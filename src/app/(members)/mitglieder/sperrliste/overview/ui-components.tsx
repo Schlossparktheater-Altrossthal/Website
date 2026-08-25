@@ -175,7 +175,9 @@ export function Note({ title, children, className = "" }: NoteProps) {
         className,
       )}
     >
-      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        {title}
+      </h3>
       <p className="mt-1 text-sm leading-6 text-foreground/85">{children}</p>
     </article>
   );
@@ -207,9 +209,13 @@ export function Kpi({ icon, title, value, hint, tone = "default" }: KpiProps) {
 
   return (
     <article className="flex items-start gap-3 rounded-2xl border border-border/60 bg-card/80 p-4 text-card-foreground shadow-sm backdrop-blur">
-      <span className={cn("flex h-11 w-11 items-center justify-center rounded-full", bgMap[tone])}>{icon}</span>
+      <span className={cn("flex h-11 w-11 items-center justify-center rounded-full", bgMap[tone])}>
+        {icon}
+      </span>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {title}
+        </p>
         <p className="truncate text-lg font-semibold text-foreground sm:text-xl">{value}</p>
         {hint && <p className="text-xs leading-5 text-foreground/80">{hint}</p>}
       </div>

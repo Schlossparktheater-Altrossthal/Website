@@ -234,7 +234,9 @@ function determineUsername(
   return fallbackEmail ?? null;
 }
 
-export async function autoDetectMailServerSettings(input: AutoDetectInput): Promise<MailServerSuggestion | null> {
+export async function autoDetectMailServerSettings(
+  input: AutoDetectInput,
+): Promise<MailServerSuggestion | null> {
   const email = normaliseEmail(input.email ?? null);
   const host = normaliseHost(input.host ?? null);
   const domainCandidates = collectDomainCandidates(email, host);
@@ -294,4 +296,3 @@ export async function autoDetectMailServerSettings(input: AutoDetectInput): Prom
     provider: null,
   };
 }
-

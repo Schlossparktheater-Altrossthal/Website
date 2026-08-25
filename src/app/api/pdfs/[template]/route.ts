@@ -59,7 +59,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Ungültige Daten", issues: error.issues }, { status: 400 });
     }
     if (error instanceof PdfRenderError) {
-      console.error(`[pdf] Fehler beim Rendern der Vorlage ${error.templateId}`, error.originalError);
+      console.error(
+        `[pdf] Fehler beim Rendern der Vorlage ${error.templateId}`,
+        error.originalError,
+      );
     } else {
       console.error(`[pdf] Unerwarteter Fehler beim Rendern der Vorlage ${templateId}`, error);
     }

@@ -16,14 +16,20 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
-  const { userId, roles, customRoleIds } = rawBody as { userId?: unknown; roles?: unknown; customRoleIds?: unknown };
+  const { userId, roles, customRoleIds } = rawBody as {
+    userId?: unknown;
+    roles?: unknown;
+    customRoleIds?: unknown;
+  };
 
   if (typeof userId !== "string" || !Array.isArray(roles)) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
   const customIds = Array.isArray(customRoleIds)
-    ? Array.from(new Set(customRoleIds)).filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    ? Array.from(new Set(customRoleIds)).filter(
+        (v): v is string => typeof v === "string" && v.trim().length > 0,
+      )
     : [];
 
   const provided = Array.from(new Set(roles)).filter(
@@ -37,7 +43,9 @@ export async function PUT(request: NextRequest) {
   const orderedRoles = withAutoCast(sortRoles(provided));
 
   // Guard: Admins cannot assign or remove the owner role
-  const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));
+  const actorRoles = new Set(
+    session.user?.roles ?? (session.user?.role ? [session.user.role] : []),
+  );
   const actorIsOwner = actorRoles.has("owner");
   const assignsOwner = orderedRoles.includes("owner");
   if (assignsOwner && !actorIsOwner) {
@@ -64,7 +72,10 @@ export async function PUT(request: NextRequest) {
     const ownersCount = await prisma.userRole.count({ where: { role: "owner" } });
     const isLastOwner = ownersCount <= 1; // only this user has owner
     if (isLastOwner) {
-      return NextResponse.json({ error: "Es muss immer mindestens einen Owner geben" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Es muss immer mindestens einen Owner geben" },
+        { status: 400 },
+      );
     }
     if (!actorIsOwner) {
       return NextResponse.json({ error: "Nur Owner dürfen Owner entfernen" }, { status: 403 });

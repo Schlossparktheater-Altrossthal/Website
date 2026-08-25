@@ -48,7 +48,6 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-
 @layer base {
   :root {
     --layout-max-width: 90rem;
@@ -116,7 +115,9 @@
   body {
     @apply bg-background text-foreground;
     min-height: 100vh;
-    font-feature-settings: "kern" 1, "liga" 1;
+    font-feature-settings:
+      "kern" 1,
+      "liga" 1;
     font-family: var(--font-body);
     letter-spacing: var(--tracking-normal);
   }
@@ -500,12 +501,16 @@
     border: 1px solid hsl(var(--border));
     background: hsl(var(--card));
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      background-color 0.2s ease;
   }
 
   .rich-text-editor:focus-within {
     border-color: color-mix(in srgb, hsl(var(--primary)) 50%, hsl(var(--border)));
-    box-shadow: 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 35%, transparent),
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 35%, transparent),
       0 8px 24px rgba(15, 23, 42, 0.12);
   }
 
@@ -551,7 +556,11 @@
     font-size: 0.875rem;
     font-weight: 500;
     line-height: 1;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow button svg,
@@ -602,7 +611,9 @@
     padding: 0.35rem 0.5rem;
     font-size: 0.875rem;
     color: hsl(var(--muted-foreground)) !important;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover,
@@ -631,7 +642,13 @@
     color: hsl(var(--foreground));
     font-size: 1rem;
     line-height: 1.7;
-    font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family:
+      var(--font-sans),
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
   }
 
   .rich-text-editor .ql-editor.ql-blank::before {
@@ -690,7 +707,9 @@
     border: 1px solid hsl(var(--border));
     background: color-mix(in srgb, hsl(var(--muted)) 80%, hsl(var(--background)));
     padding: 1rem 1.25rem;
-    font-family: var(--font-mono), SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family:
+      var(--font-mono), SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+      monospace;
     font-size: 0.95rem;
     color: hsl(var(--foreground));
     overflow-x: auto;
@@ -802,7 +821,7 @@
       right: 1rem;
     }
   }
-  }
+}
 
 /* Mystic ambient background (performant CSS-only) */
 .mystic-bg {
@@ -818,15 +837,19 @@
   height: 48vmax;
   border-radius: 9999px;
   filter: blur(90px);
-  opacity: .22;
-  transform: translate3d(0,0,0);
+  opacity: 0.22;
+  transform: translate3d(0, 0, 0);
   animation: drift 36s ease-in-out infinite;
   will-change: transform, opacity;
 }
 .mystic-amber {
   left: -10vmax;
   top: -10vmax;
-  background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 70%, transparent) 0%, transparent 72%);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--primary) 70%, transparent) 0%,
+    transparent 72%
+  );
 }
 .mystic-forest {
   right: -12vmax;
@@ -848,24 +871,44 @@
   right: -10%;
   bottom: -8vmax;
   height: 45vmax;
-  background: radial-gradient(70vmax 34vmax at 50% 100%, color-mix(in oklab, var(--primary) 12%, transparent) 0%, transparent 72%);
+  background: radial-gradient(
+    70vmax 34vmax at 50% 100%,
+    color-mix(in oklab, var(--primary) 12%, transparent) 0%,
+    transparent 72%
+  );
   filter: blur(60px);
-  opacity: .18;
+  opacity: 0.18;
   animation: breathe 24s ease-in-out infinite;
 }
 
 @keyframes drift {
-  0% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(10vmax, -6vmax, 0) scale(1.12); }
-  100% { transform: translate3d(0, 0, 0) scale(1); }
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(10vmax, -6vmax, 0) scale(1.12);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 @keyframes breathe {
-  0%, 100% { opacity: .14; transform: translateY(0); }
-  50% { opacity: .22; transform: translateY(-3vmax); }
+  0%,
+  100% {
+    opacity: 0.14;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.22;
+    transform: translateY(-3vmax);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mystic-blob, .mystic-mist { animation: none !important; }
+  .mystic-blob,
+  .mystic-mist {
+    animation: none !important;
+  }
 }
 
 /* Timeline scrollbar hiding */
@@ -876,7 +919,6 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-
 
 @keyframes carousel {
   from {

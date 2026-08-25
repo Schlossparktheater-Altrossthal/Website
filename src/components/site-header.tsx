@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import {
-  type CSSProperties,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -108,10 +101,7 @@ export function SiteHeader({
   const isHomePage = pathname === "/";
   const isTransparentHomeHeader = isHomePage && !scrolled;
 
-  const visibleNavigationItems = useMemo(
-    () => navigationItems,
-    [navigationItems],
-  );
+  const visibleNavigationItems = useMemo(() => navigationItems, [navigationItems]);
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") {
@@ -234,8 +224,7 @@ export function SiteHeader({
 
           <div className="hidden items-center gap-[var(--space-md)] md:flex">
             {visibleNavigationItems.map((item) => {
-              const isActive =
-                pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
 
               return (
                 <Link
@@ -301,13 +290,9 @@ export function SiteHeader({
         style={drawerPanelStyles}
         className="flex h-screen flex-col gap-[var(--drawer-gap)] border-l border-border/60 bg-card/95 p-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl backdrop-blur-md md:hidden"
       >
-        <div
-          style={drawerLinkGroupStyles}
-          className="flex flex-col gap-[var(--drawer-link-gap)]"
-        >
+        <div style={drawerLinkGroupStyles} className="flex flex-col gap-[var(--drawer-link-gap)]">
           {visibleNavigationItems.map((item) => {
-            const isActive =
-              pathname === item.href || pathname?.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
 
             return (
               <Link

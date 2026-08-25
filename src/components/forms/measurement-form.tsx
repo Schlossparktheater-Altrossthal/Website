@@ -125,23 +125,20 @@ export function MeasurementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Einheit</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Wählen Sie eine Einheit" />
                     </SelectTrigger>
                   </FormControl>
-                    <SelectContent>
-                      {measurementUnitEnum.options.map((unit) => (
-                        <SelectItem key={unit} value={unit}>
-                          {MEASUREMENT_UNIT_LABELS[unit] ?? unit}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectContent>
+                    {measurementUnitEnum.options.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {MEASUREMENT_UNIT_LABELS[unit] ?? unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -157,9 +154,7 @@ export function MeasurementForm({
               <FormControl>
                 <Textarea {...field} />
               </FormControl>
-              <FormDescription>
-                Optionale Anmerkungen zu diesem Maß
-              </FormDescription>
+              <FormDescription>Optionale Anmerkungen zu diesem Maß</FormDescription>
               <FormMessage />
             </FormItem>
           )}

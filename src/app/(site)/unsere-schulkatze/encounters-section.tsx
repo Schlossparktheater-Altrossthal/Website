@@ -1,6 +1,12 @@
 "use client";
 
-import { EyeOffIcon, SparklesIcon, Trash2Icon, Undo2Icon, UserRoundIcon } from "@/components/ui/action-icons";
+import {
+  EyeOffIcon,
+  SparklesIcon,
+  Trash2Icon,
+  Undo2Icon,
+  UserRoundIcon,
+} from "@/components/ui/action-icons";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -74,7 +80,7 @@ export function CatMemorySection() {
             entry !== null &&
             typeof entry.since === "string" &&
             typeof entry.nickname === "string" &&
-            typeof entry.story === "string"
+            typeof entry.story === "string",
         )
         .map((entry) => ({
           id: entry.id ?? generateMemoryId(),
@@ -130,7 +136,9 @@ export function CatMemorySection() {
         return;
       }
 
-      const sanitized = parsed.filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+      const sanitized = parsed.filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0,
+      );
 
       if (sanitized.length > 0) {
         setHiddenMemoryIds(Array.from(new Set(sanitized)));
@@ -153,7 +161,10 @@ export function CatMemorySection() {
     window.localStorage.setItem(MODERATION_STORAGE_KEY, JSON.stringify(hiddenMemoryIds));
   }, [hiddenMemoryIds]);
 
-  const allCatMemoryEntries = useMemo(() => [...userMemories, ...curatedCatMemoryEntries], [userMemories]);
+  const allCatMemoryEntries = useMemo(
+    () => [...userMemories, ...curatedCatMemoryEntries],
+    [userMemories],
+  );
 
   const hiddenCatMemoryEntryIdSet = useMemo(() => new Set(hiddenMemoryIds), [hiddenMemoryIds]);
 
@@ -273,8 +284,9 @@ export function CatMemorySection() {
               Begegnungen mit Dennis Dieter von Altroßthal
             </Heading>
             <Text variant="body" tone="muted" align="center">
-              Seit wann kennen Sie schon Dennis Dieter von Altroßthal? Welchen Spitznamen hat er bei Ihnen? Teilen Sie uns Ihre Begegnung
-              mit Dennis Dieter mit. Wir freuen uns, mehr darüber zu erfahren.
+              Seit wann kennen Sie schon Dennis Dieter von Altroßthal? Welchen Spitznamen hat er bei
+              Ihnen? Teilen Sie uns Ihre Begegnung mit Dennis Dieter mit. Wir freuen uns, mehr
+              darüber zu erfahren.
             </Text>
           </div>
 
@@ -300,8 +312,8 @@ export function CatMemorySection() {
                     Begegnung teilen
                   </Heading>
                   <Text variant="small" tone="muted">
-                    Ihre Angaben erscheinen nach dem Absenden sofort in der Übersicht. Pflichtfelder helfen uns, Ihre Geschichte
-                    einzuordnen und den Überblick zu behalten.
+                    Ihre Angaben erscheinen nach dem Absenden sofort in der Übersicht. Pflichtfelder
+                    helfen uns, Ihre Geschichte einzuordnen und den Überblick zu behalten.
                   </Text>
                 </div>
               </div>
@@ -325,15 +337,17 @@ export function CatMemorySection() {
               </div>
 
               {isFormOpen ? (
-                <form
-                  id="cat-memory-form"
-                  className="mt-6 space-y-4"
-                  onSubmit={handleSubmit}
-                >
+                <form id="cat-memory-form" className="mt-6 space-y-4" onSubmit={handleSubmit}>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="cat-memory-since">Seit wann kennen Sie Dennis Dieter?</Label>
-                      <Input id="cat-memory-since" name="since" placeholder="z. B. Frühjahr 2024" required autoComplete="off" />
+                      <Input
+                        id="cat-memory-since"
+                        name="since"
+                        placeholder="z. B. Frühjahr 2024"
+                        required
+                        autoComplete="off"
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="cat-memory-nickname">Wie hieß er bei Ihnen?</Label>
@@ -387,11 +401,15 @@ export function CatMemorySection() {
                     Eure Begegnungen
                   </Heading>
                   <Text variant="small" tone="muted">
-                    Hier sammeln wir alle Erinnerungen – neue Beiträge erscheinen sofort nach dem Absenden.
+                    Hier sammeln wir alle Erinnerungen – neue Beiträge erscheinen sofort nach dem
+                    Absenden.
                   </Text>
                 </div>
                 {canModerate ? (
-                  <Badge size="sm" className="self-start rounded-full border border-info/30 bg-info/10 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-info">
+                  <Badge
+                    size="sm"
+                    className="self-start rounded-full border border-info/30 bg-info/10 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-info"
+                  >
                     Moderation aktiv
                   </Badge>
                 ) : null}
@@ -442,7 +460,10 @@ export function CatMemorySection() {
 
                           <Card className="group relative space-y-3 rounded-2xl border border-border/50 bg-background/75 p-4 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl sm:p-5">
                             {canModerate ? (
-                              <ActionDropdownMenu items={moderationItems} className="absolute right-4 top-4" />
+                              <ActionDropdownMenu
+                                items={moderationItems}
+                                className="absolute right-4 top-4"
+                              />
                             ) : null}
 
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -466,7 +487,9 @@ export function CatMemorySection() {
                             <Text variant="small" tone="muted" weight="medium">
                               Seit {entry.since}
                             </Text>
-                            <Text className="whitespace-pre-line text-sm leading-7 text-foreground/90">{entry.story}</Text>
+                            <Text className="whitespace-pre-line text-sm leading-7 text-foreground/90">
+                              {entry.story}
+                            </Text>
                             {entry.author ? (
                               <Text variant="small" tone="muted" className="italic">
                                 — {entry.author}

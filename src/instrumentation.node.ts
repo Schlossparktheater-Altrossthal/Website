@@ -3,7 +3,17 @@ import type { AnalyticsRequestArea } from "@prisma/client";
 const requestMeta = new WeakMap<Request, PendingRequest>();
 
 const IGNORED_PREFIXES = ["/_next", "/_proxy", "/favicon", "/assets", "/fonts", "/icons"];
-const IGNORED_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico", ".css", ".js", ".map"];
+const IGNORED_EXTENSIONS = [
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".svg",
+  ".ico",
+  ".css",
+  ".js",
+  ".map",
+];
 
 type PendingRequest = {
   startedAt: number;
@@ -84,6 +94,6 @@ export function finalizeRequest(request: Request, response: Response) {
       method: metadata.method,
     }).catch((error) => {
       console.error("[analytics] Failed to record HTTP request", error);
-    })
+    }),
   );
 }

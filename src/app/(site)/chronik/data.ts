@@ -10,8 +10,7 @@ type ChronikShowRecord = Pick<
 >;
 
 type PosterOverride =
-  | { strategy: "replace"; sources: string[] }
-  | { strategy: "append"; sources: string[] };
+  { strategy: "replace"; sources: string[] } | { strategy: "append"; sources: string[] };
 
 const CHRONIK_POSTER_OVERRIDES: Record<string, PosterOverride> = {
   "altrossthal-2024": {
@@ -158,7 +157,8 @@ function parseShowMeta(meta: Prisma.JsonValue | null | undefined): ChronikMeta |
   }
 
   const record = meta as Record<string, unknown>;
-  const stringOrNull = (value: unknown) => (typeof value === "string" ? value.trim() || null : null);
+  const stringOrNull = (value: unknown) =>
+    typeof value === "string" ? value.trim() || null : null;
   const stringArrayOrNull = (value: unknown) => sanitizeStringArray(value);
   const castOrNull = (value: unknown): ChronikMeta["cast"] => {
     if (!Array.isArray(value)) {
@@ -175,7 +175,10 @@ function parseShowMeta(meta: Prisma.JsonValue | null | undefined): ChronikMeta |
         const role = typeof castRecord.role === "string" ? castRecord.role.trim() : "";
         const players = Array.isArray(castRecord.players)
           ? castRecord.players
-              .filter((player): player is string => typeof player === "string" && player.trim().length > 0)
+              .filter(
+                (player): player is string =>
+                  typeof player === "string" && player.trim().length > 0,
+              )
               .map((player) => player.trim())
           : [];
 
@@ -230,7 +233,13 @@ const CHRONIK_SUPPLEMENTS: Record<string, Partial<ChronikMeta>> = {
       { role: "Diener", players: ["Bianca Milke", "Jonas Fehrmann"] },
       {
         role: "Amüsierdamen",
-        players: ["Sarah König", "Bashi Deutsch", "Mathilda Hoffmann", "Helene Irmer", "Mia Däbler"],
+        players: [
+          "Sarah König",
+          "Bashi Deutsch",
+          "Mathilda Hoffmann",
+          "Helene Irmer",
+          "Mia Däbler",
+        ],
       },
       { role: "Gäste", players: ["Sebastian Seifert", "Lennart Neumeister", "Justus Schmeling"] },
     ],

@@ -6,7 +6,11 @@ export async function readProductionFlyerSettings() {
   return prisma.homepageFlyer.findUnique({ where: { id: PRODUCTION_FLYER_SETTINGS_ID } });
 }
 
-export async function saveProductionFlyerSettings(data: { aktiv: boolean; titel: string | null; beschreibung: string | null }) {
+export async function saveProductionFlyerSettings(data: {
+  aktiv: boolean;
+  titel: string | null;
+  beschreibung: string | null;
+}) {
   return prisma.homepageFlyer.upsert({
     where: { id: PRODUCTION_FLYER_SETTINGS_ID },
     update: data,
@@ -14,7 +18,10 @@ export async function saveProductionFlyerSettings(data: { aktiv: boolean; titel:
   });
 }
 
-export async function saveProductionFlyerSettingsImage(data: { bildData: Uint8Array<ArrayBuffer>; bildMimeType: string }) {
+export async function saveProductionFlyerSettingsImage(data: {
+  bildData: Uint8Array<ArrayBuffer>;
+  bildMimeType: string;
+}) {
   return prisma.homepageFlyer.upsert({
     where: { id: PRODUCTION_FLYER_SETTINGS_ID },
     update: data,

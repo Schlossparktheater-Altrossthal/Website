@@ -34,7 +34,10 @@ export default async function MemberManagementPage() {
         deactivatedAt: true,
       },
     }),
-    prisma.appRole.findMany({ where: { isSystem: false, systemRole: null }, orderBy: { name: "asc" } }),
+    prisma.appRole.findMany({
+      where: { isSystem: false, systemRole: null },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   const formatted = users.map((user) => {
@@ -62,7 +65,8 @@ export default async function MemberManagementPage() {
       <div>
         <h1 className="text-2xl font-semibold">Mitgliederverwaltung</h1>
         <p className="text-sm text-foreground/70">
-          Erstelle neue Mitgliederprofile und verwalte Rollen für bestehende Nutzer in einer Tabelle.
+          Erstelle neue Mitgliederprofile und verwalte Rollen für bestehende Nutzer in einer
+          Tabelle.
         </p>
       </div>
 

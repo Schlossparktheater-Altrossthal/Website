@@ -44,13 +44,13 @@ function createOfflineProfile({
   const resolvedFirstName = hasDerivedFullName
     ? toTitleCase(firstName!)
     : sanitizedSegments.length >= 2
-    ? sanitizedSegments[0]!
-    : "Offline";
+      ? sanitizedSegments[0]!
+      : "Offline";
   const resolvedLastName = hasDerivedFullName
     ? toTitleCase(lastName!)
     : sanitizedSegments.length >= 2
-    ? sanitizedSegments.slice(1).join(" ")
-    : sanitizedSegments[0] ?? roleLabel;
+      ? sanitizedSegments.slice(1).join(" ")
+      : (sanitizedSegments[0] ?? roleLabel);
 
   const offlineName =
     combineNameParts(resolvedFirstName, resolvedLastName) ??
@@ -130,7 +130,7 @@ export async function ensureDevTestUser(email: string, role: Role): Promise<DevT
       email: user.email!,
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
-      name: combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null),
+      name: combineNameParts(user.firstName, user.lastName) ?? user.name ?? null,
       role,
       roles: [role],
       avatarSource: user.avatarSource,

@@ -16,7 +16,9 @@ export async function POST(request: Request) {
 
     const payload = (await request.json().catch(() => null)) as Payload | null;
     const ids = Array.isArray(payload?.ids)
-      ? payload!.ids.filter((value): value is string => typeof value === "string" && value.length > 0)
+      ? payload!.ids.filter(
+          (value): value is string => typeof value === "string" && value.length > 0,
+        )
       : [];
 
     const where: { userId: string; id?: { in: string[] } } = { userId };

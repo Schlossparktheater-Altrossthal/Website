@@ -20,8 +20,7 @@ export const DIETARY_STRICTNESS_OPTIONS = [
   { value: "situational", label: "Situationsabhängig / nach Rücksprache" },
 ] as const;
 
-export type DietaryStrictnessOption =
-  (typeof DIETARY_STRICTNESS_OPTIONS)[number]["value"];
+export type DietaryStrictnessOption = (typeof DIETARY_STRICTNESS_OPTIONS)[number]["value"];
 
 export const dietaryPreferenceSchema = z.object({
   style: z.enum([
@@ -72,15 +71,14 @@ export function resolveDietaryStrictnessLabel(
   if (style === "none" || style === "omnivore") {
     return NONE_STRICTNESS_LABEL;
   }
-  const option = DIETARY_STRICTNESS_OPTIONS.find(
-    (entry) => entry.value === strictness,
-  );
+  const option = DIETARY_STRICTNESS_OPTIONS.find((entry) => entry.value === strictness);
   return option?.label ?? DIETARY_STRICTNESS_OPTIONS[1].label;
 }
 
-export function parseDietaryStyleFromLabel(
-  label: string | null | undefined,
-): { style: DietaryStyleOption; customLabel: string | null } {
+export function parseDietaryStyleFromLabel(label: string | null | undefined): {
+  style: DietaryStyleOption;
+  customLabel: string | null;
+} {
   const trimmed = label?.trim();
   if (!trimmed) {
     return { style: "none", customLabel: null };

@@ -105,7 +105,9 @@ export function RoleManager({
     "Unbekannte Person";
 
   const rolesDirty = useMemo(
-    () => selected.join("|") !== saved.join("|") || selectedCustomIds.join("|") !== savedCustomIds.join("|"),
+    () =>
+      selected.join("|") !== saved.join("|") ||
+      selectedCustomIds.join("|") !== savedCustomIds.join("|"),
     [selected, saved, selectedCustomIds, savedCustomIds],
   );
 
@@ -263,7 +265,9 @@ export function RoleManager({
       const updatedLastName = data?.user?.lastName ?? (trimmedLastName || null);
       const updatedName =
         combineNameParts(updatedFirstName, updatedLastName) ??
-        (data?.user?.name ?? combinedName ?? null);
+        data?.user?.name ??
+        combinedName ??
+        null;
 
       const normalizedEmail = updatedEmail ?? "";
       setCurrentEmail(normalizedEmail);
@@ -440,7 +444,12 @@ export function RoleManager({
               >
                 Zurücksetzen
               </Button>
-              <Button type="submit" size="sm" disabled={!profileDirty || profileSaving} className="min-w-24">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!profileDirty || profileSaving}
+                className="min-w-24"
+              >
                 {profileSaving ? "Speichern…" : "Speichern"}
               </Button>
             </div>
@@ -451,7 +460,9 @@ export function RoleManager({
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Rollen verwalten</CardTitle>
-          <p className="text-sm text-muted-foreground">Wählen Sie die Rollen für diesen Benutzer aus</p>
+          <p className="text-sm text-muted-foreground">
+            Wählen Sie die Rollen für diesen Benutzer aus
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           <RolePicker

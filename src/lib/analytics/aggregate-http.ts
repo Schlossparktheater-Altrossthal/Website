@@ -10,10 +10,9 @@ export type HttpRequestLike = Pick<
   "timestamp" | "area" | "statusCode" | "durationMs" | "payloadBytes" | "route" | "method"
 > & { timestamp: Date; route: string; method: string };
 
-export type UptimeHeartbeatLike = Pick<
-  AnalyticsUptimeHeartbeat,
-  "observedAt" | "isHealthy"
-> & { observedAt: Date };
+export type UptimeHeartbeatLike = Pick<AnalyticsUptimeHeartbeat, "observedAt" | "isHealthy"> & {
+  observedAt: Date;
+};
 
 export type HttpSummaryAggregation = {
   windowStart: Date;
@@ -152,7 +151,8 @@ function normalizeMethod(method: string | null | undefined): string {
 function normalizeRequests(requests: HttpRequestLike[]): HttpRequestLike[] {
   return requests
     .map((request) => ({
-      timestamp: request.timestamp instanceof Date ? request.timestamp : new Date(request.timestamp),
+      timestamp:
+        request.timestamp instanceof Date ? request.timestamp : new Date(request.timestamp),
       area: normalizeArea(request.area),
       statusCode: Number.isFinite(request.statusCode) ? Math.trunc(request.statusCode) : 0,
       durationMs: sanitizeDuration(request.durationMs),
@@ -169,7 +169,10 @@ function normalizeHeartbeats(heartbeats: UptimeHeartbeatLike[] | undefined): Upt
   }
   return heartbeats
     .map((heartbeat) => ({
-      observedAt: heartbeat.observedAt instanceof Date ? heartbeat.observedAt : new Date(heartbeat.observedAt),
+      observedAt:
+        heartbeat.observedAt instanceof Date
+          ? heartbeat.observedAt
+          : new Date(heartbeat.observedAt),
       isHealthy: Boolean(heartbeat.isHealthy),
     }))
     .filter((heartbeat) => Number.isFinite(heartbeat.observedAt.getTime()));
@@ -180,7 +183,10 @@ function calculateUptimePercentage(heartbeats: UptimeHeartbeatLike[]): number | 
     return null;
   }
   const total = heartbeats.length;
-  const healthy = heartbeats.reduce((count, heartbeat) => (heartbeat.isHealthy ? count + 1 : count), 0);
+  const healthy = heartbeats.reduce(
+    (count, heartbeat) => (heartbeat.isHealthy ? count + 1 : count),
+    0,
+  );
   if (total === 0) {
     return null;
   }
@@ -225,7 +231,9 @@ function calculateAreaErrorRate(requests: HttpRequestLike[]): number {
 
 function isLikelyStaticAsset(route: string): boolean {
   const lower = route.toLowerCase();
-  return /(\.json|\.js|\.mjs|\.css|\.ico|\.png|\.jpg|\.jpeg|\.gif|\.svg|\.webp|\.txt|\.xml|\.map)$/.test(lower);
+  return /(\.json|\.js|\.mjs|\.css|\.ico|\.png|\.jpg|\.jpeg|\.gif|\.svg|\.webp|\.txt|\.xml|\.map)$/.test(
+    lower,
+  );
 }
 
 function isLikelyCacheHit(request: HttpRequestLike): boolean {
@@ -361,12 +369,16 @@ export function aggregateHttpMetrics({
 
   const normalizedRequests = normalizeRequests(requests).filter((request) => {
     const timestamp = request.timestamp.getTime();
-    return timestamp >= normalizedWindowStart.getTime() && timestamp <= normalizedWindowEnd.getTime();
+    return (
+      timestamp >= normalizedWindowStart.getTime() && timestamp <= normalizedWindowEnd.getTime()
+    );
   });
 
   const normalizedHeartbeats = normalizeHeartbeats(heartbeats).filter((heartbeat) => {
     const timestamp = heartbeat.observedAt.getTime();
-    return timestamp >= normalizedWindowStart.getTime() && timestamp <= normalizedWindowEnd.getTime();
+    return (
+      timestamp >= normalizedWindowStart.getTime() && timestamp <= normalizedWindowEnd.getTime()
+    );
   });
 
   const totalRequests = normalizedRequests.length;

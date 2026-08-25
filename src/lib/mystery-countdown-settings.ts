@@ -27,7 +27,9 @@ export function resolveMysterySettings(record: MysterySettingsRecord) {
   const trimmedMessage = typeof storedMessageRaw === "string" ? storedMessageRaw.trim() : null;
   const hasMessage = Boolean(trimmedMessage);
   const effectiveCountdownTarget = storedCountdown ?? defaultCountdown;
-  const effectiveExpirationMessage = hasMessage ? (trimmedMessage as string) : DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
+  const effectiveExpirationMessage = hasMessage
+    ? (trimmedMessage as string)
+    : DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
 
   return {
     countdownTarget: storedCountdown,

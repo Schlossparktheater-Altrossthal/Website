@@ -133,7 +133,8 @@ export function DepartmentEventPlanner({
 
       {eventsWithMeta.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border/60 bg-background/70 p-6 text-sm text-muted-foreground">
-          Es sind aktuell keine Termine geplant. Sobald du einen Termin anlegst, erscheint er hier mit allen Details.
+          Es sind aktuell keine Termine geplant. Sobald du einen Termin anlegst, erscheint er hier
+          mit allen Details.
         </div>
       ) : (
         <div className="space-y-6">
@@ -159,7 +160,8 @@ export function DepartmentEventPlanner({
                         <p className="flex items-center gap-2 text-sm text-muted-foreground">
                           <ClockIcon aria-hidden className="h-4 w-4" />
                           <span>
-                            {DATE_FORMATTER.format(event.startDate)} · {TIME_FORMATTER.format(event.startDate)}
+                            {DATE_FORMATTER.format(event.startDate)} ·{" "}
+                            {TIME_FORMATTER.format(event.startDate)}
                             {event.endDate ? ` – ${TIME_FORMATTER.format(event.endDate)}` : ""}
                           </span>
                         </p>
@@ -170,7 +172,9 @@ export function DepartmentEventPlanner({
                           </p>
                         ) : null}
                         {event.description ? (
-                          <p className="whitespace-pre-wrap text-sm text-muted-foreground/90">{event.description}</p>
+                          <p className="whitespace-pre-wrap text-sm text-muted-foreground/90">
+                            {event.description}
+                          </p>
                         ) : null}
                         {event.createdBy ? (
                           <p className="text-xs text-muted-foreground/80">

@@ -48,7 +48,11 @@ export async function PUT(request: NextRequest) {
   }
 
   const payload = await request.json().catch(() => null);
-  if (!payload || typeof payload !== "object" || !Array.isArray((payload as { interests?: unknown }).interests)) {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !Array.isArray((payload as { interests?: unknown }).interests)
+  ) {
     return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
   }
 
@@ -157,6 +161,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ok: true, interests: updatedNames });
   } catch (error) {
     console.error("[profile.interests]", error);
-    return NextResponse.json({ error: "Aktualisierung der Interessen fehlgeschlagen" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Aktualisierung der Interessen fehlgeschlagen" },
+      { status: 500 },
+    );
   }
 }

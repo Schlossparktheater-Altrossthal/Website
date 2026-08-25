@@ -25,17 +25,10 @@ type Props = {
   hasImage: boolean;
 };
 
-export function ShowFlyerSection({
-  active,
-  title,
-  description,
-  hasImage,
-}: Props) {
+export function ShowFlyerSection({ active, title, description, hasImage }: Props) {
   const { status } = useSession();
-  const { hasFeature, openFeature, closeFeature, activeFeature } =
-    useFrontendEditing();
-  const canEdit =
-    status === "authenticated" && hasFeature("FEATURE.HOME.FLYER");
+  const { hasFeature, openFeature, closeFeature, activeFeature } = useFrontendEditing();
+  const canEdit = status === "authenticated" && hasFeature("FEATURE.HOME.FLYER");
   const open = canEdit && activeFeature === "FEATURE.HOME.FLYER";
 
   const [form, setForm] = useState({
@@ -87,9 +80,7 @@ export function ShowFlyerSection({
       {active ? (
         <div className="layout-container space-y-4">
           {title ? (
-            <h2 className="text-[clamp(1.4rem,4vw,2.2rem)] font-semibold">
-              {title}
-            </h2>
+            <h2 className="text-[clamp(1.4rem,4vw,2.2rem)] font-semibold">{title}</h2>
           ) : null}
           {hasImage ? (
             <Image
@@ -102,9 +93,7 @@ export function ShowFlyerSection({
             />
           ) : null}
           {description ? (
-            <p className="text-muted-foreground text-[clamp(0.9rem,2vw,1.1rem)]">
-              {description}
-            </p>
+            <p className="text-muted-foreground text-[clamp(0.9rem,2vw,1.1rem)]">{description}</p>
           ) : null}
         </div>
       ) : null}
@@ -114,9 +103,7 @@ export function ShowFlyerSection({
           <Button
             size="sm"
             variant={open ? "secondary" : "outline"}
-            onClick={() =>
-              open ? closeFeature() : openFeature("FEATURE.HOME.FLYER")
-            }
+            onClick={() => (open ? closeFeature() : openFeature("FEATURE.HOME.FLYER"))}
           >
             {open ? "Einstellungen schließen" : "Flyer bearbeiten"}
           </Button>
@@ -125,9 +112,7 @@ export function ShowFlyerSection({
 
       <Dialog
         open={open}
-        onOpenChange={(v) =>
-          v ? openFeature("FEATURE.HOME.FLYER") : closeFeature()
-        }
+        onOpenChange={(v) => (v ? openFeature("FEATURE.HOME.FLYER") : closeFeature())}
       >
         <DialogContent>
           <DialogHeader>
@@ -138,24 +123,18 @@ export function ShowFlyerSection({
               <span>Sektion active anzeigen</span>
               <Switch
                 checked={form.active}
-                onCheckedChange={(next) =>
-                  setForm((s) => ({ ...s, active: next }))
-                }
+                onCheckedChange={(next) => setForm((s) => ({ ...s, active: next }))}
               />
             </div>
             <Input
               placeholder="Stücktitle 2026"
               value={form.title}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, title: e.target.value }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))}
             />
             <Textarea
               placeholder="Beschreibung"
               value={form.description}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, description: e.target.value }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
             />
             <Input
               ref={fileInputRef}
@@ -165,11 +144,7 @@ export function ShowFlyerSection({
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                 Datei ändern
               </Button>
               <Button type="button" variant="outline" onClick={removeImage}>

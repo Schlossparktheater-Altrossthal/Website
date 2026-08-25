@@ -78,9 +78,7 @@ export function MembersBreadcrumbs({
                 aria-current={isCurrent ? "page" : undefined}
                 className={cn(
                   "flex min-w-0 items-center gap-1.5",
-                  isCurrent
-                    ? "text-foreground"
-                    : "text-muted-foreground/80",
+                  isCurrent ? "text-foreground" : "text-muted-foreground/80",
                   item.className,
                 )}
               >

@@ -38,13 +38,11 @@ export async function GET() {
         type: string | null;
         createdAt: Date;
         rehearsalId: string | null;
-        rehearsal:
-          | {
-              id: string;
-              title: string;
-              start: Date;
-            }
-          | null;
+        rehearsal: {
+          id: string;
+          title: string;
+          start: Date;
+        } | null;
       };
     };
 
@@ -73,7 +71,7 @@ export async function GET() {
       : [];
 
     const attendanceMap = new Map<string, AttendanceStatus>(
-      attendance.map((entry) => [entry.rehearsalId, entry.status])
+      attendance.map((entry) => [entry.rehearsalId, entry.status]),
     );
 
     const notifications: NotificationResponse[] = records.map((record: RecipientRecord) => ({
@@ -91,8 +89,8 @@ export async function GET() {
           }
         : null,
       attendanceStatus: record.notification.rehearsalId
-  ? ((attendanceMap.get(record.notification.rehearsalId) as AttendanceStatus | null) ?? null)
-  : null,
+        ? ((attendanceMap.get(record.notification.rehearsalId) as AttendanceStatus | null) ?? null)
+        : null,
     }));
 
     return NextResponse.json({ notifications });

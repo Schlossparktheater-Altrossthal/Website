@@ -6,7 +6,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Text } from "@/components/ui/typography";
 
 const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat("de-DE", {
@@ -62,7 +68,12 @@ type MysterySubmissionReviewManagerProps = {
   scoreboard: ScoreboardEntry[];
 };
 
-export function MysterySubmissionReviewManager({ clues, selectedClueId, submissions, scoreboard }: MysterySubmissionReviewManagerProps) {
+export function MysterySubmissionReviewManager({
+  clues,
+  selectedClueId,
+  submissions,
+  scoreboard,
+}: MysterySubmissionReviewManagerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -71,7 +82,10 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
 
-  const activeClue = useMemo(() => clues.find((clue) => clue.id === selectedClueId) ?? null, [clues, selectedClueId]);
+  const activeClue = useMemo(
+    () => clues.find((clue) => clue.id === selectedClueId) ?? null,
+    [clues, selectedClueId],
+  );
 
   function handleSelectClue(nextId: string) {
     const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
@@ -107,7 +121,10 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
       });
       const payload = await response.json();
       if (!response.ok) {
-        const message = typeof payload?.error === "string" ? payload.error : "Der Tipp konnte nicht aktualisiert werden.";
+        const message =
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Der Tipp konnte nicht aktualisiert werden.";
         throw new Error(message);
       }
 
@@ -156,12 +173,15 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
         <CardHeader>
           <CardTitle>Punktestand</CardTitle>
           <Text variant="small" tone="muted">
-            Punkte werden automatisch anhand der Rätsel-Punkte vergeben, sobald ein Tipp als richtig markiert wird.
+            Punkte werden automatisch anhand der Rätsel-Punkte vergeben, sobald ein Tipp als richtig
+            markiert wird.
           </Text>
         </CardHeader>
         <CardContent>
           {board.length === 0 ? (
-            <Text variant="small" tone="muted">Noch keine Punkte vergeben.</Text>
+            <Text variant="small" tone="muted">
+              Noch keine Punkte vergeben.
+            </Text>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-border text-sm">
@@ -177,10 +197,14 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
                   {board.map((entry) => (
                     <tr key={entry.playerName} className="bg-background/60">
                       <td className="px-3 py-2 font-medium">{entry.playerName}</td>
-                      <td className="px-3 py-2 font-semibold">{SCOREBOARD_FORMATTER.format(entry.totalScore)}</td>
+                      <td className="px-3 py-2 font-semibold">
+                        {SCOREBOARD_FORMATTER.format(entry.totalScore)}
+                      </td>
                       <td className="px-3 py-2">{entry.correctCount}</td>
                       <td className="px-3 py-2 text-muted-foreground">
-                        {entry.lastUpdated ? TIMESTAMP_FORMATTER.format(new Date(entry.lastUpdated)) : "–"}
+                        {entry.lastUpdated
+                          ? TIMESTAMP_FORMATTER.format(new Date(entry.lastUpdated))
+                          : "–"}
                       </td>
                     </tr>
                   ))}
@@ -195,15 +219,21 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
         <CardHeader>
           <CardTitle>Tipps nach Rätsel</CardTitle>
           <Text variant="small" tone="muted">
-            Wähle ein Rätsel, um die abgegebenen Tipps zu prüfen und bei korrekter Lösung Punkte zu vergeben.
+            Wähle ein Rätsel, um die abgegebenen Tipps zu prüfen und bei korrekter Lösung Punkte zu
+            vergeben.
           </Text>
         </CardHeader>
         <CardContent className="space-y-4">
           {clues.length > 0 ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
-                <Text variant="small" tone="muted">Rätsel auswählen</Text>
-                <Select value={selectedClueId ?? clues[0]?.id ?? ""} onValueChange={handleSelectClue}>
+                <Text variant="small" tone="muted">
+                  Rätsel auswählen
+                </Text>
+                <Select
+                  value={selectedClueId ?? clues[0]?.id ?? ""}
+                  onValueChange={handleSelectClue}
+                >
                   <SelectTrigger className="w-72">
                     <SelectValue placeholder="Rätsel wählen" />
                   </SelectTrigger>
@@ -223,13 +253,17 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
               )}
             </div>
           ) : (
-            <Text variant="small" tone="muted">Noch keine Rätsel angelegt.</Text>
+            <Text variant="small" tone="muted">
+              Noch keine Rätsel angelegt.
+            </Text>
           )}
 
           {error && <Text tone="destructive">{error}</Text>}
 
           {items.length === 0 ? (
-            <Text variant="small" tone="muted">Keine Tipps für dieses Rätsel vorhanden.</Text>
+            <Text variant="small" tone="muted">
+              Keine Tipps für dieses Rätsel vorhanden.
+            </Text>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-border text-sm">
@@ -262,7 +296,10 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-2 text-muted-foreground">
-                              <span className="h-2 w-2 rounded-full bg-muted-foreground/40" aria-hidden />
+                              <span
+                                className="h-2 w-2 rounded-full bg-muted-foreground/40"
+                                aria-hidden
+                              />
                               Offen
                             </span>
                           )}
@@ -277,8 +314,8 @@ export function MysterySubmissionReviewManager({ clues, selectedClueId, submissi
                             {isActive
                               ? "Aktualisiere…"
                               : item.isCorrect
-                              ? "Als falsch markieren"
-                              : "Als richtig markieren"}
+                                ? "Als falsch markieren"
+                                : "Als richtig markieren"}
                           </Button>
                         </td>
                       </tr>

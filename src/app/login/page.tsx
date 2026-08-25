@@ -25,8 +25,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "Login",
-    description:
-      "Hier meldest du dich im Mitgliederbereich des Sommertheaters Altrossthal an.",
+    description: "Hier meldest du dich im Mitgliederbereich des Sommertheaters Altrossthal an.",
   },
 };
 

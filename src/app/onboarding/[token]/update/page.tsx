@@ -68,8 +68,8 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         <div className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
           <h1 className="text-3xl font-semibold text-foreground">Einladung nicht gefunden</h1>
           <p className="text-muted-foreground">
-            Dieser Einladungslink ist nicht gültig oder wurde bereits entfernt. Bitte wende dich an die Theaterleitung für einen
-            neuen Link.
+            Dieser Einladungslink ist nicht gültig oder wurde bereits entfernt. Bitte wende dich an
+            die Theaterleitung für einen neuen Link.
           </p>
         </div>
       </main>
@@ -83,8 +83,8 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         <div className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
           <h1 className="text-3xl font-semibold text-foreground">Einladung nicht mehr aktiv</h1>
           <p className="text-muted-foreground">
-            Diese Einladung kann nicht mehr verwendet werden. Sie ist entweder abgelaufen, deaktiviert oder es wurden alle Plätze
-            genutzt.
+            Diese Einladung kann nicht mehr verwendet werden. Sie ist entweder abgelaufen,
+            deaktiviert oder es wurden alle Plätze genutzt.
           </p>
         </div>
       </main>
@@ -103,13 +103,17 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
               <CardTitle className="text-3xl">Willkommen zurück</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground">Melde dich zuerst an, um deine Daten zu aktualisieren.</p>
+              <p className="text-muted-foreground">
+                Melde dich zuerst an, um deine Daten zu aktualisieren.
+              </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button asChild variant="primary" size="lg">
                   <Link href="/login">Anmelden</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href={`/onboarding/${encodeURIComponent(token)}`}>Neues Konto erstellen</Link>
+                  <Link href={`/onboarding/${encodeURIComponent(token)}`}>
+                    Neues Konto erstellen
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -119,7 +123,13 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     );
   }
 
-  const [existingProfile, existingDietary, existingPreferences, existingPhotoConsent, existingUser] = await Promise.all([
+  const [
+    existingProfile,
+    existingDietary,
+    existingPreferences,
+    existingPhotoConsent,
+    existingUser,
+  ] = await Promise.all([
     prisma.memberOnboardingProfile.findUnique({
       where: { userId },
       select: {

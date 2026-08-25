@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  Prisma,
-  SyncScope,
-  TicketStatus,
-  type Ticket,
-  type TicketScanEvent,
-} from "@prisma/client";
+import { Prisma, SyncScope, TicketStatus, type Ticket, type TicketScanEvent } from "@prisma/client";
 
 export type TransactionClient = Prisma.TransactionClient;
 
@@ -50,11 +44,7 @@ export function normalizeOccurredAt(value?: Date | string | null): Date {
 
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) {
-      throw new TicketCheckInError(
-        "Zeitstempel für Scan ungültig.",
-        400,
-        "INVALID_INPUT",
-      );
+      throw new TicketCheckInError("Zeitstempel für Scan ungültig.", 400, "INVALID_INPUT");
     }
 
     return value;
@@ -63,11 +53,7 @@ export function normalizeOccurredAt(value?: Date | string | null): Date {
   const parsed = new Date(value);
 
   if (Number.isNaN(parsed.getTime())) {
-    throw new TicketCheckInError(
-      "Zeitstempel für Scan ungültig.",
-      400,
-      "INVALID_INPUT",
-    );
+    throw new TicketCheckInError("Zeitstempel für Scan ungültig.", 400, "INVALID_INPUT");
   }
 
   return parsed;
@@ -79,11 +65,7 @@ export function computeDedupeKey(ticketId: string, provided?: string | null): st
   }
 
   if (!ticketId || ticketId.trim().length === 0) {
-    throw new TicketCheckInError(
-      "Ticket-Identifikator fehlt.",
-      400,
-      "INVALID_INPUT",
-    );
+    throw new TicketCheckInError("Ticket-Identifikator fehlt.", 400, "INVALID_INPUT");
   }
 
   return `ticket:${ticketId}`;
@@ -105,9 +87,7 @@ export function serializeTicketForPayload(ticket: Ticket): Record<string, unknow
   return payload;
 }
 
-export function serializeScanEventForPayload(
-  scanEvent: TicketScanEvent,
-): Record<string, unknown> {
+export function serializeScanEventForPayload(scanEvent: TicketScanEvent): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     id: scanEvent.id,
     ticketId: scanEvent.ticketId,
@@ -134,10 +114,7 @@ export function serializeScanEventForPayload(
 }
 
 function isUniqueConstraintError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002"
-  );
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
 async function lockTicket(
@@ -193,7 +170,8 @@ async function createSyncEnvelope(
   clientId?: string | null,
   clientMutationId?: string | null,
 ): Promise<{ serverSeq: number; mutationId: string }> {
-  const normalizedClientId = clientId?.trim() && clientId.trim().length > 0 ? clientId.trim() : "server";
+  const normalizedClientId =
+    clientId?.trim() && clientId.trim().length > 0 ? clientId.trim() : "server";
   const mutationId =
     clientMutationId && clientMutationId.trim().length > 0
       ? clientMutationId.trim()
@@ -251,7 +229,8 @@ export async function checkInTicket(
   input: TicketCheckInInput,
 ): Promise<TicketCheckInResult> {
   const occurredAt = normalizeOccurredAt(input.occurredAt);
-  const dedupeFromPayload = input.dedupeKey?.trim() && input.dedupeKey.trim().length > 0 ? input.dedupeKey.trim() : null;
+  const dedupeFromPayload =
+    input.dedupeKey?.trim() && input.dedupeKey.trim().length > 0 ? input.dedupeKey.trim() : null;
 
   if (dedupeFromPayload) {
     const existing = await db.ticketScanEvent.findUnique({
@@ -319,8 +298,10 @@ export async function checkInTicket(
 
   const dedupeKey = computeDedupeKey(updatedTicket.id, dedupeFromPayload);
   const processedAt = new Date();
-  const normalizedSource = input.source?.trim() && input.source.trim().length > 0 ? input.source.trim() : null;
-  const normalizedClientId = input.clientId?.trim() && input.clientId.trim().length > 0 ? input.clientId.trim() : null;
+  const normalizedSource =
+    input.source?.trim() && input.source.trim().length > 0 ? input.source.trim() : null;
+  const normalizedClientId =
+    input.clientId?.trim() && input.clientId.trim().length > 0 ? input.clientId.trim() : null;
   const normalizedClientMutationId =
     input.clientMutationId?.trim() && input.clientMutationId.trim().length > 0
       ? input.clientMutationId.trim()

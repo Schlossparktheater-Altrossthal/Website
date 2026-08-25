@@ -38,9 +38,10 @@ function normalizeTags(tags: AnalyticsServerLog["tags"]): string[] {
 }
 
 function mapRowToLoadedLog(row: AnalyticsServerLog): LoadedServerLog {
-  const description = typeof row.description === "string" && row.description.trim().length > 0
-    ? row.description
-    : row.message;
+  const description =
+    typeof row.description === "string" && row.description.trim().length > 0
+      ? row.description
+      : row.message;
   return {
     id: row.id,
     severity: row.severity,
@@ -75,10 +76,7 @@ export async function loadLatestCriticalServerLogs({
       severity: { in: CRITICAL_SEVERITIES },
       ...(since ? { lastSeenAt: { gte: since } } : {}),
     },
-    orderBy: [
-      { lastSeenAt: "desc" },
-      { occurrences: "desc" },
-    ],
+    orderBy: [{ lastSeenAt: "desc" }, { occurrences: "desc" }],
     take: Math.max(1, limit),
   });
 

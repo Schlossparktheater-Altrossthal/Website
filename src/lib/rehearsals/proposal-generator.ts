@@ -1,12 +1,12 @@
-import { PrismaClient, Role } from '@prisma/client';
-import { addDays, addMinutes, isFriday, isSaturday, isSunday, startOfDay } from 'date-fns';
+import { PrismaClient, Role } from "@prisma/client";
+import { addDays, addMinutes, isFriday, isSaturday, isSunday, startOfDay } from "date-fns";
 
 const MIN_PARTICIPANTS_AVAILABLE = 0.8; // 80% der benötigten Besetzung muss verfügbar sein
 const DEFAULT_REQUIRED_ROLES: Role[] = ["cast", "tech"];
 
 type TimeSlot = {
   startTime: number; // Minuten seit Mitternacht
-  endTime: number;   // Minuten seit Mitternacht
+  endTime: number; // Minuten seit Mitternacht
 };
 
 const WEEKEND_TIME_SLOTS: TimeSlot[] = [
@@ -25,7 +25,9 @@ const WEEKEND_TIME_SLOTS: TimeSlot[] = [
 
 export async function generateRehearsalProposals(prisma: PrismaClient) {
   if (!process.env.DATABASE_URL) {
-    console.warn('[proposal-generator] DATABASE_URL not set; skipping rehearsal proposal generation.');
+    console.warn(
+      "[proposal-generator] DATABASE_URL not set; skipping rehearsal proposal generation.",
+    );
     return;
   }
 
@@ -63,7 +65,7 @@ export async function generateRehearsalProposals(prisma: PrismaClient) {
             startTime: slot.startTime,
             endTime: slot.endTime,
             requiredRoles: show.roles,
-            status: 'proposed',
+            status: "proposed",
           },
         });
       }
@@ -81,7 +83,11 @@ export async function generateRehearsalProposals(prisma: PrismaClient) {
     return availableSlots;
   }
 
-  async function checkSlotAvailability(date: Date, slot: TimeSlot, show: ShowWithRoles): Promise<boolean> {
+  async function checkSlotAvailability(
+    date: Date,
+    slot: TimeSlot,
+    show: ShowWithRoles,
+  ): Promise<boolean> {
     const slotStart = toDateWithMinutes(date, slot.startTime);
     const slotEnd = toDateWithMinutes(date, slot.endTime);
 
@@ -101,7 +107,7 @@ export async function generateRehearsalProposals(prisma: PrismaClient) {
         date,
         startTime: slot.startTime,
         status: {
-          in: ['proposed', 'approved'],
+          in: ["proposed", "approved"],
         },
       },
     });
@@ -113,7 +119,7 @@ export async function generateRehearsalProposals(prisma: PrismaClient) {
     const availableParticipants = await prisma.availabilityDay.count({
       where: {
         date,
-        kind: 'FULL_AVAILABLE',
+        kind: "FULL_AVAILABLE",
         user: {
           roles: {
             some: {
@@ -127,7 +133,8 @@ export async function generateRehearsalProposals(prisma: PrismaClient) {
     });
 
     const requiredParticipants = show.roles.length || DEFAULT_REQUIRED_ROLES.length;
-    const availabilityRatio = requiredParticipants > 0 ? availableParticipants / requiredParticipants : 0;
+    const availabilityRatio =
+      requiredParticipants > 0 ? availableParticipants / requiredParticipants : 0;
 
     return availabilityRatio >= MIN_PARTICIPANTS_AVAILABLE;
   }
@@ -142,7 +149,7 @@ function extractRolesFromRehearsals(rehearsals: Array<{ requiredRoles: unknown }
     const { requiredRoles } = rehearsal;
     if (Array.isArray(requiredRoles)) {
       requiredRoles.forEach((role) => {
-        if (typeof role === 'string' && allowedRoles.has(role as Role)) {
+        if (typeof role === "string" && allowedRoles.has(role as Role)) {
           roles.add(role as Role);
         }
       });
@@ -156,7 +163,8 @@ function getNextTwoWeekendDays(): Date[] {
   const weekendDays: Date[] = [];
   let currentDate = startOfDay(new Date());
 
-  while (weekendDays.length < 6) { // Die nächsten 6 Wochenendtage
+  while (weekendDays.length < 6) {
+    // Die nächsten 6 Wochenendtage
     if (isWeekendDay(currentDate)) {
       weekendDays.push(currentDate);
     }

@@ -24,8 +24,7 @@ const ROLE_PREFERENCE_DEFINITIONS: Record<string, RolePreferenceDefinition> = {
     code: "acting_medium",
     domain: "acting",
     title: "Mittlere Rolle",
-    description:
-      "Spürbar auf der Bühne, mit Verantwortung im Ensemble und regelmäßigem Proben.",
+    description: "Spürbar auf der Bühne, mit Verantwortung im Ensemble und regelmäßigem Proben.",
   },
   acting_lead: {
     code: "acting_lead",
@@ -131,4 +130,3 @@ export function getRolePreferenceDescription(code: string): string | null {
   }
   return ROLE_PREFERENCE_DEFINITIONS[code]?.description ?? null;
 }
-

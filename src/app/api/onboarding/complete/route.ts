@@ -12,12 +12,7 @@ import { broadcastOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard
 import { signatureSubmissionSchema, type SignaturePayload } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
-const ALLOWED_DOCUMENT_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/jpg",
-]);
+const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -95,7 +90,17 @@ const genderSchema = z
 
 const dietaryPreferenceSchema = z
   .object({
-    style: z.enum(["none", "omnivore", "vegetarian", "vegan", "pescetarian", "flexitarian", "halal", "kosher", "custom"]),
+    style: z.enum([
+      "none",
+      "omnivore",
+      "vegetarian",
+      "vegan",
+      "pescetarian",
+      "flexitarian",
+      "halal",
+      "kosher",
+      "custom",
+    ]),
     custom: z.string().max(120).optional().nullable(),
     strictness: z.enum(["strict", "flexible", "situational"]),
   })
@@ -207,7 +212,11 @@ export async function POST(request: NextRequest) {
   const password = payload.password;
   const preferences = payload.preferences.filter((pref) => pref.weight > 0);
   const interests = Array.from(
-    new Set(payload.interests.map((interest) => interest.trim()).filter((interest) => interest.length > 0)),
+    new Set(
+      payload.interests
+        .map((interest) => interest.trim())
+        .filter((interest) => interest.length > 0),
+    ),
   ).slice(0, 30);
   const dietaryRaw = payload.dietary.map((entry) => ({
     allergen: entry.allergen.trim(),
@@ -232,9 +241,7 @@ export async function POST(request: NextRequest) {
   const genderOption = payload.gender.option as GenderOption;
   const genderCustom = normalizeString(payload.gender.custom);
   const genderLabel =
-    genderOption === "custom"
-      ? genderCustom
-      : genderOptionLabels[genderOption] ?? null;
+    genderOption === "custom" ? genderCustom : (genderOptionLabels[genderOption] ?? null);
   const genderDisplay = genderLabel ?? genderOptionLabels.no_answer;
 
   const memberSinceYear = payload.memberSinceYear ?? null;
@@ -245,13 +252,12 @@ export async function POST(request: NextRequest) {
   const dietaryStyleLabel =
     dietaryStyleOption === "custom"
       ? dietaryCustom
-      : dietaryStyleLabels[dietaryStyleOption] ?? null;
+      : (dietaryStyleLabels[dietaryStyleOption] ?? null);
   const dietaryStyleDisplay = dietaryStyleLabel ?? dietaryStyleLabels.none;
 
   const dietaryStrictnessOption = dietaryPreference.strictness as DietaryStrictnessOption;
   const dietaryStrictnessLabel = dietaryStrictnessLabels[dietaryStrictnessOption];
-  const isBaselineDietaryStyle =
-    dietaryStyleOption === "none" || dietaryStyleOption === "omnivore";
+  const isBaselineDietaryStyle = dietaryStyleOption === "none" || dietaryStyleOption === "omnivore";
   const dietaryStrictnessDisplay = isBaselineDietaryStyle
     ? "Nicht relevant"
     : dietaryStrictnessLabel;
@@ -266,7 +272,11 @@ export async function POST(request: NextRequest) {
   }
 
   const age = calculateAge(dateOfBirth);
-  const photoConsent = payload.photoConsent ?? { consent: true, skipDocument: false, signature: null };
+  const photoConsent = payload.photoConsent ?? {
+    consent: true,
+    skipDocument: false,
+    signature: null,
+  };
   const skipDocument = Boolean(photoConsent.skipDocument);
   const signatureSubmission = photoConsent.signature ?? null;
 
@@ -290,7 +300,10 @@ export async function POST(request: NextRequest) {
     }
     const type = documentFile.type?.toLowerCase() ?? "";
     if (type && !ALLOWED_DOCUMENT_TYPES.has(type)) {
-      return NextResponse.json({ error: "Bitte nutze PDF oder Bilddateien (JPG/PNG)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Bitte nutze PDF oder Bilddateien (JPG/PNG)" },
+        { status: 400 },
+      );
     }
     const arrayBuffer = await documentFile.arrayBuffer();
     documentBuffer = new Uint8Array(arrayBuffer);
@@ -300,7 +313,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (signaturePayload && !documentBuffer) {
-    return NextResponse.json({ error: "Digitale Unterschrift konnte nicht gespeichert werden" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Digitale Unterschrift konnte nicht gespeichert werden" },
+      { status: 400 },
+    );
   }
 
   if (!documentBuffer && photoConsent.consent && !skipDocument) {
@@ -327,7 +343,10 @@ export async function POST(request: NextRequest) {
   const invite = redemption.invite;
   const whatsappLinkVisitedAt = redemption.whatsappLinkVisitedAt ?? null;
   if (!isInviteUsable(invite)) {
-    return NextResponse.json({ error: "Dieser Einladungslink ist nicht mehr gültig" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Dieser Einladungslink ist nicht mehr gültig" },
+      { status: 400 },
+    );
   }
 
   if (!invite.showId) {
@@ -339,10 +358,14 @@ export async function POST(request: NextRequest) {
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
-    return NextResponse.json({ error: "Für diese E-Mail existiert bereits ein Konto" }, { status: 409 });
+    return NextResponse.json(
+      { error: "Für diese E-Mail existiert bereits ein Konto" },
+      { status: 409 },
+    );
   }
 
-  const rolesFromInvite = invite.roles?.filter((role): role is Role => (ROLES as readonly string[]).includes(role)) ?? [];
+  const rolesFromInvite =
+    invite.roles?.filter((role): role is Role => (ROLES as readonly string[]).includes(role)) ?? [];
   const roles = withAutoCast(sortRoles(rolesFromInvite.length ? rolesFromInvite : ["member"]));
   const primaryRole = roles[roles.length - 1];
 
@@ -471,7 +494,7 @@ export async function POST(request: NextRequest) {
         );
 
         const filters = normalizedInterests.map(([, original]) => ({
-          name: { equals: original, mode: 'insensitive' as const },
+          name: { equals: original, mode: "insensitive" as const },
         }));
 
         let interestRecords = filters.length
@@ -525,7 +548,8 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const shouldCreateConsent = photoConsent.consent || documentBuffer || (age !== null && age < 18);
+      const shouldCreateConsent =
+        photoConsent.consent || documentBuffer || (age !== null && age < 18);
       if (shouldCreateConsent) {
         await tx.photoConsent.create({
           data: {
@@ -537,8 +561,8 @@ export async function POST(request: NextRequest) {
             documentSize: documentSize ?? undefined,
             documentUploadedAt: documentBuffer ? new Date() : null,
             documentData: documentBuffer ?? undefined,
-            signatureVersion: signaturePayload ? signatureVersion ?? "velocity.v1" : null,
-            signatureCapturedAt: signaturePayload ? signatureCapturedAt ?? new Date() : null,
+            signatureVersion: signaturePayload ? (signatureVersion ?? "velocity.v1") : null,
+            signatureCapturedAt: signaturePayload ? (signatureCapturedAt ?? new Date()) : null,
             signaturePayload: signaturePayload ?? undefined,
           },
         });
@@ -565,11 +589,17 @@ export async function POST(request: NextRequest) {
         : String(targetValue ?? "").toLowerCase();
 
       if (target.includes("allergen")) {
-        return NextResponse.json({ error: "Du hast dieses Allergen bereits eingetragen." }, { status: 409 });
+        return NextResponse.json(
+          { error: "Du hast dieses Allergen bereits eingetragen." },
+          { status: 409 },
+        );
       }
 
       if (target.includes("email")) {
-        return NextResponse.json({ error: "Für diese E-Mail existiert bereits ein Konto" }, { status: 409 });
+        return NextResponse.json(
+          { error: "Für diese E-Mail existiert bereits ein Konto" },
+          { status: 409 },
+        );
       }
 
       return NextResponse.json({ error: "Daten existieren bereits" }, { status: 409 });

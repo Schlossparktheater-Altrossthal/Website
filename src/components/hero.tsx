@@ -8,7 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Heading, Text } from "@/components/ui/typography";
 import { HeroRotator } from "@/components/hero-rotator";
 
-export function Hero({ images, showMysteryLink = true, showTimelineLink = true }: { images: string[]; showMysteryLink?: boolean; showTimelineLink?: boolean }) {
+export function Hero({
+  images,
+  showMysteryLink = true,
+  showTimelineLink = true,
+}: {
+  images: string[];
+  showMysteryLink?: boolean;
+  showTimelineLink?: boolean;
+}) {
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
@@ -17,12 +25,11 @@ export function Hero({ images, showMysteryLink = true, showTimelineLink = true }
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const rotateImages = images.length > 0 ? images.slice(0, 5) : ["https://picsum.photos/id/1069/1600/900"];
+  const rotateImages =
+    images.length > 0 ? images.slice(0, 5) : ["https://picsum.photos/id/1069/1600/900"];
 
   return (
-    <section
-      className="hero-section relative min-h-[100vh] supports-[min-height:100svh]:min-h-[100svh] supports-[min-height:100dvh]:min-h-[100dvh] w-full overflow-hidden sm:min-h-[90vh] sm:supports-[min-height:100svh]:min-h-[90svh] sm:supports-[min-height:100dvh]:min-h-[90dvh] lg:min-h-[100vh] lg:supports-[min-height:100svh]:min-h-[100svh] lg:supports-[min-height:100dvh]:min-h-[100dvh]"
-    >
+    <section className="hero-section relative min-h-[100vh] supports-[min-height:100svh]:min-h-[100svh] supports-[min-height:100dvh]:min-h-[100dvh] w-full overflow-hidden sm:min-h-[90vh] sm:supports-[min-height:100svh]:min-h-[90svh] sm:supports-[min-height:100dvh]:min-h-[90dvh] lg:min-h-[100vh] lg:supports-[min-height:100svh]:min-h-[100svh] lg:supports-[min-height:100dvh]:min-h-[100dvh]">
       <div
         className="absolute inset-0 z-0 h-full w-full overflow-hidden"
         style={{
@@ -63,7 +70,11 @@ export function Hero({ images, showMysteryLink = true, showTimelineLink = true }
             }}
           >
             <div className="flex flex-col items-center gap-10 md:gap-12">
-              <Heading level="display" weight="bold" className="font-serif text-balance text-primary-foreground">
+              <Heading
+                level="display"
+                weight="bold"
+                className="font-serif text-balance text-primary-foreground"
+              >
                 <span className="relative inline-flex flex-col items-center gap-9">
                   <span
                     aria-hidden="true"
@@ -93,7 +104,10 @@ export function Hero({ images, showMysteryLink = true, showTimelineLink = true }
                       </span>
                     </span>
                   </span>
-                  <span aria-hidden="true" className="mt-1 flex w-36 items-center justify-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="mt-1 flex w-36 items-center justify-center gap-3"
+                  >
                     <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/60 to-transparent" />
                     <span className="h-1.5 w-1.5 rounded-full bg-card/80" />
                     <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/60 to-transparent" />
@@ -108,27 +122,31 @@ export function Hero({ images, showMysteryLink = true, showTimelineLink = true }
                 Ein Sommer. Ein Wochenende. Ein einziges Stück – verborgen zwischen Licht und Laub.
               </Text>
               <div className="flex flex-col items-center justify-center gap-4 md:flex-row md:gap-5">
-                {showMysteryLink ? <Button
-                  asChild
-                  size="xl"
-                  className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold tracking-wide"
-                >
-                  <Link href="/mystery" title="Geheimnis entdecken">
-                    <SparklesIcon aria-hidden className="h-5 w-5" />
-                    <span>Das Geheimnis entdecken</span>
-                  </Link>
-                </Button> : null}
-                {showTimelineLink ? <Button
-                  variant="outline"
-                  asChild
-                  size="xl"
-                  className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] border-white/50 bg-card/10 px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold text-primary-foreground shadow-lg backdrop-blur"
-                >
-                  <Link href="/chronik" title="Chronik öffnen">
-                    <BookOpenIcon aria-hidden className="h-5 w-5" />
-                    <span>Chronik</span>
-                  </Link>
-                </Button> : null}
+                {showMysteryLink ? (
+                  <Button
+                    asChild
+                    size="xl"
+                    className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold tracking-wide"
+                  >
+                    <Link href="/mystery" title="Geheimnis entdecken">
+                      <SparklesIcon aria-hidden className="h-5 w-5" />
+                      <span>Das Geheimnis entdecken</span>
+                    </Link>
+                  </Button>
+                ) : null}
+                {showTimelineLink ? (
+                  <Button
+                    variant="outline"
+                    asChild
+                    size="xl"
+                    className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] border-white/50 bg-card/10 px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold text-primary-foreground shadow-lg backdrop-blur"
+                  >
+                    <Link href="/chronik" title="Chronik öffnen">
+                      <BookOpenIcon aria-hidden className="h-5 w-5" />
+                      <span>Chronik</span>
+                    </Link>
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>

@@ -138,7 +138,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   };
 
   const productionItems: UsageItem[] = [
-    { key: "departmentMemberships", label: "Gewerkemitgliedschaften", count: departmentMemberships },
+    {
+      key: "departmentMemberships",
+      label: "Gewerkemitgliedschaften",
+      count: departmentMemberships,
+    },
     { key: "characterCastings", label: "Besetzungen in Produktionen", count: characterCastings },
     { key: "breakdownAssignments", label: "Szenische Aufgaben", count: breakdownAssignments },
     { key: "rehearsalsCreated", label: "Erstellte Proben", count: rehearsalsCreated },
@@ -154,13 +158,29 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const rehearsalItems: UsageItem[] = [
     { key: "rehearsalInvites", label: "Probeeinladungen", count: rehearsalInvites },
     { key: "rehearsalAttendance", label: "Anwesenheitseinträge", count: rehearsalAttendance },
-    { key: "attendanceLogsAuthored", label: "Anwesenheitsprotokolle (Autor)", count: attendanceLogsAuthored },
-    { key: "attendanceLogsTarget", label: "Anwesenheitsprotokolle (Ziel)", count: attendanceLogsTarget },
+    {
+      key: "attendanceLogsAuthored",
+      label: "Anwesenheitsprotokolle (Autor)",
+      count: attendanceLogsAuthored,
+    },
+    {
+      key: "attendanceLogsTarget",
+      label: "Anwesenheitsprotokolle (Ziel)",
+      count: attendanceLogsTarget,
+    },
     { key: "blockedDays", label: "Gesperrte Tage", count: blockedDays },
     { key: "availabilityEntries", label: "Verfügbarkeitszeiträume", count: availabilityEntries },
     { key: "availabilityDays", label: "Tagesverfügbarkeiten", count: availabilityDayEntries },
-    { key: "availabilityTemplates", label: "Verfügbarkeitsvorlagen", count: availabilityTemplateEntries },
-    { key: "rehearsalProposalsApproved", label: "Freigegebene Probenvorschläge", count: rehearsalProposalsApproved },
+    {
+      key: "availabilityTemplates",
+      label: "Verfügbarkeitsvorlagen",
+      count: availabilityTemplateEntries,
+    },
+    {
+      key: "rehearsalProposalsApproved",
+      label: "Freigegebene Probenvorschläge",
+      count: rehearsalProposalsApproved,
+    },
   ].filter((item) => item.count > 0);
 
   addSection({
@@ -172,8 +192,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const taskItems: UsageItem[] = [
     { key: "generalTasks", label: "Allgemeine Aufgaben", count: generalTasks },
-    { key: "departmentTasksAssigned", label: "Gewerkaufgaben (zugewiesen)", count: departmentTasksAssigned },
-    { key: "departmentTasksCreated", label: "Gewerkaufgaben (erstellt)", count: departmentTasksCreated },
+    {
+      key: "departmentTasksAssigned",
+      label: "Gewerkaufgaben (zugewiesen)",
+      count: departmentTasksAssigned,
+    },
+    {
+      key: "departmentTasksCreated",
+      label: "Gewerkaufgaben (erstellt)",
+      count: departmentTasksCreated,
+    },
   ].filter((item) => item.count > 0);
 
   addSection({
@@ -184,9 +212,21 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   const financeItems: UsageItem[] = [
-    { key: "financeEntriesCreated", label: "Finanzvorgänge angelegt", count: financeEntriesCreated },
-    { key: "financeEntriesApproved", label: "Finanzvorgänge freigegeben", count: financeEntriesApproved },
-    { key: "financeEntriesPaid", label: "Als zahlendes Mitglied hinterlegt", count: financeEntriesPaid },
+    {
+      key: "financeEntriesCreated",
+      label: "Finanzvorgänge angelegt",
+      count: financeEntriesCreated,
+    },
+    {
+      key: "financeEntriesApproved",
+      label: "Finanzvorgänge freigegeben",
+      count: financeEntriesApproved,
+    },
+    {
+      key: "financeEntriesPaid",
+      label: "Als zahlendes Mitglied hinterlegt",
+      count: financeEntriesPaid,
+    },
     { key: "financeLogsAuthored", label: "Finanzprotokolle", count: financeLogsAuthored },
   ].filter((item) => item.count > 0);
 
@@ -217,7 +257,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     { key: "inviteRedemptions", label: "Einladungen eingelöst", count: inviteRedemptions },
     { key: "onboardingProfile", label: "Onboardingprofil", count: onboardingProfileCount },
     { key: "photoConsent", label: "Fotoeinverständnisse", count: photoConsentCount },
-    { key: "approvedPhotoConsents", label: "Fotoeinverständnisse geprüft", count: approvedPhotoConsents },
+    {
+      key: "approvedPhotoConsents",
+      label: "Fotoeinverständnisse geprüft",
+      count: approvedPhotoConsents,
+    },
   ].filter((item) => item.count > 0);
 
   addSection({

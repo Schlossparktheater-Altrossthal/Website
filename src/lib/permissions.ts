@@ -51,7 +51,11 @@ export const PROFILE_DATA_PERMISSION_KEYS = {
 
 // Registry of all permissions used by the app
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
-  { key: "PRIVATE.DASHBOARD.OVERVIEW.VIEW", label: "Mitglieder-Dashboard öffnen", category: "base" },
+  {
+    key: "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
+    label: "Mitglieder-Dashboard öffnen",
+    category: "base",
+  },
   { key: "PRIVATE.PROFILE.OWN.VIEW", label: "Profilbereich aufrufen", category: "base" },
   {
     key: "PRIVATE.SUPPORT.ISSUE.VIEW",
@@ -63,7 +67,8 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {
     key: "PRIVATE.SUPPORT.ISSUE.MANAGE",
     label: "Feedback-Anliegen verwalten",
-    description: "Status, Priorität und Moderation für gemeldete Anliegen im Issue-Board übernehmen.",
+    description:
+      "Status, Priorität und Moderation für gemeldete Anliegen im Issue-Board übernehmen.",
     category: "communication",
   },
   {
@@ -82,8 +87,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {
     key: "PRIVATE.DEPARTMENT.OWN.VIEW",
     label: "Gewerkeplanung einsehen",
-    description:
-      'Zugang zum Bereich "Gewerkeplanung" mit Aufgabenübersicht und Terminvorschlägen.',
+    description: 'Zugang zum Bereich "Gewerkeplanung" mit Aufgabenübersicht und Terminvorschlägen.',
     category: "department",
   },
   {
@@ -107,7 +111,11 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
       "Einsicht und Pflege von Allergien, Unverträglichkeiten und Ernährungspräferenzen zur sicheren Verpflegung.",
     category: "department",
   },
-  { key: "PRIVATE.REHEARSAL.PLANNING.MANAGE", label: "Probenplanung verwalten", category: "rehearsal" },
+  {
+    key: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
+    label: "Probenplanung verwalten",
+    category: "rehearsal",
+  },
   {
     key: "PRIVATE.PRODUCTION.SHOW.MANAGE",
     label: "Produktionsplanung öffnen",
@@ -147,8 +155,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {
     key: "PRIVATE.SETTINGS.THEME.MANAGE",
     label: "Website-Einstellungen verwalten",
-    description:
-      "Theme-Farben, Branding und öffentliche Website-Parameter anpassen.",
+    description: "Theme-Farben, Branding und öffentliche Website-Parameter anpassen.",
     category: "pages",
   },
   {
@@ -242,7 +249,6 @@ const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
 
 // Grouped permission helpers
 
-
 const MEASUREMENT_PERMISSION_KEY = PROFILE_DATA_PERMISSION_KEYS.measurements;
 
 const PROFILE_ADMIN_PERMISSION_KEYS = [
@@ -257,10 +263,6 @@ const MEASUREMENT_DEFAULT_ROLE_NAMES = [
   "board",
   "finance",
 ] as const satisfies readonly Role[];
-
-
-
-
 
 // Baseline permissions that every authenticated user should retain even when not explicitly granted
 const BASELINE_PERMISSION_KEYS = new Set([
@@ -344,7 +346,9 @@ async function ensureMeasurementRoleDefaultAssignments() {
 
   const [permission, roles] = await Promise.all([
     prisma.permission.findUnique({ where: { key: MEASUREMENT_PERMISSION_KEY } }),
-    prisma.appRole.findMany({ where: { name: { in: Array.from(MEASUREMENT_DEFAULT_ROLE_NAMES) } } }),
+    prisma.appRole.findMany({
+      where: { name: { in: Array.from(MEASUREMENT_DEFAULT_ROLE_NAMES) } },
+    }),
   ]);
 
   if (!permission || roles.length === 0) {
@@ -369,7 +373,9 @@ async function ensureProfileAdminDefaultAssignments() {
 
   const [role, permissions] = await Promise.all([
     prisma.appRole.findUnique({ where: { name: "board" } }),
-    prisma.permission.findMany({ where: { key: { in: Array.from(PROFILE_ADMIN_PERMISSION_KEYS) } } }),
+    prisma.permission.findMany({
+      where: { key: { in: Array.from(PROFILE_ADMIN_PERMISSION_KEYS) } },
+    }),
   ]);
 
   if (!role || permissions.length === 0) {
@@ -483,10 +489,7 @@ export async function hasPermission(user: UserLike, permissionKey: string): Prom
   if (systemRoles.length) {
     roleFilters.push({
       role: {
-        OR: [
-          { systemRole: { in: systemRoles } },
-          { name: { in: systemRoles } },
-        ],
+        OR: [{ systemRole: { in: systemRoles } }, { name: { in: systemRoles } }],
       },
     });
   }
@@ -527,10 +530,7 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   if (systemRoles.length) {
     roleFilters.push({
       role: {
-        OR: [
-          { systemRole: { in: systemRoles } },
-          { name: { in: systemRoles } },
-        ],
+        OR: [{ systemRole: { in: systemRoles } }, { name: { in: systemRoles } }],
       },
     });
   }

@@ -4,7 +4,9 @@ import { requireAuth } from "@/lib/rbac";
 
 import { ServerAnalyticsContent } from "./server-analytics-content";
 
-function userHasOwnerRole(user: { role?: string | null; roles?: unknown } | null | undefined): boolean {
+function userHasOwnerRole(
+  user: { role?: string | null; roles?: unknown } | null | undefined,
+): boolean {
   if (!user) {
     return false;
   }

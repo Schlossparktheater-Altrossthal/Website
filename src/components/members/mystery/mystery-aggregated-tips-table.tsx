@@ -41,19 +41,33 @@ export function MysteryAggregatedTipsTable({ tips }: { tips: MysteryTipEntry[] }
             <table className="min-w-full divide-y divide-border text-left text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-3 py-2 font-semibold">Tipp</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Normalisierte Form</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Häufigkeit</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Zuletzt aktualisiert</th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Tipp
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Normalisierte Form
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Häufigkeit
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Zuletzt aktualisiert
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
                 {tips.map((tip) => (
                   <tr key={tip.id} className="bg-background/60">
                     <td className="px-3 py-2 align-top font-medium text-foreground">{tip.text}</td>
-                    <td className="px-3 py-2 align-top text-muted-foreground">{tip.normalizedText}</td>
-                    <td className="px-3 py-2 align-top font-semibold text-foreground">{tip.count}</td>
-                    <td className="px-3 py-2 align-top text-muted-foreground">{formatTimestamp(tip.updatedAt)}</td>
+                    <td className="px-3 py-2 align-top text-muted-foreground">
+                      {tip.normalizedText}
+                    </td>
+                    <td className="px-3 py-2 align-top font-semibold text-foreground">
+                      {tip.count}
+                    </td>
+                    <td className="px-3 py-2 align-top text-muted-foreground">
+                      {formatTimestamp(tip.updatedAt)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

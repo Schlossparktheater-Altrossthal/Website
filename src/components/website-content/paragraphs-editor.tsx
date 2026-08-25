@@ -92,7 +92,13 @@ export function ParagraphsEditor({ contentId, initialContent }: Props) {
             onChange={(e) => updateParagraph(index, e.target.value)}
             placeholder={`Absatz ${index + 1}`}
           />
-          <Button variant="ghost" size="icon" className="mt-2 shrink-0" aria-label="Absatz löschen" onClick={() => setDeleteIndex(index)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="mt-2 shrink-0"
+            aria-label="Absatz löschen"
+            onClick={() => setDeleteIndex(index)}
+          >
             <TrashIcon className="h-4 w-4" />
           </Button>
         </div>
@@ -108,13 +114,20 @@ export function ParagraphsEditor({ contentId, initialContent }: Props) {
       </div>
       <ConfirmDialog
         open={deleteIndex !== null}
-        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteIndex(null);
+        }}
         title="Absatz löschen?"
         description="Dieser Absatz wird dauerhaft entfernt."
         confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         variant="destructive"
-        onConfirm={() => { if (deleteIndex !== null) { deleteParagraph(deleteIndex); setDeleteIndex(null); } }}
+        onConfirm={() => {
+          if (deleteIndex !== null) {
+            deleteParagraph(deleteIndex);
+            setDeleteIndex(null);
+          }
+        }}
         onCancel={() => setDeleteIndex(null)}
       />
     </div>

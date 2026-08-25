@@ -354,7 +354,9 @@ export const DEV_ONBOARDING_ANALYTICS_FIXTURE: OnboardingAnalytics = {
     },
     [],
   ),
-  rolePreferences: [...ROLE_PREFS_DEMO_2024, ...ROLE_PREFS_DEMO_2023].map((entry) => ({ ...entry })),
+  rolePreferences: [...ROLE_PREFS_DEMO_2024, ...ROLE_PREFS_DEMO_2023].map((entry) => ({
+    ...entry,
+  })),
   dietary: [
     { level: "MILD", count: 2 },
     { level: "MODERATE", count: 1 },
@@ -366,4 +368,3 @@ export const DEV_ONBOARDING_ANALYTICS_FIXTURE: OnboardingAnalytics = {
   talentProfiles: TALENT_PROFILES,
   showAggregations: SHOW_AGGREGATIONS,
 };
-

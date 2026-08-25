@@ -55,16 +55,14 @@ function createSignature(encodedPayload: string): Buffer {
   return hmac.digest();
 }
 
-export function createSyncToken(
-  userId: string,
-  options: { ttlMs?: number } = {},
-): string {
+export function createSyncToken(userId: string, options: { ttlMs?: number } = {}): string {
   if (!userId || userId.trim().length === 0) {
     throw new Error("Cannot create sync token without user id");
   }
 
   const now = Date.now();
-  const ttl = typeof options.ttlMs === "number" && options.ttlMs > 0 ? options.ttlMs : DEFAULT_TTL_MS;
+  const ttl =
+    typeof options.ttlMs === "number" && options.ttlMs > 0 ? options.ttlMs : DEFAULT_TTL_MS;
   const payload: SyncTokenClaims = {
     version: TOKEN_VERSION,
     userId,
@@ -125,4 +123,3 @@ export function verifySyncToken(token: string | null | undefined): SyncTokenClai
 
   return payload;
 }
-

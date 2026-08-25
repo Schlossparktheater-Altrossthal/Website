@@ -158,7 +158,9 @@ function ensureShowSummary(
   return summary;
 }
 
-export async function collectOnboardingAnalytics(now: Date = new Date()): Promise<OnboardingAnalytics> {
+export async function collectOnboardingAnalytics(
+  now: Date = new Date(),
+): Promise<OnboardingAnalytics> {
   if (!databaseEnabled()) {
     return DEV_ONBOARDING_ANALYTICS_FIXTURE;
   }
@@ -206,7 +208,9 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
         show: { select: { id: true, title: true, year: true } },
       },
     }),
-    prisma.memberRolePreference.findMany({ select: { userId: true, code: true, domain: true, weight: true } }),
+    prisma.memberRolePreference.findMany({
+      select: { userId: true, code: true, domain: true, weight: true },
+    }),
     prisma.userInterest.findMany({ include: { interest: true } }),
     prisma.dietaryRestriction.groupBy({
       by: ["level"],
@@ -257,7 +261,9 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
         usageCount: invite.usageCount,
         remainingUses: status.remainingUses,
         isActive: status.isActive,
-        show: invite.show ? { id: invite.show.id, title: invite.show.title, year: invite.show.year } : null,
+        show: invite.show
+          ? { id: invite.show.id, title: invite.show.title, year: invite.show.year }
+          : null,
       };
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -296,8 +302,14 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
   const preferenceKey = (domain: RolePreferenceDomain, code: string) => `${domain}:${code}`;
-  const prefMap = new Map<string, { domain: RolePreferenceDomain; code: string; total: number; responses: number }>();
-  const preferencesByUser = new Map<string, { code: string; domain: RolePreferenceDomain; weight: number }[]>();
+  const prefMap = new Map<
+    string,
+    { domain: RolePreferenceDomain; code: string; total: number; responses: number }
+  >();
+  const preferencesByUser = new Map<
+    string,
+    { code: string; domain: RolePreferenceDomain; weight: number }[]
+  >();
   for (const pref of rolePreferences) {
     const key = preferenceKey(pref.domain, pref.code);
     if (!prefMap.has(key)) {
@@ -365,7 +377,9 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
       const age = calculateAge(user?.dateOfBirth ?? null);
       const hasPendingPhotoConsent = user?.photoConsent?.status === "pending";
       const requiresGuardianDocument =
-        typeof age === "number" && age < 18 && (!user?.photoConsent || !user.photoConsent.documentUploadedAt);
+        typeof age === "number" &&
+        age < 18 &&
+        (!user?.photoConsent || !user.photoConsent.documentUploadedAt);
       const show = profile.show ?? profile.invite?.show ?? null;
 
       if (show) {
@@ -444,8 +458,12 @@ export async function collectOnboardingAnalytics(now: Date = new Date()): Promis
       } satisfies OnboardingTalentProfile;
     })
     .sort((a, b) => {
-      const aTime = a.completedAt ? new Date(a.completedAt).getTime() : new Date(a.createdAt).getTime();
-      const bTime = b.completedAt ? new Date(b.completedAt).getTime() : new Date(b.createdAt).getTime();
+      const aTime = a.completedAt
+        ? new Date(a.completedAt).getTime()
+        : new Date(a.createdAt).getTime();
+      const bTime = b.completedAt
+        ? new Date(b.completedAt).getTime()
+        : new Date(b.createdAt).getTime();
       return bTime - aTime;
     });
 

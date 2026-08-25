@@ -11,19 +11,19 @@ import type {
   TicketRealtimePayload,
   InventoryRealtimePayload,
   ServerToClientEvents,
-} from '../types';
-import type { Server as SocketIOServer, Socket } from 'socket.io';
+} from "../types";
+import type { Server as SocketIOServer, Socket } from "socket.io";
 
 export interface PresenceTrackingInput {
   userId: string;
   room: RoomType;
-  action: 'join' | 'leave';
+  action: "join" | "leave";
   occurredAt: Date;
 }
 
 export interface RealtimeCoreOptions {
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
-  logger?: Pick<Console, 'error' | 'warn' | 'log'>;
+  logger?: Pick<Console, "error" | "warn" | "log">;
   toISO?: (value: Date) => string;
   trackPresenceEvent?: (payload: PresenceTrackingInput) => void | Promise<void>;
 }
@@ -38,10 +38,20 @@ export interface ReleaseConnectionResult {
   userName?: string;
 }
 
-type SocketIOServerInstance = SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
-type SocketInstance = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
+type SocketIOServerInstance = SocketIOServer<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
+type SocketInstance = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
 
-type EmitTargets = 'all' | 'subscribers' | Iterable<string>;
+type EmitTargets = "all" | "subscribers" | Iterable<string>;
 
 export interface RealtimeCore {
   readonly io: SocketIOServerInstance;
@@ -59,7 +69,11 @@ export interface RealtimeCore {
   emitOnlineStatsUpdate(options?: { targetSocket?: SocketInstance; broadcast?: boolean }): void;
   emitUserJoined(details: { userId: string; userName?: string; targets?: EmitTargets }): void;
   emitUserLeft(details: { userId: string; userName?: string; targets?: EmitTargets }): void;
-  emitRehearsalPresence(details: { room: RoomType; socket: SocketInstance; action: 'join' | 'leave' }): void;
+  emitRehearsalPresence(details: {
+    room: RoomType;
+    socket: SocketInstance;
+    action: "join" | "leave";
+  }): void;
   emitRehearsalUsersList(details: { rehearsalId: string; socket: SocketInstance }): Promise<void>;
   broadcast(event: RealtimeEvent, rooms: RoomType | RoomType[], excludeSocketId?: string): boolean;
   broadcastAttendanceUpdate(payload: {
@@ -70,24 +84,32 @@ export interface RealtimeCore {
     actorUserId?: string | null;
   }): boolean;
   broadcastRehearsalCreated(payload: {
-    rehearsal: RehearsalCreatedEvent['rehearsal'];
+    rehearsal: RehearsalCreatedEvent["rehearsal"];
     targetUserIds?: string[];
   }): boolean;
   broadcastRehearsalUpdated(
-    payload: Omit<RehearsalUpdatedEvent, 'timestamp'>,
+    payload: Omit<RehearsalUpdatedEvent, "timestamp">,
     options?: { timestamp?: Date | number },
   ): boolean;
   sendNotification(
-    payload: Omit<NotificationCreatedEvent, 'timestamp'>,
+    payload: Omit<NotificationCreatedEvent, "timestamp">,
     options?: { timestamp?: Date | number },
   ): boolean;
   broadcastInventoryEvent(
     payload: InventoryRealtimePayload,
-    options?: { rooms?: RoomType | RoomType[]; excludeSocketId?: string; timestamp?: Date | number },
+    options?: {
+      rooms?: RoomType | RoomType[];
+      excludeSocketId?: string;
+      timestamp?: Date | number;
+    },
   ): boolean;
   broadcastTicketScanEvent(
     payload: TicketRealtimePayload,
-    options?: { rooms?: RoomType | RoomType[]; excludeSocketId?: string; timestamp?: Date | number },
+    options?: {
+      rooms?: RoomType | RoomType[];
+      excludeSocketId?: string;
+      timestamp?: Date | number;
+    },
   ): boolean;
   broadcastOnboardingDashboardUpdate(
     payload: {

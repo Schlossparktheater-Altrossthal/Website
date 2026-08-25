@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AnalyticsHttpSummary, AnalyticsRealtimeSummary, AnalyticsSessionSummary } from "@prisma/client";
+import type {
+  AnalyticsHttpSummary,
+  AnalyticsRealtimeSummary,
+  AnalyticsSessionSummary,
+} from "@prisma/client";
 
 import { collectServerAnalytics } from "@/lib/server-analytics";
 
@@ -118,7 +122,9 @@ describe("collectServerAnalytics", () => {
       eventCounts: { ping: 20 },
     };
 
-    prismaMock.analyticsHttpSummary.findFirst.mockResolvedValue(httpSummary as AnalyticsHttpSummary);
+    prismaMock.analyticsHttpSummary.findFirst.mockResolvedValue(
+      httpSummary as AnalyticsHttpSummary,
+    );
     prismaMock.analyticsHttpPeakHour.findMany.mockResolvedValue([]);
     prismaMock.analyticsSessionSummary.findFirst.mockResolvedValue(
       sessionSummary as AnalyticsSessionSummary,
@@ -138,7 +144,9 @@ describe("collectServerAnalytics", () => {
     expect(analytics.requestBreakdown.members.realtimeEvents).toBe(12);
     expect(analytics.requestBreakdown.members.avgSessionDurationSeconds).toBe(450);
     expect(analytics.requestBreakdown.api.backgroundJobs).toBe(21);
-    const loggedOutSegment = analytics.visitorDistribution.find((segment) => segment.id === "logged-out");
+    const loggedOutSegment = analytics.visitorDistribution.find(
+      (segment) => segment.id === "logged-out",
+    );
     expect(loggedOutSegment?.requests).toBe(90);
     expect(loggedOutSegment?.avgSessionDurationSeconds).toBe(260);
     const botSegment = analytics.visitorDistribution.find((segment) => segment.id === "bot");

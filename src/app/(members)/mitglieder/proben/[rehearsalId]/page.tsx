@@ -87,7 +87,11 @@ export default async function RehearsalDetailPage({
   }
 
   if (rehearsal.status === "DRAFT" && !canPlan) {
-    return <div className="text-sm text-muted-foreground">Dieser Entwurf ist noch nicht veröffentlicht.</div>;
+    return (
+      <div className="text-sm text-muted-foreground">
+        Dieser Entwurf ist noch nicht veröffentlicht.
+      </div>
+    );
   }
 
   const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
@@ -156,34 +160,36 @@ export default async function RehearsalDetailPage({
         </Card>
       ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Eingeladene Mitglieder</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {invitees.length ? (
-              <ul className="space-y-2">
-                {invitees.map((entry) => {
-                  return (
-                    <li
-                      key={entry.id}
+      <Card>
+        <CardHeader>
+          <CardTitle>Eingeladene Mitglieder</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {invitees.length ? (
+            <ul className="space-y-2">
+              {invitees.map((entry) => {
+                return (
+                  <li
+                    key={entry.id}
                     className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/70 p-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div>
-                        <p className="font-medium text-foreground">{displayName(entry.user)}</p>
-                        {entry.user.email ? (
-                          <p className="text-xs text-muted-foreground">{entry.user.email}</p>
-                        ) : null}
-                      </div>
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">{displayName(entry.user)}</p>
+                      {entry.user.email ? (
+                        <p className="text-xs text-muted-foreground">{entry.user.email}</p>
+                      ) : null}
+                    </div>
                     <Badge variant="outline" className="bg-muted text-muted-foreground">
                       Erwartet
                     </Badge>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-            <p className="text-sm text-muted-foreground">Für diese Probe wurden noch keine Einladungen vergeben.</p>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Für diese Probe wurden noch keine Einladungen vergeben.
+            </p>
           )}
         </CardContent>
       </Card>

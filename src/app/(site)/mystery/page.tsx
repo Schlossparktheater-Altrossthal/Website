@@ -65,7 +65,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-
 type ClueContent = {
   text?: string;
   url?: string;
@@ -88,7 +87,12 @@ function renderClueBody(clue: Clue, content: ClueContent) {
   if (clue.type === "image") {
     return (
       <div className="relative h-64 w-full">
-        <Image src={content.url ?? "/next.svg"} alt={content.alt ?? "Hinweis"} fill className="object-contain" />
+        <Image
+          src={content.url ?? "/next.svg"}
+          alt={content.alt ?? "Hinweis"}
+          fill
+          className="object-contain"
+        />
       </div>
     );
   }
@@ -114,19 +118,16 @@ export default async function MysteryPage() {
   let clueSummaries: Awaited<ReturnType<typeof getMysteryClueSummaries>> = [];
 
   if (process.env.DATABASE_URL) {
-    const [cluesResult, tipsResult, settingsResult, scoreboardResult, clueSummaryResult] = await Promise.allSettled([
-      prisma.clue.findMany({ orderBy: [{ index: "asc" }] }),
-      prisma.mysteryTip.findMany({
-        orderBy: [
-          { count: "desc" },
-          { updatedAt: "desc" },
-          { createdAt: "asc" },
-        ],
-      }),
-      readMysterySettings(),
-      getMysteryScoreboard(10),
-      getMysteryClueSummaries(),
-    ]);
+    const [cluesResult, tipsResult, settingsResult, scoreboardResult, clueSummaryResult] =
+      await Promise.allSettled([
+        prisma.clue.findMany({ orderBy: [{ index: "asc" }] }),
+        prisma.mysteryTip.findMany({
+          orderBy: [{ count: "desc" }, { updatedAt: "desc" }, { createdAt: "asc" }],
+        }),
+        readMysterySettings(),
+        getMysteryScoreboard(10),
+        getMysteryClueSummaries(),
+      ]);
 
     clues = cluesResult.status === "fulfilled" ? cluesResult.value : [];
     tips = tipsResult.status === "fulfilled" ? tipsResult.value : [];
@@ -140,7 +141,8 @@ export default async function MysteryPage() {
   const initialCountdownTargetIso = resolvedSettings.countdownTarget
     ? resolvedSettings.countdownTarget.toISOString()
     : null;
-  const effectiveExpirationMessage = resolvedSettings.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
+  const effectiveExpirationMessage =
+    resolvedSettings.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE;
   const updatedAtIso = resolvedSettings.updatedAt ? resolvedSettings.updatedAt.toISOString() : null;
 
   const visibleClues = clues.filter((clue) => clue.published && clue.releaseAt <= now);
@@ -171,7 +173,9 @@ export default async function MysteryPage() {
     lastUpdated: entry.lastUpdated ? entry.lastUpdated.toISOString() : null,
   }));
 
-  const isFirstRiddleReleased = Boolean(firstRiddle && firstRiddle.published && firstRiddle.releaseAt <= now);
+  const isFirstRiddleReleased = Boolean(
+    firstRiddle && firstRiddle.published && firstRiddle.releaseAt <= now,
+  );
   const showSilentMessage = !isFirstRiddleReleased && visibleClues.length === 0;
   const hasAdditionalClues = remainingClues.length > 0;
 
@@ -182,7 +186,8 @@ export default async function MysteryPage() {
         <div className="space-y-2">
           {showSilentMessage && <Text tone="muted">Die Schatten sind noch still…</Text>}
           <Text>
-            Jeden Monat kommt ein neues Rätsel hinzu, um den Titel des nächsten Stückes immer mehr aufzudecken.
+            Jeden Monat kommt ein neues Rätsel hinzu, um den Titel des nächsten Stückes immer mehr
+            aufzudecken.
           </Text>
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -213,7 +218,9 @@ export default async function MysteryPage() {
                     </Text>
                   </>
                 ) : (
-                  <Text tone="muted">Das Rätsel wird gerade vorbereitet. Schau bald wieder vorbei.</Text>
+                  <Text tone="muted">
+                    Das Rätsel wird gerade vorbereitet. Schau bald wieder vorbei.
+                  </Text>
                 )
               ) : (
                 <div className="space-y-2">
@@ -221,7 +228,11 @@ export default async function MysteryPage() {
                   <Text tone="muted">Das 1. Rätsel kommt bald.</Text>
                   {firstRiddle?.releaseAt ? (
                     <Text variant="small" tone="muted">
-                      Geplant für {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(firstRiddle.releaseAt)}
+                      Geplant für{" "}
+                      {new Intl.DateTimeFormat("de-DE", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(firstRiddle.releaseAt)}
                     </Text>
                   ) : null}
                 </div>
@@ -252,12 +263,24 @@ export default async function MysteryPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      {isReleased ? <EyeIcon className="h-4 w-4" aria-hidden /> : <LockIcon className="h-4 w-4" aria-hidden />}
+                      {isReleased ? (
+                        <EyeIcon className="h-4 w-4" aria-hidden />
+                      ) : (
+                        <LockIcon className="h-4 w-4" aria-hidden />
+                      )}
                       <Text variant="small" tone="muted">
-                        {isReleased ? "Enthüllt" : "Geplant"} am {new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(clue.releaseAt)}
+                        {isReleased ? "Enthüllt" : "Geplant"} am{" "}
+                        {new Intl.DateTimeFormat("de-DE", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(clue.releaseAt)}
                       </Text>
                     </div>
-                    {isReleased ? renderClueBody(clue, content) : <Text tone="muted">Dieser Hinweis ist noch verschlossen.</Text>}
+                    {isReleased ? (
+                      renderClueBody(clue, content)
+                    ) : (
+                      <Text tone="muted">Dieser Hinweis ist noch verschlossen.</Text>
+                    )}
                   </CardContent>
                 </Card>
               );

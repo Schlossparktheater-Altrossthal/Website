@@ -45,9 +45,10 @@ describe("web vitals analytics route", () => {
     );
   });
 
-  const createRequest = (body: unknown) => ({
-    json: async () => body,
-  }) as NextRequest;
+  const createRequest = (body: unknown) =>
+    ({
+      json: async () => body,
+    }) as NextRequest;
 
   it("stores normalized metrics and device snapshot", async () => {
     const response = await POST(

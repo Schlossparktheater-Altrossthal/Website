@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckIcon, LockIcon, MessageCircleIcon, ShieldCheckIcon, TargetIcon } from "@/components/ui/action-icons";
+import {
+  CheckIcon,
+  LockIcon,
+  MessageCircleIcon,
+  ShieldCheckIcon,
+  TargetIcon,
+} from "@/components/ui/action-icons";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -202,7 +208,8 @@ function getEducationSummary(form: EducationFormSlice) {
   }
 
   const categoryLabel =
-    EDUCATION_CATEGORY_OPTIONS.find((option) => option.value === form.educationCategory)?.label ?? form.educationCategory;
+    EDUCATION_CATEGORY_OPTIONS.find((option) => option.value === form.educationCategory)?.label ??
+    form.educationCategory;
   const details: string[] = [];
 
   if (form.educationCategory === "school") {
@@ -346,9 +353,7 @@ function createInitialCrewPreferences(variant: OnboardingWizardVariant): Prefere
 }
 
 function getIntroHeading(variant: OnboardingWizardVariant) {
-  return variant === "regie"
-    ? "Willkommen im Regieteam"
-    : "Willkommen im Zukunftstheater";
+  return variant === "regie" ? "Willkommen im Regieteam" : "Willkommen im Zukunftstheater";
 }
 
 function getIntroDescription(variant: OnboardingWizardVariant) {
@@ -449,7 +454,12 @@ function formatProductionLabel(production: InviteMeta["production"]) {
   return `Produktion ${production.year}`;
 }
 
-export function OnboardingWizard({ token, sessionToken, invite, variant = "default" }: OnboardingWizardProps) {
+export function OnboardingWizard({
+  token,
+  sessionToken,
+  invite,
+  variant = "default",
+}: OnboardingWizardProps) {
   const router = useRouter();
   const isRegieVariant = variant === "regie";
   const [step, setStep] = useState(0);
@@ -463,10 +473,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
   const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
   const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
-  const {
-    suggestions: interestSuggestions,
-    loading: interestsLoading,
-  } = useInterestSuggestions();
+  const { suggestions: interestSuggestions, loading: interestsLoading } = useInterestSuggestions();
   const [form, setForm] = useState(() => createInitialFormState(variant));
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
   const derivedFocus = useMemo(() => {
@@ -474,20 +481,18 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       return "tech" as const;
     }
     return (
-      deriveOnboardingFocusFromPreferences(
-        [
-          ...form.actingPreferences.map((pref) => ({
-            domain: "acting" as const,
-            weight: pref.weight,
-            enabled: pref.enabled,
-          })),
-          ...form.crewPreferences.map((pref) => ({
-            domain: "crew" as const,
-            weight: pref.weight,
-            enabled: pref.enabled,
-          })),
-        ],
-      ) ?? null
+      deriveOnboardingFocusFromPreferences([
+        ...form.actingPreferences.map((pref) => ({
+          domain: "acting" as const,
+          weight: pref.weight,
+          enabled: pref.enabled,
+        })),
+        ...form.crewPreferences.map((pref) => ({
+          domain: "crew" as const,
+          weight: pref.weight,
+          enabled: pref.enabled,
+        })),
+      ]) ?? null
     );
   }, [form.actingPreferences, form.crewPreferences, isRegieVariant]);
 
@@ -595,16 +600,11 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
   }, [form.nutritionCustomStyle, form.nutritionStyle]);
 
   const nutritionStrictnessLabel = useMemo(
-    () =>
-      resolveDietaryStrictnessLabel(
-        form.nutritionStyle,
-        form.nutritionStrictness,
-      ),
+    () => resolveDietaryStrictnessLabel(form.nutritionStyle, form.nutritionStrictness),
     [form.nutritionStrictness, form.nutritionStyle],
   );
 
-  const isAllesesser =
-    form.nutritionStyle === "omnivore" || form.nutritionStyle === "none";
+  const isAllesesser = form.nutritionStyle === "omnivore" || form.nutritionStyle === "none";
 
   useEffect(() => {
     if (form.nutritionStyle !== "none") return;
@@ -619,7 +619,6 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
       nutritionStrictness: DEFAULT_STRICTNESS_FOR_NONE,
     }));
   }, [form.nutritionStrictness, form.nutritionStyle, isAllesesser, setForm]);
-
 
   const availableInterestSuggestions = useMemo(() => {
     const selected = new Set(form.interests.map((item) => item.toLowerCase()));
@@ -692,19 +691,22 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
     });
   }, []);
 
-  const updatePreferenceWeight = useCallback((domain: "acting" | "crew", code: string, weight: number) => {
-    if (!Number.isFinite(weight)) {
-      return;
-    }
-    const normalizedWeight = normalizeRolePreferenceWeight(weight);
-    setForm((prev) => {
-      const key = domain === "acting" ? "actingPreferences" : "crewPreferences";
-      const updated = prev[key].map((pref) =>
-        pref.code === code ? { ...pref, weight: normalizedWeight } : pref,
-      );
-      return { ...prev, [key]: updated };
-    });
-  }, []);
+  const updatePreferenceWeight = useCallback(
+    (domain: "acting" | "crew", code: string, weight: number) => {
+      if (!Number.isFinite(weight)) {
+        return;
+      }
+      const normalizedWeight = normalizeRolePreferenceWeight(weight);
+      setForm((prev) => {
+        const key = domain === "acting" ? "actingPreferences" : "crewPreferences";
+        const updated = prev[key].map((pref) =>
+          pref.code === code ? { ...pref, weight: normalizedWeight } : pref,
+        );
+        return { ...prev, [key]: updated };
+      });
+    },
+    [],
+  );
 
   const removeCustomCrewPreference = useCallback((code: string) => {
     setForm((prev) => ({
@@ -715,7 +717,10 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
 
   const preferenceSummary = useMemo(() => {
     const buildLabel = (entry: PreferenceEntry) => getRolePreferenceWeightLabel(entry.weight);
-    const mapEntry = (entry: PreferenceEntry, domain: "acting" | "crew"): PreferenceSummaryEntry => ({
+    const mapEntry = (
+      entry: PreferenceEntry,
+      domain: "acting" | "crew",
+    ): PreferenceSummaryEntry => ({
       code: entry.code,
       title: entry.title,
       weight: entry.weight,
@@ -785,7 +790,9 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
     }
 
     const normalized = trimmed.toLocaleLowerCase("de-DE");
-    if (form.dietary.some((entry) => entry.allergen.trim().toLocaleLowerCase("de-DE") === normalized)) {
+    if (
+      form.dietary.some((entry) => entry.allergen.trim().toLocaleLowerCase("de-DE") === normalized)
+    ) {
       setError("Dieses Allergen hast du bereits eingetragen.");
       return;
     }
@@ -865,7 +872,7 @@ export function OnboardingWizard({ token, sessionToken, invite, variant = "defau
     setDocumentFromFile(null);
   };
 
-const handleDownloadParentalTemplate = async () => {
+  const handleDownloadParentalTemplate = async () => {
     setDownloadError(null);
     try {
       const response = await fetch("/api/photo-consents/parental-template");
@@ -1010,7 +1017,12 @@ const handleDownloadParentalTemplate = async () => {
       const sinceYear = form.memberSinceYear.trim();
       if (sinceYear) {
         const parsedYear = Number.parseInt(sinceYear, 10);
-        if (!Number.isFinite(parsedYear) || sinceYear.length !== 4 || parsedYear < 1900 || parsedYear > CURRENT_YEAR) {
+        if (
+          !Number.isFinite(parsedYear) ||
+          sinceYear.length !== 4 ||
+          parsedYear < 1900 ||
+          parsedYear > CURRENT_YEAR
+        ) {
           setError(`Bitte gib ein gültiges Jahr zwischen 1900 und ${CURRENT_YEAR} an.`);
           return;
         }
@@ -1019,7 +1031,8 @@ const handleDownloadParentalTemplate = async () => {
       return;
     }
     if (step === 2) {
-      const actingSelected = !isRegieVariant && form.actingPreferences.some((pref) => pref.enabled && pref.weight > 0);
+      const actingSelected =
+        !isRegieVariant && form.actingPreferences.some((pref) => pref.enabled && pref.weight > 0);
       const crewSelected = form.crewPreferences.some((pref) => pref.enabled && pref.weight > 0);
       if (!actingSelected && !crewSelected) {
         setError(
@@ -1042,7 +1055,9 @@ const handleDownloadParentalTemplate = async () => {
         return;
       }
       if (isMinor && !documentFile && !parentalTemplateDownloaded) {
-        setError("Bitte lade das unterschriebene Elternformular hoch oder lade zuerst das Elternformular herunter.");
+        setError(
+          "Bitte lade das unterschriebene Elternformular hoch oder lade zuerst das Elternformular herunter.",
+        );
         return;
       }
       if (form.photoConsent.consent && !form.photoConsent.skipDocument && !documentFile) {
@@ -1178,7 +1193,8 @@ const handleDownloadParentalTemplate = async () => {
           : "Willkommen im Ensemble! Wir melden uns bei dir.",
       );
 
-      const signInEmail = typeof data?.user?.email === "string" ? data.user.email : form.email.trim();
+      const signInEmail =
+        typeof data?.user?.email === "string" ? data.user.email : form.email.trim();
       const signInResult = await signIn("credentials", {
         email: signInEmail,
         password: form.password,
@@ -1241,7 +1257,9 @@ const handleDownloadParentalTemplate = async () => {
 
   const inviteCreatedAt = useMemo(() => {
     try {
-      return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(invite.createdAt));
+      return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(
+        new Date(invite.createdAt),
+      );
     } catch {
       return null;
     }
@@ -1250,7 +1268,9 @@ const handleDownloadParentalTemplate = async () => {
   const inviteExpiresAt = useMemo(() => {
     if (!invite.expiresAt) return null;
     try {
-      return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(invite.expiresAt));
+      return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(
+        new Date(invite.expiresAt),
+      );
     } catch {
       return null;
     }
@@ -1271,7 +1291,9 @@ const handleDownloadParentalTemplate = async () => {
       <Card className="border border-border/70 bg-gradient-to-br from-background to-background/70">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-xl font-semibold sm:text-2xl">Dein Einstieg ins Theater</CardTitle>
+            <CardTitle className="text-xl font-semibold sm:text-2xl">
+              Dein Einstieg ins Theater
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               Einladung erstellt {inviteCreatedAt ? `am ${inviteCreatedAt}` : "vor Kurzem"}
               {invite.createdBy ? ` von ${invite.createdBy}` : ""}.
@@ -1286,7 +1308,9 @@ const handleDownloadParentalTemplate = async () => {
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:flex-nowrap">
             <Badge variant="outline">Link-ID gesichert</Badge>
             {invite.remainingUses !== null ? (
-              <span>{invite.remainingUses} von {invite.remainingUses + invite.usageCount} Plätzen frei</span>
+              <span>
+                {invite.remainingUses} von {invite.remainingUses + invite.usageCount} Plätzen frei
+              </span>
             ) : (
               <span>Mehrfach nutzbar</span>
             )}
@@ -1355,7 +1379,9 @@ const handleDownloadParentalTemplate = async () => {
         <Card className="border border-border/70 bg-background/80 shadow-xl">
           <CardContent className="space-y-5 px-5 py-6 text-center sm:space-y-6 sm:px-8 sm:py-8">
             <h2 className="text-2xl font-semibold sm:text-3xl">{getIntroHeading(variant)}</h2>
-            <p className="text-sm text-muted-foreground sm:text-base">{getIntroDescription(variant)}</p>
+            <p className="text-sm text-muted-foreground sm:text-base">
+              {getIntroDescription(variant)}
+            </p>
             <div className="flex flex-row justify-center gap-2">
               <Button size="lg" onClick={goNext}>
                 Los geht&apos;s
@@ -1373,7 +1399,8 @@ const handleDownloadParentalTemplate = async () => {
           <CardHeader>
             <CardTitle>Wer bist du?</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Wir nutzen diese Angaben, um dein Profil anzulegen, dich zu erreichen und deinen Mitglieder-Login zu aktivieren.
+              Wir nutzen diese Angaben, um dein Profil anzulegen, dich zu erreichen und deinen
+              Mitglieder-Login zu aktivieren.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1382,7 +1409,9 @@ const handleDownloadParentalTemplate = async () => {
                 <span className="font-medium">Vorname</span>
                 <Input
                   value={form.firstName}
-                  onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, firstName: event.target.value }))
+                  }
                   placeholder="Vorname"
                   autoComplete="given-name"
                 />
@@ -1391,7 +1420,9 @@ const handleDownloadParentalTemplate = async () => {
                 <span className="font-medium">Nachname</span>
                 <Input
                   value={form.lastName}
-                  onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, lastName: event.target.value }))
+                  }
                   placeholder="Nachname"
                   autoComplete="family-name"
                 />
@@ -1412,7 +1443,9 @@ const handleDownloadParentalTemplate = async () => {
                 <span className="font-medium">Passwort</span>
                 <PasswordInput
                   value={form.password}
-                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, password: event.target.value }))
+                  }
                   placeholder="Mindestens 6 Zeichen"
                   autoComplete="new-password"
                 />
@@ -1424,7 +1457,9 @@ const handleDownloadParentalTemplate = async () => {
                 <span className="font-medium">Passwort bestätigen</span>
                 <PasswordInput
                   value={form.passwordConfirm}
-                  onChange={(event) => setForm((prev) => ({ ...prev, passwordConfirm: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, passwordConfirm: event.target.value }))
+                  }
                   placeholder="Noch einmal eingeben"
                   autoComplete="new-password"
                 />
@@ -1435,9 +1470,13 @@ const handleDownloadParentalTemplate = async () => {
                 <span className="font-medium">Geburtsdatum</span>
                 <DateInput
                   value={form.dateOfBirth}
-                  onChange={(event) => setForm((prev) => ({ ...prev, dateOfBirth: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, dateOfBirth: event.target.value }))
+                  }
                 />
-                <span className="text-xs text-muted-foreground">Damit wissen wir, ob wir ein Eltern-Formular benötigen.</span>
+                <span className="text-xs text-muted-foreground">
+                  Damit wissen wir, ob wir ein Eltern-Formular benötigen.
+                </span>
               </label>
               <div className="space-y-1 text-sm">
                 <span className="font-medium">Geschlecht</span>
@@ -1465,7 +1504,9 @@ const handleDownloadParentalTemplate = async () => {
                 {form.genderOption === "custom" && (
                   <Input
                     value={form.genderCustom}
-                    onChange={(event) => setForm((prev) => ({ ...prev, genderCustom: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, genderCustom: event.target.value }))
+                    }
                     placeholder="Wie beschreibst du dich?"
                   />
                 )}
@@ -1485,7 +1526,9 @@ const handleDownloadParentalTemplate = async () => {
                         key={option.value}
                         className={cn(
                           "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
-                          checked ? "border-primary bg-primary/5 text-foreground" : "border-border bg-background",
+                          checked
+                            ? "border-primary bg-primary/5 text-foreground"
+                            : "border-border bg-background",
                         )}
                       >
                         <input
@@ -1498,8 +1541,10 @@ const handleDownloadParentalTemplate = async () => {
                               ...prev,
                               educationCategory: option.value,
                               schoolVariant: option.value === "school" ? prev.schoolVariant : "",
-                              educationSchoolName: option.value === "school" ? prev.educationSchoolName : "",
-                              educationClassName: option.value === "school" ? prev.educationClassName : "",
+                              educationSchoolName:
+                                option.value === "school" ? prev.educationSchoolName : "",
+                              educationClassName:
+                                option.value === "school" ? prev.educationClassName : "",
                             }))
                           }
                           className="h-4 w-4 accent-primary"
@@ -1522,7 +1567,9 @@ const handleDownloadParentalTemplate = async () => {
                           key={option.value}
                           className={cn(
                             "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
-                            checked ? "border-primary bg-primary/5 text-foreground" : "border-border bg-background",
+                            checked
+                              ? "border-primary bg-primary/5 text-foreground"
+                              : "border-border bg-background",
                           )}
                         >
                           <input
@@ -1559,7 +1606,9 @@ const handleDownloadParentalTemplate = async () => {
                                 key={option.value}
                                 className={cn(
                                   "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
-                                  checked ? "border-primary bg-primary/5 text-foreground" : "border-border bg-background",
+                                  checked
+                                    ? "border-primary bg-primary/5 text-foreground"
+                                    : "border-border bg-background",
                                 )}
                               >
                                 <input
@@ -1641,7 +1690,10 @@ const handleDownloadParentalTemplate = async () => {
                   <Input
                     value={form.educationOtherDescription}
                     onChange={(event) =>
-                      setForm((prev) => ({ ...prev, educationOtherDescription: event.target.value }))
+                      setForm((prev) => ({
+                        ...prev,
+                        educationOtherDescription: event.target.value,
+                      }))
                     }
                     placeholder="Kurze Beschreibung deines Umfelds"
                   />
@@ -1655,7 +1707,9 @@ const handleDownloadParentalTemplate = async () => {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   value={form.memberSinceYear}
-                  onChange={(event) => setForm((prev) => ({ ...prev, memberSinceYear: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, memberSinceYear: event.target.value }))
+                  }
                   placeholder={`z.B. ${CURRENT_YEAR}`}
                   min="1900"
                   max={String(CURRENT_YEAR)}
@@ -1673,7 +1727,9 @@ const handleDownloadParentalTemplate = async () => {
         <Card className="border border-border/70">
           <CardHeader>
             <CardTitle>
-              {isRegieVariant ? "Dein Bereich: Regie & Produktionsleitung" : "Bereiche & Schwerpunkte"}
+              {isRegieVariant
+                ? "Dein Bereich: Regie & Produktionsleitung"
+                : "Bereiche & Schwerpunkte"}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {isRegieVariant
@@ -1688,24 +1744,30 @@ const handleDownloadParentalTemplate = async () => {
                   <div>
                     <p className="text-sm font-semibold text-primary">Regie &amp; Organisation</p>
                     <p className="text-xs text-muted-foreground sm:text-sm">
-                      Dein Fokus liegt auf Probenplanung, Call Sheets und Teamkoordination. Unten kannst du deine Schwerpunkte
-                      präzisieren.
+                      Dein Fokus liegt auf Probenplanung, Call Sheets und Teamkoordination. Unten
+                      kannst du deine Schwerpunkte präzisieren.
                     </p>
                   </div>
-                  <Badge variant="outline" className="w-fit border-primary/40 bg-primary/5 text-primary">
+                  <Badge
+                    variant="outline"
+                    className="w-fit border-primary/40 bg-primary/5 text-primary"
+                  >
                     Automatisch gesetzt
                   </Badge>
                 </div>
               </div>
             ) : (
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-left text-xs text-muted-foreground sm:text-sm">
-                Wir zeigen dir Schauspiel und Gewerke gleichzeitig. Wähle einfach die Aufgaben aus, die zu dir passen – den Fokus berechnet der Wizard im Hintergrund.
+                Wir zeigen dir Schauspiel und Gewerke gleichzeitig. Wähle einfach die Aufgaben aus,
+                die zu dir passen – den Fokus berechnet der Wizard im Hintergrund.
               </div>
             )}
 
             {!isRegieVariant && (
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Schauspiel</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Schauspiel
+                </h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   {form.actingPreferences.map((pref) => {
                     const active = pref.enabled;
@@ -1741,10 +1803,18 @@ const handleDownloadParentalTemplate = async () => {
                               step={10}
                               value={pref.weight}
                               onChange={(event) =>
-                                updatePreferenceWeight("acting", pref.code, event.currentTarget.valueAsNumber)
+                                updatePreferenceWeight(
+                                  "acting",
+                                  pref.code,
+                                  event.currentTarget.valueAsNumber,
+                                )
                               }
                               onInput={(event) =>
-                                updatePreferenceWeight("acting", pref.code, event.currentTarget.valueAsNumber)
+                                updatePreferenceWeight(
+                                  "acting",
+                                  pref.code,
+                                  event.currentTarget.valueAsNumber,
+                                )
                               }
                               className="w-full accent-primary"
                             />
@@ -1775,7 +1845,9 @@ const handleDownloadParentalTemplate = async () => {
                       key={pref.code}
                       className={cn(
                         "flex flex-col gap-4 rounded-2xl border p-4 transition",
-                        active ? "border-primary/70 bg-primary/5 shadow-sm" : "border-border bg-background/90",
+                        active
+                          ? "border-primary/70 bg-primary/5 shadow-sm"
+                          : "border-border bg-background/90",
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -1783,7 +1855,10 @@ const handleDownloadParentalTemplate = async () => {
                           <div className="flex items-center gap-2">
                             <h4 className="font-medium">{pref.title}</h4>
                             {pref.isCustom && (
-                              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                              <Badge
+                                variant="outline"
+                                className="border-primary/40 bg-primary/10 text-primary"
+                              >
                                 Eigenes Gewerk
                               </Badge>
                             )}
@@ -1821,10 +1896,18 @@ const handleDownloadParentalTemplate = async () => {
                             step={10}
                             value={pref.weight}
                             onChange={(event) =>
-                              updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                              updatePreferenceWeight(
+                                "crew",
+                                pref.code,
+                                event.currentTarget.valueAsNumber,
+                              )
                             }
                             onInput={(event) =>
-                              updatePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                              updatePreferenceWeight(
+                                "crew",
+                                pref.code,
+                                event.currentTarget.valueAsNumber,
+                              )
                             }
                             className="w-full accent-primary"
                           />
@@ -1848,8 +1931,8 @@ const handleDownloadParentalTemplate = async () => {
           <CardHeader>
             <CardTitle>Was begeistert dich?</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Sammle Interessen als Schlagworte – so finden wir passende Teams, Workshops und Rollen für dich. Auch neue Ideen sind
-              willkommen.
+              Sammle Interessen als Schlagworte – so finden wir passende Teams, Workshops und Rollen
+              für dich. Auch neue Ideen sind willkommen.
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -1870,7 +1953,11 @@ const handleDownloadParentalTemplate = async () => {
                   </button>
                 </span>
               ))}
-              {!form.interests.length && <span className="text-sm text-muted-foreground">Noch keine Interessen ausgewählt.</span>}
+              {!form.interests.length && (
+                <span className="text-sm text-muted-foreground">
+                  Noch keine Interessen ausgewählt.
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -1893,7 +1980,9 @@ const handleDownloadParentalTemplate = async () => {
             <div className="space-y-2">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Beliebte Tags</p>
               <div className="flex flex-wrap gap-2">
-                {interestsLoading && <span className="text-xs text-muted-foreground">Lade Vorschläge …</span>}
+                {interestsLoading && (
+                  <span className="text-xs text-muted-foreground">Lade Vorschläge …</span>
+                )}
                 {!interestsLoading &&
                   availableInterestSuggestions.map((interest) => (
                     <button
@@ -1921,8 +2010,8 @@ const handleDownloadParentalTemplate = async () => {
           <CardHeader>
             <CardTitle>Fotoeinverständnis</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Wir dokumentieren Proben, Aufführungen und Werkstätten. Deine Zustimmung hilft uns bei Social Media, Presse und
-              Erinnerungen.
+              Wir dokumentieren Proben, Aufführungen und Werkstätten. Deine Zustimmung hilft uns bei
+              Social Media, Presse und Erinnerungen.
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -1931,12 +2020,18 @@ const handleDownloadParentalTemplate = async () => {
                 type="checkbox"
                 checked={form.photoConsent.consent}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, photoConsent: { ...prev.photoConsent, consent: event.target.checked } }))
+                  setForm((prev) => ({
+                    ...prev,
+                    photoConsent: { ...prev.photoConsent, consent: event.target.checked },
+                  }))
                 }
                 className="mt-1 h-4 w-4"
               />
               <div className="space-y-1 text-sm">
-                <p className="font-medium">Ich bin einverstanden, dass Fotos/Videos von mir für das Schultheater genutzt werden.</p>
+                <p className="font-medium">
+                  Ich bin einverstanden, dass Fotos/Videos von mir für das Schultheater genutzt
+                  werden.
+                </p>
                 <p className="text-xs text-muted-foreground">
                   Die Zustimmung kann jederzeit im Profil angepasst werden.
                 </p>
@@ -1947,15 +2042,22 @@ const handleDownloadParentalTemplate = async () => {
               <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
                 <p className="font-medium">Du bist unter 18 Jahre alt</p>
                 <p>
-                  Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner Erziehungsberechtigten. Lade das Dokument
-                  als PDF oder Bilddatei hoch oder markiere unten, dass du es später nachreichst.
+                  Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner
+                  Erziehungsberechtigten. Lade das Dokument als PDF oder Bilddatei hoch oder
+                  markiere unten, dass du es später nachreichst.
                 </p>
-                <p>Deine eigene Zustimmung gibst du direkt über das Kästchen oben – sie ist verpflichtend.</p>
+                <p>
+                  Deine eigene Zustimmung gibst du direkt über das Kästchen oben – sie ist
+                  verpflichtend.
+                </p>
               </div>
             ) : (
               <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
                 <p className="font-medium">Du bist volljährig</p>
-                <p>Du kannst das Formular als Datei hochladen oder hier direkt digital unterschreiben.</p>
+                <p>
+                  Du kannst das Formular als Datei hochladen oder hier direkt digital
+                  unterschreiben.
+                </p>
               </div>
             )}
 
@@ -1971,8 +2073,12 @@ const handleDownloadParentalTemplate = async () => {
                     >
                       Elternformular herunterladen
                     </Button>
-                    {downloadError && <p className="text-xs text-destructive">Elternformular nicht verfügbar.</p>}
-                    <label className="block font-medium">Einverständnis der Erziehungsberechtigten (PDF, JPG, PNG)</label>
+                    {downloadError && (
+                      <p className="text-xs text-destructive">Elternformular nicht verfügbar.</p>
+                    )}
+                    <label className="block font-medium">
+                      Einverständnis der Erziehungsberechtigten (PDF, JPG, PNG)
+                    </label>
                     <Input
                       type="file"
                       accept="application/pdf,image/jpeg,image/png"
@@ -2026,9 +2132,11 @@ const handleDownloadParentalTemplate = async () => {
                             : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
                         </p>
                         <p>
-                          Mit meiner digitalen Unterschrift erlaube ich dem Schultheater, Fotos und Videos von mir im Rahmen
-                          von Proben, Aufführungen und der Öffentlichkeitsarbeit zu erstellen und zu veröffentlichen. Mir ist
-                          bewusst, dass ich diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen kann.
+                          Mit meiner digitalen Unterschrift erlaube ich dem Schultheater, Fotos und
+                          Videos von mir im Rahmen von Proben, Aufführungen und der
+                          Öffentlichkeitsarbeit zu erstellen und zu veröffentlichen. Mir ist
+                          bewusst, dass ich diese Einwilligung jederzeit mit Wirkung für die Zukunft
+                          widerrufen kann.
                         </p>
                       </div>
                     </div>
@@ -2054,7 +2162,8 @@ const handleDownloadParentalTemplate = async () => {
               Ernährung, Unverträglichkeiten &amp; Bedürfnisse
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Verrate uns deinen Ernährungsstil und mögliche Unverträglichkeiten – so planen wir Verpflegung, Proben und Events sicher und inklusiv. Alle Angaben sind optional.
+              Verrate uns deinen Ernährungsstil und mögliche Unverträglichkeiten – so planen wir
+              Verpflegung, Proben und Events sicher und inklusiv. Alle Angaben sind optional.
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -2072,15 +2181,17 @@ const handleDownloadParentalTemplate = async () => {
                       }))
                     }
                   >
-                    <SelectTrigger >
+                    <SelectTrigger>
                       <SelectValue placeholder="Wähle deinen Stil" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DIETARY_STYLE_OPTIONS.filter((option) => option.value !== "none").map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      {DIETARY_STYLE_OPTIONS.filter((option) => option.value !== "none").map(
+                        (option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                   {form.nutritionStyle === "custom" && (
@@ -2093,7 +2204,8 @@ const handleDownloadParentalTemplate = async () => {
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Allesesser ist vorausgewählt. Wähle eine andere Option, wenn du besondere Ernährungsweisen hast.
+                    Allesesser ist vorausgewählt. Wähle eine andere Option, wenn du besondere
+                    Ernährungsweisen hast.
                   </p>
                 </div>
                 <div className="space-y-2 text-sm">
@@ -2102,7 +2214,8 @@ const handleDownloadParentalTemplate = async () => {
                     <div className="space-y-1 rounded-lg border border-border/50 bg-background px-3 py-2">
                       <p className="text-sm font-medium text-foreground">Nicht relevant</p>
                       <p className="text-xs text-muted-foreground">
-                        Für Allesesser planen wir flexibel. Melde dich einfach beim Team, falls es besondere Wünsche gibt.
+                        Für Allesesser planen wir flexibel. Melde dich einfach beim Team, falls es
+                        besondere Wünsche gibt.
                       </p>
                     </div>
                   ) : (
@@ -2110,10 +2223,13 @@ const handleDownloadParentalTemplate = async () => {
                       <Select
                         value={form.nutritionStrictness}
                         onValueChange={(value) =>
-                          setForm((prev) => ({ ...prev, nutritionStrictness: value as DietaryStrictnessOption }))
+                          setForm((prev) => ({
+                            ...prev,
+                            nutritionStrictness: value as DietaryStrictnessOption,
+                          }))
                         }
                       >
-                        <SelectTrigger >
+                        <SelectTrigger>
                           <SelectValue placeholder="Wähle eine Option" />
                         </SelectTrigger>
                         <SelectContent>
@@ -2125,7 +2241,8 @@ const handleDownloadParentalTemplate = async () => {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        So wissen wir, ob Ausnahmen möglich sind oder strikt vermieden werden sollen.
+                        So wissen wir, ob Ausnahmen möglich sind oder strikt vermieden werden
+                        sollen.
                       </p>
                     </>
                   )}
@@ -2137,12 +2254,20 @@ const handleDownloadParentalTemplate = async () => {
                 const style = allergyLevelStyles[entry.level];
                 const progress = style.intensity;
                 return (
-                  <div key={entry.id} className="relative overflow-hidden rounded-2xl border border-border/60 bg-background/95 p-5 shadow-sm">
-                    <div className={cn("absolute inset-x-5 top-0 h-px bg-gradient-to-r", style.accent)} aria-hidden />
+                  <div
+                    key={entry.id}
+                    className="relative overflow-hidden rounded-2xl border border-border/60 bg-background/95 p-5 shadow-sm"
+                  >
+                    <div
+                      className={cn("absolute inset-x-5 top-0 h-px bg-gradient-to-r", style.accent)}
+                      aria-hidden
+                    />
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-foreground">{entry.allergen}</p>
-                        <Badge className={cn("text-[11px]", style.badge)}>{allergyLevelLabels[entry.level]}</Badge>
+                        <Badge className={cn("text-[11px]", style.badge)}>
+                          {allergyLevelLabels[entry.level]}
+                        </Badge>
                       </div>
                       <Button size="sm" variant="outline" onClick={() => removeDietary(entry.id)}>
                         Entfernen
@@ -2152,17 +2277,20 @@ const handleDownloadParentalTemplate = async () => {
                       <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                         {entry.symptoms && (
                           <p>
-                            <span className="font-medium text-foreground/80">Symptome:</span> {entry.symptoms}
+                            <span className="font-medium text-foreground/80">Symptome:</span>{" "}
+                            {entry.symptoms}
                           </p>
                         )}
                         {entry.treatment && (
                           <p>
-                            <span className="font-medium text-foreground/80">Behandlung:</span> {entry.treatment}
+                            <span className="font-medium text-foreground/80">Behandlung:</span>{" "}
+                            {entry.treatment}
                           </p>
                         )}
                         {entry.note && (
                           <p>
-                            <span className="font-medium text-foreground/80">Hinweis:</span> {entry.note}
+                            <span className="font-medium text-foreground/80">Hinweis:</span>{" "}
+                            {entry.note}
                           </p>
                         )}
                       </div>
@@ -2189,14 +2317,17 @@ const handleDownloadParentalTemplate = async () => {
                 Neue Unverträglichkeit hinzufügen
               </div>
               <p className="text-xs text-muted-foreground">
-                Teile nur, was relevant ist – die Informationen bleiben intern und helfen dem Orga-Team bei Notfällen.
+                Teile nur, was relevant ist – die Informationen bleiben intern und helfen dem
+                Orga-Team bei Notfällen.
               </p>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="space-y-1 text-sm">
                   <span>Auslöser / Gericht</span>
                   <Input
                     value={dietaryDraft.allergen}
-                    onChange={(event) => setDietaryDraft((prev) => ({ ...prev, allergen: event.target.value }))}
+                    onChange={(event) =>
+                      setDietaryDraft((prev) => ({ ...prev, allergen: event.target.value }))
+                    }
                     placeholder="z.B. Erdnüsse, Gluten, Laktose"
                   />
                 </label>
@@ -2204,9 +2335,11 @@ const handleDownloadParentalTemplate = async () => {
                   <span>Schweregrad</span>
                   <Select
                     value={dietaryDraft.level}
-                    onValueChange={(value: AllergyLevel) => setDietaryDraft((prev) => ({ ...prev, level: value }))}
+                    onValueChange={(value: AllergyLevel) =>
+                      setDietaryDraft((prev) => ({ ...prev, level: value }))
+                    }
                   >
-                    <SelectTrigger >
+                    <SelectTrigger>
                       <SelectValue placeholder="Wähle den Schweregrad" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2222,25 +2355,34 @@ const handleDownloadParentalTemplate = async () => {
               <div className="grid gap-3 md:grid-cols-3">
                 <Textarea
                   value={dietaryDraft.symptoms}
-                  onChange={(event) => setDietaryDraft((prev) => ({ ...prev, symptoms: event.target.value }))}
+                  onChange={(event) =>
+                    setDietaryDraft((prev) => ({ ...prev, symptoms: event.target.value }))
+                  }
                   placeholder="Symptome (optional)"
                   className="md:col-span-1"
                 />
                 <Textarea
                   value={dietaryDraft.treatment}
-                  onChange={(event) => setDietaryDraft((prev) => ({ ...prev, treatment: event.target.value }))}
+                  onChange={(event) =>
+                    setDietaryDraft((prev) => ({ ...prev, treatment: event.target.value }))
+                  }
                   placeholder="Behandlung im Notfall"
                   className="md:col-span-1"
                 />
                 <Textarea
                   value={dietaryDraft.note}
-                  onChange={(event) => setDietaryDraft((prev) => ({ ...prev, note: event.target.value }))}
+                  onChange={(event) =>
+                    setDietaryDraft((prev) => ({ ...prev, note: event.target.value }))
+                  }
                   placeholder="Weitere Hinweise"
                   className="md:col-span-1"
                 />
               </div>
               <div className="flex flex-col gap-2 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
-                <span>Wir speichern die Angaben verschlüsselt und teilen sie nur mit dem verantwortlichen Team.</span>
+                <span>
+                  Wir speichern die Angaben verschlüsselt und teilen sie nur mit dem
+                  verantwortlichen Team.
+                </span>
                 <Button type="button" onClick={handleAddDietary}>
                   Speichern
                 </Button>
@@ -2255,8 +2397,9 @@ const handleDownloadParentalTemplate = async () => {
           <CardHeader>
             <CardTitle>Gibt es noch etwas, das wir wissen sollten?</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Teile besondere Erfahrungen, Wünsche oder Hinweise – alles, was uns beim Kennenlernen helfen kann. Auch Hinweise
-              auf Krankheiten oder gesundheitliche Besonderheiten kannst du hier ergänzen.
+              Teile besondere Erfahrungen, Wünsche oder Hinweise – alles, was uns beim Kennenlernen
+              helfen kann. Auch Hinweise auf Krankheiten oder gesundheitliche Besonderheiten kannst
+              du hier ergänzen.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -2283,7 +2426,8 @@ const handleDownloadParentalTemplate = async () => {
           <CardHeader>
             <CardTitle>Zusammenfassung</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Schau alles noch einmal durch. Nach dem Absenden legen wir dein Profil an und melden uns mit den nächsten Schritten.
+              Schau alles noch einmal durch. Nach dem Absenden legen wir dein Profil an und melden
+              uns mit den nächsten Schritten.
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -2311,7 +2455,8 @@ const handleDownloadParentalTemplate = async () => {
                   </Button>
                 </div>
                 <p className="text-sm text-emerald-900/80">
-                  Tritt unserer WhatsApp-Gruppe bei, um alle Updates und Ansprechpartner kennenzulernen.
+                  Tritt unserer WhatsApp-Gruppe bei, um alle Updates und Ansprechpartner
+                  kennenzulernen.
                   {whatsappHost ? ` (${whatsappHost})` : null}
                 </p>
                 {whatsappVisitTracked ? (
@@ -2345,7 +2490,9 @@ const handleDownloadParentalTemplate = async () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">Alter</dt>
-                    <dd className="font-medium text-foreground">{age !== null ? `${age} Jahre` : "–"}</dd>
+                    <dd className="font-medium text-foreground">
+                      {age !== null ? `${age} Jahre` : "–"}
+                    </dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-muted-foreground">Geschlecht</dt>
@@ -2357,10 +2504,15 @@ const handleDownloadParentalTemplate = async () => {
                   </div>
                 </dl>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Kontext</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Kontext
+                  </span>
                   {educationSummary ? (
                     <>
-                      <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                      <Badge
+                        variant="outline"
+                        className="border-primary/30 bg-primary/5 text-primary"
+                      >
                         {educationSummary.categoryLabel}
                       </Badge>
                       {educationSummary.details.map((detail) => (
@@ -2378,20 +2530,26 @@ const handleDownloadParentalTemplate = async () => {
                   )}
                 </div>
                 <div className="mt-4 space-y-2">
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Freitext</span>
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Freitext
+                  </span>
                   {form.notes ? (
                     <p className="rounded-lg border border-border/60 bg-background/80 p-3 text-sm leading-relaxed text-foreground/80">
                       {form.notes}
                     </p>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Keine zusätzlichen Hinweise</span>
+                    <span className="text-xs text-muted-foreground">
+                      Keine zusätzlichen Hinweise
+                    </span>
                   )}
                 </div>
               </section>
 
               <section className="space-y-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Fokus &amp; Intensität</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Fokus &amp; Intensität
+                  </h3>
                   <span
                     className={cn(
                       "rounded-full border px-3 py-1 text-xs font-medium",
@@ -2410,65 +2568,84 @@ const handleDownloadParentalTemplate = async () => {
                 </p>
                 {derivedFocus ? (
                   <p className="text-xs text-muted-foreground">
-                    Passe deine Rollenpräferenzen an, um den Fokus zu verändern – wir übernehmen die Berechnung automatisch.
+                    Passe deine Rollenpräferenzen an, um den Fokus zu verändern – wir übernehmen die
+                    Berechnung automatisch.
                   </p>
                 ) : null}
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {(isRegieVariant ? (["crew"] as const) : (["acting", "crew"] as const)).map((domain) => {
-                    const entries = preferenceSummary[domain];
-                    const stats = preferenceStats[domain];
-                    return (
-                      <div key={domain} className="space-y-3 rounded-xl border border-border/60 bg-background/85 p-3">
-                        <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
-                          <span>{getDomainLabel(domain, variant)}</span>
-                          <span>{stats.count} Auswahl{stats.count === 1 ? "" : "en"}</span>
-                        </div>
-                        {entries.length ? (
-                          <div className="space-y-3">
-                            {entries.map((pref) => (
-                              <div key={pref.code} className="space-y-1.5">
-                                <div className="flex items-center justify-between text-sm font-medium text-foreground">
-                                  <div className="flex items-center gap-2">
-                                    <span>{pref.title}</span>
-                                    {pref.isCustom && (
-                                      <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-                                        Eigenes Gewerk
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span>{pref.weight}%</span>
-                                </div>
-                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
-                                  <div
-                                    className={cn("h-full rounded-full bg-gradient-to-r", preferenceAccent[pref.domain])}
-                                    style={{ width: `${pref.weight}%` }}
-                                  />
-                                </div>
-                                <p className="text-[11px] text-muted-foreground">{pref.label}</p>
-                              </div>
-                            ))}
-                            <p className="text-[11px] text-muted-foreground">
-                              Ø Intensität: {stats.average}%
-                            </p>
+                  {(isRegieVariant ? (["crew"] as const) : (["acting", "crew"] as const)).map(
+                    (domain) => {
+                      const entries = preferenceSummary[domain];
+                      const stats = preferenceStats[domain];
+                      return (
+                        <div
+                          key={domain}
+                          className="space-y-3 rounded-xl border border-border/60 bg-background/85 p-3"
+                        >
+                          <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
+                            <span>{getDomainLabel(domain, variant)}</span>
+                            <span>
+                              {stats.count} Auswahl{stats.count === 1 ? "" : "en"}
+                            </span>
                           </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">Keine Angaben</p>
-                        )}
-                      </div>
-                    );
-                  })}
+                          {entries.length ? (
+                            <div className="space-y-3">
+                              {entries.map((pref) => (
+                                <div key={pref.code} className="space-y-1.5">
+                                  <div className="flex items-center justify-between text-sm font-medium text-foreground">
+                                    <div className="flex items-center gap-2">
+                                      <span>{pref.title}</span>
+                                      {pref.isCustom && (
+                                        <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                                          Eigenes Gewerk
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span>{pref.weight}%</span>
+                                  </div>
+                                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
+                                    <div
+                                      className={cn(
+                                        "h-full rounded-full bg-gradient-to-r",
+                                        preferenceAccent[pref.domain],
+                                      )}
+                                      style={{ width: `${pref.weight}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground">{pref.label}</p>
+                                </div>
+                              ))}
+                              <p className="text-[11px] text-muted-foreground">
+                                Ø Intensität: {stats.average}%
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Keine Angaben</p>
+                          )}
+                        </div>
+                      );
+                    },
+                  )}
                 </div>
               </section>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-2xl border border-border/70 bg-background/90 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Interessen</h3>
-                <p className="text-xs text-muted-foreground">Wir nutzen deine Tags für Workshops, Rollen und Teamvorschläge.</p>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Interessen
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Wir nutzen deine Tags für Workshops, Rollen und Teamvorschläge.
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {form.interests.length ? (
                     form.interests.map((interest) => (
-                      <Badge key={interest} variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                      <Badge
+                        key={interest}
+                        variant="outline"
+                        className="border-primary/30 bg-primary/5 text-primary"
+                      >
                         {interest}
                       </Badge>
                     ))
@@ -2504,10 +2681,15 @@ const handleDownloadParentalTemplate = async () => {
                     {form.dietary.map((entry) => {
                       const style = allergyLevelStyles[entry.level];
                       return (
-                        <div key={entry.id} className="space-y-1 rounded-xl border border-border/50 bg-background/80 p-3">
+                        <div
+                          key={entry.id}
+                          className="space-y-1 rounded-xl border border-border/50 bg-background/80 p-3"
+                        >
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground">{entry.allergen}</span>
-                            <Badge className={cn("text-[10px]", style.badge)}>{allergyLevelLabels[entry.level]}</Badge>
+                            <Badge className={cn("text-[10px]", style.badge)}>
+                              {allergyLevelLabels[entry.level]}
+                            </Badge>
                           </div>
                           {(entry.symptoms || entry.treatment || entry.note) && (
                             <div className="space-y-1 text-xs text-muted-foreground">
@@ -2527,7 +2709,9 @@ const handleDownloadParentalTemplate = async () => {
             </div>
 
             <section className="space-y-4 rounded-2xl border border-border/70 bg-background/90 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Sicherheit &amp; Zustimmung</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Sicherheit &amp; Zustimmung
+              </h3>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2 rounded-xl border border-border/60 bg-background p-3">
                   <div className="flex items-center justify-between">
@@ -2537,7 +2721,11 @@ const handleDownloadParentalTemplate = async () => {
                     </div>
                     <Badge
                       variant="outline"
-                      className={form.photoConsent.consent ? "border-emerald-400/40 bg-emerald-50 text-emerald-700" : "border-amber-400/40 bg-amber-50 text-amber-700"}
+                      className={
+                        form.photoConsent.consent
+                          ? "border-emerald-400/40 bg-emerald-50 text-emerald-700"
+                          : "border-amber-400/40 bg-amber-50 text-amber-700"
+                      }
                     >
                       {form.photoConsent.consent ? "Erteilt" : "Offen"}
                     </Badge>
@@ -2550,7 +2738,8 @@ const handleDownloadParentalTemplate = async () => {
                     Passwort gesetzt
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Dein neues Passwort wird mit dem Absenden aktiviert. Du kannst dich anschließend sofort im Mitgliederbereich anmelden.
+                    Dein neues Passwort wird mit dem Absenden aktiviert. Du kannst dich anschließend
+                    sofort im Mitgliederbereich anmelden.
                   </p>
                 </div>
               </div>
@@ -2560,7 +2749,9 @@ const handleDownloadParentalTemplate = async () => {
               <div className="rounded-lg border border-emerald-300 bg-emerald-50/80 p-4 text-sm text-emerald-900">
                 <p className="font-medium">Danke, deine Angaben sind angekommen!</p>
                 <p>
-                  Wir legen jetzt dein Profil an und melden uns mit den nächsten Schritten. Du kannst dich ab sofort mit deiner E-Mail-Adresse und deinem Passwort im Mitgliederbereich anmelden.
+                  Wir legen jetzt dein Profil an und melden uns mit den nächsten Schritten. Du
+                  kannst dich ab sofort mit deiner E-Mail-Adresse und deinem Passwort im
+                  Mitgliederbereich anmelden.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link href="/login">

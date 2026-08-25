@@ -68,7 +68,10 @@ async function ensurePermission(): Promise<PermissionResult> {
     return { status: "offline", response: null };
   }
   if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"))) {
-    return { status: "denied", response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    return {
+      status: "denied",
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
   }
   return { status: "ok", response: null };
 }
@@ -102,7 +105,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Failed to load sperrliste settings", error);
-    return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Einstellungen konnten nicht geladen werden." },
+      { status: 500 },
+    );
   }
 }
 
@@ -207,6 +213,9 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to save sperrliste settings", error);
-    return NextResponse.json({ error: "Die Einstellungen konnten nicht gespeichert werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Die Einstellungen konnten nicht gespeichert werden." },
+      { status: 500 },
+    );
   }
 }

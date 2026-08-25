@@ -60,11 +60,7 @@ function parseStart(date: string, time: string) {
   }
 }
 
-function parseEnd(
-  date: string,
-  endTime: string,
-  start: Date,
-) {
+function parseEnd(date: string, endTime: string, start: Date) {
   let end: Date;
   try {
     end = parseDateTimeInTimeZone(date, endTime, REHEARSAL_TIME_ZONE);
@@ -134,10 +130,7 @@ async function syncInvitees(
   return unique;
 }
 
-async function collectInviteeRoles(
-  tx: Prisma.TransactionClient,
-  inviteeIds: string[],
-) {
+async function collectInviteeRoles(tx: Prisma.TransactionClient, inviteeIds: string[]) {
   if (!inviteeIds.length) return [] as string[];
   const users = await tx.user.findMany({
     where: { id: { in: inviteeIds } },
@@ -242,16 +235,7 @@ export async function updateRehearsalDraftAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const {
-    id,
-    title,
-    date,
-    time,
-    endTime,
-    location,
-    description,
-    invitees,
-  } = parsed.data;
+  const { id, title, date, time, endTime, location, description, invitees } = parsed.data;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -332,7 +316,10 @@ export async function updateRehearsalDraftAction(input: {
     if (error instanceof Error && error.message === "Ungültige Endzeit.") {
       return { error: error.message } as const;
     }
-    if (error instanceof Error && error.message === "Ungültige Kombination aus Datum und Uhrzeit.") {
+    if (
+      error instanceof Error &&
+      error.message === "Ungültige Kombination aus Datum und Uhrzeit."
+    ) {
       return { error: error.message } as const;
     }
     console.error("Error updating rehearsal draft", error);
@@ -359,16 +346,7 @@ export async function publishRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const {
-    id,
-    title,
-    date,
-    time,
-    endTime,
-    location,
-    description,
-    invitees,
-  } = parsed.data;
+  const { id, title, date, time, endTime, location, description, invitees } = parsed.data;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -533,15 +511,7 @@ export async function createRehearsalAction(input: {
     return { error: "Bitte Titel, Datum und Uhrzeit prüfen." } as const;
   }
 
-  const {
-    title,
-    date,
-    time,
-    endTime,
-    location,
-    description,
-    invitees,
-  } = parsed.data;
+  const { title, date, time, endTime, location, description, invitees } = parsed.data;
   const start = parseStart(date, time);
   const end = endTime ? parseEnd(date, endTime, start) : computeEnd(start);
   const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
@@ -659,16 +629,7 @@ export async function updateRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const {
-    id,
-    title,
-    date,
-    time,
-    endTime,
-    location,
-    description,
-    invitees,
-  } = parsed.data;
+  const { id, title, date, time, endTime, location, description, invitees } = parsed.data;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -693,7 +654,7 @@ export async function updateRehearsalAction(input: {
         : computeEnd(start, existing.start, existing.end);
       const normalizedLocation = location?.trim()
         ? location.trim()
-        : existing.location ?? "Noch offen";
+        : (existing.location ?? "Noch offen");
 
       let sanitizedDescription: string | null | undefined;
       const updateData: Prisma.RehearsalUpdateInput = {
@@ -843,7 +804,6 @@ export async function updateRehearsalAction(input: {
     return { error: "Die Probe konnte nicht aktualisiert werden." } as const;
   }
 }
-
 
 const deleteSchema = z.object({ id: z.string().min(1) });
 

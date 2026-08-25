@@ -53,7 +53,9 @@ function extractFilenameFromDisposition(disposition: string | null) {
 }
 
 export function CastingExportDialog({ showTitle, characters }: CastingExportDialogProps) {
-  const [selectedRoleIds, setSelectedRoleIds] = useState(() => new Set(characters.map((role) => role.id)));
+  const [selectedRoleIds, setSelectedRoleIds] = useState(
+    () => new Set(characters.map((role) => role.id)),
+  );
   const [includeDescriptions, setIncludeDescriptions] = useState(true);
   const [includeRoleNotes, setIncludeRoleNotes] = useState(true);
   const [includeCastingNotes, setIncludeCastingNotes] = useState(true);
@@ -113,7 +115,15 @@ export function CastingExportDialog({ showTitle, characters }: CastingExportDial
       generatedAt: new Date().toISOString(),
       roles,
     };
-  }, [characters, includeCastingNotes, includeDescriptions, includeEmptyRoles, includeRoleNotes, selectedRoleIds, showTitle]);
+  }, [
+    characters,
+    includeCastingNotes,
+    includeDescriptions,
+    includeEmptyRoles,
+    includeRoleNotes,
+    selectedRoleIds,
+    showTitle,
+  ]);
 
   const handleExport = () => {
     if (selectedRoleIds.size === 0) {
@@ -245,7 +255,8 @@ export function CastingExportDialog({ showTitle, characters }: CastingExportDial
             </div>
             <div className="rounded-lg border border-border/70 bg-background/70 p-3 text-xs text-muted-foreground">
               <p>
-                Der Export enthält {selectedCount} ausgewählte {selectedCount === 1 ? "Rolle" : "Rollen"}.
+                Der Export enthält {selectedCount} ausgewählte{" "}
+                {selectedCount === 1 ? "Rolle" : "Rollen"}.
               </p>
             </div>
           </div>

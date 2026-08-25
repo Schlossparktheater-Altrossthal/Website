@@ -8,11 +8,7 @@ export type ShoppingListEntry = {
   category?: string;
 };
 
-function createIngredientKey(ingredient: {
-  name: string;
-  unit: string;
-  category?: string;
-}) {
+function createIngredientKey(ingredient: { name: string; unit: string; category?: string }) {
   const name = ingredient.name.trim().toLocaleLowerCase("de-DE");
   const unit = ingredient.unit.trim().toLocaleLowerCase("de-DE");
   const category = ingredient.category?.trim().toLocaleLowerCase("de-DE") ?? "";

@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowDownAZIcon, ArrowUpAZIcon, ChevronDownIcon, FilterXIcon, LayoutGridIcon, ListIcon, PencilIcon, PlusIcon, Trash2Icon } from "@/components/ui/action-icons";
+import {
+  ArrowDownAZIcon,
+  ArrowUpAZIcon,
+  ChevronDownIcon,
+  FilterXIcon,
+  LayoutGridIcon,
+  ListIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from "@/components/ui/action-icons";
 
 import { useMemo, useState } from "react";
 import { BreakdownStatus } from "@prisma/client";
@@ -118,7 +128,8 @@ function formatIsoDate(value: string | null) {
   return value.slice(0, 10);
 }
 
-type SceneFilter = "all" | "with-roles" | "without-roles" | "with-breakdowns" | "without-breakdowns";
+type SceneFilter =
+  "all" | "with-roles" | "without-roles" | "with-breakdowns" | "without-breakdowns";
 type SceneSort = "asc" | "desc";
 
 function parseSceneIdentifier(value: string | null): number[] {
@@ -246,10 +257,16 @@ export function SceneListClient({
               type="button"
               variant="outline"
               size="icon"
-              aria-label={sceneSort === "asc" ? "Nummern A bis Z sortieren" : "Nummern Z bis A sortieren"}
+              aria-label={
+                sceneSort === "asc" ? "Nummern A bis Z sortieren" : "Nummern Z bis A sortieren"
+              }
               onClick={() => setSceneSort((prev) => (prev === "asc" ? "desc" : "asc"))}
             >
-              {sceneSort === "asc" ? <ArrowDownAZIcon className="h-4 w-4" /> : <ArrowUpAZIcon className="h-4 w-4" />}
+              {sceneSort === "asc" ? (
+                <ArrowDownAZIcon className="h-4 w-4" />
+              ) : (
+                <ArrowUpAZIcon className="h-4 w-4" />
+              )}
             </Button>
             {hasFilters ? (
               <Button
@@ -303,7 +320,9 @@ export function SceneListClient({
           </Card>
         ) : (
           filteredScenes.map((scene) => {
-            const assignedCharacterIds = new Set(scene.characters.map((entry) => entry.character.id));
+            const assignedCharacterIds = new Set(
+              scene.characters.map((entry) => entry.character.id),
+            );
             const availableCharacters = sortedCharacters.filter(
               (character) => !assignedCharacterIds.has(character.id),
             );
@@ -316,11 +335,17 @@ export function SceneListClient({
                 <CardHeader className="relative space-y-3">
                   <div className="space-y-1 pr-16">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="uppercase tracking-wide">Szene {scene.identifier ?? "?"}</span>
+                      <span className="uppercase tracking-wide">
+                        Szene {scene.identifier ?? "?"}
+                      </span>
                     </div>
-                    <CardTitle className="text-xl font-semibold">{scene.title ?? "(ohne Titel)"}</CardTitle>
+                    <CardTitle className="text-xl font-semibold">
+                      {scene.title ?? "(ohne Titel)"}
+                    </CardTitle>
                     {scene.summary ? (
-                      <p className="text-sm text-muted-foreground">{truncateSummary(scene.summary)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {truncateSummary(scene.summary)}
+                      </p>
                     ) : null}
                     <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                       {scene.location ? <span>Ort: {scene.location}</span> : null}
@@ -329,7 +354,12 @@ export function SceneListClient({
                   <div className="absolute right-4 top-4 flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" aria-label="Szene erweitern">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Szene erweitern"
+                        >
                           <PlusIcon className="h-4 w-4" aria-hidden />
                         </Button>
                       </PopoverTrigger>
@@ -337,14 +367,21 @@ export function SceneListClient({
                         <div className="grid gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button type="button" variant="outline" size="sm" className="w-full justify-start">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start"
+                              >
                                 Mitwirkende Figur hinzufügen
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
                                 <DialogTitle>Figur hinzufügen</DialogTitle>
-                                <DialogDescription>Ordne eine Figur dieser Szene zu.</DialogDescription>
+                                <DialogDescription>
+                                  Ordne eine Figur dieser Szene zu.
+                                </DialogDescription>
                               </DialogHeader>
                               <form
                                 className="grid gap-3 md:grid-cols-3"
@@ -354,7 +391,9 @@ export function SceneListClient({
                                 <input type="hidden" name="sceneId" value={scene.id} />
                                 <input type="hidden" name="redirectPath" value={currentPath} />
                                 <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium text-muted-foreground">Figur</label>
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Figur
+                                  </label>
                                   <select name="characterId" className={selectClassName} required>
                                     <option value="">Figur auswählen</option>
                                     {availableCharacters.map((character) => (
@@ -365,8 +404,14 @@ export function SceneListClient({
                                   </select>
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-xs font-medium text-muted-foreground">Hervorgehoben?</label>
-                                  <select name="isFeatured" className={selectClassName} defaultValue="false">
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Hervorgehoben?
+                                  </label>
+                                  <select
+                                    name="isFeatured"
+                                    className={selectClassName}
+                                    defaultValue="false"
+                                  >
                                     <option value="false">Standard</option>
                                     <option value="true">Hervorgehoben</option>
                                   </select>
@@ -383,14 +428,21 @@ export function SceneListClient({
                           </Dialog>
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button type="button" variant="outline" size="sm" className="w-full justify-start">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start"
+                              >
                                 Breakdown hinzufügen
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl">
                               <DialogHeader>
                                 <DialogTitle>Breakdown-Eintrag hinzufügen</DialogTitle>
-                                <DialogDescription>Lege Aufgaben für die Szene an und weise sie zu.</DialogDescription>
+                                <DialogDescription>
+                                  Lege Aufgaben für die Szene an und weise sie zu.
+                                </DialogDescription>
                               </DialogHeader>
                               <form
                                 className="grid gap-2 md:grid-cols-4"
@@ -400,8 +452,14 @@ export function SceneListClient({
                                 <input type="hidden" name="sceneId" value={scene.id} />
                                 <input type="hidden" name="redirectPath" value={currentPath} />
                                 <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium text-muted-foreground">Gewerk</label>
-                                  <select name="departmentId" className={selectSmallClassName} required>
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Gewerk
+                                  </label>
+                                  <select
+                                    name="departmentId"
+                                    className={selectSmallClassName}
+                                    required
+                                  >
                                     <option value="">Gewerk auswählen</option>
                                     {departments.map((departmentOption) => (
                                       <option key={departmentOption.id} value={departmentOption.id}>
@@ -411,7 +469,9 @@ export function SceneListClient({
                                   </select>
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-xs font-medium text-muted-foreground">Status</label>
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Status
+                                  </label>
                                   <select
                                     name="status"
                                     className={selectSmallClassName}
@@ -425,19 +485,37 @@ export function SceneListClient({
                                   </select>
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-xs font-medium text-muted-foreground">Benötigt bis</label>
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Benötigt bis
+                                  </label>
                                   <DateInput name="neededBy" />
                                 </div>
                                 <div className="space-y-1 md:col-span-4">
-                                  <label className="text-xs font-medium text-muted-foreground">Titel</label>
-                                  <Input name="title" maxLength={160} required placeholder="Aufgabe" />
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Titel
+                                  </label>
+                                  <Input
+                                    name="title"
+                                    maxLength={160}
+                                    required
+                                    placeholder="Aufgabe"
+                                  />
                                 </div>
                                 <div className="space-y-1 md:col-span-4">
-                                  <label className="text-xs font-medium text-muted-foreground">Beschreibung</label>
-                                  <Textarea name="description" rows={2} maxLength={600} placeholder="Details zur Aufgabe" />
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Beschreibung
+                                  </label>
+                                  <Textarea
+                                    name="description"
+                                    rows={2}
+                                    maxLength={600}
+                                    placeholder="Details zur Aufgabe"
+                                  />
                                 </div>
                                 <div className="space-y-1 md:col-span-2">
-                                  <label className="text-xs font-medium text-muted-foreground">Zuständig</label>
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Zuständig
+                                  </label>
                                   <select name="assignedToId" className={selectSmallClassName}>
                                     <option value="">(optional)</option>
                                     {users.map((user) => (
@@ -448,7 +526,9 @@ export function SceneListClient({
                                   </select>
                                 </div>
                                 <div className="space-y-1 md:col-span-4">
-                                  <label className="text-xs font-medium text-muted-foreground">Notiz</label>
+                                  <label className="text-xs font-medium text-muted-foreground">
+                                    Notiz
+                                  </label>
                                   <Input name="note" maxLength={300} placeholder="interne Notiz" />
                                 </div>
                                 <div className="md:col-span-4 flex justify-end">
@@ -466,14 +546,21 @@ export function SceneListClient({
                     </Popover>
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" aria-label="Szene bearbeiten">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Szene bearbeiten"
+                        >
                           <PencilIcon className="h-4 w-4" aria-hidden />
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
                         <DialogHeader>
                           <DialogTitle>Szene bearbeiten</DialogTitle>
-                          <DialogDescription>Aktualisiere Titel, Orte und Notizen der Szene.</DialogDescription>
+                          <DialogDescription>
+                            Aktualisiere Titel, Orte und Notizen der Szene.
+                          </DialogDescription>
                         </DialogHeader>
                         <form
                           action={updateSceneAction}
@@ -483,26 +570,53 @@ export function SceneListClient({
                           <input type="hidden" name="sceneId" value={scene.id} />
                           <input type="hidden" name="redirectPath" value={currentPath} />
                           <div className="space-y-1">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Nummer</label>
-                            <Input name="identifier" defaultValue={scene.identifier ?? ""} maxLength={40} required />
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Nummer
+                            </label>
+                            <Input
+                              name="identifier"
+                              defaultValue={scene.identifier ?? ""}
+                              maxLength={40}
+                              required
+                            />
                           </div>
                           <div className="space-y-1 md:col-span-2">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Titel</label>
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Titel
+                            </label>
                             <Input name="title" defaultValue={scene.title ?? ""} maxLength={160} />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ort</label>
-                            <Input name="location" defaultValue={scene.location ?? ""} maxLength={120} />
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Ort
+                            </label>
+                            <Input
+                              name="location"
+                              defaultValue={scene.location ?? ""}
+                              maxLength={120}
+                            />
                           </div>
                           <div className="space-y-1 md:col-span-3">
                             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                               Zusammenfassung
                             </label>
-                            <Textarea name="summary" rows={2} maxLength={600} defaultValue={scene.summary ?? ""} />
+                            <Textarea
+                              name="summary"
+                              rows={2}
+                              maxLength={600}
+                              defaultValue={scene.summary ?? ""}
+                            />
                           </div>
                           <div className="space-y-1 md:col-span-3">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notizen</label>
-                            <Textarea name="notes" rows={2} maxLength={400} defaultValue={scene.notes ?? ""} />
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Notizen
+                            </label>
+                            <Textarea
+                              name="notes"
+                              rows={2}
+                              maxLength={400}
+                              defaultValue={scene.notes ?? ""}
+                            />
                           </div>
                           <div className="md:col-span-3 flex justify-end">
                             <DialogClose asChild>
@@ -516,7 +630,12 @@ export function SceneListClient({
                     </Dialog>
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" aria-label="Szene entfernen">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Szene entfernen"
+                        >
                           <Trash2Icon className="h-4 w-4" aria-hidden />
                         </Button>
                       </DialogTrigger>
@@ -524,10 +643,15 @@ export function SceneListClient({
                         <DialogHeader>
                           <DialogTitle>Szene löschen</DialogTitle>
                           <DialogDescription>
-                            Bist du sicher, dass du diese Szene löschen möchtest? Die zugehörigen Einträge gehen verloren.
+                            Bist du sicher, dass du diese Szene löschen möchtest? Die zugehörigen
+                            Einträge gehen verloren.
                           </DialogDescription>
                         </DialogHeader>
-                        <form action={deleteSceneAction} method="post" className="flex justify-end gap-2">
+                        <form
+                          action={deleteSceneAction}
+                          method="post"
+                          className="flex justify-end gap-2"
+                        >
                           <input type="hidden" name="sceneId" value={scene.id} />
                           <input type="hidden" name="redirectPath" value={currentPath} />
                           <DialogClose asChild>
@@ -552,11 +676,16 @@ export function SceneListClient({
                       <details className="group [&_summary::-webkit-details-marker]:hidden">
                         <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-foreground">
                           <span>Mitwirkende Figuren</span>
-                          <ChevronDownIcon className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
+                          <ChevronDownIcon
+                            className="h-4 w-4 transition duration-200 group-open:rotate-180"
+                            aria-hidden
+                          />
                         </summary>
                         <div className="mt-3 space-y-2">
                           {scene.characters.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Noch keine Figuren zugeordnet.</p>
+                            <p className="text-sm text-muted-foreground">
+                              Noch keine Figuren zugeordnet.
+                            </p>
                           ) : (
                             sortedSceneCharacters.map((entry) => (
                               <div
@@ -564,7 +693,9 @@ export function SceneListClient({
                                 className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/50 bg-background/80 p-3 text-sm"
                                 style={{
                                   borderColor: entry.character.color ?? undefined,
-                                  backgroundColor: entry.character.color ? `${entry.character.color}1A` : undefined,
+                                  backgroundColor: entry.character.color
+                                    ? `${entry.character.color}1A`
+                                    : undefined,
                                 }}
                               >
                                 <div className="flex items-center gap-2">
@@ -575,7 +706,9 @@ export function SceneListClient({
                                   <div>
                                     <p className="font-medium">{entry.character.name}</p>
                                     {entry.character.shortName ? (
-                                      <p className="text-xs text-muted-foreground">{entry.character.shortName}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {entry.character.shortName}
+                                      </p>
                                     ) : null}
                                     {entry.isFeatured ? (
                                       <p className="text-xs text-muted-foreground">Hervorgehoben</p>
@@ -585,7 +718,12 @@ export function SceneListClient({
                                 <form action={removeSceneCharacterAction} method="post">
                                   <input type="hidden" name="assignmentId" value={entry.id} />
                                   <input type="hidden" name="redirectPath" value={currentPath} />
-                                  <Button type="submit" variant="ghost" size="icon" aria-label="Rolle entfernen">
+                                  <Button
+                                    type="submit"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Rolle entfernen"
+                                  >
                                     <Trash2Icon className="h-4 w-4" aria-hidden="true" />
                                   </Button>
                                 </form>
@@ -600,11 +738,16 @@ export function SceneListClient({
                       <details className="group rounded-lg border border-border/60 bg-background/70 p-4 [&_summary::-webkit-details-marker]:hidden">
                         <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-semibold text-foreground">
                           <span>Breakdown-Aufgaben</span>
-                          <ChevronDownIcon className="h-4 w-4 transition duration-200 group-open:rotate-180" aria-hidden />
+                          <ChevronDownIcon
+                            className="h-4 w-4 transition duration-200 group-open:rotate-180"
+                            aria-hidden
+                          />
                         </summary>
                         <div className="mt-3 space-y-3">
                           {scene.breakdownItems.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Noch keine Aufgaben hinterlegt.</p>
+                            <p className="text-sm text-muted-foreground">
+                              Noch keine Aufgaben hinterlegt.
+                            </p>
                           ) : (
                             scene.breakdownItems.map((item) => (
                               <div
@@ -620,12 +763,20 @@ export function SceneListClient({
                                       {item.assignedTo ? (
                                         <span>Zuständig: {formatUserName(item.assignedTo)}</span>
                                       ) : null}
-                                      {item.neededBy ? <span>Fällig: {formatIsoDate(item.neededBy)}</span> : null}
+                                      {item.neededBy ? (
+                                        <span>Fällig: {formatIsoDate(item.neededBy)}</span>
+                                      ) : null}
                                     </div>
                                     {item.description ? (
-                                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {item.description}
+                                      </p>
                                     ) : null}
-                                    {item.note ? <p className="text-xs text-muted-foreground">Notiz: {item.note}</p> : null}
+                                    {item.note ? (
+                                      <p className="text-xs text-muted-foreground">
+                                        Notiz: {item.note}
+                                      </p>
+                                    ) : null}
                                   </div>
                                   <form action={removeBreakdownItemAction} method="post">
                                     <input type="hidden" name="itemId" value={item.id} />
@@ -639,8 +790,12 @@ export function SceneListClient({
                                 <details className="group mt-3 rounded-md border border-border/50 bg-background/70 p-3 [&_summary::-webkit-details-marker]:hidden">
                                   <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                     <span>Aufgabe aktualisieren</span>
-                                    <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
-                                    <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
+                                    <span className="text-[11px] text-muted-foreground group-open:hidden">
+                                      Öffnen
+                                    </span>
+                                    <span className="hidden text-[11px] text-muted-foreground group-open:inline">
+                                      Schließen
+                                    </span>
                                   </summary>
                                   <form
                                     action={updateBreakdownItemAction}
@@ -650,7 +805,9 @@ export function SceneListClient({
                                     <input type="hidden" name="itemId" value={item.id} />
                                     <input type="hidden" name="redirectPath" value={currentPath} />
                                     <div className="space-y-1">
-                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Gewerk</label>
+                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Gewerk
+                                      </label>
                                       <select
                                         name="departmentId"
                                         defaultValue={item.department?.id ?? ""}
@@ -658,15 +815,24 @@ export function SceneListClient({
                                       >
                                         <option value="">Gewerk wählen</option>
                                         {departments.map((departmentOption) => (
-                                          <option key={departmentOption.id} value={departmentOption.id}>
+                                          <option
+                                            key={departmentOption.id}
+                                            value={departmentOption.id}
+                                          >
                                             {departmentOption.name}
                                           </option>
                                         ))}
                                       </select>
                                     </div>
                                     <div className="space-y-1">
-                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</label>
-                                      <select name="status" defaultValue={item.status} className={selectSmallClassName}>
+                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Status
+                                      </label>
+                                      <select
+                                        name="status"
+                                        defaultValue={item.status}
+                                        className={selectSmallClassName}
+                                      >
                                         {statusOptions.map((status) => (
                                           <option key={status} value={status}>
                                             {STATUS_LABELS[status]}
@@ -675,11 +841,18 @@ export function SceneListClient({
                                       </select>
                                     </div>
                                     <div className="space-y-1">
-                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Benötigt bis</label>
-                                      <DateInput name="neededBy" defaultValue={formatIsoDate(item.neededBy)} />
+                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Benötigt bis
+                                      </label>
+                                      <DateInput
+                                        name="neededBy"
+                                        defaultValue={formatIsoDate(item.neededBy)}
+                                      />
                                     </div>
                                     <div className="space-y-1 md:col-span-4">
-                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
+                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Beschreibung
+                                      </label>
                                       <Textarea
                                         name="description"
                                         rows={2}
@@ -688,11 +861,19 @@ export function SceneListClient({
                                       />
                                     </div>
                                     <div className="space-y-1 md:col-span-2">
-                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-                                      <Input name="note" defaultValue={item.note ?? ""} maxLength={300} />
+                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Notiz
+                                      </label>
+                                      <Input
+                                        name="note"
+                                        defaultValue={item.note ?? ""}
+                                        maxLength={300}
+                                      />
                                     </div>
                                     <div className="space-y-1 md:col-span-2">
-                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Zuständig</label>
+                                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Zuständig
+                                      </label>
                                       <select
                                         name="assignedToId"
                                         defaultValue={item.assignedToId ?? ""}

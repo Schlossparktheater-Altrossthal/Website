@@ -87,10 +87,7 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
     notFound();
   }
 
-  const [item, session] = await Promise.all([
-    getChronicleItem(showId),
-    getSession(),
-  ]);
+  const [item, session] = await Promise.all([getChronicleItem(showId), getSession()]);
   const isLoggedIn = Boolean(session?.user);
 
   if (!item) {
@@ -111,11 +108,7 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
       <div className="relative isolate overflow-hidden border-b border-border/60 bg-background">
         <div className="relative h-[65vh] min-h-[420px] w-full">
           {item.posterSources.length > 0 && (
-            <PosterSlideshow
-              sources={item.posterSources}
-              alt={heading}
-              priority
-            />
+            <PosterSlideshow sources={item.posterSources} alt={heading} priority />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[color:color-mix(in_oklab,var(--foreground)_75%,transparent)] via-[color:color-mix(in_oklab,var(--foreground)_35%,transparent)] to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/30 to-background/95" />
@@ -126,9 +119,22 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
               <div className="mx-auto max-w-4xl space-y-6 rounded-3xl border border-border/60 bg-background/75 p-6 shadow-2xl backdrop-blur-sm sm:p-8">
                 <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted-foreground">
                   <TextLink asChild variant="ghost" weight="semibold">
-                    <Link href="/chronik" className="inline-flex items-center gap-2 text-foreground">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    <Link
+                      href="/chronik"
+                      className="inline-flex items-center gap-2 text-foreground"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.75 19.5L8.25 12l7.5-7.5"
+                        />
                       </svg>
                       Zur Chronik
                     </Link>
@@ -138,7 +144,10 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                   </Badge>
                 </div>
 
-                <Heading level="h1" className="text-balance text-3xl leading-tight sm:text-4xl md:text-5xl">
+                <Heading
+                  level="h1"
+                  className="text-balance text-3xl leading-tight sm:text-4xl md:text-5xl"
+                >
                   {heading}
                 </Heading>
 
@@ -148,15 +157,13 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                   </Text>
                 ) : (
                   <Text className="max-w-3xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                    Für diese Saison liegt uns aktuell keine Zusammenfassung vor. Wir ergänzen die Chronik, sobald neue Informationen verfügbar sind.
+                    Für diese Saison liegt uns aktuell keine Zusammenfassung vor. Wir ergänzen die
+                    Chronik, sobald neue Informationen verfügbar sind.
                   </Text>
                 )}
 
                 <dl className="grid gap-4 sm:grid-cols-2">
-                  <EditablePerformanceDatesCard
-                    showId={item.id}
-                    initialDates={item.dates}
-                  />
+                  <EditablePerformanceDatesCard showId={item.id} initialDates={item.dates} />
                   {primaryDetails.map((detail) => (
                     <div
                       key={`${item.id}-${detail.label}`}
@@ -165,9 +172,7 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                       <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                         {detail.label}
                       </dt>
-                      <dd className="mt-1 text-base font-semibold md:text-lg">
-                        {detail.value}
-                      </dd>
+                      <dd className="mt-1 text-base font-semibold md:text-lg">{detail.value}</dd>
                     </div>
                   ))}
                 </dl>
@@ -186,7 +191,8 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
             </Text>
           ) : (
             <Text className="text-base leading-relaxed text-muted-foreground md:text-lg">
-              Noch haben wir keine weiteren Hintergründe zu dieser Saison aufgezeichnet. Wenn du Informationen beitragen möchtest, freuen wir uns über eine Nachricht.
+              Noch haben wir keine weiteren Hintergründe zu dieser Saison aufgezeichnet. Wenn du
+              Informationen beitragen möchtest, freuen wir uns über eine Nachricht.
             </Text>
           )}
         </section>
@@ -201,9 +207,7 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                   className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
                 >
                   <Heading level="h3" asChild>
-                    <span className="text-lg font-semibold text-foreground">
-                      {entry.role}
-                    </span>
+                    <span className="text-lg font-semibold text-foreground">{entry.role}</span>
                   </Heading>
                   <Text className="mt-2 text-sm text-foreground/80 md:text-base">
                     {isLoggedIn
@@ -259,8 +263,18 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                   className="group relative flex flex-col rounded-2xl border border-border/60 bg-background/80 p-4 text-sm text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:bg-background/90 hover:shadow-lg"
                 >
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    <svg
+                      className="h-4 w-4 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
                     </svg>
                     Quelle {index + 1}
                   </span>
@@ -292,7 +306,12 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
                   <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-2 text-sm font-semibold text-white drop-shadow-lg">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M3 19h18M5 5l1.5 14h11L19 5" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 5h18M3 19h18M5 5l1.5 14h11L19 5"
+                      />
                     </svg>
                     Bild {index + 1}
                   </div>

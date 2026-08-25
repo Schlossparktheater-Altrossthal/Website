@@ -1,4 +1,4 @@
-import { hasPermission, PROFILE_DATA_PERMISSION_KEYS } from '@/lib/permissions';
+import { hasPermission, PROFILE_DATA_PERMISSION_KEYS } from "@/lib/permissions";
 
 const PROFILE_PERMISSION_MATRIX = {
   measurements: {
@@ -22,10 +22,7 @@ type ProfilePermissionUser = Parameters<typeof hasPermission>[0];
 export type ProfileDataType = keyof ProfilePermissionMatrix;
 export type ProfilePermissionAction = keyof ProfilePermissionMatrix[ProfileDataType];
 
-function getProfilePermissionKey(
-  dataType: ProfileDataType,
-  action: ProfilePermissionAction
-) {
+function getProfilePermissionKey(dataType: ProfileDataType, action: ProfilePermissionAction) {
   const entry = PROFILE_PERMISSION_MATRIX[dataType];
   return entry?.[action];
 }
@@ -33,7 +30,7 @@ function getProfilePermissionKey(
 function checkProfilePermission(
   dataType: ProfileDataType,
   action: ProfilePermissionAction,
-  user?: ProfilePermissionUser
+  user?: ProfilePermissionUser,
 ) {
   const permissionKey = getProfilePermissionKey(dataType, action);
   if (!permissionKey) {
@@ -44,35 +41,35 @@ function checkProfilePermission(
 
 export function canReadProfileData(
   dataType: ProfileDataType,
-  user?: ProfilePermissionUser
+  user?: ProfilePermissionUser,
 ): Promise<boolean> {
-  return checkProfilePermission(dataType, 'read', user);
+  return checkProfilePermission(dataType, "read", user);
 }
 
 export function canWriteProfileData(
   dataType: ProfileDataType,
-  user?: ProfilePermissionUser
+  user?: ProfilePermissionUser,
 ): Promise<boolean> {
-  return checkProfilePermission(dataType, 'write', user);
+  return checkProfilePermission(dataType, "write", user);
 }
 
 export function canAccessProfileData(
   dataType: ProfileDataType,
   action: ProfilePermissionAction,
-  user?: ProfilePermissionUser
+  user?: ProfilePermissionUser,
 ): Promise<boolean> {
   return checkProfilePermission(dataType, action, user);
 }
 
 export async function canEditOwnProfileData(
   dataType: ProfileDataType,
-  user?: ProfilePermissionUser
+  user?: ProfilePermissionUser,
 ): Promise<boolean> {
   if (!user?.id) {
     return false;
   }
 
-  if (dataType === 'dietary') {
+  if (dataType === "dietary") {
     return true;
   }
 
@@ -81,15 +78,15 @@ export async function canEditOwnProfileData(
 
 export const profileAccessRights = {
   measurements: {
-    read: (user?: ProfilePermissionUser) => canReadProfileData('measurements', user),
-    write: (user?: ProfilePermissionUser) => canWriteProfileData('measurements', user),
+    read: (user?: ProfilePermissionUser) => canReadProfileData("measurements", user),
+    write: (user?: ProfilePermissionUser) => canWriteProfileData("measurements", user),
   },
   sizes: {
-    read: (user?: ProfilePermissionUser) => canReadProfileData('sizes', user),
-    write: (user?: ProfilePermissionUser) => canWriteProfileData('sizes', user),
+    read: (user?: ProfilePermissionUser) => canReadProfileData("sizes", user),
+    write: (user?: ProfilePermissionUser) => canWriteProfileData("sizes", user),
   },
   dietary: {
-    read: (user?: ProfilePermissionUser) => canReadProfileData('dietary', user),
-    write: (user?: ProfilePermissionUser) => canWriteProfileData('dietary', user),
+    read: (user?: ProfilePermissionUser) => canReadProfileData("dietary", user),
+    write: (user?: ProfilePermissionUser) => canWriteProfileData("dietary", user),
   },
 } as const;

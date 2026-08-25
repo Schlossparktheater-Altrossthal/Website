@@ -68,11 +68,11 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
   const requiresDocument = age !== null && age < 18;
   const requiresDateOfBirth = !dateOfBirth;
   const combinedName =
-    combineNameParts(consent.user.firstName, consent.user.lastName) ??
-    (consent.user.name ?? null);
+    combineNameParts(consent.user.firstName, consent.user.lastName) ?? consent.user.name ?? null;
   const approverName = consent.approvedBy
-    ? combineNameParts(consent.approvedBy.firstName, consent.approvedBy.lastName) ??
-      (consent.approvedBy.name ?? null)
+    ? (combineNameParts(consent.approvedBy.firstName, consent.approvedBy.lastName) ??
+      consent.approvedBy.name ??
+      null)
     : null;
   const documentPreviewUrl =
     consent.documentUploadedAt && consent.documentMime?.toLowerCase().startsWith("image/")
@@ -103,7 +103,9 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
     age,
     documentName: consent.documentName ?? null,
     documentUrl: consent.documentUploadedAt ? `/api/photo-consents/${consent.id}/document` : null,
-    documentUploadedAt: consent.documentUploadedAt ? consent.documentUploadedAt.toISOString() : null,
+    documentUploadedAt: consent.documentUploadedAt
+      ? consent.documentUploadedAt.toISOString()
+      : null,
     documentMime: consent.documentMime ?? null,
     documentPreviewUrl,
     signatureVersion,
@@ -266,7 +268,12 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ ok: true, entry });
   } catch (error: unknown) {
-    if (typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "P2025") {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P2025"
+    ) {
       return NextResponse.json({ error: "Eintrag nicht gefunden" }, { status: 404 });
     }
     console.error("[PhotoConsent] Update failed", error);

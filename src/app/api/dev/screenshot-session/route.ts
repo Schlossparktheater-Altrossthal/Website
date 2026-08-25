@@ -3,10 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { encode } from "next-auth/jwt";
 
-import {
-  DEV_TEST_USERS,
-  DEV_TEST_USER_ROLE_MAP,
-} from "@/lib/auth-dev-test-users";
+import { DEV_TEST_USERS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { ROLES, type Role } from "@/lib/roles";
 import { getAuthSecret } from "@/lib/auth-secret";
@@ -53,13 +50,7 @@ function shouldReturnJson(url: URL) {
   return mode === "json" || mode === "api";
 }
 
-async function createSessionCookie({
-  email,
-  role,
-}: {
-  email: string;
-  role: Role;
-}) {
+async function createSessionCookie({ email, role }: { email: string; role: Role }) {
   const secret = getAuthSecret();
 
   const devUser = await ensureDevTestUser(email, role);

@@ -13,10 +13,7 @@ import { TimeInput } from "@/components/ui/time-input";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { ROLE_LABELS, ROLES } from "@/lib/roles";
 import { cn } from "@/lib/utils";
-import {
-  formatIsoDateInTimeZone,
-  formatIsoTimeInTimeZone,
-} from "@/lib/date-time";
+import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 
 import {
   discardRehearsalDraftAction,
@@ -40,10 +37,10 @@ type RehearsalEditorProps = {
     title: string;
     start: string;
     end: string | null;
-  location: string;
-  description: string | null;
-  inviteeIds: string[];
-};
+    location: string;
+    description: string | null;
+    inviteeIds: string[];
+  };
   members: MemberOption[];
   initialBlockedUserIds: string[];
 };
@@ -54,24 +51,28 @@ function displayName(member: MemberOption) {
   return member.name?.trim() || member.email?.trim() || "Unbekannt";
 }
 
-export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: RehearsalEditorProps) {
+export function RehearsalEditor({
+  rehearsal,
+  members,
+  initialBlockedUserIds,
+}: RehearsalEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
 
   const [title, setTitle] = useState(rehearsal.title);
-  const [date, setDate] = useState(() =>
-    formatIsoDateInTimeZone(rehearsal.start)
-  );
-  const [time, setTime] = useState(() =>
-    formatIsoTimeInTimeZone(rehearsal.start)
-  );
+  const [date, setDate] = useState(() => formatIsoDateInTimeZone(rehearsal.start));
+  const [time, setTime] = useState(() => formatIsoTimeInTimeZone(rehearsal.start));
   const [endTime, setEndTime] = useState(() =>
-    rehearsal.end ? formatIsoTimeInTimeZone(rehearsal.end) : ""
+    rehearsal.end ? formatIsoTimeInTimeZone(rehearsal.end) : "",
   );
   const [location, setLocation] = useState(rehearsal.location);
   const [description, setDescription] = useState(rehearsal.description ?? "");
-  const [selectedInvitees, setSelectedInvitees] = useState<string[]>(() => Array.from(new Set(rehearsal.inviteeIds)));
-  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(() => new Set(initialBlockedUserIds));
+  const [selectedInvitees, setSelectedInvitees] = useState<string[]>(() =>
+    Array.from(new Set(rehearsal.inviteeIds)),
+  );
+  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(
+    () => new Set(initialBlockedUserIds),
+  );
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -109,25 +110,22 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
     });
   }, []);
 
-  const fetchBlockedForDate = useCallback(
-    async (dateValue: string) => {
-      setIsCheckingBlocks(true);
-      try {
-        const response = await fetch(`/api/rehearsals/blocked?date=${dateValue}`);
-        if (!response.ok) {
-          throw new Error("Request failed");
-        }
-        const data = (await response.json()) as { userIds?: string[] };
-        setBlockedUserIds(new Set(data.userIds ?? []));
-      } catch (error) {
-        console.error("Failed to load blocked members", error);
-        toast.error("Sperrtermine konnten nicht geladen werden.");
-      } finally {
-        setIsCheckingBlocks(false);
+  const fetchBlockedForDate = useCallback(async (dateValue: string) => {
+    setIsCheckingBlocks(true);
+    try {
+      const response = await fetch(`/api/rehearsals/blocked?date=${dateValue}`);
+      if (!response.ok) {
+        throw new Error("Request failed");
       }
-    },
-    [],
-  );
+      const data = (await response.json()) as { userIds?: string[] };
+      setBlockedUserIds(new Set(data.userIds ?? []));
+    } catch (error) {
+      console.error("Failed to load blocked members", error);
+      toast.error("Sperrtermine konnten nicht geladen werden.");
+    } finally {
+      setIsCheckingBlocks(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchBlockedForDate(date).catch(() => null);
@@ -189,17 +187,7 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
     }, 800);
 
     return () => clearTimeout(handle);
-  }, [
-    description,
-    date,
-    time,
-    endTime,
-    title,
-    location,
-    selectedInvitees,
-    rehearsal.id,
-    isDraft,
-  ]);
+  }, [description, date, time, endTime, title, location, selectedInvitees, rehearsal.id, isDraft]);
 
   const handlePublish = () => {
     startPublish(() => {
@@ -268,7 +256,9 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
       case "saving":
         return "Speichert Änderungen…";
       case "saved":
-        return formattedTime ? `Änderungen gespeichert (${formattedTime})` : "Änderungen gespeichert";
+        return formattedTime
+          ? `Änderungen gespeichert (${formattedTime})`
+          : "Änderungen gespeichert";
       case "error":
         return "Speichern fehlgeschlagen";
       default:
@@ -334,7 +324,6 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
               </div>
             </div>
 
-
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="rehearsal-location">
                 Ort
@@ -349,7 +338,11 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Beschreibung</label>
-              <RichTextEditor value={description} onChange={setDescription} placeholder="Beschreibe Ablauf, Ziele oder Materialien." />
+              <RichTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Beschreibe Ablauf, Ziele oder Materialien."
+              />
             </div>
           </div>
         </CardContent>
@@ -359,7 +352,8 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
         <CardHeader>
           <CardTitle>Teilnehmer auswählen</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Wähle aus, wer zur Probe eingeladen werden soll. Gesperrte Personen sind entsprechend gekennzeichnet.
+            Wähle aus, wer zur Probe eingeladen werden soll. Gesperrte Personen sind entsprechend
+            gekennzeichnet.
             {isCheckingBlocks ? " (aktualisiere…)" : null}
           </p>
         </CardHeader>
@@ -368,21 +362,27 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
             {groupedMembers.map(([role, list]) => (
               <section key={role} className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-foreground/90">{ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}</h4>
+                  <h4 className="text-sm font-semibold text-foreground/90">
+                    {ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
+                  </h4>
                   <Badge variant="outline">{list.length}</Badge>
                 </div>
                 <div className="grid gap-3 lg:grid-cols-2">
                   {list.map((member) => {
                     const isSelected = selectedSet.has(member.id);
                     const isBlocked = blockedUserIds.has(member.id);
-                    const extraRoles = Array.from(new Set(member.extraRoles)).filter((extra) => extra !== member.role);
+                    const extraRoles = Array.from(new Set(member.extraRoles)).filter(
+                      (extra) => extra !== member.role,
+                    );
 
                     return (
                       <label
                         key={member.id}
                         className={cn(
                           "flex cursor-pointer items-start gap-3 rounded-lg border bg-background/70 px-3 py-3 text-sm shadow-sm transition",
-                          isSelected ? "border-primary/70 ring-1 ring-primary/40" : "border-border/60 hover:border-primary/40",
+                          isSelected
+                            ? "border-primary/70 ring-1 ring-primary/40"
+                            : "border-border/60 hover:border-primary/40",
                         )}
                       >
                         <input
@@ -393,7 +393,9 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
                         />
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium text-foreground">{displayName(member)}</span>
+                            <span className="font-medium text-foreground">
+                              {displayName(member)}
+                            </span>
                             {isBlocked && <Badge variant="destructive">gesperrt</Badge>}
                           </div>
                           {member.email && (
@@ -444,7 +446,8 @@ export function RehearsalEditor({ rehearsal, members, initialBlockedUserIds }: R
         ) : (
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3 md:ml-auto">
             <div className="text-xs text-muted-foreground">
-              Änderungen werden automatisch gespeichert. Alle Teilnehmer erhalten Benachrichtigungen über Updates.
+              Änderungen werden automatisch gespeichert. Alle Teilnehmer erhalten Benachrichtigungen
+              über Updates.
             </div>
           </div>
         )}

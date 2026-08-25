@@ -101,23 +101,14 @@ export function RehearsalCalendar({
 }: RehearsalCalendarProps) {
   const router = useRouter();
   const [, startCreating] = useTransition();
-  const initialSelection = useMemo(
-    () => createSelection(findUpcomingWeekendDay(new Date())),
-    []
-  );
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    initialSelection.date
-  );
-  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(
-    initialSelection.key
-  );
-  const [currentMonth, setCurrentMonth] = useState<Date>(() =>
-    startOfMonth(initialSelection.date)
-  );
+  const initialSelection = useMemo(() => createSelection(findUpcomingWeekendDay(new Date())), []);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(initialSelection.date);
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(initialSelection.key);
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => startOfMonth(initialSelection.date));
   const [viewMode, setViewMode] = useState<RehearsalCalendarView>("calendar");
   const currentMonthLabel = useMemo(
     () => format(currentMonth, "MMMM yyyy", { locale: de }),
-    [currentMonth]
+    [currentMonth],
   );
   // Use a fixed timezone for time-only rendering to avoid SSR/CSR hydration mismatches
   const timeFormatter = new Intl.DateTimeFormat("de-DE", {
@@ -159,10 +150,7 @@ export function RehearsalCalendar({
       map.set(key, list);
     }
     for (const [, list] of map) {
-      list.sort(
-        (a, b) =>
-          parseISO(a.start).getTime() - parseISO(b.start).getTime()
-      );
+      list.sort((a, b) => parseISO(a.start).getTime() - parseISO(b.start).getTime());
     }
     return map;
   }, [rehearsals]);
@@ -190,9 +178,7 @@ export function RehearsalCalendar({
     selectedDayRehearsals.length === 1 ? "Probe" : "Proben"
   } geplant`;
   const selectedSummary =
-    selectedDayKey != null
-      ? [selectedAvailableLabel, selectedRehearsalLabel].join(" · ")
-      : null;
+    selectedDayKey != null ? [selectedAvailableLabel, selectedRehearsalLabel].join(" · ") : null;
 
   const handleSelectDayByKey = (dayKey: string) => {
     const parsed = startOfDay(parseISO(dayKey));
@@ -215,16 +201,13 @@ export function RehearsalCalendar({
     setPlanOpen(true);
   };
 
-  const createDraftForDay = (
-    dayKey: string,
-    defaultTime = DEFAULT_NEW_REHEARSAL_TIME
-  ) => {
+  const createDraftForDay = (dayKey: string, defaultTime = DEFAULT_NEW_REHEARSAL_TIME) => {
     startCreating(() => {
       createRehearsalDraftAction({
         date: dayKey,
         time: defaultTime,
         title: "Neue Probe",
-        location: "Noch offen"
+        location: "Noch offen",
       })
         .then((result) => {
           if (result?.success && result.id) {
@@ -253,7 +236,7 @@ export function RehearsalCalendar({
   const handleDeleteRehearsal = (rehearsalId: string, title: string) => {
     if (
       !confirm(
-        `Probe "${title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
+        `Probe "${title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
       )
     ) {
       return;
@@ -354,18 +337,17 @@ export function RehearsalCalendar({
         group.rangeLabel = "";
         continue;
       }
-      group.rangeLabel = group.days.length > 1
-        ? `${format(firstDate, "d. MMM", { locale: de })} – ${format(lastDate, "d. MMM", { locale: de })}`
-        : format(firstDate, "d. MMM", { locale: de });
+      group.rangeLabel =
+        group.days.length > 1
+          ? `${format(firstDate, "d. MMM", { locale: de })} – ${format(lastDate, "d. MMM", { locale: de })}`
+          : format(firstDate, "d. MMM", { locale: de });
     }
 
     return groups;
   }, [weekendFocusDays]);
 
-
   return (
     <section className="space-y-8">
-
       {/* Planungs-Dialog: Tagesplan + Blockierte Mitglieder zum ausgewählten Tag */}
       <Dialog
         open={planOpen && Boolean(selectedDate)}
@@ -385,111 +367,121 @@ export function RehearsalCalendar({
             {selectedSummary ? <DialogDescription>{selectedSummary}</DialogDescription> : null}
           </DialogHeader>
           <div className="space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex w-full flex-col gap-3 sm:max-w-sm">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Verfügbarkeit</span>
-                <span>{selectedAvailableLabel}</span>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex w-full flex-col gap-3 sm:max-w-sm">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Verfügbarkeit</span>
+                  <span>{selectedAvailableLabel}</span>
+                </div>
+                <div className="relative h-3 overflow-hidden rounded-full bg-muted">
+                  <span
+                    className={cn(
+                      "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
+                      selectedAvailableRatio <= 0.5
+                        ? "bg-destructive/80"
+                        : selectedAvailableRatio <= 0.75
+                          ? "bg-amber-400"
+                          : "bg-primary/70",
+                    )}
+                    style={{ width: `${selectedAvailablePercent}%` }}
+                    aria-hidden
+                  />
+                </div>
               </div>
-              <div className="relative h-3 overflow-hidden rounded-full bg-muted">
-                <span
-                  className={cn(
-                    "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
-                    selectedAvailableRatio <= 0.5
-                      ? "bg-destructive/80"
-                      : selectedAvailableRatio <= 0.75
-                      ? "bg-amber-400"
-                      : "bg-primary/70",
-                  )}
-                  style={{ width: `${selectedAvailablePercent}%` }}
-                  aria-hidden
-                />
-              </div>
+              <Button
+                onClick={handlePlanRehearsalForSelectedDay}
+                disabled={!selectedDayKey}
+                className="w-full sm:w-auto px-5 py-2.5"
+              >
+                Probe planen
+              </Button>
             </div>
-            <Button
-              onClick={handlePlanRehearsalForSelectedDay}
-              disabled={!selectedDayKey}
-              className="w-full sm:w-auto px-5 py-2.5"
-            >
-              Probe planen
-            </Button>
-          </div>
 
-          <section className="space-y-3">
-            <h4 className="text-sm font-semibold">Geplante Proben</h4>
-            {selectedDayRehearsals.length ? (
-              <ul className="space-y-3">
-                {selectedDayRehearsals.map((entry) => {
-                  const startDate = parseISO(entry.start);
-                  const endDate = entry.end ? parseISO(entry.end) : null;
-                  const startLabel = fmtTime(startDate);
-                  const endLabel = endDate ? fmtTime(endDate) : null;
-                  const timeChip = endLabel
-                    ? `${startLabel} – ${endLabel}`
-                    : `Start ${startLabel}`;
-                  return (
-                    <li key={entry.id} className="rounded-2xl border border-border/60 bg-background/90 p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <h5 className="text-sm font-semibold text-foreground">{entry.title}</h5>
-                        {entry.location ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                            {entry.location}
-                          </span>
+            <section className="space-y-3">
+              <h4 className="text-sm font-semibold">Geplante Proben</h4>
+              {selectedDayRehearsals.length ? (
+                <ul className="space-y-3">
+                  {selectedDayRehearsals.map((entry) => {
+                    const startDate = parseISO(entry.start);
+                    const endDate = entry.end ? parseISO(entry.end) : null;
+                    const startLabel = fmtTime(startDate);
+                    const endLabel = endDate ? fmtTime(endDate) : null;
+                    const timeChip = endLabel
+                      ? `${startLabel} – ${endLabel}`
+                      : `Start ${startLabel}`;
+                    return (
+                      <li
+                        key={entry.id}
+                        className="rounded-2xl border border-border/60 bg-background/90 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <h5 className="text-sm font-semibold text-foreground">{entry.title}</h5>
+                          {entry.location ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                              {entry.location}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                          {timeChip}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditRehearsal(entry.id)}
+                          >
+                            Bearbeiten
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteRehearsal(entry.id, entry.title)}
+                            disabled={isDeleting && deletingId === entry.id}
+                          >
+                            {isDeleting && deletingId === entry.id
+                              ? "Wird gelöscht..."
+                              : "Entfernen"}
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Für diesen Tag sind noch keine Proben geplant.
+                </p>
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <h4 className="text-sm font-semibold">Blockierte Mitglieder</h4>
+              {selectedDayBlocked.length ? (
+                <ul className="space-y-2">
+                  {selectedDayBlocked.map((entry) => {
+                    const displayName = getUserDisplayName(entry.user, "Mitglied");
+                    return (
+                      <li
+                        key={entry.id}
+                        className="rounded-2xl border border-border/60 bg-card/70 px-3 py-2"
+                      >
+                        <div className="text-sm font-medium text-foreground">{displayName}</div>
+                        {entry.reason ? (
+                          <p className="text-xs text-muted-foreground">{entry.reason}</p>
                         ) : null}
-                      </div>
-                      <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                        {timeChip}
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditRehearsal(entry.id)}
-                        >
-                          Bearbeiten
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteRehearsal(entry.id, entry.title)}
-                          disabled={isDeleting && deletingId === entry.id}
-                        >
-                          {isDeleting && deletingId === entry.id
-                            ? "Wird gelöscht..."
-                            : "Entfernen"}
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">Für diesen Tag sind noch keine Proben geplant.</p>
-            )}
-          </section>
-
-          <section className="space-y-3">
-            <h4 className="text-sm font-semibold">Blockierte Mitglieder</h4>
-            {selectedDayBlocked.length ? (
-              <ul className="space-y-2">
-                {selectedDayBlocked.map((entry) => {
-                  const displayName = getUserDisplayName(entry.user, "Mitglied");
-                  return (
-                    <li key={entry.id} className="rounded-2xl border border-border/60 bg-card/70 px-3 py-2">
-                      <div className="text-sm font-medium text-foreground">{displayName}</div>
-                      {entry.reason ? (
-                        <p className="text-xs text-muted-foreground">{entry.reason}</p>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">Es sind keine Sperrungen eingetragen.</p>
-            )}
-          </section>
-        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Es sind keine Sperrungen eingetragen.
+                </p>
+              )}
+            </section>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -539,13 +531,8 @@ export function RehearsalCalendar({
                   } geplant`
                 : "Noch frei";
               const displayedRehearsals = dayRehearsals.slice(0, 2);
-              const remainingCount = Math.max(
-                0,
-                dayRehearsals.length - displayedRehearsals.length
-              );
-              const isWeekend = WEEKEND_DAY_INDICES.has(
-                day.date.getDay()
-              );
+              const remainingCount = Math.max(0, dayRehearsals.length - displayedRehearsals.length);
+              const isWeekend = WEEKEND_DAY_INDICES.has(day.date.getDay());
               const isSelected = selectedDayKey === day.key;
 
               const ariaLabelParts: string[] = [
@@ -557,27 +544,26 @@ export function RehearsalCalendar({
               ariaLabelParts.push(
                 memberCount > 0
                   ? `${availableCount} von ${memberCount} Mitgliedern verfügbar`
-                  : `${availableCount} verfügbar`
+                  : `${availableCount} verfügbar`,
               );
               ariaLabelParts.push(
                 dayRehearsals.length
                   ? `${dayRehearsals.length} ${
                       dayRehearsals.length === 1 ? "Probe" : "Proben"
                     } geplant`
-                  : "Keine Probe geplant"
+                  : "Keine Probe geplant",
               );
 
               return {
                 onClick: () => handleDaySelect(day),
                 className: cn(
                   "transition",
-                  dayRehearsals.length > 0 &&
-                    "border-primary/50 bg-primary/5",
+                  dayRehearsals.length > 0 && "border-primary/50 bg-primary/5",
                   availRatio <= 0.5 && "border-destructive/60 bg-destructive/10",
-                  availRatio > 0.5 && availRatio <= 0.75 &&
+                  availRatio > 0.5 &&
+                    availRatio <= 0.75 &&
                     "border-amber-400/60 bg-amber-100/30 dark:border-amber-400/40 dark:bg-amber-500/10",
-                  isSelected &&
-                    "border-primary/70 bg-primary/10"
+                  isSelected && "border-primary/70 bg-primary/10",
                 ),
                 "aria-label": ariaLabelParts.join(". "),
                 "aria-pressed": isSelected,
@@ -595,9 +581,7 @@ export function RehearsalCalendar({
                       <ul className="space-y-1.5">
                         {displayedRehearsals.map((entry) => {
                           const startDate = parseISO(entry.start);
-                          const endDate = entry.end
-                            ? parseISO(entry.end)
-                            : null;
+                          const endDate = entry.end ? parseISO(entry.end) : null;
                           const timeLabel = endDate
                             ? `${fmtTime(startDate)} – ${fmtTime(endDate)}`
                             : fmtTime(startDate);
@@ -631,14 +615,16 @@ export function RehearsalCalendar({
                             availRatio <= 0.5
                               ? "bg-destructive/80"
                               : availRatio <= 0.75
-                              ? "bg-amber-400"
-                              : "bg-primary/70",
+                                ? "bg-amber-400"
+                                : "bg-primary/70",
                           )}
                           style={{ width: `${availClamped * 100}%` }}
                           aria-hidden
                         />
                       </div>
-                      <span className="text-[10px] font-medium text-muted-foreground">{Math.round(availClamped * 100)}%</span>
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {Math.round(availClamped * 100)}%
+                      </span>
                     </div>
                   </div>
                 ),
@@ -678,15 +664,20 @@ export function RehearsalCalendar({
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold">Wochenend-Fokus</h3>
                 <p className="text-xs text-muted-foreground">
-                  Freitag bis Sonntag immer im Blick. Tippe auf eine Karte, um den Tagesplan zu öffnen.
+                  Freitag bis Sonntag immer im Blick. Tippe auf eine Karte, um den Tagesplan zu
+                  öffnen.
                 </p>
               </div>
               <div className="mt-4 space-y-5">
                 {weekendFocusGroups.map((group) => (
                   <div key={group.key} className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      <span className="rounded-full bg-muted px-3 py-1 text-xs">KW {group.weekNumber}</span>
-                      <span className="text-[10px] font-medium normal-case text-muted-foreground">{group.isoYear}</span>
+                      <span className="rounded-full bg-muted px-3 py-1 text-xs">
+                        KW {group.weekNumber}
+                      </span>
+                      <span className="text-[10px] font-medium normal-case text-muted-foreground">
+                        {group.isoYear}
+                      </span>
                       {group.rangeLabel ? (
                         <span className="text-[10px] font-medium normal-case text-muted-foreground/80">
                           {group.rangeLabel}
@@ -716,7 +707,9 @@ export function RehearsalCalendar({
                                 : null;
                               const startLabel = fmtTime(startDate);
                               const endLabel = endDate ? fmtTime(endDate) : null;
-                              return endLabel ? `${startLabel} – ${endLabel}` : `Start ${startLabel}`;
+                              return endLabel
+                                ? `${startLabel} – ${endLabel}`
+                                : `Start ${startLabel}`;
                             })()
                           : null;
                         const label = format(entry.date, "EEE, d. MMM", {
@@ -733,8 +726,7 @@ export function RehearsalCalendar({
                             }}
                             className={cn(
                               "group relative flex min-w-[200px] snap-start flex-col rounded-2xl border border-border/60 bg-card/70 p-5 text-left transition hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-w-0 sm:h-full",
-                              isSelected &&
-                                "border-primary/60 bg-primary/10 shadow-lg"
+                              isSelected && "border-primary/60 bg-primary/10 shadow-lg",
                             )}
                             aria-pressed={isSelected}
                             aria-label={`Wochenende ${label}: ${summary}`}
@@ -754,8 +746,8 @@ export function RehearsalCalendar({
                                     availRatio <= 0.5
                                       ? "bg-destructive/80"
                                       : availRatio <= 0.75
-                                      ? "bg-amber-400"
-                                      : "bg-primary/70",
+                                        ? "bg-amber-400"
+                                        : "bg-primary/70",
                                   )}
                                   style={{ width: `${availClamped * 100}%` }}
                                   aria-hidden
@@ -782,7 +774,8 @@ export function RehearsalCalendar({
             </div>
           ) : (
             <div className="rounded-3xl border border-border/60 bg-card/70 p-6 text-sm text-muted-foreground shadow-sm">
-              Aktuell gibt es keine Wochenendtermine im gewählten Zeitraum. Nutze die Kalenderansicht, um andere Tage zu planen.
+              Aktuell gibt es keine Wochenendtermine im gewählten Zeitraum. Nutze die
+              Kalenderansicht, um andere Tage zu planen.
             </div>
           )}
         </TabsContent>

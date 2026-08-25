@@ -28,7 +28,10 @@ async function ensurePermission() {
   return null;
 }
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ themeId: string }> }) {
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ themeId: string }> },
+) {
   const { themeId } = await params;
   const permissionResponse = await ensurePermission();
   if (permissionResponse) {
@@ -47,7 +50,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({ theme });
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ themeId: string }> }) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ themeId: string }> },
+) {
   const { themeId } = await params;
   const permissionResponse = await ensurePermission();
   if (permissionResponse) {
@@ -93,8 +99,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 }
 
-
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ themeId: string }> }) {
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ themeId: string }> },
+) {
   const { themeId } = await params;
   const permissionResponse = await ensurePermission();
   if (permissionResponse) {
@@ -112,6 +120,9 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (error instanceof LockedWebsiteThemeError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Theme konnte nicht gelöscht werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Theme konnte nicht gelöscht werden." },
+      { status: 500 },
+    );
   }
 }

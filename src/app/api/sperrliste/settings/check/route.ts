@@ -18,14 +18,12 @@ import { databaseEnabled } from "@/lib/dev-database";
 const checkSchema = z.object({
   source: z.enum(["holiday", "publicHoliday"]),
   mode: z.enum(HOLIDAY_SOURCE_MODES),
-  url: z
-    .union([z.string().trim().url().max(500), z.literal(""), z.null()])
-    .transform((value) => {
-      if (value === null || value === "") {
-        return null;
-      }
-      return value;
-    }),
+  url: z.union([z.string().trim().url().max(500), z.literal(""), z.null()]).transform((value) => {
+    if (value === null || value === "") {
+      return null;
+    }
+    return value;
+  }),
 });
 
 async function ensurePermission() {
@@ -42,16 +40,11 @@ async function ensurePermission() {
   return null;
 }
 
-function resolveCandidateSource(
-  mode: HolidaySourceMode,
-  url: string | null,
-  defaultUrl: string,
-) {
+function resolveCandidateSource(mode: HolidaySourceMode, url: string | null, defaultUrl: string) {
   return {
     mode,
     url,
-    effectiveUrl:
-      mode === "disabled" ? null : mode === "custom" ? url : defaultUrl,
+    effectiveUrl: mode === "disabled" ? null : mode === "custom" ? url : defaultUrl,
   } as const;
 }
 
@@ -83,8 +76,7 @@ function buildCandidateSettings(
   const nextPublicStatus =
     source === "publicHoliday"
       ? ({
-          status:
-            nextPublicHolidaySource.mode === "disabled" ? "disabled" : "unknown",
+          status: nextPublicHolidaySource.mode === "disabled" ? "disabled" : "unknown",
           message: null,
           checkedAt: null,
         } as const)
@@ -141,10 +133,7 @@ export async function POST(request: NextRequest) {
 
   if (mode === "custom" && url && !isHolidaySourceUrlAllowed(url)) {
     console.warn("[sperrliste] blocked custom holiday source", { url });
-    return NextResponse.json(
-      { error: "Diese Quelle ist nicht erlaubt." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Diese Quelle ist nicht erlaubt." }, { status: 400 });
   }
 
   try {

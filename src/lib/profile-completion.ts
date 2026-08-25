@@ -1,18 +1,8 @@
 export type ProfileChecklistItemId =
-  | "basics"
-  | "birthdate"
-  | "payments"
-  | "dietary"
-  | "photo-consent"
-  | "whatsapp";
+  "basics" | "birthdate" | "payments" | "dietary" | "photo-consent" | "whatsapp";
 
 export type ProfileChecklistTarget =
-  | "stammdaten"
-  | "zahlungen"
-  | "ernaehrung"
-  | "interessen"
-  | "freigaben"
-  | "onboarding";
+  "stammdaten" | "zahlungen" | "ernaehrung" | "interessen" | "freigaben" | "onboarding";
 
 export type ProfileChecklistItem = {
   id: ProfileChecklistItemId;
@@ -57,8 +47,8 @@ export function isPaymentDetailsComplete(details: PaymentDetailsInput): boolean 
     case "BANK_TRANSFER": {
       return Boolean(
         details.payoutAccountHolder?.trim() &&
-          details.payoutIban?.trim() &&
-          details.payoutBankName?.trim(),
+        details.payoutIban?.trim() &&
+        details.payoutBankName?.trim(),
       );
     }
     case "PAYPAL": {
@@ -72,9 +62,7 @@ export function isPaymentDetailsComplete(details: PaymentDetailsInput): boolean 
   }
 }
 
-export function buildProfileChecklist(
-  input: ChecklistInput,
-): ProfileCompletionSummary {
+export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionSummary {
   const items: ProfileChecklistItem[] = [
     {
       id: "basics",

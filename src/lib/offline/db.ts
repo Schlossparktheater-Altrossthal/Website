@@ -30,8 +30,7 @@ class OfflineDatabase extends Dexie {
   }
 }
 
-const hasIndexedDb =
-  typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
+const hasIndexedDb = typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
 
 export const offlineDb = hasIndexedDb ? new OfflineDatabase() : null;
 

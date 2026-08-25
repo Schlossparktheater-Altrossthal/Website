@@ -23,8 +23,12 @@ export async function GET() {
       where: { isSystem: false },
       orderBy: [{ sortIndex: "asc" }, { name: "asc" }],
     }),
-    prisma.permission.findMany({ where: { key: { in: DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key) } } }),
-    prisma.appRolePermission.findMany({ select: { roleId: true, permission: { select: { key: true } } } }),
+    prisma.permission.findMany({
+      where: { key: { in: DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key) } },
+    }),
+    prisma.appRolePermission.findMany({
+      select: { roleId: true, permission: { select: { key: true } } },
+    }),
     prisma.department.findMany({
       orderBy: [{ name: "asc" }],
       select: { id: true, name: true, slug: true, requiresJoinApproval: true },
@@ -75,21 +79,20 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => null) as
-    | {
-        targetType?: "role" | "department";
-        roleId?: string;
-        departmentId?: string;
-        targetId?: string;
-        permissionKey: string;
-        grant: boolean;
-      }
-    | null;
+  const body = (await request.json().catch(() => null)) as {
+    targetType?: "role" | "department";
+    roleId?: string;
+    departmentId?: string;
+    targetId?: string;
+    permissionKey: string;
+    grant: boolean;
+  } | null;
   if (!body || typeof body.permissionKey !== "string") {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
-  const targetType = body.targetType ?? (body.roleId ? "role" : body.departmentId ? "department" : undefined);
+  const targetType =
+    body.targetType ?? (body.roleId ? "role" : body.departmentId ? "department" : undefined);
   const targetId =
     typeof body.targetId === "string"
       ? body.targetId
@@ -120,7 +123,9 @@ export async function PUT(request: NextRequest) {
 
     if (body.grant) {
       await prisma.departmentPermission.upsert({
-        where: { departmentId_permissionId: { departmentId: department.id, permissionId: perm.id } },
+        where: {
+          departmentId_permissionId: { departmentId: department.id, permissionId: perm.id },
+        },
         update: {},
         create: { departmentId: department.id, permissionId: perm.id },
       });
@@ -144,7 +149,9 @@ export async function PUT(request: NextRequest) {
         create: { roleId: role.id, permissionId: perm.id },
       });
     } else {
-      await prisma.appRolePermission.deleteMany({ where: { roleId: role.id, permissionId: perm.id } });
+      await prisma.appRolePermission.deleteMany({
+        where: { roleId: role.id, permissionId: perm.id },
+      });
     }
   }
 
@@ -153,5 +160,8 @@ export async function PUT(request: NextRequest) {
 
 // No POST: permissions are defined in source. Return 405 for creation attempts.
 export async function POST() {
-  return NextResponse.json({ error: "Rechte sind im Code definiert und können nicht angelegt werden." }, { status: 405 });
+  return NextResponse.json(
+    { error: "Rechte sind im Code definiert und können nicht angelegt werden." },
+    { status: 405 },
+  );
 }

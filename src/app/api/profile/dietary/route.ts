@@ -40,8 +40,7 @@ export async function PUT(request: NextRequest) {
   try {
     parsed = parseRequestBody(payload);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Ungültige Eingaben.";
+    const message = error instanceof Error ? error.message : "Ungültige Eingaben.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
@@ -52,10 +51,7 @@ export async function PUT(request: NextRequest) {
     : parsed.strictness;
   const customLabel = parsed.customLabel ?? null;
 
-  const { label: styleLabel, custom } = resolveDietaryStyleLabel(
-    style,
-    customLabel,
-  );
+  const { label: styleLabel, custom } = resolveDietaryStyleLabel(style, customLabel);
   const strictnessLabel = resolveDietaryStrictnessLabel(style, strictness);
 
   try {

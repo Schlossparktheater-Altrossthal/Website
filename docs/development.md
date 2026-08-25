@@ -11,6 +11,7 @@ pnpm dev:start:local
 ```
 
 Beide Befehle starten automatisch:
+
 - PostgreSQL Datenbank (Port 5432, Docker-Modus)
 - Mailpit E-Mail Interface (Port 8025, Docker-Modus)
 - Next.js Development Server mit Realtime Support (Port 3000)
@@ -77,6 +78,7 @@ docker volume ls | grep theater-website         # Projekt-Volumes anzeigen
 ## Troubleshooting
 
 ### Port bereits belegt
+
 ```bash
 # Finde Prozess auf Port 3000
 lsof -i :3000
@@ -90,6 +92,7 @@ netstat -tulpn | grep :8025
 ```
 
 ### Datenbank Probleme
+
 ```bash
 # Container neu starten
 docker compose restart db
@@ -99,6 +102,7 @@ pnpm dev:reset
 ```
 
 ### Node.js/pnpm Probleme
+
 ```bash
 # Cache leeren
 pnpm store prune
@@ -111,6 +115,7 @@ pnpm install
 ## Environment Variablen
 
 Das Script generiert automatisch eine `.env` Datei mit:
+
 - Sichere Zufalls-Secrets für Auth und Realtime
 - Lokale URLs (localhost:3000)
 - Development-optimierte Einstellungen

@@ -2,14 +2,7 @@
 
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { TooltipContentProps } from "recharts";
-import {
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-  Tooltip,
-} from "recharts";
+import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, Tooltip } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -127,7 +120,12 @@ export function RoleSpiderChart({
     [chartData],
   );
 
-  const tooltipLabelFormatter = (value: ReactNode) => (typeof value === "string" ? value : typeof value === "number" ? `${value}%` : String(value ?? ""));
+  const tooltipLabelFormatter = (value: ReactNode) =>
+    typeof value === "string"
+      ? value
+      : typeof value === "number"
+        ? `${value}%`
+        : String(value ?? "");
 
   const renderTooltip = ({ active, payload }: TooltipContentProps<number, string>) => {
     if (!active || !payload?.length) {
@@ -192,11 +190,7 @@ export function RoleSpiderChart({
               </linearGradient>
             </defs>
 
-            <PolarGrid
-              gridType="polygon"
-              stroke="hsl(var(--border))"
-              strokeOpacity={0.4}
-            />
+            <PolarGrid gridType="polygon" stroke="hsl(var(--border))" strokeOpacity={0.4} />
             <PolarAngleAxis
               dataKey="label"
               tickLine={false}

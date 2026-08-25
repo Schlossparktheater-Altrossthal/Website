@@ -4,27 +4,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-const keyMetricValueVariants = cva(
-  "text-2xl font-semibold tracking-tight",
-  {
-    variants: {
-      tone: {
-        default: "text-foreground",
-        positive: "text-success",
-        info: "text-info",
-        warning: "text-warning",
-        destructive: "text-destructive",
-      },
-    },
-    defaultVariants: {
-      tone: "default",
+const keyMetricValueVariants = cva("text-2xl font-semibold tracking-tight", {
+  variants: {
+    tone: {
+      default: "text-foreground",
+      positive: "text-success",
+      info: "text-info",
+      warning: "text-warning",
+      destructive: "text-destructive",
     },
   },
-);
+  defaultVariants: {
+    tone: "default",
+  },
+});
 
 export interface KeyMetricCardProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof keyMetricValueVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof keyMetricValueVariants> {
   label: React.ReactNode;
   value: React.ReactNode;
   hint?: React.ReactNode;
@@ -43,9 +39,7 @@ export function KeyMetricCard({
   return (
     <Card data-pattern="key-metric" className={cn("h-full", className)} {...props}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground/90">
-          {label}
-        </CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground/90">{label}</CardTitle>
         {icon ? <span className="text-muted-foreground">{icon}</span> : null}
       </CardHeader>
       <CardContent className="space-y-2 pt-0">

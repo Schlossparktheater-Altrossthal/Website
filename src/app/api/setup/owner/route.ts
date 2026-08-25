@@ -104,7 +104,10 @@ export async function POST(request: NextRequest) {
 
   if (!setupToken) {
     return NextResponse.json(
-      { error: "Dieser Link ist nicht mehr gültig. Bitte starte den Server neu, um einen neuen Link zu erhalten." },
+      {
+        error:
+          "Dieser Link ist nicht mehr gültig. Bitte starte den Server neu, um einen neuen Link zu erhalten.",
+      },
       { status: 410 },
     );
   }
@@ -150,7 +153,10 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     if (error instanceof Error) {
       if (error.message === "TOKEN_ALREADY_USED") {
-        return NextResponse.json({ error: "Dieser Link wurde bereits verwendet." }, { status: 410 });
+        return NextResponse.json(
+          { error: "Dieser Link wurde bereits verwendet." },
+          { status: 410 },
+        );
       }
     }
 

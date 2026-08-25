@@ -55,9 +55,9 @@ const dateFormatter = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",
 });
 
-function isValidationError<Result extends { success: boolean; error?: unknown; fieldErrors?: FieldErrors }>(
-  result: Result,
-): result is Result & { success: false; fieldErrors: FieldErrors } {
+function isValidationError<
+  Result extends { success: boolean; error?: unknown; fieldErrors?: FieldErrors },
+>(result: Result): result is Result & { success: false; fieldErrors: FieldErrors } {
   return result.success === false && Boolean(result.fieldErrors);
 }
 
@@ -75,11 +75,16 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
     mailFromName: initialSettings.mailFromName,
     mailReplyTo: initialSettings.mailReplyTo,
   });
-  const [passwordState, setPasswordState] = useState<PasswordState>({ mode: "preserve", value: "" });
+  const [passwordState, setPasswordState] = useState<PasswordState>({
+    mode: "preserve",
+    value: "",
+  });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [testFeedback, setTestFeedback] = useState<TestFeedback>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(initialSettings.updatedAt);
-  const [passwordPersisted, setPasswordPersisted] = useState<boolean>(initialSettings.mailPasswordSet);
+  const [passwordPersisted, setPasswordPersisted] = useState<boolean>(
+    initialSettings.mailPasswordSet,
+  );
   const [autoDetectInfo, setAutoDetectInfo] = useState<string | null>(null);
   const passwordHintId = useId();
   const [activeStep, setActiveStep] = useState<StepId>(() => {
@@ -142,8 +147,8 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
     }
   };
 
-  const handleTextChange = (field: keyof ServerSettingsFormValues) =>
-    (event: ChangeEvent<HTMLInputElement>) => {
+  const handleTextChange =
+    (field: keyof ServerSettingsFormValues) => (event: ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
       setFormState((previous) => ({ ...previous, [field]: value }));
       clearFieldError(field);
@@ -340,7 +345,8 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
       return false;
     }
 
-    const message = result.message ?? "Die SMTP-Einstellungen konnten nicht automatisch erkannt werden.";
+    const message =
+      result.message ?? "Die SMTP-Einstellungen konnten nicht automatisch erkannt werden.";
     toast.error(message);
     return false;
   };
@@ -442,8 +448,8 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
   const credentialsStep = (
     <section className="space-y-6">
       <p className="text-sm text-muted-foreground">
-        Hinterlege hier die Zugangsdaten für den Versand. Mit einem Klick auf „Automatisch konfigurieren“
-        versucht das System anschließend, passende Servereinstellungen zu ermitteln.
+        Hinterlege hier die Zugangsdaten für den Versand. Mit einem Klick auf „Automatisch
+        konfigurieren“ versucht das System anschließend, passende Servereinstellungen zu ermitteln.
       </p>
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
@@ -467,7 +473,10 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
             onChange={handlePasswordChange}
             aria-describedby={passwordHintId}
           />
-          <div id={passwordHintId} className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <div
+            id={passwordHintId}
+            className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+          >
             <span>{passwordHint}</span>
             {passwordState.mode !== "preserve" ? (
               <Button
@@ -504,7 +513,11 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
         >
           Zurück
         </Button>
-        <Button type="button" onClick={goToNextStep} disabled={isSaving || isTesting || isAutodetecting}>
+        <Button
+          type="button"
+          onClick={goToNextStep}
+          disabled={isSaving || isTesting || isAutodetecting}
+        >
           Weiter
         </Button>
         <Button
@@ -546,7 +559,9 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
             >
               Automatisch erkennen
             </Button>
-            {autoDetectInfo ? <span className="text-xs text-muted-foreground">{autoDetectInfo}</span> : null}
+            {autoDetectInfo ? (
+              <span className="text-xs text-muted-foreground">{autoDetectInfo}</span>
+            ) : null}
           </div>
           {renderFieldErrors("mailHost")}
         </div>
@@ -564,7 +579,10 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
         </div>
       </div>
       <div className="space-y-2">
-        <label className="flex items-center gap-3 text-sm font-medium text-foreground" htmlFor="mailSecure">
+        <label
+          className="flex items-center gap-3 text-sm font-medium text-foreground"
+          htmlFor="mailSecure"
+        >
           <input
             id="mailSecure"
             type="checkbox"
@@ -642,8 +660,9 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
         <form className="space-y-8" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Der Assistent führt dich Schritt für Schritt durch die Einrichtung. Du kannst jederzeit zu einem vorherigen Schritt
-              zurückkehren oder direkt zur manuellen Konfiguration wechseln.
+              Der Assistent führt dich Schritt für Schritt durch die Einrichtung. Du kannst
+              jederzeit zu einem vorherigen Schritt zurückkehren oder direkt zur manuellen
+              Konfiguration wechseln.
             </p>
             <ol className="flex flex-wrap items-center gap-6 text-sm font-medium">
               {STEPS.map((step, index) => {
@@ -657,8 +676,8 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
                         (isActive
                           ? " border-primary bg-primary/10 text-primary"
                           : isCompleted
-                          ? " border-primary bg-primary text-primary-foreground"
-                          : " border-muted-foreground/40 text-muted-foreground")
+                            ? " border-primary bg-primary text-primary-foreground"
+                            : " border-muted-foreground/40 text-muted-foreground")
                       }
                     >
                       {index + 1}
@@ -672,9 +691,11 @@ export function ServerSettingsContent({ initialSettings }: ServerSettingsContent
                         (isActive
                           ? " text-foreground"
                           : isCompleted
-                          ? " text-foreground"
-                          : " text-muted-foreground") +
-                        (isSaving || isTesting || isAutodetecting ? " cursor-not-allowed opacity-70" : "")
+                            ? " text-foreground"
+                            : " text-muted-foreground") +
+                        (isSaving || isTesting || isAutodetecting
+                          ? " cursor-not-allowed opacity-70"
+                          : "")
                       }
                     >
                       {step.label}

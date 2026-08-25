@@ -1,5 +1,22 @@
-
-import { AudioLinesIcon, CalendarHeartIcon, ClipboardListIcon, DramaIcon, HeartHandshakeIcon, IconComponent, MegaphoneIcon, Music3Icon, PackageIcon, ShirtIcon, SparklesIcon, TreesIcon, UsersIcon, UtensilsCrossedIcon, WandSparklesIcon, ZapIcon } from "@/components/ui/action-icons";export const revalidate = 60;
+import {
+  AudioLinesIcon,
+  CalendarHeartIcon,
+  ClipboardListIcon,
+  DramaIcon,
+  HeartHandshakeIcon,
+  IconComponent,
+  MegaphoneIcon,
+  Music3Icon,
+  PackageIcon,
+  ShirtIcon,
+  SparklesIcon,
+  TreesIcon,
+  UsersIcon,
+  UtensilsCrossedIcon,
+  WandSparklesIcon,
+  ZapIcon,
+} from "@/components/ui/action-icons";
+export const revalidate = 60;
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -67,7 +84,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-
 type StatisticItem = {
   label: string;
   value: string;
@@ -85,15 +101,16 @@ export default async function PublicAboutPage() {
     notFound();
   }
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
-  const [ensembleStats, intro, statsContent, milestones, signature, values, trades] = await Promise.all([
-    getCurrentProductionEnsembleStats(),
-    readUeberUnsIntro(),
-    readUeberUnsStats(),
-    readUeberUnsMilestones(),
-    readUeberUnsSignature(),
-    readUeberUnsValues(),
-    readUeberUnsTrades(),
-  ]);
+  const [ensembleStats, intro, statsContent, milestones, signature, values, trades] =
+    await Promise.all([
+      getCurrentProductionEnsembleStats(),
+      readUeberUnsIntro(),
+      readUeberUnsStats(),
+      readUeberUnsMilestones(),
+      readUeberUnsSignature(),
+      readUeberUnsValues(),
+      readUeberUnsTrades(),
+    ]);
 
   const statisticItems = statsContent.items.map<StatisticItem>((item) => {
     if (item.label !== "Ensemble" || !ensembleStats) {
@@ -129,7 +146,10 @@ export default async function PublicAboutPage() {
   return (
     <div className="relative isolate">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background" aria-hidden />
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background"
+          aria-hidden
+        />
         <div
           className="absolute left-1/2 top-[-10%] h-[28rem] w-[120vw] -translate-x-1/2 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent blur-3xl opacity-60"
           aria-hidden
@@ -143,11 +163,19 @@ export default async function PublicAboutPage() {
       <section className="layout-container pb-12 pt-16 sm:pt-24">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl">
-            <Heading level="h1" className="text-[clamp(1.2rem,2.5vw,1.8rem)] font-bold text-foreground">
+            <Heading
+              level="h1"
+              className="text-[clamp(1.2rem,2.5vw,1.8rem)] font-bold text-foreground"
+            >
               Über uns
             </Heading>
             {intro.paragraphs.map((paragraph, index) => (
-              <Text key={index} variant={index === 0 ? "bodyLg" : "body"} tone="muted" className={index === 0 ? "mt-6" : "mt-4"}>
+              <Text
+                key={index}
+                variant={index === 0 ? "bodyLg" : "body"}
+                tone="muted"
+                className={index === 0 ? "mt-6" : "mt-4"}
+              >
                 {paragraph}
               </Text>
             ))}
@@ -155,12 +183,19 @@ export default async function PublicAboutPage() {
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {statisticItems.map((item) => (
-              <Card key={item.label} className="flex flex-col items-center border border-primary/60 bg-card/70 p-4 text-center shadow-sm">
+              <Card
+                key={item.label}
+                className="flex flex-col items-center border border-primary/60 bg-card/70 p-4 text-center shadow-sm"
+              >
                 <CardHeader className="p-0 pb-2">
-                  <p className="text-center text-xs font-semibold uppercase tracking-widest text-primary">{item.label}</p>
+                  <p className="text-center text-xs font-semibold uppercase tracking-widest text-primary">
+                    {item.label}
+                  </p>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <p className="text-center text-[clamp(1.8rem,3vw,2.4rem)] font-bold text-primary">{item.value}</p>
+                  <p className="text-center text-[clamp(1.8rem,3vw,2.4rem)] font-bold text-primary">
+                    {item.value}
+                  </p>
                   <p className="mt-1 text-center text-sm text-muted-foreground">{item.detail}</p>
                 </CardContent>
               </Card>
@@ -176,8 +211,8 @@ export default async function PublicAboutPage() {
               Gewerke, die eine Produktion tragen
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
-              Jeder Sommer entsteht aus vielen Händen und Talenten. Unser Ensemble arbeitet bereichsübergreifend – von der ersten Textprobe bis zur letzten
-              Vorstellungsnacht.
+              Jeder Sommer entsteht aus vielen Händen und Talenten. Unser Ensemble arbeitet
+              bereichsübergreifend – von der ersten Textprobe bis zur letzten Vorstellungsnacht.
             </Text>
           </div>
           <div className="mt-4 flex justify-end">
@@ -200,29 +235,32 @@ export default async function PublicAboutPage() {
             >
               {Array.from({ length: CAROUSEL_GROUP_COUNT }).map((_, groupIndex) => (
                 <div key={groupIndex} className="flex gap-6" aria-hidden={groupIndex > 0}>
-                  {trades.items.map(({ icon: iconName, title, description }) => { const TradeIcon = ICON_MAP[iconName] ?? DramaIcon; return (
-                    <Card
-                      key={`${title}-${groupIndex}`}
-                      role={groupIndex === 0 ? "listitem" : "presentation"}
-                      aria-hidden={groupIndex > 0}
-                      tabIndex={groupIndex === 0 ? 0 : -1}
-                      className="flex w-[min(18.5rem,80vw)] shrink-0 snap-center flex-col justify-between gap-4 rounded-2xl border border-primary/50 bg-card/70 p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:w-[22rem] sm:snap-start"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
-                          <TradeIcon className="h-6 w-6" aria-hidden />
+                  {trades.items.map(({ icon: iconName, title, description }) => {
+                    const TradeIcon = ICON_MAP[iconName] ?? DramaIcon;
+                    return (
+                      <Card
+                        key={`${title}-${groupIndex}`}
+                        role={groupIndex === 0 ? "listitem" : "presentation"}
+                        aria-hidden={groupIndex > 0}
+                        tabIndex={groupIndex === 0 ? 0 : -1}
+                        className="flex w-[min(18.5rem,80vw)] shrink-0 snap-center flex-col justify-between gap-4 rounded-2xl border border-primary/50 bg-card/70 p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:w-[22rem] sm:snap-start"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
+                            <TradeIcon className="h-6 w-6" aria-hidden />
+                          </div>
+                          <Heading level="h3" className="text-xl" weight="bold">
+                            {title}
+                          </Heading>
                         </div>
-                        <Heading level="h3" className="text-xl" weight="bold">
-                          {title}
-                        </Heading>
-                      </div>
-                      <div className="space-y-3">
-                        <Text variant="small" tone="muted">
-                          {description}
-                        </Text>
-                      </div>
-                    </Card>
-                  ); })}
+                        <div className="space-y-3">
+                          <Text variant="small" tone="muted">
+                            {description}
+                          </Text>
+                        </div>
+                      </Card>
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -238,45 +276,54 @@ export default async function PublicAboutPage() {
                 Unsere Handschrift
               </Heading>
               <Text variant="bodyLg" tone="muted">
-                Die Sommerproduktionen entstehen über Monate hinweg – von der ersten Idee bis zur letzten Generalprobe. Dabei verbinden wir poetische Stoffe mit
-                immersiven Erlebnissen, die nur unter freiem Himmel möglich sind. Werkstätten für Floristik, Holz- und Metallgestaltung sowie Maskenbild des
-                Berufsschulzentrums fließen direkt in Bühnenwelten ein.
+                Die Sommerproduktionen entstehen über Monate hinweg – von der ersten Idee bis zur
+                letzten Generalprobe. Dabei verbinden wir poetische Stoffe mit immersiven
+                Erlebnissen, die nur unter freiem Himmel möglich sind. Werkstätten für Floristik,
+                Holz- und Metallgestaltung sowie Maskenbild des Berufsschulzentrums fließen direkt
+                in Bühnenwelten ein.
               </Text>
               <div className="space-y-5">
-                {signature.items.map(({ icon: iconName, title, description }) => { const SignatureIcon = ICON_MAP[iconName] ?? DramaIcon; return (
-                  <div
-                    key={title}
-                    className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
-                  >
-                    <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                      <SignatureIcon className="h-6 w-6" aria-hidden />
+                {signature.items.map(({ icon: iconName, title, description }) => {
+                  const SignatureIcon = ICON_MAP[iconName] ?? DramaIcon;
+                  return (
+                    <div
+                      key={title}
+                      className="group flex gap-4 rounded-xl border border-border/40 bg-card/60 p-4 transition hover:border-primary/50 hover:bg-card/80"
+                    >
+                      <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                        <SignatureIcon className="h-6 w-6" aria-hidden />
+                      </div>
+                      <div>
+                        <Heading level="h4" className="text-lg" weight="bold">
+                          {title}
+                        </Heading>
+                        <Text variant="small" tone="muted" className="mt-1">
+                          {description}
+                        </Text>
+                      </div>
                     </div>
-                    <div>
-                      <Heading level="h4" className="text-lg" weight="bold">
-                        {title}
-                      </Heading>
-                      <Text variant="small" tone="muted" className="mt-1">
-                        {description}
-                      </Text>
-                    </div>
-                  </div>
-                ); })}
+                  );
+                })}
               </div>
             </div>
 
             <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-primary/10 via-background to-background p-[clamp(1rem,2vw,1.5rem)] shadow-lg">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,223,150,0.18),_transparent_60%)]" aria-hidden />
+              <div
+                className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(248,223,150,0.18),_transparent_60%)]"
+                aria-hidden
+              />
               <div className="relative space-y-4">
                 <Text variant="eyebrow" uppercase tone="primary">
                   Atmosphäre
                 </Text>
                 <Heading level="h3" className="text-[clamp(1rem,2vw,1.3rem)] font-bold">
-                  Wenn die Sonne hinter den Baumwipfeln verschwindet, beginnt unser Bühnenraum zu leben: leuchtende Pfade, flüsternde Bäume und ein Ensemble, das
-                  das Publikum mitnimmt in eine andere Welt.
+                  Wenn die Sonne hinter den Baumwipfeln verschwindet, beginnt unser Bühnenraum zu
+                  leben: leuchtende Pfade, flüsternde Bäume und ein Ensemble, das das Publikum
+                  mitnimmt in eine andere Welt.
                 </Heading>
                 <Text variant="small" tone="muted">
-                  Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen und räumlicher Klang lassen die Besucher:innen mitten in der
-                  Geschichte stehen.
+                  Jedes Szenenbild wird speziell für den Schlosspark entwickelt. Lichtinstallationen
+                  und räumlicher Klang lassen die Besucher:innen mitten in der Geschichte stehen.
                 </Text>
               </div>
             </div>
@@ -291,24 +338,31 @@ export default async function PublicAboutPage() {
               Werte, die wir leben
             </Heading>
             <Text variant="bodyLg" tone="muted" className="mt-4">
-              Ensemblearbeit bedeutet Vertrauen. Unsere Werte spiegeln sich in jeder Probe, jedem Ehrenamt und jedem Gast wider, der den Weg nach Altrossthal findet.
+              Ensemblearbeit bedeutet Vertrauen. Unsere Werte spiegeln sich in jeder Probe, jedem
+              Ehrenamt und jedem Gast wider, der den Weg nach Altrossthal findet.
             </Text>
           </div>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {values.items.map(({ icon: iconName, title, description }) => { const ValueIcon = ICON_MAP[iconName] ?? DramaIcon; return (
-              <Card key={title} className="relative overflow-hidden bg-card/70">
-                <div className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl" aria-hidden />
-                <CardHeader>
-                  <ValueIcon className="h-8 w-8 text-primary" aria-hidden />
-                </CardHeader>
-                <CardContent>
-                  <CardTitle className="text-xl">{title}</CardTitle>
-                  <Text variant="small" tone="muted" className="mt-2">
-                    {description}
-                  </Text>
-                </CardContent>
-              </Card>
-            ); })}
+            {values.items.map(({ icon: iconName, title, description }) => {
+              const ValueIcon = ICON_MAP[iconName] ?? DramaIcon;
+              return (
+                <Card key={title} className="relative overflow-hidden bg-card/70">
+                  <div
+                    className="absolute right-4 top-4 h-16 w-16 rounded-full bg-primary/10 blur-2xl"
+                    aria-hidden
+                  />
+                  <CardHeader>
+                    <ValueIcon className="h-8 w-8 text-primary" aria-hidden />
+                  </CardHeader>
+                  <CardContent>
+                    <CardTitle className="text-xl">{title}</CardTitle>
+                    <Text variant="small" tone="muted" className="mt-2">
+                      {description}
+                    </Text>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -325,7 +379,10 @@ export default async function PublicAboutPage() {
               </Text>
             </div>
             <div className="relative">
-              <div className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent" aria-hidden />
+              <div
+                className="absolute left-3 top-1 bottom-1 w-px bg-gradient-to-b from-primary/60 via-primary/20 to-transparent"
+                aria-hidden
+              />
               <ul className="space-y-8">
                 {milestones.items.map((milestone, index) => (
                   <li key={index} className="relative pl-12">
@@ -346,7 +403,10 @@ export default async function PublicAboutPage() {
         </div>
       </section>
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutOrganizationJsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutOrganizationJsonLd) }}
+      />
     </div>
   );
 }

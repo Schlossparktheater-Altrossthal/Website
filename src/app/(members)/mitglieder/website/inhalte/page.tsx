@@ -44,17 +44,25 @@ export default async function SeiteninhalteePage() {
     );
   }
 
-  const [faq, schulkatzeIntro, ueberUnsIntro, ueberUnsStats, ueberUnsMilestones, ueberUnsSignature, ueberUnsValues, ueberUnsTrades] =
-    await Promise.all([
-      readFaqContent(),
-      readSchulkatzeIntro(),
-      readUeberUnsIntro(),
-      readUeberUnsStats(),
-      readUeberUnsMilestones(),
-      readUeberUnsSignature(),
-      readUeberUnsValues(),
-      readUeberUnsTrades(),
-    ]);
+  const [
+    faq,
+    schulkatzeIntro,
+    ueberUnsIntro,
+    ueberUnsStats,
+    ueberUnsMilestones,
+    ueberUnsSignature,
+    ueberUnsValues,
+    ueberUnsTrades,
+  ] = await Promise.all([
+    readFaqContent(),
+    readSchulkatzeIntro(),
+    readUeberUnsIntro(),
+    readUeberUnsStats(),
+    readUeberUnsMilestones(),
+    readUeberUnsSignature(),
+    readUeberUnsValues(),
+    readUeberUnsTrades(),
+  ]);
 
   return (
     <div className="space-y-6">

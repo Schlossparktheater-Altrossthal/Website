@@ -91,7 +91,6 @@ services:
 
       com.centurylinklabs.watchtower.enable: true
 
-
   app-prod:
     image: "${THEATER_WEBSITE_IMAGE:-limitlessgreen/theater_website}:${PROD_IMAGE_TAG:-prod}"
     restart: unless-stopped

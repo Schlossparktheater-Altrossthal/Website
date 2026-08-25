@@ -109,7 +109,10 @@ export function getNameInitials(params: {
   return "?";
 }
 
-export function splitFullName(fullName: MaybeString): { firstName: string | null; lastName: string | null } {
+export function splitFullName(fullName: MaybeString): {
+  firstName: string | null;
+  lastName: string | null;
+} {
   const trimmed = trimToNull(fullName);
   if (!trimmed) return { firstName: null, lastName: null };
 

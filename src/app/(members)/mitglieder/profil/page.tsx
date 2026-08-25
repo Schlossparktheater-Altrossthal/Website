@@ -127,10 +127,7 @@ export default async function ProfilePage() {
     "Unbekanntes Mitglied",
   );
 
-  const roles = sortRoles([
-    user.role as Role,
-    ...user.roles.map((entry) => entry.role as Role),
-  ]);
+  const roles = sortRoles([user.role as Role, ...user.roles.map((entry) => entry.role as Role)]);
 
   const preferenceSummaries = user.rolePreferences.map((preference) => ({
     code: preference.code,
@@ -140,7 +137,10 @@ export default async function ProfilePage() {
 
   const customRoles = user.appRoles
     .map((entry) => entry.role)
-    .filter((role): role is { id: string; name: string; systemRole: Role | null; isSystem: boolean } => Boolean(role))
+    .filter(
+      (role): role is { id: string; name: string; systemRole: Role | null; isSystem: boolean } =>
+        Boolean(role),
+    )
     .filter((role) => !role.systemRole)
     .map((role) => ({ id: role.id, name: role.name }));
 
@@ -234,11 +234,16 @@ export default async function ProfilePage() {
       }
     : null;
 
-  const headerDescription = "Pflege deine Stammdaten, Zahlungsdaten, Ernährungspräferenzen und Freigaben für unser Ensemble.";
+  const headerDescription =
+    "Pflege deine Stammdaten, Zahlungsdaten, Ernährungspräferenzen und Freigaben für unser Ensemble.";
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Mein Profil" description={headerDescription} breadcrumbs={[membersBreadcrumb]} />
+      <PageHeader
+        title="Mein Profil"
+        description={headerDescription}
+        breadcrumbs={[membersBreadcrumb]}
+      />
       <ProfileClient
         user={{
           id: user.id,

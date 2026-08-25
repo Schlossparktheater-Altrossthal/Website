@@ -211,14 +211,18 @@ export function PermissionDetailDrawer({
         if (!grant && !alreadyGranted) continue;
         await mutateDepartmentGrant(department.id, grant);
       }
-      toast.success(grant ? "Recht allen Gewerken zugewiesen." : "Recht bei allen Gewerken entfernt.");
+      toast.success(
+        grant ? "Recht allen Gewerken zugewiesen." : "Recht bei allen Gewerken entfernt.",
+      );
     } finally {
       setBulkLoading(false);
     }
   };
 
   const renderRoleRow = (role: PermissionWorkbenchRole, granted: boolean, pending: boolean) => {
-    const label = role.systemRole ? ROLE_LABELS[role.systemRole as keyof typeof ROLE_LABELS] ?? role.name : role.name;
+    const label = role.systemRole
+      ? (ROLE_LABELS[role.systemRole as keyof typeof ROLE_LABELS] ?? role.name)
+      : role.name;
     return (
       <button
         key={role.id}
@@ -264,7 +268,9 @@ export function PermissionDetailDrawer({
         <span className="truncate text-left">
           <span className="font-medium">{department.name}</span>
           {department.slug ? (
-            <span className="ml-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">{department.slug}</span>
+            <span className="ml-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              {department.slug}
+            </span>
           ) : null}
           {department.requiresJoinApproval ? (
             <Badge variant="warning" size="sm" className="ml-2">
@@ -286,7 +292,9 @@ export function PermissionDetailDrawer({
           <div className="space-y-4">
             <SheetHeader>
               <SheetTitle>Kein Recht ausgewählt</SheetTitle>
-              <SheetDescription>Wähle ein Recht aus, um Zuweisungen zu bearbeiten.</SheetDescription>
+              <SheetDescription>
+                Wähle ein Recht aus, um Zuweisungen zu bearbeiten.
+              </SheetDescription>
             </SheetHeader>
           </div>
         ) : (
@@ -295,7 +303,9 @@ export function PermissionDetailDrawer({
               <SheetTitle>{permission.label}</SheetTitle>
               <SheetDescription>
                 <span className="font-mono text-xs text-muted-foreground">{permission.key}</span>
-                {permission.description ? <p className="mt-2 text-sm">{permission.description}</p> : null}
+                {permission.description ? (
+                  <p className="mt-2 text-sm">{permission.description}</p>
+                ) : null}
               </SheetDescription>
             </SheetHeader>
 
@@ -312,7 +322,7 @@ export function PermissionDetailDrawer({
                 ) : null}
                 {systemRoles.map((role) => {
                   const label = role.systemRole
-                    ? ROLE_LABELS[role.systemRole as keyof typeof ROLE_LABELS] ?? role.name
+                    ? (ROLE_LABELS[role.systemRole as keyof typeof ROLE_LABELS] ?? role.name)
                     : role.name;
                   return (
                     <div
@@ -326,7 +336,11 @@ export function PermissionDetailDrawer({
                         ) : null}
                       </span>
                       <Badge
-                        className={ROLE_BADGE_VARIANTS[(role.systemRole as keyof typeof ROLE_BADGE_VARIANTS) ?? "member"]}
+                        className={
+                          ROLE_BADGE_VARIANTS[
+                            (role.systemRole as keyof typeof ROLE_BADGE_VARIANTS) ?? "member"
+                          ]
+                        }
                         size="sm"
                       >
                         Vollzugriff
@@ -363,14 +377,12 @@ export function PermissionDetailDrawer({
               </div>
               <div className="grid gap-2">
                 {roles.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Noch keine eigenen Rollen angelegt.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Noch keine eigenen Rollen angelegt.
+                  </p>
                 ) : null}
                 {roles.map((role) =>
-                  renderRoleRow(
-                    role,
-                    assignedRoleIds.has(role.id),
-                    pendingRoleIds.has(role.id),
-                  ),
+                  renderRoleRow(role, assignedRoleIds.has(role.id), pendingRoleIds.has(role.id)),
                 )}
               </div>
             </section>

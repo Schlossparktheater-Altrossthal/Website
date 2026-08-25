@@ -40,10 +40,7 @@ export function ImpersonationBanner({ details }: ImpersonationBannerProps) {
     return search ? `${basePath}?${search}` : basePath;
   }, [pathname, searchParams]);
 
-  const startedAtLabel = useMemo(
-    () => formatStartedAt(details.startedAt),
-    [details.startedAt],
-  );
+  const startedAtLabel = useMemo(() => formatStartedAt(details.startedAt), [details.startedAt]);
 
   const targetName = details.target.name ?? "dieses Mitglied";
   const ownerName = details.owner.name ?? "dir selbst";
@@ -71,7 +68,11 @@ export function ImpersonationBanner({ details }: ImpersonationBannerProps) {
         </div>
         <div className="space-y-1 text-sm">
           <p className="font-semibold leading-tight">
-            Du siehst diese Seite gerade als <span className="underline decoration-warning/60 decoration-2 underline-offset-4">{targetName}</span>.
+            Du siehst diese Seite gerade als{" "}
+            <span className="underline decoration-warning/60 decoration-2 underline-offset-4">
+              {targetName}
+            </span>
+            .
           </p>
           <p className="text-warning-foreground/80">
             Ursprünglich angemeldet als {ownerName}

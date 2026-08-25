@@ -80,10 +80,7 @@ describe("filterMembersNavigationByPermissions", () => {
 
     expect(assignments).toBeDefined();
     const hrefs = assignments!.items.map((item) => item.href);
-    expect(hrefs).toEqual([
-      "/mitglieder/meine-gewerke",
-      membersAssignmentsTodoItem.href,
-    ]);
+    expect(hrefs).toEqual(["/mitglieder/meine-gewerke", membersAssignmentsTodoItem.href]);
   });
 });
 
@@ -94,7 +91,10 @@ describe("resolveAssignmentsGroupLabel", () => {
 
   it("infers label from permissions when focus is none", () => {
     expect(
-      resolveAssignmentsGroupLabel("none", ["PRIVATE.DEPARTMENT.OWN.VIEW", "PRIVATE.REHEARSAL.OWN.VIEW"]),
+      resolveAssignmentsGroupLabel("none", [
+        "PRIVATE.DEPARTMENT.OWN.VIEW",
+        "PRIVATE.REHEARSAL.OWN.VIEW",
+      ]),
     ).toBe("Gewerke");
     expect(resolveAssignmentsGroupLabel("none", ["PRIVATE.DEPARTMENT.OWN.VIEW"])).toBe("Gewerke");
     expect(resolveAssignmentsGroupLabel("none", ["PRIVATE.REHEARSAL.OWN.VIEW"])).toBe("Proben");

@@ -22,7 +22,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { deactivated } = rawBody as { deactivated?: unknown };
   if (typeof deactivated !== "boolean") {
-    return NextResponse.json({ error: "Status muss als boolescher Wert übermittelt werden" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Status muss als boolescher Wert übermittelt werden" },
+      { status: 400 },
+    );
   }
 
   const target = await prisma.user.findUnique({
@@ -41,8 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (deactivated) {
     const alreadyDeactivated = target.deactivatedAt ?? null;
-    const isOwner =
-      target.role === "owner" || target.roles.some((entry) => entry.role === "owner");
+    const isOwner = target.role === "owner" || target.roles.some((entry) => entry.role === "owner");
 
     if (isOwner) {
       const remainingOwners = await prisma.user.count({
@@ -54,7 +56,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       });
 
       if (remainingOwners === 0) {
-        return NextResponse.json({ error: "Es muss immer mindestens einen Owner geben" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Es muss immer mindestens einen Owner geben" },
+          { status: 400 },
+        );
       }
     }
 

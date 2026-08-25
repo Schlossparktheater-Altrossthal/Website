@@ -39,9 +39,7 @@ export async function POST(request: Request) {
       const today = toDateOnly(todayKey);
       const cutoff = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
       allowed = parsedDates.filter((p) => p.date.getTime() >= cutoff.getTime());
-      skipped = parsedDates
-        .filter((p) => p.date.getTime() < cutoff.getTime())
-        .map((p) => p.key);
+      skipped = parsedDates.filter((p) => p.date.getTime() < cutoff.getTime()).map((p) => p.key);
     }
 
     const payload = allowed.map((p) => ({ userId, date: p.date, reason, kind }));

@@ -15,7 +15,12 @@ interface OwnerSetupFormProps {
 interface ApiResponse {
   ok?: boolean;
   error?: string;
-  user?: { email?: string | null; name?: string | null; firstName?: string | null; lastName?: string | null };
+  user?: {
+    email?: string | null;
+    name?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  };
 }
 
 export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
@@ -102,7 +107,8 @@ export function OwnerSetupForm({ token }: OwnerSetupFormProps) {
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Owner erfolgreich angelegt</h2>
         <p className="text-sm text-muted-foreground">
-          Du kannst dich jetzt mit <span className="font-medium text-foreground">{createdEmail}</span> anmelden.
+          Du kannst dich jetzt mit{" "}
+          <span className="font-medium text-foreground">{createdEmail}</span> anmelden.
         </p>
         <Button asChild variant="secondary">
           <Link href="/login">Zum Login</Link>

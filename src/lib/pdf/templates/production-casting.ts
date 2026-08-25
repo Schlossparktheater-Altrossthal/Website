@@ -2,31 +2,27 @@ import { z } from "zod";
 
 import type { PdfTemplate } from "../types";
 
-const optionalString = z
-  .union([z.string(), z.null(), z.undefined()])
-  .transform((value) => {
-    if (typeof value !== "string") return null;
-    const trimmed = value.trim();
-    return trimmed.length ? trimmed : null;
-  });
+const optionalString = z.union([z.string(), z.null(), z.undefined()]).transform((value) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+});
 
 const castingExportSchema = z.object({
   showTitle: optionalString,
-  generatedAt: z
-    .union([z.string(), z.date(), z.null(), z.undefined()])
-    .transform((value) => {
-      if (!value) return null;
-      if (value instanceof Date) {
-        return Number.isNaN(value.valueOf()) ? null : value;
-      }
-      if (typeof value === "string") {
-        const trimmed = value.trim();
-        if (!trimmed) return null;
-        const parsed = new Date(trimmed);
-        return Number.isNaN(parsed.valueOf()) ? null : parsed;
-      }
-      return null;
-    }),
+  generatedAt: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform((value) => {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.valueOf()) ? null : value;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const parsed = new Date(trimmed);
+      return Number.isNaN(parsed.valueOf()) ? null : parsed;
+    }
+    return null;
+  }),
   roles: z.array(
     z.object({
       name: z.string().trim().min(1),
@@ -96,10 +92,18 @@ export const productionCastingTemplate: PdfTemplate<CastingExportData> = {
     const createdAt = data.generatedAt ?? new Date();
 
     doc.info.Title = `Besetzung ${title}`;
-    doc.font("Helvetica-Bold").fontSize(20).fillColor("#111827").text("Besetzung", { align: "left" });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(20)
+      .fillColor("#111827")
+      .text("Besetzung", { align: "left" });
     doc.moveDown(0.2);
     doc.font("Helvetica").fontSize(12).fillColor("#374151").text(`Produktion: ${title}`);
-    doc.font("Helvetica").fontSize(10).fillColor("#6b7280").text(`Exportiert: ${formatDateTime(createdAt)}`);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor("#6b7280")
+      .text(`Exportiert: ${formatDateTime(createdAt)}`);
     doc.moveDown(1);
 
     const tableX = doc.page.margins.left;
@@ -125,19 +129,26 @@ export const productionCastingTemplate: PdfTemplate<CastingExportData> = {
       doc.rect(tableX, y, tableWidth, headerHeight).fill("#f3f4f6");
       doc.restore();
       doc.fillColor("#111827");
-      doc.text("Rolle", tableX + cellPadding, y + cellPadding, { width: roleColumnWidth - cellPadding * 2 });
+      doc.text("Rolle", tableX + cellPadding, y + cellPadding, {
+        width: roleColumnWidth - cellPadding * 2,
+      });
       doc.text("Schauspieler", tableX + roleColumnWidth + cellPadding, y + cellPadding, {
         width: castingColumnWidth - cellPadding * 2,
       });
       doc.strokeColor("#e5e7eb").lineWidth(1).rect(tableX, y, tableWidth, headerHeight).stroke();
-      doc.moveTo(tableX + roleColumnWidth, y).lineTo(tableX + roleColumnWidth, y + headerHeight).stroke();
+      doc
+        .moveTo(tableX + roleColumnWidth, y)
+        .lineTo(tableX + roleColumnWidth, y + headerHeight)
+        .stroke();
       doc.y = y + headerHeight;
     };
 
     const drawRow = (roleText: string, castingText: string) => {
       doc.font("Helvetica").fontSize(10).fillColor("#111827");
       const leftHeight = doc.heightOfString(roleText, { width: roleColumnWidth - cellPadding * 2 });
-      const rightHeight = doc.heightOfString(castingText, { width: castingColumnWidth - cellPadding * 2 });
+      const rightHeight = doc.heightOfString(castingText, {
+        width: castingColumnWidth - cellPadding * 2,
+      });
       const rowHeight = Math.max(leftHeight, rightHeight) + cellPadding * 2;
       const pageBottom = doc.page.height - doc.page.margins.bottom;
 
@@ -148,9 +159,14 @@ export const productionCastingTemplate: PdfTemplate<CastingExportData> = {
 
       const y = doc.y;
       doc.strokeColor("#e5e7eb").lineWidth(1).rect(tableX, y, tableWidth, rowHeight).stroke();
-      doc.moveTo(tableX + roleColumnWidth, y).lineTo(tableX + roleColumnWidth, y + rowHeight).stroke();
+      doc
+        .moveTo(tableX + roleColumnWidth, y)
+        .lineTo(tableX + roleColumnWidth, y + rowHeight)
+        .stroke();
       doc.fillColor("#111827");
-      doc.text(roleText, tableX + cellPadding, y + cellPadding, { width: roleColumnWidth - cellPadding * 2 });
+      doc.text(roleText, tableX + cellPadding, y + cellPadding, {
+        width: roleColumnWidth - cellPadding * 2,
+      });
       doc.text(castingText, tableX + roleColumnWidth + cellPadding, y + cellPadding, {
         width: castingColumnWidth - cellPadding * 2,
       });

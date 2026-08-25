@@ -59,9 +59,10 @@ const createSettings = (freezeDays: number): ResolvedSperrlisteSettings => ({
 });
 
 describe("block days route", () => {
-  const createRequest = (body: unknown) => ({
-    json: async () => body,
-  }) as NextRequest;
+  const createRequest = (body: unknown) =>
+    ({
+      json: async () => body,
+    }) as NextRequest;
 
   beforeEach(() => {
     vi.clearAllMocks();

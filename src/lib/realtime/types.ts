@@ -14,7 +14,7 @@ export interface BaseRealtimeEvent {
 
 // Specific Event Types
 export interface AttendanceUpdatedEvent extends BaseRealtimeEvent {
-  type: 'attendance_updated';
+  type: "attendance_updated";
   rehearsalId: string;
   targetUserId: string;
   status: AttendanceStatus | null;
@@ -23,7 +23,7 @@ export interface AttendanceUpdatedEvent extends BaseRealtimeEvent {
 }
 
 export interface RehearsalCreatedEvent extends BaseRealtimeEvent {
-  type: 'rehearsal_created';
+  type: "rehearsal_created";
   rehearsal: {
     id: string;
     title: string;
@@ -35,7 +35,7 @@ export interface RehearsalCreatedEvent extends BaseRealtimeEvent {
 }
 
 export interface RehearsalUpdatedEvent extends BaseRealtimeEvent {
-  type: 'rehearsal_updated';
+  type: "rehearsal_updated";
   rehearsalId: string;
   changes: {
     title?: string;
@@ -48,13 +48,13 @@ export interface RehearsalUpdatedEvent extends BaseRealtimeEvent {
 }
 
 export interface NotificationCreatedEvent extends BaseRealtimeEvent {
-  type: 'notification_created';
+  type: "notification_created";
   notification: {
     id: string;
     title: string;
     body?: string;
     rehearsalId?: string;
-    type?: 'info' | 'warning' | 'success' | 'error';
+    type?: "info" | "warning" | "success" | "error";
     actionUrl?: string;
     metadata?: Record<string, unknown>;
   };
@@ -62,7 +62,7 @@ export interface NotificationCreatedEvent extends BaseRealtimeEvent {
 }
 
 export interface InventoryRealtimePayload {
-  scope: 'inventory';
+  scope: "inventory";
   serverSeq?: number;
   events?: ServerSyncEvent[];
   mutationId?: string | null;
@@ -75,7 +75,7 @@ export interface InventoryRealtimePayload {
 }
 
 export interface TicketRealtimePayload {
-  scope: 'tickets';
+  scope: "tickets";
   serverSeq?: number;
   events?: ServerSyncEvent[];
   mutationId?: string | null;
@@ -89,24 +89,24 @@ export interface TicketRealtimePayload {
 }
 
 export interface InventoryRealtimeEvent extends BaseRealtimeEvent {
-  type: 'inventory_event';
+  type: "inventory_event";
   payload: InventoryRealtimePayload;
 }
 
 export interface TicketScanRealtimeEvent extends BaseRealtimeEvent {
-  type: 'ticket_scan_event';
+  type: "ticket_scan_event";
   payload: TicketRealtimePayload;
 }
 
 export interface OnboardingDashboardUpdateEvent extends BaseRealtimeEvent {
-  type: 'onboarding_dashboard_update';
+  type: "onboarding_dashboard_update";
   onboardingId: string;
   dashboard: OnboardingDashboardData;
 }
 
 export interface UserPresenceEvent extends BaseRealtimeEvent {
-  type: 'user_presence';
-  action: 'join' | 'leave';
+  type: "user_presence";
+  action: "join" | "leave";
   room: string;
   user: {
     id: string;
@@ -125,17 +125,17 @@ export interface OnlineStatsSnapshot {
 }
 
 export interface OnlineStatsUpdateEvent extends BaseRealtimeEvent {
-  type: 'online_stats_update';
+  type: "online_stats_update";
   stats: OnlineStatsSnapshot;
 }
 
 export interface ServerAnalyticsRealtimeEvent extends BaseRealtimeEvent {
-  type: 'server_analytics_update';
+  type: "server_analytics_update";
   analytics: ServerAnalytics;
 }
 
 export interface UserJoinedEvent extends BaseRealtimeEvent {
-  type: 'user_joined';
+  type: "user_joined";
   user: {
     id: string;
     name?: string;
@@ -143,7 +143,7 @@ export interface UserJoinedEvent extends BaseRealtimeEvent {
 }
 
 export interface UserLeftEvent extends BaseRealtimeEvent {
-  type: 'user_left';
+  type: "user_left";
   user: {
     id: string;
     name?: string;
@@ -151,7 +151,7 @@ export interface UserLeftEvent extends BaseRealtimeEvent {
 }
 
 export interface RehearsalUsersListEvent extends BaseRealtimeEvent {
-  type: 'rehearsal_users_list';
+  type: "rehearsal_users_list";
   rehearsalId: string;
   users: Array<{
     id: string;
@@ -177,11 +177,11 @@ export type RealtimeEvent =
 
 // Room Types
 export type RoomType =
-  | `user_${string}`           // User-specific room
-  | `rehearsal_${string}`      // Rehearsal-specific room
-  | `show_${string}`           // Show-specific room
-  | `onboarding_${string}`     // Onboarding dashboard room
-  | 'global';                  // Global announcements
+  | `user_${string}` // User-specific room
+  | `rehearsal_${string}` // Rehearsal-specific room
+  | `show_${string}` // Show-specific room
+  | `onboarding_${string}` // Onboarding dashboard room
+  | "global"; // Global announcements
 
 // Client to Server Events
 export interface ClientToServerEvents {

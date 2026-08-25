@@ -1,12 +1,12 @@
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { createAdapter } from '@socket.io/redis-adapter';
-import { Redis } from 'ioredis';
-import { URL } from 'url';
-import { createAnalyticsManager } from './analytics.js';
-import { createRealtimeAnalyticsRecorder } from './analytics-events.js';
-import { verifyHandshake } from './handshake.js';
-import { createEventHandlers } from './events.js';
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { Redis } from "ioredis";
+import { URL } from "url";
+import { createAnalyticsManager } from "./analytics.js";
+import { createRealtimeAnalyticsRecorder } from "./analytics-events.js";
+import { verifyHandshake } from "./handshake.js";
+import { createEventHandlers } from "./events.js";
 
 function toISO(date) {
   return new Date(date).toISOString();
@@ -14,23 +14,23 @@ function toISO(date) {
 
 function createJsonResponse(res, statusCode, payload) {
   res.statusCode = statusCode;
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(payload));
 }
 
-function normalizePath(path, fallback = '/') {
+function normalizePath(path, fallback = "/") {
   const raw = path ?? fallback;
-  if (!raw) return '/';
-  return raw.startsWith('/') ? raw.replace(/\/$/, '') || '/' : `/${raw}`.replace(/\/$/, '');
+  if (!raw) return "/";
+  return raw.startsWith("/") ? raw.replace(/\/$/, "") || "/" : `/${raw}`.replace(/\/$/, "");
 }
 
 function resolveBoolean(value, fallback) {
-  if (typeof value === 'boolean') return value;
+  if (typeof value === "boolean") return value;
   return fallback;
 }
 
 function resolveNumber(value, fallback) {
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
   const parsed = Number(value);
@@ -56,49 +56,72 @@ export function createRealtimeServer(options = {}) {
   } = options;
 
   const logError =
-    typeof logger?.error === 'function' ? (...args) => logger.error(...args) : (...args) => console.error(...args);
+    typeof logger?.error === "function"
+      ? (...args) => logger.error(...args)
+      : (...args) => console.error(...args);
   const logWarn =
-    typeof logger?.warn === 'function' ? (...args) => logger.warn(...args) : (...args) => console.warn(...args);
+    typeof logger?.warn === "function"
+      ? (...args) => logger.warn(...args)
+      : (...args) => console.warn(...args);
   const logInfo =
-    typeof logger?.log === 'function' ? (...args) => logger.log(...args) : (...args) => console.log(...args);
+    typeof logger?.log === "function"
+      ? (...args) => logger.log(...args)
+      : (...args) => console.log(...args);
 
-  const port = Number.isFinite(explicitPort) ? Number(explicitPort) : Number(process.env.PORT || 4001);
+  const port = Number.isFinite(explicitPort)
+    ? Number(explicitPort)
+    : Number(process.env.PORT || 4001);
   const socketPath = normalizePath(
-    explicitSocketPath ?? process.env.SOCKET_PATH ?? process.env.NEXT_PUBLIC_REALTIME_PATH ?? '/socket.io',
-    '/socket.io',
+    explicitSocketPath ??
+      process.env.SOCKET_PATH ??
+      process.env.NEXT_PUBLIC_REALTIME_PATH ??
+      "/socket.io",
+    "/socket.io",
   );
   const eventPath = normalizePath(
-    explicitEventPath ?? process.env.EVENT_PATH ?? process.env.REALTIME_SERVER_EVENT_PATH ?? '/events',
-    '/events',
+    explicitEventPath ??
+      process.env.EVENT_PATH ??
+      process.env.REALTIME_SERVER_EVENT_PATH ??
+      "/events",
+    "/events",
   );
-  const healthCheckPath = explicitHealthCheckPath === null ? null : normalizePath(explicitHealthCheckPath ?? '/');
+  const healthCheckPath =
+    explicitHealthCheckPath === null ? null : normalizePath(explicitHealthCheckPath ?? "/");
 
   const rawOrigins =
-    typeof explicitCorsOrigin === 'string' && explicitCorsOrigin.trim()
+    typeof explicitCorsOrigin === "string" && explicitCorsOrigin.trim()
       ? explicitCorsOrigin
-      : process.env.CORS_ORIGIN || '*';
-  const allowAllOrigins = rawOrigins === '*';
+      : process.env.CORS_ORIGIN || "*";
+  const allowAllOrigins = rawOrigins === "*";
   const allowedOrigins = allowAllOrigins
     ? true
     : rawOrigins
-        .split(',')
+        .split(",")
         .map((origin) => origin.trim())
         .filter(Boolean);
 
   const resolvedAuthToken = (
-    explicitAuthToken ?? process.env.REALTIME_AUTH_TOKEN ?? process.env.REALTIME_SERVER_TOKEN ?? ''
+    explicitAuthToken ??
+    process.env.REALTIME_AUTH_TOKEN ??
+    process.env.REALTIME_SERVER_TOKEN ??
+    ""
   ).trim();
   const resolvedHandshakeSecret = (
-    explicitHandshakeSecret ?? process.env.REALTIME_HANDSHAKE_SECRET ?? resolvedAuthToken ?? ''
+    explicitHandshakeSecret ??
+    process.env.REALTIME_HANDSHAKE_SECRET ??
+    resolvedAuthToken ??
+    ""
   ).trim();
 
   if (!resolvedAuthToken) {
-    logWarn('[Realtime] REALTIME_AUTH_TOKEN is not configured. Admin event requests without a token will be rejected.');
+    logWarn(
+      "[Realtime] REALTIME_AUTH_TOKEN is not configured. Admin event requests without a token will be rejected.",
+    );
   }
 
   if (!resolvedHandshakeSecret) {
     logWarn(
-      '[Realtime] REALTIME_HANDSHAKE_SECRET/REALTIME_AUTH_TOKEN is not configured. Socket handshakes will be rejected.',
+      "[Realtime] REALTIME_HANDSHAKE_SECRET/REALTIME_AUTH_TOKEN is not configured. Socket handshakes will be rejected.",
     );
   }
 
@@ -107,7 +130,7 @@ export function createRealtimeServer(options = {}) {
 
   const io = new Server(httpServer, {
     path: socketPath,
-    transports: ['websocket', 'polling'],
+    transports: ["websocket", "polling"],
     cors: allowAllOrigins
       ? {
           origin: true,
@@ -155,31 +178,38 @@ export function createRealtimeServer(options = {}) {
   if (redisUrl) {
     const pubClient = new Redis(redisUrl, { lazyConnect: true });
     const subClient = pubClient.duplicate();
-    pubClient.on('error', (error) => logError('[Realtime] Redis pub client error', error));
-    subClient.on('error', (error) => logError('[Realtime] Redis sub client error', error));
+    pubClient.on("error", (error) => logError("[Realtime] Redis pub client error", error));
+    subClient.on("error", (error) => logError("[Realtime] Redis sub client error", error));
     Promise.all([pubClient.connect(), subClient.connect()])
       .then(() => {
         io.adapter(createAdapter(pubClient, subClient));
-        logInfo('[Realtime] Using Redis adapter for cross-instance broadcasts');
+        logInfo("[Realtime] Using Redis adapter for cross-instance broadcasts");
       })
       .catch((error) => {
-        logError('[Realtime] Failed to connect to Redis, falling back to single-instance mode', error);
+        logError(
+          "[Realtime] Failed to connect to Redis, falling back to single-instance mode",
+          error,
+        );
       });
   } else {
-    logWarn('[Realtime] REDIS_URL is not configured. Realtime events will not be shared across replicas.');
+    logWarn(
+      "[Realtime] REDIS_URL is not configured. Realtime events will not be shared across replicas.",
+    );
   }
 
   const analyticsRecorder =
     providedAnalyticsRecorder ?? createRealtimeAnalyticsRecorder({ logger });
 
   const recordAnalyticsEvent = (eventType) => {
-    if (!analyticsRecorder || typeof analyticsRecorder.record !== 'function') {
+    if (!analyticsRecorder || typeof analyticsRecorder.record !== "function") {
       return;
     }
     try {
       const result = analyticsRecorder.record(eventType, new Date());
-      if (result && typeof result.catch === 'function') {
-        result.catch((error) => logError(`[Realtime] Failed to record analytics event ${eventType}`, error));
+      if (result && typeof result.catch === "function") {
+        result.catch((error) =>
+          logError(`[Realtime] Failed to record analytics event ${eventType}`, error),
+        );
       }
     } catch (error) {
       logError(`[Realtime] Failed to submit analytics event ${eventType}`, error);
@@ -189,15 +219,15 @@ export function createRealtimeServer(options = {}) {
   analyticsManager.start(io);
 
   function handleAdminEventRequest(req, res) {
-    let body = '';
-    req.on('data', (chunk) => {
+    let body = "";
+    req.on("data", (chunk) => {
       body += chunk;
       if (body.length > 1_000_000) {
         req.socket.destroy();
       }
     });
 
-    req.on('end', () => {
+    req.on("end", () => {
       try {
         const payload = body ? JSON.parse(body) : {};
         const token = payload?.token;
@@ -205,21 +235,21 @@ export function createRealtimeServer(options = {}) {
         const data = payload?.payload;
 
         if (!resolvedAuthToken || token !== resolvedAuthToken) {
-          logWarn('[Realtime] Rejected admin event request due to missing or invalid auth token.');
-          createJsonResponse(res, 401, { error: 'Unauthorized' });
+          logWarn("[Realtime] Rejected admin event request due to missing or invalid auth token.");
+          createJsonResponse(res, 401, { error: "Unauthorized" });
           return;
         }
 
         const handled = handleServerEvent(eventType, data);
         if (!handled) {
-          createJsonResponse(res, 400, { error: 'Unsupported event type' });
+          createJsonResponse(res, 400, { error: "Unsupported event type" });
           return;
         }
 
         createJsonResponse(res, 200, { ok: true });
       } catch (error) {
-        logError('[Realtime] Failed to handle admin event', error);
-        createJsonResponse(res, 400, { error: 'Invalid payload' });
+        logError("[Realtime] Failed to handle admin event", error);
+        createJsonResponse(res, 400, { error: "Invalid payload" });
       }
     });
 
@@ -231,22 +261,22 @@ export function createRealtimeServer(options = {}) {
       if (!respondToUnknownPaths) {
         return false;
       }
-      createJsonResponse(res, 404, { error: 'Not Found' });
+      createJsonResponse(res, 404, { error: "Not Found" });
       return true;
     }
 
     let url;
     try {
-      url = new URL(req.url, 'http://localhost');
+      url = new URL(req.url, "http://localhost");
     } catch {
       if (!respondToUnknownPaths) {
         return false;
       }
-      createJsonResponse(res, 400, { error: 'Invalid request URL' });
+      createJsonResponse(res, 400, { error: "Invalid request URL" });
       return true;
     }
 
-    if (req.method === 'POST' && url.pathname === eventPath) {
+    if (req.method === "POST" && url.pathname === eventPath) {
       return handleAdminEventRequest(req, res);
     }
 
@@ -255,11 +285,11 @@ export function createRealtimeServer(options = {}) {
     }
 
     if (!healthCheckPath || url.pathname === healthCheckPath) {
-      createJsonResponse(res, 200, { status: 'ok' });
+      createJsonResponse(res, 200, { status: "ok" });
       return true;
     }
 
-    createJsonResponse(res, 200, { status: 'ok' });
+    createJsonResponse(res, 200, { status: "ok" });
     return true;
   };
 
@@ -271,38 +301,42 @@ export function createRealtimeServer(options = {}) {
         return;
       }
     };
-    if (typeof httpServer.prependListener === 'function') {
-      httpServer.prependListener('request', listener);
+    if (typeof httpServer.prependListener === "function") {
+      httpServer.prependListener("request", listener);
     } else {
-      httpServer.on('request', listener);
+      httpServer.on("request", listener);
     }
     attachedRequestListener = true;
   }
 
   io.use((socket, next) => {
     const auth = socket.handshake.auth || {};
-    const rawUserId = typeof auth.userId === 'string' ? auth.userId : null;
-    const token = typeof auth.token === 'string' ? auth.token : null;
-    const rawName = typeof auth.userName === 'string' ? auth.userName : null;
+    const rawUserId = typeof auth.userId === "string" ? auth.userId : null;
+    const token = typeof auth.token === "string" ? auth.token : null;
+    const rawName = typeof auth.userName === "string" ? auth.userName : null;
 
-    const validation = verifyHandshake({ userId: rawUserId, token, secret: resolvedHandshakeSecret });
+    const validation = verifyHandshake({
+      userId: rawUserId,
+      token,
+      secret: resolvedHandshakeSecret,
+    });
     if (!validation.ok) {
       logWarn(`[Realtime] Rejected socket ${socket.id} handshake: ${validation.reason}`);
-      return next(new Error('Unauthorized'));
+      return next(new Error("Unauthorized"));
     }
 
     socket.data.userId = rawUserId;
-    socket.data.userName = rawName && rawName.trim() ? rawName : 'Unbekannt';
+    socket.data.userName = rawName && rawName.trim() ? rawName : "Unbekannt";
     socket.data.rooms = new Set();
 
     return next();
   });
 
-  io.on('connection', (socket) => {
-    recordAnalyticsEvent('socket_connected');
-    const userId = typeof socket.data.userId === 'string' ? socket.data.userId : null;
+  io.on("connection", (socket) => {
+    recordAnalyticsEvent("socket_connected");
+    const userId = typeof socket.data.userId === "string" ? socket.data.userId : null;
     if (!userId) {
-      socket.emit('error', { message: 'Unauthorized: missing userId' });
+      socket.emit("error", { message: "Unauthorized: missing userId" });
       return socket.disconnect(true);
     }
 
@@ -311,7 +345,7 @@ export function createRealtimeServer(options = {}) {
     }
 
     registerUser(socket);
-    recordAnalyticsEvent('user_authenticated');
+    recordAnalyticsEvent("user_authenticated");
 
     analyticsManager
       .getSnapshot()
@@ -322,10 +356,10 @@ export function createRealtimeServer(options = {}) {
         logError(`[Realtime] Failed to deliver analytics snapshot to socket ${socket.id}`, error);
       });
 
-    socket.join('global');
-    socket.data.rooms.add('global');
+    socket.join("global");
+    socket.data.rooms.add("global");
 
-    socket.on('join_room', (room) => {
+    socket.on("join_room", (room) => {
       if (!validateRoom(room, socket)) {
         return;
       }
@@ -334,30 +368,30 @@ export function createRealtimeServer(options = {}) {
       }
       socket.join(room);
       socket.data.rooms.add(room);
-      recordAnalyticsEvent('join_room');
-      emitUserPresence(room, socket, 'join');
+      recordAnalyticsEvent("join_room");
+      emitUserPresence(room, socket, "join");
 
-      if (room.startsWith('rehearsal_')) {
-        const rehearsalId = room.substring('rehearsal_'.length);
+      if (room.startsWith("rehearsal_")) {
+        const rehearsalId = room.substring("rehearsal_".length);
         emitRehearsalUsersList(rehearsalId, socket);
       }
     });
 
-    socket.on('leave_room', (room) => {
-      if (typeof room !== 'string') return;
+    socket.on("leave_room", (room) => {
+      if (typeof room !== "string") return;
       if (!socket.data.rooms.has(room)) return;
       socket.data.rooms.delete(room);
       socket.leave(room);
-      recordAnalyticsEvent('leave_room');
-      emitUserPresence(room, socket, 'leave');
+      recordAnalyticsEvent("leave_room");
+      emitUserPresence(room, socket, "leave");
     });
 
-    socket.on('get_online_stats', () => {
+    socket.on("get_online_stats", () => {
       broadcastOnlineStats();
     });
 
-    socket.on('get_rehearsal_users', (rehearsalId) => {
-      if (typeof rehearsalId !== 'string') return;
+    socket.on("get_rehearsal_users", (rehearsalId) => {
+      if (typeof rehearsalId !== "string") return;
       const roomName = `rehearsal_${rehearsalId}`;
       if (!socket.data.rooms.has(roomName)) {
         return;
@@ -365,7 +399,7 @@ export function createRealtimeServer(options = {}) {
       emitRehearsalUsersList(rehearsalId, socket);
     });
 
-    socket.on('get_server_analytics', () => {
+    socket.on("get_server_analytics", () => {
       analyticsManager
         .getSnapshot()
         .then((analytics) => {
@@ -376,28 +410,28 @@ export function createRealtimeServer(options = {}) {
         });
     });
 
-    socket.on('ping', () => {
-      recordAnalyticsEvent('ping');
-      socket.emit('pong');
+    socket.on("ping", () => {
+      recordAnalyticsEvent("ping");
+      socket.emit("pong");
     });
 
-    socket.on('disconnecting', () => {
+    socket.on("disconnecting", () => {
       for (const room of socket.data.rooms) {
-        emitUserPresence(room, socket, 'leave');
+        emitUserPresence(room, socket, "leave");
       }
     });
 
-    socket.on('disconnect', () => {
-      recordAnalyticsEvent('socket_disconnected');
+    socket.on("disconnect", () => {
+      recordAnalyticsEvent("socket_disconnected");
       unregisterUser(socket);
     });
   });
 
   let closed = false;
 
-  async function listen(listenPort = port, hostname = '0.0.0.0') {
+  async function listen(listenPort = port, hostname = "0.0.0.0") {
     if (server) {
-      throw new Error('listen() should not be called when using an existing HTTP server instance');
+      throw new Error("listen() should not be called when using an existing HTTP server instance");
     }
     await new Promise((resolve) => {
       httpServer.listen(listenPort, hostname, resolve);
@@ -409,7 +443,7 @@ export function createRealtimeServer(options = {}) {
     if (closed) return;
     closed = true;
     analyticsManager.stop();
-    if (analyticsRecorder && typeof analyticsRecorder.flush === 'function') {
+    if (analyticsRecorder && typeof analyticsRecorder.flush === "function") {
       await analyticsRecorder.flush();
     }
     await new Promise((resolve, reject) => {

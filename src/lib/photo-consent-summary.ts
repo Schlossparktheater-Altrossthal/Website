@@ -23,9 +23,7 @@ type PhotoConsentUserLike = {
   photoConsent: ConsentRecord | null;
 };
 
-export function calculatePhotoConsentAge(
-  date: Date | null | undefined,
-): number | null {
+export function calculatePhotoConsentAge(date: Date | null | undefined): number | null {
   if (!date) return null;
   const now = new Date();
   let age = now.getFullYear() - date.getFullYear();
@@ -36,9 +34,7 @@ export function calculatePhotoConsentAge(
   return age;
 }
 
-export function buildPhotoConsentSummary(
-  user: PhotoConsentUserLike,
-): PhotoConsentSummary {
+export function buildPhotoConsentSummary(user: PhotoConsentUserLike): PhotoConsentSummary {
   const consent = user.photoConsent;
   const dateOfBirth = user.dateOfBirth;
   const age = calculatePhotoConsentAge(dateOfBirth);

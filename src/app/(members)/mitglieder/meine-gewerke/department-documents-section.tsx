@@ -76,7 +76,12 @@ export function DepartmentDocumentsSection({
           <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Dateien hochladen (Bilder oder PDFs, max. 15&nbsp;MB)
           </label>
-          <Input type="file" name="files" multiple accept="image/*,application/pdf,application/msword,application/vnd.*" />
+          <Input
+            type="file"
+            name="files"
+            multiple
+            accept="image/*,application/pdf,application/msword,application/vnd.*"
+          />
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] text-muted-foreground">
               Unterstützt Bilder (JPG, PNG, WebP) sowie PDF- und Office-Dokumente.
@@ -115,7 +120,7 @@ export function DepartmentDocumentsSection({
                       {doc.fileName}
                     </a>
                     <p className="text-xs text-muted-foreground">
-                      {formatFileLibraryFileSize(doc.fileSize)} · hochgeladen von {uploadedLabel} ·{' '}
+                      {formatFileLibraryFileSize(doc.fileSize)} · hochgeladen von {uploadedLabel} ·{" "}
                       {formatDistanceToNow(doc.createdAt, { addSuffix: true, locale: de })}
                     </p>
                   </div>
@@ -124,7 +129,12 @@ export function DepartmentDocumentsSection({
                   <form action={deleteDepartmentDocumentAction} className="flex justify-end">
                     <input type="hidden" name="documentId" value={doc.id} />
                     <input type="hidden" name="redirectPath" value={refreshPath} />
-                    <Button type="submit" variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                    >
                       <CloseIcon aria-hidden className="mr-2 h-4 w-4" />
                       Entfernen
                     </Button>
@@ -136,7 +146,10 @@ export function DepartmentDocumentsSection({
         </ul>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Noch keine Dateien hinterlegt. {canManage ? "Lege los und stelle deinem Team wichtige Unterlagen bereit." : "Bitte wende dich an die Leitung, um Unterlagen zu teilen."}
+          Noch keine Dateien hinterlegt.{" "}
+          {canManage
+            ? "Lege los und stelle deinem Team wichtige Unterlagen bereit."
+            : "Bitte wende dich an die Leitung, um Unterlagen zu teilen."}
         </p>
       )}
     </section>

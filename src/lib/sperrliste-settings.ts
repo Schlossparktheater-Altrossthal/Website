@@ -16,12 +16,7 @@ export const DEFAULT_EXCEPTION_WEEKDAYS = [5] as const;
 export const HOLIDAY_SOURCE_MODES = ["default", "custom", "disabled"] as const;
 export type HolidaySourceMode = (typeof HOLIDAY_SOURCE_MODES)[number];
 
-export const HOLIDAY_SOURCE_STATUSES = [
-  "unknown",
-  "ok",
-  "error",
-  "disabled",
-] as const;
+export const HOLIDAY_SOURCE_STATUSES = ["unknown", "ok", "error", "disabled"] as const;
 export type HolidaySourceStatus = (typeof HOLIDAY_SOURCE_STATUSES)[number];
 
 export type SperrlisteSettingsRecord = SperrlisteSettings | null;
@@ -152,7 +147,10 @@ function clampNumber(value: unknown, minimum: number, maximum: number, fallback:
 
 const WEEKDAY_ORDER: number[] = [1, 2, 3, 4, 5, 6, 0];
 
-function sanitiseWeekdayJson(value: Prisma.JsonValue | null | undefined, fallback: readonly number[]) {
+function sanitiseWeekdayJson(
+  value: Prisma.JsonValue | null | undefined,
+  fallback: readonly number[],
+) {
   if (!Array.isArray(value)) {
     return [...fallback];
   }
@@ -226,20 +224,16 @@ export type ReadSperrlisteSettingsMeta = {
 type ReadSperrlisteSettingsOptionsWithMeta = { withMeta: true };
 type ReadSperrlisteSettingsOptionsWithoutMeta = { withMeta?: false };
 type ReadSperrlisteSettingsOptions =
-  | ReadSperrlisteSettingsOptionsWithMeta
-  | ReadSperrlisteSettingsOptionsWithoutMeta;
+  ReadSperrlisteSettingsOptionsWithMeta | ReadSperrlisteSettingsOptionsWithoutMeta;
 
-type ReadSperrlisteSettingsResult<
-  TOptions extends ReadSperrlisteSettingsOptions | undefined,
-> = TOptions extends ReadSperrlisteSettingsOptionsWithMeta
-  ? ReadSperrlisteSettingsMeta
-  : SperrlisteSettingsRecord;
+type ReadSperrlisteSettingsResult<TOptions extends ReadSperrlisteSettingsOptions | undefined> =
+  TOptions extends ReadSperrlisteSettingsOptionsWithMeta
+    ? ReadSperrlisteSettingsMeta
+    : SperrlisteSettingsRecord;
 
 export async function readSperrlisteSettings<
   TOptions extends ReadSperrlisteSettingsOptions | undefined = undefined,
->(
-  options?: TOptions,
-): Promise<ReadSperrlisteSettingsResult<TOptions>> {
+>(options?: TOptions): Promise<ReadSperrlisteSettingsResult<TOptions>> {
   const withMeta = options?.withMeta ?? false;
 
   if (!databaseEnabled()) {
@@ -267,10 +261,18 @@ export async function readSperrlisteSettings<
   return record as ReadSperrlisteSettingsResult<TOptions>;
 }
 
-export function resolveBlocklistSettings(record: SperrlisteSettingsRecord): ResolvedSperrlisteSettings {
+export function resolveBlocklistSettings(
+  record: SperrlisteSettingsRecord,
+): ResolvedSperrlisteSettings {
   const freezeDays = clampNumber(record?.freezeDays, 0, 365, DEFAULT_FREEZE_DAYS);
-  const preferredWeekdays = sanitiseWeekdayJson(record?.preferredWeekdays ?? null, DEFAULT_PREFERRED_WEEKDAYS);
-  const exceptionWeekdays = sanitiseWeekdayJson(record?.exceptionWeekdays ?? null, DEFAULT_EXCEPTION_WEEKDAYS);
+  const preferredWeekdays = sanitiseWeekdayJson(
+    record?.preferredWeekdays ?? null,
+    DEFAULT_PREFERRED_WEEKDAYS,
+  );
+  const exceptionWeekdays = sanitiseWeekdayJson(
+    record?.exceptionWeekdays ?? null,
+    DEFAULT_EXCEPTION_WEEKDAYS,
+  );
 
   const holidaySourceMode = resolveMode(record?.holidaySourceMode);
   const holidaySourceUrl = normaliseUrl(record?.holidaySourceUrl);
@@ -293,13 +295,17 @@ export function resolveBlocklistSettings(record: SperrlisteSettingsRecord): Reso
         : defaultPublicUrl;
 
   const holidayStatus = {
-    status: holidaySourceMode === "disabled" ? "disabled" : resolveStatus(record?.holidaySourceStatus),
+    status:
+      holidaySourceMode === "disabled" ? "disabled" : resolveStatus(record?.holidaySourceStatus),
     message: record?.holidaySourceMessage ?? null,
     checkedAt: record?.holidaySourceCheckedAt ?? null,
   } as const;
 
   const publicHolidayStatus = {
-    status: publicHolidaySourceMode === "disabled" ? "disabled" : resolveStatus(record?.publicHolidaySourceStatus),
+    status:
+      publicHolidaySourceMode === "disabled"
+        ? "disabled"
+        : resolveStatus(record?.publicHolidaySourceStatus),
     message: record?.publicHolidaySourceMessage ?? null,
     checkedAt: record?.publicHolidaySourceCheckedAt ?? null,
   } as const;

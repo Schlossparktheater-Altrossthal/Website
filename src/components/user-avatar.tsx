@@ -72,7 +72,8 @@ export default function UserAvatar({
 
   const gravatarResetKey = `${normalized ?? ""}:${trimmedEmail ?? ""}`;
 
-  let effectiveSource = normalized ?? (previewUrl ? "UPLOAD" : trimmedEmail ? "GRAVATAR" : "INITIALS");
+  let effectiveSource =
+    normalized ?? (previewUrl ? "UPLOAD" : trimmedEmail ? "GRAVATAR" : "INITIALS");
   if (effectiveSource === "GRAVATAR" && !trimmedEmail) {
     effectiveSource = "INITIALS";
   }
@@ -80,7 +81,9 @@ export default function UserAvatar({
   const sharedStyle: CSSProperties = { width: displaySize, height: displaySize, ...style };
 
   if (effectiveSource === "UPLOAD") {
-    const uploadSrc = previewUrl ?? (userId ? `/api/users/${userId}/avatar${version ? `?v=${version}` : ""}` : undefined);
+    const uploadSrc =
+      previewUrl ??
+      (userId ? `/api/users/${userId}/avatar${version ? `?v=${version}` : ""}` : undefined);
     if (uploadSrc) {
       return (
         <Image
@@ -92,7 +95,10 @@ export default function UserAvatar({
           height={displaySize}
           loading={loading}
           sizes={`${displaySize}px`}
-          className={cn("inline-block rounded-full border border-border bg-muted object-cover", className)}
+          className={cn(
+            "inline-block rounded-full border border-border bg-muted object-cover",
+            className,
+          )}
           style={sharedStyle}
           draggable={false}
         />
@@ -114,7 +120,10 @@ export default function UserAvatar({
         loading={loading}
         priority={loading === "eager"}
         sizes={`${displaySize}px`}
-        className={cn("inline-block rounded-full border border-border bg-muted object-cover", className)}
+        className={cn(
+          "inline-block rounded-full border border-border bg-muted object-cover",
+          className,
+        )}
         style={sharedStyle}
         draggable={false}
         onError={() => setGravatarFailed(true)}
@@ -126,8 +135,16 @@ export default function UserAvatar({
   const initials = getNameInitials({ firstName, lastName, name, email });
   return (
     <div
-      className={cn("inline-flex items-center justify-center rounded-full border border-border bg-muted", className)}
-      style={{ width: displaySize, height: displaySize, fontSize: Math.max(10, displaySize * 0.4), ...style }}
+      className={cn(
+        "inline-flex items-center justify-center rounded-full border border-border bg-muted",
+        className,
+      )}
+      style={{
+        width: displaySize,
+        height: displaySize,
+        fontSize: Math.max(10, displaySize * 0.4),
+        ...style,
+      }}
       aria-label={label ? `Avatar von ${label}` : "Avatar"}
       title={label}
       draggable={false}

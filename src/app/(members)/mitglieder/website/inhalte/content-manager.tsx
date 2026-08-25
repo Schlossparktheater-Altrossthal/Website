@@ -61,7 +61,10 @@ export function ContentManager({ ids, initialData }: Props) {
             <CardTitle>Einleitungstext</CardTitle>
           </CardHeader>
           <CardContent>
-            <ParagraphsEditor contentId={ids.SCHULKATZE_INTRO} initialContent={initialData.schulkatzeIntro} />
+            <ParagraphsEditor
+              contentId={ids.SCHULKATZE_INTRO}
+              initialContent={initialData.schulkatzeIntro}
+            />
           </CardContent>
         </Card>
       </TabsContent>
@@ -73,7 +76,10 @@ export function ContentManager({ ids, initialData }: Props) {
             <CardTitle>Einleitungstext</CardTitle>
           </CardHeader>
           <CardContent>
-            <ParagraphsEditor contentId={ids.UEBER_UNS_INTRO} initialContent={initialData.ueberUnsIntro} />
+            <ParagraphsEditor
+              contentId={ids.UEBER_UNS_INTRO}
+              initialContent={initialData.ueberUnsIntro}
+            />
           </CardContent>
         </Card>
 
@@ -82,7 +88,10 @@ export function ContentManager({ ids, initialData }: Props) {
             <CardTitle>Kennzahlen</CardTitle>
           </CardHeader>
           <CardContent>
-            <StatsEditor contentId={ids.UEBER_UNS_STATS} initialContent={initialData.ueberUnsStats} />
+            <StatsEditor
+              contentId={ids.UEBER_UNS_STATS}
+              initialContent={initialData.ueberUnsStats}
+            />
           </CardContent>
         </Card>
 
@@ -91,7 +100,10 @@ export function ContentManager({ ids, initialData }: Props) {
             <CardTitle>Meilensteine</CardTitle>
           </CardHeader>
           <CardContent>
-            <MilestonesEditor contentId={ids.UEBER_UNS_MILESTONES} initialContent={initialData.ueberUnsMilestones} />
+            <MilestonesEditor
+              contentId={ids.UEBER_UNS_MILESTONES}
+              initialContent={initialData.ueberUnsMilestones}
+            />
           </CardContent>
         </Card>
 
@@ -100,7 +112,10 @@ export function ContentManager({ ids, initialData }: Props) {
             <CardTitle>Signature-Elemente</CardTitle>
           </CardHeader>
           <CardContent>
-            <IconItemsEditor contentId={ids.UEBER_UNS_SIGNATURE} initialContent={initialData.ueberUnsSignature} />
+            <IconItemsEditor
+              contentId={ids.UEBER_UNS_SIGNATURE}
+              initialContent={initialData.ueberUnsSignature}
+            />
           </CardContent>
         </Card>
 
@@ -109,7 +124,10 @@ export function ContentManager({ ids, initialData }: Props) {
             <CardTitle>Unsere Werte</CardTitle>
           </CardHeader>
           <CardContent>
-            <IconItemsEditor contentId={ids.UEBER_UNS_VALUES} initialContent={initialData.ueberUnsValues} />
+            <IconItemsEditor
+              contentId={ids.UEBER_UNS_VALUES}
+              initialContent={initialData.ueberUnsValues}
+            />
           </CardContent>
         </Card>
 
@@ -118,7 +136,10 @@ export function ContentManager({ ids, initialData }: Props) {
             <CardTitle>Gewerke</CardTitle>
           </CardHeader>
           <CardContent>
-            <IconItemsEditor contentId={ids.UEBER_UNS_TRADES} initialContent={initialData.ueberUnsTrades} />
+            <IconItemsEditor
+              contentId={ids.UEBER_UNS_TRADES}
+              initialContent={initialData.ueberUnsTrades}
+            />
           </CardContent>
         </Card>
       </TabsContent>

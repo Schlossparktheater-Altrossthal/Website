@@ -84,7 +84,7 @@ export default async function ProduktionenPage() {
         label: "Breakdowns",
         value: activeStats.breakdownItems,
         hint: "Offene Aufgaben über alle Gewerke",
-      }
+      },
     );
   }
 
@@ -129,7 +129,8 @@ export default async function ProduktionenPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-lg font-semibold">Gewerke &amp; Teams</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Pflege Farben, Beschreibungen und Zuständigkeiten deiner Produktionsgewerke in einem dedizierten Arbeitsbereich.
+              Pflege Farben, Beschreibungen und Zuständigkeiten deiner Produktionsgewerke in einem
+              dedizierten Arbeitsbereich.
             </p>
           </CardHeader>
           <CardContent>
@@ -142,7 +143,8 @@ export default async function ProduktionenPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-lg font-semibold">Strukturierte Arbeitsabläufe</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Nutze die Navigation für Rollen sowie Szenen, um fokussiert an deiner Produktion zu arbeiten.
+              Nutze die Navigation für Rollen sowie Szenen, um fokussiert an deiner Produktion zu
+              arbeiten.
             </p>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -161,7 +163,8 @@ export default async function ProduktionenPage() {
           <div>
             <h2 className="text-xl font-semibold">Produktionen verwalten</h2>
             <p className="text-sm text-muted-foreground">
-              Setze eine Produktion als aktiv, um Rollen, Szenen und Breakdown-Aufgaben gezielt zu bearbeiten.
+              Setze eine Produktion als aktiv, um Rollen, Szenen und Breakdown-Aufgaben gezielt zu
+              bearbeiten.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -182,7 +185,8 @@ export default async function ProduktionenPage() {
 
         {shows.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Noch keine Produktionen angelegt. Nutze den Button „Neue Produktion anlegen“, um deine erste Produktion einzurichten.
+            Noch keine Produktionen angelegt. Nutze den Button „Neue Produktion anlegen“, um deine
+            erste Produktion einzurichten.
           </p>
         ) : (
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -194,21 +198,27 @@ export default async function ProduktionenPage() {
                   <Card
                     className={cn(
                       "flex h-full flex-col justify-between border-border/60 bg-background/70 transition hover:border-primary/50 hover:shadow-md",
-                      isActive && "border-primary/60 bg-primary/5 shadow-md"
+                      isActive && "border-primary/60 bg-primary/5 shadow-md",
                     )}
                   >
                     <CardHeader className="space-y-2">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Jahrgang {show.year}</p>
-                          <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                            Jahrgang {show.year}
+                          </p>
+                          <CardTitle className="text-base font-semibold text-foreground">
+                            {title}
+                          </CardTitle>
                         </div>
                         {isActive ? <Badge>Aktiv</Badge> : null}
                       </div>
                       {show.synopsis ? (
                         <p className="text-sm text-muted-foreground">{show.synopsis}</p>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Keine Kurzbeschreibung hinterlegt.</p>
+                        <p className="text-sm text-muted-foreground">
+                          Keine Kurzbeschreibung hinterlegt.
+                        </p>
                       )}
                     </CardHeader>
                     <CardContent className="mt-auto flex flex-wrap items-center gap-2">

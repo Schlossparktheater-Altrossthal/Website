@@ -65,7 +65,8 @@ export default async function RehearsalPlanningPage() {
         id: entry.user.id,
         firstName: entry.user.firstName ?? null,
         lastName: entry.user.lastName ?? null,
-        name: combineNameParts(entry.user.firstName, entry.user.lastName) ?? entry.user.name ?? null,
+        name:
+          combineNameParts(entry.user.firstName, entry.user.lastName) ?? entry.user.name ?? null,
         email: entry.user.email ?? null,
       },
     };
@@ -126,7 +127,8 @@ export default async function RehearsalPlanningPage() {
           <CardHeader>
             <CardTitle>Offene Entwürfe</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Entwürfe werden automatisch gespeichert. Du kannst sie hier weiterbearbeiten oder veröffentlichen.
+              Entwürfe werden automatisch gespeichert. Du kannst sie hier weiterbearbeiten oder
+              veröffentlichen.
             </p>
           </CardHeader>
           <CardContent>
@@ -152,7 +154,8 @@ export default async function RehearsalPlanningPage() {
                       ) : null}
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      Zuletzt bearbeitet {formatDistanceToNow(draft.updatedAt, { locale: de, addSuffix: true })}
+                      Zuletzt bearbeitet{" "}
+                      {formatDistanceToNow(draft.updatedAt, { locale: de, addSuffix: true })}
                     </span>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
@@ -178,14 +181,16 @@ export default async function RehearsalPlanningPage() {
       />
 
       {publishedRehearsals.length ? (
-      <RehearsalList
-        initial={publishedRehearsals.map((r) => ({
-          id: r.id,
-          title: r.title,
-          start: r.start.toISOString(),
-          location: r.location ?? "",
-        })) as RehearsalLite[]}
-      />
+        <RehearsalList
+          initial={
+            publishedRehearsals.map((r) => ({
+              id: r.id,
+              title: r.title,
+              start: r.start.toISOString(),
+              location: r.location ?? "",
+            })) as RehearsalLite[]
+          }
+        />
       ) : (
         <p className="text-sm text-muted-foreground">Es sind aktuell keine Proben geplant.</p>
       )}

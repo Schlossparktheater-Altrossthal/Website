@@ -19,7 +19,9 @@ export async function PermissionWorkbench() {
       where: { key: { in: DEFAULT_PERMISSION_DEFINITIONS.map((definition) => definition.key) } },
       select: { id: true, key: true, label: true, description: true },
     }),
-    prisma.appRolePermission.findMany({ select: { roleId: true, permission: { select: { key: true } } } }),
+    prisma.appRolePermission.findMany({
+      select: { roleId: true, permission: { select: { key: true } } },
+    }),
     prisma.department.findMany({
       orderBy: [{ name: "asc" }],
       select: { id: true, name: true, slug: true, requiresJoinApproval: true },
@@ -60,7 +62,9 @@ export async function PermissionWorkbench() {
     departmentGrantMap[grant.departmentId]!.push(grant.permission.key);
   }
 
-  const systemRoles = roles.filter((role) => role.isSystem).sort((a, b) => a.sortIndex - b.sortIndex);
+  const systemRoles = roles
+    .filter((role) => role.isSystem)
+    .sort((a, b) => a.sortIndex - b.sortIndex);
   const customRoles = roles
     .filter((role) => !role.isSystem)
     .sort((a, b) => {

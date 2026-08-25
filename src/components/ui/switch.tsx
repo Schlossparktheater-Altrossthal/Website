@@ -28,13 +28,19 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           "data-[state=checked]:bg-primary data-[state=checked]:shadow-md disabled:cursor-not-allowed disabled:opacity-60",
           className,
         )}
-        style={{ transition: "background-color var(--transition-base), box-shadow var(--transition-base)", ...props.style }}
+        style={{
+          transition: "background-color var(--transition-base), box-shadow var(--transition-base)",
+          ...props.style,
+        }}
         {...props}
       >
         <span className="sr-only">Umschalten</span>
         <span
           aria-hidden
-          className={cn("block h-5 w-5 rounded-full bg-primary-foreground shadow-sm", checked ? "translate-x-5" : "translate-x-0")}
+          className={cn(
+            "block h-5 w-5 rounded-full bg-primary-foreground shadow-sm",
+            checked ? "translate-x-5" : "translate-x-0",
+          )}
           style={{ transition: "transform var(--transition-base)" }}
         />
       </button>

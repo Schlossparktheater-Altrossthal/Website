@@ -14,18 +14,17 @@ async function loadQrCode(): Promise<QrCodeModule> {
   }
 
   const qrModule = await import("qrcode");
-  const resolved = (qrModule as QrCodeModule & { default?: QrCodeModule }).default ?? (qrModule as QrCodeModule);
+  const resolved =
+    (qrModule as QrCodeModule & { default?: QrCodeModule }).default ?? (qrModule as QrCodeModule);
   cachedQrCodeModule = resolved;
   return resolved;
 }
 
-const optionalString = z
-  .union([z.string(), z.null(), z.undefined()])
-  .transform((value) => {
-    if (typeof value !== "string") return null;
-    const trimmed = value.trim();
-    return trimmed.length ? trimmed : null;
-  });
+const optionalString = z.union([z.string(), z.null(), z.undefined()]).transform((value) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+});
 
 const onboardingInviteSchema = z.object({
   link: z
@@ -36,34 +35,30 @@ const onboardingInviteSchema = z.object({
   headline: optionalString,
   inviteLabel: optionalString,
   note: optionalString,
-  expiresAt: z
-    .union([z.string(), z.date(), z.null(), z.undefined()])
-    .transform((value) => {
-      if (!value) return null;
-      if (value instanceof Date) {
-        return Number.isNaN(value.valueOf()) ? null : value;
-      }
-      if (typeof value === "string") {
-        const trimmed = value.trim();
-        if (!trimmed) return null;
-        const parsed = new Date(trimmed);
-        return Number.isNaN(parsed.valueOf()) ? null : parsed;
-      }
-      return null;
-    }),
-  maxUses: z
-    .union([z.number().int().positive(), z.null(), z.undefined()])
-    .transform((value) => {
-      if (typeof value === "number" && Number.isFinite(value)) {
-        return Math.max(1, Math.floor(value));
-      }
-      return null;
-    }),
+  expiresAt: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform((value) => {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.valueOf()) ? null : value;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const parsed = new Date(trimmed);
+      return Number.isNaN(parsed.valueOf()) ? null : parsed;
+    }
+    return null;
+  }),
+  maxUses: z.union([z.number().int().positive(), z.null(), z.undefined()]).transform((value) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return Math.max(1, Math.floor(value));
+    }
+    return null;
+  }),
   roles: z
     .array(z.enum(ROLES))
     .optional()
     .transform((value) => {
-      if (!value?.length) return [] as typeof ROLES[number][];
+      if (!value?.length) return [] as (typeof ROLES)[number][];
       const unique = new Set(value);
       return Array.from(unique);
     }),
@@ -106,7 +101,8 @@ function formatLinkForDisplay(link: string) {
 export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
   id: "onboarding-invite",
   label: "Backstage-Pass Poster",
-  description: "Erzeugt ein farbenfrohes A4-PDF mit QR-Code für neue Gesichter beim Sommertheater Altrossthal.",
+  description:
+    "Erzeugt ein farbenfrohes A4-PDF mit QR-Code für neue Gesichter beim Sommertheater Altrossthal.",
   filename: (data) => {
     const slug = slugify(data.inviteLabel ?? data.headline ?? null);
     return slug ? `onboarding-${slug}.pdf` : "onboarding-link.pdf";
@@ -153,7 +149,12 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
 
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
-    const { left: marginLeft, right: marginRight, top: marginTop, bottom: marginBottom } = doc.page.margins;
+    const {
+      left: marginLeft,
+      right: marginRight,
+      top: marginTop,
+      bottom: marginBottom,
+    } = doc.page.margins;
     const availableWidth = pageWidth - marginLeft - marginRight;
 
     doc.save();
@@ -187,19 +188,35 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.opacity(1);
     doc.y = marginTop;
 
-    doc.font("Helvetica-Bold").fontSize(32).fillColor(palette.sunrise).text(greetingHeadline, { align: "center" });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(32)
+      .fillColor(palette.sunrise)
+      .text(greetingHeadline, { align: "center" });
 
     doc.moveDown(0.3);
-    doc.font("Helvetica-Bold").fontSize(26).fillColor(palette.text).text(title, { align: "center" });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(26)
+      .fillColor(palette.text)
+      .text(title, { align: "center" });
 
     doc.moveDown(0.55);
     doc.font("Helvetica").fontSize(14).fillColor(palette.text).text(warmIntro, { align: "center" });
 
     doc.moveDown(0.25);
-    doc.font("Helvetica").fontSize(13).fillColor(palette.textMuted).text(actionLine, { align: "center" });
+    doc
+      .font("Helvetica")
+      .fontSize(13)
+      .fillColor(palette.textMuted)
+      .text(actionLine, { align: "center" });
 
     doc.moveDown(0.35);
-    doc.font("Helvetica").fontSize(12).fillColor(palette.textMuted).text(storyLine, { align: "center" });
+    doc
+      .font("Helvetica")
+      .fontSize(12)
+      .fillColor(palette.textMuted)
+      .text(storyLine, { align: "center" });
 
     if (data.note) {
       doc.moveDown(0.8);
@@ -210,7 +227,10 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       const noteHeight = doc.heightOfString(data.note, { width: noteTextWidth });
 
       doc.save();
-      doc.roundedRect(noteX, noteY - 14, noteBoxWidth, noteHeight + 28, 18).fillColor(palette.noteBackground).fill();
+      doc
+        .roundedRect(noteX, noteY - 14, noteBoxWidth, noteHeight + 28, 18)
+        .fillColor(palette.noteBackground)
+        .fill();
       doc.restore();
 
       doc.save();
@@ -225,7 +245,11 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     }
 
     doc.moveDown(0.8);
-    doc.font("Helvetica-Bold").fontSize(16).fillColor(palette.sunrise).text("Backstage-Check-in", { align: "center" });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(16)
+      .fillColor(palette.sunrise)
+      .text("Backstage-Check-in", { align: "center" });
 
     doc.moveDown(0.8);
     const qrTopPadding = Math.max(doc.currentLineHeight(true) * 0.8, 12);
@@ -277,26 +301,28 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.restore();
 
     doc.save();
-    doc.roundedRect(
-      qrX - qrFramePadding,
-      qrY - qrFramePadding,
-      qrSize + qrFramePadding * 2,
-      qrSize + qrFramePadding * 2,
-      qrFrameRadius,
-    )
+    doc
+      .roundedRect(
+        qrX - qrFramePadding,
+        qrY - qrFramePadding,
+        qrSize + qrFramePadding * 2,
+        qrSize + qrFramePadding * 2,
+        qrFrameRadius,
+      )
       .fillColor(palette.qrFrame)
       .fill();
     doc.restore();
 
     doc.save();
     doc.lineWidth(3.4);
-    doc.roundedRect(
-      qrX - qrFramePadding,
-      qrY - qrFramePadding,
-      qrSize + qrFramePadding * 2,
-      qrSize + qrFramePadding * 2,
-      qrFrameRadius,
-    )
+    doc
+      .roundedRect(
+        qrX - qrFramePadding,
+        qrY - qrFramePadding,
+        qrSize + qrFramePadding * 2,
+        qrSize + qrFramePadding * 2,
+        qrFrameRadius,
+      )
       .stroke(palette.qrFrameStroke);
     doc.restore();
 
@@ -362,7 +388,11 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
     doc.y = qrY + qrSize + 28;
 
     doc.moveDown(0.9);
-    doc.font("Helvetica-Bold").fontSize(14).fillColor(palette.text).text("Direkter Zugang", { align: "center" });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(14)
+      .fillColor(palette.text)
+      .text("Direkter Zugang", { align: "center" });
     doc.moveDown(0.25);
     const displayLink = data.displayLink ?? data.link;
     const manualLink = formatLinkForDisplay(displayLink);
@@ -395,27 +425,42 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
 
     if (detailEntries.length) {
       doc.moveDown(1);
-      doc.font("Helvetica-Bold").fontSize(12).fillColor(palette.sunrise).text("Backstage-Fakten", { align: "left" });
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(12)
+        .fillColor(palette.sunrise)
+        .text("Backstage-Fakten", { align: "left" });
       doc.moveDown(0.2);
       doc
         .font("Helvetica")
         .fontSize(11)
         .fillColor(palette.textMuted)
-        .text("Damit deine erste Probe stressfrei läuft, findest du hier die wichtigsten Eckdaten:", {
-          align: "left",
-          width: availableWidth,
-        });
+        .text(
+          "Damit deine erste Probe stressfrei läuft, findest du hier die wichtigsten Eckdaten:",
+          {
+            align: "left",
+            width: availableWidth,
+          },
+        );
       doc.moveDown(0.35);
       for (const entry of detailEntries) {
-        doc.font("Helvetica-Bold").fontSize(11).fillColor(palette.rose).text(`${entry.label}: `, { continued: true });
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(11)
+          .fillColor(palette.rose)
+          .text(`${entry.label}: `, { continued: true });
         doc.font("Helvetica").fontSize(11).fillColor(palette.text).text(entry.value);
       }
     }
 
     doc.moveDown(0.9);
-    doc.font("Helvetica").fontSize(11).fillColor(palette.text).text("Wir sehen uns auf und hinter der Bühne!", {
-      align: "center",
-    });
+    doc
+      .font("Helvetica")
+      .fontSize(11)
+      .fillColor(palette.text)
+      .text("Wir sehen uns auf und hinter der Bühne!", {
+        align: "center",
+      });
 
     doc.moveDown(0.6);
     const generatedAt = formatDateTime(new Date());

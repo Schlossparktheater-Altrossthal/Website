@@ -85,8 +85,11 @@ export function formatRelativeBetween(
   reference: Date,
   options: RelativeTimeOptions = {},
 ): string {
-  const { formatter = DEFAULT_RELATIVE_TIME_FORMATTER, segments = RELATIVE_TIME_SEGMENTS, roundingMethod = Math.round } =
-    options;
+  const {
+    formatter = DEFAULT_RELATIVE_TIME_FORMATTER,
+    segments = RELATIVE_TIME_SEGMENTS,
+    roundingMethod = Math.round,
+  } = options;
   const diffInSeconds = (target.getTime() - reference.getTime()) / 1000;
 
   if (!Number.isFinite(diffInSeconds)) {
@@ -103,10 +106,7 @@ export function formatRelativeBetween(
   return formatter.format(rounded, unit);
 }
 
-export function formatRelativeFromNow(
-  date: Date,
-  options: RelativeFromNowOptions = {},
-): string {
+export function formatRelativeFromNow(date: Date, options: RelativeFromNowOptions = {}): string {
   const { now, ...rest } = options;
   const reference = resolveReferenceDate(now);
   return formatRelativeBetween(date, reference, rest);
@@ -116,7 +116,11 @@ export function formatRelativeWithAbsolute(
   date: Date,
   options: RelativeWithAbsoluteOptions = {},
 ): { relative: string; absolute: string; combined: string } {
-  const { absoluteFormatter = DEFAULT_ABSOLUTE_DATETIME_FORMATTER, separator = " • ", ...relativeOptions } = options;
+  const {
+    absoluteFormatter = DEFAULT_ABSOLUTE_DATETIME_FORMATTER,
+    separator = " • ",
+    ...relativeOptions
+  } = options;
   const relative = formatRelativeFromNow(date, relativeOptions);
   const absolute = absoluteFormatter.format(date);
 

@@ -1,6 +1,24 @@
 "use client";
 
-import { ArrowUpRightIcon, CalendarCheckIcon, CalendarCogIcon, CalendarIcon, CalendarRangeIcon, CheckCircle2Icon, HammerIcon, IconComponent, PiggyBankIcon, ShieldCheckIcon, SparklesIcon, UserRoundIcon, UsersIcon, UsersRoundIcon, UtensilsCrossedIcon, WifiIcon, WifiOffIcon } from "@/components/ui/action-icons";
+import {
+  ArrowUpRightIcon,
+  CalendarCheckIcon,
+  CalendarCogIcon,
+  CalendarIcon,
+  CalendarRangeIcon,
+  CheckCircle2Icon,
+  HammerIcon,
+  IconComponent,
+  PiggyBankIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  UserRoundIcon,
+  UsersIcon,
+  UsersRoundIcon,
+  UtensilsCrossedIcon,
+  WifiIcon,
+  WifiOffIcon,
+} from "@/components/ui/action-icons";
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -18,7 +36,12 @@ import {
   MembersTopbarTitle,
 } from "@/components/members/members-app-shell";
 import { useMembersPermissions } from "@/components/members/permissions-context";
-import { PageHeader, PageHeaderDescription, PageHeaderStatus, PageHeaderTitle } from "@/design-system/patterns";
+import {
+  PageHeader,
+  PageHeaderDescription,
+  PageHeaderStatus,
+  PageHeaderTitle,
+} from "@/design-system/patterns";
 import { cn } from "@/lib/utils";
 
 interface DashboardStats {
@@ -67,8 +90,9 @@ const DAY_IN_MS = 86_400_000;
 const CARD_VARIANTS = {
   surface: "rounded-2xl border border-border bg-card shadow-lg",
   elevated: "rounded-2xl border border-border bg-card shadow-xl shadow-primary/5",
-  accent: "rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/8 to-primary/4 shadow-lg shadow-primary/10",
-  metric: "rounded-2xl border border-border bg-gradient-to-br from-card to-background shadow-md"
+  accent:
+    "rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/8 to-primary/4 shadow-lg shadow-primary/10",
+  metric: "rounded-2xl border border-border bg-gradient-to-br from-card to-background shadow-md",
 } as const;
 
 const METRIC_CARD_CLASSES: Record<MetricTone, string> = {
@@ -187,9 +211,7 @@ function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null 
   const title = typeof value.title === "string" && value.title.trim() ? value.title : null;
   const yearRaw = value.year;
   const year =
-    typeof yearRaw === "number" && Number.isFinite(yearRaw)
-      ? yearRaw
-      : startDate.getFullYear();
+    typeof yearRaw === "number" && Number.isFinite(yearRaw) ? yearRaw : startDate.getFullYear();
 
   return {
     showId,
@@ -200,38 +222,33 @@ function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null 
   };
 }
 
-function parseProfileCompletion(value: unknown):
-  | { complete: boolean; completed: number; total: number }
-  | null {
+function parseProfileCompletion(
+  value: unknown,
+): { complete: boolean; completed: number; total: number } | null {
   if (!isRecord(value)) return null;
   const totalRaw = value.total;
   const completedRaw = value.completed;
   const complete = Boolean(value.complete);
-  const total =
-    typeof totalRaw === "number" && Number.isFinite(totalRaw) ? totalRaw : 0;
+  const total = typeof totalRaw === "number" && Number.isFinite(totalRaw) ? totalRaw : 0;
   const completed =
-    typeof completedRaw === "number" && Number.isFinite(completedRaw)
-      ? completedRaw
-      : 0;
+    typeof completedRaw === "number" && Number.isFinite(completedRaw) ? completedRaw : 0;
   return { complete, completed, total };
 }
 
 export function MembersDashboard({ permissions: permissionsProp }: MembersDashboardProps = {}) {
   const { data: session } = useSession();
   const { connectionStatus } = useRealtime();
-  const {
-    totalOnline: liveOnline,
-    onlineUsers,
-    isLoading: onlineLoading,
-  } = useOnlineStats();
+  const { totalOnline: liveOnline, onlineUsers, isLoading: onlineLoading } = useOnlineStats();
   const contextPermissions = useMembersPermissions();
   const effectivePermissions = permissionsProp ?? contextPermissions;
 
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
   const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
-  const [profileCompletion, setProfileCompletion] = useState<
-    { complete: boolean; completed: number; total: number } | null
-  >(null);
+  const [profileCompletion, setProfileCompletion] = useState<{
+    complete: boolean;
+    completed: number;
+    total: number;
+  } | null>(null);
   const [isOfflineFallback, setIsOfflineFallback] = useState(false);
 
   useEffect(() => {
@@ -505,16 +522,26 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
     if (!profileCompletion.complete) {
       return (
-        <div className="flex flex-col gap-4 rounded-lg border border-warning bg-warning/15 p-4 text-sm text-warning shadow-lg" role="alert" aria-live="polite">
+        <div
+          className="flex flex-col gap-4 rounded-lg border border-warning bg-warning/15 p-4 text-sm text-warning shadow-lg"
+          role="alert"
+          aria-live="polite"
+        >
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
             <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-warning/30 bg-warning/20 text-warning" aria-hidden="true">
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-warning/30 bg-warning/20 text-warning"
+                aria-hidden="true"
+              >
                 <CalendarRangeIcon className="h-5 w-5" />
               </div>
               <p className="text-base font-semibold">Profilangaben unvollständig</p>
             </div>
             {profileCompletion.total ? (
-              <Badge className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-warning/30 bg-warning/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-sm" aria-label={`Profil zu ${percentComplete} Prozent vollständig`}>
+              <Badge
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-warning/30 bg-warning/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-sm"
+                aria-label={`Profil zu ${percentComplete} Prozent vollständig`}
+              >
                 {percentLabel}
               </Badge>
             ) : null}
@@ -533,8 +560,15 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     }
 
     return (
-      <div className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-success" role="status" aria-live="polite">
-        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-success/30 bg-success/15" aria-hidden="true">
+      <div
+        className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-success"
+        role="status"
+        aria-live="polite"
+      >
+        <div
+          className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-success/30 bg-success/15"
+          aria-hidden="true"
+        >
           <CheckCircle2Icon className="h-4 w-4" />
         </div>
         <div>
@@ -544,8 +578,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       </div>
     );
   }, [profileCompletion]);
-
-
 
   if (!session?.user) {
     return (
@@ -649,14 +681,14 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                         href={link.href}
                         className={cn(
                           "group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-medium shadow-sm transition",
-                          "hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+                          "hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2",
                         )}
                       >
                         <span className="flex items-center gap-3">
                           <span
                             className={cn(
                               "flex h-10 w-10 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors",
-                              "group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground"
+                              "group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground",
                             )}
                           >
                             <Icon className="h-4 w-4" />
@@ -677,10 +709,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {metrics.map((metric) => (
-            <Card
-              key={metric.key}
-              className={METRIC_CARD_CLASSES[metric.tone]}
-            >
+            <Card key={metric.key} className={METRIC_CARD_CLASSES[metric.tone]}>
               <CardHeader className={cn(SPACING.cardPadding, "space-y-4")}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-2">

@@ -5,47 +5,47 @@
     /* Status-Farben direkt vom Design System */
     --spl-ok: var(--success);
     --spl-ok-foreground: var(--success-foreground);
-    
+
     --spl-warn: var(--warning);
     --spl-warn-foreground: var(--warning-foreground);
-    
+
     --spl-danger: var(--destructive);
     --spl-danger-foreground: var(--destructive-foreground);
-    
+
     --spl-info: var(--info);
     --spl-info-foreground: var(--info-foreground);
-    
+
     --spl-primary: var(--primary);
     --spl-primary-foreground: var(--primary-foreground);
-    
+
     --spl-accent: var(--accent);
     --spl-accent-foreground: var(--accent-foreground);
-    
+
     /* Vacation = Info (Sky Blue) */
     --spl-vacation: var(--info);
     --spl-vacation-foreground: var(--info-foreground);
-    
+
     /* Holiday = Accent (Amber/Gold) */
     --spl-holiday: var(--accent);
     --spl-holiday-foreground: var(--accent-foreground);
-    
+
     /* Gruppen-Farben - abgeleitet vom Design System */
-    --spl-actors: var(--info);        /* Info = Blue */
+    --spl-actors: var(--info); /* Info = Blue */
     --spl-actors-foreground: var(--info-foreground);
-    
-    --spl-crew: var(--success);       /* Success = Green */
+
+    --spl-crew: var(--success); /* Success = Green */
     --spl-crew-foreground: var(--success-foreground);
-    
-    --spl-both: var(--accent);        /* Accent = Purple/Amber */
+
+    --spl-both: var(--accent); /* Accent = Purple/Amber */
     --spl-both-foreground: var(--accent-foreground);
-    
+
     /* Neutral-Farben */
     --spl-border: var(--border);
     --spl-card: var(--card);
     --spl-card-foreground: var(--card-foreground);
     --spl-muted: var(--muted);
     --spl-muted-foreground: var(--muted-foreground);
-    
+
     /* Glass-morphism Effekte */
     --spl-glass-bg: hsl(var(--card) / 0.9);
     --spl-glass-border: hsl(var(--border) / 0.5);
@@ -61,106 +61,96 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
-  
+
   /* Status-Backgrounds mit Alpha - passt sich automatisch an Light/Dark Mode an */
   .spl-bg-ok {
     background-color: hsl(var(--success) / 0.14);
   }
-  
+
   .spl-bg-warn {
     background-color: hsl(var(--warning) / 0.18);
   }
-  
+
   .spl-bg-danger {
     background-color: hsl(var(--destructive) / 0.12);
   }
-  
+
   .spl-bg-info {
     background-color: hsl(var(--info) / 0.18);
   }
-  
+
   .spl-bg-primary {
     background-color: hsl(var(--primary) / 0.15);
   }
-  
+
   .spl-bg-accent {
     background-color: hsl(var(--accent) / 0.18);
   }
-  
+
   /* Gruppen-Backgrounds - nutzt Design System Farben */
   .spl-bg-actors {
     background-color: hsl(var(--info) / 0.18);
   }
-  
+
   .spl-bg-crew {
     background-color: hsl(var(--success) / 0.14);
   }
-  
+
   .spl-bg-both {
     background-color: hsl(var(--accent) / 0.18);
   }
-  
+
   /* Vacation/Holiday Backgrounds */
   .spl-bg-vacation {
     background-color: hsl(var(--info) / 0.18);
   }
-  
+
   .spl-bg-holiday {
     background-color: hsl(var(--accent) / 0.18);
   }
-  
+
   /* Gradients für Gruppen - nutzt Design System Farben */
   .spl-gradient-actors {
-    background: linear-gradient(to bottom right, 
-      hsl(var(--info) / 0.8), 
-      hsl(var(--info)));
+    background: linear-gradient(to bottom right, hsl(var(--info) / 0.8), hsl(var(--info)));
   }
-  
+
   .spl-gradient-crew {
-    background: linear-gradient(to bottom right, 
-      hsl(var(--success) / 0.8), 
-      hsl(var(--success)));
+    background: linear-gradient(to bottom right, hsl(var(--success) / 0.8), hsl(var(--success)));
   }
-  
+
   .spl-gradient-both {
-    background: linear-gradient(to bottom right, 
-      hsl(var(--accent) / 0.8), 
-      hsl(var(--accent)));
+    background: linear-gradient(to bottom right, hsl(var(--accent) / 0.8), hsl(var(--accent)));
   }
-  
+
   /* Vacation/Holiday Gradients */
   .spl-gradient-vacation {
-    background: linear-gradient(to right, 
-      hsl(var(--info) / 0.7), 
-      hsl(var(--info)));
+    background: linear-gradient(to right, hsl(var(--info) / 0.7), hsl(var(--info)));
   }
-  
+
   .spl-gradient-holiday {
-    background: linear-gradient(to right, 
-      hsl(var(--accent) / 0.7), 
-      hsl(var(--accent)));
+    background: linear-gradient(to right, hsl(var(--accent) / 0.7), hsl(var(--accent)));
   }
-  
+
   /* Thin scrollbar */
   .spl-scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
   }
-  
+
   .spl-scrollbar-thin::-webkit-scrollbar {
     height: 8px;
     width: 8px;
   }
-  
+
   .spl-scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .spl-scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: hsl(var(--muted));
     border-radius: 4px;
   }
-  
+
   .spl-scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: hsl(var(--muted-foreground) / 0.5);
   }

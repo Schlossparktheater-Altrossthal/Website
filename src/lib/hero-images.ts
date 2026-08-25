@@ -21,8 +21,9 @@ export function pickHeroForNow(images: string[]): string | null {
   if (!images || images.length === 0) return null;
   // Use a stable seed based on the day to avoid hydration mismatch
   const today = new Date();
-  const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
+  const dayOfYear = Math.floor(
+    (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000,
+  );
   const idx = dayOfYear % images.length;
   return images[idx];
 }
-

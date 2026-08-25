@@ -121,7 +121,11 @@ export const DEFAULT_UEBER_UNS_INTRO: ParagraphsContent = {
 
 export const DEFAULT_UEBER_UNS_STATS: StatsContent = {
   items: [
-    { label: "Gründung", value: "2009", detail: 'Premiere mit "Die lustigen Weiber von Windsor" im Schlosspark' },
+    {
+      label: "Gründung",
+      value: "2009",
+      detail: 'Premiere mit "Die lustigen Weiber von Windsor" im Schlosspark',
+    },
     { label: "Ensemble", value: "45+", detail: "Darstellende, Musiker:innen und helfende Hände" },
     { label: "Publikum", value: "400+", detail: "Gäste pro Aufführung" },
     { label: "Aufführungen", value: "4", detail: "pro Saison" },
@@ -151,7 +155,8 @@ export const DEFAULT_UEBER_UNS_MILESTONES: MilestonesContent = {
     {
       year: "2023",
       title: "Digital verbunden",
-      description: "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
+      description:
+        "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
     },
     {
       year: "2023",
@@ -173,12 +178,14 @@ export const DEFAULT_UEBER_UNS_SIGNATURE: IconItemsContent = {
     {
       icon: "Drama",
       title: "Freiluftbühne im Schlosspark",
-      description: "Wir verwandeln historische Mauern und alte Baumkronen in eine Bühne voller Atmosphären, Licht und Klang.",
+      description:
+        "Wir verwandeln historische Mauern und alte Baumkronen in eine Bühne voller Atmosphären, Licht und Klang.",
     },
     {
       icon: "Sparkles",
       title: "Storytelling mit Tiefgang",
-      description: "Jedes Stück entsteht eigens für Altrossthal – poetisch, geheimnisvoll und nah an den Menschen, die uns umgeben.",
+      description:
+        "Jedes Stück entsteht eigens für Altrossthal – poetisch, geheimnisvoll und nah an den Menschen, die uns umgeben.",
     },
     {
       icon: "Trees",
@@ -194,7 +201,8 @@ export const DEFAULT_UEBER_UNS_VALUES: IconItemsContent = {
     {
       icon: "HeartHandshake",
       title: "Gemeinschaft",
-      description: "Im Ensemble wirken Generationen zusammen. Ehrenamt, Professionalität und Nachbarschaft greifen ineinander.",
+      description:
+        "Im Ensemble wirken Generationen zusammen. Ehrenamt, Professionalität und Nachbarschaft greifen ineinander.",
     },
     {
       icon: "Users",
@@ -205,7 +213,8 @@ export const DEFAULT_UEBER_UNS_VALUES: IconItemsContent = {
     {
       icon: "CalendarHeart",
       title: "Sorgfalt",
-      description: "Jedes Detail zählt: von der Dramaturgie über die Kostüme bis zur letzten Bankreihe im Park.",
+      description:
+        "Jedes Detail zählt: von der Dramaturgie über die Kostüme bis zur letzten Bankreihe im Park.",
     },
   ],
 };
@@ -227,7 +236,8 @@ export const DEFAULT_UEBER_UNS_TRADES: IconItemsContent = {
     {
       icon: "Shirt",
       title: "Kostüm",
-      description: "Outfits werden entworfen, zugeschnitten und veredelt. So erzählen Stoffe, Farben und Accessoires eigene Geschichten.",
+      description:
+        "Outfits werden entworfen, zugeschnitten und veredelt. So erzählen Stoffe, Farben und Accessoires eigene Geschichten.",
     },
     {
       icon: "WandSparkles",
@@ -256,7 +266,8 @@ export const DEFAULT_UEBER_UNS_TRADES: IconItemsContent = {
     {
       icon: "UtensilsCrossed",
       title: "Verpflegung",
-      description: "Snacks für lange Probentage und liebevoll gedeckte Buffets vor den Shows halten Ensemble und Gäste bei Kräften.",
+      description:
+        "Snacks für lange Probentage und liebevoll gedeckte Buffets vor den Shows halten Ensemble und Gäste bei Kräften.",
     },
     {
       icon: "ClipboardList",

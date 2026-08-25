@@ -36,7 +36,7 @@ function linearToSrgb(value: number) {
 function oklchToSrgb(color: OklchColor) {
   const l = clamp(color.l, 0, 1);
   const c = Math.max(color.c, 0);
-  const hueRadians = normalizeHue(color.h) / 360 * TAU;
+  const hueRadians = (normalizeHue(color.h) / 360) * TAU;
   const a = c * Math.cos(hueRadians);
   const b = c * Math.sin(hueRadians);
 
@@ -98,7 +98,7 @@ function channelToHex(value: number) {
 export function oklchToHex(color: OklchColor, options?: { includeAlpha?: boolean }) {
   const { r, g, b, alpha } = oklchToSrgb(color);
   const rgbHex = `#${channelToHex(r)}${channelToHex(g)}${channelToHex(b)}`;
-  const shouldIncludeAlpha = options?.includeAlpha ?? (alpha < 1);
+  const shouldIncludeAlpha = options?.includeAlpha ?? alpha < 1;
   if (shouldIncludeAlpha) {
     return `${rgbHex}${channelToHex(alpha)}`;
   }

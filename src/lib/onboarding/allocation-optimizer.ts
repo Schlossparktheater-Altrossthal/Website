@@ -68,7 +68,13 @@ class MinCostMaxFlow {
     this.graph = Array.from({ length: size }, () => []);
   }
 
-  addEdge(from: number, to: number, capacity: number, cost: number, meta?: EdgeMeta): EdgeReference {
+  addEdge(
+    from: number,
+    to: number,
+    capacity: number,
+    cost: number,
+    meta?: EdgeMeta,
+  ): EdgeReference {
     const forward: Edge = {
       to,
       rev: this.graph[to].length,
@@ -189,15 +195,14 @@ function bucketLabel(focus: FocusCategory, experience: ExperienceCategory): stri
           ? "Hybrid"
           : "Offen";
   const experienceLabel =
-    experience === "novice"
-      ? "Novize"
-      : experience === "experienced"
-        ? "Erfahren"
-        : "Unbekannt";
+    experience === "novice" ? "Novize" : experience === "experienced" ? "Erfahren" : "Unbekannt";
   return `${focusLabel} · ${experienceLabel}`;
 }
 
-function computeFocusPenalty(roleDomain: AllocationRole["domain"], focus: AllocationCandidate["focus"]): number {
+function computeFocusPenalty(
+  roleDomain: AllocationRole["domain"],
+  focus: AllocationCandidate["focus"],
+): number {
   if (!focus) {
     return 0.08;
   }
@@ -474,18 +479,12 @@ export function optimizeRoleAllocation(roles: AllocationRole[]): AllocationOptim
       if (candidateIdx === undefined) return;
       const adjustedScore = option.adjustedScore;
       const cost = Math.round(-adjustedScore * SCORE_SCALE);
-      const edge = flow.addEdge(
-        slotOffset + index,
-        candidateOffset + candidateIdx,
-        1,
-        cost,
-        {
-          type: "assignment",
-          slotId: slot.slotId,
-          roleId: slot.roleId,
-          candidateId,
-        },
-      );
+      const edge = flow.addEdge(slotOffset + index, candidateOffset + candidateIdx, 1, cost, {
+        type: "assignment",
+        slotId: slot.slotId,
+        roleId: slot.roleId,
+        candidateId,
+      });
       const slotEntry = slotOptions.get(slot.slotId) ?? [];
       slotEntry.push(option);
       slotOptions.set(slot.slotId, slotEntry);
@@ -525,7 +524,11 @@ export function optimizeRoleAllocation(roles: AllocationRole[]): AllocationOptim
     const slotsForRole: AllocationSlot[] = slotEntries.map((slot) => {
       const assignment = assignmentBySlot.get(slot.slotId) ?? null;
       const assignedCandidate = assignment
-        ? enhanceCandidate(assignment.candidate, assignment.adjustedScore, assignment.fairnessPenalty)
+        ? enhanceCandidate(
+            assignment.candidate,
+            assignment.adjustedScore,
+            assignment.fairnessPenalty,
+          )
         : null;
       const alternatives = (slotOptions.get(slot.slotId) ?? [])
         .filter((option) => !assignment || option.candidate.userId !== assignment.candidateId)
@@ -539,7 +542,9 @@ export function optimizeRoleAllocation(roles: AllocationRole[]): AllocationOptim
           );
           return {
             ...candidateWithAdjustment,
-            delta: assignment ? round(assignment.adjustedScore - option.adjustedScore, 3) : undefined,
+            delta: assignment
+              ? round(assignment.adjustedScore - option.adjustedScore, 3)
+              : undefined,
           };
         });
       return {
@@ -560,7 +565,9 @@ export function optimizeRoleAllocation(roles: AllocationRole[]): AllocationOptim
     }, 0);
 
     const candidateListForRole = Array.from(roleCandidates.values())
-      .map((option) => enhanceCandidate(option.candidate, option.adjustedScore, option.fairnessPenalty))
+      .map((option) =>
+        enhanceCandidate(option.candidate, option.adjustedScore, option.fairnessPenalty),
+      )
       .sort((a, b) => (b.adjustedScore ?? b.score) - (a.adjustedScore ?? a.score));
 
     return {
@@ -588,7 +595,9 @@ export function optimizeRoleAllocation(roles: AllocationRole[]): AllocationOptim
       if (!bestAlternative.adjustedScore) {
         return;
       }
-      const delta = Math.abs((slot.candidate.adjustedScore ?? slot.candidate.score) - bestAlternative.adjustedScore);
+      const delta = Math.abs(
+        (slot.candidate.adjustedScore ?? slot.candidate.score) - bestAlternative.adjustedScore,
+      );
       if (delta <= 0.05) {
         conflicts.push({
           roleId: role.roleId,
@@ -599,7 +608,8 @@ export function optimizeRoleAllocation(roles: AllocationRole[]): AllocationOptim
             userId: candidate.userId,
             name: candidate.name,
             score: round(candidate.adjustedScore ?? candidate.score, 3),
-            tieBreaker: `${candidate.justification}${candidate.delta !== undefined ? ` · Δ ${round(Math.abs(candidate.delta), 3)}` : ""}`.trim(),
+            tieBreaker:
+              `${candidate.justification}${candidate.delta !== undefined ? ` · Δ ${round(Math.abs(candidate.delta), 3)}` : ""}`.trim(),
           })),
         });
       }
@@ -636,9 +646,7 @@ export function optimizeRoleAllocation(roles: AllocationRole[]): AllocationOptim
     fairnessBuckets: fairnessSummary,
   };
 
-  const sortedConflicts = conflicts
-    .sort((a, b) => a.delta - b.delta)
-    .slice(0, 12);
+  const sortedConflicts = conflicts.sort((a, b) => a.delta - b.delta).slice(0, 12);
 
   return {
     roles: optimizedRoles,

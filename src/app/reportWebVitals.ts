@@ -89,9 +89,7 @@ function normalizeDuration(value: number | null | undefined): number | null {
   return Math.round(value);
 }
 
-function normalizeTimeOnPageDuration(
-  value: number | null | undefined,
-): number | null {
+function normalizeTimeOnPageDuration(value: number | null | undefined): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return null;
   }
@@ -109,25 +107,15 @@ function generateSessionId(fallback?: string): string {
   if (typeof fallback === "string" && fallback.trim()) {
     return fallback;
   }
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
   const random = Math.random().toString(16).slice(2);
   return `${Date.now()}-${random}`;
 }
 
-function getOrCreateSessionId(
-  context: WebVitalsContext,
-  fallback?: string,
-): string {
-  if (
-    context.metricId &&
-    typeof context.metricId === "string" &&
-    context.metricId.trim()
-  ) {
+function getOrCreateSessionId(context: WebVitalsContext, fallback?: string): string {
+  if (context.metricId && typeof context.metricId === "string" && context.metricId.trim()) {
     return context.metricId;
   }
   const sessionId = generateSessionId(fallback);
@@ -206,10 +194,7 @@ async function transmitMetrics(
   };
 
   const body = JSON.stringify(payload);
-  if (
-    typeof navigator !== "undefined" &&
-    typeof navigator.sendBeacon === "function"
-  ) {
+  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
     try {
       const blob = new Blob([body], { type: "application/json" });
       const success = navigator.sendBeacon("/api/analytics/web-vitals", blob);
@@ -245,9 +230,7 @@ function sendTimeOnPageMetric(context: WebVitalsContext, sessionId?: string) {
 
   const resolvedSessionId = getOrCreateSessionId(context, sessionId);
   const now = Date.now();
-  const startedAt = Number.isFinite(context.startedAt)
-    ? context.startedAt
-    : now;
+  const startedAt = Number.isFinite(context.startedAt) ? context.startedAt : now;
   const durationMs = Math.max(0, now - startedAt);
   const normalized = normalizeTimeOnPageDuration(durationMs);
   if (normalized === null) {
@@ -259,13 +242,7 @@ function sendTimeOnPageMetric(context: WebVitalsContext, sessionId?: string) {
   context.timeOnPageCleanup = null;
   context.timeOnPageHandlerAttached = false;
 
-  void transmitMetrics(
-    resolvedSessionId,
-    context,
-    null,
-    null,
-    normalized,
-  ).catch(() => {
+  void transmitMetrics(resolvedSessionId, context, null, null, normalized).catch(() => {
     // Swallow errors to avoid blocking unload.
   });
 
@@ -274,10 +251,7 @@ function sendTimeOnPageMetric(context: WebVitalsContext, sessionId?: string) {
   }
 }
 
-function ensureTimeOnPageTracking(
-  context: WebVitalsContext,
-  sessionId: string,
-) {
+function ensureTimeOnPageTracking(context: WebVitalsContext, sessionId: string) {
   if (typeof document === "undefined" || typeof window === "undefined") {
     return;
   }
@@ -286,9 +260,7 @@ function ensureTimeOnPageTracking(
   }
 
   context.timeOnPageHandlerAttached = true;
-  context.startedAt = Number.isFinite(context.startedAt)
-    ? context.startedAt
-    : Date.now();
+  context.startedAt = Number.isFinite(context.startedAt) ? context.startedAt : Date.now();
 
   const visibilityHandler = () => {
     if (document.visibilityState === "hidden") {
@@ -355,22 +327,12 @@ function attemptSend(metricId: string) {
 
   const normalizedTimeOnPage = normalizeTimeOnPageDuration(entry.timeOnPageMs);
 
-  if (
-    normalizedLoad === null &&
-    normalizedLcp === null &&
-    normalizedTimeOnPage === null
-  ) {
+  if (normalizedLoad === null && normalizedLcp === null && normalizedTimeOnPage === null) {
     return;
   }
 
   entry.reported = true;
-  void transmitMetrics(
-    sessionId,
-    context,
-    normalizedLoad,
-    normalizedLcp,
-    normalizedTimeOnPage,
-  );
+  void transmitMetrics(sessionId, context, normalizedLoad, normalizedLcp, normalizedTimeOnPage);
   finalizeMetric(metricId);
 }
 

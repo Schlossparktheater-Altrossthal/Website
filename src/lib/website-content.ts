@@ -114,7 +114,11 @@ export async function readUeberUnsTrades(): Promise<IconItemsContent> {
 
 // ── Write function ────────────────────────────────────────────────────────────
 
-export async function saveWebsiteContent(id: WebsiteContentId, content: unknown, updatedById?: string): Promise<void> {
+export async function saveWebsiteContent(
+  id: WebsiteContentId,
+  content: unknown,
+  updatedById?: string,
+): Promise<void> {
   const meta = CONTENT_METADATA[id];
   await prisma.websiteContent.upsert({
     where: { id },
@@ -134,7 +138,9 @@ export async function saveWebsiteContent(id: WebsiteContentId, content: unknown,
 
 // ── Batch reader for CMS (all content for a page) ─────────────────────────────
 
-export async function readAllContentForPage(page: "home" | "schulkatze" | "ueber-uns"): Promise<Record<string, unknown>> {
+export async function readAllContentForPage(
+  page: "home" | "schulkatze" | "ueber-uns",
+): Promise<Record<string, unknown>> {
   if (!process.env.DATABASE_URL) return {};
   try {
     const records = await prisma.websiteContent.findMany({

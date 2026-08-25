@@ -34,7 +34,14 @@ export type FileLibraryFolderWithAccess = FileLibraryFolder & {
 
 export type FileLibraryItemSummary = Pick<
   FileLibraryItem,
-  "id" | "fileName" | "fileSize" | "mimeType" | "description" | "uploadedById" | "createdAt" | "updatedAt"
+  | "id"
+  | "fileName"
+  | "fileSize"
+  | "mimeType"
+  | "description"
+  | "uploadedById"
+  | "createdAt"
+  | "updatedAt"
 > & {
   uploadedBy?: {
     id: string | null;
@@ -60,10 +67,7 @@ function getAllowAllFlag(folder: FileLibraryFolder, kind: FileLibraryAccessKind)
   }
 }
 
-function matchesAccessRule(
-  context: PermissionRoleContext,
-  rule: FileLibraryFolderAccess,
-) {
+function matchesAccessRule(context: PermissionRoleContext, rule: FileLibraryFolderAccess) {
   if (rule.targetType === FileLibraryAccessTargetType.SYSTEM_ROLE && rule.systemRole) {
     return context.systemRoles.includes(rule.systemRole as Role);
   }

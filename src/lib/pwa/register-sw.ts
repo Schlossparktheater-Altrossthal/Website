@@ -153,9 +153,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
           void wb
             .messageSW({ type: "SKIP_WAITING" })
-            .catch((error) =>
-              console.error("Failed to activate new service worker", error),
-            );
+            .catch((error) => console.error("Failed to activate new service worker", error));
         };
 
         wb.addEventListener("waiting", () => {

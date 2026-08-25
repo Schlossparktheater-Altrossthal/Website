@@ -6,12 +6,7 @@ import { cn } from "@/lib/utils";
 export type MembersNavIconProps = { className?: string };
 export type MembersNavIcon = ComponentType<MembersNavIconProps>;
 
-export type MembersNavGroupId =
-  | "general"
-  | "assignments"
-  | "production"
-  | "admin"
-  | "pages";
+export type MembersNavGroupId = "general" | "assignments" | "production" | "admin" | "pages";
 
 export const MEMBERS_NAV_ASSIGNMENTS_GROUP_ID: MembersNavGroupId = "assignments";
 export const MEMBERS_NAV_PRODUCTION_GROUP_ID: MembersNavGroupId = "production";
@@ -315,7 +310,7 @@ const MembersAdminIcon = createMembersNavIcon(
 );
 
 const PermissionsIcon = createMembersNavIcon(
-  <path d="M12 22s8-3 8-10V5l-8-3-8 3v7c0 7 8 10 8 10Z" />
+  <path d="M12 22s8-3 8-10V5l-8-3-8 3v7c0 7 8 10 8 10Z" />,
 );
 
 const PhotoConsentIcon = createMembersNavIcon(
@@ -510,10 +505,30 @@ export const membersNavigation = [
     id: "pages",
     label: "Pages",
     items: [
-      { href: "/mitglieder/pages/ui", label: "UI", permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE", icon: DashboardIcon },
-      { href: "/mitglieder/website", label: "Website & Theme", permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE", icon: WebsiteIcon },
-      { href: "/mitglieder/website/inhalte", label: "Seiteninhalte", permissionKey: "PUBLIC.CONTENT.MANAGE", icon: ContentIcon },
-      { href: "/mitglieder/pages/seitensteuerung", label: "Seitensteuerung", permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE", icon: WebsiteIcon },
+      {
+        href: "/mitglieder/pages/ui",
+        label: "UI",
+        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
+        icon: DashboardIcon,
+      },
+      {
+        href: "/mitglieder/website",
+        label: "Website & Theme",
+        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
+        icon: WebsiteIcon,
+      },
+      {
+        href: "/mitglieder/website/inhalte",
+        label: "Seiteninhalte",
+        permissionKey: "PUBLIC.CONTENT.MANAGE",
+        icon: ContentIcon,
+      },
+      {
+        href: "/mitglieder/pages/seitensteuerung",
+        label: "Seitensteuerung",
+        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
+        icon: WebsiteIcon,
+      },
     ],
   },
   {

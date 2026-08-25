@@ -8,7 +8,12 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
-import { ArrowRightIcon, Building2Icon, ClipboardListIcon, UsersIcon } from "@/components/ui/action-icons";
+import {
+  ArrowRightIcon,
+  Building2Icon,
+  ClipboardListIcon,
+  UsersIcon,
+} from "@/components/ui/action-icons";
 
 type OverviewStat = {
   label: string;
@@ -36,9 +41,7 @@ export default async function ProduktionsGewerkePage() {
   const activeProduction = await getActiveProduction(session.user?.id);
   const breadcrumbs = [membersNavigationBreadcrumb(currentPath)];
 
-  const departmentCount = activeProduction
-    ? await prisma.department.count()
-    : 0;
+  const departmentCount = activeProduction ? await prisma.department.count() : 0;
 
   const openTaskCount = activeProduction
     ? await prisma.departmentTask.count({
@@ -75,9 +78,24 @@ export default async function ProduktionsGewerkePage() {
     : 0;
 
   const stats: OverviewStat[] = [
-    { label: "Gewerke", value: departmentCount.toString(), hint: "Aktive Teams in der Produktion", icon: Building2Icon },
-    { label: "Mitglieder", value: memberCount.toString(), hint: "Zugeordnete Personen", icon: UsersIcon },
-    { label: "Offene Aufgaben", value: openTaskCount.toString(), hint: "Todos in allen Gewerken", icon: ClipboardListIcon },
+    {
+      label: "Gewerke",
+      value: departmentCount.toString(),
+      hint: "Aktive Teams in der Produktion",
+      icon: Building2Icon,
+    },
+    {
+      label: "Mitglieder",
+      value: memberCount.toString(),
+      hint: "Zugeordnete Personen",
+      icon: UsersIcon,
+    },
+    {
+      label: "Offene Aufgaben",
+      value: openTaskCount.toString(),
+      hint: "Todos in allen Gewerken",
+      icon: ClipboardListIcon,
+    },
   ];
 
   return (
@@ -92,7 +110,9 @@ export default async function ProduktionsGewerkePage() {
         <Card>
           <CardHeader>
             <CardTitle>Keine aktive Produktion</CardTitle>
-            <p className="text-sm text-muted-foreground">Wähle eine aktive Produktion aus. Die Grundstruktur der Seite bleibt dabei erhalten.</p>
+            <p className="text-sm text-muted-foreground">
+              Wähle eine aktive Produktion aus. Die Grundstruktur der Seite bleibt dabei erhalten.
+            </p>
           </CardHeader>
         </Card>
       ) : (
@@ -130,15 +150,21 @@ export default async function ProduktionsGewerkePage() {
               ) : (
                 <ul className="space-y-3">
                   {departments.map((department) => (
-                    <li key={department.id} className="rounded-lg border border-border/60 bg-background/70 p-4">
+                    <li
+                      key={department.id}
+                      className="rounded-lg border border-border/60 bg-background/70 p-4"
+                    >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="space-y-1">
-                          <h2 className="text-base font-semibold text-foreground">{department.name}</h2>
+                          <h2 className="text-base font-semibold text-foreground">
+                            {department.name}
+                          </h2>
                           <p className="text-sm text-muted-foreground">
                             {department.description?.trim() || "Keine Beschreibung hinterlegt."}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {department._count.memberships} Mitglieder · {department._count.tasks} Aufgaben
+                            {department._count.memberships} Mitglieder · {department._count.tasks}{" "}
+                            Aufgaben
                           </p>
                         </div>
                         <Button asChild variant="outline" size="sm" className="sm:ml-4">

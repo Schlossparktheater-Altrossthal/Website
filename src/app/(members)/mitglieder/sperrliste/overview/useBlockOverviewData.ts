@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
+import { useMemo } from "react";
 import {
   addDays,
   eachDayOfInterval,
@@ -13,14 +13,14 @@ import {
   startOfMonth,
   startOfToday,
   startOfWeek,
-} from 'date-fns';
-import { de } from 'date-fns/locale/de';
+} from "date-fns";
+import { de } from "date-fns/locale/de";
 
-import { combineNameParts } from '@/lib/names';
-import { sortWeekdays } from '@/lib/weekdays';
-import type { HolidayRange } from '@/types/holidays';
+import { combineNameParts } from "@/lib/names";
+import { sortWeekdays } from "@/lib/weekdays";
+import type { HolidayRange } from "@/types/holidays";
 
-import type { BlockedDay } from '../block-calendar';
+import type { BlockedDay } from "../block-calendar";
 
 type MemberStats = {
   total: number;
@@ -74,7 +74,7 @@ export type BlockOverviewSummary = {
   upcoming: number;
 };
 
-export const DATE_FORMAT = 'yyyy-MM-dd';
+export const DATE_FORMAT = "yyyy-MM-dd";
 
 type UseBlockOverviewDataParams = {
   members: OverviewMember[];
@@ -94,7 +94,7 @@ function prepareMembers(members: OverviewMember[]): PreparedMember[] {
       combineNameParts(member.firstName, member.lastName) ??
       member.name ??
       member.email ??
-      'Unbekannt';
+      "Unbekannt";
 
     return {
       ...member,
@@ -112,7 +112,8 @@ function createHolidayMap(holidays: HolidayRange[]): Map<string, HolidayRange[]>
     const parsedEnd = parseISO(`${holiday.endDate}`);
     const validStart = Number.isFinite(start.getTime()) ? start : null;
     if (!validStart) continue;
-    const end = Number.isFinite(parsedEnd.getTime()) && parsedEnd >= validStart ? parsedEnd : validStart;
+    const end =
+      Number.isFinite(parsedEnd.getTime()) && parsedEnd >= validStart ? parsedEnd : validStart;
 
     for (let cursor = validStart; cursor <= end; cursor = addDays(cursor, 1)) {
       const key = format(cursor, DATE_FORMAT);
@@ -140,7 +141,7 @@ function summarizeMembers(members: PreparedMember[], dayKeys: string[]): BlockOv
     let memberUpcoming = 0;
 
     for (const entry of member.blockedDays) {
-      if (entry.kind !== 'BLOCKED') continue;
+      if (entry.kind !== "BLOCKED") continue;
       if (!keySet.has(entry.date)) continue;
       memberTotal += 1;
       total += 1;
@@ -183,13 +184,16 @@ export function useBlockOverviewData({
 
   const preferredWeekdaySet = useMemo(() => new Set(preferredWeekdays), [preferredWeekdays]);
   const exceptionWeekdaySet = useMemo(() => new Set(exceptionWeekdays), [exceptionWeekdays]);
-  const sortedPreferredWeekdays = useMemo(() => sortWeekdays(preferredWeekdays), [preferredWeekdays]);
+  const sortedPreferredWeekdays = useMemo(
+    () => sortWeekdays(preferredWeekdays),
+    [preferredWeekdays],
+  );
   const preferredDayKeys = useMemo(() => {
     const set = new Set<string>();
 
     for (const member of preparedMembers) {
       for (const entry of member.blockedDays) {
-        if (entry.kind === 'PREFERRED') {
+        if (entry.kind === "PREFERRED") {
           set.add(entry.date);
         }
       }
@@ -198,28 +202,25 @@ export function useBlockOverviewData({
     return set;
   }, [preparedMembers]);
 
-  const visibleDayInfo = useMemo(
-    () => {
-      const today = startOfToday();
+  const visibleDayInfo = useMemo(() => {
+    const today = startOfToday();
 
-      return daysInView
-        .map((day) => {
-          const weekday = day.getDay();
-          const key = format(day, DATE_FORMAT);
+    return daysInView
+      .map((day) => {
+        const weekday = day.getDay();
+        const key = format(day, DATE_FORMAT);
 
-          return {
-            day,
-            key,
-            weekday,
-            isoWeek: getISOWeek(day),
-            isWeekend: weekday === 0 || weekday === 6,
-            isCurrentMonth: isSameMonth(day, currentMonth),
-          } satisfies VisibleDayInfo;
-        })
-        .filter((info) => info.day >= today);
-    },
-    [daysInView, currentMonth],
-  );
+        return {
+          day,
+          key,
+          weekday,
+          isoWeek: getISOWeek(day),
+          isWeekend: weekday === 0 || weekday === 6,
+          isCurrentMonth: isSameMonth(day, currentMonth),
+        } satisfies VisibleDayInfo;
+      })
+      .filter((info) => info.day >= today);
+  }, [daysInView, currentMonth]);
 
   const dayKeys = useMemo(() => visibleDayInfo.map((item) => item.key), [visibleDayInfo]);
   const holidayMap = useMemo(() => createHolidayMap(holidays), [holidays]);
@@ -233,18 +234,20 @@ export function useBlockOverviewData({
     let currentSpan = 0;
     let currentIsHoliday = false;
     let currentStartIndex = 0;
-    let currentStartKey = '';
+    let currentStartKey = "";
 
     const signatureForEntries = (entries: HolidayRange[]) =>
       entries
-        .map((entry) => entry.id ?? `${entry.title ?? 'holiday'}:${entry.startDate}:${entry.endDate}`)
+        .map(
+          (entry) => entry.id ?? `${entry.title ?? "holiday"}:${entry.startDate}:${entry.endDate}`,
+        )
         .sort()
-        .join('|');
+        .join("|");
 
     for (let index = 0; index < visibleDayInfo.length; index += 1) {
       const { key } = visibleDayInfo[index];
       const entries = holidayMap.get(key) ?? [];
-      const signature = entries.length ? signatureForEntries(entries) : '';
+      const signature = entries.length ? signatureForEntries(entries) : "";
 
       if (signature === currentSignature) {
         currentSpan += 1;
@@ -255,10 +258,13 @@ export function useBlockOverviewData({
         const startInfo = visibleDayInfo[currentStartIndex];
         const weekday = startInfo?.day.getDay();
         const showDivider =
-          !!startInfo && sortedPreferredWeekdays.length > 0 && weekday === sortedPreferredWeekdays[0] && currentStartIndex !== 0;
+          !!startInfo &&
+          sortedPreferredWeekdays.length > 0 &&
+          weekday === sortedPreferredWeekdays[0] &&
+          currentStartIndex !== 0;
 
         segments.push({
-          key: `${currentStartKey}:${currentSignature || 'none'}`,
+          key: `${currentStartKey}:${currentSignature || "none"}`,
           titles: currentTitles,
           isHoliday: currentIsHoliday,
           span: currentSpan,
@@ -278,10 +284,13 @@ export function useBlockOverviewData({
       const startInfo = visibleDayInfo[currentStartIndex];
       const weekday = startInfo?.day.getDay();
       const showDivider =
-        !!startInfo && sortedPreferredWeekdays.length > 0 && weekday === sortedPreferredWeekdays[0] && currentStartIndex !== 0;
+        !!startInfo &&
+        sortedPreferredWeekdays.length > 0 &&
+        weekday === sortedPreferredWeekdays[0] &&
+        currentStartIndex !== 0;
 
       segments.push({
-        key: `${currentStartKey}:${currentSignature || 'none'}`,
+        key: `${currentStartKey}:${currentSignature || "none"}`,
         titles: currentTitles,
         isHoliday: currentIsHoliday,
         span: currentSpan,
@@ -292,7 +301,10 @@ export function useBlockOverviewData({
     return segments;
   }, [holidayMap, sortedPreferredWeekdays, visibleDayInfo]);
 
-  const summary = useMemo(() => summarizeMembers(preparedMembers, dayKeys), [preparedMembers, dayKeys]);
+  const summary = useMemo(
+    () => summarizeMembers(preparedMembers, dayKeys),
+    [preparedMembers, dayKeys],
+  );
 
   const holidaysInRange = useMemo(() => {
     if (!dayKeys.length) return [] as HolidayRange[];
@@ -302,7 +314,10 @@ export function useBlockOverviewData({
     return holidays.filter((holiday) => holiday.startDate <= last && holiday.endDate >= first);
   }, [holidays, dayKeys]);
 
-  const monthLabel = useMemo(() => format(currentMonth, 'MMMM yyyy', { locale: de }), [currentMonth]);
+  const monthLabel = useMemo(
+    () => format(currentMonth, "MMMM yyyy", { locale: de }),
+    [currentMonth],
+  );
 
   const busiestMember = useMemo(() => {
     let leader: { name: string; total: number } | null = null;

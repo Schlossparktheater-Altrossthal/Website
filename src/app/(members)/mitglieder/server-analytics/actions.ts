@@ -20,7 +20,11 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
-const statusSchema = z.enum(["open", "monitoring", "resolved"] satisfies readonly ServerLogStatus[]);
+const statusSchema = z.enum([
+  "open",
+  "monitoring",
+  "resolved",
+] satisfies readonly ServerLogStatus[]);
 
 const updateStatusSchema = z.object({
   logId: z.string().min(1, "Log-ID erforderlich"),
@@ -30,44 +34,37 @@ const updateStatusSchema = z.object({
 const settingsLimits = SERVER_ANALYTICS_SETTINGS_LIMITS;
 
 const updateSettingsSchema = z.object({
-  httpWindowMinutes: z
-    .coerce
+  httpWindowMinutes: z.coerce
     .number()
     .int()
     .min(settingsLimits.httpWindowMinutes.min, "Mindestens 5 Minuten")
     .max(settingsLimits.httpWindowMinutes.max, "Maximal 7 Tage"),
-  httpBucketMinutes: z
-    .coerce
+  httpBucketMinutes: z.coerce
     .number()
     .int()
     .min(settingsLimits.httpBucketMinutes.min, "Mindestens 1 Minute")
     .max(settingsLimits.httpBucketMinutes.max, "Maximal 24 Stunden"),
-  sessionWindowDays: z
-    .coerce
+  sessionWindowDays: z.coerce
     .number()
     .int()
     .min(settingsLimits.sessionWindowDays.min, "Mindestens 1 Tag")
     .max(settingsLimits.sessionWindowDays.max, "Maximal 365 Tage"),
-  sessionRetentionDays: z
-    .coerce
+  sessionRetentionDays: z.coerce
     .number()
     .int()
     .min(settingsLimits.sessionRetentionDays.min, "Mindestens 1 Tag")
     .max(settingsLimits.sessionRetentionDays.max, "Maximal 365 Tage"),
-  realtimeWindowHours: z
-    .coerce
+  realtimeWindowHours: z.coerce
     .number()
     .int()
     .min(settingsLimits.realtimeWindowHours.min, "Mindestens 1 Stunde")
     .max(settingsLimits.realtimeWindowHours.max, "Maximal 168 Stunden"),
-  pageWindowDays: z
-    .coerce
+  pageWindowDays: z.coerce
     .number()
     .int()
     .min(settingsLimits.pageWindowDays.min, "Mindestens 1 Tag")
     .max(settingsLimits.pageWindowDays.max, "Maximal 365 Tage"),
-  pageRetentionDays: z
-    .coerce
+  pageRetentionDays: z.coerce
     .number()
     .int()
     .min(settingsLimits.pageRetentionDays.min, "Mindestens 1 Tag")
@@ -77,8 +74,7 @@ const updateSettingsSchema = z.object({
 export type UpdateServerLogStatusInput = z.infer<typeof updateStatusSchema>;
 
 export type UpdateServerLogStatusResult =
-  | { success: true; log: LoadedServerLog }
-  | { success: false; error: string };
+  { success: true; log: LoadedServerLog } | { success: false; error: string };
 
 export type UpdateServerAnalyticsSettingsInput = z.infer<typeof updateSettingsSchema>;
 

@@ -96,11 +96,12 @@ export function buildCandidateAggregates(
   return map;
 }
 
-export function createRoleSummaries(
-  ranking: OnboardingDashboardData["ranking"],
-): RoleSummary[] {
+export function createRoleSummaries(ranking: OnboardingDashboardData["ranking"]): RoleSummary[] {
   return ranking.roles.map((role) => {
-    const totalShare = role.candidates.reduce((sum, candidate) => sum + candidate.normalizedShare, 0);
+    const totalShare = role.candidates.reduce(
+      (sum, candidate) => sum + candidate.normalizedShare,
+      0,
+    );
     const averageShare = role.candidates.length === 0 ? 0 : totalShare / role.candidates.length;
 
     return {
@@ -140,10 +141,7 @@ export function createRoleGroups(
   }));
 }
 
-export function sortRoleSummariesByDomain(
-  summaries: RoleSummary[],
-  domain: Domain,
-): RoleSummary[] {
+export function sortRoleSummariesByDomain(summaries: RoleSummary[], domain: Domain): RoleSummary[] {
   return summaries
     .filter((summary) => summary.domain === domain)
     .slice()

@@ -108,7 +108,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   if (typeof body.password === "string" && body.password.length > 0) {
     if (body.password.length < 6) {
-      return NextResponse.json({ error: "Passwort muss mindestens 6 Zeichen haben" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Passwort muss mindestens 6 Zeichen haben" },
+        { status: 400 },
+      );
     }
     updates.passwordHash = await hashPassword(body.password);
   } else if (body.password !== undefined && typeof body.password !== "string") {
@@ -126,7 +129,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       select: { id: true, email: true, firstName: true, lastName: true, name: true },
     });
 
-    const responseName = combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null);
+    const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;
 
     return NextResponse.json({
       ok: true,
@@ -139,7 +142,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       },
     });
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === "P2002") {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "E-Mail wird bereits verwendet" }, { status: 409 });
     }
     const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
@@ -147,7 +150,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -171,8 +177,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
 
-  const isOwner =
-    target.role === "owner" || target.roles.some((entry) => entry.role === "owner");
+  const isOwner = target.role === "owner" || target.roles.some((entry) => entry.role === "owner");
 
   if (isOwner) {
     const remainingOwners = await prisma.user.count({
@@ -184,7 +189,10 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     });
 
     if (remainingOwners === 0) {
-      return NextResponse.json({ error: "Es muss immer mindestens einen Owner geben" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Es muss immer mindestens einen Owner geben" },
+        { status: 400 },
+      );
     }
   }
 

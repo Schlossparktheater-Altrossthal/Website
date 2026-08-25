@@ -12,12 +12,7 @@ import type { PhotoConsentSummary } from "@/types/photo-consent";
 import { signaturePayloadSchema, type SignaturePayload } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024; // 8 MB
-const ALLOWED_DOCUMENT_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/jpg",
-]);
+const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
 
 type ConsentRecord = {
   id: string;
@@ -53,10 +48,7 @@ function isFileLike(value: unknown): value is UploadedFile {
     return false;
   }
   const maybeFile = value as Partial<UploadedFile>;
-  return (
-    typeof maybeFile.size === "number" &&
-    typeof maybeFile.arrayBuffer === "function"
-  );
+  return typeof maybeFile.size === "number" && typeof maybeFile.arrayBuffer === "function";
 }
 
 function calculateAge(date: Date | null | undefined): number | null {
@@ -115,7 +107,9 @@ function buildSummary(user: UserRecord): PhotoConsentSummary {
     age,
     dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
     documentName: consent?.documentName ?? null,
-    documentUploadedAt: consent?.documentUploadedAt ? consent.documentUploadedAt.toISOString() : null,
+    documentUploadedAt: consent?.documentUploadedAt
+      ? consent.documentUploadedAt.toISOString()
+      : null,
     documentMime,
     documentPreviewUrl,
     signatureVersion,
@@ -261,7 +255,10 @@ export async function POST(request: NextRequest) {
   const requiresDocument = age !== null && age < 18;
 
   if (requiresDocument && !documentFile && !user.photoConsent?.documentUploadedAt) {
-    return NextResponse.json({ error: "Bitte lade die unterschriebene Einverständniserklärung hoch" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Bitte lade die unterschriebene Einverständniserklärung hoch" },
+      { status: 400 },
+    );
   }
 
   let signaturePayload: SignaturePayload | null = null;
@@ -277,7 +274,10 @@ export async function POST(request: NextRequest) {
         try {
           parsedValue = JSON.parse(trimmed);
         } catch {
-          return NextResponse.json({ error: "Signaturdaten konnten nicht gelesen werden" }, { status: 400 });
+          return NextResponse.json(
+            { error: "Signaturdaten konnten nicht gelesen werden" },
+            { status: 400 },
+          );
         }
       }
     } else if (typeof rawSignaturePayload === "object") {
@@ -310,7 +310,10 @@ export async function POST(request: NextRequest) {
     }
     const mime = upload.type?.toLowerCase() ?? "";
     if (mime && !ALLOWED_DOCUMENT_TYPES.has(mime)) {
-      return NextResponse.json({ error: "Erlaubt sind PDF oder Bilddateien (JPG, PNG)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Erlaubt sind PDF oder Bilddateien (JPG, PNG)" },
+        { status: 400 },
+      );
     }
     const buffer = new Uint8Array(await upload.arrayBuffer());
     documentBuffer = buffer;
@@ -320,7 +323,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (signaturePayload && !documentBuffer) {
-    return NextResponse.json({ error: "Digitale Unterschrift konnte nicht gespeichert werden" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Digitale Unterschrift konnte nicht gespeichert werden" },
+      { status: 400 },
+    );
   }
 
   const now = new Date();

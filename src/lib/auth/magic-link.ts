@@ -5,10 +5,8 @@ import { getAuthSecret } from "@/lib/auth-secret";
 
 export const MAGIC_LINK_SUCCESS_MESSAGE =
   "Falls ein Konto mit dieser E-Mail existiert, erhältst du in Kürze eine E-Mail.";
-export const MAGIC_LINK_RATE_LIMIT_MESSAGE =
-  "Zu viele Versuche, bitte später erneut versuchen";
-export const MAGIC_LINK_INVALID_MESSAGE =
-  "Dieser Link ist ungültig oder abgelaufen";
+export const MAGIC_LINK_RATE_LIMIT_MESSAGE = "Zu viele Versuche, bitte später erneut versuchen";
+export const MAGIC_LINK_INVALID_MESSAGE = "Dieser Link ist ungültig oder abgelaufen";
 
 const ONE_HOUR_IN_MS = 60 * 60 * 1000;
 const EMAIL_LIMIT = 3;
@@ -44,10 +42,7 @@ export function normalizeMagicLinkEmail(email: string) {
 }
 
 export function getResetRequestIp(request: Request) {
-  const forwardedFor = request.headers
-    .get("x-forwarded-for")
-    ?.split(",")[0]
-    ?.trim();
+  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const realIp = request.headers.get("x-real-ip")?.trim();
   return forwardedFor || realIp || "unknown";
 }
@@ -69,9 +64,7 @@ function incrementBucket(
 ) {
   const existing = map.get(key);
   const bucket =
-    existing && existing.resetAt > now
-      ? existing
-      : { count: 0, resetAt: now + ONE_HOUR_IN_MS };
+    existing && existing.resetAt > now ? existing : { count: 0, resetAt: now + ONE_HOUR_IN_MS };
   bucket.count += 1;
   map.set(key, bucket);
 
@@ -102,18 +95,11 @@ export function recordMagicLinkAttempt(
 
   return {
     allowed: false,
-    retryAfterSeconds: Math.max(
-      emailResult.retryAfterSeconds,
-      ipResult.retryAfterSeconds,
-    ),
+    retryAfterSeconds: Math.max(emailResult.retryAfterSeconds, ipResult.retryAfterSeconds),
   };
 }
 
-export async function sendMagicLinkEmail({
-  identifier,
-  url,
-  provider,
-}: SendMagicLinkEmailParams) {
+export async function sendMagicLinkEmail({ identifier, url, provider }: SendMagicLinkEmailParams) {
   if (!provider.server || process.env.NODE_ENV !== "production") {
     console.log("[DEV Magic Link]", identifier, url);
     return;
@@ -151,16 +137,10 @@ export function createMagicLinkToken() {
 }
 
 export function hashMagicLinkToken(token: string) {
-  return createHash("sha256")
-    .update(`${token}${getAuthSecret()}`)
-    .digest("hex");
+  return createHash("sha256").update(`${token}${getAuthSecret()}`).digest("hex");
 }
 
-export function createMagicLinkUrl(
-  requestUrl: string,
-  identifier: string,
-  token: string,
-) {
+export function createMagicLinkUrl(requestUrl: string, identifier: string, token: string) {
   const baseUrl = new URL(requestUrl).origin;
   const params = new URLSearchParams({
     callbackUrl: `${baseUrl}/reset-password`,
@@ -170,10 +150,7 @@ export function createMagicLinkUrl(
   return `${baseUrl}/api/auth/callback/email?${params}`;
 }
 
-export async function createAndSendMagicLink(
-  requestUrl: string,
-  identifier: string,
-) {
+export async function createAndSendMagicLink(requestUrl: string, identifier: string) {
   const { token, tokenHash } = createMagicLinkToken();
   const expires = new Date(Date.now() + MAGIC_LINK_MAX_AGE_IN_SECONDS * 1000);
   const url = createMagicLinkUrl(requestUrl, identifier, token);

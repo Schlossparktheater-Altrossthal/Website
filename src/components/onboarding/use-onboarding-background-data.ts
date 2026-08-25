@@ -39,7 +39,10 @@ export function useOnboardingBackgroundData(
   activeTag: BackgroundTag | null;
   requiresClass: boolean;
 } {
-  const baseSuggestions = useMemo(() => sanitizeSuggestions(options?.initialSuggestions), [options?.initialSuggestions]);
+  const baseSuggestions = useMemo(
+    () => sanitizeSuggestions(options?.initialSuggestions),
+    [options?.initialSuggestions],
+  );
   const [backgroundSuggestions, setBackgroundSuggestions] = useState<string[]>(baseSuggestions);
   const [classSuggestions, setClassSuggestions] = useState<string[]>([]);
 
@@ -55,13 +58,19 @@ export function useOnboardingBackgroundData(
         const data = await response.json().catch(() => null);
         if (cancelled || !Array.isArray(data?.backgrounds)) return;
         setBackgroundSuggestions((prev) => {
-          const seen = new Set(prev.map((entry) => normalizeBackgroundLabel(entry) || entry.toLowerCase()));
+          const seen = new Set(
+            prev.map((entry) => normalizeBackgroundLabel(entry) || entry.toLowerCase()),
+          );
           const merged = [...prev];
           for (const raw of data.backgrounds as unknown[]) {
             let label: string | null = null;
             if (typeof raw === "string") {
               label = raw;
-            } else if (raw && typeof raw === "object" && typeof (raw as { name?: unknown }).name === "string") {
+            } else if (
+              raw &&
+              typeof raw === "object" &&
+              typeof (raw as { name?: unknown }).name === "string"
+            ) {
               label = (raw as { name: string }).name;
             }
             if (!label) continue;
@@ -89,7 +98,9 @@ export function useOnboardingBackgroundData(
   useEffect(() => {
     // keep suggestions in sync with option changes
     setBackgroundSuggestions((prev) => {
-      const seen = new Set(baseSuggestions.map((entry) => normalizeBackgroundLabel(entry) || entry.toLowerCase()));
+      const seen = new Set(
+        baseSuggestions.map((entry) => normalizeBackgroundLabel(entry) || entry.toLowerCase()),
+      );
       const merged = [...baseSuggestions];
       for (const entry of prev) {
         const key = normalizeBackgroundLabel(entry) || entry.toLowerCase();
@@ -117,7 +128,11 @@ export function useOnboardingBackgroundData(
         const entries = (data.classes as unknown[])
           .map((entry): string | null => {
             if (typeof entry === "string") return entry.trim();
-            if (entry && typeof entry === "object" && typeof (entry as { name?: unknown }).name === "string") {
+            if (
+              entry &&
+              typeof entry === "object" &&
+              typeof (entry as { name?: unknown }).name === "string"
+            ) {
               return (entry as { name: string }).name.trim();
             }
             return null;

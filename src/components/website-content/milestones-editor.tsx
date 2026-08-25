@@ -56,10 +56,31 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
     <div className="space-y-4">
       <div className="space-y-2">
         {items.map((item, index) => (
-          <div key={index} className="flex items-start gap-3 rounded-lg border border-border bg-card p-4">
+          <div
+            key={index}
+            className="flex items-start gap-3 rounded-lg border border-border bg-card p-4"
+          >
             <div className="flex flex-col gap-1">
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-xs" onClick={() => moveItem(index, -1)} disabled={index === 0} aria-label="Nach oben">↑</Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-xs" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1} aria-label="Nach unten">↓</Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-xs"
+                onClick={() => moveItem(index, -1)}
+                disabled={index === 0}
+                aria-label="Nach oben"
+              >
+                ↑
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-xs"
+                onClick={() => moveItem(index, 1)}
+                disabled={index === items.length - 1}
+                aria-label="Nach unten"
+              >
+                ↓
+              </Button>
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-primary">{item.year}</p>
@@ -67,10 +88,20 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
               <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{item.description}</p>
             </div>
             <div className="flex shrink-0 gap-1">
-              <Button variant="ghost" size="icon" onClick={() => setEditItem({ ...item, index })} aria-label="Bearbeiten">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditItem({ ...item, index })}
+                aria-label="Bearbeiten"
+              >
                 <EditIcon className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Löschen" onClick={() => setDeleteIndex(index)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Löschen"
+                onClick={() => setDeleteIndex(index)}
+              >
                 <TrashIcon className="h-4 w-4" />
               </Button>
             </div>
@@ -79,15 +110,22 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
       </div>
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>+ Meilenstein hinzufügen</Button>
-        <AsyncButton onClick={save} isLoading={saving} size="sm">Speichern</AsyncButton>
+        <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
+          + Meilenstein hinzufügen
+        </Button>
+        <AsyncButton onClick={save} isLoading={saving} size="sm">
+          Speichern
+        </AsyncButton>
       </div>
 
       <MilestoneDialog
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Neuer Meilenstein"
-        onSave={(item) => { setItems((prev) => [...prev, item]); setAddOpen(false); }}
+        onSave={(item) => {
+          setItems((prev) => [...prev, item]);
+          setAddOpen(false);
+        }}
       />
 
       {editItem && (
@@ -96,18 +134,32 @@ export function MilestonesEditor({ contentId, initialContent }: Props) {
           onOpenChange={(open) => !open && setEditItem(null)}
           title="Meilenstein bearbeiten"
           initialValues={editItem}
-          onSave={(item) => { setItems((prev) => prev.map((it, i) => (i === editItem.index ? item : it))); setEditItem(null); }}
+          onSave={(item) => {
+            setItems((prev) => prev.map((it, i) => (i === editItem.index ? item : it)));
+            setEditItem(null);
+          }}
         />
       )}
       <ConfirmDialog
         open={deleteIndex !== null}
-        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteIndex(null);
+        }}
         title="Meilenstein löschen?"
-        description={deleteIndex !== null ? `"${items[deleteIndex]?.title}" (${items[deleteIndex]?.year}) wird dauerhaft entfernt.` : undefined}
+        description={
+          deleteIndex !== null
+            ? `"${items[deleteIndex]?.title}" (${items[deleteIndex]?.year}) wird dauerhaft entfernt.`
+            : undefined
+        }
         confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         variant="destructive"
-        onConfirm={() => { if (deleteIndex !== null) { setItems((prev) => prev.filter((_, i) => i !== deleteIndex)); setDeleteIndex(null); } }}
+        onConfirm={() => {
+          if (deleteIndex !== null) {
+            setItems((prev) => prev.filter((_, i) => i !== deleteIndex));
+            setDeleteIndex(null);
+          }
+        }}
         onCancel={() => setDeleteIndex(null)}
       />
     </div>
@@ -130,11 +182,19 @@ function MilestoneDialog({ open, onOpenChange, title, initialValues, onSave }: D
   const handleSave = () => {
     if (!year.trim() || !itemTitle.trim() || !description.trim()) return;
     onSave({ year: year.trim(), title: itemTitle.trim(), description: description.trim() });
-    setYear(""); setItemTitle(""); setDescription("");
+    setYear("");
+    setItemTitle("");
+    setDescription("");
   };
 
   return (
-    <ModalFormDialog open={open} onOpenChange={onOpenChange} title={title} onSave={handleSave} saveLabel="Übernehmen">
+    <ModalFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      onSave={handleSave}
+      saveLabel="Übernehmen"
+    >
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label>Jahr</Label>
@@ -142,11 +202,20 @@ function MilestoneDialog({ open, onOpenChange, title, initialValues, onSave }: D
         </div>
         <div className="space-y-1.5">
           <Label>Titel</Label>
-          <Input value={itemTitle} onChange={(e) => setItemTitle(e.target.value)} placeholder="Kurzer Titelname" />
+          <Input
+            value={itemTitle}
+            onChange={(e) => setItemTitle(e.target.value)}
+            placeholder="Kurzer Titelname"
+          />
         </div>
         <div className="space-y-1.5">
           <Label>Beschreibung</Label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Was ist passiert?" rows={3} />
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Was ist passiert?"
+            rows={3}
+          />
         </div>
       </div>
     </ModalFormDialog>

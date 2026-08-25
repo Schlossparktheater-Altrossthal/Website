@@ -12,7 +12,12 @@ type PermissionToggleProps = {
   onCheckedChange?: (checked: PermissionToggleState) => void;
 };
 
-export function PermissionToggle({ checked = false, disabled = false, className, onCheckedChange }: PermissionToggleProps) {
+export function PermissionToggle({
+  checked = false,
+  disabled = false,
+  className,
+  onCheckedChange,
+}: PermissionToggleProps) {
   const isChecked = checked === true;
   const isIndeterminate = checked === "indeterminate";
 

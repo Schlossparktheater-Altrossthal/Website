@@ -43,7 +43,10 @@ export type { AssignmentFocus } from "@/lib/members-navigation";
 function isActive(pathname: string, href: string) {
   if (pathname === href) return true;
   if (href === "/mitglieder") return false;
-  if (href === "/mitglieder/meine-gewerke" && pathname.startsWith("/mitglieder/meine-gewerke/todos")) {
+  if (
+    href === "/mitglieder/meine-gewerke" &&
+    pathname.startsWith("/mitglieder/meine-gewerke/todos")
+  ) {
     return false;
   }
   return pathname.startsWith(`${href}/`);
@@ -129,7 +132,8 @@ function MembersNavProductionSwitcher({
       items.push({
         href: `/mitglieder/produktionen/${activeProduction.id}`,
         label: "Aktive Produktion",
-        description: "Direkter Zugriff auf Besetzung, Szenen und Aufgaben deiner aktuellen Produktion.",
+        description:
+          "Direkter Zugriff auf Besetzung, Szenen und Aufgaben deiner aktuellen Produktion.",
       });
     }
 
@@ -143,7 +147,7 @@ function MembersNavProductionSwitcher({
   }, [activeProduction]);
 
   return (
-    <SidebarGroup className={cn(!isCollapsed && "pt-[var(--space-2xs)]")}> 
+    <SidebarGroup className={cn(!isCollapsed && "pt-[var(--space-2xs)]")}>
       <SidebarGroupContent>
         <SidebarMenu>
           <SidebarMenuItem ref={containerRef}>
@@ -187,16 +191,10 @@ function MembersNavProductionSwitcher({
                 className="absolute left-0 right-0 top-full z-50 mt-[var(--space-3xs)] rounded-lg border border-sidebar-border/60 bg-popover text-popover-foreground shadow-lg"
               >
                 <div className="px-[var(--space-sm)] py-[var(--space-xs)]">
-                  <Text
-                    asChild
-                    variant="eyebrow"
-                    className="text-muted-foreground/80"
-                  >
+                  <Text asChild variant="eyebrow" className="text-muted-foreground/80">
                     <span>Aktive Produktion</span>
                   </Text>
-                  <p className="mt-1 text-sm font-semibold leading-5">
-                    {primaryLabel}
-                  </p>
+                  <p className="mt-1 text-sm font-semibold leading-5">{primaryLabel}</p>
                   <p className="text-xs text-muted-foreground">
                     {activeProduction
                       ? `Jahrgang ${activeProduction.year}`
@@ -231,22 +229,49 @@ function MembersNavProductionSwitcher({
   );
 }
 
-
 function renderItem(pathname: string, isCollapsed: boolean, item: MembersNavItem) {
   const active = isActive(pathname, item.href);
   const Icon = item.icon ?? defaultMembersNavIcon;
   const badgeContent = item.badge;
-  const hasBadgeValue = badgeContent !== undefined && badgeContent !== null && badgeContent !== false;
+  const hasBadgeValue =
+    badgeContent !== undefined && badgeContent !== null && badgeContent !== false;
   const showBadge = !isCollapsed && hasBadgeValue;
   const isPrimitiveBadge = typeof badgeContent === "string" || typeof badgeContent === "number";
   const reserveBadgeSpace = showBadge && isPrimitiveBadge;
   return (
     <SidebarMenuItem key={item.href}>
-      <SidebarMenuButton asChild isActive={active} tooltip={item.label} className={cn("gap-[var(--space-2xs)]", isCollapsed && "justify-center")}>
-        <Link href={item.href} aria-label={item.ariaLabel ?? item.label} aria-current={active ? "page" : undefined}>
-          <Icon className={cn("h-4 w-4 shrink-0 transition-opacity", active ? "opacity-100" : "opacity-70", !isCollapsed && "mt-0.5")} />
-          {!isCollapsed ? <div className={cn("flex min-w-0 flex-1 flex-col", reserveBadgeSpace && "pr-8")}><span className="break-words text-sidebar-foreground leading-5">{item.label}</span></div> : null}
-          {showBadge ? (isPrimitiveBadge ? <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">{badgeContent}</SidebarMenuBadge> : <span className="ml-auto flex shrink-0 items-center">{badgeContent}</span>) : null}
+      <SidebarMenuButton
+        asChild
+        isActive={active}
+        tooltip={item.label}
+        className={cn("gap-[var(--space-2xs)]", isCollapsed && "justify-center")}
+      >
+        <Link
+          href={item.href}
+          aria-label={item.ariaLabel ?? item.label}
+          aria-current={active ? "page" : undefined}
+        >
+          <Icon
+            className={cn(
+              "h-4 w-4 shrink-0 transition-opacity",
+              active ? "opacity-100" : "opacity-70",
+              !isCollapsed && "mt-0.5",
+            )}
+          />
+          {!isCollapsed ? (
+            <div className={cn("flex min-w-0 flex-1 flex-col", reserveBadgeSpace && "pr-8")}>
+              <span className="break-words text-sidebar-foreground leading-5">{item.label}</span>
+            </div>
+          ) : null}
+          {showBadge ? (
+            isPrimitiveBadge ? (
+              <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">
+                {badgeContent}
+              </SidebarMenuBadge>
+            ) : (
+              <span className="ml-auto flex shrink-0 items-center">{badgeContent}</span>
+            )
+          ) : null}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -348,10 +373,12 @@ export function MembersNav({
         .map((group) => ({
           ...group,
           items: group.items.filter((item) => visibilityMap[item.href] ?? true),
-          subgroups: group.subgroups?.map((subgroup) => ({
-            ...subgroup,
-            items: subgroup.items.filter((item) => visibilityMap[item.href] ?? true),
-          })).filter((subgroup) => subgroup.items.length > 0),
+          subgroups: group.subgroups
+            ?.map((subgroup) => ({
+              ...subgroup,
+              items: subgroup.items.filter((item) => visibilityMap[item.href] ?? true),
+            }))
+            .filter((subgroup) => subgroup.items.length > 0),
         }))
         .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0),
     [groups, visibilityMap],

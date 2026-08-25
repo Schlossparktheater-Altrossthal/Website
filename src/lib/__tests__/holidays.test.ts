@@ -46,15 +46,13 @@ const { defaultHolidayUrl, defaultPublicHolidayUrl, resolvedSettings } = vi.hois
 vi.mock("@/lib/sperrliste-settings", () => ({
   DEFAULT_SAXONY_PUBLIC_HOLIDAY_FEED: "https://www.officeholidays.com/ics/germany/saxony",
   readSperrlisteSettings: vi.fn().mockResolvedValue(null),
-  resolveBlocklistSettings: vi
-    .fn()
-    .mockImplementation(() => ({
-      ...resolvedSettings,
-      holidaySource: { ...resolvedSettings.holidaySource },
-      holidayStatus: { ...resolvedSettings.holidayStatus },
-      publicHolidaySource: { ...resolvedSettings.publicHolidaySource },
-      publicHolidayStatus: { ...resolvedSettings.publicHolidayStatus },
-    })),
+  resolveBlocklistSettings: vi.fn().mockImplementation(() => ({
+    ...resolvedSettings,
+    holidaySource: { ...resolvedSettings.holidaySource },
+    holidayStatus: { ...resolvedSettings.holidayStatus },
+    publicHolidaySource: { ...resolvedSettings.publicHolidaySource },
+    publicHolidayStatus: { ...resolvedSettings.publicHolidayStatus },
+  })),
   applyHolidaySourceStatuses: vi.fn().mockResolvedValue(undefined),
   getDefaultHolidaySourceUrl: vi.fn(() => defaultHolidayUrl),
   getDefaultPublicHolidaySourceUrl: vi.fn(() => defaultPublicHolidayUrl),

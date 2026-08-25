@@ -80,8 +80,7 @@ const isDevBuild = process.env.NODE_ENV === "development";
 export default async function MembersLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const sidebarState = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value;
-  const defaultSidebarOpen =
-    typeof sidebarState === "undefined" ? true : sidebarState === "true";
+  const defaultSidebarOpen = typeof sidebarState === "undefined" ? true : sidebarState === "true";
 
   const session = await requireAuth();
   const [permissions, activeProduction, websiteSettingsRecord] = await Promise.all([

@@ -2,7 +2,7 @@ function defaultToISO(value) {
   if (value instanceof Date) {
     return value.toISOString();
   }
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     return new Date(value).toISOString();
   }
   return new Date().toISOString();
@@ -12,7 +12,7 @@ function normalizeDateInput(value) {
   if (value instanceof Date) {
     return value;
   }
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     return new Date(value);
   }
   return new Date();
@@ -20,7 +20,7 @@ function normalizeDateInput(value) {
 
 function createEmitter(io, room, excludeSocketId) {
   const baseEmitter = io.to(room);
-  if (!excludeSocketId || typeof baseEmitter?.except !== 'function') {
+  if (!excludeSocketId || typeof baseEmitter?.except !== "function") {
     return baseEmitter;
   }
   return baseEmitter.except(excludeSocketId);
@@ -30,20 +30,24 @@ export function createRealtimeCore(options = {}) {
   const { io, logger = console, toISO = defaultToISO, trackPresenceEvent } = options;
 
   if (!io) {
-    throw new Error('Socket server instance is required');
+    throw new Error("Socket server instance is required");
   }
 
   const logError =
-    typeof logger?.error === 'function' ? (...args) => logger.error(...args) : (...args) => console.error(...args);
+    typeof logger?.error === "function"
+      ? (...args) => logger.error(...args)
+      : (...args) => console.error(...args);
   const logWarn =
-    typeof logger?.warn === 'function' ? (...args) => logger.warn(...args) : (...args) => console.warn(...args);
+    typeof logger?.warn === "function"
+      ? (...args) => logger.warn(...args)
+      : (...args) => console.warn(...args);
 
   const formatTimestamp = (value) => {
     const date = normalizeDateInput(value ?? Date.now());
     try {
       return toISO(date);
     } catch (error) {
-      logWarn('[Realtime] Failed to format timestamp via custom formatter', error);
+      logWarn("[Realtime] Failed to format timestamp via custom formatter", error);
       return date.toISOString();
     }
   };
@@ -109,22 +113,22 @@ export function createRealtimeCore(options = {}) {
     onlineStatsSubscribers.delete(socketId);
   }
 
-  function emitToTargets(eventName, payload, targets = 'subscribers') {
-    if (targets === 'all') {
+  function emitToTargets(eventName, payload, targets = "subscribers") {
+    if (targets === "all") {
       io.emit(eventName, payload);
       return;
     }
 
     const ids =
-      !targets || targets === 'subscribers'
+      !targets || targets === "subscribers"
         ? Array.from(onlineStatsSubscribers)
-        : Array.from(targets).filter((id) => typeof id === 'string');
+        : Array.from(targets).filter((id) => typeof id === "string");
 
     ids.forEach((socketId) => {
       const recipient = io.sockets.sockets.get(socketId);
       if (recipient) {
         recipient.emit(eventName, payload);
-      } else if (!targets || targets === 'subscribers') {
+      } else if (!targets || targets === "subscribers") {
         onlineStatsSubscribers.delete(socketId);
       }
     });
@@ -133,47 +137,47 @@ export function createRealtimeCore(options = {}) {
   function emitOnlineStatsUpdate(options = {}) {
     const { targetSocket, broadcast = false } = options;
     const event = {
-      type: 'online_stats_update',
+      type: "online_stats_update",
       timestamp: formatTimestamp(),
       stats: getOnlineStatsSnapshot(),
     };
 
     if (targetSocket) {
-      targetSocket.emit('online_stats_update', event);
+      targetSocket.emit("online_stats_update", event);
       return;
     }
 
     if (broadcast) {
-      io.emit('online_stats_update', event);
+      io.emit("online_stats_update", event);
       return;
     }
 
-    emitToTargets('online_stats_update', event, 'subscribers');
+    emitToTargets("online_stats_update", event, "subscribers");
   }
 
   function emitUserJoined({ userId, userName, targets }) {
     if (!userId) return;
     const event = {
-      type: 'user_joined',
+      type: "user_joined",
       timestamp: formatTimestamp(),
       user: { id: userId, name: userName },
     };
-    emitToTargets('user_joined', event, targets ?? 'subscribers');
+    emitToTargets("user_joined", event, targets ?? "subscribers");
   }
 
   function emitUserLeft({ userId, userName, targets }) {
     if (!userId) return;
     const event = {
-      type: 'user_left',
+      type: "user_left",
       timestamp: formatTimestamp(),
       user: { id: userId, name: userName },
     };
-    emitToTargets('user_left', event, targets ?? 'subscribers');
+    emitToTargets("user_left", event, targets ?? "subscribers");
   }
 
   function emitRehearsalPresence({ room, socket, action }) {
-    if (!room || typeof room !== 'string') return;
-    if (!room.startsWith('rehearsal_')) return;
+    if (!room || typeof room !== "string") return;
+    if (!room.startsWith("rehearsal_")) return;
 
     const userId = socket?.data?.userId;
     const userName = socket?.data?.userName;
@@ -183,7 +187,7 @@ export function createRealtimeCore(options = {}) {
 
     const occurredAt = new Date();
     const payload = {
-      type: 'user_presence',
+      type: "user_presence",
       timestamp: formatTimestamp(occurredAt),
       action,
       room,
@@ -193,19 +197,19 @@ export function createRealtimeCore(options = {}) {
       },
     };
 
-    if (typeof trackPresenceEvent === 'function') {
+    if (typeof trackPresenceEvent === "function") {
       try {
         const result = trackPresenceEvent({ userId, room, action, occurredAt });
-        if (result && typeof result.catch === 'function') {
-          result.catch((error) => logError('[Realtime] Failed to track presence event', error));
+        if (result && typeof result.catch === "function") {
+          result.catch((error) => logError("[Realtime] Failed to track presence event", error));
         }
       } catch (error) {
-        logError('[Realtime] Failed to track presence event', error);
+        logError("[Realtime] Failed to track presence event", error);
       }
     }
 
     const emitter = socket?.to?.(room);
-    emitter?.emit?.('user_presence', payload);
+    emitter?.emit?.("user_presence", payload);
   }
 
   async function emitRehearsalUsersList({ rehearsalId, socket }) {
@@ -213,7 +217,7 @@ export function createRealtimeCore(options = {}) {
     const roomName = `rehearsal_${rehearsalId}`;
 
     let participants;
-    if (typeof io.in === 'function' && typeof io.in(roomName).fetchSockets === 'function') {
+    if (typeof io.in === "function" && typeof io.in(roomName).fetchSockets === "function") {
       // fetchSockets() works across instances when a Redis (or other
       // distributed) adapter is configured, unlike the local adapter rooms map.
       participants = await io.in(roomName).fetchSockets();
@@ -238,8 +242,8 @@ export function createRealtimeCore(options = {}) {
       ];
     });
 
-    socket.emit('rehearsal_users_list', {
-      type: 'rehearsal_users_list',
+    socket.emit("rehearsal_users_list", {
+      type: "rehearsal_users_list",
       timestamp: formatTimestamp(),
       rehearsalId,
       users,
@@ -250,7 +254,7 @@ export function createRealtimeCore(options = {}) {
     if (!event || !rooms) return false;
     const roomArray = Array.isArray(rooms) ? rooms : [rooms];
     roomArray
-      .filter((room) => typeof room === 'string' && room)
+      .filter((room) => typeof room === "string" && room)
       .forEach((room) => {
         const emitter = createEmitter(io, room, excludeSocketId);
         emitter?.emit?.(event.type, event);
@@ -261,7 +265,7 @@ export function createRealtimeCore(options = {}) {
   function broadcastAttendanceUpdate(payload) {
     if (!payload || !payload.rehearsalId) return false;
     const event = {
-      type: 'attendance_updated',
+      type: "attendance_updated",
       rehearsalId: payload.rehearsalId,
       targetUserId: payload.targetUserId,
       status: payload.status ?? null,
@@ -280,7 +284,7 @@ export function createRealtimeCore(options = {}) {
   function broadcastRehearsalCreated(payload) {
     if (!payload || !payload.rehearsal) return false;
     const event = {
-      type: 'rehearsal_created',
+      type: "rehearsal_created",
       rehearsal: payload.rehearsal,
       targetUserIds: Array.isArray(payload.targetUserIds) ? payload.targetUserIds : [],
       timestamp: formatTimestamp(),
@@ -291,7 +295,7 @@ export function createRealtimeCore(options = {}) {
         broadcast(event, `user_${userId}`);
       });
     } else {
-      io.emit('rehearsal_created', event);
+      io.emit("rehearsal_created", event);
     }
     return true;
   }
@@ -299,7 +303,7 @@ export function createRealtimeCore(options = {}) {
   function broadcastRehearsalUpdated(payload, options = {}) {
     if (!payload || !payload.rehearsalId) return false;
     const event = {
-      type: 'rehearsal_updated',
+      type: "rehearsal_updated",
       rehearsalId: payload.rehearsalId,
       changes: payload.changes || {},
       targetUserIds: Array.isArray(payload.targetUserIds) ? payload.targetUserIds : [],
@@ -316,7 +320,7 @@ export function createRealtimeCore(options = {}) {
   function sendNotification(payload, options = {}) {
     if (!payload || !payload.targetUserId || !payload.notification) return false;
     const event = {
-      type: 'notification_created',
+      type: "notification_created",
       notification: payload.notification,
       targetUserId: payload.targetUserId,
       timestamp: formatTimestamp(options.timestamp ?? Date.now()),
@@ -327,30 +331,30 @@ export function createRealtimeCore(options = {}) {
   }
 
   function broadcastInventoryEvent(payload, options = {}) {
-    if (!payload || typeof payload !== 'object') return false;
+    if (!payload || typeof payload !== "object") return false;
     const event = {
-      type: 'inventory_event',
+      type: "inventory_event",
       payload,
       timestamp: formatTimestamp(options.timestamp ?? Date.now()),
     };
 
-    const rooms = options.rooms ?? ['global'];
+    const rooms = options.rooms ?? ["global"];
     broadcast(event, rooms, options.excludeSocketId);
     return true;
   }
 
   function broadcastTicketScanEvent(payload, options = {}) {
-    if (!payload || typeof payload !== 'object') return false;
+    if (!payload || typeof payload !== "object") return false;
     const event = {
-      type: 'ticket_scan_event',
+      type: "ticket_scan_event",
       payload,
       timestamp: formatTimestamp(options.timestamp ?? Date.now()),
     };
 
-    const rooms = options.rooms ?? ['global'];
+    const rooms = options.rooms ?? ["global"];
     broadcast(event, rooms, options.excludeSocketId);
 
-    const showId = typeof payload.showId === 'string' ? payload.showId.trim() : '';
+    const showId = typeof payload.showId === "string" ? payload.showId.trim() : "";
     if (showId) {
       broadcast(event, `show_${showId}`, options.excludeSocketId);
     }
@@ -359,13 +363,13 @@ export function createRealtimeCore(options = {}) {
   }
 
   function broadcastOnboardingDashboardUpdate(payload, options = {}) {
-    if (!payload || typeof payload !== 'object') return false;
+    if (!payload || typeof payload !== "object") return false;
     const { onboardingId, dashboard } = payload;
-    if (typeof onboardingId !== 'string' || !onboardingId.trim()) return false;
-    if (!dashboard || typeof dashboard !== 'object') return false;
+    if (typeof onboardingId !== "string" || !onboardingId.trim()) return false;
+    if (!dashboard || typeof dashboard !== "object") return false;
 
     const event = {
-      type: 'onboarding_dashboard_update',
+      type: "onboarding_dashboard_update",
       onboardingId,
       dashboard,
       timestamp: formatTimestamp(options.timestamp ?? Date.now()),
@@ -373,26 +377,26 @@ export function createRealtimeCore(options = {}) {
 
     broadcast(event, `onboarding_${onboardingId}`);
     if (payload.broadcastToGlobal) {
-      broadcast(event, 'global');
+      broadcast(event, "global");
     }
     return true;
   }
 
   function handleServerEvent(eventType, data) {
     switch (eventType) {
-      case 'attendance_updated':
+      case "attendance_updated":
         return broadcastAttendanceUpdate(data);
-      case 'rehearsal_created':
+      case "rehearsal_created":
         return broadcastRehearsalCreated(data);
-      case 'rehearsal_updated':
+      case "rehearsal_updated":
         return broadcastRehearsalUpdated(data);
-      case 'notification_created':
+      case "notification_created":
         return sendNotification(data);
-      case 'inventory_event':
+      case "inventory_event":
         return broadcastInventoryEvent(data);
-      case 'ticket_scan_event':
+      case "ticket_scan_event":
         return broadcastTicketScanEvent(data);
-      case 'onboarding_dashboard_update':
+      case "onboarding_dashboard_update":
         return broadcastOnboardingDashboardUpdate(data);
       default:
         return false;

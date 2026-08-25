@@ -24,7 +24,7 @@ export function createThemeCss(tokens: ThemeTokens) {
     : modeKeys[0];
   const darkMode: ThemeModeKey | null = modeKeys.includes("dark" as ThemeModeKey)
     ? ("dark" as ThemeModeKey)
-    : modeKeys.find((key) => key !== baseMode) ?? null;
+    : (modeKeys.find((key) => key !== baseMode) ?? null);
 
   const baseTokens = (tokens.modes[baseMode] ?? {}) as Record<ThemeTokenKey, string>;
   const tokenKeySet = new Set<ThemeTokenKey>(

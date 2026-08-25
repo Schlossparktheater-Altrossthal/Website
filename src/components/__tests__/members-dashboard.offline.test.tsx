@@ -17,7 +17,9 @@ const { fetchMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: { user: { id: "user-1", name: "Offline Tester", email: "offline@example.com" } } }),
+  useSession: () => ({
+    data: { user: { id: "user-1", name: "Offline Tester", email: "offline@example.com" } },
+  }),
 }));
 
 vi.mock("@/hooks/useRealtime", () => ({
@@ -45,7 +47,9 @@ vi.mock("@/components/members/permissions-context", () => ({
 }));
 
 vi.mock("@/components/members/members-app-shell", () => ({
-  MembersContentLayout: ({ children }: { children: React.ReactNode }) => <div data-testid="layout">{children}</div>,
+  MembersContentLayout: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="layout">{children}</div>
+  ),
   MembersContentHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   MembersTopbar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   MembersTopbarStatus: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -88,7 +92,9 @@ describe("MembersDashboard offline fallback", () => {
     const banner = await screen.findByText("Offline-Demo-Modus");
     expect(banner).toBeInTheDocument();
     expect(
-      screen.getByText("Der Dashboard-Endpunkt liefert Beispielwerte, da keine Datenbank verbunden ist."),
+      screen.getByText(
+        "Der Dashboard-Endpunkt liefert Beispielwerte, da keine Datenbank verbunden ist.",
+      ),
     ).toBeInTheDocument();
 
     expect(consoleErrorSpy).not.toHaveBeenCalled();

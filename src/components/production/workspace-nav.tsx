@@ -28,7 +28,7 @@ export function ProductionWorkspaceNav({ active }: { active: WorkspaceKey }) {
             "inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition",
             item.key === active
               ? "border-primary/70 bg-primary/10 text-primary shadow-sm"
-              : "border-border/60 bg-background/80 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              : "border-border/60 bg-background/80 text-muted-foreground hover:border-primary/40 hover:text-foreground",
           )}
         >
           {item.label}

@@ -3,15 +3,30 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { getRolePreferenceTitle, listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
+import {
+  getRolePreferenceTitle,
+  listRolePreferenceDefinitions,
+} from "@/lib/onboarding/role-preferences";
 import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
 
 type ExistingProfile = {
@@ -147,24 +162,28 @@ function createInitialState(
   const existingPreferencesByCode = new Map(
     existingPreferences.map((preference) => [preference.code, preference]),
   );
-  const actingPreferences: PreferenceEntry[] = listRolePreferenceDefinitions("acting").map((definition) => {
-    const existingPreference = existingPreferencesByCode.get(definition.code);
-    return {
-      code: definition.code,
-      domain: definition.domain,
-      enabled: Boolean(existingPreference),
-      weight: existingPreference?.weight ?? 0,
-    };
-  });
-  const crewPreferences: PreferenceEntry[] = listRolePreferenceDefinitions("crew").map((definition) => {
-    const existingPreference = existingPreferencesByCode.get(definition.code);
-    return {
-      code: definition.code,
-      domain: definition.domain,
-      enabled: Boolean(existingPreference),
-      weight: existingPreference?.weight ?? 0,
-    };
-  });
+  const actingPreferences: PreferenceEntry[] = listRolePreferenceDefinitions("acting").map(
+    (definition) => {
+      const existingPreference = existingPreferencesByCode.get(definition.code);
+      return {
+        code: definition.code,
+        domain: definition.domain,
+        enabled: Boolean(existingPreference),
+        weight: existingPreference?.weight ?? 0,
+      };
+    },
+  );
+  const crewPreferences: PreferenceEntry[] = listRolePreferenceDefinitions("crew").map(
+    (definition) => {
+      const existingPreference = existingPreferencesByCode.get(definition.code);
+      return {
+        code: definition.code,
+        domain: definition.domain,
+        enabled: Boolean(existingPreference),
+        weight: existingPreference?.weight ?? 0,
+      };
+    },
+  );
   return {
     educationCategory,
     schoolVariant:
@@ -382,7 +401,9 @@ export function ReturneeUpdateWizard({
         return;
       }
       if (!canContinueStep1) {
-        setError("Bitte fülle die Angaben zu Schule, Beruf, Universität oder Anderem vollständig aus.");
+        setError(
+          "Bitte fülle die Angaben zu Schule, Beruf, Universität oder Anderem vollständig aus.",
+        );
         return;
       }
     }
@@ -476,7 +497,10 @@ export function ReturneeUpdateWizard({
 
   return (
     <div className="space-y-6">
-      <nav aria-label="Fortschritt" className="rounded-xl border border-border/60 bg-background/80 px-3 py-2 shadow-sm">
+      <nav
+        aria-label="Fortschritt"
+        className="rounded-xl border border-border/60 bg-background/80 px-3 py-2 shadow-sm"
+      >
         <ol className="flex flex-wrap items-center gap-3">
           {steps.map((item, index) => {
             const isActive = index === step;
@@ -510,11 +534,18 @@ export function ReturneeUpdateWizard({
                   >
                     {isComplete ? <CheckIcon className="h-4 w-4" /> : index + 1}
                   </span>
-                  <span className={cn("text-xs font-medium sm:text-sm", isActive ? "text-foreground" : "text-muted-foreground")}>
+                  <span
+                    className={cn(
+                      "text-xs font-medium sm:text-sm",
+                      isActive ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
                     {item.title}
                   </span>
                 </button>
-                {index < steps.length - 1 ? <div className="hidden h-px w-8 bg-border sm:block" aria-hidden /> : null}
+                {index < steps.length - 1 ? (
+                  <div className="hidden h-px w-8 bg-border sm:block" aria-hidden />
+                ) : null}
               </li>
             );
           })}
@@ -524,7 +555,11 @@ export function ReturneeUpdateWizard({
       <Card className="border border-border/70 bg-card">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">{steps[step].title}</CardTitle>
-          {error ? <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p> : null}
+          {error ? (
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-6">
           {step === 0 ? (
@@ -533,7 +568,8 @@ export function ReturneeUpdateWizard({
                 {(["school", "work", "university", "other"] as const).map((choice) => {
                   const isActive =
                     choice === "school"
-                      ? form.educationCategory === "school_bsz" || form.educationCategory === "school_other"
+                      ? form.educationCategory === "school_bsz" ||
+                        form.educationCategory === "school_other"
                       : form.educationCategory === choice;
                   return (
                     <button
@@ -545,13 +581,18 @@ export function ReturneeUpdateWizard({
                           educationCategory:
                             choice === "school"
                               ? "school_bsz"
-                              : (choice as Exclude<EducationCategory, "school_bsz" | "school_other">),
+                              : (choice as Exclude<
+                                  EducationCategory,
+                                  "school_bsz" | "school_other"
+                                >),
                           schoolVariant: choice === "school" ? "bsz" : "",
                         }))
                       }
                       className={cn(
                         "rounded-xl border px-4 py-3 text-left text-sm transition",
-                        isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground",
+                        isActive
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground",
                       )}
                     >
                       {choice === "school"
@@ -566,17 +607,25 @@ export function ReturneeUpdateWizard({
                 })}
               </div>
 
-              {form.educationCategory === "school_bsz" || form.educationCategory === "school_other" ? (
+              {form.educationCategory === "school_bsz" ||
+              form.educationCategory === "school_other" ? (
                 <div className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <button
                       type="button"
                       className={cn(
                         "rounded-xl border px-4 py-3 text-left text-sm transition",
-                        form.schoolVariant === "bsz" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background",
+                        form.schoolVariant === "bsz"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background",
                       )}
                       onClick={() =>
-                        setForm((prev) => ({ ...prev, schoolVariant: "bsz", educationCategory: "school_bsz", educationCampus: null }))
+                        setForm((prev) => ({
+                          ...prev,
+                          schoolVariant: "bsz",
+                          educationCategory: "school_bsz",
+                          educationCampus: null,
+                        }))
                       }
                     >
                       BSZ für Agrarwirtschaft &amp; Ernährung Dresden
@@ -585,10 +634,17 @@ export function ReturneeUpdateWizard({
                       type="button"
                       className={cn(
                         "rounded-xl border px-4 py-3 text-left text-sm transition",
-                        form.schoolVariant === "other" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background",
+                        form.schoolVariant === "other"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background",
                       )}
                       onClick={() =>
-                        setForm((prev) => ({ ...prev, schoolVariant: "other", educationCategory: "school_other", educationCampus: null }))
+                        setForm((prev) => ({
+                          ...prev,
+                          schoolVariant: "other",
+                          educationCategory: "school_other",
+                          educationCampus: null,
+                        }))
                       }
                     >
                       Andere Schule
@@ -612,7 +668,9 @@ export function ReturneeUpdateWizard({
                                 aria-pressed={isActive}
                                 className={cn(
                                   "rounded-xl border px-4 py-3 text-left text-sm transition",
-                                  isActive ? "border-primary bg-primary/10 text-primary" : "border-border bg-background",
+                                  isActive
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border bg-background",
                                 )}
                               >
                                 <span className="min-w-0">{option.label}</span>
@@ -625,7 +683,9 @@ export function ReturneeUpdateWizard({
                         <span className="font-medium">Klasse</span>
                         <Input
                           value={form.educationClassName}
-                          onChange={(event) => setForm((prev) => ({ ...prev, educationClassName: event.target.value }))}
+                          onChange={(event) =>
+                            setForm((prev) => ({ ...prev, educationClassName: event.target.value }))
+                          }
                           placeholder="z.B. BFS 23A"
                         />
                       </label>
@@ -635,7 +695,9 @@ export function ReturneeUpdateWizard({
                       <span className="font-medium">Schulname</span>
                       <Input
                         value={form.educationSchoolName}
-                        onChange={(event) => setForm((prev) => ({ ...prev, educationSchoolName: event.target.value }))}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, educationSchoolName: event.target.value }))
+                        }
                         placeholder="Name deiner Schule"
                       />
                     </label>
@@ -648,7 +710,9 @@ export function ReturneeUpdateWizard({
                   <span className="font-medium">Beruf / Tätigkeit</span>
                   <Input
                     value={form.educationWorkDescription}
-                    onChange={(event) => setForm((prev) => ({ ...prev, educationWorkDescription: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, educationWorkDescription: event.target.value }))
+                    }
                     placeholder="z.B. Ausbildung, Job oder Tätigkeit"
                   />
                 </label>
@@ -659,7 +723,9 @@ export function ReturneeUpdateWizard({
                   <span className="font-medium">Universität / Hochschule</span>
                   <Input
                     value={form.educationUniversityName}
-                    onChange={(event) => setForm((prev) => ({ ...prev, educationUniversityName: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, educationUniversityName: event.target.value }))
+                    }
                     placeholder="Name deiner Hochschule"
                   />
                 </label>
@@ -670,7 +736,12 @@ export function ReturneeUpdateWizard({
                   <span className="font-medium">Beschreibung</span>
                   <Input
                     value={form.educationOtherDescription}
-                    onChange={(event) => setForm((prev) => ({ ...prev, educationOtherDescription: event.target.value }))}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        educationOtherDescription: event.target.value,
+                      }))
+                    }
                     placeholder="Was machst du aktuell?"
                   />
                 </label>
@@ -681,7 +752,8 @@ export function ReturneeUpdateWizard({
           {step === 1 ? (
             <section className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Reiche nur die Bereiche ein, die aktuell für dich passen. Die Gewichtung bleibt erhalten.
+                Reiche nur die Bereiche ein, die aktuell für dich passen. Die Gewichtung bleibt
+                erhalten.
               </p>
               <div className="grid gap-4 md:grid-cols-2">
                 {form.preferences.map((preference) => {
@@ -697,7 +769,9 @@ export function ReturneeUpdateWizard({
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <h4 className="font-medium">{getRolePreferenceTitle(preference.code)}</h4>
-                          <p className="text-xs text-muted-foreground">Bereich: {preference.domain}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Bereich: {preference.domain}
+                          </p>
                         </div>
                         <Button
                           type="button"
@@ -721,8 +795,16 @@ export function ReturneeUpdateWizard({
                             max={100}
                             step={10}
                             value={preference.weight}
-                            onChange={(event) => updatePreference(preference.code, { weight: event.currentTarget.valueAsNumber })}
-                            onInput={(event) => updatePreference(preference.code, { weight: event.currentTarget.valueAsNumber })}
+                            onChange={(event) =>
+                              updatePreference(preference.code, {
+                                weight: event.currentTarget.valueAsNumber,
+                              })
+                            }
+                            onInput={(event) =>
+                              updatePreference(preference.code, {
+                                weight: event.currentTarget.valueAsNumber,
+                              })
+                            }
                             className="w-full accent-primary"
                           />
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -743,11 +825,18 @@ export function ReturneeUpdateWizard({
               <label className="flex items-start gap-3 rounded-lg border border-border/70 p-4">
                 <Checkbox
                   checked={form.photoConsent}
-                  onCheckedChange={(checked) => setForm((prev) => ({ ...prev, photoConsent: checked === true }))}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({ ...prev, photoConsent: checked === true }))
+                  }
                 />
                 <div className="space-y-1 text-sm">
-                  <p className="font-medium">Ich bin einverstanden, dass Fotos/Videos von mir für das Schultheater genutzt werden.</p>
-                  <p className="text-xs text-muted-foreground">Die Zustimmung kann jederzeit im Profil angepasst werden.</p>
+                  <p className="font-medium">
+                    Ich bin einverstanden, dass Fotos/Videos von mir für das Schultheater genutzt
+                    werden.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Die Zustimmung kann jederzeit im Profil angepasst werden.
+                  </p>
                 </div>
               </label>
 
@@ -756,22 +845,27 @@ export function ReturneeUpdateWizard({
                   <div className="rounded-lg border border-border bg-muted p-4 text-sm">
                     <p className="font-medium">Zustimmung der Erziehungsberechtigten</p>
                     <p className="text-xs text-muted-foreground">
-                      Da du noch minderjährig bist, benötigen wir die unterschriebene Einverständniserklärung deiner
-                      Erziehungsberechtigten. Lade sie als PDF oder Bilddatei (JPG/PNG) hoch.
+                      Da du noch minderjährig bist, benötigen wir die unterschriebene
+                      Einverständniserklärung deiner Erziehungsberechtigten. Lade sie als PDF oder
+                      Bilddatei (JPG/PNG) hoch.
                     </p>
                   </div>
                   <Button type="button" variant="outline" onClick={handleDownloadParentalTemplate}>
                     Elternformular herunterladen
                   </Button>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium">Unterschriebenes Elternformular (PDF, JPG, PNG)</label>
+                    <label className="block text-sm font-medium">
+                      Unterschriebenes Elternformular (PDF, JPG, PNG)
+                    </label>
                     <Input
                       type="file"
                       accept="application/pdf,image/jpeg,image/png"
                       onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {documentFile ? `Ausgewählt: ${documentFile.name}` : "Lade das unterschriebene Formular deiner Erziehungsberechtigten hoch."}
+                      {documentFile
+                        ? `Ausgewählt: ${documentFile.name}`
+                        : "Lade das unterschriebene Formular deiner Erziehungsberechtigten hoch."}
                     </p>
                   </div>
                 </div>
@@ -810,7 +904,9 @@ export function ReturneeUpdateWizard({
                       <label className="block text-sm font-medium">Digital unterschreiben</label>
                       <SignaturePad value={signatureResult} onChange={handleSignatureChange} />
                       <p className="text-xs text-muted-foreground">
-                        {documentFile ? "Deine digitale Unterschrift ist hinterlegt." : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
+                        {documentFile
+                          ? "Deine digitale Unterschrift ist hinterlegt."
+                          : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
                       </p>
                     </div>
                   ) : null}
@@ -833,7 +929,9 @@ export function ReturneeUpdateWizard({
                   <span className="font-medium">Ernährungsstil</span>
                   <Select
                     value={form.dietaryPreference}
-                    onValueChange={(value) => setForm((prev) => ({ ...prev, dietaryPreference: value }))}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({ ...prev, dietaryPreference: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Bitte wählen" />
@@ -851,7 +949,9 @@ export function ReturneeUpdateWizard({
                   <span className="font-medium">Wie konsequent hältst du dich daran?</span>
                   <Select
                     value={form.dietaryPreferenceStrictness}
-                    onValueChange={(value) => setForm((prev) => ({ ...prev, dietaryPreferenceStrictness: value }))}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({ ...prev, dietaryPreferenceStrictness: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Bitte wählen" />
@@ -874,7 +974,9 @@ export function ReturneeUpdateWizard({
                           <span className="font-medium">Unverträglichkeit</span>
                           <Input
                             value={entry.allergen}
-                            onChange={(event) => updateDietaryEntry(entry.id, { allergen: event.target.value })}
+                            onChange={(event) =>
+                              updateDietaryEntry(entry.id, { allergen: event.target.value })
+                            }
                             placeholder="z.B. Erdnüsse"
                           />
                         </label>
@@ -885,10 +987,14 @@ export function ReturneeUpdateWizard({
                               <button
                                 key={option.value}
                                 type="button"
-                                onClick={() => updateDietaryEntry(entry.id, { level: option.value })}
+                                onClick={() =>
+                                  updateDietaryEntry(entry.id, { level: option.value })
+                                }
                                 className={cn(
                                   "rounded-full border px-3 py-1 text-xs transition",
-                                  active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground",
+                                  active
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border text-muted-foreground",
                                 )}
                               >
                                 {option.label}
@@ -897,7 +1003,12 @@ export function ReturneeUpdateWizard({
                           })}
                         </div>
                       </div>
-                      <Button type="button" variant="outline" size="sm" onClick={() => removeDietaryEntry(entry.id)}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeDietaryEntry(entry.id)}
+                      >
                         <TrashIcon className="h-4 w-4" />
                         Entfernen
                       </Button>
@@ -905,17 +1016,23 @@ export function ReturneeUpdateWizard({
                     <div className="grid gap-3 md:grid-cols-3">
                       <Textarea
                         value={entry.symptoms}
-                        onChange={(event) => updateDietaryEntry(entry.id, { symptoms: event.target.value })}
+                        onChange={(event) =>
+                          updateDietaryEntry(entry.id, { symptoms: event.target.value })
+                        }
                         placeholder="Symptome"
                       />
                       <Textarea
                         value={entry.treatment}
-                        onChange={(event) => updateDietaryEntry(entry.id, { treatment: event.target.value })}
+                        onChange={(event) =>
+                          updateDietaryEntry(entry.id, { treatment: event.target.value })
+                        }
                         placeholder="Behandlung"
                       />
                       <Textarea
                         value={entry.note}
-                        onChange={(event) => updateDietaryEntry(entry.id, { note: event.target.value })}
+                        onChange={(event) =>
+                          updateDietaryEntry(entry.id, { note: event.target.value })
+                        }
                         placeholder="Hinweis"
                       />
                     </div>
@@ -941,7 +1058,12 @@ export function ReturneeUpdateWizard({
           ) : null}
 
           <div className="flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <Button type="button" variant="outline" onClick={goBack} disabled={step === 0 || loading}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goBack}
+              disabled={step === 0 || loading}
+            >
               <ArrowLeftIcon className="h-4 w-4" />
               Zurück
             </Button>

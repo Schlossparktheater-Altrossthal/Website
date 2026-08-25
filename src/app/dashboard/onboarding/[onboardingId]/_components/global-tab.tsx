@@ -31,12 +31,16 @@ function RoleDistribution({
     <Card className="h-full">
       <CardHeader className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">{title}</CardTitle>
+          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+            {title}
+          </CardTitle>
           <Badge variant={coverage >= 70 ? "success" : coverage >= 40 ? "warning" : "destructive"}>
             {coverage.toFixed(0)}% Coverage
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground">Normierte Präferenzen & Anteil beteiligter Personen.</p>
+        <p className="text-sm text-muted-foreground">
+          Normierte Präferenzen & Anteil beteiligter Personen.
+        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         {roles.length === 0 ? (
@@ -47,7 +51,9 @@ function RoleDistribution({
               <li key={role.roleId} className="space-y-1">
                 <div className="flex items-center justify-between text-sm font-medium">
                   <span className="text-muted-foreground">{role.label}</span>
-                  <span className="text-foreground/80">{(role.normalizedShare * 100).toFixed(0)}%</span>
+                  <span className="text-foreground/80">
+                    {(role.normalizedShare * 100).toFixed(0)}%
+                  </span>
                 </div>
                 <div className="h-2 rounded-full bg-muted/50">
                   <motion.div
@@ -79,16 +85,28 @@ export function GlobalOverviewTab({ data, participants }: GlobalOverviewTabProps
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <DistributionBars title="Altersgruppen" items={data.ageGroups} subtitle="Verteilung der angegebenen Altersgruppen" />
-        <DistributionBars title="Geschlechter" items={data.genderDistribution} subtitle="Selbstangaben" />
+        <DistributionBars
+          title="Altersgruppen"
+          items={data.ageGroups}
+          subtitle="Verteilung der angegebenen Altersgruppen"
+        />
+        <DistributionBars
+          title="Geschlechter"
+          items={data.genderDistribution}
+          subtitle="Selbstangaben"
+        />
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Fotoeinverständnis</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+              Fotoeinverständnis
+            </CardTitle>
             <p className="text-sm text-muted-foreground">Quote bestätigter Einverständnisse.</p>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="text-4xl font-semibold">
-              {data.photoConsentRate !== null ? `${(data.photoConsentRate * 100).toFixed(0)}%` : "–"}
+              {data.photoConsentRate !== null
+                ? `${(data.photoConsentRate * 100).toFixed(0)}%`
+                : "–"}
             </div>
             <p className="text-sm text-muted-foreground">
               {data.photoConsentRate !== null

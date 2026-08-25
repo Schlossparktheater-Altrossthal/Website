@@ -61,7 +61,10 @@ type MemberEntry = z.infer<typeof entrySchema>;
 type Member = z.infer<typeof memberSchema>;
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
-const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
+const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 
 function ensurePageSpace(doc: PDFKit.PDFDocument, neededHeight: number) {
   const bottom = doc.page.height - doc.page.margins.bottom;
@@ -275,7 +278,12 @@ function drawTable(
     });
   };
 
-  const drawGridLines = (top: number, bottom: number, includeTop: boolean, boundaryRowIndex: number | null) => {
+  const drawGridLines = (
+    top: number,
+    bottom: number,
+    includeTop: boolean,
+    boundaryRowIndex: number | null,
+  ) => {
     doc.save().lineWidth(gridWidth).strokeColor(gridColor);
     if (includeTop) {
       drawHorizontalLine(top, null);
@@ -344,7 +352,8 @@ function drawTable(
             lineBreak: false,
           })
         : 0;
-      const spacing = secondaryHeight > 0 && primaryHeight > 0 ? cell.style.secondarySpacing ?? 1.6 : 0;
+      const spacing =
+        secondaryHeight > 0 && primaryHeight > 0 ? (cell.style.secondarySpacing ?? 1.6) : 0;
       const textHeight = primaryHeight + spacing + secondaryHeight;
       const iconHeight = icon?.size ?? 0;
       const contentOffsetY = cell.style.contentOffsetY ?? 0;
@@ -352,7 +361,11 @@ function drawTable(
         (cell.style.fontSize ?? 9) +
         1.5 +
         (secondaryHeight > 0 ? (cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5)) : 0);
-      const effectiveHeight = Math.max(textHeight + contentOffsetY, iconHeight, fallbackHeight + contentOffsetY);
+      const effectiveHeight = Math.max(
+        textHeight + contentOffsetY,
+        iconHeight,
+        fallbackHeight + contentOffsetY,
+      );
       const height = effectiveHeight + paddingY * 2;
       return Math.max(max, height);
     }, 0);
@@ -535,7 +548,10 @@ function drawTable(
         fontSize: isNameColumn ? 8 : 7.4,
         textColor: isNameColumn ? "#111827" : "#1f2937",
       };
-      const style = { ...defaultStyle, ...(options.cellStyles?.[rowIndex]?.[cellIndex] ?? {}) } satisfies TableCellStyle;
+      const style = {
+        ...defaultStyle,
+        ...(options.cellStyles?.[rowIndex]?.[cellIndex] ?? {}),
+      } satisfies TableCellStyle;
       return { text: cell, style };
     });
 
@@ -578,7 +594,7 @@ function drawTable(
       const secondaryText = cell.style.secondaryText?.trim() ?? "";
       const secondaryFont = resolveFont({ font: cell.style.secondaryFont ?? "regular" });
       const secondaryFontSize = cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5);
-      const spacing = secondaryText && text ? cell.style.secondarySpacing ?? 1.6 : 0;
+      const spacing = secondaryText && text ? (cell.style.secondarySpacing ?? 1.6) : 0;
       const lineBreak = cell.style.lineBreak ?? false;
       const lineGap = cell.style.lineGap;
 
@@ -603,21 +619,20 @@ function drawTable(
         : 0;
       const contentOffsetY = cell.style.contentOffsetY ?? 0;
       const secondaryHeight = secondaryText
-        ? doc
-            .font(secondaryFont)
-            .fontSize(secondaryFontSize)
-            .heightOfString(secondaryText, {
-              width: textWidth,
-              align,
-              lineBreak: false,
-            })
+        ? doc.font(secondaryFont).fontSize(secondaryFontSize).heightOfString(secondaryText, {
+            width: textWidth,
+            align,
+            lineBreak: false,
+          })
         : 0;
-      const totalTextHeight = (text ? primaryHeight : 0) + (secondaryText ? spacing + secondaryHeight : 0);
+      const totalTextHeight =
+        (text ? primaryHeight : 0) + (secondaryText ? spacing + secondaryHeight : 0);
       const availableHeight = Math.max(rowHeight - paddingY * 2, 0);
       const verticalAlign = cell.style.verticalAlign ?? "top";
       let textStartY = rowTop + paddingY + contentOffsetY;
       if (verticalAlign === "middle") {
-        textStartY = rowTop + paddingY + Math.max((availableHeight - totalTextHeight) / 2, 0) + contentOffsetY;
+        textStartY =
+          rowTop + paddingY + Math.max((availableHeight - totalTextHeight) / 2, 0) + contentOffsetY;
       }
       if (verticalAlign === "bottom") {
         textStartY = rowTop + rowHeight - paddingY - totalTextHeight + contentOffsetY;
@@ -674,7 +689,9 @@ function drawTable(
         const { startRow, rowSpan, text } = group;
         const rowsForGroup = rowMetrics
           .slice(startRow, startRow + rowSpan)
-          .filter((metric): metric is { top: number; height: number; pageIndex: number } => Boolean(metric));
+          .filter((metric): metric is { top: number; height: number; pageIndex: number } =>
+            Boolean(metric),
+          );
         if (!rowsForGroup.length) {
           return;
         }
@@ -709,7 +726,7 @@ function drawTable(
           const paddingY = 3;
           const availableWidth = Math.max(columnWidth - paddingX * 2, 8);
           const availableHeight = Math.max(segment.height - paddingY * 2, 8);
-          const rotation = ((style.rotate ?? 0) % 360 + 360) % 360;
+          const rotation = (((style.rotate ?? 0) % 360) + 360) % 360;
           const font = resolveFont(style);
           const fontSize = style.fontSize ?? 9;
           const textColor = style.textColor ?? "#1f2937";
@@ -743,15 +760,11 @@ function drawTable(
             doc.rotate(normalizedRotation, { origin: [centerX, centerY] });
             const textX = centerX - drawWidth / 2;
             const textY = centerY - drawHeight / 2;
-            doc
-              .font(font)
-              .fontSize(fontSize)
-              .fillColor(textColor)
-              .text(text, textX, textY, {
-                width: drawWidth,
-                align: "center",
-                lineBreak: false,
-              });
+            doc.font(font).fontSize(fontSize).fillColor(textColor).text(text, textX, textY, {
+              width: drawWidth,
+              align: "center",
+              lineBreak: false,
+            });
             doc.restore();
             return;
           }
@@ -809,7 +822,11 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     bufferPages: true,
   },
   async render(doc, data) {
-    doc.font("Helvetica-Bold").fontSize(17).fillColor("#111827").text("Verfügbarkeiten · Wichtige Probentage");
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(17)
+      .fillColor("#111827")
+      .text("Verfügbarkeiten · Wichtige Probentage");
 
     const accentStartX = doc.page.margins.left;
     const accentEndX = accentStartX + 64;
@@ -929,7 +946,10 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
     const headers: string[] = ["Zone", "Mitglied", ...data.days.map((day) => day.label)];
     const dayLookup = new Map(data.days.map((day, index) => [day.key, index] as const));
 
-    const zonePalette: Record<MemberZone, { rowFill: string | null; columnFill: string; textColor: string; columnLabel: string }> = {
+    const zonePalette: Record<
+      MemberZone,
+      { rowFill: string | null; columnFill: string; textColor: string; columnLabel: string }
+    > = {
       acting: {
         rowFill: "#eef2ff",
         columnFill: "#e0e7ff",
@@ -1156,22 +1176,20 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
       });
     }
 
-    doc.font("Helvetica-Bold").fontSize(11).fillColor("#111827").text("Verfügbarkeiten im Überblick");
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .fillColor("#111827")
+      .text("Verfügbarkeiten im Überblick");
     doc.moveDown(0.4);
 
-    drawTable(
-      doc,
-      headers,
-      rows,
-      columnWidths,
-      {
-        headerStyles: headers.map(() => ({ align: "center", verticalAlign: "middle" })),
-        cellStyles,
-        rowBackgrounds,
-        repeatHeaderAtBottom: true,
-        mergedColumnGroups,
-      },
-    );
+    drawTable(doc, headers, rows, columnWidths, {
+      headerStyles: headers.map(() => ({ align: "center", verticalAlign: "middle" })),
+      cellStyles,
+      rowBackgrounds,
+      repeatHeaderAtBottom: true,
+      mergedColumnGroups,
+    });
 
     doc
       .font("Helvetica")

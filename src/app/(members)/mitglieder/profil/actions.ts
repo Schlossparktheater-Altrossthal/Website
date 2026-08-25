@@ -2,7 +2,13 @@
 
 import { cookies } from "next/headers";
 
-import type { AllergyLevel, MeasurementType, MeasurementUnit, OnboardingFocus, PayoutMethod } from "@prisma/client";
+import type {
+  AllergyLevel,
+  MeasurementType,
+  MeasurementUnit,
+  OnboardingFocus,
+  PayoutMethod,
+} from "@prisma/client";
 
 const BASE_URL = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
 
@@ -56,9 +62,15 @@ export type UpdateProfileBasicsResult = {
   };
 };
 
-const PAYOUT_METHOD_VALUES = ["BANK_TRANSFER", "PAYPAL", "OTHER"] as const satisfies readonly PayoutMethod[];
+const PAYOUT_METHOD_VALUES = [
+  "BANK_TRANSFER",
+  "PAYPAL",
+  "OTHER",
+] as const satisfies readonly PayoutMethod[];
 
-export async function updateProfileBasicsAction(formData: FormData): Promise<ActionResult<UpdateProfileBasicsResult>> {
+export async function updateProfileBasicsAction(
+  formData: FormData,
+): Promise<ActionResult<UpdateProfileBasicsResult>> {
   try {
     const response = await authorizedFetch("/api/profile", {
       method: "PUT",
@@ -67,7 +79,8 @@ export async function updateProfileBasicsAction(formData: FormData): Promise<Act
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Profil konnte nicht aktualisiert werden.";
+      const error =
+        typeof data?.error === "string" ? data.error : "Profil konnte nicht aktualisiert werden.";
       return { ok: false, error };
     }
 
@@ -90,20 +103,29 @@ export async function updateProfileBasicsAction(formData: FormData): Promise<Act
                 .map((role) =>
                   typeof role === "string"
                     ? role
-                    : role && typeof role === "object" && typeof (role as { role?: unknown }).role === "string"
+                    : role &&
+                        typeof role === "object" &&
+                        typeof (role as { role?: unknown }).role === "string"
                       ? (role as { role: string }).role
                       : null,
                 )
                 .filter((role): role is string => Boolean(role))
             : [],
           avatarSource:
-            typeof user.avatarSource === "string" && user.avatarSource.trim() ? user.avatarSource : null,
+            typeof user.avatarSource === "string" && user.avatarSource.trim()
+              ? user.avatarSource
+              : null,
           avatarUpdatedAt:
-            typeof user.avatarUpdatedAt === "string" && user.avatarUpdatedAt.trim() ? user.avatarUpdatedAt : null,
+            typeof user.avatarUpdatedAt === "string" && user.avatarUpdatedAt.trim()
+              ? user.avatarUpdatedAt
+              : null,
           dateOfBirth:
-            typeof user.dateOfBirth === "string" && user.dateOfBirth.trim() ? user.dateOfBirth : null,
+            typeof user.dateOfBirth === "string" && user.dateOfBirth.trim()
+              ? user.dateOfBirth
+              : null,
           payoutMethod:
-            typeof user.payoutMethod === "string" && PAYOUT_METHOD_VALUES.includes(user.payoutMethod as PayoutMethod)
+            typeof user.payoutMethod === "string" &&
+            PAYOUT_METHOD_VALUES.includes(user.payoutMethod as PayoutMethod)
               ? (user.payoutMethod as PayoutMethod)
               : "BANK_TRANSFER",
           payoutAccountHolder:
@@ -113,7 +135,9 @@ export async function updateProfileBasicsAction(formData: FormData): Promise<Act
           payoutIban:
             typeof user.payoutIban === "string" && user.payoutIban.trim() ? user.payoutIban : null,
           payoutBankName:
-            typeof user.payoutBankName === "string" && user.payoutBankName.trim() ? user.payoutBankName : null,
+            typeof user.payoutBankName === "string" && user.payoutBankName.trim()
+              ? user.payoutBankName
+              : null,
           payoutPaypalHandle:
             typeof user.payoutPaypalHandle === "string" && user.payoutPaypalHandle.trim()
               ? user.payoutPaypalHandle
@@ -156,7 +180,10 @@ export async function saveDietaryPreferenceAction(
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Ernährungsprofil konnte nicht gespeichert werden.";
+      const error =
+        typeof data?.error === "string"
+          ? data.error
+          : "Ernährungsprofil konnte nicht gespeichert werden.";
       return { ok: false, error };
     }
 
@@ -166,25 +193,32 @@ export async function saveDietaryPreferenceAction(
         preference: {
           style: typeof data?.preference?.style === "string" ? data.preference.style : input.style,
           strictness:
-            typeof data?.preference?.strictness === "string" ? data.preference.strictness : input.strictness,
+            typeof data?.preference?.strictness === "string"
+              ? data.preference.strictness
+              : input.strictness,
           customLabel:
             typeof data?.preference?.customLabel === "string"
               ? data.preference.customLabel
               : data?.preference?.customLabel === null
                 ? null
-                : input.customLabel ?? null,
+                : (input.customLabel ?? null),
           label:
-            typeof data?.preference?.label === "string" ? data.preference.label : data?.preference?.label ?? null,
+            typeof data?.preference?.label === "string"
+              ? data.preference.label
+              : (data?.preference?.label ?? null),
           strictnessLabel:
             typeof data?.preference?.strictnessLabel === "string"
               ? data.preference.strictnessLabel
-              : data?.preference?.strictnessLabel ?? null,
+              : (data?.preference?.strictnessLabel ?? null),
         },
       },
     };
   } catch (error) {
     console.error("[profile][dietary]", error);
-    return { ok: false, error: "Netzwerkfehler: Ernährungsprofil konnte nicht gespeichert werden." };
+    return {
+      ok: false,
+      error: "Netzwerkfehler: Ernährungsprofil konnte nicht gespeichert werden.",
+    };
   }
 }
 
@@ -208,7 +242,9 @@ export type UpsertAllergyResult = {
   };
 };
 
-export async function upsertAllergyAction(input: UpsertAllergyInput): Promise<ActionResult<UpsertAllergyResult>> {
+export async function upsertAllergyAction(
+  input: UpsertAllergyInput,
+): Promise<ActionResult<UpsertAllergyResult>> {
   try {
     const response = await authorizedFetch("/api/allergies", {
       method: "POST",
@@ -217,7 +253,8 @@ export async function upsertAllergyAction(input: UpsertAllergyInput): Promise<Ac
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Allergie konnte nicht gespeichert werden.";
+      const error =
+        typeof data?.error === "string" ? data.error : "Allergie konnte nicht gespeichert werden.";
       return { ok: false, error };
     }
 
@@ -241,15 +278,21 @@ export async function upsertAllergyAction(input: UpsertAllergyInput): Promise<Ac
   }
 }
 
-export async function deleteAllergyAction(allergen: string): Promise<ActionResult<{ success: boolean }>> {
+export async function deleteAllergyAction(
+  allergen: string,
+): Promise<ActionResult<{ success: boolean }>> {
   try {
-    const response = await authorizedFetch(`/api/allergies?allergen=${encodeURIComponent(allergen)}`, {
-      method: "DELETE",
-    });
+    const response = await authorizedFetch(
+      `/api/allergies?allergen=${encodeURIComponent(allergen)}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Allergie konnte nicht gelöscht werden.";
+      const error =
+        typeof data?.error === "string" ? data.error : "Allergie konnte nicht gelöscht werden.";
       return { ok: false, error };
     }
 
@@ -299,7 +342,8 @@ export async function saveMeasurementAction(
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Maß konnte nicht gespeichert werden.";
+      const error =
+        typeof data?.error === "string" ? data.error : "Maß konnte nicht gespeichert werden.";
       return { ok: false, error };
     }
 
@@ -322,7 +366,9 @@ export async function saveMeasurementAction(
   }
 }
 
-export async function saveInterestsAction(interests: string[]): Promise<ActionResult<{ interests: string[] }>> {
+export async function saveInterestsAction(
+  interests: string[],
+): Promise<ActionResult<{ interests: string[] }>> {
   try {
     const response = await authorizedFetch("/api/profile/interests", {
       method: "PUT",
@@ -331,7 +377,10 @@ export async function saveInterestsAction(interests: string[]): Promise<ActionRe
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Interessen konnten nicht gespeichert werden.";
+      const error =
+        typeof data?.error === "string"
+          ? data.error
+          : "Interessen konnten nicht gespeichert werden.";
       return { ok: false, error };
     }
 
@@ -403,7 +452,10 @@ export async function saveOnboardingAction(
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Onboarding-Angaben konnten nicht gespeichert werden.";
+      const error =
+        typeof data?.error === "string"
+          ? data.error
+          : "Onboarding-Angaben konnten nicht gespeichert werden.";
       return { ok: false, error };
     }
 
@@ -418,21 +470,26 @@ export async function saveOnboardingAction(
         onboarding: {
           focus: (onboarding.focus as OnboardingFocus) ?? input.focus,
           background: typeof onboarding.background === "string" ? onboarding.background : null,
-          backgroundClass: typeof onboarding.backgroundClass === "string" ? onboarding.backgroundClass : null,
+          backgroundClass:
+            typeof onboarding.backgroundClass === "string" ? onboarding.backgroundClass : null,
           notes: typeof onboarding.notes === "string" ? onboarding.notes : null,
           memberSinceYear:
-            typeof onboarding.memberSinceYear === "number" && Number.isFinite(onboarding.memberSinceYear)
+            typeof onboarding.memberSinceYear === "number" &&
+            Number.isFinite(onboarding.memberSinceYear)
               ? onboarding.memberSinceYear
               : onboarding.memberSinceYear === null
                 ? null
-                : input.memberSinceYear ?? null,
+                : (input.memberSinceYear ?? null),
           updatedAt: typeof onboarding.updatedAt === "string" ? onboarding.updatedAt : null,
         },
       },
     };
   } catch (error) {
     console.error("[profile][onboarding]", error);
-    return { ok: false, error: "Netzwerkfehler: Onboarding-Angaben konnten nicht gespeichert werden." };
+    return {
+      ok: false,
+      error: "Netzwerkfehler: Onboarding-Angaben konnten nicht gespeichert werden.",
+    };
   }
 }
 
@@ -448,7 +505,10 @@ export async function startOnboardingAction(
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Onboarding konnte nicht aktualisiert werden.";
+      const error =
+        typeof data?.error === "string"
+          ? data.error
+          : "Onboarding konnte nicht aktualisiert werden.";
       return { ok: false, error };
     }
 
@@ -473,7 +533,8 @@ export async function startOnboardingAction(
             periodLabel: typeof show.periodLabel === "string" ? show.periodLabel : null,
             status: typeof show.status === "string" ? show.status : "draft",
           },
-          whatsappLink: typeof onboarding.whatsappLink === "string" ? onboarding.whatsappLink : null,
+          whatsappLink:
+            typeof onboarding.whatsappLink === "string" ? onboarding.whatsappLink : null,
           whatsappLinkVisitedAt:
             typeof onboarding.whatsappLinkVisitedAt === "string"
               ? onboarding.whatsappLinkVisitedAt
@@ -506,7 +567,10 @@ export async function saveRolePreferencesAction(
 
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = typeof data?.error === "string" ? data.error : "Präferenzen konnten nicht gespeichert werden.";
+      const error =
+        typeof data?.error === "string"
+          ? data.error
+          : "Präferenzen konnten nicht gespeichert werden.";
       return { ok: false, error };
     }
 
@@ -534,7 +598,9 @@ export async function saveRolePreferencesAction(
         }
 
         const numericWeight =
-          typeof candidate.weight === "number" && Number.isFinite(candidate.weight) ? candidate.weight : 0;
+          typeof candidate.weight === "number" && Number.isFinite(candidate.weight)
+            ? candidate.weight
+            : 0;
 
         const normalizedEntry: SaveRolePreferencesInput = {
           code,

@@ -110,7 +110,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <div className="app-shell">
       <MysticBackground />
-      {!showMaintenanceNotice ? <SiteHeader siteTitle={siteTitle} navigationItems={visibleNavigationItems} /> : null}
+      {!showMaintenanceNotice ? (
+        <SiteHeader siteTitle={siteTitle} navigationItems={visibleNavigationItems} />
+      ) : null}
       <main id="main" className="site-main">
         {showMaintenanceNotice ? (
           <div className="flex min-h-[60svh] items-center justify-center px-6 py-16">
@@ -150,11 +152,10 @@ function extractUserRoles(session: Session | null): string[] {
 function MaintenanceNotice({ siteTitle }: { siteTitle: string }) {
   return (
     <section className="w-full max-w-2xl space-y-6 rounded-3xl border border-border/70 bg-background/80 p-10 text-center backdrop-blur">
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-        Wartungsmodus aktiv
-      </h1>
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">Wartungsmodus aktiv</h1>
       <p className="text-base leading-relaxed text-muted-foreground">
-        {siteTitle} wird gerade überarbeitet. Mitglieder können sich trotzdem anmelden und sehen die vollständige Website.
+        {siteTitle} wird gerade überarbeitet. Mitglieder können sich trotzdem anmelden und sehen die
+        vollständige Website.
       </p>
       <div className="flex justify-center">
         <a

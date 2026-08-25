@@ -66,7 +66,11 @@ function parseAvatarCrop(value: unknown): AvatarCrop | null {
     }),
   ) as AvatarCrop;
 
-  if (keys.some((key) => Number.isNaN(parsed[key]) || parsed[key] <= 0 && key !== "x" && key !== "y")) {
+  if (
+    keys.some(
+      (key) => Number.isNaN(parsed[key]) || (parsed[key] <= 0 && key !== "x" && key !== "y"),
+    )
+  ) {
     return null;
   }
 
@@ -132,7 +136,10 @@ async function processAvatarImage(
     return { buffer: await pipeline.webp({ quality: 85 }).toBuffer(), mime: "image/webp" };
   }
 
-  return { buffer: await pipeline.jpeg({ quality: 85, mozjpeg: true }).toBuffer(), mime: "image/jpeg" };
+  return {
+    buffer: await pipeline.jpeg({ quality: 85, mozjpeg: true }).toBuffer(),
+    mime: "image/jpeg",
+  };
 }
 
 function parsePayoutMethod(value: unknown): PayoutMethod | null {
@@ -149,7 +156,9 @@ const normalizeIban = (value: string) => value.replace(/\s+/g, "").toUpperCase()
 function parseBooleanFlag(value: unknown): boolean {
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
-    return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+    return (
+      normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on"
+    );
   }
   return value === true;
 }
@@ -189,7 +198,7 @@ export async function GET() {
   }
 
   const roles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
-  const fullName = combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null);
+  const fullName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;
 
   return NextResponse.json({
     id: user.id,
@@ -368,7 +377,10 @@ export async function PUT(request: NextRequest) {
     }
     const trimmed = value.trim();
     if (trimmed.length > 160) {
-      return NextResponse.json({ error: "Kontoinhaber darf maximal 160 Zeichen lang sein" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Kontoinhaber darf maximal 160 Zeichen lang sein" },
+        { status: 400 },
+      );
     }
     parsedPayoutAccountHolder = trimmed ? trimmed : null;
   }
@@ -398,7 +410,10 @@ export async function PUT(request: NextRequest) {
     }
     const trimmed = value.trim();
     if (trimmed.length > 160) {
-      return NextResponse.json({ error: "Bankname darf maximal 160 Zeichen lang sein" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Bankname darf maximal 160 Zeichen lang sein" },
+        { status: 400 },
+      );
     }
     parsedPayoutBankName = trimmed ? trimmed : null;
   }
@@ -413,7 +428,10 @@ export async function PUT(request: NextRequest) {
     }
     const trimmed = value.trim();
     if (trimmed.length > 160) {
-      return NextResponse.json({ error: "PayPal-Angabe darf maximal 160 Zeichen lang sein" }, { status: 400 });
+      return NextResponse.json(
+        { error: "PayPal-Angabe darf maximal 160 Zeichen lang sein" },
+        { status: 400 },
+      );
     }
     if (trimmed && !PAYPAL_HANDLE_REGEX.test(trimmed)) {
       return NextResponse.json(
@@ -434,7 +452,10 @@ export async function PUT(request: NextRequest) {
     }
     const trimmed = value.trim();
     if (trimmed.length > 500) {
-      return NextResponse.json({ error: "Notizen dürfen maximal 500 Zeichen enthalten" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Notizen dürfen maximal 500 Zeichen enthalten" },
+        { status: 400 },
+      );
     }
     parsedPayoutNote = trimmed ? trimmed : null;
   }
@@ -444,7 +465,9 @@ export async function PUT(request: NextRequest) {
     ? parsedPayoutAccountHolder
     : existingUser.payoutAccountHolder;
   const effectiveIban = payoutIbanProvided ? parsedPayoutIban : existingUser.payoutIban;
-  const effectiveBankName = payoutBankNameProvided ? parsedPayoutBankName : existingUser.payoutBankName;
+  const effectiveBankName = payoutBankNameProvided
+    ? parsedPayoutBankName
+    : existingUser.payoutBankName;
   const effectivePaypalHandle = payoutPaypalHandleProvided
     ? parsedPayoutPaypalHandle
     : existingUser.payoutPaypalHandle;
@@ -484,7 +507,10 @@ export async function PUT(request: NextRequest) {
       }
     } else if (effectivePayoutMethod === "OTHER") {
       if (!effectivePayoutNote) {
-        return NextResponse.json({ error: "Bitte beschreibe deine bevorzugte Auszahlung" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Bitte beschreibe deine bevorzugte Auszahlung" },
+          { status: 400 },
+        );
       }
     }
   }
@@ -511,7 +537,10 @@ export async function PUT(request: NextRequest) {
   if ("password" in body) {
     const passwordValue = body.password;
     if (typeof passwordValue !== "string" || passwordValue.length < 6) {
-      return NextResponse.json({ error: "Passwort muss mindestens 6 Zeichen haben" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Passwort muss mindestens 6 Zeichen haben" },
+        { status: 400 },
+      );
     }
     updates.passwordHash = await hashPassword(passwordValue);
   }
@@ -529,7 +558,10 @@ export async function PUT(request: NextRequest) {
         }
         const now = new Date();
         if (parsed > now) {
-          return NextResponse.json({ error: "Geburtsdatum darf nicht in der Zukunft liegen" }, { status: 400 });
+          return NextResponse.json(
+            { error: "Geburtsdatum darf nicht in der Zukunft liegen" },
+            { status: 400 },
+          );
         }
         updates.dateOfBirth = parsed;
       }
@@ -558,7 +590,11 @@ export async function PUT(request: NextRequest) {
     const crop = parseAvatarCrop(body.avatarCrop);
     if (crop) {
       parsedAvatarCrop = crop;
-    } else if (body.avatarCrop !== undefined && body.avatarCrop !== null && body.avatarCrop !== "") {
+    } else if (
+      body.avatarCrop !== undefined &&
+      body.avatarCrop !== null &&
+      body.avatarCrop !== ""
+    ) {
       return NextResponse.json({ error: "Ungültiger Bildausschnitt" }, { status: 400 });
     }
   }
@@ -574,7 +610,10 @@ export async function PUT(request: NextRequest) {
     }
     const mime = avatarFile.type?.toLowerCase() ?? "";
     if (!AVATAR_MIME_TYPES.has(mime)) {
-      return NextResponse.json({ error: "Nur JPG, PNG oder WebP werden unterstützt" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Nur JPG, PNG oder WebP werden unterstützt" },
+        { status: 400 },
+      );
     }
     const arrayBuffer = await avatarFile.arrayBuffer();
     avatarBuffer = Buffer.from(arrayBuffer);
@@ -589,7 +628,11 @@ export async function PUT(request: NextRequest) {
 
   if (avatarBuffer) {
     try {
-      const processed = await processAvatarImage(avatarBuffer, avatarMime ?? "image/jpeg", parsedAvatarCrop);
+      const processed = await processAvatarImage(
+        avatarBuffer,
+        avatarMime ?? "image/jpeg",
+        parsedAvatarCrop,
+      );
       avatarBuffer = processed.buffer;
       avatarMime = processed.mime;
     } catch (error) {
@@ -597,7 +640,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Bild konnte nicht verarbeitet werden" }, { status: 400 });
     }
 
-    updates.avatarImage = avatarBuffer ? new Uint8Array(avatarBuffer.buffer, avatarBuffer.byteOffset, avatarBuffer.byteLength) as Uint8Array<ArrayBuffer> : undefined;
+    updates.avatarImage = avatarBuffer
+      ? (new Uint8Array(
+          avatarBuffer.buffer,
+          avatarBuffer.byteOffset,
+          avatarBuffer.byteLength,
+        ) as Uint8Array<ArrayBuffer>)
+      : undefined;
     updates.avatarImageMime = avatarMime;
     updates.avatarImageUpdatedAt = new Date();
     if (!parsedAvatarSource) {
@@ -615,7 +664,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
     }
     if (!existing.avatarImageUpdatedAt) {
-      return NextResponse.json({ error: "Bitte lade zuerst ein eigenes Bild hoch" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Bitte lade zuerst ein eigenes Bild hoch" },
+        { status: 400 },
+      );
     }
   }
 
@@ -648,7 +700,8 @@ export async function PUT(request: NextRequest) {
     });
 
     const roles = sortRoles([updated.role as Role, ...updated.roles.map((r) => r.role as Role)]);
-    const userFullName = combineNameParts(updated.firstName, updated.lastName) ?? (updated.name ?? null);
+    const userFullName =
+      combineNameParts(updated.firstName, updated.lastName) ?? updated.name ?? null;
 
     return NextResponse.json({
       ok: true,

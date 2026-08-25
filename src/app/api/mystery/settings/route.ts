@@ -34,7 +34,8 @@ function serializeSettings(record: Awaited<ReturnType<typeof readMysterySettings
     countdownTarget: record?.countdownTarget ? record.countdownTarget.toISOString() : null,
     expirationMessage: record?.expirationMessage ?? null,
     effectiveCountdownTarget: resolved.effectiveCountdownTarget.toISOString(),
-    effectiveExpirationMessage: resolved.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE,
+    effectiveExpirationMessage:
+      resolved.effectiveExpirationMessage ?? DEFAULT_MYSTERY_EXPIRATION_MESSAGE,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
     hasCustomCountdown: resolved.hasCustomCountdown,
     hasCustomMessage: resolved.hasCustomMessage,
@@ -57,7 +58,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ settings: serializeSettings(record) });
   } catch (error) {
     console.error("Failed to load mystery settings", error);
-    return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Einstellungen konnten nicht geladen werden." },
+      { status: 500 },
+    );
   }
 }
 
@@ -94,6 +98,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ settings: serializeSettings(saved) });
   } catch (error) {
     console.error("Failed to save mystery settings", error);
-    return NextResponse.json({ error: "Die Einstellungen konnten nicht gespeichert werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Die Einstellungen konnten nicht gespeichert werden." },
+      { status: 500 },
+    );
   }
 }

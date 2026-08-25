@@ -9,11 +9,7 @@ import type { WeekdayValue } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
 
 import type { BlockedDay } from "../block-calendar";
-import type {
-  BlockOverviewSummary,
-  PreparedMember,
-  VisibleDayInfo,
-} from "./useBlockOverviewData";
+import type { BlockOverviewSummary, PreparedMember, VisibleDayInfo } from "./useBlockOverviewData";
 import type {
   DayColumn,
   HolidayIndicator,
@@ -81,7 +77,10 @@ export function OverviewShell({
   const visibleDayInfoForView = useMemo(() => {
     if (!showWeekendsOnly) return visibleDayInfo;
     return visibleDayInfo.filter(
-      (info) => info.isWeekend || preferredWeekdaySet.has(info.weekday) || exceptionWeekdaySet.has(info.weekday),
+      (info) =>
+        info.isWeekend ||
+        preferredWeekdaySet.has(info.weekday) ||
+        exceptionWeekdaySet.has(info.weekday),
     );
   }, [exceptionWeekdaySet, preferredWeekdaySet, showWeekendsOnly, visibleDayInfo]);
 
@@ -104,9 +103,18 @@ export function OverviewShell({
     dayCols.forEach((day, index) => {
       const entries = holidayMap.get(day.key) ?? [];
       if (!entries.length) return;
-      const label = entries.map((entry) => entry.title).filter(Boolean).join(", ") || undefined;
+      const label =
+        entries
+          .map((entry) => entry.title)
+          .filter(Boolean)
+          .join(", ") || undefined;
       const isPublicHoliday = entries.some((entry) => entry.category === "publicHoliday");
-      result.push({ dayIndex: index, label, type: isPublicHoliday ? "holiday" : "vacation", isPublicHoliday });
+      result.push({
+        dayIndex: index,
+        label,
+        type: isPublicHoliday ? "holiday" : "vacation",
+        isPublicHoliday,
+      });
     });
     return result;
   }, [dayCols, holidayMap]);
@@ -164,7 +172,11 @@ export function OverviewShell({
         onPreviousMonth={onPrev}
         onNextMonth={onNext}
         onReset={onReset}
-        month={{ label: monthLabel, year: dayCols[0]?.date.getFullYear() ?? new Date().getFullYear(), month: dayCols[0]?.date.getMonth() ?? new Date().getMonth() }}
+        month={{
+          label: monthLabel,
+          year: dayCols[0]?.date.getFullYear() ?? new Date().getFullYear(),
+          month: dayCols[0]?.date.getMonth() ?? new Date().getMonth(),
+        }}
         showWeekendsOnly={showWeekendsOnly}
         onShowWeekendsOnlyChange={setShowWeekendsOnly}
       />

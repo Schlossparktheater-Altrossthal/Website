@@ -15,4 +15,3 @@ export function MysticBackground() {
     </div>
   );
 }
-

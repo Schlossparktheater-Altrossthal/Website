@@ -7,8 +7,7 @@ import { clearImpersonationCookie, setImpersonationCookie } from "@/lib/auth/imp
 const DEFAULT_REDIRECT = "/";
 
 export type StartImpersonationResult =
-  | { ok: true; redirectTo: string }
-  | { ok: false; error: string };
+  { ok: true; redirectTo: string } | { ok: false; error: string };
 
 export async function startImpersonationAction(input: {
   targetUserId: string;

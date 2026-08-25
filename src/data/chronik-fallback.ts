@@ -59,7 +59,9 @@ function sanitizeCast(entry: RawChronikEntry["cast"]): ChronikCastEntry[] | null
     const role = typeof castEntry.role === "string" ? castEntry.role.trim() : "";
     const players = Array.isArray(castEntry.players)
       ? castEntry.players
-          .filter((player): player is string => typeof player === "string" && player.trim().length > 0)
+          .filter(
+            (player): player is string => typeof player === "string" && player.trim().length > 0,
+          )
           .map((player) => player.trim())
       : [];
 
@@ -98,14 +100,17 @@ function toChronikShowRecord(entry: RawChronikEntry): ChronikShowRecord | null {
     title: typeof entry.title === "string" ? entry.title : null,
     synopsis: entry.author ? `${entry.author}` : null,
     dates: sanitizeDates(entry.dates ?? null),
-    posterUrl: typeof entry.posterUrl === "string" && entry.posterUrl.trim()
-      ? entry.posterUrl.trim()
-      : `https://picsum.photos/seed/${entry.year}/800/1200`,
+    posterUrl:
+      typeof entry.posterUrl === "string" && entry.posterUrl.trim()
+        ? entry.posterUrl.trim()
+        : `https://picsum.photos/seed/${entry.year}/800/1200`,
     meta,
   } satisfies ChronikShowRecord;
 }
 
-const chronikFallbackShowsInternal = (Array.isArray(rawChronikAltrossthal) ? rawChronikAltrossthal : [])
+const chronikFallbackShowsInternal = (
+  Array.isArray(rawChronikAltrossthal) ? rawChronikAltrossthal : []
+)
   .map((entry) => toChronikShowRecord(entry as RawChronikEntry))
   .filter((entry): entry is ChronikShowRecord => Boolean(entry))
   .sort((a, b) => b.year - a.year);

@@ -124,7 +124,9 @@ export async function readServerSettings() {
 }
 
 export async function ensureServerSettingsRecord() {
-  const existing = await prisma.serverSettings.findUnique({ where: { id: DEFAULT_SERVER_SETTINGS_ID } });
+  const existing = await prisma.serverSettings.findUnique({
+    where: { id: DEFAULT_SERVER_SETTINGS_ID },
+  });
   if (existing) {
     return existing;
   }
@@ -206,11 +208,15 @@ export function applyServerSettingsPatch(
       patch.mailSecure !== undefined && patch.mailSecure !== null
         ? normaliseBoolean(patch.mailSecure, base.mailSecure)
         : base.mailSecure,
-    mailUsername: patch.mailUsername !== undefined ? trimToNull(patch.mailUsername) : base.mailUsername,
+    mailUsername:
+      patch.mailUsername !== undefined ? trimToNull(patch.mailUsername) : base.mailUsername,
     mailPassword: patch.mailPassword !== undefined ? patch.mailPassword : base.mailPassword,
     mailFromAddress:
-      patch.mailFromAddress !== undefined ? normaliseEmail(patch.mailFromAddress) : base.mailFromAddress,
-    mailFromName: patch.mailFromName !== undefined ? trimToNull(patch.mailFromName) : base.mailFromName,
+      patch.mailFromAddress !== undefined
+        ? normaliseEmail(patch.mailFromAddress)
+        : base.mailFromAddress,
+    mailFromName:
+      patch.mailFromName !== undefined ? trimToNull(patch.mailFromName) : base.mailFromName,
     mailReplyTo:
       patch.mailReplyTo !== undefined ? normaliseEmail(patch.mailReplyTo) : base.mailReplyTo,
   };

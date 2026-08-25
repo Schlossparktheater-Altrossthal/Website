@@ -50,7 +50,6 @@ type NotificationRealtimeEvent = {
   };
 };
 
-
 export function NotificationBell({ className }: { className?: string }) {
   const { data: session, status } = useSession();
   const [open, setOpen] = useState(false);
@@ -171,9 +170,7 @@ export function NotificationBell({ className }: { className?: string }) {
 
     setNotifications((prev) =>
       prev.map((item) =>
-        unreadIds.includes(item.id)
-          ? { ...item, readAt: new Date().toISOString() }
-          : item,
+        unreadIds.includes(item.id) ? { ...item, readAt: new Date().toISOString() } : item,
       ),
     );
   }, [open, notifications]);
@@ -199,10 +196,7 @@ export function NotificationBell({ className }: { className?: string }) {
       }
 
       if (browserNotificationsSupported) {
-        const notificationUrlCandidates = [
-          event.notification.actionUrl,
-          "/mitglieder",
-        ];
+        const notificationUrlCandidates = [event.notification.actionUrl, "/mitglieder"];
 
         let resolvedNotificationUrl: string | null = null;
 
@@ -271,7 +265,12 @@ export function NotificationBell({ className }: { className?: string }) {
   ]);
 
   if (status === "loading") {
-    return <div className={cn(className, "h-9 w-9 animate-pulse rounded-full bg-foreground/10")} aria-hidden />;
+    return (
+      <div
+        className={cn(className, "h-9 w-9 animate-pulse rounded-full bg-foreground/10")}
+        aria-hidden
+      />
+    );
   }
 
   if (!session?.user) {
@@ -313,7 +312,9 @@ export function NotificationBell({ className }: { className?: string }) {
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={!isMobile && open ? panelId : undefined}
-        aria-label={unreadCount ? `${unreadCount} ungelesene Benachrichtigungen` : "Benachrichtigungen"}
+        aria-label={
+          unreadCount ? `${unreadCount} ungelesene Benachrichtigungen` : "Benachrichtigungen"
+        }
       >
         <BellIcon size={18} />
         {unreadCount > 0 && (
@@ -373,7 +374,10 @@ function NotificationContent({
 }: NotificationContentProps) {
   return (
     <div className="space-y-3 text-sm">
-      <header className="flex items-center justify-between text-xs text-muted-foreground" aria-live="polite">
+      <header
+        className="flex items-center justify-between text-xs text-muted-foreground"
+        aria-live="polite"
+      >
         <span>Benachrichtigungen</span>
         <span className="flex items-center gap-2">
           {loading && <span>Aktualisiere…</span>}
@@ -395,9 +399,7 @@ function NotificationContent({
         <p className="text-xs text-muted-foreground">Keine Benachrichtigungen vorhanden.</p>
       ) : (
         <div className={cn("space-y-3 overflow-y-auto pr-1", scrollAreaClassName)}>
-          <NotificationList
-            notifications={notifications}
-          />
+          <NotificationList notifications={notifications} />
         </div>
       )}
     </div>
@@ -410,7 +412,11 @@ type BrowserNotificationCalloutProps = {
   pending: boolean;
 };
 
-function BrowserNotificationCallout({ permission, onEnable, pending }: BrowserNotificationCalloutProps) {
+function BrowserNotificationCallout({
+  permission,
+  onEnable,
+  pending,
+}: BrowserNotificationCalloutProps) {
   if (permission === "granted") {
     return null;
   }
@@ -420,11 +426,13 @@ function BrowserNotificationCallout({ permission, onEnable, pending }: BrowserNo
   return (
     <section className="rounded-lg border border-dashed border-primary/50 bg-primary/10 p-3 text-xs">
       <p className="mb-2 leading-relaxed text-muted-foreground">
-        Aktiviere Browser-Benachrichtigungen, um auch außerhalb der Website sofort informiert zu bleiben.
+        Aktiviere Browser-Benachrichtigungen, um auch außerhalb der Website sofort informiert zu
+        bleiben.
       </p>
       {isBlocked ? (
         <p className="text-xs font-medium text-amber-700">
-          Browser-Benachrichtigungen wurden blockiert. Bitte erlaube sie in den Browser-Einstellungen.
+          Browser-Benachrichtigungen wurden blockiert. Bitte erlaube sie in den
+          Browser-Einstellungen.
         </p>
       ) : (
         <Button type="button" size="sm" onClick={onEnable} disabled={pending}>
@@ -443,10 +451,7 @@ function NotificationList({ notifications }: NotificationListProps) {
   return (
     <ul className="space-y-3">
       {notifications.map((item) => (
-        <NotificationEntry
-          key={item.id}
-          item={item}
-        />
+        <NotificationEntry key={item.id} item={item} />
       ))}
     </ul>
   );
@@ -474,19 +479,19 @@ function NotificationEntry({ item }: NotificationEntryProps) {
     highlightEmergency
       ? "border-rose-400/70 bg-rose-500/10"
       : highlightUpdate
-      ? "border-primary/60 bg-primary/10"
-      : highlightAttendance
-      ? "border-amber-400/70 bg-amber-500/10"
-      : "border-border/40 bg-background/85",
+        ? "border-primary/60 bg-primary/10"
+        : highlightAttendance
+          ? "border-amber-400/70 bg-amber-500/10"
+          : "border-border/40 bg-background/85",
   );
 
   const badgeConfig = isEmergencyAlert
     ? { label: "Notfall", className: "bg-rose-500/20 text-rose-100" }
     : isUpdate
-    ? { label: "Aktualisiert", className: "bg-primary/15 text-primary" }
-    : isAttendanceAlert
-    ? { label: "Absage", className: "bg-amber-500/20 text-amber-100" }
-    : null;
+      ? { label: "Aktualisiert", className: "bg-primary/15 text-primary" }
+      : isAttendanceAlert
+        ? { label: "Absage", className: "bg-amber-500/20 text-amber-100" }
+        : null;
 
   const canRemoveSingle = Boolean(item.readAt);
 
@@ -497,7 +502,10 @@ function NotificationEntry({ item }: NotificationEntryProps) {
           <div className="min-w-0 space-y-1">
             <h3 className="text-sm font-medium text-foreground break-words flex items-center gap-2">
               {item.rehearsal ? (
-                <Link href={`/mitglieder/proben/${item.rehearsal.id}`} className="text-primary hover:underline">
+                <Link
+                  href={`/mitglieder/proben/${item.rehearsal.id}`}
+                  className="text-primary hover:underline"
+                >
                   {item.title}
                 </Link>
               ) : (
@@ -524,16 +532,19 @@ function NotificationEntry({ item }: NotificationEntryProps) {
                 Erhalten: {dateTimeFormatter.format(createdAt)}
               </time>
               {startDate && item.rehearsal && (
-                <Link href={`/mitglieder/proben/${item.rehearsal.id}`} className="block text-primary hover:underline">
+                <Link
+                  href={`/mitglieder/proben/${item.rehearsal.id}`}
+                  className="block text-primary hover:underline"
+                >
                   <time dateTime={startDate.toISOString()}>
                     Probe: {dateTimeFormatter.format(startDate)}
                   </time>
                 </Link>
               )}
             </div>
-            </div>
-            <div className="flex shrink-0 items-start gap-2">
-              {canRemoveSingle && (
+          </div>
+          <div className="flex shrink-0 items-start gap-2">
+            {canRemoveSingle && (
               <button
                 type="button"
                 className="rounded-md border border-border/40 px-2 py-1 text-[0.7rem] text-muted-foreground hover:bg-accent/30"

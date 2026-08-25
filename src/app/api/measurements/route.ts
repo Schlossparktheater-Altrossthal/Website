@@ -4,7 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { measurementSchema } from "@/data/measurements";
-import type { MeasurementType as PrismaMeasurementType, MeasurementUnit as PrismaMeasurementUnit } from "@prisma/client";
+import type {
+  MeasurementType as PrismaMeasurementType,
+  MeasurementUnit as PrismaMeasurementUnit,
+} from "@prisma/client";
 
 const measurementRequestSchema = measurementSchema.extend({
   userId: z.string().cuid().optional(),
@@ -17,10 +20,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
     const canManageAll = await hasPermission(session.user, "PRIVATE.PROFILE.MEASUREMENTS.MANAGE");
@@ -39,10 +39,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(measurements);
   } catch (error) {
     console.error("[Measurements] Failed to load measurements", error);
-    return NextResponse.json(
-      { error: "Nicht autorisiert" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 }
 
@@ -126,9 +123,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(measurement);
   } catch (error) {
     console.error("[Measurements] Failed to save measurement", error);
-    return NextResponse.json(
-      { error: "Fehler beim Speichern der Maße" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Fehler beim Speichern der Maße" }, { status: 500 });
   }
 }

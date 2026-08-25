@@ -56,7 +56,12 @@ function createAnalytics(overrides: Partial<ServerAnalytics> = {}): ServerAnalyt
     ],
     requestBreakdown: {
       frontend: { requests: 600, avgResponseTimeMs: 160, cacheHitRate: 0.5, avgPayloadKb: 120 },
-      members: { requests: 420, avgResponseTimeMs: 210, realtimeEvents: 80, avgSessionDurationSeconds: 360 },
+      members: {
+        requests: 420,
+        avgResponseTimeMs: 210,
+        realtimeEvents: 80,
+        avgSessionDurationSeconds: 360,
+      },
       api: { requests: 180, avgResponseTimeMs: 240, backgroundJobs: 15, errorRate: 0.04 },
     },
     visitorDistribution: [

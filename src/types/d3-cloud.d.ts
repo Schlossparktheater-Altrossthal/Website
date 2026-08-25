@@ -11,7 +11,9 @@ declare module "d3-cloud" {
     fontStyle(style: string | ((datum: T) => string)): CloudLayout<T>;
     fontWeight(weight: string | number | ((datum: T) => string | number)): CloudLayout<T>;
     fontSize(fontSize: (datum: T) => number): CloudLayout<T>;
-    spiral(name: string | ((size: [number, number]) => (theta: number) => [number, number])): CloudLayout<T>;
+    spiral(
+      name: string | ((size: [number, number]) => (theta: number) => [number, number]),
+    ): CloudLayout<T>;
     random(random: number | (() => number)): CloudLayout<T>;
     on(event: string, listener: (words: T[], bounds?: [number, number]) => void): CloudLayout<T>;
     start(): CloudLayout<T>;

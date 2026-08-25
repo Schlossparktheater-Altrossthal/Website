@@ -151,10 +151,7 @@ async function main() {
       OR: [
         { id: "seed-show" },
         {
-          AND: [
-            { id: { startsWith: "altrossthal-" } },
-            { NOT: { id: { in: keepIds } } },
-          ],
+          AND: [{ id: { startsWith: "altrossthal-" } }, { NOT: { id: { in: keepIds } } }],
         },
       ],
     },
@@ -365,7 +362,9 @@ async function main() {
     prisma.user.findUnique({ where: { email: "board@example.com" } }),
     prisma.user.findUnique({ where: { email: "member@example.com" } }),
     prisma.user.findUnique({ where: { email: "cast@example.com" } }),
-    prisma.financeBudget.findMany({ where: { id: { in: financeBudgetSeeds.map((budget) => budget.id) } } }),
+    prisma.financeBudget.findMany({
+      where: { id: { in: financeBudgetSeeds.map((budget) => budget.id) } },
+    }),
   ]);
 
   const budgetMap = new Map(financeBudgets.map((budget) => [budget.id, budget.id]));
@@ -406,7 +405,12 @@ async function main() {
           },
         ],
         logs: [
-          { fromStatus: null, toStatus: "pending", changedById: financeUser?.id ?? null, note: null },
+          {
+            fromStatus: null,
+            toStatus: "pending",
+            changedById: financeUser?.id ?? null,
+            note: null,
+          },
           {
             fromStatus: "pending",
             toStatus: "approved",
@@ -444,7 +448,12 @@ async function main() {
         approvedAt: new Date(Date.UTC(referenceYear, 3, 6, 9, 0)),
         attachments: [],
         logs: [
-          { fromStatus: null, toStatus: "pending", changedById: financeUser?.id ?? null, note: null },
+          {
+            fromStatus: null,
+            toStatus: "pending",
+            changedById: financeUser?.id ?? null,
+            note: null,
+          },
           {
             fromStatus: "pending",
             toStatus: "approved",
@@ -648,7 +657,9 @@ async function main() {
   ];
 
   for (const membership of membershipSeeds) {
-    const department = await prisma.department.findUnique({ where: { slug: membership.departmentSlug } });
+    const department = await prisma.department.findUnique({
+      where: { slug: membership.departmentSlug },
+    });
     const user = await prisma.user.findUnique({ where: { email: membership.email } });
     if (!department || !user) continue;
 
@@ -1024,7 +1035,7 @@ async function main() {
       location: "Schlosspark Altroßthal",
       requiredRoles: ["cast", "tech"],
       priority: "NORMAL",
-      isActive: true
+      isActive: true,
     },
     {
       id: "weekend-sunday",
@@ -1036,7 +1047,7 @@ async function main() {
       location: "Schlosspark Altroßthal",
       requiredRoles: ["cast", "tech"],
       priority: "NORMAL",
-      isActive: true
+      isActive: true,
     },
     {
       id: "tech-rehearsal",
@@ -1048,15 +1059,15 @@ async function main() {
       location: "Schlosspark Altroßthal",
       requiredRoles: ["cast", "tech"],
       priority: "HIGH",
-      isActive: false // Nur bei Bedarf aktivieren
-    }
+      isActive: false, // Nur bei Bedarf aktivieren
+    },
   ];
 
   for (const template of defaultTemplates) {
     await prisma.rehearsalTemplate.upsert({
       where: { id: template.id },
       update: template,
-      create: template
+      create: template,
     });
   }
 
@@ -1072,7 +1083,14 @@ async function main() {
       data: [
         { userId: seedUser.id, date: mkDate(5), kind: "FULL_AVAILABLE", note: "frei" },
         { userId: seedUser.id, date: mkDate(6), kind: "FULL_UNAVAILABLE", note: "Familie" },
-        { userId: seedUser.id, date: mkDate(7), kind: "PARTIAL", availableFromMin: 17 * 60, availableToMin: 20 * 60, note: "nach der Arbeit" },
+        {
+          userId: seedUser.id,
+          date: mkDate(7),
+          kind: "PARTIAL",
+          availableFromMin: 17 * 60,
+          availableToMin: 20 * 60,
+          note: "nach der Arbeit",
+        },
       ],
       skipDuplicates: true,
     });

@@ -17,7 +17,9 @@ export default async function WebsiteSettingsPage() {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-muted-foreground">Kein Zugriff auf die Website-Einstellungen.</div>
+        <div className="text-sm text-muted-foreground">
+          Kein Zugriff auf die Website-Einstellungen.
+        </div>
       </div>
     );
   }
@@ -44,13 +46,11 @@ export default async function WebsiteSettingsPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Website & Theme</h1>
           <p className="text-sm text-muted-foreground">
-            Passe Farben, Branding und Darstellung der öffentlichen Website an. Änderungen werden sofort im aktuellen Fenster sichtbar.
+            Passe Farben, Branding und Darstellung der öffentlichen Website an. Änderungen werden
+            sofort im aktuellen Fenster sichtbar.
           </p>
         </div>
-        <WebsiteThemeSettingsManager
-          initialSettings={clientSettings}
-          initialThemes={themes}
-        />
+        <WebsiteThemeSettingsManager initialSettings={clientSettings} initialThemes={themes} />
       </div>
     );
   } catch (error) {

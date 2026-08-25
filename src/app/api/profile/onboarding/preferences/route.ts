@@ -59,7 +59,10 @@ export async function PUT(request: NextRequest) {
     const definition = getRolePreferenceDefinition(code);
     if (definition) {
       if (definition.domain !== entry.domain) {
-        return NextResponse.json({ error: "Unzulässige Kombination aus Rolle und Bereich." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Unzulässige Kombination aus Rolle und Bereich." },
+          { status: 400 },
+        );
       }
     } else if (!isCustomRolePreference(code)) {
       return NextResponse.json({ error: "Unbekannte Präferenz." }, { status: 400 });

@@ -23,11 +23,7 @@ function normalizeTip(text: string) {
 export async function GET() {
   try {
     const tips = await prisma.mysteryTip.findMany({
-      orderBy: [
-        { count: "desc" },
-        { updatedAt: "desc" },
-        { createdAt: "asc" },
-      ],
+      orderBy: [{ count: "desc" }, { updatedAt: "desc" }, { createdAt: "asc" }],
     });
 
     return NextResponse.json({
@@ -67,7 +63,10 @@ export async function POST(request: NextRequest) {
   try {
     const clue = await prisma.clue.findUnique({ where: { id: clueId } });
     if (!clue || !clue.published) {
-      return NextResponse.json({ error: "Dieses Rätsel kann aktuell nicht ausgewählt werden." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Dieses Rätsel kann aktuell nicht ausgewählt werden." },
+        { status: 400 },
+      );
     }
 
     const savedTip = await prisma.$transaction(async (tx) => {
@@ -108,10 +107,13 @@ export async function POST(request: NextRequest) {
         },
         created,
       },
-      { status: created ? 201 : 200 }
+      { status: created ? 201 : 200 },
     );
   } catch (error) {
     console.error("Failed to save mystery tip", error);
-    return NextResponse.json({ error: "Dein Tipp konnte nicht gespeichert werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Dein Tipp konnte nicht gespeichert werden." },
+      { status: 500 },
+    );
   }
 }

@@ -107,12 +107,18 @@ export function AvatarCropDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
       <DialogContent className="max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Bild zuschneiden</DialogTitle>
           <DialogDescription>
-            Verschiebe den Ausschnitt und passe bei Bedarf den Zoom an, damit dein Avatar perfekt dargestellt wird.
+            Verschiebe den Ausschnitt und passe bei Bedarf den Zoom an, damit dein Avatar perfekt
+            dargestellt wird.
           </DialogDescription>
         </DialogHeader>
         <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted">

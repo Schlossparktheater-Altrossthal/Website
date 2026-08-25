@@ -23,9 +23,7 @@ interface PageHeaderProps {
   title: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
-  breadcrumbs?:
-    | readonly (MembersBreadcrumbItem | null | undefined | false)[]
-    | null;
+  breadcrumbs?: readonly (MembersBreadcrumbItem | null | undefined | false)[] | null;
   quickActions?: React.ReactNode;
   status?: React.ReactNode;
   variant?: "page" | "section";
@@ -44,9 +42,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   const breadcrumbItems = React.useMemo(
     () =>
-      breadcrumbs
-        ? createMembersBreadcrumbItems(breadcrumbs)
-        : ([] as MembersBreadcrumbItem[]),
+      breadcrumbs ? createMembersBreadcrumbItems(breadcrumbs) : ([] as MembersBreadcrumbItem[]),
     [breadcrumbs],
   );
   const hasBreadcrumbs = breadcrumbItems.length > 0;
@@ -63,33 +59,29 @@ export function PageHeader({
           <Heading level="h2" className="text-2xl md:text-3xl">
             {title}
           </Heading>
-          {description
-            ? typeof description === "string"
-              ? (
-                  <Text tone="muted" variant="body">
-                    {description}
-                  </Text>
-                )
-              : description
-            : null}
+          {description ? (
+            typeof description === "string" ? (
+              <Text tone="muted" variant="body">
+                {description}
+              </Text>
+            ) : (
+              description
+            )
+          ) : null}
         </div>
-        {actions ? (
-          <div className="flex flex-wrap items-center gap-2">{actions}</div>
-        ) : null}
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
     );
   }
 
   const descriptionNode =
-    description === undefined || description === null
-      ? null
-      : typeof description === "string"
-        ? (
-            <Text tone="muted" variant="body">
-              {description}
-            </Text>
-          )
-        : description;
+    description === undefined || description === null ? null : typeof description === "string" ? (
+      <Text tone="muted" variant="body">
+        {description}
+      </Text>
+    ) : (
+      description
+    );
 
   return (
     <>

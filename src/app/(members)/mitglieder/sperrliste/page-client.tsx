@@ -43,7 +43,7 @@ export function BlocklistPageClient({
   );
   const [offline, setOffline] = useState<boolean>(Boolean(isOffline));
   const [offlineNotice, setOfflineNotice] = useState<string | null>(
-    isOffline ? offlineMessage ?? null : null,
+    isOffline ? (offlineMessage ?? null) : null,
   );
   const defaultOfflineDescription =
     offlineMessage ??
@@ -66,9 +66,7 @@ export function BlocklistPageClient({
       {offline ? (
         <div className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
           <p className="text-sm font-semibold text-warning">Offline-Demo-Modus</p>
-          <p className="text-xs text-warning/80">
-            {offlineNotice ?? defaultOfflineDescription}
-          </p>
+          <p className="text-xs text-warning/80">{offlineNotice ?? defaultOfflineDescription}</p>
         </div>
       ) : null}
       <BlocklistTabs
@@ -96,16 +94,12 @@ export function BlocklistPageClient({
                   setDefaultHolidayUrl(payload.defaults.holidaySourceUrl);
                 }
                 if (payload.defaults?.publicHolidaySourceUrl) {
-                  setDefaultPublicHolidayUrl(
-                    payload.defaults.publicHolidaySourceUrl,
-                  );
+                  setDefaultPublicHolidayUrl(payload.defaults.publicHolidaySourceUrl);
                 }
                 if (typeof payload.offline === "boolean") {
                   setOffline(payload.offline);
                   setOfflineNotice(
-                    payload.offline
-                      ? payload.message ?? defaultOfflineDescription
-                      : null,
+                    payload.offline ? (payload.message ?? defaultOfflineDescription) : null,
                   );
                 }
               }}

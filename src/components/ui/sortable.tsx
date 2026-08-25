@@ -1,7 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
@@ -11,7 +18,13 @@ import {
 
 export { SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy };
 
-export function DndSortableProvider({ children, onDragEnd }: { children: ReactNode; onDragEnd: (event: DragEndEvent) => void }) {
+export function DndSortableProvider({
+  children,
+  onDragEnd,
+}: {
+  children: ReactNode;
+  onDragEnd: (event: DragEndEvent) => void;
+}) {
   const sensors = useSensors(useSensor(PointerSensor));
 
   return (

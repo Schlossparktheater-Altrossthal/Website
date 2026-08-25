@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
-const globalPrismaKey = Symbol.for('__realtime_prisma');
+const globalPrismaKey = Symbol.for("__realtime_prisma");
 
 function getGlobalPrisma() {
   const globalObject = globalThis;
@@ -12,7 +12,10 @@ function getGlobalPrisma() {
 
 export function createRealtimeAnalyticsRecorder({ logger } = {}) {
   const enabled = Boolean(process.env.DATABASE_URL);
-  const logError = typeof logger?.error === 'function' ? (...args) => logger.error(...args) : (...args) => console.error(...args);
+  const logError =
+    typeof logger?.error === "function"
+      ? (...args) => logger.error(...args)
+      : (...args) => console.error(...args);
   let prisma = null;
 
   async function ensureClient() {
@@ -25,7 +28,7 @@ export function createRealtimeAnalyticsRecorder({ logger } = {}) {
     try {
       prisma = getGlobalPrisma();
     } catch (error) {
-      logError('[Realtime] Failed to initialize Prisma for analytics events', error);
+      logError("[Realtime] Failed to initialize Prisma for analytics events", error);
       prisma = null;
     }
     return prisma;
@@ -45,15 +48,15 @@ export function createRealtimeAnalyticsRecorder({ logger } = {}) {
           },
         });
       } catch (error) {
-        logError('[Realtime] Failed to persist realtime analytics event', error);
+        logError("[Realtime] Failed to persist realtime analytics event", error);
       }
     },
     async flush() {
-      if (prisma && typeof prisma.$disconnect === 'function') {
+      if (prisma && typeof prisma.$disconnect === "function") {
         try {
           await prisma.$disconnect();
         } catch (error) {
-          logError('[Realtime] Failed to disconnect Prisma for analytics recorder', error);
+          logError("[Realtime] Failed to disconnect Prisma for analytics recorder", error);
         }
         prisma = null;
       }

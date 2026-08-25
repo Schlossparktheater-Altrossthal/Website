@@ -2,11 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { z, type ZodIssue } from "zod";
 
-import type {
-  InventoryItemRecord,
-  OfflineScope,
-  TicketRecord,
-} from "@/lib/offline/types";
+import type { InventoryItemRecord, OfflineScope, TicketRecord } from "@/lib/offline/types";
 import { prisma } from "@/lib/prisma";
 import {
   Prisma,
@@ -140,7 +136,10 @@ export type ApplyIncomingEventsResult =
     };
 
 export class SyncEventValidationError extends Error {
-  constructor(message: string, public readonly issues: ZodIssue[]) {
+  constructor(
+    message: string,
+    public readonly issues: ZodIssue[],
+  ) {
     super(message);
     this.name = "SyncEventValidationError";
   }
@@ -439,10 +438,13 @@ export async function applyIncomingEvents(
 ): Promise<ApplyIncomingEventsResult> {
   const normalizedScope = toSyncScope(payload.scope);
   const normalizedEvents = payload.events.map(normalizeIncomingEvent);
-  const validatedEvents = normalizedEvents.map((event) => ({
-    ...event,
-    payload: validateIncomingEventPayload(payload.scope, event),
-  } satisfies NormalizedIncomingEvent));
+  const validatedEvents = normalizedEvents.map(
+    (event) =>
+      ({
+        ...event,
+        payload: validateIncomingEventPayload(payload.scope, event),
+      }) satisfies NormalizedIncomingEvent,
+  );
 
   return prisma.$transaction(async (tx) => {
     const currentSeq = await getLatestServerSeq(normalizedScope, tx);
@@ -497,7 +499,9 @@ export async function applyIncomingEvents(
     ]);
 
     const existingIdSet = new Set(existingEvents.map((event) => event.id));
-    const existingDedupeSet = new Set(existingDedupe.map((event) => event.dedupeKey).filter(Boolean));
+    const existingDedupeSet = new Set(
+      existingDedupe.map((event) => event.dedupeKey).filter(Boolean),
+    );
 
     const skipped: SkippedIncomingEvent[] = [];
     const filtered: NormalizedIncomingEvent[] = [];
@@ -510,7 +514,11 @@ export async function applyIncomingEvents(
 
       if (event.dedupeKey) {
         if (existingDedupeSet.has(event.dedupeKey)) {
-          skipped.push({ id: event.id, dedupeKey: event.dedupeKey, reason: "duplicate-dedupe-key" });
+          skipped.push({
+            id: event.id,
+            dedupeKey: event.dedupeKey,
+            reason: "duplicate-dedupe-key",
+          });
           continue;
         }
 

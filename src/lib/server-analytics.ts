@@ -14,7 +14,10 @@ import type {
 import { deriveOptimizationInsights } from "@/lib/analytics/derive-optimization-insights";
 import type { LoadedServerLog } from "@/lib/analytics/load-server-logs";
 import { loadLatestCriticalServerLogs } from "@/lib/analytics/load-server-logs";
-import { loadDeviceBreakdownFromDatabase, loadPagePerformanceMetrics } from "@/lib/server-analytics-data";
+import {
+  loadDeviceBreakdownFromDatabase,
+  loadPagePerformanceMetrics,
+} from "@/lib/server-analytics-data";
 import type { PagePerformanceMetricOverride } from "@/lib/server-analytics-data";
 import {
   DEFAULT_SERVER_ANALYTICS_SETTINGS,
@@ -241,7 +244,9 @@ function cloneDeviceStats(entries: DeviceStat[]): DeviceStat[] {
   return entries.map((entry) => ({ ...entry }));
 }
 
-function cloneVisitorDistribution(entries: VisitorDistributionSegment[]): VisitorDistributionSegment[] {
+function cloneVisitorDistribution(
+  entries: VisitorDistributionSegment[],
+): VisitorDistributionSegment[] {
   return entries.map((entry) => ({ ...entry }));
 }
 
@@ -274,7 +279,7 @@ function buildAggregatedPageEntries(
 
     const base = metadata.get(metric.path);
     const weight = Number.isFinite(metric.weight) ? Math.max(0, Math.round(metric.weight ?? 0)) : 0;
-    const views = weight > 0 ? weight : base?.views ?? 0;
+    const views = weight > 0 ? weight : (base?.views ?? 0);
 
     entries.push({
       path: metric.path,
@@ -284,7 +289,7 @@ function buildAggregatedPageEntries(
       avgTimeOnPageSeconds:
         metric.avgTimeOnPageSeconds !== null && metric.avgTimeOnPageSeconds !== undefined
           ? metric.avgTimeOnPageSeconds
-          : base?.avgTimeOnPageSeconds ?? 0,
+          : (base?.avgTimeOnPageSeconds ?? 0),
       loadTimeMs: metric.avgPageLoadMs,
       lcpMs: metric.lcpMs ?? base?.lcpMs ?? 0,
       bounceRate: base?.bounceRate ?? 0,
@@ -364,11 +369,15 @@ function formatTimeRange(start: Date | string | number, end: Date | string | num
 function applyHttpSummaryOverrides(base: ServerSummary, row: AnalyticsHttpSummary): ServerSummary {
   const totalRequests = Math.max(0, row.totalRequests);
   const totalErrors = Math.max(0, row.clientErrorRequests + row.serverErrorRequests);
-  const averageResponse = Number.isFinite(row.averageDurationMs) ? Math.max(0, row.averageDurationMs) : base.averageResponseTimeMs;
+  const averageResponse = Number.isFinite(row.averageDurationMs)
+    ? Math.max(0, row.averageDurationMs)
+    : base.averageResponseTimeMs;
   const uptime = Number.isFinite(row.uptimePercentage ?? NaN)
     ? clamp(Number(row.uptimePercentage), 0, 100)
     : base.uptimePercentage;
-  const cacheHitRate = Number.isFinite(row.cacheHitRate) ? clamp(Number(row.cacheHitRate), 0, 1) : base.cacheHitRate;
+  const cacheHitRate = Number.isFinite(row.cacheHitRate)
+    ? clamp(Number(row.cacheHitRate), 0, 1)
+    : base.cacheHitRate;
 
   return {
     ...base,
@@ -380,7 +389,10 @@ function applyHttpSummaryOverrides(base: ServerSummary, row: AnalyticsHttpSummar
   };
 }
 
-function applyRequestBreakdownOverrides(base: RequestBreakdown, row: AnalyticsHttpSummary): RequestBreakdown {
+function applyRequestBreakdownOverrides(
+  base: RequestBreakdown,
+  row: AnalyticsHttpSummary,
+): RequestBreakdown {
   const frontendPayloadKb = row.frontendAvgPayloadBytes / 1024;
   const hasFrontendData = row.frontendRequests > 0;
   const hasMemberData = row.membersRequests > 0;
@@ -390,7 +402,9 @@ function applyRequestBreakdownOverrides(base: RequestBreakdown, row: AnalyticsHt
       ...base.frontend,
       requests: Math.max(0, row.frontendRequests),
       avgResponseTimeMs:
-        hasFrontendData && Number.isFinite(row.frontendAvgResponseMs) && row.frontendAvgResponseMs >= 0
+        hasFrontendData &&
+        Number.isFinite(row.frontendAvgResponseMs) &&
+        row.frontendAvgResponseMs >= 0
           ? Math.round(row.frontendAvgResponseMs)
           : base.frontend.avgResponseTimeMs,
       cacheHitRate:
@@ -513,7 +527,10 @@ function deriveVisitorDistribution(
     }
   }
 
-  const totalRequests = segments.reduce((total, segment) => total + Math.max(0, segment.requests), 0);
+  const totalRequests = segments.reduce(
+    (total, segment) => total + Math.max(0, segment.requests),
+    0,
+  );
   const denominator = totalRequests > 0 ? totalRequests : totalFallback;
 
   if (denominator > 0) {
@@ -534,7 +551,10 @@ function convertTrafficSourcesFromDatabase(rows: AnalyticsTrafficSource[]): Traf
     .map((row) => ({
       channel: row.channel,
       sessions: Math.max(0, row.sessions),
-      avgSessionDurationSeconds: Math.max(0, Math.round(Number(row.avgSessionDurationSeconds ?? 0))),
+      avgSessionDurationSeconds: Math.max(
+        0,
+        Math.round(Number(row.avgSessionDurationSeconds ?? 0)),
+      ),
       conversionRate: clamp(Number(row.conversionRate ?? 0), 0, 1),
       changePercent: Number.isFinite(row.changePercent) ? Number(row.changePercent) : 0,
     }))
@@ -592,10 +612,7 @@ async function loadHttpAggregationsFromDatabase() {
       orderBy: { windowEnd: "desc" },
     }),
     prisma.analyticsHttpPeakHour.findMany({
-      orderBy: [
-        { requests: "desc" },
-        { bucketStart: "desc" },
-      ],
+      orderBy: [{ requests: "desc" }, { bucketStart: "desc" }],
       take: 8,
     }),
   ]);
@@ -665,7 +682,7 @@ async function getDiskUsageSnapshot(path: string): Promise<DiskUsageSnapshot> {
   const blockSize = clamp(stats.bsize ?? 0, 0, Number.MAX_SAFE_INTEGER);
   const totalBlocks = clamp(stats.blocks ?? 0, 0, Number.MAX_SAFE_INTEGER);
   const availableBlocksValue =
-    typeof stats.bavail === "number" && stats.bavail >= 0 ? stats.bavail : stats.bfree ?? 0;
+    typeof stats.bavail === "number" && stats.bavail >= 0 ? stats.bavail : (stats.bfree ?? 0);
   const availableBlocks = clamp(availableBlocksValue, 0, totalBlocks);
 
   const totalBytes = blockSize * totalBlocks;
@@ -700,7 +717,8 @@ function calculateChangePercent(id: string, currentValue: number) {
 function finalizeResourceMeasurement(measurement: ResourceMeasurement): ServerResourceUsage {
   const sanitizedUsage = clamp(measurement.usagePercent, 0, 100);
   const roundedUsage = Math.round(sanitizedUsage * 10) / 10;
-  const changePercent = Math.round(calculateChangePercent(measurement.id, roundedUsage) * 100) / 100;
+  const changePercent =
+    Math.round(calculateChangePercent(measurement.id, roundedUsage) * 100) / 100;
 
   return {
     ...measurement,
@@ -782,11 +800,17 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   };
   let visitorDistribution = cloneVisitorDistribution(DEFAULT_ANALYTICS.visitorDistribution);
   let peakHours: PeakHour[] = (DEFAULT_ANALYTICS.peakHours ?? []).map((entry) => ({ ...entry }));
-  let trafficSources: TrafficSource[] = DEFAULT_ANALYTICS.trafficSources.map((entry) => ({ ...entry }));
-  let sessionInsights: SessionInsight[] = DEFAULT_ANALYTICS.sessionInsights.map((entry) => ({ ...entry }));
-  let optimizationInsights: OptimizationInsight[] = DEFAULT_ANALYTICS.optimizationInsights.map((entry) => ({
+  let trafficSources: TrafficSource[] = DEFAULT_ANALYTICS.trafficSources.map((entry) => ({
     ...entry,
   }));
+  let sessionInsights: SessionInsight[] = DEFAULT_ANALYTICS.sessionInsights.map((entry) => ({
+    ...entry,
+  }));
+  let optimizationInsights: OptimizationInsight[] = DEFAULT_ANALYTICS.optimizationInsights.map(
+    (entry) => ({
+      ...entry,
+    }),
+  );
   let latestHttpSummary: AnalyticsHttpSummary | null = null;
   let hasDynamicOptimizationData = false;
   const databaseSegments: Record<
@@ -862,18 +886,22 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
           console.error("[server-analytics] Failed to load session summary", error);
           return null;
         }),
-      prisma.analyticsSessionInsight.findMany({
-        orderBy: { generatedAt: "desc" },
-      }).catch((error) => {
-        console.error("[server-analytics] Failed to load session insights", error);
-        return null;
-      }),
-      prisma.analyticsTrafficSource.findMany({
-        orderBy: { generatedAt: "desc" },
-      }).catch((error) => {
-        console.error("[server-analytics] Failed to load traffic sources", error);
-        return null;
-      }),
+      prisma.analyticsSessionInsight
+        .findMany({
+          orderBy: { generatedAt: "desc" },
+        })
+        .catch((error) => {
+          console.error("[server-analytics] Failed to load session insights", error);
+          return null;
+        }),
+      prisma.analyticsTrafficSource
+        .findMany({
+          orderBy: { generatedAt: "desc" },
+        })
+        .catch((error) => {
+          console.error("[server-analytics] Failed to load traffic sources", error);
+          return null;
+        }),
       prisma.analyticsRealtimeSummary
         .findFirst({
           orderBy: { windowEnd: "desc" },

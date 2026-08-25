@@ -74,7 +74,8 @@ export async function POST(request: Request) {
     const formattedStart = formatter.format(rehearsal.start);
     const locationInfo = rehearsal.location ? ` · Ort: ${rehearsal.location}` : "";
 
-    const creatorId = rehearsal.createdBy && rehearsal.createdBy !== userId ? rehearsal.createdBy : null;
+    const creatorId =
+      rehearsal.createdBy && rehearsal.createdBy !== userId ? rehearsal.createdBy : null;
     const creatorNotification = creatorId
       ? (() => {
           if (nextStatus === "emergency") {

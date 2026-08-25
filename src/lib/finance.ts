@@ -21,7 +21,10 @@ export const FINANCE_ENTRY_STATUS_LABELS: Record<FinanceEntryStatus, string> = {
   cancelled: "Storniert",
 };
 
-export const FINANCE_ENTRY_STATUS_TONES: Record<FinanceEntryStatus, "default" | "info" | "warning" | "success" | "destructive"> = {
+export const FINANCE_ENTRY_STATUS_TONES: Record<
+  FinanceEntryStatus,
+  "default" | "info" | "warning" | "success" | "destructive"
+> = {
   draft: "default",
   pending: "warning",
   approved: "success",
@@ -54,7 +57,9 @@ export const FINANCE_VISIBILITY_LABELS: Record<VisibilityScope, string> = {
 };
 
 export function isFinanceEntryStatus(value: unknown): value is FinanceEntryStatus {
-  return typeof value === "string" && FINANCE_ENTRY_STATUS_VALUES.includes(value as FinanceEntryStatus);
+  return (
+    typeof value === "string" && FINANCE_ENTRY_STATUS_VALUES.includes(value as FinanceEntryStatus)
+  );
 }
 
 export function isFinanceEntryKind(value: unknown): value is FinanceEntryKind {

@@ -8,12 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ProductionWorkspaceNav } from "./workspace-nav";
 import { ClapperboardIcon } from "@/components/ui/action-icons";
 
-type WorkspaceKey =
-  | "overview"
-  | "departments"
-  | "casting"
-  | "scenes"
-  | "feedback";
+type WorkspaceKey = "overview" | "departments" | "casting" | "scenes" | "feedback";
 
 type ProductionSummary = {
   id: string;
@@ -73,22 +68,14 @@ export function ProductionWorkspaceHeader({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             {hideTitle ? null : (
-              <h1 className="text-3xl font-semibold text-foreground md:text-4xl">
-                {title}
-              </h1>
+              <h1 className="text-3xl font-semibold text-foreground md:text-4xl">{title}</h1>
             )}
-            <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
-              {description}
-            </p>
+            <p className="max-w-3xl text-sm text-muted-foreground md:text-base">{description}</p>
           </div>
-          {actions ? (
-            <div className="flex flex-wrap items-center gap-2">{actions}</div>
-          ) : null}
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
 
-        {showNavigation ? (
-          <ProductionWorkspaceNav active={activeWorkspace} />
-        ) : null}
+        {showNavigation ? <ProductionWorkspaceNav active={activeWorkspace} /> : null}
         {showDivider ? <div className="border-b border-border/60" /> : null}
       </div>
 
@@ -111,28 +98,21 @@ export function ProductionWorkspaceHeader({
               </Badge>
             </div>
             {production?.synopsis ? (
-              <p className="text-sm text-muted-foreground">
-                {production.synopsis}
-              </p>
+              <p className="text-sm text-muted-foreground">{production.synopsis}</p>
             ) : null}
           </CardHeader>
           {production ? (
             summaryActions ? (
-              <CardContent className="flex flex-wrap gap-2">
-                {summaryActions}
-              </CardContent>
+              <CardContent className="flex flex-wrap gap-2">{summaryActions}</CardContent>
             ) : null
           ) : (
             <CardContent className="flex flex-wrap items-center gap-3">
               <p className="text-sm text-muted-foreground">
-                Ohne aktive Produktion fehlen Rollen, Szenen und Aufgaben. Wähle
-                eine Produktion aus oder lege eine neue an, um loszulegen.
+                Ohne aktive Produktion fehlen Rollen, Szenen und Aufgaben. Wähle eine Produktion aus
+                oder lege eine neue an, um loszulegen.
               </p>
               <Button asChild size="sm" variant="outline" className="ml-auto">
-                <Link
-                  href="/mitglieder/produktionen"
-                  title="Produktion auswählen"
-                >
+                <Link href="/mitglieder/produktionen" title="Produktion auswählen">
                   <ClapperboardIcon aria-hidden className="h-4 w-4" />
                   <span>Produktion auswählen</span>
                 </Link>
@@ -157,13 +137,9 @@ export function ProductionWorkspaceHeader({
               {stat.content ? (
                 <div className="mt-2">{stat.content}</div>
               ) : (
-                <div className="mt-2 text-2xl font-semibold text-foreground">
-                  {stat.value}
-                </div>
+                <div className="mt-2 text-2xl font-semibold text-foreground">{stat.value}</div>
               )}
-              {stat.hint ? (
-                <p className="text-xs text-muted-foreground">{stat.hint}</p>
-              ) : null}
+              {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
             </div>
           ))}
         </div>

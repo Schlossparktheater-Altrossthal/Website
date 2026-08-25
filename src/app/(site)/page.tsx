@@ -19,8 +19,10 @@ import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 export default async function PublicHomePage() {
   const publicVisibility = await getPublicPageVisibility();
   const availableHeroImages = getHeroImages();
-  const selectedHeroImage = pickHeroForNow(availableHeroImages) ?? "https://picsum.photos/id/1069/1600/900";
-  const heroImages = availableHeroImages.length > 0 ? availableHeroImages.slice(0, 5) : [selectedHeroImage];
+  const selectedHeroImage =
+    pickHeroForNow(availableHeroImages) ?? "https://picsum.photos/id/1069/1600/900";
+  const heroImages =
+    availableHeroImages.length > 0 ? availableHeroImages.slice(0, 5) : [selectedHeroImage];
   let countdownRecord = null;
   const hasDatabase = Boolean(process.env.DATABASE_URL);
   if (hasDatabase) {
@@ -32,17 +34,27 @@ export default async function PublicHomePage() {
   }
   const resolvedCountdown = resolvePremiereCountdownSettings(countdownRecord);
   let productionFlyer = null;
-  if (hasDatabase) { try { productionFlyer = await readProductionFlyerSettings(); } catch {} }
+  if (hasDatabase) {
+    try {
+      productionFlyer = await readProductionFlyerSettings();
+    } catch {}
+  }
   const faqContent = await readFaqContent();
   const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
   const initialCountdownTargetIso = resolvedCountdown.countdownTarget
     ? resolvedCountdown.countdownTarget.toISOString()
     : null;
-  const updatedAtIso = resolvedCountdown.updatedAt ? resolvedCountdown.updatedAt.toISOString() : null;
+  const updatedAtIso = resolvedCountdown.updatedAt
+    ? resolvedCountdown.updatedAt.toISOString()
+    : null;
 
   return (
     <div>
-      <Hero images={heroImages} showMysteryLink={publicVisibility.mystery} showTimelineLink={publicVisibility.timeline} />
+      <Hero
+        images={heroImages}
+        showMysteryLink={publicVisibility.mystery}
+        showTimelineLink={publicVisibility.timeline}
+      />
       <div className="layout-container">
         <div className="space-y-12 py-16">
           <section className="flex flex-col items-center gap-6 text-center">
@@ -70,7 +82,12 @@ export default async function PublicHomePage() {
               />
             </div>
           </section>
-          <ShowFlyerSection active={productionFlyer?.aktiv ?? false} title={productionFlyer?.titel ?? null} description={productionFlyer?.beschreibung ?? null} hasImage={Boolean(productionFlyer?.bildData && productionFlyer?.bildMimeType)} />
+          <ShowFlyerSection
+            active={productionFlyer?.aktiv ?? false}
+            title={productionFlyer?.titel ?? null}
+            description={productionFlyer?.beschreibung ?? null}
+            hasImage={Boolean(productionFlyer?.bildData && productionFlyer?.bildMimeType)}
+          />
           <HomepageLinkCards />
           <section className="relative mt-24 overflow-hidden rounded-3xl border border-border/60 bg-card/90 text-card-foreground shadow-2xl">
             <div
@@ -86,7 +103,11 @@ export default async function PublicHomePage() {
                 >
                   FAQ
                 </Badge>
-                <Heading level="h2" align="center" className="text-[clamp(2rem,5.5vw,3.4rem)] font-extrabold">
+                <Heading
+                  level="h2"
+                  align="center"
+                  className="text-[clamp(2rem,5.5vw,3.4rem)] font-extrabold"
+                >
                   Häufig gestellte Fragen
                 </Heading>
               </div>

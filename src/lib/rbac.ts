@@ -5,7 +5,10 @@ import { applyImpersonation } from "@/lib/auth/impersonation";
 
 export { ROLES, type Role } from "@/lib/roles";
 
-export function hasRole(user: { role?: Role; roles?: Role[] } | null | undefined, ...roles: Role[]) {
+export function hasRole(
+  user: { role?: Role; roles?: Role[] } | null | undefined,
+  ...roles: Role[]
+) {
   if (!roles.length) return true;
   if (!user) return false;
 

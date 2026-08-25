@@ -13,7 +13,18 @@ import type {
 import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ActivityIcon, ArrowLeftIcon, BarChart3Icon, CalendarClockIcon, CalendarIcon, HistoryIcon, ListChecksIcon, MailIcon, ShieldCheckIcon, SparklesIcon } from "@/components/ui/action-icons";
+import {
+  ActivityIcon,
+  ArrowLeftIcon,
+  BarChart3Icon,
+  CalendarClockIcon,
+  CalendarIcon,
+  HistoryIcon,
+  ListChecksIcon,
+  MailIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+} from "@/components/ui/action-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
@@ -27,10 +38,16 @@ import { getUserDisplayName } from "@/lib/names";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { ImpersonationButton } from "./impersonation-button";
-import { getRolePreferenceDescription, getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
+import {
+  getRolePreferenceDescription,
+  getRolePreferenceTitle,
+} from "@/lib/onboarding/role-preferences";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
-const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" });
+const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 const numberFormatter = new Intl.NumberFormat("de-DE");
 const percentFormatter = new Intl.NumberFormat("de-DE", {
   style: "percent",
@@ -191,7 +208,8 @@ function resolvePhotoConsent(consent: PhotoConsentSelection | null): PhotoConsen
   const status = consent.status;
   const label = PHOTO_STATUS_LABELS[status] ?? "Status unbekannt";
   const description = PHOTO_STATUS_DESCRIPTIONS[status] ?? "Status konnte nicht bestimmt werden.";
-  const className = PHOTO_STATUS_CLASSES[status] ?? "border-border/70 bg-muted/40 text-muted-foreground";
+  const className =
+    PHOTO_STATUS_CLASSES[status] ?? "border-border/70 bg-muted/40 text-muted-foreground";
   const updatedAt = consent.approvedAt ?? consent.updatedAt ?? null;
 
   return {
@@ -217,7 +235,9 @@ function resolveRolePreferenceDescription(code: string) {
 }
 
 function resolveRolePreferenceWeightLabel(weight: number) {
-  const match = [...ROLE_PREFERENCE_WEIGHT_LABELS].reverse().find((entry) => weight >= entry.threshold);
+  const match = [...ROLE_PREFERENCE_WEIGHT_LABELS]
+    .reverse()
+    .find((entry) => weight >= entry.threshold);
   return match?.label ?? "Interesse";
 }
 
@@ -225,7 +245,13 @@ function rolePreferenceSectionLabel(domain: "acting" | "crew") {
   return domain === "acting" ? "Schauspiel" : "Gewerke";
 }
 
-function RolePreferenceList({ domain, preferences }: { domain: "acting" | "crew"; preferences: RolePreferenceEntry[] }) {
+function RolePreferenceList({
+  domain,
+  preferences,
+}: {
+  domain: "acting" | "crew";
+  preferences: RolePreferenceEntry[];
+}) {
   if (!preferences.length) {
     return null;
   }
@@ -250,7 +276,9 @@ function RolePreferenceList({ domain, preferences }: { domain: "acting" | "crew"
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <p className="text-sm font-semibold text-foreground">{title}</p>
-                  {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+                  {description ? (
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  ) : null}
                   {preference.code.startsWith("custom-") ? (
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
                       Individueller Eintrag ({preference.code})
@@ -266,7 +294,10 @@ function RolePreferenceList({ domain, preferences }: { domain: "acting" | "crew"
                 <span>{ROLE_PREFERENCE_WEIGHT_FORMAT.format(safeWeight)}</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
-                <div className="h-full rounded-full bg-primary/70" style={{ width: `${barWidth}%` }} />
+                <div
+                  className="h-full rounded-full bg-primary/70"
+                  style={{ width: `${barWidth}%` }}
+                />
               </div>
             </li>
           );
@@ -319,7 +350,9 @@ function ActivityStatCard({ label, value, hint, icon }: ActivityStatCardProps) {
     <div className="rounded-lg border border-border/60 bg-background/70 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </div>
           <div className="mt-2 text-2xl font-semibold text-foreground">{value}</div>
           {hint ? <div className="mt-2 text-xs text-muted-foreground">{hint}</div> : null}
         </div>
@@ -549,14 +582,13 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   for (let offset = monthRange - 1; offset >= 0; offset -= 1) {
     const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
     const monthKey = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
-    const bucket =
-      monthlyBuckets.get(monthKey) ?? {
-        yes: 0,
-        no: 0,
-        maybe: 0,
-        emergency: 0,
-        total: 0,
-      };
+    const bucket = monthlyBuckets.get(monthKey) ?? {
+      yes: 0,
+      no: 0,
+      maybe: 0,
+      emergency: 0,
+      total: 0,
+    };
     monthlyStats.push({
       key: monthKey,
       label: monthFormatter.format(monthDate),
@@ -664,7 +696,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     responsesHintParts.push(`${numberFormatter.format(attendanceStatusCounts.yes)} Zusagen`);
   }
   if (attendanceStatusCounts.maybe > 0) {
-    responsesHintParts.push(`${numberFormatter.format(attendanceStatusCounts.maybe)} Unentschieden`);
+    responsesHintParts.push(
+      `${numberFormatter.format(attendanceStatusCounts.maybe)} Unentschieden`,
+    );
   }
   const declines = attendanceStatusCounts.no + attendanceStatusCounts.emergency;
   if (declines > 0) {
@@ -688,9 +722,10 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     ? upcomingHintParts.join(" · ")
     : "Keine anstehenden Proben mit Rückmeldungen.";
 
-  const tasksHint = openTaskCount > 0
-    ? `${numberFormatter.format(overdueCount)} überfällig · ${numberFormatter.format(dueSoonCount)} in 7 Tagen`
-    : "Keine offenen Aufgaben.";
+  const tasksHint =
+    openTaskCount > 0
+      ? `${numberFormatter.format(overdueCount)} überfällig · ${numberFormatter.format(dueSoonCount)} in 7 Tagen`
+      : "Keine offenen Aufgaben.";
 
   const displayName = getUserDisplayName(
     {
@@ -708,19 +743,34 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   ]);
 
   const customRoles = member.appRoles
-    .map((entry: { role: { id: string; name: string; systemRole: Role | null; isSystem: boolean } | null }) => entry.role)
+    .map(
+      (entry: {
+        role: { id: string; name: string; systemRole: Role | null; isSystem: boolean } | null;
+      }) => entry.role,
+    )
     .filter(
-      (role: { id: string; name: string; systemRole: Role | null; isSystem: boolean } | null): role is {
-        id: string; name: string; systemRole: Role | null; isSystem: boolean
+      (
+        role: { id: string; name: string; systemRole: Role | null; isSystem: boolean } | null,
+      ): role is {
+        id: string;
+        name: string;
+        systemRole: Role | null;
+        isSystem: boolean;
       } => Boolean(role),
     )
-    .filter((role: { id: string; name: string; systemRole: Role | null; isSystem: boolean }) => !role.systemRole)
+    .filter(
+      (role: { id: string; name: string; systemRole: Role | null; isSystem: boolean }) =>
+        !role.systemRole,
+    )
     .map((role: { id: string; name: string }) => ({ id: role.id, name: role.name }));
 
   const interestNames: string[] = Array.from(
     new Set<string>(
       member.interests
-        .map((entry: { interest: { name: string | null } | null }) => entry.interest?.name?.trim() ?? null)
+        .map(
+          (entry: { interest: { name: string | null } | null }) =>
+            entry.interest?.name?.trim() ?? null,
+        )
         .filter((value: string | null): value is string => Boolean(value && value.length > 0)),
     ),
   );
@@ -733,16 +783,20 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     : `Seit ${formatDate(member.createdAt)}`;
 
   const onboardingFocus = (member.onboardingProfile?.focus ?? null) as OnboardingFocus | null;
-  const onboardingFocusLabel = onboardingFocus ? ONBOARDING_FOCUS_LABELS[onboardingFocus] : "Kein Schwerpunkt hinterlegt";
+  const onboardingFocusLabel = onboardingFocus
+    ? ONBOARDING_FOCUS_LABELS[onboardingFocus]
+    : "Kein Schwerpunkt hinterlegt";
 
   const onboardingBackground = member.onboardingProfile?.background?.trim() ?? null;
   const onboardingNotes = member.onboardingProfile?.notes?.trim() ?? null;
 
-  const rolePreferences: RolePreferenceEntry[] = (member.rolePreferences ?? []).map((preference) => ({
-    code: preference.code,
-    domain: preference.domain as RolePreferenceEntry["domain"],
-    weight: preference.weight ?? 0,
-  }));
+  const rolePreferences: RolePreferenceEntry[] = (member.rolePreferences ?? []).map(
+    (preference) => ({
+      code: preference.code,
+      domain: preference.domain as RolePreferenceEntry["domain"],
+      weight: preference.weight ?? 0,
+    }),
+  );
   const sortedRolePreferences = [...rolePreferences].sort((a, b) => {
     const weightDiff = Math.max(0, Math.min(100, b.weight)) - Math.max(0, Math.min(100, a.weight));
     if (weightDiff !== 0) {
@@ -750,8 +804,12 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     }
     return a.code.localeCompare(b.code);
   });
-  const actingRolePreferences = sortedRolePreferences.filter((preference) => preference.domain === "acting");
-  const crewRolePreferences = sortedRolePreferences.filter((preference) => preference.domain === "crew");
+  const actingRolePreferences = sortedRolePreferences.filter(
+    (preference) => preference.domain === "acting",
+  );
+  const crewRolePreferences = sortedRolePreferences.filter(
+    (preference) => preference.domain === "crew",
+  );
   const hasRolePreferences = actingRolePreferences.length > 0 || crewRolePreferences.length > 0;
 
   const email = member.email?.trim() ?? null;
@@ -769,9 +827,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   ];
 
   const canStartImpersonation = Boolean(
-    session.user?.id &&
-      session.user.id !== member.id &&
-      !(session.impersonation?.active ?? false),
+    session.user?.id && session.user.id !== member.id && !(session.impersonation?.active ?? false),
   );
 
   return (
@@ -794,21 +850,24 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
               </Link>
             </Button>
             {canStartImpersonation ? (
-              <ImpersonationButton
-                targetUserId={member.id}
-                targetName={displayName}
-              />
+              <ImpersonationButton targetUserId={member.id} targetName={displayName} />
             ) : null}
           </div>
         }
       />
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="w-full justify-start rounded-full border border-border/70 bg-background/70 p-1 shadow-inner ring-1 ring-primary/10 backdrop-blur">
-          <TabsTrigger value="overview" className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="overview"
+            className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm"
+          >
             <SparklesIcon className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Profil</span>
           </TabsTrigger>
-          <TabsTrigger value="activity" className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm">
+          <TabsTrigger
+            value="activity"
+            className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm"
+          >
             <ActivityIcon className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Aktivität</span>
           </TabsTrigger>
@@ -834,9 +893,14 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       />
                       <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <CardTitle className="text-xl font-semibold leading-tight text-foreground">{displayName}</CardTitle>
+                          <CardTitle className="text-xl font-semibold leading-tight text-foreground">
+                            {displayName}
+                          </CardTitle>
                           {isDeactivated && (
-                            <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px] uppercase tracking-wide"
+                            >
                               Deaktiviert
                             </Badge>
                           )}
@@ -847,7 +911,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                         </div>
                         {isDeactivated && (
                           <div className="text-xs text-destructive">
-                            {deactivatedAtLabel ? `Konto deaktiviert seit ${deactivatedAtLabel}.` : "Konto ist aktuell deaktiviert."}
+                            {deactivatedAtLabel
+                              ? `Konto deaktiviert seit ${deactivatedAtLabel}.`
+                              : "Konto ist aktuell deaktiviert."}
                           </div>
                         )}
                       </div>
@@ -869,14 +935,20 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                         </span>
                       ))
                     ) : (
-                      <span className="text-sm text-muted-foreground">Keine Systemrollen zugewiesen.</span>
+                      <span className="text-sm text-muted-foreground">
+                        Keine Systemrollen zugewiesen.
+                      </span>
                     )}
                   </div>
 
                   {customRoles.length ? (
                     <div className="flex flex-wrap gap-2">
                       {customRoles.map((role: { id: string; name: string }) => (
-                        <Badge key={role.id} variant="secondary" className="border-primary/30 bg-primary/10 text-primary">
+                        <Badge
+                          key={role.id}
+                          variant="secondary"
+                          className="border-primary/30 bg-primary/10 text-primary"
+                        >
                           {role.name}
                         </Badge>
                       ))}
@@ -886,11 +958,16 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                   <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                     <MailIcon className="h-4 w-4" aria-hidden />
                     {email ? (
-                      <a href={`mailto:${email}`} className="font-medium text-foreground transition hover:text-primary">
+                      <a
+                        href={`mailto:${email}`}
+                        className="font-medium text-foreground transition hover:text-primary"
+                      >
                         {email}
                       </a>
                     ) : (
-                      <span className="italic text-muted-foreground">Keine E-MailIcon hinterlegt</span>
+                      <span className="italic text-muted-foreground">
+                        Keine E-MailIcon hinterlegt
+                      </span>
                     )}
                   </div>
                 </CardContent>
@@ -914,7 +991,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       <p className="mt-2 text-xs text-muted-foreground">{onboardingBackground}</p>
                     ) : null}
                     {onboardingNotes ? (
-                      <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{onboardingNotes}</p>
+                      <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">
+                        {onboardingNotes}
+                      </p>
                     ) : null}
                   </div>
 
@@ -955,10 +1034,14 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                         {photoConsentInfo.label}
                       </Badge>
                       {photoConsentUpdatedAt ? (
-                        <span className="text-xs text-muted-foreground">Stand: {photoConsentUpdatedAt}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Stand: {photoConsentUpdatedAt}
+                        </span>
                       ) : null}
                     </div>
-                    <p className="mt-2 text-xs text-muted-foreground">{photoConsentInfo.description}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {photoConsentInfo.description}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -968,24 +1051,40 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
               <Card className="border border-border/70">
                 <CardHeader className="space-y-2">
                   <CardTitle>Stammdaten</CardTitle>
-                  <p className="text-sm text-muted-foreground">Zentrale Kontaktdaten und interne Kennungen des Mitglieds.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Zentrale Kontaktdaten und interne Kennungen des Mitglieds.
+                  </p>
                 </CardHeader>
                 <CardContent>
                   <dl className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Vorname</dt>
-                      <dd className="text-sm font-medium text-foreground">{member.firstName?.trim() || "—"}</dd>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Vorname
+                      </dt>
+                      <dd className="text-sm font-medium text-foreground">
+                        {member.firstName?.trim() || "—"}
+                      </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nachname</dt>
-                      <dd className="text-sm font-medium text-foreground">{member.lastName?.trim() || "—"}</dd>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Nachname
+                      </dt>
+                      <dd className="text-sm font-medium text-foreground">
+                        {member.lastName?.trim() || "—"}
+                      </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Anzeigename</dt>
-                      <dd className="text-sm font-medium text-foreground">{member.name?.trim() || "—"}</dd>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Anzeigename
+                      </dt>
+                      <dd className="text-sm font-medium text-foreground">
+                        {member.name?.trim() || "—"}
+                      </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">E-MailIcon</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        E-MailIcon
+                      </dt>
                       <dd className="text-sm font-medium text-foreground">
                         {email ? (
                           <a href={`mailto:${email}`} className="transition hover:text-primary">
@@ -997,7 +1096,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Geburtsdatum</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Geburtsdatum
+                      </dt>
                       <dd className="space-y-0.5">
                         <div className="text-sm font-semibold text-foreground">
                           {dateOfBirthAge != null ? `${dateOfBirthAge} Jahre` : "—"}
@@ -1006,11 +1107,17 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Konto erstellt</dt>
-                      <dd className="text-sm font-medium text-foreground">{createdAtLabel ?? "—"}</dd>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Konto erstellt
+                      </dt>
+                      <dd className="text-sm font-medium text-foreground">
+                        {createdAtLabel ?? "—"}
+                      </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mitglieds-ID</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Mitglieds-ID
+                      </dt>
                       <dd className="text-xs font-mono text-muted-foreground">{member.id}</dd>
                     </div>
                     <div className="space-y-1">
@@ -1022,25 +1129,33 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kontoinhaber</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Kontoinhaber
+                      </dt>
                       <dd className="text-sm font-medium text-foreground">
                         {member.payoutAccountHolder?.trim() || "—"}
                       </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Bank</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Bank
+                      </dt>
                       <dd className="text-sm font-medium text-foreground">
                         {member.payoutBankName?.trim() || "—"}
                       </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">IBAN</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        IBAN
+                      </dt>
                       <dd className="text-sm font-medium text-foreground font-mono">
                         {member.payoutIban ? formatIban(member.payoutIban) : "—"}
                       </dd>
                     </div>
                     <div className="space-y-1">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PayPal</dt>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        PayPal
+                      </dt>
                       <dd className="text-sm font-medium text-foreground break-all">
                         {member.payoutPaypalHandle?.trim() || "—"}
                       </dd>
@@ -1074,7 +1189,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Systemrollen</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Systemrollen
+                    </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {systemRoles.length ? (
                         systemRoles.map((role) => (
@@ -1089,22 +1206,32 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                           </span>
                         ))
                       ) : (
-                        <span className="text-sm text-muted-foreground">Keine Systemrollen vergeben.</span>
+                        <span className="text-sm text-muted-foreground">
+                          Keine Systemrollen vergeben.
+                        </span>
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Zusätzliche Rollen</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Zusätzliche Rollen
+                    </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {customRoles.length ? (
                         customRoles.map((role: { id: string; name: string }) => (
-                          <Badge key={role.id} variant="outline" className="border-primary/30 bg-primary/5 text-primary">
+                          <Badge
+                            key={role.id}
+                            variant="outline"
+                            className="border-primary/30 bg-primary/5 text-primary"
+                          >
                             {role.name}
                           </Badge>
                         ))
                       ) : (
-                        <span className="text-sm text-muted-foreground">Keine zusätzlichen Rollen hinterlegt.</span>
+                        <span className="text-sm text-muted-foreground">
+                          Keine zusätzlichen Rollen hinterlegt.
+                        </span>
                       )}
                     </div>
                   </div>
@@ -1115,7 +1242,8 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                 <CardHeader className="space-y-2">
                   <CardTitle>Interessen &amp; Talente</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Schlagworte aus dem Mitgliederprofil unterstützen bei der Planung von Besetzungen und Aufgaben.
+                    Schlagworte aus dem Mitgliederprofil unterstützen bei der Planung von
+                    Besetzungen und Aufgaben.
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -1132,7 +1260,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Noch keine Interessen hinterlegt.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Noch keine Interessen hinterlegt.
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -1197,7 +1327,10 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                         return (
                           <span
                             key={`${month.key}-${status}`}
-                            className={cn("h-full", ATTENDANCE_STATUS_SEGMENT_CLASSES[status] ?? DEFAULT_SEGMENT_CLASS)}
+                            className={cn(
+                              "h-full",
+                              ATTENDANCE_STATUS_SEGMENT_CLASSES[status] ?? DEFAULT_SEGMENT_CLASS,
+                            )}
                             style={{ width: `${width}%` }}
                           />
                         );
@@ -1230,10 +1363,14 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                 {lastActivityRelative || lastActivityAbsolute ? (
                   <span className="text-xs text-muted-foreground">
                     Zuletzt aktualisiert {lastActivityRelative ?? lastActivityAbsolute}
-                    {lastActivityRelative && lastActivityAbsolute ? ` (${lastActivityAbsolute})` : null}
+                    {lastActivityRelative && lastActivityAbsolute
+                      ? ` (${lastActivityAbsolute})`
+                      : null}
                   </span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Noch keine Änderungen protokolliert</span>
+                  <span className="text-xs text-muted-foreground">
+                    Noch keine Änderungen protokolliert
+                  </span>
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
@@ -1267,12 +1404,17 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           <span>{entry.rehearsalTitle}</span>
-                          {entry.rehearsalDateLabel ? <span>{entry.rehearsalDateLabel}</span> : null}
+                          {entry.rehearsalDateLabel ? (
+                            <span>{entry.rehearsalDateLabel}</span>
+                          ) : null}
                           <span>
-                            Aktualisiert {entry.changedAtRelative ?? entry.changedAtLabel} durch {entry.changedBy}
+                            Aktualisiert {entry.changedAtRelative ?? entry.changedAtLabel} durch{" "}
+                            {entry.changedBy}
                           </span>
                           {entry.changedAtRelative && entry.changedAtLabel ? (
-                            <span className="text-muted-foreground/70">({entry.changedAtLabel})</span>
+                            <span className="text-muted-foreground/70">
+                              ({entry.changedAtLabel})
+                            </span>
                           ) : null}
                         </div>
                         {entry.comment ? (

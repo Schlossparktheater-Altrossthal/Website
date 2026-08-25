@@ -21,8 +21,7 @@ interface OfflineSyncContextValue {
   applyDeltas: (delta: OfflineDelta) => Promise<void>;
 }
 
-const OfflineSyncContext =
-  React.createContext<OfflineSyncContextValue | undefined>(undefined);
+const OfflineSyncContext = React.createContext<OfflineSyncContextValue | undefined>(undefined);
 
 function createId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -65,9 +64,7 @@ function buildAudit(
   };
 }
 
-export async function enqueueEvent(
-  input: PendingEventInput,
-): Promise<PendingEvent> {
+export async function enqueueEvent(input: PendingEventInput): Promise<PendingEvent> {
   const db = ensureDb();
   const baseCreatedAt = input.createdAt ?? nowIso();
   const pendingEvent: PendingEvent = {
@@ -122,9 +119,7 @@ export async function enqueueEvent(
   });
 }
 
-export async function consumeEvents(
-  limit = 20,
-): Promise<PendingEvent[]> {
+export async function consumeEvents(limit = 20): Promise<PendingEvent[]> {
   const db = ensureDb();
   const normalizedLimit = Math.max(0, limit);
 
@@ -133,10 +128,7 @@ export async function consumeEvents(
   }
 
   return db.transaction("rw", db.eventQueue, db.audits, async () => {
-    const events = await db.eventQueue
-      .orderBy("createdAt")
-      .limit(normalizedLimit)
-      .toArray();
+    const events = await db.eventQueue.orderBy("createdAt").limit(normalizedLimit).toArray();
 
     if (events.length === 0) {
       return events;
@@ -300,20 +292,12 @@ export async function applyDeltas(delta: OfflineDelta) {
 }
 
 function createUnsupportedPromise<T = never>() {
-  return Promise.reject<T>(
-    new Error("Offline persistence is not available in this environment."),
-  );
+  return Promise.reject<T>(new Error("Offline persistence is not available in this environment."));
 }
 
-export function OfflineSyncProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function OfflineSyncProvider({ children }: { children: React.ReactNode }) {
   const isSupported = offlineDb !== null;
-  const [isReady, setIsReady] = React.useState(
-    () => isSupported && offlineDb?.isOpen() === true,
-  );
+  const [isReady, setIsReady] = React.useState(() => isSupported && offlineDb?.isOpen() === true);
 
   React.useEffect(() => {
     if (!isSupported || !offlineDb) {
@@ -374,20 +358,14 @@ export function OfflineSyncProvider({
     };
   }, [isSupported, isReady]);
 
-  return (
-    <OfflineSyncContext.Provider value={value}>
-      {children}
-    </OfflineSyncContext.Provider>
-  );
+  return <OfflineSyncContext.Provider value={value}>{children}</OfflineSyncContext.Provider>;
 }
 
 export function useOfflineSync() {
   const context = React.useContext(OfflineSyncContext);
 
   if (!context) {
-    throw new Error(
-      "useOfflineSync must be used within an OfflineSyncProvider.",
-    );
+    throw new Error("useOfflineSync must be used within an OfflineSyncProvider.");
   }
 
   return context;

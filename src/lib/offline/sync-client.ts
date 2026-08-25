@@ -3,11 +3,7 @@
 import { createContext } from "react";
 
 import { offlineDb, type OfflineDatabase } from "./db";
-import {
-  applyDeltas,
-  applySnapshot,
-  enqueueEvent as persistEvent,
-} from "./storage";
+import { applyDeltas, applySnapshot, enqueueEvent as persistEvent } from "./storage";
 import type {
   InventoryDelta,
   InventoryItemRecord,
@@ -30,9 +26,7 @@ const INVENTORY_CATEGORY_VALUES: InventoryItemRecord["category"][] = [
   "accessories",
 ];
 
-function isInventoryCategoryValue(
-  value: string | null,
-): value is InventoryItemRecord["category"] {
+function isInventoryCategoryValue(value: string | null): value is InventoryItemRecord["category"] {
   if (!value) {
     return false;
   }
@@ -49,12 +43,7 @@ const BACKGROUND_SYNC_TAG = "workbox-background-sync:offline-events";
 const CLIENT_ID_STORAGE_KEY = "offline.sync.clientId";
 const AUTO_SYNC_SCOPES: OfflineScope[] = ["inventory", "tickets"];
 
-export type SyncActivity =
-  | "idle"
-  | "bootstrapping"
-  | "flushing"
-  | "pulling"
-  | "error";
+export type SyncActivity = "idle" | "bootstrapping" | "flushing" | "pulling" | "error";
 
 export interface SyncScopeState {
   status: SyncActivity;
@@ -98,8 +87,7 @@ export interface OfflineSyncContextValue {
   isSyncing: boolean;
 }
 
-export const OfflineSyncContext =
-  createContext<OfflineSyncContextValue | null>(null);
+export const OfflineSyncContext = createContext<OfflineSyncContextValue | null>(null);
 
 interface RequestOptions {
   retries?: number;
@@ -157,10 +145,7 @@ interface PushResponseStale extends PushResponseBase {
   status: "stale";
 }
 
-type PushResponse =
-  | PushResponseApplied
-  | PushResponseDuplicate
-  | PushResponseStale;
+type PushResponse = PushResponseApplied | PushResponseDuplicate | PushResponseStale;
 
 export interface ServerSyncEvent {
   id: string;
@@ -198,19 +183,12 @@ export type TicketRealtimeSyncPayload = {
   source?: string | null;
 };
 
-export type RealtimeSyncPayload =
-  | InventoryRealtimeSyncPayload
-  | TicketRealtimeSyncPayload;
+export type RealtimeSyncPayload = InventoryRealtimeSyncPayload | TicketRealtimeSyncPayload;
 
 export class SyncError extends Error {
   constructor(
     message: string,
-    public readonly code:
-      | "http"
-      | "network"
-      | "timeout"
-      | "stale"
-      | "unsupported",
+    public readonly code: "http" | "network" | "timeout" | "stale" | "unsupported",
     public readonly scope?: OfflineScope,
     options?: { cause?: unknown },
   ) {
@@ -453,12 +431,9 @@ export class SyncClient {
         );
       }
 
-      throw new SyncError(
-        "Failed to deliver offline events to the server.",
-        "network",
-        scope,
-        { cause: error },
-      );
+      throw new SyncError("Failed to deliver offline events to the server.", "network", scope, {
+        cause: error,
+      });
     }
   }
 
@@ -466,17 +441,14 @@ export class SyncClient {
     const db = this.ensureDb();
     const lastServerSeq = await this.getServerSeq(db, scope);
 
-    const { data } = await this.requestJson<PullResponse>(
-      "/api/sync/pull",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scope,
-          lastServerSeq,
-        }),
-      },
-    );
+    const { data } = await this.requestJson<PullResponse>("/api/sync/pull", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scope,
+        lastServerSeq,
+      }),
+    });
 
     const applied = await this.applyRealtimePayload({
       scope,
@@ -655,8 +627,7 @@ export class SyncClient {
 
   private ensureClientId(): string {
     if (typeof window === "undefined") {
-      this.fallbackClientId ??=
-        `offline-client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      this.fallbackClientId ??= `offline-client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       return this.fallbackClientId;
     }
 
@@ -675,17 +646,12 @@ export class SyncClient {
       window.localStorage.setItem(CLIENT_ID_STORAGE_KEY, newId);
       return newId;
     } catch {
-      this.fallbackClientId ??=
-        `offline-client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      this.fallbackClientId ??= `offline-client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       return this.fallbackClientId;
     }
   }
 
-  private async touchSyncState(
-    db: OfflineDatabase,
-    scope: OfflineScope,
-    serverSeq: number,
-  ) {
+  private async touchSyncState(db: OfflineDatabase, scope: OfflineScope, serverSeq: number) {
     await db.transaction("rw", db.syncState, async () => {
       const existing = await db.syncState.get(scope);
       const updatedAt = new Date().toISOString();
@@ -755,15 +721,11 @@ export class SyncClient {
 
     while (attempt <= retries) {
       const controller = new AbortController();
-      const timeoutId =
-        timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+      const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
 
       try {
         if (!this.authToken) {
-          throw new SyncError(
-            "Sync authentication token is missing.",
-            "http",
-          );
+          throw new SyncError("Sync authentication token is missing.", "http");
         }
 
         const headers = new Headers(init.headers as HeadersInit | undefined);
@@ -794,10 +756,7 @@ export class SyncClient {
             continue;
           }
 
-          throw new SyncError(
-            `Request failed with status ${response.status}`,
-            "http",
-          );
+          throw new SyncError(`Request failed with status ${response.status}`, "http");
         }
 
         return response;
@@ -967,20 +926,13 @@ export class SyncClient {
     } satisfies { upserts?: TicketRecord[]; deletes?: string[] };
   }
 
-  private extractInventoryRecord(
-    value: unknown,
-    occurredAt: string,
-  ): InventoryItemRecord | null {
+  private extractInventoryRecord(value: unknown, occurredAt: string): InventoryItemRecord | null {
     if (!value || typeof value !== "object") {
       return null;
     }
 
     const record = value as Record<string, unknown>;
-    const id = this.pickString(record, [
-      "id",
-      "itemId",
-      "inventoryItemId",
-    ]);
+    const id = this.pickString(record, ["id", "itemId", "inventoryItemId"]);
 
     if (!id) {
       return null;
@@ -992,12 +944,10 @@ export class SyncClient {
       return null;
     }
 
-    const name =
-      this.pickString(record, ["name", "label", "title"]) ?? "Unbekannt";
+    const name = this.pickString(record, ["name", "label", "title"]) ?? "Unbekannt";
     const sku = this.pickString(record, ["sku", "code"]) ?? id;
 
-    const updatedAt =
-      this.pickString(record, ["updatedAt", "occurredAt"]) ?? occurredAt;
+    const updatedAt = this.pickString(record, ["updatedAt", "occurredAt"]) ?? occurredAt;
 
     const categoryValue = this.pickString(record, ["category", "type"]);
     const category = isInventoryCategoryValue(categoryValue)
@@ -1012,11 +962,7 @@ export class SyncClient {
     ]);
     const location = this.pickString(record, ["location", "place", "room"]);
     const owner = this.pickString(record, ["owner", "responsible", "contact"]);
-    const condition = this.pickString(record, [
-      "condition",
-      "state",
-      "status",
-    ]);
+    const condition = this.pickString(record, ["condition", "state", "status"]);
 
     return {
       id,
@@ -1034,10 +980,7 @@ export class SyncClient {
     } satisfies InventoryItemRecord;
   }
 
-  private extractTicketRecord(
-    value: unknown,
-    occurredAt: string,
-  ): TicketRecord | null {
+  private extractTicketRecord(value: unknown, occurredAt: string): TicketRecord | null {
     if (!value || typeof value !== "object") {
       return null;
     }
@@ -1052,8 +995,7 @@ export class SyncClient {
       return null;
     }
 
-    const updatedAt =
-      this.pickString(record, ["updatedAt", "occurredAt"]) ?? occurredAt;
+    const updatedAt = this.pickString(record, ["updatedAt", "occurredAt"]) ?? occurredAt;
 
     const holderName = this.pickString(record, ["holderName", "name"]);
 
@@ -1067,10 +1009,7 @@ export class SyncClient {
     } satisfies TicketRecord;
   }
 
-  private pickString(
-    source: Record<string, unknown>,
-    keys: string[],
-  ): string | null {
+  private pickString(source: Record<string, unknown>, keys: string[]): string | null {
     for (const key of keys) {
       const value = source[key];
 
@@ -1082,10 +1021,7 @@ export class SyncClient {
     return null;
   }
 
-  private pickNumber(
-    source: Record<string, unknown>,
-    keys: string[],
-  ): number | null {
+  private pickNumber(source: Record<string, unknown>, keys: string[]): number | null {
     for (const key of keys) {
       const value = source[key];
 
@@ -1098,14 +1034,6 @@ export class SyncClient {
   }
 
   private extractIdentifier(payload: Record<string, unknown>): string | null {
-    return (
-      this.pickString(payload, [
-        "id",
-        "itemId",
-        "ticketId",
-        "deletedId",
-        "deleteId",
-      ]) ?? null
-    );
+    return this.pickString(payload, ["id", "itemId", "ticketId", "deletedId", "deleteId"]) ?? null;
   }
 }

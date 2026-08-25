@@ -155,9 +155,7 @@ export function buildOnboardingStatisticsPdfData(
     },
     history,
     photoConsentRate: clampPercentage(
-      dashboard.global.photoConsentRate !== null
-        ? dashboard.global.photoConsentRate * 100
-        : null,
+      dashboard.global.photoConsentRate !== null ? dashboard.global.photoConsentRate * 100 : null,
     ),
   };
 }

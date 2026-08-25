@@ -39,24 +39,8 @@ const LOAD_PATTERNS = [
   "zeit",
   "perf",
 ];
-const SHARE_PATTERNS = [
-  "share",
-  "ratio",
-  "percent",
-  "anteil",
-  "quote",
-  "quota",
-  "prozent",
-];
-const PATH_PATTERNS = [
-  "path",
-  "pfad",
-  "url",
-  "page",
-  "seite",
-  "slug",
-  "route",
-];
+const SHARE_PATTERNS = ["share", "ratio", "percent", "anteil", "quote", "quota", "prozent"];
+const PATH_PATTERNS = ["path", "pfad", "url", "page", "seite", "slug", "route"];
 const SCOPE_PATTERNS = [
   "scope",
   "section",
@@ -207,7 +191,14 @@ function findColumn(table, patterns, exclude = new Set()) {
 
 function computeScore(
   table,
-  { keywords = [], hasShare = false, hasScope = false, hasLcp = false, hasCount = false, hasTimeOnPage = false } = {},
+  {
+    keywords = [],
+    hasShare = false,
+    hasScope = false,
+    hasLcp = false,
+    hasCount = false,
+    hasTimeOnPage = false,
+  } = {},
 ) {
   let score = 0;
   const name = table.tableLower;
@@ -257,7 +248,11 @@ async function resolveDeviceTable(prisma) {
       const loadColumn = findColumn(table, LOAD_PATTERNS, exclude);
       if (!loadColumn) continue;
 
-      const shareColumn = findColumn(table, SHARE_PATTERNS, new Set([deviceColumn.original, sessionsColumn.original, loadColumn.original]));
+      const shareColumn = findColumn(
+        table,
+        SHARE_PATTERNS,
+        new Set([deviceColumn.original, sessionsColumn.original, loadColumn.original]),
+      );
       const score = computeScore(table, {
         keywords: ["device", "analytics", "load", "performance"],
         hasShare: Boolean(shareColumn),
@@ -433,13 +428,23 @@ function normalizeDeviceKey(value) {
   if (lower.includes("tv") || lower.includes("smarttv") || lower.includes("fernseh")) {
     return "tv";
   }
-  if (lower.includes("konsole") || lower.includes("console") || lower.includes("xbox") || lower.includes("playstation")) {
+  if (
+    lower.includes("konsole") ||
+    lower.includes("console") ||
+    lower.includes("xbox") ||
+    lower.includes("playstation")
+  ) {
     return "console";
   }
   if (lower.includes("watch") || lower.includes("wearable")) {
     return "wearable";
   }
-  if (lower.includes("sonst") || lower.includes("other") || lower.includes("unknown") || lower.includes("unbekannt")) {
+  if (
+    lower.includes("sonst") ||
+    lower.includes("other") ||
+    lower.includes("unknown") ||
+    lower.includes("unbekannt")
+  ) {
     return "other";
   }
   return lower.replace(/\s+/g, "_");
@@ -501,10 +506,20 @@ function normalizePath(value) {
 function normalizeScope(value, path) {
   if (value && value !== 0) {
     const lower = String(value).trim().toLowerCase();
-    if (lower.includes("member") || lower.includes("intern") || lower.includes("protected") || lower.includes("mitglieder")) {
+    if (
+      lower.includes("member") ||
+      lower.includes("intern") ||
+      lower.includes("protected") ||
+      lower.includes("mitglieder")
+    ) {
       return "members";
     }
-    if (lower.includes("public") || lower.includes("extern") || lower.includes("marketing") || lower.includes("landing")) {
+    if (
+      lower.includes("public") ||
+      lower.includes("extern") ||
+      lower.includes("marketing") ||
+      lower.includes("landing")
+    ) {
       return "public";
     }
     if (lower.includes("overall") || lower.includes("gesamt") || lower.includes("all")) {
@@ -536,7 +551,10 @@ async function loadDeviceMetricsFromDedicatedView(prisma) {
 
     for (const row of rows) {
       const deviceKey = normalizeDeviceKey(row?.device ?? row?.DEVICE ?? row?.device_key);
-      const sessions = Math.max(0, Math.round(toNumber(row?.sessions ?? row?.SESSIONS ?? row?.count)));
+      const sessions = Math.max(
+        0,
+        Math.round(toNumber(row?.sessions ?? row?.SESSIONS ?? row?.count)),
+      );
       if (!Number.isFinite(sessions) || sessions <= 0) {
         continue;
       }
@@ -669,10 +687,15 @@ export async function loadDeviceBreakdownFromDatabase() {
     const deviceKey = normalizeDeviceKey(row.device ?? row.DEVICE ?? row.Device);
     if (!deviceKey) continue;
 
-    const sessions = Math.max(0, Math.round(toNumber(row.sessions ?? row.SESSIONS ?? row.session_count)));
+    const sessions = Math.max(
+      0,
+      Math.round(toNumber(row.sessions ?? row.SESSIONS ?? row.session_count)),
+    );
     if (!Number.isFinite(sessions) || sessions <= 0) continue;
 
-    const loadMs = normalizeDurationToMs(row.avg_load ?? row.AVG_LOAD ?? row.avg_load_ms ?? row.average_load);
+    const loadMs = normalizeDurationToMs(
+      row.avg_load ?? row.AVG_LOAD ?? row.avg_load_ms ?? row.average_load,
+    );
 
     if (!buckets.has(deviceKey)) {
       buckets.set(deviceKey, {
@@ -688,7 +711,10 @@ export async function loadDeviceBreakdownFromDatabase() {
   }
 
   const totals = Array.from(buckets.values());
-  const totalSessions = totals.reduce((sum, entry) => sum + (Number.isFinite(entry.sessions) ? entry.sessions : 0), 0);
+  const totalSessions = totals.reduce(
+    (sum, entry) => sum + (Number.isFinite(entry.sessions) ? entry.sessions : 0),
+    0,
+  );
   if (totalSessions <= 0) {
     return totals
       .map((entry) => ({
@@ -765,10 +791,14 @@ export async function loadPagePerformanceMetrics() {
     const normalizedPath = normalizePath(row.path ?? row.PAGE ?? row.url);
     if (!normalizedPath) continue;
 
-    const loadMs = normalizeDurationToMs(row.avg_load ?? row.load ?? row.avg_load_ms ?? row.average_load);
+    const loadMs = normalizeDurationToMs(
+      row.avg_load ?? row.load ?? row.avg_load_ms ?? row.average_load,
+    );
     if (!Number.isFinite(loadMs) || loadMs <= 0) continue;
 
-    const scope = match.columns.scope ? normalizeScope(row.scope, normalizedPath) : normalizeScope(null, normalizedPath);
+    const scope = match.columns.scope
+      ? normalizeScope(row.scope, normalizedPath)
+      : normalizeScope(null, normalizedPath);
 
     let weight = 1;
     if (match.columns.count) {
@@ -780,7 +810,9 @@ export async function loadPagePerformanceMetrics() {
 
     let lcpMs = null;
     if (match.columns.lcp) {
-      const parsedLcp = normalizeDurationToMs(row.lcp ?? row.LCP ?? row.lcp_ms ?? row.largest_contentful_paint);
+      const parsedLcp = normalizeDurationToMs(
+        row.lcp ?? row.LCP ?? row.lcp_ms ?? row.largest_contentful_paint,
+      );
       if (Number.isFinite(parsedLcp) && parsedLcp > 0) {
         lcpMs = parsedLcp;
       }
@@ -832,9 +864,7 @@ export async function loadPagePerformanceMetrics() {
     const avgLoad = bucket.totalLoad / bucket.totalWeight;
     const avgLcp = bucket.lcpWeight > 0 ? bucket.totalLcp / bucket.lcpWeight : null;
     const avgTimeOnPageSeconds =
-      bucket.timeOnPageWeight > 0
-        ? bucket.totalTimeOnPageSeconds / bucket.timeOnPageWeight
-        : null;
+      bucket.timeOnPageWeight > 0 ? bucket.totalTimeOnPageSeconds / bucket.timeOnPageWeight : null;
     result.push({
       path: bucket.path,
       avgPageLoadMs: Math.max(0, Math.round(avgLoad)),
@@ -894,7 +924,10 @@ export function mergeDeviceBreakdown(base, overrides) {
     }
   }
 
-  const totalSessions = result.reduce((sum, entry) => sum + (Number.isFinite(entry.sessions) ? entry.sessions : 0), 0);
+  const totalSessions = result.reduce(
+    (sum, entry) => sum + (Number.isFinite(entry.sessions) ? entry.sessions : 0),
+    0,
+  );
   if (totalSessions > 0) {
     return result.map((entry) => ({
       device: entry.device,
@@ -925,14 +958,18 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
     for (const entry of overrides) {
       const normalizedPath = normalizePath(entry?.path);
       if (!normalizedPath) continue;
-      const normalizedScope = entry?.scope === "members" || entry?.scope === "public" ? entry.scope : null;
+      const normalizedScope =
+        entry?.scope === "members" || entry?.scope === "public" ? entry.scope : null;
       const scopeKey = normalizedScope ?? "all";
       if (!normalizedOverrides.has(normalizedPath)) {
         normalizedOverrides.set(normalizedPath, new Map());
       }
       normalizedOverrides.get(normalizedPath).set(scopeKey, {
         path: normalizedPath,
-        avgPageLoadMs: Math.max(0, Math.round(Number(entry.avgPageLoadMs ?? entry.loadTimeMs ?? 0))),
+        avgPageLoadMs: Math.max(
+          0,
+          Math.round(Number(entry.avgPageLoadMs ?? entry.loadTimeMs ?? 0)),
+        ),
         lcpMs:
           entry.lcpMs === null || entry.lcpMs === undefined
             ? null
@@ -965,7 +1002,11 @@ export function applyPagePerformanceMetrics(baseEntries, overrides, scope) {
     if (Number.isFinite(override.avgPageLoadMs) && override.avgPageLoadMs > 0) {
       updates.loadTimeMs = override.avgPageLoadMs;
     }
-    if (override.lcpMs !== null && override.lcpMs !== undefined && Number.isFinite(override.lcpMs)) {
+    if (
+      override.lcpMs !== null &&
+      override.lcpMs !== undefined &&
+      Number.isFinite(override.lcpMs)
+    ) {
       updates.lcpMs = override.lcpMs;
     }
     if (

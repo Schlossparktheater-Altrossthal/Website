@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, availability });
-
   } catch (error) {
     console.error("Error updating availability:", error);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });

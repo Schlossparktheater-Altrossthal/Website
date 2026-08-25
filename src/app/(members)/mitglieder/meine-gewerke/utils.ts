@@ -203,7 +203,8 @@ export type DepartmentMembershipWithDepartment = Prisma.DepartmentMembershipGetP
   };
 }>;
 
-export type DepartmentMemberUser = DepartmentMembershipWithDepartment["department"]["memberships"][number]["user"];
+export type DepartmentMemberUser =
+  DepartmentMembershipWithDepartment["department"]["memberships"][number]["user"];
 
 export function isCastDepartmentUser(user: DepartmentMemberUser | null | undefined) {
   if (!user) {

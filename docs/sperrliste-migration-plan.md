@@ -20,32 +20,32 @@ Migration der kompletten Sperrlistenübersicht vom Spielplatz in die Theater-Web
 @layer base {
   :root {
     /* Von Spielplatz Mapping */
-    --spl-ok: var(--success);           /* Grün für frei/bevorzugt */
+    --spl-ok: var(--success); /* Grün für frei/bevorzugt */
     --spl-ok-rgba: hsl(var(--success) / 0.14);
-    --spl-warn: var(--warning);         /* Orange für eingeschränkt */
+    --spl-warn: var(--warning); /* Orange für eingeschränkt */
     --spl-warn-rgba: hsl(var(--warning) / 0.18);
-    --spl-danger: var(--destructive);   /* Rot für gesperrt */
+    --spl-danger: var(--destructive); /* Rot für gesperrt */
     --spl-danger-rgba: hsl(var(--destructive) / 0.12);
-    --spl-info: var(--info);            /* Blau für Info/Ferien */
+    --spl-info: var(--info); /* Blau für Info/Ferien */
     --spl-info-rgba: hsl(var(--info) / 0.18);
-    --spl-primary: var(--primary);      /* Primär für Highlights */
+    --spl-primary: var(--primary); /* Primär für Highlights */
     --spl-primary-rgba: hsl(var(--primary) / 0.15);
-    
+
     /* Ferien/Feiertage Farben */
-    --spl-vacation: 186 91% 54%;        /* Sky-500 für Ferien */
-    --spl-vacation-from: 186 91% 60%;   /* Sky-400 */
-    --spl-vacation-to: 186 91% 54%;     /* Sky-500 */
-    --spl-holiday: 38 92% 50%;          /* Amber-500 für Feiertage */
-    --spl-holiday-from: 43 96% 56%;     /* Amber-400 */
-    --spl-holiday-to: 38 92% 50%;       /* Amber-500 */
-    
+    --spl-vacation: 186 91% 54%; /* Sky-500 für Ferien */
+    --spl-vacation-from: 186 91% 60%; /* Sky-400 */
+    --spl-vacation-to: 186 91% 54%; /* Sky-500 */
+    --spl-holiday: 38 92% 50%; /* Amber-500 für Feiertage */
+    --spl-holiday-from: 43 96% 56%; /* Amber-400 */
+    --spl-holiday-to: 38 92% 50%; /* Amber-500 */
+
     /* Gruppen-Farben */
-    --spl-actors-from: 217 91% 60%;     /* Blue-400 */
-    --spl-actors-to: 217 91% 54%;       /* Blue-500 */
-    --spl-crew-from: 142 71% 45%;       /* Green-400 */
-    --spl-crew-to: 142 76% 36%;         /* Green-500 */
-    --spl-both-from: 271 81% 60%;       /* Purple-400 */
-    --spl-both-to: 326 78% 54%;         /* Pink-500 */
+    --spl-actors-from: 217 91% 60%; /* Blue-400 */
+    --spl-actors-to: 217 91% 54%; /* Blue-500 */
+    --spl-crew-from: 142 71% 45%; /* Green-400 */
+    --spl-crew-to: 142 76% 36%; /* Green-500 */
+    --spl-both-from: 271 81% 60%; /* Purple-400 */
+    --spl-both-to: 326 78% 54%; /* Pink-500 */
   }
 }
 ```
@@ -55,15 +55,7 @@ Migration der kompletten Sperrlistenübersicht vom Spielplatz in die Theater-Web
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/icons.tsx`
 
 ```tsx
-import { 
-  Star, 
-  Clock, 
-  AlertCircle, 
-  XCircle, 
-  Check, 
-  Umbrella, 
-  CalendarDays 
-} from 'lucide-react';
+import { Star, Clock, AlertCircle, XCircle, Check, Umbrella, CalendarDays } from "lucide-react";
 
 // Standardisierte Icon-Props
 type IconProps = { className?: string };
@@ -102,16 +94,16 @@ export function CalendarStarIcon({ className = "h-4 w-4" }: IconProps) {
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/ui-components.tsx`
 
 ```tsx
-import React from 'react';
+import React from "react";
 
 // Badge-Komponente mit tones
 type BadgeTone = "info" | "danger" | "ok" | "default";
-export function Badge({ 
-  children, 
-  tone = "default" 
-}: { 
-  children: React.ReactNode; 
-  tone?: BadgeTone 
+export function Badge({
+  children,
+  tone = "default",
+}: {
+  children: React.ReactNode;
+  tone?: BadgeTone;
 }) {
   const palettes: Record<BadgeTone, string> = {
     info: "border-sky-200 bg-[color:var(--spl-info-rgba)] text-[color:var(--spl-info)]",
@@ -119,19 +111,18 @@ export function Badge({
     ok: "border-green-200 bg-[color:var(--spl-ok-rgba)] text-[color:var(--spl-ok)]",
     default: "border-slate-200 bg-white/80 text-slate-600",
   };
-  
+
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${palettes[tone]}`}>
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${palettes[tone]}`}
+    >
       {children}
     </span>
   );
 }
 
 // IconButton
-export function IconButton({ 
-  children, 
-  ...props 
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function IconButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       {...props}
@@ -143,33 +134,37 @@ export function IconButton({
 }
 
 // StatusBadge
-export function StatusBadge({ 
-  icon, 
-  count, 
-  tone, 
-  compact 
-}: { 
-  icon: React.ReactNode; 
-  count: number; 
-  tone: 'ok' | 'warn' | 'danger'; 
-  compact?: boolean 
+export function StatusBadge({
+  icon,
+  count,
+  tone,
+  compact,
+}: {
+  icon: React.ReactNode;
+  count: number;
+  tone: "ok" | "warn" | "danger";
+  compact?: boolean;
 }) {
   const colors = {
-    ok: 'bg-green-100 text-green-700 border-green-300',
-    warn: 'bg-orange-100 text-orange-700 border-orange-300',
-    danger: 'bg-red-100 text-red-700 border-red-300'
+    ok: "bg-green-100 text-green-700 border-green-300",
+    warn: "bg-orange-100 text-orange-700 border-orange-300",
+    danger: "bg-red-100 text-red-700 border-red-300",
   };
-  
+
   if (compact) {
     return (
-      <div className={`flex items-center justify-center rounded-md border px-1 py-0.5 text-[10px] font-bold ${colors[tone]}`}>
+      <div
+        className={`flex items-center justify-center rounded-md border px-1 py-0.5 text-[10px] font-bold ${colors[tone]}`}
+      >
         <span>{count}</span>
       </div>
     );
   }
-  
+
   return (
-    <div className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[10px] font-bold shadow-sm ${colors[tone]}`}>
+    <div
+      className={`flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[10px] font-bold shadow-sm ${colors[tone]}`}
+    >
       {icon}
       <span>{count}</span>
     </div>
@@ -177,38 +172,26 @@ export function StatusBadge({
 }
 
 // MiniChip & Dot für kompakte Listen
-export function MiniChip({ 
-  count, 
-  tone 
-}: { 
-  count: number; 
-  tone: 'ok' | 'warn' | 'danger' 
-}) {
+export function MiniChip({ count, tone }: { count: number; tone: "ok" | "warn" | "danger" }) {
   const map: Record<string, string> = {
-    ok: 'bg-[color:var(--spl-ok-rgba)] text-[color:var(--spl-ok)] border-green-200',
-    warn: 'bg-[color:var(--spl-warn-rgba)] text-[color:var(--spl-warn)] border-orange-200',
-    danger: 'bg-[color:var(--spl-danger-rgba)] text-[color:var(--spl-danger)] border-red-200',
+    ok: "bg-[color:var(--spl-ok-rgba)] text-[color:var(--spl-ok)] border-green-200",
+    warn: "bg-[color:var(--spl-warn-rgba)] text-[color:var(--spl-warn)] border-orange-200",
+    danger: "bg-[color:var(--spl-danger-rgba)] text-[color:var(--spl-danger)] border-red-200",
   };
   return (
-    <span className={`inline-flex min-w-5 items-center justify-center rounded-md border px-1 text-[10px] ${map[tone]}`}>
+    <span
+      className={`inline-flex min-w-5 items-center justify-center rounded-md border px-1 text-[10px] ${map[tone]}`}
+    >
       {count}
     </span>
   );
 }
 
 // Note-Komponente für Infokarten
-export function Note({ 
-  title, 
-  children 
-}: { 
-  title: string; 
-  children: React.ReactNode 
-}) {
+export function Note({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <article className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm">
-      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-        {title}
-      </h3>
+      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</h3>
       <p className="mt-1 text-sm leading-6 text-slate-700">{children}</p>
     </article>
   );
@@ -224,12 +207,7 @@ export function Note({
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/data-helpers.ts`
 
 ```typescript
-import type { 
-  DayColumn, 
-  HolidayIndicator, 
-  OverviewPerson, 
-  OverviewPersonDay 
-} from "./types";
+import type { DayColumn, HolidayIndicator, OverviewPerson, OverviewPersonDay } from "./types";
 
 // Bucket-Typ für Day-Gruppierung
 export type DayBucket = {
@@ -245,34 +223,36 @@ export type DayBucket = {
 
 // Personen nach Tagen gruppieren
 export function selectDayBuckets(
-  people: OverviewPerson[], 
-  dayCols: DayColumn[], 
-  holidays: HolidayIndicator[]
+  people: OverviewPerson[],
+  dayCols: DayColumn[],
+  holidays: HolidayIndicator[],
 ): DayBucket[] {
   return dayCols.map((column, index) => {
-    const entries = people.map((person) => ({ 
-      person, 
-      cell: person.days[index] 
+    const entries = people.map((person) => ({
+      person,
+      cell: person.days[index],
     }));
-    
+
     const available = entries
       .filter((e) => e.cell.type === "preferred" || e.cell.type === "free")
-      .sort((a, b) => 
-        a.cell.type === b.cell.type 
-          ? a.person.name.localeCompare(b.person.name) 
-          : a.cell.type === "preferred" ? -1 : 1
+      .sort((a, b) =>
+        a.cell.type === b.cell.type
+          ? a.person.name.localeCompare(b.person.name)
+          : a.cell.type === "preferred"
+            ? -1
+            : 1,
       );
-    
+
     const limited = entries
       .filter((e) => e.cell.type === "limited")
       .sort((a, b) => a.person.name.localeCompare(b.person.name));
-    
+
     const blocked = entries
       .filter((e) => e.cell.type === "block")
       .sort((a, b) => a.person.name.localeCompare(b.person.name));
-    
+
     const holidayInfo = holidays.find((h) => h.dayIndex === index);
-    
+
     return {
       column,
       available,
@@ -295,10 +275,7 @@ export type HolidaySpan = {
 };
 
 // Zusammenhängende Ferien-Zeiträume finden
-export function getHolidaySpans(
-  dayCols: DayColumn[], 
-  buckets: DayBucket[]
-): HolidaySpan[] {
+export function getHolidaySpans(dayCols: DayColumn[], buckets: DayBucket[]): HolidaySpan[] {
   const spans: HolidaySpan[] = [];
   let currentSpan: HolidaySpan | null = null;
 
@@ -349,8 +326,8 @@ export function calculateAvailability(bucket: DayBucket): number {
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/table-cell.tsx`
 
 ```tsx
-import React from 'react';
-import type { OverviewPersonDay } from './types';
+import React from "react";
+import type { OverviewPersonDay } from "./types";
 
 type CellProps = {
   cell: OverviewPersonDay;
@@ -378,10 +355,10 @@ export function Cell({ cell, compact }: CellProps) {
 
   if (cell.type === "block") {
     return (
-      <button className={`${baseClasses} bg-[color:var(--spl-danger-rgba)] text-[color:var(--spl-danger)] border border-red-200`}>
-        <span className="block truncate text-[10px] uppercase tracking-[0.14em]">
-          Sperrtermin
-        </span>
+      <button
+        className={`${baseClasses} bg-[color:var(--spl-danger-rgba)] text-[color:var(--spl-danger)] border border-red-200`}
+      >
+        <span className="block truncate text-[10px] uppercase tracking-[0.14em]">Sperrtermin</span>
         {cell.label && (
           <span className="block mt-0.5 text-[11px] text-[color:var(--spl-danger)] truncate">
             {cell.label}
@@ -393,7 +370,9 @@ export function Cell({ cell, compact }: CellProps) {
 
   if (cell.type === "limited") {
     return (
-      <button className={`${baseClasses} border border-orange-200 bg-[color:var(--spl-warn-rgba)] text-[color:var(--spl-warn)]`}>
+      <button
+        className={`${baseClasses} border border-orange-200 bg-[color:var(--spl-warn-rgba)] text-[color:var(--spl-warn)]`}
+      >
         <span className="block truncate text-[10px] uppercase tracking-[0.14em]">
           Eingeschränkt
         </span>
@@ -408,10 +387,10 @@ export function Cell({ cell, compact }: CellProps) {
 
   if (cell.type === "preferred") {
     return (
-      <button className={`${baseClasses} border border-green-200 bg-[color:var(--spl-ok-rgba)] text-[color:var(--spl-ok)]`}>
-        <span className="block truncate text-[10px] uppercase tracking-[0.14em]">
-          Bevorzugt
-        </span>
+      <button
+        className={`${baseClasses} border border-green-200 bg-[color:var(--spl-ok-rgba)] text-[color:var(--spl-ok)]`}
+      >
+        <span className="block truncate text-[10px] uppercase tracking-[0.14em]">Bevorzugt</span>
         {cell.label && (
           <span className="block mt-0.5 text-[11px] text-[color:var(--spl-ok)] truncate">
             {cell.label}
@@ -430,55 +409,59 @@ export function Cell({ cell, compact }: CellProps) {
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/person-card.tsx`
 
 ```tsx
-import React from 'react';
-import type { OverviewPerson, OverviewPersonDay } from './types';
+import React from "react";
+import type { OverviewPerson, OverviewPersonDay } from "./types";
 
 type PersonCardProps = {
   person: OverviewPerson;
   cell: OverviewPersonDay;
-  tone: 'ok' | 'warn' | 'danger';
+  tone: "ok" | "warn" | "danger";
   compact: boolean;
 };
 
 export function PersonCard({ person, cell, tone, compact }: PersonCardProps) {
   const colors = {
     ok: {
-      border: 'border-green-200/80',
-      bg: 'from-green-50/80 to-white',
-      avatar: 'from-green-500 to-green-600',
-      text: 'text-green-700/90',
-      badge: 'bg-green-600'
+      border: "border-green-200/80",
+      bg: "from-green-50/80 to-white",
+      avatar: "from-green-500 to-green-600",
+      text: "text-green-700/90",
+      badge: "bg-green-600",
     },
     warn: {
-      border: 'border-orange-200/80',
-      bg: 'from-orange-50/80 to-white',
-      avatar: 'from-orange-500 to-orange-600',
-      text: 'text-orange-700/90',
-      badge: 'bg-orange-600'
+      border: "border-orange-200/80",
+      bg: "from-orange-50/80 to-white",
+      avatar: "from-orange-500 to-orange-600",
+      text: "text-orange-700/90",
+      badge: "bg-orange-600",
     },
     danger: {
-      border: 'border-red-200/80',
-      bg: 'from-red-50/80 to-white',
-      avatar: 'from-red-500 to-red-600',
-      text: 'text-red-700/90',
-      badge: 'bg-red-600'
-    }
+      border: "border-red-200/80",
+      bg: "from-red-50/80 to-white",
+      avatar: "from-red-500 to-red-600",
+      text: "text-red-700/90",
+      badge: "bg-red-600",
+    },
   };
 
   const style = colors[tone];
 
   return (
-    <li className={`group/item flex items-start gap-1.5 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} px-2 py-1.5 text-[11px] shadow-sm transition-all hover:scale-[1.02] hover:shadow-md`}>
-      <span className={`mt-0.5 inline-flex ${compact ? 'h-5 w-5' : 'h-6 w-6'} shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${style.avatar} text-[9px] font-bold text-white shadow-sm`}>
+    <li
+      className={`group/item flex items-start gap-1.5 rounded-xl border ${style.border} bg-gradient-to-br ${style.bg} px-2 py-1.5 text-[11px] shadow-sm transition-all hover:scale-[1.02] hover:shadow-md`}
+    >
+      <span
+        className={`mt-0.5 inline-flex ${compact ? "h-5 w-5" : "h-6 w-6"} shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${style.avatar} text-[9px] font-bold text-white shadow-sm`}
+      >
         {person.initials}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">
-          <p className="truncate font-semibold text-slate-900 text-[11px]">
-            {person.name}
-          </p>
-          {cell.type === 'preferred' && !compact && (
-            <span className={`rounded-full ${style.badge} px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white`}>
+          <p className="truncate font-semibold text-slate-900 text-[11px]">{person.name}</p>
+          {cell.type === "preferred" && !compact && (
+            <span
+              className={`rounded-full ${style.badge} px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white`}
+            >
               Top
             </span>
           )}
@@ -504,9 +487,9 @@ export function PersonCard({ person, cell, tone, compact }: PersonCardProps) {
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/timeline-cell.tsx`
 
 ```tsx
-import React, { useState } from 'react';
-import { StarIcon, ClockAlertIcon, XCircleIcon, CheckIcon } from './icons';
-import type { OverviewPersonDay } from './types';
+import React, { useState } from "react";
+import { StarIcon, ClockAlertIcon, XCircleIcon, CheckIcon } from "./icons";
+import type { OverviewPersonDay } from "./types";
 
 type TimelineCellProps = {
   cell: OverviewPersonDay;
@@ -551,9 +534,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-red-700">
               Sperrtermin
             </p>
-            <p className="mt-0.5 text-xs leading-snug text-slate-700">
-              {cell.label}
-            </p>
+            <p className="mt-0.5 text-xs leading-snug text-slate-700">{cell.label}</p>
           </div>
         )}
       </div>
@@ -575,9 +556,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-700">
               Eingeschränkt
             </p>
-            <p className="mt-0.5 text-xs leading-snug text-slate-700">
-              {cell.label}
-            </p>
+            <p className="mt-0.5 text-xs leading-snug text-slate-700">{cell.label}</p>
           </div>
         )}
       </div>
@@ -599,9 +578,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-green-700">
               Bevorzugt
             </p>
-            <p className="mt-0.5 text-xs leading-snug text-slate-700">
-              {cell.label}
-            </p>
+            <p className="mt-0.5 text-xs leading-snug text-slate-700">{cell.label}</p>
           </div>
         )}
       </div>
@@ -619,6 +596,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 ### 4.1 WeekStrip erweitern
 
 **Schlüssel-Features:**
+
 - 7-Grid-Layout mit `grid-cols-7`
 - Status-Badges in farbigen Bubbles
 - Availability-Fortschrittsbalken (absolute bottom)
@@ -629,6 +607,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 ### 4.2 DesktopCalendar neu
 
 **Struktur:**
+
 ```tsx
 <div className="overflow-x-auto">
   {/* Holiday Spans Bar (colSpan logic) */}
@@ -646,6 +625,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 ```
 
 **Features:**
+
 - Ferien/Feiertags-Balken mit `colSpan` und absolute positioning
 - Hover-States mit `setHoveredDay`
 - Kompaktmodus bei >5 Personen
@@ -655,11 +635,12 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 ### 4.3 TimelineView neu
 
 **Struktur:**
+
 ```tsx
 <div className="space-y-3">
   {/* Kompakte Symbollegende */}
   {/* Holiday/Ferien-Balken */}
-  
+
   {/* Sticky Day Header */}
   <div className="grid grid-cols-[200px_1fr]">
     <div>Mitglied</div>
@@ -667,7 +648,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
       {/* Tag-Buttons */}
     </div>
   </div>
-  
+
   {/* Gruppierte Personen */}
   {groupedPeople.actors.map(...)}
   {groupedPeople.both.map(...)}
@@ -676,6 +657,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 ```
 
 **Features:**
+
 - Gruppierung mit sticky colored headers
 - Keyboard-Navigation (ArrowLeft/Right, Home, End)
 - Day-Highlighting mit `ring-2 ring-inset ring-blue-200`
@@ -684,6 +666,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 ### 4.4 MobileByDay erweitern
 
 **Features:**
+
 - Gruppierung mit farbigen Separatoren
 - Initialen-Avatare mit Gruppen-Farben
 - `divide-y` Listen
@@ -695,6 +678,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 **Neue Datei:** `src/app/(members)/mitglieder/sperrliste/overview/desktop-table.tsx`
 
 **Features:**
+
 - Sticky header & name column mit `sticky left-0 z-20`
 - Ferien/Feiertags-Zeilen mit `colSpan`
 - Gruppierungs-Spalte mit `rowSpan` und vertical text
@@ -709,6 +693,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 ### 5.1 SperrlistenV2.tsx
 
 **Neue Features:**
+
 ```tsx
 // Heute-Button
 <button onClick={() => {
@@ -751,6 +736,7 @@ useEffect(() => {
 ## Phase 6: Testing & Optimierung
 
 ### 6.1 Responsive Testing
+
 - [ ] xs (320px) - Mobile Legende, WeekStrip
 - [ ] sm (640px) - View-Toggle sichtbar
 - [ ] md (768px) - DesktopCalendar 2-col
@@ -758,6 +744,7 @@ useEffect(() => {
 - [ ] xl (1440px) - Full features
 
 ### 6.2 Performance
+
 - [ ] `useMemo` für buckets/spans
 - [ ] `useCallback` für event handler
 - [ ] `React.memo` für PersonCard/Cell
@@ -765,6 +752,7 @@ useEffect(() => {
 - [ ] Debounce hover states
 
 ### 6.3 Accessibility
+
 - [ ] ARIA-labels für alle interaktiven Elemente
 - [ ] Keyboard-Navigation (Tab, Arrow keys)
 - [ ] Screen-reader text mit `sr-only`

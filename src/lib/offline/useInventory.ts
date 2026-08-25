@@ -6,11 +6,7 @@ import { liveQuery } from "dexie";
 import { offlineDb } from "./db";
 import { useOfflineSync } from "./storage";
 import { useOfflineSyncClient } from "./hooks";
-import type {
-  InventoryItemRecord,
-  PendingEvent,
-  PendingEventInput,
-} from "./types";
+import type { InventoryItemRecord, PendingEvent, PendingEventInput } from "./types";
 
 interface InventoryAdjustmentOptions {
   reason?: string;
@@ -46,14 +42,8 @@ function createBufferEntry(event: PendingEvent): InventoryBufferEntry | null {
 
   const record = payload as Record<string, unknown>;
   const sku = isString(record.sku) ? record.sku.trim() : undefined;
-  const itemId = isString(record.itemId)
-    ? record.itemId.trim()
-    : sku ?? undefined;
-  const delta = isNumber(record.delta)
-    ? record.delta
-    : isNumber(record.change)
-      ? record.change
-      : 0;
+  const itemId = isString(record.itemId) ? record.itemId.trim() : (sku ?? undefined);
+  const delta = isNumber(record.delta) ? record.delta : isNumber(record.change) ? record.change : 0;
 
   if (!itemId && !sku) {
     return null;
@@ -94,8 +84,7 @@ async function updateInventoryRecord(
   const db = offlineDb;
   return db.transaction("rw", db.items, async () => {
     const existing =
-      (await db.items.where("sku").equals(normalized).first()) ??
-      (await db.items.get(normalized));
+      (await db.items.where("sku").equals(normalized).first()) ?? (await db.items.get(normalized));
 
     if (!existing) {
       return null;

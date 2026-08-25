@@ -1,12 +1,12 @@
-self.addEventListener('install', () => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const rawUrl = event.notification?.data?.url;
@@ -27,7 +27,10 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     (async () => {
-      const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const windowClients = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
 
       for (const client of windowClients) {
         try {
@@ -38,11 +41,11 @@ self.addEventListener('notificationclick', (event) => {
           if (sameOrigin && pathMatches) {
             await client.focus();
             try {
-              if ('navigate' in client) {
+              if ("navigate" in client) {
                 await client.navigate(target.href);
               }
             } catch (navigateError) {
-              console.warn('[NotificationSW] navigate failed', navigateError);
+              console.warn("[NotificationSW] navigate failed", navigateError);
             }
             return;
           }

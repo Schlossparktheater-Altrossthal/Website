@@ -66,8 +66,7 @@ export function UserNav({ className }: { className?: string }) {
     "",
   );
   const { firstName: derivedFirstName } = splitFullName(name);
-  const firstNameDisplay =
-    session.user.firstName?.trim() ?? derivedFirstName ?? name;
+  const firstNameDisplay = session.user.firstName?.trim() ?? derivedFirstName ?? name;
   async function onLogout() {
     try {
       await signOut({ callbackUrl: "/" });
@@ -99,11 +98,18 @@ export function UserNav({ className }: { className?: string }) {
           avatarUpdatedAt={session.user.avatarUpdatedAt}
           loading="eager"
         />
-        <span className="hidden sm:inline text-foreground/90">
-          {firstNameDisplay}
-        </span>
-        <svg aria-hidden className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        <span className="hidden sm:inline text-foreground/90">{firstNameDisplay}</span>
+        <svg
+          aria-hidden
+          className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
         </svg>
       </button>
 

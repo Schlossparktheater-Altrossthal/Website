@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertCircleIcon, CheckCircle2Icon, Loader2Icon, PlugZapIcon, SparklesIcon } from "@/components/ui/action-icons";
+import {
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  Loader2Icon,
+  PlugZapIcon,
+  SparklesIcon,
+} from "@/components/ui/action-icons";
 
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
 
@@ -9,7 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import {
@@ -148,7 +160,9 @@ export function BlocklistSettingsManager({
   onSettingsChange,
 }: BlocklistSettingsManagerProps) {
   const [freezeDaysValue, setFreezeDaysValue] = useState(String(settings.freezeDays));
-  const [holidayModeState, setHolidayModeState] = useState<HolidaySourceMode>(settings.holidaySource.mode);
+  const [holidayModeState, setHolidayModeState] = useState<HolidaySourceMode>(
+    settings.holidaySource.mode,
+  );
   const [holidayUrlState, setHolidayUrlState] = useState(settings.holidaySource.url ?? "");
   const [publicHolidayModeState, setPublicHolidayModeState] = useState<HolidaySourceMode>(
     settings.publicHolidaySource.mode,
@@ -301,8 +315,7 @@ export function BlocklistSettingsManager({
       return null;
     }
 
-    const rawUrl =
-      holidayMode === "custom" ? holidayUrl : defaults.holidaySourceUrl ?? "";
+    const rawUrl = holidayMode === "custom" ? holidayUrl : (defaults.holidaySourceUrl ?? "");
     const trimmed = rawUrl.trim();
 
     if (!trimmed) {
@@ -311,7 +324,10 @@ export function BlocklistSettingsManager({
 
     try {
       const parsed = new URL(trimmed);
-      const label = `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(/\/$/, "");
+      const label = `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(
+        /\/$/,
+        "",
+      );
 
       return {
         href: parsed.toString(),
@@ -341,7 +357,8 @@ export function BlocklistSettingsManager({
         }
         try {
           const parsed = new URL(trimmed);
-          const label = `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(/\/$/, "");
+          const label =
+            `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(/\/$/, "");
           return `Standardfeed (${label || parsed.hostname})`;
         } catch {
           return `Standardfeed (${trimmed})`;
@@ -369,9 +386,7 @@ export function BlocklistSettingsManager({
     }
 
     const rawUrl =
-      publicHolidayMode === "custom"
-        ? publicHolidayUrl
-        : defaults.publicHolidaySourceUrl ?? "";
+      publicHolidayMode === "custom" ? publicHolidayUrl : (defaults.publicHolidaySourceUrl ?? "");
     const trimmed = rawUrl.trim();
 
     if (!trimmed) {
@@ -380,7 +395,10 @@ export function BlocklistSettingsManager({
 
     try {
       const parsed = new URL(trimmed);
-      const label = `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(/\/$/, "");
+      const label = `${parsed.hostname}${parsed.pathname}${parsed.search}${parsed.hash}`.replace(
+        /\/$/,
+        "",
+      );
 
       return {
         href: parsed.toString(),
@@ -530,8 +548,7 @@ export function BlocklistSettingsManager({
   const handleResetPublicToDefault = () => {
     const targetUrl = defaults.publicHolidaySourceUrl ?? "";
     const shouldUpdateStatus =
-      publicHolidayModeState !== "default" ||
-      publicHolidayUrlState.trim() !== targetUrl.trim();
+      publicHolidayModeState !== "default" || publicHolidayUrlState.trim() !== targetUrl.trim();
 
     if (publicHolidayModeState !== "default") {
       setPublicHolidayModeState("default");
@@ -660,7 +677,9 @@ export function BlocklistSettingsManager({
       };
 
       if (!response.ok || !data?.settings) {
-        throw new Error(data?.error || "Die Sperrlisten-Einstellungen konnten nicht gespeichert werden.");
+        throw new Error(
+          data?.error || "Die Sperrlisten-Einstellungen konnten nicht gespeichert werden.",
+        );
       }
 
       setStatus(data.settings.holidayStatus);
@@ -826,7 +845,8 @@ export function BlocklistSettingsManager({
             Sperrlisten-Einstellungen
           </CardTitle>
           <Text variant="small" tone="muted">
-            Verwalte Ferien- und Feiertagsquellen, Probenplanung und Sperrfrist in einem kompakten Ablauf.
+            Verwalte Ferien- und Feiertagsquellen, Probenplanung und Sperrfrist in einem kompakten
+            Ablauf.
           </Text>
         </div>
       </CardHeader>
@@ -914,7 +934,9 @@ export function BlocklistSettingsManager({
                   <HolidayStatusIcon
                     className={cn(
                       "mt-0.5 h-4 w-4 shrink-0",
-                      statusMeta.tone === "unknown" && isCheckingHoliday ? "animate-spin" : undefined,
+                      statusMeta.tone === "unknown" && isCheckingHoliday
+                        ? "animate-spin"
+                        : undefined,
                     )}
                     aria-hidden
                   />
@@ -945,14 +967,18 @@ export function BlocklistSettingsManager({
                     <Label htmlFor="public-holiday-mode">Quelle</Label>
                     <Select
                       value={publicHolidayMode}
-                      onValueChange={(value) => handlePublicHolidayModeChange(value as HolidaySourceMode)}
+                      onValueChange={(value) =>
+                        handlePublicHolidayModeChange(value as HolidaySourceMode)
+                      }
                       disabled={saving}
                     >
                       <SelectTrigger id="public-holiday-mode">
                         <SelectValue placeholder="Modus wählen" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="default">Standardfeed (Sachsen, OfficeHolidays)</SelectItem>
+                        <SelectItem value="default">
+                          Standardfeed (Sachsen, OfficeHolidays)
+                        </SelectItem>
                         <SelectItem value="custom">Eigene URL</SelectItem>
                         <SelectItem value="disabled">Keine Feiertagsquelle</SelectItem>
                       </SelectContent>
@@ -1057,7 +1083,8 @@ export function BlocklistSettingsManager({
                 <header className="space-y-1">
                   <p className="text-sm font-semibold leading-5">Sperrfrist</p>
                   <p className="text-sm text-muted-foreground">
-                    Lege fest, wie viele Tage vor einer Probe keine neuen Sperrtage mehr eingetragen werden können.
+                    Lege fest, wie viele Tage vor einer Probe keine neuen Sperrtage mehr eingetragen
+                    werden können.
                   </p>
                 </header>
                 <div className="space-y-2">
@@ -1079,7 +1106,8 @@ export function BlocklistSettingsManager({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Innerhalb der Sperrfrist lassen sich keine neuen Sperrtage eintragen. Bestehende Termine bleiben editierbar.
+                    Innerhalb der Sperrfrist lassen sich keine neuen Sperrtage eintragen. Bestehende
+                    Termine bleiben editierbar.
                   </p>
                 </div>
               </section>
@@ -1102,8 +1130,12 @@ export function BlocklistSettingsManager({
                 <p className="font-medium">{error.message}</p>
                 {error.details ? (
                   <details className="mt-2 text-xs">
-                    <summary className="cursor-pointer text-destructive">Technische Details</summary>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-destructive/80">{error.details}</p>
+                    <summary className="cursor-pointer text-destructive">
+                      Technische Details
+                    </summary>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-destructive/80">
+                      {error.details}
+                    </p>
                   </details>
                 ) : null}
               </div>

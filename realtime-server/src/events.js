@@ -1,14 +1,16 @@
-import { createRealtimeCore } from '../../src/lib/realtime/shared/core.js';
+import { createRealtimeCore } from "../../src/lib/realtime/shared/core.js";
 
 export function createEventHandlers({ io, logger, toISO }) {
   if (!io) {
-    throw new Error('Socket server instance is required');
+    throw new Error("Socket server instance is required");
   }
 
   const core = createRealtimeCore({ io, logger, toISO });
 
   const logWarn =
-    typeof logger?.warn === 'function' ? (...args) => logger.warn(...args) : (...args) => console.warn(...args);
+    typeof logger?.warn === "function"
+      ? (...args) => logger.warn(...args)
+      : (...args) => console.warn(...args);
 
   function broadcastOnlineStats() {
     core.emitOnlineStatsUpdate({ broadcast: true });
@@ -19,7 +21,9 @@ export function createEventHandlers({ io, logger, toISO }) {
   }
 
   function emitRehearsalUsersList(rehearsalId, socket) {
-    core.emitRehearsalUsersList({ rehearsalId, socket }).catch((error) => logWarn('[Realtime] Failed to emit rehearsal users list', error));
+    core
+      .emitRehearsalUsersList({ rehearsalId, socket })
+      .catch((error) => logWarn("[Realtime] Failed to emit rehearsal users list", error));
   }
 
   function registerUser(socket) {
@@ -31,7 +35,7 @@ export function createEventHandlers({ io, logger, toISO }) {
       userName: socket.data.userName,
     });
     if (isFirstConnection) {
-      core.emitUserJoined({ userId, userName: socket.data.userName, targets: 'all' });
+      core.emitUserJoined({ userId, userName: socket.data.userName, targets: "all" });
     }
     broadcastOnlineStats();
   }
@@ -41,7 +45,7 @@ export function createEventHandlers({ io, logger, toISO }) {
     if (!userId) return;
     const { isLastConnection, userName } = core.releaseConnection({ userId, socketId: socket.id });
     if (isLastConnection) {
-      core.emitUserLeft({ userId, userName: userName ?? socket.data.userName, targets: 'all' });
+      core.emitUserLeft({ userId, userName: userName ?? socket.data.userName, targets: "all" });
     }
     broadcastOnlineStats();
   }
@@ -55,7 +59,7 @@ export function createEventHandlers({ io, logger, toISO }) {
   }
 
   function isValidRoomIdentifier(room, prefixLength) {
-    if (typeof room !== 'string') return false;
+    if (typeof room !== "string") return false;
     if (room.length > 200) return false;
     if (prefixLength >= room.length) return false;
     const identifier = room.slice(prefixLength);
@@ -63,20 +67,20 @@ export function createEventHandlers({ io, logger, toISO }) {
   }
 
   function isAllowedRoom(room, socket) {
-    if (typeof room !== 'string' || !room) return false;
-    if (room === 'global') return true;
-    if (room.startsWith('user_')) {
+    if (typeof room !== "string" || !room) return false;
+    if (room === "global") return true;
+    if (room.startsWith("user_")) {
       const expectedRoom = `user_${socket.data.userId}`;
       return expectedRoom === room;
     }
-    if (room.startsWith('rehearsal_')) {
-      return isValidRoomIdentifier(room, 'rehearsal_'.length);
+    if (room.startsWith("rehearsal_")) {
+      return isValidRoomIdentifier(room, "rehearsal_".length);
     }
-    if (room.startsWith('show_')) {
-      return isValidRoomIdentifier(room, 'show_'.length);
+    if (room.startsWith("show_")) {
+      return isValidRoomIdentifier(room, "show_".length);
     }
-    if (room.startsWith('onboarding_')) {
-      return isValidRoomIdentifier(room, 'onboarding_'.length);
+    if (room.startsWith("onboarding_")) {
+      return isValidRoomIdentifier(room, "onboarding_".length);
     }
     return false;
   }

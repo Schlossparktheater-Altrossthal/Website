@@ -15,14 +15,7 @@ type NutritionSectionProps = {
   className?: string;
 };
 
-const dietPalette = [
-  "#5eead4",
-  "#60a5fa",
-  "#fbbf24",
-  "#f97316",
-  "#f87171",
-  "#c084fc",
-];
+const dietPalette = ["#5eead4", "#60a5fa", "#fbbf24", "#f97316", "#f87171", "#c084fc"];
 
 const severityOrder = ["mild", "moderat", "schwer", "akut"];
 
@@ -48,7 +41,9 @@ export function NutritionSection({ data, totalParticipants, className }: Nutriti
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader className="space-y-1">
-        <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Ernährung & Allergien</CardTitle>
+        <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+          Ernährung & Allergien
+        </CardTitle>
         <p className="text-sm text-muted-foreground">
           Überblick über Ernährungspräferenzen und gemeldete Unverträglichkeiten.
         </p>
@@ -62,13 +57,17 @@ export function NutritionSection({ data, totalParticipants, className }: Nutriti
             >
               <div className="flex h-full w-full items-center justify-center">
                 <span className="text-sm font-semibold text-foreground/80">
-                  {totalDiets > 0 ? `${Math.round((totalDiets / Math.max(totalParticipants, 1)) * 100)}%` : "–"}
+                  {totalDiets > 0
+                    ? `${Math.round((totalDiets / Math.max(totalParticipants, 1)) * 100)}%`
+                    : "–"}
                 </span>
               </div>
             </div>
             <ul className="flex-1 space-y-2 text-sm">
               {data.diets.length === 0 ? (
-                <li className="text-muted-foreground">Keine Angaben zu Ernährungspräferenzen vorhanden.</li>
+                <li className="text-muted-foreground">
+                  Keine Angaben zu Ernährungspräferenzen vorhanden.
+                </li>
               ) : (
                 data.diets.map((entry, index) => (
                   <li key={entry.label} className="flex items-center justify-between gap-3">
@@ -96,7 +95,10 @@ export function NutritionSection({ data, totalParticipants, className }: Nutriti
           ) : (
             <div className="space-y-2">
               {data.allergies.map((entry) => {
-                const total = severityOrder.reduce((sum, key) => sum + (entry.severities[key] ?? 0), 0);
+                const total = severityOrder.reduce(
+                  (sum, key) => sum + (entry.severities[key] ?? 0),
+                  0,
+                );
                 return (
                   <div key={entry.allergen} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
@@ -110,7 +112,12 @@ export function NutritionSection({ data, totalParticipants, className }: Nutriti
                           return null;
                         }
                         const width = `${Math.max(4, (value / Math.max(total, 1)) * 100)}%`;
-                        const colors = ["bg-emerald-400", "bg-amber-400", "bg-orange-500", "bg-rose-500"];
+                        const colors = [
+                          "bg-emerald-400",
+                          "bg-amber-400",
+                          "bg-orange-500",
+                          "bg-rose-500",
+                        ];
                         return (
                           <motion.div
                             key={severity}

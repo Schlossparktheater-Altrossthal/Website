@@ -11,7 +11,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { OnboardingDashboardData, OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
+import type {
+  OnboardingDashboardData,
+  OnboardingSummary,
+} from "@/lib/onboarding/dashboard-schemas";
 import { useRealtime } from "@/hooks/useRealtime";
 
 import { AllocationTab } from "./allocation-tab";
@@ -227,7 +230,10 @@ export function DashboardClient({
                   Suche
                 </div>
                 <div className="relative">
-                  <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <SearchIcon
+                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
                   <Input
                     value={memberQuery}
                     onChange={(event) => setMemberQuery(event.target.value)}
@@ -270,7 +276,8 @@ export function DashboardClient({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Such- und Filterleiste greift auf die Mitgliederübersicht. Andere Tabs bleiben unverändert.
+              Such- und Filterleiste greift auf die Mitgliederübersicht. Andere Tabs bleiben
+              unverändert.
             </p>
           </div>
         ) : null}
@@ -300,7 +307,10 @@ export function DashboardClient({
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <GlobalOverviewTab data={currentData.global} participants={currentData.onboarding.participants} />
+              <GlobalOverviewTab
+                data={currentData.global}
+                participants={currentData.onboarding.participants}
+              />
             </motion.div>
           </TabsContent>
           <TabsContent key="ranking" value="ranking" className="space-y-6">

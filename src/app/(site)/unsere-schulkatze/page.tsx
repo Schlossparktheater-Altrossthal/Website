@@ -1,5 +1,13 @@
-
-import { CatIcon, HeartIcon, IconComponent, MoonStarIcon, PawPrintIcon, ShieldCheckIcon, SunIcon } from "@/components/ui/action-icons";export const revalidate = 60;
+import {
+  CatIcon,
+  HeartIcon,
+  IconComponent,
+  MoonStarIcon,
+  PawPrintIcon,
+  ShieldCheckIcon,
+  SunIcon,
+} from "@/components/ui/action-icons";
+export const revalidate = 60;
 
 import { readdirSync } from "node:fs";
 import path from "node:path";
@@ -71,7 +79,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-
 type CatProfileHighlight = {
   icon: IconComponent;
   title: string;
@@ -83,7 +90,6 @@ type CatMemoryItem = {
   title: string;
   detail: string;
 };
-
 
 const catCareLessons: string[] = [
   "Tiere, die unsere Schule begleiten, brauchen feste Bezugspersonen und klare Absprachen – Dieter hat uns das gelehrt.",
@@ -125,7 +131,12 @@ export default async function SchoolCatPage() {
               Unsere Schulkatze
             </Heading>
             {introContent.paragraphs.map((paragraph, index) => (
-              <Text key={index} variant={index === 0 ? "bodyLg" : "body"} tone="muted" className={index === 0 ? "mt-4" : undefined}>
+              <Text
+                key={index}
+                variant={index === 0 ? "bodyLg" : "body"}
+                tone="muted"
+                className={index === 0 ? "mt-4" : undefined}
+              >
                 {paragraph}
               </Text>
             ))}
@@ -138,9 +149,7 @@ export default async function SchoolCatPage() {
         </div>
       </section>
 
-
       <CatMemorySection />
-
     </div>
   );
 }

@@ -68,4 +68,3 @@ describe("autoDetectMailServerSettings", () => {
     expect(result?.confidence).toBe("low");
   });
 });
-

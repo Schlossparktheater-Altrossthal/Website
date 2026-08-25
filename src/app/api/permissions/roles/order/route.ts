@@ -10,7 +10,11 @@ export async function PUT(request: NextRequest) {
   }
 
   const body = (await request.json().catch(() => null)) as { roleIds?: unknown } | null;
-  if (!body || !Array.isArray(body.roleIds) || !body.roleIds.every((id) => typeof id === "string")) {
+  if (
+    !body ||
+    !Array.isArray(body.roleIds) ||
+    !body.roleIds.every((id) => typeof id === "string")
+  ) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
   }
 
@@ -31,7 +35,10 @@ export async function PUT(request: NextRequest) {
   const existingIds = new Set(existing.map((role) => role.id));
   const missing = roleIds.filter((id) => !existingIds.has(id));
   if (missing.length > 0) {
-    return NextResponse.json({ error: "Unbekannte Rollen können nicht sortiert werden" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Unbekannte Rollen können nicht sortiert werden" },
+      { status: 400 },
+    );
   }
 
   await prisma.$transaction(

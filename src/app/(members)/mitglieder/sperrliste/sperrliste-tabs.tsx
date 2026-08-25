@@ -49,25 +49,17 @@ export function BlocklistTabs({
     <Tabs defaultValue="personal" className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <TabsList className="order-2 flex w-full gap-1.5 sm:order-1 sm:w-auto">
-          <TabsTrigger
-            value="personal"
-            className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none"
-          >
+          <TabsTrigger value="personal" className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none">
             <CalendarCheckIcon className="h-4 w-4" aria-hidden />
             <span>Meine Sperrtermine</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="overview"
-            className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none"
-          >
+          <TabsTrigger value="overview" className="flex-1 gap-2 px-3 py-1.5 text-sm sm:flex-none">
             <UsersRoundIcon className="h-4 w-4" aria-hidden />
             <span>Übersicht</span>
           </TabsTrigger>
         </TabsList>
         {actions ? (
-          <div className="order-1 flex w-full justify-end sm:order-2 sm:w-auto">
-            {actions}
-          </div>
+          <div className="order-1 flex w-full justify-end sm:order-2 sm:w-auto">{actions}</div>
         ) : null}
       </div>
 

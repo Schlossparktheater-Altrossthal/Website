@@ -196,7 +196,10 @@ export function SignatureVisualizer({ payload, mode, className }: SignatureVisua
 
     let frame: number | null = null;
     let start: number | null = null;
-    const duration = Math.max(payload.duration, segments.length ? segments[segments.length - 1].end.time : 0);
+    const duration = Math.max(
+      payload.duration,
+      segments.length ? segments[segments.length - 1].end.time : 0,
+    );
     const pause = 600;
 
     const step = (timestamp: number) => {

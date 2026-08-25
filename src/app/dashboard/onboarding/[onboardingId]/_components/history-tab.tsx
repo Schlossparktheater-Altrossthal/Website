@@ -63,8 +63,12 @@ export function HistoryTab({ history }: HistoryTabProps) {
                   <tr key={item.onboardingId} className="border-t border-border/40">
                     <td className="px-3 py-2 font-medium text-foreground/80">{item.label}</td>
                     <td className="px-3 py-2">{item.participants}</td>
-                    <td className="px-3 py-2">{item.medianAge ? `${item.medianAge.toFixed(1)} Jahre` : "–"}</td>
-                    <td className="px-3 py-2">{item.focusBothShare ? `${item.focusBothShare.toFixed(0)}%` : "–"}</td>
+                    <td className="px-3 py-2">
+                      {item.medianAge ? `${item.medianAge.toFixed(1)} Jahre` : "–"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {item.focusBothShare ? `${item.focusBothShare.toFixed(0)}%` : "–"}
+                    </td>
                     <td className="px-3 py-2 text-muted-foreground">
                       {new Date(item.createdAt).toLocaleDateString("de-DE", {
                         day: "2-digit",

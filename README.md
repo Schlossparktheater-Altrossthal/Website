@@ -7,8 +7,6 @@ Node.js process and expose the realtime API under `/realtime` (websocket path
 lightweight reverse proxy so external deployments only have to expose a single
 HTTP endpoint.
 
-
-
 ## Quick Start (Development)
 
 ```bash
@@ -20,12 +18,14 @@ pnpm dev:start:local
 ```
 
 Both commands automatically handle:
+
 - Secure `.env` configuration with random secrets
 - Node.js dependency installation
 - Database migrations and seeding
 - Next.js development server with realtime support
 
 **Access URLs after startup:**
+
 - Main App: http://localhost:3000
 - Email UI: http://localhost:8025 (Docker mode only)
 
@@ -144,10 +144,10 @@ keep working without Prisma access. Responses in JSON mode include an
 ## Docker overview
 
 - `Dockerfile.dev` builds the development image that serves the Next.js app via
-the bundled dev server and proxies the realtime routes below `/realtime`.
+  the bundled dev server and proxies the realtime routes below `/realtime`.
 - `Dockerfile.prod` produces the production image with the statically built
-Next.js output. The runtime launches the combined server and proxies it so the
-realtime API stays on the same host.
+  Next.js output. The runtime launches the combined server and proxies it so the
+  realtime API stays on the same host.
 
 Both images execute `scripts/start-with-proxy.mjs`. The script first prepares
 Next.js via `scripts/start-combined-server.mjs`, attaches the Socket.IO server to

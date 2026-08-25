@@ -44,7 +44,9 @@ export default async function MyRehearsalsPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW");
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Probenübersicht.</div>;
+    return (
+      <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Probenübersicht.</div>
+    );
   }
 
   const userId = session.user?.id;
@@ -82,9 +84,7 @@ export default async function MyRehearsalsPage() {
     }),
   ]);
 
-  const membershipByDepartment = new Map(
-    memberships.map((entry) => [entry.departmentId, entry]),
-  );
+  const membershipByDepartment = new Map(memberships.map((entry) => [entry.departmentId, entry]));
 
   const departmentEventsRaw = membershipByDepartment.size
     ? await prisma.departmentEvent.findMany({
@@ -114,24 +114,22 @@ export default async function MyRehearsalsPage() {
     location: rehearsal.location,
   }));
 
-  const upcomingDepartmentEvents: UpcomingDepartmentEvent[] = departmentEventsRaw.map(
-    (event) => {
-      const membership = membershipByDepartment.get(event.departmentId);
-      return {
-        kind: "department" as const,
-        id: event.id,
-        title: event.title,
-        start: event.start,
-        end: event.end ?? null,
-        location: event.location ?? null,
-        description: event.description ?? null,
-        departmentId: event.departmentId,
-        departmentName: event.department.name,
-        departmentSlug: event.department.slug,
-        membershipRole: membership?.role ?? DepartmentMembershipRole.member,
-      };
-    },
-  );
+  const upcomingDepartmentEvents: UpcomingDepartmentEvent[] = departmentEventsRaw.map((event) => {
+    const membership = membershipByDepartment.get(event.departmentId);
+    return {
+      kind: "department" as const,
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      end: event.end ?? null,
+      location: event.location ?? null,
+      description: event.description ?? null,
+      departmentId: event.departmentId,
+      departmentName: event.department.name,
+      departmentSlug: event.department.slug,
+      membershipRole: membership?.role ?? DepartmentMembershipRole.member,
+    };
+  });
 
   const upcomingItems: UpcomingItem[] = [...upcomingRehearsals, ...upcomingDepartmentEvents].sort(
     (a, b) => a.start.getTime() - b.start.getTime(),
@@ -170,14 +168,22 @@ export default async function MyRehearsalsPage() {
                                   >
                                     {item.title}
                                   </Link>
-                                  <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[0.65rem] uppercase tracking-wide"
+                                  >
                                     Probe
                                   </Badge>
                                 </div>
-                                <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
-                                <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  Rückmeldungen sind nicht nötig – alle Nicht-Gesperrten werden erwartet.
+                                  {formatDateTime(item.start)}
+                                </p>
+                                <p className="text-xs text-muted-foreground/80">
+                                  Ort: {item.location}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Rückmeldungen sind nicht nötig – alle Nicht-Gesperrten werden
+                                  erwartet.
                                 </p>
                               </div>
                             </div>
@@ -195,19 +201,31 @@ export default async function MyRehearsalsPage() {
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0 space-y-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-semibold text-foreground">{item.title}</span>
-                                <Badge variant="outline" className="text-[0.65rem] uppercase tracking-wide">
+                                <span className="text-sm font-semibold text-foreground">
+                                  {item.title}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="text-[0.65rem] uppercase tracking-wide"
+                                >
                                   {item.departmentName}
                                 </Badge>
                                 {optional ? (
-                                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                                  <Badge
+                                    variant="outline"
+                                    className="border-amber-200 bg-amber-50 text-amber-700"
+                                  >
                                     Optional
                                   </Badge>
                                 ) : null}
                               </div>
-                              <p className="text-xs text-muted-foreground">{formatDateTime(item.start)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDateTime(item.start)}
+                              </p>
                               {item.location ? (
-                                <p className="text-xs text-muted-foreground/80">Ort: {item.location}</p>
+                                <p className="text-xs text-muted-foreground/80">
+                                  Ort: {item.location}
+                                </p>
                               ) : null}
                             </div>
                           </div>
@@ -218,7 +236,9 @@ export default async function MyRehearsalsPage() {
                               </p>
                             ) : null}
                             {item.description ? (
-                              <p className="whitespace-pre-wrap text-sm text-muted-foreground/90">{item.description}</p>
+                              <p className="whitespace-pre-wrap text-sm text-muted-foreground/90">
+                                {item.description}
+                              </p>
                             ) : null}
                             {!hasAdditionalDetails ? (
                               <p className="text-xs text-muted-foreground">
@@ -227,7 +247,8 @@ export default async function MyRehearsalsPage() {
                             ) : null}
                             {optional ? (
                               <p className="text-xs text-muted-foreground">
-                                Als Gast ist deine Teilnahme freiwillig – informiere das Team, falls du unterstützen möchtest.
+                                Als Gast ist deine Teilnahme freiwillig – informiere das Team, falls
+                                du unterstützen möchtest.
                               </p>
                             ) : null}
                           </div>
@@ -252,10 +273,22 @@ export default async function MyRehearsalsPage() {
             </CardHeader>
             <CardContent>
               <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                <li>Trage bekannte Abwesenheiten direkt in die Sperrliste ein – dadurch weiß die Planung, dass du fehlst.</li>
-                <li>Bei kurzfristigen Änderungen informiere zusätzlich telefonisch oder per Chat, damit Ersatz organisiert werden kann.</li>
-                <li>Neue Termine gelten als zugesagt. Du musst keine Zusage- oder Absage-Buttons mehr verwenden.</li>
-                <li>Nach dem Eintrag in die Sperrliste kannst du den Termin aus deinem Kalender entfernen.</li>
+                <li>
+                  Trage bekannte Abwesenheiten direkt in die Sperrliste ein – dadurch weiß die
+                  Planung, dass du fehlst.
+                </li>
+                <li>
+                  Bei kurzfristigen Änderungen informiere zusätzlich telefonisch oder per Chat,
+                  damit Ersatz organisiert werden kann.
+                </li>
+                <li>
+                  Neue Termine gelten als zugesagt. Du musst keine Zusage- oder Absage-Buttons mehr
+                  verwenden.
+                </li>
+                <li>
+                  Nach dem Eintrag in die Sperrliste kannst du den Termin aus deinem Kalender
+                  entfernen.
+                </li>
               </ul>
             </CardContent>
           </Card>

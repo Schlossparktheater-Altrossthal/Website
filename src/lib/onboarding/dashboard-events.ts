@@ -1,7 +1,7 @@
-import { prisma } from '@/lib/prisma';
-import { broadcastOnboardingDashboardUpdate } from '@/lib/realtime/triggers';
+import { prisma } from "@/lib/prisma";
+import { broadcastOnboardingDashboardUpdate } from "@/lib/realtime/triggers";
 
-import { loadOnboardingDashboardSnapshot } from './dashboard-service';
+import { loadOnboardingDashboardSnapshot } from "./dashboard-service";
 
 interface BroadcastOptions {
   broadcastToGlobal?: boolean;

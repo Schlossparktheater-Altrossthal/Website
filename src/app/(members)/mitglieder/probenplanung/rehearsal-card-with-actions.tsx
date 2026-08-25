@@ -20,7 +20,13 @@ const timeFormatter = new Intl.DateTimeFormat("de-DE", {
   timeZone: "Europe/Berlin",
 });
 
-export function RehearsalCardWithActions({ rehearsal, forceOpen }: { rehearsal: RehearsalLite; forceOpen?: boolean }) {
+export function RehearsalCardWithActions({
+  rehearsal,
+  forceOpen,
+}: {
+  rehearsal: RehearsalLite;
+  forceOpen?: boolean;
+}) {
   const router = useRouter();
   const [isDeletingTransition, startDeletingTransition] = useTransition();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

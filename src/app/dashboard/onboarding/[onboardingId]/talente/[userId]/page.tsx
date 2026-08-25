@@ -35,7 +35,9 @@ function HighlightSummary({ highlight }: { highlight: HighlightContext | null })
       <Badge variant="muted" size="sm" className="font-semibold uppercase tracking-wide">
         {highlight.label}
       </Badge>
-      <Badge variant="outline" size="sm">#{highlight.rank}</Badge>
+      <Badge variant="outline" size="sm">
+        #{highlight.rank}
+      </Badge>
       <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 font-medium text-foreground/80">
         {percentageFormatter.format(highlight.share * 100)}% Präferenzanteil
       </span>
@@ -104,9 +106,7 @@ export default async function OnboardingTalentDetailPage({
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {candidate.name}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {dashboard.onboarding.title}
-          </p>
+          <p className="text-sm text-muted-foreground">{dashboard.onboarding.title}</p>
           <HighlightSummary highlight={highlight} />
         </div>
       </div>

@@ -83,7 +83,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Validierungsfehler", details: parsed.error.flatten() }, { status: 422 });
+    return NextResponse.json(
+      { error: "Validierungsfehler", details: parsed.error.flatten() },
+      { status: 422 },
+    );
   }
 
   await saveWebsiteContent(contentId, parsed.data, userId);

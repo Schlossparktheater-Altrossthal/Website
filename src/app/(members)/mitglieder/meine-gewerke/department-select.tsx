@@ -28,7 +28,9 @@ export function DepartmentSelect({ options, selectedDepartmentId }: DepartmentSe
         const href = option.value
           ? `${pathname ?? ""}?department=${encodeURIComponent(option.value)}`
           : (pathname ?? "/");
-        const isActive = option.value ? selectedDepartmentId === option.value : !selectedDepartmentId;
+        const isActive = option.value
+          ? selectedDepartmentId === option.value
+          : !selectedDepartmentId;
 
         return (
           <Link

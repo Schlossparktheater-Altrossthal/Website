@@ -22,11 +22,13 @@ const CACHE_HIT_WARNING = 0.6;
 const FRONTEND_PAYLOAD_WARNING = 450_000; // ~440 KB
 
 function formatId(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48) || "unknown";
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "unknown"
+  );
 }
 
 function formatMilliseconds(ms: number): string {
@@ -102,11 +104,17 @@ export function deriveOptimizationInsights({
   const pageCandidates: PagePerformanceEntry[] = [...publicPages, ...memberPages];
 
   const slowestPage = pageCandidates
-    .filter((page) => Number.isFinite(page.loadTimeMs) && page.loadTimeMs >= MS_FRONTEND_MEDIUM_THRESHOLD)
+    .filter(
+      (page) => Number.isFinite(page.loadTimeMs) && page.loadTimeMs >= MS_FRONTEND_MEDIUM_THRESHOLD,
+    )
     .sort((a, b) => b.loadTimeMs - a.loadTimeMs || b.views - a.views)[0];
 
   if (slowestPage) {
-    const impact = chooseImpact(slowestPage.loadTimeMs, MS_FRONTEND_HIGH_THRESHOLD, MS_FRONTEND_MEDIUM_THRESHOLD);
+    const impact = chooseImpact(
+      slowestPage.loadTimeMs,
+      MS_FRONTEND_HIGH_THRESHOLD,
+      MS_FRONTEND_MEDIUM_THRESHOLD,
+    );
     pushInsight({
       id: `page-speed-${formatId(slowestPage.path)}`,
       area: resolveAreaFromPath(slowestPage.path),
@@ -119,12 +127,18 @@ export function deriveOptimizationInsights({
   }
 
   const lcpCandidate = pageCandidates
-    .filter((page) => Number.isFinite(page.lcpMs) && (page.lcpMs ?? 0) >= MS_FRONTEND_MEDIUM_THRESHOLD)
+    .filter(
+      (page) => Number.isFinite(page.lcpMs) && (page.lcpMs ?? 0) >= MS_FRONTEND_MEDIUM_THRESHOLD,
+    )
     .sort((a, b) => (b.lcpMs ?? 0) - (a.lcpMs ?? 0) || b.views - a.views)
     .find((page) => !slowestPage || page.path !== slowestPage.path);
 
   if (lcpCandidate) {
-    const impact = chooseImpact(lcpCandidate.lcpMs ?? 0, MS_FRONTEND_HIGH_THRESHOLD, MS_FRONTEND_MEDIUM_THRESHOLD);
+    const impact = chooseImpact(
+      lcpCandidate.lcpMs ?? 0,
+      MS_FRONTEND_HIGH_THRESHOLD,
+      MS_FRONTEND_MEDIUM_THRESHOLD,
+    );
     pushInsight({
       id: `lcp-${formatId(lcpCandidate.path)}`,
       area: resolveAreaFromPath(lcpCandidate.path),
@@ -141,7 +155,11 @@ export function deriveOptimizationInsights({
     .sort((a, b) => b.loadTimeMs - a.loadTimeMs || b.views - a.views)[0];
 
   if (memberLatency) {
-    const impact = chooseImpact(memberLatency.loadTimeMs, MS_FRONTEND_HIGH_THRESHOLD, MS_MEMBER_THRESHOLD);
+    const impact = chooseImpact(
+      memberLatency.loadTimeMs,
+      MS_FRONTEND_HIGH_THRESHOLD,
+      MS_MEMBER_THRESHOLD,
+    );
     pushInsight({
       id: `member-speed-${formatId(memberLatency.path)}`,
       area: "Mitgliederbereich",
@@ -154,14 +172,18 @@ export function deriveOptimizationInsights({
   }
 
   const strugglingSegment = sessionInsights
-    .filter((segment) => segment.share >= SHARE_MINIMUM && segment.retentionRate <= RETENTION_WARNING)
+    .filter(
+      (segment) => segment.share >= SHARE_MINIMUM && segment.retentionRate <= RETENTION_WARNING,
+    )
     .sort((a, b) => a.retentionRate - b.retentionRate)[0];
 
   if (strugglingSegment) {
     const impact = strugglingSegment.retentionRate <= RETENTION_CRITICAL ? "Hoch" : "Mittel";
     pushInsight({
       id: `segment-${formatId(strugglingSegment.segment)}`,
-      area: strugglingSegment.segment.toLowerCase().includes("mitglied") ? "Mitgliederbereich" : "Frontend",
+      area: strugglingSegment.segment.toLowerCase().includes("mitglied")
+        ? "Mitgliederbereich"
+        : "Frontend",
       title: `${strugglingSegment.segment}: Rückkehrquote steigern`,
       description:
         "Dieses Segment springt früh ab. Angepasste Onboarding-Inhalte oder personalisierte Empfehlungen können die Bindung erhöhen.",
@@ -171,11 +193,18 @@ export function deriveOptimizationInsights({
   }
 
   const slowDevice = deviceStats
-    .filter((device) => device.share >= DEVICE_SHARE_MINIMUM && device.avgPageLoadMs >= MS_DEVICE_THRESHOLD)
+    .filter(
+      (device) =>
+        device.share >= DEVICE_SHARE_MINIMUM && device.avgPageLoadMs >= MS_DEVICE_THRESHOLD,
+    )
     .sort((a, b) => b.share - a.share || b.avgPageLoadMs - a.avgPageLoadMs)[0];
 
   if (slowDevice) {
-    const impact = chooseImpact(slowDevice.avgPageLoadMs, MS_FRONTEND_HIGH_THRESHOLD, MS_DEVICE_THRESHOLD + 200);
+    const impact = chooseImpact(
+      slowDevice.avgPageLoadMs,
+      MS_FRONTEND_HIGH_THRESHOLD,
+      MS_DEVICE_THRESHOLD + 200,
+    );
     pushInsight({
       id: `device-${formatId(slowDevice.device)}`,
       area: "Frontend",
@@ -213,8 +242,15 @@ export function deriveOptimizationInsights({
       });
     }
 
-    if (httpSummary.membersAvgResponseMs >= MS_MEMBER_THRESHOLD && !seen.has("member-api-latency")) {
-      const impact = chooseImpact(httpSummary.membersAvgResponseMs, MS_FRONTEND_HIGH_THRESHOLD, MS_MEMBER_THRESHOLD);
+    if (
+      httpSummary.membersAvgResponseMs >= MS_MEMBER_THRESHOLD &&
+      !seen.has("member-api-latency")
+    ) {
+      const impact = chooseImpact(
+        httpSummary.membersAvgResponseMs,
+        MS_FRONTEND_HIGH_THRESHOLD,
+        MS_MEMBER_THRESHOLD,
+      );
       pushInsight({
         id: "member-api-latency",
         area: "Mitgliederbereich",
@@ -233,8 +269,11 @@ export function deriveOptimizationInsights({
         title: "Frontend-Payload verkleinern",
         description:
           "Die durchschnittliche Antwortgröße ist hoch. Nicht kritische Skripte lazy laden und Assets stärker komprimieren.",
-        impact: httpSummary.frontendAvgPayloadBytes >= FRONTEND_PAYLOAD_WARNING * 1.5 ? "Hoch" : "Mittel",
-        metric: `Durchschnittliche Payload ${(httpSummary.frontendAvgPayloadBytes / 1024).toLocaleString("de-DE", {
+        impact:
+          httpSummary.frontendAvgPayloadBytes >= FRONTEND_PAYLOAD_WARNING * 1.5 ? "Hoch" : "Mittel",
+        metric: `Durchschnittliche Payload ${(
+          httpSummary.frontendAvgPayloadBytes / 1024
+        ).toLocaleString("de-DE", {
           maximumFractionDigits: 0,
         })} KB`,
       });

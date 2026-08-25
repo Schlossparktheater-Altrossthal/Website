@@ -15,7 +15,9 @@ export default async function ServerSettingsPage() {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-muted-foreground">Kein Zugriff auf die Servereinstellungen.</div>
+        <div className="text-sm text-muted-foreground">
+          Kein Zugriff auf die Servereinstellungen.
+        </div>
       </div>
     );
   }
@@ -39,7 +41,8 @@ export default async function ServerSettingsPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Servereinstellungen</h1>
           <p className="text-sm text-muted-foreground">
-            Hinterlege den SMTP-Server für Systemnachrichten und teste die Verbindung direkt aus dem Backend.
+            Hinterlege den SMTP-Server für Systemnachrichten und teste die Verbindung direkt aus dem
+            Backend.
           </p>
         </div>
         <ServerSettingsContent initialSettings={clientSettings} />

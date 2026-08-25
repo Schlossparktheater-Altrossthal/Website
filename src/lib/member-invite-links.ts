@@ -11,7 +11,9 @@ function ensureArray<T>(value: readonly T[] | null | undefined): readonly T[] {
   return Array.isArray(value) ? value : [];
 }
 
-export function resolveOnboardingVariant(roles: readonly Role[] | null | undefined): OnboardingVariant {
+export function resolveOnboardingVariant(
+  roles: readonly Role[] | null | undefined,
+): OnboardingVariant {
   const roleSet = new Set(ensureArray(roles));
   if (roleSet.has("board") && !roleSet.has("cast")) {
     return "regie";
@@ -39,11 +41,17 @@ export function onboardingPathForToken(token: string, roles: readonly Role[] | n
   return buildVariantPath(onboardingBasePath(roles), token);
 }
 
-export function onboardingPathForHash(tokenHash: string, roles: readonly Role[] | null | undefined) {
+export function onboardingPathForHash(
+  tokenHash: string,
+  roles: readonly Role[] | null | undefined,
+) {
   return buildVariantPath(onboardingBasePath(roles), tokenHash);
 }
 
-export function onboardingShortPathForInvite(inviteId: string, roles: readonly Role[] | null | undefined) {
+export function onboardingShortPathForInvite(
+  inviteId: string,
+  roles: readonly Role[] | null | undefined,
+) {
   const base = onboardingBasePath(roles);
   if (!inviteId) {
     return base;

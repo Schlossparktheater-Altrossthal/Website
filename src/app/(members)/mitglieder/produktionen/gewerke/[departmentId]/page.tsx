@@ -38,13 +38,21 @@ import {
   deleteDepartmentTaskAction,
   updateDepartmentTaskAction,
 } from "../../actions";
-import { CalendarDaysIcon, CheckCircle2Icon, ClockIcon, IconComponent, ListTodoIcon, SparklesIcon, Trash2Icon, UsersIcon } from "@/components/ui/action-icons";
+import {
+  CalendarDaysIcon,
+  CheckCircle2Icon,
+  ClockIcon,
+  IconComponent,
+  ListTodoIcon,
+  SparklesIcon,
+  Trash2Icon,
+  UsersIcon,
+} from "@/components/ui/action-icons";
 
 const selectClassName =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-const subtleSurfaceClassName =
-  "rounded-2xl border border-border/60 bg-background/80 shadow-inner";
+const subtleSurfaceClassName = "rounded-2xl border border-border/60 bg-background/80 shadow-inner";
 
 type PageProps = { params: Promise<{ departmentId: string }> };
 
@@ -52,9 +60,7 @@ type SummaryStat = { label: string; value: number; hint?: string; icon: IconComp
 
 type MeetingSuggestion = ReturnType<typeof findMeetingSuggestions>[number];
 
-type DepartmentWithRelations = Awaited<
-  ReturnType<typeof loadDepartmentWithRelations>
->;
+type DepartmentWithRelations = Awaited<ReturnType<typeof loadDepartmentWithRelations>>;
 
 async function loadDepartmentWithRelations(id: string) {
   return prisma.department.findUnique({
@@ -108,7 +114,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
     notFound();
   }
 
-  const department = (await loadDepartmentWithRelations(departmentId)) as DepartmentWithRelations | null;
+  const department = (await loadDepartmentWithRelations(
+    departmentId,
+  )) as DepartmentWithRelations | null;
   if (!department) {
     notFound();
   }
@@ -145,7 +153,12 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
   const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
   const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
 
-  const meetingSuggestions = findMeetingSuggestions(memberIds, planningStart, planningEnd, blockedByUser);
+  const meetingSuggestions = findMeetingSuggestions(
+    memberIds,
+    planningStart,
+    planningEnd,
+    blockedByUser,
+  );
   const blockedDatesCount = countBlockedDays(memberIds, blockedByUser);
   const hasMembers = memberIds.length > 0;
   const documents = department.documents ?? [];
@@ -157,7 +170,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
   const canManageDocuments =
     viewerMembership?.role === "lead" || viewerMembership?.role === "deputy" || allowed;
 
-  const sortedMembers = [...department.memberships].sort((a, b) => compareMembersByLastName(a.user, b.user));
+  const sortedMembers = [...department.memberships].sort((a, b) =>
+    compareMembersByLastName(a.user, b.user),
+  );
 
   const sortedTasks = [...department.tasks].sort((a, b) => {
     const statusDiff = TASK_STATUS_ORDER[a.status] - TASK_STATUS_ORDER[b.status];
@@ -172,9 +187,24 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
   const completedTasks = sortedTasks.filter((task) => task.status === "done");
 
   const summaryStats: SummaryStat[] = [
-    { label: "Aktive Aufgaben", value: activeTasks.length, hint: "Offen & in Arbeit", icon: ListTodoIcon },
-    { label: "Teammitglieder", value: department.memberships.length, hint: "Eingetragene Personen", icon: UsersIcon },
-    { label: "Abgeschlossen", value: completedTasks.length, hint: "Erledigte Aufgaben", icon: CheckCircle2Icon },
+    {
+      label: "Aktive Aufgaben",
+      value: activeTasks.length,
+      hint: "Offen & in Arbeit",
+      icon: ListTodoIcon,
+    },
+    {
+      label: "Teammitglieder",
+      value: department.memberships.length,
+      hint: "Eingetragene Personen",
+      icon: UsersIcon,
+    },
+    {
+      label: "Abgeschlossen",
+      value: completedTasks.length,
+      hint: "Erledigte Aufgaben",
+      icon: CheckCircle2Icon,
+    },
   ];
 
   const accentStyle = {
@@ -203,13 +233,20 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                   <span className="tracking-[0.2em]">Mission Control</span>
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-muted-foreground">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: department.color ?? "#94a3b8" }} />
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: department.color ?? "#94a3b8" }}
+                  />
                   {department.slug ?? "Gewerk"}
                 </span>
               </div>
               <div className="space-y-4">
-                <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">{department.name}</h1>
-                <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{heroDescription}</p>
+                <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">
+                  {department.name}
+                </h1>
+                <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+                  {heroDescription}
+                </p>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
                     <CalendarDaysIcon aria-hidden className="h-4 w-4" />
@@ -258,9 +295,13 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                       <Icon aria-hidden className="h-5 w-5" />
                     </span>
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">{stat.label}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                        {stat.label}
+                      </p>
                       <p className="text-2xl font-semibold text-foreground">{stat.value}</p>
-                      {stat.hint ? <p className="text-xs text-muted-foreground/80">{stat.hint}</p> : null}
+                      {stat.hint ? (
+                        <p className="text-xs text-muted-foreground/80">{stat.hint}</p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -289,7 +330,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
           <CardHeader className="relative z-[1] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-lg font-semibold text-foreground">Aufgaben &amp; To-Dos</CardTitle>
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Aufgaben &amp; To-Dos
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Koordiniere Aufgaben, Verantwortlichkeiten und Fortschritt deines Gewerks.
                 </p>
@@ -318,7 +361,11 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm" className="rounded-full">
+                            <Badge
+                              variant={TASK_STATUS_BADGES[task.status]}
+                              size="sm"
+                              className="rounded-full"
+                            >
                               {TASK_STATUS_LABELS[task.status]}
                             </Badge>
                             {dueMeta ? (
@@ -338,11 +385,15 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                                 : "Noch keine Zuordnung"}
                             </span>
                           </div>
-                          <p className="text-base font-medium leading-snug text-foreground">{task.title}</p>
+                          <p className="text-base font-medium leading-snug text-foreground">
+                            {task.title}
+                          </p>
                           {task.description ? (
                             <p className="text-sm text-muted-foreground">{task.description}</p>
                           ) : null}
-                          <p className="text-xs text-muted-foreground">Erstellt von {creatorName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Erstellt von {creatorName}
+                          </p>
                         </div>
                         <form action={deleteDepartmentTaskAction}>
                           <input type="hidden" name="taskId" value={task.id} />
@@ -358,26 +409,56 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                         </form>
                       </div>
 
-                      <details className={`${subtleSurfaceClassName} group border-border/50 bg-background/80 p-4 [&_summary::-webkit-details-marker]:hidden`}>
+                      <details
+                        className={`${subtleSurfaceClassName} group border-border/50 bg-background/80 p-4 [&_summary::-webkit-details-marker]:hidden`}
+                      >
                         <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                           <span>Aufgabe bearbeiten</span>
-                          <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
-                          <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
+                          <span className="text-[11px] text-muted-foreground group-open:hidden">
+                            Öffnen
+                          </span>
+                          <span className="hidden text-[11px] text-muted-foreground group-open:inline">
+                            Schließen
+                          </span>
                         </summary>
-                        <form action={updateDepartmentTaskAction} className="mt-3 grid gap-3 md:grid-cols-2">
+                        <form
+                          action={updateDepartmentTaskAction}
+                          className="mt-3 grid gap-3 md:grid-cols-2"
+                        >
                           <input type="hidden" name="taskId" value={task.id} />
                           <input type="hidden" name="redirectPath" value={detailPath} />
                           <div className="space-y-1 md:col-span-2">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Titel</label>
-                            <Input name="title" defaultValue={task.title} minLength={2} maxLength={160} required />
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Titel
+                            </label>
+                            <Input
+                              name="title"
+                              defaultValue={task.title}
+                              minLength={2}
+                              maxLength={160}
+                              required
+                            />
                           </div>
                           <div className="space-y-1 md:col-span-2">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
-                            <Textarea name="description" rows={3} maxLength={2000} defaultValue={task.description ?? ""} />
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Beschreibung
+                            </label>
+                            <Textarea
+                              name="description"
+                              rows={3}
+                              maxLength={2000}
+                              defaultValue={task.description ?? ""}
+                            />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</label>
-                            <select name="status" defaultValue={task.status} className={selectClassName}>
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Status
+                            </label>
+                            <select
+                              name="status"
+                              defaultValue={task.status}
+                              className={selectClassName}
+                            >
                               {Object.values(TaskStatus).map((status) => (
                                 <option key={status} value={status}>
                                   {TASK_STATUS_LABELS[status]}
@@ -386,7 +467,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                             </select>
                           </div>
                           <div className="space-y-1">
-                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Fällig bis</label>
+                            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Fällig bis
+                            </label>
                             <DateInput name="dueAt" defaultValue={dueDateValue} />
                           </div>
                           <div className="space-y-1">
@@ -427,25 +510,40 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
             )}
 
             {completedTasks.length ? (
-              <details className={`${subtleSurfaceClassName} border-border/50 bg-background/70 p-4 transition open:border-primary/40`}>
+              <details
+                className={`${subtleSurfaceClassName} border-border/50 bg-background/70 p-4 transition open:border-primary/40`}
+              >
                 <summary className="flex cursor-pointer items-center justify-between text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                   <span>Abgeschlossene Aufgaben</span>
-                  <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
-                  <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
+                  <span className="text-[11px] text-muted-foreground group-open:hidden">
+                    Öffnen
+                  </span>
+                  <span className="hidden text-[11px] text-muted-foreground group-open:inline">
+                    Schließen
+                  </span>
                 </summary>
                 <ul className="mt-3 space-y-3 text-sm">
                   {completedTasks.map((task) => {
                     const dueMeta = task.dueAt ? getDueMeta(task.dueAt, now) : null;
                     return (
-                      <li key={task.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
+                      <li
+                        key={task.id}
+                        className="rounded-xl border border-border/60 bg-background/90 p-3"
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1">
                             <p className="font-medium text-foreground">{task.title}</p>
                             {dueMeta ? (
-                              <p className="text-xs text-muted-foreground">Fällig war {dueMeta.absolute}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Fällig war {dueMeta.absolute}
+                              </p>
                             ) : null}
                           </div>
-                          <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm" className="rounded-full">
+                          <Badge
+                            variant={TASK_STATUS_BADGES[task.status]}
+                            size="sm"
+                            className="rounded-full"
+                          >
                             {TASK_STATUS_LABELS[task.status]}
                           </Badge>
                         </div>
@@ -456,13 +554,19 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
               </details>
             ) : null}
 
-            <div className={`${subtleSurfaceClassName} border-dashed border-border/60 bg-background/70 p-4`}>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Neue Aufgabe hinzufügen</h3>
+            <div
+              className={`${subtleSurfaceClassName} border-dashed border-border/60 bg-background/70 p-4`}
+            >
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Neue Aufgabe hinzufügen
+              </h3>
               <form className="mt-3 grid gap-3 md:grid-cols-2" action={createDepartmentTaskAction}>
                 <input type="hidden" name="departmentId" value={department.id} />
                 <input type="hidden" name="redirectPath" value={detailPath} />
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Titel</label>
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Titel
+                  </label>
                   <Input
                     name="title"
                     placeholder="z.B. Lichtplan aktualisieren"
@@ -472,7 +576,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                   />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Beschreibung
+                  </label>
                   <Textarea
                     name="description"
                     rows={3}
@@ -481,7 +587,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</label>
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Status
+                  </label>
                   <select name="status" className={selectClassName} defaultValue={TaskStatus.todo}>
                     {Object.values(TaskStatus).map((status) => (
                       <option key={status} value={status}>
@@ -491,7 +599,9 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Fällig bis</label>
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Fällig bis
+                  </label>
                   <DateInput name="dueAt" />
                 </div>
                 <div className="space-y-1 md:col-span-2">
@@ -525,16 +635,26 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
         </Card>
 
         <Card className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/75">
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),transparent_70%)]" />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),transparent_70%)]"
+          />
           <CardHeader className="relative z-[1] space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-lg font-semibold text-foreground">Planung &amp; Termine</CardTitle>
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Planung &amp; Termine
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Verfügbare Slots ab {freezeUntilLabel} und innerhalb der nächsten {PLANNING_LOOKAHEAD_DAYS} Tage.
+                  Verfügbare Slots ab {freezeUntilLabel} und innerhalb der nächsten{" "}
+                  {PLANNING_LOOKAHEAD_DAYS} Tage.
                 </p>
               </div>
-              <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
+              <Badge
+                variant="outline"
+                size="sm"
+                className="rounded-full border-primary/40 text-primary"
+              >
                 {canSeePlanning ? `${meetingSuggestions.length} Vorschläge` : "Nur Leitung"}
               </Badge>
             </div>
@@ -546,9 +666,13 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
               </p>
             ) : canSeePlanning ? (
               <>
-                <div className={`${subtleSurfaceClassName} flex items-center justify-between gap-3 border-border/50 bg-background/85 px-4 py-3`}>
+                <div
+                  className={`${subtleSurfaceClassName} flex items-center justify-between gap-3 border-border/50 bg-background/85 px-4 py-3`}
+                >
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sperrtage im Zeitraum</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Sperrtage im Zeitraum
+                    </p>
                     <p className="text-sm text-foreground">{blockedDatesCount}</p>
                   </div>
                   <Button
@@ -585,7 +709,10 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
       </div>
 
       <Card className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/75">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),transparent_70%)]" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),transparent_70%)]"
+        />
         <CardHeader className="relative z-[1] space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -610,9 +737,14 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
           ) : (
             <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {sortedMembers.map((membership) => (
-                <li key={membership.id} className={`${subtleSurfaceClassName} border-border/50 bg-background/85 p-4`}>
+                <li
+                  key={membership.id}
+                  className={`${subtleSurfaceClassName} border-border/50 bg-background/85 p-4`}
+                >
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-foreground">{formatUserName(membership.user)}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {formatUserName(membership.user)}
+                    </p>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <Badge variant="outline" size="sm" className="rounded-full border-border/60">
                         {ROLE_LABELS[membership.role]}
@@ -641,7 +773,8 @@ function renderSuggestions(suggestions: MeetingSuggestion[], memberCount: number
   if (suggestions.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/80 p-4 text-xs text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/10 dark:text-amber-100">
-        Kein gemeinsamer freier Termin gefunden. Aktualisiert Sperrlisten oder erweitert den Zeitrahmen.
+        Kein gemeinsamer freier Termin gefunden. Aktualisiert Sperrlisten oder erweitert den
+        Zeitrahmen.
       </div>
     );
   }
@@ -659,7 +792,9 @@ function renderSuggestions(suggestions: MeetingSuggestion[], memberCount: number
             </span>
             <div className="space-y-1">
               <p className="text-sm font-medium text-foreground">{slot.label}</p>
-              <p className="text-xs text-muted-foreground">Alle {memberCount} Mitglieder sind verfügbar.</p>
+              <p className="text-xs text-muted-foreground">
+                Alle {memberCount} Mitglieder sind verfügbar.
+              </p>
             </div>
           </div>
           <Badge variant="success" size="sm" className="rounded-full">

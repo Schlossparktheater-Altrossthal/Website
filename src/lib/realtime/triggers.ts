@@ -1,6 +1,6 @@
-import type { OnboardingDashboardData } from '@/lib/onboarding/dashboard-schemas';
+import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
 
-import { emitRealtimeEvent } from './event-client';
+import { emitRealtimeEvent } from "./event-client";
 
 /**
  * Server-side utilities for triggering real-time events
@@ -14,11 +14,11 @@ export class RealtimeTriggers {
   static async broadcastAttendanceUpdate(data: {
     rehearsalId: string;
     targetUserId: string;
-    status: 'yes' | 'no' | 'emergency';
+    status: "yes" | "no" | "emergency";
     comment?: string;
     actorUserId: string;
   }) {
-    await emitRealtimeEvent('attendance_updated', {
+    await emitRealtimeEvent("attendance_updated", {
       rehearsalId: data.rehearsalId,
       targetUserId: data.targetUserId,
       status: data.status ?? null,
@@ -40,7 +40,7 @@ export class RealtimeTriggers {
     };
     targetUserIds: string[];
   }) {
-    await emitRealtimeEvent('rehearsal_created', {
+    await emitRealtimeEvent("rehearsal_created", {
       rehearsal: data.rehearsal,
       targetUserIds: data.targetUserIds,
     });
@@ -60,7 +60,7 @@ export class RealtimeTriggers {
     };
     targetUserIds: string[];
   }) {
-    await emitRealtimeEvent('rehearsal_updated', {
+    await emitRealtimeEvent("rehearsal_updated", {
       rehearsalId: data.rehearsalId,
       changes: data.changes,
       targetUserIds: data.targetUserIds,
@@ -74,11 +74,11 @@ export class RealtimeTriggers {
     targetUserId: string;
     title: string;
     body?: string;
-    type?: 'info' | 'warning' | 'success' | 'error';
+    type?: "info" | "warning" | "success" | "error";
     actionUrl?: string;
     metadata?: Record<string, unknown>;
   }) {
-    await emitRealtimeEvent('notification_created', {
+    await emitRealtimeEvent("notification_created", {
       targetUserId: data.targetUserId,
       notification: {
         id: `notif_${Date.now()}`,
@@ -100,7 +100,7 @@ export class RealtimeTriggers {
     dashboard: OnboardingDashboardData;
     broadcastToGlobal?: boolean;
   }) {
-    await emitRealtimeEvent('onboarding_dashboard_update', {
+    await emitRealtimeEvent("onboarding_dashboard_update", {
       onboardingId: data.onboardingId,
       dashboard: data.dashboard,
       broadcastToGlobal: Boolean(data.broadcastToGlobal),
@@ -111,7 +111,10 @@ export class RealtimeTriggers {
    * Get list of users currently online in a rehearsal
    */
   static async getOnlineUsersInRehearsal(rehearsalId: string): Promise<string[]> {
-    console.warn('[RealtimeTriggers] getOnlineUsersInRehearsal is not supported in external server mode', rehearsalId);
+    console.warn(
+      "[RealtimeTriggers] getOnlineUsersInRehearsal is not supported in external server mode",
+      rehearsalId,
+    );
     return [];
   }
 
@@ -119,7 +122,10 @@ export class RealtimeTriggers {
    * Check if a specific user is online
    */
   static async isUserOnline(userId: string): Promise<boolean> {
-    console.warn('[RealtimeTriggers] isUserOnline is not supported in external server mode', userId);
+    console.warn(
+      "[RealtimeTriggers] isUserOnline is not supported in external server mode",
+      userId,
+    );
     return false;
   }
 
@@ -127,7 +133,7 @@ export class RealtimeTriggers {
    * Get total count of online users
    */
   static async getOnlineUserCount(): Promise<number> {
-    console.warn('[RealtimeTriggers] getOnlineUserCount is not supported in external server mode');
+    console.warn("[RealtimeTriggers] getOnlineUserCount is not supported in external server mode");
     return 0;
   }
 }

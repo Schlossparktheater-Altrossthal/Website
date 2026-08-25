@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 
-
 const WATCH_IGNORED_PATTERNS = [
   /(^|[\\/])node_modules([\\/]|$)/,
   /(^|[\\/])\.next([\\/]|$)/,

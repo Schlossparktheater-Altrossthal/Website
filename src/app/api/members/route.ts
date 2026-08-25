@@ -93,7 +93,10 @@ export async function POST(request: NextRequest) {
 
   const password = typeof passwordValue === "string" ? passwordValue : "";
   if (password.length < 6) {
-    return NextResponse.json({ error: "Passwort muss mindestens 6 Zeichen haben" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Passwort muss mindestens 6 Zeichen haben" },
+      { status: 400 },
+    );
   }
 
   const passwordHash = await hashPassword(password);
@@ -105,7 +108,9 @@ export async function POST(request: NextRequest) {
   const roles = withAutoCast(sortRoles(filteredRoles.length > 0 ? filteredRoles : ["member"]));
 
   // Only owners may assign the owner role
-  const actorRoles = new Set(session.user?.roles ?? (session.user?.role ? [session.user.role] : []));
+  const actorRoles = new Set(
+    session.user?.roles ?? (session.user?.role ? [session.user.role] : []),
+  );
   if (roles.includes("owner") && !actorRoles.has("owner")) {
     return NextResponse.json({ error: "Nur Owner dürfen Owner zuweisen" }, { status: 403 });
   }
@@ -138,7 +143,7 @@ export async function POST(request: NextRequest) {
     });
 
     const allRoles = sortRoles([user.role, ...user.roles.map((r) => r.role as Role)]);
-    const responseName = combineNameParts(user.firstName, user.lastName) ?? (user.name ?? null);
+    const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;
 
     return NextResponse.json({
       ok: true,

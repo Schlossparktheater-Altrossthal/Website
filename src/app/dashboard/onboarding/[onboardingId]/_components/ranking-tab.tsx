@@ -69,17 +69,23 @@ type RoleFilter = "all" | string;
 
 const roleAccentStyles: Record<string, string> = {
   acting_lead: "border-amber-400/60 bg-amber-500/10 dark:border-amber-400/40 dark:bg-amber-500/5",
-  acting_medium: "border-orange-400/60 bg-orange-500/10 dark:border-orange-400/40 dark:bg-orange-500/5",
-  acting_scout: "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-400/40 dark:bg-emerald-500/5",
-  acting_statist: "border-primary400/60 bg-primary500/10 dark:border-primary400/40 dark:bg-primary500/5",
-  crew_stage: "border-purple-400/55 bg-purple-500/10 dark:border-purple-400/40 dark:bg-purple-500/5",
+  acting_medium:
+    "border-orange-400/60 bg-orange-500/10 dark:border-orange-400/40 dark:bg-orange-500/5",
+  acting_scout:
+    "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-400/40 dark:bg-emerald-500/5",
+  acting_statist:
+    "border-primary400/60 bg-primary500/10 dark:border-primary400/40 dark:bg-primary500/5",
+  crew_stage:
+    "border-purple-400/55 bg-purple-500/10 dark:border-purple-400/40 dark:bg-purple-500/5",
   crew_tech: "border-cyan-400/55 bg-cyan-500/10 dark:border-cyan-400/40 dark:bg-cyan-500/5",
   crew_costume: "border-pink-400/55 bg-pink-500/10 dark:border-pink-400/40 dark:bg-pink-500/5",
   crew_makeup: "border-rose-400/55 bg-rose-500/10 dark:border-rose-400/40 dark:bg-rose-500/5",
-  crew_direction: "border-indigo-400/55 bg-indigo-500/10 dark:border-indigo-400/40 dark:bg-indigo-500/5",
+  crew_direction:
+    "border-indigo-400/55 bg-indigo-500/10 dark:border-indigo-400/40 dark:bg-indigo-500/5",
   crew_music: "border-lime-400/55 bg-lime-500/10 dark:border-lime-400/40 dark:bg-lime-500/5",
   crew_props: "border-teal-400/55 bg-teal-500/10 dark:border-teal-400/40 dark:bg-teal-500/5",
-  crew_marketing: "border-amber-300/55 bg-amber-400/10 dark:border-amber-300/40 dark:bg-amber-400/5",
+  crew_marketing:
+    "border-amber-300/55 bg-amber-400/10 dark:border-amber-300/40 dark:bg-amber-400/5",
   default: "border-border/60 bg-muted/30",
 };
 
@@ -239,7 +245,9 @@ function CandidateCard({
         </div>
         {candidate.interests.length > 0 && (
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Tags</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Tags
+            </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {candidate.interests.map((interest) => (
                 <Badge
@@ -258,7 +266,8 @@ function CandidateCard({
           <div className="space-y-2 text-[12px]">
             {candidate.background && (
               <p className="text-muted-foreground">
-                <span className="font-semibold text-foreground/80">Background:</span> {candidate.background}
+                <span className="font-semibold text-foreground/80">Background:</span>{" "}
+                {candidate.background}
               </p>
             )}
             {candidate.notes && (
@@ -320,14 +329,13 @@ function DomainSection({
             {/* Sticky Group Header */}
             <div className="sticky top-[140px] z-20 -mx-6 px-6 pb-3 bg-gradient-to-b from-background via-background/95 to-transparent backdrop-blur-sm">
               <div
-                className={cn(
-                  "rounded-xl border shadow-md px-4 py-3 sm:px-5 sm:py-4",
-                  accentClass,
-                )}
+                className={cn("rounded-xl border shadow-md px-4 py-3 sm:px-5 sm:py-4", accentClass)}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-0.5">
-                    <h3 className="text-base sm:text-lg font-semibold text-foreground">{group.label}</h3>
+                    <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                      {group.label}
+                    </h3>
                     <p className="text-xs text-muted-foreground">
                       {domain === "acting"
                         ? "Rollengröße im Onboarding"
@@ -336,20 +344,17 @@ function DomainSection({
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" size="sm" className="font-semibold">
-                      {numberFormatter.format(profileCount)} {profileCount === 1 ? "Profil" : "Profile"}
+                      {numberFormatter.format(profileCount)}{" "}
+                      {profileCount === 1 ? "Profil" : "Profile"}
                     </Badge>
-                    <Badge
-                      variant="outline"
-                      size="sm"
-                      className="border-border/50"
-                    >
+                    <Badge variant="outline" size="sm" className="border-border/50">
                       {group.demand} {group.demand === 1 ? "Platz" : "Plätze"}
                     </Badge>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {/* Cards Container */}
             {group.candidates.length === 0 ? (
               <div className="mt-3 rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
@@ -393,7 +398,9 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
   const { actingRoleSummaries, crewRoleSummaries, actingGroups, crewGroups } = useMemo(() => {
     const candidateMap = buildCandidateAggregates(ranking);
     const summaries = createRoleSummaries(ranking);
-    const summaryMap = new Map<string, RoleSummary>(summaries.map((summary) => [summary.roleId, summary]));
+    const summaryMap = new Map<string, RoleSummary>(
+      summaries.map((summary) => [summary.roleId, summary]),
+    );
     const groups = createRoleGroups(ranking, candidateMap);
 
     return {
@@ -470,10 +477,13 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
     };
   }, [domain]);
 
-  const activeFilterOptions = domain === "acting" ? roleFilterOptions.acting : roleFilterOptions.crew;
+  const activeFilterOptions =
+    domain === "acting" ? roleFilterOptions.acting : roleFilterOptions.crew;
   const totalProfiles = activeFilterOptions.reduce((sum, option) => sum + option.count, 0);
   const selectedRoleMeta =
-    roleFilter === "all" ? null : activeFilterOptions.find((option) => option.value === roleFilter) ?? null;
+    roleFilter === "all"
+      ? null
+      : (activeFilterOptions.find((option) => option.value === roleFilter) ?? null);
   const filterLabel = domain === "acting" ? "Rollengröße" : "Gewerk";
   const filterDescription =
     domain === "acting"
@@ -531,26 +541,35 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
               </Select>
             </div>
           </div>
-          
+
           {/* Tabs + Context Info */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <TabsList>
               <TabsTrigger value="acting">Acting</TabsTrigger>
               <TabsTrigger value="crew">Crew</TabsTrigger>
             </TabsList>
-            
+
             {/* Current Context Breadcrumb */}
             <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
               <span>Zeige:</span>
               <span className="font-semibold text-foreground">
-                {domain === "acting" ? "Acting" : "Crew"} · {roleFilter === "all" ? allLabel : selectedRoleMeta?.label} · {numberFormatter.format(roleFilter === "all" ? totalProfiles : selectedRoleMeta?.count ?? 0)} Profile
+                {domain === "acting" ? "Acting" : "Crew"} ·{" "}
+                {roleFilter === "all" ? allLabel : selectedRoleMeta?.label} ·{" "}
+                {numberFormatter.format(
+                  roleFilter === "all" ? totalProfiles : (selectedRoleMeta?.count ?? 0),
+                )}{" "}
+                Profile
               </span>
             </div>
           </div>
         </div>
       </div>
-      
-      <Tabs value={domain} onValueChange={(value) => setDomain(value as Domain)} className="space-y-6 mt-6">
+
+      <Tabs
+        value={domain}
+        onValueChange={(value) => setDomain(value as Domain)}
+        className="space-y-6 mt-6"
+      >
         <TabsContent value="acting" className="mt-0 space-y-4">
           {actingRoleSummaries.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -604,7 +623,6 @@ export function RankingTab({ ranking, onboardingId, detailHrefTemplate }: Rankin
           )}
         </TabsContent>
       </Tabs>
-
     </>
   );
 }

@@ -41,7 +41,8 @@ function createProps(overrides: Partial<OnboardingSectionProps> = {}): Onboardin
     whatsappLink: "https://example.com",
   };
 
-  const whatsappVisitedAt = overrides.whatsappVisitedAt ?? onboarding?.whatsappLinkVisitedAt ?? null;
+  const whatsappVisitedAt =
+    overrides.whatsappVisitedAt ?? onboarding?.whatsappLinkVisitedAt ?? null;
 
   return {
     onboarding,

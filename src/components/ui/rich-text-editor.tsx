@@ -23,30 +23,37 @@ const TOOLBAR_OPTIONS = [
 
 const BASE_MODULES = {
   toolbar: TOOLBAR_OPTIONS,
-  clipboard: { 
-    matchVisual: false 
+  clipboard: {
+    matchVisual: false,
   },
   history: {
     delay: 2000,
     maxStack: 500,
-    userOnly: true
+    userOnly: true,
   },
   keyboard: {
     bindings: {
       tab: {
         key: 9,
-        handler: function(this: { quill: { history: { cutoff(): void }; getSelection(): { index: number } | null; insertText(index: number, text: string): void; setSelection(index: number): void } }) {
+        handler: function (this: {
+          quill: {
+            history: { cutoff(): void };
+            getSelection(): { index: number } | null;
+            insertText(index: number, text: string): void;
+            setSelection(index: number): void;
+          };
+        }) {
           this.quill.history.cutoff();
           const range = this.quill.getSelection();
           if (range) {
-            this.quill.insertText(range.index, '\t');
+            this.quill.insertText(range.index, "\t");
             this.quill.setSelection(range.index + 1);
           }
           return false;
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 };
 
 const BASE_FORMATS = [
@@ -93,10 +100,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 
   return (
     <div
-      className={cn(
-        "rich-text-editor group relative overflow-hidden rounded-[28px]",
-        className,
-      )}
+      className={cn("rich-text-editor group relative overflow-hidden rounded-[28px]", className)}
     >
       <ReactQuill
         theme="snow"

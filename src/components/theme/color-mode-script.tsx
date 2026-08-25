@@ -1,7 +1,4 @@
-import {
-  DEFAULT_COLOR_MODE,
-  type ThemeColorMode,
-} from "@/lib/website-settings";
+import { DEFAULT_COLOR_MODE, type ThemeColorMode } from "@/lib/website-settings";
 
 export type ColorModeScriptProps = {
   mode: ThemeColorMode;

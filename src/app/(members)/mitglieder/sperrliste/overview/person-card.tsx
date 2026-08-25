@@ -67,7 +67,9 @@ const PersonCardComponent = ({ person, cell, tone, compact = false }: PersonCard
           )}
         </div>
         {cell.label && !compact && (
-          <p className={`mt-0.5 text-[10px] leading-tight ${style.text} line-clamp-2`}>{cell.label}</p>
+          <p className={`mt-0.5 text-[10px] leading-tight ${style.text} line-clamp-2`}>
+            {cell.label}
+          </p>
         )}
         {cell.label && compact && (
           <p className={`text-[9px] ${style.text} truncate`} title={cell.label}>

@@ -14,7 +14,11 @@ export function StatCard({
 }) {
   return (
     <Card className="p-4 flex items-center gap-3">
-      {icon ? <div className="text-primary" aria-hidden>{icon}</div> : null}
+      {icon ? (
+        <div className="text-primary" aria-hidden>
+          {icon}
+        </div>
+      ) : null}
       <div>
         <div className="text-xs uppercase tracking-wide text-foreground/70">{label}</div>
         <div className="text-xl font-semibold">{value}</div>
@@ -23,4 +27,3 @@ export function StatCard({
     </Card>
   );
 }
-

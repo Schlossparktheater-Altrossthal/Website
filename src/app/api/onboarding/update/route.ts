@@ -6,12 +6,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
-const ALLOWED_DOCUMENT_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/jpg",
-]);
+const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
 
 function sanitizeFilename(name: string | undefined | null) {
   if (!name) return "einverstaendnis.pdf";
@@ -151,7 +146,10 @@ export async function POST(request: NextRequest) {
     }
     const type = documentFile.type?.toLowerCase() ?? "";
     if (type && !ALLOWED_DOCUMENT_TYPES.has(type)) {
-      return NextResponse.json({ error: "Bitte nutze PDF oder Bilddateien (JPG/PNG)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Bitte nutze PDF oder Bilddateien (JPG/PNG)" },
+        { status: 400 },
+      );
     }
     const arrayBuffer = await documentFile.arrayBuffer();
     documentBuffer = new Uint8Array(arrayBuffer);
@@ -287,9 +285,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("[Onboarding][Update] update failed", error);
-    return NextResponse.json(
-      { error: "Aktualisierung fehlgeschlagen" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
 }

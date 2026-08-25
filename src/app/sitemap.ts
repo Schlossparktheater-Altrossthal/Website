@@ -4,7 +4,9 @@ import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-setti
 
 export const dynamic = "force-dynamic";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL ?? "https://sommertheater-altrossthal.de").replace(/\/$/, "");
+const BASE_URL = (
+  process.env.NEXT_PUBLIC_BASE_URL ?? "https://sommertheater-altrossthal.de"
+).replace(/\/$/, "");
 
 const publicRouteMap = {
   about: "/ueber-uns",
@@ -18,7 +20,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseEntries: MetadataRoute.Sitemap = [
     { url: `${BASE_URL}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${BASE_URL}/impressum`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${BASE_URL}/datenschutz`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
+    {
+      url: `${BASE_URL}/datenschutz`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
   ];
 
   try {

@@ -98,7 +98,8 @@ export function HeaderBar({
             <Badge variant={statusVariant[status] ?? "muted"}>{statusText}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            {timeSpan ? `Zeitraum ${timeSpan}` : "Zeitraum in Planung"} · {participants} Teilnehmende
+            {timeSpan ? `Zeitraum ${timeSpan}` : "Zeitraum in Planung"} · {participants}{" "}
+            Teilnehmende
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -142,7 +143,11 @@ export function HeaderBar({
             onClick={handleShare}
           >
             <Share2Icon className="h-4 w-4" />
-            {shareState === "success" ? "Link kopiert" : shareState === "error" ? "Fehler" : "Teilen"}
+            {shareState === "success"
+              ? "Link kopiert"
+              : shareState === "error"
+                ? "Fehler"
+                : "Teilen"}
           </Button>
         </div>
       </div>

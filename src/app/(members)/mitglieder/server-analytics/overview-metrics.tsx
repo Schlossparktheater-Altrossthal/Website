@@ -46,13 +46,7 @@ const overviewMetricStyles = tv({
 });
 
 export type OverviewMetricTone =
-  | "emerald"
-  | "sky"
-  | "amber"
-  | "violet"
-  | "rose"
-  | "indigo"
-  | "slate";
+  "emerald" | "sky" | "amber" | "violet" | "rose" | "indigo" | "slate";
 
 export type OverviewMetricDefinition = {
   id: string;

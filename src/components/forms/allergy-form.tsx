@@ -1,5 +1,5 @@
-import { AllergyLevel } from "@prisma/client"
-import { Button } from "@/components/ui/button"
+import { AllergyLevel } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -8,20 +8,20 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { toast } from "sonner"
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { toast } from "sonner";
 
 const allergySchema = z.object({
   allergen: z.string().min(1, "Allergen ist erforderlich"),
@@ -29,13 +29,13 @@ const allergySchema = z.object({
   symptoms: z.string().optional(),
   treatment: z.string().optional(),
   note: z.string().optional(),
-})
+});
 
-type AllergyFormData = z.infer<typeof allergySchema>
+type AllergyFormData = z.infer<typeof allergySchema>;
 
 interface AllergyFormProps {
-  initialData?: AllergyFormData
-  onSubmit: (data: AllergyFormData) => Promise<void>
+  initialData?: AllergyFormData;
+  onSubmit: (data: AllergyFormData) => Promise<void>;
 }
 
 export function AllergyForm({ initialData, onSubmit }: AllergyFormProps) {
@@ -48,17 +48,17 @@ export function AllergyForm({ initialData, onSubmit }: AllergyFormProps) {
       treatment: "",
       note: "",
     },
-  })
+  });
 
   const handleSubmit = async (data: AllergyFormData) => {
     try {
-      await onSubmit(data)
-      toast.success("Allergie/Unverträglichkeit wurde erfolgreich gespeichert")
+      await onSubmit(data);
+      toast.success("Allergie/Unverträglichkeit wurde erfolgreich gespeichert");
     } catch (error) {
-      console.error("[AllergyForm] Failed to submit allergy", error)
-      toast.error("Fehler beim Speichern der Allergie/Unverträglichkeit")
+      console.error("[AllergyForm] Failed to submit allergy", error);
+      toast.error("Fehler beim Speichern der Allergie/Unverträglichkeit");
     }
-  }
+  };
 
   return (
     <Form {...form}>
@@ -83,10 +83,7 @@ export function AllergyForm({ initialData, onSubmit }: AllergyFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Schweregrad</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Wählen Sie den Schweregrad" />
@@ -112,10 +109,7 @@ export function AllergyForm({ initialData, onSubmit }: AllergyFormProps) {
             <FormItem>
               <FormLabel>Symptome</FormLabel>
               <FormControl>
-                <Textarea
-                  {...field}
-                  placeholder="Beschreiben Sie die auftretenden Symptome"
-                />
+                <Textarea {...field} placeholder="Beschreiben Sie die auftretenden Symptome" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -129,14 +123,9 @@ export function AllergyForm({ initialData, onSubmit }: AllergyFormProps) {
             <FormItem>
               <FormLabel>Behandlung</FormLabel>
               <FormControl>
-                <Textarea
-                  {...field}
-                  placeholder="Notwendige Behandlungsschritte im Notfall"
-                />
+                <Textarea {...field} placeholder="Notwendige Behandlungsschritte im Notfall" />
               </FormControl>
-              <FormDescription>
-                Geben Sie an, wie im Notfall reagiert werden soll
-              </FormDescription>
+              <FormDescription>Geben Sie an, wie im Notfall reagiert werden soll</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -161,7 +150,7 @@ export function AllergyForm({ initialData, onSubmit }: AllergyFormProps) {
         </Button>
       </form>
     </Form>
-  )
+  );
 }
 
 function getAllergyLevelLabel(level: AllergyLevel): string {
@@ -170,6 +159,6 @@ function getAllergyLevelLabel(level: AllergyLevel): string {
     MODERATE: "Mittel (Allergische Reaktion)",
     SEVERE: "Schwer (Notfall möglich)",
     LETHAL: "Lebensbedrohlich",
-  }
-  return labels[level] || level
+  };
+  return labels[level] || level;
 }

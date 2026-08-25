@@ -9,10 +9,7 @@ type BuildInfoTimestampProps = {
   isoTimestamp: string;
 };
 
-export function BuildInfoTimestamp({
-  formattedTimestamp,
-  isoTimestamp,
-}: BuildInfoTimestampProps) {
+export function BuildInfoTimestamp({ formattedTimestamp, isoTimestamp }: BuildInfoTimestampProps) {
   const buildDate = useMemo(() => new Date(isoTimestamp), [isoTimestamp]);
   const isValidTimestamp = !Number.isNaN(buildDate.getTime());
   const [relativeTime, setRelativeTime] = useState<string | null>(null);

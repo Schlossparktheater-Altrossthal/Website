@@ -3,7 +3,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { EditIcon, EyeIcon, LoadingIcon, TrashIcon, UserCheckIcon, UserXIcon } from "@/components/ui/action-icons";
+import {
+  EditIcon,
+  EyeIcon,
+  LoadingIcon,
+  TrashIcon,
+  UserCheckIcon,
+  UserXIcon,
+} from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,7 +115,9 @@ export function MembersTable({
             className="max-w-sm"
           />
         </div>
-        <div className="text-sm text-muted-foreground">{filteredRows.length} von {rows.length} Mitgliedern</div>
+        <div className="text-sm text-muted-foreground">
+          {filteredRows.length} von {rows.length} Mitgliedern
+        </div>
       </div>
 
       {!filteredRows.length ? (
@@ -125,7 +134,10 @@ export function MembersTable({
               return (
                 <div
                   key={u.id}
-                  className={cn("rounded-md border bg-card p-3", u.isDeactivated && "border-dashed bg-muted/40")}
+                  className={cn(
+                    "rounded-md border bg-card p-3",
+                    u.isDeactivated && "border-dashed bg-muted/40",
+                  )}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -144,7 +156,10 @@ export function MembersTable({
                         <div className="flex flex-wrap items-center gap-2 font-medium">
                           <span>{displayName || "—"}</span>
                           {u.isDeactivated && (
-                            <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px] uppercase tracking-wide"
+                            >
                               Deaktiviert
                             </Badge>
                           )}
@@ -195,7 +210,13 @@ export function MembersTable({
                     const displayName = getDisplayName(u);
                     const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
                     return (
-                      <tr key={u.id} className={cn("border-b hover:bg-accent/10", u.isDeactivated && "bg-muted/40")}>
+                      <tr
+                        key={u.id}
+                        className={cn(
+                          "border-b hover:bg-accent/10",
+                          u.isDeactivated && "bg-muted/40",
+                        )}
+                      >
                         <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <UserAvatar
@@ -213,7 +234,10 @@ export function MembersTable({
                               <div className="flex flex-wrap items-center gap-2 font-medium">
                                 <span>{displayName || "—"}</span>
                                 {u.isDeactivated && (
-                                  <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+                                  <Badge
+                                    variant="destructive"
+                                    className="text-[10px] uppercase tracking-wide"
+                                  >
                                     Deaktiviert
                                   </Badge>
                                 )}
@@ -221,7 +245,9 @@ export function MembersTable({
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{u.email || "—"}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                          {u.email || "—"}
+                        </td>
                         <td className="px-3 py-2">
                           <div className="flex flex-wrap gap-1">
                             {sorted.map((r) => (
@@ -301,14 +327,17 @@ export function MembersTable({
                                         ? {
                                             ...row,
                                             email: email ?? row.email,
-                                            firstName: firstName !== undefined ? firstName : row.firstName,
-                                            lastName: lastName !== undefined ? lastName : row.lastName,
+                                            firstName:
+                                              firstName !== undefined ? firstName : row.firstName,
+                                            lastName:
+                                              lastName !== undefined ? lastName : row.lastName,
                                             name:
                                               name ??
                                               combineNameParts(
                                                 firstName !== undefined ? firstName : row.firstName,
                                                 lastName !== undefined ? lastName : row.lastName,
-                                              ) ?? row.name,
+                                              ) ??
+                                              row.name,
                                           }
                                         : row,
                                     ),
@@ -522,16 +551,19 @@ function MemberStatusModal({ user, onClose, onStatusChange }: MemberStatusModalP
         <div className="space-y-4">
           <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
             <div className="font-medium text-foreground">{displayName}</div>
-            <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
+            <div className="text-xs text-muted-foreground">
+              {user.email || "Keine E-Mail hinterlegt"}
+            </div>
           </div>
           {targetWillDeactivate ? (
             <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning-foreground">
-              Deaktivierte Profile bleiben in Listen sichtbar, verfügen jedoch über keinerlei Rechte mehr. Die
-              Reaktivierung ist jederzeit möglich.
+              Deaktivierte Profile bleiben in Listen sichtbar, verfügen jedoch über keinerlei Rechte
+              mehr. Die Reaktivierung ist jederzeit möglich.
             </div>
           ) : (
             <div className="rounded-md border border-success/30 bg-success/10 p-3 text-xs text-success-foreground">
-              Das Mitglied kann nach der Reaktivierung sofort wieder alle zugewiesenen Funktionen nutzen.
+              Das Mitglied kann nach der Reaktivierung sofort wieder alle zugewiesenen Funktionen
+              nutzen.
             </div>
           )}
         </div>
@@ -602,7 +634,8 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
         }
       } catch (error) {
         if (cancelled) return;
-        const message = error instanceof Error ? error.message : "Übersicht konnte nicht geladen werden";
+        const message =
+          error instanceof Error ? error.message : "Übersicht konnte nicht geladen werden";
         setUsage(null);
         setUsageError(message);
       } finally {
@@ -665,17 +698,22 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
         <div className="space-y-4">
           <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-sm">
             <div className="font-medium text-foreground">{displayName}</div>
-            <div className="text-xs text-muted-foreground">{user.email || "Keine E-Mail hinterlegt"}</div>
+            <div className="text-xs text-muted-foreground">
+              {user.email || "Keine E-Mail hinterlegt"}
+            </div>
             {user.isDeactivated && (
-              <Badge variant="outline" className="mt-2 text-[10px] uppercase tracking-wide text-destructive">
+              <Badge
+                variant="outline"
+                className="mt-2 text-[10px] uppercase tracking-wide text-destructive"
+              >
                 Bereits deaktiviert
               </Badge>
             )}
           </div>
 
           <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-            Dieser Vorgang kann nicht rückgängig gemacht werden. Alle verknüpften Daten werden entsprechend den
-            hinterlegten Löschregeln entfernt oder anonymisiert.
+            Dieser Vorgang kann nicht rückgängig gemacht werden. Alle verknüpften Daten werden
+            entsprechend den hinterlegten Löschregeln entfernt oder anonymisiert.
           </div>
 
           {loadingUsage ? (
@@ -690,7 +728,10 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
           ) : usage && usage.sections.length > 0 ? (
             <div className="space-y-3">
               {usage.sections.map((section) => (
-                <div key={section.key} className="rounded-md border border-border/60 bg-background p-3">
+                <div
+                  key={section.key}
+                  className="rounded-md border border-border/60 bg-background p-3"
+                >
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm font-semibold text-foreground">{section.title}</span>
                     <span className="text-xs text-muted-foreground">{section.total} Einträge</span>

@@ -11,10 +11,7 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 
-import type {
-  FrontendEditingFeature,
-  FrontendEditingFeatureKey,
-} from "@/lib/frontend-editing";
+import type { FrontendEditingFeature, FrontendEditingFeatureKey } from "@/lib/frontend-editing";
 
 const FrontendEditingContext = createContext<FrontendEditingContextValue | null>(null);
 
@@ -88,7 +85,11 @@ export function FrontendEditingProvider({ children }: { children: React.ReactNod
         if ((err as Error).name === "AbortError") return;
         console.error("Failed to load frontend editing permissions", err);
         setFeatures([]);
-        setError(err instanceof Error ? err.message : "Unbekannter Fehler beim Laden der Bearbeitungsrechte.");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unbekannter Fehler beim Laden der Bearbeitungsrechte.",
+        );
         setActiveFeature(null);
       } finally {
         if (!ignore) {
@@ -156,10 +157,23 @@ export function FrontendEditingProvider({ children }: { children: React.ReactNod
       toggleFeature,
       refresh,
     }),
-    [status, loading, error, features, activeFeature, hasFeature, openFeature, closeFeature, toggleFeature, refresh],
+    [
+      status,
+      loading,
+      error,
+      features,
+      activeFeature,
+      hasFeature,
+      openFeature,
+      closeFeature,
+      toggleFeature,
+      refresh,
+    ],
   );
 
-  return <FrontendEditingContext.Provider value={value}>{children}</FrontendEditingContext.Provider>;
+  return (
+    <FrontendEditingContext.Provider value={value}>{children}</FrontendEditingContext.Provider>
+  );
 }
 
 export function useFrontendEditing() {

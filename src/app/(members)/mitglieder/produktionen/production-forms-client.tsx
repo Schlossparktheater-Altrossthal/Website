@@ -45,7 +45,9 @@ function extractDateRangeInput(raw: unknown): { start: string; end: string } {
     const normalized = values
       .map((value) => {
         if (value && typeof value === "object" && "date" in (value as Record<string, unknown>)) {
-          return formatDateInput((value as Record<string, unknown>).date as string | Date | null | undefined);
+          return formatDateInput(
+            (value as Record<string, unknown>).date as string | Date | null | undefined,
+          );
         }
         return formatDateInput(value as string | Date | null | undefined);
       })
@@ -108,12 +110,9 @@ export function CreateProductionForm({
   onSuccess,
 }: CreateProductionFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
-  const action = useCallback(
-    async (_state: ProductionActionResult, formData: FormData) => {
-      return createProductionAction(formData);
-    },
-    [],
-  );
+  const action = useCallback(async (_state: ProductionActionResult, formData: FormData) => {
+    return createProductionAction(formData);
+  }, []);
   const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
   const onSuccessRef = useRef(onSuccess);
 
@@ -142,7 +141,14 @@ export function CreateProductionForm({
         </legend>
         <div className="space-y-1">
           <label className="text-sm font-medium">Jahr</label>
-          <Input type="number" name="year" min={1900} max={2200} defaultValue={suggestedYear} required />
+          <Input
+            type="number"
+            name="year"
+            min={1900}
+            max={2200}
+            defaultValue={suggestedYear}
+            required
+          />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium">Titel</label>
@@ -230,15 +236,13 @@ export function CreateProductionDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? <Button>Neue Produktion anlegen</Button>}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger ?? <Button>Neue Produktion anlegen</Button>}</DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader className="space-y-2">
           <DialogTitle>Neue Produktion anlegen</DialogTitle>
           <DialogDescription>
-            Erfasse Jahrgang, optionale Beschreibung und starte direkt in den modernen
-            Gewerke-, Rollen- und Szenen-Workflows.
+            Erfasse Jahrgang, optionale Beschreibung und starte direkt in den modernen Gewerke-,
+            Rollen- und Szenen-Workflows.
           </DialogDescription>
         </DialogHeader>
         <CreateProductionForm
@@ -267,12 +271,9 @@ export function SetActiveProductionForm({
   isActive,
   className,
 }: SetActiveProductionFormProps) {
-  const action = useCallback(
-    async (_state: ProductionActionResult, formData: FormData) => {
-      return setActiveProductionAction(formData);
-    },
-    [],
-  );
+  const action = useCallback(async (_state: ProductionActionResult, formData: FormData) => {
+    return setActiveProductionAction(formData);
+  }, []);
   const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
   const isInitialRender = useRef(true);
 
@@ -310,13 +311,13 @@ type ClearActiveProductionFormProps = {
   className?: string;
 };
 
-export function ClearActiveProductionForm({ redirectPath, className }: ClearActiveProductionFormProps) {
-  const action = useCallback(
-    async (_state: ProductionActionResult, formData: FormData) => {
-      return clearActiveProductionAction(formData);
-    },
-    [],
-  );
+export function ClearActiveProductionForm({
+  redirectPath,
+  className,
+}: ClearActiveProductionFormProps) {
+  const action = useCallback(async (_state: ProductionActionResult, formData: FormData) => {
+    return clearActiveProductionAction(formData);
+  }, []);
   const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
   const isInitialRender = useRef(true);
 
@@ -363,12 +364,9 @@ type UpdateProductionFormProps = {
 
 export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdateProductionFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
-  const action = useCallback(
-    async (_state: ProductionActionResult, formData: FormData) => {
-      return updateProductionAction(formData);
-    },
-    [],
-  );
+  const action = useCallback(async (_state: ProductionActionResult, formData: FormData) => {
+    return updateProductionAction(formData);
+  }, []);
   const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
   const onSuccessRef = useRef(onSuccess);
 
@@ -417,7 +415,12 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
           <label className="text-sm font-medium" htmlFor={`title-${show.id}`}>
             Titel
           </label>
-          <Input id={`title-${show.id}`} name="title" defaultValue={show.title ?? ""} maxLength={160} />
+          <Input
+            id={`title-${show.id}`}
+            name="title"
+            defaultValue={show.title ?? ""}
+            maxLength={160}
+          />
         </div>
         <div className="space-y-1 sm:col-span-2">
           <label className="text-sm font-medium" htmlFor={`synopsis-${show.id}`}>
@@ -483,7 +486,11 @@ type UpdateProductionDialogProps = {
   trigger?: ReactNode;
 };
 
-export function UpdateProductionDialog({ show, redirectPath, trigger }: UpdateProductionDialogProps) {
+export function UpdateProductionDialog({
+  show,
+  redirectPath,
+  trigger,
+}: UpdateProductionDialogProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -493,11 +500,15 @@ export function UpdateProductionDialog({ show, redirectPath, trigger }: UpdatePr
         <DialogHeader className="space-y-2">
           <DialogTitle>Produktion bearbeiten</DialogTitle>
           <DialogDescription>
-            Aktualisiere Jahrgang, optionale Beschreibung sowie Zeitraum deiner Produktion. Änderungen werden
-            direkt im Workspace übernommen.
+            Aktualisiere Jahrgang, optionale Beschreibung sowie Zeitraum deiner Produktion.
+            Änderungen werden direkt im Workspace übernommen.
           </DialogDescription>
         </DialogHeader>
-        <UpdateProductionForm show={show} redirectPath={redirectPath} onSuccess={() => setOpen(false)} />
+        <UpdateProductionForm
+          show={show}
+          redirectPath={redirectPath}
+          onSuccess={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

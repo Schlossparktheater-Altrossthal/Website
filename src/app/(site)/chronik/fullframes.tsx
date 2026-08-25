@@ -71,7 +71,7 @@ export function ChronicleFullframes({ items }: { items: ChronikItem[] }) {
           requestAnimationFrame(() => setActive(candidate!));
         }
       },
-      { root: null, threshold: [0.4, 0.6, 0.8] }
+      { root: null, threshold: [0.4, 0.6, 0.8] },
     );
     sections.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
@@ -84,13 +84,16 @@ export function ChronicleFullframes({ items }: { items: ChronikItem[] }) {
         el.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
       }
     },
-    [reducedMotion]
+    [reducedMotion],
   );
 
   return (
     <div className="relative lg:grid lg:grid-cols-[11rem_1fr] lg:gap-6">
       {/* Side timeline */}
-      <aside className="hidden lg:block sticky top-28 self-start h-[calc(100vh-7rem)]" aria-label="Zeitleiste">
+      <aside
+        className="hidden lg:block sticky top-28 self-start h-[calc(100vh-7rem)]"
+        aria-label="Zeitleiste"
+      >
         <ol className="relative pl-4 pr-2">
           <div className="absolute left-1 top-0 bottom-0 w-px bg-border/60" aria-hidden />
           {sorted.map((s) => {
@@ -125,12 +128,14 @@ export function ChronicleFullframes({ items }: { items: ChronikItem[] }) {
           const sources = toStringArray(meta.sources, 3);
           const gallery = toStringArray(meta.gallery, 6);
           const posterSources = toPosterSources(s.posterUrl);
-        return (
-          <section
-            key={s.id}
-            id={s.id}
-            data-id={s.id}
-              ref={(el) => { sectionRefs.current[s.id] = el; }}
+          return (
+            <section
+              key={s.id}
+              id={s.id}
+              data-id={s.id}
+              ref={(el) => {
+                sectionRefs.current[s.id] = el;
+              }}
               className="relative min-h-screen grid place-items-stretch overflow-hidden snap-start"
             >
               {/* Background image */}
@@ -149,31 +154,45 @@ export function ChronicleFullframes({ items }: { items: ChronikItem[] }) {
               <div className="layout-container grid items-center gap-8 py-16 md:grid-cols-2 md:py-24">
                 <div className="space-y-2">
                   <div className="text-sm text-foreground/80">{s.year}</div>
-                  <h2 className="text-3xl md:text-4xl font-serif">{s.title ?? `Saison ${s.year}`}</h2>
-                  {meta?.author && <div className="text-sm text-foreground/80">Autor: {meta.author}</div>}
-                  {meta?.director && <div className="text-sm text-foreground/80">Regie: {meta.director}</div>}
-                  {meta?.venue && <div className="text-sm text-foreground/80">Ort: {meta.venue}</div>}
-                  {s.synopsis && <p className="mt-3 max-w-prose text-foreground/85">{s.synopsis}</p>}
+                  <h2 className="text-3xl md:text-4xl font-serif">
+                    {s.title ?? `Saison ${s.year}`}
+                  </h2>
+                  {meta?.author && (
+                    <div className="text-sm text-foreground/80">Autor: {meta.author}</div>
+                  )}
+                  {meta?.director && (
+                    <div className="text-sm text-foreground/80">Regie: {meta.director}</div>
+                  )}
+                  {meta?.venue && (
+                    <div className="text-sm text-foreground/80">Ort: {meta.venue}</div>
+                  )}
+                  {s.synopsis && (
+                    <p className="mt-3 max-w-prose text-foreground/85">{s.synopsis}</p>
+                  )}
                   <div className="flex flex-wrap gap-2 pt-3">
                     {sources.map((src, i) => (
-                        <a
-                          key={i}
-                          href={src}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center rounded border border-border/60 bg-card/70 px-2 py-1 text-xs hover:bg-accent/30"
-                        >
-                          Quelle {i + 1}
-                        </a>
-                      ))}
+                      <a
+                        key={i}
+                        href={src}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded border border-border/60 bg-card/70 px-2 py-1 text-xs hover:bg-accent/30"
+                      >
+                        Quelle {i + 1}
+                      </a>
+                    ))}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {gallery.length > 0 ? (
                     gallery.map((url, i) => {
-                      const isImg = /\.(jpg|jpeg|png|webp|avif)$/i.test(url) || /picsum\.photos/.test(url);
+                      const isImg =
+                        /\.(jpg|jpeg|png|webp|avif)$/i.test(url) || /picsum\.photos/.test(url);
                       return (
-                        <div key={i} className="relative h-28 sm:h-32 md:h-36 rounded overflow-hidden border border-border/40">
+                        <div
+                          key={i}
+                          className="relative h-28 sm:h-32 md:h-36 rounded overflow-hidden border border-border/40"
+                        >
                           {isImg ? (
                             <Image
                               src={url}

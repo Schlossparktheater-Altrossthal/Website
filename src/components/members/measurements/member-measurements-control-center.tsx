@@ -1,6 +1,16 @@
 "use client";
 
-import { AlertTriangleIcon, ArrowDownAZIcon, ArrowUpAZIcon, BarChart3Icon, Clock3Icon, FileDownIcon, RulerIcon, SettingsIcon, UsersIcon } from "@/components/ui/action-icons";
+import {
+  AlertTriangleIcon,
+  ArrowDownAZIcon,
+  ArrowUpAZIcon,
+  BarChart3Icon,
+  Clock3Icon,
+  FileDownIcon,
+  RulerIcon,
+  SettingsIcon,
+  UsersIcon,
+} from "@/components/ui/action-icons";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -314,7 +324,9 @@ export function MemberMeasurementsControlCenter({
             onClick={() => setMemberDialogId(member.id)}
             className="flex w-full flex-col items-start gap-1 rounded-md px-1 text-left text-xs text-muted-foreground transition hover:text-foreground"
           >
-            <span className="w-full truncate text-sm font-semibold text-foreground">{member.displayName}</span>
+            <span className="w-full truncate text-sm font-semibold text-foreground">
+              {member.displayName}
+            </span>
             <span className="w-full truncate text-[10px]">
               {member.stats.captured}/{member.stats.total} Maße
               {member.stats.missing > 0 ? ` · ${member.stats.missing} offen` : " · Vollständig"}
@@ -323,12 +335,12 @@ export function MemberMeasurementsControlCenter({
         ),
         cell: ({ row }) => {
           const entry = row.original.entryMap.get(member.id) ?? null;
-          const unitLabel = entry ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit : undefined;
+          const unitLabel = entry ? (MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit) : undefined;
           const secondaryText = entry?.note?.trim()
             ? entry.note
             : entry?.updatedAt
-            ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
-            : "Keine Notiz";
+              ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
+              : "Keine Notiz";
 
           return (
             <button
@@ -336,7 +348,11 @@ export function MemberMeasurementsControlCenter({
               onClick={() =>
                 entry
                   ? setDialogState({ mode: "edit", memberId: member.id, entry })
-                  : setDialogState({ mode: "create", memberId: member.id, initialType: row.original.type })
+                  : setDialogState({
+                      mode: "create",
+                      memberId: member.id,
+                      initialType: row.original.type,
+                    })
               }
               className={cn(
                 "flex h-full w-full flex-col gap-1 rounded-md border border-transparent px-2 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -350,8 +366,13 @@ export function MemberMeasurementsControlCenter({
                 <span className="font-semibold text-foreground">
                   {entry ? formatValue(entry.value) : "—"}
                 </span>
-                <span className={cn("text-[10px]", entry ? "text-muted-foreground" : "text-destructive")}>
-                  {entry ? unitLabel ?? entry.unit : "Fehlt"}
+                <span
+                  className={cn(
+                    "text-[10px]",
+                    entry ? "text-muted-foreground" : "text-destructive",
+                  )}
+                >
+                  {entry ? (unitLabel ?? entry.unit) : "Fehlt"}
                 </span>
               </div>
               <span className="truncate text-[10px] text-muted-foreground/80">{secondaryText}</span>
@@ -369,15 +390,15 @@ export function MemberMeasurementsControlCenter({
   }, [sortedMembers, setDialogState, setMemberDialogId]);
 
   const dialogMember = dialogState
-    ? preparedMembers.find((member) => member.id === dialogState.memberId) ?? null
+    ? (preparedMembers.find((member) => member.id === dialogState.memberId) ?? null)
     : null;
 
   const memberModalMember = memberDialogId
-    ? preparedMembers.find((member) => member.id === memberDialogId) ?? null
+    ? (preparedMembers.find((member) => member.id === memberDialogId) ?? null)
     : null;
 
   const mobileMember = mobileMemberId
-    ? preparedMembers.find((member) => member.id === mobileMemberId) ?? null
+    ? (preparedMembers.find((member) => member.id === mobileMemberId) ?? null)
     : null;
 
   const handleDialogClose = () => {
@@ -413,9 +434,7 @@ export function MemberMeasurementsControlCenter({
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload) {
         const message =
-          typeof payload?.error === "string"
-            ? payload.error
-            : "Speichern der Maße fehlgeschlagen.";
+          typeof payload?.error === "string" ? payload.error : "Speichern der Maße fehlgeschlagen.";
         throw new Error(message);
       }
 
@@ -430,7 +449,8 @@ export function MemberMeasurementsControlCenter({
         value: parsed.value,
         unit: parsed.unit,
         note: parsed.note ?? null,
-        updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date().toISOString(),
+        updatedAt:
+          typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date().toISOString(),
       };
 
       setMemberItems((prev) =>
@@ -452,10 +472,15 @@ export function MemberMeasurementsControlCenter({
 
   const globalStats = useMemo(() => {
     const totalMembers = memberItems.length;
-    const totalMeasurements = memberItems.reduce((sum, member) => sum + member.measurements.length, 0);
+    const totalMeasurements = memberItems.reduce(
+      (sum, member) => sum + member.measurements.length,
+      0,
+    );
     const completedMembers = memberItems.reduce(
       (count, member) =>
-        activeMeasurementTypes.every((type) => member.measurements.some((entry) => entry.type === type))
+        activeMeasurementTypes.every((type) =>
+          member.measurements.some((entry) => entry.type === type),
+        )
           ? count + 1
           : count,
       0,
@@ -493,7 +518,10 @@ export function MemberMeasurementsControlCenter({
   };
 
   const handleExportCsv = () => {
-    const headers = ["Mitglied", ...activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type])];
+    const headers = [
+      "Mitglied",
+      ...activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type]),
+    ];
     const rows = preparedMembers.map((member) => {
       const values = activeMeasurementTypes.map((type) =>
         formatMeasurementValue(member.measurementMap.get(type) ?? null),
@@ -501,13 +529,19 @@ export function MemberMeasurementsControlCenter({
       return [member.displayName, ...values];
     });
     const csvContent = [headers, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replaceAll("\"", "\"\"")}"`).join(";"))
+      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(";"))
       .join("\n");
-    downloadFile(new Blob([csvContent], { type: "text/csv;charset=utf-8;" }), "koerpermasse-export.csv");
+    downloadFile(
+      new Blob([csvContent], { type: "text/csv;charset=utf-8;" }),
+      "koerpermasse-export.csv",
+    );
   };
 
   const handleExportPdf = () => {
-    const tableHeaders = ["Mitglied", ...activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type])];
+    const tableHeaders = [
+      "Mitglied",
+      ...activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type]),
+    ];
     const rows = preparedMembers.map((member) => {
       const values = activeMeasurementTypes.map((type) =>
         formatMeasurementValue(member.measurementMap.get(type) ?? null),
@@ -574,7 +608,9 @@ export function MemberMeasurementsControlCenter({
                 variant="outline"
                 size="icon"
                 aria-label={
-                  sortDirection === "asc" ? "Schauspieler A bis Z sortieren" : "Schauspieler Z bis A sortieren"
+                  sortDirection === "asc"
+                    ? "Schauspieler A bis Z sortieren"
+                    : "Schauspieler Z bis A sortieren"
                 }
                 onClick={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
               >
@@ -596,8 +632,12 @@ export function MemberMeasurementsControlCenter({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={handleExportCsv}>Als CSV exportieren</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={handleExportPdf}>Als PDF exportieren</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleExportCsv}>
+                    Als CSV exportieren
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleExportPdf}>
+                    Als PDF exportieren
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               {canConfigureMeasurements ? (
@@ -616,7 +656,8 @@ export function MemberMeasurementsControlCenter({
                     <DialogHeader>
                       <DialogTitle>Benötigte Maße auswählen</DialogTitle>
                       <DialogDescription>
-                        Lege fest, welche Maße für diese Produktion relevant sind. Mindestens ein Maß bleibt aktiv.
+                        Lege fest, welche Maße für diese Produktion relevant sind. Mindestens ein
+                        Maß bleibt aktiv.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2">
@@ -674,7 +715,9 @@ export function MemberMeasurementsControlCenter({
                   className="w-full sm:w-auto"
                   disabled={!mobileMemberId}
                   onClick={() =>
-                    mobileMemberId ? setDialogState({ mode: "create", memberId: mobileMemberId }) : null
+                    mobileMemberId
+                      ? setDialogState({ mode: "create", memberId: mobileMemberId })
+                      : null
                   }
                 >
                   Maß hinzufügen
@@ -685,7 +728,9 @@ export function MemberMeasurementsControlCenter({
               <div className="grid gap-3">
                 {activeMeasurementTypes.map((type) => {
                   const entry = mobileMember.measurementMap.get(type) ?? null;
-                  const unitLabel = entry ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit : undefined;
+                  const unitLabel = entry
+                    ? (MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit)
+                    : undefined;
                   return (
                     <button
                       key={type}
@@ -693,11 +738,17 @@ export function MemberMeasurementsControlCenter({
                       onClick={() =>
                         entry
                           ? setDialogState({ mode: "edit", memberId: mobileMember.id, entry })
-                          : setDialogState({ mode: "create", memberId: mobileMember.id, initialType: type })
+                          : setDialogState({
+                              mode: "create",
+                              memberId: mobileMember.id,
+                              initialType: type,
+                            })
                       }
                       className={cn(
                         "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-background px-4 py-3 text-left text-sm text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        entry ? "hover:border-primary/40 hover:bg-primary/5" : "border-dashed border-destructive/60",
+                        entry
+                          ? "hover:border-primary/40 hover:bg-primary/5"
+                          : "border-dashed border-destructive/60",
                       )}
                     >
                       <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/80">
@@ -707,8 +758,13 @@ export function MemberMeasurementsControlCenter({
                         <span className="text-lg font-semibold">
                           {entry ? formatValue(entry.value) : "—"}
                         </span>
-                        <span className={cn("text-xs", entry ? "text-muted-foreground" : "text-destructive")}>
-                          {entry ? unitLabel ?? entry.unit : "Fehlt"}
+                        <span
+                          className={cn(
+                            "text-xs",
+                            entry ? "text-muted-foreground" : "text-destructive",
+                          )}
+                        >
+                          {entry ? (unitLabel ?? entry.unit) : "Fehlt"}
                         </span>
                       </div>
                     </button>
@@ -728,7 +784,11 @@ export function MemberMeasurementsControlCenter({
         <div className="hidden sm:block">
           {sortedMembers.length ? (
             measurementRows.length ? (
-              <DataTable columns={columns} data={measurementRows} tableClassName="w-full min-w-[480px] text-xs" />
+              <DataTable
+                columns={columns}
+                data={measurementRows}
+                tableClassName="w-full min-w-[480px] text-xs"
+              />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
                 <AlertTriangleIcon className="h-5 w-5" />
@@ -738,17 +798,25 @@ export function MemberMeasurementsControlCenter({
           ) : (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-sm text-muted-foreground">
               <AlertTriangleIcon className="h-5 w-5" />
-              <p>Keine Mitglieder mit Besetzung gefunden. Lege eine Besetzung an oder entferne Filter.</p>
+              <p>
+                Keine Mitglieder mit Besetzung gefunden. Lege eine Besetzung an oder entferne
+                Filter.
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      <Dialog open={memberDialogId !== null} onOpenChange={(open) => (!open ? handleMemberDialogClose() : null)}>
+      <Dialog
+        open={memberDialogId !== null}
+        onOpenChange={(open) => (!open ? handleMemberDialogClose() : null)}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader className="sr-only">
             <DialogTitle>
-              {memberModalMember ? `Übersicht für ${memberModalMember.displayName}` : "Profilübersicht"}
+              {memberModalMember
+                ? `Übersicht für ${memberModalMember.displayName}`
+                : "Profilübersicht"}
             </DialogTitle>
           </DialogHeader>
           {memberModalMember ? (
@@ -766,7 +834,9 @@ export function MemberMeasurementsControlCenter({
                     className="border-border/70"
                   />
                   <div>
-                    <h2 className="font-serif text-2xl text-foreground">{memberModalMember.displayName}</h2>
+                    <h2 className="font-serif text-2xl text-foreground">
+                      {memberModalMember.displayName}
+                    </h2>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                       {memberModalMember.roles.length ? (
                         memberModalMember.roles.map((role) => (
@@ -774,7 +844,8 @@ export function MemberMeasurementsControlCenter({
                             key={role}
                             className={cn(
                               "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs",
-                              ROLE_BADGE_VARIANTS[role] ?? "border border-border/60 bg-muted/40 text-muted-foreground",
+                              ROLE_BADGE_VARIANTS[role] ??
+                                "border border-border/60 bg-muted/40 text-muted-foreground",
                             )}
                           >
                             {ROLE_LABELS[role] ?? role}
@@ -809,14 +880,18 @@ export function MemberMeasurementsControlCenter({
                     <div className="h-1.5 overflow-hidden rounded-full bg-muted/40">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-primary via-sky-500 to-violet-500"
-                        style={{ width: `${Math.round(memberModalMember.stats.completion * 100)}%` }}
+                        style={{
+                          width: `${Math.round(memberModalMember.stats.completion * 100)}%`,
+                        }}
                       />
                     </div>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setDialogState({ mode: "create", memberId: memberModalMember.id })}
+                    onClick={() =>
+                      setDialogState({ mode: "create", memberId: memberModalMember.id })
+                    }
                   >
                     Neues Maß erfassen
                   </Button>
@@ -826,7 +901,9 @@ export function MemberMeasurementsControlCenter({
               <div className="grid gap-4 md:grid-cols-2">
                 {measurementTypeEnum.options.map((type) => {
                   const entry = memberModalMember.measurementMap.get(type) ?? null;
-                  const unitLabel = entry ? MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit : undefined;
+                  const unitLabel = entry
+                    ? (MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit)
+                    : undefined;
                   return (
                     <div
                       key={type}
@@ -839,11 +916,17 @@ export function MemberMeasurementsControlCenter({
                             {MEASUREMENT_TYPE_LABELS[type]}
                           </span>
                           {entry ? (
-                            <Badge variant="outline" className="border-border/50 bg-background/60 text-[10px] text-foreground/80">
+                            <Badge
+                              variant="outline"
+                              className="border-border/50 bg-background/60 text-[10px] text-foreground/80"
+                            >
                               Aktualisiert
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="border-destructive/60 bg-destructive/10 text-[10px] text-destructive">
+                            <Badge
+                              variant="outline"
+                              className="border-destructive/60 bg-destructive/10 text-[10px] text-destructive"
+                            >
                               Fehlt
                             </Badge>
                           )}
@@ -852,7 +935,9 @@ export function MemberMeasurementsControlCenter({
                           <span className="text-3xl font-semibold tracking-tight text-foreground">
                             {entry ? formatValue(entry.value) : "—"}
                           </span>
-                          {entry ? <span className="text-sm text-muted-foreground">{unitLabel}</span> : null}
+                          {entry ? (
+                            <span className="text-sm text-muted-foreground">{unitLabel}</span>
+                          ) : null}
                         </div>
                         <p className="min-h-[2.5rem] text-xs leading-snug text-muted-foreground/80">
                           {entry?.note ? entry.note : "Noch keine Notiz hinterlegt."}
@@ -869,8 +954,16 @@ export function MemberMeasurementsControlCenter({
                             className="h-7 px-2 text-xs"
                             onClick={() =>
                               entry
-                                ? setDialogState({ mode: "edit", memberId: memberModalMember.id, entry })
-                                : setDialogState({ mode: "create", memberId: memberModalMember.id, initialType: type })
+                                ? setDialogState({
+                                    mode: "edit",
+                                    memberId: memberModalMember.id,
+                                    entry,
+                                  })
+                                : setDialogState({
+                                    mode: "create",
+                                    memberId: memberModalMember.id,
+                                    initialType: type,
+                                  })
                             }
                           >
                             {entry ? "Bearbeiten" : "Erfassen"}
@@ -885,13 +978,19 @@ export function MemberMeasurementsControlCenter({
           ) : (
             <div className="flex flex-col items-center gap-4 py-10 text-center text-sm text-muted-foreground">
               <AlertTriangleIcon className="h-6 w-6 text-muted-foreground" />
-              <p>Profilinformationen konnten nicht geladen werden. Schließe das Fenster und versuche es erneut.</p>
+              <p>
+                Profilinformationen konnten nicht geladen werden. Schließe das Fenster und versuche
+                es erneut.
+              </p>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      <Dialog open={dialogState !== null} onOpenChange={(open) => (!open ? handleDialogClose() : null)}>
+      <Dialog
+        open={dialogState !== null}
+        onOpenChange={(open) => (!open ? handleDialogClose() : null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -929,7 +1028,8 @@ export function MemberMeasurementsControlCenter({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Wähle ein Mitglied der aktuellen Produktion aus, dem das Maß zugeordnet werden soll.
+                    Wähle ein Mitglied der aktuellen Produktion aus, dem das Maß zugeordnet werden
+                    soll.
                   </p>
                 </div>
               ) : null}
@@ -937,7 +1037,7 @@ export function MemberMeasurementsControlCenter({
                 key={`${dialogState.mode}-${dialogState.memberId}-${
                   dialogState.mode === "edit"
                     ? dialogState.entry.id
-                    : dialogState.initialType ?? "new"
+                    : (dialogState.initialType ?? "new")
                 }`}
                 initialData={
                   dialogState.mode === "edit"
@@ -948,8 +1048,8 @@ export function MemberMeasurementsControlCenter({
                         note: dialogState.entry.note ?? "",
                       }
                     : dialogState.initialType
-                    ? { type: dialogState.initialType }
-                    : undefined
+                      ? { type: dialogState.initialType }
+                      : undefined
                 }
                 disableTypeSelection={dialogState.mode === "edit"}
                 onSubmit={(formData) => handleSubmit(dialogState.memberId, formData)}
@@ -962,19 +1062,13 @@ export function MemberMeasurementsControlCenter({
   );
 }
 
-function StatBlock({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string;
-  icon: ReactNode;
-}) {
+function StatBlock({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm">
       <div className="space-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
         <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
       </div>
       <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
@@ -1033,7 +1127,7 @@ function escapeHtml(value: string) {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
+    .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
 

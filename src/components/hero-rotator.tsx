@@ -36,9 +36,7 @@ export function HeroRotator({
 
   return (
     <div className="absolute inset-0 -z-10">
-      {prevSrc && (
-        <Frame src={prevSrc} fadeMs={fadeMs} visible={false} priority={false} />
-      )}
+      {prevSrc && <Frame src={prevSrc} fadeMs={fadeMs} visible={false} priority={false} />}
       <Frame src={currentSrc} fadeMs={fadeMs} visible={true} priority={true} />
     </div>
   );

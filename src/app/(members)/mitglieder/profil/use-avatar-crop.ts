@@ -8,7 +8,12 @@ const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
 
 type UseAvatarCropOptions = {
   userId: string;
-  onCropComplete?: (file: File, selection: AvatarCropSelection, state: AvatarCropState, previewUrl: string) => void;
+  onCropComplete?: (
+    file: File,
+    selection: AvatarCropSelection,
+    state: AvatarCropState,
+    previewUrl: string,
+  ) => void;
 };
 
 export function useAvatarCrop({ userId, onCropComplete }: UseAvatarCropOptions) {
@@ -19,8 +24,11 @@ export function useAvatarCrop({ userId, onCropComplete }: UseAvatarCropOptions) 
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
-  const [cropDialogInitialSelection, setCropDialogInitialSelection] = useState<AvatarCropSelection | null>(null);
-  const [cropDialogInitialState, setCropDialogInitialState] = useState<AvatarCropState | null>(null);
+  const [cropDialogInitialSelection, setCropDialogInitialSelection] =
+    useState<AvatarCropSelection | null>(null);
+  const [cropDialogInitialState, setCropDialogInitialState] = useState<AvatarCropState | null>(
+    null,
+  );
   const [avatarCropLoading, setAvatarCropLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -70,10 +78,19 @@ export function useAvatarCrop({ userId, onCropComplete }: UseAvatarCropOptions) 
           throw new Error("Canvas-Kontext nicht verfügbar");
         }
 
-        const cropWidth = Math.min(sourceWidth, Math.max(1, Math.round(sourceWidth * selection.width)));
-        const cropHeight = Math.min(sourceHeight, Math.max(1, Math.round(sourceHeight * selection.height)));
+        const cropWidth = Math.min(
+          sourceWidth,
+          Math.max(1, Math.round(sourceWidth * selection.width)),
+        );
+        const cropHeight = Math.min(
+          sourceHeight,
+          Math.max(1, Math.round(sourceHeight * selection.height)),
+        );
         const cropX = Math.min(sourceWidth - 1, Math.max(0, Math.round(sourceWidth * selection.x)));
-        const cropY = Math.min(sourceHeight - 1, Math.max(0, Math.round(sourceHeight * selection.y)));
+        const cropY = Math.min(
+          sourceHeight - 1,
+          Math.max(0, Math.round(sourceHeight * selection.y)),
+        );
         const safeCropWidth = Math.min(cropWidth, sourceWidth - cropX);
         const safeCropHeight = Math.min(cropHeight, sourceHeight - cropY);
 
@@ -150,66 +167,70 @@ export function useAvatarCrop({ userId, onCropComplete }: UseAvatarCropOptions) 
     [createAvatarPreview, handleCropDialogClose, onCropComplete, pendingAvatarFile],
   );
 
-  const handleAvatarFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) {
-      if (event.target.value) {
-        event.target.value = "";
-      }
-      return;
-    }
-    if (!AVATAR_MIME_TYPES.has(file.type.toLowerCase())) {
-      toast.error("Nur JPG, PNG oder WebP werden unterstützt.");
-      event.target.value = "";
-      return;
-    }
-    if (file.size > MAX_AVATAR_BYTES) {
-      toast.error("Bitte nutze ein Bild bis maximal 8 MB.");
-      event.target.value = "";
-      return;
-    }
-    openCropDialogForFile(file);
-  }, [openCropDialogForFile]);
-
-  const handleAvatarCropReopen = useCallback(async (
-    currentAvatarSource: string | null,
-  ) => {
-    if (avatarFile) {
-      openCropDialogForFile(avatarFile, {
-        selection: avatarCropSelection,
-        state: avatarCropState,
-      });
-      return;
-    }
-
-    if (currentAvatarSource !== "UPLOAD") {
-      return;
-    }
-
-    try {
-      setAvatarCropLoading(true);
-      const response = await fetch(`/api/users/${userId}/avatar?v=${Date.now()}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        toast.error("Bestehendes Bild konnte nicht geladen werden.");
+  const handleAvatarFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0] ?? null;
+      if (!file) {
+        if (event.target.value) {
+          event.target.value = "";
+        }
         return;
       }
-      const blob = await response.blob();
-      const mimeType = blob.type || "image/png";
-      const extension = mimeType.split("/").pop() || "png";
-      const restoredFile = new File([blob], `avatar-${userId}.${extension}`, { type: mimeType });
-      openCropDialogForFile(restoredFile, {
-        selection: avatarCropSelection,
-        state: avatarCropState,
-      });
-    } catch (error) {
-      console.error("[profile][avatar-crop][reload]", error);
-      toast.error("Bildausschnitt konnte nicht vorbereitet werden.");
-    } finally {
-      setAvatarCropLoading(false);
-    }
-  }, [avatarCropSelection, avatarCropState, avatarFile, openCropDialogForFile, userId]);
+      if (!AVATAR_MIME_TYPES.has(file.type.toLowerCase())) {
+        toast.error("Nur JPG, PNG oder WebP werden unterstützt.");
+        event.target.value = "";
+        return;
+      }
+      if (file.size > MAX_AVATAR_BYTES) {
+        toast.error("Bitte nutze ein Bild bis maximal 8 MB.");
+        event.target.value = "";
+        return;
+      }
+      openCropDialogForFile(file);
+    },
+    [openCropDialogForFile],
+  );
+
+  const handleAvatarCropReopen = useCallback(
+    async (currentAvatarSource: string | null) => {
+      if (avatarFile) {
+        openCropDialogForFile(avatarFile, {
+          selection: avatarCropSelection,
+          state: avatarCropState,
+        });
+        return;
+      }
+
+      if (currentAvatarSource !== "UPLOAD") {
+        return;
+      }
+
+      try {
+        setAvatarCropLoading(true);
+        const response = await fetch(`/api/users/${userId}/avatar?v=${Date.now()}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          toast.error("Bestehendes Bild konnte nicht geladen werden.");
+          return;
+        }
+        const blob = await response.blob();
+        const mimeType = blob.type || "image/png";
+        const extension = mimeType.split("/").pop() || "png";
+        const restoredFile = new File([blob], `avatar-${userId}.${extension}`, { type: mimeType });
+        openCropDialogForFile(restoredFile, {
+          selection: avatarCropSelection,
+          state: avatarCropState,
+        });
+      } catch (error) {
+        console.error("[profile][avatar-crop][reload]", error);
+        toast.error("Bildausschnitt konnte nicht vorbereitet werden.");
+      } finally {
+        setAvatarCropLoading(false);
+      }
+    },
+    [avatarCropSelection, avatarCropState, avatarFile, openCropDialogForFile, userId],
+  );
 
   const resetAvatarCrop = useCallback(() => {
     setAvatarFile(null);

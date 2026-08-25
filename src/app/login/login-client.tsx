@@ -97,9 +97,7 @@ export function LoginPageClient() {
     const reason = sp?.get("reason");
     if (err) {
       if (err === "AccessDenied" && reason === "deactivated") {
-        toast.error(
-          "Dieses Konto wurde deaktiviert. Bitte kontaktiere die Administration.",
-        );
+        toast.error("Dieses Konto wurde deaktiviert. Bitte kontaktiere die Administration.");
         setShowMagicSuggestion(false);
         return;
       }
@@ -127,9 +125,7 @@ export function LoginPageClient() {
         message?: string;
       } | null;
       if (res.status === 429) {
-        toast.error(
-          data?.message ?? "Zu viele Versuche, bitte später erneut versuchen",
-        );
+        toast.error(data?.message ?? "Zu viele Versuche, bitte später erneut versuchen");
       } else if (!res.ok) {
         toast.error("E-Mail Versand fehlgeschlagen");
       } else {
@@ -219,22 +215,14 @@ export function LoginPageClient() {
                   <MailCheckIcon className="h-5 w-5" aria-hidden />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold">
-                    Kein Passwort zur Hand?
-                  </p>
+                  <p className="text-sm font-semibold">Kein Passwort zur Hand?</p>
                   <p className="text-sm text-muted-foreground">
-                    Lass dir einen Link zum Zurücksetzen deines Passworts
-                    senden.
+                    Lass dir einen Link zum Zurücksetzen deines Passworts senden.
                   </p>
                 </div>
               </div>
               <DialogTrigger asChild>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleOpenMagic}
-                >
+                <Button type="button" size="sm" variant="secondary" onClick={handleOpenMagic}>
                   Passwort vergessen
                 </Button>
               </DialogTrigger>
@@ -277,8 +265,8 @@ export function LoginPageClient() {
           <DialogHeader>
             <DialogTitle>Passwort zurücksetzen</DialogTitle>
             <DialogDescription>
-              Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link zum
-              Zurücksetzen deines Passworts.
+              Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link zum Zurücksetzen deines
+              Passworts.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -294,11 +282,7 @@ export function LoginPageClient() {
               aria-required
             />
             <DialogFooter className="gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setMagicDialogOpen(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => setMagicDialogOpen(false)}>
                 Abbrechen
               </Button>
               <Button type="submit" disabled={loading}>
@@ -312,8 +296,8 @@ export function LoginPageClient() {
           <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm text-primary">
             <p className="font-semibold">Passwort vergessen?</p>
             <p className="mt-1">
-              Versuch es mit einem einmaligen Login-Link. Wir schicken dir eine
-              E-Mail an {magicForm.getValues("email") || "deine Adresse"}.
+              Versuch es mit einem einmaligen Login-Link. Wir schicken dir eine E-Mail an{" "}
+              {magicForm.getValues("email") || "deine Adresse"}.
             </p>
           </div>
         )}
@@ -332,9 +316,7 @@ export function LoginPageClient() {
                   onClick={() => testLogin(option.email)}
                   disabled={loading}
                 >
-                  {option.label
-                    ? `${option.label} (${option.email})`
-                    : option.email}
+                  {option.label ? `${option.label} (${option.email})` : option.email}
                 </Button>
               ))}
             </div>

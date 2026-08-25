@@ -227,7 +227,8 @@ export async function recordSessionEnd({
     }
 
     const endTime = endedAt ?? new Date();
-    const referenceTime = session.lastSeenAt && session.lastSeenAt > endTime ? session.lastSeenAt : endTime;
+    const referenceTime =
+      session.lastSeenAt && session.lastSeenAt > endTime ? session.lastSeenAt : endTime;
     const durationMs = Math.max(0, referenceTime.getTime() - session.startedAt.getTime());
     const durationSeconds = Math.round(durationMs / 1000);
 

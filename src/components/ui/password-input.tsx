@@ -7,8 +7,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "./input";
 
-export interface PasswordInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
+export interface PasswordInputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "type"
+> {
   wrapperClassName?: string;
 }
 
@@ -32,18 +34,21 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
             "absolute inset-y-0 right-0 flex h-full w-11 items-center justify-center rounded-r-md border-l border-border/40",
             "text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2",
             "focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            "disabled:cursor-not-allowed disabled:opacity-60"
+            "disabled:cursor-not-allowed disabled:opacity-60",
           )}
           aria-pressed={isPasswordVisible}
           aria-label={isPasswordVisible ? "Passwort verbergen" : "Passwort anzeigen"}
           disabled={disabled}
         >
-          {isPasswordVisible ? <EyeOffIcon className="h-4 w-4" aria-hidden /> : <EyeIcon className="h-4 w-4" aria-hidden />}
+          {isPasswordVisible ? (
+            <EyeOffIcon className="h-4 w-4" aria-hidden />
+          ) : (
+            <EyeIcon className="h-4 w-4" aria-hidden />
+          )}
         </button>
       </div>
     );
-  }
+  },
 );
 
 PasswordInput.displayName = "PasswordInput";
-

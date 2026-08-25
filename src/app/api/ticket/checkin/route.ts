@@ -4,11 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
-import {
-  checkInTicket,
-  TicketCheckInError,
-  type TicketCheckInResult,
-} from "@/lib/tickets/service";
+import { checkInTicket, TicketCheckInError, type TicketCheckInResult } from "@/lib/tickets/service";
 
 const payloadSchema = z
   .object({
@@ -108,9 +104,6 @@ export async function POST(request: Request) {
     }
 
     console.error("Ticket check-in failed", error);
-    return NextResponse.json(
-      { error: "Ticket-Check-in fehlgeschlagen" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Ticket-Check-in fehlgeschlagen" }, { status: 500 });
   }
 }

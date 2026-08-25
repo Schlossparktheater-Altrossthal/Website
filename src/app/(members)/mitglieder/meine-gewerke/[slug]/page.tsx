@@ -6,7 +6,14 @@ import type { ComponentType, SVGProps } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, ListTodoIcon, RulerIcon, SparklesIcon, SuccessIcon, UsersIcon } from "@/components/ui/action-icons";
+import {
+  CalendarIcon,
+  ListTodoIcon,
+  RulerIcon,
+  SparklesIcon,
+  SuccessIcon,
+  UsersIcon,
+} from "@/components/ui/action-icons";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -35,16 +42,15 @@ export default async function GewerkDetailPage({ params }: PageProps) {
     session.user,
     "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
   );
-  const canManageDepartments = await hasPermission(
-    session.user,
-    "PRIVATE.PRODUCTION.SHOW.MANAGE",
-  );
+  const canManageDepartments = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
   const isEnsembleMember = hasRole(session.user, "cast");
   const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>
+        <div className="text-sm text-red-600">
+          Kein Zugriff auf die persönliche Gewerkeübersicht.
+        </div>
       </div>
     );
   }
@@ -156,7 +162,9 @@ export default async function GewerkDetailPage({ params }: PageProps) {
           }
         : null,
     }))
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()) as DepartmentEventLite[];
+    .sort(
+      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+    ) as DepartmentEventLite[];
 
   const today = startOfToday();
   const planningStart = addDays(today, PLANNING_FREEZE_DAYS);
@@ -222,9 +230,24 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const completedTasksCount = tasksForStats.filter((task) => task.status === "done").length;
 
   const summaryStats: SummaryStat[] = [
-    { label: "Teammitglieder", value: membership.department.memberships.length, hint: "Aktive Personen", icon: UsersIcon },
-    { label: "Aktive Aufgaben", value: activeTasksCount, hint: "Offen & in Arbeit im Gewerk", icon: ListTodoIcon },
-    { label: "Abgeschlossen", value: completedTasksCount, hint: "Erledigte Gewerke-Aufgaben", icon: SuccessIcon },
+    {
+      label: "Teammitglieder",
+      value: membership.department.memberships.length,
+      hint: "Aktive Personen",
+      icon: UsersIcon,
+    },
+    {
+      label: "Aktive Aufgaben",
+      value: activeTasksCount,
+      hint: "Offen & in Arbeit im Gewerk",
+      icon: ListTodoIcon,
+    },
+    {
+      label: "Abgeschlossen",
+      value: completedTasksCount,
+      hint: "Erledigte Gewerke-Aufgaben",
+      icon: SuccessIcon,
+    },
   ];
 
   const headerActions = (
@@ -291,13 +314,20 @@ export default async function GewerkDetailPage({ params }: PageProps) {
                 <span className="tracking-[0.2em]">Mission Control</span>
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-muted-foreground">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: membership.department.color ?? "#94a3b8" }} />
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: membership.department.color ?? "#94a3b8" }}
+                />
                 {membership.department.slug ?? "Gewerk"}
               </span>
             </div>
             <div className="space-y-4">
-              <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">{membership.department.name}</h1>
-              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{heroDescription}</p>
+              <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">
+                {membership.department.name}
+              </h1>
+              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+                {heroDescription}
+              </p>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <Badge variant={ROLE_BADGE_VARIANTS[membership.role]} size="sm">
                   {ROLE_LABELS[membership.role]}
@@ -319,24 +349,28 @@ export default async function GewerkDetailPage({ params }: PageProps) {
         </div>
         <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
           <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {summaryStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={stat.label}
-                className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
-              >
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
-                  <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
-                  {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
+            {summaryStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.label}
+                  className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
+                >
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {stat.label}
+                    </p>
+                    <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
+                    {stat.hint ? (
+                      <p className="text-xs text-muted-foreground">{stat.hint}</p>
+                    ) : null}
+                  </div>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+                    <Icon aria-hidden className="h-4 w-4" />
+                  </span>
                 </div>
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
-                  <Icon aria-hidden className="h-4 w-4" />
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
           </dl>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:text-sm">

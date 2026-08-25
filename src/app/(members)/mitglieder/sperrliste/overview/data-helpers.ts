@@ -38,7 +38,7 @@ export type HolidaySpan = {
 
 /**
  * Gruppiert Personen nach Tagen und kategorisiert sie nach Verfügbarkeit
- * 
+ *
  * @param people - Liste der Personen mit ihren Tagesangaben
  * @param dayCols - Spalten-Definitionen der Tage
  * @param holidays - Ferien- und Feiertags-Indikatoren
@@ -47,7 +47,7 @@ export type HolidaySpan = {
 export function selectDayBuckets(
   people: OverviewPerson[],
   dayCols: DayColumn[],
-  holidays: HolidayIndicator[]
+  holidays: HolidayIndicator[],
 ): DayBucket[] {
   return dayCols.map((column, index) => {
     // Alle Personen mit ihren Zellen für diesen Tag
@@ -99,7 +99,7 @@ export function selectDayBuckets(
 
 /**
  * Findet zusammenhängende Ferien-Zeiträume für colSpan-Berechnung
- * 
+ *
  * @param dayCols - Spalten-Definitionen der Tage
  * @param buckets - Day-Buckets mit Holiday-Informationen
  * @returns Array von HolidaySpans mit Start/End-Indizes
@@ -149,7 +149,7 @@ export function getHolidaySpans(dayCols: DayColumn[], buckets: DayBucket[]): Hol
 
 /**
  * Berechnet den Verfügbarkeits-Prozentsatz für einen Tag
- * 
+ *
  * @param bucket - Day-Bucket mit gruppierten Personen
  * @returns Prozentsatz der verfügbaren Personen (0-100)
  */
@@ -188,6 +188,6 @@ export function countByGroup(people: OverviewPerson[]) {
       else acc.other += 1;
       return acc;
     },
-    { total: 0, actors: 0, crew: 0, both: 0, other: 0 }
+    { total: 0, actors: 0, crew: 0, both: 0, other: 0 },
   );
 }

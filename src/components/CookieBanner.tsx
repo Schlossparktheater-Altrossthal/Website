@@ -42,8 +42,8 @@ export function CookieBanner() {
     <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-card/85">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-foreground">
-          Diese Website verwendet technisch notwendige Cookies für den Login-Bereich. Kein Tracking, keine
-          Werbung.
+          Diese Website verwendet technisch notwendige Cookies für den Login-Bereich. Kein Tracking,
+          keine Werbung.
         </p>
         <button
           type="button"

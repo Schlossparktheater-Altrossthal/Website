@@ -10,14 +10,14 @@
 
 Beim ersten Zugriff werden mehrere Presets automatisch angelegt, falls sie noch nicht vorhanden sind.
 
-| ID | Name | Beschreibung |
-| --- | --- | --- |
-| `theatre-sunset-glow` | Sommertheater Sonnenuntergang | Warme Orange- und Goldtöne für stimmungsvolle Abendvorstellungen. |
-| `theatre-night-sky` | Sommertheater Nachtblau | Kühle Blaunuancen mit hoher Kontrastwirkung für nächtliche Events. |
-| `theatre-pastel-dream` | Sommertheater Pastell | Sanfte Pastellfarben für festliche Sommermatineen. |
-| `theatre-forest-canopy` | Sommertheater Waldlichtung | Natürliche Grün- und Moostöne für Freilicht-Bühnenbilder. |
-| `theatre-velvet-spotlight` | Sommertheater Samt & Scheinwerfer | Dramatische Purpurakzente für Gala-Abende und Premieren. |
-| `theatre-festival-lights` | Sommertheater Festivallichter | Strahlende Festivalfarben mit verspieltem Charakter für Sommerfeste. |
+| ID                         | Name                              | Beschreibung                                                         |
+| -------------------------- | --------------------------------- | -------------------------------------------------------------------- |
+| `theatre-sunset-glow`      | Sommertheater Sonnenuntergang     | Warme Orange- und Goldtöne für stimmungsvolle Abendvorstellungen.    |
+| `theatre-night-sky`        | Sommertheater Nachtblau           | Kühle Blaunuancen mit hoher Kontrastwirkung für nächtliche Events.   |
+| `theatre-pastel-dream`     | Sommertheater Pastell             | Sanfte Pastellfarben für festliche Sommermatineen.                   |
+| `theatre-forest-canopy`    | Sommertheater Waldlichtung        | Natürliche Grün- und Moostöne für Freilicht-Bühnenbilder.            |
+| `theatre-velvet-spotlight` | Sommertheater Samt & Scheinwerfer | Dramatische Purpurakzente für Gala-Abende und Premieren.             |
+| `theatre-festival-lights`  | Sommertheater Festivallichter     | Strahlende Festivalfarben mit verspieltem Charakter für Sommerfeste. |
 
 Die Presets werden als normale Datenbankeinträge gespeichert und können auf Wunsch dupliziert oder als Basis für eigene Anpassungen verwendet werden.
 

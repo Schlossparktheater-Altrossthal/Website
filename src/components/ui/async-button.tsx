@@ -12,7 +12,11 @@ export function AsyncButton({
   ...props
 }: AsyncButtonProps) {
   return (
-    <Button disabled={disabled || isLoading} data-state={isLoading ? "loading" : undefined} {...props}>
+    <Button
+      disabled={disabled || isLoading}
+      data-state={isLoading ? "loading" : undefined}
+      {...props}
+    >
       {isLoading ? (
         <>
           <LoadingIcon className="h-4 w-4 animate-spin" aria-hidden />

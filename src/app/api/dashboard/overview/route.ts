@@ -210,14 +210,10 @@ export async function GET() {
     });
 
     const profileChecklist = buildProfileChecklist({
-      hasBasicData: Boolean(
-        userRecord?.firstName && userRecord?.lastName && userRecord?.email,
-      ),
+      hasBasicData: Boolean(userRecord?.firstName && userRecord?.lastName && userRecord?.email),
       hasBirthdate: Boolean(userRecord?.dateOfBirth),
       hasPaymentDetails,
-      hasDietaryPreference: Boolean(
-        onboardingProfile?.dietaryPreference?.trim(),
-      ),
+      hasDietaryPreference: Boolean(onboardingProfile?.dietaryPreference?.trim()),
       photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
     });
 

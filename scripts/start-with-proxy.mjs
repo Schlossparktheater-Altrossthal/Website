@@ -1,22 +1,22 @@
-import http from 'node:http';
-import process from 'node:process';
-import { spawn } from 'node:child_process';
-import httpProxy from 'http-proxy';
+import http from "node:http";
+import process from "node:process";
+import { spawn } from "node:child_process";
+import httpProxy from "http-proxy";
 
 function normalizeAbsolutePath(value, fallback) {
-  const raw = (value ?? fallback ?? '').trim();
+  const raw = (value ?? fallback ?? "").trim();
   if (!raw) {
-    return fallback ?? '/';
+    return fallback ?? "/";
   }
 
-  if (raw === '/') {
-    return '/';
+  if (raw === "/") {
+    return "/";
   }
 
-  const prefixed = raw.startsWith('/') ? raw : `/${raw}`;
-  const collapsed = prefixed.replace(/\/+/g, '/');
-  const trimmed = collapsed.replace(/\/+$/, '');
-  return trimmed || '/';
+  const prefixed = raw.startsWith("/") ? raw : `/${raw}`;
+  const collapsed = prefixed.replace(/\/+/g, "/");
+  const trimmed = collapsed.replace(/\/+$/, "");
+  return trimmed || "/";
 }
 
 function resolveDeployWebhookTarget(defaultPort) {
@@ -41,7 +41,7 @@ function resolveDeployWebhookTarget(defaultPort) {
   const protocol =
     process.env.DEPLOY_WEBHOOK_PROTOCOL?.trim() ||
     process.env.AUTO_DEPLOY_INTERNAL_PROTOCOL?.trim() ||
-    'http';
+    "http";
   const port = parsePort(
     process.env.DEPLOY_WEBHOOK_PORT ??
       process.env.AUTO_DEPLOY_INTERNAL_PORT ??
@@ -61,9 +61,9 @@ function createDeployProxyConfig(defaultPort) {
   let normalizedTarget;
   try {
     const url = new URL(target);
-    normalizedTarget = `${url.origin}${url.pathname.replace(/\/$/, '')}`;
+    normalizedTarget = `${url.origin}${url.pathname.replace(/\/$/, "")}`;
   } catch (error) {
-    console.warn('[Proxy] Ignoring invalid deploy webhook target URL', target, error);
+    console.warn("[Proxy] Ignoring invalid deploy webhook target URL", target, error);
     return null;
   }
 
@@ -71,18 +71,18 @@ function createDeployProxyConfig(defaultPort) {
     process.env.DEPLOY_WEBHOOK_PATH ||
       process.env.AUTO_DEPLOY_PROXY_PATH ||
       process.env.AUTO_DEPLOY_WEBHOOK_PATH,
-    '/webhook',
+    "/webhook",
   );
 
-  const pathSet = new Set(['/healthz']);
+  const pathSet = new Set(["/healthz"]);
   pathSet.add(webhookPath);
-  if (webhookPath !== '/' && !webhookPath.endsWith('/')) {
+  if (webhookPath !== "/" && !webhookPath.endsWith("/")) {
     pathSet.add(`${webhookPath}/`);
   }
 
-  const healthPath = webhookPath === '/' ? '/health' : `${webhookPath}/health`;
+  const healthPath = webhookPath === "/" ? "/health" : `${webhookPath}/health`;
   pathSet.add(healthPath);
-  if (!healthPath.endsWith('/')) {
+  if (!healthPath.endsWith("/")) {
     pathSet.add(`${healthPath}/`);
   }
 
@@ -95,7 +95,7 @@ function createDeployProxyConfig(defaultPort) {
 }
 
 function parsePort(value, fallback) {
-  const parsed = Number.parseInt(String(value ?? ''), 10);
+  const parsed = Number.parseInt(String(value ?? ""), 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return fallback;
   }
@@ -108,15 +108,20 @@ async function main() {
     process.env.PROXY_HOST?.trim() ||
     process.env.APP_PROXY_HOST?.trim() ||
     process.env.HOST?.trim() ||
-    '0.0.0.0';
-  const appHost = process.env.APP_HOST?.trim() || process.env.APP_BIND_HOST?.trim() || '127.0.0.1';
-  const appPort = parsePort(process.env.APP_SERVER_PORT ?? process.env.APP_PORT ?? proxyPort + 1, proxyPort + 1);
+    "0.0.0.0";
+  const appHost = process.env.APP_HOST?.trim() || process.env.APP_BIND_HOST?.trim() || "127.0.0.1";
+  const appPort = parsePort(
+    process.env.APP_SERVER_PORT ?? process.env.APP_PORT ?? proxyPort + 1,
+    proxyPort + 1,
+  );
 
   if (!Number.isFinite(proxyPort) || proxyPort <= 0) {
     throw new Error(`Invalid proxy port: ${process.env.PORT}`);
   }
   if (!Number.isFinite(appPort) || appPort <= 0) {
-    throw new Error(`Invalid application port: ${process.env.APP_SERVER_PORT ?? process.env.APP_PORT}`);
+    throw new Error(
+      `Invalid application port: ${process.env.APP_SERVER_PORT ?? process.env.APP_PORT}`,
+    );
   }
 
   const targetUrl = `http://${appHost}:${appPort}`;
@@ -132,9 +137,9 @@ async function main() {
   }
 
   console.log(`[Proxy] Launching combined application server on ${targetUrl}`);
-  const child = spawn(process.execPath, ['scripts/start-combined-server.mjs'], {
+  const child = spawn(process.execPath, ["scripts/start-combined-server.mjs"], {
     env: childEnv,
-    stdio: 'inherit',
+    stdio: "inherit",
   });
 
   let shuttingDown = false;
@@ -156,26 +161,26 @@ async function main() {
     xfwd: true,
   });
 
-  proxy.on('error', (error, req, res) => {
+  proxy.on("error", (error, req, res) => {
     if (shuttingDown) return;
-    console.error('[Proxy] Error while proxying request', error);
+    console.error("[Proxy] Error while proxying request", error);
 
     if (res instanceof http.ServerResponse) {
       if (!res.headersSent) {
-        res.writeHead(502, { 'Content-Type': 'text/plain' });
+        res.writeHead(502, { "Content-Type": "text/plain" });
       }
       if (!res.writableEnded) {
-        res.end('Bad Gateway');
+        res.end("Bad Gateway");
       }
       return;
     }
 
-    if (res && typeof res.destroy === 'function') {
+    if (res && typeof res.destroy === "function") {
       res.destroy();
       return;
     }
 
-    if (req && typeof req.destroy === 'function') {
+    if (req && typeof req.destroy === "function") {
       req.destroy();
     }
   });
@@ -184,25 +189,25 @@ async function main() {
     let target = targetUrl;
     if (deployProxyConfig) {
       try {
-        const { pathname } = new URL(req.url ?? '/', 'http://localhost');
+        const { pathname } = new URL(req.url ?? "/", "http://localhost");
         if (deployProxyConfig.allowedPaths.has(pathname)) {
           target = deployProxyConfig.target;
         }
       } catch (error) {
-        console.warn('[Proxy] Failed to inspect request URL for deploy webhook routing', error);
+        console.warn("[Proxy] Failed to inspect request URL for deploy webhook routing", error);
       }
     }
 
     proxy.web(req, res, { target });
   });
 
-  server.on('upgrade', (req, socket, head) => {
+  server.on("upgrade", (req, socket, head) => {
     proxy.ws(req, socket, head, { target: targetUrl });
   });
 
-  server.on('error', (error) => {
+  server.on("error", (error) => {
     if (shuttingDown) return;
-    console.error('[Proxy] HTTP server error', error);
+    console.error("[Proxy] HTTP server error", error);
   });
 
   const markServerClosed = () => {
@@ -211,8 +216,10 @@ async function main() {
   };
 
   server.listen(proxyPort, proxyHost, () => {
-    const displayHost = ['0.0.0.0', '::', '::0'].includes(proxyHost) ? '0.0.0.0' : proxyHost;
-    console.log(`[Proxy] Listening on http://${displayHost}:${proxyPort} and proxying to ${targetUrl}`);
+    const displayHost = ["0.0.0.0", "::", "::0"].includes(proxyHost) ? "0.0.0.0" : proxyHost;
+    console.log(
+      `[Proxy] Listening on http://${displayHost}:${proxyPort} and proxying to ${targetUrl}`,
+    );
   });
 
   function maybeExit() {
@@ -233,10 +240,10 @@ async function main() {
     }
   }
 
-  process.on('SIGTERM', () => initiateShutdown('SIGTERM', 0));
-  process.on('SIGINT', () => initiateShutdown('SIGINT', 0));
+  process.on("SIGTERM", () => initiateShutdown("SIGTERM", 0));
+  process.on("SIGINT", () => initiateShutdown("SIGINT", 0));
 
-  child.on('exit', (code, signal) => {
+  child.on("exit", (code, signal) => {
     childExited = true;
     if (!shuttingDown) {
       plannedExitCode = code ?? (signal ? 1 : 0);
@@ -256,6 +263,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('[Proxy] Fatal error starting reverse proxy', error);
+  console.error("[Proxy] Fatal error starting reverse proxy", error);
   process.exit(1);
 });

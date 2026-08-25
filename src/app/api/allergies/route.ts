@@ -9,10 +9,7 @@ export async function GET() {
     const userId = session.user?.id;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "Nicht autorisiert" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
     const allergies = await prisma.dietaryRestriction.findMany({
@@ -26,10 +23,7 @@ export async function GET() {
     return NextResponse.json(allergies);
   } catch (error) {
     console.error("[Allergies] Failed to load allergies", error);
-    return NextResponse.json(
-      { error: "Nicht autorisiert" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 }
 
@@ -70,10 +64,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(allergy);
   } catch (error) {
     console.error("[Allergies] Failed to upsert allergy", error);
-    return NextResponse.json(
-      { error: "Fehler beim Speichern der Allergie" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Fehler beim Speichern der Allergie" }, { status: 500 });
   }
 }
 
@@ -89,10 +80,7 @@ export async function DELETE(request: NextRequest) {
     const allergen = searchParams.get("allergen");
 
     if (!allergen) {
-      return NextResponse.json(
-        { error: "Allergen muss angegeben werden" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Allergen muss angegeben werden" }, { status: 400 });
     }
 
     await prisma.dietaryRestriction.update({
@@ -110,9 +98,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[Allergies] Failed to deactivate allergy", error);
-    return NextResponse.json(
-      { error: "Fehler beim Deaktivieren der Allergie" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Fehler beim Deaktivieren der Allergie" }, { status: 500 });
   }
 }

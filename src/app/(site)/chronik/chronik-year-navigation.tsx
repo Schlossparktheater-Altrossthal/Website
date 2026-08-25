@@ -107,7 +107,8 @@ export function ChronikYearNavigation({ items }: { items: ChronikItem[] }) {
                     <div
                       className={cn(
                         "h-4 w-4 rounded-full border-2 transition-all duration-500",
-                        isActive && "scale-110 border-primary bg-primary shadow-lg shadow-primary/40",
+                        isActive &&
+                          "scale-110 border-primary bg-primary shadow-lg shadow-primary/40",
                         !isActive &&
                           (isPast
                             ? "border-primary/50 bg-primary/40 shadow-md shadow-primary/25"
@@ -126,7 +127,10 @@ export function ChronikYearNavigation({ items }: { items: ChronikItem[] }) {
                     className={cn(
                       "text-sm font-semibold transition-all duration-300",
                       isActive && "scale-105 text-primary",
-                      !isActive && (isPast ? "text-primary/80" : "text-muted-foreground group-hover:scale-105 group-hover:text-foreground"),
+                      !isActive &&
+                        (isPast
+                          ? "text-primary/80"
+                          : "text-muted-foreground group-hover:scale-105 group-hover:text-foreground"),
                     )}
                   >
                     {item.year}

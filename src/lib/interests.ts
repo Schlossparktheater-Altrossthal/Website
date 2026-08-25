@@ -33,7 +33,9 @@ function toSuggestion(entry: unknown): InterestSuggestion | null {
 export function parseInterestSuggestions(payload: unknown): InterestSuggestion[] {
   const list: unknown[] = Array.isArray(payload)
     ? payload
-    : payload && typeof payload === "object" && Array.isArray((payload as { interests?: unknown }).interests)
+    : payload &&
+        typeof payload === "object" &&
+        Array.isArray((payload as { interests?: unknown }).interests)
       ? ((payload as { interests: unknown[] }).interests ?? [])
       : [];
 

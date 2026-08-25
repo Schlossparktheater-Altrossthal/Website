@@ -14,10 +14,11 @@ export default async function RechteVerwaltungPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Rechteverwaltung</h1>
-        <p className="text-sm text-foreground/70">Lege Rollen an und weise ihnen Rechte zu. Owner/Admin haben automatisch Vollzugriff.</p>
+        <p className="text-sm text-foreground/70">
+          Lege Rollen an und weise ihnen Rechte zu. Owner/Admin haben automatisch Vollzugriff.
+        </p>
       </div>
       <PermissionWorkbench />
     </div>
   );
 }
-

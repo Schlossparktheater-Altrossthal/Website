@@ -7,7 +7,11 @@ export default async function FotoErlaubnissePage() {
   await ensurePermissionDefinitions();
   const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE");
   if (!allowed) {
-    return <div className="text-sm text-destructive">Kein Zugriff auf die Verwaltung der Fotoeinverständnisse</div>;
+    return (
+      <div className="text-sm text-destructive">
+        Kein Zugriff auf die Verwaltung der Fotoeinverständnisse
+      </div>
+    );
   }
 
   return (

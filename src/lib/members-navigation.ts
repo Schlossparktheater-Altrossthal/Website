@@ -1,4 +1,8 @@
-import type { MembersNavGroup, MembersNavItem, MembersNavSubgroup } from "@/config/members-navigation";
+import type {
+  MembersNavGroup,
+  MembersNavItem,
+  MembersNavSubgroup,
+} from "@/config/members-navigation";
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
@@ -62,10 +66,9 @@ export function selectMembersNavigation({
           href: activeHref,
           label: overviewItem?.label ?? activeProduction.title ?? "Aktive Produktion",
           badge: String(activeProduction.year),
-          ariaLabel:
-            activeProduction.title
-              ? `Aktive Produktion: ${activeProduction.title}`
-              : "Aktive Produktion",
+          ariaLabel: activeProduction.title
+            ? `Aktive Produktion: ${activeProduction.title}`
+            : "Aktive Produktion",
         };
 
         items.unshift(activeItem);
@@ -73,7 +76,11 @@ export function selectMembersNavigation({
       return { ...group, items, subgroups: cloneSubgroups(group.subgroups) };
     }
 
-    return { ...group, items: cloneGroupItems(group.items), subgroups: cloneSubgroups(group.subgroups) };
+    return {
+      ...group,
+      items: cloneGroupItems(group.items),
+      subgroups: cloneSubgroups(group.subgroups),
+    };
   });
 }
 
@@ -85,10 +92,8 @@ export function resolveAssignmentsGroupLabel(
   if (focus === "departments") return "Gewerke";
   if (focus === "rehearsals") return "Proben";
 
-  const permissionSet =
-    permissions instanceof Set ? permissions : new Set(permissions ?? []);
-  const canSeeRehearsals =
-    permissionSet.has("PRIVATE.REHEARSAL.OWN.VIEW");
+  const permissionSet = permissions instanceof Set ? permissions : new Set(permissions ?? []);
+  const canSeeRehearsals = permissionSet.has("PRIVATE.REHEARSAL.OWN.VIEW");
   const canSeeDepartments = permissionSet.has("PRIVATE.DEPARTMENT.OWN.VIEW");
 
   if (canSeeRehearsals && canSeeDepartments) return "Gewerke";
@@ -117,7 +122,10 @@ export function filterMembersNavigationByPermissions(
     })
     .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0);
 
-  const flat = filteredGroups.flatMap((group) => [...group.items, ...(group.subgroups?.flatMap((sub) => sub.items) ?? [])]);
+  const flat = filteredGroups.flatMap((group) => [
+    ...group.items,
+    ...(group.subgroups?.flatMap((sub) => sub.items) ?? []),
+  ]);
   return { groups: filteredGroups, flat };
 }
 
@@ -140,7 +148,10 @@ export function filterMembersNavigationByQuery(
     })
     .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0);
 
-  const flat = filteredGroups.flatMap((group) => [...group.items, ...(group.subgroups?.flatMap((sub) => sub.items) ?? [])]);
+  const flat = filteredGroups.flatMap((group) => [
+    ...group.items,
+    ...(group.subgroups?.flatMap((sub) => sub.items) ?? []),
+  ]);
   return { groups: filteredGroups, flat };
 }
 

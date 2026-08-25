@@ -5,7 +5,11 @@ export function VisibleForRole({
   role,
   userRoles,
   children,
-}: { role: Role | Role[]; userRoles?: Role[]; children: React.ReactNode }) {
+}: {
+  role: Role | Role[];
+  userRoles?: Role[];
+  children: React.ReactNode;
+}) {
   const required = Array.isArray(role) ? role : [role];
   const owned = new Set(userRoles ?? []);
   if (owned.size === 0) return null;

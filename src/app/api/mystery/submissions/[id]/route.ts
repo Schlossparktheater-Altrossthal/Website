@@ -50,7 +50,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Der Tipp konnte nicht gefunden werden." }, { status: 404 });
   }
 
-  const nextScore = parsed.data.isCorrect ? submission.clue?.points ?? 1 : 0;
+  const nextScore = parsed.data.isCorrect ? (submission.clue?.points ?? 1) : 0;
 
   const updated = await prisma.mysteryTipSubmission.update({
     where: { id: submission.id },
@@ -82,7 +82,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           totalScore: scoreboardEntry.totalScore,
           correctCount: scoreboardEntry.correctCount,
           totalSubmissions: scoreboardEntry.totalSubmissions,
-          lastUpdated: scoreboardEntry.lastUpdated ? scoreboardEntry.lastUpdated.toISOString() : null,
+          lastUpdated: scoreboardEntry.lastUpdated
+            ? scoreboardEntry.lastUpdated.toISOString()
+            : null,
         }
       : null,
   });

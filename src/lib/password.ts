@@ -10,11 +10,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isBcryptModule(value: unknown): value is BcryptModule {
-  return (
-    isRecord(value) &&
-    typeof value.hash === "function" &&
-    typeof value.compare === "function"
-  );
+  return isRecord(value) && typeof value.hash === "function" && typeof value.compare === "function";
 }
 
 async function loadBcrypt(): Promise<BcryptModule> {

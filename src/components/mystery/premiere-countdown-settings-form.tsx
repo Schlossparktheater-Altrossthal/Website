@@ -82,7 +82,9 @@ export function PremiereCountdownSettingsForm({
   hasCustomMessage,
   onSaved,
 }: PremiereCountdownSettingsFormProps) {
-  const [countdownValue, setCountdownValue] = useState(() => isoToLocalInputValue(initialCountdownTarget));
+  const [countdownValue, setCountdownValue] = useState(() =>
+    isoToLocalInputValue(initialCountdownTarget),
+  );
   const [messageValue, setMessageValue] = useState(() => initialExpirationMessage ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,7 +103,10 @@ export function PremiereCountdownSettingsForm({
     () => formatIsoForDisplay(defaultCountdownTarget, DATE_TIME_FORMATTER),
     [defaultCountdownTarget],
   );
-  const formattedUpdatedAt = useMemo(() => formatIsoForDisplay(lastUpdated, UPDATED_AT_FORMATTER), [lastUpdated]);
+  const formattedUpdatedAt = useMemo(
+    () => formatIsoForDisplay(lastUpdated, UPDATED_AT_FORMATTER),
+    [lastUpdated],
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -165,7 +170,8 @@ export function PremiereCountdownSettingsForm({
           aria-describedby="mystery-countdown-description"
         />
         <Text id="mystery-countdown-description" variant="small" tone="muted">
-          Zeitzone wird als lokale Zeit interpretiert. Besucher sehen den Countdown automatisch in ihrer Systemsprache.
+          Zeitzone wird als lokale Zeit interpretiert. Besucher sehen den Countdown automatisch in
+          ihrer Systemsprache.
         </Text>
         <Text variant="small" tone="muted">
           {customCountdown
@@ -173,8 +179,8 @@ export function PremiereCountdownSettingsForm({
               ? `Aktuelles Veröffentlichungsdatum: ${formattedEffectiveCountdown}`
               : "Aktuelles Veröffentlichungsdatum ist gesetzt."
             : formattedDefaultCountdown
-                ? `Kein eigenes Datum hinterlegt – Standard: ${formattedDefaultCountdown}`
-                : "Kein eigenes Datum hinterlegt."}
+              ? `Kein eigenes Datum hinterlegt – Standard: ${formattedDefaultCountdown}`
+              : "Kein eigenes Datum hinterlegt."}
         </Text>
       </div>
 
@@ -189,7 +195,8 @@ export function PremiereCountdownSettingsForm({
           aria-describedby="mystery-message-description"
         />
         <Text id="mystery-message-description" variant="small" tone="muted">
-          Maximal {MAX_MESSAGE_LENGTH} Zeichen. Dieser Text ersetzt die Standardmeldung, sobald der Countdown abgelaufen ist.
+          Maximal {MAX_MESSAGE_LENGTH} Zeichen. Dieser Text ersetzt die Standardmeldung, sobald der
+          Countdown abgelaufen ist.
         </Text>
         <Text variant="small" tone="muted">
           {customMessage

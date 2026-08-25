@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeftRightIcon, CalendarDaysIcon, ChevronDownIcon, CircleXIcon, ClockIcon, StarIcon } from "@/components/ui/action-icons";
+import {
+  ArrowLeftRightIcon,
+  CalendarDaysIcon,
+  ChevronDownIcon,
+  CircleXIcon,
+  ClockIcon,
+  StarIcon,
+} from "@/components/ui/action-icons";
 
 import {
   type PointerEvent as ReactPointerEvent,
@@ -64,16 +71,17 @@ const KIND_OPTIONS: { kind: BlockedDayKind; title: string; description: string }
   },
 ];
 
-const HOLIDAY_CATEGORY_META: Record<HolidayRange["category"], { label: string; badgeClass: string }> = {
+const HOLIDAY_CATEGORY_META: Record<
+  HolidayRange["category"],
+  { label: string; badgeClass: string }
+> = {
   schoolHoliday: {
     label: "Schulferien",
-    badgeClass:
-      "bg-info/20 text-foreground",
+    badgeClass: "bg-info/20 text-foreground",
   },
   publicHoliday: {
     label: "Feiertag",
-    badgeClass:
-      "bg-amber-200/90 text-amber-900 dark:bg-amber-500/30 dark:text-amber-100",
+    badgeClass: "bg-amber-200/90 text-amber-900 dark:bg-amber-500/30 dark:text-amber-100",
   },
 };
 
@@ -95,14 +103,10 @@ const getBulkActionLabel = (kind: BlockedDayKind, count: number) => {
 
 const getCreateToastMessage = (kind: BlockedDayKind, count: number) => {
   if (kind === "PREFERRED") {
-    return count > 1
-      ? `${count} bevorzugte Tage eingetragen.`
-      : "Bevorzugter Tag eingetragen.";
+    return count > 1 ? `${count} bevorzugte Tage eingetragen.` : "Bevorzugter Tag eingetragen.";
   }
   if (kind === "LIMITED") {
-    return count > 1
-      ? `${count} eingeschränkte Tage eingetragen.`
-      : "Einschränkung eingetragen.";
+    return count > 1 ? `${count} eingeschränkte Tage eingetragen.` : "Einschränkung eingetragen.";
   }
   return count > 1 ? `${count} Sperrtermine eingetragen.` : "Sperrtermin eingetragen.";
 };
@@ -145,7 +149,7 @@ export function BlockCalendar({
 }: BlockCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [blockedDays, setBlockedDays] = useState<BlockedDay[]>(() =>
-    [...initialBlockedDays].sort((a, b) => a.date.localeCompare(b.date))
+    [...initialBlockedDays].sort((a, b) => a.date.localeCompare(b.date)),
   );
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -155,9 +159,7 @@ export function BlockCalendar({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedDayKeys, setSelectedDayKeys] = useState<Set<string>>(
-    () => new Set<string>()
-  );
+  const [selectedDayKeys, setSelectedDayKeys] = useState<Set<string>>(() => new Set<string>());
   const [bulkReason, setBulkReason] = useState("");
   const [bulkKind, setBulkKind] = useState<BlockedDayKind>("BLOCKED");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
@@ -178,8 +180,7 @@ export function BlockCalendar({
   });
 
   const readOnlyNotice =
-    readOnlyMessage ??
-    "Im Offline-Demo-Modus können keine Sperrtermine bearbeitet werden.";
+    readOnlyMessage ?? "Im Offline-Demo-Modus können keine Sperrtermine bearbeitet werden.";
 
   useEffect(() => {
     if (readOnly) {
@@ -213,9 +214,7 @@ export function BlockCalendar({
         continue;
       }
       const inclusiveEnd =
-        isValid(parsedEnd) && parsedEnd.getTime() >= start.getTime()
-          ? parsedEnd
-          : start;
+        isValid(parsedEnd) && parsedEnd.getTime() >= start.getTime() ? parsedEnd : start;
 
       for (
         let cursor = start;
@@ -281,7 +280,7 @@ export function BlockCalendar({
 
   const selectedKeys = useMemo(
     () => Array.from(selectedDayKeys).sort((a, b) => a.localeCompare(b)),
-    [selectedDayKeys]
+    [selectedDayKeys],
   );
 
   const selectedEntries = useMemo(
@@ -289,22 +288,22 @@ export function BlockCalendar({
       selectedKeys
         .map((key) => blockedByDate.get(key))
         .filter((entry): entry is BlockedDay => Boolean(entry)),
-    [blockedByDate, selectedKeys]
+    [blockedByDate, selectedKeys],
   );
 
   const selectedBlockedCount = useMemo(
     () => selectedEntries.filter((entry) => entry.kind === "BLOCKED").length,
-    [selectedEntries]
+    [selectedEntries],
   );
 
   const selectedLimitedCount = useMemo(
     () => selectedEntries.filter((entry) => entry.kind === "LIMITED").length,
-    [selectedEntries]
+    [selectedEntries],
   );
 
   const selectedPreferredCount = useMemo(
     () => selectedEntries.filter((entry) => entry.kind === "PREFERRED").length,
-    [selectedEntries]
+    [selectedEntries],
   );
 
   const selectedFreeCount = selectedKeys.length - selectedEntries.length;
@@ -323,9 +322,7 @@ export function BlockCalendar({
       return [] as HolidayRange[];
     }
 
-    const sorted = [...holidays].sort((a, b) =>
-      a.startDate.localeCompare(b.startDate),
-    );
+    const sorted = [...holidays].sort((a, b) => a.startDate.localeCompare(b.startDate));
     const upcoming = sorted.filter((holiday) => holiday.endDate >= todayKey);
 
     if (upcoming.length > 0) {
@@ -445,7 +442,7 @@ export function BlockCalendar({
       });
       setBulkError(null);
     },
-    [setBulkError]
+    [setBulkError],
   );
 
   const closeModal = useCallback(() => {
@@ -491,17 +488,15 @@ export function BlockCalendar({
       }
       setModalOpen(true);
     },
-    [blockedByDate, lastUsedKind]
+    [blockedByDate, lastUsedKind],
   );
 
   const handleMonthChange = useCallback(
     (nextMonth: Date) => {
-      setEnterDir(
-        nextMonth.getTime() >= currentMonth.getTime() ? "right" : "left"
-      );
+      setEnterDir(nextMonth.getTime() >= currentMonth.getTime() ? "right" : "left");
       setCurrentMonth(nextMonth);
     },
-    [currentMonth]
+    [currentMonth],
   );
 
   const handleDayPointerDown = useCallback(
@@ -529,7 +524,7 @@ export function BlockCalendar({
       dragIntentRef.current = null;
       draggingRef.current = false;
     },
-    [readOnly, resetGestureSelection, selectionMode, selectedDayKeys, updateSelection]
+    [readOnly, resetGestureSelection, selectionMode, selectedDayKeys, updateSelection],
   );
 
   const handleDayPointerEnter = useCallback(
@@ -578,7 +573,7 @@ export function BlockCalendar({
 
       updateSelection(key, true);
     },
-    [readOnly, resetGestureSelection, selectionMode, startGestureSelection, updateSelection]
+    [readOnly, resetGestureSelection, selectionMode, startGestureSelection, updateSelection],
   );
 
   const handleDayClick = useCallback(
@@ -593,7 +588,7 @@ export function BlockCalendar({
       }
       openDay(day, key);
     },
-    [openDay, selectionMode, selectedDayKeys, updateSelection]
+    [openDay, selectionMode, selectedDayKeys, updateSelection],
   );
 
   const renderCalendarDay = useCallback(
@@ -681,7 +676,8 @@ export function BlockCalendar({
             "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-500/40 dark:bg-emerald-500/10",
           isLimitedEntry &&
             "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/10 dark:text-amber-100",
-          !entry && isHoliday &&
+          !entry &&
+            isHoliday &&
             "border-border bg-muted/50 dark:border-primary500/40 dark:bg-muted0/10",
           !entry &&
             !isHoliday &&
@@ -694,7 +690,7 @@ export function BlockCalendar({
           isSelected && "border-primary ring-2 ring-primary/60",
           "hover:shadow-sm hover:-translate-y-[1px]",
           wasAdded && "added-anim",
-          wasRemoved && "removed-anim"
+          wasRemoved && "removed-anim",
         ),
         "aria-pressed": selectionMode ? isSelected : undefined,
         "aria-label": ariaLabelParts.join(""),
@@ -715,7 +711,7 @@ export function BlockCalendar({
                     ? "text-emerald-600 dark:text-emerald-200"
                     : isLimitedEntry
                       ? "text-amber-700 dark:text-amber-200"
-                      : "text-destructive"
+                      : "text-destructive",
                 )}
               >
                 {isPreferredEntry ? (
@@ -726,7 +722,12 @@ export function BlockCalendar({
                   <CircleXIcon className="h-4 w-4" />
                 )}
                 <span className="truncate" title={entry.reason ?? undefined}>
-                  {entry.reason ?? (isPreferredEntry ? "Bevorzugt" : isLimitedEntry ? "Eingeschränkt" : "Gesperrt")}
+                  {entry.reason ??
+                    (isPreferredEntry
+                      ? "Bevorzugt"
+                      : isLimitedEntry
+                        ? "Eingeschränkt"
+                        : "Gesperrt")}
                 </span>
               </span>
             ) : (
@@ -748,7 +749,7 @@ export function BlockCalendar({
       selectionMode,
       preferredWeekdaySet,
       exceptionWeekdaySet,
-    ]
+    ],
   );
   // Define bulk handlers before they are referenced in JSX
   const handleBulkCreate = async () => {
@@ -784,7 +785,10 @@ export function BlockCalendar({
           next.sort((a, b) => a.date.localeCompare(b.date));
           return next;
         });
-        markRecent(created.map((c) => c.date), "added");
+        markRecent(
+          created.map((c) => c.date),
+          "added",
+        );
       }
       toast.success(getCreateToastMessage(bulkKind, created.length));
       setLastUsedKind(bulkKind);
@@ -821,8 +825,13 @@ export function BlockCalendar({
       }
       const { deleted } = (await response.json()) as { deleted?: number };
       if ((deleted ?? 0) > 0) {
-        setBlockedDays((prev) => prev.filter((entry) => !entriesToRemove.some((e) => e.id === entry.id)));
-        markRecent(entriesToRemove.map((e) => e.date), "removed");
+        setBlockedDays((prev) =>
+          prev.filter((entry) => !entriesToRemove.some((e) => e.id === entry.id)),
+        );
+        markRecent(
+          entriesToRemove.map((e) => e.date),
+          "removed",
+        );
       }
       toast.success(getRemoveToastMessage(deleted ?? 0));
       clearSelection();
@@ -840,9 +849,7 @@ export function BlockCalendar({
           <p className="text-sm font-medium">
             {selectedKeys.length === 0
               ? "Keine Tage ausgewählt."
-              : `${selectedKeys.length} ${
-                  selectedKeys.length === 1 ? "Tag" : "Tage"
-                } ausgewählt.`}
+              : `${selectedKeys.length} ${selectedKeys.length === 1 ? "Tag" : "Tage"} ausgewählt.`}
           </p>
           {selectedKeys.length > 0 && (
             <p className="text-[13px] leading-5 text-muted-foreground sm:text-xs sm:leading-5">
@@ -854,9 +861,7 @@ export function BlockCalendar({
                   : null,
                 selectedBlockedCount > 0
                   ? `${selectedBlockedCount} ${
-                      selectedBlockedCount === 1
-                        ? "Tag ist gesperrt"
-                        : "Tage sind gesperrt"
+                      selectedBlockedCount === 1 ? "Tag ist gesperrt" : "Tage sind gesperrt"
                     }`
                   : null,
                 selectedLimitedCount > 0
@@ -868,9 +873,7 @@ export function BlockCalendar({
                   : null,
                 selectedPreferredCount > 0
                   ? `${selectedPreferredCount} ${
-                      selectedPreferredCount === 1
-                        ? "Tag ist bevorzugt"
-                        : "Tage sind bevorzugt"
+                      selectedPreferredCount === 1 ? "Tag ist bevorzugt" : "Tage sind bevorzugt"
                     }`
                   : null,
               ]
@@ -924,9 +927,7 @@ export function BlockCalendar({
                     )}
                   >
                     <div className="text-sm font-semibold">{option.title}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {option.description}
-                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">{option.description}</div>
                   </button>
                 );
               })}
@@ -990,15 +991,14 @@ export function BlockCalendar({
       variant="toggle"
       data-state={showHolidays ? "active" : "inactive"}
       onClick={() => setShowHolidays((prev) => !prev)}
-      className={cn(
-        headerToggleBase,
-        "w-full justify-center sm:w-auto sm:justify-start",
-      )}
+      className={cn(headerToggleBase, "w-full justify-center sm:w-auto sm:justify-start")}
       aria-pressed={showHolidays}
     >
       <span className="flex items-center gap-1.5">
         <CalendarDaysIcon className="h-4 w-4" aria-hidden />
-        <span>{showHolidays ? "Ferien & Feiertage eingeblendet" : "Ferien & Feiertage anzeigen"}</span>
+        <span>
+          {showHolidays ? "Ferien & Feiertage eingeblendet" : "Ferien & Feiertage anzeigen"}
+        </span>
       </span>
     </Button>
   );
@@ -1009,11 +1009,11 @@ export function BlockCalendar({
       variant="toggle"
       data-state={selectionMode ? "active" : "inactive"}
       onClick={handleToggleSelectionMode}
-        className={cn(
-          headerToggleBase,
-          "w-full justify-center sm:w-auto sm:justify-start",
-          readOnly && "cursor-not-allowed opacity-60",
-        )}
+      className={cn(
+        headerToggleBase,
+        "w-full justify-center sm:w-auto sm:justify-start",
+        readOnly && "cursor-not-allowed opacity-60",
+      )}
       aria-pressed={selectionMode}
       disabled={readOnly}
     >
@@ -1021,63 +1021,60 @@ export function BlockCalendar({
     </Button>
   );
 
-  const holidayPanelContent = upcomingHolidays.length
-    ? (
-        <div className="space-y-3 rounded-lg border border-primary200 bg-muted p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-primary500/40 dark:bg-muted0/10">
-          <div className="flex items-center gap-2 text-primary800 dark:text-primary100">
-            <CalendarDaysIcon className="h-4 w-4" aria-hidden />
-            <span className="font-semibold">Ferien &amp; Feiertage in Sachsen</span>
-          </div>
-          <ul className="space-y-2 text-foreground/90 dark:text-primary100/90">
-            {upcomingHolidays.map((holiday) => {
-              const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
-              const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
-              const categoryMeta = HOLIDAY_CATEGORY_META[holiday.category];
+  const holidayPanelContent = upcomingHolidays.length ? (
+    <div className="space-y-3 rounded-lg border border-primary200 bg-muted p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-primary500/40 dark:bg-muted0/10">
+      <div className="flex items-center gap-2 text-primary800 dark:text-primary100">
+        <CalendarDaysIcon className="h-4 w-4" aria-hidden />
+        <span className="font-semibold">Ferien &amp; Feiertage in Sachsen</span>
+      </div>
+      <ul className="space-y-2 text-foreground/90 dark:text-primary100/90">
+        {upcomingHolidays.map((holiday) => {
+          const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
+          const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
+          const categoryMeta = HOLIDAY_CATEGORY_META[holiday.category];
 
-              return (
-                <li
-                  key={holiday.id}
-                  className="space-y-1 rounded-md bg-card/60 p-2 shadow-sm ring-1 ring-sky-200/60  dark:ring-sky-500/40"
+          return (
+            <li
+              key={holiday.id}
+              className="space-y-1 rounded-md bg-card/60 p-2 shadow-sm ring-1 ring-sky-200/60  dark:ring-sky-500/40"
+            >
+              <div
+                className={cn(
+                  "font-medium",
+                  isActive ? "text-foreground " : "text-foreground/90 dark:text-primary100/90",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mr-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide align-middle",
+                    categoryMeta.badgeClass,
+                  )}
+                  aria-label={categoryMeta.label}
+                  title={categoryMeta.label}
                 >
-                  <div
-                    className={cn(
-                      "font-medium",
-                      isActive
-                        ? "text-foreground "
-                        : "text-foreground/90 dark:text-primary100/90",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "mr-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide align-middle",
-                        categoryMeta.badgeClass,
-                      )}
-                      aria-label={categoryMeta.label}
-                      title={categoryMeta.label}
-                    >
-                      {categoryMeta.label}
-                    </span>
-                    <span className="align-middle">{holiday.title}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-foreground/80 dark:text-primary100/80">
-                    <span>{rangeLabel}</span>
-                    {isActive ? (
-                      <span className="inline-flex items-center rounded-full bg-primary200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground dark:bg-muted0/30 ">
-                        Aktuell
-                      </span>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )
-    : (
-        <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
-          Die Übersicht erscheint automatisch, sobald Ferien oder Feiertage aus der abonnierten Quelle bereitstehen.
-        </div>
-      );
+                  {categoryMeta.label}
+                </span>
+                <span className="align-middle">{holiday.title}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-foreground/80 dark:text-primary100/80">
+                <span>{rangeLabel}</span>
+                {isActive ? (
+                  <span className="inline-flex items-center rounded-full bg-primary200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground dark:bg-muted0/30 ">
+                    Aktuell
+                  </span>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  ) : (
+    <div className="rounded-lg border border-muted/40 bg-muted/30 p-4 text-xs text-muted-foreground">
+      Die Übersicht erscheint automatisch, sobald Ferien oder Feiertage aus der abonnierten Quelle
+      bereitstehen.
+    </div>
+  );
 
   const holidayPanel = (
     <section className="space-y-3">
@@ -1095,7 +1092,10 @@ export function BlockCalendar({
           <span>Ferien &amp; Feiertage</span>
         </span>
         <ChevronDownIcon
-          className={cn("h-4 w-4 transition-transform", holidayPanelOpen ? "rotate-180" : "rotate-0")}
+          className={cn(
+            "h-4 w-4 transition-transform",
+            holidayPanelOpen ? "rotate-180" : "rotate-0",
+          )}
           aria-hidden
         />
       </Button>
@@ -1151,7 +1151,7 @@ export function BlockCalendar({
     try {
       if (selectedKind === "BLOCKED" && isWithinFreeze(selectedDateKey)) {
         throw new Error(
-          `Aus Planungsgründen können Sperrtermine erst ab ${format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de })} eingetragen werden.`
+          `Aus Planungsgründen können Sperrtermine erst ab ${format(freezeUntil, "EEEE, d. MMMM yyyy", { locale: de })} eingetragen werden.`,
         );
       }
       const response = await fetch("/api/block-days", {
@@ -1166,15 +1166,11 @@ export function BlockCalendar({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(
-          payload?.error ?? "Der Sperrtermin konnte nicht gespeichert werden."
-        );
+        throw new Error(payload?.error ?? "Der Sperrtermin konnte nicht gespeichert werden.");
       }
 
       const data = (await response.json()) as BlockedDay;
-      setBlockedDays((prev) =>
-        [...prev, data].sort((a, b) => a.date.localeCompare(b.date))
-      );
+      setBlockedDays((prev) => [...prev, data].sort((a, b) => a.date.localeCompare(b.date)));
       markRecent([data.date], "added");
       toast.success(getCreateToastMessage(selectedKind, 1));
       setLastUsedKind(selectedKind);
@@ -1207,15 +1203,11 @@ export function BlockCalendar({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(
-          payload?.error ?? "Die Änderung konnte nicht gespeichert werden."
-        );
+        throw new Error(payload?.error ?? "Die Änderung konnte nicht gespeichert werden.");
       }
 
       const data = (await response.json()) as BlockedDay;
-      setBlockedDays((prev) =>
-        prev.map((entry) => (entry.id === data.id ? data : entry))
-      );
+      setBlockedDays((prev) => prev.map((entry) => (entry.id === data.id ? data : entry)));
       toast.success(getUpdateToastMessage(data.kind));
       setReason(data.reason ?? "");
       setLastUsedKind(data.kind);
@@ -1241,9 +1233,7 @@ export function BlockCalendar({
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(
-          payload?.error ?? "Der Sperrtermin konnte nicht entfernt werden."
-        );
+        throw new Error(payload?.error ?? "Der Sperrtermin konnte nicht entfernt werden.");
       }
 
       setBlockedDays((prev) => prev.filter((entry) => entry.id !== selectedEntry.id));
@@ -1256,7 +1246,6 @@ export function BlockCalendar({
       setSubmitting(false);
     }
   };
-
 
   return (
     <div className="space-y-4">

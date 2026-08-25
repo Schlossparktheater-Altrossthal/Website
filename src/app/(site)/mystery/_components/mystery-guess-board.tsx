@@ -10,7 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -53,11 +59,17 @@ type MysteryGuessBoardProps = {
   defaultClueId?: string | null;
 };
 
-export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId }: MysteryGuessBoardProps) {
+export function MysteryGuessBoard({
+  initialTips = [],
+  clueOptions,
+  defaultClueId,
+}: MysteryGuessBoardProps) {
   const [tips, setTips] = useState<MysteryTip[]>(() => sortTips(initialTips));
   const [tipText, setTipText] = useState("");
   const [playerName, setPlayerName] = useState("");
-  const [selectedClueId, setSelectedClueId] = useState(() => defaultClueId ?? clueOptions[0]?.id ?? "");
+  const [selectedClueId, setSelectedClueId] = useState(
+    () => defaultClueId ?? clueOptions[0]?.id ?? "",
+  );
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,7 +93,10 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
       const response = await fetch("/api/mystery/submissions", { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) {
-        const message = typeof payload?.error === "string" ? payload.error : "Die Tipps konnten nicht geladen werden.";
+        const message =
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Die Tipps konnten nicht geladen werden.";
         throw new Error(message);
       }
       setTips(sortTips(payload.tips ?? []));
@@ -130,11 +145,18 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
         const response = await fetch("/api/mystery/submissions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tip: trimmed, playerName: playerName.trim(), clueId: selectedClueId }),
+          body: JSON.stringify({
+            tip: trimmed,
+            playerName: playerName.trim(),
+            clueId: selectedClueId,
+          }),
         });
         const payload = await response.json();
         if (!response.ok) {
-          const message = typeof payload?.error === "string" ? payload.error : "Dein Tipp konnte nicht gespeichert werden.";
+          const message =
+            typeof payload?.error === "string"
+              ? payload.error
+              : "Dein Tipp konnte nicht gespeichert werden.";
           throw new Error(message);
         }
 
@@ -158,12 +180,14 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
         setTouchedFields({ playerName: false, clueId: false });
       } catch (err) {
         console.error("Failed to submit mystery tip", err);
-        setSubmissionError(err instanceof Error ? err.message : "Unbekannter Fehler beim Speichern.");
+        setSubmissionError(
+          err instanceof Error ? err.message : "Unbekannter Fehler beim Speichern.",
+        );
       } finally {
         setIsSubmitting(false);
       }
     },
-    [playerName, selectedClueId, tipText]
+    [playerName, selectedClueId, tipText],
   );
 
   const remainingCharacters = MAX_TIP_LENGTH - tipText.length;
@@ -203,12 +227,16 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
 
               <div className="space-y-2">
                 <Label htmlFor="mystery-clue">Rätsel auswählen</Label>
-                <Select value={selectedClueId} onValueChange={(value) => {
-                  setSelectedClueId(value);
-                  if (!touchedFields.clueId) {
-                    setTouchedFields((current) => ({ ...current, clueId: true }));
-                  }
-                }} disabled={clueOptions.length === 0 || isSubmitting}>
+                <Select
+                  value={selectedClueId}
+                  onValueChange={(value) => {
+                    setSelectedClueId(value);
+                    if (!touchedFields.clueId) {
+                      setTouchedFields((current) => ({ ...current, clueId: true }));
+                    }
+                  }}
+                  disabled={clueOptions.length === 0 || isSubmitting}
+                >
                   <SelectTrigger
                     id="mystery-clue"
                     className="w-full"
@@ -257,11 +285,25 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
                 </Text>
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <AsyncButton type="submit" isLoading={isSubmitting} loadingText="Wird gesendet…" disabled={!canSubmit}>
+                <AsyncButton
+                  type="submit"
+                  isLoading={isSubmitting}
+                  loadingText="Wird gesendet…"
+                  disabled={!canSubmit}
+                >
                   Tipp abschicken
                 </AsyncButton>
-                <Button type="button" variant="ghost" onClick={refreshTips} disabled={isLoading} className="gap-2">
-                  <RefreshCwIcon className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={refreshTips}
+                  disabled={isLoading}
+                  className="gap-2"
+                >
+                  <RefreshCwIcon
+                    className={cn("h-4 w-4", isLoading && "animate-spin")}
+                    aria-hidden
+                  />
                   Aktualisieren
                 </Button>
               </div>
@@ -281,11 +323,16 @@ export function MysteryGuessBoard({ initialTips = [], clueOptions, defaultClueId
             {isLoading ? (
               <Text tone="muted">Die Tipps werden geladen…</Text>
             ) : tips.length === 0 ? (
-              <Text tone="muted">Noch keine Tipps vorhanden – sei die erste Person und teile deinen Verdacht!</Text>
+              <Text tone="muted">
+                Noch keine Tipps vorhanden – sei die erste Person und teile deinen Verdacht!
+              </Text>
             ) : (
               <ul className="space-y-3">
                 {tips.map((tip) => (
-                  <li key={tip.id} className="rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
+                  <li
+                    key={tip.id}
+                    className="rounded-lg border border-border/60 bg-muted/10 px-4 py-3"
+                  >
                     <div className="stack-responsive stack-responsive--between">
                       <Text className="text-left">{tip.text}</Text>
                       <Badge variant="secondary">×{tip.count}</Badge>

@@ -21,7 +21,7 @@ type Props = {
 export function FaqEditor({ contentId, initialContent }: Props) {
   const [items, setItems] = useState<FaqItem[]>(initialContent.items);
   const [saving, setSaving] = useState(false);
-  const [editItem, setEditItem] = useState<FaqItem & { index: number } | null>(null);
+  const [editItem, setEditItem] = useState<(FaqItem & { index: number }) | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
@@ -107,7 +107,12 @@ export function FaqEditor({ contentId, initialContent }: Props) {
               >
                 <EditIcon className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Löschen" onClick={() => setDeleteIndex(index)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Löschen"
+                onClick={() => setDeleteIndex(index)}
+              >
                 <TrashIcon className="h-4 w-4" />
               </Button>
             </div>
@@ -148,13 +153,22 @@ export function FaqEditor({ contentId, initialContent }: Props) {
       )}
       <ConfirmDialog
         open={deleteIndex !== null}
-        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteIndex(null);
+        }}
         title="Frage löschen?"
-        description={deleteIndex !== null ? `"${items[deleteIndex]?.question}" wird dauerhaft entfernt.` : undefined}
+        description={
+          deleteIndex !== null
+            ? `"${items[deleteIndex]?.question}" wird dauerhaft entfernt.`
+            : undefined
+        }
         confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         variant="destructive"
-        onConfirm={() => { if (deleteIndex !== null) handleDelete(deleteIndex); setDeleteIndex(null); }}
+        onConfirm={() => {
+          if (deleteIndex !== null) handleDelete(deleteIndex);
+          setDeleteIndex(null);
+        }}
         onCancel={() => setDeleteIndex(null)}
       />
     </div>

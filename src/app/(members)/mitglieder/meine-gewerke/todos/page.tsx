@@ -5,7 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
-import { CheckSquareIcon, ClipboardCheckIcon, IconComponent, UsersIcon } from "@/components/ui/action-icons";
+import {
+  CheckSquareIcon,
+  ClipboardCheckIcon,
+  IconComponent,
+  UsersIcon,
+} from "@/components/ui/action-icons";
 
 type TodoStat = {
   label: string;
@@ -51,13 +56,30 @@ export default async function DepartmentTodosPage() {
 
   const allTasks = memberships.flatMap((entry) => entry.department.tasks);
   const openTasks = allTasks.filter((task) => task.status !== "done").length;
-  const assignedToMe = allTasks.filter((task) => task.assignments.some((assignment) => assignment.userId === userId));
+  const assignedToMe = allTasks.filter((task) =>
+    task.assignments.some((assignment) => assignment.userId === userId),
+  );
   const openAssignedToMe = assignedToMe.filter((task) => task.status !== "done").length;
 
   const stats: TodoStat[] = [
-    { label: "Teams", value: memberships.length.toString(), hint: "Gewerke mit Aufgaben", icon: UsersIcon },
-    { label: "Offene Aufgaben", value: openTasks.toString(), hint: "Alle offenen Todos", icon: CheckSquareIcon },
-    { label: "Meine offenen Aufgaben", value: openAssignedToMe.toString(), hint: "Direkt zugewiesen", icon: ClipboardCheckIcon },
+    {
+      label: "Teams",
+      value: memberships.length.toString(),
+      hint: "Gewerke mit Aufgaben",
+      icon: UsersIcon,
+    },
+    {
+      label: "Offene Aufgaben",
+      value: openTasks.toString(),
+      hint: "Alle offenen Todos",
+      icon: CheckSquareIcon,
+    },
+    {
+      label: "Meine offenen Aufgaben",
+      value: openAssignedToMe.toString(),
+      hint: "Direkt zugewiesen",
+      icon: ClipboardCheckIcon,
+    },
   ];
 
   return (
@@ -88,7 +110,10 @@ export default async function DepartmentTodosPage() {
       <Card>
         <CardHeader>
           <CardTitle>Arbeitsfläche für neue Aufgaben-UI</CardTitle>
-          <p className="text-sm text-muted-foreground">Datenzugriff und Berechtigungen funktionieren weiterhin. Ersetze diesen Platzhalter Schritt für Schritt durch dein neues Layout.</p>
+          <p className="text-sm text-muted-foreground">
+            Datenzugriff und Berechtigungen funktionieren weiterhin. Ersetze diesen Platzhalter
+            Schritt für Schritt durch dein neues Layout.
+          </p>
         </CardHeader>
       </Card>
     </div>

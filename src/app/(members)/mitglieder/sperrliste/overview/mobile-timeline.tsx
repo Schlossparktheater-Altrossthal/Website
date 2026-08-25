@@ -1,44 +1,38 @@
-'use client';
+"use client";
 
-import { ArrowRightLeftIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon } from "@/components/ui/action-icons";
+import {
+  ArrowRightLeftIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  InfoIcon,
+} from "@/components/ui/action-icons";
 
-import { format, isToday } from 'date-fns';
-import { de } from 'date-fns/locale/de';
-import * as React from 'react';
+import { format, isToday } from "date-fns";
+import { de } from "date-fns/locale/de";
+import * as React from "react";
 
-import { UserAvatar } from '@/components/user-avatar';
-import { Badge } from '@/components/ui/badge';
+import { UserAvatar } from "@/components/user-avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import type { HolidayRange } from '@/types/holidays';
+} from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { HolidayRange } from "@/types/holidays";
 
-import type { BlockedDay } from '../block-calendar';
-import {
-  timelineStatusStyles,
-  type TimelineStatus,
-} from './desktop-timeline';
-import {
-  timelineToneStyles,
-  type TimelineTone,
-} from './timeline-legend';
+import type { BlockedDay } from "../block-calendar";
+import { timelineStatusStyles, type TimelineStatus } from "./desktop-timeline";
+import { timelineToneStyles, type TimelineTone } from "./timeline-legend";
 import type {
   BlockOverviewSummary,
   DaySummary,
   PreparedMember,
   VisibleDayInfo,
-} from './useBlockOverviewData';
+} from "./useBlockOverviewData";
 
 type ReasonPreviewProps = {
   reason: string;
@@ -50,20 +44,17 @@ function ReasonPreview({ reason, label, tone }: ReasonPreviewProps) {
   const [open, setOpen] = React.useState(false);
   const toneClasses = timelineToneStyles({ tone });
 
-  const handleOpen = React.useCallback(
-    (event: React.MouseEvent | React.KeyboardEvent) => {
-      event.stopPropagation();
-      if ('key' in event) {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-        } else {
-          return;
-        }
+  const handleOpen = React.useCallback((event: React.MouseEvent | React.KeyboardEvent) => {
+    event.stopPropagation();
+    if ("key" in event) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+      } else {
+        return;
       }
-      setOpen(true);
-    },
-    [],
-  );
+    }
+    setOpen(true);
+  }, []);
 
   return (
     <>
@@ -74,25 +65,23 @@ function ReasonPreview({ reason, label, tone }: ReasonPreviewProps) {
             tabIndex={0}
             onClick={handleOpen}
             onKeyDown={handleOpen}
+            className={cn(
+              "group flex w-full cursor-pointer items-start gap-2 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              toneClasses.text(),
+            )}
+          >
+            <span
+              aria-hidden
               className={cn(
-                'group flex w-full cursor-pointer items-start gap-2 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                toneClasses.text(),
+                "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-colors",
+                toneClasses.bullet(),
               )}
-            >
-              <span
-                aria-hidden
-                className={cn(
-                  'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
-                  toneClasses.bullet(),
-                )}
-              />
-              <span className="line-clamp-2 flex-1 text-[11px] leading-4">
-                {reason}
-              </span>
+            />
+            <span className="line-clamp-2 flex-1 text-[11px] leading-4">{reason}</span>
             <InfoIcon
               aria-hidden
               className={cn(
-                'mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-foreground',
+                "mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70 transition-colors group-hover:text-foreground",
                 toneClasses.text(),
               )}
             />
@@ -141,8 +130,7 @@ export function MobileTimeline({
   onSelectBlockedDay,
   formatCreatedAtLabel,
 }: MobileTimelineProps) {
-  const showPaginationDots =
-    visibleDayInfo.length > 1 && visibleDayInfo.length <= 14;
+  const showPaginationDots = visibleDayInfo.length > 1 && visibleDayInfo.length <= 14;
 
   return (
     <TooltipProvider delayDuration={200} disableHoverableContent>
@@ -171,23 +159,23 @@ export function MobileTimeline({
                   <div className="text-sm font-semibold">{member.displayName}</div>
                   <div className="text-xs text-muted-foreground">
                     {stats?.total
-                      ? `${stats.total} Sperrtermin${stats.total === 1 ? '' : 'e'}`
-                      : 'Keine Sperrtermine'}
+                      ? `${stats.total} Sperrtermin${stats.total === 1 ? "" : "e"}`
+                      : "Keine Sperrtermine"}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     <Badge
-                      variant={stats?.total ? 'destructive' : 'muted'}
+                      variant={stats?.total ? "destructive" : "muted"}
                       size="sm"
                       className="uppercase tracking-[0.16em]"
                     >
                       {stats?.total ?? 0} gesamt
                     </Badge>
                     <Badge
-                      variant={stats?.upcoming ? 'info' : 'muted'}
+                      variant={stats?.upcoming ? "info" : "muted"}
                       size="sm"
                       className="uppercase tracking-[0.16em]"
                     >
-                      {stats?.upcoming ? `${stats.upcoming} bevorstehend` : 'Keine neuen'}
+                      {stats?.upcoming ? `${stats.upcoming} bevorstehend` : "Keine neuen"}
                     </Badge>
                   </div>
                 </div>
@@ -212,9 +200,9 @@ export function MobileTimeline({
                     const entry = member.blockedMap.get(key);
                     const holidayEntries = holidayMap.get(key) ?? [];
                     const isHoliday = holidayEntries.length > 0;
-                    const isBlocked = entry?.kind === 'BLOCKED';
-                    const isLimited = entry?.kind === 'LIMITED';
-                    const isPreferred = entry?.kind === 'PREFERRED';
+                    const isBlocked = entry?.kind === "BLOCKED";
+                    const isLimited = entry?.kind === "LIMITED";
+                    const isPreferred = entry?.kind === "PREFERRED";
                     const trimmedReason = entry?.reason?.trim();
                     const hasReason = Boolean(trimmedReason);
                     const createdAtLabel = formatCreatedAtLabel(entry?.createdAt);
@@ -222,22 +210,23 @@ export function MobileTimeline({
                     const summaryBadges: React.ReactNode[] = [];
 
                     const holidaySummary = holidayEntries
-                      .map((holiday) =>
-                        `${holiday.category === 'publicHoliday' ? 'Feiertag' : 'Ferien'}: ${holiday.title}`,
+                      .map(
+                        (holiday) =>
+                          `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
                       )
-                      .join(', ');
+                      .join(", ");
 
                     const label = [
-                      format(day, 'EEEE, d. MMMM yyyy', { locale: de }),
+                      format(day, "EEEE, d. MMMM yyyy", { locale: de }),
                       entry
                         ? isPreferred
-                          ? trimmedReason ?? 'bevorzugt'
+                          ? (trimmedReason ?? "bevorzugt")
                           : isLimited
-                            ? trimmedReason ?? 'eingeschränkt'
-                            : trimmedReason ?? 'gesperrt'
+                            ? (trimmedReason ?? "eingeschränkt")
+                            : (trimmedReason ?? "gesperrt")
                         : isHoliday
-                          ? holidaySummary || 'Ferien & Feiertage'
-                          : 'frei',
+                          ? holidaySummary || "Ferien & Feiertage"
+                          : "frei",
                     ];
 
                     if (createdAtLabel) {
@@ -245,31 +234,34 @@ export function MobileTimeline({
                     }
 
                     const baseId = `${member.id}-${key}-mobile`;
-                    const createdAtId = createdAtLabel
-                      ? `${baseId}-created`
-                      : undefined;
+                    const createdAtId = createdAtLabel ? `${baseId}-created` : undefined;
                     const describedBy = createdAtId ?? undefined;
 
-                    let status: TimelineStatus = 'freeMuted';
+                    let status: TimelineStatus = "freeMuted";
                     if (isBlocked) {
-                      status = 'blocked';
+                      status = "blocked";
                     } else if (isLimited) {
-                      status = 'limited';
+                      status = "limited";
                     } else if (isPreferred) {
-                      status = 'preferred';
+                      status = "preferred";
                     } else if (isHoliday) {
-                      status = 'holiday';
+                      status = "holiday";
                     }
 
                     const isInteractive = Boolean(entry && isBlocked);
                     const cardClasses = cn(
-                      'grid h-40 min-w-[9.5rem] shrink-0 grid-rows-[auto,1fr,auto] rounded-2xl border border-transparent px-2 py-2 text-center text-xs leading-5 shadow-sm transition-colors',
+                      "grid h-40 min-w-[9.5rem] shrink-0 grid-rows-[auto,1fr,auto] rounded-2xl border border-transparent px-2 py-2 text-center text-xs leading-5 shadow-sm transition-colors",
                       timelineStatusStyles({ status }),
                       isInteractive &&
-                        'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                      isToday(day) && 'ring-2 ring-primary/70',
-                      isWeekend && !isInteractive && !isLimited && !isPreferred && !isHoliday && 'bg-muted/40',
-                      !isCurrentMonth && 'opacity-80',
+                        "cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      isToday(day) && "ring-2 ring-primary/70",
+                      isWeekend &&
+                        !isInteractive &&
+                        !isLimited &&
+                        !isPreferred &&
+                        !isHoliday &&
+                        "bg-muted/40",
+                      !isCurrentMonth && "opacity-80",
                     );
 
                     if (columnSummary?.blocked) {
@@ -315,13 +307,11 @@ export function MobileTimeline({
                       }
                     };
 
-                    const handleKeyDown = (
-                      event: React.KeyboardEvent<HTMLDivElement>,
-                    ) => {
+                    const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
                       if (!isInteractive) {
                         return;
                       }
-                      if (event.key === 'Enter' || event.key === ' ') {
+                      if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         handleSelect();
                       }
@@ -331,9 +321,9 @@ export function MobileTimeline({
                       <div key={key} className="min-w-[9.5rem] shrink-0 snap-center">
                         <div
                           className={cardClasses}
-                          role={isInteractive ? 'button' : undefined}
+                          role={isInteractive ? "button" : undefined}
                           tabIndex={isInteractive ? 0 : undefined}
-                          aria-label={label.join('. ')}
+                          aria-label={label.join(". ")}
                           aria-describedby={describedBy}
                           onClick={handleSelect}
                           onKeyDown={handleKeyDown}
@@ -342,14 +332,14 @@ export function MobileTimeline({
                             <div className="flex flex-col items-center gap-0.5">
                               {weekday === 1 ? (
                                 <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-                                  KW {format(day, 'I', { locale: de })}
+                                  KW {format(day, "I", { locale: de })}
                                 </span>
                               ) : null}
                               <span className="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                {format(day, 'EE', { locale: de })}
+                                {format(day, "EE", { locale: de })}
                               </span>
                               <span className="text-sm font-semibold">
-                                {format(day, 'd', { locale: de })}
+                                {format(day, "d", { locale: de })}
                               </span>
                             </div>
                             {summaryBadges.length ? (
@@ -384,16 +374,16 @@ export function MobileTimeline({
                             ) : isHoliday ? (
                               <div className="flex flex-col gap-1 px-1 text-[11px] leading-4">
                                 <span className="line-clamp-2 text-foreground">
-                                  {holidayEntries.map((h) => h.title).join(', ')}
+                                  {holidayEntries.map((h) => h.title).join(", ")}
                                 </span>
                               </div>
                             ) : entry ? (
                               <div className="px-1 text-[11px] leading-4 text-muted-foreground">
                                 {isPreferred
-                                  ? 'Ohne Angabe'
+                                  ? "Ohne Angabe"
                                   : isLimited
-                                    ? 'Eingeschränkt'
-                                    : 'Ohne Details'}
+                                    ? "Eingeschränkt"
+                                    : "Ohne Details"}
                               </div>
                             ) : (
                               <div className="text-[11px] leading-4 text-muted-foreground">
@@ -423,8 +413,8 @@ export function MobileTimeline({
                       <span
                         key={`${member.id}-${key}-dot`}
                         className={cn(
-                          'h-1.5 w-1.5 rounded-full bg-muted',
-                          isToday(day) && 'bg-primary',
+                          "h-1.5 w-1.5 rounded-full bg-muted",
+                          isToday(day) && "bg-primary",
                         )}
                         aria-hidden
                       />

@@ -5,7 +5,17 @@ import type { FormEvent } from "react";
 import { toast } from "sonner";
 import type { Role } from "@prisma/client";
 
-import { ChevronDownIcon, ChevronUpIcon, CopyIcon, DownloadIcon, EditIcon, ExternalLinkIcon, MessageCircleIcon, PowerIcon, TrashIcon } from "@/components/ui/action-icons";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CopyIcon,
+  DownloadIcon,
+  EditIcon,
+  ExternalLinkIcon,
+  MessageCircleIcon,
+  PowerIcon,
+  TrashIcon,
+} from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +24,13 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -184,7 +200,10 @@ type FreshInvite = {
   production: ProductionSummary | null;
 };
 
-type EditableInviteFields = Pick<InviteSummary, "id" | "label" | "note" | "expiresAt" | "maxUses" | "roles" | "showId" | "production">;
+type EditableInviteFields = Pick<
+  InviteSummary,
+  "id" | "label" | "note" | "expiresAt" | "maxUses" | "roles" | "showId" | "production"
+>;
 
 type InviteForPdf = {
   id: string;
@@ -234,14 +253,11 @@ export function MemberInviteManager() {
     showId: "",
   });
   const [lockedRoles, setLockedRoles] = useState<Role[]>([]);
-  const normalizeRoles = useCallback(
-    (roles: Role[]): Role[] => {
-      const deduped = Array.from(new Set(roles));
-      const normalized = sortRoles(deduped.length ? deduped : (["member"] as Role[]));
-      return normalized.length ? normalized : (["member"] as Role[]);
-    },
-    [],
-  );
+  const normalizeRoles = useCallback((roles: Role[]): Role[] => {
+    const deduped = Array.from(new Set(roles));
+    const normalized = sortRoles(deduped.length ? deduped : (["member"] as Role[]));
+    return normalized.length ? normalized : (["member"] as Role[]);
+  }, []);
   const freshInviteId = freshInvite?.id ?? null;
   const editingInviteId = editingInvite?.id ?? null;
   const isUpdatingCurrentInvite = editingInviteId ? updatingInviteId === editingInviteId : false;
@@ -436,9 +452,7 @@ export function MemberInviteManager() {
         const nextRoles = Array.isArray(match.roles)
           ? normalizeRoles(match.roles as Role[])
           : prev.roles;
-        const fallbackInviteUrl = prev.token
-          ? onboardingPathForToken(prev.token, nextRoles)
-          : null;
+        const fallbackInviteUrl = prev.token ? onboardingPathForToken(prev.token, nextRoles) : null;
         return {
           ...prev,
           label: match.label ?? null,
@@ -579,7 +593,9 @@ export function MemberInviteManager() {
     const editableRoles = invite.roles.filter((role) => ASSIGNABLE_ROLE_SET.has(role));
     const locked = invite.roles.filter((role) => !ASSIGNABLE_ROLE_SET.has(role));
     const dedupedLocked = Array.from(new Set(locked));
-    const sanitizedEditable = normalizeRoles(editableRoles.length ? editableRoles : (["member"] as Role[]));
+    const sanitizedEditable = normalizeRoles(
+      editableRoles.length ? editableRoles : (["member"] as Role[]),
+    );
     setLockedRoles(dedupedLocked);
     const resolvedShowId =
       invite.showId && productions.some((production) => production.id === invite.showId)
@@ -598,9 +614,10 @@ export function MemberInviteManager() {
       label: invite.label ?? "",
       note: invite.note ?? "",
       expiresAt: formatDateForInput(invite.expiresAt ?? null),
-      maxUses: typeof invite.maxUses === "number" && Number.isFinite(invite.maxUses)
-        ? String(invite.maxUses)
-        : "",
+      maxUses:
+        typeof invite.maxUses === "number" && Number.isFinite(invite.maxUses)
+          ? String(invite.maxUses)
+          : "",
       roles: sanitizedEditable,
       showId: resolvedShowId,
     });
@@ -637,11 +654,7 @@ export function MemberInviteManager() {
         label: trimmedLabel || null,
         note: trimmedNote || null,
         expiresAt: trimmedExpires || null,
-        maxUses: trimmedMaxUses
-          ? Number.isFinite(parsedMaxUses)
-            ? parsedMaxUses
-            : null
-          : null,
+        maxUses: trimmedMaxUses ? (Number.isFinite(parsedMaxUses) ? parsedMaxUses : null) : null,
         roles: normalizeRoles([...editForm.roles, ...lockedRoles]),
         showId: editForm.showId,
       };
@@ -656,9 +669,7 @@ export function MemberInviteManager() {
         throw new Error(data?.error ?? "Einladung konnte nicht aktualisiert werden");
       }
 
-      const updatedInvite = data?.invite as
-        | (InviteSummaryPayload & { roles?: Role[] })
-        | undefined;
+      const updatedInvite = data?.invite as (InviteSummaryPayload & { roles?: Role[] }) | undefined;
       if (updatedInvite && typeof updatedInvite.id === "string") {
         setExpandedInviteId(updatedInvite.id);
         if (freshInvite?.id === updatedInvite.id) {
@@ -699,7 +710,8 @@ export function MemberInviteManager() {
       setEditModalOpen(false);
       await loadInvites();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Einladung konnte nicht aktualisiert werden";
+      const message =
+        err instanceof Error ? err.message : "Einladung konnte nicht aktualisiert werden";
       setError(message);
       toast.error(message);
     } finally {
@@ -733,27 +745,25 @@ export function MemberInviteManager() {
         throw new Error(data?.error ?? "Einladung konnte nicht erstellt werden");
       }
       if (data?.invite) {
-        const inviteId = typeof data.invite.id === "string" && data.invite.id.trim().length
-          ? data.invite.id
-          : data.invite.token;
+        const inviteId =
+          typeof data.invite.id === "string" && data.invite.id.trim().length
+            ? data.invite.id
+            : data.invite.token;
         const createdRoles = normalizeRoles(
-          Array.isArray(data.invite.roles)
-            ? (data.invite.roles as Role[])
-            : form.roles,
+          Array.isArray(data.invite.roles) ? (data.invite.roles as Role[]) : form.roles,
         );
         const computedInviteUrl = data.invite.token
           ? onboardingPathForToken(data.invite.token, createdRoles)
           : null;
-        const linkCandidate = typeof data.invite.shareUrl === "string"
-          ? data.invite.shareUrl
-          : data.invite.inviteUrl ?? computedInviteUrl;
+        const linkCandidate =
+          typeof data.invite.shareUrl === "string"
+            ? data.invite.shareUrl
+            : (data.invite.inviteUrl ?? computedInviteUrl);
         setFreshInvite({
           id: inviteId,
           token: data.invite.token,
           inviteUrl:
-            typeof data.invite.inviteUrl === "string"
-              ? data.invite.inviteUrl
-              : computedInviteUrl,
+            typeof data.invite.inviteUrl === "string" ? data.invite.inviteUrl : computedInviteUrl,
           shareUrl: data.invite.shareUrl ?? null,
           label: data.invite.label ?? null,
           note: data.invite.note ?? null,
@@ -764,7 +774,7 @@ export function MemberInviteManager() {
           production:
             data.invite.show && typeof data.invite.show === "object"
               ? (data.invite.show as ProductionSummary)
-              : productions.find((entry) => entry.id === form.showId) ?? null,
+              : (productions.find((entry) => entry.id === form.showId) ?? null),
         });
         try {
           const absolute = buildAbsoluteUrl(linkCandidate);
@@ -919,7 +929,10 @@ export function MemberInviteManager() {
     }
   };
 
-  const sortedInvites = useMemo(() => invites.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [invites]);
+  const sortedInvites = useMemo(
+    () => invites.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [invites],
+  );
 
   return (
     <Card className="border border-border/60 bg-card/80 shadow-sm">
@@ -937,7 +950,9 @@ export function MemberInviteManager() {
           <div className="rounded-lg border border-primary/50 bg-primary/10 p-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-foreground">Neuer Onboarding-Link erstellt</p>
+                <p className="text-sm font-semibold text-foreground">
+                  Neuer Onboarding-Link erstellt
+                </p>
                 <p className="text-xs text-muted-foreground sm:text-sm">
                   Kopiere den Link für den Versand oder öffne ihn direkt in einem neuen Tab.
                 </p>
@@ -1015,7 +1030,11 @@ export function MemberInviteManager() {
                     className="h-8 gap-2 px-3 text-xs text-primary hover:bg-primary/15"
                     asChild
                   >
-                    <a href={freshInviteLinkDetails.display || undefined} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={freshInviteLinkDetails.display || undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <ExternalLinkIcon className="h-4 w-4" />
                       Öffnen
                     </a>
@@ -1048,24 +1067,26 @@ export function MemberInviteManager() {
           ) : (
             <div className="grid gap-4">
               {sortedInvites.map((invite) => {
-              const status = statusForInvite(invite);
-              const isFresh = freshInvite?.id === invite.id;
-              const isExpanded = expandedInviteId === invite.id;
-              const sharePath = invite.shareUrl ?? null;
-              const shareLinkDisplay = sharePath ? buildAbsoluteUrl(sharePath) ?? sharePath : null;
-              const isProcessing = processingInviteId === invite.id;
-              const isDownloading = downloadingPdfFor === invite.id;
-              const metaItems: string[] = [];
-              if (invite.production) {
-                metaItems.push(formatProductionLabel(invite.production));
-              }
-              if (invite.production?.whatsappLink) {
-                metaItems.push("WhatsApp-Link hinterlegt");
-              }
-              if (resolveOnboardingVariant(invite.roles) === "regie") {
-                metaItems.push("Variante: Regie-Onboarding");
-              }
-              metaItems.push(`Erstellt am ${formatDate(invite.createdAt)}`);
+                const status = statusForInvite(invite);
+                const isFresh = freshInvite?.id === invite.id;
+                const isExpanded = expandedInviteId === invite.id;
+                const sharePath = invite.shareUrl ?? null;
+                const shareLinkDisplay = sharePath
+                  ? (buildAbsoluteUrl(sharePath) ?? sharePath)
+                  : null;
+                const isProcessing = processingInviteId === invite.id;
+                const isDownloading = downloadingPdfFor === invite.id;
+                const metaItems: string[] = [];
+                if (invite.production) {
+                  metaItems.push(formatProductionLabel(invite.production));
+                }
+                if (invite.production?.whatsappLink) {
+                  metaItems.push("WhatsApp-Link hinterlegt");
+                }
+                if (resolveOnboardingVariant(invite.roles) === "regie") {
+                  metaItems.push("Variante: Regie-Onboarding");
+                }
+                metaItems.push(`Erstellt am ${formatDate(invite.createdAt)}`);
                 if (invite.expiresAt) {
                   metaItems.push(`Gültig bis ${formatDate(invite.expiresAt)}`);
                 }
@@ -1155,13 +1176,19 @@ export function MemberInviteManager() {
                           <h3 className="text-sm font-semibold text-foreground">
                             {invite.label?.trim() || "Allgemeiner Link"}
                           </h3>
-                          <Badge variant={status.variant} className="px-2 py-0.5 text-[0.65rem] font-medium uppercase">
+                          <Badge
+                            variant={status.variant}
+                            className="px-2 py-0.5 text-[0.65rem] font-medium uppercase"
+                          >
                             {status.label}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           {metaItems.map((item, index) => (
-                            <span key={`${invite.id}-meta-${index}`} className="flex items-center gap-1">
+                            <span
+                              key={`${invite.id}-meta-${index}`}
+                              className="flex items-center gap-1"
+                            >
                               {index > 0 && <span aria-hidden>•</span>}
                               <span>{item}</span>
                             </span>
@@ -1174,7 +1201,9 @@ export function MemberInviteManager() {
                           variant="ghost"
                           className="h-8 gap-2 px-3 text-xs"
                           onClick={() =>
-                            setExpandedInviteId((current) => (current === invite.id ? null : invite.id))
+                            setExpandedInviteId((current) =>
+                              current === invite.id ? null : invite.id,
+                            )
                           }
                         >
                           {isExpanded ? (
@@ -1201,37 +1230,53 @@ export function MemberInviteManager() {
                         )}
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-3">
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium uppercase text-muted-foreground">Produktion</p>
-                            <p className="text-sm text-foreground">
-                              {invite.production ? formatProductionLabel(invite.production) : "–"}
-                            </p>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium uppercase text-muted-foreground">
-                              WhatsApp-Beitrittslink
-                            </p>
-                            {invite.production?.whatsappLink ? (
-                              <>
-                                <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
-                                  {invite.production.whatsappLink}
-                                </code>
-                                <div className="flex flex-wrap gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-8 gap-2 px-3 text-xs"
-                                    asChild
-                                  >
-                                    <a
-                                      href={invite.production.whatsappLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium uppercase text-muted-foreground">
+                                Produktion
+                              </p>
+                              <p className="text-sm text-foreground">
+                                {invite.production ? formatProductionLabel(invite.production) : "–"}
+                              </p>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium uppercase text-muted-foreground">
+                                WhatsApp-Beitrittslink
+                              </p>
+                              {invite.production?.whatsappLink ? (
+                                <>
+                                  <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
+                                    {invite.production.whatsappLink}
+                                  </code>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 gap-2 px-3 text-xs"
+                                      asChild
                                     >
-                                      <ExternalLinkIcon className="h-4 w-4" />
-                                      Öffnen
-                                    </a>
-                                  </Button>
+                                      <a
+                                        href={invite.production.whatsappLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        <ExternalLinkIcon className="h-4 w-4" />
+                                        Öffnen
+                                      </a>
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 gap-2 px-3 text-xs"
+                                      onClick={() => openOnboardingSettings(invite.showId)}
+                                    >
+                                      <MessageCircleIcon className="h-4 w-4" />
+                                      Einstellungen
+                                    </Button>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <span>Kein Link hinterlegt.</span>
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1239,91 +1284,79 @@ export function MemberInviteManager() {
                                     onClick={() => openOnboardingSettings(invite.showId)}
                                   >
                                     <MessageCircleIcon className="h-4 w-4" />
-                                    Einstellungen
+                                    Link hinzufügen
                                   </Button>
                                 </div>
-                              </>
-                            ) : (
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                <span>Kein Link hinterlegt.</span>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 gap-2 px-3 text-xs"
-                                  onClick={() => openOnboardingSettings(invite.showId)}
-                                >
-                                  <MessageCircleIcon className="h-4 w-4" />
-                                  Link hinzufügen
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium uppercase text-muted-foreground">Onboarding-Link</p>
-                            {sharePath ? (
-                              <>
-                                <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium uppercase text-muted-foreground">
+                                Onboarding-Link
+                              </p>
+                              {sharePath ? (
+                                <>
+                                  <code className="block break-all rounded-md bg-card/80 px-3 py-2 font-mono text-xs text-foreground">
                                     {shareLinkDisplay}
                                   </code>
                                   <div className="flex flex-wrap gap-2 pt-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-8 gap-2 px-3 text-xs"
-                                    onClick={() => copyInviteLink(sharePath)}
-                                  >
-                                    <CopyIcon className="h-4 w-4" />
-                                    Link kopieren
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-8 gap-2 px-3 text-xs"
-                                    onClick={() => openEditModalWith(invite)}
-                                    disabled={updatingInviteId === invite.id}
-                                  >
-                                    <EditIcon className="h-4 w-4" />
-                                    Details bearbeiten
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-8 gap-2 px-3 text-xs"
-                                    onClick={() => {
-                                      if (isDownloading) return;
-                                      void requestInvitePdf({
-                                        id: invite.id,
-                                        label: invite.label,
-                                        note: invite.note,
-                                        shareUrl: invite.shareUrl,
-                                        expiresAt: invite.expiresAt,
-                                        maxUses: invite.maxUses,
-                                        roles: invite.roles,
-                                      });
-                                    }}
-                                    disabled={isDownloading}
-                                  >
-                                    {isDownloading ? (
-                                      "PDF wird erstellt …"
-                                    ) : (
-                                      <>
-                                        <DownloadIcon className="h-4 w-4" />
-                                        PDF generieren
-                                      </>
-                                    )}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 gap-2 px-3 text-xs"
-                                    asChild
-                                  >
-                                    <a href={sharePath} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLinkIcon className="h-4 w-4" />
-                                      Öffnen
-                                    </a>
-                                  </Button>
-                                </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 gap-2 px-3 text-xs"
+                                      onClick={() => copyInviteLink(sharePath)}
+                                    >
+                                      <CopyIcon className="h-4 w-4" />
+                                      Link kopieren
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 gap-2 px-3 text-xs"
+                                      onClick={() => openEditModalWith(invite)}
+                                      disabled={updatingInviteId === invite.id}
+                                    >
+                                      <EditIcon className="h-4 w-4" />
+                                      Details bearbeiten
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 gap-2 px-3 text-xs"
+                                      onClick={() => {
+                                        if (isDownloading) return;
+                                        void requestInvitePdf({
+                                          id: invite.id,
+                                          label: invite.label,
+                                          note: invite.note,
+                                          shareUrl: invite.shareUrl,
+                                          expiresAt: invite.expiresAt,
+                                          maxUses: invite.maxUses,
+                                          roles: invite.roles,
+                                        });
+                                      }}
+                                      disabled={isDownloading}
+                                    >
+                                      {isDownloading ? (
+                                        "PDF wird erstellt …"
+                                      ) : (
+                                        <>
+                                          <DownloadIcon className="h-4 w-4" />
+                                          PDF generieren
+                                        </>
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 gap-2 px-3 text-xs"
+                                      asChild
+                                    >
+                                      <a href={sharePath} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLinkIcon className="h-4 w-4" />
+                                        Öffnen
+                                      </a>
+                                    </Button>
+                                  </div>
                                 </>
                               ) : (
                                 <p className="text-xs text-muted-foreground">
@@ -1334,7 +1367,9 @@ export function MemberInviteManager() {
                           </div>
                           <div className="space-y-3">
                             <div className="space-y-1">
-                              <p className="text-xs font-medium uppercase text-muted-foreground">Rollen</p>
+                              <p className="text-xs font-medium uppercase text-muted-foreground">
+                                Rollen
+                              </p>
                               <div className="flex flex-wrap gap-2">
                                 {invite.roles.map((role) => (
                                   <Badge key={role} variant="outline">
@@ -1345,7 +1380,9 @@ export function MemberInviteManager() {
                             </div>
                             <div className="space-y-3">
                               <div className="space-y-1">
-                                <p className="text-xs font-medium uppercase text-muted-foreground">Nutzungsübersicht</p>
+                                <p className="text-xs font-medium uppercase text-muted-foreground">
+                                  Nutzungsübersicht
+                                </p>
                                 <p className="text-sm text-foreground">
                                   {invite.maxUses !== null
                                     ? `${invite.usageCount} / ${invite.maxUses} genutzt`
@@ -1378,7 +1415,9 @@ export function MemberInviteManager() {
                                               {String(index + 1).padStart(2, "0")}
                                             </span>
                                             <div className="space-y-0.5">
-                                              <p className="text-sm font-medium text-foreground">{entry.relative}</p>
+                                              <p className="text-sm font-medium text-foreground">
+                                                {entry.relative}
+                                              </p>
                                               <time
                                                 dateTime={entry.iso}
                                                 className="text-[11px] uppercase tracking-wide text-muted-foreground"
@@ -1396,7 +1435,9 @@ export function MemberInviteManager() {
                                     ))}
                                   </div>
                                 ) : (
-                                  <p className="text-xs text-muted-foreground">Noch keine Klicks registriert.</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Noch keine Klicks registriert.
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -1426,7 +1467,8 @@ export function MemberInviteManager() {
           <DialogHeader>
             <DialogTitle>Details bearbeiten</DialogTitle>
             <DialogDescription>
-              Passe Titel, Notizen oder Laufzeit deines Onboarding-Links an. Leere Felder setzen Werte zurück.
+              Passe Titel, Notizen oder Laufzeit deines Onboarding-Links an. Leere Felder setzen
+              Werte zurück.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1434,7 +1476,9 @@ export function MemberInviteManager() {
               <span className="font-medium">Titel</span>
               <Input
                 value={editForm.label}
-                onChange={(event) => setEditForm((prev) => ({ ...prev, label: event.target.value }))}
+                onChange={(event) =>
+                  setEditForm((prev) => ({ ...prev, label: event.target.value }))
+                }
                 placeholder="z.B. Sommercrew 2025"
                 disabled={isUpdatingCurrentInvite}
               />
@@ -1448,11 +1492,7 @@ export function MemberInviteManager() {
                   variant="ghost"
                   className="h-8 gap-1.5 px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary"
                   onClick={() => openOnboardingSettings(editForm.showId)}
-                  disabled={
-                    isUpdatingCurrentInvite ||
-                    productions.length === 0 ||
-                    !editForm.showId
-                  }
+                  disabled={isUpdatingCurrentInvite || productions.length === 0 || !editForm.showId}
                 >
                   <MessageCircleIcon className="h-4 w-4" />
                   Onboarding-Einstellungen
@@ -1498,10 +1538,14 @@ export function MemberInviteManager() {
                 <span className="font-medium">Gültig bis</span>
                 <DateInput
                   value={editForm.expiresAt}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, expiresAt: event.target.value }))
+                  }
                   disabled={isUpdatingCurrentInvite}
                 />
-                <span className="text-xs text-muted-foreground">Freilassen für unbegrenzte Laufzeit.</span>
+                <span className="text-xs text-muted-foreground">
+                  Freilassen für unbegrenzte Laufzeit.
+                </span>
               </label>
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Max. Nutzungen</span>
@@ -1509,11 +1553,15 @@ export function MemberInviteManager() {
                   type="number"
                   min={1}
                   value={editForm.maxUses}
-                  onChange={(event) => setEditForm((prev) => ({ ...prev, maxUses: event.target.value }))}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, maxUses: event.target.value }))
+                  }
                   placeholder="Unbegrenzt"
                   disabled={isUpdatingCurrentInvite}
                 />
-                <span className="text-xs text-muted-foreground">Leer lassen, um keine Grenze zu setzen.</span>
+                <span className="text-xs text-muted-foreground">
+                  Leer lassen, um keine Grenze zu setzen.
+                </span>
               </label>
             </div>
             <div className="space-y-2">
@@ -1526,7 +1574,9 @@ export function MemberInviteManager() {
                       key={`edit-${role}`}
                       className={cn(
                         "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition",
-                        checked ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/60",
+                        checked
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/60",
                         isUpdatingCurrentInvite && "pointer-events-none opacity-70",
                       )}
                     >
@@ -1543,15 +1593,26 @@ export function MemberInviteManager() {
                 })}
               </div>
               <p className="text-xs text-muted-foreground">
-                Standard bleibt „Mitglied“. Weitere Rollen kannst du jederzeit ergänzen oder entfernen.
+                Standard bleibt „Mitglied“. Weitere Rollen kannst du jederzeit ergänzen oder
+                entfernen.
               </p>
             </div>
           </div>
           <DialogFooter className="gap-2 pt-4 sm:space-x-2">
-            <Button type="button" variant="outline" onClick={closeEditModal} disabled={isUpdatingCurrentInvite}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeEditModal}
+              disabled={isUpdatingCurrentInvite}
+            >
               Abbrechen
             </Button>
-            <AsyncButton onClick={handleUpdate} isLoading={isUpdatingCurrentInvite} loadingText="Speichere …" disabled={!editingInviteId}>
+            <AsyncButton
+              onClick={handleUpdate}
+              isLoading={isUpdatingCurrentInvite}
+              loadingText="Speichere …"
+              disabled={!editingInviteId}
+            >
               Änderungen speichern
             </AsyncButton>
           </DialogFooter>
@@ -1640,7 +1701,9 @@ export function MemberInviteManager() {
                 <span className="font-medium">Gültig bis</span>
                 <DateInput
                   value={form.expiresAt}
-                  onChange={(event) => setForm((prev) => ({ ...prev, expiresAt: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, expiresAt: event.target.value }))
+                  }
                 />
               </label>
               <label className="space-y-1 text-sm">
@@ -1649,7 +1712,9 @@ export function MemberInviteManager() {
                   type="number"
                   min={1}
                   value={form.maxUses}
-                  onChange={(event) => setForm((prev) => ({ ...prev, maxUses: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, maxUses: event.target.value }))
+                  }
                   placeholder="Unbegrenzt"
                 />
               </label>
@@ -1664,7 +1729,9 @@ export function MemberInviteManager() {
                       key={role}
                       className={cn(
                         "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition",
-                        checked ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/60",
+                        checked
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/60",
                       )}
                     >
                       <input
@@ -1717,8 +1784,7 @@ export function MemberInviteManager() {
           <DialogHeader>
             <DialogTitle>Onboarding-Einstellungen</DialogTitle>
             <DialogDescription>
-              Hinterlege optional den WhatsApp-Beitrittslink für
-              {" "}
+              Hinterlege optional den WhatsApp-Beitrittslink für{" "}
               {onboardingSettings?.label ?? "diese Produktion"}.
             </DialogDescription>
           </DialogHeader>
@@ -1743,7 +1809,8 @@ export function MemberInviteManager() {
                   disabled={onboardingSettingsPending}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Nur offizielle WhatsApp-Beitrittslinks werden akzeptiert. Lass das Feld leer, um den Link zu entfernen.
+                  Nur offizielle WhatsApp-Beitrittslinks werden akzeptiert. Lass das Feld leer, um
+                  den Link zu entfernen.
                 </p>
               </div>
               {onboardingSettingsError ? (

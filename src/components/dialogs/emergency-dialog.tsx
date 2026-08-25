@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,49 +6,54 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "sonner"
-import { useEffect, useState } from "react"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 interface EmergencyDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (reason: string) => Promise<void>
-  rehearsalTitle?: string
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (reason: string) => Promise<void>;
+  rehearsalTitle?: string;
 }
 
-export function EmergencyDialog({ isOpen, onClose, onSubmit, rehearsalTitle }: EmergencyDialogProps) {
-  const [reason, setReason] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export function EmergencyDialog({
+  isOpen,
+  onClose,
+  onSubmit,
+  rehearsalTitle,
+}: EmergencyDialogProps) {
+  const [reason, setReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
-      setReason("")
-      setIsSubmitting(false)
+      setReason("");
+      setIsSubmitting(false);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   const handleSubmit = async () => {
-    const trimmed = reason.trim()
+    const trimmed = reason.trim();
     if (!trimmed) {
-      toast.error("Bitte geben Sie einen Grund für die Emergency-Absage an")
-      return
+      toast.error("Bitte geben Sie einen Grund für die Emergency-Absage an");
+      return;
     }
 
     try {
-      setIsSubmitting(true)
-      await onSubmit(trimmed)
-      toast.success("Notfall wurde gemeldet.")
-      setReason("")
-      onClose()
+      setIsSubmitting(true);
+      await onSubmit(trimmed);
+      toast.success("Notfall wurde gemeldet.");
+      setReason("");
+      onClose();
     } catch (error) {
-      console.error("[EmergencyDialog] Failed to submit emergency reason", error)
+      console.error("[EmergencyDialog] Failed to submit emergency reason", error);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -88,5 +93,5 @@ export function EmergencyDialog({ isOpen, onClose, onSubmit, rehearsalTitle }: E
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

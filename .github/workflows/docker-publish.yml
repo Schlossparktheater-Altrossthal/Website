@@ -5,22 +5,22 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/docker-publish.yml'
-      - 'Dockerfile.prod'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'next.config.ts'
-      - 'tsconfig.json'
-      - 'postcss.config.mjs'
-      - 'tailwind.config.js'
-      - 'eslint.config.mjs'
-      - 'components.json'
-      - 'src/**'
-      - 'public/**'
-      - 'prisma.config.ts'
-      - 'prisma/**'
-      - 'realtime-server/**'
-      - 'scripts/**'
+      - ".github/workflows/docker-publish.yml"
+      - "Dockerfile.prod"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "next.config.ts"
+      - "tsconfig.json"
+      - "postcss.config.mjs"
+      - "tailwind.config.js"
+      - "eslint.config.mjs"
+      - "components.json"
+      - "src/**"
+      - "public/**"
+      - "prisma.config.ts"
+      - "prisma/**"
+      - "realtime-server/**"
+      - "scripts/**"
   release:
     types: [published]
   workflow_dispatch:
@@ -44,8 +44,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
-          cache: 'pnpm'
+          node-version: "26"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --no-frozen-lockfile
@@ -129,8 +129,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '26'
-          cache: 'pnpm'
+          node-version: "26"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: SKIP_PRISMA_POSTINSTALL=1 PRISMA_SKIP_POSTINSTALL_GENERATE=1 pnpm install --no-frozen-lockfile

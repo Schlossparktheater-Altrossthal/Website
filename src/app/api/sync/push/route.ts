@@ -72,10 +72,7 @@ export async function POST(request: Request) {
     json = await request.json();
   } catch (error) {
     console.error("Failed to parse sync push payload", error);
-    return NextResponse.json(
-      { error: "Invalid sync push payload" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid sync push payload" }, { status: 400 });
   }
 
   const parsed = payloadSchema.safeParse(json);
@@ -114,16 +111,10 @@ export async function POST(request: Request) {
     return NextResponse.json(responseBody, { status, headers });
   } catch (error) {
     if (error instanceof SyncEventValidationError) {
-      return NextResponse.json(
-        { error: error.message, issues: error.issues },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: error.message, issues: error.issues }, { status: 400 });
     }
 
     console.error("Failed to apply incoming events", error);
-    return NextResponse.json(
-      { error: "Failed to apply sync events" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to apply sync events" }, { status: 500 });
   }
 }

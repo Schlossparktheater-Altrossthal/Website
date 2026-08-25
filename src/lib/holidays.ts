@@ -106,7 +106,9 @@ function ensureHolidaySourceUrlAllowed(url: string) {
 }
 
 function createAbortSignal(timeoutMs: number) {
-  const timeoutFactory = (AbortSignal as typeof AbortSignal & { timeout?: (ms: number) => AbortSignal }).timeout;
+  const timeoutFactory = (
+    AbortSignal as typeof AbortSignal & { timeout?: (ms: number) => AbortSignal }
+  ).timeout;
   if (typeof timeoutFactory === "function") {
     return timeoutFactory(timeoutMs);
   }
@@ -390,8 +392,7 @@ async function fetchFallbackSchoolHolidayFeed() {
     const response = await fetch(FALLBACK_SAXONY_HOLIDAY_FEED, {
       headers: {
         Accept: "application/json",
-        "User-Agent":
-          "Theaterverein Kalenderbot/1.0 (+https://devtheater.beegreenx.de)",
+        "User-Agent": "Theaterverein Kalenderbot/1.0 (+https://devtheater.beegreenx.de)",
         Referer: "https://devtheater.beegreenx.de/mitglieder/sperrliste",
       },
       next: { revalidate: 60 * 60 * 12 },
@@ -522,7 +523,7 @@ async function fetchSchoolHolidayRangesForSettings(
   const primaryUrl =
     settings.holidaySource.mode === "custom"
       ? settings.holidaySource.url
-      : settings.holidaySource.effectiveUrl ?? getDefaultHolidaySourceUrl();
+      : (settings.holidaySource.effectiveUrl ?? getDefaultHolidaySourceUrl());
 
   let primaryError: Error | null = null;
 
@@ -539,7 +540,8 @@ async function fetchSchoolHolidayRangesForSettings(
         },
       };
     } catch (error) {
-      primaryError = error instanceof Error ? error : new Error("Ferienquelle konnte nicht geladen werden.");
+      primaryError =
+        error instanceof Error ? error : new Error("Ferienquelle konnte nicht geladen werden.");
       console.error("[holidays] primary feed fetch failed", primaryError);
     }
   } else {
@@ -599,7 +601,7 @@ async function fetchPublicHolidayRangesForSettings(
   const publicUrl =
     settings.publicHolidaySource.mode === "custom"
       ? settings.publicHolidaySource.url
-      : settings.publicHolidaySource.effectiveUrl ?? getDefaultPublicHolidaySourceUrl();
+      : (settings.publicHolidaySource.effectiveUrl ?? getDefaultPublicHolidaySourceUrl());
 
   if (isOutboundHttpDisabled()) {
     const ranges = filterRelevantRanges(getStaticPublicHolidayRanges());
@@ -627,7 +629,8 @@ async function fetchPublicHolidayRangesForSettings(
         },
       };
     } catch (error) {
-      publicError = error instanceof Error ? error : new Error("Feiertagsquelle konnte nicht geladen werden.");
+      publicError =
+        error instanceof Error ? error : new Error("Feiertagsquelle konnte nicht geladen werden.");
       console.error("[holidays] public holiday feed fetch failed", publicError);
     }
   } else {

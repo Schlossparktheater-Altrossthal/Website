@@ -9,30 +9,23 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-[var(--shadow-lg)] hover:bg-primary/90",
-        primary:
-          "bg-primary text-primary-foreground shadow-[var(--shadow-lg)] hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground shadow-[var(--shadow-lg)] hover:bg-primary/90",
+        primary: "bg-primary text-primary-foreground shadow-[var(--shadow-lg)] hover:bg-primary/90",
         secondary:
           "bg-secondary text-secondary-foreground shadow-[var(--shadow-md)] hover:bg-secondary/90",
-        accent:
-          "bg-accent text-accent-foreground shadow-[var(--shadow-md)] hover:bg-accent/90",
+        accent: "bg-accent text-accent-foreground shadow-[var(--shadow-md)] hover:bg-accent/90",
         outline:
           "border border-border bg-transparent text-foreground hover:border-primary/50 hover:text-primary",
         toggle:
           "border border-transparent bg-transparent text-muted-foreground hover:bg-muted/40 data-[state=active]:border-transparent data-[state=active]:bg-accent data-[state=active]:text-accent-foreground",
-        ghost:
-          "bg-transparent text-foreground hover:bg-muted/40 hover:text-foreground",
-        subtle:
-          "bg-muted text-foreground/90 shadow-[var(--shadow-sm)] hover:bg-muted/70",
-        link:
-          "text-primary underline underline-offset-4 decoration-primary/60 hover:text-primary/90 hover:decoration-primary",
+        ghost: "bg-transparent text-foreground hover:bg-muted/40 hover:text-foreground",
+        subtle: "bg-muted text-foreground/90 shadow-[var(--shadow-sm)] hover:bg-muted/70",
+        link: "text-primary underline underline-offset-4 decoration-primary/60 hover:text-primary/90 hover:decoration-primary",
         destructive:
           "bg-destructive text-destructive-foreground shadow-[var(--shadow-md)] hover:bg-destructive/90 focus-visible:ring-destructive/40",
         success:
           "bg-success text-success-foreground shadow-[var(--shadow-md)] hover:bg-success/90 focus-visible:ring-success/40",
-        info:
-          "bg-info text-info-foreground shadow-[var(--shadow-md)] hover:bg-info/90 focus-visible:ring-info/40",
+        info: "bg-info text-info-foreground shadow-[var(--shadow-md)] hover:bg-info/90 focus-visible:ring-info/40",
       },
       size: {
         xs: "h-8 rounded-md px-3 text-xs",
@@ -44,12 +37,11 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
-  }
+  },
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
@@ -57,13 +49,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
-      <Comp
-        ref={ref}
-        className={cn(buttonVariants({ variant, size }), className)}
-        {...props}
-      />
+      <Comp ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
     );
-  }
+  },
 );
 Button.displayName = "Button";
 

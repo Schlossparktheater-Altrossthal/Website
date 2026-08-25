@@ -7,7 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { membersNavigation } from "@/config/members-navigation";
 import { toast } from "sonner";
@@ -39,14 +45,19 @@ export function SeitensteuerungManager() {
         .filter((group) => group.pages.length > 0),
     [],
   );
-  const memberPages = useMemo(() => memberPageGroups.flatMap((group) => group.pages), [memberPageGroups]);
+  const memberPages = useMemo(
+    () => memberPageGroups.flatMap((group) => group.pages),
+    [memberPageGroups],
+  );
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [pageVisibility, setPageVisibility] = useState<ClientWebsiteSettings["pageVisibility"]>({
     public: { about: true, mystery: true, schoolCat: true, timeline: true },
     members: {},
     pages: { general: true, maintenance: true, ui: true, websiteTheme: true },
-    categories: { dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true } },
+    categories: {
+      dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true },
+    },
   });
   const [pendingPublic, setPendingPublic] = useState(pageVisibility.public);
   const [pendingMembers, setPendingMembers] = useState<Record<string, boolean>>({});
@@ -76,7 +87,9 @@ export function SeitensteuerungManager() {
       setPendingPublic(payload.settings.pageVisibility.public);
       const membersFromSettings = payload.settings.pageVisibility.members ?? {};
       setPendingMembers(
-        Object.fromEntries(memberPages.map((page) => [page.key, membersFromSettings[page.key] ?? true])),
+        Object.fromEntries(
+          memberPages.map((page) => [page.key, membersFromSettings[page.key] ?? true]),
+        ),
       );
     };
     void loadSettings();
@@ -130,7 +143,9 @@ export function SeitensteuerungManager() {
   };
 
   const getCategoryStatus = (categoryPageKeys: string[]) => {
-    const enabledCount = categoryPageKeys.filter((pageKey) => (pendingMembers[pageKey] ?? true) === true).length;
+    const enabledCount = categoryPageKeys.filter(
+      (pageKey) => (pendingMembers[pageKey] ?? true) === true,
+    ).length;
     if (enabledCount === 0) return "disabled";
     if (enabledCount === categoryPageKeys.length) return "enabled";
     return "partial";
@@ -156,33 +171,71 @@ export function SeitensteuerungManager() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Wartungsmodus</CardTitle>
-            <Badge variant={maintenanceMode ? "warning" : "muted"}>{maintenanceMode ? "Aktiv" : "Inaktiv"}</Badge>
+            <Badge variant={maintenanceMode ? "warning" : "muted"}>
+              {maintenanceMode ? "Aktiv" : "Inaktiv"}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <span>Wartungsmodus aktiv</span>
-            <Switch checked={maintenanceMode} disabled={savingMaintenance} onCheckedChange={updateMaintenance} />
+            <Switch
+              checked={maintenanceMode}
+              disabled={savingMaintenance}
+              onCheckedChange={updateMaintenance}
+            />
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Öffentliche Seiten</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Öffentliche Seiten</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           {publicPages.map((page) => (
-            <div key={page.key} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
+            <div
+              key={page.key}
+              className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
+            >
               <span>{page.label}</span>
               <Dialog>
-                <DialogTrigger asChild><Button variant="ghost" size="icon"><SettingsIcon className="h-4 w-4" /></Button></DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <SettingsIcon className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>{page.label} konfigurieren</DialogTitle></DialogHeader>
+                  <DialogHeader>
+                    <DialogTitle>{page.label} konfigurieren</DialogTitle>
+                  </DialogHeader>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Label htmlFor={`public-${page.key}`}>Seite aktivieren</Label>
-                      <Switch id={`public-${page.key}`} checked={pendingPublic[page.key]} onCheckedChange={(checked) => setPendingPublic((prev) => ({ ...prev, [page.key]: checked }))} />
+                      <Switch
+                        id={`public-${page.key}`}
+                        checked={pendingPublic[page.key]}
+                        onCheckedChange={(checked) =>
+                          setPendingPublic((prev) => ({ ...prev, [page.key]: checked }))
+                        }
+                      />
                     </div>
-                    <Button disabled={savingPage === page.key} onClick={() => void saveVisibility({ public: { ...pageVisibility.public, [page.key]: pendingPublic[page.key] } }, page.key)}>Speichern</Button>
+                    <Button
+                      disabled={savingPage === page.key}
+                      onClick={() =>
+                        void saveVisibility(
+                          {
+                            public: {
+                              ...pageVisibility.public,
+                              [page.key]: pendingPublic[page.key],
+                            },
+                          },
+                          page.key,
+                        )
+                      }
+                    >
+                      Speichern
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -192,7 +245,9 @@ export function SeitensteuerungManager() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Mitglieder-Seiten ({memberPages.length})</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Mitglieder-Seiten ({memberPages.length})</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           {memberPageGroups.map((group) => {
             const categoryPageKeys = group.pages.map((page) => page.key);
@@ -216,7 +271,9 @@ export function SeitensteuerungManager() {
                   <div className="relative">
                     <Switch
                       checked={categoryStatus === "enabled"}
-                      onCheckedChange={(checked) => void toggleCategory(categoryPageKeys, checked, group.id)}
+                      onCheckedChange={(checked) =>
+                        void toggleCategory(categoryPageKeys, checked, group.id)
+                      }
                       aria-label={`${group.label} aktivieren`}
                     />
                     {categoryStatus === "partial" ? (
@@ -230,15 +287,42 @@ export function SeitensteuerungManager() {
                       <div key={page.key} className="flex items-center justify-between px-3 py-2">
                         <span>{page.label}</span>
                         <Dialog>
-                          <DialogTrigger asChild><Button variant="ghost" size="icon"><SettingsIcon className="h-4 w-4" /></Button></DialogTrigger>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <SettingsIcon className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
                           <DialogContent>
-                            <DialogHeader><DialogTitle>{page.label} konfigurieren</DialogTitle></DialogHeader>
+                            <DialogHeader>
+                              <DialogTitle>{page.label} konfigurieren</DialogTitle>
+                            </DialogHeader>
                             <div className="space-y-4">
                               <div className="flex items-center justify-between">
                                 <Label htmlFor={`member-${page.key}`}>Seite aktivieren</Label>
-                                <Switch id={`member-${page.key}`} checked={pendingMembers[page.key] ?? true} onCheckedChange={(checked) => setPendingMembers((prev) => ({ ...prev, [page.key]: checked }))} />
+                                <Switch
+                                  id={`member-${page.key}`}
+                                  checked={pendingMembers[page.key] ?? true}
+                                  onCheckedChange={(checked) =>
+                                    setPendingMembers((prev) => ({ ...prev, [page.key]: checked }))
+                                  }
+                                />
                               </div>
-                              <Button disabled={savingPage === page.key} onClick={() => void saveVisibility({ members: { ...pageVisibility.members, [page.key]: pendingMembers[page.key] ?? true } }, page.key)}>Speichern</Button>
+                              <Button
+                                disabled={savingPage === page.key}
+                                onClick={() =>
+                                  void saveVisibility(
+                                    {
+                                      members: {
+                                        ...pageVisibility.members,
+                                        [page.key]: pendingMembers[page.key] ?? true,
+                                      },
+                                    },
+                                    page.key,
+                                  )
+                                }
+                              >
+                                Speichern
+                              </Button>
                             </div>
                           </DialogContent>
                         </Dialog>

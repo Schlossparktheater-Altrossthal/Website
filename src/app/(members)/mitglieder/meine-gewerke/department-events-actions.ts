@@ -33,11 +33,7 @@ const optionalStringSchema = (min: number, max: number, message?: string) =>
 const createSchema = z.object({
   departmentId: z.string().min(1, "Ungültiges Gewerk"),
   departmentSlug: z.string().min(1, "Ungültiges Gewerk"),
-  title: z
-    .string()
-    .trim()
-    .min(3, "Titel ist zu kurz")
-    .max(120, "Titel ist zu lang"),
+  title: z.string().trim().min(3, "Titel ist zu kurz").max(120, "Titel ist zu lang"),
   date: z.string().regex(ISO_DATE, "Ungültiges Datum"),
   startTime: z.string().regex(ISO_TIME, "Ungültige Uhrzeit"),
   endTime: optionalTimeSchema,

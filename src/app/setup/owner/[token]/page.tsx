@@ -43,9 +43,14 @@ export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
   }
 
   return (
-    <main id="main" className="mx-auto flex min-h-[70vh] max-w-2xl flex-col justify-center gap-8 px-4 py-16">
+    <main
+      id="main"
+      className="mx-auto flex min-h-[70vh] max-w-2xl flex-col justify-center gap-8 px-4 py-16"
+    >
       <div className="space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Erstkonfiguration</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Erstkonfiguration
+        </p>
         <h1 className="font-serif text-4xl">Owner-Zugang anlegen</h1>
         <p className="text-base text-muted-foreground">
           {hasOwner
@@ -58,7 +63,8 @@ export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
         <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-sm text-amber-900 shadow-sm">
           <p className="font-medium text-amber-900">Hinweis</p>
           <p className="mt-1 text-amber-900/90">
-            Der bestehende Owner bleibt unverändert bestehen. Nach der Anmeldung kannst du weitere Rechte jederzeit in der Mitgliederverwaltung anpassen.
+            Der bestehende Owner bleibt unverändert bestehen. Nach der Anmeldung kannst du weitere
+            Rechte jederzeit in der Mitgliederverwaltung anpassen.
           </p>
         </div>
       )}
@@ -68,7 +74,11 @@ export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Nach erfolgreicher Einrichtung kannst du dich jederzeit über das <Link href="/login" className="font-medium text-primary underline-offset-2 hover:underline">Login</Link> anmelden.
+        Nach erfolgreicher Einrichtung kannst du dich jederzeit über das{" "}
+        <Link href="/login" className="font-medium text-primary underline-offset-2 hover:underline">
+          Login
+        </Link>{" "}
+        anmelden.
       </p>
     </main>
   );
@@ -80,14 +90,22 @@ interface InvalidTokenProps {
 
 function InvalidToken({ message }: InvalidTokenProps) {
   return (
-    <main id="main" className="mx-auto flex min-h-[60vh] max-w-xl flex-col justify-center gap-6 px-4 py-16 text-center">
+    <main
+      id="main"
+      className="mx-auto flex min-h-[60vh] max-w-xl flex-col justify-center gap-6 px-4 py-16 text-center"
+    >
       <h1 className="font-serif text-4xl">Owner-Link ungültig</h1>
       <p className="text-base text-muted-foreground">{message}</p>
       <p className="text-sm text-muted-foreground">
-        Falls du einen Owner hinzufügen möchtest, starte den Server neu, um einen aktuellen Link in der Konsole zu erhalten.
+        Falls du einen Owner hinzufügen möchtest, starte den Server neu, um einen aktuellen Link in
+        der Konsole zu erhalten.
       </p>
       <p className="text-sm text-muted-foreground">
-        Bereits eingerichtet? Dann geht es hier zum <Link href="/login" className="font-medium text-primary underline-offset-2 hover:underline">Login</Link>.
+        Bereits eingerichtet? Dann geht es hier zum{" "}
+        <Link href="/login" className="font-medium text-primary underline-offset-2 hover:underline">
+          Login
+        </Link>
+        .
       </p>
     </main>
   );

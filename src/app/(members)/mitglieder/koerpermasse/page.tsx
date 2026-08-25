@@ -42,12 +42,7 @@ export default async function MemberMeasurementsPage() {
     where: {
       OR: memberFilters,
     },
-    orderBy: [
-      { lastName: "asc" },
-      { firstName: "asc" },
-      { name: "asc" },
-      { email: "asc" },
-    ],
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
     select: {
       id: true,
       firstName: true,
@@ -76,10 +71,7 @@ export default async function MemberMeasurementsPage() {
     firstName: member.firstName,
     lastName: member.lastName,
     name: member.name,
-    roles: sortRoles([
-      member.role as Role,
-      ...member.roles.map((entry) => entry.role as Role),
-    ]),
+    roles: sortRoles([member.role as Role, ...member.roles.map((entry) => entry.role as Role)]),
     avatarSource: member.avatarSource,
     avatarUpdatedAt: member.avatarImageUpdatedAt?.toISOString() ?? null,
     measurements: member.measurements.map((measurement) => ({
@@ -101,7 +93,10 @@ export default async function MemberMeasurementsPage() {
         description="Futuristisches Control Center für das Kostüm-Team: Synchronisiere, vergleiche und aktualisiere die Körpermaße des gesamten Ensembles in einem Blick."
         breadcrumbs={breadcrumbs}
       />
-      <MemberMeasurementsControlCenter members={normalizedMembers} canConfigureMeasurements={allowed} />
+      <MemberMeasurementsControlCenter
+        members={normalizedMembers}
+        canConfigureMeasurements={allowed}
+      />
     </div>
   );
 }

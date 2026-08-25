@@ -21,9 +21,13 @@ export function ModalFormDialog({
   onSave,
   saveLabel = "Speichern",
 }: ModalFormDialogProps) {
-  const effectiveFooter = footer ?? (onSave ? (
-    <Button type="button" onClick={onSave}>{saveLabel}</Button>
-  ) : null);
+  const effectiveFooter =
+    footer ??
+    (onSave ? (
+      <Button type="button" onClick={onSave}>
+        {saveLabel}
+      </Button>
+    ) : null);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

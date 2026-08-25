@@ -7,7 +7,10 @@ import {
   getAvailableOnboardings,
   getOnboardingDashboardData,
 } from "@/lib/onboarding/dashboard-service";
-import { DEV_ONBOARDING_DASHBOARD, DEV_ONBOARDING_SUMMARY } from "@/lib/onboarding/dashboard-dev-fixture";
+import {
+  DEV_ONBOARDING_DASHBOARD,
+  DEV_ONBOARDING_SUMMARY,
+} from "@/lib/onboarding/dashboard-dev-fixture";
 import { collectOnboardingAnalytics } from "@/lib/onboarding-analytics";
 import { databaseEnabled } from "@/lib/dev-database";
 import { hasPermission } from "@/lib/permissions";
@@ -108,10 +111,12 @@ export default async function MembersOnboardingAnalyticsPage({
               <AlertIcon className="h-5 w-5 text-warning" aria-hidden />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold uppercase tracking-wide text-warning">Offline-Demo</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-warning">
+                Offline-Demo
+              </p>
               <p className="text-sm text-warning-foreground/90">
-                Die Onboarding-Analyse nutzt Demo-Daten, weil keine Datenbankverbindung verfügbar ist. Interaktive Auswertungen
-                sind vorübergehend deaktiviert.
+                Die Onboarding-Analyse nutzt Demo-Daten, weil keine Datenbankverbindung verfügbar
+                ist. Interaktive Auswertungen sind vorübergehend deaktiviert.
               </p>
             </div>
           </div>

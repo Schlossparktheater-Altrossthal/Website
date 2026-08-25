@@ -4,8 +4,7 @@ import { clearImpersonationCookie } from "@/lib/auth/impersonation";
 import { requireAuth } from "@/lib/rbac";
 
 export type StopImpersonationResult =
-  | { ok: true; redirectTo?: string }
-  | { ok: false; error: string };
+  { ok: true; redirectTo?: string } | { ok: false; error: string };
 
 export async function stopImpersonationAction(input?: {
   redirectTo?: string | null;

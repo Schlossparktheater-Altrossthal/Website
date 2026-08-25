@@ -4,7 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
-import { describeInvite, generateInviteToken, hashInviteToken, calculateInviteStatus } from "@/lib/member-invites";
+import {
+  describeInvite,
+  generateInviteToken,
+  hashInviteToken,
+  calculateInviteStatus,
+} from "@/lib/member-invites";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { onboardingPathForHash, onboardingPathForToken } from "@/lib/member-invite-links";
 import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
@@ -103,7 +108,9 @@ export async function GET() {
     const status = calculateInviteStatus(invite, now);
     const completed = invite.redemptions.filter((r) => r.completedAt).length;
     const pending = invite.redemptions.length - completed;
-    const recentClicks = invite.redemptions.slice(0, 3).map((entry) => entry.createdAt.toISOString());
+    const recentClicks = invite.redemptions
+      .slice(0, 3)
+      .map((entry) => entry.createdAt.toISOString());
     const production = invite.show
       ? {
           id: invite.show.id,
@@ -131,9 +138,7 @@ export async function GET() {
       isExhausted: status.isExhausted,
       pendingSessions: pending,
       completedSessions: completed,
-      shareUrl: status.isActive
-        ? onboardingPathForHash(invite.tokenHash, invite.roles)
-        : null,
+      shareUrl: status.isActive ? onboardingPathForHash(invite.tokenHash, invite.roles) : null,
       recentClicks,
     };
   });
@@ -170,16 +175,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await request.json().catch(() => null) as
-    | {
-        label?: unknown;
-        note?: unknown;
-        expiresAt?: unknown;
-        maxUses?: unknown;
-        roles?: unknown;
-        showId?: unknown;
-      }
-    | null;
+  const body = (await request.json().catch(() => null)) as {
+    label?: unknown;
+    note?: unknown;
+    expiresAt?: unknown;
+    maxUses?: unknown;
+    roles?: unknown;
+    showId?: unknown;
+  } | null;
 
   if (!body) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });

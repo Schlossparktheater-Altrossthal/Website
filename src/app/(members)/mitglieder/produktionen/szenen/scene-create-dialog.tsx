@@ -25,9 +25,7 @@ export function SceneCreateDialog({ showId, currentPath }: Props) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm">
-          Szene erstellen
-        </Button>
+        <Button size="sm">Szene erstellen</Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>

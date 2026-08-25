@@ -83,11 +83,7 @@ export function OfflineSyncStatusProvider({
   const ensureReady = React.useCallback(
     (scope: OfflineScope) => {
       if (!isReady) {
-        throw new SyncError(
-          "Offline persistence is not ready yet.",
-          "unsupported",
-          scope,
-        );
+        throw new SyncError("Offline persistence is not ready yet.", "unsupported", scope);
       }
     },
     [isReady],
@@ -298,20 +294,14 @@ export function OfflineSyncStatusProvider({
     [bootstrap, client, enqueue, flush, isSyncing, pull, scopes],
   );
 
-  return (
-    <OfflineSyncContext.Provider value={value}>
-      {children}
-    </OfflineSyncContext.Provider>
-  );
+  return <OfflineSyncContext.Provider value={value}>{children}</OfflineSyncContext.Provider>;
 }
 
 export function useOfflineSyncClient() {
   const context = React.useContext(OfflineSyncContext);
 
   if (!context) {
-    throw new Error(
-      "useOfflineSyncClient must be used within an OfflineSyncStatusProvider.",
-    );
+    throw new Error("useOfflineSyncClient must be used within an OfflineSyncStatusProvider.");
   }
 
   return context;

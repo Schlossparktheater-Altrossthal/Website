@@ -70,7 +70,10 @@ function normalizePath(raw?: string | null): string | null {
   return path || "/";
 }
 
-function normalizeScope(scope: string | null | undefined, path: string): "public" | "members" | null {
+function normalizeScope(
+  scope: string | null | undefined,
+  path: string,
+): "public" | "members" | null {
   if (scope === "public" || scope === "members") {
     return scope;
   }

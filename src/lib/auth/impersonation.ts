@@ -236,4 +236,3 @@ export function hasActiveImpersonation(
 ): session is Session & { impersonation: ImpersonationDetails } {
   return Boolean(session?.impersonation?.active);
 }
-

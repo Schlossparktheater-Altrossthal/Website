@@ -30,7 +30,12 @@ export function CreateRehearsalButton() {
   };
 
   return (
-    <AsyncButton type="button" onClick={handleClick} isLoading={isPending} loadingText="Entwurf wird vorbereitet…">
+    <AsyncButton
+      type="button"
+      onClick={handleClick}
+      isLoading={isPending}
+      loadingText="Entwurf wird vorbereitet…"
+    >
       Neue Probe anlegen
     </AsyncButton>
   );

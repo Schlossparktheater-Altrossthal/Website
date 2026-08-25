@@ -1,6 +1,14 @@
 "use client";
 
-import { ActivityIcon, AlertTriangleIcon, HardDriveIcon, RadioIcon, ShieldCheckIcon, TimerIcon, UsersIcon } from "@/components/ui/action-icons";
+import {
+  ActivityIcon,
+  AlertTriangleIcon,
+  HardDriveIcon,
+  RadioIcon,
+  ShieldCheckIcon,
+  TimerIcon,
+  UsersIcon,
+} from "@/components/ui/action-icons";
 
 import {
   useCallback,
@@ -49,23 +57,35 @@ import { OverviewMetrics, type OverviewMetricDefinition } from "./overview-metri
 import { SERVER_ANALYTICS_SETTINGS_LIMITS } from "@/lib/server-analytics-settings-constants";
 
 const numberFormat = new Intl.NumberFormat("de-DE");
-const decimalFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const decimalFormat = new Intl.NumberFormat("de-DE", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
 const percentPreciseFormat = new Intl.NumberFormat("de-DE", {
   style: "percent",
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
-const percentChangeFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const percentChangeFormat = new Intl.NumberFormat("de-DE", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
 const dateTimeFormat = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
   timeZone: "Europe/Berlin",
 });
-const uptimeFormat = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const uptimeFormat = new Intl.NumberFormat("de-DE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 const ANIMATION_DURATION_MS = 450;
 
-const visitorSegmentAccentMap: Record<ServerAnalytics["visitorDistribution"][number]["id"], string> = {
+const visitorSegmentAccentMap: Record<
+  ServerAnalytics["visitorDistribution"][number]["id"],
+  string
+> = {
   "logged-in": "bg-indigo-500",
   "logged-out": "bg-primary500",
   bot: "bg-amber-500",
@@ -205,7 +225,9 @@ function PagePerformanceMobileSection({
               </dd>
             </div>
             <div className="space-y-1">
-              <dt className="text-xs font-semibold uppercase text-muted-foreground">Zielerfüllung</dt>
+              <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                Zielerfüllung
+              </dt>
               <dd className="font-semibold text-foreground">
                 {percentPreciseFormat.format(entry.goalCompletionRate)}
               </dd>
@@ -217,11 +239,7 @@ function PagePerformanceMobileSection({
   );
 }
 
-function TrafficSourcesMobileSection({
-  sources,
-}: {
-  sources: ServerAnalytics["trafficSources"];
-}) {
+function TrafficSourcesMobileSection({ sources }: { sources: ServerAnalytics["trafficSources"] }) {
   if (!sources.length) {
     return null;
   }
@@ -235,7 +253,9 @@ function TrafficSourcesMobileSection({
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-foreground">{source.channel}</p>
-            <span className={cn("text-xs font-medium", changeTextClass(source.changePercent, true))}>
+            <span
+              className={cn("text-xs font-medium", changeTextClass(source.changePercent, true))}
+            >
               {formatChange(source.changePercent)} vs. Vorwoche
             </span>
           </div>
@@ -248,7 +268,9 @@ function TrafficSourcesMobileSection({
               <dt className="text-xs font-semibold uppercase text-muted-foreground">
                 Ø Sitzungsdauer
               </dt>
-              <dd className="text-foreground">{formatDuration(source.avgSessionDurationSeconds)}</dd>
+              <dd className="text-foreground">
+                {formatDuration(source.avgSessionDurationSeconds)}
+              </dd>
             </div>
             <div className="space-y-1">
               <dt className="text-xs font-semibold uppercase text-muted-foreground">Konversion</dt>
@@ -320,15 +342,21 @@ function SessionInsightsMobileSection({
           <dl className="grid gap-3 text-sm">
             <div className="space-y-1">
               <dt className="text-xs font-semibold uppercase text-muted-foreground">Ø Dauer</dt>
-              <dd className="text-foreground">{formatDuration(segment.avgSessionDurationSeconds)}</dd>
+              <dd className="text-foreground">
+                {formatDuration(segment.avgSessionDurationSeconds)}
+              </dd>
             </div>
             <div className="space-y-1">
-              <dt className="text-xs font-semibold uppercase text-muted-foreground">Seiten / Sitzung</dt>
+              <dt className="text-xs font-semibold uppercase text-muted-foreground">
+                Seiten / Sitzung
+              </dt>
               <dd className="text-foreground">{decimalFormat.format(segment.pagesPerSession)}</dd>
             </div>
             <div className="space-y-1">
               <dt className="text-xs font-semibold uppercase text-muted-foreground">Retention</dt>
-              <dd className="text-foreground">{percentPreciseFormat.format(segment.retentionRate)}</dd>
+              <dd className="text-foreground">
+                {percentPreciseFormat.format(segment.retentionRate)}
+              </dd>
             </div>
             <div className="space-y-1">
               <dt className="text-xs font-semibold uppercase text-muted-foreground">Anteil</dt>
@@ -362,7 +390,12 @@ function easeOutCubic(t: number) {
 }
 
 function interpolateValue<T>(start: T, end: T, progress: number): T {
-  if (typeof start === "number" && typeof end === "number" && Number.isFinite(start) && Number.isFinite(end)) {
+  if (
+    typeof start === "number" &&
+    typeof end === "number" &&
+    Number.isFinite(start) &&
+    Number.isFinite(end)
+  ) {
     return (start + (end - start) * progress) as T;
   }
 
@@ -371,7 +404,9 @@ function interpolateValue<T>(start: T, end: T, progress: number): T {
       return end as T;
     }
 
-    return end.map((value, index) => interpolateValue(start[index], value, progress)) as unknown as T;
+    return end.map((value, index) =>
+      interpolateValue(start[index], value, progress),
+    ) as unknown as T;
   }
 
   if (
@@ -397,7 +432,10 @@ function interpolateValue<T>(start: T, end: T, progress: number): T {
   return end;
 }
 
-function useAnimatedAnalytics(targetAnalytics: ServerAnalytics, durationMs = ANIMATION_DURATION_MS) {
+function useAnimatedAnalytics(
+  targetAnalytics: ServerAnalytics,
+  durationMs = ANIMATION_DURATION_MS,
+) {
   const [animatedAnalytics, setAnimatedAnalytics] = useState<ServerAnalytics>(targetAnalytics);
   const frameRef = useRef<number | null>(null);
   const latestValueRef = useRef<ServerAnalytics>(targetAnalytics);
@@ -552,7 +590,9 @@ export function ServerAnalyticsContent({
 }: ServerAnalyticsContentProps) {
   const { socket, isConnected, connectionStatus } = useRealtime();
   const [analytics, setAnalytics] = useState<ServerAnalytics>(initialAnalytics);
-  const [generatedAt, setGeneratedAt] = useState<Date>(() => parseGeneratedAt(initialAnalytics.generatedAt));
+  const [generatedAt, setGeneratedAt] = useState<Date>(() =>
+    parseGeneratedAt(initialAnalytics.generatedAt),
+  );
   const [hasLiveUpdate, setHasLiveUpdate] = useState(false);
   const [pendingLogId, setPendingLogId] = useState<string | null>(null);
   const [isStatusUpdating, startStatusUpdate] = useTransition();
@@ -642,7 +682,8 @@ export function ServerAnalyticsContent({
           setSettingsFieldErrors(result.fieldErrors as SettingsFieldErrors);
           toast.error("Bitte prüfe die markierten Felder.");
         } else if (result.error === "no_database") {
-          const message = "Ohne Datenbankverbindung können die Einstellungen nicht gespeichert werden.";
+          const message =
+            "Ohne Datenbankverbindung können die Einstellungen nicht gespeichert werden.";
           setSettingsError(message);
           toast.error(message);
         } else if (result.error === "not_authorized") {
@@ -650,7 +691,8 @@ export function ServerAnalyticsContent({
           setSettingsError(message);
           toast.error(message);
         } else {
-          const message = "Einstellungen konnten nicht gespeichert werden. Bitte später erneut versuchen.";
+          const message =
+            "Einstellungen konnten nicht gespeichert werden. Bitte später erneut versuchen.";
           setSettingsError(message);
           toast.error(message);
         }
@@ -767,7 +809,13 @@ export function ServerAnalyticsContent({
                       }
                     : entry,
                 )
-              : [...currentLogs, { ...result.log, tags: Array.isArray(result.log.tags) ? [...result.log.tags] : [] }];
+              : [
+                  ...currentLogs,
+                  {
+                    ...result.log,
+                    tags: Array.isArray(result.log.tags) ? [...result.log.tags] : [],
+                  },
+                ];
 
             return {
               ...previous,
@@ -775,7 +823,9 @@ export function ServerAnalyticsContent({
             };
           });
         } else {
-          console.error(`[server-analytics] Status update failed for log ${logId}: ${result.error}`);
+          console.error(
+            `[server-analytics] Status update failed for log ${logId}: ${result.error}`,
+          );
         }
       } catch (error) {
         console.error(`[server-analytics] Status update threw for log ${logId}`, error);
@@ -810,8 +860,8 @@ export function ServerAnalyticsContent({
             socket.emit("get_server_analytics");
           }
         } else {
-          const message = RESET_ERROR_MESSAGES[result.error] ??
-            "Statistiken konnten nicht zurückgesetzt werden.";
+          const message =
+            RESET_ERROR_MESSAGES[result.error] ?? "Statistiken konnten nicht zurückgesetzt werden.";
           setResetError(message);
           toast.error(message);
         }
@@ -834,7 +884,9 @@ export function ServerAnalyticsContent({
     lastSeenLabel: lastLogSeenLabel,
   } = useMemo(() => {
     const entries = analytics.serverLogs ?? [];
-    const filtered = entries.filter((log) => log.severity === "warning" || log.severity === "error");
+    const filtered = entries.filter(
+      (log) => log.severity === "warning" || log.severity === "error",
+    );
     const sorted = [...filtered].sort((a, b) => {
       const aTime = Date.parse(a.lastSeen);
       const bTime = Date.parse(b.lastSeen);
@@ -873,8 +925,8 @@ export function ServerAnalyticsContent({
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Server- & Nutzungsstatistiken</h1>
           <p className="text-sm text-muted-foreground">
-            Umfassender Überblick über Auslastung, Performance und Nutzungsverhalten. Die Kennzahlen helfen bei der Optimierung
-            der öffentlichen Seiten und des Mitgliederbereichs.
+            Umfassender Überblick über Auslastung, Performance und Nutzungsverhalten. Die Kennzahlen
+            helfen bei der Optimierung der öffentlichen Seiten und des Mitgliederbereichs.
           </p>
           <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
             <span className="flex items-center gap-1 font-medium text-foreground/80">
@@ -901,12 +953,14 @@ export function ServerAnalyticsContent({
                 <DialogHeader>
                   <DialogTitle>Serverstatistiken zurücksetzen</DialogTitle>
                   <DialogDescription>
-                    Dadurch werden alle gespeicherten Analytics-Daten gelöscht – inklusive Requests, Sessions, Realtime-Events
-                    und Serverlogs. Dieser Schritt kann nicht rückgängig gemacht werden.
+                    Dadurch werden alle gespeicherten Analytics-Daten gelöscht – inklusive Requests,
+                    Sessions, Realtime-Events und Serverlogs. Dieser Schritt kann nicht rückgängig
+                    gemacht werden.
                   </DialogDescription>
                 </DialogHeader>
                 <p className="text-sm text-muted-foreground">
-                  Nach dem Zurücksetzen zeigt die Auswertung wieder Demodaten, bis neue Messwerte gesammelt wurden.
+                  Nach dem Zurücksetzen zeigt die Auswertung wieder Demodaten, bis neue Messwerte
+                  gesammelt wurden.
                 </p>
                 {resetError ? (
                   <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -938,9 +992,7 @@ export function ServerAnalyticsContent({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Kennzahlen</TabsTrigger>
-            {canManageSettings ? (
-              <TabsTrigger value="settings">Einstellungen</TabsTrigger>
-            ) : null}
+            {canManageSettings ? <TabsTrigger value="settings">Einstellungen</TabsTrigger> : null}
             <TabsTrigger value="logs">Serverlogs</TabsTrigger>
           </TabsList>
           <div className="text-xs text-muted-foreground sm:text-right">
@@ -959,7 +1011,8 @@ export function ServerAnalyticsContent({
                 {renderMockDataBadge()}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Aufschlüsselung nach Gästen, eingeloggten Mitgliedern und erkannten Bots innerhalb der letzten 24 Stunden.
+                Aufschlüsselung nach Gästen, eingeloggten Mitgliedern und erkannten Bots innerhalb
+                der letzten 24 Stunden.
               </p>
             </CardHeader>
             <CardContent>
@@ -986,7 +1039,9 @@ export function ServerAnalyticsContent({
                           </p>
                           <p>Ø Antwortzeit {formatMs(segment.avgResponseTimeMs)}</p>
                           {segment.avgSessionDurationSeconds ? (
-                            <p>Ø Sitzungsdauer {formatDuration(segment.avgSessionDurationSeconds)}</p>
+                            <p>
+                              Ø Sitzungsdauer {formatDuration(segment.avgSessionDurationSeconds)}
+                            </p>
                           ) : null}
                           {segment.realtimeEvents ? (
                             <p>Realtime-Events {numberFormat.format(segment.realtimeEvents)}</p>
@@ -997,7 +1052,10 @@ export function ServerAnalyticsContent({
                         </div>
                       </div>
                       <div className="h-2 w-full rounded-full bg-muted">
-                        <div className={cn("h-2 rounded-full", accentClass)} style={{ width: barWidth }} />
+                        <div
+                          className={cn("h-2 rounded-full", accentClass)}
+                          style={{ width: barWidth }}
+                        />
                       </div>
                     </div>
                   );
@@ -1006,343 +1064,406 @@ export function ServerAnalyticsContent({
             </CardContent>
           </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border border-border/70">
-          <CardHeader>
-            <CardTitle>Serverauslastung & Ressourcen</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Auslastung der Kernsysteme inklusive Trend gegenüber dem Vortag.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {displayAnalytics.resourceUsage.map((resource) => (
-                <div key={resource.id} className="space-y-2 rounded-md border border-border/60 p-3">
-                  <div className="flex items-center justify-between text-sm font-medium">
-                    <span>{resource.label}</span>
-                    <span>{decimalFormat.format(resource.usagePercent)} %</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="border border-border/70">
+              <CardHeader>
+                <CardTitle>Serverauslastung & Ressourcen</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Auslastung der Kernsysteme inklusive Trend gegenüber dem Vortag.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {displayAnalytics.resourceUsage.map((resource) => (
                     <div
-                      className="h-2 rounded-full bg-primary/70"
-                      style={{ width: `${Math.min(resource.usagePercent, 100)}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Kapazität: {resource.capacity}</span>
-                    <span className={cn("font-medium", changeTextClass(resource.changePercent, false))}>
-                      {formatChange(resource.changePercent)} vs. Vortag
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Stoßzeiten & Lastverteilung
-              {renderMockDataBadge()}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">Zeitfenster mit erhöhter Auslastung innerhalb der letzten 7 Tage.</p>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              {displayAnalytics.peakHours.map((bucket) => (
-                <li
-                  key={bucket.range}
-                  className="flex items-center justify-between rounded-md border border-border/60 bg-background/60 px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{bucket.range}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {numberFormat.format(bucket.requests)} Requests · Anteil {percentPreciseFormat.format(bucket.share)}
-                    </p>
-                  </div>
-                  <Badge variant="outline">Peak</Badge>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border border-border/70">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Seitenperformance – Öffentlicher Bereich
-            {renderMockDataBadge()}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Ladezeiten, Verweildauer und Zielerfüllung auf den wichtigsten öffentlichen Seiten.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <PagePerformanceMobileSection
-            entries={displayAnalytics.publicPages}
-            uniqueVisitorLabel="eindeutige Besucher"
-          />
-          <div className="hidden overflow-x-auto md:block">
-            <table className="min-w-full divide-y divide-border text-sm">
-              <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">Seite</th>
-                  <th className="px-3 py-2 text-left">Aufrufe</th>
-                  <th className="px-3 py-2 text-left">Ø Zeit auf Seite</th>
-                  <th className="px-3 py-2 text-left">Performance</th>
-                  <th className="px-3 py-2 text-left">Absprung</th>
-                  <th className="px-3 py-2 text-left">Zielerfüllung</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {displayAnalytics.publicPages.map((entry) => (
-                  <tr key={entry.path} className="bg-background/60">
-                    <td className="px-3 py-2">
-                      <div className="font-medium text-foreground">{entry.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {entry.path} · Scrolltiefe {percentPreciseFormat.format(entry.avgScrollDepth)}
+                      key={resource.id}
+                      className="space-y-2 rounded-md border border-border/60 p-3"
+                    >
+                      <div className="flex items-center justify-between text-sm font-medium">
+                        <span>{resource.label}</span>
+                        <span>{decimalFormat.format(resource.usagePercent)} %</span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="font-semibold text-foreground">{numberFormat.format(entry.views)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {numberFormat.format(entry.uniqueVisitors)} eindeutige Besucher
+                      <div className="h-2 w-full rounded-full bg-muted">
+                        <div
+                          className="h-2 rounded-full bg-primary/70"
+                          style={{ width: `${Math.min(resource.usagePercent, 100)}%` }}
+                        />
                       </div>
-                    </td>
-                    <td className="px-3 py-2 text-foreground">{formatDuration(entry.avgTimeOnPageSeconds)}</td>
-                    <td className="px-3 py-2 text-foreground">
-                      <div>Ø Ladezeit {formatMs(entry.loadTimeMs)}</div>
-                      <div className="text-xs text-muted-foreground">LCP {formatMs(entry.lcpMs)}</div>
-                    </td>
-                    <td className="px-3 py-2 text-foreground">
-                      <div>{percentPreciseFormat.format(entry.bounceRate)}</div>
-                      <div className="text-xs text-muted-foreground">Exit-Rate {percentPreciseFormat.format(entry.exitRate)}</div>
-                    </td>
-                    <td className="px-3 py-2 font-semibold text-foreground">
-                      {percentPreciseFormat.format(entry.goalCompletionRate)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border border-border/70">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Seitenperformance – Mitgliederbereich
-            {renderMockDataBadge()}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Nutzungsverhalten der eingeloggten Mitglieder inklusive Verweildauer und Erfolgsquote in den Arbeitsbereichen.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <PagePerformanceMobileSection
-            entries={displayAnalytics.memberPages}
-            uniqueVisitorLabel="eindeutige Mitglieder"
-          />
-          <div className="hidden overflow-x-auto md:block">
-            <table className="min-w-full divide-y divide-border text-sm">
-              <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left">Bereich</th>
-                  <th className="px-3 py-2 text-left">Aufrufe</th>
-                  <th className="px-3 py-2 text-left">Ø Zeit auf Seite</th>
-                  <th className="px-3 py-2 text-left">Performance</th>
-                  <th className="px-3 py-2 text-left">Absprung</th>
-                  <th className="px-3 py-2 text-left">Zielerfüllung</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {displayAnalytics.memberPages.map((entry) => (
-                  <tr key={entry.path} className="bg-background/60">
-                    <td className="px-3 py-2">
-                      <div className="font-medium text-foreground">{entry.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {entry.path} · Scrolltiefe {percentPreciseFormat.format(entry.avgScrollDepth)}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="font-semibold text-foreground">{numberFormat.format(entry.views)}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {numberFormat.format(entry.uniqueVisitors)} eindeutige Mitglieder
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-foreground">{formatDuration(entry.avgTimeOnPageSeconds)}</td>
-                    <td className="px-3 py-2 text-foreground">
-                      <div>Ø Ladezeit {formatMs(entry.loadTimeMs)}</div>
-                      <div className="text-xs text-muted-foreground">LCP {formatMs(entry.lcpMs)}</div>
-                    </td>
-                    <td className="px-3 py-2 text-foreground">
-                      <div>{percentPreciseFormat.format(entry.bounceRate)}</div>
-                      <div className="text-xs text-muted-foreground">Exit-Rate {percentPreciseFormat.format(entry.exitRate)}</div>
-                    </td>
-                    <td className="px-3 py-2 font-semibold text-foreground">
-                      {percentPreciseFormat.format(entry.goalCompletionRate)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border border-border/70">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Traffic-Kanäle
-              {renderMockDataBadge()}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Entwicklung der wichtigsten Besucherquellen inklusive Konversionsrate.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <TrafficSourcesMobileSection sources={displayAnalytics.trafficSources} />
-            <div className="hidden overflow-x-auto md:block">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Kanal</th>
-                    <th className="px-3 py-2 text-left">Sessions</th>
-                    <th className="px-3 py-2 text-left">Ø Sitzungsdauer</th>
-                    <th className="px-3 py-2 text-left">Konversion</th>
-                    <th className="px-3 py-2 text-left">Trend</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
-                  {displayAnalytics.trafficSources.map((source) => (
-                    <tr key={source.channel} className="bg-background/60">
-                      <td className="px-3 py-2 font-medium text-foreground">{source.channel}</td>
-                      <td className="px-3 py-2 text-foreground">{numberFormat.format(source.sessions)}</td>
-                      <td className="px-3 py-2 text-foreground">{formatDuration(source.avgSessionDurationSeconds)}</td>
-                      <td className="px-3 py-2 font-semibold text-foreground">
-                        {percentPreciseFormat.format(source.conversionRate)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={cn("text-xs font-medium", changeTextClass(source.changePercent, true))}>
-                          {formatChange(source.changePercent)} vs. Vorwoche
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Kapazität: {resource.capacity}</span>
+                        <span
+                          className={cn(
+                            "font-medium",
+                            changeTextClass(resource.changePercent, false),
+                          )}
+                        >
+                          {formatChange(resource.changePercent)} vs. Vortag
                         </span>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70">
-          <CardHeader>
-            <CardTitle>Geräte & Ladezeiten</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Anteil der Sitzungen pro Gerätetyp inklusive typischer Ladezeit.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <DeviceBreakdownMobileSection devices={displayAnalytics.deviceBreakdown} />
-            <div className="hidden overflow-x-auto md:block">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Gerät</th>
-                    <th className="px-3 py-2 text-left">Sessions</th>
-                    <th className="px-3 py-2 text-left">Anteil</th>
-                    <th className="px-3 py-2 text-left">Ø Ladezeit</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
-                  {displayAnalytics.deviceBreakdown.map((device) => (
-                    <tr key={device.device} className="bg-background/60">
-                      <td className="px-3 py-2 font-medium text-foreground">{device.device}</td>
-                      <td className="px-3 py-2 text-foreground">{numberFormat.format(device.sessions)}</td>
-                      <td className="px-3 py-2 text-foreground">{percentPreciseFormat.format(device.share)}</td>
-                      <td className="px-3 py-2 text-foreground">{formatMs(device.avgPageLoadMs)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border border-border/70">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Session Insights
-              {renderMockDataBadge()}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Vergleich von neuen, wiederkehrenden und eingeloggten Nutzergruppen.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <SessionInsightsMobileSection segments={displayAnalytics.sessionInsights} />
-            <div className="hidden overflow-x-auto md:block">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Segment</th>
-                    <th className="px-3 py-2 text-left">Ø Dauer</th>
-                    <th className="px-3 py-2 text-left">Seiten / Sitzung</th>
-                    <th className="px-3 py-2 text-left">Retention</th>
-                    <th className="px-3 py-2 text-left">Anteil</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
-                  {displayAnalytics.sessionInsights.map((segment) => (
-                    <tr key={segment.segment} className="bg-background/60">
-                      <td className="px-3 py-2 font-medium text-foreground">{segment.segment}</td>
-                      <td className="px-3 py-2 text-foreground">{formatDuration(segment.avgSessionDurationSeconds)}</td>
-                      <td className="px-3 py-2 text-foreground">{decimalFormat.format(segment.pagesPerSession)}</td>
-                      <td className="px-3 py-2 text-foreground">{percentPreciseFormat.format(segment.retentionRate)}</td>
-                      <td className="px-3 py-2 text-foreground">{percentPreciseFormat.format(segment.share)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Optimierungspotenziale
-              {renderMockDataBadge()}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Konkrete Hebel zur Verbesserung der Ladezeiten und Nutzerführung basierend auf den gemessenen Daten.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {displayAnalytics.optimizationInsights.map((insight) => (
-                <div key={insight.id} className="space-y-2 rounded-md border border-border/60 bg-background/70 p-3">
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <Badge variant={areaBadgeVariant(insight.area)}>{insight.area}</Badge>
-                    <Badge variant={impactBadgeVariant(insight.impact)}>{insight.impact}-Impact</Badge>
-                    <span className="text-muted-foreground">{insight.metric}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">{insight.title}</p>
-                    <p className="text-sm text-muted-foreground">{insight.description}</p>
-                  </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/70">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Stoßzeiten & Lastverteilung
+                  {renderMockDataBadge()}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Zeitfenster mit erhöhter Auslastung innerhalb der letzten 7 Tage.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {displayAnalytics.peakHours.map((bucket) => (
+                    <li
+                      key={bucket.range}
+                      className="flex items-center justify-between rounded-md border border-border/60 bg-background/60 px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{bucket.range}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {numberFormat.format(bucket.requests)} Requests · Anteil{" "}
+                          {percentPreciseFormat.format(bucket.share)}
+                        </p>
+                      </div>
+                      <Badge variant="outline">Peak</Badge>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border border-border/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Seitenperformance – Öffentlicher Bereich
+                {renderMockDataBadge()}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Ladezeiten, Verweildauer und Zielerfüllung auf den wichtigsten öffentlichen Seiten.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <PagePerformanceMobileSection
+                entries={displayAnalytics.publicPages}
+                uniqueVisitorLabel="eindeutige Besucher"
+              />
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Seite</th>
+                      <th className="px-3 py-2 text-left">Aufrufe</th>
+                      <th className="px-3 py-2 text-left">Ø Zeit auf Seite</th>
+                      <th className="px-3 py-2 text-left">Performance</th>
+                      <th className="px-3 py-2 text-left">Absprung</th>
+                      <th className="px-3 py-2 text-left">Zielerfüllung</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/70">
+                    {displayAnalytics.publicPages.map((entry) => (
+                      <tr key={entry.path} className="bg-background/60">
+                        <td className="px-3 py-2">
+                          <div className="font-medium text-foreground">{entry.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {entry.path} · Scrolltiefe{" "}
+                            {percentPreciseFormat.format(entry.avgScrollDepth)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-foreground">
+                            {numberFormat.format(entry.views)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {numberFormat.format(entry.uniqueVisitors)} eindeutige Besucher
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-foreground">
+                          {formatDuration(entry.avgTimeOnPageSeconds)}
+                        </td>
+                        <td className="px-3 py-2 text-foreground">
+                          <div>Ø Ladezeit {formatMs(entry.loadTimeMs)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            LCP {formatMs(entry.lcpMs)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-foreground">
+                          <div>{percentPreciseFormat.format(entry.bounceRate)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Exit-Rate {percentPreciseFormat.format(entry.exitRate)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-foreground">
+                          {percentPreciseFormat.format(entry.goalCompletionRate)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Seitenperformance – Mitgliederbereich
+                {renderMockDataBadge()}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Nutzungsverhalten der eingeloggten Mitglieder inklusive Verweildauer und
+                Erfolgsquote in den Arbeitsbereichen.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <PagePerformanceMobileSection
+                entries={displayAnalytics.memberPages}
+                uniqueVisitorLabel="eindeutige Mitglieder"
+              />
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Bereich</th>
+                      <th className="px-3 py-2 text-left">Aufrufe</th>
+                      <th className="px-3 py-2 text-left">Ø Zeit auf Seite</th>
+                      <th className="px-3 py-2 text-left">Performance</th>
+                      <th className="px-3 py-2 text-left">Absprung</th>
+                      <th className="px-3 py-2 text-left">Zielerfüllung</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/70">
+                    {displayAnalytics.memberPages.map((entry) => (
+                      <tr key={entry.path} className="bg-background/60">
+                        <td className="px-3 py-2">
+                          <div className="font-medium text-foreground">{entry.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {entry.path} · Scrolltiefe{" "}
+                            {percentPreciseFormat.format(entry.avgScrollDepth)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="font-semibold text-foreground">
+                            {numberFormat.format(entry.views)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {numberFormat.format(entry.uniqueVisitors)} eindeutige Mitglieder
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-foreground">
+                          {formatDuration(entry.avgTimeOnPageSeconds)}
+                        </td>
+                        <td className="px-3 py-2 text-foreground">
+                          <div>Ø Ladezeit {formatMs(entry.loadTimeMs)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            LCP {formatMs(entry.lcpMs)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-foreground">
+                          <div>{percentPreciseFormat.format(entry.bounceRate)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Exit-Rate {percentPreciseFormat.format(entry.exitRate)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-foreground">
+                          {percentPreciseFormat.format(entry.goalCompletionRate)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="border border-border/70">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Traffic-Kanäle
+                  {renderMockDataBadge()}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Entwicklung der wichtigsten Besucherquellen inklusive Konversionsrate.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <TrafficSourcesMobileSection sources={displayAnalytics.trafficSources} />
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-border text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Kanal</th>
+                        <th className="px-3 py-2 text-left">Sessions</th>
+                        <th className="px-3 py-2 text-left">Ø Sitzungsdauer</th>
+                        <th className="px-3 py-2 text-left">Konversion</th>
+                        <th className="px-3 py-2 text-left">Trend</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/70">
+                      {displayAnalytics.trafficSources.map((source) => (
+                        <tr key={source.channel} className="bg-background/60">
+                          <td className="px-3 py-2 font-medium text-foreground">
+                            {source.channel}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {numberFormat.format(source.sessions)}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {formatDuration(source.avgSessionDurationSeconds)}
+                          </td>
+                          <td className="px-3 py-2 font-semibold text-foreground">
+                            {percentPreciseFormat.format(source.conversionRate)}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span
+                              className={cn(
+                                "text-xs font-medium",
+                                changeTextClass(source.changePercent, true),
+                              )}
+                            >
+                              {formatChange(source.changePercent)} vs. Vorwoche
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/70">
+              <CardHeader>
+                <CardTitle>Geräte & Ladezeiten</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Anteil der Sitzungen pro Gerätetyp inklusive typischer Ladezeit.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <DeviceBreakdownMobileSection devices={displayAnalytics.deviceBreakdown} />
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-border text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Gerät</th>
+                        <th className="px-3 py-2 text-left">Sessions</th>
+                        <th className="px-3 py-2 text-left">Anteil</th>
+                        <th className="px-3 py-2 text-left">Ø Ladezeit</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/70">
+                      {displayAnalytics.deviceBreakdown.map((device) => (
+                        <tr key={device.device} className="bg-background/60">
+                          <td className="px-3 py-2 font-medium text-foreground">{device.device}</td>
+                          <td className="px-3 py-2 text-foreground">
+                            {numberFormat.format(device.sessions)}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {percentPreciseFormat.format(device.share)}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {formatMs(device.avgPageLoadMs)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="border border-border/70">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Session Insights
+                  {renderMockDataBadge()}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Vergleich von neuen, wiederkehrenden und eingeloggten Nutzergruppen.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <SessionInsightsMobileSection segments={displayAnalytics.sessionInsights} />
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full divide-y divide-border text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Segment</th>
+                        <th className="px-3 py-2 text-left">Ø Dauer</th>
+                        <th className="px-3 py-2 text-left">Seiten / Sitzung</th>
+                        <th className="px-3 py-2 text-left">Retention</th>
+                        <th className="px-3 py-2 text-left">Anteil</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/70">
+                      {displayAnalytics.sessionInsights.map((segment) => (
+                        <tr key={segment.segment} className="bg-background/60">
+                          <td className="px-3 py-2 font-medium text-foreground">
+                            {segment.segment}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {formatDuration(segment.avgSessionDurationSeconds)}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {decimalFormat.format(segment.pagesPerSession)}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {percentPreciseFormat.format(segment.retentionRate)}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
+                            {percentPreciseFormat.format(segment.share)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/70">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  Optimierungspotenziale
+                  {renderMockDataBadge()}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Konkrete Hebel zur Verbesserung der Ladezeiten und Nutzerführung basierend auf den
+                  gemessenen Daten.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {displayAnalytics.optimizationInsights.map((insight) => (
+                    <div
+                      key={insight.id}
+                      className="space-y-2 rounded-md border border-border/60 bg-background/70 p-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <Badge variant={areaBadgeVariant(insight.area)}>{insight.area}</Badge>
+                        <Badge variant={impactBadgeVariant(insight.impact)}>
+                          {insight.impact}-Impact
+                        </Badge>
+                        <span className="text-muted-foreground">{insight.metric}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-foreground">{insight.title}</p>
+                        <p className="text-sm text-muted-foreground">{insight.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {canManageSettings ? (
@@ -1351,15 +1472,17 @@ export function ServerAnalyticsContent({
               <CardHeader>
                 <CardTitle>Einstellungen für Messfenster &amp; Retention</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Steuere, wie lange Requests, Sessions und Seitenaufrufe ausgewertet werden. Änderungen wirken sich auf die
-                  nächste Aggregation aus.
+                  Steuere, wie lange Requests, Sessions und Seitenaufrufe ausgewertet werden.
+                  Änderungen wirken sich auf die nächste Aggregation aus.
                 </p>
               </CardHeader>
               <CardContent>
                 <form className="space-y-6" onSubmit={handleSettingsSubmit}>
                   <div className="grid gap-6 lg:grid-cols-2">
                     <fieldset className="space-y-4">
-                      <legend className="text-sm font-semibold text-foreground">HTTP-Requests</legend>
+                      <legend className="text-sm font-semibold text-foreground">
+                        HTTP-Requests
+                      </legend>
                       <div className="space-y-2">
                         <Label htmlFor="httpWindowMinutes">Auswertungszeitraum (Minuten)</Label>
                         <Input
@@ -1369,7 +1492,9 @@ export function ServerAnalyticsContent({
                           min={settingsLimits.httpWindowMinutes.min}
                           max={settingsLimits.httpWindowMinutes.max}
                           value={settingsForm.httpWindowMinutes}
-                          onChange={(event) => handleSettingsChange("httpWindowMinutes", event.target.value)}
+                          onChange={(event) =>
+                            handleSettingsChange("httpWindowMinutes", event.target.value)
+                          }
                           disabled={isSavingSettings}
                           inputMode="numeric"
                         />
@@ -1391,7 +1516,9 @@ export function ServerAnalyticsContent({
                           min={settingsLimits.httpBucketMinutes.min}
                           max={settingsLimits.httpBucketMinutes.max}
                           value={settingsForm.httpBucketMinutes}
-                          onChange={(event) => handleSettingsChange("httpBucketMinutes", event.target.value)}
+                          onChange={(event) =>
+                            handleSettingsChange("httpBucketMinutes", event.target.value)
+                          }
                           disabled={isSavingSettings}
                           inputMode="numeric"
                         />
@@ -1407,9 +1534,13 @@ export function ServerAnalyticsContent({
                     </fieldset>
 
                     <fieldset className="space-y-4">
-                      <legend className="text-sm font-semibold text-foreground">Sessions &amp; Realtime</legend>
+                      <legend className="text-sm font-semibold text-foreground">
+                        Sessions &amp; Realtime
+                      </legend>
                       <div className="space-y-2">
-                        <Label htmlFor="sessionWindowDays">Auswertungszeitraum Sessions (Tage)</Label>
+                        <Label htmlFor="sessionWindowDays">
+                          Auswertungszeitraum Sessions (Tage)
+                        </Label>
                         <Input
                           id="sessionWindowDays"
                           name="sessionWindowDays"
@@ -1417,7 +1548,9 @@ export function ServerAnalyticsContent({
                           min={settingsLimits.sessionWindowDays.min}
                           max={settingsLimits.sessionWindowDays.max}
                           value={settingsForm.sessionWindowDays}
-                          onChange={(event) => handleSettingsChange("sessionWindowDays", event.target.value)}
+                          onChange={(event) =>
+                            handleSettingsChange("sessionWindowDays", event.target.value)
+                          }
                           disabled={isSavingSettings}
                           inputMode="numeric"
                         />
@@ -1439,12 +1572,15 @@ export function ServerAnalyticsContent({
                           min={settingsLimits.sessionRetentionDays.min}
                           max={settingsLimits.sessionRetentionDays.max}
                           value={settingsForm.sessionRetentionDays}
-                          onChange={(event) => handleSettingsChange("sessionRetentionDays", event.target.value)}
+                          onChange={(event) =>
+                            handleSettingsChange("sessionRetentionDays", event.target.value)
+                          }
                           disabled={isSavingSettings}
                           inputMode="numeric"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Ab wann alte Sessions, Traffic-Attributions und Realtime-Events gelöscht werden.
+                          Ab wann alte Sessions, Traffic-Attributions und Realtime-Events gelöscht
+                          werden.
                         </p>
                         {settingsFieldErrors.sessionRetentionDays ? (
                           <p className="text-xs text-destructive">
@@ -1461,7 +1597,9 @@ export function ServerAnalyticsContent({
                           min={settingsLimits.realtimeWindowHours.min}
                           max={settingsLimits.realtimeWindowHours.max}
                           value={settingsForm.realtimeWindowHours}
-                          onChange={(event) => handleSettingsChange("realtimeWindowHours", event.target.value)}
+                          onChange={(event) =>
+                            handleSettingsChange("realtimeWindowHours", event.target.value)
+                          }
                           disabled={isSavingSettings}
                           inputMode="numeric"
                         />
@@ -1477,7 +1615,9 @@ export function ServerAnalyticsContent({
                     </fieldset>
 
                     <fieldset className="space-y-4 lg:col-span-2">
-                      <legend className="text-sm font-semibold text-foreground">Seiten-Performance</legend>
+                      <legend className="text-sm font-semibold text-foreground">
+                        Seiten-Performance
+                      </legend>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
                           <Label htmlFor="pageWindowDays">Auswertungszeitraum Seiten (Tage)</Label>
@@ -1488,7 +1628,9 @@ export function ServerAnalyticsContent({
                             min={settingsLimits.pageWindowDays.min}
                             max={settingsLimits.pageWindowDays.max}
                             value={settingsForm.pageWindowDays}
-                            onChange={(event) => handleSettingsChange("pageWindowDays", event.target.value)}
+                            onChange={(event) =>
+                              handleSettingsChange("pageWindowDays", event.target.value)
+                            }
                             disabled={isSavingSettings}
                             inputMode="numeric"
                           />
@@ -1510,12 +1652,15 @@ export function ServerAnalyticsContent({
                             min={settingsLimits.pageRetentionDays.min}
                             max={settingsLimits.pageRetentionDays.max}
                             value={settingsForm.pageRetentionDays}
-                            onChange={(event) => handleSettingsChange("pageRetentionDays", event.target.value)}
+                            onChange={(event) =>
+                              handleSettingsChange("pageRetentionDays", event.target.value)
+                            }
                             disabled={isSavingSettings}
                             inputMode="numeric"
                           />
                           <p className="text-xs text-muted-foreground">
-                            Nach wie vielen Tagen Pageviews und Geräteschnappschüsse bereinigt werden.
+                            Nach wie vielen Tagen Pageviews und Geräteschnappschüsse bereinigt
+                            werden.
                           </p>
                           {settingsFieldErrors.pageRetentionDays ? (
                             <p className="text-xs text-destructive">
@@ -1601,12 +1746,12 @@ export function ServerAnalyticsContent({
             </Card>
           </div>
 
-        <Card className="border border-border/70">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Warn- & Fehlermeldungen
-              {renderMockDataBadge()}
-            </CardTitle>
+          <Card className="border border-border/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Warn- & Fehlermeldungen
+                {renderMockDataBadge()}
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Automatisch aggregierte Serverlogs der letzten 48 Stunden.
               </p>
@@ -1615,11 +1760,17 @@ export function ServerAnalyticsContent({
               {hasLogs ? (
                 <div className="space-y-4">
                   {relevantLogs.map((log) => (
-                    <div key={log.id} className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-4">
+                    <div
+                      key={log.id}
+                      className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-4"
+                    >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground">
-                            <Badge variant={severityBadgeVariant(log.severity)} className="uppercase tracking-wide">
+                            <Badge
+                              variant={severityBadgeVariant(log.severity)}
+                              className="uppercase tracking-wide"
+                            >
                               {severityLabelMap[log.severity as keyof typeof severityLabelMap]}
                             </Badge>
                             <span>{log.service}</span>
@@ -1642,7 +1793,10 @@ export function ServerAnalyticsContent({
                         </div>
                         <div className="flex flex-col items-start gap-2 sm:items-end">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant={statusBadgeVariant(log.status)} className="uppercase tracking-wide">
+                            <Badge
+                              variant={statusBadgeVariant(log.status)}
+                              className="uppercase tracking-wide"
+                            >
                               {statusLabelMap[log.status as keyof typeof statusLabelMap]}
                             </Badge>
                             <div className="flex flex-wrap gap-1">
@@ -1651,7 +1805,9 @@ export function ServerAnalyticsContent({
                                 .map((statusOption) => {
                                   const isLogUpdating = pendingLogId === log.id && isStatusUpdating;
                                   const disableOtherLogs =
-                                    isStatusUpdating && pendingLogId !== null && pendingLogId !== log.id;
+                                    isStatusUpdating &&
+                                    pendingLogId !== null &&
+                                    pendingLogId !== log.id;
                                   const isDisabled = isLogUpdating || disableOtherLogs;
                                   return (
                                     <Button
@@ -1670,12 +1826,16 @@ export function ServerAnalyticsContent({
                             </div>
                           </div>
                           {log.recommendedAction ? (
-                            <p className="max-w-xs text-xs text-muted-foreground sm:text-right">{log.recommendedAction}</p>
+                            <p className="max-w-xs text-xs text-muted-foreground sm:text-right">
+                              {log.recommendedAction}
+                            </p>
                           ) : null}
                           <div className="flex flex-wrap justify-end gap-3 text-xs text-muted-foreground">
                             <span>Vorkommen: {numberFormat.format(log.occurrences)}</span>
                             {typeof log.affectedUsers === "number" ? (
-                              <span>Betroffene Nutzer: {numberFormat.format(log.affectedUsers)}</span>
+                              <span>
+                                Betroffene Nutzer: {numberFormat.format(log.affectedUsers)}
+                              </span>
                             ) : null}
                           </div>
                         </div>
@@ -1691,7 +1851,8 @@ export function ServerAnalyticsContent({
                 <div className="rounded-md border border-success/40 bg-success/10 p-6 text-sm text-success">
                   <p className="font-semibold">Keine aktiven Warn- oder Fehlermeldungen</p>
                   <p className="mt-1 text-success/90">
-                    Innerhalb der letzten 48 Stunden wurden keine Warnungen oder Fehler registriert. Systeme laufen stabil.
+                    Innerhalb der letzten 48 Stunden wurden keine Warnungen oder Fehler registriert.
+                    Systeme laufen stabil.
                   </p>
                 </div>
               )}

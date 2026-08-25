@@ -37,14 +37,23 @@ const clusterColors: Record<string, string> = {
   allgemein: "from-amber-500/60 to-amber-500/15",
 };
 
-export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, diversity }: InterestsSectionProps) {
+export function InterestsSection({
+  topTags,
+  wordCloud,
+  coOccurrences,
+  clusters,
+  diversity,
+}: InterestsSectionProps) {
   const words = useMemo<WordCloudWord[]>(() => {
     return wordCloud
       .map((entry) => ({ text: entry.tag, value: Number(entry.weight) || 0 }))
       .filter((entry) => Number.isFinite(entry.value) && entry.value >= 0);
   }, [wordCloud]);
 
-  const maxWeight = useMemo(() => words.reduce((max, word) => Math.max(max, word.value), 0), [words]);
+  const maxWeight = useMemo(
+    () => words.reduce((max, word) => Math.max(max, word.value), 0),
+    [words],
+  );
 
   const colorScale = useMemo(() => {
     const safeMax = maxWeight > 0 ? maxWeight : 1;
@@ -57,16 +66,16 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
     return wordCloud.length ? [...wordCloud].sort((a, b) => b.weight - a.weight)[0] : undefined;
   }, [wordCloud]);
 
-  const sortedEdges = [...coOccurrences]
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 8);
+  const sortedEdges = [...coOccurrences].sort((a, b) => b.weight - a.weight).slice(0, 8);
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
       <DistributionBars title="Top-Interessen" items={topTags} subtitle="Häufigste Angaben" />
       <Card className="h-full">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Wordcloud</CardTitle>
+          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+            Wordcloud
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
             Schriftgröße entspricht relativer Häufigkeit der Nennung.
           </p>
@@ -97,7 +106,12 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
                 <span>{words.length} Stichwörter</span>
               </div>
               <div className="relative h-[300px] w-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-background via-muted/40 to-background p-2">
-                <WordCloudCanvas words={words} maxWeight={maxWeight} maxFont={maxFont} colorScale={colorScale} />
+                <WordCloudCanvas
+                  words={words}
+                  maxWeight={maxWeight}
+                  maxFont={maxFont}
+                  colorScale={colorScale}
+                />
               </div>
             </>
           )}
@@ -105,15 +119,29 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
       </Card>
       <Card className="h-full">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Diversität</CardTitle>
+          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+            Diversität
+          </CardTitle>
           <p className="text-sm text-muted-foreground">
             Mischung der Interessensgebiete & Häufigkeit.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <Badge variant={diversity.status === "ok" ? "success" : diversity.status === "warning" ? "warning" : "destructive"}>
-              {diversity.status === "ok" ? "sehr vielfältig" : diversity.status === "warning" ? "ausbalanciert" : "monoton"}
+            <Badge
+              variant={
+                diversity.status === "ok"
+                  ? "success"
+                  : diversity.status === "warning"
+                    ? "warning"
+                    : "destructive"
+              }
+            >
+              {diversity.status === "ok"
+                ? "sehr vielfältig"
+                : diversity.status === "warning"
+                  ? "ausbalanciert"
+                  : "monoton"}
             </Badge>
             <span className="text-sm text-muted-foreground">{diversity.explanation}</span>
           </div>
@@ -142,7 +170,9 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
                   <span className="text-sm font-semibold uppercase tracking-[0.12em] text-foreground/85">
                     {cluster.label}
                   </span>
-                  <span className="text-sm font-medium">{cluster.value.toLocaleString("de-DE")}</span>
+                  <span className="text-sm font-medium">
+                    {cluster.value.toLocaleString("de-DE")}
+                  </span>
                 </div>
               );
             })}
@@ -151,7 +181,9 @@ export function InterestsSection({ topTags, wordCloud, coOccurrences, clusters, 
       </Card>
       <Card className="xl:col-span-3">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Co-Occurrences</CardTitle>
+          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+            Co-Occurrences
+          </CardTitle>
           <p className="text-sm text-muted-foreground">Gemeinsame Tags pro Person (Top 8).</p>
         </CardHeader>
         <CardContent>
@@ -201,7 +233,10 @@ const ROTATION_VALUES = [-20, 0, 20] as const;
 
 function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
   const [layoutWords, setLayoutWords] = useState<LayoutWord[]>([]);
   const [hasError, setHasError] = useState(false);
 
@@ -234,7 +269,10 @@ function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCan
     let cancelled = false;
     try {
       const layout = cloud<LayoutWord>()
-        .size([Math.max(1, Math.floor(dimensions.width)), Math.max(1, Math.floor(dimensions.height))])
+        .size([
+          Math.max(1, Math.floor(dimensions.width)),
+          Math.max(1, Math.floor(dimensions.height)),
+        ])
         .words(words.map((word) => ({ ...word })) as LayoutWord[])
         .padding(2)
         .rotate((datum) => computeRotation(datum.text ?? ""))

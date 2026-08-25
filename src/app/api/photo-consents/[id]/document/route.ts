@@ -8,10 +8,7 @@ function sanitizeForHeader(value: string): string {
   return value.replace(/"/g, "").replace(/\r|\n/g, "");
 }
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -49,7 +46,9 @@ export async function GET(
   const response = new NextResponse(buffer, {
     headers: {
       "Content-Type": mime,
-      "Content-Length": consent.documentSize ? String(consent.documentSize) : String(buffer.byteLength),
+      "Content-Length": consent.documentSize
+        ? String(consent.documentSize)
+        : String(buffer.byteLength),
       "Content-Disposition": `${disposition}; filename="${safeFileName}"; filename*=UTF-8''${encodedFileName}`,
       "Cache-Control": "no-store",
     },

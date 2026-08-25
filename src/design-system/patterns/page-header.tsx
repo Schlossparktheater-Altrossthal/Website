@@ -27,10 +27,7 @@ export function PageHeaderTitle({ className, ...props }: PageHeaderTitleProps) {
 
 type PageHeaderDescriptionProps = React.HTMLAttributes<HTMLParagraphElement>;
 
-export function PageHeaderDescription({
-  className,
-  ...props
-}: PageHeaderDescriptionProps) {
+export function PageHeaderDescription({ className, ...props }: PageHeaderDescriptionProps) {
   return <Text className={cn("max-w-2xl", className)} tone="muted" variant="body" {...props} />;
 }
 
@@ -38,13 +35,7 @@ type PageHeaderActionsProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function PageHeaderActions({ className, ...props }: PageHeaderActionsProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center gap-2 sm:justify-end",
-        className,
-      )}
-      {...props}
-    />
+    <div className={cn("flex flex-wrap items-center gap-2 sm:justify-end", className)} {...props} />
   );
 }
 
@@ -67,8 +58,7 @@ const pageHeaderStatusVariants = cva(
 );
 
 export interface PageHeaderStatusProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof pageHeaderStatusVariants> {
+  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof pageHeaderStatusVariants> {
   icon?: React.ReactNode;
 }
 

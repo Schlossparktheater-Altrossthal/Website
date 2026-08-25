@@ -63,10 +63,7 @@ export default async function RehearsalEditorPage({
     },
   });
 
-  const dateKey = formatIsoDateInTimeZone(
-    rehearsal.start.toISOString(),
-    DEFAULT_TIME_ZONE,
-  );
+  const dateKey = formatIsoDateInTimeZone(rehearsal.start.toISOString(), DEFAULT_TIME_ZONE);
   const dayStart = parseDateTimeInTimeZone(dateKey, "00:00", DEFAULT_TIME_ZONE);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 

@@ -1,21 +1,63 @@
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EditIcon, SettingsIcon, TrashIcon } from "@/components/ui/action-icons";
 
 const uiElements = [
-  { type: "Button", variant: "primary", purpose: "Primäre Aktion", usages: ["Szenen > add", "Produktionen > speichern", "Mitglieder > erstellen"] },
-  { type: "Button", variant: "outline", purpose: "Sekundäre Aktion", usages: ["Szenen > edit", "Website & Theme > Umbenennen"] },
-  { type: "Button", variant: "destructive", purpose: "Lösch-Aktion", usages: ["Szenen > delete", "Dateien > entfernen", "Theme-Verwaltung > Theme löschen"] },
-  { type: "Toggle", variant: "switch", purpose: "Status umschalten", usages: ["Seitensteuerung > Seite aktivieren", "Wartungsmodus"] },
+  {
+    type: "Button",
+    variant: "primary",
+    purpose: "Primäre Aktion",
+    usages: ["Szenen > add", "Produktionen > speichern", "Mitglieder > erstellen"],
+  },
+  {
+    type: "Button",
+    variant: "outline",
+    purpose: "Sekundäre Aktion",
+    usages: ["Szenen > edit", "Website & Theme > Umbenennen"],
+  },
+  {
+    type: "Button",
+    variant: "destructive",
+    purpose: "Lösch-Aktion",
+    usages: ["Szenen > delete", "Dateien > entfernen", "Theme-Verwaltung > Theme löschen"],
+  },
+  {
+    type: "Toggle",
+    variant: "switch",
+    purpose: "Status umschalten",
+    usages: ["Seitensteuerung > Seite aktivieren", "Wartungsmodus"],
+  },
 ] as const;
 
 const iconUsages = [
-  { Icon: EditIcon, name: "EditIcon", purpose: "Bearbeiten", usages: ["Szenen", "Mitgliederverwaltung", "Dokumente"] },
-  { Icon: TrashIcon, name: "TrashIcon", purpose: "Löschen", usages: ["Szenen", "Dateimanager", "Theme-Verwaltung"] },
-  { Icon: SettingsIcon, name: "SettingsIcon", purpose: "Einstellungen", usages: ["Seitensteuerung", "Server-Einstellungen", "Website & Theme"] },
+  {
+    Icon: EditIcon,
+    name: "EditIcon",
+    purpose: "Bearbeiten",
+    usages: ["Szenen", "Mitgliederverwaltung", "Dokumente"],
+  },
+  {
+    Icon: TrashIcon,
+    name: "TrashIcon",
+    purpose: "Löschen",
+    usages: ["Szenen", "Dateimanager", "Theme-Verwaltung"],
+  },
+  {
+    Icon: SettingsIcon,
+    name: "SettingsIcon",
+    purpose: "Einstellungen",
+    usages: ["Seitensteuerung", "Server-Einstellungen", "Website & Theme"],
+  },
 ] as const;
 
 export default async function PagesUiOverviewPage() {
@@ -54,7 +96,9 @@ export default async function PagesUiOverviewPage() {
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
                       {entry.usages.map((usage) => (
-                        <Badge key={usage} variant="secondary">{usage}</Badge>
+                        <Badge key={usage} variant="secondary">
+                          {usage}
+                        </Badge>
                       ))}
                     </div>
                   </TableCell>
@@ -77,12 +121,18 @@ export default async function PagesUiOverviewPage() {
             <TableBody>
               {iconUsages.map(({ Icon, name, purpose, usages }) => (
                 <TableRow key={name}>
-                  <TableCell><Icon className="h-4 w-4" aria-hidden /></TableCell>
+                  <TableCell>
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </TableCell>
                   <TableCell>{name}</TableCell>
                   <TableCell>{purpose}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
-                      {usages.map((usage) => <Badge key={usage} variant="secondary">{usage}</Badge>)}
+                      {usages.map((usage) => (
+                        <Badge key={usage} variant="secondary">
+                          {usage}
+                        </Badge>
+                      ))}
                     </div>
                   </TableCell>
                 </TableRow>

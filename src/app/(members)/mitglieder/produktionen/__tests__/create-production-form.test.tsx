@@ -34,7 +34,10 @@ describe("CreateProductionForm", () => {
   });
 
   it("surfaces validation errors from the server action", async () => {
-    createProductionActionMock.mockResolvedValueOnce({ ok: false as const, error: "Bitte gib ein Jahr an." });
+    createProductionActionMock.mockResolvedValueOnce({
+      ok: false as const,
+      error: "Bitte gib ein Jahr an.",
+    });
     const user = userEvent.setup();
 
     render(

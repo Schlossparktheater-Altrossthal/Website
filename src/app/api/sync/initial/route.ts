@@ -7,8 +7,8 @@ import { buildSyncEtag, selectBaseline } from "@/lib/sync/server";
 const querySchema = z.object({
   scope: z.enum(["inventory", "tickets"]),
   cursor: z.string().optional(),
-  limit: z
-    .coerce.number()
+  limit: z.coerce
+    .number()
     .superRefine((value, ctx) => {
       if (Number.isNaN(value)) {
         ctx.addIssue({
@@ -69,9 +69,6 @@ export async function GET(request: Request) {
     return NextResponse.json(baseline, { headers });
   } catch (error) {
     console.error("Failed to select sync baseline", error);
-    return NextResponse.json(
-      { error: "Failed to create sync baseline" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create sync baseline" }, { status: 500 });
   }
 }

@@ -1,13 +1,13 @@
-import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { createAnalyticsManager } from '../analytics.js';
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { createAnalyticsManager } from "../analytics.js";
 
-test('analytics manager refreshes snapshots with fallback data', async () => {
+test("analytics manager refreshes snapshots with fallback data", async () => {
   const staticData = {
     resourceUsage: [],
-    deviceBreakdown: [{ label: 'Mobile', value: 50 }],
-    publicPages: [{ path: '/home', ttfb: 120 }],
-    memberPages: [{ path: '/members', ttfb: 140 }],
+    deviceBreakdown: [{ label: "Mobile", value: 50 }],
+    publicPages: [{ path: "/home", ttfb: 120 }],
+    memberPages: [{ path: "/members", ttfb: 140 }],
   };
 
   let currentTime = 1_000;
@@ -27,16 +27,16 @@ test('analytics manager refreshes snapshots with fallback data', async () => {
       resourceCalls += 1;
       return [
         {
-          id: 'app-cpu',
-          label: 'CPU',
+          id: "app-cpu",
+          label: "CPU",
           usagePercent: 37.5,
-          capacity: '2 cores',
+          capacity: "2 cores",
         },
       ];
     },
     importAnalyticsModule: async () => {
-      const error = new Error('not found');
-      error.code = 'ERR_MODULE_NOT_FOUND';
+      const error = new Error("not found");
+      error.code = "ERR_MODULE_NOT_FOUND";
       throw error;
     },
     getDatabaseUrl: () => null,
@@ -46,13 +46,13 @@ test('analytics manager refreshes snapshots with fallback data', async () => {
   assert.equal(firstSnapshot.generatedAt, toISO(1_000));
   assert.deepEqual(firstSnapshot.resourceUsage, [
     {
-      id: 'app-cpu',
-      label: 'CPU',
+      id: "app-cpu",
+      label: "CPU",
       usagePercent: 37.5,
-      capacity: '2 cores',
+      capacity: "2 cores",
     },
   ]);
-  assert.deepEqual(firstSnapshot.deviceBreakdown, [{ label: 'Mobile', value: 50 }]);
+  assert.deepEqual(firstSnapshot.deviceBreakdown, [{ label: "Mobile", value: 50 }]);
   assert.equal(resourceCalls, 1);
 
   const cachedSnapshot = await manager.getSnapshot();
@@ -72,31 +72,29 @@ test('analytics manager refreshes snapshots with fallback data', async () => {
   assert.equal(resourceCalls, 3);
 });
 
-test('analytics manager merges database overrides when module is available', async () => {
+test("analytics manager merges database overrides when module is available", async () => {
   const staticData = {
     resourceUsage: [
       {
-        id: 'app-cpu',
-        label: 'CPU',
+        id: "app-cpu",
+        label: "CPU",
         usagePercent: 25,
         changePercent: 0,
-        capacity: '2 cores',
+        capacity: "2 cores",
       },
     ],
     deviceBreakdown: [
-      { device: 'Desktop', sessions: 100, avgPageLoadMs: 600, share: 0.5 },
-      { device: 'Mobile', sessions: 80, avgPageLoadMs: 650, share: 0.5 },
+      { device: "Desktop", sessions: 100, avgPageLoadMs: 600, share: 0.5 },
+      { device: "Mobile", sessions: 80, avgPageLoadMs: 650, share: 0.5 },
     ],
     publicPages: [
-      { path: '/home', title: 'Home', loadTimeMs: 1000, lcpMs: 1200 },
-      { path: '/about', title: 'About', loadTimeMs: 900, lcpMs: 1000 },
+      { path: "/home", title: "Home", loadTimeMs: 1000, lcpMs: 1200 },
+      { path: "/about", title: "About", loadTimeMs: 900, lcpMs: 1000 },
     ],
-    memberPages: [
-      { path: '/members', title: 'Members', loadTimeMs: 950, lcpMs: 1050 },
-    ],
+    memberPages: [{ path: "/members", title: "Members", loadTimeMs: 950, lcpMs: 1050 }],
   };
 
-  const analyticsModule = await import('../../../src/lib/server-analytics-data.js');
+  const analyticsModule = await import("../../../src/lib/server-analytics-data.js");
 
   let currentTime = 5000;
   const toISO = (value) => new Date(value).toISOString();
@@ -113,37 +111,37 @@ test('analytics manager merges database overrides when module is available', asy
       mergeDeviceBreakdown: analyticsModule.mergeDeviceBreakdown,
       applyPagePerformanceMetrics: analyticsModule.applyPagePerformanceMetrics,
       loadDeviceBreakdownFromDatabase: async () => [
-        { device: 'Desktop', sessions: 150, avgPageLoadMs: 420, share: 0.6 },
-        { device: 'Mobile', sessions: 120, avgPageLoadMs: 520, share: 0.4 },
+        { device: "Desktop", sessions: 150, avgPageLoadMs: 420, share: 0.6 },
+        { device: "Mobile", sessions: 120, avgPageLoadMs: 520, share: 0.4 },
       ],
       loadPagePerformanceMetrics: async () => [
-        { path: '/home', avgPageLoadMs: 890, scope: 'public' },
-        { path: '/members', avgPageLoadMs: 640, scope: 'members' },
+        { path: "/home", avgPageLoadMs: 890, scope: "public" },
+        { path: "/members", avgPageLoadMs: 640, scope: "members" },
       ],
     }),
-    getDatabaseUrl: () => 'postgres://example',
+    getDatabaseUrl: () => "postgres://example",
   });
 
   const snapshot = await manager.refresh();
 
   assert.equal(snapshot.deviceBreakdown.length, 2);
-  assert.equal(snapshot.deviceBreakdown[0].device, 'Desktop');
+  assert.equal(snapshot.deviceBreakdown[0].device, "Desktop");
   assert.equal(snapshot.deviceBreakdown[0].sessions, 150);
   assert.equal(snapshot.deviceBreakdown[0].avgPageLoadMs, 420);
-  assert.equal(snapshot.deviceBreakdown[1].device, 'Mobil');
+  assert.equal(snapshot.deviceBreakdown[1].device, "Mobil");
   assert.equal(snapshot.deviceBreakdown[1].sessions, 120);
   assert.equal(snapshot.deviceBreakdown[1].avgPageLoadMs, 520);
 
-  const homePage = snapshot.publicPages.find((entry) => entry.path === '/home');
+  const homePage = snapshot.publicPages.find((entry) => entry.path === "/home");
   assert.ok(homePage);
   assert.equal(homePage.loadTimeMs, 890);
 
-  const memberPage = snapshot.memberPages.find((entry) => entry.path === '/members');
+  const memberPage = snapshot.memberPages.find((entry) => entry.path === "/members");
   assert.ok(memberPage);
   assert.equal(memberPage.loadTimeMs, 640);
 });
 
-test('analytics manager incorporates online peak concurrency statistics', async () => {
+test("analytics manager incorporates online peak concurrency statistics", async () => {
   let currentTime = 10_000;
   let stats = { totalOnline: 4, peakConcurrentUsers: 9 };
   const toISO = (value) => new Date(value).toISOString();
@@ -159,7 +157,12 @@ test('analytics manager incorporates online peak concurrency statistics', async 
       resourceUsage: [],
       requestBreakdown: {
         frontend: { requests: 0, avgResponseTimeMs: 0, cacheHitRate: 0, avgPayloadKb: 0 },
-        members: { requests: 0, avgResponseTimeMs: 0, realtimeEvents: 0, avgSessionDurationSeconds: 0 },
+        members: {
+          requests: 0,
+          avgResponseTimeMs: 0,
+          realtimeEvents: 0,
+          avgSessionDurationSeconds: 0,
+        },
         api: { requests: 0, avgResponseTimeMs: 0, backgroundJobs: 0, errorRate: 0 },
       },
       visitorDistribution: [],

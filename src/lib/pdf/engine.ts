@@ -36,7 +36,10 @@ export class PdfValidationError extends Error {
 }
 
 export class PdfRenderError extends Error {
-  constructor(public readonly templateId: string, public readonly originalError: unknown) {
+  constructor(
+    public readonly templateId: string,
+    public readonly originalError: unknown,
+  ) {
     super(`Rendering PDF template failed: ${templateId}`);
     this.name = "PdfRenderError";
   }

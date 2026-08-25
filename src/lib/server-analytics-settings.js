@@ -2,7 +2,10 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
-import { DEFAULT_SERVER_ANALYTICS_SETTINGS, SERVER_ANALYTICS_SETTINGS_LIMITS } from "./server-analytics-settings-constants.js";
+import {
+  DEFAULT_SERVER_ANALYTICS_SETTINGS,
+  SERVER_ANALYTICS_SETTINGS_LIMITS,
+} from "./server-analytics-settings-constants.js";
 export { DEFAULT_SERVER_ANALYTICS_SETTINGS, SERVER_ANALYTICS_SETTINGS_LIMITS };
 
 const SETTINGS_ID = "default";
@@ -25,7 +28,9 @@ function getAnalyticsPrisma(client) {
   if (!globalForAnalyticsSettings[globalKey]) {
     const poolKey = Symbol.for("__analytics_settings_pg_pool");
     if (!globalForAnalyticsSettings[poolKey]) {
-      globalForAnalyticsSettings[poolKey] = new Pool({ connectionString: process.env.DATABASE_URL });
+      globalForAnalyticsSettings[poolKey] = new Pool({
+        connectionString: process.env.DATABASE_URL,
+      });
     }
     const adapter = new PrismaPg(globalForAnalyticsSettings[poolKey]);
     globalForAnalyticsSettings[globalKey] = new PrismaClient({

@@ -1,14 +1,7 @@
 export type OfflineScope = "inventory" | "tickets";
 
 export type InventoryItemCategoryValue =
-  | "light"
-  | "sound"
-  | "network"
-  | "video"
-  | "instruments"
-  | "cables"
-  | "cases"
-  | "accessories";
+  "light" | "sound" | "network" | "video" | "instruments" | "cables" | "cases" | "accessories";
 
 export interface InventoryItemRecord {
   id: string;
@@ -52,8 +45,7 @@ export interface PendingEvent {
   dedupeKey: string;
 }
 
-export interface PendingEventInput
-  extends Omit<PendingEvent, "id" | "createdAt" | "retryCount"> {
+export interface PendingEventInput extends Omit<PendingEvent, "id" | "createdAt" | "retryCount"> {
   id?: string;
   createdAt?: string;
   retryCount?: number;

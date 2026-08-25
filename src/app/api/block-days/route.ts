@@ -14,13 +14,7 @@ import {
   readSperrlisteSettings,
   resolveBlocklistSettings,
 } from "@/lib/sperrliste-settings";
-import {
-  isoDate,
-  normaliseReason,
-  toDateOnly,
-  toResponse,
-  reasonSchema,
-} from "./utils";
+import { isoDate, normaliseReason, toDateOnly, toResponse, reasonSchema } from "./utils";
 
 type SessionUser = { id?: string } | null | undefined;
 
@@ -148,7 +142,7 @@ export async function POST(request: Request) {
             {
               error: `Aus Planungsgründen können Sperrtermine erst ab ${formatFreezeDate(cutoff)} eingetragen werden.`,
             },
-            { status: 400 }
+            { status: 400 },
           );
         }
       }
@@ -172,14 +166,14 @@ export async function POST(request: Request) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json(
         { error: "Für dieses Datum existiert bereits ein Sperrtermin." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     console.error("[block-days:POST]", error);
     return NextResponse.json(
       { error: "Der Sperrtermin konnte nicht gespeichert werden." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

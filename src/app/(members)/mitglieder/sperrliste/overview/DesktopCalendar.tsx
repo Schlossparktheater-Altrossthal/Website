@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from "react";
 
-import { CalendarStarIcon, CheckIcon, ClockAlertIcon, StarIcon, UmbrellaIcon, XCircleIcon } from "./icons";
+import {
+  CalendarStarIcon,
+  CheckIcon,
+  ClockAlertIcon,
+  StarIcon,
+  UmbrellaIcon,
+  XCircleIcon,
+} from "./icons";
 import { PersonCard } from "./person-card";
 import { StatusBadge } from "./ui-components";
 import { getHolidaySpans, type DayBucket, selectDayBuckets } from "./data-helpers";
-import type {
-  DayColumn,
-  HolidayIndicator,
-  OverviewPerson,
-} from "./types";
+import type { DayColumn, HolidayIndicator, OverviewPerson } from "./types";
 
 type DesktopCalendarProps = {
   people: OverviewPerson[];
@@ -17,21 +20,24 @@ type DesktopCalendarProps = {
 };
 
 export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarProps) {
-  const days = useMemo(() => selectDayBuckets(people, dayCols, holidays), [people, dayCols, holidays]);
+  const days = useMemo(
+    () => selectDayBuckets(people, dayCols, holidays),
+    [people, dayCols, holidays],
+  );
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
   const holidaySpans = useMemo(() => getHolidaySpans(dayCols, days), [dayCols, days]);
-  
+
   // Determine if we need compact mode based on people count
   const totalPeople = people.length;
   const isCompactMode = totalPeople > 5;
-  
+
   return (
     <section className="hidden sm:block">
       {/* Horizontal Scrolling Container mit Touch-Support */}
       <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-transparent touch-pan-x">
         <div className="min-w-max">
           {/* Holiday Spans Bar - scrollt MIT den Karten */}
-          {(holidaySpans.length > 0 || holidays.some(h => h.type === 'holiday')) && (
+          {(holidaySpans.length > 0 || holidays.some((h) => h.type === "holiday")) && (
             <div className="mb-3 space-y-1.5">
               {/* Ferien-Balken mit responsive Breite */}
               {holidaySpans.length > 0 && (
@@ -40,42 +46,50 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                     const span = holidaySpans.find((s) => s.start === idx);
                     const isInSpan = holidaySpans.some((s) => idx >= s.start && idx <= s.end);
                     const isStart = span !== undefined;
-                    
+
                     if (isStart && span) {
                       const colSpan = span.end - span.start + 1;
                       // Responsive card width: 240px auf sm, 288px auf md+
-                      const cardWidth = 'clamp(240px, 20vw, 288px)';
+                      const cardWidth = "clamp(240px, 20vw, 288px)";
                       const gapWidth = 12;
                       return (
                         <div
                           key={idx}
                           className="flex items-center justify-center rounded-lg bg-primary/90 border border-primary px-3 py-2 text-primary-foreground shadow-md shrink-0"
-                          style={colSpan > 1 ? {
-                            width: `calc(${colSpan} * ${cardWidth} + ${(colSpan - 1) * gapWidth}px)`
-                          } : {
-                            width: cardWidth
-                          }}
+                          style={
+                            colSpan > 1
+                              ? {
+                                  width: `calc(${colSpan} * ${cardWidth} + ${(colSpan - 1) * gapWidth}px)`,
+                                }
+                              : {
+                                  width: cardWidth,
+                                }
+                          }
                         >
                           <UmbrellaIcon className="h-4 w-4" />
-                          <span className="ml-2 text-sm font-bold truncate">{span.label || 'Ferien'}</span>
+                          <span className="ml-2 text-sm font-bold truncate">
+                            {span.label || "Ferien"}
+                          </span>
                         </div>
                       );
                     }
-                    
+
                     if (isInSpan && !isStart) {
                       return null; // Wird vom Span abgedeckt
                     }
-                    
+
                     return <div key={idx} className="w-72 shrink-0" />;
                   })}
                 </div>
               )}
-              
+
               {/* Feiertags-Balken (separat) */}
-              {holidays.some(h => h.type === 'holiday') && (
+              {holidays.some((h) => h.type === "holiday") && (
                 <div className="flex gap-3">
                   {dayCols.map((_, idx) => {
-                    const holiday = holidays.find(h => h.dayIndex === idx && h.type === 'holiday');
+                    const holiday = holidays.find(
+                      (h) => h.dayIndex === idx && h.type === "holiday",
+                    );
                     if (holiday) {
                       return (
                         <div
@@ -83,45 +97,49 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                           className="flex items-center justify-center rounded-lg bg-warning/90 border border-warning px-3 py-2 text-warning-foreground shadow-md shrink-0 w-72"
                         >
                           <CalendarStarIcon className="h-4 w-4" />
-                          <span className="ml-2 text-sm font-bold truncate">{holiday.label || 'Feiertag'}</span>
+                          <span className="ml-2 text-sm font-bold truncate">
+                            {holiday.label || "Feiertag"}
+                          </span>
                         </div>
                       );
                     }
-                    
+
                     return <div key={idx} className="w-72 shrink-0" />;
                   })}
                 </div>
               )}
             </div>
           )}
-          
+
           {/* Karten-Grid */}
           <div className="flex gap-3">
             {days.map((bucket: DayBucket) => {
               const isHovered = hoveredDay === bucket.column.n;
               const isToday = bucket.column.accent === true;
-              const totalCount = bucket.available.length + bucket.limited.length + bucket.blocked.length;
-              const availablePercent = totalCount > 0 ? Math.round((bucket.available.length / totalCount) * 100) : 0;
-              
+              const totalCount =
+                bucket.available.length + bucket.limited.length + bucket.blocked.length;
+              const availablePercent =
+                totalCount > 0 ? Math.round((bucket.available.length / totalCount) * 100) : 0;
+
               return (
-                <div 
-                  key={bucket.column.key} 
+                <div
+                  key={bucket.column.key}
                   id={`day-${bucket.column.n}`}
                   className={`group flex flex-col rounded-2xl border bg-gradient-to-br shadow-md transition-all duration-300 w-72 shrink-0 ${
                     isToday
-                      ? 'border-primary shadow-xl ring-2 ring-primary/30'
-                      : isHovered 
-                        ? 'border-primary/60 shadow-xl scale-[1.02] ring-2 ring-primary/20' 
-                        : 'border-border/60 hover:border-border hover:shadow-lg'
+                      ? "border-primary shadow-xl ring-2 ring-primary/30"
+                      : isHovered
+                        ? "border-primary/60 shadow-xl scale-[1.02] ring-2 ring-primary/20"
+                        : "border-border/60 hover:border-border hover:shadow-lg"
                   } ${
-                    bucket.holiday 
-                      ? 'from-sky-50 to-card' 
-                      : availablePercent >= 75 
-                        ? 'from-success/10 to-card'
+                    bucket.holiday
+                      ? "from-sky-50 to-card"
+                      : availablePercent >= 75
+                        ? "from-success/10 to-card"
                         : availablePercent <= 25
-                          ? 'from-destructive/10 to-card'
-                          : 'from-card to-muted/30'
-                  } ${isCompactMode ? 'min-h-[16rem] max-h-[24rem]' : 'min-h-[20rem] max-h-[32rem]'}`}
+                          ? "from-destructive/10 to-card"
+                          : "from-card to-muted/30"
+                  } ${isCompactMode ? "min-h-[16rem] max-h-[24rem]" : "min-h-[20rem] max-h-[32rem]"}`}
                   onMouseEnter={() => setHoveredDay(bucket.column.n)}
                   onMouseLeave={() => setHoveredDay(null)}
                 >
@@ -134,39 +152,43 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                           <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                             {bucket.column.label}
                           </span>
-                          <span className="text-lg font-bold text-foreground">{bucket.column.n}</span>
+                          <span className="text-lg font-bold text-foreground">
+                            {bucket.column.n}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center justify-end gap-0.5">
-                        <StatusBadge 
-                          icon={<StarIcon className="h-3 w-3" />} 
-                          count={bucket.available.length} 
-                          tone="ok" 
-                          compact={isCompactMode} 
+                        <StatusBadge
+                          icon={<StarIcon className="h-3 w-3" />}
+                          count={bucket.available.length}
+                          tone="ok"
+                          compact={isCompactMode}
                         />
-                        <StatusBadge 
-                          icon={<ClockAlertIcon className="h-3 w-3" />} 
-                          count={bucket.limited.length} 
-                          tone="warn" 
-                          compact={isCompactMode} 
+                        <StatusBadge
+                          icon={<ClockAlertIcon className="h-3 w-3" />}
+                          count={bucket.limited.length}
+                          tone="warn"
+                          compact={isCompactMode}
                         />
-                        <StatusBadge 
-                          icon={<XCircleIcon className="h-3 w-3" />} 
-                          count={bucket.blocked.length} 
-                          tone="danger" 
-                          compact={isCompactMode} 
+                        <StatusBadge
+                          icon={<XCircleIcon className="h-3 w-3" />}
+                          count={bucket.blocked.length}
+                          tone="danger"
+                          compact={isCompactMode}
                         />
                       </div>
                     </div>
-                  
+
                     {/* Availability Progress Bar */}
                     {totalCount > 0 && (
                       <div className="absolute bottom-0 left-0 right-0 h-1 bg-border/30">
-                        <div 
+                        <div
                           className={`h-full transition-all duration-500 ${
-                            availablePercent >= 75 ? 'bg-gradient-to-r from-success to-success' :
-                            availablePercent >= 50 ? 'bg-gradient-to-r from-warning to-warning' :
-                            'bg-gradient-to-r from-destructive to-destructive'
+                            availablePercent >= 75
+                              ? "bg-gradient-to-r from-success to-success"
+                              : availablePercent >= 50
+                                ? "bg-gradient-to-r from-warning to-warning"
+                                : "bg-gradient-to-r from-destructive to-destructive"
                           }`}
                           style={{ width: `${availablePercent}%` }}
                         />
@@ -184,7 +206,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                         </h4>
                         <ul className="space-y-1">
                           {bucket.available.map(({ person, cell }, i) => (
-                            <PersonCard 
+                            <PersonCard
                               key={person.name + i}
                               person={person}
                               cell={cell}
@@ -204,7 +226,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                         </h4>
                         <ul className="space-y-1">
                           {bucket.limited.map(({ person, cell }, i) => (
-                            <PersonCard 
+                            <PersonCard
                               key={person.name + i}
                               person={person}
                               cell={cell}
@@ -224,7 +246,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                         </h4>
                         <ul className="space-y-1">
                           {bucket.blocked.map(({ person, cell }, i) => (
-                            <PersonCard 
+                            <PersonCard
                               key={person.name + i}
                               person={person}
                               cell={cell}
@@ -240,7 +262,9 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                       <div className="flex h-full min-h-[8rem] items-center justify-center">
                         <div className="rounded-xl border-2 border-dashed border-border bg-muted/30 px-3 py-4 text-center">
                           <CheckIcon className="h-5 w-5 mx-auto text-muted-foreground" />
-                          <p className="mt-1 text-[11px] font-medium text-muted-foreground">Keine Einträge</p>
+                          <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+                            Keine Einträge
+                          </p>
                         </div>
                       </div>
                     )}
@@ -273,14 +297,14 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
           </div>
         </div>
       </div>
-      
+
       {/* Helper Text */}
       <p className="mt-3 text-[11px] text-muted-foreground">
         Tipp: Auf
-          <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary font-medium mr-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            Heute
-          </span>
+        <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-primary font-medium mr-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          Heute
+        </span>
         klicken, um die Karte zu fokussieren.
       </p>
     </section>

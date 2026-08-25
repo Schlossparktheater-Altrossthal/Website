@@ -31,7 +31,7 @@ const linkVariants = cva(
       variant: "default",
       weight: "medium",
     },
-  }
+  },
 );
 
 type TextLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> &
@@ -41,30 +41,23 @@ type TextLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> &
   };
 
 const TextLink = React.forwardRef<HTMLAnchorElement, TextLinkProps>(
-  (
-    {
-      className,
-      variant,
-      weight,
-      asChild = false,
-      disabled = false,
-      tabIndex,
-      ...props
-    },
-    ref
-  ) => {
+  ({ className, variant, weight, asChild = false, disabled = false, tabIndex, ...props }, ref) => {
     const Component = asChild ? Slot : "a";
 
     return (
       <Component
         ref={ref as React.Ref<HTMLAnchorElement>}
-        className={cn(linkVariants({ variant, weight }), disabled && "pointer-events-none opacity-60", className)}
+        className={cn(
+          linkVariants({ variant, weight }),
+          disabled && "pointer-events-none opacity-60",
+          className,
+        )}
         aria-disabled={disabled || undefined}
         tabIndex={disabled ? -1 : tabIndex}
         {...props}
       />
     );
-  }
+  },
 );
 TextLink.displayName = "TextLink";
 

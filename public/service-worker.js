@@ -51,8 +51,7 @@ if (workbox) {
   const offlineQueue = syncPlugin._queue;
 
   routing.registerRoute(
-    ({ request, url }) =>
-      request.method === "GET" && url.pathname.startsWith("/api/sync"),
+    ({ request, url }) => request.method === "GET" && url.pathname.startsWith("/api/sync"),
     new strategies.NetworkFirst({
       cacheName: "sync-api-cache",
       networkTimeoutSeconds: 10,

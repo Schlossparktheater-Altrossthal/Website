@@ -23,7 +23,12 @@ type RealtimeCore = ReturnType<typeof createRealtimeCore>;
 
 export class RealtimeService {
   private static instance: RealtimeService;
-  private io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData> | null = null;
+  private io: SocketIOServer<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    InterServerEvents,
+    SocketData
+  > | null = null;
   private core: RealtimeCore | null = null;
 
   private constructor() {}
@@ -40,7 +45,12 @@ export class RealtimeService {
       return this.io;
     }
 
-    this.io = new SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(server, {
+    this.io = new SocketIOServer<
+      ClientToServerEvents,
+      ServerToClientEvents,
+      InterServerEvents,
+      SocketData
+    >(server, {
       cors: {
         origin: process.env.NODE_ENV === "production" ? false : "*",
         methods: ["GET", "POST"],
@@ -89,7 +99,10 @@ export class RealtimeService {
         client.join(userRoom);
         client.data.rooms.add(userRoom);
         if (isFirstConnection) {
-          core.emitUserJoined({ userId: client.data.userId, userName: userName ?? client.data.userName });
+          core.emitUserJoined({
+            userId: client.data.userId,
+            userName: userName ?? client.data.userName,
+          });
         }
         core.emitOnlineStatsUpdate();
       } else {
@@ -230,7 +243,10 @@ export class RealtimeService {
           socketId: socket.id,
         });
         if (isLastConnection) {
-          core.emitUserLeft({ userId: socket.data.userId, userName: userName ?? socket.data.userName });
+          core.emitUserLeft({
+            userId: socket.data.userId,
+            userName: userName ?? socket.data.userName,
+          });
           core.emitOnlineStatsUpdate();
         }
       }
@@ -240,7 +256,9 @@ export class RealtimeService {
   }
 
   private logUnauthorizedRoomJoin(socket: IOSocket, room: RoomType, reason: string): void {
-    const userDescriptor = socket.data.userId ? `user ${socket.data.userId}` : "unauthenticated user";
+    const userDescriptor = socket.data.userId
+      ? `user ${socket.data.userId}`
+      : "unauthenticated user";
     console.warn(
       `[Realtime] Blocked socket ${socket.id} (${userDescriptor}) from joining room ${room}: ${reason}`,
     );
@@ -286,7 +304,11 @@ export class RealtimeService {
 
       const allowed = await this.isUserAuthorizedForRehearsal(userId, rehearsalId);
       if (!allowed) {
-        this.logUnauthorizedRoomJoin(socket, room, `user ${userId} is not allowed to join rehearsal ${rehearsalId}`);
+        this.logUnauthorizedRoomJoin(
+          socket,
+          room,
+          `user ${userId} is not allowed to join rehearsal ${rehearsalId}`,
+        );
       }
       return allowed;
     }
@@ -300,7 +322,11 @@ export class RealtimeService {
 
       const allowed = await this.isUserAuthorizedForShow(userId, showId);
       if (!allowed) {
-        this.logUnauthorizedRoomJoin(socket, room, `user ${userId} is not allowed to join show ${showId}`);
+        this.logUnauthorizedRoomJoin(
+          socket,
+          room,
+          `user ${userId} is not allowed to join show ${showId}`,
+        );
       }
       return allowed;
     }
@@ -308,7 +334,10 @@ export class RealtimeService {
     return true;
   }
 
-  private async isUserAuthorizedForRehearsal(userId: string, rehearsalId: string): Promise<boolean> {
+  private async isUserAuthorizedForRehearsal(
+    userId: string,
+    rehearsalId: string,
+  ): Promise<boolean> {
     try {
       const rehearsal = await prisma.rehearsal.findFirst({
         where: {
@@ -345,7 +374,10 @@ export class RealtimeService {
 
       return Boolean(membership);
     } catch (error) {
-      console.error(`[Realtime] Failed to verify show access for user ${userId} and show ${showId}`, error);
+      console.error(
+        `[Realtime] Failed to verify show access for user ${userId} and show ${showId}`,
+        error,
+      );
       return false;
     }
   }
@@ -372,7 +404,11 @@ export class RealtimeService {
     this.core.broadcastTicketScanEvent(payload);
   }
 
-  public broadcast<T extends RealtimeEvent>(event: T, rooms: RoomType[] | RoomType, excludeSocket?: string): void {
+  public broadcast<T extends RealtimeEvent>(
+    event: T,
+    rooms: RoomType[] | RoomType,
+    excludeSocket?: string,
+  ): void {
     this.core?.broadcast(event, rooms, excludeSocket);
   }
 

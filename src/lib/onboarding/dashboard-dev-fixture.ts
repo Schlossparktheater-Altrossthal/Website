@@ -30,7 +30,14 @@ export const DEV_ONBOARDING_DASHBOARD = {
       { id: "focus", label: "Fokus", type: "badge-list", width: 140, sortable: true, priority: 2 },
       { id: "rolesActing", label: "Rollen Acting", type: "badge-list", width: 220, priority: 3 },
       { id: "rolesCrew", label: "Rollen Crew", type: "badge-list", width: 220, priority: 4 },
-      { id: "experience", label: "Erfahrung", type: "number", width: 120, priority: 5, renderRule: { suffix: "Jahre" } },
+      {
+        id: "experience",
+        label: "Erfahrung",
+        type: "number",
+        width: 120,
+        priority: 5,
+        renderRule: { suffix: "Jahre" },
+      },
       { id: "photoConsent", label: "Foto", type: "icon-status", width: 120, priority: 6 },
       { id: "diet", label: "Ernährung", type: "text", width: 160, priority: 7 },
       { id: "allergies", label: "Allergien", type: "badge-list", width: 200, priority: 8 },
@@ -503,8 +510,20 @@ export const DEV_ONBOARDING_DASHBOARD = {
             background: "Studium Schauspiel",
             notes: "Leitet Impro-Workshops.",
             otherPreferences: [
-              { roleId: "acting_support", label: "Support", domain: "acting", normalizedShare: 0.6, rank: 2 },
-              { roleId: "crew_stage", label: "Bühne", domain: "crew", normalizedShare: 0.4, rank: 3 },
+              {
+                roleId: "acting_support",
+                label: "Support",
+                domain: "acting",
+                normalizedShare: 0.6,
+                rank: 2,
+              },
+              {
+                roleId: "crew_stage",
+                label: "Bühne",
+                domain: "crew",
+                normalizedShare: 0.4,
+                rank: 3,
+              },
             ],
           },
           {
@@ -521,8 +540,20 @@ export const DEV_ONBOARDING_DASHBOARD = {
             background: "Regieassistenz im Jugendtheater",
             notes: "Möchte mehr Bühnenerfahrung.",
             otherPreferences: [
-              { roleId: "acting_support", label: "Support", domain: "acting", normalizedShare: 0.55, rank: 1 },
-              { roleId: "crew_direction", label: "Regieassistenz", domain: "crew", normalizedShare: 0.62, rank: 2 },
+              {
+                roleId: "acting_support",
+                label: "Support",
+                domain: "acting",
+                normalizedShare: 0.55,
+                rank: 1,
+              },
+              {
+                roleId: "crew_direction",
+                label: "Regieassistenz",
+                domain: "crew",
+                normalizedShare: 0.62,
+                rank: 2,
+              },
             ],
           },
           {
@@ -539,7 +570,13 @@ export const DEV_ONBOARDING_DASHBOARD = {
             background: null,
             notes: "",
             otherPreferences: [
-              { roleId: "acting_statist", label: "Statist", domain: "acting", normalizedShare: 0.58, rank: 1 },
+              {
+                roleId: "acting_statist",
+                label: "Statist",
+                domain: "acting",
+                normalizedShare: 0.58,
+                rank: 1,
+              },
             ],
           },
         ],
@@ -564,7 +601,13 @@ export const DEV_ONBOARDING_DASHBOARD = {
             background: "Ausbildung Veranstaltungstechnik",
             notes: null,
             otherPreferences: [
-              { roleId: "crew_props", label: "Requisite", domain: "crew", normalizedShare: 0.52, rank: 2 },
+              {
+                roleId: "crew_props",
+                label: "Requisite",
+                domain: "crew",
+                normalizedShare: 0.52,
+                rank: 2,
+              },
             ],
           },
           {
@@ -581,8 +624,20 @@ export const DEV_ONBOARDING_DASHBOARD = {
             background: "Freie Projekte",
             notes: "",
             otherPreferences: [
-              { roleId: "crew_costume", label: "Kostüm", domain: "crew", normalizedShare: 0.6, rank: 1 },
-              { roleId: "acting_support", label: "Support", domain: "acting", normalizedShare: 0.42, rank: 3 },
+              {
+                roleId: "crew_costume",
+                label: "Kostüm",
+                domain: "crew",
+                normalizedShare: 0.6,
+                rank: 1,
+              },
+              {
+                roleId: "acting_support",
+                label: "Support",
+                domain: "acting",
+                normalizedShare: 0.42,
+                rank: 3,
+              },
             ],
           },
         ],

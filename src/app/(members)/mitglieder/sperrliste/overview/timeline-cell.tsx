@@ -45,7 +45,9 @@ export function TimelineCell({ cell }: TimelineCellProps) {
         </div>
         {cell.label && showTooltip && (
           <div className="absolute -top-2 left-1/2 z-30 w-48 -translate-x-1/2 -translate-y-full rounded-lg border border-destructive/40 bg-card p-2 shadow-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-destructive">Sperrtermin</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-destructive">
+              Sperrtermin
+            </p>
             <p className="mt-0.5 text-xs leading-snug text-card-foreground">{cell.label}</p>
           </div>
         )}
@@ -66,7 +68,9 @@ export function TimelineCell({ cell }: TimelineCellProps) {
         </div>
         {cell.label && showTooltip && (
           <div className="absolute -top-2 left-1/2 z-30 w-48 -translate-x-1/2 -translate-y-full rounded-lg border border-warning/40 bg-card p-2 shadow-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-warning">Eingeschränkt</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-warning">
+              Eingeschränkt
+            </p>
             <p className="mt-0.5 text-xs leading-snug text-card-foreground">{cell.label}</p>
           </div>
         )}
@@ -87,7 +91,9 @@ export function TimelineCell({ cell }: TimelineCellProps) {
         </div>
         {cell.label && showTooltip && (
           <div className="absolute -top-2 left-1/2 z-30 w-48 -translate-x-1/2 -translate-y-full rounded-lg border border-success/40 bg-card p-2 shadow-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-success">Bevorzugt</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-success">
+              Bevorzugt
+            </p>
             <p className="mt-0.5 text-xs leading-snug text-card-foreground">{cell.label}</p>
           </div>
         )}

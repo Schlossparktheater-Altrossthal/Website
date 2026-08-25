@@ -54,40 +54,41 @@ export default async function BlocklistPage() {
   }
 
   if (!databaseOnline) {
-    const initialBlockedDays: BlockedDayDTO[] = DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE.map((entry) => ({
-      id: entry.id,
-      date: entry.date,
-      reason: entry.reason,
-      kind: entry.kind,
-      createdAt: entry.createdAt,
-    }));
-
-    const overviewMembers: OverviewMember[] = DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE.map((member) => ({
-      id: member.id,
-      firstName: member.firstName,
-      lastName: member.lastName,
-      name: member.name,
-      email: member.email,
-      avatarSource: member.avatarSource,
-      avatarUpdatedAt: member.avatarUpdatedAt,
-      onboardingFocus: member.onboardingFocus,
-      blockedDays: member.blockedDays.map((entry) => ({
+    const initialBlockedDays: BlockedDayDTO[] = DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE.map(
+      (entry) => ({
         id: entry.id,
         date: entry.date,
         reason: entry.reason,
         kind: entry.kind,
         createdAt: entry.createdAt,
-      })),
-    }));
+      }),
+    );
+
+    const overviewMembers: OverviewMember[] = DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE.map(
+      (member) => ({
+        id: member.id,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        name: member.name,
+        email: member.email,
+        avatarSource: member.avatarSource,
+        avatarUpdatedAt: member.avatarUpdatedAt,
+        onboardingFocus: member.onboardingFocus,
+        blockedDays: member.blockedDays.map((entry) => ({
+          id: entry.id,
+          date: entry.date,
+          reason: entry.reason,
+          kind: entry.kind,
+          createdAt: entry.createdAt,
+        })),
+      }),
+    );
 
     const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/sperrliste")];
 
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Sperrliste"
-          breadcrumbs={breadcrumbs}
-        />
+        <PageHeader title="Sperrliste" breadcrumbs={breadcrumbs} />
         <BlocklistPageClient
           initialBlockedDays={initialBlockedDays}
           initialHolidays={DEV_SPERRLISTE_HOLIDAYS_FIXTURE}
@@ -163,9 +164,7 @@ export default async function BlocklistPage() {
     name: user.name ?? null,
     email: user.email ?? null,
     avatarSource: user.avatarSource ?? null,
-    avatarUpdatedAt: user.avatarImageUpdatedAt
-      ? user.avatarImageUpdatedAt.toISOString()
-      : null,
+    avatarUpdatedAt: user.avatarImageUpdatedAt ? user.avatarImageUpdatedAt.toISOString() : null,
     onboardingFocus: user.onboardingProfile?.focus ?? null,
     blockedDays: user.blockedDays.map((entry) => ({
       id: entry.id,

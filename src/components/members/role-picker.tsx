@@ -101,7 +101,9 @@ export function RolePicker({
                     />
                     <span>{ROLE_LABELS[role] ?? role}</span>
                   </div>
-                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[role]}`}>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[role]}`}
+                  >
                     {role}
                   </span>
                 </label>
@@ -121,4 +123,3 @@ export function RolePicker({
     </div>
   );
 }
-

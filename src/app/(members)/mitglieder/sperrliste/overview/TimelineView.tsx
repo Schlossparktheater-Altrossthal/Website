@@ -2,13 +2,13 @@ import React, { useMemo, useEffect, useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 
-import { 
-  CalendarStarIcon, 
-  CheckIcon, 
-  ClockAlertIcon, 
-  StarIcon, 
-  UmbrellaIcon, 
-  XCircleIcon 
+import {
+  CalendarStarIcon,
+  CheckIcon,
+  ClockAlertIcon,
+  StarIcon,
+  UmbrellaIcon,
+  XCircleIcon,
 } from "./icons";
 import { TimelineCell } from "./timeline-cell";
 import { getHolidaySpans, selectDayBuckets, groupPeopleByType } from "./data-helpers";
@@ -23,17 +23,20 @@ type TimelineViewProps = {
   personFilter?: PersonGroup | "all";
 };
 
-export function TimelineView({ 
-  people, 
-  dayCols, 
+export function TimelineView({
+  people,
+  dayCols,
   holidays,
-  highlightedDay, 
+  highlightedDay,
   setHighlightedDay,
-  personFilter = "all"
+  personFilter = "all",
 }: TimelineViewProps) {
-  const days = useMemo(() => selectDayBuckets(people, dayCols, holidays), [people, dayCols, holidays]);
+  const days = useMemo(
+    () => selectDayBuckets(people, dayCols, holidays),
+    [people, dayCols, holidays],
+  );
   const holidaySpans = useMemo(() => getHolidaySpans(dayCols, days), [dayCols, days]);
-  
+
   // Gruppierung nur wenn NICHT gefiltert (also bei "all")
   const groupedPeople = useMemo(() => {
     if (personFilter !== "all") return null;
@@ -41,44 +44,49 @@ export function TimelineView({
   }, [people, personFilter]);
 
   // Keyboard Navigation (Arrow Keys)
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "ArrowLeft" && highlightedDay !== null) {
-      const currentIndex = dayCols.findIndex(d => d.n === highlightedDay);
-      if (currentIndex > 0) {
-        const prevDay = dayCols[currentIndex - 1];
-        setHighlightedDay(prevDay.n);
-        document.querySelector(`[data-day="${prevDay.n}"]`)?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center', 
-          inline: 'center' 
-        });
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft" && highlightedDay !== null) {
+        const currentIndex = dayCols.findIndex((d) => d.n === highlightedDay);
+        if (currentIndex > 0) {
+          const prevDay = dayCols[currentIndex - 1];
+          setHighlightedDay(prevDay.n);
+          document.querySelector(`[data-day="${prevDay.n}"]`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "center",
+          });
+        }
+      } else if (e.key === "ArrowRight" && highlightedDay !== null) {
+        const currentIndex = dayCols.findIndex((d) => d.n === highlightedDay);
+        if (currentIndex < dayCols.length - 1) {
+          const nextDay = dayCols[currentIndex + 1];
+          setHighlightedDay(nextDay.n);
+          document.querySelector(`[data-day="${nextDay.n}"]`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "center",
+          });
+        }
+      } else if (e.key === "Escape") {
+        setHighlightedDay(null);
       }
-    } else if (e.key === "ArrowRight" && highlightedDay !== null) {
-      const currentIndex = dayCols.findIndex(d => d.n === highlightedDay);
-      if (currentIndex < dayCols.length - 1) {
-        const nextDay = dayCols[currentIndex + 1];
-        setHighlightedDay(nextDay.n);
-        document.querySelector(`[data-day="${nextDay.n}"]`)?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center', 
-          inline: 'center' 
-        });
-      }
-    } else if (e.key === "Escape") {
-      setHighlightedDay(null);
-    }
-  }, [highlightedDay, dayCols, setHighlightedDay]);
+    },
+    [highlightedDay, dayCols, setHighlightedDay],
+  );
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
-  
+
   return (
     <section className="hidden sm:block">
       {/* Kompakte Symbollegende */}
       <div className="mb-3 flex items-center gap-4 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-[11px]">
-        <span className="font-semibold uppercase tracking-wide text-muted-foreground">Legende:</span>
+        <span className="font-semibold uppercase tracking-wide text-muted-foreground">
+          Legende:
+        </span>
         <div className="flex items-center gap-1">
           <div className="flex h-5 w-5 items-center justify-center rounded border border-success/40 bg-gradient-to-br from-success/15 to-success/25">
             <StarIcon className="h-3 w-3 text-success-foreground" />
@@ -121,14 +129,16 @@ export function TimelineView({
       {/* Timeline mit sticky Header */}
       <div className="overflow-x-auto rounded-2xl border border-border/60 bg-muted/20 p-3">
         {/* Holiday Spans Bar */}
-        {(holidaySpans.length > 0 || holidays.some(h => h.type === 'holiday')) && (
+        {(holidaySpans.length > 0 || holidays.some((h) => h.type === "holiday")) && (
           <div className="mb-3 space-y-1.5 min-w-[900px]">
             {/* Ferien-Balken */}
             {holidaySpans.length > 0 && (
               <div className="relative h-10">
                 <div className="grid grid-cols-[200px_1fr] gap-0">
                   <div className="flex items-center justify-end border-r border-border/60 px-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">Ferien</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      Ferien
+                    </span>
                   </div>
                   <div className="grid grid-cols-7 gap-0 relative min-w-0">
                     {holidaySpans.map((span, idx) => {
@@ -143,7 +153,9 @@ export function TimelineView({
                           }}
                         >
                           <UmbrellaIcon className="h-4 w-4" />
-                          <span className="ml-2 text-sm font-bold truncate">{span.label || 'Ferien'}</span>
+                          <span className="ml-2 text-sm font-bold truncate">
+                            {span.label || "Ferien"}
+                          </span>
                         </div>
                       );
                     })}
@@ -151,17 +163,19 @@ export function TimelineView({
                 </div>
               </div>
             )}
-            
+
             {/* Feiertags-Balken (separat) */}
-            {holidays.some(h => h.type === 'holiday') && (
+            {holidays.some((h) => h.type === "holiday") && (
               <div className="relative h-10">
                 <div className="grid grid-cols-[200px_1fr] gap-0">
                   <div className="flex items-center justify-end border-r border-border/60 px-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-warning">Feiertage</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-warning">
+                      Feiertage
+                    </span>
                   </div>
                   <div className="grid grid-cols-7 gap-0 relative min-w-0">
                     {days.map((day, idx) => {
-                      if (day.holidayType === 'holiday' || day.isPublicHoliday) {
+                      if (day.holidayType === "holiday" || day.isPublicHoliday) {
                         return (
                           <div
                             key={`holiday-${idx}`}
@@ -172,7 +186,9 @@ export function TimelineView({
                             }}
                           >
                             <CalendarStarIcon className="h-4 w-4" />
-                            <span className="ml-1 text-xs font-bold truncate">{day.holidayLabel || 'Feiertag'}</span>
+                            <span className="ml-1 text-xs font-bold truncate">
+                              {day.holidayLabel || "Feiertag"}
+                            </span>
                           </div>
                         );
                       }
@@ -190,7 +206,9 @@ export function TimelineView({
           <div className="sticky top-0 z-20 rounded-2xl border border-border/60 bg-card/95 shadow-sm backdrop-blur">
             <div className="grid grid-cols-[200px_1fr] gap-0">
               <div className="border-r border-border/60 px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Mitglied</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Mitglied
+                </span>
               </div>
               <div className="grid grid-cols-7 gap-0 min-w-0">
                 {dayCols.map((d) => (
@@ -199,16 +217,22 @@ export function TimelineView({
                     data-day={d.n}
                     onClick={() => setHighlightedDay(highlightedDay === d.n ? null : d.n)}
                     className={`group flex flex-col items-center gap-1 border-l border-border/50 px-2 py-2 transition-colors hover:bg-muted/50 min-w-[90px] ${
-                      highlightedDay === d.n ? 'bg-primary/10' : ''
+                      highlightedDay === d.n ? "bg-primary/10" : ""
                     }`}
-                    aria-label={`Tag ${d.n} ${highlightedDay === d.n ? 'hervorgehoben' : 'hervorheben'}`}
+                    aria-label={`Tag ${d.n} ${highlightedDay === d.n ? "hervorgehoben" : "hervorheben"}`}
                   >
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{d.label}</span>
-                    <span className={`flex h-7 w-7 items-center justify-center rounded-full border text-[13px] font-semibold transition-all ${
-                      highlightedDay === d.n 
-                        ? 'border-primary bg-primary text-primary-foreground shadow-md' 
-                        : 'border-border bg-muted text-foreground group-hover:border-primary/60'
-                    }`}>{d.n}</span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      {d.label}
+                    </span>
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border text-[13px] font-semibold transition-all ${
+                        highlightedDay === d.n
+                          ? "border-primary bg-primary text-primary-foreground shadow-md"
+                          : "border-border bg-muted text-foreground group-hover:border-primary/60"
+                      }`}
+                    >
+                      {d.n}
+                    </span>
                   </Button>
                 ))}
               </div>
@@ -223,35 +247,41 @@ export function TimelineView({
                 <>
                   <div className="sticky top-[72px] z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 to-primary/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
-                      Schauspieler <span className="ml-2 text-xs font-normal text-muted-foreground">({groupedPeople.actors.length})</span>
+                      Schauspieler{" "}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({groupedPeople.actors.length})
+                      </span>
                     </h3>
                   </div>
                   {groupedPeople.actors.map((p) => (
-                    <PersonLane 
-                      key={p.id} 
-                      person={p} 
-                      dayCols={dayCols} 
-                      highlightedDay={highlightedDay} 
+                    <PersonLane
+                      key={p.id}
+                      person={p}
+                      dayCols={dayCols}
+                      highlightedDay={highlightedDay}
                       groupColor="blue"
                     />
                   ))}
                 </>
               )}
-              
+
               {/* Beides Gruppe (Schauspieler & Gewerke) */}
               {groupedPeople.both.length > 0 && (
                 <>
                   <div className="sticky top-[72px] z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-accent bg-gradient-to-r from-accent/10 to-accent/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
-                      Schauspieler & Gewerke <span className="ml-2 text-xs font-normal text-accent-foreground">({groupedPeople.both.length})</span>
+                      Schauspieler & Gewerke{" "}
+                      <span className="ml-2 text-xs font-normal text-accent-foreground">
+                        ({groupedPeople.both.length})
+                      </span>
                     </h3>
                   </div>
                   {groupedPeople.both.map((p) => (
-                    <PersonLane 
-                      key={p.id} 
-                      person={p} 
-                      dayCols={dayCols} 
-                      highlightedDay={highlightedDay} 
+                    <PersonLane
+                      key={p.id}
+                      person={p}
+                      dayCols={dayCols}
+                      highlightedDay={highlightedDay}
                       groupColor="purple"
                     />
                   ))}
@@ -263,15 +293,18 @@ export function TimelineView({
                 <>
                   <div className="sticky top-[72px] z-10 -mx-1 mb-2 mt-4 rounded-lg border-l-4 border-success bg-gradient-to-r from-success/10 to-success/15 px-4 py-2.5 backdrop-blur-sm shadow-sm">
                     <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">
-                      Gewerke <span className="ml-2 text-xs font-normal text-success-foreground">({groupedPeople.crew.length})</span>
+                      Gewerke{" "}
+                      <span className="ml-2 text-xs font-normal text-success-foreground">
+                        ({groupedPeople.crew.length})
+                      </span>
                     </h3>
                   </div>
                   {groupedPeople.crew.map((p) => (
-                    <PersonLane 
-                      key={p.id} 
-                      person={p} 
-                      dayCols={dayCols} 
-                      highlightedDay={highlightedDay} 
+                    <PersonLane
+                      key={p.id}
+                      person={p}
+                      dayCols={dayCols}
+                      highlightedDay={highlightedDay}
                       groupColor="green"
                     />
                   ))}
@@ -281,16 +314,19 @@ export function TimelineView({
           ) : (
             /* Ungefilterte Liste ohne Gruppierung */
             people.map((p) => (
-              <PersonLane 
-                key={p.id} 
-                person={p} 
-                dayCols={dayCols} 
-                highlightedDay={highlightedDay} 
+              <PersonLane
+                key={p.id}
+                person={p}
+                dayCols={dayCols}
+                highlightedDay={highlightedDay}
                 groupColor={
-                  p.group === 'actors' ? 'blue' :
-                  p.group === 'crew' ? 'green' :
-                  p.group === 'both' ? 'purple' :
-                  'slate'
+                  p.group === "actors"
+                    ? "blue"
+                    : p.group === "crew"
+                      ? "green"
+                      : p.group === "both"
+                        ? "purple"
+                        : "slate"
                 }
               />
             ))
@@ -299,7 +335,8 @@ export function TimelineView({
       </div>
 
       <p className="mt-3 text-[11px] text-muted-foreground">
-        <strong>Tipp:</strong> Klicke auf einen Tag im Header, um alle Einträge für diesen Tag hervorzuheben. Nutze ← → für Navigation, ESC zum Abbrechen.
+        <strong>Tipp:</strong> Klicke auf einen Tag im Header, um alle Einträge für diesen Tag
+        hervorzuheben. Nutze ← → für Navigation, ESC zum Abbrechen.
       </p>
     </section>
   );
@@ -313,38 +350,42 @@ type PersonLaneProps = {
   person: OverviewPerson;
   dayCols: DayColumn[];
   highlightedDay: number | null;
-  groupColor: 'blue' | 'green' | 'purple' | 'slate';
+  groupColor: "blue" | "green" | "purple" | "slate";
 };
 
 function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneProps) {
   const colorMap = {
-    blue: 'from-primary to-primary',
-    green: 'from-success to-success',
-    purple: 'from-accent to-accent',
-    slate: 'from-muted-foreground to-muted-foreground',
+    blue: "from-primary to-primary",
+    green: "from-success to-success",
+    purple: "from-accent to-accent",
+    slate: "from-muted-foreground to-muted-foreground",
   };
 
   // Initialen generieren
   const initials = person.name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
     .toUpperCase()
     .slice(0, 2);
 
   // Stats berechnen
-  const stats = `${person.days.filter(d => d.type === 'free' || d.type === 'preferred').length}/${person.days.length} frei`;
+  const stats = `${person.days.filter((d) => d.type === "free" || d.type === "preferred").length}/${person.days.length} frei`;
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md mb-2">
       <div className="grid grid-cols-[200px_1fr] gap-0">
         {/* Person Info */}
         <div className="flex items-center gap-2.5 border-r border-border/60 px-3 py-2">
-          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorMap[groupColor]} text-xs font-semibold text-primary-foreground shadow-sm`}>
+          <span
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${colorMap[groupColor]} text-xs font-semibold text-primary-foreground shadow-sm`}
+          >
             {initials}
           </span>
           <div className="min-w-0">
-            <p className="truncate font-semibold text-sm leading-tight text-foreground">{person.name}</p>
+            <p className="truncate font-semibold text-sm leading-tight text-foreground">
+              {person.name}
+            </p>
             <p className="text-[10px] text-muted-foreground">{stats}</p>
           </div>
         </div>
@@ -355,7 +396,9 @@ function PersonLane({ person, dayCols, highlightedDay, groupColor }: PersonLaneP
             <div
               key={`${person.id}-${cell.dayKey}`}
               className={`relative border-l border-border/50 px-2 py-2 transition-all min-w-[90px] ${
-                highlightedDay === dayCols[i].n ? 'bg-primary/10 ring-2 ring-inset ring-primary/30' : ''
+                highlightedDay === dayCols[i].n
+                  ? "bg-primary/10 ring-2 ring-inset ring-primary/30"
+                  : ""
               }`}
             >
               <TimelineCell cell={cell} />

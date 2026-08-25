@@ -102,7 +102,9 @@ function renderBirthday(dateOfBirth: Date | null): ReactNode {
 
   return (
     <div className="flex flex-col leading-tight">
-      <span className="text-sm font-semibold text-foreground">{age != null ? `${age} Jahre` : "–"}</span>
+      <span className="text-sm font-semibold text-foreground">
+        {age != null ? `${age} Jahre` : "–"}
+      </span>
       <span className="text-xs text-muted-foreground">{formattedDate}</span>
     </div>
   );
@@ -149,12 +151,15 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
   const firstName = typeof values.firstName === "string" ? values.firstName : null;
   const lastName = typeof values.lastName === "string" ? values.lastName : null;
   const dateOfBirth = parseDate(values.dateOfBirth);
-  const ageFromData = typeof values.age === "number" && Number.isFinite(values.age) ? values.age : null;
+  const ageFromData =
+    typeof values.age === "number" && Number.isFinite(values.age) ? values.age : null;
   const email = typeof values.email === "string" ? values.email : null;
   const background = typeof values.background === "string" ? values.background : null;
-  const backgroundClass = typeof values.backgroundClass === "string" ? values.backgroundClass : null;
+  const backgroundClass =
+    typeof values.backgroundClass === "string" ? values.backgroundClass : null;
   const diet = typeof values.diet === "string" ? values.diet : null;
-  const photoConsent = values.photoConsent as { status?: string; consentGiven?: boolean | null } | undefined;
+  const photoConsent = values.photoConsent as
+    { status?: string; consentGiven?: boolean | null } | undefined;
   const photoConsentStatus: MemberRow["photoConsentStatus"] =
     photoConsent?.status === "approved" || photoConsent?.consentGiven === true
       ? "approved"
@@ -248,11 +253,18 @@ function renderPhotoConsent(status: MemberRow["photoConsentStatus"]): ReactNode 
   );
 }
 
-export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFilter }: MembersOverviewTabProps) {
+export function MembersOverviewTab({
+  data,
+  query,
+  onQueryChange,
+  photoConsentFilter,
+}: MembersOverviewTabProps) {
   const members = useMemo(() => {
     return data.rows
       .map(parseMemberRow)
-      .sort((a, b) => (a.lastName || "").localeCompare(b.lastName || "", "de", { sensitivity: "base" }));
+      .sort((a, b) =>
+        (a.lastName || "").localeCompare(b.lastName || "", "de", { sensitivity: "base" }),
+      );
   }, [data.rows]);
 
   const filteredMembers = useMemo(() => {
@@ -308,7 +320,10 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                 <TableBody>
                   {filteredMembers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={TABLE_COLUMNS.length} className="h-24 text-center text-sm text-muted-foreground">
+                      <TableCell
+                        colSpan={TABLE_COLUMNS.length}
+                        className="h-24 text-center text-sm text-muted-foreground"
+                      >
                         Keine Mitglieder gefunden.
                       </TableCell>
                     </TableRow>
@@ -354,7 +369,10 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                                   className="whitespace-normal break-words px-3 py-2 align-top text-sm text-foreground"
                                 >
                                   {member.email ? (
-                                    <a className="underline decoration-border underline-offset-2" href={`mailto:${member.email}`}>
+                                    <a
+                                      className="underline decoration-border underline-offset-2"
+                                      href={`mailto:${member.email}`}
+                                    >
                                       {member.email}
                                     </a>
                                   ) : (
@@ -382,13 +400,19 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               );
                             case "rolesActing":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 py-2 align-top"
+                                >
                                   {renderRoles(member.rolesActing)}
                                 </TableCell>
                               );
                             case "rolesCrew":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 py-2 align-top"
+                                >
                                   {renderRoles(member.rolesCrew)}
                                 </TableCell>
                               );
@@ -403,13 +427,19 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
                               );
                             case "allergies":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 py-2 align-top"
+                                >
                                   {renderStackedList(member.allergies)}
                                 </TableCell>
                               );
                             case "photoConsentStatus":
                               return (
-                                <TableCell key={`${member.id}-${column.id}`} className="px-3 py-2 align-top">
+                                <TableCell
+                                  key={`${member.id}-${column.id}`}
+                                  className="px-3 py-2 align-top"
+                                >
                                   {renderPhotoConsent(member.photoConsentStatus)}
                                 </TableCell>
                               );
@@ -445,9 +475,13 @@ export function MembersOverviewTab({ data, query, onQueryChange, photoConsentFil
             ) : (
               <div className="divide-y divide-border rounded-md border border-border/70">
                 {filteredMembers.map((member) => (
-                  <div key={member.id} className="flex w-full items-center justify-between px-3 py-2 text-left text-sm">
+                  <div
+                    key={member.id}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm"
+                  >
                     <span className="font-medium text-foreground">
-                      {[member.firstName, member.lastName].filter(Boolean).join(" ") || member.avatar.name}
+                      {[member.firstName, member.lastName].filter(Boolean).join(" ") ||
+                        member.avatar.name}
                     </span>
                   </div>
                 ))}

@@ -19,7 +19,7 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60 md:text-sm",
-      className
+      className,
     )}
     {...props}
   >
@@ -41,7 +41,7 @@ const SelectContent = React.forwardRef<
       className={cn(
         "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
         position === "popper" && "translate-y-1",
-        className
+        className,
       )}
       position={position}
       {...props}
@@ -49,9 +49,7 @@ const SelectContent = React.forwardRef<
       <SelectPrimitive.ScrollUpButton className="flex cursor-default items-center justify-center py-1">
         <ChevronUpIcon className="h-4 w-4" />
       </SelectPrimitive.ScrollUpButton>
-      <SelectPrimitive.Viewport className="p-1">
-        {children}
-      </SelectPrimitive.Viewport>
+      <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
       <SelectPrimitive.ScrollDownButton className="flex cursor-default items-center justify-center py-1">
         <ChevronDownIcon className="h-4 w-4" />
       </SelectPrimitive.ScrollDownButton>
@@ -80,7 +78,7 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-base outline-none focus:bg-accent focus:text-accent-foreground md:text-sm",
-      className
+      className,
     )}
     {...props}
   >

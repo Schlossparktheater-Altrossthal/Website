@@ -62,4 +62,3 @@ describe("sanitiseThemeTokens", () => {
     expect(tokens.meta?.modes).toEqual(["light", "dark", "contrast"]);
   });
 });
-

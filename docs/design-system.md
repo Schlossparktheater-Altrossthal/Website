@@ -23,22 +23,22 @@ Die Token-Konfiguration besteht aus zwei Ebenen:
 
 Der Build-Script schreibt daraus die finalen `modes` (Light/Dark) zurück ins JSON und erzeugt die CSS-Custom-Properties. Änderungen an Familienparametern wirken sich automatisch auf sämtliche abhängige Tokens aus – die Wartung reduziert sich auf wenige Kernwerte.
 
-| Rolle | Token | Vorschau |
-| --- | --- | --- |
-| Primär-CTA, Fokus | `--primary` / `--primary-foreground` | <img src="swatches/primary-500.svg" width="14" height="14" /> |
-| Primär-Soft | `primary` Soft (`Badge`, Sekundäraktionen) | <img src="swatches/primary-300.svg" width="14" height="14" /> |
-| Sekundär-CTA | `--secondary` / `--secondary-foreground` | <img src="swatches/secondary-500.svg" width="14" height="14" /> |
-| Sekundär-Soft | `secondary` Soft-Flächen, Highlights | <img src="swatches/secondary-200.svg" width="14" height="14" /> |
-| Akzent/Interaktion | `--accent` / `--accent-foreground` | <img src="swatches/accent-500.svg" width="14" height="14" /> |
-| Akzent-Soft | `accent` Soft States, Pills | <img src="swatches/accent-200.svg" width="14" height="14" /> |
-| Erfolg | `--success` / `--success-foreground` | <img src="swatches/success-500.svg" width="14" height="14" /> |
-| Warnung | `--warning` / `--warning-foreground` | <img src="swatches/warning-500.svg" width="14" height="14" /> |
-| Info | `--info` / `--info-foreground` | <img src="swatches/info-500.svg" width="14" height="14" /> |
-| Destruktiv | `--destructive` / `--destructive-foreground` | <img src="swatches/destructive-500.svg" width="14" height="14" /> |
-| Hintergrund dunkel | `--background` (Dark) | <img src="swatches/neutral-900.svg" width="14" height="14" /> |
-| Sekundärflächen dunkel | `--muted` (Dark) | <img src="swatches/neutral-700.svg" width="14" height="14" /> |
-| Hintergrund hell | `--background` (Light) | <img src="swatches/neutral-100.svg" width="14" height="14" /> |
-| Rahmen/Flächen hell | `--border` & `--muted` (Light) | <img src="swatches/neutral-200.svg" width="14" height="14" /> |
+| Rolle                  | Token                                        | Vorschau                                                          |
+| ---------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| Primär-CTA, Fokus      | `--primary` / `--primary-foreground`         | <img src="swatches/primary-500.svg" width="14" height="14" />     |
+| Primär-Soft            | `primary` Soft (`Badge`, Sekundäraktionen)   | <img src="swatches/primary-300.svg" width="14" height="14" />     |
+| Sekundär-CTA           | `--secondary` / `--secondary-foreground`     | <img src="swatches/secondary-500.svg" width="14" height="14" />   |
+| Sekundär-Soft          | `secondary` Soft-Flächen, Highlights         | <img src="swatches/secondary-200.svg" width="14" height="14" />   |
+| Akzent/Interaktion     | `--accent` / `--accent-foreground`           | <img src="swatches/accent-500.svg" width="14" height="14" />      |
+| Akzent-Soft            | `accent` Soft States, Pills                  | <img src="swatches/accent-200.svg" width="14" height="14" />      |
+| Erfolg                 | `--success` / `--success-foreground`         | <img src="swatches/success-500.svg" width="14" height="14" />     |
+| Warnung                | `--warning` / `--warning-foreground`         | <img src="swatches/warning-500.svg" width="14" height="14" />     |
+| Info                   | `--info` / `--info-foreground`               | <img src="swatches/info-500.svg" width="14" height="14" />        |
+| Destruktiv             | `--destructive` / `--destructive-foreground` | <img src="swatches/destructive-500.svg" width="14" height="14" /> |
+| Hintergrund dunkel     | `--background` (Dark)                        | <img src="swatches/neutral-900.svg" width="14" height="14" />     |
+| Sekundärflächen dunkel | `--muted` (Dark)                             | <img src="swatches/neutral-700.svg" width="14" height="14" />     |
+| Hintergrund hell       | `--background` (Light)                       | <img src="swatches/neutral-100.svg" width="14" height="14" />     |
+| Rahmen/Flächen hell    | `--border` & `--muted` (Light)               | <img src="swatches/neutral-200.svg" width="14" height="14" />     |
 
 > **Kontrastprüfung:** Alle Primärfarben erfüllen ≥ 4.5:1 auf ihren Gegenstücken. Die `ring`- und `focus-visible`-Farben greifen auf `--primary` zurück.
 
@@ -46,21 +46,22 @@ Der Build-Script schreibt daraus die finalen `modes` (Light/Dark) zurück ins JS
 
 Die Typografie wird über Utility-Klassen (`.text-*`) und neue UI-Komponenten gesteuert. Die Basisschrift ist `var(--font-sans)`; Headings nutzen `var(--font-heading)`.
 
-| Ebene | Utility | Verwendung | Beispiel |
-| --- | --- | --- | --- |
-| Display | `.text-display` | Hero Headline | `<Heading level="display">` |
-| H1 | `.text-h1` | Seitentitel | `<Heading level="h1">` |
-| H2 | `.text-h2` | Abschnittstitel | `<Heading level="h2">` |
-| H3 | `.text-h3` | Untertitel, Feature Cards | `<Heading level="h3">` |
-| H4 | `.text-h4` | Kleinere Überschriften | `<Heading level="h4">` |
-| Lead | `.text-lead` | Hero-Text, Einleitungen | `<Text variant="lead">` |
-| Body L | `.text-body-lg` | Größerer Fließtext | `<Text variant="bodyLg">` |
-| Body | `.text-body` | Standard-Fließtext | `<Text variant="body">` |
-| Body S | `.text-body-sm` | Meta-Angaben | `<Text variant="small">` |
-| Caption | `.text-caption` | Labels, Legenden | `<Text variant="caption">` |
-| Eyebrow | `.text-eyebrow` | Kicker, Kategorie | `<Text variant="eyebrow">` |
+| Ebene   | Utility         | Verwendung                | Beispiel                    |
+| ------- | --------------- | ------------------------- | --------------------------- |
+| Display | `.text-display` | Hero Headline             | `<Heading level="display">` |
+| H1      | `.text-h1`      | Seitentitel               | `<Heading level="h1">`      |
+| H2      | `.text-h2`      | Abschnittstitel           | `<Heading level="h2">`      |
+| H3      | `.text-h3`      | Untertitel, Feature Cards | `<Heading level="h3">`      |
+| H4      | `.text-h4`      | Kleinere Überschriften    | `<Heading level="h4">`      |
+| Lead    | `.text-lead`    | Hero-Text, Einleitungen   | `<Text variant="lead">`     |
+| Body L  | `.text-body-lg` | Größerer Fließtext        | `<Text variant="bodyLg">`   |
+| Body    | `.text-body`    | Standard-Fließtext        | `<Text variant="body">`     |
+| Body S  | `.text-body-sm` | Meta-Angaben              | `<Text variant="small">`    |
+| Caption | `.text-caption` | Labels, Legenden          | `<Text variant="caption">`  |
+| Eyebrow | `.text-eyebrow` | Kicker, Kategorie         | `<Text variant="eyebrow">`  |
 
 **Komponenten:**
+
 - `Heading` (in `@/components/ui/typography`) kapselt Level, Tonalität (`tone`) und Ausrichtung.
 - `Text` deckt Body-, Lead- und Caption-Typen ab und erlaubt `tone`, `align`, `weight` sowie das Rendern via `asChild`.
 
@@ -79,6 +80,7 @@ Die Layout-Variablen folgen einem 8pt-System, ergänzt um halbe Schritte:
 - `--space-3xl`: 6rem (96px)
 
 Weitere Layout-Konstanten:
+
 - `--layout-max-width`: 90rem (1440px Bühne)
 - `--layout-gutter`: responsive Außenabstände (mobile 1rem → Desktop 3–4rem)
 - `--header-height`: 4rem (mobile) / 5rem (≥768px)
@@ -92,6 +94,7 @@ Weitere Layout-Konstanten:
 Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `globals.css` als `.members-container` definiert ist:
 
 **CSS-Klassen:**
+
 - `.members-container` - Basis-Container mit CSS-Custom-Properties
 - `.members-container--width-{sm,md,lg,xl,2xl,full}` - Breiten-Varianten:
   - `sm`: 40rem (640px)
@@ -107,17 +110,20 @@ Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `global
   - `relaxed`: 1.5rem → 2rem (≥640px)
 
 **React-Komponenten:**
+
 - `<MembersContentLayout width="xl" padding="compact" spacing="comfortable" gap="md" />` - Registriert Layout-Präferenzen im App-Shell-Kontext
 - `useMembersContentLayout()` - Hook zum Auslesen der effektiven Layout-Werte
 
 **⚠️ WICHTIG - Häufiger Fehler:**
 `MembersAppShell` rendert Content automatisch in einem Container mit default-Werten:
+
 - Width: `2xl` (96rem)
 - Padding: `default` (`var(--layout-gutter)`)
 - Spacing: `comfortable` (`py-6 sm:py-8`)
 - Gap: `md` (`space-y-6`)
 
 **❌ NICHT tun:**
+
 ```tsx
 // FALSCH - doppeltes Padding!
 <div className="mx-auto px-4 py-6 sm:px-6 lg:px-8">
@@ -127,6 +133,7 @@ Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `global
 ```
 
 **✅ Richtig:**
+
 ```tsx
 // Korrekt - MembersAppShell kümmert sich um Container
 <>
@@ -144,6 +151,7 @@ Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `global
 
 **Status Quo (Stand: Oktober 2025):**
 Von ~94 Seiten im Mitgliederbereich nutzen nur 3 explizit `<MembersContentLayout>`:
+
 - `inventar-aufkleber`: `width="full" padding="compact"`
 - `scan`: `width="xl" padding="compact"`
 - `finanzen`: Custom Layout-Config
@@ -193,6 +201,7 @@ Die meisten Seiten verwenden korrekt nur `<div className="space-y-6">` ohne eige
 ```
 
 ### Buttons (`@/components/ui/button`)
+
 - **Varianten:** `primary` (alias `default`), `secondary`, `accent`, `outline`, `ghost`, `subtle`, `link`, `destructive`, `success`, `info`.
 - **States:** Hover reduziert Deckkraft bzw. hebt Konturen hervor; `focus-visible` nutzt `ring` + Offset, `disabled` setzt `opacity-60` und deaktiviert Pointer Events.
 - **Sizes:** `xs`–`xl` plus `icon`, alle auf das 8pt-Raster abgestimmt.
@@ -218,11 +227,13 @@ import { CalendarCog } from "lucide-react";
 ```
 
 ### TextLink (`@/components/ui/text-link`)
+
 - Variants: `default` (primär), `subtle`, `muted`, `ghost`, `accent`, `button`.
 - Unterstützt `weight` (`medium`/`semibold`), `asChild` (Integration mit `next/link`) und `disabled` (setzt `aria-disabled`, entfernt Tab-Fokus).
 - Fokusring via `ring`-Token, Underline-Offset standardisiert.
 
 ### Badges (`@/components/ui/badge`)
+
 - Neue tönungsbasierte Varianten (`default`, `secondary`, `accent`, `muted`, `success`, `warning`, `info`, `destructive`, `outline`, `ghost`) + Größen `sm`, `md`, `lg`.
 - Standardmäßig pill-förmig (`rounded-full`) mit getönten Hintergründen; Outline-Variante erzeugt Hover-Hervorhebung.
 - SVG-Icons skalieren automatisch (`[&>svg]:size-3`).
@@ -247,6 +258,7 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 ### Semantische Farb-Tokens statt Hard-coded Werte
 
 **❌ Vermeide hard-coded Farben:**
+
 ```tsx
 // FALSCH - funktioniert nicht im Dark Mode
 <div className="bg-white border-slate-200 text-slate-900">
@@ -255,6 +267,7 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 ```
 
 **✅ Nutze semantische Design-Tokens:**
+
 ```tsx
 // KORREKT - passt sich automatisch an Light/Dark Mode an
 <div className="bg-card border-border text-card-foreground">
@@ -264,18 +277,18 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 
 ### Farb-Token Mapping
 
-| Hard-coded (❌) | Design Token (✅) | Verwendung |
-|-----------------|-------------------|------------|
-| `bg-white` | `bg-card` oder `bg-background` | Karten, Panels |
-| `bg-slate-50` | `bg-muted` | Sekundäre Flächen |
-| `bg-slate-100` | `bg-muted/40` | Hover-States, Highlights |
-| `border-slate-200` | `border-border` | Standard-Rahmen |
-| `border-slate-300` | `border-border/60` | Subtilere Rahmen |
-| `text-slate-900` | `text-foreground` | Haupttext |
-| `text-slate-700` | `text-foreground` | Sekundärtext |
-| `text-slate-600` | `text-muted-foreground` | Meta-Informationen |
-| `text-slate-500` | `text-muted-foreground` | Labels, Platzhalter |
-| `text-slate-400` | `text-muted-foreground/60` | Deaktivierte Elemente |
+| Hard-coded (❌)    | Design Token (✅)              | Verwendung               |
+| ------------------ | ------------------------------ | ------------------------ |
+| `bg-white`         | `bg-card` oder `bg-background` | Karten, Panels           |
+| `bg-slate-50`      | `bg-muted`                     | Sekundäre Flächen        |
+| `bg-slate-100`     | `bg-muted/40`                  | Hover-States, Highlights |
+| `border-slate-200` | `border-border`                | Standard-Rahmen          |
+| `border-slate-300` | `border-border/60`             | Subtilere Rahmen         |
+| `text-slate-900`   | `text-foreground`              | Haupttext                |
+| `text-slate-700`   | `text-foreground`              | Sekundärtext             |
+| `text-slate-600`   | `text-muted-foreground`        | Meta-Informationen       |
+| `text-slate-500`   | `text-muted-foreground`        | Labels, Platzhalter      |
+| `text-slate-400`   | `text-muted-foreground/60`     | Deaktivierte Elemente    |
 
 ### Status-Farben
 
@@ -304,6 +317,7 @@ Für Status-Indikatoren nutze die semantischen Tokens statt direkter Farbnamen:
 Für bestehende Komponenten mit vielen hard-coded Farben (z.B. Sperrlistenübersicht) kann eine CSS-Override-Strategie verwendet werden:
 
 **Beispiel: `sperrliste-styles.css`**
+
 ```css
 @layer components {
   .sperrlisten-overview {
@@ -339,13 +353,12 @@ Für bestehende Komponenten mit vielen hard-coded Farben (z.B. Sperrlistenübers
 ```
 
 **Verwendung:**
+
 ```tsx
 // Wrapper mit CSS-Klasse für Overrides
 <div className="sperrlisten-overview">
   {/* Alle child-Elemente mit hard-coded Farben werden automatisch gemappt */}
-  <div className="bg-white border-slate-200 text-slate-900">
-    Content
-  </div>
+  <div className="bg-white border-slate-200 text-slate-900">Content</div>
 </div>
 ```
 
@@ -372,11 +385,9 @@ export default async function MeineSeitePage() {
         description="Kurze Beschreibung der Seite"
         breadcrumbs={breadcrumbs}
       />
-      
+
       {/* Content */}
-      <section className="space-y-4">
-        {/* Komponenten */}
-      </section>
+      <section className="space-y-4">{/* Komponenten */}</section>
     </div>
   );
 }
@@ -394,7 +405,7 @@ export default function BrEiteSeite() {
     <>
       {/* Layout-Config registrieren */}
       <MembersContentLayout width="full" padding="compact" />
-      
+
       <div className="space-y-6">
         <PageHeader title="Breite Ansicht" />
         {/* Content */}
@@ -407,12 +418,14 @@ export default function BrEiteSeite() {
 ### 3. Typische Fehler vermeiden
 
 **❌ NICHT:**
+
 - Eigene Container mit `mx-auto` erstellen
 - Eigene Paddings mit `px-*` hinzufügen
 - Hard-coded Farben (`bg-white`, `text-slate-*`) verwenden
 - Direkt `<main>` oder `<article>` Tags nutzen (MembersAppShell macht das)
 
 **✅ STATTDESSEN:**
+
 - Nur `space-y-*` für vertikalen Abstand verwenden
 - Design-Tokens (`bg-card`, `text-foreground`) nutzen
 - MembersAppShell das Layout überlassen
@@ -475,4 +488,3 @@ Beim Erstellen oder Refactoren von Komponenten:
 - [ ] Typografie nutzt definierte Utilities (`.text-h1`, `.text-body`, etc.)
 - [ ] Fokus-States sind sichtbar (`focus-visible:ring-*`)
 - [ ] Komponente funktioniert in Light & Dark Mode
-

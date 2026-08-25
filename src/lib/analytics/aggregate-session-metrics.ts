@@ -138,7 +138,17 @@ function normalizeChannel(rawChannel: string | null | undefined): string {
   if (["email"].includes(normalized)) {
     return "E-Mail";
   }
-  if (["social", "social_media", "social-media", "facebook", "instagram", "twitter", "linkedin"].includes(normalized)) {
+  if (
+    [
+      "social",
+      "social_media",
+      "social-media",
+      "facebook",
+      "instagram",
+      "twitter",
+      "linkedin",
+    ].includes(normalized)
+  ) {
     return "Social";
   }
   if (["cpc", "ppc", "paidsearch", "sem"].includes(normalized)) {
@@ -213,10 +223,18 @@ export function aggregateSessionMetrics({
     }
   }
 
-  const segments: Array<{ id: string; label: string; predicate: (session: AnalyticsSessionLike) => boolean }> = [
+  const segments: Array<{
+    id: string;
+    label: string;
+    predicate: (session: AnalyticsSessionLike) => boolean;
+  }> = [
     { id: "members", label: "Mitglieder", predicate: (session) => Boolean(session.isMember) },
     { id: "guests", label: "Gäste", predicate: (session) => !session.isMember },
-    { id: "returning", label: "Wiederkehrend", predicate: (session) => returningSessionIds.has(session.id) },
+    {
+      id: "returning",
+      label: "Wiederkehrend",
+      predicate: (session) => returningSessionIds.has(session.id),
+    },
   ];
 
   const sessionInsights: SessionInsight[] = segments
@@ -226,9 +244,7 @@ export function aggregateSessionMetrics({
         return null;
       }
 
-      const durations = matching.map((session) =>
-        computeDurationSeconds(session, fallbackEnd),
-      );
+      const durations = matching.map((session) => computeDurationSeconds(session, fallbackEnd));
       const avgDuration = Math.round(average(durations));
 
       const pageCounts = matching.map((session) => uniquePageCount(session));
@@ -238,15 +254,14 @@ export function aggregateSessionMetrics({
         (count, session) => count + (returningSessionIds.has(session.id) ? 1 : 0),
         0,
       );
-      const conversions = matching.reduce((count, session) => count + (session.isMember ? 1 : 0), 0);
+      const conversions = matching.reduce(
+        (count, session) => count + (session.isMember ? 1 : 0),
+        0,
+      );
 
-      const retentionRate = matching.length
-        ? clamp(returningCount / matching.length, 0, 1)
-        : 0;
+      const retentionRate = matching.length ? clamp(returningCount / matching.length, 0, 1) : 0;
       const share = totalSessions ? clamp(matching.length / totalSessions, 0, 1) : 0;
-      const conversionRate = matching.length
-        ? clamp(conversions / matching.length, 0, 1)
-        : 0;
+      const conversionRate = matching.length ? clamp(conversions / matching.length, 0, 1) : 0;
 
       return {
         segment: segment.label,
@@ -326,11 +341,15 @@ export function aggregateSessionMetrics({
   const memberRealtimeEvents = totalEvents;
 
   const memberSessions = sessions.filter((session) => Boolean(session.isMember));
-  const memberDurations = memberSessions.map((session) => computeDurationSeconds(session, fallbackEnd));
+  const memberDurations = memberSessions.map((session) =>
+    computeDurationSeconds(session, fallbackEnd),
+  );
   const membersAvgSessionDurationSeconds = Math.round(average(memberDurations));
 
   const guestSessions = sessions.filter((session) => !session.isMember);
-  const guestDurations = guestSessions.map((session) => computeDurationSeconds(session, fallbackEnd));
+  const guestDurations = guestSessions.map((session) =>
+    computeDurationSeconds(session, fallbackEnd),
+  );
   const guestAvgSessionDurationSeconds = Math.round(average(guestDurations));
 
   const concurrencyWindowStart = windowStart;

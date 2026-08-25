@@ -21,12 +21,24 @@ export default function DatenschutzPage() {
         <Heading level="h2" className="text-xl" weight="bold">
           1. Verantwortlicher
         </Heading>
-        <Text>Verantwortlich für die Datenverarbeitung auf dieser Website im Sinne der DSGVO ist:</Text>
-        <Text>Freunde und Förderer des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung e.V.</Text>
-        <Text>Altroßthal 1, 01169 Dresden</Text>
-        <Text>Vertreten durch: Dr. Falk Hohmann (1. Vorsitzender), Anke Habich (2. Vorsitzende)</Text>
         <Text>
-          E-Mail: <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="mailto:info@bsz-ae-dd.de">info@bsz-ae-dd.de</Link>
+          Verantwortlich für die Datenverarbeitung auf dieser Website im Sinne der DSGVO ist:
+        </Text>
+        <Text>
+          Freunde und Förderer des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung e.V.
+        </Text>
+        <Text>Altroßthal 1, 01169 Dresden</Text>
+        <Text>
+          Vertreten durch: Dr. Falk Hohmann (1. Vorsitzender), Anke Habich (2. Vorsitzende)
+        </Text>
+        <Text>
+          E-Mail:{" "}
+          <Link
+            className="underline underline-offset-4 transition-colors hover:text-primary"
+            href="mailto:info@bsz-ae-dd.de"
+          >
+            info@bsz-ae-dd.de
+          </Link>
         </Text>
       </section>
 
@@ -35,15 +47,17 @@ export default function DatenschutzPage() {
           2. Allgemeines zur Datenverarbeitung
         </Heading>
         <Text>
-          Wir nehmen den Schutz Ihrer persönlichen Daten sehr ernst. Diese Datenschutzerklärung informiert Sie darüber, welche
-          personenbezogenen Daten wir auf unserer Website sommertheater-altrossthal.de erheben, wie wir diese nutzen und welche Rechte
-          Ihnen zustehen.
+          Wir nehmen den Schutz Ihrer persönlichen Daten sehr ernst. Diese Datenschutzerklärung
+          informiert Sie darüber, welche personenbezogenen Daten wir auf unserer Website
+          sommertheater-altrossthal.de erheben, wie wir diese nutzen und welche Rechte Ihnen
+          zustehen.
         </Text>
         <Text>
-          Rechtsgrundlagen für die Verarbeitung personenbezogener Daten sind insbesondere Art. 6 DSGVO. Soweit wir für
-          Verarbeitungsvorgänge eine Einwilligung einholen, dient Art. 6 Abs. 1 lit. a DSGVO als Rechtsgrundlage. Sofern die Verarbeitung
-          zur Wahrung berechtigter Interessen erforderlich ist und die Interessen der betroffenen Person nicht überwiegen, ist Art. 6
-          Abs. 1 lit. f DSGVO Rechtsgrundlage.
+          Rechtsgrundlagen für die Verarbeitung personenbezogener Daten sind insbesondere Art. 6
+          DSGVO. Soweit wir für Verarbeitungsvorgänge eine Einwilligung einholen, dient Art. 6 Abs.
+          1 lit. a DSGVO als Rechtsgrundlage. Sofern die Verarbeitung zur Wahrung berechtigter
+          Interessen erforderlich ist und die Interessen der betroffenen Person nicht überwiegen,
+          ist Art. 6 Abs. 1 lit. f DSGVO Rechtsgrundlage.
         </Text>
       </section>
 
@@ -52,8 +66,14 @@ export default function DatenschutzPage() {
           3. Hosting und Server-Logfiles
         </Heading>
         <Text>Diese Website wird auf einem Virtual Private Server (VPS) gehostet.</Text>
-        <Text>Die Website wird auf einem VPS des Anbieters Contabo GmbH, Aschauer Straße 32a, 81549 München, Deutschland gehostet.</Text>
-        <Text>Beim Aufruf unserer Website übermittelt Ihr Browser automatisch Informationen an unseren Server. Diese sogenannten Server-Logfiles enthalten:</Text>
+        <Text>
+          Die Website wird auf einem VPS des Anbieters Contabo GmbH, Aschauer Straße 32a, 81549
+          München, Deutschland gehostet.
+        </Text>
+        <Text>
+          Beim Aufruf unserer Website übermittelt Ihr Browser automatisch Informationen an unseren
+          Server. Diese sogenannten Server-Logfiles enthalten:
+        </Text>
         <ul className="list-disc space-y-1 pl-6 text-foreground">
           <li>IP-Adresse des anfragenden Rechners</li>
           <li>Datum und Uhrzeit des Zugriffs</li>
@@ -64,8 +84,9 @@ export default function DatenschutzPage() {
           <li>Betriebssystem</li>
         </ul>
         <Text>
-          Die Verarbeitung erfolgt auf Basis von Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt in der Gewährleistung der
-          Stabilität, Sicherheit und Funktionsfähigkeit der Website. Die Logfiles werden nach spätestens 30 Tagen gelöscht, sofern keine
+          Die Verarbeitung erfolgt auf Basis von Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes
+          Interesse liegt in der Gewährleistung der Stabilität, Sicherheit und Funktionsfähigkeit
+          der Website. Die Logfiles werden nach spätestens 30 Tagen gelöscht, sofern keine
           sicherheitsrelevante Auswertung erforderlich ist.
         </Text>
       </section>
@@ -75,20 +96,30 @@ export default function DatenschutzPage() {
           4. Cloudflare (CDN und DDoS-Schutz)
         </Heading>
         <Text>
-          Diese Website nutzt Dienste von Cloudflare Inc., 101 Townsend St., San Francisco, CA 94107, USA, als vorgelagerten Reverse
-          Proxy und zum Schutz vor Angriffen (DDoS-Schutz). Alle Anfragen an unsere Website werden zunächst über die Server von
-          Cloudflare geleitet.
+          Diese Website nutzt Dienste von Cloudflare Inc., 101 Townsend St., San Francisco, CA
+          94107, USA, als vorgelagerten Reverse Proxy und zum Schutz vor Angriffen (DDoS-Schutz).
+          Alle Anfragen an unsere Website werden zunächst über die Server von Cloudflare geleitet.
         </Text>
         <Text>
-          Dabei können technische Daten wie IP-Adresse, HTTP-Header und Anfragedaten verarbeitet werden. Cloudflare verarbeitet diese
-          Daten gemäß seiner Datenschutzrichtlinie. Eine Übermittlung in die USA erfolgt auf Basis von Standardvertragsklauseln gemäß
-          Art. 46 Abs. 2 lit. c DSGVO.
+          Dabei können technische Daten wie IP-Adresse, HTTP-Header und Anfragedaten verarbeitet
+          werden. Cloudflare verarbeitet diese Daten gemäß seiner Datenschutzrichtlinie. Eine
+          Übermittlung in die USA erfolgt auf Basis von Standardvertragsklauseln gemäß Art. 46 Abs.
+          2 lit. c DSGVO.
         </Text>
         <Text>
-          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Sicherheit und Verfügbarkeit der Website).
+          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Sicherheit und
+          Verfügbarkeit der Website).
         </Text>
         <Text>
-          Weitere Informationen: <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noreferrer">https://www.cloudflare.com/privacypolicy/</Link>
+          Weitere Informationen:{" "}
+          <Link
+            className="underline underline-offset-4 transition-colors hover:text-primary"
+            href="https://www.cloudflare.com/privacypolicy/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            https://www.cloudflare.com/privacypolicy/
+          </Link>
         </Text>
       </section>
 
@@ -97,16 +128,18 @@ export default function DatenschutzPage() {
           5. Kontaktaufnahme per E-Mail
         </Heading>
         <Text>
-          Wenn Sie uns per E-Mail kontaktieren, werden die von Ihnen übermittelten Daten (E-Mail-Adresse, Name, Inhalt) zum Zweck der
-          Bearbeitung Ihrer Anfrage gespeichert. Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.
+          Wenn Sie uns per E-Mail kontaktieren, werden die von Ihnen übermittelten Daten
+          (E-Mail-Adresse, Name, Inhalt) zum Zweck der Bearbeitung Ihrer Anfrage gespeichert. Diese
+          Daten geben wir nicht ohne Ihre Einwilligung weiter.
         </Text>
         <Text>
-          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Bearbeitung von Anfragen) bzw. Art. 6 Abs. 1 lit. b
-          DSGVO, soweit Ihre Anfrage auf den Abschluss eines Vertrags gerichtet ist.
+          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Bearbeitung von
+          Anfragen) bzw. Art. 6 Abs. 1 lit. b DSGVO, soweit Ihre Anfrage auf den Abschluss eines
+          Vertrags gerichtet ist.
         </Text>
         <Text>
-          Die Daten werden gelöscht, sobald Ihre Anfrage abschließend bearbeitet wurde und keine gesetzlichen Aufbewahrungspflichten
-          entgegenstehen.
+          Die Daten werden gelöscht, sobald Ihre Anfrage abschließend bearbeitet wurde und keine
+          gesetzlichen Aufbewahrungspflichten entgegenstehen.
         </Text>
       </section>
 
@@ -115,14 +148,22 @@ export default function DatenschutzPage() {
           6. Cookies und Session-Daten
         </Heading>
         <Text>
-          Unsere Website verwendet technisch notwendige Cookies, um den Betrieb des Mitgliederbereichs zu ermöglichen (Session-Cookie für
-          den Login). Die Session-Cookies enthalten lediglich eine pseudonyme Session-ID, die zur Aufrechterhaltung der Anmeldung
+          Unsere Website verwendet technisch notwendige Cookies, um den Betrieb des
+          Mitgliederbereichs zu ermöglichen (Session-Cookie für den Login). Die Session-Cookies
+          enthalten lediglich eine pseudonyme Session-ID, die zur Aufrechterhaltung der Anmeldung
           erforderlich ist.
         </Text>
-        <Text>Die Session-Cookies werden nach Ende der Sitzung bzw. beim Schließen des Browsers automatisch gelöscht.</Text>
-        <Text>Wir verwenden keine Tracking-Cookies, keine Werbe-Cookies und kein Cookie-basiertes Analyse-Tracking.</Text>
         <Text>
-          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Technisch notwendige Cookies erfordern keine Einwilligung gemäß § 25 Abs. 2 TTDSG.
+          Die Session-Cookies werden nach Ende der Sitzung bzw. beim Schließen des Browsers
+          automatisch gelöscht.
+        </Text>
+        <Text>
+          Wir verwenden keine Tracking-Cookies, keine Werbe-Cookies und kein Cookie-basiertes
+          Analyse-Tracking.
+        </Text>
+        <Text>
+          Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Technisch notwendige Cookies erfordern keine
+          Einwilligung gemäß § 25 Abs. 2 TTDSG.
         </Text>
       </section>
 
@@ -131,8 +172,9 @@ export default function DatenschutzPage() {
           7. Mitgliederbereich / Benutzerkonten
         </Heading>
         <Text>
-          Für registrierte Mitglieder speichern wir die zur Anmeldung erforderlichen Zugangsdaten. Die Authentifizierung erfolgt per Magic
-          Link (E-Mail). Es werden keine Passwörter gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
+          Für registrierte Mitglieder speichern wir die zur Anmeldung erforderlichen Zugangsdaten.
+          Die Authentifizierung erfolgt per Magic Link (E-Mail). Es werden keine Passwörter
+          gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO.
         </Text>
       </section>
 
@@ -141,12 +183,14 @@ export default function DatenschutzPage() {
           8. Keine Drittanbieter-Tracking-Dienste
         </Heading>
         <Text>
-          Wir setzen auf dieser Website keine Analyse- oder Tracking-Werkzeuge von Drittanbietern ein (z. B. Google Analytics, Facebook
-          Pixel o. Ä.). Es findet keine Weitergabe Ihrer Daten zu Werbe- oder Analysezwecken an Dritte statt.
+          Wir setzen auf dieser Website keine Analyse- oder Tracking-Werkzeuge von Drittanbietern
+          ein (z. B. Google Analytics, Facebook Pixel o. Ä.). Es findet keine Weitergabe Ihrer Daten
+          zu Werbe- oder Analysezwecken an Dritte statt.
         </Text>
         <Text>
-          Hinweis: Sollten zu einem späteren Zeitpunkt externe Dienste eingebunden werden (z. B. eingebettete Videos, Kartendienste,
-          externe Schriftarten), wird diese Datenschutzerklärung entsprechend aktualisiert.
+          Hinweis: Sollten zu einem späteren Zeitpunkt externe Dienste eingebunden werden (z. B.
+          eingebettete Videos, Kartendienste, externe Schriftarten), wird diese Datenschutzerklärung
+          entsprechend aktualisiert.
         </Text>
       </section>
 
@@ -154,7 +198,9 @@ export default function DatenschutzPage() {
         <Heading level="h2" className="text-xl" weight="bold">
           9. Ihre Rechte als betroffene Person
         </Heading>
-        <Text>Sie haben gegenüber uns folgende Rechte hinsichtlich Ihrer personenbezogenen Daten:</Text>
+        <Text>
+          Sie haben gegenüber uns folgende Rechte hinsichtlich Ihrer personenbezogenen Daten:
+        </Text>
         <ul className="list-disc space-y-1 pl-6 text-foreground">
           <li>Recht auf Auskunft (Art. 15 DSGVO)</li>
           <li>Recht auf Berichtigung unrichtiger Daten (Art. 16 DSGVO)</li>
@@ -164,7 +210,9 @@ export default function DatenschutzPage() {
           <li>Widerspruchsrecht gegen die Verarbeitung (Art. 21 DSGVO)</li>
           <li>Recht auf Widerruf erteilter Einwilligungen (Art. 7 Abs. 3 DSGVO)</li>
         </ul>
-        <Text>Zur Ausübung Ihrer Rechte wenden Sie sich bitte an die oben genannte Kontaktadresse.</Text>
+        <Text>
+          Zur Ausübung Ihrer Rechte wenden Sie sich bitte an die oben genannte Kontaktadresse.
+        </Text>
       </section>
 
       <section className="mb-8 space-y-2 border-t border-border pt-6">
@@ -172,16 +220,33 @@ export default function DatenschutzPage() {
           10. Beschwerderecht bei der Aufsichtsbehörde
         </Heading>
         <Text>
-          Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen Daten durch uns
-          zu beschweren. Die zuständige Aufsichtsbehörde richtet sich nach dem Bundesland des Vereinssitzes.
+          Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung
+          Ihrer personenbezogenen Daten durch uns zu beschweren. Die zuständige Aufsichtsbehörde
+          richtet sich nach dem Bundesland des Vereinssitzes.
         </Text>
         <Text>
           Hinweis: Sächsischer Datenschutzbeauftragter (SächsDSB)
           <br />
-          Website: <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="https://www.saechsdsb.de" target="_blank" rel="noreferrer">https://www.saechsdsb.de</Link>
+          Website:{" "}
+          <Link
+            className="underline underline-offset-4 transition-colors hover:text-primary"
+            href="https://www.saechsdsb.de"
+            target="_blank"
+            rel="noreferrer"
+          >
+            https://www.saechsdsb.de
+          </Link>
         </Text>
         <Text>
-          Eine Übersicht aller deutschen Datenschutz-Aufsichtsbehörden finden Sie unter: <Link className="underline underline-offset-4 transition-colors hover:text-primary" href="https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html" target="_blank" rel="noreferrer">https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html</Link>
+          Eine Übersicht aller deutschen Datenschutz-Aufsichtsbehörden finden Sie unter:{" "}
+          <Link
+            className="underline underline-offset-4 transition-colors hover:text-primary"
+            href="https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html"
+            target="_blank"
+            rel="noreferrer"
+          >
+            https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html
+          </Link>
         </Text>
       </section>
 
@@ -190,9 +255,11 @@ export default function DatenschutzPage() {
           11. Datensicherheit
         </Heading>
         <Text>
-          Wir treffen technische und organisatorische Maßnahmen, um Ihre Daten gegen Verlust, Zerstörung, Manipulation und unberechtigten
-          Zugriff zu schützen. Diese Seite nutzt aus Sicherheitsgründen und zum Schutz der Übertragung vertraulicher Inhalte eine
-          TLS-Verschlüsselung (HTTPS). Unsere Server sind durch Zugangskontrollen und aktuelle Sicherheitsupdates geschützt.
+          Wir treffen technische und organisatorische Maßnahmen, um Ihre Daten gegen Verlust,
+          Zerstörung, Manipulation und unberechtigten Zugriff zu schützen. Diese Seite nutzt aus
+          Sicherheitsgründen und zum Schutz der Übertragung vertraulicher Inhalte eine
+          TLS-Verschlüsselung (HTTPS). Unsere Server sind durch Zugangskontrollen und aktuelle
+          Sicherheitsupdates geschützt.
         </Text>
       </section>
 
@@ -201,8 +268,9 @@ export default function DatenschutzPage() {
           12. Aktualität und Änderungen dieser Datenschutzerklärung
         </Heading>
         <Text>
-          Diese Datenschutzerklärung ist aktuell gültig. Durch die Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher
-          Vorgaben kann es notwendig werden, diese Datenschutzerklärung anzupassen. Die jeweils aktuelle Fassung ist jederzeit auf unserer
+          Diese Datenschutzerklärung ist aktuell gültig. Durch die Weiterentwicklung unserer Website
+          oder aufgrund geänderter gesetzlicher Vorgaben kann es notwendig werden, diese
+          Datenschutzerklärung anzupassen. Die jeweils aktuelle Fassung ist jederzeit auf unserer
           Website unter sommertheater-altrossthal.de/datenschutz abrufbar.
         </Text>
       </section>

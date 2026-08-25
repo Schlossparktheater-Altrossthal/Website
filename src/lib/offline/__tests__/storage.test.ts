@@ -51,13 +51,7 @@ describe("offline storage", () => {
 
   it("initialises the offline database with expected stores", () => {
     const tableNames = db.tables.map((table) => table.name).sort();
-    expect(tableNames).toEqual([
-      "audits",
-      "eventQueue",
-      "items",
-      "syncState",
-      "tickets",
-    ]);
+    expect(tableNames).toEqual(["audits", "eventQueue", "items", "syncState", "tickets"]);
 
     const eventQueue = db.tables.find((table) => table.name === "eventQueue");
     expect(eventQueue?.schema.primKey.keyPath).toBe("id");

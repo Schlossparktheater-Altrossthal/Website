@@ -13,6 +13,9 @@ export async function GET() {
     return NextResponse.json({ features });
   } catch (error) {
     console.error("Failed to resolve frontend editing features", error);
-    return NextResponse.json({ features: [], error: "Bearbeitungsrechte konnten nicht geladen werden." }, { status: 500 });
+    return NextResponse.json(
+      { features: [], error: "Bearbeitungsrechte konnten nicht geladen werden." },
+      { status: 500 },
+    );
   }
 }

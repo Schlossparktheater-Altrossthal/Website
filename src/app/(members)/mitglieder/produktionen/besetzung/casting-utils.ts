@@ -1,7 +1,10 @@
 import { CharacterCastingType } from "@prisma/client";
 
 import { getUserDisplayName } from "@/lib/names";
-import { getRolePreferenceTitle, listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
+import {
+  getRolePreferenceTitle,
+  listRolePreferenceDefinitions,
+} from "@/lib/onboarding/role-preferences";
 
 export type DisplayUser = {
   id: string;

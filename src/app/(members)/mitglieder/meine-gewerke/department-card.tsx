@@ -79,7 +79,9 @@ export function DepartmentCard({
 
   const isCostumeDepartment = department.slug === "kostuem";
 
-  const sortedMembers = [...department.memberships].sort((a, b) => compareMembersByLastName(a.user, b.user));
+  const sortedMembers = [...department.memberships].sort((a, b) =>
+    compareMembersByLastName(a.user, b.user),
+  );
 
   const measurementEligibleMembers = isCostumeDepartment
     ? sortedMembers.filter((member) => isCastDepartmentUser(member.user))
@@ -130,7 +132,9 @@ export function DepartmentCard({
         return null;
       }
 
-      const formattedDates = dates.slice(0, 3).map(({ date }) => format(date, "dd.MM.", { locale: de }));
+      const formattedDates = dates
+        .slice(0, 3)
+        .map(({ date }) => format(date, "dd.MM.", { locale: de }));
       const remaining = dates.length - formattedDates.length;
 
       return {
@@ -142,9 +146,12 @@ export function DepartmentCard({
     })
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
-  const measurementsForDepartment = isCostumeDepartment && measurementsByUser ? measurementsByUser : undefined;
+  const measurementsForDepartment =
+    isCostumeDepartment && measurementsByUser ? measurementsByUser : undefined;
   const membersWithMeasurements = measurementsForDepartment
-    ? measurementEligibleMembers.filter((member) => (measurementsForDepartment[member.userId]?.length ?? 0) > 0).length
+    ? measurementEligibleMembers.filter(
+        (member) => (measurementsForDepartment[member.userId]?.length ?? 0) > 0,
+      ).length
     : 0;
 
   const accentStyle = {
@@ -173,10 +180,15 @@ export function DepartmentCard({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-border/60 bg-background/90 shadow-inner">
-              <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: department.color ?? "#94a3b8" }} />
+              <span
+                className="h-3.5 w-3.5 rounded-full"
+                style={{ backgroundColor: department.color ?? "#94a3b8" }}
+              />
             </div>
             <div className="space-y-2">
-              <CardTitle className="text-xl font-semibold text-foreground">{department.name}</CardTitle>
+              <CardTitle className="text-xl font-semibold text-foreground">
+                {department.name}
+              </CardTitle>
               {department.description ? (
                 <p className="text-sm text-muted-foreground">{department.description}</p>
               ) : null}
@@ -223,7 +235,9 @@ export function DepartmentCard({
                   {sortedMembers.length} Personen
                 </Badge>
                 <span className="text-xs text-muted-foreground group-open:hidden">Öffnen</span>
-                <span className="hidden text-xs text-muted-foreground group-open:inline">Schließen</span>
+                <span className="hidden text-xs text-muted-foreground group-open:inline">
+                  Schließen
+                </span>
               </div>
             </summary>
             <ul className="mt-4 space-y-3">
@@ -235,7 +249,9 @@ export function DepartmentCard({
                     className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/90 px-3 py-3 transition hover:border-primary/40"
                   >
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {formatUserName(member.user)}
+                      </p>
                       {member.title ? (
                         <p className="text-xs text-muted-foreground">{member.title}</p>
                       ) : null}
@@ -245,7 +261,11 @@ export function DepartmentCard({
                         {ROLE_LABELS[member.role]}
                       </Badge>
                       {isCurrentUser ? (
-                        <Badge variant="outline" size="sm" className="border-primary/40 text-primary">
+                        <Badge
+                          variant="outline"
+                          size="sm"
+                          className="border-primary/40 text-primary"
+                        >
                           Du
                         </Badge>
                       ) : null}
@@ -291,12 +311,20 @@ export function DepartmentCard({
                               <CalendarIcon aria-hidden className="h-5 w-5" />
                             </span>
                             <div className="space-y-1">
-                              <p className="text-sm font-medium text-foreground">{suggestion.label}</p>
-                              <p className="text-xs text-muted-foreground">Frei für alle Mitglieder</p>
+                              <p className="text-sm font-medium text-foreground">
+                                {suggestion.label}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Frei für alle Mitglieder
+                              </p>
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-2">
-                            <Badge variant="outline" size="sm" className="rounded-full border-primary/40 text-primary">
+                            <Badge
+                              variant="outline"
+                              size="sm"
+                              className="rounded-full border-primary/40 text-primary"
+                            >
                               {suggestion.shortLabel}
                             </Badge>
                             {canManageEvents ? (
@@ -322,7 +350,8 @@ export function DepartmentCard({
                     </ul>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      Aktuell gibt es keinen Termin ohne Sperrlisten-Konflikte. Prüfe deine Sperrtage und die deines Teams.
+                      Aktuell gibt es keinen Termin ohne Sperrlisten-Konflikte. Prüfe deine
+                      Sperrtage und die deines Teams.
                     </p>
                   )}
                   {blockedMembersDetailed.length ? (
@@ -345,7 +374,8 @@ export function DepartmentCard({
                         ))}
                       </ul>
                       <p className="text-[11px] text-muted-foreground/80">
-                        Grundlage: Aktualisierte Sperrlisten seit dem Freeze bis {planningWindowLabel}.
+                        Grundlage: Aktualisierte Sperrlisten seit dem Freeze bis{" "}
+                        {planningWindowLabel}.
                       </p>
                     </div>
                   ) : null}
@@ -381,13 +411,17 @@ export function DepartmentCard({
         {isCostumeDepartment && measurementsForDepartment ? (
           <section className="rounded-2xl border border-border/60 bg-background/80 p-4 shadow-inner">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Körpermaße &amp; Anprobeninfos</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                Körpermaße &amp; Anprobeninfos
+              </h3>
               <Badge variant="muted" size="sm">
-                {membersWithMeasurements} {membersWithMeasurements === 1 ? "Person" : "Personen"} mit Angaben
+                {membersWithMeasurements} {membersWithMeasurements === 1 ? "Person" : "Personen"}{" "}
+                mit Angaben
               </Badge>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Übersicht der in den Profilen hinterlegten Maße aller Ensemble-Mitglieder dieses Kostüm-Gewerks.
+              Übersicht der in den Profilen hinterlegten Maße aller Ensemble-Mitglieder dieses
+              Kostüm-Gewerks.
             </p>
             {measurementEligibleMembers.length ? (
               <ul className="mt-4 space-y-3">
@@ -397,9 +431,14 @@ export function DepartmentCard({
                     : [];
                   if (!entries.length) {
                     return (
-                      <li key={member.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
+                      <li
+                        key={member.id}
+                        className="rounded-xl border border-border/60 bg-background/90 p-3"
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {formatUserName(member.user)}
+                          </p>
                           <span className="text-[11px] text-muted-foreground">Keine Angaben</span>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -412,11 +451,18 @@ export function DepartmentCard({
                   const latestUpdate = formatMeasurementDate(entries);
 
                   return (
-                    <li key={member.id} className="space-y-2 rounded-xl border border-border/60 bg-background/90 p-3">
+                    <li
+                      key={member.id}
+                      className="space-y-2 rounded-xl border border-border/60 bg-background/90 p-3"
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-foreground">{formatUserName(member.user)}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {formatUserName(member.user)}
+                        </p>
                         {latestUpdate ? (
-                          <span className="text-[11px] text-muted-foreground">Stand: {latestUpdate}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            Stand: {latestUpdate}
+                          </span>
                         ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2 text-xs">
@@ -484,13 +530,18 @@ export function DepartmentCard({
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2.5 py-0.5">
-                            Zuständig: {assigneeNames.length ? assigneeNames.join(", ") : "Noch keine Zuordnung"}
+                            Zuständig:{" "}
+                            {assigneeNames.length
+                              ? assigneeNames.join(", ")
+                              : "Noch keine Zuordnung"}
                           </span>
                           {dueMeta ? (
                             <span
                               className={cn(
                                 "inline-flex items-center gap-1 rounded-full border border-border/60 px-2.5 py-0.5 transition",
-                                dueMeta.isOverdue ? "border-destructive/60 text-destructive" : "text-muted-foreground",
+                                dueMeta.isOverdue
+                                  ? "border-destructive/60 text-destructive"
+                                  : "text-muted-foreground",
                               )}
                             >
                               <ClockIcon aria-hidden className="h-3.5 w-3.5" />
@@ -498,7 +549,9 @@ export function DepartmentCard({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-sm font-medium leading-6 text-foreground">{task.title}</p>
+                        <p className="text-sm font-medium leading-6 text-foreground">
+                          {task.title}
+                        </p>
                         {task.description ? (
                           <p className="text-sm text-muted-foreground">{task.description}</p>
                         ) : null}
@@ -513,7 +566,11 @@ export function DepartmentCard({
                           </p>
                         ) : null}
                       </div>
-                      <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm" className="rounded-full">
+                      <Badge
+                        variant={TASK_STATUS_BADGES[task.status]}
+                        size="sm"
+                        className="rounded-full"
+                      >
                         {TASK_STATUS_LABELS[task.status]}
                       </Badge>
                     </div>
@@ -532,7 +589,9 @@ export function DepartmentCard({
               <summary className="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                 <span>Abgeschlossene Aufgaben</span>
                 <span className="text-[11px] text-muted-foreground group-open:hidden">Öffnen</span>
-                <span className="hidden text-[11px] text-muted-foreground group-open:inline">Schließen</span>
+                <span className="hidden text-[11px] text-muted-foreground group-open:inline">
+                  Schließen
+                </span>
               </summary>
               <ul className="mt-4 space-y-3 text-sm">
                 {completedTasks.map((task) => {
@@ -541,18 +600,28 @@ export function DepartmentCard({
                     .map((assignment) => formatUserName(assignment.user))
                     .filter(Boolean);
                   return (
-                    <li key={task.id} className="rounded-xl border border-border/60 bg-background/90 p-3">
+                    <li
+                      key={task.id}
+                      className="rounded-xl border border-border/60 bg-background/90 p-3"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <p className="font-medium text-foreground">{task.title}</p>
                           <p className="text-xs text-muted-foreground">
-                            Zuständig: {assigneeNames.length ? assigneeNames.join(", ") : "Noch offen"}
+                            Zuständig:{" "}
+                            {assigneeNames.length ? assigneeNames.join(", ") : "Noch offen"}
                           </p>
                           {dueMeta ? (
-                            <p className="text-xs text-muted-foreground">Fällig war {dueMeta.absolute}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Fällig war {dueMeta.absolute}
+                            </p>
                           ) : null}
                         </div>
-                        <Badge variant={TASK_STATUS_BADGES[task.status]} size="sm" className="rounded-full">
+                        <Badge
+                          variant={TASK_STATUS_BADGES[task.status]}
+                          size="sm"
+                          className="rounded-full"
+                        >
                           {TASK_STATUS_LABELS[task.status]}
                         </Badge>
                       </div>
@@ -578,6 +647,9 @@ function formatMeasurementValue(value: number, unit: MeasurementUnit) {
 
 function formatMeasurementDate(entries: DepartmentMeasurementEntry[]) {
   if (!entries.length) return null;
-  const latest = entries.reduce((acc, entry) => (entry.updatedAt > acc ? entry.updatedAt : acc), entries[0].updatedAt);
+  const latest = entries.reduce(
+    (acc, entry) => (entry.updatedAt > acc ? entry.updatedAt : acc),
+    entries[0].updatedAt,
+  );
   return latest.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }

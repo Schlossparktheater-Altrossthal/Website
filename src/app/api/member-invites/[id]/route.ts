@@ -58,10 +58,7 @@ function parseDate(value: unknown) {
   return parsed;
 }
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (!(await canManageInvites(session.user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -72,17 +69,15 @@ export async function PATCH(
     return NextResponse.json({ error: "Ungültige Einladung" }, { status: 400 });
   }
 
-  const body = await request.json().catch(() => null) as
-    | {
-        isDisabled?: unknown;
-        expiresAt?: unknown;
-        maxUses?: unknown;
-        label?: unknown;
-        note?: unknown;
-        roles?: unknown;
-        showId?: unknown;
-      }
-    | null;
+  const body = (await request.json().catch(() => null)) as {
+    isDisabled?: unknown;
+    expiresAt?: unknown;
+    maxUses?: unknown;
+    label?: unknown;
+    note?: unknown;
+    roles?: unknown;
+    showId?: unknown;
+  } | null;
 
   if (!body) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
@@ -179,17 +174,15 @@ function parseRoles(value: unknown): Role[] | undefined {
     return ["member"];
   }
   if (!Array.isArray(value)) return undefined;
-  const allowed = value.filter((entry): entry is Role =>
-    typeof entry === "string" && (ROLES as readonly string[]).includes(entry),
+  const allowed = value.filter(
+    (entry): entry is Role =>
+      typeof entry === "string" && (ROLES as readonly string[]).includes(entry),
   );
   const normalized = withAutoCast(sortRoles(allowed.length ? allowed : ["member"]));
   return normalized.length ? normalized : ["member"];
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (!(await canManageInvites(session.user))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

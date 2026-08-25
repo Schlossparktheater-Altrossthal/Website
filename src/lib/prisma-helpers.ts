@@ -65,9 +65,7 @@ export type MysterySubmissionWithCounts = Prisma.MysteryTipSubmissionGetPayload<
   include: typeof mysterySubmissionWithCountsInclude;
 }>;
 
-export function groupMysteryTipSubmissionsByPlayer(
-  where?: Prisma.MysteryTipSubmissionWhereInput,
-) {
+export function groupMysteryTipSubmissionsByPlayer(where?: Prisma.MysteryTipSubmissionWhereInput) {
   return prisma.mysteryTipSubmission.groupBy({
     ...playerScoreboardGroupByArgs,
     ...(where ? { where } : {}),
@@ -78,9 +76,7 @@ export type MysteryScoreboardGroupRow = Awaited<
   ReturnType<typeof groupMysteryTipSubmissionsByPlayer>
 >[number];
 
-export function aggregateMysteryTipSubmissionScores(
-  where: Prisma.MysteryTipSubmissionWhereInput,
-) {
+export function aggregateMysteryTipSubmissionScores(where: Prisma.MysteryTipSubmissionWhereInput) {
   return prisma.mysteryTipSubmission.aggregate({
     ...playerScoreboardAggregateArgs,
     where,

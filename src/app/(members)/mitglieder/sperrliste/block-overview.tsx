@@ -1,34 +1,46 @@
-'use client';
+"use client";
 
 import { FileDownIcon } from "@/components/ui/action-icons";
 
-import { useMemo, useState } from 'react';
-import { addDays, addMonths, eachDayOfInterval, format, startOfMonth, startOfToday } from 'date-fns';
-import { de } from 'date-fns/locale/de';
+import { useMemo, useState } from "react";
+import {
+  addDays,
+  addMonths,
+  eachDayOfInterval,
+  format,
+  startOfMonth,
+  startOfToday,
+} from "date-fns";
+import { de } from "date-fns/locale/de";
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { formatWeekdayList, getWeekdayLabel, sortWeekdays, type WeekdayValue } from '@/lib/weekdays';
-import { toast } from 'sonner';
+} from "@/components/ui/dialog";
+import {
+  formatWeekdayList,
+  getWeekdayLabel,
+  sortWeekdays,
+  type WeekdayValue,
+} from "@/lib/weekdays";
+import { toast } from "sonner";
 
-import type { HolidayRange } from '@/types/holidays';
+import type { HolidayRange } from "@/types/holidays";
 
-import type { BlockedDay } from './block-calendar';
-import { OverviewShell } from './overview/overview-shell';
+import type { BlockedDay } from "./block-calendar";
+import { OverviewShell } from "./overview/overview-shell";
 import {
   DATE_FORMAT,
   formatCreatedAtLabel,
   useBlockOverviewData,
   type OverviewMember,
   type PreparedMember,
-} from './overview/useBlockOverviewData';
+} from "./overview/useBlockOverviewData";
 
 type SelectedBlockedDay = {
   member: PreparedMember;
@@ -64,13 +76,13 @@ function toPdfZone(focus: PreparedMember["onboardingFocus"]): PdfMemberZone {
   }
 }
 
-export type { OverviewMember } from './overview/useBlockOverviewData';
+export type { OverviewMember } from "./overview/useBlockOverviewData";
 
 function normaliseReason(value: string | null | undefined) {
   if (!value) {
-    return '';
+    return "";
   }
-  return value.replace(/\s+/g, ' ').trim();
+  return value.replace(/\s+/g, " ").trim();
 }
 
 export function BlockOverview({
@@ -125,8 +137,8 @@ export function BlockOverview({
         return {
           date: day,
           key: format(day, DATE_FORMAT),
-          header: `${getWeekdayLabel(weekday, 'short')} ${format(day, 'dd.MM.', { locale: de })}`,
-          title: format(day, 'EEEE, d. MMMM yyyy', { locale: de }),
+          header: `${getWeekdayLabel(weekday, "short")} ${format(day, "dd.MM.", { locale: de })}`,
+          title: format(day, "EEEE, d. MMMM yyyy", { locale: de }),
         };
       });
 
@@ -149,7 +161,7 @@ export function BlockOverview({
         if (!entry) {
           return null;
         }
-        if (entry.kind === 'BLOCKED' || entry.kind === 'LIMITED' || entry.kind === 'PREFERRED') {
+        if (entry.kind === "BLOCKED" || entry.kind === "LIMITED" || entry.kind === "PREFERRED") {
           return entry;
         }
         return null;
@@ -169,7 +181,7 @@ export function BlockOverview({
           if (!entry) {
             return true;
           }
-          return entry.kind === 'LIMITED' || entry.kind === 'PREFERRED';
+          return entry.kind === "LIMITED" || entry.kind === "PREFERRED";
         }),
       ).length,
     [exportRows],
@@ -179,7 +191,7 @@ export function BlockOverview({
     if (!exportWindow) {
       return null;
     }
-    return `${format(exportWindow.start, 'dd.MM.yyyy')} – ${format(exportWindow.end, 'dd.MM.yyyy')}`;
+    return `${format(exportWindow.start, "dd.MM.yyyy")} – ${format(exportWindow.end, "dd.MM.yyyy")}`;
   }, [exportWindow]);
 
   const exportDisabled = !exportWindow || exportRows.length === 0;
@@ -224,7 +236,7 @@ export function BlockOverview({
       return;
     }
     if (!exportWindow || exportRows.length === 0) {
-      toast.warning('Keine Sperrtermine auf wichtigen Tagen im ausgewählten Zeitraum gefunden.');
+      toast.warning("Keine Sperrtermine auf wichtigen Tagen im ausgewählten Zeitraum gefunden.");
       return;
     }
 
@@ -253,24 +265,24 @@ export function BlockOverview({
           entries: exportWindow.days.map((day, index) => {
             const entry = entries[index];
             if (!entry) {
-              return { dayKey: day.key, status: 'none', value: null };
+              return { dayKey: day.key, status: "none", value: null };
             }
             const reason = normaliseReason(entry.reason);
             const status =
-              entry.kind === 'BLOCKED'
-                ? 'blocked'
-                : entry.kind === 'LIMITED'
-                  ? 'limited'
-                  : entry.kind === 'PREFERRED'
-                    ? 'preferred'
-                    : 'none';
-            if (status === 'none') {
-              return { dayKey: day.key, status: 'none', value: reason || null };
+              entry.kind === "BLOCKED"
+                ? "blocked"
+                : entry.kind === "LIMITED"
+                  ? "limited"
+                  : entry.kind === "PREFERRED"
+                    ? "preferred"
+                    : "none";
+            if (status === "none") {
+              return { dayKey: day.key, status: "none", value: reason || null };
             }
-            const fallbackLabels: Record<'blocked' | 'limited' | 'preferred', string> = {
-              blocked: 'gesperrt',
-              limited: 'eingeschränkt',
-              preferred: 'bevorzugt',
+            const fallbackLabels: Record<"blocked" | "limited" | "preferred", string> = {
+              blocked: "gesperrt",
+              limited: "eingeschränkt",
+              preferred: "bevorzugt",
             };
             return {
               dayKey: day.key,
@@ -281,41 +293,44 @@ export function BlockOverview({
         })),
       };
 
-      const response = await fetch('/api/pdfs/sperrliste-wichtige-tage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/pdfs/sperrliste-wichtige-tage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pdfPayload),
       });
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null);
-        throw new Error(errorPayload?.error ?? 'PDF konnte nicht erstellt werden.');
+        throw new Error(errorPayload?.error ?? "PDF konnte nicht erstellt werden.");
       }
 
       const blob = await response.blob();
-      const disposition = response.headers.get('content-disposition');
+      const disposition = response.headers.get("content-disposition");
       const filenameFromHeader = extractFilenameFromDisposition(disposition);
       let filename =
         filenameFromHeader?.trim() ||
-        `sperrliste-wichtige-tage-${format(exportWindow.start, 'yyyyMMdd')}-${format(exportWindow.end, 'yyyyMMdd')}.pdf`;
-      filename = filename.replace(/[\\/]/g, '_').replace(/[\r\n]/g, '').trim();
-      if (!filename.toLowerCase().endsWith('.pdf')) {
+        `sperrliste-wichtige-tage-${format(exportWindow.start, "yyyyMMdd")}-${format(exportWindow.end, "yyyyMMdd")}.pdf`;
+      filename = filename
+        .replace(/[\\/]/g, "_")
+        .replace(/[\r\n]/g, "")
+        .trim();
+      if (!filename.toLowerCase().endsWith(".pdf")) {
         filename = `${filename}.pdf`;
       }
 
       const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = filename;
-      link.rel = 'noopener';
+      link.rel = "noopener";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(downloadUrl);
-      toast.success('PDF wurde heruntergeladen.');
+      toast.success("PDF wurde heruntergeladen.");
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'PDF konnte nicht erstellt werden.';
+      const message = error instanceof Error ? error.message : "PDF konnte nicht erstellt werden.";
       toast.error(message);
     } finally {
       setIsExportingPdf(false);
@@ -339,21 +354,25 @@ export function BlockOverview({
               {exportWindow ? (
                 <>
                   <p>
-                    Zeitraum: {exportRangeLabel ?? '–'}. Berücksichtigte Tage:{' '}
-                    {importantWeekdaySummary ?? '–'}.
+                    Zeitraum: {exportRangeLabel ?? "–"}. Berücksichtigte Tage:{" "}
+                    {importantWeekdaySummary ?? "–"}.
                   </p>
                   {membersWithEntries === 0 ? (
-                    <p>Aktuell liegen keine Sperrtermine auf diesen Tagen in den nächsten zwei Wochen vor.</p>
+                    <p>
+                      Aktuell liegen keine Sperrtermine auf diesen Tagen in den nächsten zwei Wochen
+                      vor.
+                    </p>
                   ) : (
                     <p>
-                      Mitglieder mit Sperrterminen: {membersWithEntries}{' '}
-                      {membersWithEntries === 1 ? 'Person' : 'Personen'}.
+                      Mitglieder mit Sperrterminen: {membersWithEntries}{" "}
+                      {membersWithEntries === 1 ? "Person" : "Personen"}.
                     </p>
                   )}
                 </>
               ) : (
                 <p>
-                  Lege wichtige Probentage in den Sperrlisten-Einstellungen fest, um einen Export zu ermöglichen.
+                  Lege wichtige Probentage in den Sperrlisten-Einstellungen fest, um einen Export zu
+                  ermöglichen.
                 </p>
               )}
             </div>
@@ -401,8 +420,8 @@ export function BlockOverview({
           <DialogHeader>
             <DialogTitle>
               {selectedBlockedDay
-                ? format(selectedBlockedDay.date, 'EEEE, d. MMMM yyyy', { locale: de })
-                : 'Sperrtermin'}
+                ? format(selectedBlockedDay.date, "EEEE, d. MMMM yyyy", { locale: de })
+                : "Sperrtermin"}
             </DialogTitle>
             {selectedBlockedDay ? (
               <DialogDescription>
@@ -417,11 +436,11 @@ export function BlockOverview({
                   Grund &amp; Zeitpunkt
                 </span>
                 <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-3 text-sm leading-6 text-muted-foreground/90">
-                  <p>{selectedBlockedDay.entry.reason?.trim() || 'Kein Grund hinterlegt.'}</p>
+                  <p>{selectedBlockedDay.entry.reason?.trim() || "Kein Grund hinterlegt."}</p>
                   <p className="mt-2 text-xs text-muted-foreground/80">
                     {selectedBlockedCreatedAtLabel
                       ? `Eingetragen am ${selectedBlockedCreatedAtLabel}.`
-                      : 'Zeitpunkt konnte nicht ermittelt werden.'}
+                      : "Zeitpunkt konnte nicht ermittelt werden."}
                   </p>
                 </div>
               </div>
@@ -434,11 +453,11 @@ export function BlockOverview({
                     {selectedBlockedDay.holidayEntries.map((holiday) => (
                       <Badge
                         key={holiday.id}
-                        variant={holiday.category === 'publicHoliday' ? 'warning' : 'info'}
+                        variant={holiday.category === "publicHoliday" ? "warning" : "info"}
                         className="flex items-center gap-1"
                       >
                         <span className="text-[11px] uppercase tracking-wide">
-                          {holiday.category === 'publicHoliday' ? 'Feiertag' : 'Ferien'}
+                          {holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}
                         </span>
                         <span className="font-medium">{holiday.title}</span>
                       </Badge>

@@ -36,8 +36,7 @@ export const timelineStatusStyles = tv({
         "border border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/15 dark:text-amber-100",
       preferred:
         "border border-emerald-400/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100",
-      holiday:
-        "border border-primary400/40 bg-primary500/10 text-primary900 dark:text-primary100",
+      holiday: "border border-primary400/40 bg-primary500/10 text-primary900 dark:text-primary100",
       free: "border border-border/40 bg-background/60 text-muted-foreground/80 backdrop-blur",
       freeMuted: "border border-border/50 bg-muted/30 text-muted-foreground",
       preferredPlaceholder:
@@ -228,7 +227,7 @@ export function DesktopTimeline({
               const summaryLabel =
                 segment.titles.length > 1
                   ? `${segment.titles[0] ?? "Ferien & Feiertage"} +${segment.titles.length - 1}`
-                  : segment.titles[0] ?? "Ferien & Feiertage";
+                  : (segment.titles[0] ?? "Ferien & Feiertage");
 
               return (
                 <th
@@ -277,7 +276,9 @@ export function DesktopTimeline({
                       className="h-11 w-11"
                     />
                     <div className="min-w-0 text-foreground">
-                      <div className="truncate text-sm font-semibold text-foreground">{member.displayName}</div>
+                      <div className="truncate text-sm font-semibold text-foreground">
+                        {member.displayName}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {stats?.total
                           ? `${stats.total} Sperrtermin${stats.total === 1 ? "" : "e"}`
@@ -322,23 +323,25 @@ export function DesktopTimeline({
                   const baseId = `${member.id}-${key}`;
                   const holidayId = isHoliday ? `${baseId}-holiday` : undefined;
                   const createdAtId = createdAtLabel ? `${baseId}-created` : undefined;
-                  const describedBy = [holidayId, createdAtId].filter(Boolean).join(" ") || undefined;
+                  const describedBy =
+                    [holidayId, createdAtId].filter(Boolean).join(" ") || undefined;
 
                   const label = [
                     format(day, "EEEE, d. MMMM yyyy", { locale: de }),
                     entry
                       ? isPreferred
-                        ? trimmedReason ?? "bevorzugt"
+                        ? (trimmedReason ?? "bevorzugt")
                         : isLimited
-                          ? trimmedReason ?? "eingeschränkt"
-                          : trimmedReason ?? "gesperrt"
+                          ? (trimmedReason ?? "eingeschränkt")
+                          : (trimmedReason ?? "gesperrt")
                       : "frei",
                   ];
 
                   if (isHoliday) {
                     const holidaySummary = holidayEntries
-                      .map((holiday) =>
-                        `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
+                      .map(
+                        (holiday) =>
+                          `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
                       )
                       .join(", ");
                     label.push(holidaySummary || "Ferien & Feiertage");
@@ -397,7 +400,9 @@ export function DesktopTimeline({
                             <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/70">
                               {format(day, "EE", { locale: de })}
                             </span>
-                            <span className="text-sm font-semibold">{format(day, "d", { locale: de })}</span>
+                            <span className="text-sm font-semibold">
+                              {format(day, "d", { locale: de })}
+                            </span>
                             {hasReason ? (
                               <span className="flex-1 truncate text-right normal-case tracking-normal text-[11px]">
                                 {trimmedReason}
@@ -411,8 +416,9 @@ export function DesktopTimeline({
                           {holidayId ? (
                             <span id={holidayId} className="sr-only">
                               {holidayEntries
-                                .map((holiday) =>
-                                  `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
+                                .map(
+                                  (holiday) =>
+                                    `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
                                 )
                                 .join(", ")}
                             </span>
@@ -441,7 +447,9 @@ export function DesktopTimeline({
                           )}
                           aria-label={label.join(". ")}
                           aria-describedby={describedBy}
-                          tabIndex={isLimited || isPreferred || (isHoliday && !entry) ? 0 : undefined}
+                          tabIndex={
+                            isLimited || isPreferred || (isHoliday && !entry) ? 0 : undefined
+                          }
                           aria-selected={isToday(day) || undefined}
                         >
                           {entry ? (
@@ -456,8 +464,9 @@ export function DesktopTimeline({
                           ) : isHoliday ? (
                             <span className="sr-only" id={holidayId}>
                               {holidayEntries
-                                .map((holiday) =>
-                                  `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
+                                .map(
+                                  (holiday) =>
+                                    `${holiday.category === "publicHoliday" ? "Feiertag" : "Ferien"}: ${holiday.title}`,
                                 )
                                 .join(", ") || "Ferien & Feiertage"}
                             </span>

@@ -8,9 +8,9 @@ Zugriffsregeln in jeder Deployment-Variante identisch sind.
 
 ## Compose-Dateien
 
-| Zweck | Datei | Beschreibung |
-| --- | --- | --- |
-| Lokale Entwicklung | `docker-compose.yml` | Baut das Dev-Image aus dem Quellcode, startet Postgres (`theater_dev`) und Mailpit. |
+| Zweck                | Datei                        | Beschreibung                                                                                                                                     |
+| -------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Lokale Entwicklung   | `docker-compose.yml`         | Baut das Dev-Image aus dem Quellcode, startet Postgres (`theater_dev`) und Mailpit.                                                              |
 | Hosting via Registry | `docker-compose.hosting.yml` | Nutzt die aus GitHub Actions gepushten Images und veröffentlicht sie per Traefik unter `devtheater.beegreenx.de` und `prodtheater.beegreenx.de`. |
 
 ## Vorbereitung für Doco

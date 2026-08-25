@@ -11,15 +11,13 @@ import { requireAuth } from "@/lib/rbac";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-const optionalTrimmedString = z
-  .union([z.string(), z.null(), z.undefined()])
-  .transform((value) => {
-    if (value === null || value === undefined) {
-      return null;
-    }
-    const trimmed = value.trim();
-    return trimmed.length ? trimmed : null;
-  });
+const optionalTrimmedString = z.union([z.string(), z.null(), z.undefined()]).transform((value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+});
 
 const onboardingUpdateSchema = z.object({
   focus: z.nativeEnum(OnboardingFocus),

@@ -26,12 +26,8 @@ export function CatImageRotator({
 }: CatImageRotatorProps) {
   const validImages = useMemo(
     () =>
-      Array.from(
-        new Set(
-          images.filter((src) => typeof src === "string" && src.trim().length > 0)
-        )
-      ),
-    [images]
+      Array.from(new Set(images.filter((src) => typeof src === "string" && src.trim().length > 0))),
+    [images],
   );
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -50,12 +46,15 @@ export function CatImageRotator({
       return;
     }
 
-    const rotationInterval = window.setInterval(() => {
-      setCurrentIndex((previousIndex) => {
-        const nextIndex = previousIndex + 1;
-        return nextIndex >= validImages.length ? 0 : nextIndex;
-      });
-    }, Math.max(MINIMUM_INTERVAL, interval));
+    const rotationInterval = window.setInterval(
+      () => {
+        setCurrentIndex((previousIndex) => {
+          const nextIndex = previousIndex + 1;
+          return nextIndex >= validImages.length ? 0 : nextIndex;
+        });
+      },
+      Math.max(MINIMUM_INTERVAL, interval),
+    );
 
     return () => {
       window.clearInterval(rotationInterval);
@@ -78,7 +77,7 @@ export function CatImageRotator({
           priority={index === 0}
           className={cn(
             "object-cover transition-opacity duration-700 ease-in-out",
-            index === currentIndex ? "opacity-100" : "opacity-0"
+            index === currentIndex ? "opacity-100" : "opacity-0",
           )}
           aria-hidden={index !== currentIndex}
         />

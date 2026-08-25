@@ -59,7 +59,9 @@ export function useBrowserNotifications(
       }
 
       try {
-        const status = await navigator.permissions.query({ name: "notifications" as PermissionName });
+        const status = await navigator.permissions.query({
+          name: "notifications" as PermissionName,
+        });
         if (cancelled) {
           return;
         }
@@ -126,7 +128,10 @@ export function useBrowserNotifications(
         }
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn("[BrowserNotifications] failed to resolve service worker registration", error);
+          console.warn(
+            "[BrowserNotifications] failed to resolve service worker registration",
+            error,
+          );
         }
       }
     };
@@ -200,7 +205,10 @@ export function useBrowserNotifications(
           return true;
         } catch (error) {
           if (process.env.NODE_ENV !== "production") {
-            console.warn("[BrowserNotifications] showNotification via service worker failed", error);
+            console.warn(
+              "[BrowserNotifications] showNotification via service worker failed",
+              error,
+            );
           }
         }
       }

@@ -1,6 +1,11 @@
 "use client";
 
-import { AlertCircleIcon, CheckCircle2Icon, Loader2Icon, UsersRoundIcon } from "@/components/ui/action-icons";
+import {
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  Loader2Icon,
+  UsersRoundIcon,
+} from "@/components/ui/action-icons";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,11 +24,11 @@ type AllocationTabProps = {
 };
 
 export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) {
-  const [draftCapacities, setDraftCapacities] = useState(() =>
-    new Map(allocation.roles.map((role) => [role.roleId, role.capacity])),
+  const [draftCapacities, setDraftCapacities] = useState(
+    () => new Map(allocation.roles.map((role) => [role.roleId, role.capacity])),
   );
-  const [appliedCapacities, setAppliedCapacities] = useState(() =>
-    new Map(allocation.roles.map((role) => [role.roleId, role.capacity])),
+  const [appliedCapacities, setAppliedCapacities] = useState(
+    () => new Map(allocation.roles.map((role) => [role.roleId, role.capacity])),
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRecalculating, startTransition] = useTransition();
@@ -97,7 +102,8 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
           <CardContent className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>
-                Optimiert: {allocation.optimizer.totalAssignments} / {allocation.optimizer.totalSlots} Slots belegt
+                Optimiert: {allocation.optimizer.totalAssignments} /{" "}
+                {allocation.optimizer.totalSlots} Slots belegt
               </span>
               {allocation.optimizer.averageScore !== null ? (
                 <span>Ø Score {allocation.optimizer.averageScore.toFixed(2)}</span>
@@ -116,7 +122,9 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                   <div className="flex h-2 overflow-hidden rounded-full bg-muted/50">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, (entry.capacity / Math.max(entry.demand, 1)) * 100)}%` }}
+                      animate={{
+                        width: `${Math.min(100, (entry.capacity / Math.max(entry.demand, 1)) * 100)}%`,
+                      }}
                       transition={{ delay: index * 0.04, duration: 0.45, ease: "easeOut" }}
                       className={`h-full ${overbooked ? "bg-rose-400" : "bg-emerald-400"}`}
                     />
@@ -176,9 +184,10 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                             ? candidate.adjustedScore
                             : candidate.score
                           : null;
-                        const confidence = candidate && typeof candidate.confidence === "number"
-                          ? Math.round(candidate.confidence * 100)
-                          : null;
+                        const confidence =
+                          candidate && typeof candidate.confidence === "number"
+                            ? Math.round(candidate.confidence * 100)
+                            : null;
 
                         return (
                           <div
@@ -192,11 +201,15 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                               {candidate ? (
                                 <Badge variant="success" className="gap-1 text-xs">
                                   <CheckCircle2Icon className="h-3.5 w-3.5" />
-                                  {displayScore !== null ? `Score ${displayScore.toFixed(2)}` : "Score –"}
+                                  {displayScore !== null
+                                    ? `Score ${displayScore.toFixed(2)}`
+                                    : "Score –"}
                                   {confidence !== null ? ` · Konfidenz ${confidence}%` : ""}
                                 </Badge>
                               ) : (
-                                <Badge variant="warning" className="text-xs">Noch unbesetzt</Badge>
+                                <Badge variant="warning" className="text-xs">
+                                  Noch unbesetzt
+                                </Badge>
                               )}
                             </div>
                             {candidate ? (
@@ -204,9 +217,11 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                                 <p className="font-medium">{candidate.name}</p>
                                 <p className="text-muted-foreground">{candidate.justification}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  Fokus {candidate.focus ?? "–"} · Erfahrung {candidate.experienceYears ?? 0} Jahre
+                                  Fokus {candidate.focus ?? "–"} · Erfahrung{" "}
+                                  {candidate.experienceYears ?? 0} Jahre
                                 </p>
-                                {typeof slot.fairnessPenalty === "number" && slot.fairnessPenalty > 0 ? (
+                                {typeof slot.fairnessPenalty === "number" &&
+                                slot.fairnessPenalty > 0 ? (
                                   <p className="text-xs text-muted-foreground">
                                     Fairness-Malus {slot.fairnessPenalty.toFixed(2)}
                                   </p>
@@ -218,7 +233,9 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                                 ) : null}
                               </div>
                             ) : (
-                              <p className="mt-2 text-sm text-muted-foreground">Noch keine passende Zuordnung.</p>
+                              <p className="mt-2 text-sm text-muted-foreground">
+                                Noch keine passende Zuordnung.
+                              </p>
                             )}
                             {slot.alternatives.length ? (
                               <div className="mt-3 space-y-1">
@@ -242,7 +259,9 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                                     return (
                                       <li key={`${slot.slotId}-${candidateAlt.userId}`}>
                                         {candidateAlt.name} · Score {altScore.toFixed(2)}
-                                        {altConfidence !== null ? ` · Konfidenz ${altConfidence}%` : ""}
+                                        {altConfidence !== null
+                                          ? ` · Konfidenz ${altConfidence}%`
+                                          : ""}
                                         {deltaLabel}
                                       </li>
                                     );
@@ -255,7 +274,8 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                       })
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        Keine Slots definiert – bitte Kapazitäten erhöhen, um Vorschläge zu erhalten.
+                        Keine Slots definiert – bitte Kapazitäten erhöhen, um Vorschläge zu
+                        erhalten.
                       </p>
                     )}
                   </div>
@@ -272,7 +292,9 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
             <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
               Fairness-Ampeln
             </CardTitle>
-            <p className="text-sm text-muted-foreground">Kontrolle über zentrale Ausgleichsmetriken.</p>
+            <p className="text-sm text-muted-foreground">
+              Kontrolle über zentrale Ausgleichsmetriken.
+            </p>
           </CardHeader>
           <CardContent className="space-y-3">
             {allocation.fairness.map((metric) => (
@@ -303,7 +325,9 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
             <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
               Kapazitäten anpassen
             </CardTitle>
-            <p className="text-sm text-muted-foreground">Setze Slots neu und starte die Optimierung.</p>
+            <p className="text-sm text-muted-foreground">
+              Setze Slots neu und starte die Optimierung.
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
@@ -360,23 +384,34 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
 
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Konfliktliste</CardTitle>
-            <p className="text-sm text-muted-foreground">Gleich hohe Scores & notwendige Entscheidungshilfen.</p>
+            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+              Konfliktliste
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Gleich hohe Scores & notwendige Entscheidungshilfen.
+            </p>
           </CardHeader>
           <CardContent>
             {allocation.conflicts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Konflikte erkannt – alle Prioritäten sind eindeutig.</p>
+              <p className="text-sm text-muted-foreground">
+                Keine Konflikte erkannt – alle Prioritäten sind eindeutig.
+              </p>
             ) : (
               <div className="space-y-3">
                 {allocation.conflicts.map((conflict) => (
-                  <div key={`${conflict.roleId}-${conflict.slotIndex}`} className="rounded-lg border border-border/40 bg-background/60 p-3">
+                  <div
+                    key={`${conflict.roleId}-${conflict.slotIndex}`}
+                    className="rounded-lg border border-border/40 bg-background/60 p-3"
+                  >
                     <p className="text-sm font-semibold text-foreground/85">
-                      {conflict.label} · Slot {conflict.slotIndex + 1} · Δ {conflict.delta.toFixed(2)}
+                      {conflict.label} · Slot {conflict.slotIndex + 1} · Δ{" "}
+                      {conflict.delta.toFixed(2)}
                     </p>
                     <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                       {conflict.candidates.map((candidate) => (
                         <li key={candidate.userId}>
-                          {candidate.name} · Score {candidate.score.toFixed(2)} · Kriterium: {candidate.tieBreaker}
+                          {candidate.name} · Score {candidate.score.toFixed(2)} · Kriterium:{" "}
+                          {candidate.tieBreaker}
                         </li>
                       ))}
                     </ul>

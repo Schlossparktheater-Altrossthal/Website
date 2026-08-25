@@ -1,6 +1,26 @@
 "use client";
 
-import { AlertTriangleIcon, ArrowRightIcon, CalendarDaysIcon, CheckCircle2Icon, CheckIcon, CreditCardIcon, EyeIcon, HeartIcon, Loader2Icon, MailIcon, MessageCircleIcon, PencilIcon, ShieldCheckIcon, SparklesIcon, TheaterIcon, Trash2Icon, UserIcon, UsersIcon, UtensilsIcon } from "@/components/ui/action-icons";
+import {
+  AlertTriangleIcon,
+  ArrowRightIcon,
+  CalendarDaysIcon,
+  CheckCircle2Icon,
+  CheckIcon,
+  CreditCardIcon,
+  EyeIcon,
+  HeartIcon,
+  Loader2Icon,
+  MailIcon,
+  MessageCircleIcon,
+  PencilIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  TheaterIcon,
+  Trash2Icon,
+  UserIcon,
+  UsersIcon,
+  UtensilsIcon,
+} from "@/components/ui/action-icons";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
@@ -15,7 +35,13 @@ import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoConsentCard } from "@/components/members/photo-consent-card";
@@ -141,7 +167,9 @@ function buildPreferenceFormState(
     if (existing) {
       remaining.delete(definition.code);
     }
-    const weight = existing ? normalizeRolePreferenceWeight(existing.weight) : DEFAULT_ROLE_PREFERENCE_WEIGHT;
+    const weight = existing
+      ? normalizeRolePreferenceWeight(existing.weight)
+      : DEFAULT_ROLE_PREFERENCE_WEIGHT;
     return {
       code: definition.code,
       title: definition.title,
@@ -158,7 +186,9 @@ function buildPreferenceFormState(
     if (existing) {
       remaining.delete(definition.code);
     }
-    const weight = existing ? normalizeRolePreferenceWeight(existing.weight) : DEFAULT_ROLE_PREFERENCE_WEIGHT;
+    const weight = existing
+      ? normalizeRolePreferenceWeight(existing.weight)
+      : DEFAULT_ROLE_PREFERENCE_WEIGHT;
     return {
       code: definition.code,
       title: definition.title,
@@ -251,15 +281,13 @@ type ProfileClientProps = {
       domain: "acting" | "crew";
       weight: number;
     }>;
-    show:
-      | {
-          id: string;
-          title: string | null;
-          year: number | null;
-          periodLabel: string | null;
-          status: OnboardingSummary["status"];
-        }
-      | null;
+    show: {
+      id: string;
+      title: string | null;
+      year: number | null;
+      periodLabel: string | null;
+      status: OnboardingSummary["status"];
+    } | null;
     whatsappLink: string | null;
   } | null;
   interests: string[];
@@ -501,10 +529,18 @@ const basicsSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.password && data.password.length > 0 && data.password.length < 6) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Passwort muss mindestens 6 Zeichen haben", path: ["password"] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Passwort muss mindestens 6 Zeichen haben",
+        path: ["password"],
+      });
     }
     if (data.password && data.password !== data.confirmPassword) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Passwörter stimmen nicht überein", path: ["confirmPassword"] });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Passwörter stimmen nicht überein",
+        path: ["confirmPassword"],
+      });
     }
   });
 
@@ -600,9 +636,8 @@ function ProfileClientInner({
 
   const [user, setUser] = useState<ProfileUser>(initialUser);
   const [onboarding, setOnboarding] = useState<ProfileClientProps["onboarding"]>(initialOnboarding);
-  const [rolePreferences, setRolePreferences] = useState<ProfileClientProps["rolePreferences"]>(
-    initialRolePreferences,
-  );
+  const [rolePreferences, setRolePreferences] =
+    useState<ProfileClientProps["rolePreferences"]>(initialRolePreferences);
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
   const [activeTab, setActiveTab] = useState<string>("stammdaten");
@@ -617,7 +652,8 @@ function ProfileClientInner({
     hasBirthdate: Boolean(initialUser.dateOfBirth),
     hasPaymentDetails: isProfilePaymentComplete(initialUser),
     hasDietaryPreference: Boolean(initialOnboarding?.dietaryPreference?.trim()),
-    photoConsentGiven: summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
+    photoConsentGiven:
+      summary.items.find((item) => item.id === "photo-consent")?.complete ?? undefined,
     hasWhatsappVisit: initialOnboarding?.whatsappLink
       ? Boolean(initialOnboarding.whatsappLinkVisitedAt)
       : undefined,
@@ -697,10 +733,7 @@ function ProfileClientInner({
     updateChecklist({ hasWhatsappVisit: Boolean(onboarding?.whatsappLinkVisitedAt) });
   }, [onboarding?.whatsappLinkVisitedAt, updateChecklist, whatsappLink]);
 
-  const percentComplete = summary.total
-    ? Math.round((summary.completed / summary.total) * 100)
-    : 0;
-
+  const percentComplete = summary.total ? Math.round((summary.completed / summary.total) * 100) : 0;
 
   const handleUserUpdated = useCallback(
     async (nextUser: ProfileUser) => {
@@ -765,7 +798,9 @@ function ProfileClientInner({
       if (!hasPhotoConsentChecklist) {
         return;
       }
-      updateChecklist({ photoConsentGiven: Boolean(nextSummary && nextSummary.status === "approved") });
+      updateChecklist({
+        photoConsentGiven: Boolean(nextSummary && nextSummary.status === "approved"),
+      });
     },
     [hasPhotoConsentChecklist, updateChecklist],
   );
@@ -784,9 +819,10 @@ function ProfileClientInner({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const data = (await response.json().catch(() => null)) as
-        | { error?: unknown; visitedAt?: unknown }
-        | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: unknown;
+        visitedAt?: unknown;
+      } | null;
 
       if (!response.ok) {
         const message =
@@ -865,7 +901,9 @@ function ProfileClientInner({
             onClick={() => {
               void handleWhatsAppVisit()
                 .then(({ alreadyVisited }) => {
-                  toast.success(alreadyVisited ? "WhatsApp-Link geöffnet" : "WhatsApp-Besuch vermerkt");
+                  toast.success(
+                    alreadyVisited ? "WhatsApp-Link geöffnet" : "WhatsApp-Besuch vermerkt",
+                  );
                 })
                 .catch((error) => {
                   const message = error instanceof Error ? error.message : "Aktion fehlgeschlagen";
@@ -881,22 +919,19 @@ function ProfileClientInner({
     ];
   }, [whatsappLink, whatsappVisitedAt, whatsappVisitedAtLabel, handleWhatsAppVisit]);
 
-  const tabOptions = useMemo(
-    () => {
-      const options: Array<{ value: string; label: string; icon: typeof UserIcon }> = [
-        { value: "stammdaten", label: "Stammdaten", icon: UserIcon },
-        { value: "zahlungen", label: "Zahlungsdaten", icon: CreditCardIcon },
-        { value: "ernaehrung", label: "Ernährung", icon: UtensilsIcon },
-        { value: "interessen", label: "Interessen", icon: HeartIcon },
-        { value: "freigaben", label: "Freigaben", icon: EyeIcon },
-        { value: "onboarding", label: "Onboarding", icon: SparklesIcon },
-        { value: "rollen", label: "Präferenzen", icon: TheaterIcon },
-      ];
+  const tabOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string; icon: typeof UserIcon }> = [
+      { value: "stammdaten", label: "Stammdaten", icon: UserIcon },
+      { value: "zahlungen", label: "Zahlungsdaten", icon: CreditCardIcon },
+      { value: "ernaehrung", label: "Ernährung", icon: UtensilsIcon },
+      { value: "interessen", label: "Interessen", icon: HeartIcon },
+      { value: "freigaben", label: "Freigaben", icon: EyeIcon },
+      { value: "onboarding", label: "Onboarding", icon: SparklesIcon },
+      { value: "rollen", label: "Präferenzen", icon: TheaterIcon },
+    ];
 
-      return options;
-    },
-    [],
-  );
+    return options;
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -1070,7 +1105,9 @@ function ProfileOverviewCard({
             />
             <div className="space-y-2 text-center sm:text-left">
               <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap">
-                <CardTitle className="text-lg font-semibold leading-tight text-foreground sm:text-xl">{displayName}</CardTitle>
+                <CardTitle className="text-lg font-semibold leading-tight text-foreground sm:text-xl">
+                  {displayName}
+                </CardTitle>
                 {checklistBadgeLabel ? (
                   <Badge
                     variant={summary.complete ? "secondary" : "outline"}
@@ -1103,7 +1140,9 @@ function ProfileOverviewCard({
                 {memberSinceLabel || createdAtLabel ? (
                   <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground sm:justify-start">
                     <CalendarDaysIcon className="h-4 w-4 shrink-0" aria-hidden />
-                    <span>{memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}</span>
+                    <span>
+                      {memberSinceLabel ?? (createdAtLabel ? `Profil seit ${createdAtLabel}` : "")}
+                    </span>
                   </div>
                 ) : null}
               </div>
@@ -1142,9 +1181,7 @@ function ProfileOverviewCard({
               <div
                 className={cn(
                   "h-full rounded-full transition-all",
-                  summary.complete
-                    ? "bg-success"
-                    : "bg-primary",
+                  summary.complete ? "bg-success" : "bg-primary",
                 )}
                 style={{ width: `${Math.min(100, Math.max(0, percentComplete))}%` }}
               />
@@ -1155,12 +1192,16 @@ function ProfileOverviewCard({
           <div
             className={cn(
               "grid gap-4",
-              hasChecklistItems && hasHighlights ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" : "",
+              hasChecklistItems && hasHighlights
+                ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
+                : "",
             )}
           >
             {hasChecklistItems ? (
               <div className="rounded-xl border border-border/60 bg-background/80 p-4 shadow-inner shadow-primary/5">
-                <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Checkliste</div>
+                <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Checkliste
+                </div>
                 <ul className="mt-3 space-y-2">
                   {pendingChecklistItems.map((item) => {
                     const target = item.targetSection ?? null;
@@ -1184,7 +1225,9 @@ function ProfileOverviewCard({
                         <span
                           className={cn(
                             "flex-1 text-left text-xs leading-snug",
-                            isComplete ? "text-muted-foreground/80 line-through" : "text-foreground",
+                            isComplete
+                              ? "text-muted-foreground/80 line-through"
+                              : "text-foreground",
                           )}
                         >
                           {item.label}
@@ -1217,7 +1260,9 @@ function ProfileOverviewCard({
                         key={item.id}
                         className={cn(
                           "flex items-center rounded-lg border px-3 py-2",
-                          isComplete ? "border-success/40 bg-success/10" : "border-border/50 bg-muted/30",
+                          isComplete
+                            ? "border-success/40 bg-success/10"
+                            : "border-border/50 bg-muted/30",
                         )}
                       >
                         {content}
@@ -1265,8 +1310,10 @@ function ProfileHighlightTile({
     default:
       "border-border/60 bg-gradient-to-br from-background via-background/95 to-background shadow-lg shadow-primary/5 backdrop-blur",
     info: "border-primary/50 bg-gradient-to-br from-primary/18 via-primary/10 to-background shadow-xl shadow-primary/10 text-primary",
-    success: "border-success/50 bg-gradient-to-br from-success/18 via-success/10 to-background shadow-xl text-success",
-    warning: "border-warning/50 bg-gradient-to-br from-warning/18 via-warning/10 to-background shadow-xl text-warning",
+    success:
+      "border-success/50 bg-gradient-to-br from-success/18 via-success/10 to-background shadow-xl text-success",
+    warning:
+      "border-warning/50 bg-gradient-to-br from-warning/18 via-warning/10 to-background shadow-xl text-warning",
   };
 
   const iconClasses: Record<NonNullable<ProfileHighlightTileProps["tone"]>, string> = {
@@ -1280,10 +1327,17 @@ function ProfileHighlightTile({
     <div className={cn("flex h-full flex-col gap-3 rounded-2xl border p-5", toneClasses[tone])}>
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/90">{title}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/90">
+            {title}
+          </p>
           <p className="text-sm font-semibold leading-5 text-foreground">{description}</p>
         </div>
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl border text-sm", iconClasses[tone])}>
+        <div
+          className={cn(
+            "flex h-10 w-10 items-center justify-center rounded-xl border text-sm",
+            iconClasses[tone],
+          )}
+        >
           {icon}
         </div>
       </div>
@@ -1308,12 +1362,14 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     password: "",
     confirmPassword: "",
     avatarSource:
-      user.avatarSource === "GRAVATAR" || user.avatarSource === "UPLOAD" || user.avatarSource === "INITIALS"
+      user.avatarSource === "GRAVATAR" ||
+      user.avatarSource === "UPLOAD" ||
+      user.avatarSource === "INITIALS"
         ? (user.avatarSource as BasicsFormState["avatarSource"])
         : "INITIALS",
     removeAvatar: false,
   }));
-  
+
   const avatarCrop = useAvatarCrop({
     userId: user.id,
     onCropComplete: () => {
@@ -1334,7 +1390,9 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
       email: user.email,
       dateOfBirth: user.dateOfBirth ? user.dateOfBirth.slice(0, 10) : "",
       avatarSource:
-        user.avatarSource === "GRAVATAR" || user.avatarSource === "UPLOAD" || user.avatarSource === "INITIALS"
+        user.avatarSource === "GRAVATAR" ||
+        user.avatarSource === "UPLOAD" ||
+        user.avatarSource === "INITIALS"
           ? (user.avatarSource as BasicsFormState["avatarSource"])
           : prev.avatarSource,
       removeAvatar: false,
@@ -1354,63 +1412,62 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     }
   }, [avatarCrop]);
 
-  const avatarPreviewState = useMemo(
-    () => {
-      if (formState.avatarSource === "GRAVATAR") {
+  const avatarPreviewState = useMemo(() => {
+    if (formState.avatarSource === "GRAVATAR") {
+      return {
+        source: "GRAVATAR" as const,
+        previewUrl: null,
+        description: "Vorschau deines Gravatar-Bildes.",
+      };
+    }
+
+    if (formState.avatarSource === "UPLOAD") {
+      if (avatarCrop.avatarPreviewUrl) {
         return {
-          source: "GRAVATAR" as const,
-          previewUrl: null,
-          description: "Vorschau deines Gravatar-Bildes.",
+          source: "UPLOAD" as const,
+          previewUrl: avatarCrop.avatarPreviewUrl,
+          description:
+            "Vorschau deines neuen Uploads mit individuellem Ausschnitt (noch nicht gespeichert).",
         };
       }
 
-      if (formState.avatarSource === "UPLOAD") {
-        if (avatarCrop.avatarPreviewUrl) {
+      if (user.avatarSource === "UPLOAD") {
+        if (formState.removeAvatar) {
           return {
-            source: "UPLOAD" as const,
-            previewUrl: avatarCrop.avatarPreviewUrl,
-            description: "Vorschau deines neuen Uploads mit individuellem Ausschnitt (noch nicht gespeichert).",
-          };
-        }
-
-        if (user.avatarSource === "UPLOAD") {
-          if (formState.removeAvatar) {
-            return {
-              source: "INITIALS" as const,
-              previewUrl: null,
-              description: "Eigenes Bild wird entfernt – wir zeigen deine Initialen.",
-            };
-          }
-
-          return {
-            source: "UPLOAD" as const,
+            source: "INITIALS" as const,
             previewUrl: null,
-            description: "Aktuell gespeichertes, eigenes Bild.",
+            description: "Eigenes Bild wird entfernt – wir zeigen deine Initialen.",
           };
         }
 
         return {
-          source: "INITIALS" as const,
+          source: "UPLOAD" as const,
           previewUrl: null,
-          description: "Kein Upload vorhanden – wir zeigen deine Initialen.",
+          description: "Aktuell gespeichertes, eigenes Bild.",
         };
       }
 
       return {
         source: "INITIALS" as const,
         previewUrl: null,
-        description: "Avatar basiert auf deinen Initialen.",
+        description: "Kein Upload vorhanden – wir zeigen deine Initialen.",
       };
-    },
-    [
-      avatarCrop.avatarPreviewUrl,
-      formState.avatarSource,
-      formState.removeAvatar,
-      user.avatarSource,
-    ],
-  );
+    }
 
-  const useStoredUploadPreview = avatarPreviewState.source === "UPLOAD" && !avatarPreviewState.previewUrl;
+    return {
+      source: "INITIALS" as const,
+      previewUrl: null,
+      description: "Avatar basiert auf deinen Initialen.",
+    };
+  }, [
+    avatarCrop.avatarPreviewUrl,
+    formState.avatarSource,
+    formState.removeAvatar,
+    user.avatarSource,
+  ]);
+
+  const useStoredUploadPreview =
+    avatarPreviewState.source === "UPLOAD" && !avatarPreviewState.previewUrl;
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -1422,7 +1479,9 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   };
 
   const handleAvatarCropReopenClick = () => {
-    void avatarCrop.handleAvatarCropReopen(formState.avatarSource === "UPLOAD" && user.avatarSource === "UPLOAD" ? "UPLOAD" : null);
+    void avatarCrop.handleAvatarCropReopen(
+      formState.avatarSource === "UPLOAD" && user.avatarSource === "UPLOAD" ? "UPLOAD" : null,
+    );
   };
 
   const resetPasswordFields = () => {
@@ -1443,9 +1502,13 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
 
     if (!parseResult.success) {
       const issues = parseResult.error.flatten();
-      const fieldIssueEntries = Object.entries(issues.fieldErrors).filter(([, messages]) => messages && messages.length > 0);
+      const fieldIssueEntries = Object.entries(issues.fieldErrors).filter(
+        ([, messages]) => messages && messages.length > 0,
+      );
       if (fieldIssueEntries.length > 0) {
-        setFieldErrors(Object.fromEntries(fieldIssueEntries.map(([key, messages]) => [key, messages![0]])));
+        setFieldErrors(
+          Object.fromEntries(fieldIssueEntries.map(([key, messages]) => [key, messages![0]])),
+        );
       }
       if (issues.formErrors.length) {
         setError(issues.formErrors[0]);
@@ -1517,7 +1580,9 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                   onChange={handleInputChange}
                   autoComplete="given-name"
                 />
-                {fieldErrors.firstName ? <p className="text-sm text-destructive">{fieldErrors.firstName}</p> : null}
+                {fieldErrors.firstName ? (
+                  <p className="text-sm text-destructive">{fieldErrors.firstName}</p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Nachname</Label>
@@ -1528,15 +1593,24 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                   onChange={handleInputChange}
                   autoComplete="family-name"
                 />
-                {fieldErrors.lastName ? <p className="text-sm text-destructive">{fieldErrors.lastName}</p> : null}
+                {fieldErrors.lastName ? (
+                  <p className="text-sm text-destructive">{fieldErrors.lastName}</p>
+                ) : null}
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="displayName">Anzeigename</Label>
-                <Input id="displayName" name="displayName" value={formState.displayName} onChange={handleInputChange} />
-                {fieldErrors.displayName ? <p className="text-sm text-destructive">{fieldErrors.displayName}</p> : null}
+                <Input
+                  id="displayName"
+                  name="displayName"
+                  value={formState.displayName}
+                  onChange={handleInputChange}
+                />
+                {fieldErrors.displayName ? (
+                  <p className="text-sm text-destructive">{fieldErrors.displayName}</p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">E-Mail</Label>
@@ -1548,25 +1622,42 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                   onChange={handleInputChange}
                   autoComplete="email"
                 />
-                {fieldErrors.email ? <p className="text-sm text-destructive">{fieldErrors.email}</p> : null}
+                {fieldErrors.email ? (
+                  <p className="text-sm text-destructive">{fieldErrors.email}</p>
+                ) : null}
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="dateOfBirth">Geburtsdatum</Label>
-                <DateInput id="dateOfBirth" name="dateOfBirth" value={formState.dateOfBirth} onChange={handleInputChange} />
-                {fieldErrors.dateOfBirth ? <p className="text-sm text-destructive">{fieldErrors.dateOfBirth}</p> : null}
-                <p className="text-xs text-muted-foreground">Benötigt für Fotoeinverständnis und Altersfreigaben.</p>
+                <DateInput
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  value={formState.dateOfBirth}
+                  onChange={handleInputChange}
+                />
+                {fieldErrors.dateOfBirth ? (
+                  <p className="text-sm text-destructive">{fieldErrors.dateOfBirth}</p>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  Benötigt für Fotoeinverständnis und Altersfreigaben.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label id="avatar-source-label">Avatar-Quelle wählen</Label>
-                <div className="flex flex-wrap gap-2" role="group" aria-labelledby="avatar-source-label">
-                  {([
-                    { value: "INITIALS", label: "Initialen" },
-                    { value: "GRAVATAR", label: "Gravatar" },
-                    { value: "UPLOAD", label: "Eigenes Bild" },
-                  ] satisfies Array<{ value: BasicsFormState["avatarSource"]; label: string }>).map((option) => {
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="group"
+                  aria-labelledby="avatar-source-label"
+                >
+                  {(
+                    [
+                      { value: "INITIALS", label: "Initialen" },
+                      { value: "GRAVATAR", label: "Gravatar" },
+                      { value: "UPLOAD", label: "Eigenes Bild" },
+                    ] satisfies Array<{ value: BasicsFormState["avatarSource"]; label: string }>
+                  ).map((option) => {
                     const active = formState.avatarSource === option.value;
                     return (
                       <button
@@ -1602,12 +1693,15 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                   />
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-foreground">Aktuelle Vorschau</p>
-                    <p className="text-xs text-muted-foreground">{avatarPreviewState.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {avatarPreviewState.description}
+                    </p>
                   </div>
                 </div>
                 {formState.avatarSource === "GRAVATAR" ? (
                   <p className="text-xs text-muted-foreground">
-                    Wir nutzen den Gravatar zu deiner E-Mail-Adresse. Stelle sicher, dass dort ein Bild hinterlegt ist.
+                    Wir nutzen den Gravatar zu deiner E-Mail-Adresse. Stelle sicher, dass dort ein
+                    Bild hinterlegt ist.
                   </p>
                 ) : null}
                 {formState.avatarSource === "UPLOAD" ? (
@@ -1619,9 +1713,11 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                       onChange={avatarCrop.handleAvatarFileChange}
                     />
                     <p className="text-xs text-muted-foreground">
-                      PNG, JPG oder WebP bis 8 MB. Wir skalieren dein Bild automatisch und speichern es optimiert.
+                      PNG, JPG oder WebP bis 8 MB. Wir skalieren dein Bild automatisch und speichern
+                      es optimiert.
                     </p>
-                    {(avatarCrop.avatarPreviewUrl || user.avatarSource === "UPLOAD") && !formState.removeAvatar ? (
+                    {(avatarCrop.avatarPreviewUrl || user.avatarSource === "UPLOAD") &&
+                    !formState.removeAvatar ? (
                       <div className="space-y-2">
                         {avatarCrop.avatarPreviewUrl ? (
                           <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
@@ -1631,7 +1727,9 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                               className="h-12 w-12"
                               previewUrl={avatarCrop.avatarPreviewUrl}
                             />
-                            <span className="text-xs text-muted-foreground">Vorschau des neuen Avatars</span>
+                            <span className="text-xs text-muted-foreground">
+                              Vorschau des neuen Avatars
+                            </span>
                           </div>
                         ) : null}
                         <div className="flex flex-wrap items-center gap-2">
@@ -1644,7 +1742,10 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                           >
                             {avatarCrop.avatarCropLoading ? (
                               <>
-                                <Loader2Icon className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden />
+                                <Loader2Icon
+                                  className="mr-2 h-3.5 w-3.5 animate-spin"
+                                  aria-hidden
+                                />
                                 Ausschnitt wird geladen…
                               </>
                             ) : (
@@ -1663,9 +1764,13 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                       <button
                         type="button"
                         className="text-xs text-muted-foreground underline transition hover:text-foreground"
-                        onClick={() => setFormState((prev) => ({ ...prev, removeAvatar: !prev.removeAvatar }))}
+                        onClick={() =>
+                          setFormState((prev) => ({ ...prev, removeAvatar: !prev.removeAvatar }))
+                        }
                       >
-                        {formState.removeAvatar ? "Eigenes Bild behalten" : "Eigenes Bild entfernen"}
+                        {formState.removeAvatar
+                          ? "Eigenes Bild behalten"
+                          : "Eigenes Bild entfernen"}
                       </button>
                     ) : null}
                   </div>
@@ -1692,7 +1797,9 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                 />
               </div>
               {(fieldErrors.password || fieldErrors.confirmPassword) && (
-                <p className="text-sm text-destructive">{fieldErrors.password ?? fieldErrors.confirmPassword}</p>
+                <p className="text-sm text-destructive">
+                  {fieldErrors.password ?? fieldErrors.confirmPassword}
+                </p>
               )}
               <p className="text-xs text-muted-foreground">
                 Lasse die Felder leer, wenn das Passwort unverändert bleiben soll.
@@ -1714,7 +1821,6 @@ function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
               </Button>
             </div>
           </form>
-
         </CardContent>
       </Card>
       <AvatarCropDialog
@@ -1783,9 +1889,13 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
     const parseResult = payoutDetailsSchema.safeParse(formState);
     if (!parseResult.success) {
       const issues = parseResult.error.flatten();
-      const fieldIssueEntries = Object.entries(issues.fieldErrors).filter(([, messages]) => messages && messages.length > 0);
+      const fieldIssueEntries = Object.entries(issues.fieldErrors).filter(
+        ([, messages]) => messages && messages.length > 0,
+      );
       if (fieldIssueEntries.length > 0) {
-        setFieldErrors(Object.fromEntries(fieldIssueEntries.map(([key, messages]) => [key, messages![0]])));
+        setFieldErrors(
+          Object.fromEntries(fieldIssueEntries.map(([key, messages]) => [key, messages![0]])),
+        );
       }
       if (issues.formErrors.length) {
         setError(issues.formErrors[0]);
@@ -1842,7 +1952,10 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="payoutMethod">Bevorzugte Auszahlung</Label>
-            <Select value={formState.payoutMethod} onValueChange={(value) => handlePayoutMethodChange(value as PayoutMethod)}>
+            <Select
+              value={formState.payoutMethod}
+              onValueChange={(value) => handlePayoutMethodChange(value as PayoutMethod)}
+            >
               <SelectTrigger id="payoutMethod">
                 <SelectValue placeholder="Auszahlungsart wählen" />
               </SelectTrigger>
@@ -1854,7 +1967,9 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
                 ))}
               </SelectContent>
             </Select>
-            {fieldErrors.payoutMethod ? <p className="text-sm text-destructive">{fieldErrors.payoutMethod}</p> : null}
+            {fieldErrors.payoutMethod ? (
+              <p className="text-sm text-destructive">{fieldErrors.payoutMethod}</p>
+            ) : null}
             <p className="text-xs text-muted-foreground">
               Diese Angaben nutzen wir, um dir Auslagen zu erstatten oder Gagen auszuzahlen.
             </p>
@@ -1897,8 +2012,12 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
                   onChange={handleInputChange}
                   autoComplete="off"
                 />
-                {fieldErrors.payoutIban ? <p className="text-sm text-destructive">{fieldErrors.payoutIban}</p> : null}
-                <p className="text-xs text-muted-foreground">Wir speichern die IBAN ohne Leerzeichen.</p>
+                {fieldErrors.payoutIban ? (
+                  <p className="text-sm text-destructive">{fieldErrors.payoutIban}</p>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  Wir speichern die IBAN ohne Leerzeichen.
+                </p>
               </div>
             </div>
           ) : null}
@@ -1934,8 +2053,12 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
                 rows={3}
                 placeholder="Beschreibe kurz, wie wir dir Geld senden sollen."
               />
-              {fieldErrors.payoutNote ? <p className="text-sm text-destructive">{fieldErrors.payoutNote}</p> : null}
-              <p className="text-xs text-muted-foreground">Zum Beispiel Revolut, Wise oder andere Konten.</p>
+              {fieldErrors.payoutNote ? (
+                <p className="text-sm text-destructive">{fieldErrors.payoutNote}</p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Zum Beispiel Revolut, Wise oder andere Konten.
+              </p>
             </div>
           ) : null}
 
@@ -1954,7 +2077,6 @@ function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
             </Button>
           </div>
         </form>
-
       </CardContent>
     </Card>
   );
@@ -1967,10 +2089,19 @@ type NutritionSectionProps = {
   onDietaryUpdated: (preference: { label: string | null; strictnessLabel: string | null }) => void;
 };
 
-function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryUpdated }: NutritionSectionProps) {
+function NutritionSection({
+  onboarding,
+  allergies,
+  onAllergiesChange,
+  onDietaryUpdated,
+}: NutritionSectionProps) {
   const initialDietary = useMemo(() => {
-    const { style, customLabel } = parseDietaryStyleFromLabel(onboarding?.dietaryPreference ?? null);
-    const strictness = parseDietaryStrictnessFromLabel(onboarding?.dietaryPreferenceStrictness ?? null);
+    const { style, customLabel } = parseDietaryStyleFromLabel(
+      onboarding?.dietaryPreference ?? null,
+    );
+    const strictness = parseDietaryStrictnessFromLabel(
+      onboarding?.dietaryPreferenceStrictness ?? null,
+    );
     return { style, customLabel: customLabel ?? "", strictness } satisfies DietaryFormState;
   }, [onboarding?.dietaryPreference, onboarding?.dietaryPreferenceStrictness]);
 
@@ -1998,7 +2129,10 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
     setDietaryError(null);
 
     const style = dietaryState.style;
-    const strictness = style === "omnivore" || style === "none" ? DEFAULT_STRICTNESS_FOR_NONE : dietaryState.strictness;
+    const strictness =
+      style === "omnivore" || style === "none"
+        ? DEFAULT_STRICTNESS_FOR_NONE
+        : dietaryState.strictness;
     const customLabel = dietaryState.customLabel.trim();
     if (style === "custom" && !customLabel) {
       setDietaryError("Bitte gib eine Bezeichnung für deinen individuellen Ernährungsstil an.");
@@ -2059,7 +2193,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
       const updated = result.data.allergy;
       const nextAllergies = [...allergies];
       const index = nextAllergies.findIndex(
-        (entry) => entry.id === updated.id || entry.allergen.toLowerCase() === updated.allergen.toLowerCase(),
+        (entry) =>
+          entry.id === updated.id ||
+          entry.allergen.toLowerCase() === updated.allergen.toLowerCase(),
       );
       const payload: Allergy = {
         id: updated.id,
@@ -2079,7 +2215,13 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
       onAllergiesChange(nextAllergies);
       toast.success("Allergie gespeichert");
       setEditingAllergyId(null);
-      setAllergyState({ allergen: "", level: AllergyLevel.MILD, symptoms: "", treatment: "", note: "" });
+      setAllergyState({
+        allergen: "",
+        level: AllergyLevel.MILD,
+        symptoms: "",
+        treatment: "",
+        note: "",
+      });
     } finally {
       setAllergySubmitting(false);
     }
@@ -2109,7 +2251,13 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
       toast.success("Allergie entfernt");
       if (editingAllergyId && allergyState.allergen === allergen) {
         setEditingAllergyId(null);
-        setAllergyState({ allergen: "", level: AllergyLevel.MILD, symptoms: "", treatment: "", note: "" });
+        setAllergyState({
+          allergen: "",
+          level: AllergyLevel.MILD,
+          symptoms: "",
+          treatment: "",
+          note: "",
+        });
       }
     } finally {
       setAllergySubmitting(false);
@@ -2117,8 +2265,14 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
   };
 
   const dietaryDescription = useMemo(() => {
-    const { label } = resolveDietaryStyleLabel(dietaryState.style, dietaryState.customLabel || undefined);
-    const strictnessLabel = resolveDietaryStrictnessLabel(dietaryState.style, dietaryState.strictness);
+    const { label } = resolveDietaryStyleLabel(
+      dietaryState.style,
+      dietaryState.customLabel || undefined,
+    );
+    const strictnessLabel = resolveDietaryStrictnessLabel(
+      dietaryState.style,
+      dietaryState.strictness,
+    );
     return { label, strictnessLabel };
   }, [dietaryState.customLabel, dietaryState.strictness, dietaryState.style]);
 
@@ -2164,7 +2318,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                 <Input
                   id="customLabel"
                   value={dietaryState.customLabel}
-                  onChange={(event) => setDietaryState((prev) => ({ ...prev, customLabel: event.target.value }))}
+                  onChange={(event) =>
+                    setDietaryState((prev) => ({ ...prev, customLabel: event.target.value }))
+                  }
                 />
               </div>
             ) : null}
@@ -2173,7 +2329,12 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <Label htmlFor="dietary-strictness">Strengegrad</Label>
               <Select
                 value={dietaryState.strictness}
-                onValueChange={(value) => setDietaryState((prev) => ({ ...prev, strictness: value as DietaryStrictnessOption }))}
+                onValueChange={(value) =>
+                  setDietaryState((prev) => ({
+                    ...prev,
+                    strictness: value as DietaryStrictnessOption,
+                  }))
+                }
                 disabled={dietaryState.style === "omnivore" || dietaryState.style === "none"}
               >
                 <SelectTrigger id="dietary-strictness" aria-label="Strengegrad des Ernährungsstils">
@@ -2222,7 +2383,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
 
       <Card className="border border-border/60">
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Allergien &amp; Unverträglichkeiten</CardTitle>
+          <CardTitle className="text-base font-semibold">
+            Allergien &amp; Unverträglichkeiten
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <form className="space-y-4" onSubmit={handleAllergySubmit}>
@@ -2231,7 +2394,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <Input
                 id="allergen"
                 value={allergyState.allergen}
-                onChange={(event) => setAllergyState((prev) => ({ ...prev, allergen: event.target.value }))}
+                onChange={(event) =>
+                  setAllergyState((prev) => ({ ...prev, allergen: event.target.value }))
+                }
                 placeholder="z.B. Erdnüsse"
               />
             </div>
@@ -2239,7 +2404,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <Label htmlFor="allergy-level">Schweregrad der Allergie</Label>
               <Select
                 value={allergyState.level}
-                onValueChange={(value) => setAllergyState((prev) => ({ ...prev, level: value as AllergyLevel }))}
+                onValueChange={(value) =>
+                  setAllergyState((prev) => ({ ...prev, level: value as AllergyLevel }))
+                }
               >
                 <SelectTrigger id="allergy-level" aria-label="Schweregrad der Allergie wählen">
                   <SelectValue placeholder="Schweregrad wählen" />
@@ -2258,7 +2425,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <Textarea
                 id="symptoms"
                 value={allergyState.symptoms}
-                onChange={(event) => setAllergyState((prev) => ({ ...prev, symptoms: event.target.value }))}
+                onChange={(event) =>
+                  setAllergyState((prev) => ({ ...prev, symptoms: event.target.value }))
+                }
                 placeholder="Beschreibe die typischen Symptome"
               />
             </div>
@@ -2267,7 +2436,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <Textarea
                 id="treatment"
                 value={allergyState.treatment}
-                onChange={(event) => setAllergyState((prev) => ({ ...prev, treatment: event.target.value }))}
+                onChange={(event) =>
+                  setAllergyState((prev) => ({ ...prev, treatment: event.target.value }))
+                }
                 placeholder="Was hilft im Notfall?"
               />
             </div>
@@ -2276,7 +2447,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <Textarea
                 id="note"
                 value={allergyState.note}
-                onChange={(event) => setAllergyState((prev) => ({ ...prev, note: event.target.value }))}
+                onChange={(event) =>
+                  setAllergyState((prev) => ({ ...prev, note: event.target.value }))
+                }
               />
             </div>
             {allergyError ? <p className="text-sm text-destructive">{allergyError}</p> : null}
@@ -2287,7 +2460,13 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                   variant="outline"
                   onClick={() => {
                     setEditingAllergyId(null);
-        setAllergyState({ allergen: "", level: AllergyLevel.MILD, symptoms: "", treatment: "", note: "" });
+                    setAllergyState({
+                      allergen: "",
+                      level: AllergyLevel.MILD,
+                      symptoms: "",
+                      treatment: "",
+                      note: "",
+                    });
                   }}
                   className="w-full sm:w-auto"
                 >
@@ -2314,7 +2493,8 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
               <p className="text-sm text-muted-foreground">Keine Allergien hinterlegt.</p>
             ) : (
               allergies.map((entry) => {
-                const style = ALLERGY_LEVEL_STYLES[entry.level as AllergyLevel] ?? ALLERGY_LEVEL_STYLES.MILD;
+                const style =
+                  ALLERGY_LEVEL_STYLES[entry.level as AllergyLevel] ?? ALLERGY_LEVEL_STYLES.MILD;
                 return (
                   <div
                     key={entry.id}
@@ -2322,7 +2502,9 @@ function NutritionSection({ onboarding, allergies, onAllergiesChange, onDietaryU
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Badge className={cn("border px-2 py-0.5 text-[11px]", style.badge)}>{getAllergyLevelLabel(entry.level as AllergyLevel)}</Badge>
+                        <Badge className={cn("border px-2 py-0.5 text-[11px]", style.badge)}>
+                          {getAllergyLevelLabel(entry.level as AllergyLevel)}
+                        </Badge>
                         <span className="font-medium text-foreground">{entry.allergen}</span>
                       </div>
                       <div className="flex gap-2 text-xs">
@@ -2384,7 +2566,8 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { suggestions: interestSuggestions, loading: suggestionsLoading } = useInterestSuggestions();
+  const { suggestions: interestSuggestions, loading: suggestionsLoading } =
+    useInterestSuggestions();
   const availableInterestSuggestions = useMemo(() => {
     const selected = new Set(state.items.map((item) => item.toLowerCase()));
     return interestSuggestions
@@ -2503,7 +2686,8 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Maximal {MAX_INTERESTS_PER_USER} Einträge. Du kannst mehrere Begriffe nacheinander hinzufügen.
+              Maximal {MAX_INTERESTS_PER_USER} Einträge. Du kannst mehrere Begriffe nacheinander
+              hinzufügen.
             </p>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
           </div>
@@ -2563,7 +2747,13 @@ function InterestsSection({ interests, onInterestsChange }: InterestsSectionProp
           </div>
 
           <div className="flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
-            <Button type="button" variant="outline" onClick={resetInterests} disabled={!state.dirty} className="w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetInterests}
+              disabled={!state.dirty}
+              className="w-full sm:w-auto"
+            >
               Änderungen verwerfen
             </Button>
             <Button type="submit" disabled={!state.dirty || saving} className="w-full sm:w-auto">
@@ -2604,12 +2794,20 @@ export function OnboardingSection({
 }: OnboardingSectionProps) {
   const whatsappLink = onboarding?.whatsappLink ?? null;
   const currentShow = onboarding?.show ?? null;
-  const initialForm = useMemo<OnboardingFormState>(() => ({
-    background: onboarding?.background ?? "",
-    backgroundClass: onboarding?.backgroundClass ?? "",
-    notes: onboarding?.notes ?? "",
-    memberSinceYear: onboarding?.memberSinceYear ? String(onboarding.memberSinceYear) : "",
-  }), [onboarding?.background, onboarding?.backgroundClass, onboarding?.memberSinceYear, onboarding?.notes]);
+  const initialForm = useMemo<OnboardingFormState>(
+    () => ({
+      background: onboarding?.background ?? "",
+      backgroundClass: onboarding?.backgroundClass ?? "",
+      notes: onboarding?.notes ?? "",
+      memberSinceYear: onboarding?.memberSinceYear ? String(onboarding.memberSinceYear) : "",
+    }),
+    [
+      onboarding?.background,
+      onboarding?.backgroundClass,
+      onboarding?.memberSinceYear,
+      onboarding?.notes,
+    ],
+  );
 
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
@@ -2619,7 +2817,8 @@ export function OnboardingSection({
   const [showSubmitting, setShowSubmitting] = useState(false);
   const [showError, setShowError] = useState<string | null>(null);
   const hasOnboardingOptions = availableOnboardings.length > 0;
-  const showTitle = currentShow?.title && currentShow.title.trim().length ? currentShow.title.trim() : null;
+  const showTitle =
+    currentShow?.title && currentShow.title.trim().length ? currentShow.title.trim() : null;
   const showYear = typeof currentShow?.year === "number" ? currentShow.year : null;
   const showLabel = currentShow
     ? showTitle
@@ -2631,16 +2830,20 @@ export function OnboardingSection({
         : "Produktion"
     : "Noch keine Produktion verknüpft";
   const showHelper = currentShow
-    ? currentShow.periodLabel ?? "Zeitraum wird noch geplant."
+    ? (currentShow.periodLabel ?? "Zeitraum wird noch geplant.")
     : "Wähle eine Produktion, um mit dem Onboarding zu starten.";
-  const showStatusLabel = currentShow ? ONBOARDING_STATUS_LABELS[currentShow.status] ?? currentShow.status : null;
+  const showStatusLabel = currentShow
+    ? (ONBOARDING_STATUS_LABELS[currentShow.status] ?? currentShow.status)
+    : null;
   const { backgroundSuggestions, classSuggestions, activeTag, requiresClass } =
     useOnboardingBackgroundData(formState.background, {
       initialSuggestions: PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
     });
   const [whatsappSubmitting, setWhatsappSubmitting] = useState(false);
   const whatsappVisitedLabel = useMemo(() => formatDate(whatsappVisitedAt), [whatsappVisitedAt]);
-  const preferenceSource = onboarding?.preferences?.length ? onboarding.preferences : rolePreferences;
+  const preferenceSource = onboarding?.preferences?.length
+    ? onboarding.preferences
+    : rolePreferences;
   const focusCandidates = useMemo(
     () =>
       (preferenceSource ?? []).map((pref) => ({
@@ -2700,10 +2903,12 @@ export function OnboardingSection({
             whatsappLink: payload.whatsappLink,
             whatsappLinkVisitedAt: payload.whatsappLinkVisitedAt,
           }
-        : {
+        : ({
             focus: focusForSubmission,
             background: formState.background.trim() ? formState.background.trim() : null,
-            backgroundClass: formState.backgroundClass.trim() ? formState.backgroundClass.trim() : null,
+            backgroundClass: formState.backgroundClass.trim()
+              ? formState.backgroundClass.trim()
+              : null,
             notes: formState.notes.trim() ? formState.notes.trim() : null,
             memberSinceYear: formState.memberSinceYear
               ? Number.parseInt(formState.memberSinceYear, 10)
@@ -2715,7 +2920,7 @@ export function OnboardingSection({
             preferences: rolePreferences,
             show: nextShow,
             whatsappLink: payload.whatsappLink,
-          } satisfies OnboardingProfile;
+          } satisfies OnboardingProfile);
 
       onOnboardingChange(nextOnboarding);
       toast.success(onboarding?.show ? "Produktion aktualisiert" : "Onboarding gestartet");
@@ -2724,7 +2929,6 @@ export function OnboardingSection({
       setShowSubmitting(false);
     }
   };
-
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -2749,7 +2953,9 @@ export function OnboardingSection({
         background: parseResult.data.background,
         backgroundClass: parseResult.data.backgroundClass ?? null,
         notes: parseResult.data.notes ?? null,
-        memberSinceYear: parseResult.data.memberSinceYear ? Number.parseInt(parseResult.data.memberSinceYear, 10) : null,
+        memberSinceYear: parseResult.data.memberSinceYear
+          ? Number.parseInt(parseResult.data.memberSinceYear, 10)
+          : null,
       });
       if (!result.ok) {
         setError(result.error);
@@ -2843,7 +3049,9 @@ export function OnboardingSection({
               </Button>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Aktuell sind keine Produktionen verfügbar.</p>
+            <p className="text-xs text-muted-foreground">
+              Aktuell sind keine Produktionen verfügbar.
+            </p>
           )}
         </div>
 
@@ -2887,7 +3095,12 @@ export function OnboardingSection({
               <p className="text-xs text-primary/80">
                 Öffne die Gruppe jetzt – wir markieren dich anschließend als informiert.
               </p>
-              <Button size="sm" onClick={handleWhatsAppClick} disabled={whatsappSubmitting} className="w-full sm:w-auto">
+              <Button
+                size="sm"
+                onClick={handleWhatsAppClick}
+                disabled={whatsappSubmitting}
+                className="w-full sm:w-auto"
+              >
                 {whatsappSubmitting ? (
                   <>
                     <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -2925,7 +3138,8 @@ export function OnboardingSection({
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Passe deine Rollenpräferenzen an, um den Fokus zu verändern – wir übernehmen die Berechnung automatisch.
+              Passe deine Rollenpräferenzen an, um den Fokus zu verändern – wir übernehmen die
+              Berechnung automatisch.
             </p>
           </div>
 
@@ -2934,7 +3148,9 @@ export function OnboardingSection({
             <Input
               id="background"
               value={formState.background}
-              onChange={(event) => setFormState((prev) => ({ ...prev, background: event.target.value }))}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, background: event.target.value }))
+              }
               placeholder="z.B. BSZ Altroßthal – Berufsschule"
             />
             <div className="flex flex-wrap gap-2">
@@ -2966,7 +3182,9 @@ export function OnboardingSection({
                 .filter(
                   (suggestion) =>
                     !BACKGROUND_TAGS.some(
-                      (tag) => normalizeBackgroundLabel(tag.value) === normalizeBackgroundLabel(suggestion),
+                      (tag) =>
+                        normalizeBackgroundLabel(tag.value) ===
+                        normalizeBackgroundLabel(suggestion),
                     ),
                 )
                 .slice(0, 6)
@@ -2995,10 +3213,14 @@ export function OnboardingSection({
               <Input
                 id="backgroundClass"
                 value={formState.backgroundClass}
-                onChange={(event) => setFormState((prev) => ({ ...prev, backgroundClass: event.target.value }))}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, backgroundClass: event.target.value }))
+                }
                 placeholder={activeTag?.classPlaceholder ?? "z.B. BG 12"}
               />
-              <p className="text-xs text-muted-foreground">{activeTag?.classHelper ?? "Hilft uns bei der Zuordnung."}</p>
+              <p className="text-xs text-muted-foreground">
+                {activeTag?.classHelper ?? "Hilft uns bei der Zuordnung."}
+              </p>
               {classSuggestions.length ? (
                 <div className="flex flex-wrap gap-2">
                   {classSuggestions.slice(0, 8).map((suggestion) => (
@@ -3006,7 +3228,9 @@ export function OnboardingSection({
                       key={suggestion}
                       type="button"
                       className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                      onClick={() => setFormState((prev) => ({ ...prev, backgroundClass: suggestion }))}
+                      onClick={() =>
+                        setFormState((prev) => ({ ...prev, backgroundClass: suggestion }))
+                      }
                     >
                       {suggestion}
                     </button>
@@ -3025,7 +3249,9 @@ export function OnboardingSection({
               min="1900"
               max={String(CURRENT_YEAR)}
               value={formState.memberSinceYear}
-              onChange={(event) => setFormState((prev) => ({ ...prev, memberSinceYear: event.target.value }))}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, memberSinceYear: event.target.value }))
+              }
               placeholder={`z.B. ${CURRENT_YEAR}`}
             />
           </div>
@@ -3045,7 +3271,9 @@ export function OnboardingSection({
               Aktuelles Ernährungsprofil: {dietaryPreference.label ?? "Noch kein Eintrag"}
               {dietaryPreference.strictnessLabel ? ` · ${dietaryPreference.strictnessLabel}` : ""}
             </p>
-            {onboarding?.updatedAt ? <p>Zuletzt aktualisiert am {formatDate(onboarding.updatedAt) ?? "unbekannt"}</p> : null}
+            {onboarding?.updatedAt ? (
+              <p>Zuletzt aktualisiert am {formatDate(onboarding.updatedAt) ?? "unbekannt"}</p>
+            ) : null}
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -3094,7 +3322,7 @@ export function OnboardingSection({
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                         active
                           ? "border-primary/60 bg-primary/10 shadow-sm"
-                          : "border-border/60 bg-background hover:border-primary/40"
+                          : "border-border/60 bg-background hover:border-primary/40",
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -3119,7 +3347,10 @@ export function OnboardingSection({
                           </>
                         ) : (
                           <>
-                            <ArrowRightIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                            <ArrowRightIcon
+                              className="h-4 w-4 text-muted-foreground"
+                              aria-hidden="true"
+                            />
                             <span className="text-muted-foreground">Auswählen</span>
                           </>
                         )}
@@ -3134,10 +3365,19 @@ export function OnboardingSection({
             {showError ? <p className="text-sm text-destructive">{showError}</p> : null}
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setShowDialogOpen(false)} disabled={showSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDialogOpen(false)}
+              disabled={showSubmitting}
+            >
               Abbrechen
             </Button>
-            <Button type="button" onClick={handleShowAssign} disabled={showSubmitting || !selectedShowId}>
+            <Button
+              type="button"
+              onClick={handleShowAssign}
+              disabled={showSubmitting || !selectedShowId}
+            >
               {showSubmitting ? (
                 <>
                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -3169,11 +3409,16 @@ export function RolePreferencesSection({
   onRolePreferencesChange,
   onOnboardingChange,
 }: RolePreferencesSectionProps) {
-  const initialPreferences = useMemo(() => buildPreferenceFormState(rolePreferences), [rolePreferences]);
+  const initialPreferences = useMemo(
+    () => buildPreferenceFormState(rolePreferences),
+    [rolePreferences],
+  );
   const [preferenceForm, setPreferenceForm] = useState<RolePreferenceFormState>(initialPreferences);
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
   const [preferenceSubmitting, setPreferenceSubmitting] = useState(false);
-  const preferenceSource = onboarding?.preferences?.length ? onboarding.preferences : rolePreferences;
+  const preferenceSource = onboarding?.preferences?.length
+    ? onboarding.preferences
+    : rolePreferences;
   const focusCandidates = useMemo(
     () =>
       (preferenceSource ?? []).map((pref) => ({
@@ -3218,18 +3463,21 @@ export function RolePreferencesSection({
     });
   }, []);
 
-  const changePreferenceWeight = useCallback((domain: "acting" | "crew", code: string, weight: number) => {
-    const normalized = normalizeRolePreferenceWeight(weight);
-    setPreferenceForm((prev) => {
-      const entries = domain === "acting" ? prev.acting : prev.crew;
-      const nextEntries = entries.map((entry) =>
-        entry.code === code ? { ...entry, weight: normalized } : entry,
-      );
-      return domain === "acting"
-        ? { ...prev, acting: nextEntries }
-        : { ...prev, crew: nextEntries };
-    });
-  }, []);
+  const changePreferenceWeight = useCallback(
+    (domain: "acting" | "crew", code: string, weight: number) => {
+      const normalized = normalizeRolePreferenceWeight(weight);
+      setPreferenceForm((prev) => {
+        const entries = domain === "acting" ? prev.acting : prev.crew;
+        const nextEntries = entries.map((entry) =>
+          entry.code === code ? { ...entry, weight: normalized } : entry,
+        );
+        return domain === "acting"
+          ? { ...prev, acting: nextEntries }
+          : { ...prev, crew: nextEntries };
+      });
+    },
+    [],
+  );
 
   const handlePreferenceSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -3304,8 +3552,8 @@ export function RolePreferencesSection({
           ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
-          Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen willst. Dein Fokus ergibt
-          sich automatisch aus deiner Auswahl.
+          Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen
+          willst. Dein Fokus ergibt sich automatisch aus deiner Auswahl.
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -3323,7 +3571,9 @@ export function RolePreferencesSection({
                       key={pref.code}
                       className={cn(
                         "flex flex-col gap-3 rounded-lg border p-4 transition",
-                        pref.enabled ? "border-primary bg-primary/5" : "border-border bg-background",
+                        pref.enabled
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background",
                       )}
                     >
                       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
@@ -3331,7 +3581,10 @@ export function RolePreferencesSection({
                           <div className="flex flex-wrap items-center gap-2">
                             <h5 className="text-sm font-medium">{pref.title}</h5>
                             {pref.isCustom ? (
-                              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                              <Badge
+                                variant="outline"
+                                className="border-primary/40 bg-primary/10 text-primary"
+                              >
                                 Individuell
                               </Badge>
                             ) : null}
@@ -3359,7 +3612,11 @@ export function RolePreferencesSection({
                             step={10}
                             value={pref.weight}
                             onChange={(event) =>
-                              changePreferenceWeight("acting", pref.code, event.currentTarget.valueAsNumber)
+                              changePreferenceWeight(
+                                "acting",
+                                pref.code,
+                                event.currentTarget.valueAsNumber,
+                              )
                             }
                             className="w-full accent-primary"
                           />
@@ -3387,7 +3644,9 @@ export function RolePreferencesSection({
                       key={pref.code}
                       className={cn(
                         "flex flex-col gap-3 rounded-lg border p-4 transition",
-                        pref.enabled ? "border-primary/70 bg-primary/5" : "border-border bg-background",
+                        pref.enabled
+                          ? "border-primary/70 bg-primary/5"
+                          : "border-border bg-background",
                       )}
                     >
                       <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
@@ -3395,7 +3654,10 @@ export function RolePreferencesSection({
                           <div className="flex flex-wrap items-center gap-2">
                             <h5 className="text-sm font-medium">{pref.title}</h5>
                             {pref.isCustom ? (
-                              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+                              <Badge
+                                variant="outline"
+                                className="border-primary/40 bg-primary/10 text-primary"
+                              >
                                 Individuell
                               </Badge>
                             ) : null}
@@ -3423,7 +3685,11 @@ export function RolePreferencesSection({
                             step={10}
                             value={pref.weight}
                             onChange={(event) =>
-                              changePreferenceWeight("crew", pref.code, event.currentTarget.valueAsNumber)
+                              changePreferenceWeight(
+                                "crew",
+                                pref.code,
+                                event.currentTarget.valueAsNumber,
+                              )
                             }
                             className="w-full accent-primary"
                           />

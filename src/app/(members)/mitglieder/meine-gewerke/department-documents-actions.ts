@@ -58,7 +58,12 @@ function readOptionalString(formData: FormData, key: string, options?: ReadOptio
 }
 
 const MAX_DOCUMENT_SIZE_BYTES = 15 * 1024 * 1024;
-const ALLOWED_MIME_PREFIXES = ["image/", "application/pdf", "application/msword", "application/vnd."];
+const ALLOWED_MIME_PREFIXES = [
+  "image/",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.",
+];
 
 function sanitizeFileName(name: string | undefined | null) {
   const fallback = "dokument";
@@ -84,8 +89,8 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
   }
 
   const departmentId = readString(formData, "departmentId", { label: "Gewerk" });
-  const redirectPath = readOptionalString(formData, "redirectPath", { label: "Seite" }) ??
-    "/mitglieder/meine-gewerke";
+  const redirectPath =
+    readOptionalString(formData, "redirectPath", { label: "Seite" }) ?? "/mitglieder/meine-gewerke";
 
   const files = formData
     .getAll("files")
@@ -104,8 +109,8 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
     });
     canManage = Boolean(
       membership &&
-        (membership.role === DepartmentMembershipRole.lead ||
-          membership.role === DepartmentMembershipRole.deputy),
+      (membership.role === DepartmentMembershipRole.lead ||
+        membership.role === DepartmentMembershipRole.deputy),
     );
   }
   if (!canManage) {
@@ -164,8 +169,8 @@ export async function deleteDepartmentDocumentAction(formData: FormData) {
   }
 
   const documentId = readString(formData, "documentId", { label: "Dokument" });
-  const redirectPath = readOptionalString(formData, "redirectPath", { label: "Seite" }) ??
-    "/mitglieder/meine-gewerke";
+  const redirectPath =
+    readOptionalString(formData, "redirectPath", { label: "Seite" }) ?? "/mitglieder/meine-gewerke";
 
   const document = await prisma.departmentDocument.findUnique({
     where: { id: documentId },
@@ -189,8 +194,8 @@ export async function deleteDepartmentDocumentAction(formData: FormData) {
     });
     canManage = Boolean(
       membership &&
-        (membership.role === DepartmentMembershipRole.lead ||
-          membership.role === DepartmentMembershipRole.deputy),
+      (membership.role === DepartmentMembershipRole.lead ||
+        membership.role === DepartmentMembershipRole.deputy),
     );
   }
   const isOwner = document.uploadedById === userId;

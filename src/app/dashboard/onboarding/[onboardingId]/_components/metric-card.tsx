@@ -28,7 +28,7 @@ const trendIntent: Record<string, string> = {
 
 export function MetricCard({ metric, index }: MetricCardProps) {
   const intentClass = intentStyles[metric.intent ?? "default"] ?? intentStyles.default;
-  const trendVariant = metric.trend ? trendIntent[metric.trend.direction] ?? "muted" : null;
+  const trendVariant = metric.trend ? (trendIntent[metric.trend.direction] ?? "muted") : null;
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -44,7 +44,13 @@ export function MetricCard({ metric, index }: MetricCardProps) {
             </CardTitle>
             {metric.intent && metric.intent !== "default" ? (
               <Badge
-                variant={metric.intent === "critical" ? "destructive" : metric.intent === "warning" ? "warning" : "success"}
+                variant={
+                  metric.intent === "critical"
+                    ? "destructive"
+                    : metric.intent === "warning"
+                      ? "warning"
+                      : "success"
+                }
                 className="uppercase tracking-[0.08em]"
               >
                 {metric.intent === "critical"
@@ -55,9 +61,7 @@ export function MetricCard({ metric, index }: MetricCardProps) {
               </Badge>
             ) : null}
           </div>
-          {metric.helper ? (
-            <p className="text-sm text-muted-foreground">{metric.helper}</p>
-          ) : null}
+          {metric.helper ? <p className="text-sm text-muted-foreground">{metric.helper}</p> : null}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -69,7 +73,15 @@ export function MetricCard({ metric, index }: MetricCardProps) {
           </div>
           {metric.trend ? (
             <div className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              <Badge variant={trendVariant === "success" ? "success" : trendVariant === "critical" ? "destructive" : "muted"}>
+              <Badge
+                variant={
+                  trendVariant === "success"
+                    ? "success"
+                    : trendVariant === "critical"
+                      ? "destructive"
+                      : "muted"
+                }
+              >
                 {metric.trend.direction === "up"
                   ? "Trend steigend"
                   : metric.trend.direction === "down"
@@ -79,7 +91,9 @@ export function MetricCard({ metric, index }: MetricCardProps) {
               {metric.trend.percentage !== undefined ? (
                 <span>{metric.trend.percentage.toFixed(1)}%</span>
               ) : null}
-              {metric.trend.label ? <span className="text-muted-foreground/80">{metric.trend.label}</span> : null}
+              {metric.trend.label ? (
+                <span className="text-muted-foreground/80">{metric.trend.label}</span>
+              ) : null}
             </div>
           ) : null}
         </CardContent>

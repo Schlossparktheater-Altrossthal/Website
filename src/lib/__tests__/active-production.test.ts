@@ -27,10 +27,10 @@ vi.mock("@/lib/permissions", () => ({
 }));
 
 describe("getActiveProduction", () => {
-beforeEach(async () => {
-  await vi.resetModules();
-  vi.clearAllMocks();
-});
+  beforeEach(async () => {
+    await vi.resetModules();
+    vi.clearAllMocks();
+  });
 
   it("allows production managers to access active shows without memberships", async () => {
     const userId = "user-123";
@@ -52,7 +52,10 @@ beforeEach(async () => {
 
     const result = await getActiveProduction(userId);
 
-    expect(mockHasPermission).toHaveBeenCalledWith({ id: userId }, "PRIVATE.PRODUCTION.SHOW.MANAGE");
+    expect(mockHasPermission).toHaveBeenCalledWith(
+      { id: userId },
+      "PRIVATE.PRODUCTION.SHOW.MANAGE",
+    );
     expect(mockMembershipFindFirst).not.toHaveBeenCalled();
     expect(mockShowFindFirst).toHaveBeenCalledWith({
       where: { id: showId },

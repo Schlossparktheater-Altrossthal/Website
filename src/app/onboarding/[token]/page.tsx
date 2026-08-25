@@ -43,8 +43,8 @@ export default async function OnboardingInvitePage({
       <main id="main" className="mx-auto max-w-3xl space-y-6 py-16 text-center">
         <h1 className="text-3xl font-semibold">Einladung nicht gefunden</h1>
         <p className="text-muted-foreground">
-          Dieser Einladungslink ist nicht gültig oder wurde bereits entfernt. Bitte wende dich an die Theaterleitung für einen
-          neuen Link.
+          Dieser Einladungslink ist nicht gültig oder wurde bereits entfernt. Bitte wende dich an
+          die Theaterleitung für einen neuen Link.
         </p>
       </main>
     );
@@ -56,8 +56,8 @@ export default async function OnboardingInvitePage({
       <main id="main" className="mx-auto max-w-3xl space-y-6 py-16 text-center">
         <h1 className="text-3xl font-semibold">Einladung nicht mehr aktiv</h1>
         <p className="text-muted-foreground">
-          Diese Einladung kann nicht mehr verwendet werden. Sie ist entweder abgelaufen, deaktiviert oder es wurden alle Plätze
-          genutzt.
+          Diese Einladung kann nicht mehr verwendet werden. Sie ist entweder abgelaufen, deaktiviert
+          oder es wurden alle Plätze genutzt.
         </p>
       </main>
     );

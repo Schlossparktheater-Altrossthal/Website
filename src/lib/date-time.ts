@@ -57,10 +57,7 @@ function formatParts(
   return map;
 }
 
-export function formatIsoDateInTimeZone(
-  iso: string,
-  timeZone: string = DEFAULT_TIME_ZONE,
-): string {
+export function formatIsoDateInTimeZone(iso: string, timeZone: string = DEFAULT_TIME_ZONE): string {
   const parts = formatParts(iso, timeZone, {
     year: "numeric",
     month: "2-digit",
@@ -72,10 +69,7 @@ export function formatIsoDateInTimeZone(
   return `${year}-${month}-${day}`;
 }
 
-export function formatIsoTimeInTimeZone(
-  iso: string,
-  timeZone: string = DEFAULT_TIME_ZONE,
-): string {
+export function formatIsoTimeInTimeZone(iso: string, timeZone: string = DEFAULT_TIME_ZONE): string {
   const parts = formatParts(iso, timeZone, {
     hour: "2-digit",
     minute: "2-digit",

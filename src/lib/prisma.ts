@@ -38,5 +38,5 @@ export const prisma = new Proxy(
       }
       return value;
     },
-  }
+  },
 ) as PrismaClient;

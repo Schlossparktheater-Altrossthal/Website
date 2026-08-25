@@ -10,10 +10,7 @@ import Credentials from "next-auth/providers/credentials";
 import type { CredentialInput } from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { sortRoles, ROLES } from "@/lib/roles";
-import {
-  DEV_TEST_USER_EMAILS,
-  DEV_TEST_USER_ROLE_MAP,
-} from "@/lib/auth-dev-test-users";
+import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
 import { ensureDevTestUser } from "@/lib/dev-auth";
@@ -52,8 +49,7 @@ const isRole = (value: unknown): value is Role =>
 const AVATAR_SOURCE_VALUES = ["GRAVATAR", "UPLOAD", "INITIALS"] as const;
 
 const isAvatarSource = (value: unknown): value is AvatarSource =>
-  typeof value === "string" &&
-  (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
+  typeof value === "string" && (AVATAR_SOURCE_VALUES as readonly string[]).includes(value);
 
 function extractAvatarSource(value: unknown): AvatarSource | undefined {
   if (typeof value !== "string") return undefined;
@@ -76,10 +72,7 @@ function extractIsoDate(value: unknown): string | undefined {
   return undefined;
 }
 
-function applyAvatarFields(
-  target: MutableToken,
-  source: Record<string, unknown>,
-) {
+function applyAvatarFields(target: MutableToken, source: Record<string, unknown>) {
   if ("avatarSource" in source) {
     const raw = (source as { avatarSource?: unknown }).avatarSource;
     const parsed = extractAvatarSource(raw);
@@ -105,10 +98,7 @@ function applyAvatarFields(
   }
 }
 
-function applyNameFields(
-  target: MutableToken,
-  source: Record<string, unknown>,
-) {
+function applyNameFields(target: MutableToken, source: Record<string, unknown>) {
   let fallbackName: string | null | undefined;
 
   if ("firstName" in source) {
@@ -182,9 +172,7 @@ function extractRoles(value: unknown): Role[] | undefined {
   return undefined;
 }
 
-function extractRolesFromSource(
-  source: RoleSource | undefined,
-): Role[] | undefined {
+function extractRolesFromSource(source: RoleSource | undefined): Role[] | undefined {
   if (!source) return undefined;
   return extractRoles(source.roles) ?? extractRoles(source.role);
 }
@@ -223,10 +211,7 @@ const authAdapter: Adapter = {
   },
   async useVerificationToken(params) {
     const verificationToken = await baseAdapter.useVerificationToken?.(params);
-    if (
-      !verificationToken ||
-      verificationToken.expires.valueOf() < Date.now()
-    ) {
+    if (!verificationToken || verificationToken.expires.valueOf() < Date.now()) {
       return null;
     }
 
@@ -250,15 +235,12 @@ const credentialsProvider = Credentials({
   name: "Passwort Login",
   credentials: credentialInputs,
   async authorize(credentials) {
-    const rawEmail =
-      typeof credentials?.email === "string" ? credentials.email : undefined;
+    const rawEmail = typeof credentials?.email === "string" ? credentials.email : undefined;
     const rawPassword =
       typeof credentials?.password === "string" ? credentials.password : undefined;
-    const devFlag =
-      typeof credentials?.dev === "string" ? credentials.dev : undefined;
+    const devFlag = typeof credentials?.dev === "string" ? credentials.dev : undefined;
     const email = rawEmail?.toLowerCase();
-    const devFastLogin =
-      process.env.NODE_ENV !== "production" && devFlag === "1";
+    const devFastLogin = process.env.NODE_ENV !== "production" && devFlag === "1";
 
     if (!email) throw new CredentialsSignin();
 
@@ -305,24 +287,18 @@ const credentialsProvider = Credentials({
       throw new CredentialsSignin("Ungültige Zugangsdaten");
     }
 
-    const combinedRoles = sortRoles([
-      user.role as Role,
-      ...user.roles.map((r) => r.role as Role),
-    ]);
+    const combinedRoles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
 
     return {
       id: user.id,
       email: user.email!,
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
-      name:
-        combineNameParts(user.firstName, user.lastName) ?? user.name ?? null,
+      name: combineNameParts(user.firstName, user.lastName) ?? user.name ?? null,
       role: combinedRoles[combinedRoles.length - 1],
       roles: combinedRoles,
       avatarSource: user.avatarSource,
-      avatarUpdatedAt: user.avatarImageUpdatedAt
-        ? user.avatarImageUpdatedAt.toISOString()
-        : null,
+      avatarUpdatedAt: user.avatarImageUpdatedAt ? user.avatarImageUpdatedAt.toISOString() : null,
     };
   },
 });
@@ -375,10 +351,7 @@ const authConfig = {
         const normalizedEmail = normalizeMagicLinkEmail(rawEmail);
 
         if (email?.verificationRequest) {
-          const rateLimit = recordMagicLinkAttempt(
-            normalizedEmail,
-            "nextauth-direct",
-          );
+          const rateLimit = recordMagicLinkAttempt(normalizedEmail, "nextauth-direct");
           if (!rateLimit.allowed) return false;
         }
 
@@ -387,8 +360,7 @@ const authConfig = {
           select: { id: true, deactivatedAt: true },
         });
         if (!dbUser) return "/login?error=Verification";
-        if (dbUser.deactivatedAt)
-          return "/login?error=AccessDenied&reason=deactivated";
+        if (dbUser.deactivatedAt) return "/login?error=AccessDenied&reason=deactivated";
         return true;
       }
 
@@ -468,18 +440,12 @@ const authConfig = {
             ...dbUser.roles.map((r) => r.role as Role),
           ]);
           applyRoles(combined);
-          applyNameFields(
-            mutableToken,
-            dbUser as unknown as Record<string, unknown>,
-          );
+          applyNameFields(mutableToken, dbUser as unknown as Record<string, unknown>);
           const dbEmail = extractString(dbUser.email);
           if (dbEmail) {
             mutableToken.email = dbEmail;
           }
-          applyAvatarFields(
-            mutableToken,
-            dbUser as unknown as Record<string, unknown>,
-          );
+          applyAvatarFields(mutableToken, dbUser as unknown as Record<string, unknown>);
           if (dbUser.deactivatedAt) {
             mutableToken.deactivatedAt = dbUser.deactivatedAt.toISOString();
             mutableToken.isDeactivated = true;
@@ -529,9 +495,7 @@ const authConfig = {
     async session({ token }) {
       const mutableToken = token as MutableToken;
       const roles = Array.isArray(mutableToken.roles)
-        ? (mutableToken.roles.filter(
-            (role): role is Role => typeof role === "string",
-          ) as Role[])
+        ? (mutableToken.roles.filter((role): role is Role => typeof role === "string") as Role[])
         : undefined;
 
       await recordSessionStart({

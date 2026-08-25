@@ -10,7 +10,6 @@ export const DEFAULT_SITE_TITLE = "Sommertheater Altrossthal" as const;
 export const DEFAULT_COLOR_MODE = "dark" as const;
 export const DEFAULT_MAINTENANCE_MODE = false as const;
 
-
 export type PageVisibilitySettings = {
   pages: {
     general: boolean;
@@ -40,17 +39,34 @@ export const DEFAULT_PAGE_VISIBILITY: PageVisibilitySettings = {
   pages: { general: true, maintenance: true, ui: true, websiteTheme: true },
   public: { about: true, mystery: true, schoolCat: true, timeline: true },
   members: {},
-  categories: { dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true } },
+  categories: {
+    dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true },
+  },
 };
 
 function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
   const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
-  const pages = source.pages && typeof source.pages === "object" ? source.pages as Record<string, unknown> : {};
-  const publicPages = source.public && typeof source.public === "object" ? source.public as Record<string, unknown> : {};
-  const members = source.members && typeof source.members === "object" ? source.members as Record<string, unknown> : {};
-  const categories = source.categories && typeof source.categories === "object" ? source.categories as Record<string, unknown> : {};
-  const dateisystem = categories.dateisystem && typeof categories.dateisystem === "object" ? categories.dateisystem as Record<string, unknown> : {};
-  const pick=(v:unknown,d:boolean)=> typeof v === 'boolean' ? v : d;
+  const pages =
+    source.pages && typeof source.pages === "object"
+      ? (source.pages as Record<string, unknown>)
+      : {};
+  const publicPages =
+    source.public && typeof source.public === "object"
+      ? (source.public as Record<string, unknown>)
+      : {};
+  const members =
+    source.members && typeof source.members === "object"
+      ? (source.members as Record<string, unknown>)
+      : {};
+  const categories =
+    source.categories && typeof source.categories === "object"
+      ? (source.categories as Record<string, unknown>)
+      : {};
+  const dateisystem =
+    categories.dateisystem && typeof categories.dateisystem === "object"
+      ? (categories.dateisystem as Record<string, unknown>)
+      : {};
+  const pick = (v: unknown, d: boolean) => (typeof v === "boolean" ? v : d);
   return {
     pages: {
       general: pick(pages.general, true),
@@ -64,7 +80,9 @@ function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
       schoolCat: pick(publicPages.schoolCat, true),
       timeline: pick(publicPages.timeline, true),
     },
-    members: Object.fromEntries(Object.entries(members).map(([key, value]) => [key, pick(value, true)])),
+    members: Object.fromEntries(
+      Object.entries(members).map(([key, value]) => [key, pick(value, true)]),
+    ),
     categories: {
       dateisystem: {
         enabled: pick(dateisystem.enabled, true),
@@ -207,7 +225,10 @@ function toNumericOklch(value: ThemeFamilyValue | undefined): NumericOklch | nul
   return { l, c, h, alpha };
 }
 
-function applyAdjustments(base: NumericOklch, adjustments: ThemeTokenAdjustment | undefined): NumericOklch {
+function applyAdjustments(
+  base: NumericOklch,
+  adjustments: ThemeTokenAdjustment | undefined,
+): NumericOklch {
   if (!adjustments || Object.keys(adjustments).length === 0) {
     return { ...base };
   }
@@ -329,11 +350,11 @@ function resolveModesFromParameters(
       const familyModes = families[familyOverride] ?? families[baseFamily];
 
       const baseColourValue =
-        (familyModes?.[mode] as ThemeFamilyValue | undefined)
-        ?? (fallbackMode && familyModes
+        (familyModes?.[mode] as ThemeFamilyValue | undefined) ??
+        (fallbackMode && familyModes
           ? (familyModes[fallbackMode] as ThemeFamilyValue | undefined)
-          : undefined)
-        ?? (familyModes ? (Object.values(familyModes)[0] as ThemeFamilyValue | undefined) : undefined);
+          : undefined) ??
+        (familyModes ? (Object.values(familyModes)[0] as ThemeFamilyValue | undefined) : undefined);
 
       const normalisedBase = toNumericOklch(baseColourValue);
       if (!normalisedBase) {
@@ -364,7 +385,9 @@ function sanitiseManualModes(
       ? (candidate as Record<string, unknown>)
       : {};
 
-  const modeNames = new Set<ThemeModeKey>(Object.keys(fallbackRecord).map((key) => key as ThemeModeKey));
+  const modeNames = new Set<ThemeModeKey>(
+    Object.keys(fallbackRecord).map((key) => key as ThemeModeKey),
+  );
   for (const key of Object.keys(candidateRecord)) {
     modeNames.add(key as ThemeModeKey);
   }
@@ -438,10 +461,7 @@ function sanitiseFamilyValue(
   return base;
 }
 
-function sanitiseFamilies(
-  value: unknown,
-  fallbackFamilies: ThemeFamilies,
-): ThemeFamilies {
+function sanitiseFamilies(value: unknown, fallbackFamilies: ThemeFamilies): ThemeFamilies {
   const result: ThemeFamilies = {};
   const fallbackRecord = fallbackFamilies ?? {};
   const candidateRecord =
@@ -458,7 +478,9 @@ function sanitiseFamilies(
     const fallbackModes = fallbackRecord[familyName] ?? {};
     const candidateModesRaw = candidateRecord[familyName];
     const candidateModes =
-      candidateModesRaw && typeof candidateModesRaw === "object" && !Array.isArray(candidateModesRaw)
+      candidateModesRaw &&
+      typeof candidateModesRaw === "object" &&
+      !Array.isArray(candidateModesRaw)
         ? (candidateModesRaw as Record<string, unknown>)
         : {};
 
@@ -490,12 +512,11 @@ function sanitiseAdjustment(
   fallback: Record<string, unknown> | undefined,
 ): SanitisedAdjustment {
   const result: SanitisedAdjustment = {};
-  const candidate = value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-  const base = fallback && typeof fallback === "object" && !Array.isArray(fallback)
-    ? fallback
-    : {};
+  const candidate =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const base = fallback && typeof fallback === "object" && !Array.isArray(fallback) ? fallback : {};
 
   const numericKeys = [
     "deltaL",
@@ -620,18 +641,21 @@ function sanitiseTokenDefinition(
   value: unknown,
   fallback: ThemeSemanticTokenDefinition | undefined,
 ): ThemeSemanticTokenDefinition {
-  const baseRecord = fallback && typeof fallback === "object" && !Array.isArray(fallback)
-    ? (fallback as Record<string, unknown>)
-    : {};
-  const candidateRecord = value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  const baseRecord =
+    fallback && typeof fallback === "object" && !Array.isArray(fallback)
+      ? (fallback as Record<string, unknown>)
+      : {};
+  const candidateRecord =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
 
   const result: Record<string, unknown> = {};
 
-  const fallbackFamily = typeof baseRecord.family === "string" && baseRecord.family.trim()
-    ? baseRecord.family.trim()
-    : "neutral";
+  const fallbackFamily =
+    typeof baseRecord.family === "string" && baseRecord.family.trim()
+      ? baseRecord.family.trim()
+      : "neutral";
   if (typeof candidateRecord.family === "string" && candidateRecord.family.trim()) {
     result.family = candidateRecord.family.trim();
   } else {
@@ -684,9 +708,10 @@ function sanitiseTokenDefinition(
 function sanitiseParameters(value: unknown, fallback: ThemeParameters): ThemeParameters {
   const base = deepClone(fallback ?? {});
 
-  const candidate = value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  const candidate =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
 
   base.families = sanitiseFamilies(candidate.families, fallback.families);
 
@@ -694,9 +719,10 @@ function sanitiseParameters(value: unknown, fallback: ThemeParameters): ThemePar
     string,
     ThemeSemanticTokenDefinition
   >;
-  const candidateTokens = candidate.tokens && typeof candidate.tokens === "object" && !Array.isArray(candidate.tokens)
-    ? (candidate.tokens as Record<string, unknown>)
-    : {};
+  const candidateTokens =
+    candidate.tokens && typeof candidate.tokens === "object" && !Array.isArray(candidate.tokens)
+      ? (candidate.tokens as Record<string, unknown>)
+      : {};
 
   const tokenNames = new Set<string>([
     ...Object.keys(fallbackTokensRecord),
@@ -1049,9 +1075,7 @@ export function sanitiseThemeTokens(value: unknown): ThemeTokens {
     metaOverride = metaCandidate as Record<string, unknown>;
   }
 
-  const resolvedModeKeys = sortModeKeys(
-    Object.keys(base.modes).map((key) => key as ThemeModeKey),
-  );
+  const resolvedModeKeys = sortModeKeys(Object.keys(base.modes).map((key) => key as ThemeModeKey));
 
   base.meta = {
     ...(base.meta ?? {}),
@@ -1108,7 +1132,9 @@ function sanitiseMaintenanceMode(value: unknown): boolean {
 export type WebsiteSettingsRecord = (WebsiteSettings & { theme: WebsiteTheme | null }) | null;
 
 export class LockedWebsiteThemeError extends Error {
-  constructor(message = "Standard-Designs können nicht bearbeitet werden. Bitte dupliziere das Theme.") {
+  constructor(
+    message = "Standard-Designs können nicht bearbeitet werden. Bitte dupliziere das Theme.",
+  ) {
     super(message);
     this.name = "LockedWebsiteThemeError";
   }
@@ -1166,8 +1192,12 @@ export function resolveWebsiteSettings(record: WebsiteSettingsRecord): ResolvedW
     id: record?.id ?? DEFAULT_WEBSITE_SETTINGS_ID,
     siteTitle: record ? sanitiseSiteTitle(record.siteTitle) : DEFAULT_SITE_TITLE,
     colorMode: record ? sanitiseColorMode(record.colorMode) : DEFAULT_COLOR_MODE,
-    maintenanceMode: record ? sanitiseMaintenanceMode(record.maintenanceMode) : DEFAULT_MAINTENANCE_MODE,
-    pageVisibility: record ? sanitisePageVisibility(record.pageVisibility) : DEFAULT_PAGE_VISIBILITY,
+    maintenanceMode: record
+      ? sanitiseMaintenanceMode(record.maintenanceMode)
+      : DEFAULT_MAINTENANCE_MODE,
+    pageVisibility: record
+      ? sanitisePageVisibility(record.pageVisibility)
+      : DEFAULT_PAGE_VISIBILITY,
     updatedAt: record?.updatedAt ?? null,
     theme,
   };
@@ -1286,8 +1316,10 @@ export async function ensureWebsiteSettingsRecord() {
     }
 
     const currentVisibility = sanitisePageVisibility(existing.pageVisibility);
-    const needsVisibilityPatch = JSON.stringify(currentVisibility) !== JSON.stringify(DEFAULT_PAGE_VISIBILITY)
-      && (!existing.pageVisibility || Object.keys((existing.pageVisibility as Record<string, unknown>) ?? {}).length === 0);
+    const needsVisibilityPatch =
+      JSON.stringify(currentVisibility) !== JSON.stringify(DEFAULT_PAGE_VISIBILITY) &&
+      (!existing.pageVisibility ||
+        Object.keys((existing.pageVisibility as Record<string, unknown>) ?? {}).length === 0);
     if (needsVisibilityPatch) {
       patch.pageVisibility = currentVisibility as Prisma.InputJsonValue;
     }
@@ -1391,10 +1423,14 @@ export async function saveWebsiteTheme(id: string, input: WebsiteThemeInput) {
 
   const baseName = existing?.name ?? "Unbenanntes Theme";
   const resolvedName = sanitiseCssValue(input.name ?? baseName, baseName);
-  const resolvedDescription = sanitiseThemeDescription(input.description, existing?.description ?? null);
-  const resolvedTokens = input.tokens !== undefined
-    ? tokensToJson(sanitiseThemeTokens(input.tokens))
-    : tokensToJson(sanitiseThemeTokens(existing?.tokens ?? cloneDefaultTokens()));
+  const resolvedDescription = sanitiseThemeDescription(
+    input.description,
+    existing?.description ?? null,
+  );
+  const resolvedTokens =
+    input.tokens !== undefined
+      ? tokensToJson(sanitiseThemeTokens(input.tokens))
+      : tokensToJson(sanitiseThemeTokens(existing?.tokens ?? cloneDefaultTokens()));
 
   if (existing) {
     return prisma.websiteTheme.update({
@@ -1500,7 +1536,6 @@ export async function getWebsiteTheme(id: string) {
   return toClientWebsiteTheme(resolveWebsiteTheme(record));
 }
 
-
 export async function deleteWebsiteTheme(id: string) {
   const existing = await prisma.websiteTheme.findUnique({ where: { id } });
   if (!existing) {
@@ -1510,7 +1545,9 @@ export async function deleteWebsiteTheme(id: string) {
     throw new LockedWebsiteThemeError();
   }
 
-  const settings = await prisma.websiteSettings.findUnique({ where: { id: DEFAULT_WEBSITE_SETTINGS_ID } });
+  const settings = await prisma.websiteSettings.findUnique({
+    where: { id: DEFAULT_WEBSITE_SETTINGS_ID },
+  });
   if (settings?.themeId === id) {
     await prisma.websiteSettings.update({
       where: { id: DEFAULT_WEBSITE_SETTINGS_ID },

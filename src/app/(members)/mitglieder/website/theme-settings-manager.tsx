@@ -7,10 +7,23 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -267,7 +280,8 @@ function createFamilyFormState(
     const modes = familiesRecord[familyName] as Record<string, unknown> | undefined;
     state[familyName] = {} as Record<ThemeModeKey, FamilyFormFields>;
     for (const mode of modeKeys) {
-      const data = modes?.[mode] as { l?: number; c?: number; h?: number; alpha?: number } | undefined;
+      const data = modes?.[mode] as
+        { l?: number; c?: number; h?: number; alpha?: number } | undefined;
       state[familyName][mode] = {
         l: toInputValue(data?.l ?? 0.5),
         c: toInputValue(data?.c ?? 0),
@@ -289,7 +303,10 @@ function createTokenFormState(
   for (const tokenName of names) {
     const definition = tokensRecord[tokenName] ?? {};
     const definitionRecord = definition as Record<string, unknown>;
-    const modes: Record<ThemeModeKey, TokenModeFields> = {} as Record<ThemeModeKey, TokenModeFields>;
+    const modes: Record<ThemeModeKey, TokenModeFields> = {} as Record<
+      ThemeModeKey,
+      TokenModeFields
+    >;
     for (const mode of modeKeys) {
       const rawAdjustments = definitionRecord[mode];
       if (typeof rawAdjustments === "string") {
@@ -318,19 +335,35 @@ function createTokenFormState(
 
       modes[mode] = {
         l: toInputValue(typeof adjustments?.l === "number" ? (adjustments.l as number) : undefined),
-        deltaL: toInputValue(typeof adjustments?.deltaL === "number" ? (adjustments.deltaL as number) : undefined),
-        scaleL: toInputValue(typeof adjustments?.scaleL === "number" ? (adjustments.scaleL as number) : undefined),
+        deltaL: toInputValue(
+          typeof adjustments?.deltaL === "number" ? (adjustments.deltaL as number) : undefined,
+        ),
+        scaleL: toInputValue(
+          typeof adjustments?.scaleL === "number" ? (adjustments.scaleL as number) : undefined,
+        ),
         c: toInputValue(typeof adjustments?.c === "number" ? (adjustments.c as number) : undefined),
-        deltaC: toInputValue(typeof adjustments?.deltaC === "number" ? (adjustments.deltaC as number) : undefined),
-        scaleC: toInputValue(typeof adjustments?.scaleC === "number" ? (adjustments.scaleC as number) : undefined),
+        deltaC: toInputValue(
+          typeof adjustments?.deltaC === "number" ? (adjustments.deltaC as number) : undefined,
+        ),
+        scaleC: toInputValue(
+          typeof adjustments?.scaleC === "number" ? (adjustments.scaleC as number) : undefined,
+        ),
         h: toInputValue(typeof adjustments?.h === "number" ? (adjustments.h as number) : undefined),
-        deltaH: toInputValue(typeof adjustments?.deltaH === "number" ? (adjustments.deltaH as number) : undefined),
-        alpha: toInputValue(typeof adjustments?.alpha === "number" ? (adjustments.alpha as number) : undefined),
+        deltaH: toInputValue(
+          typeof adjustments?.deltaH === "number" ? (adjustments.deltaH as number) : undefined,
+        ),
+        alpha: toInputValue(
+          typeof adjustments?.alpha === "number" ? (adjustments.alpha as number) : undefined,
+        ),
         deltaAlpha: toInputValue(
-          typeof adjustments?.deltaAlpha === "number" ? (adjustments.deltaAlpha as number) : undefined,
+          typeof adjustments?.deltaAlpha === "number"
+            ? (adjustments.deltaAlpha as number)
+            : undefined,
         ),
         scaleAlpha: toInputValue(
-          typeof adjustments?.scaleAlpha === "number" ? (adjustments.scaleAlpha as number) : undefined,
+          typeof adjustments?.scaleAlpha === "number"
+            ? (adjustments.scaleAlpha as number)
+            : undefined,
         ),
         value: typeof adjustments?.value === "string" ? (adjustments.value as string) : "",
         family: typeof adjustments?.family === "string" ? (adjustments.family as string) : "",
@@ -416,7 +449,8 @@ function normaliseParameters(tokens: ThemeTokens, modeKeys: ThemeModeKey[]): Nor
     const modesRecord = familiesSource[familyName] as Record<string, unknown> | undefined;
     families[familyName] = {} as Record<ThemeModeKey, NumericOklch>;
     for (const mode of modeKeys) {
-      const data = modesRecord?.[mode] as { l?: number; c?: number; h?: number; alpha?: number } | undefined;
+      const data = modesRecord?.[mode] as
+        { l?: number; c?: number; h?: number; alpha?: number } | undefined;
       families[familyName][mode] = {
         l: typeof data?.l === "number" ? data.l : 0.5,
         c: typeof data?.c === "number" ? data.c : 0,
@@ -556,7 +590,7 @@ function buildNormalisedParameters(
     const entry: NormalisedToken = {
       family: formToken?.family.trim().length
         ? formToken.family.trim()
-        : fallbackToken?.family ?? "neutral",
+        : (fallbackToken?.family ?? "neutral"),
     };
 
     const descriptionValue = formToken?.meta.description ?? fallbackToken?.description;
@@ -655,10 +689,11 @@ function resolveThemeModes(
     }
   }
   const sortedModes = sortModeKeys(Array.from(modeSet));
-  const fallbackMode = sortedModes.includes(LIGHT_MODE)
-    ? LIGHT_MODE
-    : sortedModes[0];
-  const resolved: Record<ThemeModeKey, Record<string, string>> = {} as Record<ThemeModeKey, Record<string, string>>;
+  const fallbackMode = sortedModes.includes(LIGHT_MODE) ? LIGHT_MODE : sortedModes[0];
+  const resolved: Record<ThemeModeKey, Record<string, string>> = {} as Record<
+    ThemeModeKey,
+    Record<string, string>
+  >;
 
   for (const mode of sortedModes) {
     resolved[mode] = {};
@@ -672,9 +707,9 @@ function resolveThemeModes(
       const familyName = adjustments.family ?? baseFamily;
       const familyModes = parameters.families[familyName] ?? parameters.families[baseFamily];
       const baseColour =
-        familyModes?.[mode]
-          ?? (fallbackMode && familyModes ? familyModes[fallbackMode] : undefined)
-          ?? (familyModes ? Object.values(familyModes)[0] : undefined);
+        familyModes?.[mode] ??
+        (fallbackMode && familyModes ? familyModes[fallbackMode] : undefined) ??
+        (familyModes ? Object.values(familyModes)[0] : undefined);
       if (!baseColour) {
         resolved[mode][tokenName] = "transparent";
         continue;
@@ -732,15 +767,16 @@ export type WebsiteThemeSettingsManagerProps = {
   initialThemes: ClientWebsiteThemeSummary[];
 };
 
-export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: WebsiteThemeSettingsManagerProps) {
+export function WebsiteThemeSettingsManager({
+  initialSettings,
+  initialThemes,
+}: WebsiteThemeSettingsManagerProps) {
   const mergedThemeSummaries = sortThemeSummaries(
     Array.from(
-      new Map(
-        [
-          ...initialThemes.map((theme) => [theme.id, theme] as const),
-          [initialSettings.theme.id, themeToSummary(initialSettings.theme)] as const,
-        ],
-      ).values(),
+      new Map([
+        ...initialThemes.map((theme) => [theme.id, theme] as const),
+        [initialSettings.theme.id, themeToSummary(initialSettings.theme)] as const,
+      ]).values(),
     ),
   );
 
@@ -755,7 +791,8 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
   const [siteTitle, setSiteTitle] = useState(initialSettings.siteTitle);
   const [colorMode, setColorMode] = useState<ThemeColorMode>(initialSettings.colorMode);
   const [maintenanceMode, setMaintenanceMode] = useState(initialSettings.maintenanceMode);
-  const [availableThemes, setAvailableThemes] = useState<ClientWebsiteThemeSummary[]>(mergedThemeSummaries);
+  const [availableThemes, setAvailableThemes] =
+    useState<ClientWebsiteThemeSummary[]>(mergedThemeSummaries);
   const [themeBaselines, setThemeBaselines] = useState<Record<string, ClientWebsiteTheme>>({
     [initialSettings.theme.id]: initialSettings.theme,
   });
@@ -901,7 +938,9 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
   useEffect(() => {
     const savedCss = createThemeCss(currentTheme.tokens);
     return () => {
-      const styleElement = document.getElementById("website-theme-style") as HTMLStyleElement | null;
+      const styleElement = document.getElementById(
+        "website-theme-style",
+      ) as HTMLStyleElement | null;
       if (!styleElement) {
         return;
       }
@@ -1053,7 +1092,11 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     setTokensState((prev) => ({
       ...prev,
       [tokenName]: {
-        ...(prev[tokenName] ?? { family: "", modes: {} as Record<ThemeModeKey, TokenModeFields>, meta: {} }),
+        ...(prev[tokenName] ?? {
+          family: "",
+          modes: {} as Record<ThemeModeKey, TokenModeFields>,
+          meta: {},
+        }),
         family,
       },
     }));
@@ -1240,14 +1283,17 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
     }
   }
 
-
   async function handleDeleteThemeClick() {
     if (themeEditingLocked) {
       toast.error("Standard-Designs können nicht gelöscht werden.");
       return;
     }
 
-    if (!window.confirm(`Theme "${currentTheme.name}" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.`)) {
+    if (
+      !window.confirm(
+        `Theme "${currentTheme.name}" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.`,
+      )
+    ) {
       return;
     }
 
@@ -1256,7 +1302,11 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
       const response = await fetch(`/api/website/themes/${currentTheme.id}`, { method: "DELETE" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(typeof payload?.error === "string" ? payload.error : "Theme konnte nicht gelöscht werden.");
+        throw new Error(
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Theme konnte nicht gelöscht werden.",
+        );
       }
 
       const themes = sortThemeSummaries(payload.themes ?? []);
@@ -1265,7 +1315,10 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
       if (fallbackId) {
         await handleThemeSelect(fallbackId);
       }
-      setSiteSnapshot((prev) => ({ ...prev, activeThemeId: payload.activeThemeId ?? prev.activeThemeId }));
+      setSiteSnapshot((prev) => ({
+        ...prev,
+        activeThemeId: payload.activeThemeId ?? prev.activeThemeId,
+      }));
       toast.success("Theme wurde gelöscht.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Theme konnte nicht gelöscht werden.");
@@ -1401,7 +1454,9 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
         populateFormFromTheme(currentTheme);
       }
 
-      toast.success(activateTheme ? "Theme gespeichert und aktiviert." : "Website-Theme gespeichert.");
+      toast.success(
+        activateTheme ? "Theme gespeichert und aktiviert." : "Website-Theme gespeichert.",
+      );
     } catch (error) {
       console.error(error);
       toast.error(error instanceof Error ? error.message : "Fehler beim Speichern.");
@@ -1496,10 +1551,10 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
               variant="outline"
               onClick={handleActivateThemeClick}
               disabled={
-                isActivatingTheme
-                || isSaving
-                || isLoadingTheme
-                || currentTheme.id === siteSnapshot.activeThemeId
+                isActivatingTheme ||
+                isSaving ||
+                isLoadingTheme ||
+                currentTheme.id === siteSnapshot.activeThemeId
               }
               data-state={isActivatingTheme ? "loading" : undefined}
             >
@@ -1554,7 +1609,10 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
             </div>
             <div className="space-y-2">
               <Label htmlFor="color-mode">Standardmodus</Label>
-              <Select value={colorMode} onValueChange={(value) => setColorMode(value as ThemeColorMode)}>
+              <Select
+                value={colorMode}
+                onValueChange={(value) => setColorMode(value as ThemeColorMode)}
+              >
                 <SelectTrigger id="color-mode">
                   <SelectValue placeholder="Modus wählen" />
                 </SelectTrigger>
@@ -1568,7 +1626,6 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
               </Select>
             </div>
           </div>
-
         </CardContent>
       </Card>
 
@@ -1576,7 +1633,8 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
         <CardHeader className="space-y-2">
           <CardTitle>Parametrische Theme-Farben</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Steuere zuerst die OKLCH-Basiswerte der Farbfamilien und passe anschließend die semantischen Token pro Modus an.
+            Steuere zuerst die OKLCH-Basiswerte der Farbfamilien und passe anschließend die
+            semantischen Token pro Modus an.
           </p>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -1598,151 +1656,342 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
             disabled={themeEditingLocked}
           >
             <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="theme-name">Theme-Name</Label>
-              <Input
-                id="theme-name"
-                value={themeName}
-                maxLength={120}
-                onChange={(event) => setThemeName(event.target.value)}
-                placeholder="z. B. Sommertheater Standard"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="theme-name">Theme-Name</Label>
+                <Input
+                  id="theme-name"
+                  value={themeName}
+                  maxLength={120}
+                  onChange={(event) => setThemeName(event.target.value)}
+                  placeholder="z. B. Sommertheater Standard"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="theme-radius">Grund-Radius</Label>
+                <Input
+                  id="theme-radius"
+                  value={radius}
+                  maxLength={60}
+                  onChange={(event) => setRadius(event.target.value)}
+                  placeholder="0.625rem"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="theme-radius">Grund-Radius</Label>
-              <Input
-                id="theme-radius"
-                value={radius}
-                maxLength={60}
-                onChange={(event) => setRadius(event.target.value)}
-                placeholder="0.625rem"
+              <Label htmlFor="theme-description">Beschreibung</Label>
+              <Textarea
+                id="theme-description"
+                value={themeDescription}
+                onChange={(event) => setThemeDescription(event.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Optionaler Hinweis zum Theme"
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="theme-description">Beschreibung</Label>
-            <Textarea
-              id="theme-description"
-              value={themeDescription}
-              onChange={(event) => setThemeDescription(event.target.value)}
-              rows={3}
-              maxLength={500}
-              placeholder="Optionaler Hinweis zum Theme"
-            />
-          </div>
 
-          <section className="space-y-4">
-            <div className="space-y-1">
-              <h3 className="text-base font-semibold">Farbfamilien</h3>
-              <p className="text-sm text-muted-foreground">
-                Definiere die OKLCH-Ausgangswerte pro Familie und Modus. Diese Werte bilden die Grundlage für alle Ableitungen.
-              </p>
-            </div>
-            <div className="space-y-4">
-              {familyNames.map((family) => {
-                const isAdvancedVisible = expandedFamilies[family] ?? false;
-                return (
-                  <div key={family} className="space-y-4 rounded-lg border p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-sm font-medium">{formatFamilyLabel(family)}</span>
-                      <div className="flex items-center gap-2">
+            <section className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold">Farbfamilien</h3>
+                <p className="text-sm text-muted-foreground">
+                  Definiere die OKLCH-Ausgangswerte pro Familie und Modus. Diese Werte bilden die
+                  Grundlage für alle Ableitungen.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {familyNames.map((family) => {
+                  const isAdvancedVisible = expandedFamilies[family] ?? false;
+                  return (
+                    <div key={family} className="space-y-4 rounded-lg border p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <span className="text-sm font-medium">{formatFamilyLabel(family)}</span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+                            onClick={() =>
+                              setExpandedFamilies((prev) => ({
+                                ...prev,
+                                [family]: !isAdvancedVisible,
+                              }))
+                            }
+                          >
+                            <span>Erweitert</span>
+                            {isAdvancedVisible ? (
+                              <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                            ) : (
+                              <ChevronRightIcon className="h-4 w-4" aria-hidden />
+                            )}
+                          </Button>
+                          <div className="flex gap-2">
+                            {modeKeys.map((mode) => {
+                              const previewColour =
+                                parameters.families[family]?.[mode] ??
+                                fallbackParameters.families[family]?.[mode] ??
+                                DEFAULT_FAMILY_COLOR;
+                              return (
+                                <span
+                                  key={`${family}-${mode}-swatch`}
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60"
+                                  style={{
+                                    backgroundColor: formatOklchValue(previewColour),
+                                  }}
+                                  aria-label={`${formatFamilyLabel(family)} ${getModeLabel(mode)} Vorschau`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {modeKeys.map((mode) => {
+                          const modeState = familiesState[family]?.[mode];
+                          const baseId = `${family}-${mode}`;
+                          const resolvedColour =
+                            parameters.families[family]?.[mode] ??
+                            fallbackParameters.families[family]?.[mode] ??
+                            DEFAULT_FAMILY_COLOR;
+                          const showAlpha = (resolvedColour.alpha ?? 1) < 0.999;
+                          const hexDraft = familyHexDrafts[family]?.[mode];
+                          const hexValue =
+                            hexDraft ??
+                            oklchToHex(resolvedColour, {
+                              includeAlpha: showAlpha,
+                            });
+                          const colorInputValue = oklchToHex(
+                            { ...resolvedColour, alpha: 1 },
+                            { includeAlpha: false },
+                          );
+                          return (
+                            <div
+                              key={`${family}-${mode}`}
+                              className="space-y-3 rounded-md border p-3"
+                            >
+                              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                {getModeLabel(mode)}
+                              </div>
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <Label htmlFor={`${baseId}-hex`} className="text-xs">
+                                    Hex-Farbe
+                                  </Label>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      id={`${baseId}-color`}
+                                      type="color"
+                                      value={colorInputValue}
+                                      aria-label={`${formatFamilyLabel(family)} ${getModeLabel(mode)} Farbwahl`}
+                                      className="h-10 w-12 min-w-[3rem] cursor-pointer rounded-md px-1 py-1"
+                                      onChange={(event) =>
+                                        handleFamilyColorInput(family, mode, event.target.value)
+                                      }
+                                    />
+                                    <Input
+                                      id={`${baseId}-hex`}
+                                      value={hexValue}
+                                      onChange={(event) =>
+                                        handleFamilyHexInput(family, mode, event.target.value)
+                                      }
+                                      onBlur={(event) =>
+                                        handleFamilyHexBlur(family, mode, event.target.value)
+                                      }
+                                      placeholder="#RRGGBB"
+                                      spellCheck={false}
+                                      autoComplete="off"
+                                      className="font-mono uppercase"
+                                    />
+                                  </div>
+                                </div>
+                                {isAdvancedVisible ? (
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                      <Label htmlFor={`${baseId}-l`} className="text-xs">
+                                        L
+                                      </Label>
+                                      <Input
+                                        id={`${baseId}-l`}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        max="1"
+                                        value={modeState?.l ?? ""}
+                                        onChange={(event) =>
+                                          handleFamilyChange(family, mode, "l", event.target.value)
+                                        }
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label htmlFor={`${baseId}-c`} className="text-xs">
+                                        Chroma
+                                      </Label>
+                                      <Input
+                                        id={`${baseId}-c`}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={modeState?.c ?? ""}
+                                        onChange={(event) =>
+                                          handleFamilyChange(family, mode, "c", event.target.value)
+                                        }
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label htmlFor={`${baseId}-h`} className="text-xs">
+                                        Hue
+                                      </Label>
+                                      <Input
+                                        id={`${baseId}-h`}
+                                        type="number"
+                                        step="0.1"
+                                        value={modeState?.h ?? ""}
+                                        onChange={(event) =>
+                                          handleFamilyChange(family, mode, "h", event.target.value)
+                                        }
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label htmlFor={`${baseId}-alpha`} className="text-xs">
+                                        Alpha
+                                      </Label>
+                                      <Input
+                                        id={`${baseId}-alpha`}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        max="1"
+                                        value={modeState?.alpha ?? ""}
+                                        onChange={(event) =>
+                                          handleFamilyChange(
+                                            family,
+                                            mode,
+                                            "alpha",
+                                            event.target.value,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold">Semantische Token</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {showSemanticTokens
+                      ? "Weise jeder Rolle eine Farbfamilie zu und definiere bei Bedarf Modus-spezifische Anpassungen. Manuelle Werte überschreiben die automatische Ableitung aus den Farbfamilien."
+                      : "Im einfachen Modus werden die Farben der Farbfamilien automatisch auf alle Tokens angewandt. Öffne den erweiterten Modus, um einzelne Tokens gezielt zu überschreiben."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setShowSemanticTokens((prev) => !prev)}
+                    className={cn(
+                      "text-xs font-semibold hover:text-foreground",
+                      showSemanticTokens ? "text-foreground" : "text-muted-foreground",
+                    )}
+                    aria-expanded={showSemanticTokens}
+                    aria-controls={SEMANTIC_TOKEN_SECTION_ID}
+                    aria-pressed={showSemanticTokens}
+                    data-state={showSemanticTokens ? "open" : "closed"}
+                  >
+                    {showSemanticTokens ? (
+                      <>
+                        <ChevronDownIcon className="h-4 w-4" aria-hidden />
+                        <span>Erweiterten Modus verbergen</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronRightIcon className="h-4 w-4" aria-hidden />
+                        <span>Erweiterten Modus anzeigen</span>
+                      </>
+                    )}
+                  </Button>
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button
                           type="button"
                           variant="ghost"
-                          size="xs"
-                          className="text-xs font-semibold text-muted-foreground hover:text-foreground"
-                          onClick={() =>
-                            setExpandedFamilies((prev) => ({
-                              ...prev,
-                              [family]: !isAdvancedVisible,
-                            }))
-                          }
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         >
-                          <span>Erweitert</span>
-                          {isAdvancedVisible ? (
-                            <ChevronDownIcon className="h-4 w-4" aria-hidden />
-                          ) : (
-                            <ChevronRightIcon className="h-4 w-4" aria-hidden />
-                          )}
+                          <InfoIcon className="h-4 w-4" aria-hidden />
+                          <span className="sr-only">Hinweis zum erweiterten Modus</span>
                         </Button>
-                        <div className="flex gap-2">
-                          {modeKeys.map((mode) => {
-                            const previewColour =
-                              parameters.families[family]?.[mode] ??
-                              fallbackParameters.families[family]?.[mode] ??
-                              DEFAULT_FAMILY_COLOR;
-                            return (
-                              <span
-                                key={`${family}-${mode}-swatch`}
-                                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60"
-                                style={{
-                                  backgroundColor: formatOklchValue(previewColour),
-                                }}
-                                aria-label={`${formatFamilyLabel(family)} ${getModeLabel(mode)} Vorschau`}
-                              />
-                            );
-                          })}
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-left" side="bottom" align="end">
+                        Manuelle Anpassungen im erweiterten Modus überschreiben die automatische
+                        Ableitung aus den Farbfamilien. Lass den Modus ausgeblendet, wenn alle
+                        Tokens den Familienwert übernehmen sollen.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              {showSemanticTokens ? (
+                <div id={SEMANTIC_TOKEN_SECTION_ID} className="space-y-6">
+                  {tokenNames.map((token) => {
+                    const tokenState = tokensState[token];
+                    return (
+                      <div key={token} className="space-y-4 rounded-lg border p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-sm font-medium">{formatTokenLabel(token)}</Label>
+                            <p className="text-xs text-muted-foreground">
+                              Basisfamilie und Ableitungen für {formatTokenLabel(token)}.
+                            </p>
+                          </div>
+                          <Select
+                            value={tokenState?.family ?? ""}
+                            onValueChange={(value) => handleTokenFamilyChange(token, value)}
+                          >
+                            <SelectTrigger className="w-[220px]">
+                              <SelectValue placeholder="Familie wählen" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {familyNames.map((family) => (
+                                <SelectItem key={`${token}-${family}`} value={family}>
+                                  {formatFamilyLabel(family)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      </div>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {modeKeys.map((mode) => {
-                        const modeState = familiesState[family]?.[mode];
-                        const baseId = `${family}-${mode}`;
-                        const resolvedColour =
-                          parameters.families[family]?.[mode] ??
-                          fallbackParameters.families[family]?.[mode] ??
-                          DEFAULT_FAMILY_COLOR;
-                        const showAlpha = (resolvedColour.alpha ?? 1) < 0.999;
-                        const hexDraft = familyHexDrafts[family]?.[mode];
-                        const hexValue =
-                          hexDraft ??
-                          oklchToHex(resolvedColour, {
-                            includeAlpha: showAlpha,
-                          });
-                        const colorInputValue = oklchToHex(
-                          { ...resolvedColour, alpha: 1 },
-                          { includeAlpha: false },
-                        );
-                        return (
-                          <div key={`${family}-${mode}`} className="space-y-3 rounded-md border p-3">
-                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                              {getModeLabel(mode)}
-                            </div>
-                            <div className="space-y-3">
-                              <div className="space-y-1">
-                                <Label htmlFor={`${baseId}-hex`} className="text-xs">
-                                  Hex-Farbe
-                                </Label>
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    id={`${baseId}-color`}
-                                    type="color"
-                                    value={colorInputValue}
-                                    aria-label={`${formatFamilyLabel(family)} ${getModeLabel(mode)} Farbwahl`}
-                                    className="h-10 w-12 min-w-[3rem] cursor-pointer rounded-md px-1 py-1"
-                                    onChange={(event) =>
-                                      handleFamilyColorInput(family, mode, event.target.value)
-                                    }
-                                  />
-                                  <Input
-                                    id={`${baseId}-hex`}
-                                    value={hexValue}
-                                    onChange={(event) =>
-                                      handleFamilyHexInput(family, mode, event.target.value)
-                                    }
-                                    onBlur={(event) =>
-                                      handleFamilyHexBlur(family, mode, event.target.value)
-                                    }
-                                    placeholder="#RRGGBB"
-                                    spellCheck={false}
-                                    autoComplete="off"
-                                    className="font-mono uppercase"
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {modeKeys.map((mode) => {
+                            const modeState = tokenState?.modes?.[mode];
+                            const baseId = `${token}-${mode}`;
+                            return (
+                              <div
+                                key={`${token}-${mode}`}
+                                className="space-y-3 rounded-md border p-3"
+                              >
+                                <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                  <span>{getModeLabel(mode)}</span>
+                                  <span
+                                    className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60"
+                                    style={{
+                                      backgroundColor: previewModes[mode]?.[token] ?? "transparent",
+                                    }}
+                                    aria-label={`${formatTokenLabel(token)} ${getModeLabel(mode)} Vorschau`}
                                   />
                                 </div>
-                              </div>
-                              {isAdvancedVisible ? (
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
                                   <div className="space-y-1">
                                     <Label htmlFor={`${baseId}-l`} className="text-xs">
                                       L
@@ -1751,11 +2000,52 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                                       id={`${baseId}-l`}
                                       type="number"
                                       step="0.01"
-                                      min="0"
-                                      max="1"
                                       value={modeState?.l ?? ""}
                                       onChange={(event) =>
-                                        handleFamilyChange(family, mode, "l", event.target.value)
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "l",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-deltaL`} className="text-xs">
+                                      ΔL
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-deltaL`}
+                                      type="number"
+                                      step="0.01"
+                                      value={modeState?.deltaL ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "deltaL",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label htmlFor={`${baseId}-scaleL`} className="text-xs">
+                                      Scale L
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-scaleL`}
+                                      type="number"
+                                      step="0.01"
+                                      value={modeState?.scaleL ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "scaleL",
+                                          event.target.value,
+                                        )
                                       }
                                     />
                                   </div>
@@ -1767,10 +2057,52 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                                       id={`${baseId}-c`}
                                       type="number"
                                       step="0.01"
-                                      min="0"
                                       value={modeState?.c ?? ""}
                                       onChange={(event) =>
-                                        handleFamilyChange(family, mode, "c", event.target.value)
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "c",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-deltaC`} className="text-xs">
+                                      ΔChroma
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-deltaC`}
+                                      type="number"
+                                      step="0.01"
+                                      value={modeState?.deltaC ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "deltaC",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label htmlFor={`${baseId}-scaleC`} className="text-xs">
+                                      Scale Chroma
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-scaleC`}
+                                      type="number"
+                                      step="0.01"
+                                      value={modeState?.scaleC ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "scaleC",
+                                          event.target.value,
+                                        )
                                       }
                                     />
                                   </div>
@@ -1784,7 +2116,31 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                                       step="0.1"
                                       value={modeState?.h ?? ""}
                                       onChange={(event) =>
-                                        handleFamilyChange(family, mode, "h", event.target.value)
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "h",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-deltaH`} className="text-xs">
+                                      ΔHue
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-deltaH`}
+                                      type="number"
+                                      step="0.1"
+                                      value={modeState?.deltaH ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "deltaH",
+                                          event.target.value,
+                                        )
                                       }
                                     />
                                   </div>
@@ -1800,340 +2156,126 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
                                       max="1"
                                       value={modeState?.alpha ?? ""}
                                       onChange={(event) =>
-                                        handleFamilyChange(family, mode, "alpha", event.target.value)
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "alpha",
+                                          event.target.value,
+                                        )
                                       }
                                     />
                                   </div>
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1">
-                <h3 className="text-base font-semibold">Semantische Token</h3>
-                <p className="text-sm text-muted-foreground">
-                  {showSemanticTokens
-                    ? "Weise jeder Rolle eine Farbfamilie zu und definiere bei Bedarf Modus-spezifische Anpassungen. Manuelle Werte überschreiben die automatische Ableitung aus den Farbfamilien."
-                    : "Im einfachen Modus werden die Farben der Farbfamilien automatisch auf alle Tokens angewandt. Öffne den erweiterten Modus, um einzelne Tokens gezielt zu überschreiben."}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => setShowSemanticTokens((prev) => !prev)}
-                  className={cn(
-                    "text-xs font-semibold hover:text-foreground",
-                    showSemanticTokens ? "text-foreground" : "text-muted-foreground",
-                  )}
-                  aria-expanded={showSemanticTokens}
-                  aria-controls={SEMANTIC_TOKEN_SECTION_ID}
-                  aria-pressed={showSemanticTokens}
-                  data-state={showSemanticTokens ? "open" : "closed"}
-                >
-                  {showSemanticTokens ? (
-                    <>
-                      <ChevronDownIcon className="h-4 w-4" aria-hidden />
-                      <span>Erweiterten Modus verbergen</span>
-                    </>
-                  ) : (
-                    <>
-                      <ChevronRightIcon className="h-4 w-4" aria-hidden />
-                      <span>Erweiterten Modus anzeigen</span>
-                    </>
-                  )}
-                </Button>
-                <TooltipProvider delayDuration={150}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                      >
-                        <InfoIcon className="h-4 w-4" aria-hidden />
-                        <span className="sr-only">Hinweis zum erweiterten Modus</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs text-left" side="bottom" align="end">
-                      Manuelle Anpassungen im erweiterten Modus überschreiben die automatische Ableitung aus den Farbfamilien. Lass den Modus ausgeblendet, wenn alle Tokens den Familienwert übernehmen sollen.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </div>
-            {showSemanticTokens ? (
-              <div id={SEMANTIC_TOKEN_SECTION_ID} className="space-y-6">
-                {tokenNames.map((token) => {
-                  const tokenState = tokensState[token];
-                  return (
-                    <div key={token} className="space-y-4 rounded-lg border p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-sm font-medium">{formatTokenLabel(token)}</Label>
-                          <p className="text-xs text-muted-foreground">
-                            Basisfamilie und Ableitungen für {formatTokenLabel(token)}.
-                          </p>
-                        </div>
-                        <Select
-                          value={tokenState?.family ?? ""}
-                          onValueChange={(value) => handleTokenFamilyChange(token, value)}
-                        >
-                          <SelectTrigger className="w-[220px]">
-                            <SelectValue placeholder="Familie wählen" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {familyNames.map((family) => (
-                              <SelectItem key={`${token}-${family}`} value={family}>
-                                {formatFamilyLabel(family)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {modeKeys.map((mode) => {
-                          const modeState = tokenState?.modes?.[mode];
-                          const baseId = `${token}-${mode}`;
-                          return (
-                            <div key={`${token}-${mode}`} className="space-y-3 rounded-md border p-3">
-                              <div className="flex items-center justify-between text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                <span>{getModeLabel(mode)}</span>
-                                <span
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60"
-                                  style={{ backgroundColor: previewModes[mode]?.[token] ?? "transparent" }}
-                                  aria-label={`${formatTokenLabel(token)} ${getModeLabel(mode)} Vorschau`}
-                                />
-                              </div>
-                              <div className="grid gap-3 sm:grid-cols-2">
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-l`} className="text-xs">
-                                    L
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-l`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.l ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "l", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-deltaL`} className="text-xs">
-                                    ΔL
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-deltaL`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.deltaL ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "deltaL", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1 sm:col-span-2">
-                                  <Label htmlFor={`${baseId}-scaleL`} className="text-xs">
-                                    Scale L
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-scaleL`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.scaleL ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "scaleL", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-c`} className="text-xs">
-                                    Chroma
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-c`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.c ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "c", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-deltaC`} className="text-xs">
-                                    ΔChroma
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-deltaC`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.deltaC ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "deltaC", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1 sm:col-span-2">
-                                  <Label htmlFor={`${baseId}-scaleC`} className="text-xs">
-                                    Scale Chroma
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-scaleC`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.scaleC ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "scaleC", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-h`} className="text-xs">
-                                    Hue
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-h`}
-                                    type="number"
-                                    step="0.1"
-                                    value={modeState?.h ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "h", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-deltaH`} className="text-xs">
-                                    ΔHue
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-deltaH`}
-                                    type="number"
-                                    step="0.1"
-                                    value={modeState?.deltaH ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "deltaH", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-alpha`} className="text-xs">
-                                    Alpha
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-alpha`}
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    max="1"
-                                    value={modeState?.alpha ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "alpha", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <Label htmlFor={`${baseId}-deltaAlpha`} className="text-xs">
-                                    ΔAlpha
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-deltaAlpha`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.deltaAlpha ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "deltaAlpha", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1 sm:col-span-2">
-                                  <Label htmlFor={`${baseId}-scaleAlpha`} className="text-xs">
-                                    Scale Alpha
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-scaleAlpha`}
-                                    type="number"
-                                    step="0.01"
-                                    value={modeState?.scaleAlpha ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "scaleAlpha", event.target.value)
-                                    }
-                                  />
-                                </div>
-                                <div className="space-y-1 sm:col-span-2">
-                                  <Label htmlFor={`${baseId}-value`} className="text-xs">
-                                    Direktwert
-                                  </Label>
-                                  <Input
-                                    id={`${baseId}-value`}
-                                    value={modeState?.value ?? ""}
-                                    onChange={(event) =>
-                                      handleTokenAdjustmentChange(token, mode, "value", event.target.value)
-                                    }
-                                    placeholder="Optionaler CSS-Wert, überschreibt LCH"
-                                  />
-                                </div>
-                                <div className="space-y-1 sm:col-span-2">
-                                  <Label htmlFor={`${baseId}-family`} className="text-xs">
-                                    Familien-Override
-                                  </Label>
-                                  <Select
-                                    value={
-                                      modeState?.family && modeState.family.trim().length > 0
-                                        ? modeState.family
-                                        : FAMILY_INHERIT_VALUE
-                                    }
-                                    onValueChange={(value) =>
-                                      handleTokenAdjustmentChange(
-                                        token,
-                                        mode,
-                                        "family",
-                                        value === FAMILY_INHERIT_VALUE ? "" : value,
-                                      )
-                                    }
-                                  >
-                                    <SelectTrigger id={`${baseId}-family`}>
-                                      <SelectValue placeholder="Basis nutzen" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value={FAMILY_INHERIT_VALUE}>Basisfamilie verwenden</SelectItem>
-                                      {familyNames.map((familyOption) => (
-                                        <SelectItem key={`${baseId}-family-${familyOption}`} value={familyOption}>
-                                          {formatFamilyLabel(familyOption)}
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`${baseId}-deltaAlpha`} className="text-xs">
+                                      ΔAlpha
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-deltaAlpha`}
+                                      type="number"
+                                      step="0.01"
+                                      value={modeState?.deltaAlpha ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "deltaAlpha",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label htmlFor={`${baseId}-scaleAlpha`} className="text-xs">
+                                      Scale Alpha
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-scaleAlpha`}
+                                      type="number"
+                                      step="0.01"
+                                      value={modeState?.scaleAlpha ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "scaleAlpha",
+                                          event.target.value,
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label htmlFor={`${baseId}-value`} className="text-xs">
+                                      Direktwert
+                                    </Label>
+                                    <Input
+                                      id={`${baseId}-value`}
+                                      value={modeState?.value ?? ""}
+                                      onChange={(event) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "value",
+                                          event.target.value,
+                                        )
+                                      }
+                                      placeholder="Optionaler CSS-Wert, überschreibt LCH"
+                                    />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label htmlFor={`${baseId}-family`} className="text-xs">
+                                      Familien-Override
+                                    </Label>
+                                    <Select
+                                      value={
+                                        modeState?.family && modeState.family.trim().length > 0
+                                          ? modeState.family
+                                          : FAMILY_INHERIT_VALUE
+                                      }
+                                      onValueChange={(value) =>
+                                        handleTokenAdjustmentChange(
+                                          token,
+                                          mode,
+                                          "family",
+                                          value === FAMILY_INHERIT_VALUE ? "" : value,
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger id={`${baseId}-family`}>
+                                        <SelectValue placeholder="Basis nutzen" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value={FAMILY_INHERIT_VALUE}>
+                                          Basisfamilie verwenden
                                         </SelectItem>
-                                      ))}
-                                      {modeState?.family && modeState.family.trim().length > 0 &&
-                                      !familyNames.includes(modeState.family) ? (
-                                        <SelectItem value={modeState.family}>{modeState.family}</SelectItem>
-                                      ) : null}
-                                    </SelectContent>
-                                  </Select>
+                                        {familyNames.map((familyOption) => (
+                                          <SelectItem
+                                            key={`${baseId}-family-${familyOption}`}
+                                            value={familyOption}
+                                          >
+                                            {formatFamilyLabel(familyOption)}
+                                          </SelectItem>
+                                        ))}
+                                        {modeState?.family &&
+                                        modeState.family.trim().length > 0 &&
+                                        !familyNames.includes(modeState.family) ? (
+                                          <SelectItem value={modeState.family}>
+                                            {modeState.family}
+                                          </SelectItem>
+                                        ) : null}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-          </section>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
           </fieldset>
         </CardContent>
       </Card>
@@ -2186,7 +2328,8 @@ export function WebsiteThemeSettingsManager({ initialSettings, initialThemes }: 
             <DialogHeader>
               <DialogTitle>Theme umbenennen</DialogTitle>
               <DialogDescription>
-                Vergib einen neuen Namen für <span className="font-medium text-foreground">{currentTheme.name}</span>.
+                Vergib einen neuen Namen für{" "}
+                <span className="font-medium text-foreground">{currentTheme.name}</span>.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">

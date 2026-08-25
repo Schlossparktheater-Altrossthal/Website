@@ -17,15 +17,24 @@ export function ProcessSection({ steps, documents }: ProcessSectionProps) {
   return (
     <Card className="h-full">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Prozess & Dokumente</CardTitle>
-        <p className="text-sm text-muted-foreground">Fortschritt entlang der Onboarding-Schritte.</p>
+        <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+          Prozess & Dokumente
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Fortschritt entlang der Onboarding-Schritte.
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           {steps.map((step, index) => {
             const completion = Math.min(100, Math.max(0, step.completionRate));
             const dropout = Math.min(100, Math.max(0, step.dropoutRate));
-            const barColor = completion >= 75 ? "bg-emerald-400" : completion >= 50 ? "bg-amber-400" : "bg-rose-400";
+            const barColor =
+              completion >= 75
+                ? "bg-emerald-400"
+                : completion >= 50
+                  ? "bg-amber-400"
+                  : "bg-rose-400";
             return (
               <div key={step.id} className="space-y-1">
                 <div className="flex items-center justify-between text-sm font-medium">
@@ -46,7 +55,9 @@ export function ProcessSection({ steps, documents }: ProcessSectionProps) {
           })}
         </div>
         <div className="rounded-lg border border-border/40 bg-muted/30 p-3">
-          <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Dokumentstatus</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Dokumentstatus
+          </h4>
           {totalDocuments === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Noch keine Dokumente eingereicht.</p>
           ) : (

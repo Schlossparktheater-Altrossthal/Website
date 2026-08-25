@@ -90,7 +90,9 @@ export async function resolveFrontendEditingFeatures(user: UserLike) {
     }));
 }
 
-export function isFrontendEditingFeatureKey(value: string | null | undefined): value is FrontendEditingFeatureKey {
+export function isFrontendEditingFeatureKey(
+  value: string | null | undefined,
+): value is FrontendEditingFeatureKey {
   if (!value) return false;
   return FEATURE_DEFINITIONS.some((definition) => definition.key === value);
 }

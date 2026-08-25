@@ -44,35 +44,19 @@ function normalizeSocketPath(path: string | undefined | null): string {
 }
 
 type SocketInstance = Socket<ServerToClientEvents, ClientToServerEvents>;
-export type AttendanceUpdateMessage = Parameters<
-  ServerToClientEvents["attendance_updated"]
->[0];
-type NotificationMessage = Parameters<
-  ServerToClientEvents["notification_created"]
->[0];
-type RehearsalCreatedMessage = Parameters<
-  ServerToClientEvents["rehearsal_created"]
->[0];
-type RehearsalUpdatedMessage = Parameters<
-  ServerToClientEvents["rehearsal_updated"]
->[0];
-type InventoryRealtimeMessage = Parameters<
-  ServerToClientEvents["inventory_event"]
->[0];
-type TicketRealtimeMessage = Parameters<
-  ServerToClientEvents["ticket_scan_event"]
->[0];
+export type AttendanceUpdateMessage = Parameters<ServerToClientEvents["attendance_updated"]>[0];
+type NotificationMessage = Parameters<ServerToClientEvents["notification_created"]>[0];
+type RehearsalCreatedMessage = Parameters<ServerToClientEvents["rehearsal_created"]>[0];
+type RehearsalUpdatedMessage = Parameters<ServerToClientEvents["rehearsal_updated"]>[0];
+type InventoryRealtimeMessage = Parameters<ServerToClientEvents["inventory_event"]>[0];
+type TicketRealtimeMessage = Parameters<ServerToClientEvents["ticket_scan_event"]>[0];
 type HandshakeAuthPayload = {
   userId: string;
   userName?: string;
   token: string;
 };
 
-export type ConnectionStatus =
-  | "connecting"
-  | "connected"
-  | "disconnected"
-  | "error";
+export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
 interface RealtimeContextValue {
   socket: SocketInstance | null;
@@ -83,16 +67,13 @@ interface RealtimeContextValue {
   reconnect: () => void;
 }
 
-const RealtimeContext = createContext<RealtimeContextValue | undefined>(
-  undefined,
-);
+const RealtimeContext = createContext<RealtimeContextValue | undefined>(undefined);
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const { client: syncClient } = useOfflineSyncClient();
   const [socket, setSocket] = useState<SocketInstance | null>(null);
-  const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>("disconnected");
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
   const reconnectAttempts = useRef(0);
   const [connectionVersion, setConnectionVersion] = useState(0);
   const socketRef = useRef<SocketInstance | null>(null);
@@ -130,9 +111,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    const requestHandshake = async (
-      signal?: AbortSignal,
-    ): Promise<HandshakeAuthPayload> => {
+    const requestHandshake = async (signal?: AbortSignal): Promise<HandshakeAuthPayload> => {
       const response = await fetch("/api/realtime/handshake", {
         method: "GET",
         cache: "no-store",
@@ -196,10 +175,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         return { target: origin, path: resolvedPath };
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn(
-            "[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL",
-            error,
-          );
+          console.warn("[Realtime] Failed to parse NEXT_PUBLIC_REALTIME_URL", error);
         }
 
         if (REALTIME_URL.startsWith("/")) {
@@ -226,8 +202,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         if (disposed) return;
         latestAuth = handshake;
 
-        const { target: connectionTarget, path: socketPath } =
-          resolveConnectionEndpoint();
+        const { target: connectionTarget, path: socketPath } = resolveConnectionEndpoint();
 
         const options: Partial<ManagerOptions & SocketOptions> = {
           path: socketPath,
@@ -249,8 +224,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           if (!auth) return;
           instance.auth = auth;
           if (instance.io?.opts) {
-            (instance.io.opts as Partial<ManagerOptions & SocketOptions>).auth =
-              auth;
+            (instance.io.opts as Partial<ManagerOptions & SocketOptions>).auth = auth;
           }
         };
 
@@ -300,10 +274,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           reconnectAttempts.current += 1;
 
           const message = String(error?.message || "").toLowerCase();
-          if (
-            message.includes("unauthorized") ||
-            message.includes("forbidden")
-          ) {
+          if (message.includes("unauthorized") || message.includes("forbidden")) {
             try {
               const refreshed = await requestHandshake();
               if (disposed) return;
@@ -350,12 +321,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       }
       setSocket(null);
     };
-  }, [
-    session?.user?.id,
-    session?.user?.name,
-    connectionVersion,
-    stopPingInterval,
-  ]);
+  }, [session?.user?.id, session?.user?.name, connectionVersion, stopPingInterval]);
 
   useEffect(() => {
     if (!socket) {
@@ -378,10 +344,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           delta: payload.delta,
         })
         .catch((error) => {
-          console.warn(
-            "[Realtime] Failed to apply inventory realtime delta",
-            error,
-          );
+          console.warn("[Realtime] Failed to apply inventory realtime delta", error);
         });
     };
 
@@ -401,10 +364,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           delta: payload.delta,
         })
         .catch((error) => {
-          console.warn(
-            "[Realtime] Failed to apply ticket realtime delta",
-            error,
-          );
+          console.warn("[Realtime] Failed to apply ticket realtime delta", error);
         });
     };
 
@@ -460,11 +420,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     [socket, connectionStatus, joinRoom, leaveRoom, reconnect],
   );
 
-  return (
-    <RealtimeContext.Provider value={value}>
-      {children}
-    </RealtimeContext.Provider>
-  );
+  return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
 }
 
 export function useRealtime(): RealtimeContextValue {
@@ -512,9 +468,7 @@ export function usePresence(
   onPresenceChange?: (event: UserPresenceEvent) => void,
 ) {
   const { socket, joinRoom, leaveRoom } = useRealtime();
-  const [presentUsers, setPresentUsers] = useState<UserPresenceEvent["user"][]>(
-    [],
-  );
+  const [presentUsers, setPresentUsers] = useState<UserPresenceEvent["user"][]>([]);
 
   useEffect(() => {
     if (!socket || !rehearsalId) return;
@@ -525,9 +479,7 @@ export function usePresence(
     const handlePresence = (event: UserPresenceEvent) => {
       setPresentUsers((prev) => {
         if (event.action === "join") {
-          return prev.some((user) => user.id === event.user.id)
-            ? prev
-            : [...prev, event.user];
+          return prev.some((user) => user.id === event.user.id) ? prev : [...prev, event.user];
         }
         return prev.filter((user) => user.id !== event.user.id);
       });
@@ -546,9 +498,7 @@ export function usePresence(
   return presentUsers;
 }
 
-export function useNotificationRealtime(
-  onNotification: (event: NotificationMessage) => void,
-) {
+export function useNotificationRealtime(onNotification: (event: NotificationMessage) => void) {
   const { socket } = useRealtime();
 
   useEffect(() => {

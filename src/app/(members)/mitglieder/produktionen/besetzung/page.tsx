@@ -89,7 +89,9 @@ function HeaderStats({
               className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
             >
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {stat.label}
+                </p>
                 <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
                 {stat.hint ? <p className="text-xs text-muted-foreground">{stat.hint}</p> : null}
               </div>
@@ -130,10 +132,18 @@ function CreateCharacterDialog({ showId, users }: { showId: string; users: Displ
           <input type="hidden" name="showId" value={showId} />
           <input type="hidden" name="redirectPath" value={currentPath} />
           <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 md:grid-cols-2">
-            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Basisdaten</legend>
+            <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Basisdaten
+            </legend>
             <div className="space-y-1">
               <label className="text-sm font-medium">Name</label>
-              <Input name="name" placeholder="z.B. Protagonist" minLength={2} maxLength={120} required />
+              <Input
+                name="name"
+                placeholder="z.B. Protagonist"
+                minLength={2}
+                maxLength={120}
+                required
+              />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Rollengröße</label>
@@ -148,7 +158,12 @@ function CreateCharacterDialog({ showId, users }: { showId: string; users: Displ
             </div>
             <div className="space-y-1 md:col-span-2">
               <label className="text-sm font-medium">Beschreibung</label>
-              <Textarea name="description" rows={2} maxLength={500} placeholder="Charakterbeschreibung" />
+              <Textarea
+                name="description"
+                rows={2}
+                maxLength={500}
+                placeholder="Charakterbeschreibung"
+              />
             </div>
           </fieldset>
           <div className="space-y-1">
@@ -262,7 +277,9 @@ export default async function ProduktionsBesetzungPage() {
                 id: true,
                 type: true,
                 notes: true,
-                user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
+                user: {
+                  select: { id: true, firstName: true, lastName: true, name: true, email: true },
+                },
               },
             },
           },
@@ -274,16 +291,22 @@ export default async function ProduktionsBesetzungPage() {
   if (!show) {
     return (
       <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut im Überblick aus.
+        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut im
+        Überblick aus.
       </div>
     );
   }
 
   const characterCount = show.characters.length;
-  const castingCount = show.characters.reduce((acc, character) => acc + character.castings.length, 0);
+  const castingCount = show.characters.reduce(
+    (acc, character) => acc + character.castings.length,
+    0,
+  );
   const assignedActorCount = new Set(
     show.characters.flatMap((character) =>
-      character.castings.map((casting) => casting.user?.id).filter((id): id is string => Boolean(id)),
+      character.castings
+        .map((casting) => casting.user?.id)
+        .filter((id): id is string => Boolean(id)),
     ),
   ).size;
 
@@ -304,9 +327,21 @@ export default async function ProduktionsBesetzungPage() {
     })),
   }));
   const headerStats: HeaderStat[] = [
-    { label: "Rollen", value: characterCount, icon: <BadgeCheckIcon className="h-4 w-4" aria-hidden /> },
-    { label: "Besetzungen", value: castingCount, icon: <UsersIcon className="h-4 w-4" aria-hidden /> },
-    { label: "Schauspieler", value: assignedActorCount, icon: <UserRoundCheckIcon className="h-4 w-4" aria-hidden /> },
+    {
+      label: "Rollen",
+      value: characterCount,
+      icon: <BadgeCheckIcon className="h-4 w-4" aria-hidden />,
+    },
+    {
+      label: "Besetzungen",
+      value: castingCount,
+      icon: <UsersIcon className="h-4 w-4" aria-hidden />,
+    },
+    {
+      label: "Schauspieler",
+      value: assignedActorCount,
+      icon: <UserRoundCheckIcon className="h-4 w-4" aria-hidden />,
+    },
   ];
 
   return (
@@ -317,7 +352,13 @@ export default async function ProduktionsBesetzungPage() {
         breadcrumbs={breadcrumbs}
       />
 
-      <HeaderStats stats={headerStats} showId={show.id} users={users} characters={exportCharacters} showTitle={showTitle} />
+      <HeaderStats
+        stats={headerStats}
+        showId={show.id}
+        users={users}
+        characters={exportCharacters}
+        showTitle={showTitle}
+      />
 
       <CastingListClient characters={show.characters} users={users} currentPath={currentPath} />
     </div>

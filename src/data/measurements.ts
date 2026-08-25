@@ -15,12 +15,7 @@ export const measurementTypeEnum = z.enum([
   "HEAD",
 ] as const);
 
-export const measurementUnitEnum = z.enum([
-  "M",
-  "CM",
-  "MM",
-  "EU",
-] as const);
+export const measurementUnitEnum = z.enum(["M", "CM", "MM", "EU"] as const);
 
 const measurementNoteSchema = z.string().max(500, "Notizen dürfen höchstens 500 Zeichen haben.");
 
@@ -63,26 +58,20 @@ export const MEASUREMENT_TYPE_DESCRIPTIONS: Record<MeasurementType, string> = {
     "Gemessen von der Oberseite des Kopfes bis zur Fußsohle – wichtig für den generellen Fit.",
   CHEST:
     "Horizontale Messung über die breiteste Stelle der Brust – entscheidend für Jacken und Oberteile.",
-  WAIST:
-    "Rund um die schmalste Stelle des Rumpfs auf Höhe des Bauchnabels gemessen.",
-  HIPS:
-    "Über die stärkste Stelle des Gesäßes geführt, sorgt diese Messung für eine passende Weite.",
+  WAIST: "Rund um die schmalste Stelle des Rumpfs auf Höhe des Bauchnabels gemessen.",
+  HIPS: "Über die stärkste Stelle des Gesäßes geführt, sorgt diese Messung für eine passende Weite.",
   INSEAM:
     "Vom Schritt bis zum Boden entlang der Beininnenseite gemessen – essenziell für Hosenlängen.",
   OUTSEAM:
     "Vom Bund außen am Bein entlang bis zum Boden gemessen – wichtig für die Außenlänge von Hosen.",
-  CHEST_DEPTH:
-    "Von der Brustmitte bis zur Rückenmitte gemessen – zeigt die Tiefe des Oberkörpers.",
+  CHEST_DEPTH: "Von der Brustmitte bis zur Rückenmitte gemessen – zeigt die Tiefe des Oberkörpers.",
   WAIST_LENGTH:
     "Von der Taille bis zum gewünschten Saum gemessen – ideal für Oberteile und Kleider.",
   SHOULDER:
     "Über den Rücken von Schulterpunkt zu Schulterpunkt gemessen – definiert die Rückenbreite.",
-  SLEEVE:
-    "Vom Schulterpunkt entlang des Arms bis zum Handgelenk – bestimmt die Ärmellänge.",
-  SHOE_SIZE:
-    "Innere Länge des Schuhs bzw. Fußlänge für das korrekte Schuhmaß.",
-  HEAD:
-    "Horizontal über Stirn und Hinterkopf geführt – Grundlage für Hüte und Kopfbedeckungen.",
+  SLEEVE: "Vom Schulterpunkt entlang des Arms bis zum Handgelenk – bestimmt die Ärmellänge.",
+  SHOE_SIZE: "Innere Länge des Schuhs bzw. Fußlänge für das korrekte Schuhmaß.",
+  HEAD: "Horizontal über Stirn und Hinterkopf geführt – Grundlage für Hüte und Kopfbedeckungen.",
 };
 
 export const MEASUREMENT_UNIT_LABELS: Record<MeasurementUnit, string> = {
@@ -94,14 +83,15 @@ export const MEASUREMENT_UNIT_LABELS: Record<MeasurementUnit, string> = {
 
 export const MEASUREMENT_TYPE_ORDER = measurementTypeEnum.options.reduce<
   Record<MeasurementType, number>
->((acc, type, index) => {
-  acc[type] = index;
-  return acc;
-}, {} as Record<MeasurementType, number>);
+>(
+  (acc, type, index) => {
+    acc[type] = index;
+    return acc;
+  },
+  {} as Record<MeasurementType, number>,
+);
 
-export function sortMeasurements<T extends { type: MeasurementType }>(
-  measurements: T[],
-) {
+export function sortMeasurements<T extends { type: MeasurementType }>(measurements: T[]) {
   return [...measurements].sort((a, b) => {
     const orderA = MEASUREMENT_TYPE_ORDER[a.type] ?? 0;
     const orderB = MEASUREMENT_TYPE_ORDER[b.type] ?? 0;

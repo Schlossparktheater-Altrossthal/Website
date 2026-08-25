@@ -46,12 +46,14 @@ function useTabsContext(component: string): TabsContextValue {
 }
 
 function hasAnimatedChild(children: React.ReactNode): boolean {
-  if (!isValidElement<{
-    animate?: unknown;
-    exit?: unknown;
-    initial?: unknown;
-    transition?: unknown;
-  }>(children)) {
+  if (
+    !isValidElement<{
+      animate?: unknown;
+      exit?: unknown;
+      initial?: unknown;
+      transition?: unknown;
+    }>(children)
+  ) {
     return false;
   }
 
@@ -78,9 +80,7 @@ export function Tabs({
   className,
   children,
 }: TabsProps) {
-  const [uncontrolledValue, setUncontrolledValue] = useState<string>(
-    defaultValue ?? "",
-  );
+  const [uncontrolledValue, setUncontrolledValue] = useState<string>(defaultValue ?? "");
   const value = controlledValue ?? uncontrolledValue;
 
   useEffect(() => {
@@ -190,9 +190,8 @@ export function TabsList({ className, children }: TabsListProps) {
   const selectLabelId = `${idBase}-select-label`;
 
   const updatePillState = useCallback(() => {
-    const activeTrigger = listRef.current?.querySelector<HTMLButtonElement>(
-      '[aria-selected="true"]',
-    );
+    const activeTrigger =
+      listRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]');
 
     if (!activeTrigger) {
       setPillState({ left: 0, width: 0 });
@@ -219,9 +218,7 @@ export function TabsList({ className, children }: TabsListProps) {
     window.addEventListener("resize", handleResize);
 
     const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => updatePillState())
-        : null;
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => updatePillState()) : null;
     resizeObserver?.observe(listElement);
 
     return () => {
@@ -243,11 +240,7 @@ export function TabsList({ className, children }: TabsListProps) {
             </SelectTrigger>
             <SelectContent>
               {tabOptions.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={option.value}
-                  disabled={option.disabled}
-                >
+                <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -280,12 +273,7 @@ interface TabsTriggerProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
 }
 
-export function TabsTrigger({
-  value,
-  className,
-  children,
-  ...props
-}: TabsTriggerProps) {
+export function TabsTrigger({ value, className, children, ...props }: TabsTriggerProps) {
   const { value: activeValue, setValue, idBase } = useTabsContext("TabsTrigger");
   const isActive = activeValue === value;
   const triggerId = `${idBase}-trigger-${value}`;

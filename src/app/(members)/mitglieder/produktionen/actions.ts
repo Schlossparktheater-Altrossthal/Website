@@ -17,9 +17,7 @@ import { ACTIVE_PRODUCTION_COOKIE, getActiveProduction } from "@/lib/active-prod
 import { setOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 
-export type ProductionActionResult =
-  | { ok: true; message?: string }
-  | { ok: false; error: string };
+export type ProductionActionResult = { ok: true; message?: string } | { ok: false; error: string };
 
 function actionSuccess(message?: string): ProductionActionResult {
   return message ? { ok: true, message } : { ok: true };
@@ -44,7 +42,11 @@ function isString(value: FormDataEntryValue | null | undefined): value is string
   return typeof value === "string";
 }
 
-function readOptionalString(formData: FormData, key: string, options?: ReadOptions): string | undefined {
+function readOptionalString(
+  formData: FormData,
+  key: string,
+  options?: ReadOptions,
+): string | undefined {
   const raw = formData.get(key);
   if (!isString(raw)) return undefined;
   const trimmed = raw.trim();
@@ -75,7 +77,9 @@ function readOptionalRolePreferenceCode(
   return value;
 }
 
-export async function setActiveProductionAction(formData: FormData): Promise<ProductionActionResult> {
+export async function setActiveProductionAction(
+  formData: FormData,
+): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
@@ -108,7 +112,9 @@ export async function setActiveProductionAction(formData: FormData): Promise<Pro
   }
 }
 
-export async function clearActiveProductionAction(formData: FormData): Promise<ProductionActionResult> {
+export async function clearActiveProductionAction(
+  formData: FormData,
+): Promise<ProductionActionResult> {
   try {
     const session = await requireAuth();
     const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
@@ -140,8 +146,16 @@ export async function createProductionAction(formData: FormData): Promise<Produc
     }
 
     const year = readInt(formData, "year", { label: "Jahr", min: 1900, max: 2200 });
-    const title = readOptionalString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
-    const synopsis = readOptionalString(formData, "synopsis", { label: "Kurzbeschreibung", minLength: 2, maxLength: 600 });
+    const title = readOptionalString(formData, "title", {
+      label: "Titel",
+      minLength: 2,
+      maxLength: 160,
+    });
+    const synopsis = readOptionalString(formData, "synopsis", {
+      label: "Kurzbeschreibung",
+      minLength: 2,
+      maxLength: 600,
+    });
     const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
     const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
     const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
@@ -189,8 +203,8 @@ export async function createProductionAction(formData: FormData): Promise<Produc
           startDate && endDate
             ? `${formatDateOnly(startDate)}/${formatDateOnly(endDate)}`
             : startDate
-                ? formatDateOnly(startDate)
-                : Prisma.JsonNull,
+              ? formatDateOnly(startDate)
+              : Prisma.JsonNull,
         revealedAt: revealDate ?? null,
         finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
         finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
@@ -247,8 +261,16 @@ export async function updateProductionAction(formData: FormData): Promise<Produc
 
     const showId = readString(formData, "showId", { label: "Produktion" });
     const year = readInt(formData, "year", { label: "Jahr", min: 1900, max: 2200 });
-    const title = readOptionalString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
-    const synopsis = readOptionalString(formData, "synopsis", { label: "Kurzbeschreibung", minLength: 2, maxLength: 600 });
+    const title = readOptionalString(formData, "title", {
+      label: "Titel",
+      minLength: 2,
+      maxLength: 160,
+    });
+    const synopsis = readOptionalString(formData, "synopsis", {
+      label: "Kurzbeschreibung",
+      minLength: 2,
+      maxLength: 600,
+    });
     const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
     const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
     const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
@@ -283,8 +305,8 @@ export async function updateProductionAction(formData: FormData): Promise<Produc
           startDate && endDate
             ? `${formatDateOnly(startDate)}/${formatDateOnly(endDate)}`
             : startDate
-                ? formatDateOnly(startDate)
-                : Prisma.JsonNull,
+              ? formatDateOnly(startDate)
+              : Prisma.JsonNull,
         revealedAt: revealDate ?? null,
         finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
         finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
@@ -370,7 +392,9 @@ function normalizeWhatsAppLink(raw: string): string {
     "wa.me",
     "api.whatsapp.com",
   ];
-  const isAllowedHost = allowedHosts.some((allowedHost) => host === allowedHost || host.endsWith(`.${allowedHost}`));
+  const isAllowedHost = allowedHosts.some(
+    (allowedHost) => host === allowedHost || host.endsWith(`.${allowedHost}`),
+  );
   if (!isAllowedHost) {
     throw new Error("Bitte nutze einen offiziellen WhatsApp-Beitrittslink.");
   }
@@ -437,7 +461,9 @@ const sceneIdentifierPattern = /^\d+(?:\.\d+)?$/;
 
 function ensureValidSceneIdentifier(identifier: string): void {
   if (!sceneIdentifierPattern.test(identifier)) {
-    throw new Error("Nummern dürfen nur Ziffern enthalten und maximal eine Unterteilung wie 1.1 besitzen.");
+    throw new Error(
+      "Nummern dürfen nur Ziffern enthalten und maximal eine Unterteilung wie 1.1 besitzen.",
+    );
   }
   const parts = identifier.split(".").map((part) => Number.parseInt(part, 10));
   if (parts.some((part) => Number.isNaN(part) || part < 1)) {
@@ -653,8 +679,13 @@ export async function createDepartmentAction(formData: FormData): Promise<void> 
     if (slugInput && !/^[a-z0-9-]+$/i.test(slugInput)) {
       throw new Error("Slug darf nur Buchstaben, Zahlen und Bindestriche enthalten.");
     }
-    const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 2000 });
-    const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 2000,
+    });
+    const color = parseColor(
+      readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }),
+    );
     const requiresApproval = parseCheckbox(formData.get("requiresApproval"));
     const baseSlug = slugify(slugInput ?? name);
     const slug = await ensureUniqueDepartmentSlug(baseSlug);
@@ -672,8 +703,7 @@ export async function createDepartmentAction(formData: FormData): Promise<void> 
     revalidateDepartments(redirectPath);
   } catch (error) {
     console.error("createDepartmentAction", error);
-    const message =
-      error instanceof Error ? error.message : "Gewerk konnte nicht angelegt werden.";
+    const message = error instanceof Error ? error.message : "Gewerk konnte nicht angelegt werden.";
     throw new Error(message);
   }
 }
@@ -692,8 +722,13 @@ export async function updateDepartmentAction(formData: FormData): Promise<void> 
     if (slugInput && !/^[a-z0-9-]+$/i.test(slugInput)) {
       throw new Error("Slug darf nur Buchstaben, Zahlen und Bindestriche enthalten.");
     }
-    const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 2000 });
-    const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 2000,
+    });
+    const color = parseColor(
+      readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }),
+    );
     const requiresApproval = parseCheckbox(formData.get("requiresApproval"));
 
     let slug = department.slug;
@@ -746,9 +781,13 @@ export async function addDepartmentMemberAction(formData: FormData): Promise<voi
     const departmentId = readString(formData, "departmentId", { label: "Gewerk" });
     const userId = readString(formData, "userId", { label: "Mitglied" });
     const role =
-      parseEnumValue(DepartmentMembershipRole, formData.get("role"), "Funktion", { optional: true }) ??
-      DepartmentMembershipRole.member;
-    const titleValue = readOptionalString(formData, "title", { label: "Bezeichnung", maxLength: 120 });
+      parseEnumValue(DepartmentMembershipRole, formData.get("role"), "Funktion", {
+        optional: true,
+      }) ?? DepartmentMembershipRole.member;
+    const titleValue = readOptionalString(formData, "title", {
+      label: "Bezeichnung",
+      maxLength: 120,
+    });
     const noteValue = readOptionalString(formData, "note", { label: "Notiz", maxLength: 200 });
 
     const [department, user] = await Promise.all([
@@ -821,9 +860,13 @@ export async function updateDepartmentMemberAction(formData: FormData): Promise<
     }
 
     const role =
-      parseEnumValue(DepartmentMembershipRole, formData.get("role"), "Funktion", { optional: true }) ??
-      membership.role;
-    const titleValue = readOptionalString(formData, "title", { label: "Bezeichnung", maxLength: 120 });
+      parseEnumValue(DepartmentMembershipRole, formData.get("role"), "Funktion", {
+        optional: true,
+      }) ?? membership.role;
+    const titleValue = readOptionalString(formData, "title", {
+      label: "Bezeichnung",
+      maxLength: 120,
+    });
     const noteValue = readOptionalString(formData, "note", { label: "Notiz", maxLength: 200 });
 
     await prisma.departmentMembership.update({
@@ -1048,14 +1091,23 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
     const rolePreferenceCode = readOptionalRolePreferenceCode(formData, "rolePreferenceCode", {
       label: "Rollengröße",
     });
-    const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 500 });
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 500,
+    });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 500 });
-    const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
+    const color = parseColor(
+      readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }),
+    );
     const castingUserId = readOptionalString(formData, "castingUserId", { label: "Schauspieler" });
     const castingType =
-      parseEnumValue(CharacterCastingType, formData.get("castingType"), "Besetzungsart", { optional: true }) ??
-      CharacterCastingType.primary;
-    const castingNotes = readOptionalString(formData, "castingNotes", { label: "Notiz", maxLength: 200 });
+      parseEnumValue(CharacterCastingType, formData.get("castingType"), "Besetzungsart", {
+        optional: true,
+      }) ?? CharacterCastingType.primary;
+    const castingNotes = readOptionalString(formData, "castingNotes", {
+      label: "Notiz",
+      maxLength: 200,
+    });
 
     const character = await prisma.character.create({
       data: {
@@ -1069,7 +1121,10 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
     });
 
     if (castingUserId) {
-      const user = await prisma.user.findUnique({ where: { id: castingUserId }, select: { id: true } });
+      const user = await prisma.user.findUnique({
+        where: { id: castingUserId },
+        select: { id: true },
+      });
       if (!user) {
         throw new Error("Mitglied wurde nicht gefunden.");
       }
@@ -1087,8 +1142,7 @@ export async function createCharacterAction(formData: FormData): Promise<void> {
     revalidateShow(showId, redirectPath);
   } catch (error) {
     console.error("createCharacterAction", error);
-    const message =
-      error instanceof Error ? error.message : "Rolle konnte nicht angelegt werden.";
+    const message = error instanceof Error ? error.message : "Rolle konnte nicht angelegt werden.";
     throw new Error(message);
   }
 }
@@ -1108,9 +1162,14 @@ export async function updateCharacterAction(formData: FormData): Promise<void> {
     const rolePreferenceCode = readOptionalRolePreferenceCode(formData, "rolePreferenceCode", {
       label: "Rollengröße",
     });
-    const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 500 });
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 500,
+    });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 500 });
-    const color = parseColor(readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }));
+    const color = parseColor(
+      readOptionalString(formData, "color", { label: "Farbe", maxLength: 20 }),
+    );
 
     await prisma.character.update({
       where: { id: characterId },
@@ -1147,8 +1206,7 @@ export async function deleteCharacterAction(formData: FormData): Promise<void> {
     revalidateShow(character.showId, redirectPath);
   } catch (error) {
     console.error("deleteCharacterAction", error);
-    const message =
-      error instanceof Error ? error.message : "Rolle konnte nicht entfernt werden.";
+    const message = error instanceof Error ? error.message : "Rolle konnte nicht entfernt werden.";
     throw new Error(message);
   }
 }
@@ -1175,8 +1233,9 @@ export async function assignCharacterCastingAction(formData: FormData): Promise<
     }
 
     const type =
-      parseEnumValue(CharacterCastingType, formData.get("type"), "Besetzungsart", { optional: true }) ??
-      CharacterCastingType.primary;
+      parseEnumValue(CharacterCastingType, formData.get("type"), "Besetzungsart", {
+        optional: true,
+      }) ?? CharacterCastingType.primary;
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 200 });
 
     await prisma.characterCasting.upsert({
@@ -1226,8 +1285,9 @@ export async function updateCharacterCastingAction(formData: FormData): Promise<
     }
 
     const type =
-      parseEnumValue(CharacterCastingType, formData.get("type"), "Besetzungsart", { optional: true }) ??
-      casting.type;
+      parseEnumValue(CharacterCastingType, formData.get("type"), "Besetzungsart", {
+        optional: true,
+      }) ?? casting.type;
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 200 });
 
     try {
@@ -1297,7 +1357,10 @@ export async function createSceneAction(formData: FormData): Promise<void> {
     ensureValidSceneIdentifier(identifier);
     await ensureUniqueSceneIdentifier(showId, identifier);
     const title = readOptionalString(formData, "title", { label: "Titel", maxLength: 160 });
-    const summary = readOptionalString(formData, "summary", { label: "Zusammenfassung", maxLength: 600 });
+    const summary = readOptionalString(formData, "summary", {
+      label: "Zusammenfassung",
+      maxLength: 600,
+    });
     const location = readOptionalString(formData, "location", { label: "Ort", maxLength: 120 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 400 });
     const baseSlugSource = identifier ?? title ?? `szene-${Date.now()}`;
@@ -1344,7 +1407,10 @@ export async function updateSceneAction(formData: FormData): Promise<void> {
     ensureValidSceneIdentifier(identifier);
     await ensureUniqueSceneIdentifier(scene.showId, identifier, sceneId);
     const title = readOptionalString(formData, "title", { label: "Titel", maxLength: 160 });
-    const summary = readOptionalString(formData, "summary", { label: "Zusammenfassung", maxLength: 600 });
+    const summary = readOptionalString(formData, "summary", {
+      label: "Zusammenfassung",
+      maxLength: 600,
+    });
     const location = readOptionalString(formData, "location", { label: "Ort", maxLength: 120 });
     const notes = readOptionalString(formData, "notes", { label: "Notiz", maxLength: 400 });
     await prisma.scene.update({
@@ -1417,7 +1483,11 @@ export async function addSceneCharacterAction(formData: FormData): Promise<void>
       throw new Error("Die Figur gehört nicht zur ausgewählten Produktion.");
     }
 
-    const orderValue = readOptionalInt(formData, "order", { label: "Sortierung", min: 0, max: 9999 });
+    const orderValue = readOptionalInt(formData, "order", {
+      label: "Sortierung",
+      min: 0,
+      max: 9999,
+    });
     const isFeatured = parseCheckbox(formData.get("isFeatured"));
 
     await prisma.sceneCharacter.upsert({
@@ -1479,7 +1549,10 @@ export async function createBreakdownItemAction(formData: FormData): Promise<voi
     const sceneId = readString(formData, "sceneId", { label: "Szene" });
     const departmentId = readString(formData, "departmentId", { label: "Gewerk" });
     const title = readString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
-    const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 600 });
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 600,
+    });
     const note = readOptionalString(formData, "note", { label: "Notiz", maxLength: 300 });
     const status =
       parseEnumValue(BreakdownStatus, formData.get("status"), "Status", { optional: true }) ??
@@ -1487,7 +1560,10 @@ export async function createBreakdownItemAction(formData: FormData): Promise<voi
     const neededBy = parseOptionalDate(formData, "neededBy", "Benötigt bis");
     const assignedToId = readOptionalString(formData, "assignedToId", { label: "Zuständig" });
 
-    const scene = await prisma.scene.findUnique({ where: { id: sceneId }, select: { showId: true } });
+    const scene = await prisma.scene.findUnique({
+      where: { id: sceneId },
+      select: { showId: true },
+    });
     if (!scene) {
       throw new Error("Szene wurde nicht gefunden.");
     }
@@ -1513,9 +1589,7 @@ export async function createBreakdownItemAction(formData: FormData): Promise<voi
   } catch (error) {
     console.error("createBreakdownItemAction", error);
     const message =
-      error instanceof Error
-        ? error.message
-        : "Breakdown-Eintrag konnte nicht erstellt werden.";
+      error instanceof Error ? error.message : "Breakdown-Eintrag konnte nicht erstellt werden.";
     throw new Error(message);
   }
 }
@@ -1537,7 +1611,10 @@ export async function updateBreakdownItemAction(formData: FormData): Promise<voi
     }
 
     const title = readString(formData, "title", { label: "Titel", minLength: 2, maxLength: 160 });
-    const description = readOptionalString(formData, "description", { label: "Beschreibung", maxLength: 600 });
+    const description = readOptionalString(formData, "description", {
+      label: "Beschreibung",
+      maxLength: 600,
+    });
     const note = readOptionalString(formData, "note", { label: "Notiz", maxLength: 300 });
     const status =
       parseEnumValue(BreakdownStatus, formData.get("status"), "Status", { optional: true }) ??
@@ -1589,9 +1666,7 @@ export async function removeBreakdownItemAction(formData: FormData): Promise<voi
   } catch (error) {
     console.error("removeBreakdownItemAction", error);
     const message =
-      error instanceof Error
-        ? error.message
-        : "Breakdown-Eintrag konnte nicht entfernt werden.";
+      error instanceof Error ? error.message : "Breakdown-Eintrag konnte nicht entfernt werden.";
     throw new Error(message);
   }
 }

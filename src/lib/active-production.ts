@@ -27,16 +27,14 @@ function selectPreferredMembership(memberships: ActiveMembership[]) {
   if (memberships.length === 0) return null;
   if (memberships.length === 1) return memberships[0];
 
-  return memberships
-    .slice()
-    .sort((a, b) => {
-      const aDate = a.show.finalRehearsalWeekStart?.getTime() ?? 0;
-      const bDate = b.show.finalRehearsalWeekStart?.getTime() ?? 0;
-      if (aDate !== bDate) {
-        return bDate - aDate;
-      }
-      return b.show.year - a.show.year;
-    })[0];
+  return memberships.slice().sort((a, b) => {
+    const aDate = a.show.finalRehearsalWeekStart?.getTime() ?? 0;
+    const bDate = b.show.finalRehearsalWeekStart?.getTime() ?? 0;
+    if (aDate !== bDate) {
+      return bDate - aDate;
+    }
+    return b.show.year - a.show.year;
+  })[0];
 }
 
 async function resolveFallbackActiveProductionId(userId: string | null | undefined) {
@@ -137,17 +135,18 @@ export const getActiveProduction = cache(async (userId?: string | null) => {
     return null;
   }
 
-  const where = userId && !canManageProductions
-    ? {
-        id: activeProductionId,
-        memberships: {
-          some: {
-            userId,
-            OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+  const where =
+    userId && !canManageProductions
+      ? {
+          id: activeProductionId,
+          memberships: {
+            some: {
+              userId,
+              OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+            },
           },
-        },
-      }
-    : { id: activeProductionId };
+        }
+      : { id: activeProductionId };
 
   const show = await prisma.show.findFirst({
     where,

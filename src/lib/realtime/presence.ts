@@ -44,12 +44,7 @@ function mapRoomToPath(room: string | null | undefined): string | null {
   return null;
 }
 
-export async function trackPresenceEvent({
-  userId,
-  room,
-  action,
-  occurredAt,
-}: PresencePayload) {
+export async function trackPresenceEvent({ userId, room, action, occurredAt }: PresencePayload) {
   if (!userId) {
     return;
   }

@@ -9,10 +9,20 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { EditIcon, TrashIcon } from "@/components/ui/action-icons";
-import { AVAILABLE_ICON_NAMES, type IconItem, type IconItemsContent } from "@/lib/website-content-schemas";
+import {
+  AVAILABLE_ICON_NAMES,
+  type IconItem,
+  type IconItemsContent,
+} from "@/lib/website-content-schemas";
 
 type Props = {
   contentId: string;
@@ -57,10 +67,31 @@ export function IconItemsEditor({ contentId, initialContent }: Props) {
     <div className="space-y-4">
       <div className="space-y-2">
         {items.map((item, index) => (
-          <div key={index} className="flex items-start gap-3 rounded-lg border border-border bg-card p-4">
+          <div
+            key={index}
+            className="flex items-start gap-3 rounded-lg border border-border bg-card p-4"
+          >
             <div className="flex flex-col gap-1">
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-xs" onClick={() => moveItem(index, -1)} disabled={index === 0} aria-label="Nach oben">↑</Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-xs" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1} aria-label="Nach unten">↓</Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-xs"
+                onClick={() => moveItem(index, -1)}
+                disabled={index === 0}
+                aria-label="Nach oben"
+              >
+                ↑
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-xs"
+                onClick={() => moveItem(index, 1)}
+                disabled={index === items.length - 1}
+                aria-label="Nach unten"
+              >
+                ↓
+              </Button>
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-mono text-muted-foreground">{item.icon}</p>
@@ -68,10 +99,20 @@ export function IconItemsEditor({ contentId, initialContent }: Props) {
               <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{item.description}</p>
             </div>
             <div className="flex shrink-0 gap-1">
-              <Button variant="ghost" size="icon" onClick={() => setEditItem({ ...item, index })} aria-label="Bearbeiten">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditItem({ ...item, index })}
+                aria-label="Bearbeiten"
+              >
                 <EditIcon className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Löschen" onClick={() => setDeleteIndex(index)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Löschen"
+                onClick={() => setDeleteIndex(index)}
+              >
                 <TrashIcon className="h-4 w-4" />
               </Button>
             </div>
@@ -80,15 +121,22 @@ export function IconItemsEditor({ contentId, initialContent }: Props) {
       </div>
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>+ Eintrag hinzufügen</Button>
-        <AsyncButton onClick={save} isLoading={saving} size="sm">Speichern</AsyncButton>
+        <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
+          + Eintrag hinzufügen
+        </Button>
+        <AsyncButton onClick={save} isLoading={saving} size="sm">
+          Speichern
+        </AsyncButton>
       </div>
 
       <IconItemDialog
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Neuer Eintrag"
-        onSave={(item) => { setItems((prev) => [...prev, item]); setAddOpen(false); }}
+        onSave={(item) => {
+          setItems((prev) => [...prev, item]);
+          setAddOpen(false);
+        }}
       />
 
       {editItem && (
@@ -97,18 +145,32 @@ export function IconItemsEditor({ contentId, initialContent }: Props) {
           onOpenChange={(open) => !open && setEditItem(null)}
           title="Eintrag bearbeiten"
           initialValues={editItem}
-          onSave={(item) => { setItems((prev) => prev.map((it, i) => (i === editItem.index ? item : it))); setEditItem(null); }}
+          onSave={(item) => {
+            setItems((prev) => prev.map((it, i) => (i === editItem.index ? item : it)));
+            setEditItem(null);
+          }}
         />
       )}
       <ConfirmDialog
         open={deleteIndex !== null}
-        onOpenChange={(open) => { if (!open) setDeleteIndex(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteIndex(null);
+        }}
         title="Eintrag löschen?"
-        description={deleteIndex !== null ? `"${items[deleteIndex]?.title}" wird dauerhaft entfernt.` : undefined}
+        description={
+          deleteIndex !== null
+            ? `"${items[deleteIndex]?.title}" wird dauerhaft entfernt.`
+            : undefined
+        }
         confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         variant="destructive"
-        onConfirm={() => { if (deleteIndex !== null) { setItems((prev) => prev.filter((_, i) => i !== deleteIndex)); setDeleteIndex(null); } }}
+        onConfirm={() => {
+          if (deleteIndex !== null) {
+            setItems((prev) => prev.filter((_, i) => i !== deleteIndex));
+            setDeleteIndex(null);
+          }
+        }}
         onCancel={() => setDeleteIndex(null)}
       />
     </div>
@@ -131,11 +193,19 @@ function IconItemDialog({ open, onOpenChange, title, initialValues, onSave }: Di
   const handleSave = () => {
     if (!icon || !itemTitle.trim() || !description.trim()) return;
     onSave({ icon, title: itemTitle.trim(), description: description.trim() });
-    setIcon(AVAILABLE_ICON_NAMES[0]); setItemTitle(""); setDescription("");
+    setIcon(AVAILABLE_ICON_NAMES[0]);
+    setItemTitle("");
+    setDescription("");
   };
 
   return (
-    <ModalFormDialog open={open} onOpenChange={onOpenChange} title={title} onSave={handleSave} saveLabel="Übernehmen">
+    <ModalFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      onSave={handleSave}
+      saveLabel="Übernehmen"
+    >
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label>Icon</Label>
@@ -145,18 +215,29 @@ function IconItemDialog({ open, onOpenChange, title, initialValues, onSave }: Di
             </SelectTrigger>
             <SelectContent>
               {AVAILABLE_ICON_NAMES.map((name) => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label>Titel</Label>
-          <Input value={itemTitle} onChange={(e) => setItemTitle(e.target.value)} placeholder="Bezeichnung" />
+          <Input
+            value={itemTitle}
+            onChange={(e) => setItemTitle(e.target.value)}
+            placeholder="Bezeichnung"
+          />
         </div>
         <div className="space-y-1.5">
           <Label>Beschreibung</Label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kurze Beschreibung..." rows={3} />
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Kurze Beschreibung..."
+            rows={3}
+          />
         </div>
       </div>
     </ModalFormDialog>

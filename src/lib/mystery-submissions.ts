@@ -64,7 +64,9 @@ export async function getMysteryScoreboard(limit?: number): Promise<MysteryScore
   }
 }
 
-export async function getMysteryScoreboardEntry(playerName: string): Promise<MysteryScoreboardEntry | null> {
+export async function getMysteryScoreboardEntry(
+  playerName: string,
+): Promise<MysteryScoreboardEntry | null> {
   const trimmed = playerName.trim();
   if (!trimmed) return null;
   if (!process.env.DATABASE_URL) return null;
@@ -95,7 +97,9 @@ export async function getMysteryClueSummaries() {
   });
 }
 
-export async function getMysterySubmissionsForClue(clueId: string): Promise<MysterySubmissionWithRelations[]> {
+export async function getMysterySubmissionsForClue(
+  clueId: string,
+): Promise<MysterySubmissionWithRelations[]> {
   if (!process.env.DATABASE_URL) return [] as MysterySubmissionWithRelations[];
   return prisma.mysteryTipSubmission.findMany({
     where: { clueId },
@@ -103,4 +107,3 @@ export async function getMysterySubmissionsForClue(clueId: string): Promise<Myst
     orderBy: [{ createdAt: "desc" }],
   });
 }
-

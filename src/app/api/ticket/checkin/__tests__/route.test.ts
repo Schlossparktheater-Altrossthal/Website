@@ -40,14 +40,13 @@ describe("ticket check-in API", () => {
     vi.clearAllMocks();
     requireAuthMock.mockResolvedValue({ user: { id: "user-1" } });
     hasPermissionMock.mockResolvedValue(true);
-    transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) =>
-      callback({}),
-    );
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) => callback({}));
   });
 
-  const createRequest = (body: unknown) => ({
-    json: async () => body,
-  }) as unknown as Request;
+  const createRequest = (body: unknown) =>
+    ({
+      json: async () => body,
+    }) as unknown as Request;
 
   it("checks in tickets when the user is allowed", async () => {
     const ticket = {
@@ -88,7 +87,10 @@ describe("ticket check-in API", () => {
     );
 
     expect(requireAuthMock).toHaveBeenCalled();
-    expect(hasPermissionMock).toHaveBeenCalledWith({ id: "user-1" }, "PRIVATE.PRODUCTION.SHOW.MANAGE");
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      { id: "user-1" },
+      "PRIVATE.PRODUCTION.SHOW.MANAGE",
+    );
     expect(checkInTicketMock).toHaveBeenCalledWith(expect.any(Object), {
       ticketId: null,
       code: "CODE-123",

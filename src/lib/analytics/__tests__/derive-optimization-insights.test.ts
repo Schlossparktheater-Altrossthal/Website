@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { AnalyticsHttpSummary } from "@prisma/client";
 
 import { deriveOptimizationInsights } from "@/lib/analytics/derive-optimization-insights";
-import type { DeviceStat, OptimizationInsight, PagePerformanceEntry, SessionInsight } from "@/lib/server-analytics";
+import type {
+  DeviceStat,
+  OptimizationInsight,
+  PagePerformanceEntry,
+  SessionInsight,
+} from "@/lib/server-analytics";
 
 const baseFallback: OptimizationInsight[] = [
   {

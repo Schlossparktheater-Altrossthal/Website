@@ -70,21 +70,14 @@ export type UseWebVitalsOptions = {
 
 function generateMetricId(seed?: string) {
   const sanitizedSeed =
-    typeof seed === "string" && seed
-      ? seed.replace(/[^a-zA-Z0-9_-]/g, "-")
-      : null;
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
+    typeof seed === "string" && seed ? seed.replace(/[^a-zA-Z0-9_-]/g, "-") : null;
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     const id = crypto.randomUUID();
     return sanitizedSeed ? `${sanitizedSeed}-${id}` : id;
   }
   const random = Math.random().toString(16).slice(2);
   const timestamp = Date.now();
-  return sanitizedSeed
-    ? `${sanitizedSeed}-${timestamp}-${random}`
-    : `${timestamp}-${random}`;
+  return sanitizedSeed ? `${sanitizedSeed}-${timestamp}-${random}` : `${timestamp}-${random}`;
 }
 
 function normalizePath(pathname: string | null): string {
@@ -130,11 +123,7 @@ function inferScope(path: string, override?: WebVitalsScope): WebVitalsScope {
   return "public";
 }
 
-function clampInteger(
-  value: number | undefined,
-  min: number,
-  max: number,
-): number | null {
+function clampInteger(value: number | undefined, min: number, max: number): number | null {
   if (!Number.isFinite(value ?? null)) {
     return null;
   }
@@ -174,18 +163,14 @@ function extractConnection(): DeviceConnection | null {
   };
 
   const connection =
-    anyNavigator.connection ||
-    anyNavigator.mozConnection ||
-    anyNavigator.webkitConnection;
+    anyNavigator.connection || anyNavigator.mozConnection || anyNavigator.webkitConnection;
 
   if (!connection) {
     return null;
   }
 
   const rtt = Number.isFinite(connection.rtt) ? Number(connection.rtt) : null;
-  const downlink = Number.isFinite(connection.downlink)
-    ? Number(connection.downlink)
-    : null;
+  const downlink = Number.isFinite(connection.downlink) ? Number(connection.downlink) : null;
 
   return {
     type: connection.type ?? null,
@@ -195,10 +180,7 @@ function extractConnection(): DeviceConnection | null {
   };
 }
 
-function detectDeviceHint(
-  userAgent: string,
-  isMobileFallback: boolean,
-): string {
+function detectDeviceHint(userAgent: string, isMobileFallback: boolean): string {
   const ua = userAgent.toLowerCase();
 
   if (typeof navigator !== "undefined") {
@@ -212,11 +194,7 @@ function detectDeviceHint(
     }
     if (navData?.platform) {
       const platform = navData.platform.toLowerCase();
-      if (
-        platform.includes("win") ||
-        platform.includes("mac") ||
-        platform.includes("linux")
-      ) {
+      if (platform.includes("win") || platform.includes("mac") || platform.includes("linux")) {
         return "desktop";
       }
     }
@@ -225,11 +203,7 @@ function detectDeviceHint(
   if (ua.includes("tablet") || ua.includes("ipad") || ua.includes("sm-t")) {
     return "tablet";
   }
-  if (
-    ua.includes("iphone") ||
-    ua.includes("android") ||
-    ua.includes("mobile")
-  ) {
+  if (ua.includes("iphone") || ua.includes("android") || ua.includes("mobile")) {
     return "mobile";
   }
   if (
@@ -240,11 +214,7 @@ function detectDeviceHint(
   ) {
     return "tv";
   }
-  if (
-    ua.includes("playstation") ||
-    ua.includes("xbox") ||
-    ua.includes("nintendo")
-  ) {
+  if (ua.includes("playstation") || ua.includes("xbox") || ua.includes("nintendo")) {
     return "console";
   }
   if (ua.includes("watch")) {
@@ -294,14 +264,9 @@ function collectDeviceHints(): DeviceHints {
   let prefersDarkMode: boolean | null = null;
   let colorSchemePreference: string | null = null;
 
-  if (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function"
-  ) {
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
     try {
-      const reducedMotionQuery = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      );
+      const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
       if (typeof reducedMotionQuery.matches === "boolean") {
         reducedMotion = reducedMotionQuery.matches;
       }
@@ -333,8 +298,7 @@ function collectDeviceHints(): DeviceHints {
       width: clampInteger(window.innerWidth, 0, 16_000),
       height: clampInteger(window.innerHeight, 0, 16_000),
       pixelRatio:
-        typeof window.devicePixelRatio === "number" &&
-        window.devicePixelRatio > 0
+        typeof window.devicePixelRatio === "number" && window.devicePixelRatio > 0
           ? Math.min(window.devicePixelRatio, 32)
           : null,
     };
@@ -365,25 +329,18 @@ function collectDeviceHints(): DeviceHints {
 }
 
 function collectNavigationInsights(): NavigationInsights {
-  if (
-    typeof performance === "undefined" ||
-    typeof performance.getEntriesByType !== "function"
-  ) {
+  if (typeof performance === "undefined" || typeof performance.getEntriesByType !== "function") {
     return {};
   }
 
   try {
     const entries = performance.getEntriesByType("navigation");
-    const entry = entries[entries.length - 1] as
-      | PerformanceNavigationTiming
-      | undefined;
+    const entry = entries[entries.length - 1] as PerformanceNavigationTiming | undefined;
     if (!entry) {
       return {};
     }
 
-    const loadTime = Number(
-      entry.loadEventEnd || entry.domComplete || entry.duration,
-    );
+    const loadTime = Number(entry.loadEventEnd || entry.domComplete || entry.duration);
     return {
       loadTimeMs: Number.isFinite(loadTime) && loadTime > 0 ? loadTime : null,
       navigationType: (entry as PerformanceNavigationTiming).type ?? null,
@@ -395,10 +352,7 @@ function collectNavigationInsights(): NavigationInsights {
 
 export function useWebVitals(options?: UseWebVitalsOptions) {
   const pathname = usePathname();
-  const normalizedPath = useMemo(
-    () => normalizePath(pathname ?? null),
-    [pathname],
-  );
+  const normalizedPath = useMemo(() => normalizePath(pathname ?? null), [pathname]);
 
   const scope = useMemo(
     () => inferScope(normalizedPath, options?.scope),
@@ -415,10 +369,7 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
   }, [providedWeight]);
 
   const analyticsSessionId = options?.analyticsSessionId ?? null;
-  const metricId = useMemo(
-    () => generateMetricId(normalizedPath),
-    [normalizedPath],
-  );
+  const metricId = useMemo(() => generateMetricId(normalizedPath), [normalizedPath]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -467,10 +418,7 @@ export function useWebVitals(options?: UseWebVitalsOptions) {
         }
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.debug(
-            "[analytics] Failed to flush web vitals on cleanup",
-            error,
-          );
+          console.debug("[analytics] Failed to flush web vitals on cleanup", error);
         }
       }
 

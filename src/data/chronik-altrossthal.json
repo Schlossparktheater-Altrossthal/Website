@@ -24,12 +24,8 @@
     "dates": null,
     "location": "Schlosspark Altroßthal",
     "director": "Toni Burghard Friedrich",
-    "sources": [
-      "https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"
-    ],
-    "evidence_snippets": [
-      "Es folgten ... Benatzkys „Im weißen Rössl ...“ (2010)"
-    ],
+    "sources": ["https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"],
+    "evidence_snippets": ["Es folgten ... Benatzkys „Im weißen Rössl ...“ (2010)"],
     "images": []
   },
   {
@@ -39,12 +35,8 @@
     "dates": null,
     "location": "Schlosspark Altroßthal",
     "director": "Toni Burghard Friedrich",
-    "sources": [
-      "https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"
-    ],
-    "evidence_snippets": [
-      "... Dürrenmatts „Der Besuch der alten Dame“ (2011) ..."
-    ],
+    "sources": ["https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"],
+    "evidence_snippets": ["... Dürrenmatts „Der Besuch der alten Dame“ (2011) ..."],
     "images": []
   },
   {
@@ -54,12 +46,8 @@
     "dates": null,
     "location": "Schlosspark Altroßthal",
     "director": "Toni Burghard Friedrich",
-    "sources": [
-      "https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"
-    ],
-    "evidence_snippets": [
-      "... frei nach Wagner inszenierte „Der Ring des Nibelungen“ (2012) ..."
-    ],
+    "sources": ["https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"],
+    "evidence_snippets": ["... frei nach Wagner inszenierte „Der Ring des Nibelungen“ (2012) ..."],
     "images": []
   },
   {
@@ -95,9 +83,7 @@
       "Premiere am 17.7., weitere Vorstellungen 18.–20.7., je 20:30 Uhr.",
       "Regie führt – wie jedes Jahr – Toni Burghard Friedrich."
     ],
-    "images": [
-      "https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"
-    ]
+    "images": ["https://www.elbmargarita.de/2014/07/goethes-faust-unter-freiem-himmel/"]
   },
   {
     "year": 2015,
@@ -106,16 +92,12 @@
     "dates": "2015-07-09/2015-07-12",
     "location": "Schlosspark Altroßthal",
     "director": "Toni Burghard Friedrich",
-    "sources": [
-      "https://www.elbmargarita.de/2015/07/das-biest-mit-schulterpolstern/"
-    ],
+    "sources": ["https://www.elbmargarita.de/2015/07/das-biest-mit-schulterpolstern/"],
     "evidence_snippets": [
       "Termintipp: 9./10./11./12. Juli, 20:30 Uhr.",
       "Schüler am BSZ Altroßthal zeigen „Romeo und Julia“."
     ],
-    "images": [
-      "https://www.elbmargarita.de/2015/07/das-biest-mit-schulterpolstern/"
-    ]
+    "images": ["https://www.elbmargarita.de/2015/07/das-biest-mit-schulterpolstern/"]
   },
   {
     "year": 2016,
@@ -124,16 +106,12 @@
     "dates": "2016-06-23/2016-06-26",
     "location": "Schlosspark Altroßthal",
     "director": "Toni Burghard Friedrich",
-    "sources": [
-      "https://www.elbmargarita.de/2016/06/altrossthal/"
-    ],
+    "sources": ["https://www.elbmargarita.de/2016/06/altrossthal/"],
     "evidence_snippets": [
       "Termine: 23., 24., 25. und 26. Juni, 20 Uhr.",
       "... Regisseur Toni Burghard Friedrich ..."
     ],
-    "images": [
-      "https://www.elbmargarita.de/2016/06/altrossthal/"
-    ]
+    "images": ["https://www.elbmargarita.de/2016/06/altrossthal/"]
   },
   {
     "year": 2017,
@@ -171,9 +149,7 @@
     "dates": "4. bis 7. Juli 2019, 20:00 Uhr",
     "location": "Schlosspark Altroßthal",
     "director": "Jens Bache",
-    "sources": [
-      "https://stadttheaterbremerhaven.de/jens-bache/"
-    ],
+    "sources": ["https://stadttheaterbremerhaven.de/jens-bache/"],
     "evidence_snippets": [
       "Im Sommer 2019 hatte sein Stück „Lysistrate’s Weber“ im Schlossparktheater Altroßthal Premiere."
     ],
@@ -268,9 +244,18 @@
       { "role": "Diener", "players": ["Bianca Milke", "Jonas Fehrmann"] },
       {
         "role": "Amüsierdamen",
-        "players": ["Sarah König", "Bashi Deutsch", "Mathilda Hoffmann", "Helene Irmer", "Mia Däbler"]
+        "players": [
+          "Sarah König",
+          "Bashi Deutsch",
+          "Mathilda Hoffmann",
+          "Helene Irmer",
+          "Mia Däbler"
+        ]
       },
-      { "role": "Gäste", "players": ["Sebastian Seifert", "Lennart Neumeister", "Justus Schmeling"] }
+      {
+        "role": "Gäste",
+        "players": ["Sebastian Seifert", "Lennart Neumeister", "Justus Schmeling"]
+      }
     ]
   },
   {
@@ -280,9 +265,7 @@
     "dates": "19. bis 22. Juni 2025, 18:30 Uhr",
     "location": "Schlosspark Altroßthal",
     "director": "Hannes Sell",
-    "press_quotes": [
-      "„…gehört zur DNA des Dresdner Westens!“ – Bericht/Fotostrecke"
-    ],
+    "press_quotes": ["„…gehört zur DNA des Dresdner Westens!“ – Bericht/Fotostrecke"],
     "sources": [
       "https://www.radiodresden.de/beitrag/grosser-tag-am-bsz-in-altrossthal-870010/",
       "https://www.facebook.com/BSZ.AE.DD/posts/-jedes-jahr-ein-highlightso-schrieb-uns-ein-treuer-theatergast-und-wir-freuen-un/1267896945341938/",

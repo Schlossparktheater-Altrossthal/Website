@@ -74,9 +74,10 @@ vi.mock("@/lib/holidays", async () => {
 });
 
 describe("sperrliste settings check route", () => {
-  const createRequest = (body: unknown) => ({
-    json: async () => body,
-  }) as NextRequest;
+  const createRequest = (body: unknown) =>
+    ({
+      json: async () => body,
+    }) as NextRequest;
 
   let previousDatabaseUrl: string | undefined;
 

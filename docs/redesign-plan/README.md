@@ -3,6 +3,7 @@
 Dieser Plan übersetzt die Analyse des aktuellen Screenshots in umsetzbare Arbeitspakete. Die Sprints sind jeweils auf 1–2 Wochen ausgelegt und bauen aufeinander auf. Jeder Sprint enthält Ziele, zentrale Aufgaben, Deliverables und Erfolgskriterien.
 
 ## Sprint 0 – Vorbereitung & Discovery (0,5–1 Woche)
+
 - **Ziele:** Anforderungen präzisieren, Erfolgskennzahlen festlegen, technische Basis verifizieren.
 - **Aufgaben:**
   - Stakeholder-Interviews durchführen und Nutzerziele priorisieren.
@@ -13,6 +14,7 @@ Dieser Plan übersetzt die Analyse des aktuellen Screenshots in umsetzbare Arbei
 - **Erfolgskriterien:** Alle Stakeholder stimmen dem Scope zu, Risiken wurden dokumentiert, technische Constraints sind geklärt.
 
 ## Sprint 1 – Informationsarchitektur & Layout-Fundament (1–2 Wochen)
+
 - **Ziele:** Grundstruktur der Seite und Navigation etablieren.
 - **Aufgaben:**
   - Navigationskonzept inkl. Header/Footer, Responsive Breakpoints (320/768/1024/1440px) definieren.
@@ -23,6 +25,7 @@ Dieser Plan übersetzt die Analyse des aktuellen Screenshots in umsetzbare Arbei
 - **Erfolgskriterien:** Lighthouse Layout/Accessibility-Score ≥ 90, Hero & Navigation funktionieren auf Desktop und Mobile.
 
 ## Sprint 2 – Design-System & Tokens erweitern (1–2 Wochen)
+
 - **Ziele:** Konsistente Styles und wiederverwendbare Basis schaffen.
 - **Aufgaben:**
   - Farbpalette in `docs/swatches` und Tailwind Theme aktualisieren, Kontrastwerte (≥ 4.5:1) überprüfen.
@@ -33,6 +36,7 @@ Dieser Plan übersetzt die Analyse des aktuellen Screenshots in umsetzbare Arbei
 - **Erfolgskriterien:** Alle UI-Elemente verwenden die neuen Tokens, Design-Dokumentation ist im Repo versioniert.
 
 ## Sprint 3 – Content-Module & Interaktion (1–2 Wochen)
+
 - **Ziele:** Zentrale Inhaltsbereiche realisieren und Nutzerführung optimieren.
 - **Aufgaben:**
   - Feature-/Programmsektionen, Testimonials, FAQ und Kontaktbereich als modulare Komponenten bauen.
@@ -43,6 +47,7 @@ Dieser Plan übersetzt die Analyse des aktuellen Screenshots in umsetzbare Arbei
 - **Erfolgskriterien:** Nutzer finden Kerninformationen binnen <3 Klicks, Formulare erfüllen WCAG-Standards.
 
 ## Sprint 4 – Qualitätssicherung & Launch-Vorbereitung (1 Woche)
+
 - **Ziele:** Stabilität, Performance und Barrierefreiheit finalisieren.
 - **Aufgaben:**
   - Umfassende `pnpm lint`, `pnpm test`, `pnpm build` Pipelines durchlaufen lassen und Issues beheben.
@@ -53,11 +58,13 @@ Dieser Plan übersetzt die Analyse des aktuellen Screenshots in umsetzbare Arbei
 - **Erfolgskriterien:** Alle Tests grün, QA-Abnahme dokumentiert, Launch-Fenster abgestimmt.
 
 ## Querschnittsaufgaben
+
 - Design- und Engineering-Sync pro Sprint, tägliche Standups.
 - Fortschritt in Design-Tools (Figma) spiegeln, Komponentenbibliothek aktuell halten.
 - User-Feedback frühzeitig einholen (z. B. mit Remote-Tests nach Sprint 2).
 
 ## Nächste Schritte
+
 1. Sprint-0-Aufgaben bestätigen und Team-Rollen besetzen.
 2. Board mit User Stories füllen, Aufwand schätzen (Planning Poker).
 3. Kick-off-Meeting terminieren und Kommunikationskanäle (Slack, Notion) festlegen.

@@ -1,6 +1,10 @@
 import { MysterySubmissionReviewManager } from "@/components/members/mystery/mystery-submission-review-manager";
 import { Heading, Text } from "@/components/ui/typography";
-import { getMysteryClueSummaries, getMysteryScoreboard, getMysterySubmissionsForClue } from "@/lib/mystery-submissions";
+import {
+  getMysteryClueSummaries,
+  getMysteryScoreboard,
+  getMysterySubmissionsForClue,
+} from "@/lib/mystery-submissions";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
@@ -21,7 +25,8 @@ export default async function MysteryTipsAdminPage({
         <div>
           <Heading level="h1">Mystery-Tipps</Heading>
           <Text variant="small" tone="muted">
-            Die Datenbank ist nicht konfiguriert. Bitte hinterlege eine gültige <code>DATABASE_URL</code>, um die Tipps auszuwerten.
+            Die Datenbank ist nicht konfiguriert. Bitte hinterlege eine gültige{" "}
+            <code>DATABASE_URL</code>, um die Tipps auszuwerten.
           </Text>
         </div>
       </div>

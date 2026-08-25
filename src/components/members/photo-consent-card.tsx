@@ -28,7 +28,10 @@ const statusLabels: Record<PhotoConsentSummary["status"], string> = {
   rejected: "Abgelehnt",
 };
 
-const statusVariants: Record<PhotoConsentSummary["status"], "default" | "secondary" | "destructive" | "outline"> = {
+const statusVariants: Record<
+  PhotoConsentSummary["status"],
+  "default" | "secondary" | "destructive" | "outline"
+> = {
   none: "outline",
   pending: "outline",
   approved: "outline",
@@ -36,14 +39,10 @@ const statusVariants: Record<PhotoConsentSummary["status"], "default" | "seconda
 };
 
 const statusBadgeClasses: Record<PhotoConsentSummary["status"], string> = {
-  none:
-    "border-info/45 bg-info/15 text-info",
-  pending:
-    "border-warning/45 bg-warning/15 text-warning",
-  approved:
-    "border-success/45 bg-success/15 text-success",
-  rejected:
-    "border-destructive/45 bg-destructive/15 text-destructive",
+  none: "border-info/45 bg-info/15 text-info",
+  pending: "border-warning/45 bg-warning/15 text-warning",
+  approved: "border-success/45 bg-success/15 text-success",
+  rejected: "border-destructive/45 bg-destructive/15 text-destructive",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -86,7 +85,12 @@ type ConsentDocumentPreviewProps = {
 
 type ConsentPreviewMode = "preview" | "outline" | "velocity" | "replay";
 
-function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, signaturePayload }: ConsentDocumentPreviewProps) {
+function ConsentDocumentPreview({
+  previewUrl,
+  documentName,
+  signatureVersion,
+  signaturePayload,
+}: ConsentDocumentPreviewProps) {
   const hasSignature = signatureVersion === "velocity.v1" && Boolean(signaturePayload);
   const hasPreview = Boolean(previewUrl);
   const [mode, setMode] = useState<ConsentPreviewMode>(() => {
@@ -123,12 +127,18 @@ function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, si
         );
       }
       if (mode === "outline") {
-        return <SignatureVisualizer payload={signaturePayload} mode="outline" className="rounded-lg" />;
+        return (
+          <SignatureVisualizer payload={signaturePayload} mode="outline" className="rounded-lg" />
+        );
       }
       if (mode === "velocity") {
-        return <SignatureVisualizer payload={signaturePayload} mode="velocity" className="rounded-lg" />;
+        return (
+          <SignatureVisualizer payload={signaturePayload} mode="velocity" className="rounded-lg" />
+        );
       }
-      return <SignatureVisualizer payload={signaturePayload} mode="replay" className="rounded-lg" />;
+      return (
+        <SignatureVisualizer payload={signaturePayload} mode="replay" className="rounded-lg" />
+      );
     }
 
     if (hasPreview) {
@@ -164,7 +174,9 @@ function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, si
   return (
     <div className="space-y-3 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Digitale Unterschrift</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Digitale Unterschrift
+        </p>
         {controls.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em]">
             {controls.map((control) => (
@@ -186,7 +198,9 @@ function ConsentDocumentPreview({ previewUrl, documentName, signatureVersion, si
       <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/50 bg-background">
         {renderContent()}
       </div>
-      <p className="text-xs text-muted-foreground">Die Unterschrift ist nur für freigeschaltete Mitglieder sichtbar.</p>
+      <p className="text-xs text-muted-foreground">
+        Die Unterschrift ist nur für freigeschaltete Mitglieder sichtbar.
+      </p>
     </div>
   );
 }
@@ -195,9 +209,7 @@ interface PhotoConsentCardProps {
   onSummaryChange?: (summary: PhotoConsentSummary | null) => void;
 }
 
-export function PhotoConsentCard({
-  onSummaryChange,
-}: PhotoConsentCardProps = {}) {
+export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}) {
   const [summary, setSummary] = useState<PhotoConsentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,7 +223,9 @@ export function PhotoConsentCard({
   const [editing, setEditing] = useState(false);
   const [signatureMode, setSignatureMode] = useState<"upload" | "signature">("upload");
   const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
-  const [signaturePreviewMode, setSignaturePreviewMode] = useState<"outline" | "velocity" | "replay">("outline");
+  const [signaturePreviewMode, setSignaturePreviewMode] = useState<
+    "outline" | "velocity" | "replay"
+  >("outline");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -506,15 +520,22 @@ export function PhotoConsentCard({
             <CameraIcon className="h-6 w-6" aria-hidden="true" />
           </span>
           <div className="space-y-1 text-center sm:text-left">
-            <CardTitle className="text-xl font-semibold leading-tight">Darf dein Bühnenmoment sichtbar sein?</CardTitle>
+            <CardTitle className="text-xl font-semibold leading-tight">
+              Darf dein Bühnenmoment sichtbar sein?
+            </CardTitle>
             <p className="max-w-2xl text-sm text-foreground/70">
-              Wie bei einem Cookiebanner entscheidest du hier, ob wir Fotos von Proben und Aufführungen teilen dürfen.
+              Wie bei einem Cookiebanner entscheidest du hier, ob wir Fotos von Proben und
+              Aufführungen teilen dürfen.
             </p>
           </div>
         </div>
         <div className="flex flex-col items-stretch gap-3 sm:items-end">
           <div className="flex items-center gap-2 self-start rounded-full border border-primary/25 bg-background/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/60 shadow-sm backdrop-blur sm:self-end">
-            <Badge variant="outline" size="sm" className="border-transparent bg-transparent px-0 py-0 text-[11px] uppercase tracking-[0.18em] text-foreground/60">
+            <Badge
+              variant="outline"
+              size="sm"
+              className="border-transparent bg-transparent px-0 py-0 text-[11px] uppercase tracking-[0.18em] text-foreground/60"
+            >
               Status
             </Badge>
             {statusBadge}
@@ -544,7 +565,7 @@ export function PhotoConsentCard({
               "space-y-2 rounded-xl border p-4 text-foreground",
               status === "approved"
                 ? "border-success/45 bg-success/15 text-success"
-                : "border-destructive/45 bg-destructive/15 text-destructive"
+                : "border-destructive/45 bg-destructive/15 text-destructive",
             )}
           >
             <p>
@@ -559,7 +580,8 @@ export function PhotoConsentCard({
               </p>
             ) : (
               <p className="text-xs text-destructive/80">
-                Zuletzt bearbeitet am {formatDate(summary?.updatedAt) ?? formatDate(summary?.submittedAt) ?? "unbekannt"}.
+                Zuletzt bearbeitet am{" "}
+                {formatDate(summary?.updatedAt) ?? formatDate(summary?.submittedAt) ?? "unbekannt"}.
               </p>
             )}
             {status === "approved" && summary?.exclusionNote && (
@@ -592,9 +614,12 @@ export function PhotoConsentCard({
           <>
             {showIntro && (
               <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 backdrop-blur">
-                <p className="font-semibold text-foreground">Mit deinem „Okay“ hilfst du unserem Auftrittsteam.</p>
+                <p className="font-semibold text-foreground">
+                  Mit deinem „Okay“ hilfst du unserem Auftrittsteam.
+                </p>
                 <p className="mt-1 text-foreground/70">
-                  Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim Cookiebanner am Seitenrand.
+                  Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim
+                  Cookiebanner am Seitenrand.
                 </p>
               </div>
             )}
@@ -610,7 +635,11 @@ export function PhotoConsentCard({
               </div>
             ) : requiresDateOfBirth ? (
               <div className="rounded-md border border-warning/45 bg-warning/15 p-3 text-warning">
-                Bitte hinterlege dein Geburtsdatum im <Link className="underline" href="/mitglieder/profil">Profil</Link>, damit wir prüfen können, ob ein Elternformular notwendig ist.
+                Bitte hinterlege dein Geburtsdatum im{" "}
+                <Link className="underline" href="/mitglieder/profil">
+                  Profil
+                </Link>
+                , damit wir prüfen können, ob ein Elternformular notwendig ist.
               </div>
             ) : status === "approved" && !editing ? (
               <div className="space-y-2 rounded-md border border-success/45 bg-success/15 p-3 text-success">
@@ -621,7 +650,9 @@ export function PhotoConsentCard({
                     {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
                   </li>
                   {summary?.documentUploadedAt && (
-                    <li>Dokument zuletzt hochgeladen am {formatDate(summary.documentUploadedAt)}.</li>
+                    <li>
+                      Dokument zuletzt hochgeladen am {formatDate(summary.documentUploadedAt)}.
+                    </li>
                   )}
                 </ul>
                 {summary?.exclusionNote && (
@@ -665,17 +696,25 @@ export function PhotoConsentCard({
                       className="mt-1 h-5 w-5 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     />
                     <span className="text-foreground/80">
-                      <span className="font-semibold text-foreground">Ja, ich bin einverstanden,</span>{" "}
-                      dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für interne sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
+                      <span className="font-semibold text-foreground">
+                        Ja, ich bin einverstanden,
+                      </span>{" "}
+                      dass im Rahmen unseres Schultheaters Fotos von mir erstellt und für interne
+                      sowie öffentliche Kommunikationszwecke genutzt werden dürfen.
                     </span>
                   </label>
-                  <p className="mt-3 text-xs text-foreground/60">Du kannst dein Okay hier jederzeit widerrufen.</p>
+                  <p className="mt-3 text-xs text-foreground/60">
+                    Du kannst dein Okay hier jederzeit widerrufen.
+                  </p>
                 </div>
 
                 <div className="space-y-2 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
-                  <div className="text-sm font-semibold text-foreground">Optional: Bereiche ausschließen</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    Optional: Bereiche ausschließen
+                  </div>
                   <p className="text-xs text-foreground/60">
-                    Notiere hier, auf welchen Kanälen oder Motiven du nicht erscheinen möchtest (z. B. Social Media, Presse, Nahaufnahmen).
+                    Notiere hier, auf welchen Kanälen oder Motiven du nicht erscheinen möchtest
+                    (z. B. Social Media, Presse, Nahaufnahmen).
                   </p>
                   <Textarea
                     value={note}
@@ -692,14 +731,18 @@ export function PhotoConsentCard({
                   />
                   <div className="flex justify-between text-[11px] text-foreground/50">
                     <span>Max. {MAX_NOTE_LENGTH} Zeichen</span>
-                    <span>{note.length}/{MAX_NOTE_LENGTH}</span>
+                    <span>
+                      {note.length}/{MAX_NOTE_LENGTH}
+                    </span>
                   </div>
                   {noteError && <p className="text-sm text-destructive">{noteError}</p>}
                 </div>
 
                 {requiresDocument ? (
                   <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur">
-                    <div className="font-medium text-foreground">Elterliche Einwilligung (PDF oder JPG/PNG)</div>
+                    <div className="font-medium text-foreground">
+                      Elterliche Einwilligung (PDF oder JPG/PNG)
+                    </div>
                     <Input
                       ref={fileInputRef}
                       type="file"
@@ -707,10 +750,13 @@ export function PhotoConsentCard({
                       onChange={handleFileChange}
                       disabled={submitting}
                     />
-                    {documentFile && <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>}
+                    {documentFile && (
+                      <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>
+                    )}
                     {summary?.hasDocument && !documentFile && (
                       <p className="text-xs text-foreground/60">
-                        Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen, falls eine aktualisierte Version vorliegt.
+                        Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen, falls
+                        eine aktualisierte Version vorliegt.
                       </p>
                     )}
                     {documentError && <p className="text-sm text-destructive">{documentError}</p>}
@@ -747,18 +793,28 @@ export function PhotoConsentCard({
                           onChange={handleFileChange}
                           disabled={submitting}
                         />
-                        {documentFile && <p className="text-xs text-foreground/70">Ausgewählt: {documentFile.name}</p>}
+                        {documentFile && (
+                          <p className="text-xs text-foreground/70">
+                            Ausgewählt: {documentFile.name}
+                          </p>
+                        )}
                         {summary?.hasDocument && !documentFile && (
                           <p className="text-xs text-foreground/60">
-                            Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen, falls du etwas aktualisieren möchtest.
+                            Es liegt bereits ein Dokument vor. Du kannst hier ein neues hochladen,
+                            falls du etwas aktualisieren möchtest.
                           </p>
                         )}
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <SignaturePad value={signatureResult} onChange={handleSignatureChange} className="bg-background" />
+                        <SignaturePad
+                          value={signatureResult}
+                          onChange={handleSignatureChange}
+                          className="bg-background"
+                        />
                         <p className="text-xs text-foreground/60">
-                          Zeichne deine Unterschrift direkt hier. Du kannst sie unten als Kontur, mit Geschwindigkeitsfarben oder als Replay ansehen.
+                          Zeichne deine Unterschrift direkt hier. Du kannst sie unten als Kontur,
+                          mit Geschwindigkeitsfarben oder als Replay ansehen.
                         </p>
                         {signatureResult && (
                           <div className="space-y-3 rounded-lg border border-border/60 bg-background/90 p-3">
@@ -773,21 +829,26 @@ export function PhotoConsentCard({
                                     type="button"
                                     onClick={() => setSignaturePreviewMode(mode)}
                                     variant="toggle"
-                                    data-state={signaturePreviewMode === mode ? "active" : "inactive"}
+                                    data-state={
+                                      signaturePreviewMode === mode ? "active" : "inactive"
+                                    }
                                     className="rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.16em]"
                                     aria-pressed={signaturePreviewMode === mode}
                                   >
                                     {mode === "outline"
                                       ? "Kontur"
                                       : mode === "velocity"
-                                      ? "Geschwindigkeit"
-                                      : "Replay"}
+                                        ? "Geschwindigkeit"
+                                        : "Replay"}
                                   </Button>
                                 ))}
                               </div>
                             </div>
                             <div className="relative h-48 w-full overflow-hidden rounded-md border border-border/60 bg-background">
-                              <SignatureVisualizer payload={signatureResult.payload} mode={signaturePreviewMode} />
+                              <SignatureVisualizer
+                                payload={signatureResult.payload}
+                                mode={signaturePreviewMode}
+                              />
                             </div>
                           </div>
                         )}
@@ -796,7 +857,9 @@ export function PhotoConsentCard({
                   </div>
                 )}
 
-                {!requiresDocument && documentError && <p className="text-sm text-destructive">{documentError}</p>}
+                {!requiresDocument && documentError && (
+                  <p className="text-sm text-destructive">{documentError}</p>
+                )}
 
                 <div className="flex flex-wrap items-center gap-3">
                   <Button
@@ -811,7 +874,13 @@ export function PhotoConsentCard({
                   >
                     {submitting ? "Speichere …" : "Jetzt zustimmen"}
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={submitting}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void load()}
+                    disabled={submitting}
+                  >
                     <RefreshIcon className="h-4 w-4" aria-hidden />
                     Status aktualisieren
                   </Button>

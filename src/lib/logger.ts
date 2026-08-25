@@ -1,7 +1,11 @@
 import crypto from "node:crypto";
 
 import { Prisma } from "@prisma/client";
-import type { AnalyticsServerLog, AnalyticsServerLogSeverity, AnalyticsServerLogStatus } from "@prisma/client";
+import type {
+  AnalyticsServerLog,
+  AnalyticsServerLogSeverity,
+  AnalyticsServerLogStatus,
+} from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -271,18 +275,24 @@ async function persistLogEvent(event: NormalizedLogEvent) {
       });
 
       if (existing) {
-        const severityWeightExisting = SEVERITY_WEIGHT[existing.severity as StructuredLogSeverity] ?? 0;
+        const severityWeightExisting =
+          SEVERITY_WEIGHT[existing.severity as StructuredLogSeverity] ?? 0;
         const severityWeightNext = SEVERITY_WEIGHT[event.severity];
         const severity: StructuredLogSeverity =
-          severityWeightNext >= severityWeightExisting ? event.severity : (existing.severity as StructuredLogSeverity);
+          severityWeightNext >= severityWeightExisting
+            ? event.severity
+            : (existing.severity as StructuredLogSeverity);
 
-        const nextLastSeenAt = event.timestamp > existing.lastSeenAt ? event.timestamp : existing.lastSeenAt;
+        const nextLastSeenAt =
+          event.timestamp > existing.lastSeenAt ? event.timestamp : existing.lastSeenAt;
 
         const nextStatus = event.status ?? (existing.status as StructuredLogStatus);
         const nextDescription = event.description ?? existing.description ?? undefined;
-        const nextRecommendedAction = event.recommendedAction ?? existing.recommendedAction ?? undefined;
+        const nextRecommendedAction =
+          event.recommendedAction ?? existing.recommendedAction ?? undefined;
         const nextAffectedUsers =
-          event.affectedUsers ?? (typeof existing.affectedUsers === "number" ? existing.affectedUsers : undefined);
+          event.affectedUsers ??
+          (typeof existing.affectedUsers === "number" ? existing.affectedUsers : undefined);
 
         await tx.analyticsServerLog.update({
           where: { id: existing.id },
@@ -353,13 +363,28 @@ export function createLogger(service: string) {
   const normalizedService = service.trim() || "application";
   return {
     info(message: string, metadata?: StructuredLogMetadata) {
-      return logStructuredEvent({ severity: "info", service: normalizedService, message, metadata });
+      return logStructuredEvent({
+        severity: "info",
+        service: normalizedService,
+        message,
+        metadata,
+      });
     },
     warn(message: string, metadata?: StructuredLogMetadata) {
-      return logStructuredEvent({ severity: "warning", service: normalizedService, message, metadata });
+      return logStructuredEvent({
+        severity: "warning",
+        service: normalizedService,
+        message,
+        metadata,
+      });
     },
     error(message: string, metadata?: StructuredLogMetadata) {
-      return logStructuredEvent({ severity: "error", service: normalizedService, message, metadata });
+      return logStructuredEvent({
+        severity: "error",
+        service: normalizedService,
+        message,
+        metadata,
+      });
     },
   };
 }

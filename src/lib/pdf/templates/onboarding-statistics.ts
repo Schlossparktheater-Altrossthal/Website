@@ -27,7 +27,12 @@ function drawSectionHeading(doc: PDFKit.PDFDocument, title: string) {
   doc.moveDown(0.6);
   doc.font("Helvetica-Bold").fontSize(14).fillColor("#111827").text(title);
   doc.moveDown(0.2);
-  doc.strokeColor("#e5e7eb").lineWidth(1).moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).stroke();
+  doc
+    .strokeColor("#e5e7eb")
+    .lineWidth(1)
+    .moveTo(doc.page.margins.left, doc.y)
+    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+    .stroke();
   doc.moveDown(0.4);
   doc.fillColor("#111827");
 }
@@ -53,7 +58,9 @@ function drawTable(
   const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const startX = doc.page.margins.left;
 
-  const normalizedWidths = widths.map((width) => (width / widths.reduce((sum, value) => sum + value, 0)) * availableWidth);
+  const normalizedWidths = widths.map(
+    (width) => (width / widths.reduce((sum, value) => sum + value, 0)) * availableWidth,
+  );
 
   const headerHeight = 18;
   const rowHeight = 16;
@@ -221,9 +228,13 @@ export const onboardingStatisticsTemplate: PdfTemplate<OnboardingStatisticsPdfDa
     doc.moveDown(0.2);
     doc.font("Helvetica").fontSize(11).fillColor("#4b5563").text(subtitle);
     doc.moveDown(0.2);
-    doc.font("Helvetica").fontSize(10).fillColor("#6b7280").text(
-      `Erstellt am ${dateFormatter.format(generatedAt)} · ${formatNumber(data.onboarding.participants)} Teilnehmende`,
-    );
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor("#6b7280")
+      .text(
+        `Erstellt am ${dateFormatter.format(generatedAt)} · ${formatNumber(data.onboarding.participants)} Teilnehmende`,
+      );
 
     drawSectionHeading(doc, "Schlüsselindikatoren");
     data.kpis.forEach((kpi) => {

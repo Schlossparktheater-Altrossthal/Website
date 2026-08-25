@@ -47,8 +47,20 @@ describe("aggregateHttpMetrics", () => {
       }),
       createRequest({ offsetMinutes: 65, durationMs: 240, payloadBytes: 3_072, area: "members" }),
       createRequest({ offsetMinutes: 125, durationMs: 200, payloadBytes: 2_560, area: "members" }),
-      createRequest({ offsetMinutes: 185, durationMs: 320, payloadBytes: 1_536, area: "api", statusCode: 502 }),
-      createRequest({ offsetMinutes: 200, durationMs: 210, payloadBytes: 512, area: "api", statusCode: 204 }),
+      createRequest({
+        offsetMinutes: 185,
+        durationMs: 320,
+        payloadBytes: 1_536,
+        area: "api",
+        statusCode: 502,
+      }),
+      createRequest({
+        offsetMinutes: 200,
+        durationMs: 210,
+        payloadBytes: 512,
+        area: "api",
+        statusCode: 204,
+      }),
     ];
 
     const heartbeats = [

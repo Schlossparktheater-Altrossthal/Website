@@ -1,10 +1,10 @@
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import { setTimeout as wait } from 'node:timers/promises';
+import fs from "node:fs/promises";
+import os from "node:os";
+import { setTimeout as wait } from "node:timers/promises";
 import {
   getDefaultServerAnalyticsSettings,
   loadServerAnalyticsSettings,
-} from '../../src/lib/server-analytics-settings.js';
+} from "../../src/lib/server-analytics-settings.js";
 const BASELINE_ANALYTICS = Object.freeze({
   summary: {
     uptimePercentage: 0,
@@ -38,16 +38,16 @@ const BASELINE_ANALYTICS = Object.freeze({
   },
   visitorDistribution: [
     {
-      id: 'logged-out',
-      label: 'Nicht eingeloggt',
+      id: "logged-out",
+      label: "Nicht eingeloggt",
       requests: 0,
       share: 0,
       avgResponseTimeMs: 0,
       avgSessionDurationSeconds: 0,
     },
     {
-      id: 'logged-in',
-      label: 'Eingeloggt',
+      id: "logged-in",
+      label: "Eingeloggt",
       requests: 0,
       share: 0,
       avgResponseTimeMs: 0,
@@ -55,8 +55,8 @@ const BASELINE_ANALYTICS = Object.freeze({
       realtimeEvents: 0,
     },
     {
-      id: 'bot',
-      label: 'Bots & Crawler',
+      id: "bot",
+      label: "Bots & Crawler",
       requests: 0,
       share: 0,
       avgResponseTimeMs: 0,
@@ -115,11 +115,11 @@ function mergeOnlineStatsIntoSummary(summary, getOnlineStatsSnapshot, previousPe
   const baseSummary = summary ? { ...summary } : { ...BASELINE_ANALYTICS.summary };
   const effectiveBasePeak = Number.isFinite(previousPeak)
     ? Math.max(baseSummary.peakConcurrentUsers ?? 0, previousPeak)
-    : baseSummary.peakConcurrentUsers ?? 0;
+    : (baseSummary.peakConcurrentUsers ?? 0);
   const onlineStats =
-    typeof getOnlineStatsSnapshot === 'function' ? getOnlineStatsSnapshot() ?? null : null;
+    typeof getOnlineStatsSnapshot === "function" ? (getOnlineStatsSnapshot() ?? null) : null;
 
-  if (onlineStats && typeof onlineStats === 'object') {
+  if (onlineStats && typeof onlineStats === "object") {
     const candidates = [
       sanitizeCount(onlineStats.peakConcurrentUsers),
       sanitizeCount(onlineStats.peak),
@@ -133,7 +133,10 @@ function mergeOnlineStatsIntoSummary(summary, getOnlineStatsSnapshot, previousPe
     if (Number.isFinite(candidatePeak) && candidatePeak >= 0) {
       baseSummary.peakConcurrentUsers = candidatePeak;
     }
-  } else if (Number.isFinite(effectiveBasePeak) && effectiveBasePeak > (baseSummary.peakConcurrentUsers ?? 0)) {
+  } else if (
+    Number.isFinite(effectiveBasePeak) &&
+    effectiveBasePeak > (baseSummary.peakConcurrentUsers ?? 0)
+  ) {
     baseSummary.peakConcurrentUsers = effectiveBasePeak;
   }
 
@@ -142,10 +145,10 @@ function mergeOnlineStatsIntoSummary(summary, getOnlineStatsSnapshot, previousPe
 
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) {
-    return '0 B';
+    return "0 B";
   }
 
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
   let value = bytes;
   let unitIndex = 0;
 
@@ -216,7 +219,8 @@ async function getDiskUsageSnapshot(path) {
 
   const blockSize = clamp(stats.bsize ?? 0, 0, Number.MAX_SAFE_INTEGER);
   const totalBlocks = clamp(stats.blocks ?? 0, 0, Number.MAX_SAFE_INTEGER);
-  const availableBlocksValue = typeof stats.bavail === 'number' && stats.bavail >= 0 ? stats.bavail : stats.bfree ?? 0;
+  const availableBlocksValue =
+    typeof stats.bavail === "number" && stats.bavail >= 0 ? stats.bavail : (stats.bfree ?? 0);
   const availableBlocks = clamp(availableBlocksValue, 0, totalBlocks);
 
   const totalBytes = blockSize * totalBlocks;
@@ -273,7 +277,7 @@ async function collectSystemResourceUsage({ previousResourceUsage, logError, dis
 
   const [cpuUsagePercent, diskUsage] = await Promise.all([
     measureCpuUsagePercent().catch((error) => {
-      logError('[server-analytics] CPU usage probe failed', error);
+      logError("[server-analytics] CPU usage probe failed", error);
       return null;
     }),
     getDiskUsageSnapshot(targetDiskPath).catch((error) => {
@@ -284,25 +288,25 @@ async function collectSystemResourceUsage({ previousResourceUsage, logError, dis
 
   if (cpuUsagePercent !== null) {
     resources.push({
-      id: 'app-cpu',
-      label: 'App-Server CPU',
+      id: "app-cpu",
+      label: "App-Server CPU",
       usagePercent: cpuUsagePercent,
-      capacity: `${cpuCount} Kern${cpuCount === 1 ? '' : 'e'} · Load 1m ${loadOneMinute.toFixed(2)}`,
+      capacity: `${cpuCount} Kern${cpuCount === 1 ? "" : "e"} · Load 1m ${loadOneMinute.toFixed(2)}`,
     });
   }
 
   const memoryUsage = getMemoryUsageSnapshot();
   resources.push({
-    id: 'app-ram',
-    label: 'Arbeitsspeicher',
+    id: "app-ram",
+    label: "Arbeitsspeicher",
     usagePercent: memoryUsage.usagePercent,
     capacity: `${formatBytes(memoryUsage.totalBytes)} gesamt · ${formatBytes(memoryUsage.freeBytes)} frei`,
   });
 
   if (diskUsage !== null) {
-    const normalizedPath = diskUsage.path === '' ? '/' : diskUsage.path;
+    const normalizedPath = diskUsage.path === "" ? "/" : diskUsage.path;
     resources.push({
-      id: 'app-disk',
+      id: "app-disk",
       label: `Dateisystem (${normalizedPath})`,
       usagePercent: diskUsage.usagePercent,
       capacity: `${formatBytes(diskUsage.totalBytes)} gesamt · ${formatBytes(diskUsage.freeBytes)} frei`,
@@ -310,7 +314,7 @@ async function collectSystemResourceUsage({ previousResourceUsage, logError, dis
   }
 
   if (resources.length === 0) {
-    throw new Error('Keine Systemressourcen konnten ermittelt werden');
+    throw new Error("Keine Systemressourcen konnten ermittelt werden");
   }
 
   return resources.map((resource) => finalizeResourceMeasurement(previousResourceUsage, resource));
@@ -320,14 +324,14 @@ function isModuleNotFoundError(error) {
   if (!error) {
     return false;
   }
-  return error.code === 'ERR_MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_FOUND';
+  return error.code === "ERR_MODULE_NOT_FOUND" || error.code === "MODULE_NOT_FOUND";
 }
 
 export function createAnalyticsManager({
   logger = console,
   intervalMs = 2000,
   maxAgeMs,
-  importAnalyticsModule = () => import('../../src/lib/server-analytics-data.js'),
+  importAnalyticsModule = () => import("../../src/lib/server-analytics-data.js"),
   loadBaselineData = () => cloneBaselineAnalytics(),
   loadStaticData,
   collectResourceUsage,
@@ -348,15 +352,19 @@ export function createAnalyticsManager({
   };
 
   const logError =
-    typeof logger?.error === 'function' ? (...args) => logger.error(...args) : (...args) => console.error(...args);
+    typeof logger?.error === "function"
+      ? (...args) => logger.error(...args)
+      : (...args) => console.error(...args);
   const logWarn =
-    typeof logger?.warn === 'function' ? (...args) => logger.warn(...args) : (...args) => console.warn(...args);
+    typeof logger?.warn === "function"
+      ? (...args) => logger.warn(...args)
+      : (...args) => console.warn(...args);
 
   const resolvedInterval = Math.max(Number(intervalMs) || 0, 2000);
   const resolvedMaxAge = Math.max(Number(maxAgeMs) || resolvedInterval * 1.5, resolvedInterval);
 
   const resourceUsageCollector =
-    typeof collectResourceUsage === 'function'
+    typeof collectResourceUsage === "function"
       ? collectResourceUsage
       : ({ previousResourceUsage }) =>
           collectSystemResourceUsage({ previousResourceUsage, logError, diskPath });
@@ -378,7 +386,7 @@ export function createAnalyticsManager({
       return;
     }
     state.moduleErrorLogged = true;
-    logError('[Realtime] Failed to load optional server analytics module', error);
+    logError("[Realtime] Failed to load optional server analytics module", error);
   }
 
   async function resolveAnalyticsModule() {
@@ -387,11 +395,11 @@ export function createAnalyticsManager({
         .then((module) => {
           if (
             !module ||
-            typeof module.applyPagePerformanceMetrics !== 'function' ||
-            typeof module.mergeDeviceBreakdown !== 'function'
+            typeof module.applyPagePerformanceMetrics !== "function" ||
+            typeof module.mergeDeviceBreakdown !== "function"
           ) {
             logMissingAnalyticsModule(
-              '[Realtime] server-analytics-data module is missing expected exports. Falling back to static analytics.',
+              "[Realtime] server-analytics-data module is missing expected exports. Falling back to static analytics.",
             );
             return null;
           }
@@ -400,7 +408,7 @@ export function createAnalyticsManager({
         .catch((error) => {
           if (isModuleNotFoundError(error)) {
             logMissingAnalyticsModule(
-              '[Realtime] server-analytics-data module not found. Falling back to static analytics.',
+              "[Realtime] server-analytics-data module not found. Falling back to static analytics.",
               error,
             );
             return null;
@@ -413,8 +421,7 @@ export function createAnalyticsManager({
     return state.modulePromise;
   }
 
-  const baselineLoader =
-    typeof loadStaticData === 'function' ? loadStaticData : loadBaselineData;
+  const baselineLoader = typeof loadStaticData === "function" ? loadStaticData : loadBaselineData;
 
   function createFallbackSnapshot() {
     const base = baselineLoader();
@@ -437,14 +444,14 @@ export function createAnalyticsManager({
         diskPath,
       });
     } catch (error) {
-      logError('[Realtime] Verwende statische Ressourcenwerte für Server-Analytics', error);
+      logError("[Realtime] Verwende statische Ressourcenwerte für Server-Analytics", error);
     }
 
     if (getDatabaseUrl()) {
       try {
         settings = await loadServerAnalyticsSettings();
       } catch (error) {
-        logError('[Realtime] Failed to load analytics settings', error);
+        logError("[Realtime] Failed to load analytics settings", error);
       }
     }
 
@@ -460,30 +467,30 @@ export function createAnalyticsManager({
 
     const analyticsModule = await resolveAnalyticsModule();
     const mergeDeviceBreakdownFn =
-      typeof analyticsModule?.mergeDeviceBreakdown === 'function'
+      typeof analyticsModule?.mergeDeviceBreakdown === "function"
         ? analyticsModule.mergeDeviceBreakdown
         : fallbackAnalyticsModule.mergeDeviceBreakdown;
     const applyPagePerformanceMetricsFn =
-      typeof analyticsModule?.applyPagePerformanceMetrics === 'function'
+      typeof analyticsModule?.applyPagePerformanceMetrics === "function"
         ? analyticsModule.applyPagePerformanceMetrics
         : fallbackAnalyticsModule.applyPagePerformanceMetrics;
     const loadDeviceBreakdownFromDatabaseFn =
-      typeof analyticsModule?.loadDeviceBreakdownFromDatabase === 'function'
+      typeof analyticsModule?.loadDeviceBreakdownFromDatabase === "function"
         ? analyticsModule.loadDeviceBreakdownFromDatabase
         : null;
     const loadPagePerformanceMetricsFn =
-      typeof analyticsModule?.loadPagePerformanceMetrics === 'function'
+      typeof analyticsModule?.loadPagePerformanceMetrics === "function"
         ? analyticsModule.loadPagePerformanceMetrics
         : null;
 
     if (getDatabaseUrl() && loadDeviceBreakdownFromDatabaseFn && loadPagePerformanceMetricsFn) {
       const [deviceOverrides, pageMetrics] = await Promise.all([
         loadDeviceBreakdownFromDatabaseFn().catch((error) => {
-          logError('[Realtime] Failed to load device analytics', error);
+          logError("[Realtime] Failed to load device analytics", error);
           return null;
         }),
         loadPagePerformanceMetricsFn().catch((error) => {
-          logError('[Realtime] Failed to load page performance metrics', error);
+          logError("[Realtime] Failed to load page performance metrics", error);
           return [];
         }),
       ]);
@@ -491,16 +498,16 @@ export function createAnalyticsManager({
       deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown, deviceOverrides ?? undefined);
 
       if (Array.isArray(pageMetrics) && pageMetrics.length > 0) {
-        publicPages = applyPagePerformanceMetricsFn(publicPages, pageMetrics, 'public');
-        memberPages = applyPagePerformanceMetricsFn(memberPages, pageMetrics, 'members');
+        publicPages = applyPagePerformanceMetricsFn(publicPages, pageMetrics, "public");
+        memberPages = applyPagePerformanceMetricsFn(memberPages, pageMetrics, "members");
       } else {
         publicPages = publicPages.map((entry) => ({ ...entry }));
         memberPages = memberPages.map((entry) => ({ ...entry }));
       }
     } else {
       deviceBreakdown = mergeDeviceBreakdownFn(deviceBreakdown);
-      publicPages = applyPagePerformanceMetricsFn(publicPages, [], 'public');
-      memberPages = applyPagePerformanceMetricsFn(memberPages, [], 'members');
+      publicPages = applyPagePerformanceMetricsFn(publicPages, [], "public");
+      memberPages = applyPagePerformanceMetricsFn(memberPages, [], "members");
     }
 
     return {
@@ -541,7 +548,7 @@ export function createAnalyticsManager({
         return snapshot;
       })
       .catch((error) => {
-        logError('[Realtime] Failed to refresh analytics snapshot', error);
+        logError("[Realtime] Failed to refresh analytics snapshot", error);
         if (state.latestAnalytics) {
           return state.latestAnalytics;
         }
@@ -564,11 +571,11 @@ export function createAnalyticsManager({
   }
 
   function emitAnalytics(target, analytics) {
-    if (!analytics || typeof target?.emit !== 'function') {
+    if (!analytics || typeof target?.emit !== "function") {
       return;
     }
-    target.emit('server_analytics_update', {
-      type: 'server_analytics_update',
+    target.emit("server_analytics_update", {
+      type: "server_analytics_update",
       timestamp: analytics.generatedAt ?? toISO(now()),
       analytics,
     });
@@ -579,23 +586,23 @@ export function createAnalyticsManager({
       const analytics = await refreshAnalytics();
       emitAnalytics(io, analytics);
     } catch (error) {
-      logError('[Realtime] Failed to broadcast analytics update', error);
+      logError("[Realtime] Failed to broadcast analytics update", error);
     }
   }
 
   function start(io) {
     if (!io) {
-      throw new Error('Socket server instance is required to schedule analytics updates');
+      throw new Error("Socket server instance is required to schedule analytics updates");
     }
     stop();
     state.intervalId = setInterval(() => {
       broadcastOnce(io);
     }, resolvedInterval);
-    if (typeof state.intervalId?.unref === 'function') {
+    if (typeof state.intervalId?.unref === "function") {
       state.intervalId.unref();
     }
     refreshAnalytics().catch((error) => {
-      logError('[Realtime] Initial analytics snapshot failed', error);
+      logError("[Realtime] Initial analytics snapshot failed", error);
     });
   }
 

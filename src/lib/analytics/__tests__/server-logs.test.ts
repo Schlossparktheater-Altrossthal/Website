@@ -9,19 +9,15 @@ import {
   type LoadedServerLog,
 } from "@/lib/analytics/load-server-logs";
 
-const {
-  transactionMock,
-  findUniqueMock,
-  createMock,
-  updateMock,
-  findManyMock,
-} = vi.hoisted(() => ({
-  transactionMock: vi.fn(),
-  findUniqueMock: vi.fn(),
-  createMock: vi.fn(),
-  updateMock: vi.fn(),
-  findManyMock: vi.fn(),
-}));
+const { transactionMock, findUniqueMock, createMock, updateMock, findManyMock } = vi.hoisted(
+  () => ({
+    transactionMock: vi.fn(),
+    findUniqueMock: vi.fn(),
+    createMock: vi.fn(),
+    updateMock: vi.fn(),
+    findManyMock: vi.fn(),
+  }),
+);
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -105,7 +101,7 @@ describe("server log pipeline", () => {
         }),
       }),
     );
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining("\"service\":\"Next.js API\""));
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('"service":"Next.js API"'));
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
@@ -191,10 +187,7 @@ describe("server log pipeline", () => {
     expect(findManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         take: 5,
-        orderBy: [
-          { lastSeenAt: "desc" },
-          { occurrences: "desc" },
-        ],
+        orderBy: [{ lastSeenAt: "desc" }, { occurrences: "desc" }],
       }),
     );
     expect(logs).toEqual([

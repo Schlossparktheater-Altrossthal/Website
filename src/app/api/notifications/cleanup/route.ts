@@ -60,7 +60,8 @@ export async function POST(request: Request) {
       deleted = res.count;
     } else if (body.action === "clear_older_than") {
       const days = Number(body.days);
-      if (!Number.isFinite(days) || days <= 0) return NextResponse.json({ error: "Invalid days" }, { status: 400 });
+      if (!Number.isFinite(days) || days <= 0)
+        return NextResponse.json({ error: "Invalid days" }, { status: 400 });
       const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       const res = await prisma.notificationRecipient.deleteMany({
         where: { userId, notification: { createdAt: { lt: cutoff } } },
@@ -86,4 +87,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Cleanup failed" }, { status: 500 });
   }
 }
-

@@ -2,10 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
-import type {
-  ProfileChecklistItemId,
-  ProfileCompletionSummary,
-} from "@/lib/profile-completion";
+import type { ProfileChecklistItemId, ProfileCompletionSummary } from "@/lib/profile-completion";
 
 type ProfileCompletionContextValue = {
   summary: ProfileCompletionSummary;
@@ -20,14 +17,15 @@ type ProfileCompletionProviderProps = {
   children: React.ReactNode;
 };
 
-export function ProfileCompletionProvider({ initialSummary, children }: ProfileCompletionProviderProps) {
+export function ProfileCompletionProvider({
+  initialSummary,
+  children,
+}: ProfileCompletionProviderProps) {
   const [summary, setSummary] = useState<ProfileCompletionSummary>(initialSummary);
 
   const setItemCompletion = useCallback((id: ProfileChecklistItemId, complete: boolean) => {
     setSummary((prev) => {
-      const items = prev.items.map((item) =>
-        item.id === id ? { ...item, complete } : item,
-      );
+      const items = prev.items.map((item) => (item.id === id ? { ...item, complete } : item));
       const completed = items.filter((item) => item.complete).length;
       return {
         items,
@@ -47,7 +45,9 @@ export function ProfileCompletionProvider({ initialSummary, children }: ProfileC
     [summary, setItemCompletion, replaceSummary],
   );
 
-  return <ProfileCompletionContext.Provider value={value}>{children}</ProfileCompletionContext.Provider>;
+  return (
+    <ProfileCompletionContext.Provider value={value}>{children}</ProfileCompletionContext.Provider>
+  );
 }
 
 export function useProfileCompletion() {
@@ -57,4 +57,3 @@ export function useProfileCompletion() {
   }
   return context;
 }
-

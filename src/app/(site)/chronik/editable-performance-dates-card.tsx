@@ -40,7 +40,10 @@ function formatDisplayValue(value: string | null) {
   return value;
 }
 
-export function EditablePerformanceDatesCard({ showId, initialDates }: EditablePerformanceDatesCardProps) {
+export function EditablePerformanceDatesCard({
+  showId,
+  initialDates,
+}: EditablePerformanceDatesCardProps) {
   const { hasFeature, activeFeature, openFeature, closeFeature } = useFrontendEditing();
   const canEdit = hasFeature(FEATURE_KEY);
   const editorOpen = canEdit && activeFeature === FEATURE_KEY;
@@ -85,9 +88,10 @@ export function EditablePerformanceDatesCard({ showId, initialDates }: EditableP
         throw new Error(data?.error || "Die Aufführungstermine konnten nicht gespeichert werden.");
       }
 
-      const nextValue = typeof data.show.dates === "string" && data.show.dates.trim().length > 0
-        ? data.show.dates
-        : null;
+      const nextValue =
+        typeof data.show.dates === "string" && data.show.dates.trim().length > 0
+          ? data.show.dates
+          : null;
 
       setDates(nextValue);
       setTextareaValue(nextValue ?? "");
@@ -106,7 +110,11 @@ export function EditablePerformanceDatesCard({ showId, initialDates }: EditableP
           Aufführungstermine
         </dt>
         <dd className="mt-1 space-y-3 text-base font-semibold md:text-lg">
-          <span className={dates ? "block whitespace-pre-line" : "block font-normal text-muted-foreground"}>
+          <span
+            className={
+              dates ? "block whitespace-pre-line" : "block font-normal text-muted-foreground"
+            }
+          >
             {displayValue}
           </span>
           {canEdit ? (
@@ -144,7 +152,8 @@ export function EditablePerformanceDatesCard({ showId, initialDates }: EditableP
             <DialogHeader>
               <DialogTitle>Aufführungstermine bearbeiten</DialogTitle>
               <DialogDescription>
-                Ergänze oder aktualisiere die Termine dieser Produktion. Änderungen werden sofort in der Chronik sichtbar.
+                Ergänze oder aktualisiere die Termine dieser Produktion. Änderungen werden sofort in
+                der Chronik sichtbar.
               </DialogDescription>
             </DialogHeader>
 

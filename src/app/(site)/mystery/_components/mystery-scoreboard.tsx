@@ -1,5 +1,3 @@
-
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -31,7 +29,9 @@ export function MysteryScoreboard({ entries }: { entries: ScoreboardEntry[] }) {
       </CardHeader>
       <CardContent>
         {entries.length === 0 ? (
-          <Text variant="small" tone="muted">Noch keine Punkte vergeben – reiche deinen Tipp ein und sichere dir den ersten Platz!</Text>
+          <Text variant="small" tone="muted">
+            Noch keine Punkte vergeben – reiche deinen Tipp ein und sichere dir den ersten Platz!
+          </Text>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border text-left text-sm">
@@ -48,10 +48,15 @@ export function MysteryScoreboard({ entries }: { entries: ScoreboardEntry[] }) {
                   const rank = index + 1;
                   const isTopThree = rank <= 3;
                   return (
-                    <tr key={entry.playerName} className={cn("bg-background/60", isTopThree && "bg-primary/10")}>
+                    <tr
+                      key={entry.playerName}
+                      className={cn("bg-background/60", isTopThree && "bg-primary/10")}
+                    >
                       <td className="px-3 py-2 font-semibold text-foreground">
                         <span className="inline-flex items-center gap-1">
-                          {rank <= 3 ? <TrophyIcon className="h-4 w-4 text-primary" aria-hidden /> : null}
+                          {rank <= 3 ? (
+                            <TrophyIcon className="h-4 w-4 text-primary" aria-hidden />
+                          ) : null}
                           {rank}.
                         </span>
                       </td>
@@ -63,7 +68,9 @@ export function MysteryScoreboard({ entries }: { entries: ScoreboardEntry[] }) {
                           {entry.playerName}
                         </div>
                       </td>
-                      <td className="px-3 py-2 font-semibold text-foreground">{NUMBER_FORMATTER.format(entry.totalScore)}</td>
+                      <td className="px-3 py-2 font-semibold text-foreground">
+                        {NUMBER_FORMATTER.format(entry.totalScore)}
+                      </td>
                       <td className="px-3 py-2 text-muted-foreground">{entry.correctCount}</td>
                     </tr>
                   );

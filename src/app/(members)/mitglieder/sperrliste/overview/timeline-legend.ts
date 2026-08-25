@@ -40,7 +40,8 @@ export const timelineToneStyles = tv({
   slots: {
     legendContainer:
       "flex items-center gap-2 rounded-lg border border-border/60 bg-card/90 px-3 py-2 shadow-sm transition-colors",
-    legendSwatch: "h-8 w-8 shrink-0 rounded-md border border-border/60 bg-muted/60 transition-colors",
+    legendSwatch:
+      "h-8 w-8 shrink-0 rounded-md border border-border/60 bg-muted/60 transition-colors",
     legendLabel: "text-xs font-semibold uppercase tracking-wide text-foreground/90",
     legendDescription: "text-[11px] leading-5 text-muted-foreground/80",
     bullet: "h-1.5 w-1.5 shrink-0 rounded-full transition-colors",
@@ -65,7 +66,8 @@ export const timelineToneStyles = tv({
         text: "text-amber-800 dark:text-amber-100",
       },
       holiday: {
-        legendContainer: "border-primary400/60 bg-primary300/20 text-primary800 dark:text-primary200",
+        legendContainer:
+          "border-primary400/60 bg-primary300/20 text-primary800 dark:text-primary200",
         legendSwatch: "border-primary400/60 bg-primary400/60",
         legendLabel: "text-primary800 dark:text-primary200",
         legendDescription: "text-primary700/80 dark:text-primary200/80",
@@ -73,7 +75,8 @@ export const timelineToneStyles = tv({
         text: "text-primary700 dark:text-primary200",
       },
       preferred: {
-        legendContainer: "border-emerald-400/60 bg-emerald-300/20 text-emerald-800 dark:text-emerald-200",
+        legendContainer:
+          "border-emerald-400/60 bg-emerald-300/20 text-emerald-800 dark:text-emerald-200",
         legendSwatch: "border-emerald-400/60 bg-emerald-400/60",
         legendLabel: "text-emerald-800 dark:text-emerald-200",
         legendDescription: "text-emerald-700/80 dark:text-emerald-200/80",

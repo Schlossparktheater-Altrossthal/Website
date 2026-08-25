@@ -71,9 +71,10 @@ export default async function ProduktionDetailPage({
   const finalRehearsalWeekEndLabel = show.finalRehearsalWeekEnd
     ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekEnd)
     : null;
-  const finalRehearsalWeekRangeLabel = finalRehearsalWeekStartLabel && finalRehearsalWeekEndLabel
-    ? `${finalRehearsalWeekStartLabel} – ${finalRehearsalWeekEndLabel}`
-    : finalRehearsalWeekStartLabel ?? finalRehearsalWeekEndLabel;
+  const finalRehearsalWeekRangeLabel =
+    finalRehearsalWeekStartLabel && finalRehearsalWeekEndLabel
+      ? `${finalRehearsalWeekStartLabel} – ${finalRehearsalWeekEndLabel}`
+      : (finalRehearsalWeekStartLabel ?? finalRehearsalWeekEndLabel);
   const whatsappLink = getOnboardingWhatsAppLink(show.meta);
   const onboardingRedirect = `/mitglieder/produktionen/${show.id}`;
   const updateDialogShow = {
@@ -90,7 +91,9 @@ export default async function ProduktionDetailPage({
       <section className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Produktion {show.year}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Produktion {show.year}
+            </p>
             <h1 className="text-3xl font-semibold">{title}</h1>
             {show.synopsis ? (
               <p className="max-w-2xl text-sm text-muted-foreground">{show.synopsis}</p>
@@ -121,14 +124,20 @@ export default async function ProduktionDetailPage({
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-background/70 p-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Rollen</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{show._count.characters}</div>
+              <div className="mt-2 text-2xl font-semibold text-foreground">
+                {show._count.characters}
+              </div>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/70 p-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Szenen</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{show._count.scenes}</div>
+              <div className="mt-2 text-2xl font-semibold text-foreground">
+                {show._count.scenes}
+              </div>
             </div>
             <div className="rounded-lg border border-border/60 bg-background/70 p-4">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Breakdowns</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                Breakdowns
+              </div>
               <div className="mt-2 text-2xl font-semibold text-foreground">{breakdownCount}</div>
             </div>
           </div>
@@ -161,9 +170,16 @@ export default async function ProduktionDetailPage({
           <CardTitle className="text-lg font-semibold">Endprobenwoche</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={updateProductionTimelineAction} className="flex flex-col gap-4 sm:flex-row sm:items-end">
+          <form
+            action={updateProductionTimelineAction}
+            className="flex flex-col gap-4 sm:flex-row sm:items-end"
+          >
             <input type="hidden" name="showId" value={show.id} />
-            <input type="hidden" name="redirectPath" value={`/mitglieder/produktionen/${show.id}`} />
+            <input
+              type="hidden"
+              name="redirectPath"
+              value={`/mitglieder/produktionen/${show.id}`}
+            />
             <div className="space-y-2 sm:max-w-xs">
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="finalRehearsalWeekStart">

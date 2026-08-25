@@ -21,10 +21,7 @@ function parseSceneIdentifier(value: SceneIdentifier): number[] {
     .filter((segment) => !Number.isNaN(segment));
 }
 
-function compareSceneIdentifiers(
-  a: SceneIdentifier,
-  b: SceneIdentifier,
-): number {
+function compareSceneIdentifiers(a: SceneIdentifier, b: SceneIdentifier): number {
   const aParts = parseSceneIdentifier(a);
   const bParts = parseSceneIdentifier(b);
   const maxLength = Math.max(aParts.length, bParts.length);
@@ -84,12 +81,7 @@ export default async function ProduktionsSzenenPage() {
           },
         },
       },
-      orderBy: [
-        { lastName: "asc" },
-        { firstName: "asc" },
-        { name: "asc" },
-        { email: "asc" },
-      ],
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: {
         id: true,
         firstName: true,
@@ -170,8 +162,8 @@ export default async function ProduktionsSzenenPage() {
   if (!show) {
     return (
       <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte
-        wähle sie erneut im Überblick aus.
+        Die aktuell ausgewählte Produktion konnte nicht gefunden werden. Bitte wähle sie erneut im
+        Überblick aus.
       </div>
     );
   }
@@ -188,10 +180,7 @@ export default async function ProduktionsSzenenPage() {
     }))
     .sort((a, b) => compareSceneIdentifiers(a.identifier, b.identifier));
   const sceneCount = scenes.length;
-  const breakdownCount = scenes.reduce(
-    (acc, scene) => acc + scene.breakdownItems.length,
-    0,
-  );
+  const breakdownCount = scenes.reduce((acc, scene) => acc + scene.breakdownItems.length, 0);
   const characterCount = show.characters.length;
   const summaryStats = [
     {
@@ -236,9 +225,7 @@ export default async function ProduktionsSzenenPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {stat.label}
                   </p>
-                  <p className="text-xl font-bold leading-tight text-foreground">
-                    {stat.value}
-                  </p>
+                  <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
                   {stat.icon}

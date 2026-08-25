@@ -56,13 +56,15 @@ export function MemberTestNotificationCard({
       <CardHeader className="space-y-1.5">
         <CardTitle>Testbenachrichtigungen</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Sende eine normale oder Notfall-Testnachricht an {displayName}, um Zustellung und Geräte zu prüfen.
+          Sende eine normale oder Notfall-Testnachricht an {displayName}, um Zustellung und Geräte
+          zu prüfen.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {!hasEmail ? (
           <p className="text-xs text-muted-foreground">
-            Es ist keine E-Mail-Adresse hinterlegt. Testbenachrichtigungen erscheinen trotzdem im Portal dieses Mitglieds.
+            Es ist keine E-Mail-Adresse hinterlegt. Testbenachrichtigungen erscheinen trotzdem im
+            Portal dieses Mitglieds.
           </p>
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -88,7 +90,8 @@ export function MemberTestNotificationCard({
           </Button>
         </div>
         <p className="text-[0.7rem] text-muted-foreground">
-          Beide Varianten erzeugen echte Portal-Benachrichtigungen für {displayName}, wirken sich aber sonst nicht auf Planungen aus.
+          Beide Varianten erzeugen echte Portal-Benachrichtigungen für {displayName}, wirken sich
+          aber sonst nicht auf Planungen aus.
         </p>
       </CardContent>
     </Card>

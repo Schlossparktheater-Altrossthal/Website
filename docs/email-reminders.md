@@ -7,15 +7,16 @@ Das System sendet automatisch E-Mail-Erinnerungen an Mitglieder, die sich noch n
 ## Konfiguration
 
 1. Umgebungsvariablen in `.env` setzen:
+
    ```bash
    # E-Mail-Service (aktuell unterstützt: 'sendgrid')
    EMAIL_SERVICE=sendgrid
    SENDGRID_API_KEY=your_sendgrid_api_key
    EMAIL_FROM=theater@example.com
-   
+
    # Basis-URL für Links in E-Mails
    NEXT_PUBLIC_BASE_URL=https://your-theater-website.com
-   
+
    # Sicherheits-Token für Cron-Job
    CRON_SECRET=your_secret_here
    ```
@@ -37,6 +38,7 @@ Das System sendet automatisch E-Mail-Erinnerungen an Mitglieder, die sich noch n
 ## E-Mail-Template
 
 Die E-Mails enthalten:
+
 - Probentitel
 - Datum und Uhrzeit
 - Ort

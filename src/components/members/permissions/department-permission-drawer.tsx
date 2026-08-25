@@ -76,7 +76,12 @@ export function DepartmentPermissionDrawer({
         return false;
       }
       if (term) {
-        const haystacks = [permission.label, permission.key, permission.description, permission.categoryLabel]
+        const haystacks = [
+          permission.label,
+          permission.key,
+          permission.description,
+          permission.categoryLabel,
+        ]
           .filter(Boolean)
           .map((value) => value!.toString().toLowerCase());
         if (!haystacks.some((value) => value.includes(term))) {
@@ -168,14 +173,17 @@ export function DepartmentPermissionDrawer({
         await mutateDepartmentGrant(permission.key, grant);
       }
       toast.success(
-        grant ? "Allen Rechten für dieses Gewerk Zugriff gewährt." : "Allen Rechten für dieses Gewerk entzogen.",
+        grant
+          ? "Allen Rechten für dieses Gewerk Zugriff gewährt."
+          : "Allen Rechten für dieses Gewerk entzogen.",
       );
     } finally {
       setBulkLoading(false);
     }
   };
 
-  const activeFilterCount = activeCategories.size + (onlyAssigned ? 1 : 0) + (searchTerm.trim() ? 1 : 0);
+  const activeFilterCount =
+    activeCategories.size + (onlyAssigned ? 1 : 0) + (searchTerm.trim() ? 1 : 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -332,7 +340,9 @@ export function DepartmentPermissionDrawer({
                       <CardHeader className="space-y-1">
                         <CardTitle className="flex flex-col gap-1 text-base">
                           <span>{permission.label}</span>
-                          <span className="text-xs font-mono text-muted-foreground">{permission.key}</span>
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {permission.key}
+                          </span>
                         </CardTitle>
                         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                           <Badge variant="muted" size="sm">

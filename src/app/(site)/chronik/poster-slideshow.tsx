@@ -62,9 +62,12 @@ export function PosterSlideshow({
       return;
     }
 
-    const interval = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % sanitizedSources.length);
-    }, Math.max(intervalMs, 2000));
+    const interval = window.setInterval(
+      () => {
+        setActiveIndex((current) => (current + 1) % sanitizedSources.length);
+      },
+      Math.max(intervalMs, 2000),
+    );
 
     return () => window.clearInterval(interval);
   }, [sanitizedSources.length, prefersReducedMotion, intervalMs]);
@@ -92,4 +95,3 @@ export function PosterSlideshow({
     </div>
   );
 }
-

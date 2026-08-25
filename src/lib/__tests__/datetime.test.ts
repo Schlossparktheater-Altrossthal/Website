@@ -42,9 +42,9 @@ describe("datetime utilities", () => {
       const target = new Date("2024-01-02T00:00:00Z");
       const englishFormatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
-      expect(
-        formatRelativeBetween(target, reference, { formatter: englishFormatter }),
-      ).toBe("tomorrow");
+      expect(formatRelativeBetween(target, reference, { formatter: englishFormatter })).toBe(
+        "tomorrow",
+      );
     });
   });
 

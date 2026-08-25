@@ -19,20 +19,27 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const role = await prisma.appRole.findUnique({ where: { id } });
   if (!role) return NextResponse.json({ error: "Rolle nicht gefunden" }, { status: 404 });
-  if (role.isSystem) return NextResponse.json({ error: "Systemrollen können nicht bearbeitet werden" }, { status: 400 });
+  if (role.isSystem)
+    return NextResponse.json(
+      { error: "Systemrollen können nicht bearbeitet werden" },
+      { status: 400 },
+    );
 
   try {
     const updated = await prisma.appRole.update({ where: { id }, data: { name } });
     return NextResponse.json({ ok: true, role: updated });
   } catch (err: unknown) {
-    if (err && typeof err === 'object' && 'code' in err && err.code === "P2002") {
+    if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
       return NextResponse.json({ error: "Der Rollenname ist bereits vergeben" }, { status: 409 });
     }
     return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -41,7 +48,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const { id } = await params;
   const role = await prisma.appRole.findUnique({ where: { id } });
   if (!role) return NextResponse.json({ error: "Rolle nicht gefunden" }, { status: 404 });
-  if (role.isSystem) return NextResponse.json({ error: "Systemrollen können nicht gelöscht werden" }, { status: 400 });
+  if (role.isSystem)
+    return NextResponse.json(
+      { error: "Systemrollen können nicht gelöscht werden" },
+      { status: 400 },
+    );
 
   try {
     await prisma.appRole.delete({ where: { id } });

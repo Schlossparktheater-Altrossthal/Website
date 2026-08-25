@@ -86,9 +86,7 @@ type MembersContentWidth = NonNullable<
 type MembersContentPadding = NonNullable<
   VariantProps<typeof membersContentContainerVariants>["padding"]
 >;
-type MembersContentGap = NonNullable<
-  VariantProps<typeof membersContentStackVariants>["gap"]
->;
+type MembersContentGap = NonNullable<VariantProps<typeof membersContentStackVariants>["gap"]>;
 
 export interface MembersContentLayoutConfig {
   spacing?: MembersContentSpacing;
@@ -142,15 +140,9 @@ function mergeContentLayout(
   return changed ? next : base;
 }
 
-function isContentLayoutEqual(
-  a: MembersContentLayoutState,
-  b: MembersContentLayoutState,
-) {
+function isContentLayoutEqual(a: MembersContentLayoutState, b: MembersContentLayoutState) {
   return (
-    a.spacing === b.spacing &&
-    a.width === b.width &&
-    a.padding === b.padding &&
-    a.gap === b.gap
+    a.spacing === b.spacing && a.width === b.width && a.padding === b.padding && a.gap === b.gap
   );
 }
 
@@ -211,21 +203,16 @@ interface MembersAppShellContextValue {
   setTopbarContent: (content: MembersTopbarSlots | null) => void;
   setContentHeader: (content: React.ReactNode | null) => void;
   setContentFooter: (content: React.ReactNode | null) => void;
-  registerContentLayout: (
-    layout: MembersContentLayoutConfig,
-  ) => () => void;
+  registerContentLayout: (layout: MembersContentLayoutConfig) => () => void;
   contentLayout: MembersContentLayoutState;
 }
 
-const MembersAppShellContext =
-  React.createContext<MembersAppShellContextValue | null>(null);
+const MembersAppShellContext = React.createContext<MembersAppShellContextValue | null>(null);
 
 function useMembersAppShellContext() {
   const context = React.useContext(MembersAppShellContext);
   if (!context) {
-    throw new Error(
-      "Members layout helpers must be used within MembersAppShell.",
-    );
+    throw new Error("Members layout helpers must be used within MembersAppShell.");
   }
 
   return context;
@@ -261,15 +248,11 @@ function MembersTopbarContent({
   const hasBreadcrumbs = Boolean(content.breadcrumbs);
 
   const desktopStatus = hasStatus ? (
-    <div className="flex flex-wrap items-center gap-2">
-      {content.status}
-    </div>
+    <div className="flex flex-wrap items-center gap-2">{content.status}</div>
   ) : null;
 
   const desktopQuickActions = hasQuickActions ? (
-    <div className="flex flex-wrap items-center gap-2">
-      {content.quickActions}
-    </div>
+    <div className="flex flex-wrap items-center gap-2">{content.quickActions}</div>
   ) : null;
 
   const mobileQuickActions = hasQuickActions ? (
@@ -279,12 +262,7 @@ function MembersTopbarContent({
   ) : null;
 
   const homeLink = (
-    <Button
-      asChild
-      variant="ghost"
-      size="sm"
-      className="gap-1.5 whitespace-nowrap"
-    >
+    <Button asChild variant="ghost" size="sm" className="gap-1.5 whitespace-nowrap">
       <Link href="/" aria-label="Zur Hauptseite">
         <ArrowLeftIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>Zur Hauptseite</span>
@@ -304,10 +282,7 @@ function MembersTopbarContent({
         )}
       >
         <SidebarTrigger className="-ml-1" aria-label="Navigationsmenü umschalten" />
-        <Separator
-          orientation="vertical"
-          className="mr-2 data-[orientation=vertical]:h-4"
-        />
+        <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           {hasBreadcrumbs ? (
             <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -336,12 +311,7 @@ function MembersTopbarContent({
         )}
       </div>
       {isMobile && hasStatus ? (
-        <div
-          className={cn(
-            "flex flex-wrap items-center gap-2 pb-3",
-            containerClassName,
-          )}
-        >
+        <div className={cn("flex flex-wrap items-center gap-2 pb-3", containerClassName)}>
           {content.status}
         </div>
       ) : null}
@@ -361,12 +331,9 @@ export function MembersAppShell({
   globalFooter,
   impersonation,
 }: MembersAppShellProps) {
-  const [topbarContent, setTopbarContentState] =
-    React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
-  const [contentHeader, setContentHeaderState] =
-    React.useState<React.ReactNode>(null);
-  const [contentFooter, setContentFooterState] =
-    React.useState<React.ReactNode>(null);
+  const [topbarContent, setTopbarContentState] = React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
+  const [contentHeader, setContentHeaderState] = React.useState<React.ReactNode>(null);
+  const [contentFooter, setContentFooterState] = React.useState<React.ReactNode>(null);
 
   const baseContentLayout = React.useMemo(
     () => mergeContentLayout(DEFAULT_CONTENT_LAYOUT, contentLayout),
@@ -374,19 +341,12 @@ export function MembersAppShell({
   );
   const [contentLayoutState, setContentLayoutState] =
     React.useState<MembersContentLayoutState>(baseContentLayout);
-  const layoutOverridesRef = React.useRef<
-    Map<number, MembersContentLayoutConfig>
-  >(new Map());
+  const layoutOverridesRef = React.useRef<Map<number, MembersContentLayoutConfig>>(new Map());
   const layoutOverrideIdRef = React.useRef(0);
 
   const updateContentLayout = React.useCallback(() => {
-    const merged = computeContentLayout(
-      baseContentLayout,
-      layoutOverridesRef.current.values(),
-    );
-    setContentLayoutState((current) =>
-      isContentLayoutEqual(current, merged) ? current : merged,
-    );
+    const merged = computeContentLayout(baseContentLayout, layoutOverridesRef.current.values());
+    setContentLayoutState((current) => (isContentLayoutEqual(current, merged) ? current : merged));
   }, [baseContentLayout]);
 
   React.useEffect(() => {
@@ -468,30 +428,15 @@ export function MembersAppShell({
           <main className="flex-1 pb-12">
             {contentHeader ? (
               <header className="border-b border-border/60 bg-background/60">
-                <div
-                  className={cn(contentClasses.container, "py-6 sm:py-8")}
-                >
-                  {contentHeader}
-                </div>
+                <div className={cn(contentClasses.container, "py-6 sm:py-8")}>{contentHeader}</div>
               </header>
             ) : null}
             <section className={contentClasses.section}>
-              <div
-                className={cn(
-                  contentClasses.container,
-                  contentClasses.stack,
-                )}
-              >
-                {children}
-              </div>
+              <div className={cn(contentClasses.container, contentClasses.stack)}>{children}</div>
             </section>
             {contentFooter ? (
               <footer className="border-t border-border/60 bg-background/60">
-                <div
-                  className={cn(contentClasses.container, "py-6 sm:py-8")}
-                >
-                  {contentFooter}
-                </div>
+                <div className={cn(contentClasses.container, "py-6 sm:py-8")}>{contentFooter}</div>
               </footer>
             ) : null}
           </main>
@@ -506,10 +451,7 @@ interface MembersTopbarProps {
   children: React.ReactNode;
 }
 
-function combineSlot(
-  current: React.ReactNode | null,
-  next: React.ReactNode,
-): React.ReactNode {
+function combineSlot(current: React.ReactNode | null, next: React.ReactNode): React.ReactNode {
   if (!current) return next;
   return (
     <>
@@ -562,8 +504,7 @@ export function MembersTopbar({ children }: MembersTopbarProps) {
   return null;
 }
 
-interface MembersTopbarBreadcrumbsProps
-  extends React.HTMLAttributes<HTMLElement> {
+interface MembersTopbarBreadcrumbsProps extends React.HTMLAttributes<HTMLElement> {
   ariaLabel?: string;
 }
 
@@ -592,10 +533,7 @@ interface MembersTopbarTitleProps {
   className?: string;
 }
 
-export function MembersTopbarTitle({
-  children,
-  className,
-}: MembersTopbarTitleProps) {
+export function MembersTopbarTitle({ children, className }: MembersTopbarTitleProps) {
   return (
     <span className={cn("truncate text-sm font-semibold text-foreground", className)}>
       {children}
@@ -608,15 +546,8 @@ interface MembersTopbarQuickActionsProps {
   className?: string;
 }
 
-export function MembersTopbarQuickActions({
-  children,
-  className,
-}: MembersTopbarQuickActionsProps) {
-  return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      {children}
-    </div>
-  );
+export function MembersTopbarQuickActions({ children, className }: MembersTopbarQuickActionsProps) {
+  return <div className={cn("flex flex-wrap items-center gap-2", className)}>{children}</div>;
 }
 
 interface MembersTopbarStatusProps {
@@ -624,13 +555,8 @@ interface MembersTopbarStatusProps {
   className?: string;
 }
 
-export function MembersTopbarStatus({
-  children,
-  className,
-}: MembersTopbarStatusProps) {
-  return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>{children}</div>
-  );
+export function MembersTopbarStatus({ children, className }: MembersTopbarStatusProps) {
+  return <div className={cn("flex flex-wrap items-center gap-2", className)}>{children}</div>;
 }
 
 interface MembersContentHeaderProps {
@@ -638,10 +564,7 @@ interface MembersContentHeaderProps {
   className?: string;
 }
 
-export function MembersContentHeader({
-  children,
-  className,
-}: MembersContentHeaderProps) {
+export function MembersContentHeader({ children, className }: MembersContentHeaderProps) {
   const { setContentHeader } = useMembersAppShellContext();
   const content = React.useMemo(
     () => (
@@ -670,17 +593,9 @@ interface MembersPageActionsProps {
   className?: string;
 }
 
-export function MembersPageActions({
-  children,
-  className,
-}: MembersPageActionsProps) {
+export function MembersPageActions({ children, className }: MembersPageActionsProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center gap-2 sm:justify-end",
-        className,
-      )}
-    >
+    <div className={cn("flex flex-wrap items-center gap-2 sm:justify-end", className)}>
       {children}
     </div>
   );
@@ -691,15 +606,10 @@ interface MembersContentFooterProps {
   className?: string;
 }
 
-export function MembersContentFooter({
-  children,
-  className,
-}: MembersContentFooterProps) {
+export function MembersContentFooter({ children, className }: MembersContentFooterProps) {
   const { setContentFooter } = useMembersAppShellContext();
   const content = React.useMemo(
-    () => (
-      <div className={cn("flex flex-col gap-4", className)}>{children}</div>
-    ),
+    () => <div className={cn("flex flex-col gap-4", className)}>{children}</div>,
     [children, className],
   );
 
@@ -740,12 +650,7 @@ export function useMembersContentLayout(): MembersContentLayoutSnapshot {
   return contentLayout;
 }
 
-export function MembersContentLayout({
-  spacing,
-  width,
-  padding,
-  gap,
-}: MembersContentLayoutConfig) {
+export function MembersContentLayout({ spacing, width, padding, gap }: MembersContentLayoutConfig) {
   const { registerContentLayout } = useMembersAppShellContext();
 
   const options = React.useMemo(

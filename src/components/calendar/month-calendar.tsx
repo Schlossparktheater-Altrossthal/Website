@@ -46,8 +46,10 @@ export interface CalendarWeek {
   days: Date[];
 }
 
-export interface CalendarDayRenderResult
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "content"> {
+export interface CalendarDayRenderResult extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "children" | "content"
+> {
   content?: ReactNode;
 }
 
@@ -115,13 +117,11 @@ export function MonthCalendar({
 }: MonthCalendarProps) {
   const initialMonth = useMemo(
     () => startOfMonth(month ?? defaultMonth ?? new Date()),
-    [defaultMonth, month]
+    [defaultMonth, month],
   );
 
   const [internalMonth, setInternalMonth] = useState<Date>(initialMonth);
-  const [internalDirection, setInternalDirection] = useState<"left" | "right">(
-    "right"
-  );
+  const [internalDirection, setInternalDirection] = useState<"left" | "right">("right");
   const previousMonthRef = useRef<Date>(initialMonth);
 
   useEffect(() => {
@@ -130,9 +130,7 @@ export function MonthCalendar({
       if (!transitionDirection) {
         const previous = previousMonthRef.current;
         if (previous) {
-          setInternalDirection(
-            normalized.getTime() >= previous.getTime() ? "right" : "left"
-          );
+          setInternalDirection(normalized.getTime() >= previous.getTime() ? "right" : "left");
         }
       }
       previousMonthRef.current = normalized;
@@ -150,7 +148,7 @@ export function MonthCalendar({
 
   const monthLabel = useMemo(
     () => format(displayedMonth, monthLabelFormat, { locale }),
-    [displayedMonth, locale, monthLabelFormat]
+    [displayedMonth, locale, monthLabelFormat],
   );
 
   const weekDayMeta = useMemo(() => {
@@ -205,10 +203,7 @@ export function MonthCalendar({
 
   const goToday = () => {
     const todayMonth = startOfMonth(new Date());
-    updateMonth(
-      todayMonth,
-      todayMonth.getTime() >= displayedMonth.getTime() ? "right" : "left"
-    );
+    updateMonth(todayMonth, todayMonth.getTime() >= displayedMonth.getTime() ? "right" : "left");
   };
 
   const goPrevMonth = () => {
@@ -270,7 +265,7 @@ export function MonthCalendar({
               "flex min-w-0 flex-col gap-3",
               navigationPlacement === "left" && !isStackedHeader
                 ? "sm:flex-row sm:items-center sm:justify-between"
-                : undefined
+                : undefined,
             )}
           >
             <div className="min-w-0 space-y-1">
@@ -279,20 +274,14 @@ export function MonthCalendar({
               ) : (
                 headerTitle
               )}
-              {subtitle ? (
-                <p className="text-sm text-muted-foreground">{subtitle}</p>
-              ) : null}
+              {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
             </div>
-            {navigationPlacement === "left" && !isStackedHeader
-              ? navigationControls
-              : null}
+            {navigationPlacement === "left" && !isStackedHeader ? navigationControls : null}
           </div>
           {isStackedHeader ? (
             <div className="flex w-full flex-wrap items-center gap-2">
               {navigationPlacement !== "right" ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {navigationControls}
-                </div>
+                <div className="flex flex-wrap items-center gap-2">{navigationControls}</div>
               ) : null}
               {(navigationPlacement === "right" || headerActions) && (
                 <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -313,22 +302,14 @@ export function MonthCalendar({
         ) : null}
       </div>
       <div className="overflow-x-auto">
-        <div
-          className={cn(
-            minGridWidthClassName,
-            "space-y-3 p-2.5 sm:p-4",
-            contentClassName
-          )}
-        >
+        <div className={cn(minGridWidthClassName, "space-y-3 p-2.5 sm:p-4", contentClassName)}>
           <div
             className={cn(
               weekdayHeaderClass,
-              "text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs"
+              "text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs",
             )}
           >
-            {showWeekNumbers ? (
-              <div className="hidden py-2 text-[11px] sm:block">KW</div>
-            ) : null}
+            {showWeekNumbers ? <div className="hidden py-2 text-[11px] sm:block">KW</div> : null}
             {weekDayMeta.map(({ label, weekday, isWeekend }, index) => (
               <div
                 key={index}
@@ -346,7 +327,7 @@ export function MonthCalendar({
               "space-y-1.5 text-sm calendar-month-enter",
               resolvedDirection === "right"
                 ? "calendar-month-from-right"
-                : "calendar-month-from-left"
+                : "calendar-month-from-left",
             )}
           >
             {weeksInView.map((week) => (
@@ -377,9 +358,7 @@ export function MonthCalendar({
                     ["aria-current"]: ariaCurrentProp,
                     ...restButtonProps
                   } = result;
-                  const ariaLabel =
-                    ariaLabelProp ??
-                    format(day, "EEEE, d. MMMM yyyy", { locale });
+                  const ariaLabel = ariaLabelProp ?? format(day, "EEEE, d. MMMM yyyy", { locale });
                   const ariaCurrent = ariaCurrentProp ?? (dayInfo.isToday ? "date" : undefined);
                   const dayNumberContent = renderDayNumber
                     ? renderDayNumber(dayInfo)
@@ -388,7 +367,7 @@ export function MonthCalendar({
                     "calendar-cell relative flex min-h-[68px] flex-col gap-1 overflow-hidden rounded-lg border bg-background p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-[96px] sm:p-3",
                     !isCurrentMonth && "text-muted-foreground/60",
                     dayClassName,
-                    daySpecificClass
+                    daySpecificClass,
                   );
                   return (
                     <button
@@ -416,18 +395,76 @@ export function MonthCalendar({
         </div>
       </div>
       <style jsx global>{`
-        @keyframes calendarCellPop { 0% { transform: scale(0.96); } 100% { transform: scale(1); } }
-        @keyframes calendarAddedFlash { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); } 100% { box-shadow: 0 0 0 12px rgba(34,197,94,0); } }
-        @keyframes calendarRemovedFlash { 0% { background-color: rgba(239,68,68,.15); } 100% { background-color: transparent; } }
-        @keyframes calendarMonthInRight { 0% { opacity: 0; transform: translateX(24px);} 100% { opacity: 1; transform: translateX(0);} }
-        @keyframes calendarMonthInLeft { 0% { opacity: 0; transform: translateX(-24px);} 100% { opacity: 1; transform: translateX(0);} }
-        .calendar-cell { position: relative; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-        .calendar-cell:hover { border-color: rgba(99,102,241,.55); transform: translateY(-2px) scale(1.01); box-shadow: 0 16px 28px -18px rgba(79,70,229,.65); }
-        .dark .calendar-cell:hover { border-color: rgba(165,180,252,.75); box-shadow: 0 16px 32px -16px rgba(30,64,175,.65); }
-        .calendar-month-enter { will-change: transform, opacity; }
+        @keyframes calendarCellPop {
+          0% {
+            transform: scale(0.96);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+        @keyframes calendarAddedFlash {
+          0% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+          }
+          100% {
+            box-shadow: 0 0 0 12px rgba(34, 197, 94, 0);
+          }
+        }
+        @keyframes calendarRemovedFlash {
+          0% {
+            background-color: rgba(239, 68, 68, 0.15);
+          }
+          100% {
+            background-color: transparent;
+          }
+        }
+        @keyframes calendarMonthInRight {
+          0% {
+            opacity: 0;
+            transform: translateX(24px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes calendarMonthInLeft {
+          0% {
+            opacity: 0;
+            transform: translateX(-24px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .calendar-cell {
+          position: relative;
+          transition:
+            transform 0.18s ease,
+            box-shadow 0.18s ease,
+            border-color 0.18s ease;
+        }
+        .calendar-cell:hover {
+          border-color: rgba(99, 102, 241, 0.55);
+          transform: translateY(-2px) scale(1.01);
+          box-shadow: 0 16px 28px -18px rgba(79, 70, 229, 0.65);
+        }
+        .dark .calendar-cell:hover {
+          border-color: rgba(165, 180, 252, 0.75);
+          box-shadow: 0 16px 32px -16px rgba(30, 64, 175, 0.65);
+        }
+        .calendar-month-enter {
+          will-change: transform, opacity;
+        }
         @media (prefers-reduced-motion: no-preference) {
-          .calendar-month-enter.calendar-month-from-right { animation: calendarMonthInRight .32s ease-out; }
-          .calendar-month-enter.calendar-month-from-left  { animation: calendarMonthInLeft  .32s ease-out; }
+          .calendar-month-enter.calendar-month-from-right {
+            animation: calendarMonthInRight 0.32s ease-out;
+          }
+          .calendar-month-enter.calendar-month-from-left {
+            animation: calendarMonthInLeft 0.32s ease-out;
+          }
         }
       `}</style>
     </div>

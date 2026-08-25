@@ -27,7 +27,10 @@ const statusLabels: Record<PhotoConsentAdminEntry["status"], string> = {
   rejected: "Abgelehnt",
 };
 
-const statusVariants: Record<PhotoConsentAdminEntry["status"], ComponentProps<typeof Badge>["variant"]> = {
+const statusVariants: Record<
+  PhotoConsentAdminEntry["status"],
+  ComponentProps<typeof Badge>["variant"]
+> = {
   pending: "secondary",
   approved: "default",
   rejected: "destructive",
@@ -48,7 +51,8 @@ const pendingHighlightClasses: Record<PendingEntry["status"], string> = {
 };
 
 const processedCardAccent: Record<ProcessedEntry["status"], string> = {
-  approved: "border-emerald-500/30 bg-emerald-500/5 dark:border-emerald-500/40 dark:bg-emerald-500/10",
+  approved:
+    "border-emerald-500/30 bg-emerald-500/5 dark:border-emerald-500/40 dark:bg-emerald-500/10",
   rejected: "border-red-500/35 bg-red-500/5 dark:border-red-500/40 dark:bg-red-500/10",
 };
 
@@ -66,10 +70,7 @@ const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
   { value: "rejected", label: "Abgelehnt" },
 ];
 
-function formatWithFormatter(
-  value: string | null | undefined,
-  formatter: Intl.DateTimeFormat,
-) {
+function formatWithFormatter(value: string | null | undefined, formatter: Intl.DateTimeFormat) {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return null;
@@ -93,7 +94,12 @@ type DocumentPreviewProps = {
 
 type PreviewMode = "preview" | "outline" | "velocity" | "replay";
 
-function DocumentPreview({ previewUrl, documentName, signatureVersion, signaturePayload }: DocumentPreviewProps) {
+function DocumentPreview({
+  previewUrl,
+  documentName,
+  signatureVersion,
+  signaturePayload,
+}: DocumentPreviewProps) {
   const hasSignature = signatureVersion === "velocity.v1" && Boolean(signaturePayload);
   const hasPreview = Boolean(previewUrl);
   const [mode, setMode] = useState<PreviewMode>(() => {
@@ -123,15 +129,21 @@ function DocumentPreview({ previewUrl, documentName, signatureVersion, signature
       }
 
       if (mode === "outline") {
-        return <SignatureVisualizer payload={signaturePayload} mode="outline" className="rounded-lg" />;
+        return (
+          <SignatureVisualizer payload={signaturePayload} mode="outline" className="rounded-lg" />
+        );
       }
 
       if (mode === "velocity") {
-        return <SignatureVisualizer payload={signaturePayload} mode="velocity" className="rounded-lg" />;
+        return (
+          <SignatureVisualizer payload={signaturePayload} mode="velocity" className="rounded-lg" />
+        );
       }
 
       if (mode === "replay") {
-        return <SignatureVisualizer payload={signaturePayload} mode="replay" className="rounded-lg" />;
+        return (
+          <SignatureVisualizer payload={signaturePayload} mode="replay" className="rounded-lg" />
+        );
       }
     }
 
@@ -168,7 +180,9 @@ function DocumentPreview({ previewUrl, documentName, signatureVersion, signature
   return (
     <div className="mt-3 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Dokumentvorschau</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Dokumentvorschau
+        </p>
         {controls.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em]">
             {controls.map((control) => (
@@ -345,57 +359,57 @@ export function PhotoConsentAdminPanel() {
   }, [entries, normalizedSearch, statusFilter]);
 
   const pendingEntries = useMemo(() => filteredEntries.filter(isPendingEntry), [filteredEntries]);
-  const processedEntries = useMemo(() => filteredEntries.filter(isProcessedEntry), [filteredEntries]);
+  const processedEntries = useMemo(
+    () => filteredEntries.filter(isProcessedEntry),
+    [filteredEntries],
+  );
 
   const hasEntries = entries.length > 0;
   const hasFilteredEntries = filteredEntries.length > 0;
 
-  const handleAction = useCallback(
-    async (id: string, action: PhotoConsentAction) => {
-      let reason: string | undefined;
-      if (action === "reject") {
-        const entered = window.prompt("Bitte Ablehnungsgrund eingeben:");
-        if (!entered) {
-          return;
-        }
-        reason = entered.trim();
-        if (!reason) {
-          toast.error("Ablehnungsgrund darf nicht leer sein");
-          return;
-        }
+  const handleAction = useCallback(async (id: string, action: PhotoConsentAction) => {
+    let reason: string | undefined;
+    if (action === "reject") {
+      const entered = window.prompt("Bitte Ablehnungsgrund eingeben:");
+      if (!entered) {
+        return;
       }
+      reason = entered.trim();
+      if (!reason) {
+        toast.error("Ablehnungsgrund darf nicht leer sein");
+        return;
+      }
+    }
 
-      setProcessing(id);
-      try {
-        const response = await fetch("/api/photo-consents/admin", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, action, reason }),
-        });
-        const data = await response.json().catch(() => null);
-        if (!response.ok) {
-          toast.error(data?.error ?? "Aktion fehlgeschlagen");
-          return;
-        }
-        const entry = data?.entry as PhotoConsentAdminEntry | undefined;
-        if (entry) {
-          setEntries((prev) => prev.map((item) => (item.id === entry.id ? entry : item)));
-        }
-        const message =
-          action === "approve"
-            ? "Fotoeinverständnis freigegeben"
-            : action === "reject"
+    setProcessing(id);
+    try {
+      const response = await fetch("/api/photo-consents/admin", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action, reason }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        toast.error(data?.error ?? "Aktion fehlgeschlagen");
+        return;
+      }
+      const entry = data?.entry as PhotoConsentAdminEntry | undefined;
+      if (entry) {
+        setEntries((prev) => prev.map((item) => (item.id === entry.id ? entry : item)));
+      }
+      const message =
+        action === "approve"
+          ? "Fotoeinverständnis freigegeben"
+          : action === "reject"
             ? "Fotoeinverständnis abgelehnt"
             : "Status zurückgesetzt";
-        toast.success(message);
-      } catch {
-        toast.error("Netzwerkfehler bei der Aktion");
-      } finally {
-        setProcessing(null);
-      }
-    },
-    [],
-  );
+      toast.success(message);
+    } catch {
+      toast.error("Netzwerkfehler bei der Aktion");
+    } finally {
+      setProcessing(null);
+    }
+  }, []);
 
   const templatePreviewUrl = useMemo(() => {
     if (!templatePreviewFile) return null;
@@ -484,7 +498,9 @@ export function PhotoConsentAdminPanel() {
           {loading ? (
             <p className="text-sm text-muted-foreground">Lade Einträge …</p>
           ) : !hasEntries ? (
-            <p className="text-sm text-muted-foreground">Bisher liegen keine Fotoeinverständnisse vor.</p>
+            <p className="text-sm text-muted-foreground">
+              Bisher liegen keine Fotoeinverständnisse vor.
+            </p>
           ) : !hasFilteredEntries ? (
             <p className="text-sm text-muted-foreground">
               Keine Fotoeinverständnisse entsprechen deiner Suche oder Filterung.
@@ -498,7 +514,8 @@ export function PhotoConsentAdminPanel() {
                       Offene Fotoeinverständnisse
                     </h3>
                     <p className="text-xs text-foreground/60">
-                      Diese Personen warten auf eine Entscheidung oder benötigen zusätzliche Unterlagen.
+                      Diese Personen warten auf eine Entscheidung oder benötigen zusätzliche
+                      Unterlagen.
                     </p>
                   </div>
                   <div className="space-y-3">
@@ -636,10 +653,18 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
 
   const hints: Array<{ key: string; tone: "warning" | "error"; message: string }> = [];
   if (entry.rejectionReason) {
-    hints.push({ key: "rejection", tone: "error", message: `Letzte Ablehnung: ${entry.rejectionReason}` });
+    hints.push({
+      key: "rejection",
+      tone: "error",
+      message: `Letzte Ablehnung: ${entry.rejectionReason}`,
+    });
   }
   if (entry.requiresDateOfBirth) {
-    hints.push({ key: "dob", tone: "warning", message: "Geburtsdatum fehlt. Bitte nachreichen lassen." });
+    hints.push({
+      key: "dob",
+      tone: "warning",
+      message: "Geburtsdatum fehlt. Bitte nachreichen lassen.",
+    });
   }
   if (!entry.hasDocument && entry.requiresDocument) {
     hints.push({
@@ -660,14 +685,19 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="text-sm font-semibold text-foreground">{entry.name ?? entry.email ?? "Unbekannt"}</div>
+          <div className="text-sm font-semibold text-foreground">
+            {entry.name ?? entry.email ?? "Unbekannt"}
+          </div>
           {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
         </div>
         <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <Badge variant="secondary" className="bg-background/70 text-foreground/80 dark:bg-background/40">
+        <Badge
+          variant="secondary"
+          className="bg-background/70 text-foreground/80 dark:bg-background/40"
+        >
           {entry.requiresDocument ? "Minderjährig" : "Volljährig"}
         </Badge>
         <Badge
@@ -710,7 +740,9 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Ausschlüsse
               </div>
-              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">{entry.exclusionNote}</p>
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">
+                {entry.exclusionNote}
+              </p>
             </div>
           )}
           {entry.documentName && (
@@ -720,7 +752,12 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
               {entry.documentUrl && (
                 <>
                   {" "}
-                  <a className="underline" href={entry.documentUrl} target="_blank" rel="noreferrer">
+                  <a
+                    className="underline"
+                    href={entry.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     öffnen
                   </a>
                 </>
@@ -761,7 +798,11 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => void onAction(entry.id, "approve")} disabled={processing === entry.id}>
+        <Button
+          size="sm"
+          onClick={() => void onAction(entry.id, "approve")}
+          disabled={processing === entry.id}
+        >
           Freigeben
         </Button>
         <Button
@@ -797,16 +838,18 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
   const updatedAt = formatDateTime(entry.updatedAt) ?? "unbekannt";
   const approvedAt = formatDateTime(entry.approvedAt);
 
-  const permissionBadge = entry.status === "approved"
-    ? {
-        label: "Fotos & Veröffentlichung erlaubt",
-        className:
-          "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-200",
-      }
-    : {
-        label: "Keine Fotoveröffentlichung erlaubt",
-        className: "border-red-500/40 bg-red-500/10 text-red-600 dark:border-red-500/40 dark:text-red-200",
-      };
+  const permissionBadge =
+    entry.status === "approved"
+      ? {
+          label: "Fotos & Veröffentlichung erlaubt",
+          className:
+            "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-200",
+        }
+      : {
+          label: "Keine Fotoveröffentlichung erlaubt",
+          className:
+            "border-red-500/40 bg-red-500/10 text-red-600 dark:border-red-500/40 dark:text-red-200",
+        };
 
   return (
     <div
@@ -818,7 +861,9 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold text-foreground">{entry.name ?? entry.email ?? "Unbekannt"}</div>
+            <div className="text-sm font-semibold text-foreground">
+              {entry.name ?? entry.email ?? "Unbekannt"}
+            </div>
             {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
           </div>
           <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
@@ -857,40 +902,49 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
           )}
         </div>
 
-      <div className="space-y-2 text-xs text-foreground/70">
-        <div>Aktualisiert: {updatedAt}</div>
-        {approvedAt && <div>Freigegeben am {approvedAt}</div>}
-        {entry.approvedByName && <div>Bearbeitet durch {entry.approvedByName}</div>}
-        {entry.rejectionReason && <div className="text-destructive">Grund: {entry.rejectionReason}</div>}
-        {entry.exclusionNote && (
-          <div className="rounded-md border border-border/60 bg-background/60 p-2 text-foreground/80">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Ausschlüsse
+        <div className="space-y-2 text-xs text-foreground/70">
+          <div>Aktualisiert: {updatedAt}</div>
+          {approvedAt && <div>Freigegeben am {approvedAt}</div>}
+          {entry.approvedByName && <div>Bearbeitet durch {entry.approvedByName}</div>}
+          {entry.rejectionReason && (
+            <div className="text-destructive">Grund: {entry.rejectionReason}</div>
+          )}
+          {entry.exclusionNote && (
+            <div className="rounded-md border border-border/60 bg-background/60 p-2 text-foreground/80">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Ausschlüsse
+              </div>
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">
+                {entry.exclusionNote}
+              </p>
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">{entry.exclusionNote}</p>
-          </div>
-        )}
-        {entry.documentName && (
-          <div>
-            Dokument: {entry.documentName}
-            {entry.documentUrl && (
-              <>
-                {" "}
-                <a className="underline" href={entry.documentUrl} target="_blank" rel="noreferrer">
-                  öffnen
-                </a>
-              </>
-            )}
-          </div>
-        )}
-        <DocumentPreview
-          key={`${entry.signatureVersion ?? "none"}-${entry.documentPreviewUrl ?? "nopreview"}`}
-          previewUrl={entry.documentPreviewUrl}
-          documentName={entry.documentName}
-          signatureVersion={entry.signatureVersion}
-          signaturePayload={entry.signaturePayload}
-        />
-      </div>
+          )}
+          {entry.documentName && (
+            <div>
+              Dokument: {entry.documentName}
+              {entry.documentUrl && (
+                <>
+                  {" "}
+                  <a
+                    className="underline"
+                    href={entry.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    öffnen
+                  </a>
+                </>
+              )}
+            </div>
+          )}
+          <DocumentPreview
+            key={`${entry.signatureVersion ?? "none"}-${entry.documentPreviewUrl ?? "nopreview"}`}
+            previewUrl={entry.documentPreviewUrl}
+            documentName={entry.documentName}
+            signatureVersion={entry.signatureVersion}
+            signaturePayload={entry.signaturePayload}
+          />
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">

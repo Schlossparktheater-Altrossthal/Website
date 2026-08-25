@@ -25,10 +25,7 @@ export function RehearsalList({ initial }: { initial: RehearsalLite[] }) {
     return initial.filter((r) => {
       if (onlyUpcoming && new Date(r.start) < now) return false;
       if (!q) return true;
-      return (
-        r.title.toLowerCase().includes(q) ||
-        r.location.toLowerCase().includes(q)
-      );
+      return r.title.toLowerCase().includes(q) || r.location.toLowerCase().includes(q);
     });
   }, [initial, query, onlyUpcoming]);
 
@@ -75,8 +72,12 @@ export function RehearsalList({ initial }: { initial: RehearsalLite[] }) {
             </label>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCollapseAll}>Alle zuklappen</Button>
-            <Button size="sm" onClick={handleExpandAll}>Alle aufklappen</Button>
+            <Button variant="outline" size="sm" onClick={handleCollapseAll}>
+              Alle zuklappen
+            </Button>
+            <Button size="sm" onClick={handleExpandAll}>
+              Alle aufklappen
+            </Button>
           </div>
         </div>
       </div>
@@ -104,4 +105,3 @@ export function RehearsalList({ initial }: { initial: RehearsalLite[] }) {
     </div>
   );
 }
-

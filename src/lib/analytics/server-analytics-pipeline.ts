@@ -28,9 +28,7 @@ const DEFAULT_REALTIME_WINDOW_HOURS = DEFAULT_SERVER_ANALYTICS_SETTINGS.realtime
 const DEFAULT_PAGE_WINDOW_DAYS = DEFAULT_SERVER_ANALYTICS_SETTINGS.pageWindowDays;
 const DEFAULT_PAGE_RETENTION_DAYS = DEFAULT_SERVER_ANALYTICS_SETTINGS.pageRetentionDays;
 
-type AggregationResult<T> =
-  | { status: "skipped"; reason: string }
-  | { status: "success"; data: T };
+type AggregationResult<T> = { status: "skipped"; reason: string } | { status: "success"; data: T };
 
 type HttpAggregationOptions = {
   prisma?: PrismaClient;
@@ -154,8 +152,7 @@ function resolvePositiveInteger(
 function transformSessions(rows: AnalyticsSession[]): AnalyticsSessionLike[] {
   return rows.map((session) => ({
     ...session,
-    startedAt:
-      session.startedAt instanceof Date ? session.startedAt : new Date(session.startedAt),
+    startedAt: session.startedAt instanceof Date ? session.startedAt : new Date(session.startedAt),
     lastSeenAt:
       session.lastSeenAt instanceof Date ? session.lastSeenAt : new Date(session.lastSeenAt),
     pagePaths: Array.isArray(session.pagePaths) ? [...session.pagePaths] : [],
@@ -165,14 +162,11 @@ function transformSessions(rows: AnalyticsSession[]): AnalyticsSessionLike[] {
 function transformRealtimeEvents(rows: AnalyticsRealtimeEvent[]): RealtimeEventLike[] {
   return rows.map((event) => ({
     ...event,
-    occurredAt:
-      event.occurredAt instanceof Date ? event.occurredAt : new Date(event.occurredAt),
+    occurredAt: event.occurredAt instanceof Date ? event.occurredAt : new Date(event.occurredAt),
   }));
 }
 
-function toTrafficAttributionLike(
-  rows: AnalyticsTrafficAttribution[],
-): TrafficAttributionLike[] {
+function toTrafficAttributionLike(rows: AnalyticsTrafficAttribution[]): TrafficAttributionLike[] {
   return rows.map((row) => ({
     sessionId: row.sessionId,
     analyticsSessionId: row.analyticsSessionId,
@@ -187,9 +181,7 @@ function toTrafficAttributionLike(
   }));
 }
 
-export async function runHttpAnalyticsAggregation(
-  options: HttpAggregationOptions = {},
-): Promise<
+export async function runHttpAnalyticsAggregation(options: HttpAggregationOptions = {}): Promise<
   AggregationResult<{
     windowStart: Date;
     windowEnd: Date;
@@ -208,24 +200,25 @@ export async function runHttpAnalyticsAggregation(
     try {
       settings = await loadServerAnalyticsSettings(client);
     } catch (error) {
-      console.error("[analytics] Failed to load server analytics settings for HTTP aggregation", error);
+      console.error(
+        "[analytics] Failed to load server analytics settings for HTTP aggregation",
+        error,
+      );
     }
   }
 
-  const windowMinutes = options.windowMinutes ??
+  const windowMinutes =
+    options.windowMinutes ??
     settings?.httpWindowMinutes ??
-    resolvePositiveInteger(
-      process.env.ANALYTICS_HTTP_WINDOW_MINUTES,
-      DEFAULT_HTTP_WINDOW_MINUTES,
-      { min: 5 },
-    );
-  const bucketMinutes = options.bucketMinutes ??
+    resolvePositiveInteger(process.env.ANALYTICS_HTTP_WINDOW_MINUTES, DEFAULT_HTTP_WINDOW_MINUTES, {
+      min: 5,
+    });
+  const bucketMinutes =
+    options.bucketMinutes ??
     settings?.httpBucketMinutes ??
-    resolvePositiveInteger(
-      process.env.ANALYTICS_HTTP_BUCKET_MINUTES,
-      DEFAULT_HTTP_BUCKET_MINUTES,
-      { min: 1 },
-    );
+    resolvePositiveInteger(process.env.ANALYTICS_HTTP_BUCKET_MINUTES, DEFAULT_HTTP_BUCKET_MINUTES, {
+      min: 1,
+    });
   const windowStart = new Date(now.getTime() - Math.max(windowMinutes, 5) * 60_000);
 
   const [requests, heartbeats] = await Promise.all([
@@ -339,25 +332,26 @@ export async function runSessionAnalyticsAggregation(
     try {
       settings = await loadServerAnalyticsSettings(client);
     } catch (error) {
-      console.error("[analytics] Failed to load server analytics settings for session aggregation", error);
+      console.error(
+        "[analytics] Failed to load server analytics settings for session aggregation",
+        error,
+      );
     }
   }
 
-  const windowDays = options.windowDays ??
+  const windowDays =
+    options.windowDays ??
     settings?.sessionWindowDays ??
-    resolvePositiveInteger(
-      process.env.ANALYTICS_SESSION_WINDOW_DAYS,
-      DEFAULT_SESSION_WINDOW_DAYS,
-    );
-  const retentionDays = options.retentionDays ??
+    resolvePositiveInteger(process.env.ANALYTICS_SESSION_WINDOW_DAYS, DEFAULT_SESSION_WINDOW_DAYS);
+  const retentionDays =
+    options.retentionDays ??
     settings?.sessionRetentionDays ??
     resolvePositiveInteger(
       process.env.ANALYTICS_SESSION_RETENTION_DAYS,
       DEFAULT_SESSION_RETENTION_DAYS,
     );
-  const realtimeWindowHours = options.realtimeWindowHours ??
-    settings?.realtimeWindowHours ??
-    DEFAULT_REALTIME_WINDOW_HOURS;
+  const realtimeWindowHours =
+    options.realtimeWindowHours ?? settings?.realtimeWindowHours ?? DEFAULT_REALTIME_WINDOW_HOURS;
 
   const windowStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
   const realtimeWindowStart = new Date(now.getTime() - realtimeWindowHours * 60 * 60 * 1000);
@@ -446,10 +440,8 @@ export async function runSessionAnalyticsAggregation(
         windowEnd: result.sessionSummary.windowEnd,
         peakConcurrentUsers: result.sessionSummary.peakConcurrentUsers,
         membersRealtimeEvents: result.sessionSummary.membersRealtimeEvents,
-        membersAvgSessionDurationSeconds:
-          result.sessionSummary.membersAvgSessionDurationSeconds,
-        guestAvgSessionDurationSeconds:
-          result.sessionSummary.guestAvgSessionDurationSeconds,
+        membersAvgSessionDurationSeconds: result.sessionSummary.membersAvgSessionDurationSeconds,
+        guestAvgSessionDurationSeconds: result.sessionSummary.guestAvgSessionDurationSeconds,
       },
     });
 
@@ -498,22 +490,21 @@ export async function runPageAnalyticsAggregation(
     try {
       settings = await loadServerAnalyticsSettings(client);
     } catch (error) {
-      console.error("[analytics] Failed to load server analytics settings for page aggregation", error);
+      console.error(
+        "[analytics] Failed to load server analytics settings for page aggregation",
+        error,
+      );
     }
   }
 
-  const windowDays = options.windowDays ??
+  const windowDays =
+    options.windowDays ??
     settings?.pageWindowDays ??
-    resolvePositiveInteger(
-      process.env.ANALYTICS_PAGE_WINDOW_DAYS,
-      DEFAULT_PAGE_WINDOW_DAYS,
-    );
-  const retentionDays = options.retentionDays ??
+    resolvePositiveInteger(process.env.ANALYTICS_PAGE_WINDOW_DAYS, DEFAULT_PAGE_WINDOW_DAYS);
+  const retentionDays =
+    options.retentionDays ??
     settings?.pageRetentionDays ??
-    resolvePositiveInteger(
-      process.env.ANALYTICS_PAGE_RETENTION_DAYS,
-      DEFAULT_PAGE_RETENTION_DAYS,
-    );
+    resolvePositiveInteger(process.env.ANALYTICS_PAGE_RETENTION_DAYS, DEFAULT_PAGE_RETENTION_DAYS);
 
   const windowStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
@@ -595,10 +586,13 @@ export async function runServerAnalyticsAggregation(
 
   if (
     isDatabaseEnabled() &&
-    (needsHttpSettings(options.http) || needsSessionSettings(options.sessions) || needsPageSettings(options.pages))
+    (needsHttpSettings(options.http) ||
+      needsSessionSettings(options.sessions) ||
+      needsPageSettings(options.pages))
   ) {
     try {
-      const prismaCandidate = options.http?.prisma ?? options.sessions?.prisma ?? options.pages?.prisma;
+      const prismaCandidate =
+        options.http?.prisma ?? options.sessions?.prisma ?? options.pages?.prisma;
       sharedSettings = await loadServerAnalyticsSettings(getPrisma(prismaCandidate));
     } catch (error) {
       console.error("[analytics] Failed to load shared server analytics settings", error);

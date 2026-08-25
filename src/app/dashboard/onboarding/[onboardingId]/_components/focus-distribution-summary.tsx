@@ -37,12 +37,19 @@ export function FocusDistributionSummary({ items }: FocusDistributionSummaryProp
     <Card className="sm:col-span-2 xl:col-span-3">
       <CardHeader className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Fokusverteilung</CardTitle>
-          <Badge variant="outline" className="border-dashed border-muted-foreground/40 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">
+            Fokusverteilung
+          </CardTitle>
+          <Badge
+            variant="outline"
+            className="border-dashed border-muted-foreground/40 text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
+          >
             acting · tech · beide
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground">Primäre Ausrichtung der Teilnehmenden nach Schwerpunkt.</p>
+        <p className="text-sm text-muted-foreground">
+          Primäre Ausrichtung der Teilnehmenden nach Schwerpunkt.
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {items.length === 0 ? (
@@ -70,11 +77,21 @@ export function FocusDistributionSummary({ items }: FocusDistributionSummaryProp
                           className={cn("h-full transition-all", barClass)}
                         />
                       </TooltipTrigger>
-                      <TooltipContent className={cn("border px-3 py-2 text-xs font-medium", tooltipIntentClasses[intent] ?? tooltipIntentClasses.default)}>
+                      <TooltipContent
+                        className={cn(
+                          "border px-3 py-2 text-xs font-medium",
+                          tooltipIntentClasses[intent] ?? tooltipIntentClasses.default,
+                        )}
+                      >
                         <div className="flex flex-col gap-0.5">
                           <span className="text-sm font-semibold">{item.label}</span>
-                          <span>{percentage.toFixed(1)}% · {item.value.toLocaleString("de-DE")} Teilnehmende</span>
-                          {total ? <span className="text-[11px] text-primary-foreground/80">{`von ${total.toLocaleString("de-DE")} gesamt`}</span> : null}
+                          <span>
+                            {percentage.toFixed(1)}% · {item.value.toLocaleString("de-DE")}{" "}
+                            Teilnehmende
+                          </span>
+                          {total ? (
+                            <span className="text-[11px] text-primary-foreground/80">{`von ${total.toLocaleString("de-DE")} gesamt`}</span>
+                          ) : null}
                         </div>
                       </TooltipContent>
                     </Tooltip>
@@ -90,10 +107,16 @@ export function FocusDistributionSummary({ items }: FocusDistributionSummaryProp
                   <Badge
                     key={item.label}
                     variant="outline"
-                    className={cn("gap-2", badgeIntentClasses[intent] ?? badgeIntentClasses.default)}
+                    className={cn(
+                      "gap-2",
+                      badgeIntentClasses[intent] ?? badgeIntentClasses.default,
+                    )}
                   >
                     <span
-                      className={cn("h-2 w-2 rounded-full", intentBarClasses[intent] ?? intentBarClasses.default)}
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        intentBarClasses[intent] ?? intentBarClasses.default,
+                      )}
                       aria-hidden="true"
                     />
                     <span className="font-semibold text-foreground">{item.label}</span>

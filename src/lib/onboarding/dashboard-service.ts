@@ -14,10 +14,7 @@ import {
   type OnboardingMembersOverview,
   type OnboardingSummary,
 } from "./dashboard-schemas";
-import {
-  optimizeRoleAllocation,
-  type AllocationOptimizerResult,
-} from "./allocation-optimizer";
+import { optimizeRoleAllocation, type AllocationOptimizerResult } from "./allocation-optimizer";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
@@ -185,10 +182,7 @@ function giniIndex(counts: number[]): number {
     return 0;
   }
   const sorted = [...counts].sort((a, b) => a - b);
-  const cumulative = sorted.reduce(
-    (acc, value, index) => acc + value * (index + 1),
-    0,
-  );
+  const cumulative = sorted.reduce((acc, value, index) => acc + value * (index + 1), 0);
   return (2 * cumulative) / (total * counts.length) - (counts.length + 1) / counts.length;
 }
 
@@ -310,14 +304,11 @@ function buildFairnessMetrics(
     focus: OnboardingFocus;
   }>,
 ): OnboardingDashboardData["allocation"]["fairness"] {
-  const genders = profiles.reduce(
-    (acc, profile) => {
-      const key = profile.gender?.toLowerCase() ?? "divers";
-      acc.set(key, (acc.get(key) ?? 0) + 1);
-      return acc;
-    },
-    new Map<string, number>(),
-  );
+  const genders = profiles.reduce((acc, profile) => {
+    const key = profile.gender?.toLowerCase() ?? "divers";
+    acc.set(key, (acc.get(key) ?? 0) + 1);
+    return acc;
+  }, new Map<string, number>());
 
   const total = profiles.length || 1;
   const femaleShare = genders.get("weiblich") ?? genders.get("f") ?? 0;
@@ -332,7 +323,9 @@ function buildFairnessMetrics(
 
   const now = new Date();
   const experienceYears = profiles
-    .map((profile) => (profile.memberSinceYear ? now.getFullYear() - profile.memberSinceYear : null))
+    .map((profile) =>
+      profile.memberSinceYear ? now.getFullYear() - profile.memberSinceYear : null,
+    )
     .filter((value): value is number => value !== null && Number.isFinite(value));
   const averageExperience =
     experienceYears.length > 0
@@ -367,7 +360,12 @@ function buildFairnessMetrics(
       label: "Erfahrungsmix",
       value: roundTo(averageExperience, 1),
       target: 3,
-      status: averageExperience >= 2 && averageExperience <= 4 ? "ok" : averageExperience < 2 ? "warning" : "critical",
+      status:
+        averageExperience >= 2 && averageExperience <= 4
+          ? "ok"
+          : averageExperience < 2
+            ? "warning"
+            : "critical",
       description: `Newcomer ${roundTo(noviceShare)}% · Veteranen ${roundTo(veteranShare)}%`,
     },
     {
@@ -375,7 +373,12 @@ function buildFairnessMetrics(
       label: "Fokus-Balance",
       value: roundTo(focusBothShare),
       target: 35,
-      status: focusBothShare >= 25 && focusBothShare <= 45 ? "ok" : focusBothShare < 25 ? "warning" : "critical",
+      status:
+        focusBothShare >= 25 && focusBothShare <= 45
+          ? "ok"
+          : focusBothShare < 25
+            ? "warning"
+            : "critical",
       description: "Anteil Personen mit Doppel-Fokus acting/tech",
     },
   ];
@@ -407,7 +410,6 @@ async function computeOnboardingDashboardData(
   onboardingId: string,
   options: DashboardComputationOptions = {},
 ): Promise<OnboardingDashboardData | null> {
-
   if (!IS_PRODUCTION && onboardingId === DEV_ONBOARDING_SUMMARY.id) {
     return DEV_ONBOARDING_DASHBOARD;
   }
@@ -534,38 +536,30 @@ async function computeOnboardingDashboardData(
         ? ages[(ages.length - 1) / 2]
         : (ages[ages.length / 2 - 1] + ages[ages.length / 2]) / 2;
 
-  const ageGroups = show.onboardingProfiles.reduce(
-    (acc, profile) => {
-      const age = computeAge(profile.user.dateOfBirth);
-      if (age === null) {
-        return acc;
-      }
-      const label = classifyAge(age);
-      acc.set(label, (acc.get(label) ?? 0) + 1);
+  const ageGroups = show.onboardingProfiles.reduce((acc, profile) => {
+    const age = computeAge(profile.user.dateOfBirth);
+    if (age === null) {
       return acc;
-    },
-    new Map<string, number>(),
-  );
+    }
+    const label = classifyAge(age);
+    acc.set(label, (acc.get(label) ?? 0) + 1);
+    return acc;
+  }, new Map<string, number>());
 
-  const genderDistribution = show.onboardingProfiles.reduce(
-    (acc, profile) => {
-      const key = profile.gender?.trim().toLowerCase() || "divers";
-      acc.set(key, (acc.get(key) ?? 0) + 1);
-      return acc;
-    },
-    new Map<string, number>(),
-  );
+  const genderDistribution = show.onboardingProfiles.reduce((acc, profile) => {
+    const key = profile.gender?.trim().toLowerCase() || "divers";
+    acc.set(key, (acc.get(key) ?? 0) + 1);
+    return acc;
+  }, new Map<string, number>());
 
-  const focusDistribution = show.onboardingProfiles.reduce(
-    (acc, profile) => {
-      acc.set(profile.focus, (acc.get(profile.focus) ?? 0) + 1);
-      return acc;
-    },
-    new Map<OnboardingFocus, number>(),
-  );
+  const focusDistribution = show.onboardingProfiles.reduce((acc, profile) => {
+    acc.set(profile.focus, (acc.get(profile.focus) ?? 0) + 1);
+    return acc;
+  }, new Map<OnboardingFocus, number>());
 
   const consentCount = show.onboardingProfiles.filter(
-    (profile) => profile.user.photoConsent?.consentGiven && profile.user.photoConsent.status === "approved",
+    (profile) =>
+      profile.user.photoConsent?.consentGiven && profile.user.photoConsent.status === "approved",
   ).length;
 
   const actingTotals = new Map<string, { shareSum: number; userCount: number }>();
@@ -587,7 +581,7 @@ async function computeOnboardingDashboardData(
 
   rolePreferences.forEach((preference) => {
     const totals = userDomainTotals.get(preference.userId);
-    const total = preference.domain === "acting" ? totals?.acting ?? 0 : totals?.crew ?? 0;
+    const total = preference.domain === "acting" ? (totals?.acting ?? 0) : (totals?.crew ?? 0);
     const normalized = total > 0 ? preference.weight / total : 0;
 
     const targetMap = preference.domain === "acting" ? actingSharesByUser : crewSharesByUser;
@@ -679,17 +673,14 @@ async function computeOnboardingDashboardData(
   const diversityStatus =
     normalizedDiversity >= 0.65 ? "ok" : normalizedDiversity >= 0.45 ? "warning" : "critical";
 
-  const diets = show.onboardingProfiles.reduce(
-    (acc, profile) => {
-      if (!profile.dietaryPreference) {
-        return acc;
-      }
-      const key = profile.dietaryPreference;
-      acc.set(key, (acc.get(key) ?? 0) + 1);
+  const diets = show.onboardingProfiles.reduce((acc, profile) => {
+    if (!profile.dietaryPreference) {
       return acc;
-    },
-    new Map<string, number>(),
-  );
+    }
+    const key = profile.dietaryPreference;
+    acc.set(key, (acc.get(key) ?? 0) + 1);
+    return acc;
+  }, new Map<string, number>());
 
   const allergies = new Map<string, Map<string, number>>();
   show.onboardingProfiles.forEach((profile) => {
@@ -728,7 +719,8 @@ async function computeOnboardingDashboardData(
       id: "documents",
       label: "Dokumente",
       completionRate: toPercentage(
-        show.onboardingProfiles.filter((profile) => profile.user.photoConsent?.documentUploadedAt).length,
+        show.onboardingProfiles.filter((profile) => profile.user.photoConsent?.documentUploadedAt)
+          .length,
         profileUserIds.length || 1,
       ),
     },
@@ -743,8 +735,12 @@ async function computeOnboardingDashboardData(
   }));
 
   const documents = {
-    uploaded: show.onboardingProfiles.filter((profile) => profile.user.photoConsent?.documentUploadedAt).length,
-    skipped: show.onboardingProfiles.filter((profile) => profile.user.photoConsent?.status === "rejected").length,
+    uploaded: show.onboardingProfiles.filter(
+      (profile) => profile.user.photoConsent?.documentUploadedAt,
+    ).length,
+    skipped: show.onboardingProfiles.filter(
+      (profile) => profile.user.photoConsent?.status === "rejected",
+    ).length,
     pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsent).length,
   };
 
@@ -935,9 +931,7 @@ async function computeOnboardingDashboardData(
           qualityFactor: metrics.quality,
           score: metrics.score,
           confidence: metrics.confidence,
-          justification: metrics.focusAlignment
-            ? "Hohe Acting-Präferenz"
-            : "Acting als Zweitfokus",
+          justification: metrics.focusAlignment ? "Hohe Acting-Präferenz" : "Acting als Zweitfokus",
           interests: candidate.interests,
           experienceYears: candidate.experienceYears ?? undefined,
         };
@@ -1235,12 +1229,13 @@ async function computeOnboardingDashboardData(
           tag,
           weight,
         })),
-      interestCoOccurrences: Array.from(interestCoOccurrences.entries()).flatMap(([source, targets]) =>
-        Array.from(targets.entries()).map(([target, weight]) => ({
-          source,
-          target,
-          weight,
-        })),
+      interestCoOccurrences: Array.from(interestCoOccurrences.entries()).flatMap(
+        ([source, targets]) =>
+          Array.from(targets.entries()).map(([target, weight]) => ({
+            source,
+            target,
+            weight,
+          })),
       ),
       interestClusters: Array.from(interestClusters.entries()).map(([label, value]) => ({
         id: label.toLowerCase(),
@@ -1301,4 +1296,3 @@ export async function loadOnboardingDashboardSnapshot(
 export const getOnboardingDashboardData = cache((onboardingId: string) =>
   computeOnboardingDashboardData(onboardingId),
 );
-

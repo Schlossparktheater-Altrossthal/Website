@@ -17,7 +17,10 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = resetSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." },
+      { status: 400 },
+    );
   }
 
   const passwordHash = await hashPassword(parsed.data.password, 12);

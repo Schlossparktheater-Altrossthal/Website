@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowDownAZIcon, ArrowUpAZIcon, ChevronDownIcon, EyeIcon, FilterXIcon, PencilIcon, PlusIcon, Trash2Icon, UserRoundCheckIcon } from "@/components/ui/action-icons";
+import {
+  ArrowDownAZIcon,
+  ArrowUpAZIcon,
+  ChevronDownIcon,
+  EyeIcon,
+  FilterXIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+  UserRoundCheckIcon,
+} from "@/components/ui/action-icons";
 
 import { useMemo, useState } from "react";
 import { CharacterCastingType } from "@prisma/client";
@@ -51,8 +61,16 @@ type RoleSizeFilterValue = "all" | "none" | (typeof ROLE_PREFERENCE_OPTIONS)[num
 
 type SortDirection = "asc" | "desc";
 
-function CastingAssignments({ castings, currentPath }: { castings: CharacterCasting[]; currentPath: string }) {
-  const sortedCastings = [...castings].sort((a, b) => getCastingOrderIndex(a.type) - getCastingOrderIndex(b.type));
+function CastingAssignments({
+  castings,
+  currentPath,
+}: {
+  castings: CharacterCasting[];
+  currentPath: string;
+}) {
+  const sortedCastings = [...castings].sort(
+    (a, b) => getCastingOrderIndex(a.type) - getCastingOrderIndex(b.type),
+  );
 
   if (sortedCastings.length === 0) {
     return <p className="text-sm text-muted-foreground">Noch keine Besetzung zugeordnet.</p>;
@@ -61,12 +79,17 @@ function CastingAssignments({ castings, currentPath }: { castings: CharacterCast
   return (
     <div className="space-y-2">
       {sortedCastings.map((casting) => (
-        <div key={casting.id} className="rounded-lg border border-border/70 bg-background/80 p-2 text-sm shadow-sm">
+        <div
+          key={casting.id}
+          className="rounded-lg border border-border/70 bg-background/80 p-2 text-sm shadow-sm"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-medium">{formatUserName(casting.user)}</p>
               <p className="text-xs text-muted-foreground">{getCastingLabel(casting.type)}</p>
-              {casting.notes ? <p className="text-xs text-muted-foreground">Notiz: {casting.notes}</p> : null}
+              {casting.notes ? (
+                <p className="text-xs text-muted-foreground">Notiz: {casting.notes}</p>
+              ) : null}
             </div>
             <form action={removeCharacterCastingAction} method="post">
               <input type="hidden" name="castingId" value={casting.id} />
@@ -88,11 +111,25 @@ function CastingAssignments({ castings, currentPath }: { castings: CharacterCast
   );
 }
 
-function AssignCastingDialog({ characterId, users, currentPath }: { characterId: string; users: DisplayUser[]; currentPath: string }) {
+function AssignCastingDialog({
+  characterId,
+  users,
+  currentPath,
+}: {
+  characterId: string;
+  users: DisplayUser[];
+  currentPath: string;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Besetzung hinzufügen">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          aria-label="Besetzung hinzufügen"
+        >
           <PlusIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -107,7 +144,9 @@ function AssignCastingDialog({ characterId, users, currentPath }: { characterId:
           <input type="hidden" name="characterId" value={characterId} />
           <input type="hidden" name="redirectPath" value={currentPath} />
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mitglied</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Mitglied
+            </label>
             <select name="userId" className={selectSmallClassName} required>
               <option value="">Mitglied auswählen</option>
               {users.map((user) => (
@@ -118,8 +157,14 @@ function AssignCastingDialog({ characterId, users, currentPath }: { characterId:
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Besetzungsart</label>
-            <select name="type" className={selectSmallClassName} defaultValue={CharacterCastingType.primary}>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Besetzungsart
+            </label>
+            <select
+              name="type"
+              className={selectSmallClassName}
+              defaultValue={CharacterCastingType.primary}
+            >
               {CASTING_ORDER.map((type) => (
                 <option key={type} value={type}>
                   {getCastingLabel(type)}
@@ -128,7 +173,9 @@ function AssignCastingDialog({ characterId, users, currentPath }: { characterId:
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Notiz
+            </label>
             <Input name="notes" maxLength={200} placeholder="optional" />
           </div>
           <DialogFooter className="sm:justify-end">
@@ -147,29 +194,53 @@ function AssignCastingDialog({ characterId, users, currentPath }: { characterId:
   );
 }
 
-function UpdateCharacterDialog({ character, currentPath }: { character: Character; currentPath: string }) {
+function UpdateCharacterDialog({
+  character,
+  currentPath,
+}: {
+  character: Character;
+  currentPath: string;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Rolle bearbeiten">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          aria-label="Rolle bearbeiten"
+        >
           <PencilIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Rolle bearbeiten</DialogTitle>
-          <DialogDescription>Aktualisiere die Stammdaten der Rolle und speichere deine Änderungen.</DialogDescription>
+          <DialogDescription>
+            Aktualisiere die Stammdaten der Rolle und speichere deine Änderungen.
+          </DialogDescription>
         </DialogHeader>
         <form action={updateCharacterAction} method="post" className="grid gap-3">
           <input type="hidden" name="characterId" value={character.id} />
           <input type="hidden" name="redirectPath" value={currentPath} />
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-1">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</label>
-              <Input name="name" defaultValue={character.name} minLength={2} maxLength={120} required />
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Name
+              </label>
+              <Input
+                name="name"
+                defaultValue={character.name}
+                minLength={2}
+                maxLength={120}
+                required
+              />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rollengröße</label>
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Rollengröße
+              </label>
               <select
                 name="rolePreferenceCode"
                 className={selectSmallClassName}
@@ -184,11 +255,20 @@ function UpdateCharacterDialog({ character, currentPath }: { character: Characte
               </select>
             </div>
             <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beschreibung</label>
-              <Textarea name="description" rows={2} maxLength={500} defaultValue={character.description ?? ""} />
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Beschreibung
+              </label>
+              <Textarea
+                name="description"
+                rows={2}
+                maxLength={500}
+                defaultValue={character.description ?? ""}
+              />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Farbe</label>
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Farbe
+              </label>
               <input
                 type="color"
                 name="color"
@@ -197,8 +277,15 @@ function UpdateCharacterDialog({ character, currentPath }: { character: Characte
               />
             </div>
             <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Notiz</label>
-              <Textarea name="notes" rows={2} maxLength={500} defaultValue={character.notes ?? ""} />
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Notiz
+              </label>
+              <Textarea
+                name="notes"
+                rows={2}
+                maxLength={500}
+                defaultValue={character.notes ?? ""}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -221,7 +308,13 @@ function CharacterDetailsDialog({ character }: { character: Character }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant="ghost" size="icon" className="h-9 w-9" aria-label="Details anzeigen">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          aria-label="Details anzeigen"
+        >
           <EyeIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -234,13 +327,17 @@ function CharacterDetailsDialog({ character }: { character: Character }) {
           <div className="space-y-3 text-xs text-muted-foreground">
             {roleSizeLabel ? (
               <div className="space-y-1">
-                <p className="font-semibold uppercase tracking-wide text-foreground/80">Rollengröße</p>
+                <p className="font-semibold uppercase tracking-wide text-foreground/80">
+                  Rollengröße
+                </p>
                 <p>{roleSizeLabel}</p>
               </div>
             ) : null}
             {character.description ? (
               <div className="space-y-1">
-                <p className="font-semibold uppercase tracking-wide text-foreground/80">Beschreibung</p>
+                <p className="font-semibold uppercase tracking-wide text-foreground/80">
+                  Beschreibung
+                </p>
                 <p>{character.description}</p>
               </div>
             ) : null}
@@ -259,12 +356,22 @@ function CharacterDetailsDialog({ character }: { character: Character }) {
   );
 }
 
-function CharacterCard({ character, users, currentPath }: { character: Character; users: DisplayUser[]; currentPath: string }) {
+function CharacterCard({
+  character,
+  users,
+  currentPath,
+}: {
+  character: Character;
+  users: DisplayUser[];
+  currentPath: string;
+}) {
   const hasCastings = character.castings.length > 0;
   const sortedCastings = [...character.castings].sort(
     (a, b) => getCastingOrderIndex(a.type) - getCastingOrderIndex(b.type),
   );
-  const infoItems = [character.shortName, character.notes].filter((value): value is string => Boolean(value));
+  const infoItems = [character.shortName, character.notes].filter((value): value is string =>
+    Boolean(value),
+  );
 
   return (
     <Card
@@ -292,7 +399,11 @@ function CharacterCard({ character, users, currentPath }: { character: Character
           </div>
           <div className="grid shrink-0 grid-cols-2 grid-rows-2 gap-1">
             <div className="col-start-1 row-start-1">
-              <AssignCastingDialog characterId={character.id} users={users} currentPath={currentPath} />
+              <AssignCastingDialog
+                characterId={character.id}
+                users={users}
+                currentPath={currentPath}
+              />
             </div>
             <div className="col-start-2 row-start-1">
               <CharacterDetailsDialog character={character} />
@@ -304,7 +415,13 @@ function CharacterCard({ character, users, currentPath }: { character: Character
               <form action={deleteCharacterAction} method="post">
                 <input type="hidden" name="characterId" value={character.id} />
                 <input type="hidden" name="redirectPath" value={currentPath} />
-                <Button type="submit" variant="ghost" size="icon" className="h-9 w-9" aria-label="Rolle entfernen">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  aria-label="Rolle entfernen"
+                >
                   <Trash2Icon className="h-4 w-4" />
                 </Button>
               </form>
@@ -313,7 +430,9 @@ function CharacterCard({ character, users, currentPath }: { character: Character
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {hasCastings ? null : (
-            <span className="rounded-full bg-destructive/10 px-2 py-1 text-destructive">Nicht besetzt</span>
+            <span className="rounded-full bg-destructive/10 px-2 py-1 text-destructive">
+              Nicht besetzt
+            </span>
           )}
         </div>
         <details className="group rounded-lg border border-border/60 bg-muted/40">
@@ -325,7 +444,10 @@ function CharacterCard({ character, users, currentPath }: { character: Character
                 {sortedCastings.length}
               </span>
             </span>
-            <ChevronDownIcon className="h-4 w-4 text-muted-foreground transition duration-200 group-open:rotate-180" aria-hidden />
+            <ChevronDownIcon
+              className="h-4 w-4 text-muted-foreground transition duration-200 group-open:rotate-180"
+              aria-hidden
+            />
           </summary>
           <div className="space-y-2 border-t border-border/60 px-3 py-3">
             <CastingAssignments castings={sortedCastings} currentPath={currentPath} />
@@ -352,7 +474,9 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
     };
 
     const matchesCastingType = (character: Character) =>
-      castingType === "all" ? true : character.castings.some((casting) => casting.type === castingType);
+      castingType === "all"
+        ? true
+        : character.castings.some((casting) => casting.type === castingType);
 
     const matchesSearch = (character: Character) => {
       if (!normalizedSearch) return true;
@@ -367,7 +491,10 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
     };
 
     return characters
-      .filter((character) => matchesSearch(character) && matchesCastingType(character) && matchesRoleSize(character))
+      .filter(
+        (character) =>
+          matchesSearch(character) && matchesCastingType(character) && matchesRoleSize(character),
+      )
       .sort((a, b) => {
         const aHasRole = Boolean(a.rolePreferenceCode);
         const bHasRole = Boolean(b.rolePreferenceCode);
@@ -384,9 +511,14 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
       });
   }, [characters, castingType, roleSizeFilter, searchTerm, sortDirection]);
 
-  const unassignedCharacters = filteredCharacters.filter((character) => character.castings.length === 0);
+  const unassignedCharacters = filteredCharacters.filter(
+    (character) => character.castings.length === 0,
+  );
   const hasFilters =
-    searchTerm.trim().length > 0 || castingType !== "all" || roleSizeFilter !== "all" || sortDirection !== "asc";
+    searchTerm.trim().length > 0 ||
+    castingType !== "all" ||
+    roleSizeFilter !== "all" ||
+    sortDirection !== "asc";
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -421,7 +553,9 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
               name="castingType"
               className={selectSmallClassName}
               value={castingType}
-              onChange={(event) => setCastingType(event.target.value as "all" | CharacterCastingType)}
+              onChange={(event) =>
+                setCastingType(event.target.value as "all" | CharacterCastingType)
+              }
             >
               <option value="all">Alle Besetzungen</option>
               {CASTING_ORDER.map((type) => (
@@ -456,10 +590,18 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
               type="button"
               variant="outline"
               size="icon"
-              aria-label={sortDirection === "asc" ? "Rollengröße A bis Z sortieren" : "Rollengröße Z bis A sortieren"}
+              aria-label={
+                sortDirection === "asc"
+                  ? "Rollengröße A bis Z sortieren"
+                  : "Rollengröße Z bis A sortieren"
+              }
               onClick={() => setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
             >
-              {sortDirection === "asc" ? <ArrowDownAZIcon className="h-4 w-4" /> : <ArrowUpAZIcon className="h-4 w-4" />}
+              {sortDirection === "asc" ? (
+                <ArrowDownAZIcon className="h-4 w-4" />
+              ) : (
+                <ArrowUpAZIcon className="h-4 w-4" />
+              )}
             </Button>
             {hasFilters ? (
               <Button
@@ -482,7 +624,9 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
           role="status"
         >
           <p className="font-semibold">
-            {unassignedCharacters.length === 1 ? "Diese Rolle ist noch nicht besetzt." : "Mehrere Rollen sind noch nicht besetzt."}
+            {unassignedCharacters.length === 1
+              ? "Diese Rolle ist noch nicht besetzt."
+              : "Mehrere Rollen sind noch nicht besetzt."}
           </p>
           <p className="text-xs text-destructive/80">
             Klicke auf eine Rolle, um direkt zur Karte zu springen und ein Mitglied zuzuordnen.
@@ -508,7 +652,8 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
           <Card>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Noch keine Rollen angelegt. Nutze den Button „Rolle anlegen“, um die erste Figur zu erstellen.
+                Noch keine Rollen angelegt. Nutze den Button „Rolle anlegen“, um die erste Figur zu
+                erstellen.
               </p>
             </CardContent>
           </Card>
@@ -523,7 +668,12 @@ export function CastingListClient({ characters, users, currentPath }: Props) {
         ) : (
           <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(16rem,1fr))]">
             {filteredCharacters.map((character) => (
-              <CharacterCard key={character.id} character={character} users={users} currentPath={currentPath} />
+              <CharacterCard
+                key={character.id}
+                character={character}
+                users={users}
+                currentPath={currentPath}
+              />
             ))}
           </div>
         )}

@@ -33,9 +33,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const avatarData = user.avatarImage as Uint8Array | ArrayBuffer;
   const byteLength = avatarData.byteLength;
   const body: ArrayBuffer =
-    avatarData instanceof ArrayBuffer
-      ? avatarData.slice(0)
-      : new Uint8Array(avatarData).buffer;
+    avatarData instanceof ArrayBuffer ? avatarData.slice(0) : new Uint8Array(avatarData).buffer;
 
   headers.set("Content-Length", String(byteLength));
 

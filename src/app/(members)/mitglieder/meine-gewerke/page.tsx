@@ -7,7 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { hasRole, requireAuth } from "@/lib/rbac";
-import { Building2Icon, CalendarDaysIcon, FolderOpenIcon, WrenchIcon } from "@/components/ui/action-icons";
+import {
+  Building2Icon,
+  CalendarDaysIcon,
+  FolderOpenIcon,
+  WrenchIcon,
+} from "@/components/ui/action-icons";
 
 type StatItem = {
   label: string;
@@ -24,7 +29,9 @@ export default async function MeineGewerkePage() {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>
+        <div className="text-sm text-red-600">
+          Kein Zugriff auf die persönliche Gewerkeübersicht.
+        </div>
       </div>
     );
   }
@@ -39,7 +46,9 @@ export default async function MeineGewerkePage() {
     if (leadCount === 0) {
       return (
         <div className="space-y-6">
-          <div className="text-sm text-red-600">Kein Zugriff auf die persönliche Gewerkeübersicht.</div>
+          <div className="text-sm text-red-600">
+            Kein Zugriff auf die persönliche Gewerkeübersicht.
+          </div>
         </div>
       );
     }
@@ -64,13 +73,31 @@ export default async function MeineGewerkePage() {
   const allTasks = memberships.flatMap((entry) => entry.department.tasks);
   const openTasks = allTasks.filter((task) => task.status !== "done").length;
   const eventCount = memberships.reduce((sum, entry) => sum + entry.department.events.length, 0);
-  const documentCount = memberships.reduce((sum, entry) => sum + entry.department.documents.length, 0);
+  const documentCount = memberships.reduce(
+    (sum, entry) => sum + entry.department.documents.length,
+    0,
+  );
 
   const stats: StatItem[] = [
     { label: "Gewerke", value: teamCount.toString(), hint: "Teams mit Zugriff", icon: WrenchIcon },
-    { label: "Offene Aufgaben", value: openTasks.toString(), hint: "Todos in deinen Gewerken", icon: WrenchIcon },
-    { label: "Termine", value: eventCount.toString(), hint: "Ereignisse in den Teams", icon: CalendarDaysIcon },
-    { label: "Dokumente", value: documentCount.toString(), hint: "Dateien aus den Gewerken", icon: FolderOpenIcon },
+    {
+      label: "Offene Aufgaben",
+      value: openTasks.toString(),
+      hint: "Todos in deinen Gewerken",
+      icon: WrenchIcon,
+    },
+    {
+      label: "Termine",
+      value: eventCount.toString(),
+      hint: "Ereignisse in den Teams",
+      icon: CalendarDaysIcon,
+    },
+    {
+      label: "Dokumente",
+      value: documentCount.toString(),
+      hint: "Dateien aus den Gewerken",
+      icon: FolderOpenIcon,
+    },
   ];
 
   const firstDepartmentSlug = memberships.find((entry) => entry.department.slug)?.department.slug;
@@ -103,7 +130,10 @@ export default async function MeineGewerkePage() {
       <Card>
         <CardHeader>
           <CardTitle>Neue Oberfläche vorbereiten</CardTitle>
-          <p className="text-sm text-muted-foreground">Nutze diese Seite als Ausgangspunkt. Authentifizierung, Berechtigungen und Datenanbindung bleiben aktiv.</p>
+          <p className="text-sm text-muted-foreground">
+            Nutze diese Seite als Ausgangspunkt. Authentifizierung, Berechtigungen und
+            Datenanbindung bleiben aktiv.
+          </p>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
@@ -111,7 +141,9 @@ export default async function MeineGewerkePage() {
           </Button>
           {firstDepartmentSlug ? (
             <Button asChild variant="outline">
-              <Link href={`/mitglieder/meine-gewerke/${encodeURIComponent(firstDepartmentSlug)}`}>Erstes Gewerk öffnen</Link>
+              <Link href={`/mitglieder/meine-gewerke/${encodeURIComponent(firstDepartmentSlug)}`}>
+                Erstes Gewerk öffnen
+              </Link>
             </Button>
           ) : null}
         </CardContent>

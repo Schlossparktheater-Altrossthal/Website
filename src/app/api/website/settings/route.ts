@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { themeDescriptionSchema, themeIdSchema, themeNameSchema, themeTokensSchema } from "../theme-schemas";
+import {
+  themeDescriptionSchema,
+  themeIdSchema,
+  themeNameSchema,
+  themeTokensSchema,
+} from "../theme-schemas";
 
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
@@ -66,7 +71,10 @@ export async function GET() {
     return NextResponse.json({ settings: toClientWebsiteSettings(resolved) });
   } catch (error) {
     console.error("Failed to load website settings", error);
-    return NextResponse.json({ error: "Einstellungen konnten nicht geladen werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Einstellungen konnten nicht geladen werden." },
+      { status: 500 },
+    );
   }
 }
 
@@ -96,7 +104,8 @@ export async function PUT(request: NextRequest) {
   const themePayload = parsed.data.theme;
   const settingsPayload = parsed.data.settings;
   const explicitThemeId = settingsPayload?.themeId;
-  const activateTheme = parsed.data.activateTheme ?? Boolean(explicitThemeId !== undefined || themePayload);
+  const activateTheme =
+    parsed.data.activateTheme ?? Boolean(explicitThemeId !== undefined || themePayload);
 
   if (!themePayload && !settingsPayload) {
     return NextResponse.json({ error: "Keine Änderungen übermittelt." }, { status: 400 });
@@ -143,6 +152,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error("Failed to save website settings", error);
-    return NextResponse.json({ error: "Die Einstellungen konnten nicht gespeichert werden." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Die Einstellungen konnten nicht gespeichert werden." },
+      { status: 500 },
+    );
   }
 }

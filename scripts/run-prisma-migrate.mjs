@@ -55,10 +55,16 @@ function parseFailedMigrations(output) {
     if (!capture) continue;
     // v6 format: "  - migration_name"
     const dashMatch = line.match(/^\s*-\s+(\d{14}_\S+)\s*$/);
-    if (dashMatch) { result.push(dashMatch[1]); continue; }
+    if (dashMatch) {
+      result.push(dashMatch[1]);
+      continue;
+    }
     // v7 format: bare "migration_name" (timestamp prefix, no dash)
     const bareMatch = line.match(/^\s*(\d{14}_\S+)\s*$/);
-    if (bareMatch) { result.push(bareMatch[1]); continue; }
+    if (bareMatch) {
+      result.push(bareMatch[1]);
+      continue;
+    }
     // Stop on blank line after capturing, or on non-name non-blank content
     if (result.length > 0) break;
   }
@@ -68,11 +74,11 @@ function parseFailedMigrations(output) {
 function resolveFailedMigrations(prismaExecutable) {
   let statusOutput = "";
   try {
-    statusOutput = execFileSync(
-      prismaExecutable,
-      ["migrate", "status", "--schema", schemaPath],
-      { env: process.env, encoding: "utf8", shell: process.platform === "win32" },
-    );
+    statusOutput = execFileSync(prismaExecutable, ["migrate", "status", "--schema", schemaPath], {
+      env: process.env,
+      encoding: "utf8",
+      shell: process.platform === "win32",
+    });
   } catch (error) {
     const combined = collectErrorOutput(error);
     if (combined) {
@@ -84,7 +90,9 @@ function resolveFailedMigrations(prismaExecutable) {
 
   const failedMigrations = parseFailedMigrations(statusOutput);
   if (failedMigrations.length === 0) {
-    console.warn("[prisma-migrate] prisma migrate status reported no failed migrations to resolve.");
+    console.warn(
+      "[prisma-migrate] prisma migrate status reported no failed migrations to resolve.",
+    );
     return [];
   }
 
@@ -184,7 +192,9 @@ async function announceOwnerSetupLink() {
         `[owner-setup] Hinweis: Passe den Host an, falls der Server nicht unter ${fallbackBase} erreichbar ist.`,
       );
     }
-    console.log("[owner-setup] Der Link ist einmalig gültig und wird ungültig, sobald er verwendet wurde.");
+    console.log(
+      "[owner-setup] Der Link ist einmalig gültig und wird ungültig, sobald er verwendet wurde.",
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[owner-setup] Konnte Owner-Setup-Link nicht erzeugen: ${message}`);
@@ -221,7 +231,9 @@ async function main() {
   }
 
   try {
-    console.log("[prisma-migrate] Ensuring database schema is up to date (prisma migrate deploy)...");
+    console.log(
+      "[prisma-migrate] Ensuring database schema is up to date (prisma migrate deploy)...",
+    );
     runMigrateDeploy(prismaExecutable);
     console.log("[prisma-migrate] Prisma migrations applied successfully.");
   } catch (error) {
@@ -236,7 +248,9 @@ async function main() {
             `[prisma-migrate] Resolved ${resolved.length} failed migration(s). Retrying prisma migrate deploy...`,
           );
           runMigrateDeploy(prismaExecutable);
-          console.log("[prisma-migrate] Prisma migrations applied successfully after automatic recovery.");
+          console.log(
+            "[prisma-migrate] Prisma migrations applied successfully after automatic recovery.",
+          );
           await announceOwnerSetupLink();
           return;
         }

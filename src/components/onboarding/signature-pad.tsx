@@ -33,58 +33,55 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
   const [isEmpty, setIsEmpty] = useState(!value);
   const [canvasHeight, setCanvasHeight] = useState(200);
 
-  const initializeCanvas = useCallback(
-    (result: SignatureResult | null) => {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      if (!canvas || !container) return;
-      const rect = container.getBoundingClientRect();
-      const rawWidth = Math.round(rect.width || 0);
-      const width = Math.max(320, rawWidth);
-      const height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(width * 0.4)));
-      canvas.width = width;
-      canvas.height = height;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      setCanvasHeight(height);
+  const initializeCanvas = useCallback((result: SignatureResult | null) => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+    const rect = container.getBoundingClientRect();
+    const rawWidth = Math.round(rect.width || 0);
+    const width = Math.max(320, rawWidth);
+    const height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(width * 0.4)));
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    setCanvasHeight(height);
 
-      const context = canvas.getContext("2d");
-      if (!context) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
 
-      context.lineCap = "round";
-      context.lineJoin = "round";
-      context.lineWidth = 2;
-      context.strokeStyle = "#111827";
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, width, height);
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.lineWidth = 2;
+    context.strokeStyle = "#111827";
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
 
-      if (result?.dataUrl) {
-        const image = new Image();
-        image.onload = () => {
-          context.drawImage(image, 0, 0, width, height);
-          setIsEmpty(false);
-        };
-        image.src = result.dataUrl;
-        if (result.payload) {
-          const payloadStrokes = result.payload.strokes ?? [];
-          strokesRef.current = payloadStrokes.map((stroke) => ({
-            points: stroke.points.map((point) => ({ ...point })),
-          }));
-          const startedAt = Date.parse(result.payload.startedAt);
-          startEpochRef.current = Number.isFinite(startedAt) ? startedAt : null;
-          timeOffsetRef.current = result.payload.duration ?? 0;
-        }
-      } else {
-        setIsEmpty(true);
-        strokesRef.current = [];
-        timeOffsetRef.current = 0;
-        startEpochRef.current = null;
+    if (result?.dataUrl) {
+      const image = new Image();
+      image.onload = () => {
+        context.drawImage(image, 0, 0, width, height);
+        setIsEmpty(false);
+      };
+      image.src = result.dataUrl;
+      if (result.payload) {
+        const payloadStrokes = result.payload.strokes ?? [];
+        strokesRef.current = payloadStrokes.map((stroke) => ({
+          points: stroke.points.map((point) => ({ ...point })),
+        }));
+        const startedAt = Date.parse(result.payload.startedAt);
+        startEpochRef.current = Number.isFinite(startedAt) ? startedAt : null;
+        timeOffsetRef.current = result.payload.duration ?? 0;
       }
-      currentStrokeRef.current = null;
-      startHighResRef.current = null;
-    },
-    [],
-  );
+    } else {
+      setIsEmpty(true);
+      strokesRef.current = [];
+      timeOffsetRef.current = 0;
+      startEpochRef.current = null;
+    }
+    currentStrokeRef.current = null;
+    startHighResRef.current = null;
+  }, []);
 
   useEffect(() => {
     initializeCanvas(value);
@@ -107,81 +104,75 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
     };
   }, []);
 
-  const recordPoint = useCallback(
-    (x: number, y: number) => {
-      const now = performance.now();
-      if (startHighResRef.current === null) {
-        startHighResRef.current = now;
-        startEpochRef.current = Date.now();
+  const recordPoint = useCallback((x: number, y: number) => {
+    const now = performance.now();
+    if (startHighResRef.current === null) {
+      startHighResRef.current = now;
+      startEpochRef.current = Date.now();
+    }
+    const base = startHighResRef.current ?? now;
+    const time = now - base + timeOffsetRef.current;
+    const stroke = currentStrokeRef.current;
+    if (!stroke) {
+      return { x, y, time };
+    }
+    const point = { x, y, time };
+    stroke.points.push(point);
+    lastPointRef.current = { x, y };
+    return point;
+  }, []);
+
+  const buildPayload = useCallback((width: number, height: number): SignaturePayload | null => {
+    const strokes = strokesRef.current;
+    if (!strokes.length) return null;
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let duration = 0;
+
+    for (const stroke of strokes) {
+      for (const point of stroke.points) {
+        if (point.x < minX) minX = point.x;
+        if (point.y < minY) minY = point.y;
+        if (point.x > maxX) maxX = point.x;
+        if (point.y > maxY) maxY = point.y;
+        if (point.time > duration) duration = point.time;
       }
-      const base = startHighResRef.current ?? now;
-      const time = now - base + timeOffsetRef.current;
-      const stroke = currentStrokeRef.current;
-      if (!stroke) {
-        return { x, y, time };
-      }
-      const point = { x, y, time };
-      stroke.points.push(point);
-      lastPointRef.current = { x, y };
-      return point;
-    },
-    [],
-  );
+    }
 
-  const buildPayload = useCallback(
-    (width: number, height: number): SignaturePayload | null => {
-      const strokes = strokesRef.current;
-      if (!strokes.length) return null;
+    if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+      minX = 0;
+      minY = 0;
+    }
+    if (!Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      maxX = width;
+      maxY = height;
+    }
 
-      let minX = Number.POSITIVE_INFINITY;
-      let minY = Number.POSITIVE_INFINITY;
-      let maxX = Number.NEGATIVE_INFINITY;
-      let maxY = Number.NEGATIVE_INFINITY;
-      let duration = 0;
+    const startedAtEpoch = startEpochRef.current ?? Date.now();
+    const startedAt = new Date(startedAtEpoch).toISOString();
+    const endedAt = new Date(startedAtEpoch + duration).toISOString();
 
-      for (const stroke of strokes) {
-        for (const point of stroke.points) {
-          if (point.x < minX) minX = point.x;
-          if (point.y < minY) minY = point.y;
-          if (point.x > maxX) maxX = point.x;
-          if (point.y > maxY) maxY = point.y;
-          if (point.time > duration) duration = point.time;
-        }
-      }
-
-      if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
-        minX = 0;
-        minY = 0;
-      }
-      if (!Number.isFinite(maxX) || !Number.isFinite(maxY)) {
-        maxX = width;
-        maxY = height;
-      }
-
-      const startedAtEpoch = startEpochRef.current ?? Date.now();
-      const startedAt = new Date(startedAtEpoch).toISOString();
-      const endedAt = new Date(startedAtEpoch + duration).toISOString();
-
-      return {
-        version: "velocity.v1",
-        width,
-        height,
-        duration,
-        startedAt,
-        endedAt,
-        boundingBox: {
-          minX,
-          minY,
-          maxX,
-          maxY,
-        },
-        strokes: strokes.map((stroke) => ({
-          points: stroke.points.map((point) => ({ ...point })),
-        })),
-      };
-    },
-    [],
-  );
+    return {
+      version: "velocity.v1",
+      width,
+      height,
+      duration,
+      startedAt,
+      endedAt,
+      boundingBox: {
+        minX,
+        minY,
+        maxX,
+        maxY,
+      },
+      strokes: strokes.map((stroke) => ({
+        points: stroke.points.map((point) => ({ ...point })),
+      })),
+    };
+  }, []);
 
   const stopDrawing = useCallback(
     (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -240,20 +231,23 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
     [getPoint, recordPoint],
   );
 
-  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current) return;
-    event.preventDefault();
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    const { x, y } = getPoint(event);
-    const lastPoint = lastPointRef.current ?? { x, y };
-    context.beginPath();
-    context.moveTo(lastPoint.x, lastPoint.y);
-    context.lineTo(x, y);
-    context.stroke();
-    recordPoint(x, y);
-  }, [getPoint, recordPoint]);
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!drawingRef.current) return;
+      event.preventDefault();
+      const canvas = canvasRef.current;
+      const context = canvas?.getContext("2d");
+      if (!canvas || !context) return;
+      const { x, y } = getPoint(event);
+      const lastPoint = lastPointRef.current ?? { x, y };
+      context.beginPath();
+      context.moveTo(lastPoint.x, lastPoint.y);
+      context.lineTo(x, y);
+      context.stroke();
+      recordPoint(x, y);
+    },
+    [getPoint, recordPoint],
+  );
 
   const handleClear = useCallback(() => {
     const canvas = canvasRef.current;
