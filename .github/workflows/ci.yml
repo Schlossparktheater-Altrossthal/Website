@@ -19,10 +19,15 @@ jobs:
           node-version: 24
           cache: "pnpm"
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Check formatting
+        run: pnpm format:check
       - name: Run ESLint
-        continue-on-error: true
         run: pnpm lint
+      - name: Typecheck
+        # Blockiert noch nicht: vorbestehende Typfehler in Testdateien (P7).
+        continue-on-error: true
+        run: pnpm typecheck
 
   test:
     runs-on: ubuntu-latest
@@ -36,7 +41,7 @@ jobs:
           node-version: 24
           cache: "pnpm"
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Run Vitest suite
         env:
           NODE_ENV: test
@@ -55,7 +60,7 @@ jobs:
           node-version: 24
           cache: "pnpm"
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
       - name: Run Playwright tests
