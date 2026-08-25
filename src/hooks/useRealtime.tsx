@@ -21,6 +21,8 @@ import type {
 import { useOfflineSyncClient } from "@/lib/offline/hooks";
 
 const MAX_RECONNECT_ATTEMPTS = 10;
+const RECONNECT_DELAY_MS = 2_000;
+const RECONNECT_DELAY_MAX_MS = 30_000;
 const PING_INTERVAL_MS = 30_000;
 const REALTIME_URL = process.env.NEXT_PUBLIC_REALTIME_URL;
 const REALTIME_PATH = process.env.NEXT_PUBLIC_REALTIME_PATH || "/socket.io";
@@ -209,8 +211,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           transports: ["websocket", "polling"],
           forceNew: true,
           reconnection: true,
-          reconnectionDelay: 2000,
-          reconnectionDelayMax: 30000,
+          reconnectionDelay: RECONNECT_DELAY_MS,
+          reconnectionDelayMax: RECONNECT_DELAY_MAX_MS,
           reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
           auth: handshake,
         };
