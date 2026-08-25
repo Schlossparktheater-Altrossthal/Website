@@ -717,7 +717,7 @@ function ProfileClientInner({
       return `Seit ${createdAtLabel}`;
     }
     return null;
-  }, [createdAtLabel, onboarding?.memberSinceYear]);
+  }, [createdAtLabel, onboarding]);
 
   const whatsappVisitedAt = onboarding?.whatsappLinkVisitedAt ?? null;
   const whatsappVisitedAtLabel = useMemo(

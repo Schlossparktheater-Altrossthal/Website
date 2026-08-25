@@ -34,25 +34,16 @@ export default async function WebsiteSettingsPage() {
     );
   }
 
+  let resolved: ReturnType<typeof resolveWebsiteSettings>;
+  let clientSettings: ReturnType<typeof toClientWebsiteSettings>;
+  let themes: Awaited<ReturnType<typeof listWebsiteThemes>>;
+
   try {
     await ensurePresetWebsiteThemes();
     const record = await ensureWebsiteSettingsRecord();
-    const resolved = resolveWebsiteSettings(record);
-    const clientSettings = toClientWebsiteSettings(resolved);
-    const themes = await listWebsiteThemes();
-
-    return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Website & Theme</h1>
-          <p className="text-sm text-muted-foreground">
-            Passe Farben, Branding und Darstellung der öffentlichen Website an. Änderungen werden
-            sofort im aktuellen Fenster sichtbar.
-          </p>
-        </div>
-        <WebsiteThemeSettingsManager initialSettings={clientSettings} initialThemes={themes} />
-      </div>
-    );
+    resolved = resolveWebsiteSettings(record);
+    clientSettings = toClientWebsiteSettings(resolved);
+    themes = await listWebsiteThemes();
   } catch (error) {
     console.error("Failed to load website settings", error);
     return (
@@ -63,4 +54,17 @@ export default async function WebsiteSettingsPage() {
       </div>
     );
   }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight">Website & Theme</h1>
+        <p className="text-sm text-muted-foreground">
+          Passe Farben, Branding und Darstellung der öffentlichen Website an. Änderungen werden
+          sofort im aktuellen Fenster sichtbar.
+        </p>
+      </div>
+      <WebsiteThemeSettingsManager initialSettings={clientSettings} initialThemes={themes} />
+    </div>
+  );
 }

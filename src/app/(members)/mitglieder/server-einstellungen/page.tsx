@@ -32,22 +32,9 @@ export default async function ServerSettingsPage() {
     );
   }
 
+  let resolved: Awaited<ReturnType<typeof loadResolvedServerSettings>>;
   try {
-    const resolved = await loadResolvedServerSettings();
-    const clientSettings: ClientServerSettings = toClientServerSettings(resolved);
-
-    return (
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Servereinstellungen</h1>
-          <p className="text-sm text-muted-foreground">
-            Hinterlege den SMTP-Server für Systemnachrichten und teste die Verbindung direkt aus dem
-            Backend.
-          </p>
-        </div>
-        <ServerSettingsContent initialSettings={clientSettings} />
-      </div>
-    );
+    resolved = await loadResolvedServerSettings();
   } catch (error) {
     console.error("[server-settings] Laden fehlgeschlagen", error);
     return (
@@ -58,4 +45,19 @@ export default async function ServerSettingsPage() {
       </div>
     );
   }
+
+  const clientSettings: ClientServerSettings = toClientServerSettings(resolved);
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold tracking-tight">Servereinstellungen</h1>
+        <p className="text-sm text-muted-foreground">
+          Hinterlege den SMTP-Server für Systemnachrichten und teste die Verbindung direkt aus dem
+          Backend.
+        </p>
+      </div>
+      <ServerSettingsContent initialSettings={clientSettings} />
+    </div>
+  );
 }
