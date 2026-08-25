@@ -128,10 +128,10 @@ export async function PUT(request: NextRequest) {
       customRoles: updated.appRoles.map((ar) => ar.role),
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json({ error: "Benutzer wurde nicht gefunden" }, { status: 404 });
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[members] Aktualisierung fehlgeschlagen", error);
+    return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
 }

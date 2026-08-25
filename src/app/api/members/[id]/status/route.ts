@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       user: { id: updated.id, deactivatedAt: updated.deactivatedAt?.toISOString() ?? null },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[members] Aktualisierung fehlgeschlagen", error);
+    return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
 }

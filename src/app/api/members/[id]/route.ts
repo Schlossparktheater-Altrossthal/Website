@@ -5,6 +5,8 @@ import { hashPassword } from "@/lib/password";
 import { hasPermission } from "@/lib/permissions";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 type UpdateMemberPayload = {
   email?: unknown;
   firstName?: unknown;
@@ -101,6 +103,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!email) {
       return NextResponse.json({ error: "E-Mail darf nicht leer sein" }, { status: 400 });
     }
+    if (!EMAIL_REGEX.test(email)) {
+      return NextResponse.json({ error: "E-Mail hat ein ungültiges Format" }, { status: 400 });
+    }
     updates.email = email;
   } else if (body.email !== undefined) {
     return NextResponse.json({ error: "E-Mail muss eine Zeichenkette sein" }, { status: 400 });
@@ -145,8 +150,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "E-Mail wird bereits verwendet" }, { status: 409 });
     }
-    const message = error instanceof Error ? error.message : "Aktualisierung fehlgeschlagen";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[members] Aktualisierung fehlgeschlagen", error);
+    return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
 }
 
@@ -200,7 +205,7 @@ export async function DELETE(
     await prisma.user.delete({ where: { id: target.id } });
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Löschen fehlgeschlagen";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[members] Löschen fehlgeschlagen", error);
+    return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
   }
 }

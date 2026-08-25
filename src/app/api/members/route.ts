@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ error: "Diese E-Mail existiert bereits" }, { status: 409 });
     }
-    const message = error instanceof Error ? error.message : "Anlegen fehlgeschlagen";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[members] Anlegen fehlgeschlagen", error);
+    return NextResponse.json({ error: "Anlegen fehlgeschlagen" }, { status: 500 });
   }
 }
