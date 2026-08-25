@@ -39,9 +39,22 @@ const eslintConfig = [
         },
       ],
 
-      // Direktes console.log verbieten; error/warn bleiben erlaubt,
-      // deren Umstellung auf den zentralen Logger ist eine eigene Aufgabe.
-      "no-console": ["warn", { allow: ["error", "warn"] }],
+      // Direktes console.log verbieten; error/warn/debug bleiben erlaubt.
+      "no-console": ["warn", { allow: ["error", "warn", "debug"] }],
+    },
+  },
+  {
+    // CLI-Skripte, der Realtime-Server und der zentrale Logger geben bewusst
+    // auf stdout aus. service.ts/presence.ts sind toter Code (P3).
+    files: [
+      "scripts/**",
+      "realtime-server/**",
+      "src/lib/logger.ts",
+      "src/lib/realtime/service.ts",
+      "src/lib/realtime/presence.ts",
+    ],
+    rules: {
+      "no-console": "off",
     },
   },
   {
