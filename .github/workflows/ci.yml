@@ -25,8 +25,6 @@ jobs:
       - name: Run ESLint
         run: pnpm lint
       - name: Typecheck
-        # Blockiert noch nicht: vorbestehende Typfehler in Testdateien (P7).
-        continue-on-error: true
         run: pnpm typecheck
 
   test:
