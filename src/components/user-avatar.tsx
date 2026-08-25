@@ -120,6 +120,7 @@ export default function UserAvatar({
         loading={loading}
         priority={loading === "eager"}
         sizes={`${displaySize}px`}
+        unoptimized
         className={cn(
           "inline-block rounded-full border border-border bg-muted object-cover",
           className,
