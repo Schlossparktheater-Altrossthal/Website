@@ -35,7 +35,17 @@
     "db:seed": "node prisma/seed.mjs",
     "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc",
     "design-system:tokens": "node scripts/build-design-tokens.mjs",
-    "workbox:copy-lib": "pnpm exec workbox copyLibraries public/workbox"
+    "workbox:copy-lib": "pnpm exec workbox copyLibraries public/workbox",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@auth/core": "0.41.3",
@@ -119,7 +129,9 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "16.2.10",
     "fake-indexeddb": "^6.2.2",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.6.2",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.8",
