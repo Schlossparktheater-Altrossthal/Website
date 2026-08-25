@@ -13,7 +13,7 @@ const { useNotificationRealtimeMock } = vi.hoisted(() => ({
 }));
 
 const { fetchMock } = vi.hoisted(() => ({
-  fetchMock: vi.fn<Parameters<typeof fetch>, ReturnType<typeof fetch>>(),
+  fetchMock: vi.fn<typeof fetch>(),
 }));
 
 vi.mock("next-auth/react", () => ({

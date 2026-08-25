@@ -10,9 +10,9 @@ describe("offline storage", () => {
   let storageModule: typeof import("../storage");
 
   beforeAll(async () => {
-    const globalWithWindow = globalThis as typeof globalThis & { window?: typeof globalThis };
+    const globalWithWindow = globalThis as unknown as { window?: unknown };
     if (!globalWithWindow.window) {
-      globalWithWindow.window = globalWithWindow;
+      globalWithWindow.window = globalThis;
     }
 
     const dbModule = await import("../db");
@@ -142,6 +142,7 @@ describe("offline storage", () => {
           sku: "SKU-1",
           name: "Scheinwerfer",
           quantity: 5,
+          category: "light",
           updatedAt: "2025-01-10T11:30:00.000Z",
         },
         {
@@ -149,6 +150,7 @@ describe("offline storage", () => {
           sku: "SKU-2",
           name: "Funkmikrofon",
           quantity: 3,
+          category: "sound",
           updatedAt: "2025-01-10T11:30:00.000Z",
         },
       ],

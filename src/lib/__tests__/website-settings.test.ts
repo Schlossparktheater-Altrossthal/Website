@@ -34,10 +34,11 @@ describe("sanitiseThemeTokens", () => {
       parameters: JSON.parse(JSON.stringify(PARAMETERS_PAYLOAD)),
     });
 
-    expect(tokens.modes.light.primary).toBe("oklch(0.62 0.1 40)");
-    expect(tokens.modes.dark.primary).toBe("oklch(0.73 0.12 40)");
-    expect(tokens.modes.light.background).toBe("oklch(0.95 0.01 255)");
-    expect(tokens.modes.dark.background).toBe("oklch(0.1 0.03 255)");
+    const modes = tokens.modes as Record<string, Record<string, string>>;
+    expect(modes.light.primary).toBe("oklch(0.62 0.1 40)");
+    expect(modes.dark.primary).toBe("oklch(0.73 0.12 40)");
+    expect(modes.light.background).toBe("oklch(0.95 0.01 255)");
+    expect(modes.dark.background).toBe("oklch(0.1 0.03 255)");
     expect(tokens.meta?.modes).toEqual(["light", "dark"]);
   });
 
@@ -55,10 +56,11 @@ describe("sanitiseThemeTokens", () => {
       },
     });
 
-    expect(tokens.modes.light.primary).toBe("#111111");
-    expect(tokens.modes.light.background).toBe("oklch(0.95 0.01 255)");
-    expect(tokens.modes.dark.primary).toBe("oklch(0.73 0.12 40)");
-    expect(tokens.modes.contrast.special).toBe("#ff00ff");
+    const modes = tokens.modes as Record<string, Record<string, string>>;
+    expect(modes.light.primary).toBe("#111111");
+    expect(modes.light.background).toBe("oklch(0.95 0.01 255)");
+    expect(modes.dark.primary).toBe("oklch(0.73 0.12 40)");
+    expect(modes.contrast.special).toBe("#ff00ff");
     expect(tokens.meta?.modes).toEqual(["light", "dark", "contrast"]);
   });
 });

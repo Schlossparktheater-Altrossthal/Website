@@ -26,10 +26,11 @@ describe("ensureDevTestUser offline fallback", () => {
   beforeEach(() => {
     prismaMock.userUpsert.mockReset();
     prismaMock.userRoleUpsert.mockReset();
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     if (ORIGINAL_DATABASE_URL) {
       process.env.DATABASE_URL = ORIGINAL_DATABASE_URL;
     } else {

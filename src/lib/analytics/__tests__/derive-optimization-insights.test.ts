@@ -132,6 +132,11 @@ describe("deriveOptimizationInsights", () => {
       apiAvgResponseMs: 640,
       apiErrorRate: 0.07,
       apiBackgroundJobs: 45,
+      guestRequests: 0,
+      guestAvgResponseMs: 0,
+      botRequests: 0,
+      botAvgResponseMs: 0,
+      botBlockedRequests: 0,
       generatedAt: new Date("2024-10-02T00:00:00Z"),
     };
 

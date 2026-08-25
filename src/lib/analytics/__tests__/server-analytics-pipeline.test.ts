@@ -63,7 +63,7 @@ describe("server analytics pipeline", () => {
     const prismaMock = {
       analyticsHttpRequest: { findMany: vi.fn().mockResolvedValue(requests) },
       analyticsUptimeHeartbeat: { findMany: vi.fn().mockResolvedValue(heartbeats) },
-      $transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<void>) => {
+      $transaction: vi.fn(async (callback: (txArg: unknown) => Promise<void>) => {
         await callback(tx);
       }),
     } as unknown as PrismaClient;
@@ -193,7 +193,7 @@ describe("server analytics pipeline", () => {
       analyticsSession: { findMany: vi.fn().mockResolvedValue(sessions) },
       analyticsTrafficAttribution: { findMany: vi.fn().mockResolvedValue(traffic) },
       analyticsRealtimeEvent: { findMany: vi.fn().mockResolvedValue(realtimeEvents) },
-      $transaction: vi.fn(async (callback: (tx: typeof tx) => Promise<void>) => {
+      $transaction: vi.fn(async (callback: (txArg: unknown) => Promise<void>) => {
         await callback(tx);
       }),
     } as unknown as PrismaClient;

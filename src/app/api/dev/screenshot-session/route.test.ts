@@ -20,13 +20,12 @@ vi.mock("@/lib/prisma", () => ({
 import { GET } from "./route";
 
 const ORIGINAL_DATABASE_URL = process.env.DATABASE_URL;
-const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
 
 describe("GET /api/dev/screenshot-session", () => {
   beforeEach(() => {
     prismaMock.userUpsert.mockReset();
     prismaMock.userRoleUpsert.mockReset();
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
     process.env.DATABASE_URL = "postgres://offline.example";
   });
 
@@ -37,11 +36,7 @@ describe("GET /api/dev/screenshot-session", () => {
       delete process.env.DATABASE_URL;
     }
 
-    if (ORIGINAL_NODE_ENV) {
-      process.env.NODE_ENV = ORIGINAL_NODE_ENV;
-    } else {
-      delete process.env.NODE_ENV;
-    }
+    vi.unstubAllEnvs();
   });
 
   it("returns a valid session cookie and JSON payload when falling back to the offline profile", async () => {

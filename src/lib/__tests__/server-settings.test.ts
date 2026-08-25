@@ -49,6 +49,12 @@ describe("resolveServerSettings", () => {
       mailReplyTo: "",
       createdAt: new Date(),
       updatedAt: new Date(),
+      parentalConsentData: null,
+      parentalConsentName: null,
+      parentalConsentMime: null,
+      parentalConsentSize: null,
+      parentalConsentUploadedAt: null,
+      parentalConsentUploadedById: null,
     });
 
     expect(resolved.mailFromAddress).toBeNull();

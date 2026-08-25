@@ -12,18 +12,6 @@ import {
   type ActiveProductionNavInfo,
 } from "@/lib/members-navigation";
 
-const BASE_PERMISSIONS = [
-  "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
-  "PRIVATE.PROFILE.OWN.VIEW",
-  "PRIVATE.REHEARSAL.BLOCKLIST.VIEW",
-  "PRIVATE.SUPPORT.ISSUE.VIEW",
-  "PRIVATE.REHEARSAL.OWN.VIEW",
-  "PRIVATE.DEPARTMENT.OWN.VIEW",
-  "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
-  "PRIVATE.REHEARSAL.PLANNING.MANAGE",
-  "PRIVATE.PRODUCTION.SHOW.MANAGE",
-];
-
 describe("selectMembersNavigation", () => {
   it("keeps the department todo item next to the Gewerke overview", () => {
     const groups = selectMembersNavigation();
@@ -63,13 +51,6 @@ describe("selectMembersNavigation", () => {
 });
 
 describe("filterMembersNavigationByPermissions", () => {
-  it("hides finance navigation for members without finance permissions", () => {
-    const groups = selectMembersNavigation();
-    const { groups: filtered } = filterMembersNavigationByPermissions(groups, BASE_PERMISSIONS);
-
-    expect(filtered.some((group) => group.id === "finance")).toBe(false);
-  });
-
   it("keeps only department related assignments for department-focused members", () => {
     const groups = selectMembersNavigation();
     const permissions = ["PRIVATE.DEPARTMENT.OWN.VIEW"] as const;

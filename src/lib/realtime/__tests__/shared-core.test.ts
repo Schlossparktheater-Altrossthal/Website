@@ -156,7 +156,9 @@ describe("createRealtimeCore", () => {
     fakeIO.sockets.set("socket-2", participant.socket);
 
     core.emitRehearsalPresence({
-      socket: participant.socket,
+      socket: participant.socket as unknown as Parameters<
+        typeof core.emitRehearsalPresence
+      >[0]["socket"],
       room: "rehearsal_demo",
       action: "join",
     });
@@ -207,7 +209,12 @@ describe("createRealtimeCore", () => {
     fakeIO.sockets.set("socket-c", requester.socket);
     fakeIO.rooms.set("rehearsal_test", new Set(["socket-a", "socket-b"]));
 
-    core.emitRehearsalUsersList({ rehearsalId: "test", socket: requester.socket });
+    core.emitRehearsalUsersList({
+      rehearsalId: "test",
+      socket: requester.socket as unknown as Parameters<
+        typeof core.emitRehearsalUsersList
+      >[0]["socket"],
+    });
 
     expect(requester.directEmits[0].event).toBe("rehearsal_users_list");
     assertRehearsalUsersPayload(requester.directEmits[0].payload);

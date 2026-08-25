@@ -54,6 +54,8 @@ const createSettings = (freezeDays: number): ResolvedSperrlisteSettings => ({
   exceptionWeekdays: [],
   holidaySource: { mode: "default", url: null, effectiveUrl: null },
   holidayStatus: { status: "unknown", message: null, checkedAt: null },
+  publicHolidaySource: { mode: "default", url: null, effectiveUrl: null },
+  publicHolidayStatus: { status: "unknown", message: null, checkedAt: null },
   updatedAt: null,
   cacheKey: `default|${freezeDays}`,
 });

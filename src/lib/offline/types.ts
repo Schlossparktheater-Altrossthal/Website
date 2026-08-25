@@ -29,7 +29,7 @@ export interface TicketRecord {
   id: string;
   code: string;
   status: TicketStatus;
-  holderName?: string;
+  holderName?: string | null;
   eventId: string;
   updatedAt: string;
 }

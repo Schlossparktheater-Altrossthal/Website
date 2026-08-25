@@ -9,7 +9,7 @@ describe("GET /api/dashboard/overview", () => {
     vi.resetModules();
     process.env = { ...ORIGINAL_ENV };
     delete process.env.DATABASE_URL;
-    process.env.NODE_ENV = "development";
+    vi.stubEnv("NODE_ENV", "development");
   });
 
   afterAll(() => {
