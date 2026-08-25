@@ -217,17 +217,22 @@ export function createRealtimeCore(options = {}) {
     const roomName = `rehearsal_${rehearsalId}`;
 
     let participants;
-    if (typeof io.in === "function" && typeof io.in(roomName).fetchSockets === "function") {
-      // fetchSockets() works across instances when a Redis (or other
-      // distributed) adapter is configured, unlike the local adapter rooms map.
-      participants = await io.in(roomName).fetchSockets();
-    } else {
-      const room = io.sockets.adapter.rooms.get(roomName);
-      participants = room
-        ? Array.from(room)
-            .map((socketId) => io.sockets.sockets.get(socketId))
-            .filter(Boolean)
-        : [];
+    try {
+      if (typeof io.in === "function" && typeof io.in(roomName).fetchSockets === "function") {
+        // fetchSockets() works across instances when a Redis (or other
+        // distributed) adapter is configured, unlike the local adapter rooms map.
+        participants = await io.in(roomName).fetchSockets();
+      } else {
+        const room = io.sockets.adapter.rooms.get(roomName);
+        participants = room
+          ? Array.from(room)
+              .map((socketId) => io.sockets.sockets.get(socketId))
+              .filter(Boolean)
+          : [];
+      }
+    } catch (error) {
+      logError("[Realtime] Failed to fetch rehearsal users", error);
+      return;
     }
 
     const users = participants.flatMap((participant) => {
