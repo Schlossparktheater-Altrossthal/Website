@@ -62,7 +62,7 @@ Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tail
 
 ## Tests, Qualitätssicherung & Reviews
 
-- Vor jedem Commit `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` ausführen.
+- Vor jedem Commit `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` ausführen. `pnpm lint` muss ohne Errors und Warnings durchlaufen – gefundene Probleme werden behoben, nicht per `eslint-disable` unterdrückt (Ausnahmen nur mit Begründung im Code).
 - Vitest-Tests liegen nahe am Quellcode. React-Komponenten mit `@testing-library/react` testen.
 - UI-Änderungen visuell mit Preview-Deployments absichern.
 
