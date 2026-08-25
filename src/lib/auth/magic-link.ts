@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import type { EmailConfig } from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 import { getAuthSecret } from "@/lib/auth-secret";
+import { createLogger } from "@/lib/logger";
 
 export const MAGIC_LINK_SUCCESS_MESSAGE =
   "Falls ein Konto mit dieser E-Mail existiert, erhältst du in Kürze eine E-Mail.";
@@ -12,6 +13,8 @@ const ONE_HOUR_IN_MS = 60 * 60 * 1000;
 const EMAIL_LIMIT = 3;
 const IP_LIMIT = 10;
 const MAGIC_LINK_MAX_AGE_IN_SECONDS = 24 * 60 * 60;
+
+const magicLinkLogger = createLogger("magic-link");
 
 type RateLimitBucket = {
   count: number;
@@ -101,11 +104,11 @@ export function recordMagicLinkAttempt(
 
 export async function sendMagicLinkEmail({ identifier, url, provider }: SendMagicLinkEmailParams) {
   if (!provider.server || process.env.NODE_ENV !== "production") {
-    console.log("[DEV Magic Link]", identifier, url);
+    magicLinkLogger.info("Dev Magic Link erstellt", { description: `${identifier} ${url}` });
     return;
   }
 
-  console.log("[MAGIC LINK REQUEST]", identifier);
+  magicLinkLogger.info("Magic-Link angefordert", { description: identifier });
   const { createTransport } = await import("nodemailer");
   const transport = createTransport(provider.server);
   await transport.sendMail({
@@ -125,7 +128,7 @@ export async function sendMagicLinkEmail({ identifier, url, provider }: SendMagi
             </div>
           `,
   });
-  console.log("[MAGIC LINK SENT]", identifier);
+  magicLinkLogger.info("Magic-Link versendet", { description: identifier });
 }
 
 export function createMagicLinkToken() {
