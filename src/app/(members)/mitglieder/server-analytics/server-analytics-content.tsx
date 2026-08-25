@@ -86,9 +86,9 @@ const visitorSegmentAccentMap: Record<
   ServerAnalytics["visitorDistribution"][number]["id"],
   string
 > = {
-  "logged-in": "bg-indigo-500",
-  "logged-out": "bg-primary500",
-  bot: "bg-amber-500",
+  "logged-in": "bg-info",
+  "logged-out": "bg-primary",
+  bot: "bg-warning",
 };
 
 const RESET_ERROR_MESSAGES: Record<string, string> = {
@@ -133,7 +133,7 @@ function changeTextClass(value: number, positiveIsGood = true) {
   }
   const isPositive = value > 0;
   const isImprovement = positiveIsGood ? isPositive : !isPositive;
-  return isImprovement ? "text-emerald-600" : "text-orange-600";
+  return isImprovement ? "text-success" : "text-destructive";
 }
 
 function areaBadgeVariant(area: OptimizationArea) {
@@ -779,11 +779,11 @@ export function ServerAnalyticsContent({
   const connectionDotClass = useMemo(() => {
     switch (connectionStatus) {
       case "connected":
-        return "bg-emerald-500 animate-pulse";
+        return "bg-success animate-pulse";
       case "connecting":
-        return "bg-primary500 animate-pulse";
+        return "bg-primary animate-pulse";
       case "error":
-        return "bg-orange-500";
+        return "bg-destructive";
       default:
         return "bg-muted-foreground/60";
     }

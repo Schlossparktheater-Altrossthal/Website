@@ -15,9 +15,9 @@ type MetricCardProps = {
 
 const intentStyles: Record<string, string> = {
   default: "bg-gradient-to-br from-muted/50 to-muted/20",
-  success: "bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border-emerald-500/40",
-  warning: "bg-gradient-to-br from-amber-500/20 to-amber-500/5 border-amber-500/40",
-  critical: "bg-gradient-to-br from-rose-500/25 to-rose-500/5 border-rose-500/40",
+  success: "bg-gradient-to-br from-success/20 to-success/5 border-success/40",
+  warning: "bg-gradient-to-br from-warning/20 to-warning/5 border-warning/40",
+  critical: "bg-gradient-to-br from-destructive/25 to-destructive/5 border-destructive/40",
 };
 
 const trendIntent: Record<string, string> = {

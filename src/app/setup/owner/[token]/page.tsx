@@ -60,9 +60,9 @@ export default async function OwnerSetupPage({ params }: OwnerSetupPageProps) {
       </div>
 
       {hasOwner && (
-        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-sm text-amber-900 shadow-sm">
-          <p className="font-medium text-amber-900">Hinweis</p>
-          <p className="mt-1 text-amber-900/90">
+        <div className="rounded-2xl border border-warning/60 bg-warning/10 p-4 text-sm text-warning-foreground shadow-sm">
+          <p className="font-medium text-warning-foreground">Hinweis</p>
+          <p className="mt-1 text-warning-foreground/90">
             Der bestehende Owner bleibt unverändert bestehen. Nach der Anmeldung kannst du weitere
             Rechte jederzeit in der Mitgliederverwaltung anpassen.
           </p>

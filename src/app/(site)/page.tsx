@@ -122,7 +122,7 @@ export default async function PublicHomePage() {
                         <span>{faq.question}</span>
                       </Text>
                       <svg
-                        className="h-4 w-4 text-orange-500 transition duration-300 group-open:rotate-180"
+                        className="h-4 w-4 text-primary transition duration-300 group-open:rotate-180"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"

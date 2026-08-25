@@ -215,7 +215,7 @@ export default async function MyRehearsalsPage() {
                                 {optional ? (
                                   <Badge
                                     variant="outline"
-                                    className="border-amber-200 bg-amber-50 text-amber-700"
+                                    className="border-warning/40 bg-warning/10 text-warning"
                                   >
                                     Optional
                                   </Badge>

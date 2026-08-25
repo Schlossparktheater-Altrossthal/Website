@@ -351,13 +351,13 @@ export default function OverviewContent({
                 <span>Begrenzt</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="h-3 w-3 rounded-full border border-[hsl(var(--destructive)/0.35)] bg-[hsl(var(--destructive)/0.2)]" />
+                <div className="h-3 w-3 rounded-full border border-destructive/35 bg-destructive/20" />
                 <span>Gesperrt</span>
               </div>
             </div>
             <div className="flex items-center gap-2 border-l border-border/60 pl-3">
               <div className="flex items-center gap-0.5">
-                <CalendarStarIcon className="h-3 w-3 text-amber-500" />
+                <CalendarStarIcon className="h-3 w-3 text-warning" />
                 <span>Feiertag</span>
               </div>
               <div className="flex items-center gap-0.5">

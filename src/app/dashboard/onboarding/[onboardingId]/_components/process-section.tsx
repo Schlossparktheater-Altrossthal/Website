@@ -30,11 +30,7 @@ export function ProcessSection({ steps, documents }: ProcessSectionProps) {
             const completion = Math.min(100, Math.max(0, step.completionRate));
             const dropout = Math.min(100, Math.max(0, step.dropoutRate));
             const barColor =
-              completion >= 75
-                ? "bg-emerald-400"
-                : completion >= 50
-                  ? "bg-amber-400"
-                  : "bg-rose-400";
+              completion >= 75 ? "bg-success" : completion >= 50 ? "bg-warning" : "bg-destructive";
             return (
               <div key={step.id} className="space-y-1">
                 <div className="flex items-center justify-between text-sm font-medium">

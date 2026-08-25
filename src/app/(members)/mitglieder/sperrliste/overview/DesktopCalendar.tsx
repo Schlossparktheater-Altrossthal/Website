@@ -133,7 +133,7 @@ export function DesktopCalendar({ people, dayCols, holidays }: DesktopCalendarPr
                         : "border-border/60 hover:border-border hover:shadow-lg"
                   } ${
                     bucket.holiday
-                      ? "from-sky-50 to-card"
+                      ? "from-info/10 to-card"
                       : availablePercent >= 75
                         ? "from-success/10 to-card"
                         : availablePercent <= 25

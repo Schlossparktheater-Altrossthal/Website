@@ -76,24 +76,24 @@ const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
 };
 
 const ATTENDANCE_STATUS_BADGE_CLASSES: Record<AttendanceStatus, string> = {
-  yes: "border-emerald-200 bg-emerald-500/10 text-emerald-700",
-  maybe: "border-amber-200 bg-amber-500/10 text-amber-700",
-  no: "border-rose-200 bg-rose-500/10 text-rose-700",
-  emergency: "border-red-200 bg-red-500/10 text-red-700",
+  yes: "border-success/40 bg-success/10 text-success",
+  maybe: "border-warning/40 bg-warning/10 text-warning",
+  no: "border-destructive/40 bg-destructive/10 text-destructive",
+  emergency: "border-destructive bg-destructive/10 text-destructive",
 };
 
 const ATTENDANCE_STATUS_DOT_CLASSES: Record<AttendanceStatus, string> = {
-  yes: "bg-emerald-500",
-  maybe: "bg-amber-500",
-  no: "bg-rose-500",
-  emergency: "bg-red-500",
+  yes: "bg-success",
+  maybe: "bg-warning",
+  no: "bg-destructive",
+  emergency: "bg-destructive",
 };
 
 const ATTENDANCE_STATUS_SEGMENT_CLASSES: Record<AttendanceStatus, string> = {
-  yes: "bg-emerald-500/70",
-  maybe: "bg-amber-500/70",
-  no: "bg-rose-500/70",
-  emergency: "bg-red-500/70",
+  yes: "bg-success/70",
+  maybe: "bg-warning/70",
+  no: "bg-destructive/70",
+  emergency: "bg-destructive/70",
 };
 
 const DEFAULT_BADGE_CLASS = "border-border/60 bg-muted/40 text-muted-foreground";
@@ -432,7 +432,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     hasPermission(session.user, "PRIVATE.SUPPORT.NOTIFICATION.TEST"),
   ]);
   if (!allowed) {
-    return <div className="text-sm text-red-600">Kein Zugriff auf die Mitgliederprofile.</div>;
+    return <div className="text-sm text-destructive">Kein Zugriff auf die Mitgliederprofile.</div>;
   }
 
   const resolvedParams = await params;

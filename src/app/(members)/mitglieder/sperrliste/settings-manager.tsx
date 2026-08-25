@@ -66,8 +66,8 @@ type HolidayStatusMeta = {
 };
 
 const STATUS_LINE_CLASSES: Record<HolidayStatusMeta["tone"], string> = {
-  ok: "border-emerald-500/50 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100",
-  warning: "border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100",
+  ok: "border-success/50 bg-success/10 text-success-foreground",
+  warning: "border-warning/50 bg-warning/10 text-warning-foreground",
   disabled: "border-border bg-muted text-muted-foreground",
   unknown: "border-border/60 bg-muted/10 text-muted-foreground dark:text-muted-foreground",
 };
@@ -821,7 +821,7 @@ export function BlocklistSettingsManager({
           isActive &&
             (type === "preferred"
               ? "border-primary bg-primary/10 text-primary"
-              : "border-amber-500 bg-amber-500/15 text-amber-900 dark:border-amber-500/60 dark:text-amber-100"),
+              : "border-warning bg-warning/15 text-warning"),
           !isActive && "border-border/60 bg-background hover:border-primary/40 hover:text-primary",
         )}
       >
@@ -1143,7 +1143,7 @@ export function BlocklistSettingsManager({
             {success ? (
               <div
                 role="status"
-                className="rounded-md border border-emerald-400/40 bg-emerald-500/10 p-3 text-sm text-emerald-900 dark:text-emerald-100"
+                className="rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success-foreground"
               >
                 {success}
               </div>

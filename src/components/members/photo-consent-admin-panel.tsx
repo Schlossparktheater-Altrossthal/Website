@@ -46,14 +46,12 @@ type ActionHandler = (id: string, action: PhotoConsentAction) => void | Promise<
 type StatusFilter = "all" | PhotoConsentAdminEntry["status"];
 
 const pendingHighlightClasses: Record<PendingEntry["status"], string> = {
-  pending:
-    "border-l-4 border-amber-400/80 bg-amber-400/10 dark:border-amber-300/60 dark:bg-amber-400/15",
+  pending: "border-l-4 border-warning/80 bg-warning/10",
 };
 
 const processedCardAccent: Record<ProcessedEntry["status"], string> = {
-  approved:
-    "border-emerald-500/30 bg-emerald-500/5 dark:border-emerald-500/40 dark:bg-emerald-500/10",
-  rejected: "border-red-500/35 bg-red-500/5 dark:border-red-500/40 dark:bg-red-500/10",
+  approved: "border-success/40 bg-success/5",
+  rejected: "border-destructive/40 bg-destructive/5",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -704,9 +702,7 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
           variant="outline"
           className={cn(
             "border-border/60 text-foreground/70",
-            entry.hasDocument
-              ? "border-emerald-500/50 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-300"
-              : "border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200",
+            entry.hasDocument ? "border-success/50 text-success" : "border-warning/70 text-warning",
           )}
         >
           {entry.hasDocument ? "Dokument vorhanden" : "Dokument fehlt"}
@@ -716,8 +712,8 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
           className={cn(
             "border-border/60 text-foreground/70",
             entry.requiresDateOfBirth
-              ? "border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200"
-              : "border-emerald-500/50 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-300",
+              ? "border-warning/70 text-warning"
+              : "border-success/50 text-success",
           )}
         >
           {entry.requiresDateOfBirth
@@ -774,7 +770,7 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
         </div>
         <div className="space-y-2">
           {allRequirementsMet ? (
-            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2 text-xs text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-200">
+            <div className="rounded-md border border-success/40 bg-success/10 p-2 text-xs text-success">
               Alle Anforderungen erfüllt. Du kannst freigeben.
             </div>
           ) : (
@@ -786,7 +782,7 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
                     "rounded-md border px-3 py-2",
                     hint.tone === "error"
                       ? "border-destructive/40 bg-destructive/10 text-destructive"
-                      : "border-amber-400/60 bg-amber-400/10 text-amber-700 dark:border-amber-300/70 dark:text-amber-200",
+                      : "border-warning/50 bg-warning/10 text-warning",
                   )}
                 >
                   {hint.message}
@@ -842,13 +838,11 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
     entry.status === "approved"
       ? {
           label: "Fotos & Veröffentlichung erlaubt",
-          className:
-            "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:border-emerald-500/40 dark:text-emerald-200",
+          className: "border-success/40 bg-success/10 text-success",
         }
       : {
           label: "Keine Fotoveröffentlichung erlaubt",
-          className:
-            "border-red-500/40 bg-red-500/10 text-red-600 dark:border-red-500/40 dark:text-red-200",
+          className: "border-destructive/40 bg-destructive/10 text-destructive",
         };
 
   return (
@@ -882,8 +876,8 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
             className={cn(
               "border-border/60 text-foreground/70",
               entry.hasDocument
-                ? "border-emerald-500/50 text-emerald-600 dark:border-emerald-500/60 dark:text-emerald-300"
-                : "border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200",
+                ? "border-success/50 text-success"
+                : "border-warning/70 text-warning",
             )}
           >
             {entry.hasDocument ? "Dokument vorhanden" : "Dokument fehlt"}
@@ -893,10 +887,7 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
               Geburtsdatum: {formattedBirthDate}
             </Badge>
           ) : (
-            <Badge
-              variant="outline"
-              className="border-amber-400/70 text-amber-700 dark:border-amber-300/80 dark:text-amber-200"
-            >
+            <Badge variant="outline" className="border-warning/70 text-warning">
               Geburtsdatum fehlt
             </Badge>
           )}

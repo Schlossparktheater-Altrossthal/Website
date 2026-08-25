@@ -355,9 +355,9 @@ export function DepartmentCard({
                     </p>
                   )}
                   {blockedMembersDetailed.length ? (
-                    <div className="space-y-2 rounded-xl border border-dashed border-amber-400/40 bg-amber-500/5 p-3 text-xs">
+                    <div className="space-y-2 rounded-xl border border-dashed border-warning/40 bg-warning/5 p-3 text-xs">
                       <div className="flex items-center gap-2 text-foreground">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-warning/10 text-warning">
                           <BellRingIcon aria-hidden className="h-4 w-4" />
                         </span>
                         <p className="text-sm font-semibold">Abmeldungen im Planungsfenster</p>

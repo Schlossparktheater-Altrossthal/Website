@@ -380,7 +380,7 @@ export function RehearsalCalendar({
                       selectedAvailableRatio <= 0.5
                         ? "bg-destructive/80"
                         : selectedAvailableRatio <= 0.75
-                          ? "bg-amber-400"
+                          ? "bg-warning"
                           : "bg-primary/70",
                     )}
                     style={{ width: `${selectedAvailablePercent}%` }}
@@ -560,9 +560,7 @@ export function RehearsalCalendar({
                   "transition",
                   dayRehearsals.length > 0 && "border-primary/50 bg-primary/5",
                   availRatio <= 0.5 && "border-destructive/60 bg-destructive/10",
-                  availRatio > 0.5 &&
-                    availRatio <= 0.75 &&
-                    "border-amber-400/60 bg-amber-100/30 dark:border-amber-400/40 dark:bg-amber-500/10",
+                  availRatio > 0.5 && availRatio <= 0.75 && "border-warning/60 bg-warning/10",
                   isSelected && "border-primary/70 bg-primary/10",
                 ),
                 "aria-label": ariaLabelParts.join(". "),
@@ -615,7 +613,7 @@ export function RehearsalCalendar({
                             availRatio <= 0.5
                               ? "bg-destructive/80"
                               : availRatio <= 0.75
-                                ? "bg-amber-400"
+                                ? "bg-warning"
                                 : "bg-primary/70",
                           )}
                           style={{ width: `${availClamped * 100}%` }}
@@ -642,7 +640,7 @@ export function RehearsalCalendar({
                   <span>Balken = Anteil verfügbarer Mitglieder</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  <span className="h-2 w-2 rounded-full bg-warning" />
                   <span>51&nbsp;–&nbsp;75&nbsp;% verfügbar</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -746,7 +744,7 @@ export function RehearsalCalendar({
                                     availRatio <= 0.5
                                       ? "bg-destructive/80"
                                       : availRatio <= 0.75
-                                        ? "bg-amber-400"
+                                        ? "bg-warning"
                                         : "bg-primary/70",
                                   )}
                                   style={{ width: `${availClamped * 100}%` }}

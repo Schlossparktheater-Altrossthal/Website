@@ -430,7 +430,7 @@ function BrowserNotificationCallout({
         bleiben.
       </p>
       {isBlocked ? (
-        <p className="text-xs font-medium text-amber-700">
+        <p className="text-xs font-medium text-warning">
           Browser-Benachrichtigungen wurden blockiert. Bitte erlaube sie in den
           Browser-Einstellungen.
         </p>
@@ -477,20 +477,20 @@ function NotificationEntry({ item }: NotificationEntryProps) {
   const cardClass = cn(
     "rounded-lg border p-3 shadow-sm",
     highlightEmergency
-      ? "border-rose-400/70 bg-rose-500/10"
+      ? "border-destructive/70 bg-destructive/10"
       : highlightUpdate
         ? "border-primary/60 bg-primary/10"
         : highlightAttendance
-          ? "border-amber-400/70 bg-amber-500/10"
+          ? "border-warning/70 bg-warning/10"
           : "border-border/40 bg-background/85",
   );
 
   const badgeConfig = isEmergencyAlert
-    ? { label: "Notfall", className: "bg-rose-500/20 text-rose-100" }
+    ? { label: "Notfall", className: "bg-destructive/20 text-destructive" }
     : isUpdate
       ? { label: "Aktualisiert", className: "bg-primary/15 text-primary" }
       : isAttendanceAlert
-        ? { label: "Absage", className: "bg-amber-500/20 text-amber-100" }
+        ? { label: "Absage", className: "bg-warning/20 text-warning" }
         : null;
 
   const canRemoveSingle = Boolean(item.readAt);

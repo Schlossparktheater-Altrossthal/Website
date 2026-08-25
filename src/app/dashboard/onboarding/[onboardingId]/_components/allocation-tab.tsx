@@ -115,7 +115,7 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                 <div key={entry.roleId} className="space-y-1">
                   <div className="flex items-center justify-between text-sm font-medium">
                     <span className="text-muted-foreground">{entry.label}</span>
-                    <span className={overbooked ? "text-rose-500" : "text-foreground/80"}>
+                    <span className={overbooked ? "text-destructive" : "text-foreground/80"}>
                       {entry.capacity} / {entry.demand}
                     </span>
                   </div>
@@ -126,7 +126,7 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
                         width: `${Math.min(100, (entry.capacity / Math.max(entry.demand, 1)) * 100)}%`,
                       }}
                       transition={{ delay: index * 0.04, duration: 0.45, ease: "easeOut" }}
-                      className={`h-full ${overbooked ? "bg-rose-400" : "bg-emerald-400"}`}
+                      className={`h-full ${overbooked ? "bg-destructive" : "bg-success"}`}
                     />
                   </div>
                 </div>

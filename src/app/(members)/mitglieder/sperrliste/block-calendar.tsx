@@ -81,7 +81,7 @@ const HOLIDAY_CATEGORY_META: Record<
   },
   publicHoliday: {
     label: "Feiertag",
-    badgeClass: "bg-amber-200/90 text-amber-900 dark:bg-amber-500/30 dark:text-amber-100",
+    badgeClass: "bg-warning/15 text-warning",
   },
 };
 
@@ -651,7 +651,7 @@ export function BlockCalendar({
           {holidayEntries.map((holiday) => (
             <span
               key={`${holiday.id}-${holiday.date}`}
-              className="inline-flex items-center rounded-md bg-info/15 px-2 py-0.5 text-foreground dark:bg-muted0/20 dark:text-primary100"
+              className="inline-flex items-center rounded-md bg-info/15 px-2 py-0.5 text-foreground dark:bg-muted/20 dark:text-foreground"
               title={
                 holiday.rangeStart && !holiday.rangeEnd
                   ? `${holiday.title} (Beginn)`
@@ -672,17 +672,15 @@ export function BlockCalendar({
         onPointerEnter: (event) => handleDayPointerEnter(event, day.key),
         className: cn(
           isBlockedEntry && "border-destructive/50 bg-destructive/10",
-          isPreferredEntry &&
-            "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-500/40 dark:bg-emerald-500/10",
-          isLimitedEntry &&
-            "border-amber-300/60 bg-amber-200/30 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/10 dark:text-amber-100",
+          isPreferredEntry && "border-success/60 bg-success/10",
+          isLimitedEntry && "border-warning/60 bg-warning/10",
           !entry &&
             isHoliday &&
-            "border-border bg-muted/50 dark:border-primary500/40 dark:bg-muted0/10",
+            "border-border bg-muted/50 dark:border-primary/40 dark:bg-muted/10",
           !entry &&
             !isHoliday &&
             (isPreferredDay || isExceptionDay) &&
-            "border-primary/30 bg-[linear-gradient(135deg,_rgba(129,140,248,0.12),_rgba(129,140,248,0))] dark:border-primary/40 dark:bg-[linear-gradient(135deg,_rgba(99,102,241,0.18),_rgba(129,140,248,0.06))]",
+            "border-primary/30 bg-gradient-to-br from-info/15 to-transparent dark:border-primary/40 dark:from-info/20 dark:to-info/5",
           day.isToday &&
             !isSelected &&
             "border-primary/60 bg-primary/10 ring-2 ring-primary/70 dark:border-primary/60 dark:bg-primary/15",
@@ -708,9 +706,9 @@ export function BlockCalendar({
                 className={cn(
                   "mt-auto flex items-center gap-1 text-xs font-semibold transition-opacity duration-300",
                   isPreferredEntry
-                    ? "text-emerald-600 dark:text-emerald-200"
+                    ? "text-success"
                     : isLimitedEntry
-                      ? "text-amber-700 dark:text-amber-200"
+                      ? "text-warning"
                       : "text-destructive",
                 )}
               >
@@ -1022,12 +1020,12 @@ export function BlockCalendar({
   );
 
   const holidayPanelContent = upcomingHolidays.length ? (
-    <div className="space-y-3 rounded-lg border border-primary200 bg-muted p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-primary500/40 dark:bg-muted0/10">
-      <div className="flex items-center gap-2 text-primary800 dark:text-primary100">
+    <div className="space-y-3 rounded-lg border border-primary/30 bg-muted p-4 text-[13px] leading-5 sm:text-sm sm:leading-6 dark:border-primary/40 dark:bg-muted/10">
+      <div className="flex items-center gap-2 text-primary">
         <CalendarDaysIcon className="h-4 w-4" aria-hidden />
         <span className="font-semibold">Ferien &amp; Feiertage in Sachsen</span>
       </div>
-      <ul className="space-y-2 text-foreground/90 dark:text-primary100/90">
+      <ul className="space-y-2 text-foreground/90">
         {upcomingHolidays.map((holiday) => {
           const rangeLabel = formatHolidayRangeLabel(holiday.startDate, holiday.endDate);
           const isActive = holiday.startDate <= todayKey && holiday.endDate >= todayKey;
@@ -1036,12 +1034,12 @@ export function BlockCalendar({
           return (
             <li
               key={holiday.id}
-              className="space-y-1 rounded-md bg-card/60 p-2 shadow-sm ring-1 ring-sky-200/60  dark:ring-sky-500/40"
+              className="space-y-1 rounded-md bg-card/60 p-2 shadow-sm ring-1 ring-info/60 dark:ring-info/40"
             >
               <div
                 className={cn(
                   "font-medium",
-                  isActive ? "text-foreground " : "text-foreground/90 dark:text-primary100/90",
+                  isActive ? "text-foreground " : "text-foreground/90 dark:text-primary/90",
                 )}
               >
                 <span
@@ -1056,10 +1054,10 @@ export function BlockCalendar({
                 </span>
                 <span className="align-middle">{holiday.title}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-foreground/80 dark:text-primary100/80">
+              <div className="flex flex-wrap items-center gap-2 text-xs leading-5 sm:text-sm sm:leading-6 text-foreground/80">
                 <span>{rangeLabel}</span>
                 {isActive ? (
-                  <span className="inline-flex items-center rounded-full bg-primary200/90 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground dark:bg-muted0/30 ">
+                  <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground dark:bg-muted/30">
                     Aktuell
                   </span>
                 ) : null}

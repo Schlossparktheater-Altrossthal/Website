@@ -772,7 +772,7 @@ export default async function DepartmentMissionControlPage({ params }: PageProps
 function renderSuggestions(suggestions: MeetingSuggestion[], memberCount: number) {
   if (suggestions.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50/80 p-4 text-xs text-amber-900 dark:border-amber-400/60 dark:bg-amber-500/10 dark:text-amber-100">
+      <div className="rounded-2xl border border-dashed border-warning/50 bg-warning/10 p-4 text-xs text-warning-foreground">
         Kein gemeinsamer freier Termin gefunden. Aktualisiert Sperrlisten oder erweitert den
         Zeitrahmen.
       </div>

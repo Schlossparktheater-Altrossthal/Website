@@ -8,23 +8,23 @@ type AllergyLevelStyle = {
 
 export const ALLERGY_LEVEL_STYLES: Record<AllergyLevel, AllergyLevelStyle> = {
   MILD: {
-    badge: "border-emerald-400/40 bg-emerald-500/10 text-emerald-600",
-    accent: "from-emerald-400/70 to-emerald-500/70",
+    badge: "border-success/40 bg-success/10 text-success",
+    accent: "from-success/70 to-success/40",
     intensity: 35,
   },
   MODERATE: {
-    badge: "border-amber-400/40 bg-amber-500/10 text-amber-600",
-    accent: "from-amber-400/70 to-orange-400/70",
+    badge: "border-warning/40 bg-warning/10 text-warning",
+    accent: "from-warning/70 to-warning/40",
     intensity: 55,
   },
   SEVERE: {
-    badge: "border-rose-400/40 bg-rose-500/10 text-rose-600",
-    accent: "from-rose-400/70 to-rose-500/70",
+    badge: "border-destructive/40 bg-destructive/10 text-destructive",
+    accent: "from-destructive/70 to-destructive/40",
     intensity: 75,
   },
   LETHAL: {
-    badge: "border-red-500/50 bg-red-500/10 text-red-600",
-    accent: "from-red-500/80 to-red-600/80",
+    badge: "border-destructive/50 bg-destructive/10 text-destructive",
+    accent: "from-destructive/80 to-destructive/60",
     intensity: 95,
   },
 };

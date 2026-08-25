@@ -17,9 +17,9 @@ type DistributionBarsProps = {
 
 const intentPalette: Record<string, string> = {
   default: "bg-primary/40",
-  success: "bg-emerald-500/80",
-  warning: "bg-amber-500/80",
-  critical: "bg-rose-500/80",
+  success: "bg-success/80",
+  warning: "bg-warning/80",
+  critical: "bg-destructive/80",
 };
 
 export function DistributionBars({ title, items, subtitle, className }: DistributionBarsProps) {

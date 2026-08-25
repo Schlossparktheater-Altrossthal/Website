@@ -113,10 +113,10 @@ export function NutritionSection({ data, totalParticipants, className }: Nutriti
                         }
                         const width = `${Math.max(4, (value / Math.max(total, 1)) * 100)}%`;
                         const colors = [
-                          "bg-emerald-400",
-                          "bg-amber-400",
-                          "bg-orange-500",
-                          "bg-rose-500",
+                          "bg-success",
+                          "bg-warning",
+                          "bg-destructive/70",
+                          "bg-destructive",
                         ];
                         return (
                           <motion.div

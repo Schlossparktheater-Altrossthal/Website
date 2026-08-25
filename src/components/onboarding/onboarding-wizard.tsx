@@ -2032,7 +2032,7 @@ export function OnboardingWizard({
             </label>
 
             {isMinor ? (
-              <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
+              <div className="space-y-2 rounded-lg border border-warning/50 bg-warning/10 p-4 text-sm text-warning-foreground">
                 <p className="font-medium">Du bist unter 18 Jahre alt</p>
                 <p>
                   Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner
@@ -2045,7 +2045,7 @@ export function OnboardingWizard({
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
+              <div className="space-y-2 rounded-lg border border-success/50 bg-success/10 p-4 text-sm text-success-foreground">
                 <p className="font-medium">Du bist volljährig</p>
                 <p>
                   Du kannst das Formular als Datei hochladen oder hier direkt digital
@@ -2425,9 +2425,9 @@ export function OnboardingWizard({
           </CardHeader>
           <CardContent className="space-y-6">
             {invite.whatsappLink ? (
-              <section className="space-y-3 rounded-3xl border border-emerald-400/70 bg-emerald-50/90 p-5 shadow-sm">
+              <section className="space-y-3 rounded-3xl border border-success/60 bg-success/10 p-5 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-base font-semibold text-emerald-900">
+                  <div className="flex items-center gap-2 text-base font-semibold text-success-foreground">
                     <MessageCircleIcon className="h-4 w-4" />
                     WhatsApp-Gruppe zum Einstieg
                   </div>
@@ -2435,7 +2435,7 @@ export function OnboardingWizard({
                     asChild
                     size="sm"
                     variant="outline"
-                    className="border-emerald-400/70 text-emerald-900"
+                    className="border-success/60 text-success-foreground"
                   >
                     <a
                       href={invite.whatsappLink}
@@ -2447,13 +2447,13 @@ export function OnboardingWizard({
                     </a>
                   </Button>
                 </div>
-                <p className="text-sm text-emerald-900/80">
+                <p className="text-sm text-success-foreground/80">
                   Tritt unserer WhatsApp-Gruppe bei, um alle Updates und Ansprechpartner
                   kennenzulernen.
                   {whatsappHost ? ` (${whatsappHost})` : null}
                 </p>
                 {whatsappVisitTracked ? (
-                  <p className="flex items-center gap-2 text-xs font-medium text-emerald-900/80">
+                  <p className="flex items-center gap-2 text-xs font-medium text-success-foreground/80">
                     <CheckIcon className="h-4 w-4" />
                     Danke! Wir haben notiert, dass du die Gruppe geöffnet hast.
                   </p>
@@ -2716,8 +2716,8 @@ export function OnboardingWizard({
                       variant="outline"
                       className={
                         form.photoConsent.consent
-                          ? "border-emerald-400/40 bg-emerald-50 text-emerald-700"
-                          : "border-amber-400/40 bg-amber-50 text-amber-700"
+                          ? "border-success/40 bg-success/10 text-success"
+                          : "border-warning/40 bg-warning/10 text-warning"
                       }
                     >
                       {form.photoConsent.consent ? "Erteilt" : "Offen"}
@@ -2739,7 +2739,7 @@ export function OnboardingWizard({
             </section>
 
             {success ? (
-              <div className="rounded-lg border border-emerald-300 bg-emerald-50/80 p-4 text-sm text-emerald-900">
+              <div className="rounded-lg border border-success/50 bg-success/10 p-4 text-sm text-success-foreground">
                 <p className="font-medium">Danke, deine Angaben sind angekommen!</p>
                 <p>
                   Wir legen jetzt dein Profil an und melden uns mit den nächsten Schritten. Du

@@ -73,8 +73,7 @@ const roleAccentStyles: Record<string, string> = {
     "border-orange-400/60 bg-orange-500/10 dark:border-orange-400/40 dark:bg-orange-500/5",
   acting_scout:
     "border-emerald-400/60 bg-emerald-500/10 dark:border-emerald-400/40 dark:bg-emerald-500/5",
-  acting_statist:
-    "border-primary400/60 bg-primary500/10 dark:border-primary400/40 dark:bg-primary500/5",
+  acting_statist: "border-primary/60 bg-primary/10 dark:border-primary/40 dark:bg-primary/5",
   crew_stage:
     "border-purple-400/55 bg-purple-500/10 dark:border-purple-400/40 dark:bg-purple-500/5",
   crew_tech: "border-cyan-400/55 bg-cyan-500/10 dark:border-cyan-400/40 dark:bg-cyan-500/5",

@@ -334,8 +334,8 @@ export function RoleManager({
 
             <div className="ml-4 flex flex-col items-end gap-2">
               {dirty && (
-                <div className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
-                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                <div className="flex items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-1 text-xs font-medium text-warning">
+                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-warning" />
                   Nicht gespeichert
                 </div>
               )}

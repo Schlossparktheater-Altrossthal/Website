@@ -112,7 +112,7 @@ export default async function RehearsalPlanningPage() {
               Insgesamt: {total}
             </span>
             <span className="inline-flex items-center gap-2 rounded-md border border-border/60 bg-background/80 px-3 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="h-2 w-2 rounded-full bg-success" />
               Bevorstehend: {upcoming}
             </span>
           </div>
