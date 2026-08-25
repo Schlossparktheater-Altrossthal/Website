@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useNotificationRealtime } from "@/hooks/useRealtime";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
+import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "short",
@@ -466,9 +467,9 @@ function NotificationEntry({ item }: NotificationEntryProps) {
   const startDate = item.rehearsal?.start ? new Date(item.rehearsal.start) : null;
 
   const typeKey = item.type ?? "";
-  const isUpdate = typeKey === "rehearsal-update";
-  const isEmergencyAlert = typeKey === "rehearsal-emergency";
-  const isAttendanceAlert = typeKey === "rehearsal-attendance";
+  const isUpdate = typeKey === NOTIFICATION_TYPES.REHEARSAL_UPDATE;
+  const isEmergencyAlert = typeKey === NOTIFICATION_TYPES.REHEARSAL_EMERGENCY;
+  const isAttendanceAlert = typeKey === NOTIFICATION_TYPES.REHEARSAL_ATTENDANCE;
 
   const highlightUpdate = isUpdate && !item.readAt;
   const highlightEmergency = isEmergencyAlert && !item.readAt;

@@ -19,6 +19,7 @@ import {
   formatIsoTimeInTimeZone,
   parseDateTimeInTimeZone,
 } from "@/lib/date-time";
+import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^\d{2}:\d{2}$/;
@@ -757,7 +758,7 @@ export async function updateRehearsalAction(input: {
         data: {
           title: updatedTitle,
           body: updatedBody,
-          type: "rehearsal-update",
+          type: NOTIFICATION_TYPES.REHEARSAL_UPDATE,
           rehearsalId: rehearsal.id,
           recipients: {
             create: targetInvitees.map((userId) => ({ userId })),

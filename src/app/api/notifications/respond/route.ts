@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/realtime/triggers";
+import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
 type SessionUser = { id?: string | null; name?: string | null; email?: string | null };
 
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
             return {
               title: `Notfall: ${actorDisplayName} fällt für ${rehearsal.title || "die Probe"} aus`,
               body: bodyParts.join(" "),
-              type: "rehearsal-emergency" as const,
+              type: NOTIFICATION_TYPES.REHEARSAL_EMERGENCY,
               severity: "error" as const,
             };
           }
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
           return {
             title: `Absage: ${actorDisplayName} kann nicht teilnehmen`,
             body: `${actorDisplayName} hat für die Probe am ${formattedStart}${locationInfo} abgesagt.`,
-            type: "rehearsal-attendance" as const,
+            type: NOTIFICATION_TYPES.REHEARSAL_ATTENDANCE,
             severity: "warning" as const,
           };
         })()
