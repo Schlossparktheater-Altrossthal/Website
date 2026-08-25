@@ -319,6 +319,14 @@ export async function POST(request: NextRequest) {
 
   try {
     await prisma.$transaction(async (tx) => {
+      if (analyticsSessionId) {
+        await tx.analyticsSession.upsert({
+          where: { id: analyticsSessionId },
+          create: { id: analyticsSessionId, startedAt: now, lastSeenAt: now },
+          update: { lastSeenAt: now },
+        });
+      }
+
       await tx.analyticsPageView.upsert({
         where: { sessionId: parsed.sessionId },
         update: {
