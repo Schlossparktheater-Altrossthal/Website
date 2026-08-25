@@ -121,6 +121,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       className={htmlClassName}
       data-color-mode={resolvedSettings.colorMode}
       style={{ colorScheme: initialColorScheme }}
+      suppressHydrationWarning
     >
       <head>
         <ColorModeScript mode={resolvedSettings.colorMode} />
