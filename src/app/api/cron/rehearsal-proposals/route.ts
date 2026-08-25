@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     // Überprüfe den Cron-Secret-Header
     const cronSecret = request.headers.get("x-cron-secret");
     if (cronSecret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
     }
 
     await generateRehearsalProposals(prisma);
@@ -19,6 +19,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Fehler bei der Generierung der Probenvorschläge:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
 }

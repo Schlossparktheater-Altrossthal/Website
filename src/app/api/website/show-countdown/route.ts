@@ -63,7 +63,7 @@ export async function GET() {
   /* unchanged auth */
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PUBLIC.HOME.COUNTDOWN.EDIT")))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   try {
     const record = await readPremiereCountdownSettings();
     return NextResponse.json({ settings: serializeSettings(record) });
@@ -78,7 +78,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PUBLIC.HOME.COUNTDOWN.EDIT")))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
     return NextResponse.json(

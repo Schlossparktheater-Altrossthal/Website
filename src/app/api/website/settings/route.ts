@@ -50,7 +50,7 @@ async function ensurePermission() {
   const canManageWebsite = await hasPermission(session.user, "PRIVATE.SETTINGS.THEME.MANAGE");
   const canManagePages = await hasPermission(session.user, "PRIVATE.ADMIN.PAGES.MANAGE");
   if (!canManageWebsite && !canManagePages) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
   return null;
 }

@@ -26,7 +26,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PUBLIC.HOME.FLYER.EDIT")))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe." }, { status: 400 });
   const saved = await saveProductionFlyerSettings({

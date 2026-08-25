@@ -45,7 +45,7 @@ function serializeSettings(record: Awaited<ReturnType<typeof readMysterySettings
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PUBLIC.MYSTERY.TIMER.EDIT"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   if (!process.env.DATABASE_URL) {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PUBLIC.MYSTERY.TIMER.EDIT"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   if (!process.env.DATABASE_URL) {

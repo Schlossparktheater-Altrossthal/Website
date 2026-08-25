@@ -20,7 +20,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PUBLIC.HOME.FLYER.EDIT")))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   const formData = await request.formData();
   const file = formData.get("image");
   if (!(file instanceof File)) return NextResponse.json({ error: "Datei fehlt." }, { status: 400 });
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PUBLIC.HOME.FLYER.EDIT")))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   await deleteProductionFlyerSettingsImage();
   return NextResponse.json({ success: true });
 }

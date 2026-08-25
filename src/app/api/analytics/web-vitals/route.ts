@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
     parsed = payloadSchema.parse(json);
   } catch (error) {
     return NextResponse.json(
-      { error: "Invalid analytics payload" },
+      { error: "Ungültige Analytics-Anfrage" },
       { status: error instanceof z.ZodError ? 400 : 422 },
     );
   }
@@ -413,7 +413,10 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("[analytics] Failed to persist web vitals", error);
-    return NextResponse.json({ error: "Failed to store analytics" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Analytics konnten nicht gespeichert werden" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ success: true });

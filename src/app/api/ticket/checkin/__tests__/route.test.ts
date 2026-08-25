@@ -141,7 +141,7 @@ describe("ticket check-in API", () => {
     );
 
     expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toEqual({ error: "Forbidden" });
+    await expect(response.json()).resolves.toEqual({ error: "Nicht berechtigt" });
     expect(checkInTicketMock).not.toHaveBeenCalled();
   });
 });

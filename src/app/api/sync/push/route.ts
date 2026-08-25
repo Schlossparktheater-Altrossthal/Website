@@ -72,12 +72,12 @@ export async function POST(request: Request) {
     json = await request.json();
   } catch (error) {
     console.error("Failed to parse sync push payload", error);
-    return NextResponse.json({ error: "Invalid sync push payload" }, { status: 400 });
+    return NextResponse.json({ error: "Ungültige Sync-Übertragungs-Anfrage" }, { status: 400 });
   }
 
   const parsed = payloadSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid sync push payload" }, { status: 400 });
+    return NextResponse.json({ error: "Ungültige Sync-Übertragungs-Anfrage" }, { status: 400 });
   }
 
   const authResult = await authenticateSyncRequest(request, parsed.data.scope);
@@ -112,6 +112,9 @@ export async function POST(request: Request) {
     }
 
     console.error("Failed to apply incoming events", error);
-    return NextResponse.json({ error: "Failed to apply sync events" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sync-Ereignisse konnten nicht angewendet werden" },
+      { status: 500 },
+    );
   }
 }

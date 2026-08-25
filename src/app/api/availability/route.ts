@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { date, kind, availableFromMin, availableToMin, note } = await request.json();
 
     if (!date || !kind || !["FULL_AVAILABLE", "FULL_UNAVAILABLE", "PARTIAL"].includes(kind)) {
-      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+      return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
     }
 
     const parsedDate = new Date(date);

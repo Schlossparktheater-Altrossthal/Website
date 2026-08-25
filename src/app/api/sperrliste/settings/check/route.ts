@@ -35,7 +35,7 @@ async function ensurePermission() {
     );
   }
   if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
   return null;
 }

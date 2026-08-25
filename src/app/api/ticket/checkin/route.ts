@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
 
   if (!allowed) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   try {

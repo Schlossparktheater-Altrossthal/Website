@@ -118,7 +118,7 @@ export async function authenticateSyncRequest(
     logDeniedAccess(scope, "missing permission PRIVATE.PRODUCTION.SHOW.MANAGE", userId);
     return {
       kind: "error",
-      response: NextResponse.json({ error: "Missing permission" }, { status: 403 }),
+      response: NextResponse.json({ error: "Berechtigung fehlt" }, { status: 403 }),
     } satisfies UnauthorizedResult;
   }
 
@@ -126,7 +126,7 @@ export async function authenticateSyncRequest(
     logDeniedAccess(scope, "missing inventory permission", userId);
     return {
       kind: "error",
-      response: NextResponse.json({ error: "Missing inventory permission" }, { status: 403 }),
+      response: NextResponse.json({ error: "Inventar-Berechtigung fehlt" }, { status: 403 }),
     } satisfies UnauthorizedResult;
   }
 

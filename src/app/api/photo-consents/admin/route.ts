@@ -117,7 +117,7 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
 export async function GET() {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const consents = await prisma.photoConsent.findMany({
@@ -151,7 +151,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);

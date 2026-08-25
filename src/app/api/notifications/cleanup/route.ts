@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => null);
     if (!isCleanupRequest(body)) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
     }
 
     let deleted = 0;
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     } else if (body.action === "clear_older_than") {
       const days = Number(body.days);
       if (!Number.isFinite(days) || days <= 0)
-        return NextResponse.json({ error: "Invalid days" }, { status: 400 });
+        return NextResponse.json({ error: "Ungültige Anzahl Tage" }, { status: 400 });
       const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       const res = await prisma.notificationRecipient.deleteMany({
         where: { userId, notification: { createdAt: { lt: cutoff } } },

@@ -11,7 +11,7 @@ function sanitizeForHeader(value: string): string {
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const params = await context.params;

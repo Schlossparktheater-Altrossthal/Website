@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   });
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: "Invalid sync baseline request" }, { status: 400 });
+    return NextResponse.json({ error: "Ungültige Sync-Basisanfrage" }, { status: 400 });
   }
 
   const authResult = await authenticateSyncRequest(request, parseResult.data.scope);
@@ -63,6 +63,6 @@ export async function GET(request: Request) {
     return NextResponse.json(baseline, { headers });
   } catch (error) {
     console.error("Failed to select sync baseline", error);
-    return NextResponse.json({ error: "Failed to create sync baseline" }, { status: 500 });
+    return NextResponse.json({ error: "Sync-Basis konnte nicht erstellt werden" }, { status: 500 });
   }
 }

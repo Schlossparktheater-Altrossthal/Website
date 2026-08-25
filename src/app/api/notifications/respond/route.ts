@@ -18,13 +18,13 @@ export async function POST(request: Request) {
     const session = await requireAuth();
     const userId = (session.user as SessionUser | undefined)?.id;
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
     }
 
     const payload = await request.json().catch(() => null);
     const parsed = respondSchema.safeParse(payload);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
     }
 
     const { recipientId, response, reason } = parsed.data;
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     });
 
     if (!recipient || recipient.userId !== userId) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
     }
 
     const rehearsalId = recipient.notification.rehearsalId;

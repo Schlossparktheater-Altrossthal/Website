@@ -33,7 +33,7 @@ export async function GET() {
     }
 
     if (!(await hasPermission(session.user, "PRIVATE.DASHBOARD.OVERVIEW.VIEW"))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
     }
 
     const now = new Date();
@@ -279,6 +279,6 @@ export async function GET() {
       throw error;
     }
     console.error("[Dashboard API] Error loading overview:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
 }

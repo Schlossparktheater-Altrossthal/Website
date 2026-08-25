@@ -17,7 +17,7 @@ function isAuthorized(request: NextRequest): boolean {
 
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   }
 
   try {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: "ok", result });
   } catch (error) {
     console.error("[analytics] Failed to execute server analytics aggregation", error);
-    return NextResponse.json({ error: "internal_error" }, { status: 500 });
+    return NextResponse.json({ error: "Interner Fehler" }, { status: 500 });
   }
 }
 

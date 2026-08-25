@@ -69,7 +69,7 @@ function filterRoles(value: unknown): Role[] {
 export async function GET() {
   const session = await requireAuth();
   if (!(await canManageInvites(session.user))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const userId = session.user?.id ?? null;
@@ -172,7 +172,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await requireAuth();
   if (!(await canManageInvites(session.user))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => null)) as {

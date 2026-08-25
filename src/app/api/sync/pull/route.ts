@@ -16,12 +16,12 @@ export async function POST(request: Request) {
     json = await request.json();
   } catch (error) {
     console.error("Failed to parse sync pull payload", error);
-    return NextResponse.json({ error: "Invalid sync pull payload" }, { status: 400 });
+    return NextResponse.json({ error: "Ungültige Sync-Abruf-Anfrage" }, { status: 400 });
   }
 
   const parsed = payloadSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid sync pull payload" }, { status: 400 });
+    return NextResponse.json({ error: "Ungültige Sync-Abruf-Anfrage" }, { status: 400 });
   }
 
   const authResult = await authenticateSyncRequest(request, parsed.data.scope);
@@ -54,6 +54,9 @@ export async function POST(request: Request) {
     return NextResponse.json(deltas, { headers });
   } catch (error) {
     console.error("Failed to select sync deltas", error);
-    return NextResponse.json({ error: "Failed to load sync events" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Sync-Ereignisse konnten nicht geladen werden" },
+      { status: 500 },
+    );
   }
 }

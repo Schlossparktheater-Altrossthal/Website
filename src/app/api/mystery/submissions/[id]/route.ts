@@ -15,7 +15,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PUBLIC.MYSTERY.TIPS.MANAGE");
   if (!allowed) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   if (!process.env.DATABASE_URL) {

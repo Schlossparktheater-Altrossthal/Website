@@ -14,7 +14,7 @@ export async function GET(
   const onboardingId = params?.onboardingId;
 
   if (!onboardingId || typeof onboardingId !== "string") {
-    return NextResponse.json({ error: "Missing onboarding id" }, { status: 400 });
+    return NextResponse.json({ error: "Onboarding-ID fehlt" }, { status: 400 });
   }
 
   try {

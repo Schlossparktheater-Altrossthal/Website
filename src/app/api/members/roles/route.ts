@@ -8,7 +8,7 @@ import { hasPermission } from "@/lib/permissions";
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
   const rawBody: unknown = await request.json().catch(() => null);
 

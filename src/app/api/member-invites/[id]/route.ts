@@ -61,7 +61,7 @@ function parseDate(value: unknown) {
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (!(await canManageInvites(session.user))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const { id } = await context.params;
@@ -185,7 +185,7 @@ function parseRoles(value: unknown): Role[] | undefined {
 export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   if (!(await canManageInvites(session.user))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const { id } = await context.params;

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
   if (!allowed) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

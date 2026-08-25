@@ -13,7 +13,7 @@ import { requireAuth } from "@/lib/rbac";
 export async function GET() {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   await Promise.all([ensureSystemRoles(), ensurePermissionDefinitions()]);
@@ -76,7 +76,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PERMISSIONS.MANAGE"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const body = (await request.json().catch(() => null)) as {

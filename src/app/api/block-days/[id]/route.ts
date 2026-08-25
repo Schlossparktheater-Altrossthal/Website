@@ -31,7 +31,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   let payload: UpdatePayload;
@@ -83,7 +83,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   }
 
   if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
   const result = await prisma.blockedDay.deleteMany({

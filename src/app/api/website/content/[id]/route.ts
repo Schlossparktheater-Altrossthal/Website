@@ -33,11 +33,17 @@ const VALID_IDS = new Set<string>(Object.values(WEBSITE_CONTENT_IDS));
 async function checkPermission(): Promise<{ forbidden: NextResponse | null; userId: string }> {
   const session = await requireAuth();
   if (!session.user) {
-    return { forbidden: NextResponse.json({ error: "Forbidden" }, { status: 403 }), userId: "" };
+    return {
+      forbidden: NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 }),
+      userId: "",
+    };
   }
   const allowed = await hasPermission(session.user, "PUBLIC.CONTENT.MANAGE");
   if (!allowed) {
-    return { forbidden: NextResponse.json({ error: "Forbidden" }, { status: 403 }), userId: "" };
+    return {
+      forbidden: NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 }),
+      userId: "",
+    };
   }
   return { forbidden: null, userId: session.user.id };
 }

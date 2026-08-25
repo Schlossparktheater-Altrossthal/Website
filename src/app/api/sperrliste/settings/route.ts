@@ -70,7 +70,7 @@ async function ensurePermission(): Promise<PermissionResult> {
   if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"))) {
     return {
       status: "denied",
-      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      response: NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 }),
     };
   }
   return { status: "ok", response: null };
