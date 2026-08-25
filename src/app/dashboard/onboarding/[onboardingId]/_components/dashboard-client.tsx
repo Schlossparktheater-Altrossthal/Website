@@ -281,7 +281,7 @@ export function DashboardClient({
             </p>
           </div>
         ) : null}
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <TabsContent key="members-overview" value="members-overview" className="space-y-6">
             <motion.div
               key={`${currentData.onboarding.id}-members-overview`}
