@@ -16,7 +16,7 @@ function isBcryptModule(value: unknown): value is BcryptModule {
 async function loadBcrypt(): Promise<BcryptModule> {
   if (cachedBcrypt) return cachedBcrypt;
 
-  const imported = (await import("bcryptjs")) as unknown;
+  const imported: unknown = await import("bcryptjs");
   const candidate = isRecord(imported) && "default" in imported ? imported.default : imported;
 
   if (!isBcryptModule(candidate)) {

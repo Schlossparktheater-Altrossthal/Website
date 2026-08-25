@@ -404,9 +404,7 @@ function interpolateValue<T>(start: T, end: T, progress: number): T {
       return end as T;
     }
 
-    return end.map((value, index) =>
-      interpolateValue(start[index], value, progress),
-    ) as unknown as T;
+    return end.map((value, index) => interpolateValue(start[index], value, progress)) as T;
   }
 
   if (

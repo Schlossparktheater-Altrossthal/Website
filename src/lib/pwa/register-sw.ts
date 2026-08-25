@@ -119,7 +119,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     hadControllerRef.current = Boolean(navigator.serviceWorker.controller);
     shouldReloadOnControllingRef.current = hadControllerRef.current;
 
-    const handleServiceWorkerMessage = (event: MessageEvent) => {
+    const handleServiceWorkerMessage = (event: { data: MessageEvent["data"] }) => {
       const { data } = event;
 
       if (!data || typeof data !== "object") {
@@ -184,7 +184,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
         });
 
         wb.addEventListener("message", (event) => {
-          handleServiceWorkerMessage(event as unknown as MessageEvent);
+          handleServiceWorkerMessage(event);
         });
 
         await wb.register();

@@ -866,8 +866,8 @@ export function WebsiteThemeSettingsManager({
     () =>
       ({
         radius: { base: radius },
-        parameters: parameters as unknown as ThemeTokens["parameters"],
-        modes: previewModes as unknown as ThemeTokens["modes"],
+        parameters: parameters as ThemeTokens["parameters"],
+        modes: previewModes as ThemeTokens["modes"],
         meta: {
           ...(currentTheme.tokens.meta ?? {}),
           modes: modeKeys,

@@ -1353,7 +1353,8 @@ export type WebsiteSettingsInput = {
   siteTitle?: string | null;
   colorMode?: ThemeColorMode | null;
   maintenanceMode?: boolean | null;
-  pageVisibility?: PageVisibilitySettings | null;
+  // Unvalidiertes Client-Input; wird intern über sanitisePageVisibility normalisiert.
+  pageVisibility?: unknown;
   themeId?: string | null;
 };
 

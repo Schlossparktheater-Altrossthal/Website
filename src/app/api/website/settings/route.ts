@@ -135,7 +135,7 @@ export async function PUT(request: NextRequest) {
         siteTitle: settingsPayload?.siteTitle ?? undefined,
         colorMode: settingsPayload?.colorMode ?? undefined,
         maintenanceMode: settingsPayload?.maintenanceMode ?? undefined,
-        pageVisibility: (settingsPayload?.pageVisibility as never) ?? undefined,
+        pageVisibility: settingsPayload?.pageVisibility ?? undefined,
         themeId: desiredThemeId,
       });
     }

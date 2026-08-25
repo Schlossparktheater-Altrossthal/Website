@@ -440,12 +440,13 @@ const authConfig = {
             ...dbUser.roles.map((r) => r.role as Role),
           ]);
           applyRoles(combined);
-          applyNameFields(mutableToken, dbUser as unknown as Record<string, unknown>);
+          const dbUserRecord: Record<string, unknown> = { ...dbUser };
+          applyNameFields(mutableToken, dbUserRecord);
           const dbEmail = extractString(dbUser.email);
           if (dbEmail) {
             mutableToken.email = dbEmail;
           }
-          applyAvatarFields(mutableToken, dbUser as unknown as Record<string, unknown>);
+          applyAvatarFields(mutableToken, dbUserRecord);
           if (dbUser.deactivatedAt) {
             mutableToken.deactivatedAt = dbUser.deactivatedAt.toISOString();
             mutableToken.isDeactivated = true;

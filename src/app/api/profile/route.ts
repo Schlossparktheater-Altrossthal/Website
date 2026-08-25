@@ -20,7 +20,9 @@ let sharpModulePromise: Promise<SharpModuleWithDefault> | null = null;
 
 async function getSharp(): Promise<SharpModuleWithDefault> {
   if (!sharpModulePromise) {
-    sharpModulePromise = import("sharp") as unknown as Promise<SharpModuleWithDefault>;
+    // CommonJS-Interop: Das dynamisch importierte sharp-Modul besitzt zur
+    // Laufzeit einen `default`-Export.
+    sharpModulePromise = import("sharp").then((module) => module as SharpModuleWithDefault);
   }
   return sharpModulePromise;
 }
@@ -46,7 +48,8 @@ function parseAvatarCrop(value: unknown): AvatarCrop | null {
     typeof value === "string"
       ? (() => {
           try {
-            return JSON.parse(value) as unknown;
+            const parsed: unknown = JSON.parse(value);
+            return parsed;
           } catch {
             return null;
           }

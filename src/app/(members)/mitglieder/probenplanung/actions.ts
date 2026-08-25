@@ -151,6 +151,10 @@ async function collectInviteeRoles(tx: Prisma.TransactionClient, inviteeIds: str
   return Array.from(roles);
 }
 
+function rolesToInputJson(roles: readonly string[]): Prisma.InputJsonValue {
+  return [...roles];
+}
+
 async function fetchInviteeIds(tx: Prisma.TransactionClient, rehearsalId: string) {
   const entries = await tx.rehearsalInvitee.findMany({
     where: { rehearsalId },
@@ -294,7 +298,7 @@ export async function updateRehearsalDraftAction(input: {
       if (invitees) {
         const synced = await syncInvitees(tx, id, invitees);
         const roles = await collectInviteeRoles(tx, synced);
-        updateData.requiredRoles = roles as unknown as Prisma.InputJsonValue;
+        updateData.requiredRoles = rolesToInputJson(roles);
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -390,7 +394,7 @@ export async function publishRehearsalAction(input: {
           location: normalizedLocation,
           description: safeDescription,
           status: "PLANNED",
-          requiredRoles: roles as unknown as Prisma.InputJsonValue,
+          requiredRoles: rolesToInputJson(roles),
           registrationDeadline: null,
           createdBy: existing.createdBy ?? auth.userId,
         },
@@ -543,7 +547,7 @@ export async function createRehearsalAction(input: {
           location: normalizedLocation,
           description: safeDescription,
           status: "PLANNED",
-          requiredRoles: roles as unknown as Prisma.InputJsonValue,
+          requiredRoles: rolesToInputJson(roles),
           registrationDeadline: null,
           createdBy: auth.userId,
         },
@@ -674,7 +678,7 @@ export async function updateRehearsalAction(input: {
       if (invitees) {
         const synced = await syncInvitees(tx, id, invitees);
         const roles = await collectInviteeRoles(tx, synced);
-        updateData.requiredRoles = roles as unknown as Prisma.InputJsonValue;
+        updateData.requiredRoles = rolesToInputJson(roles);
         targetInvitees = synced;
       } else {
         targetInvitees = await fetchInviteeIds(tx, id);
