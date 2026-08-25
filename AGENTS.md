@@ -1,6 +1,5 @@
 # AGENTS.md
 
-
 ## Stack & Einstieg
 
 Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion; aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
@@ -21,7 +20,8 @@ Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tail
 
 - Abhängigkeiten mit `pnpm install --frozen-lockfile`. Neue Pakete: `pnpm add <pkg>`.
 - `pnpm dev` startet Turbopack-Devserver und führt Prisma-Migrationen aus.
-- Zentrale Skripte: `pnpm lint`, `pnpm test`, `pnpm build` müssen vor jedem Commit sauber durchlaufen.
+- Zentrale Skripte: `pnpm lint`, `pnpm test`, `pnpm build` und `pnpm format:check` müssen vor jedem Commit sauber durchlaufen.
+- Formatierung: Prettier ist der verbindliche Formatter (Konfiguration in `.prettierrc`). `pnpm format` formatiert das gesamte Repo, `pnpm format:check` prüft in CI. Keine manuellen Stil-Anpassungen gegen Prettier.
 - DB-Skripte: `pnpm prisma:generate`, `pnpm db:migrate`, `pnpm db:seed`.
 - Token-Workflows: `pnpm swatches:gen` und `pnpm design-system:tokens`.
 - Docker-Compose stellt Postgres & Mailpit bereit. Bei DB-Änderungen `.env.example` aktualisieren.
@@ -62,7 +62,7 @@ Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tail
 
 ## Tests, Qualitätssicherung & Reviews
 
-- Vor jedem Commit `pnpm lint`, `pnpm test` und `pnpm build` ausführen.
+- Vor jedem Commit `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` ausführen.
 - Vitest-Tests liegen nahe am Quellcode. React-Komponenten mit `@testing-library/react` testen.
 - UI-Änderungen visuell mit Preview-Deployments absichern.
 
@@ -145,24 +145,29 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Metric-Cards verwenden das `KeyMetricCard`-Pattern aus `src/design-system/patterns/key-metric.tsx`.
 
 ## Typografie & Abstände
+
 - Folge der Typografie-Skala aus `docs/design-system.md` (`text-h1`, `text-h2`, `text-body` usw.). Verwende `Heading`- und `Text`-Komponenten aus `@/components/ui/typography`.
 
 ## Badge & Status
+
 - Badges verwenden die Badge-Komponente aus src/components/ui/badge.tsx.
 - Status-Semantik: success-Token für positiv/aktiv, warning-Token für ausstehend/Hinweis, destructive-Token für Fehler/gesperrt, muted für neutral/inaktiv.
 - Nie hardcodierte Farben für Statusbadges. Immer variant oder className mit semantischem Token.
 
 ## Empty States
+
 - Leere Zustände immer mit zentriertem Text und muted-foreground Farbe darstellen.
 - Struktur: umschließende div mit py-12 text-center, Icon optional in text-muted-foreground, darunter p mit text-muted-foreground.
 - Kein window.confirm, kein gestrichelter Box-Eigenbau ohne diese Struktur.
 
 ## Skeleton & Ladezeichen
+
 - Ladezeichen immer mit der Skeleton-Komponente aus src/components/ui/skeleton.tsx.
 - animate-pulse direkt auf Elementen ist verboten. Immer Skeleton verwenden.
 - Suspense-Fallbacks verwenden dedizierte loading.tsx Dateien mit Skeleton-Komponenten.
 
 ## Toast & Feedback
+
 - toast.success für erfolgreich abgeschlossene Aktionen.
 - toast.error für Fehler die eine Nutzeraktion erfordern.
 - toast.info für neutrale Statusänderungen und Echtzeit-Events.
@@ -170,9 +175,8 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Toasts haben immer einen kurzen Titel und optional eine description für Details.
 
 ## Callout & Hinweisboxen
+
 - Hinweisboxen verwenden bg-muted border border-border rounded-lg p-4.
 - Warnhinweise verwenden bg-warning/10 border border-warning text-warning-foreground rounded-lg p-4.
 - Fehlerhinweise verwenden bg-destructive/10 border border-destructive text-destructive-foreground rounded-lg p-4.
 - Nie eigene Farben oder hardcodierte Hintergründe für Hinweisboxen.
-
-

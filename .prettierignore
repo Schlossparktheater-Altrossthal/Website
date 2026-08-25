@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+build
+coverage
+
+# Generated
+next-env.d.ts
+public/workbox
+docs/swatches/generated.adoc
+
+# Prettier-Markdown-Sonderfall (HTML/AsciiDoc-Mischung, nicht idempotent formatierbar)
+docs/entwurf-und-analyse.md
+
+# Lockfiles (not formatted by Prettier)
+pnpm-lock.yaml
+
+# Not owned by this codebase
+deploy-service
