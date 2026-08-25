@@ -77,10 +77,7 @@ export async function POST(request: Request) {
 
   const parsed = payloadSchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid sync push payload", issues: parsed.error.issues },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid sync push payload" }, { status: 400 });
   }
 
   const authResult = await authenticateSyncRequest(request, parsed.data.scope);

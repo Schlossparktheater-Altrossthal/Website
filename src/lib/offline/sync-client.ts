@@ -824,8 +824,8 @@ export class SyncClient {
     try {
       const clone = response.clone();
       return (await clone.json()) as T;
-    } catch {
-      return {} as T;
+    } catch (error) {
+      throw new Error("Failed to parse sync response", { cause: error });
     }
   }
 

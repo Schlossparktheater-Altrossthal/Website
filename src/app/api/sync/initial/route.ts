@@ -32,13 +32,7 @@ export async function GET(request: Request) {
   });
 
   if (!parseResult.success) {
-    return NextResponse.json(
-      {
-        error: "Invalid sync baseline request",
-        issues: parseResult.error.issues,
-      },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid sync baseline request" }, { status: 400 });
   }
 
   const authResult = await authenticateSyncRequest(request, parseResult.data.scope);
