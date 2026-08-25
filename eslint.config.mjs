@@ -44,6 +44,14 @@ const eslintConfig = [
       "no-console": ["warn", { allow: ["error", "warn"] }],
     },
   },
+  {
+    // Test-Mocks nutzen bewusst partielle Objekte und casten sie (z. B.
+    // "as unknown as Request"). Diese Casts sind in Tests idiomatisch.
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
+    rules: {
+      "no-restricted-syntax": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
