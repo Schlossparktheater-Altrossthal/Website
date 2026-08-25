@@ -1,23 +1,9 @@
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 
-// eslint-plugin-react 7.37.5 unterstützt ESLint 10 noch nicht (Peer: ^9.7)
-// und crasht beim Laden der react/*-Regeln ("react/display-name").
-// Deshalb werden die react/*-Regeln vorübergehend entfernt, bis das Plugin
-// ESLint 10 unterstützt oder das Projekt auf ESLint 9 zurückgeht.
-// Nur die react/*-Regeln sind betroffen – react-hooks/* und
-// @typescript-eslint/* bleiben aktiv.
-function stripReactRules(config) {
-  if (!config?.rules) return config;
-  const filteredRules = Object.fromEntries(
-    Object.entries(config.rules).filter(([name]) => !name.startsWith("react/")),
-  );
-  return { ...config, rules: filteredRules };
-}
-
 const eslintConfig = [
-  ...nextVitals.map(stripReactRules),
-  ...nextTypescript.map(stripReactRules),
+  ...nextVitals,
+  ...nextTypescript,
   {
     ignores: [
       "node_modules/**",
@@ -32,6 +18,10 @@ const eslintConfig = [
   },
   {
     rules: {
+      // Deutsche Texte enthalten Apostrophe ("geht's"), die sonst als
+      // unescaped entities gemeldet würden. Gezielte, begründete Ausnahme.
+      "react/no-unescaped-entities": "off",
+
       // AGENTS.md verbietet explizites any.
       "@typescript-eslint/no-explicit-any": "error",
 
