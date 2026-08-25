@@ -66,6 +66,28 @@ Webauftritt läuft auf Next.js 15 (App Router) mit React 19, TypeScript und Tail
 - Vitest-Tests liegen nahe am Quellcode. React-Komponenten mit `@testing-library/react` testen.
 - UI-Änderungen visuell mit Preview-Deployments absichern.
 
+## Commits
+
+- Commit-Messages folgen dem Conventional-Commits-Format: `type(scope): description`.
+- Die Beschreibung ist immer auf Englisch, im Imperativ formuliert (`Fix …` statt `Fixed …` oder `Fixes …`) und ausdrucksstark: Sie sagt, was geändert wurde und warum. Nie nur `update`, `changes` oder `wip`.
+- Feste Kategorien (`type`):
+  - `feat` – neues Feature
+  - `fix` – Fehlerbehebung
+  - `docs` – reine Dokumentationsänderung
+  - `style` – Formatierung, keine Logik (z. B. Prettier)
+  - `refactor` – Umbau ohne Verhaltensänderung
+  - `perf` – Performance-Verbesserung
+  - `test` – Tests ergänzen oder anpassen
+  - `build` – Build-System, Dependencies, Tooling
+  - `ci` – CI/CD-Konfiguration
+  - `chore` – sonstige Wartungsarbeiten
+  - `revert` – Änderung rückgängig machen
+- `scope` (optional) benennt den betroffenen Bereich, z. B. `feat(tickets)`, `fix(sync)`, `chore(deps)`.
+- Breaking Changes mit `!` kennzeichnen: `feat(api)!: …`.
+- Ein Commit = genau eine abgeschlossene, atomare Änderung. Keine Themen mischen.
+- Keine Secrets oder API-Keys in Commit-Messages.
+- Beispiele: `feat(tickets): add QR check-in for rehearsals`, `fix(profile): validate email format before saving`, `refactor(sync): extract generic buildDelta helper`.
+
 ## Dokumentation & Kommunikation
 
 - README, `docs/**` und `.env.example` bei relevanten Änderungen aktualisieren.
