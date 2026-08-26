@@ -48,6 +48,40 @@ function getDisplayName(user: MembersTableUser): string {
   return combineNameParts(user.firstName, user.lastName) ?? user.name ?? "";
 }
 
+function MemberName({
+  displayName,
+  isDeactivated,
+}: {
+  displayName: string;
+  isDeactivated: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 font-medium">
+      <span>{displayName || "—"}</span>
+      {isDeactivated && (
+        <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+          Deaktiviert
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+function MemberRoleChips({ roles, className }: { roles: Role[]; className?: string }) {
+  return (
+    <div className={cn("flex flex-wrap gap-1", className)}>
+      {sortRoles(roles).map((r) => (
+        <span
+          key={r}
+          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[r]}`}
+        >
+          {ROLE_LABELS[r] ?? r}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function MembersTable({
   users,
   canEditOwner,
@@ -128,7 +162,6 @@ export function MembersTable({
         <>
           <div className="space-y-4 sm:hidden">
             {filteredRows.map((u) => {
-              const sorted = sortRoles(u.roles);
               const displayName = getDisplayName(u);
               const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
               return (
@@ -153,27 +186,8 @@ export function MembersTable({
                         avatarUpdatedAt={u.avatarUpdatedAt}
                       />
                       <div>
-                        <div className="flex flex-wrap items-center gap-2 font-medium">
-                          <span>{displayName || "—"}</span>
-                          {u.isDeactivated && (
-                            <Badge
-                              variant="destructive"
-                              className="text-[10px] uppercase tracking-wide"
-                            >
-                              Deaktiviert
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {sorted.map((r) => (
-                            <span
-                              key={r}
-                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[r]}`}
-                            >
-                              {ROLE_LABELS[r] ?? r}
-                            </span>
-                          ))}
-                        </div>
+                        <MemberName displayName={displayName} isDeactivated={u.isDeactivated} />
+                        <MemberRoleChips roles={u.roles} className="mt-2" />
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
@@ -206,7 +220,6 @@ export function MembersTable({
                 </thead>
                 <tbody>
                   {filteredRows.map((u) => {
-                    const sorted = sortRoles(u.roles);
                     const displayName = getDisplayName(u);
                     const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
                     return (
@@ -230,35 +243,14 @@ export function MembersTable({
                               avatarSource={u.avatarSource}
                               avatarUpdatedAt={u.avatarUpdatedAt}
                             />
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2 font-medium">
-                                <span>{displayName || "—"}</span>
-                                {u.isDeactivated && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-[10px] uppercase tracking-wide"
-                                  >
-                                    Deaktiviert
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
+                            <MemberName displayName={displayName} isDeactivated={u.isDeactivated} />
                           </div>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
                           {u.email || "—"}
                         </td>
                         <td className="px-3 py-2">
-                          <div className="flex flex-wrap gap-1">
-                            {sorted.map((r) => (
-                              <span
-                                key={r}
-                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[r]}`}
-                              >
-                                {ROLE_LABELS[r] ?? r}
-                              </span>
-                            ))}
-                          </div>
+                          <MemberRoleChips roles={u.roles} />
                         </td>
                         <td className="px-3 py-2">
                           {u.customRoles.length ? (
