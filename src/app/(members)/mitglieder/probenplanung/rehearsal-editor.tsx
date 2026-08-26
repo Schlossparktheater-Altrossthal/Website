@@ -19,8 +19,8 @@ import {
   discardRehearsalDraftAction,
   publishRehearsalAction,
   updateRehearsalDraftAction,
-  updateRehearsalAction,
-} from "./actions";
+} from "./actions/drafts";
+import { updateRehearsalAction } from "./actions/rehearsals";
 
 type MemberOption = {
   id: string;

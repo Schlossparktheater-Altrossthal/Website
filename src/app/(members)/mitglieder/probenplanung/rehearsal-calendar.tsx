@@ -34,7 +34,8 @@ import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/names";
 import { toast } from "sonner";
 
-import { createRehearsalDraftAction, deleteRehearsalAction } from "./actions";
+import { createRehearsalDraftAction } from "./actions/drafts";
+import { deleteRehearsalAction } from "./actions/rehearsals";
 
 const DEFAULT_NEW_REHEARSAL_TIME = "19:00";
 

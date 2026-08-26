@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { AsyncButton } from "@/components/ui/async-button";
 
-import { createRehearsalDraftAction } from "./actions";
+import { createRehearsalDraftAction } from "./actions/drafts";
 
 export function CreateRehearsalButton() {
   const router = useRouter();

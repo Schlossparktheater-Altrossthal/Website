@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { AsyncButton } from "@/components/ui/async-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
-import { discardRehearsalDraftAction } from "./actions";
+import { discardRehearsalDraftAction } from "./actions/drafts";
 
 type DiscardDraftButtonProps = {
   id: string;

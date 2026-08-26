@@ -7,7 +7,7 @@ import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
 import { EditIcon, TrashIcon } from "@/components/ui/action-icons";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { deleteRehearsalAction } from "./actions";
+import { deleteRehearsalAction } from "./actions/rehearsals";
 import type { RehearsalLite } from "./rehearsal-list";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
