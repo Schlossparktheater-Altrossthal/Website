@@ -30,35 +30,6 @@ Beispiel:
 </PageHeader>
 ```
 
-## Key Metrics
-
-`KeyMetricGrid` und `KeyMetricCard` kapseln Kennzahlen-Karten.
-
-- `KeyMetricGrid`: Responsive Grid für 2–4 Metriken
-- `KeyMetricCard`: basiert auf dem shadcn-`Card`, nimmt `label`, `value`, `hint` (Fußnote) und `icon` entgegen
-- `tone`-Varianten (`default`, `positive`, `info`, `warning`, `danger`) steuern die Farbigkeit des Hauptwerts
-
-Beispiel:
-
-```tsx
-<KeyMetricGrid>
-  <KeyMetricCard
-    label="Online Mitglieder"
-    value={stats.totalOnline}
-    icon={<Users className="h-4 w-4" />}
-    hint={onlineUpdatedHint}
-    tone="positive"
-  />
-  <KeyMetricCard
-    label="Ungelesene Benachrichtigungen"
-    value={stats.unreadNotifications}
-    icon={<Bell className="h-4 w-4" />}
-    hint="Wer zuerst liest, ist informiert"
-    tone={stats.unreadNotifications > 0 ? "warning" : undefined}
-  />
-</KeyMetricGrid>
-```
-
 ## Tokens einsetzen
 
 Alle Patterns lesen Farben und Radii aus den generierten CSS-Variablen (`src/app/design-tokens.css`). Änderungen an den Tokens erfolgen in `src/design-system/tokens.json`. Anschließend `pnpm design-system:tokens` ausführen, damit die Styles aktualisiert werden.

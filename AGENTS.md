@@ -169,7 +169,6 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 ## Seiten-Patterns
 
 - Seiten-Header verwenden das `PageHeader`-Pattern aus `src/design-system/patterns/page-header.tsx`.
-- Metric-Cards verwenden das `KeyMetricCard`-Pattern aus `src/design-system/patterns/key-metric.tsx`.
 
 ## Typografie & Abstände
 
