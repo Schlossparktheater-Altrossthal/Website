@@ -1,15 +1,19 @@
 "use client";
 
 import * as React from "react";
+import type { Table } from "dexie";
 
-import { offlineDb } from "./db";
+import { offlineDb, type OfflineDatabase } from "./db";
+import { generateId } from "./id";
+import { inferScopeFromEventType } from "./scope";
 import type {
+  DeltaEnvelope,
   OfflineDelta,
   OfflineScope,
   OfflineSnapshot,
   PendingEvent,
   PendingEventInput,
-  PendingEventType,
+  SnapshotEnvelope,
 } from "./types";
 
 interface OfflineSyncContextValue {
@@ -23,14 +27,6 @@ interface OfflineSyncContextValue {
 
 const OfflineSyncContext = React.createContext<OfflineSyncContextValue | undefined>(undefined);
 
-function createId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `offline_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -43,10 +39,6 @@ function ensureDb() {
   return offlineDb;
 }
 
-function inferScopeFromEventType(type: PendingEventType): OfflineScope {
-  return type.startsWith("inventory") ? "inventory" : "tickets";
-}
-
 function buildAudit(
   scope: OfflineScope,
   action: "queue" | "snapshot" | "delta" | "dequeue",
@@ -55,7 +47,7 @@ function buildAudit(
   createdAt: string = nowIso(),
 ) {
   return {
-    id: createId(),
+    id: generateId("offline"),
     scope,
     action,
     summary,
@@ -68,7 +60,7 @@ export async function enqueueEvent(input: PendingEventInput): Promise<PendingEve
   const db = ensureDb();
   const baseCreatedAt = input.createdAt ?? nowIso();
   const pendingEvent: PendingEvent = {
-    id: input.id ?? createId(),
+    id: input.id ?? generateId("offline"),
     type: input.type,
     payload: input.payload,
     createdAt: baseCreatedAt,
@@ -153,46 +145,18 @@ export async function consumeEvents(limit = 20): Promise<PendingEvent[]> {
   });
 }
 
-export async function applySnapshot(snapshot: OfflineSnapshot) {
-  const db = ensureDb();
+async function applySnapshotToTable<TRecord>(
+  db: OfflineDatabase,
+  table: Table<TRecord, string>,
+  snapshot: SnapshotEnvelope<TRecord> & { scope: OfflineScope },
+) {
   const timestamp = snapshot.capturedAt ?? nowIso();
-  if (snapshot.scope === "inventory") {
-    await db.transaction("rw", db.items, db.syncState, db.audits, async () => {
-      await db.items.clear();
 
-      if (snapshot.records.length > 0) {
-        await db.items.bulkPut(snapshot.records);
-      }
-
-      await db.syncState.put({
-        scope: snapshot.scope,
-        lastServerSeq: snapshot.serverSeq,
-        updatedAt: timestamp,
-        lastSnapshotAt: timestamp,
-      });
-
-      await db.audits.put(
-        buildAudit(
-          snapshot.scope,
-          "snapshot",
-          `Applied snapshot for ${snapshot.scope}`,
-          {
-            serverSeq: snapshot.serverSeq,
-            recordCount: snapshot.records.length,
-            capturedAt: snapshot.capturedAt,
-          },
-          timestamp,
-        ),
-      );
-    });
-    return;
-  }
-
-  await db.transaction("rw", db.tickets, db.syncState, db.audits, async () => {
-    await db.tickets.clear();
+  await db.transaction("rw", table, db.syncState, db.audits, async () => {
+    await table.clear();
 
     if (snapshot.records.length > 0) {
-      await db.tickets.bulkPut(snapshot.records);
+      await table.bulkPut(snapshot.records);
     }
 
     await db.syncState.put({
@@ -218,52 +182,31 @@ export async function applySnapshot(snapshot: OfflineSnapshot) {
   });
 }
 
-export async function applyDeltas(delta: OfflineDelta) {
+export async function applySnapshot(snapshot: OfflineSnapshot) {
   const db = ensureDb();
-  const timestamp = nowIso();
-  if (delta.scope === "inventory") {
-    await db.transaction("rw", db.items, db.syncState, db.audits, async () => {
-      if (delta.upserts?.length) {
-        await db.items.bulkPut(delta.upserts);
-      }
 
-      if (delta.deletes?.length) {
-        await db.items.bulkDelete(delta.deletes);
-      }
-
-      const previousState = await db.syncState.get(delta.scope);
-
-      await db.syncState.put({
-        scope: delta.scope,
-        lastServerSeq: delta.serverSeq,
-        updatedAt: timestamp,
-        lastSnapshotAt: previousState?.lastSnapshotAt,
-      });
-
-      await db.audits.put(
-        buildAudit(
-          delta.scope,
-          "delta",
-          `Applied delta for ${delta.scope}`,
-          {
-            serverSeq: delta.serverSeq,
-            upserts: delta.upserts?.length ?? 0,
-            deletes: delta.deletes?.length ?? 0,
-          },
-          timestamp,
-        ),
-      );
-    });
+  if (snapshot.scope === "inventory") {
+    await applySnapshotToTable(db, db.items, snapshot);
     return;
   }
 
-  await db.transaction("rw", db.tickets, db.syncState, db.audits, async () => {
+  await applySnapshotToTable(db, db.tickets, snapshot);
+}
+
+async function applyDeltaToTable<TRecord>(
+  db: OfflineDatabase,
+  table: Table<TRecord, string>,
+  delta: DeltaEnvelope<TRecord> & { scope: OfflineScope },
+) {
+  const timestamp = nowIso();
+
+  await db.transaction("rw", table, db.syncState, db.audits, async () => {
     if (delta.upserts?.length) {
-      await db.tickets.bulkPut(delta.upserts);
+      await table.bulkPut(delta.upserts);
     }
 
     if (delta.deletes?.length) {
-      await db.tickets.bulkDelete(delta.deletes);
+      await table.bulkDelete(delta.deletes);
     }
 
     const previousState = await db.syncState.get(delta.scope);
@@ -289,6 +232,17 @@ export async function applyDeltas(delta: OfflineDelta) {
       ),
     );
   });
+}
+
+export async function applyDeltas(delta: OfflineDelta) {
+  const db = ensureDb();
+
+  if (delta.scope === "inventory") {
+    await applyDeltaToTable(db, db.items, delta);
+    return;
+  }
+
+  await applyDeltaToTable(db, db.tickets, delta);
 }
 
 function createUnsupportedPromise<T = never>() {

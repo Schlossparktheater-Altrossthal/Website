@@ -3,6 +3,8 @@
 import { createContext } from "react";
 
 import { offlineDb, type OfflineDatabase } from "./db";
+import { generateId } from "./id";
+import { inferScopeFromEventType } from "./scope";
 import { applyDeltas, applySnapshot, enqueueEvent as persistEvent } from "./storage";
 import type {
   InventoryDelta,
@@ -543,7 +545,7 @@ export class SyncClient {
   }
 
   determineScopeFromEvent(event: PendingEvent | PendingEventInput): OfflineScope {
-    return this.inferScope(event.type);
+    return inferScopeFromEventType(event.type);
   }
 
   private ensureDb(): OfflineDatabase {
@@ -581,7 +583,7 @@ export class SyncClient {
           break;
         }
 
-        if (this.inferScope(event.type) !== scope) {
+        if (inferScopeFromEventType(event.type) !== scope) {
           continue;
         }
 
@@ -611,23 +613,14 @@ export class SyncClient {
     }
   }
 
-  private inferScope(type: string): OfflineScope {
-    return type.startsWith("inventory") ? "inventory" : "tickets";
-  }
-
   private createMutationId(): string {
     this.mutationCounter += 1;
-
-    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-      return crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}-${this.mutationCounter}`;
+    return generateId("mutation", String(this.mutationCounter));
   }
 
   private ensureClientId(): string {
     if (typeof window === "undefined") {
-      this.fallbackClientId ??= `offline-client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      this.fallbackClientId ??= generateId("offline-client");
       return this.fallbackClientId;
     }
 
@@ -638,15 +631,12 @@ export class SyncClient {
         return stored;
       }
 
-      const newId =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `offline-client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const newId = generateId("offline-client");
 
       window.localStorage.setItem(CLIENT_ID_STORAGE_KEY, newId);
       return newId;
     } catch {
-      this.fallbackClientId ??= `offline-client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      this.fallbackClientId ??= generateId("offline-client");
       return this.fallbackClientId;
     }
   }
@@ -829,75 +819,33 @@ export class SyncClient {
     }
   }
 
-  private buildDeltaFromEvents(
-    scope: "inventory",
-    events: ServerSyncEvent[],
-  ): { upserts?: InventoryItemRecord[]; deletes?: string[] };
-  private buildDeltaFromEvents(
-    scope: "tickets",
-    events: ServerSyncEvent[],
-  ): { upserts?: TicketRecord[]; deletes?: string[] };
-  private buildDeltaFromEvents(
-    scope: OfflineScope,
-    events: ServerSyncEvent[],
-  ): { upserts?: InventoryItemRecord[] | TicketRecord[]; deletes?: string[] } {
-    if (scope === "inventory") {
-      return this.buildInventoryDelta(events);
-    }
-
-    return this.buildTicketDelta(events);
-  }
-
   private buildInventoryDelta(events: ServerSyncEvent[]) {
-    const upserts: InventoryItemRecord[] = [];
-    const deletes: string[] = [];
-
-    for (const event of events) {
-      const payload = event.payload ?? {};
-      const normalizedType = event.type.toLowerCase();
-      const recordCandidate =
-        this.extractInventoryRecord(payload.record, event.occurredAt) ??
-        this.extractInventoryRecord(payload.item, event.occurredAt) ??
-        this.extractInventoryRecord(payload, event.occurredAt);
-
-      if (recordCandidate) {
-        upserts.push(recordCandidate);
-        continue;
-      }
-
-      const shouldDelete =
-        normalizedType.includes("delete") ||
-        normalizedType.includes("remove") ||
-        payload.deleted === true;
-
-      if (!shouldDelete) {
-        continue;
-      }
-
-      const deleteId = this.extractIdentifier(payload);
-
-      if (deleteId) {
-        deletes.push(deleteId);
-      }
-    }
-
-    return {
-      upserts: upserts.length ? upserts : undefined,
-      deletes: deletes.length ? deletes : undefined,
-    } satisfies { upserts?: InventoryItemRecord[]; deletes?: string[] };
+    return this.buildDelta(events, "item", (value, occurredAt) =>
+      this.extractInventoryRecord(value, occurredAt),
+    );
   }
 
   private buildTicketDelta(events: ServerSyncEvent[]) {
-    const upserts: TicketRecord[] = [];
+    return this.buildDelta(events, "ticket", (value, occurredAt) =>
+      this.extractTicketRecord(value, occurredAt),
+    );
+  }
+
+  private buildDelta<TRecord extends InventoryItemRecord | TicketRecord>(
+    events: ServerSyncEvent[],
+    secondaryField: "item" | "ticket",
+    extractRecord: (value: unknown, occurredAt: string) => TRecord | null,
+  ) {
+    const upserts: TRecord[] = [];
     const deletes: string[] = [];
 
     for (const event of events) {
       const payload = event.payload ?? {};
       const normalizedType = event.type.toLowerCase();
       const recordCandidate =
-        this.extractTicketRecord(payload.record, event.occurredAt) ??
-        this.extractTicketRecord(payload.ticket, event.occurredAt) ??
-        this.extractTicketRecord(payload, event.occurredAt);
+        extractRecord(payload.record, event.occurredAt) ??
+        extractRecord(payload[secondaryField], event.occurredAt) ??
+        extractRecord(payload, event.occurredAt);
 
       if (recordCandidate) {
         upserts.push(recordCandidate);
@@ -923,7 +871,7 @@ export class SyncClient {
     return {
       upserts: upserts.length ? upserts : undefined,
       deletes: deletes.length ? deletes : undefined,
-    } satisfies { upserts?: TicketRecord[]; deletes?: string[] };
+    } satisfies { upserts?: TRecord[]; deletes?: string[] };
   }
 
   private extractInventoryRecord(value: unknown, occurredAt: string): InventoryItemRecord | null {
