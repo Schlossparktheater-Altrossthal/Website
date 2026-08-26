@@ -20,7 +20,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 ## Tooling & lokale Entwicklung
 
 - Abhängigkeiten mit `pnpm install --frozen-lockfile`. Neue Pakete: `pnpm add <pkg>`.
-- `pnpm dev` startet Turbopack-Devserver und führt Prisma-Migrationen aus. `turbopack.root` ist in `next.config.ts` auf `process.cwd()` gesetzt und darf nicht entfernt werden – sonst inferiert Turbopack den Workspace-Root falsch (z. B. über eine fremde `package-lock.json` im Home-Verzeichnis), was zu fehlerhaften Compile-Fehlern führt.
+- `pnpm dev` startet Turbopack-Devserver und führt Prisma-Migrationen aus. `turbopack.root` ist in `next.config.ts` auf `process.cwd()` gesetzt und darf nicht entfernt werden – sonst inferiert Turbopack den Workspace-Root falsch (z. B. über eine fremde `package-lock.json` im Home-Verzeichnis), was zu fehlerhaften Compile-Fehlern führt. Nach **jeder** Änderung an `next.config.ts` (insbesondere `turbopack.root`) den Dev-Server stoppen und `.next` löschen (`rm -rf .next`) – sonst bleibt der alte Cache inkonsistent und es kommt zum Fehler `Could not find the module … in the React Client Manifest`.
 - Zentrale Skripte: `pnpm lint`, `pnpm test`, `pnpm build` und `pnpm format:check` müssen vor jedem Commit sauber durchlaufen.
 - Formatierung: Prettier ist der verbindliche Formatter (Konfiguration in `.prettierrc`). `pnpm format` formatiert das gesamte Repo, `pnpm format:check` prüft in CI. Keine manuellen Stil-Anpassungen gegen Prettier.
 - DB-Skripte: `pnpm prisma:generate`, `pnpm db:migrate`, `pnpm db:seed`.
