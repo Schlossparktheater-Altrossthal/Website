@@ -37,7 +37,7 @@ import {
   deleteCharacterAction,
   removeCharacterCastingAction,
   updateCharacterAction,
-} from "../actions";
+} from "../actions/casting";
 import {
   CASTING_ORDER,
   ROLE_PREFERENCE_OPTIONS,

@@ -15,7 +15,7 @@ const { toastMock } = vi.hoisted(() => {
   return { toastMock: base };
 });
 
-vi.mock("../actions", () => ({
+vi.mock("../actions/production", () => ({
   createProductionAction: createProductionActionMock,
   setActiveProductionAction: vi.fn(),
   clearActiveProductionAction: vi.fn(),

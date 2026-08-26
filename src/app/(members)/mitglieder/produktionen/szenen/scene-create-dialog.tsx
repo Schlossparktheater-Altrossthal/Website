@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-import { createSceneAction } from "../actions";
+import { createSceneAction } from "../actions/scenes";
 
 type Props = {
   showId: string;

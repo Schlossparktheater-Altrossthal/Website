@@ -12,7 +12,10 @@ import { Input } from "@/components/ui/input";
 
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
-import { updateOnboardingSettingsAction, updateProductionTimelineAction } from "../actions";
+import {
+  updateOnboardingSettingsAction,
+  updateProductionTimelineAction,
+} from "../actions/production";
 import { SetActiveProductionForm, UpdateProductionDialog } from "../production-forms-client";
 import { XIcon } from "@/components/ui/action-icons";
 

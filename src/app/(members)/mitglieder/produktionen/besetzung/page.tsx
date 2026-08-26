@@ -34,7 +34,7 @@ import {
   getCastingLabel,
   selectSmallClassName,
 } from "./casting-utils";
-import { createCharacterAction } from "../actions";
+import { createCharacterAction } from "../actions/casting";
 import { BadgeCheckIcon, UserRoundCheckIcon, UsersIcon } from "@/components/ui/action-icons";
 
 type HeaderStat = {

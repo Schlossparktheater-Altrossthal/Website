@@ -40,7 +40,7 @@ import {
   removeSceneCharacterAction,
   updateBreakdownItemAction,
   updateSceneAction,
-} from "../actions";
+} from "../actions/scenes";
 
 type DisplayUser = {
   id: string;

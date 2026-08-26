@@ -37,7 +37,7 @@ import {
   createDepartmentTaskAction,
   deleteDepartmentTaskAction,
   updateDepartmentTaskAction,
-} from "../../actions";
+} from "../../actions/departments";
 import {
   CalendarDaysIcon,
   CheckCircle2Icon,

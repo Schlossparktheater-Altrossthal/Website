@@ -18,13 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-import type { ProductionActionResult } from "./actions";
+import type { ProductionActionResult } from "./actions/helpers";
 import {
   clearActiveProductionAction,
   createProductionAction,
   setActiveProductionAction,
   updateProductionAction,
-} from "./actions";
+} from "./actions/production";
 
 const INITIAL_ACTION_STATE: ProductionActionResult = { ok: false, error: "" };
 

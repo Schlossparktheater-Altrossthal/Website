@@ -48,7 +48,7 @@ import {
 } from "@/lib/member-invite-links";
 import { cn } from "@/lib/utils";
 import { formatRelativeFromNow } from "@/lib/datetime";
-import { updateOnboardingSettingsAction } from "@/app/(members)/mitglieder/produktionen/actions";
+import { updateOnboardingSettingsAction } from "@/app/(members)/mitglieder/produktionen/actions/production";
 
 const ASSIGNABLE_ROLES = ROLES.filter((role) => role !== "admin" && role !== "owner");
 const ASSIGNABLE_ROLE_SET = new Set<Role>(ASSIGNABLE_ROLES);
