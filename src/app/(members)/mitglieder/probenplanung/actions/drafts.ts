@@ -19,7 +19,7 @@ import {
   rolesToInputJson,
   sanitizeDescription,
   syncInvitees,
-} from "./helpers";
+} from "@/lib/probenplanung/actions-helpers";
 
 export async function createRehearsalDraftAction(input?: {
   title?: string;

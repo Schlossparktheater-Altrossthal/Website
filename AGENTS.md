@@ -19,7 +19,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 ## Tooling & lokale Entwicklung
 
 - Abhängigkeiten mit `pnpm install --frozen-lockfile`. Neue Pakete: `pnpm add <pkg>`.
-- `pnpm dev` startet Turbopack-Devserver und führt Prisma-Migrationen aus.
+- `pnpm dev` startet Turbopack-Devserver und führt Prisma-Migrationen aus. `turbopack.root` ist in `next.config.ts` auf `process.cwd()` gesetzt und darf nicht entfernt werden – sonst inferiert Turbopack den Workspace-Root falsch (z. B. über eine fremde `package-lock.json` im Home-Verzeichnis), was zu fehlerhaften Compile-Fehlern führt.
 - Zentrale Skripte: `pnpm lint`, `pnpm test`, `pnpm build` und `pnpm format:check` müssen vor jedem Commit sauber durchlaufen.
 - Formatierung: Prettier ist der verbindliche Formatter (Konfiguration in `.prettierrc`). `pnpm format` formatiert das gesamte Repo, `pnpm format:check` prüft in CI. Keine manuellen Stil-Anpassungen gegen Prettier.
 - DB-Skripte: `pnpm prisma:generate`, `pnpm db:migrate`, `pnpm db:seed`.
@@ -38,8 +38,8 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Keine zwei exportierten Symbole mit identischem Namen (`PageHeader` existierte doppelt in `design-system/patterns` und `components/members`). Namenskollisionen sofort auflösen: konsolidieren oder eindeutig benennen.
 - Keine leeren catch-Blöcke. Fehler immer loggen oder explizit weitergeben.
 - Fehler lokal mit `console.error`, Warnungen mit `console.warn` loggen – kein `console.log` außerhalb von `src/lib/logger`. Server-seitige strukturierte Log-Events über `createLogger` aus `@/lib/logger` (persistiert in der DB).
-- Server-Actions-Dateien (`actions.ts`) nach Domäne aufteilen und schlank halten. Gemeinsame Helper in einer eigenen Datei (`actions/helpers.ts`) bündeln. Eine Actions-Datei sollte nicht über ~400 Zeilen wachsen – neue Actions gehören in eine passende Domänen-Datei statt in eine bestehende Sammeldatei.
-- Nur echte Server-Actions-Dateien tragen `"use server"`. Helper-Dateien (`actions/helpers.ts`) dürfen **kein** `"use server"` haben – sie sind normale serverseitige Utilities und dürfen auch synchrone Funktionen exportieren. `"use server"` erzwingt, dass alle Exporte async sind (`Server Actions must be async functions`).
+- Server-Actions-Dateien (`actions.ts`) nach Domäne aufteilen und schlank halten. Gemeinsame Helper in einer eigenen Datei **außerhalb des `app/`-Verzeichnisses** bündeln (z. B. `src/lib/<domäne>/actions-helpers.ts`). Eine Actions-Datei sollte nicht über ~400 Zeilen wachsen – neue Actions gehören in eine passende Domänen-Datei statt in eine bestehende Sammeldatei.
+- Nur echte Server-Actions-Dateien tragen `"use server"`. Helper-Dateien dürfen **kein** `"use server"` haben und müssen **außerhalb des `app/`-Verzeichnisses** liegen (z. B. `src/lib/produktionen/`). Grund: `"use server"` erzwingt, dass alle Exporte async sind (`Server Actions must be async functions`); Turbopack wendet diese Regel fälschlich auch auf Helper-Dateien **innerhalb** des `app/`-Verzeichnisses an, die von einer `"use server"`-Datei importiert werden. Shared Helper für Server Actions gehören daher nach `src/lib/` und werden über den `@/`-Alias importiert.
 - API-Routes geben Fehler immer als `{ error: string }` mit passendem HTTP-Statuscode zurück.
 
 ## Daten, Backend & Realtime

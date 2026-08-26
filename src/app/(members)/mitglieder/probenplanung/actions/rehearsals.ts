@@ -25,7 +25,7 @@ import {
   sanitizeDescription,
   syncInvitees,
   updateSchema,
-} from "./helpers";
+} from "@/lib/probenplanung/actions-helpers";
 
 export async function createRehearsalAction(input: {
   title: string;

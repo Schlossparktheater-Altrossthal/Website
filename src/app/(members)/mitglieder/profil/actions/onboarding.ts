@@ -2,7 +2,7 @@
 
 import type { OnboardingFocus } from "@prisma/client";
 
-import { authorizedFetch, type ActionResult } from "./helpers";
+import { authorizedFetch, type ActionResult } from "@/lib/profil/actions-helpers";
 
 export type SaveOnboardingInput = {
   focus: OnboardingFocus;

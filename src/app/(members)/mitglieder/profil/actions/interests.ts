@@ -1,6 +1,6 @@
 "use server";
 
-import { authorizedFetch, type ActionResult } from "./helpers";
+import { authorizedFetch, type ActionResult } from "@/lib/profil/actions-helpers";
 
 export async function saveInterestsAction(
   interests: string[],

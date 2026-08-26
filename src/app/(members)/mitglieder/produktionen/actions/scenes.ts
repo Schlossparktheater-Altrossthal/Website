@@ -16,7 +16,7 @@ import {
   readString,
   revalidateShow,
   slugify,
-} from "./helpers";
+} from "@/lib/produktionen/actions-helpers";
 
 const sceneIdentifierPattern = /^\d+(?:\.\d+)?$/;
 

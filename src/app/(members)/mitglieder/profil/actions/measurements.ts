@@ -2,7 +2,7 @@
 
 import type { MeasurementType, MeasurementUnit } from "@prisma/client";
 
-import { authorizedFetch, type ActionResult } from "./helpers";
+import { authorizedFetch, type ActionResult } from "@/lib/profil/actions-helpers";
 
 export type SaveMeasurementInput = {
   type: MeasurementType;

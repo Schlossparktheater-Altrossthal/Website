@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-import type { ProductionActionResult } from "./actions/helpers";
+import type { ProductionActionResult } from "@/lib/produktionen/actions-helpers";
 import {
   clearActiveProductionAction,
   createProductionAction,

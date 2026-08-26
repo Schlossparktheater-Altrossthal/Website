@@ -17,7 +17,7 @@ import {
   requireProductionManager,
   revalidateDepartments,
   slugify,
-} from "./helpers";
+} from "@/lib/produktionen/actions-helpers";
 
 export async function createDepartmentAction(formData: FormData): Promise<void> {
   await requireProductionManager();

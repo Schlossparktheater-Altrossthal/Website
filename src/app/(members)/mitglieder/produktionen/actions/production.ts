@@ -21,7 +21,7 @@ import {
   readString,
   revalidateShow,
   type ProductionActionResult,
-} from "./helpers";
+} from "@/lib/produktionen/actions-helpers";
 
 export async function setActiveProductionAction(
   formData: FormData,

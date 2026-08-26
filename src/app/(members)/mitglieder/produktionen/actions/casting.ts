@@ -14,7 +14,7 @@ import {
   readString,
   requireProductionManager,
   revalidateShow,
-} from "./helpers";
+} from "@/lib/produktionen/actions-helpers";
 
 export async function createCharacterAction(formData: FormData): Promise<void> {
   await requireProductionManager();

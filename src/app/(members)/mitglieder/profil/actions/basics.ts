@@ -2,7 +2,7 @@
 
 import type { PayoutMethod } from "@prisma/client";
 
-import { authorizedFetch, type ActionResult } from "./helpers";
+import { authorizedFetch, type ActionResult } from "@/lib/profil/actions-helpers";
 
 export type UpdateProfileBasicsResult = {
   user: {
