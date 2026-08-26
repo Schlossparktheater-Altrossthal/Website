@@ -39,6 +39,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Keine leeren catch-Blöcke. Fehler immer loggen oder explizit weitergeben.
 - Fehler lokal mit `console.error`, Warnungen mit `console.warn` loggen – kein `console.log` außerhalb von `src/lib/logger`. Server-seitige strukturierte Log-Events über `createLogger` aus `@/lib/logger` (persistiert in der DB).
 - Server-Actions-Dateien (`actions.ts`) nach Domäne aufteilen und schlank halten. Gemeinsame Helper in einer eigenen Datei (`actions/helpers.ts`) bündeln. Eine Actions-Datei sollte nicht über ~400 Zeilen wachsen – neue Actions gehören in eine passende Domänen-Datei statt in eine bestehende Sammeldatei.
+- Nur echte Server-Actions-Dateien tragen `"use server"`. Helper-Dateien (`actions/helpers.ts`) dürfen **kein** `"use server"` haben – sie sind normale serverseitige Utilities und dürfen auch synchrone Funktionen exportieren. `"use server"` erzwingt, dass alle Exporte async sind (`Server Actions must be async functions`).
 - API-Routes geben Fehler immer als `{ error: string }` mit passendem HTTP-Statuscode zurück.
 
 ## Daten, Backend & Realtime
