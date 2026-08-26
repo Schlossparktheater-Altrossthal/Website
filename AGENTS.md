@@ -34,6 +34,8 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Validierungen mit `zod`. Pfad-Alias `@/*` statt relativer Imports. `cn` aus `@/lib/utils` für Klassenketten.
 - Type-Casts wie `as never`, `as any` oder `as unknown as ...` sind verboten. Korrekte Typen und Guards verwenden.
 - Vor neuen Hilfsfunktionen mit `rg` suchen ob eine passende bereits existiert. Keine Duplikate anlegen.
+- Vor dem Löschen von Modulen, Komponenten oder Exports immer die Verwendung prüfen: direkte Imports **und** Barrel-Exports (`index.ts`) und dynamische Imports. Ein Modul ist erst „tot“, wenn weder ein direkter noch ein Barrel-Import existiert – niemals nur auf Basis eines einzelnen Suchlaufs löschen.
+- Keine zwei exportierten Symbole mit identischem Namen (`PageHeader` existierte doppelt in `design-system/patterns` und `components/members`). Namenskollisionen sofort auflösen: konsolidieren oder eindeutig benennen.
 - Keine leeren catch-Blöcke. Fehler immer loggen oder explizit weitergeben.
 - Fehler lokal mit `console.error`, Warnungen mit `console.warn` loggen – kein `console.log` außerhalb von `src/lib/logger`. Server-seitige strukturierte Log-Events über `createLogger` aus `@/lib/logger` (persistiert in der DB).
 - Server-Actions-Dateien (`actions.ts`) nach Domäne aufteilen und schlank halten. Gemeinsame Helper in einer eigenen Datei (`actions/helpers.ts`) bündeln. Eine Actions-Datei sollte nicht über ~400 Zeilen wachsen – neue Actions gehören in eine passende Domänen-Datei statt in eine bestehende Sammeldatei.
@@ -45,6 +47,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - ENV-Variablen in `.env.example` und README dokumentieren.
 - Realtime-Ereignisse über `@/hooks/useRealtime` und `realtime-server/src`. Frontend und Backend gleichzeitig pflegen.
 - Geteilte Module des Realtime-Servers (`src/lib/realtime/shared/*`, `src/lib/server-analytics-*`) bleiben handgepflegt als `.js` + `.d.ts`. Der Realtime-Server hat keine Build-Stufe und kann `.ts` nicht laden – keine TS-Migration. Bei Änderungen an der `.js` die zugehörige `.d.ts` synchron halten.
+- Änderungen an `src/lib/realtime/shared/core.js` mit `node --check` und den Realtime-Tests (`src/lib/realtime/__tests__`) absichern, bevor sie committet werden.
 - Neue Permission-Keys müssen in `DEFAULT_PERMISSION_DEFINITIONS` in `src/lib/permissions.ts` registriert werden, bevor sie verwendet werden.
 - Neue Feature-Keys für öffentliche Seiten müssen in `FEATURE_DEFINITIONS` in `src/lib/frontend-editing.ts` eingetragen werden.
 - Bei Umbenennung von Permission-Keys eine neue Prisma-Migration erstellen, die alte Keys in der DB umbenennt.
@@ -67,6 +70,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 
 - Vor jedem Commit `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` ausführen. `pnpm lint` muss ohne Errors und Warnings durchlaufen – gefundene Probleme werden behoben, nicht per `eslint-disable` unterdrückt (Ausnahmen nur mit Begründung im Code).
 - Vitest-Tests liegen nahe am Quellcode. React-Komponenten mit `@testing-library/react` testen.
+- Beim Umbau oder bei der Migration einer Komponente/eines Moduls die zugehörigen Tests und `vi.mock`-Mocks mitpflegen: neue interne Abhängigkeiten müssen auch im Mock bereitstehen, sonst brechen Tests zur Laufzeit.
 - UI-Änderungen visuell mit Preview-Deployments absichern.
 
 ## Commits
