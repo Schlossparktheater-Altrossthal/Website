@@ -267,24 +267,49 @@ export function createRealtimeCore(options = {}) {
     return true;
   }
 
-  function broadcastAttendanceUpdate(payload) {
-    if (!payload || !payload.rehearsalId) return false;
-    const event = {
-      type: "attendance_updated",
-      rehearsalId: payload.rehearsalId,
-      targetUserId: payload.targetUserId,
-      status: payload.status ?? null,
-      comment: payload.comment,
-      actorUserId: payload.actorUserId,
-      timestamp: formatTimestamp(),
-    };
+  function createBroadcaster(type, buildFields, resolveRooms) {
+    return function broadcastEvent(payload, options = {}) {
+      const fields = buildFields(payload, options);
+      if (!fields) {
+        return false;
+      }
 
-    broadcast(event, `rehearsal_${payload.rehearsalId}`);
-    if (payload.targetUserId) {
-      broadcast(event, `user_${payload.targetUserId}`);
-    }
-    return true;
+      const event = {
+        type,
+        ...fields,
+        timestamp: formatTimestamp(options.timestamp ?? Date.now()),
+      };
+
+      const rooms = resolveRooms(event, payload, options);
+      if (!rooms) {
+        return false;
+      }
+
+      broadcast(event, rooms, options.excludeSocketId);
+      return true;
+    };
   }
+
+  const broadcastAttendanceUpdate = createBroadcaster(
+    "attendance_updated",
+    (payload) => {
+      if (!payload || !payload.rehearsalId) return null;
+      return {
+        rehearsalId: payload.rehearsalId,
+        targetUserId: payload.targetUserId,
+        status: payload.status ?? null,
+        comment: payload.comment,
+        actorUserId: payload.actorUserId,
+      };
+    },
+    (event, payload) => {
+      const rooms = [`rehearsal_${payload.rehearsalId}`];
+      if (payload.targetUserId) {
+        rooms.push(`user_${payload.targetUserId}`);
+      }
+      return rooms;
+    },
+  );
 
   function broadcastRehearsalCreated(payload) {
     if (!payload || !payload.rehearsal) return false;
@@ -305,87 +330,76 @@ export function createRealtimeCore(options = {}) {
     return true;
   }
 
-  function broadcastRehearsalUpdated(payload, options = {}) {
-    if (!payload || !payload.rehearsalId) return false;
-    const event = {
-      type: "rehearsal_updated",
-      rehearsalId: payload.rehearsalId,
-      changes: payload.changes || {},
-      targetUserIds: Array.isArray(payload.targetUserIds) ? payload.targetUserIds : [],
-      timestamp: formatTimestamp(options.timestamp ?? Date.now()),
-    };
+  const broadcastRehearsalUpdated = createBroadcaster(
+    "rehearsal_updated",
+    (payload) => {
+      if (!payload || !payload.rehearsalId) return null;
+      return {
+        rehearsalId: payload.rehearsalId,
+        changes: payload.changes || {},
+        targetUserIds: Array.isArray(payload.targetUserIds) ? payload.targetUserIds : [],
+      };
+    },
+    (event) => {
+      const rooms = [`rehearsal_${event.rehearsalId}`];
+      event.targetUserIds.forEach((userId) => {
+        rooms.push(`user_${userId}`);
+      });
+      return rooms;
+    },
+  );
 
-    broadcast(event, `rehearsal_${payload.rehearsalId}`);
-    event.targetUserIds.forEach((userId) => {
-      broadcast(event, `user_${userId}`);
-    });
-    return true;
-  }
+  const sendNotification = createBroadcaster(
+    "notification_created",
+    (payload) => {
+      if (!payload || !payload.targetUserId || !payload.notification) return null;
+      return {
+        notification: payload.notification,
+        targetUserId: payload.targetUserId,
+      };
+    },
+    (event) => `user_${event.targetUserId}`,
+  );
 
-  function sendNotification(payload, options = {}) {
-    if (!payload || !payload.targetUserId || !payload.notification) return false;
-    const event = {
-      type: "notification_created",
-      notification: payload.notification,
-      targetUserId: payload.targetUserId,
-      timestamp: formatTimestamp(options.timestamp ?? Date.now()),
-    };
+  const broadcastInventoryEvent = createBroadcaster(
+    "inventory_event",
+    (payload) => {
+      if (!payload || typeof payload !== "object") return null;
+      return { payload };
+    },
+    (event, payload, options) => options.rooms ?? ["global"],
+  );
 
-    broadcast(event, `user_${payload.targetUserId}`);
-    return true;
-  }
+  const broadcastTicketScanEvent = createBroadcaster(
+    "ticket_scan_event",
+    (payload) => {
+      if (!payload || typeof payload !== "object") return null;
+      return { payload };
+    },
+    (event, payload, options) => {
+      const rooms = options.rooms ?? ["global"];
+      const roomArray = Array.isArray(rooms) ? rooms : [rooms];
+      const showId = typeof payload.showId === "string" ? payload.showId.trim() : "";
+      return showId ? [...roomArray, `show_${showId}`] : roomArray;
+    },
+  );
 
-  function broadcastInventoryEvent(payload, options = {}) {
-    if (!payload || typeof payload !== "object") return false;
-    const event = {
-      type: "inventory_event",
-      payload,
-      timestamp: formatTimestamp(options.timestamp ?? Date.now()),
-    };
-
-    const rooms = options.rooms ?? ["global"];
-    broadcast(event, rooms, options.excludeSocketId);
-    return true;
-  }
-
-  function broadcastTicketScanEvent(payload, options = {}) {
-    if (!payload || typeof payload !== "object") return false;
-    const event = {
-      type: "ticket_scan_event",
-      payload,
-      timestamp: formatTimestamp(options.timestamp ?? Date.now()),
-    };
-
-    const rooms = options.rooms ?? ["global"];
-    broadcast(event, rooms, options.excludeSocketId);
-
-    const showId = typeof payload.showId === "string" ? payload.showId.trim() : "";
-    if (showId) {
-      broadcast(event, `show_${showId}`, options.excludeSocketId);
-    }
-
-    return true;
-  }
-
-  function broadcastOnboardingDashboardUpdate(payload, options = {}) {
-    if (!payload || typeof payload !== "object") return false;
-    const { onboardingId, dashboard } = payload;
-    if (typeof onboardingId !== "string" || !onboardingId.trim()) return false;
-    if (!dashboard || typeof dashboard !== "object") return false;
-
-    const event = {
-      type: "onboarding_dashboard_update",
-      onboardingId,
-      dashboard,
-      timestamp: formatTimestamp(options.timestamp ?? Date.now()),
-    };
-
-    broadcast(event, `onboarding_${onboardingId}`);
-    if (payload.broadcastToGlobal) {
-      broadcast(event, "global");
-    }
-    return true;
-  }
+  const broadcastOnboardingDashboardUpdate = createBroadcaster(
+    "onboarding_dashboard_update",
+    (payload) => {
+      const { onboardingId, dashboard } = payload ?? {};
+      if (typeof onboardingId !== "string" || !onboardingId.trim()) return null;
+      if (!dashboard || typeof dashboard !== "object") return null;
+      return { onboardingId, dashboard };
+    },
+    (event, payload) => {
+      const rooms = [`onboarding_${event.onboardingId}`];
+      if (payload.broadcastToGlobal) {
+        rooms.push("global");
+      }
+      return rooms;
+    },
+  );
 
   function handleServerEvent(eventType, data) {
     switch (eventType) {
