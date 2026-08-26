@@ -51,6 +51,7 @@ vi.mock("@/components/members/members-app-shell", () => ({
     <div data-testid="layout">{children}</div>
   ),
   MembersContentHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  MembersPageActions: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   MembersTopbar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   MembersTopbarStatus: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   MembersTopbarTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

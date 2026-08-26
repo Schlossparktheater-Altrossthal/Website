@@ -1,33 +1,31 @@
 # Pattern Library
 
-Diese Notiz sammelt die aktuellen UI-Patterns, die auf Basis von Tailwind, shadcn/ui und den neuen Design-Tokens umgesetzt wurden. Komponenten liegen unter `src/design-system/patterns` und können in React-Dateien via `@/design-system/patterns` importiert werden.
+Diese Notiz sammelt die aktuellen UI-Patterns, die auf Basis von Tailwind, shadcn/ui und den Design-Tokens umgesetzt wurden. Layout-Patterns liegen unter `src/components/members` und `src/components/ui`.
 
 ## Page Header
 
-Der `PageHeader` bündelt Titel, Beschreibung und Metadaten eines Bereichs.
+Der `PageHeader` aus `src/components/members/page-header.tsx` bündelt Titel, Beschreibung, Aktionen und Metadaten einer Mitgliederseite. Er projiziert Titel und Status in die `MembersAppShell`-Topbar und Beschreibung sowie Aktionen in den Content-Header.
 
-- `PageHeader`: Container mit responsiver Flex-Verteilung
-- `PageHeaderTitle`: gerenderter `<h1>` mit konsistenter Typografie
-- `PageHeaderDescription`: optionale Beschreibung unter dem Titel
-- `PageHeaderActions`: rechte Spalte für Aktionen oder Status
-- `PageHeaderStatus`: Badge-ähnlicher Status-Chip mit Varianten `online`, `offline`, `warning`, `error`, `idle`
+- `title`: Seitentitel (erscheint in der Topbar)
+- `description`: optionale Beschreibung im Content-Header
+- `actions`: rechte Spalte für Aktionen oder Status-Badges
+- `breadcrumbs`: optionale Breadcrumbs in der Topbar
+- `quickActions`: optionale Schnellzugriffe in der Topbar
+- `status`: optionaler Status-Chip in der Topbar
+- `variant`: `"page"` (Standard) oder `"section"` für Unterbereiche
 
 Beispiel:
 
 ```tsx
-<PageHeader>
-  <div className="space-y-1.5">
-    <PageHeaderTitle>Mitglieder-Dashboard</PageHeaderTitle>
-    <PageHeaderDescription>
-      Schneller Überblick über Live-Status und aktuelle Aktivitäten.
-    </PageHeaderDescription>
-  </div>
-  <PageHeaderActions>
-    <PageHeaderStatus state="online" icon={<Wifi className="h-4 w-4" />}>
+<PageHeader
+  title="Mitglieder-Dashboard"
+  description="Aktuelle Kennzahlen, Aktivitäten und Schnellzugriffe auf einen Blick."
+  status={
+    <ConnectionStatusBadge state="online" icon={<WifiIcon className="h-4 w-4" />}>
       Live verbunden
-    </PageHeaderStatus>
-  </PageHeaderActions>
-</PageHeader>
+    </ConnectionStatusBadge>
+  }
+/>
 ```
 
 ## Tokens einsetzen

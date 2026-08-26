@@ -172,32 +172,17 @@ Die meisten Seiten verwenden korrekt nur `<div className="space-y-6">` ohne eige
 **Beispiel:**
 
 ```tsx
-<MembersTopbar>
-  <MembersTopbarBreadcrumbs>Mitglieder · Probenplanung</MembersTopbarBreadcrumbs>
-  <MembersTopbarTitle>Probenplanung</MembersTopbarTitle>
-  <MembersTopbarStatus>
-    <Badge variant="info">Planung aktiv</Badge>
-  </MembersTopbarStatus>
-  <MembersTopbarQuickActions>
-    <Button size="sm">Neue Probe</Button>
-  </MembersTopbarQuickActions>
-</MembersTopbar>
+<PageHeader
+  title="Probenplanung"
+  description="Termine anlegen, veröffentlichen und Rückmeldungen im Blick behalten."
+  status={<Badge variant="info">Planung aktiv</Badge>}
+  quickActions={<Button size="sm">Neue Probe</Button>}
+/>;
 
-<MembersContentHeader>
-  <PageHeader>
-    <div className="space-y-1.5">
-      <PageHeaderTitle>Probenplanung</PageHeaderTitle>
-      <PageHeaderDescription>
-        Termine anlegen, veröffentlichen und Rückmeldungen im Blick behalten.
-      </PageHeaderDescription>
-    </div>
-  </PageHeader>
-</MembersContentHeader>
-
-{/* Hauptinhalt folgt im Section-Bereich */}
-<div className="space-y-6">
-  …
-</div>
+{
+  /* Hauptinhalt folgt im Section-Bereich */
+}
+<div className="space-y-6">…</div>;
 ```
 
 ### Buttons (`@/components/ui/button`)

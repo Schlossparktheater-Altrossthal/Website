@@ -26,20 +26,10 @@ import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  MembersContentHeader,
-  MembersContentLayout,
-  MembersTopbar,
-  MembersTopbarStatus,
-  MembersTopbarTitle,
-} from "@/components/members/members-app-shell";
+import { MembersContentLayout } from "@/components/members/members-app-shell";
 import { useMembersPermissions } from "@/components/members/permissions-context";
-import {
-  PageHeader,
-  PageHeaderDescription,
-  PageHeaderStatus,
-  PageHeaderTitle,
-} from "@/design-system/patterns";
+import { ConnectionStatusBadge } from "@/components/members/connection-status-badge";
+import { PageHeader } from "@/components/members/page-header";
 import { cn } from "@/lib/utils";
 
 interface DashboardStats {
@@ -594,37 +584,27 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
   return (
     <Fragment>
       <MembersContentLayout width="2xl" spacing="comfortable" gap="lg" />
-      <MembersTopbar>
-        <MembersTopbarTitle>Mitglieder-Dashboard</MembersTopbarTitle>
-        <MembersTopbarStatus>
-          <PageHeaderStatus state={connectionMeta.state} icon={connectionMeta.icon}>
+      <PageHeader
+        title="Mitglieder-Dashboard"
+        description="Aktuelle Kennzahlen, Aktivitäten und Schnellzugriffe auf einen Blick."
+        status={
+          <ConnectionStatusBadge state={connectionMeta.state} icon={connectionMeta.icon}>
             {connectionMeta.label}
-          </PageHeaderStatus>
-        </MembersTopbarStatus>
-      </MembersTopbar>
-
-      <MembersContentHeader>
-        <PageHeader>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-1.5">
-              <PageHeaderTitle>Mitglieder-Dashboard</PageHeaderTitle>
-              <PageHeaderDescription>
-                Aktuelle Kennzahlen, Aktivitäten und Schnellzugriffe auf einen Blick.
-              </PageHeaderDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <PageHeaderStatus state={connectionMeta.state} icon={connectionMeta.icon}>
-                {connectionMeta.label}
-              </PageHeaderStatus>
-              {profileCompletion?.complete ? (
-                <Badge variant="outline" className="border-success/40 bg-success/10 text-success">
-                  Profil aktualisiert
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-        </PageHeader>
-      </MembersContentHeader>
+          </ConnectionStatusBadge>
+        }
+        actions={
+          <>
+            <ConnectionStatusBadge state={connectionMeta.state} icon={connectionMeta.icon}>
+              {connectionMeta.label}
+            </ConnectionStatusBadge>
+            {profileCompletion?.complete ? (
+              <Badge variant="outline" className="border-success/40 bg-success/10 text-success">
+                Profil aktualisiert
+              </Badge>
+            ) : null}
+          </>
+        }
+      />
 
       <div className="space-y-10 pb-12">
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">

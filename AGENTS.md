@@ -168,7 +168,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 ## Seiten-Patterns
 
-- Seiten-Header verwenden das `PageHeader`-Pattern aus `src/design-system/patterns/page-header.tsx`.
+- Seiten-Header verwenden das `PageHeader`-Pattern aus `src/components/members/page-header.tsx`.
 
 ## Typografie & Abstände
 

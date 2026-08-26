@@ -29,5 +29,4 @@ Schnellzugriffe, aktuelle Hinweise) und dient als Landepunkt für Mitglieder.
 
 ## Besonderheiten
 
-- Nutzt das `PageHeader`-Pattern aus `src/components/members/page-header.tsx` (nicht das
-  inaktive Pattern aus `src/design-system/patterns`).
+- Nutzt das `PageHeader`-Pattern aus `src/components/members/page-header.tsx`.
