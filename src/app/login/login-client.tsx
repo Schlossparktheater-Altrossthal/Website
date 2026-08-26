@@ -222,7 +222,7 @@ export function LoginPageClient() {
                 </div>
               </div>
               <DialogTrigger asChild>
-                <Button type="button" size="sm" variant="secondary" onClick={handleOpenMagic}>
+                <Button type="button" size="sm" variant="outline" onClick={handleOpenMagic}>
                   Passwort vergessen
                 </Button>
               </DialogTrigger>
