@@ -1,6 +1,11 @@
 /* global workbox */
 const WORKBOX_VERSION = "7.4.1";
-importScripts(`./workbox/workbox-v${WORKBOX_VERSION}/workbox-sw.js`);
+
+try {
+  importScripts(`./workbox/workbox-v${WORKBOX_VERSION}/workbox-sw.js`);
+} catch (error) {
+  console.warn("[ServiceWorker] Workbox library could not be loaded.", error);
+}
 
 if (workbox) {
   workbox.setConfig({ modulePathPrefix: `./workbox/workbox-v${WORKBOX_VERSION}` });
@@ -93,5 +98,5 @@ if (workbox) {
     }
   });
 } else {
-  console.error("Workbox failed to load. Offline support is disabled.");
+  self.registration?.unregister?.();
 }

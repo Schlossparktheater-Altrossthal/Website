@@ -114,7 +114,6 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     }
 
     let wb: Workbox | null = null;
-    let isMounted = true;
 
     hadControllerRef.current = Boolean(navigator.serviceWorker.controller);
     shouldReloadOnControllingRef.current = hadControllerRef.current;
@@ -189,9 +188,10 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
         await wb.register();
       } catch (error) {
-        console.error("Service Worker registration failed", error);
-        if (isMounted) {
-          toast.error("Service Worker konnte nicht registriert werden.");
+        // Der Service Worker ist ein Progressive Enhancement. Ein Registrierungsfehler
+        // (z. B. geschützte Umgebungen oder fehlende Workbox-Assets) ist nicht kritisch.
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Service Worker registration failed", error);
         }
       }
     };
@@ -229,7 +229,6 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("online", handleOnline);
 
     return () => {
-      isMounted = false;
       navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.removeEventListener("appinstalled", handleAppInstalled);
