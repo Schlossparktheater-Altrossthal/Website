@@ -86,18 +86,16 @@ import type { OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 import { AllergyLevel, type OnboardingFocus, type PayoutMethod, type Role } from "@prisma/client";
 
+import { deleteAllergyAction, upsertAllergyAction } from "./actions/allergies";
+import { updateProfileBasicsAction, type UpdateProfileBasicsResult } from "./actions/basics";
+import { saveDietaryPreferenceAction } from "./actions/dietary";
+import { saveInterestsAction } from "./actions/interests";
 import {
-  deleteAllergyAction,
-  saveDietaryPreferenceAction,
-  saveInterestsAction,
   saveOnboardingAction,
-  startOnboardingAction,
   saveRolePreferencesAction,
-  updateProfileBasicsAction,
-  upsertAllergyAction,
-  type UpdateProfileBasicsResult,
+  startOnboardingAction,
   type SaveRolePreferencesInput,
-} from "./actions";
+} from "./actions/onboarding";
 import { ProfileCompletionProvider, useProfileCompletion } from "./profile-completion-context";
 import { AvatarCropDialog } from "./avatar-crop-dialog";
 import { useAvatarCrop } from "./use-avatar-crop";
