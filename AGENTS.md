@@ -77,6 +77,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 
 ## Commits
 
+- Nach jeder abgeschlossenen Aufgabe wird committet – nicht erst auf explizite Aufforderung. Jede Aufgabe als atomarer Commit.
 - Commit-Messages folgen dem Conventional-Commits-Format: `type(scope): description`.
 - Die Beschreibung ist immer auf Englisch, im Imperativ formuliert (`Fix …` statt `Fixed …` oder `Fixes …`) und ausdrucksstark: Sie sagt, was geändert wurde und warum. Nie nur `update`, `changes` oder `wip`.
 - Feste Kategorien (`type`):
