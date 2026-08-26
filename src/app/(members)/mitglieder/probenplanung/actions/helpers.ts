@@ -5,7 +5,6 @@ import sanitizeHtml from "sanitize-html";
 import type { Prisma } from "@prisma/client";
 
 import { requireAuth } from "@/lib/rbac";
-import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
 
