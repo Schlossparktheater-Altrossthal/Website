@@ -143,9 +143,9 @@ export type IconProps = React.SVGProps<SVGSVGElement> & {
 
 export type IconComponent = (props: IconProps) => React.ReactNode;
 
-export const EditIcon = ({ className = "w-4 h-4", ...props }: IconProps) => {
+export function EditIcon({ className = "w-4 h-4", ...props }: IconProps) {
   return <Pencil className={className} aria-hidden {...props} />;
-};
+}
 
 export function TrashIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
   return <Trash2 className={className} aria-hidden {...props} />;
