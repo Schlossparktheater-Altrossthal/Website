@@ -69,7 +69,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 
 ## Tests, Qualitätssicherung & Reviews
 
-- Vor jedem Commit `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` ausführen. `pnpm lint` muss ohne Errors und Warnings durchlaufen – gefundene Probleme werden behoben, nicht per `eslint-disable` unterdrückt (Ausnahmen nur mit Begründung im Code).
+- Vor jedem Commit `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` ausführen. `pnpm lint` muss ohne Errors durchlaufen – gefundene Fehler werden behoben, nicht per `eslint-disable` unterdrückt (Ausnahmen nur mit Begründung im Code). Warnings der React-Compiler-Regeln (`react-hooks/set-state-in-effect`, `react-hooks/refs`) sind dokumentiert erlaubt, solange der React Compiler nicht aktiv ist (Begründung in `eslint.config.mjs`).
 - Vitest-Tests liegen nahe am Quellcode. React-Komponenten mit `@testing-library/react` testen.
 - Beim Umbau oder bei der Migration einer Komponente/eines Moduls die zugehörigen Tests und `vi.mock`-Mocks mitpflegen: neue interne Abhängigkeiten müssen auch im Mock bereitstehen, sonst brechen Tests zur Laufzeit.
 - UI-Änderungen visuell mit Preview-Deployments absichern.
