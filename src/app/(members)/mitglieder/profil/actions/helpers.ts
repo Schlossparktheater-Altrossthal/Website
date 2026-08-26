@@ -1,5 +1,3 @@
-"use server";
-
 import { cookies } from "next/headers";
 
 const BASE_URL = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");

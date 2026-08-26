@@ -1,5 +1,3 @@
-"use server";
-
 import { z } from "zod";
 import sanitizeHtml from "sanitize-html";
 import type { Prisma } from "@prisma/client";
