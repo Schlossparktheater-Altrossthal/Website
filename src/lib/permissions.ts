@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sortRoles, type Role } from "@/lib/roles";
+import { isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 
 // Categories for permissions
@@ -455,6 +455,24 @@ function getBaselinePermissions(user: UserLike) {
   return granted;
 }
 
+function buildRoleFilter(
+  systemRoles: Role[],
+  customRoleIds: string[],
+): Prisma.AppRolePermissionWhereInput[] {
+  const roleFilters: Prisma.AppRolePermissionWhereInput[] = [];
+  if (systemRoles.length) {
+    roleFilters.push({
+      role: {
+        OR: [{ systemRole: { in: systemRoles } }, { name: { in: systemRoles } }],
+      },
+    });
+  }
+  if (customRoleIds.length) {
+    roleFilters.push({ roleId: { in: customRoleIds } });
+  }
+  return roleFilters;
+}
+
 export async function hasPermission(user: UserLike, permissionKey: string): Promise<boolean> {
   if (!user?.id) return false;
   if (!isKnownPermissionKey(permissionKey)) return false;
@@ -462,7 +480,7 @@ export async function hasPermission(user: UserLike, permissionKey: string): Prom
   const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(user);
   const owned = new Set(systemRoles);
 
-  if (owned.has("owner") || owned.has("admin")) return true;
+  if (isAdminRole(owned)) return true;
 
   if (getBaselinePermissions(user).has(permissionKey)) {
     return true;
@@ -485,17 +503,7 @@ export async function hasPermission(user: UserLike, permissionKey: string): Prom
     }
   }
 
-  const roleFilters: Prisma.AppRolePermissionWhereInput[] = [];
-  if (systemRoles.length) {
-    roleFilters.push({
-      role: {
-        OR: [{ systemRole: { in: systemRoles } }, { name: { in: systemRoles } }],
-      },
-    });
-  }
-  if (customRoleIds.length) {
-    roleFilters.push({ roleId: { in: customRoleIds } });
-  }
+  const roleFilters = buildRoleFilter(systemRoles, customRoleIds);
 
   if (!roleFilters.length) {
     return false;
@@ -517,7 +525,7 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(user);
   const owned = new Set(systemRoles);
 
-  if (owned.has("owner") || owned.has("admin")) {
+  if (isAdminRole(owned)) {
     return [...DEFAULT_PERMISSION_KEYS];
   }
 
@@ -526,17 +534,7 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   await ensureSystemRoles();
   await ensurePermissionDefinitions();
 
-  const roleFilters: Prisma.AppRolePermissionWhereInput[] = [];
-  if (systemRoles.length) {
-    roleFilters.push({
-      role: {
-        OR: [{ systemRole: { in: systemRoles } }, { name: { in: systemRoles } }],
-      },
-    });
-  }
-  if (customRoleIds.length) {
-    roleFilters.push({ roleId: { in: customRoleIds } });
-  }
+  const roleFilters = buildRoleFilter(systemRoles, customRoleIds);
 
   if (roleFilters.length) {
     const rolePermissions = await prisma.appRolePermission.findMany({

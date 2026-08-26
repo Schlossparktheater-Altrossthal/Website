@@ -37,6 +37,10 @@ export function sortRoles(roles: Role[]) {
   return [...new Set(roles)].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
 }
 
+export function isAdminRole(roles: ReadonlySet<Role>): boolean {
+  return roles.has("owner") || roles.has("admin");
+}
+
 export function withAutoCast(roles: Role[]) {
   const unique = new Set(roles);
   const hasAssignedRole = Array.from(unique).some((role) => role !== "member");

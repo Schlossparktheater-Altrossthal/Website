@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import type { Role } from "@/lib/roles";
+import { isAdminRole, type Role } from "@/lib/roles";
 import { applyImpersonation } from "@/lib/auth/impersonation";
 
 export { ROLES, type Role } from "@/lib/roles";
@@ -23,7 +23,7 @@ export function hasRole(
   if (owned.size === 0) return false;
 
   // Owners and Admins have full access (wildcard)
-  if (owned.has("owner") || owned.has("admin")) return true;
+  if (isAdminRole(owned)) return true;
 
   return roles.some((role) => owned.has(role));
 }
