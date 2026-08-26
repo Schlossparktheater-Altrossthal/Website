@@ -11,6 +11,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 ## Design-System & Layout-System
 
 - **Design-Tokens statt hard-coded Farben:** Nur semantische Tokens verwenden (`bg-card`, `text-foreground`, `border-border`, `bg-muted` etc.), keine Tailwind-Farben (`bg-white`, `text-slate-*`, `bg-gray-*`). Alle Komponenten müssen in Light & Dark Mode funktionieren.
+- `src/app/design-tokens.css` wird von `scripts/build-design-tokens.mjs` generiert und muss im Root-Layout (`src/app/layout.tsx`) per JS-Import geladen werden – **nicht** per CSS-`@import` in `globals.css`. Relative CSS-`@import`-Pfade werden vom Bundler nicht zuverlässig relativ zur Datei aufgelöst (`Can't resolve './design-tokens.css'`).
 - **Mitgliederbereich-Layout:** `MembersAppShell` übernimmt Container und Padding. Seiten nur `<div className="space-y-6">` — keine eigenen `mx-auto`, `px-*`, `py-*` oder `<main>`-Wrapper.
 - **Custom-Layouts:** Nur bei Bedarf `<MembersContentLayout width="..." padding="..." />` verwenden.
 - **Legacy-Code:** Bestehende Komponenten mit hard-coded Farben nutzen CSS-Override-Strategie. Neue Komponenten immer mit Design-Tokens bauen.

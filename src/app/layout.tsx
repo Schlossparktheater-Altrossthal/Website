@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Providers } from "./providers";
+import "./design-tokens.css";
 import "./globals.css";
 import type { Viewport } from "next";
 import type { Session } from "next-auth";
