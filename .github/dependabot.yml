@@ -22,6 +22,16 @@ updates:
         dependency-type: production
       development-dependencies:
         dependency-type: development
+    ignore:
+      # typescript-eslint unterstützt TypeScript 7 noch nicht (typescript-eslint#10940).
+      - dependency-name: "typescript"
+        versions: [">=7"]
+      # Projekt bleibt bewusst auf ESLint 9 (siehe „downgrade to ESLint 9“).
+      - dependency-name: "eslint"
+        versions: [">=10"]
+      # @tanstack/react-table v9 bricht die API (createCoreRowModel/ReactTable statt getCoreRowModel/useReactTable).
+      - dependency-name: "@tanstack/react-table"
+        versions: [">=9"]
   - package-ecosystem: "npm"
     directory: "/realtime-server"
     schedule:
