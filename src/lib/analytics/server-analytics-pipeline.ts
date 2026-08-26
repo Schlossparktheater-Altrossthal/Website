@@ -181,13 +181,18 @@ function toTrafficAttributionLike(rows: AnalyticsTrafficAttribution[]): TrafficA
   }));
 }
 
-export async function runHttpAnalyticsAggregation(options: HttpAggregationOptions = {}): Promise<
-  AggregationResult<{
-    windowStart: Date;
-    windowEnd: Date;
-    requestCount: number;
-  }>
-> {
+type AnalyticsAggregationContext = {
+  client: PrismaClient;
+  now: Date;
+  settings: ServerAnalyticsSettings | null;
+};
+
+async function runAggregation<T>(
+  options: { prisma?: PrismaClient; now?: Date; settings?: ServerAnalyticsSettings },
+  shouldLoadSettings: boolean,
+  settingsLabel: string,
+  execute: (context: AnalyticsAggregationContext) => Promise<T>,
+): Promise<AggregationResult<T>> {
   if (!isDatabaseEnabled()) {
     return { status: "skipped", reason: "database_disabled" };
   }
@@ -196,114 +201,134 @@ export async function runHttpAnalyticsAggregation(options: HttpAggregationOption
   const now = options.now ?? new Date();
   let settings = options.settings ?? null;
 
-  if (!settings && (options.windowMinutes === undefined || options.bucketMinutes === undefined)) {
+  if (!settings && shouldLoadSettings) {
     try {
       settings = await loadServerAnalyticsSettings(client);
     } catch (error) {
       console.error(
-        "[analytics] Failed to load server analytics settings for HTTP aggregation",
+        `[analytics] Failed to load server analytics settings for ${settingsLabel} aggregation`,
         error,
       );
     }
   }
 
-  const windowMinutes =
-    options.windowMinutes ??
-    settings?.httpWindowMinutes ??
-    resolvePositiveInteger(process.env.ANALYTICS_HTTP_WINDOW_MINUTES, DEFAULT_HTTP_WINDOW_MINUTES, {
-      min: 5,
-    });
-  const bucketMinutes =
-    options.bucketMinutes ??
-    settings?.httpBucketMinutes ??
-    resolvePositiveInteger(process.env.ANALYTICS_HTTP_BUCKET_MINUTES, DEFAULT_HTTP_BUCKET_MINUTES, {
-      min: 1,
-    });
-  const windowStart = new Date(now.getTime() - Math.max(windowMinutes, 5) * 60_000);
+  const data = await execute({ client, now, settings });
 
-  const [requests, heartbeats] = await Promise.all([
-    client.analyticsHttpRequest.findMany({
-      where: {
-        timestamp: {
-          gte: windowStart,
-          lte: now,
-        },
-      },
-      orderBy: { timestamp: "asc" },
-    }),
-    client.analyticsUptimeHeartbeat.findMany({
-      where: {
-        observedAt: {
-          gte: windowStart,
-          lte: now,
-        },
-      },
-    }),
-  ]);
+  return { status: "success", data };
+}
 
-  const { summary, peakHours } = aggregateHttpMetrics({
-    requests,
-    heartbeats,
-    windowStart,
-    windowEnd: now,
-    bucketMinutes,
-  });
+export async function runHttpAnalyticsAggregation(options: HttpAggregationOptions = {}): Promise<
+  AggregationResult<{
+    windowStart: Date;
+    windowEnd: Date;
+    requestCount: number;
+  }>
+> {
+  return runAggregation(
+    options,
+    options.windowMinutes === undefined || options.bucketMinutes === undefined,
+    "HTTP",
+    async ({ client, now, settings }) => {
+      const windowMinutes =
+        options.windowMinutes ??
+        settings?.httpWindowMinutes ??
+        resolvePositiveInteger(
+          process.env.ANALYTICS_HTTP_WINDOW_MINUTES,
+          DEFAULT_HTTP_WINDOW_MINUTES,
+          { min: 5 },
+        );
+      const bucketMinutes =
+        options.bucketMinutes ??
+        settings?.httpBucketMinutes ??
+        resolvePositiveInteger(
+          process.env.ANALYTICS_HTTP_BUCKET_MINUTES,
+          DEFAULT_HTTP_BUCKET_MINUTES,
+          { min: 1 },
+        );
+      const windowStart = new Date(now.getTime() - Math.max(windowMinutes, 5) * 60_000);
 
-  await client.$transaction(async (tx) => {
-    await tx.analyticsHttpSummary.deleteMany({});
-    await tx.analyticsHttpPeakHour.deleteMany({});
+      const [requests, heartbeats] = await Promise.all([
+        client.analyticsHttpRequest.findMany({
+          where: {
+            timestamp: {
+              gte: windowStart,
+              lte: now,
+            },
+          },
+          orderBy: { timestamp: "asc" },
+        }),
+        client.analyticsUptimeHeartbeat.findMany({
+          where: {
+            observedAt: {
+              gte: windowStart,
+              lte: now,
+            },
+          },
+        }),
+      ]);
 
-    await tx.analyticsHttpSummary.create({
-      data: {
-        windowStart: summary.windowStart,
-        windowEnd: summary.windowEnd,
-        totalRequests: summary.totalRequests,
-        successfulRequests: summary.successfulRequests,
-        clientErrorRequests: summary.clientErrorRequests,
-        serverErrorRequests: summary.serverErrorRequests,
-        averageDurationMs: summary.averageDurationMs,
-        p95DurationMs: summary.p95DurationMs,
-        averagePayloadBytes: summary.averagePayloadBytes,
-        uptimePercentage: summary.uptimePercentage,
-        frontendRequests: summary.frontendRequests,
-        frontendAvgResponseMs: summary.frontendAvgResponseMs,
-        frontendAvgPayloadBytes: summary.frontendAvgPayloadBytes,
-        cacheHitRate: summary.cacheHitRate,
-        frontendCacheHitRate: summary.frontendCacheHitRate,
-        membersRequests: summary.membersRequests,
-        membersAvgResponseMs: summary.membersAvgResponseMs,
-        guestRequests: summary.guestRequests,
-        guestAvgResponseMs: summary.guestAvgResponseMs,
-        apiRequests: summary.apiRequests,
-        apiAvgResponseMs: summary.apiAvgResponseMs,
-        apiErrorRate: summary.apiErrorRate,
-        apiBackgroundJobs: summary.apiBackgroundJobs,
-        botRequests: summary.botRequests,
-        botAvgResponseMs: summary.botAvgResponseMs,
-        botBlockedRequests: summary.botBlockedRequests,
-      },
-    });
-
-    if (peakHours.length > 0) {
-      await tx.analyticsHttpPeakHour.createMany({
-        data: peakHours.map((entry) => ({
-          bucketStart: entry.bucketStart,
-          bucketEnd: entry.bucketEnd,
-          requests: entry.requests,
-          share: entry.share,
-        })),
+      const { summary, peakHours } = aggregateHttpMetrics({
+        requests,
+        heartbeats,
+        windowStart,
+        windowEnd: now,
+        bucketMinutes,
       });
-    }
-  });
 
-  return {
-    status: "success",
-    data: {
-      windowStart,
-      windowEnd: now,
-      requestCount: requests.length,
+      await client.$transaction(async (tx) => {
+        await tx.analyticsHttpSummary.deleteMany({});
+        await tx.analyticsHttpPeakHour.deleteMany({});
+
+        await tx.analyticsHttpSummary.create({
+          data: {
+            windowStart: summary.windowStart,
+            windowEnd: summary.windowEnd,
+            totalRequests: summary.totalRequests,
+            successfulRequests: summary.successfulRequests,
+            clientErrorRequests: summary.clientErrorRequests,
+            serverErrorRequests: summary.serverErrorRequests,
+            averageDurationMs: summary.averageDurationMs,
+            p95DurationMs: summary.p95DurationMs,
+            averagePayloadBytes: summary.averagePayloadBytes,
+            uptimePercentage: summary.uptimePercentage,
+            frontendRequests: summary.frontendRequests,
+            frontendAvgResponseMs: summary.frontendAvgResponseMs,
+            frontendAvgPayloadBytes: summary.frontendAvgPayloadBytes,
+            cacheHitRate: summary.cacheHitRate,
+            frontendCacheHitRate: summary.frontendCacheHitRate,
+            membersRequests: summary.membersRequests,
+            membersAvgResponseMs: summary.membersAvgResponseMs,
+            guestRequests: summary.guestRequests,
+            guestAvgResponseMs: summary.guestAvgResponseMs,
+            apiRequests: summary.apiRequests,
+            apiAvgResponseMs: summary.apiAvgResponseMs,
+            apiErrorRate: summary.apiErrorRate,
+            apiBackgroundJobs: summary.apiBackgroundJobs,
+            botRequests: summary.botRequests,
+            botAvgResponseMs: summary.botAvgResponseMs,
+            botBlockedRequests: summary.botBlockedRequests,
+          },
+        });
+
+        if (peakHours.length > 0) {
+          await tx.analyticsHttpPeakHour.createMany({
+            data: peakHours.map((entry) => ({
+              bucketStart: entry.bucketStart,
+              bucketEnd: entry.bucketEnd,
+              requests: entry.requests,
+              share: entry.share,
+            })),
+          });
+        }
+      });
+
+      return {
+        windowStart,
+        windowEnd: now,
+        requestCount: requests.length,
+      };
     },
-  };
+  );
 }
 
 export async function runSessionAnalyticsAggregation(
@@ -315,268 +340,244 @@ export async function runSessionAnalyticsAggregation(
     realtimeEventCount: number;
   }>
 > {
-  if (!isDatabaseEnabled()) {
-    return { status: "skipped", reason: "database_disabled" };
-  }
-
-  const client = getPrisma(options.prisma);
-  const now = options.now ?? new Date();
-  let settings = options.settings ?? null;
-
-  if (
-    !settings &&
-    (options.windowDays === undefined ||
+  return runAggregation(
+    options,
+    options.windowDays === undefined ||
       options.retentionDays === undefined ||
-      options.realtimeWindowHours === undefined)
-  ) {
-    try {
-      settings = await loadServerAnalyticsSettings(client);
-    } catch (error) {
-      console.error(
-        "[analytics] Failed to load server analytics settings for session aggregation",
-        error,
-      );
-    }
-  }
+      options.realtimeWindowHours === undefined,
+    "session",
+    async ({ client, now, settings }) => {
+      const windowDays =
+        options.windowDays ??
+        settings?.sessionWindowDays ??
+        resolvePositiveInteger(
+          process.env.ANALYTICS_SESSION_WINDOW_DAYS,
+          DEFAULT_SESSION_WINDOW_DAYS,
+        );
+      const retentionDays =
+        options.retentionDays ??
+        settings?.sessionRetentionDays ??
+        resolvePositiveInteger(
+          process.env.ANALYTICS_SESSION_RETENTION_DAYS,
+          DEFAULT_SESSION_RETENTION_DAYS,
+        );
+      const realtimeWindowHours =
+        options.realtimeWindowHours ??
+        settings?.realtimeWindowHours ??
+        DEFAULT_REALTIME_WINDOW_HOURS;
 
-  const windowDays =
-    options.windowDays ??
-    settings?.sessionWindowDays ??
-    resolvePositiveInteger(process.env.ANALYTICS_SESSION_WINDOW_DAYS, DEFAULT_SESSION_WINDOW_DAYS);
-  const retentionDays =
-    options.retentionDays ??
-    settings?.sessionRetentionDays ??
-    resolvePositiveInteger(
-      process.env.ANALYTICS_SESSION_RETENTION_DAYS,
-      DEFAULT_SESSION_RETENTION_DAYS,
-    );
-  const realtimeWindowHours =
-    options.realtimeWindowHours ?? settings?.realtimeWindowHours ?? DEFAULT_REALTIME_WINDOW_HOURS;
+      const windowStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
+      const realtimeWindowStart = new Date(now.getTime() - realtimeWindowHours * 60 * 60 * 1000);
 
-  const windowStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
-  const realtimeWindowStart = new Date(now.getTime() - realtimeWindowHours * 60 * 60 * 1000);
+      const [sessionsRaw, trafficRaw, realtimeEventsRaw] = await Promise.all([
+        client.analyticsSession.findMany({
+          where: {
+            startedAt: {
+              gte: windowStart,
+              lte: now,
+            },
+          },
+        }),
+        client.analyticsTrafficAttribution.findMany({
+          where: {
+            createdAt: {
+              gte: windowStart,
+              lte: now,
+            },
+          },
+        }),
+        client.analyticsRealtimeEvent.findMany({
+          where: {
+            occurredAt: {
+              gte: realtimeWindowStart,
+              lte: now,
+            },
+          },
+        }),
+      ]);
 
-  const [sessionsRaw, trafficRaw, realtimeEventsRaw] = await Promise.all([
-    client.analyticsSession.findMany({
-      where: {
-        startedAt: {
-          gte: windowStart,
-          lte: now,
-        },
-      },
-    }),
-    client.analyticsTrafficAttribution.findMany({
-      where: {
-        createdAt: {
-          gte: windowStart,
-          lte: now,
-        },
-      },
-    }),
-    client.analyticsRealtimeEvent.findMany({
-      where: {
-        occurredAt: {
-          gte: realtimeWindowStart,
-          lte: now,
-        },
-      },
-    }),
-  ]);
+      const sessions = transformSessions(sessionsRaw as AnalyticsSession[]);
+      const traffic = toTrafficAttributionLike(trafficRaw as AnalyticsTrafficAttribution[]);
+      const realtimeEvents = transformRealtimeEvents(realtimeEventsRaw as AnalyticsRealtimeEvent[]);
 
-  const sessions = transformSessions(sessionsRaw as AnalyticsSession[]);
-  const traffic = toTrafficAttributionLike(trafficRaw as AnalyticsTrafficAttribution[]);
-  const realtimeEvents = transformRealtimeEvents(realtimeEventsRaw as AnalyticsRealtimeEvent[]);
-
-  const result = aggregateSessionMetrics({
-    sessions,
-    traffic,
-    realtimeEvents,
-    now,
-  });
-
-  await client.$transaction(async (tx) => {
-    await tx.analyticsSessionInsight.deleteMany({});
-    await tx.analyticsTrafficSource.deleteMany({});
-    await tx.analyticsRealtimeSummary.deleteMany({});
-    await tx.analyticsSessionSummary.deleteMany({});
-
-    if (result.sessionInsights.length > 0) {
-      await tx.analyticsSessionInsight.createMany({
-        data: result.sessionInsights.map((insight) => ({
-          segment: insight.segment,
-          avgSessionDurationSeconds: insight.avgSessionDurationSeconds,
-          pagesPerSession: insight.pagesPerSession,
-          retentionRate: insight.retentionRate,
-          share: insight.share,
-          conversionRate: insight.conversionRate,
-        })),
+      const result = aggregateSessionMetrics({
+        sessions,
+        traffic,
+        realtimeEvents,
+        now,
       });
-    }
 
-    if (result.trafficSources.length > 0) {
-      await tx.analyticsTrafficSource.createMany({
-        data: result.trafficSources.map((source) => ({
-          channel: source.channel,
-          sessions: source.sessions,
-          avgSessionDurationSeconds: source.avgSessionDurationSeconds,
-          conversionRate: source.conversionRate,
-          changePercent: source.changePercent,
-        })),
+      await client.$transaction(async (tx) => {
+        await tx.analyticsSessionInsight.deleteMany({});
+        await tx.analyticsTrafficSource.deleteMany({});
+        await tx.analyticsRealtimeSummary.deleteMany({});
+        await tx.analyticsSessionSummary.deleteMany({});
+
+        if (result.sessionInsights.length > 0) {
+          await tx.analyticsSessionInsight.createMany({
+            data: result.sessionInsights.map((insight) => ({
+              segment: insight.segment,
+              avgSessionDurationSeconds: insight.avgSessionDurationSeconds,
+              pagesPerSession: insight.pagesPerSession,
+              retentionRate: insight.retentionRate,
+              share: insight.share,
+              conversionRate: insight.conversionRate,
+            })),
+          });
+        }
+
+        if (result.trafficSources.length > 0) {
+          await tx.analyticsTrafficSource.createMany({
+            data: result.trafficSources.map((source) => ({
+              channel: source.channel,
+              sessions: source.sessions,
+              avgSessionDurationSeconds: source.avgSessionDurationSeconds,
+              conversionRate: source.conversionRate,
+              changePercent: source.changePercent,
+            })),
+          });
+        }
+
+        await tx.analyticsRealtimeSummary.create({
+          data: {
+            windowStart: result.realtimeSummary.windowStart,
+            windowEnd: result.realtimeSummary.windowEnd,
+            totalEvents: result.realtimeSummary.totalEvents,
+            eventCounts: result.realtimeSummary.eventCounts,
+          },
+        });
+
+        await tx.analyticsSessionSummary.create({
+          data: {
+            windowStart: result.sessionSummary.windowStart,
+            windowEnd: result.sessionSummary.windowEnd,
+            peakConcurrentUsers: result.sessionSummary.peakConcurrentUsers,
+            membersRealtimeEvents: result.sessionSummary.membersRealtimeEvents,
+            membersAvgSessionDurationSeconds:
+              result.sessionSummary.membersAvgSessionDurationSeconds,
+            guestAvgSessionDurationSeconds: result.sessionSummary.guestAvgSessionDurationSeconds,
+          },
+        });
+
+        if (retentionDays > 0) {
+          const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+          await tx.analyticsSession.deleteMany({
+            where: {
+              startedAt: { lt: cutoff },
+            },
+          });
+          await tx.analyticsTrafficAttribution.deleteMany({
+            where: {
+              createdAt: { lt: cutoff },
+            },
+          });
+          await tx.analyticsRealtimeEvent.deleteMany({
+            where: {
+              occurredAt: { lt: cutoff },
+            },
+          });
+        }
       });
-    }
 
-    await tx.analyticsRealtimeSummary.create({
-      data: {
-        windowStart: result.realtimeSummary.windowStart,
-        windowEnd: result.realtimeSummary.windowEnd,
-        totalEvents: result.realtimeSummary.totalEvents,
-        eventCounts: result.realtimeSummary.eventCounts,
-      },
-    });
-
-    await tx.analyticsSessionSummary.create({
-      data: {
-        windowStart: result.sessionSummary.windowStart,
-        windowEnd: result.sessionSummary.windowEnd,
-        peakConcurrentUsers: result.sessionSummary.peakConcurrentUsers,
-        membersRealtimeEvents: result.sessionSummary.membersRealtimeEvents,
-        membersAvgSessionDurationSeconds: result.sessionSummary.membersAvgSessionDurationSeconds,
-        guestAvgSessionDurationSeconds: result.sessionSummary.guestAvgSessionDurationSeconds,
-      },
-    });
-
-    if (retentionDays > 0) {
-      const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
-      await tx.analyticsSession.deleteMany({
-        where: {
-          startedAt: { lt: cutoff },
-        },
-      });
-      await tx.analyticsTrafficAttribution.deleteMany({
-        where: {
-          createdAt: { lt: cutoff },
-        },
-      });
-      await tx.analyticsRealtimeEvent.deleteMany({
-        where: {
-          occurredAt: { lt: cutoff },
-        },
-      });
-    }
-  });
-
-  return {
-    status: "success",
-    data: {
-      sessionCount: sessionsRaw.length,
-      trafficAttributionCount: trafficRaw.length,
-      realtimeEventCount: realtimeEventsRaw.length,
+      return {
+        sessionCount: sessionsRaw.length,
+        trafficAttributionCount: trafficRaw.length,
+        realtimeEventCount: realtimeEventsRaw.length,
+      };
     },
-  };
+  );
 }
 
 export async function runPageAnalyticsAggregation(
   options: PageAggregationOptions = {},
 ): Promise<AggregationResult<{ pageViewCount: number }>> {
-  if (!isDatabaseEnabled()) {
-    return { status: "skipped", reason: "database_disabled" };
-  }
+  return runAggregation(
+    options,
+    options.windowDays === undefined || options.retentionDays === undefined,
+    "page",
+    async ({ client, now, settings }) => {
+      const windowDays =
+        options.windowDays ??
+        settings?.pageWindowDays ??
+        resolvePositiveInteger(process.env.ANALYTICS_PAGE_WINDOW_DAYS, DEFAULT_PAGE_WINDOW_DAYS);
+      const retentionDays =
+        options.retentionDays ??
+        settings?.pageRetentionDays ??
+        resolvePositiveInteger(
+          process.env.ANALYTICS_PAGE_RETENTION_DAYS,
+          DEFAULT_PAGE_RETENTION_DAYS,
+        );
 
-  const client = getPrisma(options.prisma);
-  const now = options.now ?? new Date();
-  let settings = options.settings ?? null;
+      const windowStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
-  if (!settings && (options.windowDays === undefined || options.retentionDays === undefined)) {
-    try {
-      settings = await loadServerAnalyticsSettings(client);
-    } catch (error) {
-      console.error(
-        "[analytics] Failed to load server analytics settings for page aggregation",
-        error,
-      );
-    }
-  }
-
-  const windowDays =
-    options.windowDays ??
-    settings?.pageWindowDays ??
-    resolvePositiveInteger(process.env.ANALYTICS_PAGE_WINDOW_DAYS, DEFAULT_PAGE_WINDOW_DAYS);
-  const retentionDays =
-    options.retentionDays ??
-    settings?.pageRetentionDays ??
-    resolvePositiveInteger(process.env.ANALYTICS_PAGE_RETENTION_DAYS, DEFAULT_PAGE_RETENTION_DAYS);
-
-  const windowStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
-
-  const pageViews = await client.analyticsPageView.findMany({
-    where: {
-      createdAt: {
-        gte: windowStart,
-        lte: now,
-      },
-    },
-    select: {
-      path: true,
-      scope: true,
-      deviceHint: true,
-      loadTimeMs: true,
-      lcpMs: true,
-      timeOnPageMs: true,
-      weight: true,
-    },
-  });
-
-  const { pages, devices } = aggregatePageMetrics(pageViews);
-
-  await client.$transaction(async (tx) => {
-    await tx.analyticsPageMetric.deleteMany({});
-    await tx.analyticsDeviceMetric.deleteMany({});
-
-    if (pages.length > 0) {
-      await tx.analyticsPageMetric.createMany({
-        data: pages.map((page) => ({
-          path: page.path,
-          scope: page.scope,
-          avgLoadMs: page.avgLoadMs,
-          lcpMs: page.lcpMs,
-          avgTimeOnPageSeconds: page.avgTimeOnPageSeconds,
-          weight: page.weight,
-        })),
-      });
-    }
-
-    if (devices.length > 0) {
-      await tx.analyticsDeviceMetric.createMany({
-        data: devices.map((device) => ({
-          device: device.device,
-          sessions: device.sessions,
-          avgLoadMs: device.avgLoadMs,
-          share: device.share,
-        })),
-      });
-    }
-
-    if (retentionDays > 0) {
-      const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
-      await tx.analyticsPageView.deleteMany({
+      const pageViews = await client.analyticsPageView.findMany({
         where: {
-          createdAt: { lt: cutoff },
+          createdAt: {
+            gte: windowStart,
+            lte: now,
+          },
+        },
+        select: {
+          path: true,
+          scope: true,
+          deviceHint: true,
+          loadTimeMs: true,
+          lcpMs: true,
+          timeOnPageMs: true,
+          weight: true,
         },
       });
-      await tx.analyticsDeviceSnapshot.deleteMany({
-        where: {
-          createdAt: { lt: cutoff },
-        },
-      });
-    }
-  });
 
-  return {
-    status: "success",
-    data: {
-      pageViewCount: pageViews.length,
+      const { pages, devices } = aggregatePageMetrics(pageViews);
+
+      await client.$transaction(async (tx) => {
+        await tx.analyticsPageMetric.deleteMany({});
+        await tx.analyticsDeviceMetric.deleteMany({});
+
+        if (pages.length > 0) {
+          await tx.analyticsPageMetric.createMany({
+            data: pages.map((page) => ({
+              path: page.path,
+              scope: page.scope,
+              avgLoadMs: page.avgLoadMs,
+              lcpMs: page.lcpMs,
+              avgTimeOnPageSeconds: page.avgTimeOnPageSeconds,
+              weight: page.weight,
+            })),
+          });
+        }
+
+        if (devices.length > 0) {
+          await tx.analyticsDeviceMetric.createMany({
+            data: devices.map((device) => ({
+              device: device.device,
+              sessions: device.sessions,
+              avgLoadMs: device.avgLoadMs,
+              share: device.share,
+            })),
+          });
+        }
+
+        if (retentionDays > 0) {
+          const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+          await tx.analyticsPageView.deleteMany({
+            where: {
+              createdAt: { lt: cutoff },
+            },
+          });
+          await tx.analyticsDeviceSnapshot.deleteMany({
+            where: {
+              createdAt: { lt: cutoff },
+            },
+          });
+        }
+      });
+
+      return {
+        pageViewCount: pageViews.length,
+      };
     },
-  };
+  );
 }
 
 export async function runServerAnalyticsAggregation(
