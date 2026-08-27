@@ -70,6 +70,7 @@ type ReturneeUpdateWizardProps = {
   existingPhotoConsent: boolean | null;
   dateOfBirth: string | null;
   isLoggedIn: boolean;
+  onboardingToken?: string | null;
 };
 
 type EducationCategory = "school_bsz" | "school_other" | "work" | "university" | "other";
@@ -221,6 +222,7 @@ export function ReturneeUpdateWizard({
   existingPhotoConsent,
   dateOfBirth,
   isLoggedIn,
+  onboardingToken,
 }: ReturneeUpdateWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -468,6 +470,9 @@ export function ReturneeUpdateWizard({
       body.append("payload", JSON.stringify(payload));
       if (documentFile) {
         body.append("document", documentFile);
+      }
+      if (onboardingToken) {
+        body.append("onboardingToken", onboardingToken);
       }
 
       const response = await fetch("/api/onboarding/update", {

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const rawPayload = formData.get("data");
   const documentFile = formData.get("document");
+  const rawOnboardingToken = formData.get("onboardingToken");
+  const onboardingToken = typeof rawOnboardingToken === "string" ? rawOnboardingToken.trim() : null;
 
   if (typeof rawPayload !== "string") {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
@@ -156,6 +159,30 @@ export async function POST(request: NextRequest) {
     documentMime = type || null;
     documentName = sanitizeFilename(documentFile.name);
     documentSize = documentBuffer.length;
+  }
+
+  let targetShowId: string | null = null;
+  if (onboardingToken) {
+    const tokenHash = /^[0-9a-f]{64}$/i.test(onboardingToken)
+      ? onboardingToken.toLowerCase()
+      : hashInviteToken(onboardingToken);
+    const invite = await prisma.memberInvite.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        showId: true,
+        expiresAt: true,
+        maxUses: true,
+        usageCount: true,
+        isDisabled: true,
+      },
+    });
+    if (invite) {
+      const status = calculateInviteStatus(invite);
+      if (status.isActive && invite.showId) {
+        targetShowId = invite.showId;
+      }
+    }
   }
 
   try {
@@ -273,6 +300,22 @@ export async function POST(request: NextRequest) {
             : {}),
         },
       });
+
+      if (targetShowId) {
+        await tx.productionMembership.upsert({
+          where: {
+            showId_userId: {
+              showId: targetShowId,
+              userId,
+            },
+          },
+          update: { leftAt: null },
+          create: {
+            showId: targetShowId,
+            userId,
+          },
+        });
+      }
 
       await tx.user.update({
         where: { id: userId },

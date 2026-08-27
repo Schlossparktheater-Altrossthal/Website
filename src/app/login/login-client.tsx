@@ -147,11 +147,14 @@ export function LoginPageClient() {
   async function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
     setLoading(true);
     try {
+      const onboardingToken = sp?.get("onboardingToken") ?? undefined;
+      const callbackUrl = sp?.get("callbackUrl") ?? "/mitglieder";
       const res: SignInResponse | undefined = await signIn("credentials", {
         email: values.email,
         password: values.password,
         redirect: false,
-        callbackUrl: "/mitglieder",
+        callbackUrl,
+        ...(onboardingToken ? { onboardingToken } : {}),
       });
       if (res?.error) {
         toast.error(res.error || "Anmeldung fehlgeschlagen");
@@ -161,7 +164,7 @@ export function LoginPageClient() {
         toast.success("Erfolgreich angemeldet");
         setShowMagicSuggestion(false);
         if (res?.url) router.push(res.url);
-        else router.push("/mitglieder");
+        else router.push(callbackUrl);
       }
     } catch {
       toast.error("Login fehlgeschlagen");

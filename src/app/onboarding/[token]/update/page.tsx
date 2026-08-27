@@ -108,7 +108,11 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button asChild variant="primary" size="lg">
-                  <Link href="/login">Anmelden</Link>
+                  <Link
+                    href={`/login?onboardingToken=${encodeURIComponent(token)}&callbackUrl=${encodeURIComponent(`/onboarding/${encodeURIComponent(token)}/update`)}`}
+                  >
+                    Anmelden
+                  </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
                   <Link href={`/onboarding/${encodeURIComponent(token)}`}>
@@ -210,6 +214,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         existingPhotoConsent={existingPhotoConsent?.consentGiven ?? null}
         dateOfBirth={existingUser?.dateOfBirth ? existingUser.dateOfBirth.toISOString() : null}
         isLoggedIn={true}
+        onboardingToken={token}
       />
     </main>
   );

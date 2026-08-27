@@ -13,6 +13,7 @@ import { sortRoles, ROLES } from "@/lib/roles";
 import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
+import { hashInviteToken, isInviteUsable } from "@/lib/member-invites";
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
 import { getAuthSecret } from "@/lib/auth-secret";
@@ -185,10 +186,25 @@ const useSecureCookies = process.env.NODE_ENV === "production";
 const credentialInputs: Record<string, CredentialInput> = {
   email: { label: "Email", type: "email" },
   password: { label: "Passwort", type: "password" },
+  onboardingToken: { label: "Onboarding-Token", type: "text" },
 };
 
 if (process.env.NODE_ENV !== "production") {
   credentialInputs.dev = { label: "Dev", type: "text" };
+}
+
+async function resolveActiveOnboardingInviteId(token: string | undefined): Promise<string | null> {
+  if (!token || !token.trim()) return null;
+  const trimmed = token.trim();
+  const tokenHash = /^[0-9a-f]{64}$/i.test(trimmed)
+    ? trimmed.toLowerCase()
+    : hashInviteToken(trimmed);
+  const invite = await prisma.memberInvite.findUnique({
+    where: { tokenHash },
+    select: { id: true, expiresAt: true, maxUses: true, usageCount: true, isDisabled: true },
+  });
+  if (!invite || !isInviteUsable(invite)) return null;
+  return invite.id;
 }
 
 const baseAdapter = PrismaAdapter(prisma);
@@ -279,13 +295,24 @@ const credentialsProvider = Credentials({
       throw new CredentialsSignin("Ungültige Zugangsdaten");
     }
 
-    if (user.deactivatedAt) {
-      throw new CredentialsSignin("Dieses Konto wurde deaktiviert.");
-    }
-
     const valid = await verifyPassword(rawPassword, user.passwordHash);
     if (!valid) {
       throw new CredentialsSignin("Ungültige Zugangsdaten");
+    }
+
+    const onboardingToken =
+      typeof credentials?.onboardingToken === "string" ? credentials.onboardingToken : undefined;
+    const activeOnboardingInviteId = await resolveActiveOnboardingInviteId(onboardingToken);
+
+    if (user.deactivatedAt && !activeOnboardingInviteId) {
+      throw new CredentialsSignin("Dieses Konto wurde deaktiviert.");
+    }
+
+    if (user.deactivatedAt && activeOnboardingInviteId) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { deactivatedAt: null },
+      });
     }
 
     const combinedRoles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
