@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AsyncButton } from "@/components/ui/async-button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { ROLE_LABELS, type Role } from "@/lib/roles";
 import { toast } from "sonner";
 
@@ -70,15 +70,17 @@ export function SeasonResetSettingsPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox checked disabled aria-readonly />
-            <span>{ROLE_LABELS.owner} — immer geschützt</span>
-          </label>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">
+              {ROLE_LABELS.owner} — immer geschützt
+            </span>
+            <Switch checked disabled onCheckedChange={() => {}} />
+          </div>
           {CONFIGURABLE_ROLES.map((role) => (
-            <label key={role} className="flex items-center gap-2 text-sm">
-              <Checkbox checked={selected.has(role)} onCheckedChange={() => toggle(role)} />
-              <span>{ROLE_LABELS[role]}</span>
-            </label>
+            <div key={role} className="flex items-center justify-between gap-3">
+              <span className="text-sm">{ROLE_LABELS[role]}</span>
+              <Switch checked={selected.has(role)} onCheckedChange={() => toggle(role)} />
+            </div>
           ))}
         </div>
         <AsyncButton onClick={handleSave} isLoading={saving} loadingText="Speichere …">
