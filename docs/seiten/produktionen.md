@@ -29,6 +29,16 @@ Auswertung der Rückmeldungen.
 ## Datenfluss
 
 - Prisma-Modelle: `Production`, `Department`, `DepartmentMembership`, Casting-Einträge.
+- Jahreswechsel: `SeasonResetSettings` (geschützte Rollen) + `deactivateMembersForSeasonChange`
+  in `src/lib/season-reset/`.
+
+## Jahreswechsel (Season Reset)
+
+- Beim Aktivieren einer neuen Produktion (`setActiveProductionAction`) bzw. beim Deaktivieren
+  der alten (`clearActiveProductionAction`) werden alle Mitglieder außerhalb der geschützten
+  Rollen deaktiviert (`deactivatedAt` + `sessionVersion`-Inkrement, sofortiges Zwangs-Logout).
+- Beim allerersten Setzen einer aktiven Produktion wird niemand deaktiviert.
+- Geschützte Rollen: `owner` immer; weitere Rollen konfigurierbar in der Mitgliederverwaltung.
 
 ## Besonderheiten / Altlasten
 
