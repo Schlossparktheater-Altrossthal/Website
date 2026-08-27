@@ -270,6 +270,7 @@ model User {
   createdAt DateTime @default(now())
   dateOfBirth DateTime?
   deactivatedAt DateTime?
+  sessionVersion Int      @default(0)
   onboardingCompletedAt DateTime?
   onboardingUpdatedAt DateTime?
   avatarSource        AvatarSource @default(GRAVATAR)
@@ -737,6 +738,13 @@ model ServerSettings {
   parentalConsentUploadedAt    DateTime?
   parentalConsentUploadedById  String?
   parentalConsentUploadedBy    User? @relation("ServerSettingsParentalConsentUploader", fields: [parentalConsentUploadedById], references: [id], onDelete: SetNull)
+}
+
+model SeasonResetSettings {
+  id             String   @id @default("default")
+  protectedRoles Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model MysteryTip {
