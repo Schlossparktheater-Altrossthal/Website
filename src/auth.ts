@@ -473,9 +473,9 @@ const authConfig = {
           }
           applyAvatarFields(mutableToken, dbUserRecord);
 
-          const tokenVersion =
-            typeof mutableToken.sessionVersion === "number" ? mutableToken.sessionVersion : 0;
-          const versionMismatch = dbUser.sessionVersion !== tokenVersion;
+          const tokenVersion = mutableToken.sessionVersion;
+          const versionMismatch =
+            typeof tokenVersion === "number" && dbUser.sessionVersion !== tokenVersion;
           const isDeactivatedNow = Boolean(dbUser.deactivatedAt);
 
           if (isDeactivatedNow || versionMismatch) {
