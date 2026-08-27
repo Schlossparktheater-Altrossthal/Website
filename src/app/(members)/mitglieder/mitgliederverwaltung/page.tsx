@@ -5,7 +5,9 @@ import { sortRoles, type Role } from "@/lib/roles";
 import { hasPermission } from "@/lib/permissions";
 import { MembersTable } from "@/components/members/members-table";
 import { MemberInviteManager } from "@/components/members/member-invite-manager";
+import { SeasonResetSettingsPanel } from "@/components/members/season-reset-settings-panel";
 import { combineNameParts } from "@/lib/names";
+import { readSeasonResetSettings, resolveProtectedRoles } from "@/lib/season-reset/settings";
 
 export default async function MemberManagementPage() {
   const session = await requireAuth();
@@ -19,7 +21,7 @@ export default async function MemberManagementPage() {
   const canManageInvites =
     (await hasPermission(session.user, "PRIVATE.ADMIN.INVITES.MANAGE")) || allowed;
 
-  const [users, customRoles] = await Promise.all([
+  const [users, customRoles, seasonResetRecord] = await Promise.all([
     prisma.user.findMany({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
       select: {
@@ -40,7 +42,10 @@ export default async function MemberManagementPage() {
       where: { isSystem: false, systemRole: null },
       orderBy: { name: "asc" },
     }),
+    readSeasonResetSettings(),
   ]);
+
+  const protectedRoles = resolveProtectedRoles(seasonResetRecord);
 
   const formatted = users.map((user) => {
     const combined = sortRoles([
@@ -73,6 +78,8 @@ export default async function MemberManagementPage() {
       </div>
 
       {canManageInvites && <MemberInviteManager />}
+
+      <SeasonResetSettingsPanel initialProtectedRoles={protectedRoles} />
 
       <div className="flex justify-end">
         <AddMemberModal />
