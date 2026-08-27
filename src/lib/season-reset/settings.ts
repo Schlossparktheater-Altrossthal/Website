@@ -21,7 +21,7 @@ export function resolveProtectedRoles(record: SeasonResetSettings | null | undef
 
   // Nie konfiguriert (null) → Default. Leer konfiguriert ([]) → nur Owner.
   if (!Array.isArray(raw)) {
-    return [...DEFAULT_PROTECTED_ROLES];
+    return sortRoles([...DEFAULT_PROTECTED_ROLES]);
   }
 
   const roles = new Set<Role>(sanitiseProtectedRoles(raw));

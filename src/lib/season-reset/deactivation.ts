@@ -3,8 +3,17 @@ import type { Prisma, Role } from "@prisma/client";
 
 import { readSeasonResetSettings, resolveProtectedRoles } from "./settings";
 
+export type MemberDeactivationTx = {
+  user: {
+    updateMany(args: {
+      where: Prisma.UserWhereInput;
+      data: Prisma.UserUpdateManyMutationInput;
+    }): Promise<{ count: number }>;
+  };
+};
+
 export async function deactivateMembersForSeasonChange(
-  tx: Prisma.TransactionClient,
+  tx: MemberDeactivationTx,
   protectedRoles: readonly Role[],
 ): Promise<number> {
   const excluded = Array.from(new Set(protectedRoles));
