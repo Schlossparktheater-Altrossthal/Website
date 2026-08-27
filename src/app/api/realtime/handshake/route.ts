@@ -15,6 +15,10 @@ export async function GET() {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
+  if (session.user?.isDeactivated) {
+    return NextResponse.json({ error: "Konto deaktiviert" }, { status: 403 });
+  }
+
   const token = createHandshakeToken({ userId, secret });
   const payload = {
     token: token.token,
