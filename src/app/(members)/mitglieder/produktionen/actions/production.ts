@@ -9,6 +9,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
 import { setOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
+import { performSeasonChangeDeactivation } from "@/lib/season-reset/deactivation";
 
 import {
   actionFailure,
@@ -42,17 +43,33 @@ export async function setActiveProductionAction(
     }
 
     const cookieStore = await cookies();
+    const previousShowId = cookieStore.get(ACTIVE_PRODUCTION_COOKIE)?.value ?? null;
+    const isSwitch = previousShowId !== null && previousShowId !== showId;
+
     cookieStore.set(ACTIVE_PRODUCTION_COOKIE, show.id, {
       maxAge: 60 * 60 * 24 * 180,
       sameSite: "lax",
       path: "/",
     });
 
+    let deactivatedCount = 0;
+    if (isSwitch) {
+      try {
+        deactivatedCount = await performSeasonChangeDeactivation();
+      } catch (error) {
+        console.error("setActiveProductionAction: season change deactivation failed", error);
+      }
+    }
+
     revalidatePath("/mitglieder", "layout");
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-    return actionSuccess("Aktive Produktion wurde gesetzt.");
+    const message =
+      deactivatedCount > 0
+        ? `Aktive Produktion wurde gesetzt. ${deactivatedCount} Mitglieder wurden deaktiviert.`
+        : "Aktive Produktion wurde gesetzt.";
+    return actionSuccess(message);
   } catch (error) {
     return actionFailure(error, "Aktive Produktion konnte nicht gesetzt werden.");
   }
@@ -71,13 +88,27 @@ export async function clearActiveProductionAction(
     const redirectPath = readOptionalString(formData, "redirectPath");
 
     const cookieStore = await cookies();
+    const previousShowId = cookieStore.get(ACTIVE_PRODUCTION_COOKIE)?.value ?? null;
     cookieStore.delete(ACTIVE_PRODUCTION_COOKIE);
+
+    let deactivatedCount = 0;
+    if (previousShowId) {
+      try {
+        deactivatedCount = await performSeasonChangeDeactivation();
+      } catch (error) {
+        console.error("clearActiveProductionAction: season change deactivation failed", error);
+      }
+    }
 
     revalidatePath("/mitglieder", "layout");
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-    return actionSuccess("Aktive Produktion wurde zurückgesetzt.");
+    const message =
+      deactivatedCount > 0
+        ? `Aktive Produktion wurde zurückgesetzt. ${deactivatedCount} Mitglieder wurden deaktiviert.`
+        : "Aktive Produktion wurde zurückgesetzt.";
+    return actionSuccess(message);
   } catch (error) {
     return actionFailure(error, "Aktive Produktion konnte nicht entfernt werden.");
   }
@@ -158,8 +189,13 @@ export async function createProductionAction(formData: FormData): Promise<Produc
       select: { id: true },
     });
 
+    let deactivatedCount = 0;
+
     if (setActive) {
       const cookieStore = await cookies();
+      const previousShowId = cookieStore.get(ACTIVE_PRODUCTION_COOKIE)?.value ?? null;
+      const isSwitch = previousShowId !== null && previousShowId !== show.id;
+
       cookieStore.set(ACTIVE_PRODUCTION_COOKIE, show.id, {
         maxAge: 60 * 60 * 24 * 180,
         sameSite: "lax",
@@ -183,6 +219,14 @@ export async function createProductionAction(formData: FormData): Promise<Produc
           },
         });
       }
+
+      if (isSwitch) {
+        try {
+          deactivatedCount = await performSeasonChangeDeactivation();
+        } catch (error) {
+          console.error("createProductionAction: season change deactivation failed", error);
+        }
+      }
     }
 
     revalidatePath("/mitglieder", "layout");
@@ -190,7 +234,11 @@ export async function createProductionAction(formData: FormData): Promise<Produc
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-    return actionSuccess("Produktion wurde erstellt.");
+    const message =
+      deactivatedCount > 0
+        ? `Produktion wurde erstellt. ${deactivatedCount} Mitglieder wurden deaktiviert.`
+        : "Produktion wurde erstellt.";
+    return actionSuccess(message);
   } catch (error) {
     console.error("createProductionAction", error);
     return actionFailure(error, "Produktion konnte nicht angelegt werden.");

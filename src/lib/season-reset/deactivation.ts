@@ -1,4 +1,7 @@
+import { prisma } from "@/lib/prisma";
 import type { Prisma, Role } from "@prisma/client";
+
+import { readSeasonResetSettings, resolveProtectedRoles } from "./settings";
 
 export async function deactivateMembersForSeasonChange(
   tx: Prisma.TransactionClient,
@@ -19,4 +22,10 @@ export async function deactivateMembersForSeasonChange(
   });
 
   return result.count;
+}
+
+export async function performSeasonChangeDeactivation(): Promise<number> {
+  const record = await readSeasonResetSettings();
+  const protectedRoles = resolveProtectedRoles(record);
+  return prisma.$transaction((tx) => deactivateMembersForSeasonChange(tx, protectedRoles));
 }
