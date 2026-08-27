@@ -34,6 +34,7 @@ type MutableToken = JWT & {
   avatarUpdatedAt?: string | null;
   isDeactivated?: boolean;
   deactivatedAt?: string | null;
+  sessionVersion?: number;
   analyticsSessionId?: string | null;
 };
 
@@ -419,7 +420,7 @@ const authConfig = {
         mutableToken.analyticsSessionId = randomUUID();
       }
 
-      if (mutableToken.id && !mutableToken.roles) {
+      if (mutableToken.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: mutableToken.id },
           select: {
@@ -432,6 +433,7 @@ const authConfig = {
             avatarSource: true,
             avatarImageUpdatedAt: true,
             deactivatedAt: true,
+            sessionVersion: true,
           },
         });
         if (dbUser) {
@@ -447,12 +449,21 @@ const authConfig = {
             mutableToken.email = dbEmail;
           }
           applyAvatarFields(mutableToken, dbUserRecord);
-          if (dbUser.deactivatedAt) {
-            mutableToken.deactivatedAt = dbUser.deactivatedAt.toISOString();
+
+          const tokenVersion =
+            typeof mutableToken.sessionVersion === "number" ? mutableToken.sessionVersion : 0;
+          const versionMismatch = dbUser.sessionVersion !== tokenVersion;
+          const isDeactivatedNow = Boolean(dbUser.deactivatedAt);
+
+          if (isDeactivatedNow || versionMismatch) {
             mutableToken.isDeactivated = true;
+            mutableToken.deactivatedAt = dbUser.deactivatedAt
+              ? dbUser.deactivatedAt.toISOString()
+              : null;
           } else {
-            mutableToken.deactivatedAt = null;
             mutableToken.isDeactivated = false;
+            mutableToken.deactivatedAt = null;
+            mutableToken.sessionVersion = dbUser.sessionVersion;
           }
         }
       }

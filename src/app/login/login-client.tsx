@@ -97,7 +97,9 @@ export function LoginPageClient() {
     const reason = sp?.get("reason");
     if (err) {
       if (err === "AccessDenied" && reason === "deactivated") {
-        toast.error("Dieses Konto wurde deaktiviert. Bitte kontaktiere die Administration.");
+        toast.error(
+          "Dieses Konto wurde deaktiviert. Bitte wende dich an einen Admin oder tritt der neuen Produktion bei.",
+        );
         setShowMagicSuggestion(false);
         return;
       }

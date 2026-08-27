@@ -75,7 +75,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.user.update({
         where: { id: target.id },
-        data: { deactivatedAt: deactivated ? new Date() : null },
+        data: {
+          deactivatedAt: deactivated ? new Date() : null,
+          ...(deactivated ? { sessionVersion: { increment: 1 } } : {}),
+        },
         select: { id: true, deactivatedAt: true },
       });
 
