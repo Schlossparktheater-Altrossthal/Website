@@ -304,10 +304,6 @@ const credentialsProvider = Credentials({
       typeof credentials?.onboardingToken === "string" ? credentials.onboardingToken : undefined;
     const activeOnboardingInviteId = await resolveActiveOnboardingInviteId(onboardingToken);
 
-    if (user.deactivatedAt && !activeOnboardingInviteId) {
-      throw new CredentialsSignin("Dieses Konto wurde deaktiviert.");
-    }
-
     if (user.deactivatedAt && activeOnboardingInviteId) {
       await prisma.user.update({
         where: { id: user.id },

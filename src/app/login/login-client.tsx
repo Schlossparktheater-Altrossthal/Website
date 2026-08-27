@@ -74,6 +74,16 @@ const passwordSchema = z.object({
   password: z.string().min(6, "Mindestens 6 Zeichen"),
 });
 
+function parseReasonFromUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.searchParams.get("reason");
+  } catch {
+    return null;
+  }
+}
+
 export function LoginPageClient() {
   // Use only NEXT_PUBLIC_ var to keep SSR/CSR consistent and avoid hydration mismatches
   const devNoDb = process.env.NEXT_PUBLIC_AUTH_DEV_NO_DB === "1";
@@ -157,9 +167,15 @@ export function LoginPageClient() {
         ...(onboardingToken ? { onboardingToken } : {}),
       });
       if (res?.error) {
-        toast.error(res.error || "Anmeldung fehlgeschlagen");
-        setShowMagicSuggestion(true);
-        magicForm.setValue("email", values.email);
+        if (parseReasonFromUrl(res.url) === "deactivated") {
+          toast.error(
+            "Dieses Konto wurde deaktiviert. Bitte wende dich an einen Admin oder tritt der neuen Produktion bei.",
+          );
+        } else {
+          toast.error(res.error || "Anmeldung fehlgeschlagen");
+          setShowMagicSuggestion(true);
+          magicForm.setValue("email", values.email);
+        }
       } else {
         toast.success("Erfolgreich angemeldet");
         setShowMagicSuggestion(false);
