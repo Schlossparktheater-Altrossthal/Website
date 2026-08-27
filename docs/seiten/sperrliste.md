@@ -23,8 +23,19 @@ Probenplanung freie Zeiten kennt.
 
 ## Datenfluss
 
-- Prisma-Modell: `LimitedBlockedDay` (Arten: normal/limited).
-- Feiertagsquelle wird über `src/lib/holidays.ts` bezogen (konfigurierbar).
+- Prisma-Modell: `BlockedDay` – ein Eintrag pro Mitglied und Datum (`@@unique([userId, date])`).
+  Die Art des Tages wird über den Enum `BlockedDayKind` abgebildet:
+  `BLOCKED`, `LIMITED`, `PREFERRED`.
+- Schreiben/Löschen der Sperrtage läuft über die API-Routen `src/app/api/block-days/*`
+  (`GET`/`POST` in `route.ts`, `PATCH`/`DELETE` in `[id]/route.ts`, Massenoperationen in
+  `bulk/route.ts`).
+- Einstellungen (Sperrfrist `freezeDays`, bevorzugte/ausgenommene Wochentage sowie Ferien-
+  und Feiertagsquellen) liegen als Singleton-Datensatz im Modell `SperrlisteSettings`
+  (`id = "default"`) und werden über `src/lib/sperrliste-settings.ts` sowie
+  `src/app/api/sperrliste/settings/route.ts` gelesen und gespeichert.
+- Feiertage werden über `src/lib/holidays.ts` aus externen ICS-Quellen geladen (konfigurierbar,
+  mit statischen Fallbacks in `src/data/saxony-*.ts`); der Prüfstatus wird in
+  `SperrlisteSettings` persistiert.
 
 ## Besonderheiten / Altlasten
 
