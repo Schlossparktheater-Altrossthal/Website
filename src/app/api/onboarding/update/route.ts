@@ -33,9 +33,9 @@ const preferenceSchema = z.object({
 const dietarySchema = z.object({
   allergen: z.string().min(1),
   level: z.string(),
-  symptoms: z.string(),
-  treatment: z.string(),
-  note: z.string(),
+  symptoms: z.string().nullable(),
+  treatment: z.string().nullable(),
+  note: z.string().nullable(),
 });
 
 const payloadSchema = z.object({
@@ -50,9 +50,7 @@ const payloadSchema = z.object({
   dietaryPreferenceStrictness: z.string().nullable(),
   dietary: z.array(dietarySchema),
   notes: z.string().nullable(),
-  photoConsent: z.object({
-    consent: z.boolean(),
-  }),
+  photoConsent: z.boolean(),
 });
 
 function normalizeNullableString(value: string | null) {
@@ -74,7 +72,7 @@ export async function POST(request: NextRequest) {
   }
 
   const formData = await request.formData();
-  const rawPayload = formData.get("data");
+  const rawPayload = formData.get("payload");
   const documentFile = formData.get("document");
   const rawOnboardingToken = formData.get("onboardingToken");
   const onboardingToken = typeof rawOnboardingToken === "string" ? rawOnboardingToken.trim() : null;
@@ -121,9 +119,9 @@ export async function POST(request: NextRequest) {
   const dietaryEntries = data.dietary.map((entry) => ({
     allergen: normalizeString(entry.allergen),
     level: normalizeString(entry.level),
-    symptoms: normalizeString(entry.symptoms),
-    treatment: normalizeString(entry.treatment),
-    note: normalizeString(entry.note),
+    symptoms: normalizeNullableString(entry.symptoms),
+    treatment: normalizeNullableString(entry.treatment),
+    note: normalizeNullableString(entry.note),
   }));
 
   const uniqueDietaryEntries = (() => {
@@ -275,7 +273,7 @@ export async function POST(request: NextRequest) {
       await tx.photoConsent.upsert({
         where: { userId },
         update: {
-          consentGiven: data.photoConsent.consent,
+          consentGiven: data.photoConsent,
           ...(documentBuffer
             ? {
                 documentData: documentBuffer,
@@ -288,7 +286,7 @@ export async function POST(request: NextRequest) {
         },
         create: {
           userId,
-          consentGiven: data.photoConsent.consent,
+          consentGiven: data.photoConsent,
           ...(documentBuffer
             ? {
                 documentData: documentBuffer,
