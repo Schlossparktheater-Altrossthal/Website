@@ -1,16 +1,8 @@
-import type { NextConfig } from "next";
-
-const WATCH_IGNORED_PATTERNS = [
-  /(^|[\\/])node_modules([\\/]|$)/,
-  /(^|[\\/])\.next([\\/]|$)/,
-  /(^|[\\/])\.git([\\/]|$)/,
-  /(^|[\\/])(dump|dumps|backup|backups|log|logs|tmp|temp)([\\/]|$)/,
-];
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
-    // qualities: [75, 80],
+    qualities: [25, 50, 75, 80, 90, 95, 100],
     minimumCacheTTL: 604800,
     remotePatterns: [
       {
@@ -82,13 +74,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  turbopack: {
-    root: process.cwd(),
+  experimental: {
+    turbopackRoot: process.cwd(),
   },
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {
-        ignored: WATCH_IGNORED_PATTERNS,
+        ignored: [
+          /(^|[\\/])node_modules([\\/]|$)/,
+          /(^|[\\/])\.next([\\/]|$)/,
+          /(^|[\\/])\.git([\\/]|$)/,
+          /(^|[\\/])(dump|dumps|backup|backups|log|logs|tmp|temp)([\\/]|$)/,
+        ],
         poll: false,
       };
     }
