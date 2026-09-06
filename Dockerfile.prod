@@ -28,7 +28,7 @@ ENV NODE_ENV=production \
     REALTIME_SERVER_URL=http://127.0.0.1:3001/realtime
 COPY node_modules ./node_modules
 COPY package.json pnpm-lock.yaml ./
-COPY prisma.config.ts ./
+COPY prisma.config.ts next.config.ts ./
 COPY .next ./.next
 COPY public ./public
 COPY prisma ./prisma
