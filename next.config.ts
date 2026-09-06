@@ -10,7 +10,7 @@ const WATCH_IGNORED_PATTERNS = [
 const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
-    qualities: [75, 80],
+    // qualities: [75, 80],
     minimumCacheTTL: 604800,
     remotePatterns: [
       {
