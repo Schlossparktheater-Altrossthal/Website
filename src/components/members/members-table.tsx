@@ -7,6 +7,7 @@ import {
   EditIcon,
   EyeIcon,
   LoadingIcon,
+  ShieldCheckIcon,
   TrashIcon,
   UserCheckIcon,
   UserXIcon,
@@ -42,6 +43,8 @@ export type MembersTableUser = {
   avatarUpdatedAt?: string | number | Date | null;
   isDeactivated: boolean;
   deactivatedAt?: string | null;
+  /** Konto ist mit Authentik verknüpft (Login bzw. Passwort-Übernahme hat geklappt). */
+  hasAuthentikAccount: boolean;
 };
 
 function getDisplayName(user: MembersTableUser): string {
@@ -51,9 +54,11 @@ function getDisplayName(user: MembersTableUser): string {
 function MemberName({
   displayName,
   isDeactivated,
+  hasAuthentikAccount,
 }: {
   displayName: string;
   isDeactivated: boolean;
+  hasAuthentikAccount: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 font-medium">
@@ -61,6 +66,16 @@ function MemberName({
       {isDeactivated && (
         <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
           Deaktiviert
+        </Badge>
+      )}
+      {hasAuthentikAccount && (
+        <Badge
+          variant="success"
+          className="px-2 py-0.5 text-[10px] uppercase tracking-wide"
+          title="Die Anmeldung über Authentik (Theater-Konto) funktioniert für dieses Mitglied."
+        >
+          <ShieldCheckIcon className="h-3 w-3" />
+          Authentik
         </Badge>
       )}
     </div>
@@ -186,7 +201,11 @@ export function MembersTable({
                         avatarUpdatedAt={u.avatarUpdatedAt}
                       />
                       <div>
-                        <MemberName displayName={displayName} isDeactivated={u.isDeactivated} />
+                        <MemberName
+                          displayName={displayName}
+                          isDeactivated={u.isDeactivated}
+                          hasAuthentikAccount={u.hasAuthentikAccount}
+                        />
                         <MemberRoleChips roles={u.roles} className="mt-2" />
                       </div>
                     </div>
@@ -243,7 +262,11 @@ export function MembersTable({
                               avatarSource={u.avatarSource}
                               avatarUpdatedAt={u.avatarUpdatedAt}
                             />
-                            <MemberName displayName={displayName} isDeactivated={u.isDeactivated} />
+                            <MemberName
+                              displayName={displayName}
+                              isDeactivated={u.isDeactivated}
+                              hasAuthentikAccount={u.hasAuthentikAccount}
+                            />
                           </div>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">

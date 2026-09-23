@@ -7,6 +7,7 @@ import { MembersTable } from "@/components/members/members-table";
 import { MemberInviteManager } from "@/components/members/member-invite-manager";
 import { SeasonResetSettingsPanel } from "@/components/members/season-reset-settings-panel";
 import { combineNameParts } from "@/lib/names";
+import { AUTHENTIK_PROVIDER_ID } from "@/lib/authentik/config";
 import { readSeasonResetSettings, resolveProtectedRoles } from "@/lib/season-reset/settings";
 
 export default async function MemberManagementPage() {
@@ -36,6 +37,7 @@ export default async function MemberManagementPage() {
         avatarSource: true,
         avatarImageUpdatedAt: true,
         deactivatedAt: true,
+        accounts: { where: { provider: AUTHENTIK_PROVIDER_ID }, select: { id: true }, take: 1 },
       },
     }),
     prisma.appRole.findMany({
@@ -64,6 +66,7 @@ export default async function MemberManagementPage() {
       avatarUpdatedAt: user.avatarImageUpdatedAt?.toISOString() ?? null,
       isDeactivated: Boolean(user.deactivatedAt),
       deactivatedAt: user.deactivatedAt?.toISOString() ?? null,
+      hasAuthentikAccount: user.accounts.length > 0,
     };
   });
 

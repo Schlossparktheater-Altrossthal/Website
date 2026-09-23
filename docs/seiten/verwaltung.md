@@ -40,6 +40,9 @@ Berechtigungen konfigurieren.
 
 ## Besonderheiten
 
+- Das Badge „Authentik“ neben dem Namen zeigt, dass das Mitglied mit seinem Theater-Konto in
+  Authentik verknüpft ist (siehe [login.md](login.md)).
+
 - E-Mail-Validierung und Fehlerbehandlung wurden in P1 gehärtet (generische Fehlermeldungen,
   `EMAIL_REGEX`).
 - Berechtigungs-Keys werden in `DEFAULT_PERMISSION_DEFINITIONS` (`src/lib/permissions.ts`)
