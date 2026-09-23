@@ -168,8 +168,9 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
       },
       orderBy: [{ domain: "asc" }, { code: "asc" }],
     }),
-    prisma.photoConsent.findUnique({
-      where: { userId },
+    // Fotoerlaubnis gilt pro Produktion: nur eine bereits für diese Produktion erteilte vorausfüllen.
+    prisma.photoConsent.findFirst({
+      where: { userId, showId: invite.show.id, revokedAt: null },
       select: { consentGiven: true },
     }),
     prisma.user.findUnique({

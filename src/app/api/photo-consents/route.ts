@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import {
+  firstConsent,
+  photoConsentsForShow,
+  resolvePhotoConsentShowId,
+} from "@/lib/photo-consent-scope";
 import { getUserDisplayName } from "@/lib/names";
 import {
   createPhotoConsentBoardNotification,
@@ -142,6 +147,7 @@ export async function GET() {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 
+  const showId = await resolvePhotoConsentShowId(userId);
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -150,24 +156,22 @@ export async function GET() {
       name: true,
       email: true,
       dateOfBirth: true,
-      photoConsent: {
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-          approvedAt: true,
-          rejectionReason: true,
-          exclusionNote: true,
-          documentUploadedAt: true,
-          documentName: true,
-          documentMime: true,
-          signatureVersion: true,
-          signatureCapturedAt: true,
-          signaturePayload: true,
-          approvedBy: { select: { name: true } },
-        },
-      },
+      photoConsents: photoConsentsForShow(showId, {
+        id: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        approvedAt: true,
+        rejectionReason: true,
+        exclusionNote: true,
+        documentUploadedAt: true,
+        documentName: true,
+        documentMime: true,
+        signatureVersion: true,
+        signatureCapturedAt: true,
+        signaturePayload: true,
+        approvedBy: { select: { name: true } },
+      }),
     },
   });
 
@@ -175,7 +179,12 @@ export async function GET() {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
 
-  return NextResponse.json({ consent: buildSummary(user) });
+  return NextResponse.json({
+    consent: buildSummary({
+      dateOfBirth: user.dateOfBirth,
+      photoConsent: firstConsent(user.photoConsents),
+    }),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -221,6 +230,14 @@ export async function POST(request: NextRequest) {
   const rawExclusionNote = typeof body.exclusionNote === "string" ? body.exclusionNote.trim() : "";
   const exclusionNote = rawExclusionNote ? rawExclusionNote.slice(0, 1000) : null;
 
+  const showId = await resolvePhotoConsentShowId(userId);
+  if (!showId) {
+    return NextResponse.json(
+      { error: "Du bist aktuell keiner Produktion zugeordnet" },
+      { status: 409 },
+    );
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -229,19 +246,18 @@ export async function POST(request: NextRequest) {
       name: true,
       email: true,
       dateOfBirth: true,
-      photoConsent: {
-        select: {
-          id: true,
-          status: true,
-          documentUploadedAt: true,
-        },
-      },
+      photoConsents: photoConsentsForShow(showId, {
+        id: true,
+        status: true,
+        documentUploadedAt: true,
+      }),
     },
   });
 
   if (!user) {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
+  const existingConsent = firstConsent(user.photoConsents);
 
   const requiresDateOfBirth = !user.dateOfBirth;
   if (requiresDateOfBirth) {
@@ -254,7 +270,7 @@ export async function POST(request: NextRequest) {
   const age = calculateAge(user.dateOfBirth);
   const requiresDocument = age !== null && age < 18;
 
-  if (requiresDocument && !documentFile && !user.photoConsent?.documentUploadedAt) {
+  if (requiresDocument && !documentFile && !existingConsent?.documentUploadedAt) {
     return NextResponse.json(
       { error: "Bitte lade die unterschriebene Einverständniserklärung hoch" },
       { status: 400 },
@@ -376,9 +392,10 @@ export async function POST(request: NextRequest) {
 
   const { consent, notification } = await prisma.$transaction(async (tx) => {
     const consent = await tx.photoConsent.upsert({
-      where: { userId },
+      where: { userId_showId: { userId, showId } },
       create: {
         userId,
+        showId,
         status: "pending",
         consentGiven: true,
         approvedAt: null,
@@ -394,6 +411,7 @@ export async function POST(request: NextRequest) {
         approvedAt: null,
         approvedById: null,
         rejectionReason: null,
+        revokedAt: null,
         exclusionNote,
         ...(documentBuffer ? docData : {}),
         ...(signaturePayload || documentBuffer ? signatureData : {}),

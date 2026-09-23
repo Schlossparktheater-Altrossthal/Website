@@ -436,7 +436,9 @@ async function computeOnboardingDashboardData(
               lastName: true,
               email: true,
               dateOfBirth: true,
-              photoConsent: {
+              photoConsents: {
+                where: { showId: onboardingId, revokedAt: null },
+                take: 1,
                 select: {
                   status: true,
                   consentGiven: true,
@@ -559,7 +561,8 @@ async function computeOnboardingDashboardData(
 
   const consentCount = show.onboardingProfiles.filter(
     (profile) =>
-      profile.user.photoConsent?.consentGiven && profile.user.photoConsent.status === "approved",
+      profile.user.photoConsents[0]?.consentGiven &&
+      profile.user.photoConsents[0].status === "approved",
   ).length;
 
   const actingTotals = new Map<string, { shareSum: number; userCount: number }>();
@@ -719,8 +722,9 @@ async function computeOnboardingDashboardData(
       id: "documents",
       label: "Dokumente",
       completionRate: toPercentage(
-        show.onboardingProfiles.filter((profile) => profile.user.photoConsent?.documentUploadedAt)
-          .length,
+        show.onboardingProfiles.filter(
+          (profile) => profile.user.photoConsents[0]?.documentUploadedAt,
+        ).length,
         profileUserIds.length || 1,
       ),
     },
@@ -736,12 +740,12 @@ async function computeOnboardingDashboardData(
 
   const documents = {
     uploaded: show.onboardingProfiles.filter(
-      (profile) => profile.user.photoConsent?.documentUploadedAt,
+      (profile) => profile.user.photoConsents[0]?.documentUploadedAt,
     ).length,
     skipped: show.onboardingProfiles.filter(
-      (profile) => profile.user.photoConsent?.status === "rejected",
+      (profile) => profile.user.photoConsents[0]?.status === "rejected",
     ).length,
-    pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsent).length,
+    pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsents[0]).length,
   };
 
   const membersColumns: OnboardingMembersOverview["columns"] = [
@@ -838,7 +842,7 @@ async function computeOnboardingDashboardData(
       [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||
       "Unbekannt";
     const age = computeAge(profile.user.dateOfBirth);
-    const consent = profile.user.photoConsent;
+    const consent = profile.user.photoConsents[0] ?? null;
     const consentState = consent
       ? consent.status === "approved"
         ? "approved"

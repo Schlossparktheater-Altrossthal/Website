@@ -196,6 +196,9 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 - [x] Schritt 2 – Produktionsstatus + Migration Phase A (`20260923120000_add_production_status`: `Show.status/statusChangedAt/archivedAt`, `ProductionMembership.status/roles/function`; „Die unendliche Geschichte“ → `active`, alle aktiven Nutzer als Mitglieder, `cast`/`tech` in `roles` kopiert. Status-Auswahl in der Produktionsübersicht; Beenden/Archivieren schließt Mitgliedschaften; „Saison abschließen“ lässt Mitglieder laufender Produktionen aus.)
   - Offen aus Schritt 2: Code liest Rollen noch global (`UserRole`) – Umstellung auf `ProductionMembership.roles` in Schritt 5 (Ensemble-Verwaltung).
 - [ ] Schritt 3 – Fotoerlaubnis & Onboarding pro Produktion (Phase B)
+  - [x] 3a Fotoerlaubnis pro Produktion (`20260923140000_photo_consent_per_production`, `@@unique([userId, showId])`, `revokedAt`; Bestand → „Die unendliche Geschichte“; Helper `src/lib/photo-consent-scope.ts`; Admin-Filter nach Produktion; Rückkehrer-Update setzt Status auf `pending`)
+  - [ ] 3b Onboarding pro Produktion (`ProductionOnboarding`)
+  - Offen: Widerruf (`revokedAt`) hat noch keine UI
 - [ ] Schritt 4 – Rückkehrer-Flow
 - [ ] Schritt 5 – Verwaltungsoberflächen
 - [ ] Phase C – Aufräum-Migration

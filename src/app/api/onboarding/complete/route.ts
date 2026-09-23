@@ -555,6 +555,7 @@ export async function POST(request: NextRequest) {
         await tx.photoConsent.create({
           data: {
             userId: user.id,
+            showId: invite.showId,
             consentGiven: photoConsent.consent,
             status: "pending",
             documentName: documentName,

@@ -408,12 +408,17 @@ const memberSelect = {
       interest: { select: { id: true, name: true } },
     },
   },
-  photoConsent: {
+  // Neueste Fotoerlaubnis; sie gilt nur für die angegebene Produktion.
+  photoConsents: {
+    where: { revokedAt: null },
+    orderBy: { createdAt: "desc" },
+    take: 1,
     select: {
       status: true,
       consentGiven: true,
       updatedAt: true,
       approvedAt: true,
+      show: { select: { title: true, year: true } },
     },
   },
   rolePreferences: {
@@ -775,7 +780,11 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     ),
   );
 
-  const photoConsentInfo = resolvePhotoConsent(member.photoConsent);
+  const latestPhotoConsent = member.photoConsents[0] ?? null;
+  const photoConsentInfo = resolvePhotoConsent(latestPhotoConsent);
+  const photoConsentShowLabel = latestPhotoConsent
+    ? (latestPhotoConsent.show.title ?? `Produktion ${latestPhotoConsent.show.year}`)
+    : null;
   const photoConsentUpdatedAt = formatDateTime(photoConsentInfo.updatedAt);
 
   const memberSinceLabel = member.onboardingProfile?.memberSinceYear
@@ -1042,6 +1051,11 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                     <p className="mt-2 text-xs text-muted-foreground">
                       {photoConsentInfo.description}
                     </p>
+                    {photoConsentShowLabel ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Gilt für: {photoConsentShowLabel}
+                      </p>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>

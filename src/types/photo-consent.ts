@@ -27,6 +27,8 @@ export type PhotoConsentSummary = {
 export type PhotoConsentAdminEntry = {
   id: string;
   userId: string;
+  showId: string;
+  showTitle: string;
   name: string | null;
   email: string | null;
   status: Exclude<PhotoConsentStatus, "none">;
@@ -49,4 +51,11 @@ export type PhotoConsentAdminEntry = {
   signatureVersion: string | null;
   signatureCapturedAt: string | null;
   signaturePayload: SignaturePayload | null;
+};
+
+export type PhotoConsentShowOption = {
+  id: string;
+  title: string;
+  year: number;
+  status: "planning" | "active" | "finished" | "archived";
 };

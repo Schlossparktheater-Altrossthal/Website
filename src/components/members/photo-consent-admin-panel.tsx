@@ -10,7 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
+import type { PhotoConsentAdminEntry, PhotoConsentShowOption } from "@/types/photo-consent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -224,18 +231,23 @@ export function PhotoConsentAdminPanel() {
   const [isUploading, setIsUploading] = useState(false);
   const [templatePreviewFile, setTemplatePreviewFile] = useState<File | null>(null);
   const [templatePreviewOpen, setTemplatePreviewOpen] = useState(false);
+  const [shows, setShows] = useState<PhotoConsentShowOption[]>([]);
+  const [showId, setShowId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (nextShowId?: string) => {
     setError(null);
     try {
-      const response = await fetch("/api/photo-consents/admin", { cache: "no-store" });
+      const query = nextShowId ? `?showId=${encodeURIComponent(nextShowId)}` : "";
+      const response = await fetch(`/api/photo-consents/admin${query}`, { cache: "no-store" });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         setError(data?.error ?? "Einträge konnten nicht geladen werden");
         return;
       }
       setEntries(Array.isArray(data?.entries) ? (data.entries as PhotoConsentAdminEntry[]) : []);
+      setShows(Array.isArray(data?.shows) ? (data.shows as PhotoConsentShowOption[]) : []);
+      setShowId(typeof data?.showId === "string" ? data.showId : null);
     } catch {
       setError("Netzwerkfehler beim Laden der Einträge");
     } finally {
@@ -426,7 +438,8 @@ export function PhotoConsentAdminPanel() {
         <div>
           <CardTitle>Fotoeinverständnisse verwalten</CardTitle>
           <p className="text-sm text-foreground/70">
-            Prüfe eingereichte Zustimmungen, bestätige sie oder fordere zusätzliche Unterlagen an.
+            Fotoerlaubnisse gelten pro Produktion. Prüfe eingereichte Zustimmungen, bestätige sie
+            oder fordere zusätzliche Unterlagen an.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-foreground/60">
@@ -472,6 +485,26 @@ export function PhotoConsentAdminPanel() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={showId ?? "all"}
+                onValueChange={(value) => {
+                  setShowId(value);
+                  setLoading(true);
+                  void load(value);
+                }}
+              >
+                <SelectTrigger className="h-9 w-56" aria-label="Produktion auswählen">
+                  <SelectValue placeholder="Produktion" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle Produktionen</SelectItem>
+                  {shows.map((show) => (
+                    <SelectItem key={show.id} value={show.id}>
+                      {show.title} ({show.year})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {STATUS_FILTERS.map((filter) => (
                 <Button
                   key={filter.value}
@@ -564,7 +597,7 @@ export function PhotoConsentAdminPanel() {
           <Button
             type="button"
             size="sm"
-            onClick={() => void load()}
+            onClick={() => void load(showId ?? undefined)}
             disabled={loading}
             className="min-w-[10rem]"
           >
@@ -687,6 +720,7 @@ function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps
             {entry.name ?? entry.email ?? "Unbekannt"}
           </div>
           {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
+          <div className="text-xs text-foreground/60">{entry.showTitle}</div>
         </div>
         <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
       </div>
@@ -859,6 +893,7 @@ function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardP
               {entry.name ?? entry.email ?? "Unbekannt"}
             </div>
             {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
+            <div className="text-xs text-foreground/60">{entry.showTitle}</div>
           </div>
           <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
         </div>

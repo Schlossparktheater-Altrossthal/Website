@@ -318,7 +318,7 @@ model User {
   blockedDays            BlockedDay[]
   appRoles               UserAppRole[]
   rehearsalInvites       RehearsalInvitee[]
-  photoConsent           PhotoConsent?
+  photoConsents          PhotoConsent[]
   approvedPhotoConsents  PhotoConsent[] @relation("PhotoConsentApprover")
   departmentMemberships        DepartmentMembership[]
   departmentTaskAssignments    DepartmentTaskAssignment[]
@@ -416,6 +416,7 @@ model Show {
   scenes     Scene[]
   finalRehearsalDuties FinalRehearsalDuty[]
   memberships ProductionMembership[]
+  photoConsents PhotoConsent[]
   onboardingProfiles MemberOnboardingProfile[]
   invites    MemberInvite[]
 }
@@ -1256,9 +1257,12 @@ enum PhotoConsentStatus {
   rejected
 }
 
+/// Fotoerlaubnis gilt pro Produktion und muss für jede Produktion neu erteilt werden.
 model PhotoConsent {
   id               String              @id @default(cuid())
-  userId           String              @unique
+  userId           String
+  showId           String
+  revokedAt        DateTime?
   status           PhotoConsentStatus  @default(pending)
   consentGiven     Boolean             @default(true)
   createdAt        DateTime            @default(now())
@@ -1276,7 +1280,11 @@ model PhotoConsent {
   signatureCapturedAt DateTime?
   signaturePayload    Json?
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show             Show                @relation(fields: [showId], references: [id], onDelete: Cascade)
   approvedBy       User?               @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
+
+  @@unique([userId, showId])
+  @@index([showId, status])
 }
 
 model GalleryItem {

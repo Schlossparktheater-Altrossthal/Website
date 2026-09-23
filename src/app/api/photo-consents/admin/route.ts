@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProductionId } from "@/lib/active-production";
 import type { PhotoConsentAdminEntry } from "@/types/photo-consent";
 import { combineNameParts, getUserDisplayName } from "@/lib/names";
 import {
@@ -26,6 +27,8 @@ type ConsentWithUser = {
   signatureCapturedAt: Date | null;
   signaturePayload: unknown;
   userId: string;
+  showId: string;
+  show: { title: string | null; year: number };
   user: {
     id: string;
     firstName: string | null;
@@ -87,6 +90,8 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
   return {
     id: consent.id,
     userId: consent.userId,
+    showId: consent.showId,
+    showTitle: consent.show.title ?? `Produktion ${consent.show.year}`,
     name: combinedName,
     email: consent.user.email,
     status: consent.status,
@@ -114,38 +119,62 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
   };
 }
 
-export async function GET() {
+const ALL_PRODUCTIONS = "all";
+
+export async function GET(request: NextRequest) {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
-  const consents = await prisma.photoConsent.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          name: true,
-          email: true,
-          dateOfBirth: true,
-        },
-      },
-      approvedBy: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          name: true,
-        },
-      },
-    },
-  });
+  // Standard: Fotoerlaubnisse der aktuell ausgewählten Produktion.
+  const requestedShowId = request.nextUrl.searchParams.get("showId")?.trim() || null;
+  const showId =
+    requestedShowId ?? (session.user?.id ? await getActiveProductionId(session.user.id) : null);
 
-  const entries = consents.map((consent) => mapConsent(consent as ConsentWithUser));
-  return NextResponse.json({ entries });
+  const [consents, shows] = await Promise.all([
+    prisma.photoConsent.findMany({
+      where: showId && showId !== ALL_PRODUCTIONS ? { showId } : {},
+      orderBy: { createdAt: "desc" },
+      include: {
+        show: { select: { title: true, year: true } },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+            email: true,
+            dateOfBirth: true,
+          },
+        },
+        approvedBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+          },
+        },
+      },
+    }),
+    prisma.show.findMany({
+      orderBy: [{ year: "desc" }],
+      select: { id: true, title: true, year: true, status: true },
+    }),
+  ]);
+
+  const entries = consents.map((consent) => mapConsent(consent));
+  return NextResponse.json({
+    entries,
+    showId: showId ?? ALL_PRODUCTIONS,
+    shows: shows.map((show) => ({
+      id: show.id,
+      title: show.title ?? `Produktion ${show.year}`,
+      year: show.year,
+      status: show.status,
+    })),
+  });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -215,6 +244,7 @@ export async function PATCH(request: NextRequest) {
         where: { id },
         data: updateData,
         include: {
+          show: { select: { title: true, year: true } },
           user: {
             select: {
               id: true,
@@ -236,7 +266,7 @@ export async function PATCH(request: NextRequest) {
         },
       });
 
-      const entry = mapConsent(updated as ConsentWithUser);
+      const entry = mapConsent(updated);
       const subjectDisplayName = getUserDisplayName(
         {
           firstName: updated.user.firstName,

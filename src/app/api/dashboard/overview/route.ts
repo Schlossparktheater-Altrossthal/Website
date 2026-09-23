@@ -131,8 +131,10 @@ export async function GET() {
         where: { userId },
         select: { dietaryPreference: true },
       }),
-      prisma.photoConsent.findUnique({
-        where: { userId },
+      prisma.photoConsent.findFirst({
+        where: activeProductionId
+          ? { userId, showId: activeProductionId, revokedAt: null }
+          : { id: { in: [] } },
         select: {
           status: true,
           consentGiven: true,

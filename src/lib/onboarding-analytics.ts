@@ -1,4 +1,5 @@
 import type { AllergyLevel, OnboardingFocus, RolePreferenceDomain } from "@prisma/client";
+import { CURRENT_PRODUCTION_STATUSES, currentMembershipWhere } from "@/lib/produktionen/status";
 
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus } from "@/lib/member-invites";
@@ -189,7 +190,10 @@ export async function collectOnboardingAnalytics(
             name: true,
             email: true,
             dateOfBirth: true,
-            photoConsent: { select: { status: true, documentUploadedAt: true } },
+            photoConsents: {
+              where: { revokedAt: null },
+              select: { showId: true, status: true, documentUploadedAt: true },
+            },
           },
         },
         invite: {
@@ -221,7 +225,7 @@ export async function collectOnboardingAnalytics(
       where: { isActive: true },
       select: { userId: true, allergen: true, level: true },
     }),
-    prisma.photoConsent.count({ where: { status: "pending" } }),
+    prisma.photoConsent.count({ where: { status: "pending", revokedAt: null } }),
   ]);
 
   const showSummaries = new Map<string, ShowSummaryAccumulator>();
@@ -362,7 +366,14 @@ export async function collectOnboardingAnalytics(
   const minorsPendingDocuments = await prisma.user.count({
     where: {
       dateOfBirth: { gt: minorCutoff },
-      OR: [{ photoConsent: null }, { photoConsent: { documentUploadedAt: null } }],
+      productionMemberships: { some: currentMembershipWhere(now) },
+      photoConsents: {
+        none: {
+          documentUploadedAt: { not: null },
+          revokedAt: null,
+          show: { status: { in: [...CURRENT_PRODUCTION_STATUSES] } },
+        },
+      },
     },
   });
 
@@ -375,12 +386,13 @@ export async function collectOnboardingAnalytics(
       const interestsForUser = interestsByUser.get(userId) ?? [];
       const dietaryEntries = dietaryByUser.get(userId) ?? [];
       const age = calculateAge(user?.dateOfBirth ?? null);
-      const hasPendingPhotoConsent = user?.photoConsent?.status === "pending";
-      const requiresGuardianDocument =
-        typeof age === "number" &&
-        age < 18 &&
-        (!user?.photoConsent || !user.photoConsent.documentUploadedAt);
       const show = profile.show ?? profile.invite?.show ?? null;
+      const consent = show
+        ? (user?.photoConsents.find((entry) => entry.showId === show.id) ?? null)
+        : null;
+      const hasPendingPhotoConsent = consent?.status === "pending";
+      const requiresGuardianDocument =
+        typeof age === "number" && age < 18 && !consent?.documentUploadedAt;
 
       if (show) {
         const summary = ensureShowSummary(showSummaries, show);

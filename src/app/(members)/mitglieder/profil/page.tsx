@@ -12,6 +12,11 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
 import { buildPhotoConsentSummary } from "@/lib/photo-consent-summary";
+import {
+  firstConsent,
+  photoConsentsForShow,
+  resolvePhotoConsentShowId,
+} from "@/lib/photo-consent-scope";
 
 const membersBreadcrumb = membersNavigationBreadcrumb("/mitglieder/profil");
 
@@ -34,6 +39,7 @@ export default async function ProfilePage() {
     notFound();
   }
 
+  const photoConsentShowId = await resolvePhotoConsentShowId(userId);
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -79,20 +85,18 @@ export default async function ProfilePage() {
           show: { select: { id: true, meta: true, title: true, year: true } },
         },
       },
-      photoConsent: {
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-          approvedAt: true,
-          rejectionReason: true,
-          documentUploadedAt: true,
-          documentName: true,
-          documentMime: true,
-          approvedBy: { select: { name: true } },
-        },
-      },
+      photoConsents: photoConsentsForShow(photoConsentShowId, {
+        id: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        approvedAt: true,
+        rejectionReason: true,
+        documentUploadedAt: true,
+        documentName: true,
+        documentMime: true,
+        approvedBy: { select: { name: true } },
+      }),
     },
   });
 
@@ -152,20 +156,21 @@ export default async function ProfilePage() {
     ),
   );
 
+  const currentPhotoConsent = firstConsent(user.photoConsents);
   const photoConsentSummary = buildPhotoConsentSummary({
     dateOfBirth: user.dateOfBirth,
-    photoConsent: user.photoConsent
+    photoConsent: currentPhotoConsent
       ? {
-          id: user.photoConsent.id,
-          status: user.photoConsent.status,
-          createdAt: user.photoConsent.createdAt,
-          updatedAt: user.photoConsent.updatedAt,
-          approvedAt: user.photoConsent.approvedAt,
-          rejectionReason: user.photoConsent.rejectionReason,
-          documentUploadedAt: user.photoConsent.documentUploadedAt,
-          documentName: user.photoConsent.documentName,
-          documentMime: user.photoConsent.documentMime,
-          approvedByName: user.photoConsent.approvedBy?.name ?? null,
+          id: currentPhotoConsent.id,
+          status: currentPhotoConsent.status,
+          createdAt: currentPhotoConsent.createdAt,
+          updatedAt: currentPhotoConsent.updatedAt,
+          approvedAt: currentPhotoConsent.approvedAt,
+          rejectionReason: currentPhotoConsent.rejectionReason,
+          documentUploadedAt: currentPhotoConsent.documentUploadedAt,
+          documentName: currentPhotoConsent.documentName,
+          documentMime: currentPhotoConsent.documentMime,
+          approvedByName: currentPhotoConsent.approvedBy?.name ?? null,
         }
       : null,
   });

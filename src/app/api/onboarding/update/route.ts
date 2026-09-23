@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveProductionId } from "@/lib/active-production";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
@@ -183,6 +184,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const consentShowId = targetShowId ?? (await getActiveProductionId(userId));
+
   try {
     await prisma.$transaction(async (tx) => {
       const onboardingProfile = await tx.memberOnboardingProfile.upsert({
@@ -270,34 +273,36 @@ export async function POST(request: NextRequest) {
         data: { isActive: false },
       });
 
-      await tx.photoConsent.upsert({
-        where: { userId },
-        update: {
-          consentGiven: data.photoConsent,
-          ...(documentBuffer
-            ? {
-                documentData: documentBuffer,
-                documentMime,
-                documentName,
-                documentSize,
-                documentUploadedAt: new Date(),
-              }
-            : {}),
-        },
-        create: {
-          userId,
-          consentGiven: data.photoConsent,
-          ...(documentBuffer
-            ? {
-                documentData: documentBuffer,
-                documentMime,
-                documentName,
-                documentSize,
-                documentUploadedAt: new Date(),
-              }
-            : {}),
-        },
-      });
+      if (consentShowId) {
+        const documentFields = documentBuffer
+          ? {
+              documentData: documentBuffer,
+              documentMime,
+              documentName,
+              documentSize,
+              documentUploadedAt: new Date(),
+            }
+          : {};
+        // Jede Änderung muss erneut freigegeben werden.
+        await tx.photoConsent.upsert({
+          where: { userId_showId: { userId, showId: consentShowId } },
+          update: {
+            consentGiven: data.photoConsent,
+            status: "pending",
+            approvedAt: null,
+            approvedById: null,
+            rejectionReason: null,
+            revokedAt: null,
+            ...documentFields,
+          },
+          create: {
+            userId,
+            showId: consentShowId,
+            consentGiven: data.photoConsent,
+            ...documentFields,
+          },
+        });
+      }
 
       if (targetShowId) {
         await tx.productionMembership.upsert({
