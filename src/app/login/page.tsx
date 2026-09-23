@@ -4,7 +4,8 @@ import { Suspense } from "react";
 
 import {
   getLegacyPasswordLoginDeadline,
-  isAuthentikEnabled,
+  isAuthentikLoginEnabled,
+  isAuthentikProvisioningEnabled,
   isLegacyPasswordLoginActive,
 } from "@/lib/authentik/config";
 
@@ -39,9 +40,10 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
   // Authentik-Konfiguration und Stichtag kommen zur Laufzeit aus der Umgebung.
   await connection();
-  const authentikEnabled = isAuthentikEnabled();
+  const authentikEnabled = isAuthentikLoginEnabled();
+  const authentikProvisioning = isAuthentikProvisioningEnabled();
   const legacyLoginActive = isLegacyPasswordLoginActive();
-  const legacyLoginDeadline = authentikEnabled
+  const legacyLoginDeadline = authentikProvisioning
     ? (getLegacyPasswordLoginDeadline()?.toISOString() ?? null)
     : null;
 
@@ -50,6 +52,7 @@ export default async function LoginPage() {
       <Suspense fallback={null}>
         <LoginPageClient
           authentikEnabled={authentikEnabled}
+          authentikProvisioning={authentikProvisioning}
           legacyLoginActive={legacyLoginActive}
           legacyLoginDeadline={legacyLoginDeadline}
         />

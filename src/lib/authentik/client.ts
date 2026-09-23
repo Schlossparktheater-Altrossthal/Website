@@ -177,7 +177,7 @@ export async function reconcileAuthentikUser(
   if (user.name !== name) changes.name = name;
   // Konto eines früher gelöschten Profils mit derselben Adresse wird übernommen.
   if (!user.is_active) changes.is_active = true;
-  if (!getAuthentikMemberId(user)) {
+  if (getAuthentikMemberId(user) !== member.userId) {
     changes.attributes = { ...user.attributes, mitgliederbereich: { userId: member.userId } };
   }
   if (Object.keys(changes).length === 0) return user;
@@ -188,15 +188,30 @@ export async function reconcileAuthentikUser(
  * Sucht das Authentik-Konto eines Mitglieds: zuerst über die Profil-ID (bleibt
  * bei E-Mail-Änderungen stabil), dann über die E-Mail.
  */
+export type MemberLookupOptions = {
+  /**
+   * Prüft, ob eine fremde Profil-ID im Mitgliederbereich noch existiert. Gehört
+   * ein Konto mit derselben Adresse zu einem Profil, das es nicht mehr gibt,
+   * wird es übernommen statt den Vorgang dauerhaft zu blockieren.
+   */
+  isKnownMember?: (userId: string) => Promise<boolean>;
+};
+
 export async function findAuthentikUserForMember(
   member: MemberIdentity,
+  options: MemberLookupOptions = {},
 ): Promise<AuthentikUser | null> {
   const byMemberId = await findAuthentikUserByMemberId(member.userId);
   if (byMemberId) return byMemberId;
   const byEmail = await findAuthentikUserByEmail(member.email);
   if (!byEmail) return null;
   const otherMemberId = getAuthentikMemberId(byEmail);
-  if (isManagedAuthentikUser(byEmail) && otherMemberId && otherMemberId !== member.userId) {
+  if (
+    isManagedAuthentikUser(byEmail) &&
+    otherMemberId &&
+    otherMemberId !== member.userId &&
+    (!options.isKnownMember || (await options.isKnownMember(otherMemberId)))
+  ) {
     throw new AuthentikApiError(
       `Konto ${byEmail.username} gehört zu einem anderen Mitglied (${otherMemberId})`,
     );
@@ -212,10 +227,19 @@ export async function findAuthentikUserForMember(
  */
 export async function ensureAuthentikUser(
   member: MemberIdentity,
-): Promise<{ user: AuthentikUser; created: boolean }> {
-  const existing = await findAuthentikUserForMember(member);
+  options: MemberLookupOptions = {},
+): Promise<{ user: AuthentikUser; created: boolean; claimed: boolean }> {
+  const existing = await findAuthentikUserForMember(member, options);
   if (existing) {
-    return { user: await reconcileAuthentikUser(existing, member), created: false };
+    // "claimed": verwaltetes Konto, das bisher keinem oder einem nicht mehr
+    // existierenden Profil gehörte; sein Passwort stammt nicht vom Mitglied.
+    const claimed =
+      isManagedAuthentikUser(existing) && getAuthentikMemberId(existing) !== member.userId;
+    return {
+      user: await reconcileAuthentikUser(existing, member),
+      created: false,
+      claimed,
+    };
   }
 
   const config = requireConfig();
@@ -232,7 +256,7 @@ export async function ensureAuthentikUser(
       attributes: { mitgliederbereich: { userId: member.userId } },
     },
   });
-  return { user: authentikUserSchema.parse(created), created: true };
+  return { user: authentikUserSchema.parse(created), created: true, claimed: false };
 }
 
 /**

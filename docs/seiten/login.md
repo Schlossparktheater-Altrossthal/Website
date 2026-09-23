@@ -83,7 +83,19 @@ Passwort-Reset).
 | `AUTHENTIK_RECOVERY_EMAIL_STAGE` | optional, Standard: `theater-recovery-email`                                 |
 | `AUTHENTIK_LEGACY_LOGIN_UNTIL`   | Stichtag (ISO-Datum) für das alte Passwortformular                           |
 
-SSO ist nur aktiv, wenn Issuer, Client-ID/-Secret und API-Token gesetzt sind.
+Mit Issuer und Client-ID/-Secret ist der Login über Authentik aktiv. Erst mit dem API-Token
+verwaltet der Mitgliederbereich die Authentik-Konten (Passwort-Übernahme, Abgleich,
+„Passwort vergessen“, Stichtag für das alte Formular).
+
+**Staging bekommt bewusst keinen API-Token.** Staging teilt sich Authentik mit der Produktion und
+arbeitet mit einer regelmäßig zurückgesetzten Kopie der echten Mitglieder. Ohne Token ändert
+Staging keine echten Konten (keine E-Mail-/Namensänderungen, kein Deaktivieren beim Löschen, keine
+Passwörter, keine Mails). Der Login über Authentik funktioniert dort trotzdem, weil die Profil-IDs
+der Kopie denen der Produktion entsprechen; nach einem Zurücksetzen werden die Verknüpfungen beim
+nächsten Login neu angelegt. Das alte Passwortformular bleibt auf Staging ohne Stichtag aktiv.
+
+Gehört ein Authentik-Konto mit derselben Adresse zu einem Profil, das es nicht mehr gibt, übernimmt
+das neue Profil das Konto (inklusive Passwort-Übernahme beim alten Login).
 
 ## Bekannte Baustellen
 

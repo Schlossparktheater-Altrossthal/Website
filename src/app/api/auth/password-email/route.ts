@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { ensureAuthentikUser, sendAuthentikPasswordEmail } from "@/lib/authentik/client";
-import { isAuthentikEnabled } from "@/lib/authentik/config";
-import { memberIdentitySelect, toMemberIdentity } from "@/lib/authentik/sync";
+import { sendAuthentikPasswordEmail } from "@/lib/authentik/client";
+import { isAuthentikProvisioningEnabled } from "@/lib/authentik/config";
+import {
+  ensureAuthentikUserForMember,
+  memberIdentitySelect,
+  toMemberIdentity,
+} from "@/lib/authentik/sync";
 import { getRequestIp, recordPasswordEmailAttempt } from "@/lib/auth/rate-limit";
 import { createLogger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +24,7 @@ const logger = createLogger("authentik-password-email");
  * Antwort verrät nicht, ob die Adresse bekannt ist.
  */
 export async function POST(request: Request) {
-  if (!isAuthentikEnabled()) {
+  if (!isAuthentikProvisioningEnabled()) {
     return NextResponse.json(
       { error: "Passwort-Zurücksetzen ist derzeit nicht verfügbar." },
       { status: 503 },
@@ -62,7 +66,7 @@ export async function POST(request: Request) {
   try {
     // Findet das Konto auch nach einer E-Mail-Änderung über die Profil-ID und
     // trägt die aktuelle Adresse ein, bevor die Mail verschickt wird.
-    const { user: authentikUser } = await ensureAuthentikUser(identity);
+    const { user: authentikUser } = await ensureAuthentikUserForMember(identity);
     await sendAuthentikPasswordEmail(authentikUser);
     // ÜBERGANGSPHASE: Das neue Passwort entsteht in Authentik. Ein alter
     // lokaler Hash würde sonst beim nächsten Login über das alte Formular das

@@ -15,13 +15,16 @@
  */
 import { linkAuthentikAccount } from "@/lib/authentik/account-link";
 import {
-  ensureAuthentikUser,
   hasAuthentikPasswordSinceCreation,
   isManagedAuthentikUser,
   setAuthentikPassword,
 } from "@/lib/authentik/client";
-import { isAuthentikEnabled } from "@/lib/authentik/config";
-import { memberIdentitySelect, toMemberIdentity } from "@/lib/authentik/sync";
+import { isAuthentikProvisioningEnabled } from "@/lib/authentik/config";
+import {
+  ensureAuthentikUserForMember,
+  memberIdentitySelect,
+  toMemberIdentity,
+} from "@/lib/authentik/sync";
 import { createLogger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
@@ -50,7 +53,7 @@ export async function migratePasswordToAuthentik(
   password: string,
   source: PasswordMigrationSource,
 ): Promise<PasswordMigrationResult> {
-  if (!isAuthentikEnabled()) {
+  if (!isAuthentikProvisioningEnabled()) {
     return { status: "skipped", reason: "disabled" };
   }
 
@@ -64,7 +67,7 @@ export async function migratePasswordToAuthentik(
   }
 
   try {
-    const { user: authentikUser, created } = await ensureAuthentikUser(identity);
+    const { user: authentikUser, created, claimed } = await ensureAuthentikUserForMember(identity);
 
     if (!isManagedAuthentikUser(authentikUser)) {
       // Konto mit gleicher E-Mail, das nicht vom Mitgliederbereich stammt
@@ -76,7 +79,12 @@ export async function migratePasswordToAuthentik(
       return { status: "skipped", reason: "unmanaged-account" };
     }
 
-    if (source === "legacy-login" && !created && hasAuthentikPasswordSinceCreation(authentikUser)) {
+    if (
+      source === "legacy-login" &&
+      !created &&
+      !claimed &&
+      hasAuthentikPasswordSinceCreation(authentikUser)
+    ) {
       // Das Mitglied hat sein Passwort bereits in Authentik gesetzt (z. B. über
       // "Passwort vergessen" auf der Authentik-Seite). Das alte Passwort aus dem
       // Mitgliederbereich darf das neuere nicht überschreiben.

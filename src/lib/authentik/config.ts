@@ -71,9 +71,22 @@ export function getAuthentikApiConfig(): AuthentikApiConfig | null {
   };
 }
 
-/** SSO ist aktiv, sobald OIDC-Client und API-Zugang konfiguriert sind. */
-export function isAuthentikEnabled(): boolean {
-  return getAuthentikOidcConfig() !== null && getAuthentikApiConfig() !== null;
+/** Anmeldung über Authentik ist möglich, sobald der OIDC-Client konfiguriert ist. */
+export function isAuthentikLoginEnabled(): boolean {
+  return getAuthentikOidcConfig() !== null;
+}
+
+/**
+ * Der Mitgliederbereich darf Authentik-Konten anlegen und ändern (Passwörter,
+ * Abgleich, Passwort-Mails). Dafür braucht er zusätzlich den API-Token.
+ *
+ * Staging bekommt bewusst keinen Token: Es teilt sich Authentik mit der
+ * Produktion und arbeitet mit einer Kopie der echten Mitglieder. Dort ist nur
+ * der Login über Authentik aktiv; Tests (E-Mail ändern, Löschen, Passwörter)
+ * verändern so keine echten Konten.
+ */
+export function isAuthentikProvisioningEnabled(): boolean {
+  return isAuthentikLoginEnabled() && getAuthentikApiConfig() !== null;
 }
 
 /**
@@ -98,11 +111,12 @@ export function getLegacyPasswordLoginDeadline(): Date | null {
 }
 
 /**
- * Ohne Authentik bleibt der Passwort-Login dauerhaft aktiv. Mit Authentik gilt
- * er nur bis zum Stichtag (ohne Stichtag unbefristet, bis einer gesetzt wird).
+ * Ohne Authentik-Konten (keine Konfiguration oder Staging ohne API-Token)
+ * bleibt der Passwort-Login dauerhaft aktiv, weil nichts migriert werden kann.
+ * Sonst gilt er nur bis zum Stichtag (ohne Stichtag unbefristet).
  */
 export function isLegacyPasswordLoginActive(now: Date = new Date()): boolean {
-  if (!isAuthentikEnabled()) return true;
+  if (!isAuthentikProvisioningEnabled()) return true;
   const deadline = getLegacyPasswordLoginDeadline();
   return !deadline || now < deadline;
 }

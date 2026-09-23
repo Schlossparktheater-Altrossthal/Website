@@ -94,6 +94,8 @@ function parseReasonFromUrl(url: string | null | undefined): string | null {
 export type LoginPageClientProps = {
   /** Anmeldung über Authentik (SSO) ist konfiguriert. */
   authentikEnabled: boolean;
+  /** Mitgliederbereich verwaltet die Authentik-Konten (Passwort-Mail, Migration). */
+  authentikProvisioning: boolean;
   /** ÜBERGANGSPHASE: altes Passwortformular noch sichtbar. */
   legacyLoginActive: boolean;
   /** ÜBERGANGSPHASE: Stichtag für das alte Formular (ISO-String) oder null. */
@@ -116,6 +118,7 @@ function formatDeadline(iso: string | null): string | null {
 
 export function LoginPageClient({
   authentikEnabled,
+  authentikProvisioning,
   legacyLoginActive,
   legacyLoginDeadline,
 }: LoginPageClientProps) {
@@ -136,7 +139,7 @@ export function LoginPageClient({
   const sp = useSearchParams();
   const callbackUrl = sp?.get("callbackUrl") ?? "/mitglieder";
   const onboardingToken = sp?.get("onboardingToken") ?? undefined;
-  const canResetPassword = authentikEnabled && !devNoDb;
+  const canResetPassword = authentikProvisioning && !devNoDb;
   const deadlineLabel = formatDeadline(legacyLoginDeadline);
 
   // Surface NextAuth error from ?error=...
@@ -327,11 +330,17 @@ export function LoginPageClient({
             {authentikEnabled && !devNoDb && (
               <div className="space-y-1 border-t border-border pt-6">
                 <h2 className="text-sm font-semibold">Mit bisherigem Passwort anmelden</h2>
-                <p className="text-sm text-muted-foreground">
-                  Beim ersten Login wird dein Passwort in dein Theater-Konto übernommen. Danach
-                  meldest du dich über den Button oben an.
-                  {deadlineLabel ? ` Dieses Formular gibt es noch bis zum ${deadlineLabel}.` : ""}
-                </p>
+                {authentikProvisioning ? (
+                  <p className="text-sm text-muted-foreground">
+                    Beim ersten Login wird dein Passwort in dein Theater-Konto übernommen. Danach
+                    meldest du dich über den Button oben an.
+                    {deadlineLabel ? ` Dieses Formular gibt es noch bis zum ${deadlineLabel}.` : ""}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Anmeldung mit dem Passwort dieser Umgebung, ohne Übernahme ins Theater-Konto.
+                  </p>
+                )}
               </div>
             )}
             <form

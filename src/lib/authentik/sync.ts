@@ -10,11 +10,12 @@
  */
 import {
   deactivateAuthentikUser,
+  ensureAuthentikUser,
   findAuthentikUserByMemberId,
   reconcileAuthentikUser,
   type MemberIdentity,
 } from "@/lib/authentik/client";
-import { isAuthentikEnabled } from "@/lib/authentik/config";
+import { isAuthentikProvisioningEnabled } from "@/lib/authentik/config";
 import { createLogger } from "@/lib/logger";
 import { combineNameParts } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
@@ -46,6 +47,16 @@ export function toMemberIdentity(member: MemberRecord): MemberIdentity | null {
   };
 }
 
+async function isKnownMember(userId: string): Promise<boolean> {
+  const count = await prisma.user.count({ where: { id: userId } });
+  return count > 0;
+}
+
+/** Wie `ensureAuthentikUser`, übernimmt aber Konten verwaister Profile. */
+export function ensureAuthentikUserForMember(identity: MemberIdentity) {
+  return ensureAuthentikUser(identity, { isKnownMember });
+}
+
 async function logSyncError(message: string, userId: string, error: unknown) {
   console.error(`[authentik] ${message}`, error);
   await logger.error(message, {
@@ -59,7 +70,7 @@ async function logSyncError(message: string, userId: string, error: unknown) {
  * schon eines gibt). Fehler werden geloggt, nicht geworfen.
  */
 export async function syncMemberToAuthentik(userId: string): Promise<void> {
-  if (!isAuthentikEnabled()) return;
+  if (!isAuthentikProvisioningEnabled()) return;
   try {
     const member = await prisma.user.findUnique({
       where: { id: userId },
@@ -77,7 +88,7 @@ export async function syncMemberToAuthentik(userId: string): Promise<void> {
 
 /** Vor dem Löschen eines Profils: Authentik-Konto deaktivieren. */
 export async function deactivateMemberInAuthentik(userId: string): Promise<void> {
-  if (!isAuthentikEnabled()) return;
+  if (!isAuthentikProvisioningEnabled()) return;
   try {
     const authentikUser = await findAuthentikUserByMemberId(userId);
     if (authentikUser) await deactivateAuthentikUser(authentikUser);

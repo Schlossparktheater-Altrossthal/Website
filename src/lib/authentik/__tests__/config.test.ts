@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getAuthentikApiConfig,
-  isAuthentikEnabled,
+  isAuthentikLoginEnabled,
+  isAuthentikProvisioningEnabled,
   isLegacyPasswordLoginActive,
 } from "@/lib/authentik/config";
 
@@ -21,13 +22,23 @@ describe("authentik config", () => {
   it("is disabled without configuration and keeps the legacy login", () => {
     vi.stubEnv("AUTHENTIK_ISSUER", "");
     vi.stubEnv("AUTHENTIK_API_TOKEN", "");
-    expect(isAuthentikEnabled()).toBe(false);
+    expect(isAuthentikLoginEnabled()).toBe(false);
+    expect(isAuthentikProvisioningEnabled()).toBe(false);
+    expect(isLegacyPasswordLoginActive()).toBe(true);
+  });
+
+  it("allows login only without API token (staging) and keeps the legacy login", () => {
+    enableAuthentik();
+    vi.stubEnv("AUTHENTIK_API_TOKEN", "");
+    vi.stubEnv("AUTHENTIK_LEGACY_LOGIN_UNTIL", "2020-01-01T00:00:00Z");
+    expect(isAuthentikLoginEnabled()).toBe(true);
+    expect(isAuthentikProvisioningEnabled()).toBe(false);
     expect(isLegacyPasswordLoginActive()).toBe(true);
   });
 
   it("derives the API base URL from the issuer", () => {
     enableAuthentik();
-    expect(isAuthentikEnabled()).toBe(true);
+    expect(isAuthentikProvisioningEnabled()).toBe(true);
     expect(getAuthentikApiConfig()).toMatchObject({
       baseUrl: "https://auth.example.org",
       recoveryEmailStage: "theater-recovery-email",

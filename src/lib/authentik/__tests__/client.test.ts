@@ -97,6 +97,21 @@ describe("authentik client", () => {
     await expect(ensureAuthentikUser(anna)).rejects.toBeInstanceOf(AuthentikApiError);
   });
 
+  it("claims an account whose member no longer exists", async () => {
+    const orphan = { ...managedUser, attributes: { mitgliederbereich: { userId: "u-gone" } } };
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ results: [] }))
+      .mockResolvedValueOnce(jsonResponse({ results: [orphan] }))
+      .mockResolvedValueOnce(jsonResponse(managedUser));
+    const isKnownMember = vi.fn(async () => false);
+
+    const result = await ensureAuthentikUser(anna, { isKnownMember });
+
+    expect(isKnownMember).toHaveBeenCalledWith("u-gone");
+    expect(result).toMatchObject({ created: false, claimed: true });
+    expect(requestBody(2)).toEqual({ attributes: { mitgliederbereich: { userId: "u1" } } });
+  });
+
   it("updates email, username and name after a change in the member area", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(managedUser));
 
