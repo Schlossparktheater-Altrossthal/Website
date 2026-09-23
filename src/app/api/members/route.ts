@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     });
 
     // ÜBERGANGSPHASE: Passwort direkt nach Authentik übertragen.
-    await migratePasswordToAuthentik(user.id, password);
+    await migratePasswordToAuthentik(user.id, password, "password-set");
 
     const allRoles = sortRoles([user.role, ...user.roles.map((r) => r.role as Role)]);
     const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;

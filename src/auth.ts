@@ -23,7 +23,7 @@ import {
   getAuthentikOidcConfig,
   isLegacyPasswordLoginActive,
 } from "@/lib/authentik/config";
-import { hasAuthentikAccount } from "@/lib/authentik/account-link";
+import { hasAuthentikAccount, linkAuthentikAccount } from "@/lib/authentik/account-link";
 import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 
 type MutableToken = JWT & {
@@ -204,10 +204,12 @@ const authentikProviders = authentikOidcConfig
         issuer: authentikOidcConfig.issuer,
         clientId: authentikOidcConfig.clientId,
         clientSecret: authentikOidcConfig.clientSecret,
-        // Konten in Authentik legt nur der Mitgliederbereich an (gleiche
-        // E-Mail), daher ist die Verknüpfung über die E-Mail unkritisch. Wer
-        // kein Mitglied ist, wird im signIn-Callback abgewiesen.
-        allowDangerousEmailAccountLinking: true,
+        // Scope "mitgliederbereich" liefert den Claim member_id (Profil-ID).
+        authorization: { params: { scope: "openid profile email mitgliederbereich" } },
+        // Keine automatische Verknüpfung über die E-Mail (in Authentik nicht
+        // eindeutig): Der signIn-Callback ordnet das Konto selbst zu und legt
+        // die Verknüpfung an, bevor Auth.js den Nutzer sucht.
+        allowDangerousEmailAccountLinking: false,
         profile(profile) {
           return {
             id: profile.sub,
@@ -244,13 +246,17 @@ async function resolveActiveOnboardingInviteId(token: string | undefined): Promi
 }
 
 /**
- * Authentik-Login nur für bestehende Mitglieder: zuerst über die gespeicherte
- * Verknüpfung (sub), sonst über die E-Mail. Neue Profile entstehen nie über
- * Authentik, sondern weiterhin über Onboarding bzw. Mitgliederverwaltung.
+ * Authentik-Login nur für bestehende Mitglieder. Zuordnung in dieser
+ * Reihenfolge:
+ * 1. gespeicherte Verknüpfung (Account mit sub = Authentik-UID),
+ * 2. Claim member_id (Attribut, das nur der Mitgliederbereich setzt),
+ * 3. nur für Konten ohne member_id (z. B. Infrastruktur-Admins): E-Mail.
+ * Neue Profile entstehen nie über Authentik, sondern weiterhin über
+ * Onboarding bzw. Mitgliederverwaltung.
  */
 async function authorizeAuthentikSignIn(
   sub: string,
-  rawEmail: string | null | undefined,
+  claims: { email?: unknown; memberId?: unknown },
 ): Promise<boolean | string> {
   const memberSelect = { id: true, deactivatedAt: true } as const;
   const linked = await prisma.account.findUnique({
@@ -259,11 +265,19 @@ async function authorizeAuthentikSignIn(
     },
     select: { user: { select: memberSelect } },
   });
-  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
-  const member =
-    linked?.user ??
-    (email ? await prisma.user.findUnique({ where: { email }, select: memberSelect }) : null);
+
+  let member = linked?.user ?? null;
+  if (!member) {
+    const memberId = typeof claims.memberId === "string" ? claims.memberId.trim() : "";
+    const email = typeof claims.email === "string" ? claims.email.trim().toLowerCase() : "";
+    if (memberId) {
+      member = await prisma.user.findUnique({ where: { id: memberId }, select: memberSelect });
+    } else if (email) {
+      member = await prisma.user.findUnique({ where: { email }, select: memberSelect });
+    }
+  }
   if (!member) return "/login?error=AccessDenied&reason=not-a-member";
+
   if (member.deactivatedAt) {
     // Rückkehrer aus dem Onboarding: Die Login-Seite legt den Einladungs-Token
     // vor dem Sprung zu Authentik in ein kurzlebiges Cookie.
@@ -273,6 +287,10 @@ async function authorizeAuthentikSignIn(
     if (!inviteId) return "/login?error=AccessDenied&reason=deactivated";
     await prisma.user.update({ where: { id: member.id }, data: { deactivatedAt: null } });
     cookieStore.delete(ONBOARDING_TOKEN_COOKIE);
+  }
+
+  if (!linked) {
+    await linkAuthentikAccount(member.id, sub);
   }
   return true;
 }
@@ -340,6 +358,15 @@ const credentialsProvider = Credentials({
       throw new CredentialsSignin("Ungültige Zugangsdaten");
     }
 
+    // ÜBERGANGSPHASE: Passwort nach Authentik übertragen und lokalen Hash
+    // löschen. Scheitert das (z. B. Authentik nicht erreichbar), klappt der
+    // Login trotzdem und der nächste Login versucht es erneut. Hat das Mitglied
+    // in Authentik schon ein neueres Passwort, gilt nur noch dieses.
+    const migration = await migratePasswordToAuthentik(user.id, rawPassword, "legacy-login");
+    if (migration.status === "superseded") {
+      throw new AuthentikMigratedSignin();
+    }
+
     const onboardingToken =
       typeof credentials?.onboardingToken === "string" ? credentials.onboardingToken : undefined;
     const activeOnboardingInviteId = await resolveActiveOnboardingInviteId(onboardingToken);
@@ -350,11 +377,6 @@ const credentialsProvider = Credentials({
         data: { deactivatedAt: null },
       });
     }
-
-    // ÜBERGANGSPHASE: Passwort nach Authentik übertragen und lokalen Hash
-    // löschen. Scheitert das (z. B. Authentik nicht erreichbar), klappt der
-    // Login trotzdem und der nächste Login versucht es erneut.
-    await migratePasswordToAuthentik(user.id, rawPassword);
 
     const combinedRoles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
 
@@ -386,9 +408,12 @@ const authConfig = {
   providers: [...authentikProviders, credentialsProvider],
   pages: { signIn: "/login", error: "/login" },
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === AUTHENTIK_PROVIDER_ID) {
-        return authorizeAuthentikSignIn(account.providerAccountId, user?.email);
+        return authorizeAuthentikSignIn(account.providerAccountId, {
+          email: profile?.email ?? user?.email,
+          memberId: profile?.member_id,
+        });
       }
 
       const userId = typeof user?.id === "string" ? user.id : null;

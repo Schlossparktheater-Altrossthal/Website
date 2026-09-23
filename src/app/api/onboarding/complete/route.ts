@@ -579,7 +579,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ÜBERGANGSPHASE: Passwort direkt nach Authentik übertragen.
-    await migratePasswordToAuthentik(result.userId, password);
+    await migratePasswordToAuthentik(result.userId, password, "password-set");
 
     return NextResponse.json({ ok: true, user: result });
   } catch (error) {

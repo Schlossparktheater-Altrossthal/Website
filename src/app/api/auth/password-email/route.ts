@@ -3,9 +3,9 @@ import { z } from "zod";
 
 import { ensureAuthentikUser, sendAuthentikPasswordEmail } from "@/lib/authentik/client";
 import { isAuthentikEnabled } from "@/lib/authentik/config";
+import { memberIdentitySelect, toMemberIdentity } from "@/lib/authentik/sync";
 import { getRequestIp, recordPasswordEmailAttempt } from "@/lib/auth/rate-limit";
 import { createLogger } from "@/lib/logger";
-import { combineNameParts } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 
 const PASSWORD_EMAIL_SUCCESS_MESSAGE =
@@ -52,35 +52,27 @@ export async function POST(request: Request) {
 
   const member = await prisma.user.findUnique({
     where: { email },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      name: true,
-      deactivatedAt: true,
-    },
+    select: { ...memberIdentitySelect, deactivatedAt: true },
   });
-  if (!member?.email || member.deactivatedAt) {
+  const identity = member && !member.deactivatedAt ? toMemberIdentity(member) : null;
+  if (!identity) {
     return NextResponse.json({ message: PASSWORD_EMAIL_SUCCESS_MESSAGE });
   }
 
   try {
-    const authentikUser = await ensureAuthentikUser({
-      userId: member.id,
-      email: member.email,
-      name: combineNameParts(member.firstName, member.lastName) ?? member.name,
-    });
+    // Findet das Konto auch nach einer E-Mail-Änderung über die Profil-ID und
+    // trägt die aktuelle Adresse ein, bevor die Mail verschickt wird.
+    const { user: authentikUser } = await ensureAuthentikUser(identity);
     await sendAuthentikPasswordEmail(authentikUser);
     // ÜBERGANGSPHASE: Das neue Passwort entsteht in Authentik. Ein alter
     // lokaler Hash würde sonst beim nächsten Login über das alte Formular das
     // neue Passwort in Authentik wieder überschreiben.
-    await prisma.user.update({ where: { id: member.id }, data: { passwordHash: null } });
-    await logger.info("Passwort-Mail über Authentik verschickt", { description: member.email });
+    await prisma.user.update({ where: { id: identity.userId }, data: { passwordHash: null } });
+    await logger.info("Passwort-Mail über Authentik verschickt", { description: identity.email });
   } catch (error) {
     console.error("[authentik] Passwort-Mail fehlgeschlagen", error);
     await logger.error("Passwort-Mail über Authentik fehlgeschlagen", {
-      description: member.email,
+      description: identity.email,
       error: error instanceof Error ? error.message : String(error),
     });
   }

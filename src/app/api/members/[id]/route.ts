@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
+import { deactivateMemberInAuthentik, syncMemberToAuthentik } from "@/lib/authentik/sync";
 import { hasPermission } from "@/lib/permissions";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
@@ -135,9 +136,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       select: { id: true, email: true, firstName: true, lastName: true, name: true },
     });
 
+    if (["email", "firstName", "lastName", "name"].some((field) => field in updates)) {
+      // E-Mail und Name pflegt der Mitgliederbereich, Authentik zieht nach.
+      await syncMemberToAuthentik(user.id);
+    }
+
     if (typeof body.password === "string" && body.password.length > 0) {
       // ÜBERGANGSPHASE: neues Passwort direkt nach Authentik übertragen.
-      await migratePasswordToAuthentik(user.id, body.password);
+      await migratePasswordToAuthentik(user.id, body.password, "password-set");
     }
 
     const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;
@@ -208,6 +214,8 @@ export async function DELETE(
   }
 
   try {
+    // Authentik-Konto vorher deaktivieren (braucht noch die Profil-ID).
+    await deactivateMemberInAuthentik(target.id);
     await prisma.user.delete({ where: { id: target.id } });
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {

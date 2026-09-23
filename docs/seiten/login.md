@@ -22,17 +22,27 @@ Passwort-Reset).
 ## Ablauf
 
 1. „Mit Theater-Konto anmelden“ leitet zu Authentik (Flow `theater-authentication`).
-2. Nach dem Login ordnet `src/auth.ts` das Konto zu: zuerst über die gespeicherte Verknüpfung
-   (`Account` mit `provider = "authentik"`, `providerAccountId` = OIDC-`sub` = Authentik-UID),
-   sonst über die E-Mail. Neue Profile entstehen nie über Authentik; unbekannte Konten landen mit
-   `?error=AccessDenied&reason=not-a-member` wieder auf `/login`.
+2. Nach dem Login ordnet `src/auth.ts` das Konto zu, in dieser Reihenfolge:
+   - gespeicherte Verknüpfung (`Account` mit `provider = "authentik"`, `providerAccountId` =
+     OIDC-`sub` = Authentik-UID),
+   - Claim `member_id` (Scope `mitgliederbereich`, Attribut `mitgliederbereich.userId`, das nur
+     der Mitgliederbereich setzt),
+   - nur für Konten ohne `member_id` (z. B. Infrastruktur-Admins): die E-Mail.
+
+   Die Verknüpfung legt der signIn-Callback selbst an; die automatische E-Mail-Verknüpfung von
+   Auth.js ist aus, weil E-Mails in Authentik nicht eindeutig sind. Neue Profile entstehen nie
+   über Authentik; unbekannte Konten landen mit `?error=AccessDenied&reason=not-a-member` wieder
+   auf `/login`.
+
 3. Deaktivierte Profile werden abgewiesen, außer die Anmeldung kommt aus dem Rückkehrer-Link.
 
 ## Übergangsphase (befristet)
 
 - Bis zum Stichtag `AUTHENTIK_LEGACY_LOGIN_UNTIL` funktioniert das alte Passwortformular. Nach
   erfolgreichem Login wird das Passwort in Authentik gesetzt, das Konto verknüpft und der lokale
-  Hash (`User.passwordHash`) gelöscht (`src/lib/authentik/migration.ts`). Ein weiterer Versuch
+  Hash (`User.passwordHash`) gelöscht (`src/lib/authentik/migration.ts`). Hat das Mitglied sein
+  Passwort in Authentik schon selbst neu gesetzt (Änderungsdatum mehr als eine Minute nach dem
+  Anlegen des Kontos), wird der alte Hash verworfen statt übertragen. Ein weiterer Versuch
   über das alte Formular zeigt dann den Hinweis auf den Theater-Konto-Button.
 - Passwörter, die der Mitgliederbereich an anderer Stelle setzt (Profil, Onboarding,
   Mitglied anlegen/bearbeiten, Owner-Setup), gehen auf demselben Weg direkt nach Authentik.
@@ -47,6 +57,15 @@ Passwort-Reset).
   Attribut `mitgliederbereich.userId`) und verändert nur Konten unter diesem Pfad. Konten mit
   gleicher E-Mail außerhalb des Pfads (z. B. Infrastruktur-Admins) werden beim Login per E-Mail
   verknüpft, ihr Passwort wird aber nie überschrieben.
+- Abgleich (`src/lib/authentik/sync.ts`): Ändern sich E-Mail oder Name im Profil oder in der
+  Mitgliederverwaltung, übernimmt Authentik E-Mail, Benutzername (= E-Mail) und Name. „Passwort
+  vergessen“ findet das Konto über die Profil-ID und trägt die aktuelle Adresse vorher ein.
+  Mitglieder können Name und E-Mail in Authentik nicht selbst ändern (der Theater-Brand hat keinen
+  Einstellungs-Flow), nur Passwort und Passkeys.
+- Deaktivierte Profile bleiben in Authentik aktiv, damit Rückkehrer sich über den Onboarding-Link
+  anmelden können; der Mitgliederbereich weist sie selbst ab. Gelöschte Profile werden in
+  Authentik deaktiviert (Profil-ID wird zu `deletedUserId`); ein neues Profil mit derselben
+  Adresse übernimmt das Konto wieder.
 - Die Mitgliederliste zeigt das Badge „Authentik“, sobald ein Mitglied verknüpft ist (Login über
   Authentik oder Passwort-Übernahme erfolgreich).
 - OIDC-Client, Service-Account und Rechte stehen im Blueprint
@@ -70,6 +89,6 @@ SSO ist nur aktiv, wenn Issuer, Client-ID/-Secret und API-Token gesetzt sind.
 
 - Abmelden beendet nur die Sitzung im Mitgliederbereich, nicht die Authentik-Sitzung
   (Single Logout folgt).
-- E-Mail-Änderungen und Deaktivierungen im Mitgliederbereich werden noch nicht nach Authentik
-  synchronisiert; Dienst-Rechte (`SSO.*`) und Gruppen-Sync folgen.
+- Zugriff auf weitere Dienste (Nextcloud usw.) soll über Dienst-Rechte (`SSO.*`) und
+  Authentik-Gruppen gesteuert werden; deaktivierte Profile verlieren dann diese Gruppen.
 - Die Tabelle `VerificationToken` wird seit dem Wegfall des Magic-Links nicht mehr genutzt.

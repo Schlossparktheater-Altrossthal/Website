@@ -16,20 +16,29 @@
 import { linkAuthentikAccount } from "@/lib/authentik/account-link";
 import {
   ensureAuthentikUser,
+  hasAuthentikPasswordSinceCreation,
   isManagedAuthentikUser,
   setAuthentikPassword,
 } from "@/lib/authentik/client";
 import { isAuthentikEnabled } from "@/lib/authentik/config";
+import { memberIdentitySelect, toMemberIdentity } from "@/lib/authentik/sync";
 import { createLogger } from "@/lib/logger";
-import { combineNameParts } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 
 const logger = createLogger("authentik-migration");
 
 export type PasswordMigrationResult =
   | { status: "migrated" }
+  /** In Authentik gilt bereits ein neueres Passwort; der lokale Hash wurde verworfen. */
+  | { status: "superseded" }
   | { status: "skipped"; reason: "disabled" | "no-email" | "unmanaged-account" }
   | { status: "failed" };
+
+export type PasswordMigrationSource =
+  /** Altes Login-Formular: Passwort nur übernehmen, wenn Authentik keins hat. */
+  | "legacy-login"
+  /** Passwort wurde im Mitgliederbereich bewusst neu gesetzt: immer übernehmen. */
+  | "password-set";
 
 /**
  * Setzt das Passwort in Authentik und löscht bei Erfolg den lokalen Hash.
@@ -39,25 +48,23 @@ export type PasswordMigrationResult =
 export async function migratePasswordToAuthentik(
   userId: string,
   password: string,
+  source: PasswordMigrationSource,
 ): Promise<PasswordMigrationResult> {
   if (!isAuthentikEnabled()) {
     return { status: "skipped", reason: "disabled" };
   }
 
-  const user = await prisma.user.findUnique({
+  const member = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, firstName: true, lastName: true, name: true },
+    select: memberIdentitySelect,
   });
-  if (!user?.email) {
+  const identity = member ? toMemberIdentity(member) : null;
+  if (!identity) {
     return { status: "skipped", reason: "no-email" };
   }
 
   try {
-    const authentikUser = await ensureAuthentikUser({
-      userId: user.id,
-      email: user.email,
-      name: combineNameParts(user.firstName, user.lastName) ?? user.name,
-    });
+    const { user: authentikUser, created } = await ensureAuthentikUser(identity);
 
     if (!isManagedAuthentikUser(authentikUser)) {
       // Konto mit gleicher E-Mail, das nicht vom Mitgliederbereich stammt
@@ -66,21 +73,30 @@ export async function migratePasswordToAuthentik(
       console.warn(
         `[authentik] Konto ${authentikUser.username} ist nicht verwaltet, Passwort bleibt lokal`,
       );
-      return {
-        status: "skipped",
-        reason: "unmanaged-account",
-      };
+      return { status: "skipped", reason: "unmanaged-account" };
+    }
+
+    if (source === "legacy-login" && !created && hasAuthentikPasswordSinceCreation(authentikUser)) {
+      // Das Mitglied hat sein Passwort bereits in Authentik gesetzt (z. B. über
+      // "Passwort vergessen" auf der Authentik-Seite). Das alte Passwort aus dem
+      // Mitgliederbereich darf das neuere nicht überschreiben.
+      await linkAuthentikAccount(identity.userId, authentikUser.uid);
+      await prisma.user.update({ where: { id: identity.userId }, data: { passwordHash: null } });
+      await logger.info("Altes Passwort verworfen, Authentik-Passwort ist neuer", {
+        description: identity.email,
+      });
+      return { status: "superseded" };
     }
 
     await setAuthentikPassword(authentikUser, password);
-    await linkAuthentikAccount(user.id, authentikUser.uid);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: null } });
-    await logger.info("Passwort nach Authentik übertragen", { description: user.email });
+    await linkAuthentikAccount(identity.userId, authentikUser.uid);
+    await prisma.user.update({ where: { id: identity.userId }, data: { passwordHash: null } });
+    await logger.info("Passwort nach Authentik übertragen", { description: identity.email });
     return { status: "migrated" };
   } catch (error) {
     console.error("[authentik] Passwort-Übertragung fehlgeschlagen", error);
     await logger.error("Passwort-Übertragung nach Authentik fehlgeschlagen", {
-      description: user.email,
+      description: identity.email,
       error: error instanceof Error ? error.message : String(error),
     });
     return { status: "failed" };

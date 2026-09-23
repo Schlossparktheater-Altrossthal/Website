@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
+import { syncMemberToAuthentik } from "@/lib/authentik/sync";
 import { sortRoles, type Role } from "@/lib/roles";
 import type { AvatarSource, PayoutMethod } from "@prisma/client";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
@@ -705,9 +706,14 @@ export async function PUT(request: NextRequest) {
       },
     });
 
+    if (["email", "firstName", "lastName", "name"].some((field) => field in updates)) {
+      // E-Mail und Name pflegt der Mitgliederbereich, Authentik zieht nach.
+      await syncMemberToAuthentik(updated.id);
+    }
+
     if (newPassword) {
       // ÜBERGANGSPHASE: neues Passwort direkt nach Authentik übertragen.
-      await migratePasswordToAuthentik(updated.id, newPassword);
+      await migratePasswordToAuthentik(updated.id, newPassword, "password-set");
     }
 
     const roles = sortRoles([updated.role as Role, ...updated.roles.map((r) => r.role as Role)]);
