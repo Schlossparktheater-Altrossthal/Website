@@ -17,7 +17,7 @@ const managedUser: AuthentikUser = {
   name: "Anna",
   email: "anna@example.org",
   is_active: true,
-  path: "mitgliederbereich",
+  path: "users/theater",
   date_joined: "2026-09-01T10:00:00Z",
   password_change_date: "2026-09-01T10:00:01Z",
   attributes: { mitgliederbereich: { userId: "u1" } },
@@ -82,7 +82,7 @@ describe("authentik client", () => {
     expect(requestBody(2)).toMatchObject({
       username: "anna@example.org",
       email: "anna@example.org",
-      path: "mitgliederbereich",
+      path: "users/theater",
       attributes: { mitgliederbereich: { userId: "u1" } },
     });
   });
@@ -128,6 +128,16 @@ describe("authentik client", () => {
       username: "anna.neu@example.org",
       name: "Anna Neu",
     });
+  });
+
+  it("moves accounts from the former path into the theater folder", async () => {
+    const legacy = { ...managedUser, path: "mitgliederbereich" };
+    fetchMock.mockResolvedValueOnce(jsonResponse(managedUser));
+
+    await reconcileAuthentikUser(legacy, anna);
+
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PATCH");
+    expect(requestBody(0)).toEqual({ path: "users/theater" });
   });
 
   it("leaves accounts outside the managed path untouched", async () => {

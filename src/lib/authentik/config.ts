@@ -9,8 +9,19 @@
 
 export const AUTHENTIK_PROVIDER_ID = "authentik";
 
-/** Pfad der vom Mitgliederbereich verwalteten Konten in Authentik. */
-export const AUTHENTIK_MANAGED_USER_PATH = "mitgliederbereich";
+/**
+ * Pfad der vom Mitgliederbereich verwalteten Konten in Authentik. Unterordner
+ * von "users" (Standardpfad), damit Theatermitglieder im Verzeichnisbaum
+ * getrennt von den übrigen Konten stehen.
+ */
+export const AUTHENTIK_MANAGED_USER_PATH = "users/theater";
+
+/**
+ * Früherer Pfad (bis v1.2.x). Konten dort gelten weiter als verwaltet und
+ * werden beim nächsten Abgleich nach AUTHENTIK_MANAGED_USER_PATH verschoben.
+ * Kann entfallen, sobald kein Konto mehr unter diesem Pfad liegt.
+ */
+export const AUTHENTIK_LEGACY_USER_PATH = "mitgliederbereich";
 
 /**
  * Kurzlebiges Cookie mit dem Onboarding-Token, damit deaktivierte Rückkehrer

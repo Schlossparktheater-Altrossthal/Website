@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  AUTHENTIK_LEGACY_USER_PATH,
   AUTHENTIK_MANAGED_USER_PATH,
   getAuthentikApiConfig,
   type AuthentikApiConfig,
@@ -80,7 +81,7 @@ async function request(
 
 /** Vom Mitgliederbereich angelegte Konten; nur diese werden verändert. */
 export function isManagedAuthentikUser(user: AuthentikUser): boolean {
-  return user.path === AUTHENTIK_MANAGED_USER_PATH;
+  return user.path === AUTHENTIK_MANAGED_USER_PATH || user.path === AUTHENTIK_LEGACY_USER_PATH;
 }
 
 /** Profil-ID im Mitgliederbereich (Attribut `mitgliederbereich.userId`). */
@@ -135,7 +136,7 @@ export type MemberIdentity = {
 };
 
 type AuthentikUserUpdate = Partial<
-  Pick<AuthentikUser, "username" | "name" | "email" | "is_active" | "attributes">
+  Pick<AuthentikUser, "username" | "name" | "email" | "is_active" | "path" | "attributes">
 >;
 
 async function updateManagedUser(
@@ -175,6 +176,7 @@ export async function reconcileAuthentikUser(
   if (user.email !== email) changes.email = email;
   if (user.username !== email) changes.username = email;
   if (user.name !== name) changes.name = name;
+  if (user.path !== AUTHENTIK_MANAGED_USER_PATH) changes.path = AUTHENTIK_MANAGED_USER_PATH;
   // Konto eines früher gelöschten Profils mit derselben Adresse wird übernommen.
   if (!user.is_active) changes.is_active = true;
   if (getAuthentikMemberId(user) !== member.userId) {
