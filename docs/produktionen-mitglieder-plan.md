@@ -182,7 +182,7 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 - **E1 (entschieden 2026-09-23):** Rollen wie `cast`/`tech` gelten pro Produktion → `ProductionMembership.roles`. Vergabe nur durch Admins; globale Rollen nur noch für Vorstand/Finanzen/Admin.
 - **E2 (entschieden 2026-09-23):** Wer für eine Produktion ongeboardet ist, hat Zugriff – auch wenn sie noch `planning` ist und der Titel sich noch ändert.
 - **E3:** Behalten Ehemalige einen eingeschränkten Lesezugriff (z. B. Galerie ihrer Produktion)?
-- **E4:** Aufbewahrungsfristen für Gesundheitsdaten, Fotodokumente, Onboarding-Antworten.
+- **E4 (entschieden 2026-09-24):** Aufbewahrung ab Ende der letzten Produktion: Ernährung/Allergien 2 Jahre, Fotoerlaubnisse 5 Jahre (ab Ende der jeweiligen Produktion), Konten 6 Jahre → anonymisieren.
 
 ## Hinweise
 
@@ -202,11 +202,12 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
   - Offen: Widerruf (`revokedAt`) hat noch keine UI
 - [x] Schritt 4 – Rückkehrer-Flow: Login deaktivierter Rückkehrer nur mit gültigem Einladungslink, Konto bleibt bis zum Abschluss des Rückkehrer-Onboardings gesperrt (`src/lib/onboarding/returnee.ts`, `returneeOnboarding`-Flag im Credentials-Login); Reaktivierung + Authentik-Gruppensync in `api/onboarding/update`; E-Mail-Prüfung beim Eintippen (`api/onboarding/email-check`, nur mit offener Einladungssitzung, rate-limitiert), 409 führt zurück zum Anmelde-Hinweis; „Passwort vergessen“ für deaktivierte Rückkehrer mit Einladungslink; Pflicht-Bestätigung übernommener Ernährungs-/Allergieangaben.
   - Offen: Nach dem Setzen des Passworts in Authentik führt kein automatischer Rücksprung zum Einladungslink; Eingaben aus einem abgebrochenen Neu-Onboarding (409) werden nicht übernommen, der Rückkehrer-Wizard füllt aus dem alten Profil vor.
-- [ ] Schritt 5 – Verwaltungsoberflächen
+- [x] Schritt 5 – Verwaltungsoberflächen
   - [x] 5a Ensemble pro Produktion + Rollen (`/mitglieder/produktionen/[showId]/ensemble`): aufnehmen (ongeboardet → aktiv, sonst eingeladen), Ensemble/Technik + Funktion pro Mitgliedschaft, Mitgliedschaft beenden; Status von Onboarding und Fotoerlaubnis je Person. Globale Rollen `cast`/`tech` werden per `syncProductionRoles` aus den laufenden Mitgliedschaften abgeleitet (ohne `withAutoCast`; mit Prod-Dump geprüft: 0 Änderungen im Bestand). Der Rollen-Editor der Mitgliederverwaltung schreibt Ensemble/Technik in die Mitgliedschaft der ausgewählten Produktion.
   - [x] 5b Ehemalige einladen: Auswahl auf der Ensemble-Seite → persönliche Einladung (einmal nutzbar, 30 Tage), Mitgliedschaft „eingeladen“, Mail über die SMTP-Server-Einstellungen (`src/lib/email/send.ts`); ohne SMTP/E-Mail werden die Links zum Weitergeben angezeigt. Rückkehrer-Onboarding zählt die Einladungsnutzung jetzt mit (vorher nie → „einmal nutzbar“ griff nicht).
     - Offen: Persönliche Links sind nicht an das Konto gebunden (wer den Link hat, kann ihn einmal nutzen).
   - [x] 5c Erinnerungen & Fotoliste (Ensemble-Seite): Onboarding-Erinnerung schickt Eingeladenen einen neuen persönlichen Link (Tokens sind nur gehasht gespeichert); Fotoerlaubnis-Erinnerung an aktive Mitglieder ohne bzw. mit abgelehnter Erlaubnis (Link aufs Profil, braucht SMTP); CSV-Fotoliste für Fotograf:innen (`api/photo-consents/export`, auch in der Fotoerlaubnis-Verwaltung): erlaubt / eingeschränkt (Ausschlüsse) / nicht fotografieren (fehlend, ausstehend, abgelehnt), Minderjährige markiert, CSV-Injection entschärft.
     - Offen: Erinnerungen werden nicht protokolliert (kein Schutz vor Mehrfachversand außer Bestätigungsdialog).
-  - [ ] 5d Produktionshistorie im Profil, Dubletten zusammenführen, Aufbewahrung
+  - [x] 5d Produktionshistorie in der Mitglieder-Detailseite; Datenpflege-Seite `/mitglieder/mitgliederverwaltung/aufbewahrung` (`src/lib/retention.ts`): Vorschau + manuelles Löschen von Ernährungs-/Allergiedaten (inkl. Onboarding-Snapshots und gespeicherter Einreichungen) und abgelaufenen Fotoerlaubnissen, Anonymisieren abgelaufener deaktivierter Konten ohne Vorstands-/Finanz-/Admin-Rolle (`User.anonymizedAt`); Erkennung möglicher Doppel-Konten (`src/lib/member-duplicates.ts`).
+    - Offen: Kein automatisches Zusammenführen von Doppel-Konten (40+ Verknüpfungen, nicht umkehrbar). Authentik-Konten werden beim Anonymisieren nur deaktiviert, dort gespeicherte Daten manuell löschen. Löschen läuft manuell (kein Cronjob).
 - [ ] Phase C – Aufräum-Migration

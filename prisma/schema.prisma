@@ -284,6 +284,8 @@ model User {
   createdAt DateTime @default(now())
   dateOfBirth DateTime?
   deactivatedAt DateTime?
+  /// Gesetzt, wenn personenbezogene Daten nach Ablauf der Aufbewahrungsfrist entfernt wurden.
+  anonymizedAt  DateTime?
   sessionVersion Int      @default(0)
   onboardingCompletedAt DateTime?
   onboardingUpdatedAt DateTime?

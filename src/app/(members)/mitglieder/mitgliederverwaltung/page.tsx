@@ -1,3 +1,7 @@
+import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { AddMemberModal } from "@/components/members/add-member-card";
@@ -85,6 +89,14 @@ export default async function MemberManagementPage() {
 
       <SeasonResetSettingsPanel initialProtectedRoles={protectedRoles} />
       <SeasonCloseoutPanel />
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <CardTitle>Datenpflege: Löschfristen &amp; Doppel-Konten</CardTitle>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/mitglieder/mitgliederverwaltung/aufbewahrung">Öffnen</Link>
+          </Button>
+        </CardHeader>
+      </Card>
 
       <div className="flex justify-end">
         <AddMemberModal />
