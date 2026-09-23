@@ -1,0 +1,120 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/rbac";
+import { hasPermission } from "@/lib/permissions";
+import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
+import {
+  actionFailure,
+  actionSuccess,
+  readOptionalString,
+  readString,
+  revalidateShow,
+  type ProductionActionResult,
+} from "@/lib/produktionen/actions-helpers";
+import { sanitizeProductionRoles, syncProductionRoles } from "@/lib/produktionen/production-roles";
+
+async function ensureManager() {
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE"))) {
+    throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
+  }
+}
+
+function ensemblePath(showId: string) {
+  return `/mitglieder/produktionen/${showId}/ensemble`;
+}
+
+/**
+ * Nimmt eine Person ins Ensemble auf. Wer für diese Produktion schon ongeboardet ist, wird
+ * direkt aktiv; alle anderen sind „eingeladen“ und bekommen Zugriff erst mit dem Onboarding (E2).
+ */
+export async function addProductionMemberAction(
+  formData: FormData,
+): Promise<ProductionActionResult> {
+  try {
+    await ensureManager();
+    const showId = readString(formData, "showId", { label: "Produktion" });
+    const userId = readString(formData, "userId", { label: "Mitglied" });
+
+    const [show, user, onboarding] = await Promise.all([
+      prisma.show.findUnique({ where: { id: showId }, select: { id: true } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+      prisma.productionOnboarding.findUnique({
+        where: { userId_showId: { userId, showId } },
+        select: { completedAt: true },
+      }),
+    ]);
+    if (!show) throw new Error("Produktion wurde nicht gefunden.");
+    if (!user) throw new Error("Mitglied wurde nicht gefunden.");
+
+    const status = onboarding?.completedAt ? "active" : "invited";
+    await prisma.productionMembership.upsert({
+      where: { showId_userId: { showId, userId } },
+      update: { status, leftAt: null },
+      create: { showId, userId, status },
+    });
+    await syncProductionRoles([userId]);
+    requestServiceGroupSync();
+
+    revalidateShow(showId, ensemblePath(showId));
+    return actionSuccess(
+      status === "active"
+        ? "Mitglied wurde ins Ensemble aufgenommen."
+        : "Mitglied wurde eingeladen und bekommt Zugriff nach dem Onboarding.",
+    );
+  } catch (error) {
+    console.error("addProductionMemberAction", error);
+    return actionFailure(error, "Mitglied konnte nicht aufgenommen werden.");
+  }
+}
+
+/** Rollen (Ensemble/Technik) und Funktion einer Mitgliedschaft setzen – nur durch Admins (E1). */
+export async function updateProductionMemberAction(
+  formData: FormData,
+): Promise<ProductionActionResult> {
+  try {
+    await ensureManager();
+    const membershipId = readString(formData, "membershipId", { label: "Mitgliedschaft" });
+    const roles = sanitizeProductionRoles(formData.getAll("roles"));
+    const func = readOptionalString(formData, "function", { label: "Funktion", maxLength: 120 });
+
+    const membership = await prisma.productionMembership.update({
+      where: { id: membershipId },
+      data: { roles, function: func ?? null },
+      select: { showId: true, userId: true },
+    });
+    const changed = await syncProductionRoles([membership.userId]);
+    if (changed.length > 0) requestServiceGroupSync();
+
+    revalidateShow(membership.showId, ensemblePath(membership.showId));
+    return actionSuccess("Rollen wurden gespeichert.");
+  } catch (error) {
+    console.error("updateProductionMemberAction", error);
+    return actionFailure(error, "Rollen konnten nicht gespeichert werden.");
+  }
+}
+
+/** Beendet eine Mitgliedschaft (die Person bleibt in der Historie der Produktion). */
+export async function removeProductionMemberAction(
+  formData: FormData,
+): Promise<ProductionActionResult> {
+  try {
+    await ensureManager();
+    const membershipId = readString(formData, "membershipId", { label: "Mitgliedschaft" });
+
+    const membership = await prisma.productionMembership.update({
+      where: { id: membershipId },
+      data: { status: "left", leftAt: new Date() },
+      select: { showId: true, userId: true },
+    });
+    await syncProductionRoles([membership.userId]);
+    requestServiceGroupSync();
+
+    revalidateShow(membership.showId, ensemblePath(membership.showId));
+    return actionSuccess("Mitgliedschaft wurde beendet.");
+  } catch (error) {
+    console.error("removeProductionMemberAction", error);
+    return actionFailure(error, "Mitgliedschaft konnte nicht beendet werden.");
+  }
+}

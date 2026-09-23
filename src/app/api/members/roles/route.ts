@@ -5,6 +5,8 @@ import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { sortRoles, type Role, withAutoCast } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProductionId } from "@/lib/active-production";
+import { sanitizeProductionRoles, syncProductionRoles } from "@/lib/produktionen/production-roles";
 
 export async function PUT(request: NextRequest) {
   const session = await requireAuth();
@@ -83,33 +85,70 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  // Ensemble/Technik gelten pro Produktion (E1): Sie landen in der Mitgliedschaft der
+  // aktuell ausgewählten Produktion, die globalen Rollen werden daraus abgeleitet.
+  const requestedProductionRoles = sanitizeProductionRoles(provided);
+  const beforeProductionRoles = sanitizeProductionRoles(beforeRoles);
+  const productionRolesChanged =
+    requestedProductionRoles.join(",") !== beforeProductionRoles.join(",");
+  const activeShowId = productionRolesChanged
+    ? await getActiveProductionId(session.user?.id ?? null)
+    : null;
+  if (productionRolesChanged && !activeShowId) {
+    return NextResponse.json(
+      {
+        error:
+          "Ensemble- und Technik-Rollen gelten pro Produktion. Bitte wähle zuerst eine Produktion aus.",
+      },
+      { status: 400 },
+    );
+  }
+
   // Keep legacy primary role field for compatibility (highest role)
   const primaryRole = orderedRoles[orderedRoles.length - 1];
 
   try {
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        role: primaryRole,
-        roles: {
-          deleteMany: {},
-          create: orderedRoles.map((role) => ({ role })),
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          role: primaryRole,
+          roles: {
+            deleteMany: {},
+            create: orderedRoles.map((role) => ({ role })),
+          },
+          appRoles: {
+            deleteMany: {},
+            create: customIds.map((rid) => ({ roleId: rid })),
+          },
         },
-        appRoles: {
-          deleteMany: {},
-          create: customIds.map((rid) => ({ roleId: rid })),
+      });
+      if (activeShowId) {
+        await tx.productionMembership.upsert({
+          where: { showId_userId: { showId: activeShowId, userId } },
+          update: { roles: requestedProductionRoles },
+          create: {
+            showId: activeShowId,
+            userId,
+            status: "active",
+            roles: requestedProductionRoles,
+          },
+        });
+      }
+      await syncProductionRoles([userId], tx);
+      return tx.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          name: true,
+          role: true,
+          roles: { select: { role: true } },
+          appRoles: { select: { role: { select: { id: true, name: true } } } },
         },
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        name: true,
-        role: true,
-        roles: { select: { role: true } },
-        appRoles: { select: { role: { select: { id: true, name: true } } } },
-      },
+      });
     });
 
     const allRoles = sortRoles([updated.role, ...updated.roles.map((r) => r.role as Role)]);

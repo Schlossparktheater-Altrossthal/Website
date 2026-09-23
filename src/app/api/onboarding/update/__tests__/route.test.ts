@@ -12,9 +12,14 @@ const mocks = vi.hoisted(() => ({
   onboardingUpsert: vi.fn(),
   userUpdate: vi.fn(),
   sync: vi.fn(),
+  syncRoles: vi.fn(),
 }));
 
 vi.mock("@/lib/authentik/service-groups", () => ({ requestServiceGroupSync: mocks.sync }));
+vi.mock("@/lib/produktionen/production-roles", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/produktionen/production-roles")>()),
+  syncProductionRoles: mocks.syncRoles,
+}));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/active-production", () => ({
@@ -70,8 +75,21 @@ describe("Rückkehrer-Onboarding: Fotoerlaubnis", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
-    mocks.inviteFindUnique.mockResolvedValue({ id: "invite-1", showId: "show-2027" });
+    mocks.inviteFindUnique.mockResolvedValue({
+      id: "invite-1",
+      showId: "show-2027",
+      roles: ["member", "tech", "board"],
+    });
     mocks.getActiveProductionId.mockResolvedValue("show-2026");
+  });
+
+  it("übernimmt Ensemble-/Technik-Rollen der Einladung nur für neue Mitgliedschaften", async () => {
+    await POST(request("token-abc"));
+
+    const args = mocks.membershipUpsert.mock.calls[0][0];
+    expect(args.create.roles).toEqual(["tech"]);
+    expect(args.update).toEqual({ leftAt: null, status: "active" });
+    expect(mocks.syncRoles).toHaveBeenCalledWith(["user-1"], expect.anything());
   });
 
   it("legt die Erlaubnis für die Produktion der Einladung an und verlangt neue Freigabe", async () => {

@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
+import { sanitizeProductionRoles } from "@/lib/produktionen/production-roles";
 import { isInviteUsable } from "@/lib/member-invites";
 import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
@@ -454,6 +455,8 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           showId: invite.showId,
+          status: "active",
+          roles: sanitizeProductionRoles(roles),
         },
       });
 

@@ -147,6 +147,9 @@ export default async function ProduktionDetailPage({
 
           <div className="flex flex-wrap items-center gap-2">
             <Button asChild>
+              <Link href={`/mitglieder/produktionen/${show.id}/ensemble`}>Ensemble</Link>
+            </Button>
+            <Button asChild variant="outline">
               <Link href="/mitglieder/produktionen/besetzung">Besetzung</Link>
             </Button>
             <Button asChild variant="outline">

@@ -7,6 +7,11 @@ import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
 import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
+import {
+  sanitizeProductionRoles,
+  syncProductionRoles,
+  type ProductionRole,
+} from "@/lib/produktionen/production-roles";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
@@ -164,6 +169,7 @@ export async function POST(request: NextRequest) {
 
   let targetShowId: string | null = null;
   let targetInviteId: string | null = null;
+  let targetInviteRoles: ProductionRole[] = [];
   if (onboardingToken) {
     const tokenHash = /^[0-9a-f]{64}$/i.test(onboardingToken)
       ? onboardingToken.toLowerCase()
@@ -173,6 +179,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         showId: true,
+        roles: true,
         expiresAt: true,
         maxUses: true,
         usageCount: true,
@@ -184,6 +191,7 @@ export async function POST(request: NextRequest) {
       if (status.isActive && invite.showId) {
         targetShowId = invite.showId;
         targetInviteId = invite.id;
+        targetInviteRoles = sanitizeProductionRoles(invite.roles ?? []);
       }
     }
   }
@@ -365,13 +373,17 @@ export async function POST(request: NextRequest) {
               userId,
             },
           },
+          // Bestehende Rollen vergibt die Produktionsleitung; neue Mitgliedschaften
+          // starten mit den Rollen aus der Einladung.
           update: { leftAt: null, status: "active" },
           create: {
             showId: targetShowId,
             userId,
             status: "active",
+            roles: targetInviteRoles,
           },
         });
+        await syncProductionRoles([userId], tx);
       }
 
       await tx.user.update({

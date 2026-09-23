@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
+import { syncProductionRoles } from "@/lib/produktionen/production-roles";
 import {
   actionFailure,
   actionSuccess,
@@ -58,10 +59,20 @@ export async function setProductionStatusAction(
       if (!shouldCloseMemberships(status)) {
         return 0;
       }
+      const open = await tx.productionMembership.findMany({
+        where: { showId, status: { not: "left" } },
+        select: { userId: true },
+      });
       const result = await tx.productionMembership.updateMany({
         where: { showId, status: { not: "left" } },
         data: { status: "left", leftAt: now },
       });
+      // Ensemble-/Technik-Rollen hängen an laufenden Produktionen.
+      await syncProductionRoles(
+        open.map((membership) => membership.userId),
+        tx,
+        now,
+      );
       return result.count;
     });
 

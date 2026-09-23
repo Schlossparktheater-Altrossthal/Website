@@ -11,6 +11,13 @@ const { hasPermissionMock, findUniqueMock, showUpdateMock, membershipUpdateManyM
     syncMock: vi.fn(),
   }));
 
+const { membershipFindManyMock, syncRolesMock } = vi.hoisted(() => ({
+  membershipFindManyMock: vi.fn(),
+  syncRolesMock: vi.fn(),
+}));
+
+vi.mock("@/lib/produktionen/production-roles", () => ({ syncProductionRoles: syncRolesMock }));
+
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/rbac", () => ({ requireAuth: async () => ({ user: { id: "admin-1" } }) }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: hasPermissionMock }));
@@ -18,7 +25,10 @@ vi.mock("@/lib/authentik/service-groups", () => ({ requestServiceGroupSync: sync
 vi.mock("@/lib/prisma", () => {
   const tx = {
     show: { update: showUpdateMock },
-    productionMembership: { updateMany: membershipUpdateManyMock },
+    productionMembership: {
+      updateMany: membershipUpdateManyMock,
+      findMany: membershipFindManyMock,
+    },
   };
   return {
     prisma: {
@@ -41,6 +51,7 @@ describe("setProductionStatusAction", () => {
     hasPermissionMock.mockResolvedValue(true);
     findUniqueMock.mockResolvedValue({ id: "show-1", status: "active" });
     membershipUpdateManyMock.mockResolvedValue({ count: 12 });
+    membershipFindManyMock.mockResolvedValue([{ userId: "u1" }, { userId: "u2" }]);
   });
 
   it("verweigert ohne Berechtigung", async () => {
@@ -79,6 +90,7 @@ describe("setProductionStatusAction", () => {
       data: { status: "left", leftAt: expect.any(Date) },
     });
     expect(syncMock).toHaveBeenCalled();
+    expect(syncRolesMock).toHaveBeenCalledWith(["u1", "u2"], expect.anything(), expect.any(Date));
   });
 
   it("lässt Mitgliedschaften beim Wechsel zwischen Planung und Aktiv unberührt", async () => {

@@ -194,7 +194,7 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 
 - [x] Schritt 1 – Deaktivierung entkoppeln, „Saison abschließen“ mit Vorschau (Mitgliederverwaltung, `api/season-reset/deactivation`)
 - [x] Schritt 2 – Produktionsstatus + Migration Phase A (`20260923120000_add_production_status`: `Show.status/statusChangedAt/archivedAt`, `ProductionMembership.status/roles/function`; „Die unendliche Geschichte“ → `active`, alle aktiven Nutzer als Mitglieder, `cast`/`tech` in `roles` kopiert. Status-Auswahl in der Produktionsübersicht; Beenden/Archivieren schließt Mitgliedschaften; „Saison abschließen“ lässt Mitglieder laufender Produktionen aus.)
-  - Offen aus Schritt 2: Code liest Rollen noch global (`UserRole`) – Umstellung auf `ProductionMembership.roles` in Schritt 5 (Ensemble-Verwaltung).
+  - Erledigt in 5a: `ProductionMembership.roles` ist Quelle der Wahrheit, `UserRole` cast/tech wird abgeleitet.
 - [x] Schritt 3 – Fotoerlaubnis & Onboarding pro Produktion (Phase B)
   - [x] 3a Fotoerlaubnis pro Produktion (`20260923140000_photo_consent_per_production`, `@@unique([userId, showId])`, `revokedAt`; Bestand → „Die unendliche Geschichte“; Helper `src/lib/photo-consent-scope.ts`; Admin-Filter nach Produktion; Rückkehrer-Update setzt Status auf `pending`)
   - [x] 3b Onboarding pro Produktion (`20260923160000_add_production_onboarding`: `ProductionOnboarding` mit Fokus, Einladung, `completedAt`, `isReturning`, `profileSnapshot`; Bestandsprofile → „Die unendliche Geschichte“. Dashboard und Onboarding-Auswertung lesen pro Produktion, Rückkehrer erscheinen jetzt in der neuen Produktion.)
@@ -203,4 +203,8 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 - [x] Schritt 4 – Rückkehrer-Flow: Login deaktivierter Rückkehrer nur mit gültigem Einladungslink, Konto bleibt bis zum Abschluss des Rückkehrer-Onboardings gesperrt (`src/lib/onboarding/returnee.ts`, `returneeOnboarding`-Flag im Credentials-Login); Reaktivierung + Authentik-Gruppensync in `api/onboarding/update`; E-Mail-Prüfung beim Eintippen (`api/onboarding/email-check`, nur mit offener Einladungssitzung, rate-limitiert), 409 führt zurück zum Anmelde-Hinweis; „Passwort vergessen“ für deaktivierte Rückkehrer mit Einladungslink; Pflicht-Bestätigung übernommener Ernährungs-/Allergieangaben.
   - Offen: Nach dem Setzen des Passworts in Authentik führt kein automatischer Rücksprung zum Einladungslink; Eingaben aus einem abgebrochenen Neu-Onboarding (409) werden nicht übernommen, der Rückkehrer-Wizard füllt aus dem alten Profil vor.
 - [ ] Schritt 5 – Verwaltungsoberflächen
+  - [x] 5a Ensemble pro Produktion + Rollen (`/mitglieder/produktionen/[showId]/ensemble`): aufnehmen (ongeboardet → aktiv, sonst eingeladen), Ensemble/Technik + Funktion pro Mitgliedschaft, Mitgliedschaft beenden; Status von Onboarding und Fotoerlaubnis je Person. Globale Rollen `cast`/`tech` werden per `syncProductionRoles` aus den laufenden Mitgliedschaften abgeleitet (ohne `withAutoCast`; mit Prod-Dump geprüft: 0 Änderungen im Bestand). Der Rollen-Editor der Mitgliederverwaltung schreibt Ensemble/Technik in die Mitgliedschaft der ausgewählten Produktion.
+  - [ ] 5b Ehemalige einladen (Mail mit persönlichem Link)
+  - [ ] 5c Onboarding-Status + Erinnerungen, Fotoerlaubnis-Übersicht mit Export
+  - [ ] 5d Produktionshistorie im Profil, Dubletten zusammenführen, Aufbewahrung
 - [ ] Phase C – Aufräum-Migration
