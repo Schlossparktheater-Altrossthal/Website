@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/permissions";
 import { MembersTable } from "@/components/members/members-table";
 import { MemberInviteManager } from "@/components/members/member-invite-manager";
 import { SeasonResetSettingsPanel } from "@/components/members/season-reset-settings-panel";
+import { SeasonCloseoutPanel } from "@/components/members/season-closeout-panel";
 import { combineNameParts } from "@/lib/names";
 import { AUTHENTIK_PROVIDER_ID } from "@/lib/authentik/config";
 import { readSeasonResetSettings, resolveProtectedRoles } from "@/lib/season-reset/settings";
@@ -83,6 +84,7 @@ export default async function MemberManagementPage() {
       {canManageInvites && <MemberInviteManager />}
 
       <SeasonResetSettingsPanel initialProtectedRoles={protectedRoles} />
+      <SeasonCloseoutPanel />
 
       <div className="flex justify-end">
         <AddMemberModal />

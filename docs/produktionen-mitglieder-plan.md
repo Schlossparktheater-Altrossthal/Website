@@ -192,7 +192,7 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 
 ## Fortschritt
 
-- [ ] Schritt 1 – Deaktivierung entkoppeln, „Saison abschließen“ mit Vorschau
+- [x] Schritt 1 – Deaktivierung entkoppeln, „Saison abschließen“ mit Vorschau (Mitgliederverwaltung, `api/season-reset/deactivation`)
 - [ ] Schritt 2 – Produktionsstatus + Migration Phase A
 - [ ] Schritt 3 – Fotoerlaubnis & Onboarding pro Produktion (Phase B)
 - [ ] Schritt 4 – Rückkehrer-Flow

@@ -64,8 +64,7 @@ export function SeasonResetSettingsPanel({
       <CardHeader>
         <CardTitle>Geschützte Rollen beim Jahreswechsel</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Diese Rollen werden beim Wechsel der aktiven Produktion nicht deaktiviert. Owner ist immer
-          geschützt.
+          Diese Rollen werden beim Saisonabschluss nicht deaktiviert. Owner ist immer geschützt.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

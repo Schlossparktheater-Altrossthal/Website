@@ -23,3 +23,18 @@ describe("deactivateMembersForSeasonChange", () => {
     });
   });
 });
+
+describe("deactivateMembersForSeasonChange mit Ausnahmen", () => {
+  it("lässt ausgewählte Mitglieder aktiv", async () => {
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const tx: MemberDeactivationTx = { user: { updateMany } };
+
+    await deactivateMembersForSeasonChange(tx, ["owner"], ["u1", "u1", "u2"]);
+
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: { notIn: ["u1", "u2"] } }),
+      }),
+    );
+  });
+});
