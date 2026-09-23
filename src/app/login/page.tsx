@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
@@ -8,6 +9,8 @@ import {
   isAuthentikProvisioningEnabled,
   isLegacyPasswordLoginActive,
 } from "@/lib/authentik/config";
+
+import { getSession } from "@/lib/rbac";
 
 import { LoginPageClient } from "./login-client";
 
@@ -37,9 +40,30 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function LoginPage() {
+/** Nur lokale Pfade als Ziel zulassen (kein Open Redirect über callbackUrl). */
+function safeCallbackPath(value: string | string[] | undefined): string {
+  const path = Array.isArray(value) ? value[0] : value;
+  if (!path || !path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {
+    return "/mitglieder";
+  }
+  return path;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   // Authentik-Konfiguration und Stichtag kommen zur Laufzeit aus der Umgebung.
   await connection();
+
+  // Schon angemeldet (z. B. über "Anmelden" auf der Drupal-Website): nicht
+  // erneut den Login anbieten, sondern direkt weiter.
+  const params = await searchParams;
+  const session = await getSession().catch(() => null);
+  if (session?.user && !session.user.isDeactivated && !params.error) {
+    redirect(safeCallbackPath(params.callbackUrl));
+  }
   const authentikEnabled = isAuthentikLoginEnabled();
   const authentikProvisioning = isAuthentikProvisioningEnabled();
   const legacyLoginActive = isLegacyPasswordLoginActive();
