@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { currentMembershipWhere } from "@/lib/produktionen/status";
 
 export const ACTIVE_PRODUCTION_COOKIE = "active-production";
 
@@ -43,7 +44,7 @@ async function resolveFallbackActiveProductionId(userId: string | null | undefin
   }
 
   const memberships = await prisma.productionMembership.findMany({
-    where: { userId },
+    where: { userId, ...currentMembershipWhere() },
     include: {
       show: {
         select: {
@@ -76,6 +77,16 @@ async function resolveFallbackActiveProductionId(userId: string | null | undefin
   return preferred?.showId ?? null;
 }
 
+/** Eine aktive Produktion (Enum-Reihenfolge: active vor planning), sonst die jüngste geplante. */
+async function resolveCurrentProductionId() {
+  const show = await prisma.show.findFirst({
+    where: { status: { in: ["active", "planning"] } },
+    orderBy: [{ status: "desc" }, { year: "desc" }, { statusChangedAt: "desc" }],
+    select: { id: true },
+  });
+  return show?.id ?? null;
+}
+
 type ActiveProductionOptions = {
   canManageProductions?: boolean;
 };
@@ -104,7 +115,7 @@ export async function getActiveProductionId(
       where: {
         userId,
         showId: cookieValue,
-        OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+        ...currentMembershipWhere(),
       },
       select: { id: true },
     });
@@ -115,12 +126,15 @@ export async function getActiveProductionId(
   }
 
   const fallbackId = await resolveFallbackActiveProductionId(userId);
-
-  if (!fallbackId) {
-    return null;
+  if (fallbackId) {
+    return fallbackId;
   }
 
-  return fallbackId;
+  if (canManageProductions) {
+    return resolveCurrentProductionId();
+  }
+
+  return null;
 }
 
 export const getActiveProduction = cache(async (userId?: string | null) => {
@@ -142,7 +156,7 @@ export const getActiveProduction = cache(async (userId?: string | null) => {
           memberships: {
             some: {
               userId,
-              OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+              ...currentMembershipWhere(),
             },
           },
         }

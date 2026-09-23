@@ -179,8 +179,8 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 
 ## Offene Entscheidungen
 
-- **E1:** Rollen (`cast`, `tech` …) künftig pro Produktion oder global lassen? (Vorschlag: `function` auf Membership, globale Rollen nur noch für Vorstand/Finanzen/Admin.)
-- **E2:** Haben Mitglieder einer Produktion im Status `planning` schon Zugriff? (Vorschlag: ja.)
+- **E1 (entschieden 2026-09-23):** Rollen wie `cast`/`tech` gelten pro Produktion → `ProductionMembership.roles`. Vergabe nur durch Admins; globale Rollen nur noch für Vorstand/Finanzen/Admin.
+- **E2 (entschieden 2026-09-23):** Wer für eine Produktion ongeboardet ist, hat Zugriff – auch wenn sie noch `planning` ist und der Titel sich noch ändert.
 - **E3:** Behalten Ehemalige einen eingeschränkten Lesezugriff (z. B. Galerie ihrer Produktion)?
 - **E4:** Aufbewahrungsfristen für Gesundheitsdaten, Fotodokumente, Onboarding-Antworten.
 
@@ -193,7 +193,8 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 ## Fortschritt
 
 - [x] Schritt 1 – Deaktivierung entkoppeln, „Saison abschließen“ mit Vorschau (Mitgliederverwaltung, `api/season-reset/deactivation`)
-- [ ] Schritt 2 – Produktionsstatus + Migration Phase A
+- [x] Schritt 2 – Produktionsstatus + Migration Phase A (`20260923120000_add_production_status`: `Show.status/statusChangedAt/archivedAt`, `ProductionMembership.status/roles/function`; „Die unendliche Geschichte“ → `active`, alle aktiven Nutzer als Mitglieder, `cast`/`tech` in `roles` kopiert. Status-Auswahl in der Produktionsübersicht; Beenden/Archivieren schließt Mitgliedschaften; „Saison abschließen“ lässt Mitglieder laufender Produktionen aus.)
+  - Offen aus Schritt 2: Code liest Rollen noch global (`UserRole`) – Umstellung auf `ProductionMembership.roles` in Schritt 5 (Ensemble-Verwaltung).
 - [ ] Schritt 3 – Fotoerlaubnis & Onboarding pro Produktion (Phase B)
 - [ ] Schritt 4 – Rückkehrer-Flow
 - [ ] Schritt 5 – Verwaltungsoberflächen

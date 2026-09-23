@@ -307,10 +307,11 @@ export async function POST(request: NextRequest) {
               userId,
             },
           },
-          update: { leftAt: null },
+          update: { leftAt: null, status: "active" },
           create: {
             showId: targetShowId,
             userId,
+            status: "active",
           },
         });
       }

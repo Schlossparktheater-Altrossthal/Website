@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
+import { currentMembershipWhere } from "@/lib/produktionen/status";
 import type { Prisma, Role } from "@prisma/client";
 
 import { readSeasonResetSettings, resolveProtectedRoles } from "./settings";
@@ -19,9 +20,14 @@ export type SeasonChangeCandidate = {
   email: string | null;
 };
 
+/**
+ * Wer deaktiviert wird: aktive Nutzer ohne geschützte Rolle und ohne Mitgliedschaft in einer
+ * geplanten oder aktiven Produktion (wer schon für die nächste Produktion ongeboardet ist, bleibt).
+ */
 export function buildSeasonChangeWhere(
   protectedRoles: readonly Role[],
   excludeUserIds: readonly string[] = [],
+  now: Date = new Date(),
 ): Prisma.UserWhereInput {
   const excluded = Array.from(new Set(protectedRoles));
   const keepIds = Array.from(new Set(excludeUserIds));
@@ -30,6 +36,7 @@ export function buildSeasonChangeWhere(
     deactivatedAt: null,
     role: { notIn: excluded },
     roles: { none: { role: { in: excluded } } },
+    productionMemberships: { none: currentMembershipWhere(now) },
     ...(keepIds.length > 0 ? { id: { notIn: keepIds } } : {}),
   };
 }

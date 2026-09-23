@@ -16,6 +16,20 @@ enum Role {
   admin
 }
 
+enum ProductionStatus {
+  planning
+  active
+  finished
+  archived
+}
+
+enum ProductionMembershipStatus {
+  invited
+  onboarding
+  active
+  left
+}
+
 enum PayoutMethod {
   BANK_TRANSFER
   PAYPAL
@@ -389,6 +403,9 @@ model Show {
   finalRehearsalWeekStart DateTime?
   finalRehearsalWeekEnd   DateTime?
   meta       Json?
+  status     ProductionStatus @default(planning)
+  statusChangedAt DateTime?
+  archivedAt DateTime?
   clues      Clue[]
   rehearsals Rehearsal[]
   finance    FinanceEntry[]
@@ -1447,6 +1464,10 @@ model ProductionMembership {
   userId    String
   joinedAt  DateTime @default(now())
   leftAt    DateTime?
+  status    ProductionMembershipStatus @default(active)
+  /// Produktionsbezogene Rollen (z. B. cast, tech); werden von Admins vergeben.
+  roles     Role[]   @default([])
+  function  String?
 
   show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1454,6 +1475,7 @@ model ProductionMembership {
   @@unique([showId, userId])
   @@index([userId, leftAt])
   @@index([showId, leftAt])
+  @@index([showId, status])
 }
 
 model Announcement {

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { deactivateMembersForSeasonChange, type MemberDeactivationTx } from "../deactivation";
 
 describe("deactivateMembersForSeasonChange", () => {
-  it("deaktiviert aktive User außerhalb der geschützten Rollen", async () => {
+  it("deaktiviert aktive User ohne geschützte Rolle und ohne laufende Produktion", async () => {
     const updateMany = vi.fn().mockResolvedValue({ count: 3 });
     const tx: MemberDeactivationTx = { user: { updateMany } };
 
@@ -15,6 +15,13 @@ describe("deactivateMembersForSeasonChange", () => {
         deactivatedAt: null,
         role: { notIn: ["owner", "admin"] },
         roles: { none: { role: { in: ["owner", "admin"] } } },
+        productionMemberships: {
+          none: {
+            status: "active",
+            OR: [{ leftAt: null }, { leftAt: { gt: expect.any(Date) } }],
+            show: { status: { in: ["planning", "active"] } },
+          },
+        },
       },
       data: {
         deactivatedAt: expect.any(Date),

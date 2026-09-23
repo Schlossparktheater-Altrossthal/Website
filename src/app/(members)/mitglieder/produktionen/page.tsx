@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PRODUCTION_STATUS_LABELS } from "@/lib/produktionen/status";
 import { ProductionWorkspaceHeader } from "@/components/production/workspace-header";
 
 import {
@@ -16,6 +17,7 @@ import {
   SetActiveProductionForm,
   UpdateProductionDialog,
 } from "./production-forms-client";
+import { ProductionStatusForm } from "./production-status-form";
 
 function formatShowTitle(show: { title: string | null; year: number }) {
   if (show.title && show.title.trim()) {
@@ -40,7 +42,15 @@ export default async function ProduktionenPage() {
   const [shows, activeProduction] = await Promise.all([
     prisma.show.findMany({
       orderBy: { year: "desc" },
-      select: { id: true, year: true, title: true, synopsis: true, dates: true, revealedAt: true },
+      select: {
+        id: true,
+        year: true,
+        title: true,
+        synopsis: true,
+        dates: true,
+        revealedAt: true,
+        status: true,
+      },
     }),
     getActiveProduction(session.user?.id),
   ]);
@@ -211,7 +221,10 @@ export default async function ProduktionenPage() {
                             {title}
                           </CardTitle>
                         </div>
-                        {isActive ? <Badge>Aktiv</Badge> : null}
+                        <div className="flex flex-wrap justify-end gap-1">
+                          <Badge variant="outline">{PRODUCTION_STATUS_LABELS[show.status]}</Badge>
+                          {isActive ? <Badge>Ausgewählt</Badge> : null}
+                        </div>
                       </div>
                       {show.synopsis ? (
                         <p className="text-sm text-muted-foreground">{show.synopsis}</p>
@@ -222,6 +235,12 @@ export default async function ProduktionenPage() {
                       )}
                     </CardHeader>
                     <CardContent className="mt-auto flex flex-wrap items-center gap-2">
+                      <ProductionStatusForm
+                        showId={show.id}
+                        showTitle={title}
+                        status={show.status}
+                        redirectPath="/mitglieder/produktionen"
+                      />
                       <SetActiveProductionForm
                         showId={show.id}
                         showTitle={title}

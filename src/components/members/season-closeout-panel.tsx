@@ -85,9 +85,9 @@ export function SeasonCloseoutPanel() {
       <CardHeader>
         <CardTitle>Saison abschließen</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Deaktiviert alle Mitglieder ohne geschützte Rolle. Der Wechsel der aktiven Produktion
-          deaktiviert niemanden mehr – das passiert nur hier. Rückkehrer werden über einen
-          Einladungslink wieder aktiviert.
+          Deaktiviert alle Mitglieder ohne geschützte Rolle, die in keiner geplanten oder aktiven
+          Produktion sind. Der Wechsel der aktiven Produktion deaktiviert niemanden mehr – das
+          passiert nur hier. Rückkehrer werden über einen Einladungslink wieder aktiviert.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -102,7 +102,8 @@ export function SeasonCloseoutPanel() {
           </AsyncButton>
         ) : candidates.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Es gibt keine aktiven Mitglieder ohne geschützte Rolle.
+            Alle aktiven Mitglieder haben eine geschützte Rolle oder gehören zu einer laufenden
+            Produktion.
           </p>
         ) : (
           <>

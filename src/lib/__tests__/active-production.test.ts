@@ -68,4 +68,68 @@ describe("getActiveProduction", () => {
       synopsis: "Test",
     });
   });
+
+  it("ignoriert beendete Produktionen beim Fallback für Mitglieder", async () => {
+    mockCookies.mockResolvedValue({ get: vi.fn(() => undefined) });
+    mockHasPermission.mockResolvedValue(false);
+    mockMembershipFindMany.mockResolvedValue([]);
+
+    const { getActiveProductionId } = await import("../active-production");
+
+    const result = await getActiveProductionId("member-1");
+
+    expect(result).toBeNull();
+    expect(mockMembershipFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: "member-1",
+          status: "active",
+          show: { status: { in: ["planning", "active"] } },
+        }),
+      }),
+    );
+    expect(mockShowFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("verwirft ein Cookie auf eine Produktion ohne aktuelle Mitgliedschaft", async () => {
+    mockCookies.mockResolvedValue({ get: vi.fn(() => ({ value: "show-alt" })) });
+    mockHasPermission.mockResolvedValue(false);
+    mockMembershipFindFirst.mockResolvedValue(null);
+    mockMembershipFindMany.mockResolvedValue([
+      {
+        showId: "show-neu",
+        leftAt: null,
+        show: {
+          id: "show-neu",
+          title: "Neu",
+          year: 2027,
+          finalRehearsalWeekStart: null,
+          finalRehearsalWeekEnd: null,
+        },
+      },
+    ]);
+
+    const { getActiveProductionId } = await import("../active-production");
+
+    expect(await getActiveProductionId("member-1")).toBe("show-neu");
+    expect(mockMembershipFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ showId: "show-alt", status: "active" }),
+      }),
+    );
+  });
+
+  it("wählt für Produktionsleitung ohne Cookie die aktive Produktion aus der DB", async () => {
+    mockCookies.mockResolvedValue({ get: vi.fn(() => undefined) });
+    mockHasPermission.mockResolvedValue(true);
+    mockMembershipFindMany.mockResolvedValue([]);
+    mockShowFindFirst.mockResolvedValue({ id: "show-aktiv" });
+
+    const { getActiveProductionId } = await import("../active-production");
+
+    expect(await getActiveProductionId("admin-1")).toBe("show-aktiv");
+    expect(mockShowFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { status: { in: ["active", "planning"] } } }),
+    );
+  });
 });
