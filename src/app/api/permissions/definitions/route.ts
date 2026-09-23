@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import {
   DEFAULT_PERMISSION_DEFINITIONS,
   PERMISSION_CATEGORY_LABELS,
@@ -155,6 +156,7 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  requestServiceGroupSync();
   return NextResponse.json({ ok: true });
 }
 

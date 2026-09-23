@@ -9,6 +9,8 @@ export async function register() {
     const mod = await import("./instrumentation.node");
     _trackRequest = mod.trackRequest;
     _finalizeRequest = mod.finalizeRequest;
+    const { startServiceGroupSyncSchedule } = await import("./lib/authentik/service-groups");
+    startServiceGroupSyncSchedule();
   }
 }
 

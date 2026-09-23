@@ -11,7 +11,8 @@ type PermissionCategoryKey =
   | "admin"
   | "public"
   | "analytics"
-  | "communication";
+  | "communication"
+  | "services";
 
 export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> = {
   base: "Allgemeines",
@@ -22,6 +23,7 @@ export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> =
   public: "Öffentliche Seiten",
   analytics: "Analysen",
   communication: "Kommunikation",
+  services: "Dienste",
 };
 
 // Permission definition shape
@@ -241,6 +243,16 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Server-Statistiken einsehen",
     description: "Auslastung, Antwortzeiten und Nutzungsverhalten in der Server-Statistik abrufen.",
     category: "analytics",
+  },
+  // Zugriff auf weitere Theater-Dienste per Single Sign-on. Der Mitgliederbereich
+  // gleicht diese Rechte mit Authentik-Gruppen ab (siehe lib/authentik/service-groups.ts);
+  // welche Gruppe welchen Dienst öffnet, steht im Authentik-Blueprint.
+  {
+    key: "SSO.NEXTCLOUD.ACCESS",
+    label: "Nextcloud nutzen",
+    description:
+      "Anmeldung an der Theater-Nextcloud mit dem Mitglieder-Konto (eigener Speicher 100 MB plus Sommertheater-Freigabe).",
+    category: "services",
   },
 ];
 

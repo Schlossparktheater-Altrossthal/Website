@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
@@ -88,6 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
       return result;
     });
+    requestServiceGroupSync();
 
     return NextResponse.json({
       ok: true,

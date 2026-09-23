@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { sortRoles, type Role, withAutoCast } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
@@ -112,6 +113,7 @@ export async function PUT(request: NextRequest) {
     });
 
     const allRoles = sortRoles([updated.role, ...updated.roles.map((r) => r.role as Role)]);
+    requestServiceGroupSync();
 
     return NextResponse.json({
       ok: true,

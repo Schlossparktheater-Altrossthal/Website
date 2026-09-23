@@ -16,6 +16,7 @@ import {
   type MemberIdentity,
 } from "@/lib/authentik/client";
 import { isAuthentikProvisioningEnabled } from "@/lib/authentik/config";
+import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { createLogger } from "@/lib/logger";
 import { combineNameParts } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
@@ -52,9 +53,14 @@ async function isKnownMember(userId: string): Promise<boolean> {
   return count > 0;
 }
 
-/** Wie `ensureAuthentikUser`, übernimmt aber Konten verwaister Profile. */
-export function ensureAuthentikUserForMember(identity: MemberIdentity) {
-  return ensureAuthentikUser(identity, { isKnownMember });
+/**
+ * Wie `ensureAuthentikUser`, übernimmt aber Konten verwaister Profile. Neue
+ * Konten bekommen danach ihre Dienst-Gruppen (z. B. Nextcloud).
+ */
+export async function ensureAuthentikUserForMember(identity: MemberIdentity) {
+  const result = await ensureAuthentikUser(identity, { isKnownMember });
+  requestServiceGroupSync();
+  return result;
 }
 
 async function logSyncError(message: string, userId: string, error: unknown) {
@@ -92,6 +98,7 @@ export async function deactivateMemberInAuthentik(userId: string): Promise<void>
   try {
     const authentikUser = await findAuthentikUserByMemberId(userId);
     if (authentikUser) await deactivateAuthentikUser(authentikUser);
+    requestServiceGroupSync();
   } catch (error) {
     await logSyncError("Deaktivieren in Authentik fehlgeschlagen", userId, error);
   }

@@ -22,6 +22,15 @@ const authentikUserSchema = z.object({
   attributes: z.record(z.string(), z.unknown()).default({}),
 });
 
+const paginationSchema = z.object({ next: z.number() });
+
+const authentikGroupSchema = z.object({
+  pk: z.string(),
+  name: z.string(),
+  users: z.array(z.number()).default([]),
+  attributes: z.record(z.string(), z.unknown()).default({}),
+});
+
 export type AuthentikUser = z.infer<typeof authentikUserSchema>;
 
 const userListSchema = z.object({ results: z.array(authentikUserSchema) });
@@ -117,6 +126,80 @@ export async function findAuthentikUserByMemberId(userId: string): Promise<Authe
       (user) => isManagedAuthentikUser(user) && getAuthentikMemberId(user) === userId,
     ) ?? null
   );
+}
+
+async function listAllPages<T>(
+  config: AuthentikApiConfig,
+  path: string,
+  itemSchema: z.ZodType<T>,
+  query: Record<string, string> = {},
+): Promise<T[]> {
+  const pageSchema = z.object({ pagination: paginationSchema, results: z.array(itemSchema) });
+  const items: T[] = [];
+  let page = 1;
+  while (page > 0) {
+    const data = pageSchema.parse(
+      await request(config, path, { query: { ...query, page: String(page), page_size: "100" } }),
+    );
+    items.push(...data.results);
+    page = data.pagination.next;
+  }
+  return items;
+}
+
+/** Alle vom Mitgliederbereich verwalteten Konten (Pfad AUTHENTIK_MANAGED_USER_PATH). */
+export async function listManagedAuthentikUsers(): Promise<AuthentikUser[]> {
+  const config = requireConfig();
+  const users = await listAllPages(config, "/core/users/", authentikUserSchema, {
+    path: AUTHENTIK_MANAGED_USER_PATH,
+    include_groups: "false",
+  });
+  return users.filter(isManagedAuthentikUser);
+}
+
+/**
+ * Dienst-Gruppe: Authentik-Gruppe mit Attribut `mitgliederbereich.permission`.
+ * Ihre Mitgliedschaft folgt der genannten Berechtigung im Mitgliederbereich;
+ * die Gruppen selbst und ihre Policy-Bindings kommen aus dem Blueprint.
+ */
+export type AuthentikServiceGroup = {
+  pk: string;
+  name: string;
+  permission: string;
+  userPks: number[];
+};
+
+export async function listAuthentikServiceGroups(): Promise<AuthentikServiceGroup[]> {
+  const config = requireConfig();
+  const groups = await listAllPages(config, "/core/groups/", authentikGroupSchema, {
+    include_users: "false",
+  });
+  return groups.flatMap((group) => {
+    const section = group.attributes.mitgliederbereich;
+    if (typeof section !== "object" || section === null || !("permission" in section)) return [];
+    if (typeof section.permission !== "string") return [];
+    return [
+      { pk: group.pk, name: group.name, permission: section.permission, userPks: group.users },
+    ];
+  });
+}
+
+/** Ändert nur Mitgliedschaften verwalteter Konten. */
+export async function setAuthentikGroupMembership(
+  group: Pick<AuthentikServiceGroup, "pk">,
+  user: AuthentikUser,
+  member: boolean,
+): Promise<void> {
+  if (!isManagedAuthentikUser(user)) {
+    throw new AuthentikApiError(
+      `Konto ${user.username} wird nicht vom Mitgliederbereich verwaltet`,
+    );
+  }
+  const config = requireConfig();
+  await request(config, `/core/groups/${group.pk}/${member ? "add_user" : "remove_user"}/`, {
+    method: "POST",
+    body: { pk: user.pk },
+  });
 }
 
 export async function findAuthentikUserByEmail(email: string): Promise<AuthentikUser | null> {

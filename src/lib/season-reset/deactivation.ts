@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import type { Prisma, Role } from "@prisma/client";
 
 import { readSeasonResetSettings, resolveProtectedRoles } from "./settings";
@@ -36,5 +37,9 @@ export async function deactivateMembersForSeasonChange(
 export async function performSeasonChangeDeactivation(): Promise<number> {
   const record = await readSeasonResetSettings();
   const protectedRoles = resolveProtectedRoles(record);
-  return prisma.$transaction((tx) => deactivateMembersForSeasonChange(tx, protectedRoles));
+  const count = await prisma.$transaction((tx) =>
+    deactivateMembersForSeasonChange(tx, protectedRoles),
+  );
+  requestServiceGroupSync();
+  return count;
 }
