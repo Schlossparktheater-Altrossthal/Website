@@ -20,6 +20,7 @@ import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
 import { cn } from "@/lib/utils";
 import type { ImpersonationDetails } from "@/lib/auth/impersonation";
 import { ImpersonationBanner } from "@/components/members/impersonation-banner/impersonation-banner";
+import { PUBLIC_SITE_URL } from "@/config/public-site";
 
 const membersContentSectionVariants = cva("py-6 sm:py-8", {
   variants: {
@@ -263,7 +264,7 @@ function MembersTopbarContent({
 
   const homeLink = (
     <Button asChild variant="ghost" size="sm" className="gap-1.5 whitespace-nowrap">
-      <Link href="/" aria-label="Zur Hauptseite">
+      <Link href={PUBLIC_SITE_URL} aria-label="Zur Hauptseite">
         <ArrowLeftIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span>Zur Hauptseite</span>
       </Link>

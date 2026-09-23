@@ -11,6 +11,7 @@ import { UserNav } from "@/components/user-nav";
 import { primaryNavigation, type NavigationItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { PUBLIC_SITE_URL } from "@/config/public-site";
 
 const HEADER_SPACING = {
   gradientHeight: "var(--header-gradient-height)",
@@ -205,7 +206,7 @@ export function SiteHeader({
                 ? "text-primary hover:opacity-90"
                 : "text-white drop-shadow-lg hover:text-white/90"
             }`}
-            href="/old"
+            href={PUBLIC_SITE_URL}
             title={siteTitle}
           >
             <span className="hidden md:inline">{siteTitle}</span>

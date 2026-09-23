@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { getUserDisplayName, splitFullName } from "@/lib/names";
+import { PUBLIC_SITE_URL } from "@/config/public-site";
 
 export function UserNav({ className }: { className?: string }) {
   const { data: session, status } = useSession();
@@ -72,15 +73,16 @@ export function UserNav({ className }: { className?: string }) {
     try {
       if (authentikLogoutUrl) {
         // Single Sign-out: erst die Sitzung hier, dann die Authentik-Session
-        // beenden; Authentik leitet anschließend zur Startseite zurück.
+        // beenden; Authentik leitet anschließend zur öffentlichen Website.
         await signOut({ redirect: false });
         const target = new URL(authentikLogoutUrl);
-        target.searchParams.set("next", `${window.location.origin}/`);
+        target.searchParams.set("next", PUBLIC_SITE_URL);
         window.location.assign(target.toString());
         return;
       }
-      await signOut({ callbackUrl: "/" });
-      toast.success("Abgemeldet");
+      // Auth.js leitet nur auf die eigene Domain um, daher selbst weiterleiten.
+      await signOut({ redirect: false });
+      window.location.assign(PUBLIC_SITE_URL);
     } catch {
       toast.error("Abmelden fehlgeschlagen");
     }
