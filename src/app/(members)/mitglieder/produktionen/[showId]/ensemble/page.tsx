@@ -16,6 +16,7 @@ import {
   AddMemberForm,
   InviteFormerMembersForm,
   MemberRoleForm,
+  ReminderActions,
   RemoveMemberForm,
   type AddableMember,
   type FormerMember,
@@ -34,6 +35,12 @@ const PHOTO_CONSENT_LABELS: Record<PhotoConsentStatus | "none", string> = {
   approved: "Fotoerlaubnis erteilt",
   rejected: "Fotoerlaubnis abgelehnt",
 };
+
+function consentStatusOf(
+  consents: ReadonlyArray<{ status: PhotoConsentStatus }>,
+): PhotoConsentStatus | "none" {
+  return consents.length > 0 ? consents[0].status : "none";
+}
 
 const STATUS_ORDER: ProductionMembershipStatus[] = ["active", "onboarding", "invited", "left"];
 
@@ -102,7 +109,7 @@ export default async function ProduktionEnsemblePage({
     .map((membership) => ({
       ...membership,
       name: getUserDisplayName(membership.user, "Unbekanntes Mitglied"),
-      photoStatus: membership.user.photoConsents[0]?.status ?? "none",
+      photoStatus: consentStatusOf(membership.user.photoConsents),
       onboarding: membership.user.productionOnboardings[0] ?? null,
     }))
     .sort(
@@ -159,6 +166,13 @@ export default async function ProduktionEnsemblePage({
     missingPhoto: members.filter(
       (member) => member.status === "active" && member.photoStatus !== "approved",
     ).length,
+    // Wie sendPhotoConsentReminders: fehlend oder abgelehnt, Konto aktiv.
+    remindablePhoto: members.filter(
+      (member) =>
+        member.status === "active" &&
+        !member.user.deactivatedAt &&
+        (member.photoStatus === "none" || member.photoStatus === "rejected"),
+    ).length,
   };
 
   return (
@@ -184,6 +198,24 @@ export default async function ProduktionEnsemblePage({
         <Badge variant="outline">Eingeladen/Onboarding offen: {counts.open}</Badge>
         <Badge variant="outline">Ohne erteilte Fotoerlaubnis: {counts.missingPhoto}</Badge>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Erinnerungen &amp; Fotoliste</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Onboarding-Erinnerungen enthalten einen neuen persönlichen Link. Die Fotoliste zeigt,
+            wen Fotograf:innen fotografieren dürfen – ausstehende Erlaubnisse zählen bis zur
+            Freigabe als „nicht fotografieren“.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ReminderActions
+            showId={show.id}
+            openCount={counts.open}
+            missingPhotoCount={counts.remindablePhoto}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

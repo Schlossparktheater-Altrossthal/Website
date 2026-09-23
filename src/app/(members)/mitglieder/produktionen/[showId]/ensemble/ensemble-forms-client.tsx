@@ -24,6 +24,10 @@ import {
   updateProductionMemberAction,
   type InviteFormerMembersResult,
 } from "../../actions/ensemble";
+import {
+  remindMissingPhotoConsentsAction,
+  remindOpenOnboardingsAction,
+} from "../../actions/reminders";
 
 const INITIAL_ACTION_STATE: ProductionActionResult = { ok: false, error: "" };
 
@@ -268,43 +272,144 @@ export function InviteFormerMembersForm({
         </form>
       )}
 
-      {state.ok && state.outcomes.some((outcome) => outcome.link) ? (
-        <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
-          <p className="font-medium">Persönliche Links (je einmal nutzbar, 30 Tage gültig)</p>
-          <ul className="space-y-2">
-            {state.outcomes
-              .filter((outcome) => outcome.link)
-              .map((outcome) => (
-                <li key={outcome.userId} className="space-y-1">
-                  <div>
-                    {outcome.name} – {OUTCOME_LABELS[outcome.status]}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <code className="break-all rounded bg-background px-2 py-1 text-xs">
-                      {outcome.link}
-                    </code>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        void navigator.clipboard
-                          .writeText(outcome.link ?? "")
-                          .then(() => toast.success("Link kopiert"))
-                          .catch((error: unknown) => {
-                            console.error("[ensemble] Kopieren fehlgeschlagen", error);
-                            toast.error("Kopieren fehlgeschlagen");
-                          });
-                      }}
-                    >
-                      Kopieren
-                    </Button>
-                  </div>
-                </li>
-              ))}
-          </ul>
-        </div>
-      ) : null}
+      <InviteLinkList result={state} />
+    </div>
+  );
+}
+
+function InviteLinkList({ result }: { result: InviteFormerMembersResult }) {
+  if (!result.ok || !result.outcomes.some((outcome) => outcome.link)) {
+    return null;
+  }
+  const state = result;
+  return (
+    <>
+      <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
+        <p className="font-medium">Persönliche Links (je einmal nutzbar, 30 Tage gültig)</p>
+        <ul className="space-y-2">
+          {state.outcomes
+            .filter((outcome) => outcome.link)
+            .map((outcome) => (
+              <li key={outcome.userId} className="space-y-1">
+                <div>
+                  {outcome.name} – {OUTCOME_LABELS[outcome.status]}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="break-all rounded bg-background px-2 py-1 text-xs">
+                    {outcome.link}
+                  </code>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(outcome.link ?? "")
+                        .then(() => toast.success("Link kopiert"))
+                        .catch((error: unknown) => {
+                          console.error("[ensemble] Kopieren fehlgeschlagen", error);
+                          toast.error("Kopieren fehlgeschlagen");
+                        });
+                    }}
+                  >
+                    Kopieren
+                  </Button>
+                </div>
+              </li>
+            ))}
+        </ul>
+      </div>
+    </>
+  );
+}
+
+export function ReminderActions({
+  showId,
+  openCount,
+  missingPhotoCount,
+}: {
+  showId: string;
+  openCount: number;
+  missingPhotoCount: number;
+}) {
+  const onboardingAction = useCallback(
+    async (_state: InviteFormerMembersResult, formData: FormData) =>
+      remindOpenOnboardingsAction(formData),
+    [],
+  );
+  const [onboardingState, onboardingFormAction, onboardingPending] = useActionState(
+    onboardingAction,
+    INITIAL_INVITE_STATE,
+  );
+  const photoAction = useCallback(
+    async (_state: ProductionActionResult, formData: FormData) =>
+      remindMissingPhotoConsentsAction(formData),
+    [],
+  );
+  const [photoState, photoFormAction, photoPending] = useActionState(
+    photoAction,
+    INITIAL_ACTION_STATE,
+  );
+  useActionToast(photoState);
+  const isInitialRender = useRef(true);
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      return;
+    }
+    if (!onboardingState.ok) {
+      if (onboardingState.error) toast.error(onboardingState.error);
+      return;
+    }
+    toast.success(onboardingState.message);
+  }, [onboardingState]);
+
+  const confirmSubmit = (message: string) => (event: React.FormEvent<HTMLFormElement>) => {
+    if (!window.confirm(message)) event.preventDefault();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <form
+          action={onboardingFormAction}
+          onSubmit={confirmSubmit(
+            `${openCount} Personen mit offenem Onboarding einen neuen Link schicken?`,
+          )}
+        >
+          <input type="hidden" name="showId" value={showId} />
+          <Button
+            type="submit"
+            size="sm"
+            variant="outline"
+            disabled={onboardingPending || openCount === 0}
+          >
+            Onboarding-Erinnerung ({openCount})
+          </Button>
+        </form>
+        <form
+          action={photoFormAction}
+          onSubmit={confirmSubmit(
+            `${missingPhotoCount} Mitglieder an die fehlende Fotoerlaubnis erinnern?`,
+          )}
+        >
+          <input type="hidden" name="showId" value={showId} />
+          <Button
+            type="submit"
+            size="sm"
+            variant="outline"
+            disabled={photoPending || missingPhotoCount === 0}
+          >
+            Fotoerlaubnis-Erinnerung ({missingPhotoCount})
+          </Button>
+        </form>
+        <Button asChild size="sm" variant="outline">
+          <a href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}`}>
+            Fotoliste für Fotograf:innen (CSV)
+          </a>
+        </Button>
+      </div>
+      <InviteLinkList result={onboardingState} />
     </div>
   );
 }

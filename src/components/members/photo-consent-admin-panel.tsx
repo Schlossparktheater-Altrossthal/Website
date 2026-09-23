@@ -505,6 +505,13 @@ export function PhotoConsentAdminPanel() {
                   ))}
                 </SelectContent>
               </Select>
+              {showId && showId !== "all" ? (
+                <Button asChild size="sm" variant="outline">
+                  <a href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}`}>
+                    Fotoliste (CSV)
+                  </a>
+                </Button>
+              ) : null}
               {STATUS_FILTERS.map((filter) => (
                 <Button
                   key={filter.value}
