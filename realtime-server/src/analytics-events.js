@@ -1,3 +1,4 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 const globalPrismaKey = Symbol.for("__realtime_prisma");
@@ -5,7 +6,9 @@ const globalPrismaKey = Symbol.for("__realtime_prisma");
 function getGlobalPrisma() {
   const globalObject = globalThis;
   if (!globalObject[globalPrismaKey]) {
-    globalObject[globalPrismaKey] = new PrismaClient();
+    // Prisma 7 verbindet sich nur noch über einen Driver-Adapter (wie src/lib/prisma.ts).
+    const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 2 });
+    globalObject[globalPrismaKey] = new PrismaClient({ adapter });
   }
   return globalObject[globalPrismaKey];
 }
