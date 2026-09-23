@@ -455,6 +455,31 @@ export function OnboardingWizard({
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bekannte E-Mail: Rückkehrer sollen sich anmelden statt ein zweites Konto anzulegen.
+  const [knownEmail, setKnownEmail] = useState<string | null>(null);
+  const checkedEmailRef = useRef<string | null>(null);
+
+  const checkEmail = useCallback(
+    async (rawEmail: string) => {
+      const email = rawEmail.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || checkedEmailRef.current === email) {
+        return;
+      }
+      checkedEmailRef.current = email;
+      try {
+        const response = await fetch("/api/onboarding/email-check", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ sessionToken, email }),
+        });
+        const data = (await response.json().catch(() => null)) as { known?: boolean } | null;
+        setKnownEmail(response.ok && data?.known ? email : null);
+      } catch (err) {
+        console.error("[onboarding.email-check]", err);
+      }
+    },
+    [sessionToken],
+  );
   const [success, setSuccess] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
@@ -1164,6 +1189,11 @@ export function OnboardingWizard({
       if (!response.ok) {
         const message = data?.error ?? "Übermittlung fehlgeschlagen";
         setError(message);
+        if (response.status === 409) {
+          setKnownEmail(form.email.trim().toLowerCase());
+          setStep(1);
+          return;
+        }
         if (message.toLowerCase().includes("dokument")) {
           setStep(4);
         }
@@ -1370,7 +1400,7 @@ export function OnboardingWizard({
                 Los geht&apos;s
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link href={`/onboarding/${token}/update`}>Ich habe bereits einen Account</Link>
+                <Link href={`/onboarding/${token}/update`}>Ich war schon mal dabei</Link>
               </Button>
             </div>
           </CardContent>
@@ -1415,10 +1445,34 @@ export function OnboardingWizard({
                 <Input
                   type="email"
                   value={form.email}
-                  onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setForm((prev) => ({ ...prev, email: value }));
+                    if (knownEmail && value.trim().toLowerCase() !== knownEmail) {
+                      setKnownEmail(null);
+                    }
+                  }}
+                  onBlur={(event) => void checkEmail(event.target.value)}
                   placeholder="du@example.com"
                   autoComplete="email"
+                  aria-describedby={knownEmail ? "onboarding-known-email" : undefined}
                 />
+                {knownEmail ? (
+                  <span
+                    id="onboarding-known-email"
+                    role="status"
+                    className="mt-2 block rounded-md border border-border bg-muted/50 p-3 text-sm"
+                  >
+                    Diese Adresse kennen wir schon – du warst also schon mal dabei. Melde dich an,
+                    dann sind deine Daten (z.&nbsp;B. Allergien) schon ausgefüllt.{" "}
+                    <Link
+                      href={`/onboarding/${token}/update`}
+                      className="font-medium text-primary underline underline-offset-2"
+                    >
+                      Jetzt anmelden
+                    </Link>
+                  </span>
+                ) : null}
               </label>
             </div>
             <div className="grid gap-4 md:grid-cols-2">

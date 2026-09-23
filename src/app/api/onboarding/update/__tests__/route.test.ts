@@ -10,7 +10,11 @@ const mocks = vi.hoisted(() => ({
   consentUpsert: vi.fn(),
   membershipUpsert: vi.fn(),
   onboardingUpsert: vi.fn(),
+  userUpdate: vi.fn(),
+  sync: vi.fn(),
 }));
+
+vi.mock("@/lib/authentik/service-groups", () => ({ requestServiceGroupSync: mocks.sync }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/active-production", () => ({
@@ -30,7 +34,7 @@ vi.mock("@/lib/prisma", () => {
     dietaryRestriction: { upsert: vi.fn(), updateMany: vi.fn() },
     photoConsent: { upsert: mocks.consentUpsert },
     productionMembership: { upsert: mocks.membershipUpsert },
-    user: { update: vi.fn() },
+    user: { update: mocks.userUpdate },
   };
   return {
     prisma: {
@@ -143,5 +147,48 @@ describe("Rückkehrer-Onboarding: Onboarding pro Produktion", () => {
     await POST(request());
 
     expect(mocks.onboardingUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("Rückkehrer-Onboarding: Reaktivierung", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.inviteFindUnique.mockResolvedValue({ id: "invite-1", showId: "show-2027" });
+    mocks.getActiveProductionId.mockResolvedValue("show-2026");
+  });
+
+  it("weist deaktivierte Mitglieder ohne gültigen Einladungslink ab", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: "user-1", isDeactivated: true } });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(403);
+    expect(mocks.consentUpsert).not.toHaveBeenCalled();
+    expect(mocks.userUpdate).not.toHaveBeenCalled();
+  });
+
+  it("schaltet deaktivierte Rückkehrer erst beim Abschluss wieder frei", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: "user-1", isDeactivated: true } });
+
+    const response = await POST(request("token-abc"));
+
+    expect(await response.json()).toEqual({ success: true, reactivated: true });
+    expect(mocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { onboardingUpdatedAt: expect.any(Date), deactivatedAt: null },
+    });
+    expect(mocks.sync).toHaveBeenCalled();
+  });
+
+  it("ändert bei aktiven Mitgliedern nichts am Kontostatus", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
+
+    await POST(request("token-abc"));
+
+    expect(mocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { onboardingUpdatedAt: expect.any(Date) },
+    });
+    expect(mocks.sync).not.toHaveBeenCalled();
   });
 });

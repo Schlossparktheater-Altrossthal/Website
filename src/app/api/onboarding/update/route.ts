@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
+import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 
@@ -187,6 +188,17 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Deaktivierte Rückkehrer kommen nur mit gültigem Einladungslink hierher; der Abschluss
+  // schaltet ihr Konto wieder frei.
+  const isDeactivated = Boolean(session?.user?.isDeactivated);
+  if (isDeactivated && !targetInviteId) {
+    return NextResponse.json(
+      { error: "Dein Konto ist deaktiviert. Bitte nutze den Einladungslink der Produktion." },
+      { status: 403 },
+    );
+  }
+  const reactivate = isDeactivated && Boolean(targetInviteId);
+
   const consentShowId = targetShowId ?? (await getActiveProductionId(userId));
 
   try {
@@ -366,11 +378,16 @@ export async function POST(request: NextRequest) {
         where: { id: userId },
         data: {
           onboardingUpdatedAt: new Date(),
+          ...(reactivate ? { deactivatedAt: null } : {}),
         },
       });
     });
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    if (reactivate) {
+      requestServiceGroupSync();
+    }
+
+    return NextResponse.json({ success: true, reactivated: reactivate }, { status: 200 });
   } catch (error) {
     console.error("[Onboarding][Update] update failed", error);
     return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });

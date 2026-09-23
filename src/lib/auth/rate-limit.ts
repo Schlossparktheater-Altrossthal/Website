@@ -73,3 +73,35 @@ export function recordPasswordEmailAttempt(
     retryAfterSeconds: Math.max(emailResult.retryAfterSeconds, ipResult.retryAfterSeconds),
   };
 }
+
+const EMAIL_CHECK_SESSION_LIMIT = 10;
+const EMAIL_CHECK_IP_LIMIT = 30;
+const emailCheckSessionAttempts = new Map<string, RateLimitBucket>();
+const emailCheckIpAttempts = new Map<string, RateLimitBucket>();
+
+/** Begrenzt die E-Mail-Prüfung im Onboarding auf 10 pro Einladungssitzung und 30 pro IP und Stunde. */
+export function recordOnboardingEmailCheck(
+  sessionToken: string,
+  ip: string,
+  now = Date.now(),
+): RateLimitResult {
+  for (const map of [emailCheckSessionAttempts, emailCheckIpAttempts]) {
+    for (const [key, bucket] of map.entries()) {
+      if (bucket.resetAt <= now) map.delete(key);
+    }
+  }
+  const sessionResult = incrementBucket(
+    emailCheckSessionAttempts,
+    `session:${sessionToken}`,
+    EMAIL_CHECK_SESSION_LIMIT,
+    now,
+  );
+  const ipResult = incrementBucket(emailCheckIpAttempts, `ip:${ip}`, EMAIL_CHECK_IP_LIMIT, now);
+  if (sessionResult.allowed && ipResult.allowed) {
+    return { allowed: true };
+  }
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.max(sessionResult.retryAfterSeconds, ipResult.retryAfterSeconds),
+  };
+}

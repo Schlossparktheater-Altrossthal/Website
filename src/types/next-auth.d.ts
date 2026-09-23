@@ -33,6 +33,8 @@ declare module "next-auth" {
     dateOfBirth?: string | null;
     isDeactivated?: boolean;
     deactivatedAt?: string | null;
+    /** Deaktiviertes Mitglied, das sich mit gültigem Einladungslink für das Rückkehrer-Onboarding anmeldet. */
+    returneeOnboarding?: boolean;
   }
 }
 

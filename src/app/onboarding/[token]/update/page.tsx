@@ -208,6 +208,16 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
 
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+      {session?.user?.isDeactivated ? (
+        <p
+          role="status"
+          className="mb-6 rounded-md border border-border bg-muted/50 p-4 text-sm text-foreground"
+        >
+          Schön, dass du wieder dabei bist! Dein Zugang zum Mitgliederbereich wird freigeschaltet,
+          sobald du diese Angaben für {invite.show.title ?? `die Produktion ${invite.show.year}`}{" "}
+          abgeschlossen hast.
+        </p>
+      ) : null}
       <ReturneeUpdateWizard
         existingProfile={profile}
         existingDietary={dietary}

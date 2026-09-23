@@ -196,7 +196,10 @@ export function LoginPageClient({
       const res = await fetch("/api/auth/password-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: values.email }),
+        body: JSON.stringify({
+          email: values.email,
+          ...(onboardingToken ? { onboardingToken } : {}),
+        }),
       });
       const data = (await res.json().catch(() => null)) as {
         message?: string;

@@ -11,11 +11,15 @@ import {
 import { getRequestIp, recordPasswordEmailAttempt } from "@/lib/auth/rate-limit";
 import { createLogger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { canSignInAsReturnee, resolveActiveInvite } from "@/lib/onboarding/returnee";
 
 const PASSWORD_EMAIL_SUCCESS_MESSAGE =
   "Falls ein Konto mit dieser E-Mail existiert, erhältst du in Kürze eine E-Mail.";
 
-const requestSchema = z.object({ email: z.string().email() });
+const requestSchema = z.object({
+  email: z.string().email(),
+  onboardingToken: z.string().min(1).max(200).optional(),
+});
 const logger = createLogger("authentik-password-email");
 
 /**
@@ -58,7 +62,12 @@ export async function POST(request: Request) {
     where: { email },
     select: { ...memberIdentitySelect, deactivatedAt: true },
   });
-  const identity = member && !member.deactivatedAt ? toMemberIdentity(member) : null;
+  // Deaktivierte Mitglieder bekommen die Mail nur als Rückkehrer mit gültigem Einladungslink.
+  const invite =
+    member?.deactivatedAt && parsed.data.onboardingToken
+      ? await resolveActiveInvite(parsed.data.onboardingToken)
+      : null;
+  const identity = member && canSignInAsReturnee(member, invite) ? toMemberIdentity(member) : null;
   if (!identity) {
     return NextResponse.json({ message: PASSWORD_EMAIL_SUCCESS_MESSAGE });
   }

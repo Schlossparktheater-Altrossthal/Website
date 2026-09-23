@@ -13,7 +13,7 @@ import { sortRoles, ROLES } from "@/lib/roles";
 import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
-import { hashInviteToken, isInviteUsable } from "@/lib/member-invites";
+import { canSignInAsReturnee, resolveActiveInvite } from "@/lib/onboarding/returnee";
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
 import { getAuthSecret } from "@/lib/auth-secret";
@@ -234,20 +234,6 @@ if (process.env.NODE_ENV !== "production") {
   credentialInputs.dev = { label: "Dev", type: "text" };
 }
 
-async function resolveActiveOnboardingInviteId(token: string | undefined): Promise<string | null> {
-  if (!token || !token.trim()) return null;
-  const trimmed = token.trim();
-  const tokenHash = /^[0-9a-f]{64}$/i.test(trimmed)
-    ? trimmed.toLowerCase()
-    : hashInviteToken(trimmed);
-  const invite = await prisma.memberInvite.findUnique({
-    where: { tokenHash },
-    select: { id: true, expiresAt: true, maxUses: true, usageCount: true, isDisabled: true },
-  });
-  if (!invite || !isInviteUsable(invite)) return null;
-  return invite.id;
-}
-
 /**
  * Authentik-Login nur für bestehende Mitglieder. Zuordnung in dieser
  * Reihenfolge:
@@ -283,12 +269,13 @@ async function authorizeAuthentikSignIn(
 
   if (member.deactivatedAt) {
     // Rückkehrer aus dem Onboarding: Die Login-Seite legt den Einladungs-Token
-    // vor dem Sprung zu Authentik in ein kurzlebiges Cookie.
+    // vor dem Sprung zu Authentik in ein kurzlebiges Cookie. Das Konto bleibt
+    // deaktiviert, bis das Rückkehrer-Onboarding abgeschlossen ist.
     const cookieStore = await cookies();
-    const onboardingToken = cookieStore.get(ONBOARDING_TOKEN_COOKIE)?.value;
-    const inviteId = await resolveActiveOnboardingInviteId(onboardingToken);
-    if (!inviteId) return "/login?error=AccessDenied&reason=deactivated";
-    await prisma.user.update({ where: { id: member.id }, data: { deactivatedAt: null } });
+    const invite = await resolveActiveInvite(cookieStore.get(ONBOARDING_TOKEN_COOKIE)?.value);
+    if (!canSignInAsReturnee(member, invite)) {
+      return "/login?error=AccessDenied&reason=deactivated";
+    }
     cookieStore.delete(ONBOARDING_TOKEN_COOKIE);
   }
 
@@ -372,14 +359,8 @@ const credentialsProvider = Credentials({
 
     const onboardingToken =
       typeof credentials?.onboardingToken === "string" ? credentials.onboardingToken : undefined;
-    const activeOnboardingInviteId = await resolveActiveOnboardingInviteId(onboardingToken);
-
-    if (user.deactivatedAt && activeOnboardingInviteId) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { deactivatedAt: null },
-      });
-    }
+    // Ohne gültige Einladung lehnt der signIn-Callback deaktivierte Konten ab.
+    const returneeInvite = user.deactivatedAt ? await resolveActiveInvite(onboardingToken) : null;
 
     const combinedRoles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
 
@@ -393,6 +374,7 @@ const credentialsProvider = Credentials({
       roles: combinedRoles,
       avatarSource: user.avatarSource,
       avatarUpdatedAt: user.avatarImageUpdatedAt ? user.avatarImageUpdatedAt.toISOString() : null,
+      returneeOnboarding: Boolean(returneeInvite),
     };
   },
 });
@@ -425,7 +407,9 @@ const authConfig = {
         where: { id: userId },
         select: { deactivatedAt: true },
       });
-      if (dbUser?.deactivatedAt) {
+      // Deaktivierte Rückkehrer mit gültigem Einladungslink (siehe authorize) dürfen sich
+      // anmelden; requireAuth sperrt den Mitgliederbereich bis zum Onboarding-Abschluss.
+      if (dbUser?.deactivatedAt && !user?.returneeOnboarding) {
         return "/login?error=AccessDenied&reason=deactivated";
       }
       return true;

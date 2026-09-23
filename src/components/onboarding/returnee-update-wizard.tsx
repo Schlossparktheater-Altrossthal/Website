@@ -215,6 +215,14 @@ function createInitialState(
   };
 }
 
+/** Übernommene Ernährungs-/Allergieangaben müssen für die neue Produktion bestätigt werden. */
+export function needsDietaryConfirmation(
+  profile: Pick<ExistingProfile, "dietaryPreference">,
+  dietary: readonly ExistingDietary[],
+): boolean {
+  return dietary.length > 0 || Boolean(profile.dietaryPreference?.trim());
+}
+
 export function ReturneeUpdateWizard({
   existingProfile,
   existingDietary,
@@ -236,6 +244,9 @@ export function ReturneeUpdateWizard({
   const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
   const [documentError, setDocumentError] = useState<string | null>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
+  // Übernommene Ernährungs- und Allergieangaben müssen für die neue Produktion bestätigt werden.
+  const hasPrefilledDietary = needsDietaryConfirmation(existingProfile, existingDietary);
+  const [dietaryConfirmed, setDietaryConfirmed] = useState(false);
 
   const age = useMemo(() => calculateAge(dateOfBirth), [dateOfBirth]);
   const isMinor = age !== null && age < 18;
@@ -433,6 +444,12 @@ export function ReturneeUpdateWizard({
     if (!selectedPreferences.length) {
       setError("Bitte wähle mindestens einen Bereich mit Gewichtung über 0.");
       setStep(1);
+      return;
+    }
+
+    if (hasPrefilledDietary && !dietaryConfirmed) {
+      setError("Bitte bestätige, dass deine Angaben zu Ernährung und Allergien noch stimmen.");
+      setStep(3);
       return;
     }
 
@@ -924,6 +941,13 @@ export function ReturneeUpdateWizard({
 
           {step === 3 ? (
             <section className="space-y-6">
+              {hasPrefilledDietary ? (
+                <p className="rounded-md border border-border bg-muted/50 p-3 text-sm">
+                  Diese Angaben stammen aus deinem letzten Onboarding. Bitte prüfe sie – vor allem
+                  Allergien und Unverträglichkeiten – und passe sie an, falls sich etwas geändert
+                  hat.
+                </p>
+              ) : null}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 text-sm">
                   <span className="font-medium">Ernährungsstil</span>
@@ -1054,6 +1078,20 @@ export function ReturneeUpdateWizard({
                   className="min-h-[120px]"
                 />
               </label>
+
+              {hasPrefilledDietary ? (
+                <div className="flex items-start gap-3 text-sm">
+                  <Checkbox
+                    id="returnee-dietary-confirmed"
+                    checked={dietaryConfirmed}
+                    onCheckedChange={(checked) => setDietaryConfirmed(checked === true)}
+                  />
+                  <label htmlFor="returnee-dietary-confirmed" className="font-medium">
+                    Ich habe meine Angaben zu Ernährung, Allergien und Unverträglichkeiten geprüft –
+                    sie stimmen so.
+                  </label>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
