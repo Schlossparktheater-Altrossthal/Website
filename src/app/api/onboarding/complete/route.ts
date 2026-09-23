@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
 import { isInviteUsable } from "@/lib/member-invites";
 import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
@@ -475,6 +476,33 @@ export async function POST(request: NextRequest) {
           dietaryPreference: dietaryStyleDisplay,
           dietaryPreferenceStrictness: dietaryStrictnessDisplay,
           whatsappLinkVisitedAt: whatsappLinkVisitedAt ?? undefined,
+        },
+      });
+
+      await tx.productionOnboarding.create({
+        data: {
+          userId: user.id,
+          showId: invite.showId,
+          inviteId: invite.id,
+          redemptionId: redemption.id,
+          focus,
+          completedAt: new Date(),
+          profileSnapshot: buildProfileSnapshot({
+            dietaryPreference: dietaryStyleDisplay,
+            dietaryPreferenceStrictness: dietaryStrictnessDisplay,
+            dietary,
+            preferences,
+            photoConsent: photoConsent.consent,
+            education: {
+              category: payload.educationCategory ?? null,
+              schoolName: educationSchoolName,
+              className: educationClassName,
+              workDescription: educationWorkDescription,
+              universityName: educationUniversityName,
+              otherDescription: educationOtherDescription,
+            },
+            notes,
+          }),
         },
       });
 

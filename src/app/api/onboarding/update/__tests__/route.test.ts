@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   inviteFindUnique: vi.fn(),
   consentUpsert: vi.fn(),
   membershipUpsert: vi.fn(),
+  onboardingUpsert: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -21,7 +22,10 @@ vi.mock("@/lib/member-invites", () => ({
 }));
 vi.mock("@/lib/prisma", () => {
   const tx = {
-    memberOnboardingProfile: { upsert: vi.fn().mockResolvedValue({ id: "profile-1" }) },
+    memberOnboardingProfile: {
+      upsert: vi.fn().mockResolvedValue({ id: "profile-1", focus: "tech" }),
+    },
+    productionOnboarding: { upsert: mocks.onboardingUpsert },
     memberRolePreference: { deleteMany: vi.fn(), createMany: vi.fn() },
     dietaryRestriction: { upsert: vi.fn(), updateMany: vi.fn() },
     photoConsent: { upsert: mocks.consentUpsert },
@@ -102,5 +106,42 @@ describe("Rückkehrer-Onboarding: Fotoerlaubnis", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.consentUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("Rückkehrer-Onboarding: Onboarding pro Produktion", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.inviteFindUnique.mockResolvedValue({ id: "invite-1", showId: "show-2027" });
+    mocks.getActiveProductionId.mockResolvedValue("show-2026");
+  });
+
+  it("legt ein Onboarding für die neue Produktion mit Snapshot an", async () => {
+    await POST(request("token-abc"));
+
+    const args = mocks.onboardingUpsert.mock.calls[0][0];
+    expect(args.where).toEqual({ userId_showId: { userId: "user-1", showId: "show-2027" } });
+    expect(args.create).toMatchObject({
+      userId: "user-1",
+      showId: "show-2027",
+      inviteId: "invite-1",
+      focus: "tech",
+      isReturning: true,
+      completedAt: expect.any(Date),
+    });
+    expect(args.create.profileSnapshot).toMatchObject({
+      photoConsent: true,
+      education: expect.objectContaining({ category: "work", workDescription: "Büro" }),
+    });
+    expect(args.update).toMatchObject({ inviteId: "invite-1", completedAt: expect.any(Date) });
+  });
+
+  it("legt ohne Produktion kein Onboarding an", async () => {
+    mocks.getActiveProductionId.mockResolvedValue(null);
+
+    await POST(request());
+
+    expect(mocks.onboardingUpsert).not.toHaveBeenCalled();
   });
 });

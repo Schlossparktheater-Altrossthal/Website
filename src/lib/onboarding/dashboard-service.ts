@@ -425,7 +425,7 @@ async function computeOnboardingDashboardData(
       finalRehearsalWeekStart: true,
       finalRehearsalWeekEnd: true,
       meta: true,
-      onboardingProfiles: {
+      productionOnboardings: {
         select: {
           id: true,
           user: {
@@ -452,16 +452,20 @@ async function computeOnboardingDashboardData(
                   isActive: true,
                 },
               },
+              onboardingProfile: {
+                select: {
+                  gender: true,
+                  background: true,
+                  backgroundClass: true,
+                  notes: true,
+                  dietaryPreference: true,
+                  dietaryPreferenceStrictness: true,
+                  memberSinceYear: true,
+                },
+              },
             },
           },
-          gender: true,
           focus: true,
-          background: true,
-          backgroundClass: true,
-          notes: true,
-          dietaryPreference: true,
-          dietaryPreferenceStrictness: true,
-          memberSinceYear: true,
           createdAt: true,
         },
       },
@@ -472,7 +476,25 @@ async function computeOnboardingDashboardData(
     return null;
   }
 
-  const profileUserIds = show.onboardingProfiles.map((profile) => profile.user.id);
+  // Ein Eintrag pro Onboarding dieser Produktion; Profildaten kommen aus dem aktuellen Profil.
+  const onboardingProfiles = show.productionOnboardings.map((onboarding) => {
+    const profile = onboarding.user.onboardingProfile;
+    return {
+      id: onboarding.id,
+      user: onboarding.user,
+      focus: onboarding.focus,
+      createdAt: onboarding.createdAt,
+      gender: profile?.gender ?? null,
+      background: profile?.background ?? null,
+      backgroundClass: profile?.backgroundClass ?? null,
+      notes: profile?.notes ?? null,
+      dietaryPreference: profile?.dietaryPreference ?? null,
+      dietaryPreferenceStrictness: profile?.dietaryPreferenceStrictness ?? null,
+      memberSinceYear: profile?.memberSinceYear ?? null,
+    };
+  });
+
+  const profileUserIds = onboardingProfiles.map((profile) => profile.user.id);
 
   const [rolePreferences, interests, memberships] = await Promise.all([
     prisma.memberRolePreference.findMany({
@@ -504,7 +526,7 @@ async function computeOnboardingDashboardData(
   const range = extractDateRange(show.dates);
   const status = deriveStatus(show, range);
   const timeSpan = formatDateRange(range);
-  const participants = show.onboardingProfiles.length;
+  const participants = onboardingProfiles.length;
 
   const onboardingSummary = onboardingSummarySchema.parse({
     id: show.id,
@@ -514,20 +536,20 @@ async function computeOnboardingDashboardData(
   });
 
   const now = new Date();
-  const newLastWeek = show.onboardingProfiles.filter((profile) =>
+  const newLastWeek = onboardingProfiles.filter((profile) =>
     isWithinInterval(profile.createdAt, {
       start: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
       end: now,
     }),
   ).length;
-  const newLastMonth = show.onboardingProfiles.filter((profile) =>
+  const newLastMonth = onboardingProfiles.filter((profile) =>
     isWithinInterval(profile.createdAt, {
       start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
       end: now,
     }),
   ).length;
 
-  const ages = show.onboardingProfiles
+  const ages = onboardingProfiles
     .map((profile) => computeAge(profile.user.dateOfBirth))
     .filter((value): value is number => value !== null)
     .sort((a, b) => a - b);
@@ -538,7 +560,7 @@ async function computeOnboardingDashboardData(
         ? ages[(ages.length - 1) / 2]
         : (ages[ages.length / 2 - 1] + ages[ages.length / 2]) / 2;
 
-  const ageGroups = show.onboardingProfiles.reduce((acc, profile) => {
+  const ageGroups = onboardingProfiles.reduce((acc, profile) => {
     const age = computeAge(profile.user.dateOfBirth);
     if (age === null) {
       return acc;
@@ -548,18 +570,18 @@ async function computeOnboardingDashboardData(
     return acc;
   }, new Map<string, number>());
 
-  const genderDistribution = show.onboardingProfiles.reduce((acc, profile) => {
+  const genderDistribution = onboardingProfiles.reduce((acc, profile) => {
     const key = profile.gender?.trim().toLowerCase() || "divers";
     acc.set(key, (acc.get(key) ?? 0) + 1);
     return acc;
   }, new Map<string, number>());
 
-  const focusDistribution = show.onboardingProfiles.reduce((acc, profile) => {
+  const focusDistribution = onboardingProfiles.reduce((acc, profile) => {
     acc.set(profile.focus, (acc.get(profile.focus) ?? 0) + 1);
     return acc;
   }, new Map<OnboardingFocus, number>());
 
-  const consentCount = show.onboardingProfiles.filter(
+  const consentCount = onboardingProfiles.filter(
     (profile) =>
       profile.user.photoConsents[0]?.consentGiven &&
       profile.user.photoConsents[0].status === "approved",
@@ -676,7 +698,7 @@ async function computeOnboardingDashboardData(
   const diversityStatus =
     normalizedDiversity >= 0.65 ? "ok" : normalizedDiversity >= 0.45 ? "warning" : "critical";
 
-  const diets = show.onboardingProfiles.reduce((acc, profile) => {
+  const diets = onboardingProfiles.reduce((acc, profile) => {
     if (!profile.dietaryPreference) {
       return acc;
     }
@@ -686,7 +708,7 @@ async function computeOnboardingDashboardData(
   }, new Map<string, number>());
 
   const allergies = new Map<string, Map<string, number>>();
-  show.onboardingProfiles.forEach((profile) => {
+  onboardingProfiles.forEach((profile) => {
     profile.user.dietaryRestrictions.forEach((restriction) => {
       if (!restriction.isActive) {
         return;
@@ -709,7 +731,7 @@ async function computeOnboardingDashboardData(
       id: "profile",
       label: "Profil ausgefüllt",
       completionRate: toPercentage(
-        show.onboardingProfiles.filter((profile) => profile.focus && profile.gender).length,
+        onboardingProfiles.filter((profile) => profile.focus && profile.gender).length,
         profileUserIds.length || 1,
       ),
     },
@@ -722,9 +744,8 @@ async function computeOnboardingDashboardData(
       id: "documents",
       label: "Dokumente",
       completionRate: toPercentage(
-        show.onboardingProfiles.filter(
-          (profile) => profile.user.photoConsents[0]?.documentUploadedAt,
-        ).length,
+        onboardingProfiles.filter((profile) => profile.user.photoConsents[0]?.documentUploadedAt)
+          .length,
         profileUserIds.length || 1,
       ),
     },
@@ -739,13 +760,13 @@ async function computeOnboardingDashboardData(
   }));
 
   const documents = {
-    uploaded: show.onboardingProfiles.filter(
+    uploaded: onboardingProfiles.filter(
       (profile) => profile.user.photoConsents[0]?.documentUploadedAt,
     ).length,
-    skipped: show.onboardingProfiles.filter(
+    skipped: onboardingProfiles.filter(
       (profile) => profile.user.photoConsents[0]?.status === "rejected",
     ).length,
-    pending: show.onboardingProfiles.filter((profile) => !profile.user.photoConsents[0]).length,
+    pending: onboardingProfiles.filter((profile) => !profile.user.photoConsents[0]).length,
   };
 
   const membersColumns: OnboardingMembersOverview["columns"] = [
@@ -836,7 +857,7 @@ async function computeOnboardingDashboardData(
     },
   ];
 
-  const membersRows: OnboardingMembersOverview["rows"] = show.onboardingProfiles.map((profile) => {
+  const membersRows: OnboardingMembersOverview["rows"] = onboardingProfiles.map((profile) => {
     const fullName =
       profile.user.name ||
       [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||
@@ -894,7 +915,7 @@ async function computeOnboardingDashboardData(
     } satisfies OnboardingMembersOverview["rows"][number];
   });
 
-  const candidateInputs: CandidateInput[] = show.onboardingProfiles.map((profile) => {
+  const candidateInputs: CandidateInput[] = onboardingProfiles.map((profile) => {
     const fullName =
       profile.user.name ||
       [profile.user.firstName, profile.user.lastName].filter(Boolean).join(" ") ||
@@ -1086,7 +1107,7 @@ async function computeOnboardingDashboardData(
       year: true,
       title: true,
       dates: true,
-      onboardingProfiles: {
+      productionOnboardings: {
         select: {
           createdAt: true,
           focus: true,
@@ -1098,7 +1119,7 @@ async function computeOnboardingDashboardData(
 
   const historySnapshots = history.map((item) => {
     const itemRange = extractDateRange(item.dates);
-    const agesHistory = item.onboardingProfiles
+    const agesHistory = item.productionOnboardings
       .map((profile) => computeAge(profile.user.dateOfBirth))
       .filter((value): value is number => value !== null)
       .sort((a, b) => a - b);
@@ -1110,14 +1131,14 @@ async function computeOnboardingDashboardData(
           : (agesHistory[agesHistory.length / 2 - 1] + agesHistory[agesHistory.length / 2]) / 2;
 
     const focusBoth = toPercentage(
-      item.onboardingProfiles.filter((profile) => profile.focus === "both").length,
-      item.onboardingProfiles.length || 1,
+      item.productionOnboardings.filter((profile) => profile.focus === "both").length,
+      item.productionOnboardings.length || 1,
     );
 
     return {
       onboardingId: item.id,
       label: normalizeTitle(item),
-      participants: item.onboardingProfiles.length,
+      participants: item.productionOnboardings.length,
       medianAge: medianHistory,
       focusBothShare: focusBoth,
       createdAt: itemRange.start?.toISOString() ?? new Date(item.year, 0, 1).toISOString(),
@@ -1272,7 +1293,7 @@ async function computeOnboardingDashboardData(
     allocation: {
       roles: optimization.roles,
       fairness: buildFairnessMetrics(
-        show.onboardingProfiles.map((profile) => ({
+        onboardingProfiles.map((profile) => ({
           gender: profile.gender,
           memberSinceYear: profile.memberSinceYear,
           focus: profile.focus,

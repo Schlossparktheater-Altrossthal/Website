@@ -181,7 +181,7 @@ export async function collectOnboardingAnalytics(
         show: { select: { id: true, title: true, year: true } },
       },
     }),
-    prisma.memberOnboardingProfile.findMany({
+    prisma.productionOnboarding.findMany({
       orderBy: { createdAt: "desc" },
       include: {
         user: {
@@ -190,6 +190,17 @@ export async function collectOnboardingAnalytics(
             name: true,
             email: true,
             dateOfBirth: true,
+            onboardingProfile: {
+              select: {
+                background: true,
+                backgroundClass: true,
+                notes: true,
+                gender: true,
+                memberSinceYear: true,
+                dietaryPreference: true,
+                dietaryPreferenceStrictness: true,
+              },
+            },
             photoConsents: {
               where: { revokedAt: null },
               select: { showId: true, status: true, documentUploadedAt: true },
@@ -377,11 +388,26 @@ export async function collectOnboardingAnalytics(
     },
   });
 
-  const talentProfiles = profileRecords
+  // Ein Eintrag pro Onboarding (Person × Produktion); Profildaten aus dem aktuellen Profil.
+  const profileEntries = profileRecords.map((onboarding) => {
+    const current = onboarding.user.onboardingProfile;
+    return {
+      ...onboarding,
+      background: current?.background ?? null,
+      backgroundClass: current?.backgroundClass ?? null,
+      notes: current?.notes ?? null,
+      gender: current?.gender ?? null,
+      memberSinceYear: current?.memberSinceYear ?? null,
+      dietaryPreference: current?.dietaryPreference ?? null,
+      dietaryPreferenceStrictness: current?.dietaryPreferenceStrictness ?? null,
+    };
+  });
+
+  const talentProfiles = profileEntries
     .map((profile) => {
       const user = profile.user;
       const userId = user?.id ?? profile.userId;
-      const completedAt = profile.redemption?.completedAt ?? null;
+      const completedAt = profile.completedAt ?? profile.redemption?.completedAt ?? null;
       const preferences = preferencesByUser.get(userId) ?? [];
       const interestsForUser = interestsByUser.get(userId) ?? [];
       const dietaryEntries = dietaryByUser.get(userId) ?? [];

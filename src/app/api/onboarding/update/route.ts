@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
+import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
@@ -161,6 +162,7 @@ export async function POST(request: NextRequest) {
   }
 
   let targetShowId: string | null = null;
+  let targetInviteId: string | null = null;
   if (onboardingToken) {
     const tokenHash = /^[0-9a-f]{64}$/i.test(onboardingToken)
       ? onboardingToken.toLowerCase()
@@ -180,6 +182,7 @@ export async function POST(request: NextRequest) {
       const status = calculateInviteStatus(invite);
       if (status.isActive && invite.showId) {
         targetShowId = invite.showId;
+        targetInviteId = invite.id;
       }
     }
   }
@@ -214,10 +217,48 @@ export async function POST(request: NextRequest) {
           dietaryPreference,
           dietaryPreferenceStrictness: dietaryPreferenceStrictness,
         },
-        select: { id: true },
+        select: { id: true, focus: true },
       });
 
-      void onboardingProfile;
+      if (consentShowId) {
+        const now = new Date();
+        const profileSnapshot = buildProfileSnapshot(
+          {
+            dietaryPreference,
+            dietaryPreferenceStrictness,
+            dietary: uniqueDietaryEntries,
+            preferences,
+            photoConsent: data.photoConsent,
+            education: {
+              category: data.educationCategory,
+              schoolName: educationSchoolName,
+              className: educationClassName,
+              workDescription: educationWorkDescription,
+              universityName: educationUniversityName,
+              otherDescription: educationOtherDescription,
+            },
+            notes,
+          },
+          now,
+        );
+        await tx.productionOnboarding.upsert({
+          where: { userId_showId: { userId, showId: consentShowId } },
+          update: {
+            completedAt: now,
+            profileSnapshot,
+            ...(targetInviteId ? { inviteId: targetInviteId } : {}),
+          },
+          create: {
+            userId,
+            showId: consentShowId,
+            inviteId: targetInviteId,
+            focus: onboardingProfile.focus,
+            isReturning: true,
+            completedAt: now,
+            profileSnapshot,
+          },
+        });
+      }
 
       await tx.memberRolePreference.deleteMany({
         where: { userId },
