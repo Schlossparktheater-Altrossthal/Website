@@ -10,10 +10,10 @@
 
 ## Wichtige Komponenten
 
-- `src/app/(site)/mystery/page.tsx`
-- `src/app/(site)/mystery/_components/mystery-guess-board.tsx`
-- `src/app/(site)/mystery/_components/mystery-scoreboard.tsx`
-- `src/app/(site)/mystery/_components/mystery-launch-countdown-card.tsx`
+- `src/app/old/mystery/page.tsx`
+- `src/app/old/mystery/_components/mystery-guess-board.tsx`
+- `src/app/old/mystery/_components/mystery-scoreboard.tsx`
+- `src/app/old/mystery/_components/mystery-launch-countdown-card.tsx`
 
 ## Datenfluss
 

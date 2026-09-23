@@ -6,13 +6,13 @@ Startseite der öffentlichen Website mit Hero-Bereich und Premieren-Countdown.
 
 ## Routen
 
-- `/` (Root, `src/app/(site)/page.tsx`)
+- `/` (Root, `src/app/old/page.tsx`)
 
 ## Wichtige Komponenten
 
 - `src/components/hero.tsx`, `src/components/hero-rotator.tsx`
 - `src/components/countdown.tsx`
-- `src/app/(site)/_components/premiere-countdown-section.tsx`
+- `src/app/old/_components/premiere-countdown-section.tsx`
 
 ## Datenfluss
 

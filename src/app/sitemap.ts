@@ -9,16 +9,16 @@ const BASE_URL = (
 ).replace(/\/$/, "");
 
 const publicRouteMap = {
-  about: "/ueber-uns",
-  mystery: "/mystery",
-  schoolCat: "/unsere-schulkatze",
-  timeline: "/chronik",
+  about: "/old/ueber-uns",
+  mystery: "/old/mystery",
+  schoolCat: "/old/unsere-schulkatze",
+  timeline: "/old/chronik",
 } as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const baseEntries: MetadataRoute.Sitemap = [
-    { url: `${BASE_URL}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
+    { url: `${BASE_URL}/old`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${BASE_URL}/impressum`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     {
       url: `${BASE_URL}/datenschutz`,

@@ -10,7 +10,7 @@ Vorstellung des Sommertheaters Altrossthal (Verein, Menschen, Geschichte).
 
 ## Wichtige Komponenten
 
-- `src/app/(site)/ueber-uns/page.tsx`
+- `src/app/old/ueber-uns/page.tsx`
 
 ## Datenfluss
 

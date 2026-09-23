@@ -8,14 +8,14 @@ const PRODUCTION_URL = "https://sommertheater-altrossthal.de";
 const SITEMAP_URL = `${PRODUCTION_URL}/sitemap.xml`;
 
 const publicRouteMap = {
-  about: "/ueber-uns",
-  mystery: "/mystery",
-  schoolCat: "/unsere-schulkatze",
-  timeline: "/chronik",
+  about: "/old/ueber-uns",
+  mystery: "/old/mystery",
+  schoolCat: "/old/unsere-schulkatze",
+  timeline: "/old/chronik",
 } as const;
 
 const alwaysDisallow = ["/login", "/api/", "/mitglieder/"];
-const alwaysAllow = ["/impressum", "/datenschutz"];
+const alwaysAllow = ["/old/impressum", "/old/datenschutz"];
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   if (process.env.NEXT_PUBLIC_BASE_URL !== PRODUCTION_URL) {

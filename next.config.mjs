@@ -35,6 +35,15 @@ const nextConfig = {
         destination: "/mitglieder/endproben-woche/essenplanung",
         permanent: true,
       },
+      // Die öffentliche Website läuft jetzt in Drupal (sommertheater-altrossthal.de);
+      // das alte Frontend bleibt nur zur Referenz unter /old erreichbar.
+      { source: "/", destination: "/mitglieder", permanent: false },
+      {
+        source:
+          "/:page(chronik|datenschutz|galerie|impressum|mystery|ueber-uns|unsere-schulkatze)/:rest*",
+        destination: "/old/:page/:rest*",
+        permanent: false,
+      },
     ];
   },
   async headers() {

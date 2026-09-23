@@ -128,7 +128,7 @@ export function Hero({
                     size="xl"
                     className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold tracking-wide"
                   >
-                    <Link href="/mystery" title="Geheimnis entdecken">
+                    <Link href="/old/mystery" title="Geheimnis entdecken">
                       <SparklesIcon aria-hidden className="h-5 w-5" />
                       <span>Das Geheimnis entdecken</span>
                     </Link>
@@ -141,7 +141,7 @@ export function Hero({
                     size="xl"
                     className="w-[clamp(200px,60vw,340px)] rounded-[clamp(0.75rem,2vw,1rem)] border-white/50 bg-card/10 px-[clamp(1rem,3vw,2rem)] py-[clamp(0.6rem,2vw,1rem)] text-[clamp(0.85rem,2vw,1rem)] font-semibold text-primary-foreground shadow-lg backdrop-blur"
                   >
-                    <Link href="/chronik" title="Chronik öffnen">
+                    <Link href="/old/chronik" title="Chronik öffnen">
                       <BookOpenIcon aria-hidden className="h-5 w-5" />
                       <span>Chronik</span>
                     </Link>

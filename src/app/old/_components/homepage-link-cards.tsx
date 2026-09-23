@@ -14,19 +14,19 @@ type HomepageLinkCard = {
 
 const LINK_CARDS: HomepageLinkCard[] = [
   {
-    href: "/ueber-uns",
+    href: "/old/ueber-uns",
     title: "Über uns",
     description: "Unser Ensemble, unsere Geschichte und unsere Arbeitsweise.",
     Icon: UsersIcon,
   },
   {
-    href: "/unsere-schulkatze",
+    href: "/old/unsere-schulkatze",
     title: "Unsere Schulkatze",
     description: "Die wichtigste tierische Begleitung rund um den Theateralltag.",
     Icon: CatIcon,
   },
   {
-    href: "/chronik",
+    href: "/old/chronik",
     title: "Chronik",
     description: "Ein Blick auf vergangene Produktionen und prägende Momente.",
     Icon: BookOpenTextIcon,

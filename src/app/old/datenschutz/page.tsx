@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Datenschutzerklärung",
   description: "Datenschutzhinweise des Sommertheaters Altrossthal.",
   alternates: {
-    canonical: "/datenschutz",
+    canonical: "/old/datenschutz",
   },
 };
 

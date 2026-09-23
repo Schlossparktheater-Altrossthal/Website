@@ -29,14 +29,14 @@ export * from "@/lib/website-content-schemas";
 
 // Maps each content ID to the public page path it belongs to (for revalidation)
 export const CONTENT_REVALIDATION_PATHS: Record<WebsiteContentId, string> = {
-  "home.faq": "/",
-  "schulkatze.intro": "/unsere-schulkatze",
-  "ueber-uns.intro": "/ueber-uns",
-  "ueber-uns.stats": "/ueber-uns",
-  "ueber-uns.milestones": "/ueber-uns",
-  "ueber-uns.signature": "/ueber-uns",
-  "ueber-uns.values": "/ueber-uns",
-  "ueber-uns.trades": "/ueber-uns",
+  "home.faq": "/old",
+  "schulkatze.intro": "/old/unsere-schulkatze",
+  "ueber-uns.intro": "/old/ueber-uns",
+  "ueber-uns.stats": "/old/ueber-uns",
+  "ueber-uns.milestones": "/old/ueber-uns",
+  "ueber-uns.signature": "/old/ueber-uns",
+  "ueber-uns.values": "/old/ueber-uns",
+  "ueber-uns.trades": "/old/ueber-uns",
 };
 
 const CONTENT_METADATA: Record<WebsiteContentId, { label: string; page: string }> = {

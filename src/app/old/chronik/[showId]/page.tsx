@@ -120,7 +120,7 @@ export default async function ChronicleDetailPage({ params }: ChronicleDetailPag
                 <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted-foreground">
                   <TextLink asChild variant="ghost" weight="semibold">
                     <Link
-                      href="/chronik"
+                      href="/old/chronik"
                       className="inline-flex items-center gap-2 text-foreground"
                     >
                       <svg

@@ -95,10 +95,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
   const siteTitle = resolvedSettings.siteTitle;
   const visibleNavigationItems = primaryNavigation.filter((item) => {
-    if (item.href === "/ueber-uns") return resolvedSettings.pageVisibility.public.about;
-    if (item.href === "/mystery") return resolvedSettings.pageVisibility.public.mystery;
-    if (item.href === "/unsere-schulkatze") return resolvedSettings.pageVisibility.public.schoolCat;
-    if (item.href === "/chronik") return resolvedSettings.pageVisibility.public.timeline;
+    if (item.href === "/old/ueber-uns") return resolvedSettings.pageVisibility.public.about;
+    if (item.href === "/old/mystery") return resolvedSettings.pageVisibility.public.mystery;
+    if (item.href === "/old/unsere-schulkatze")
+      return resolvedSettings.pageVisibility.public.schoolCat;
+    if (item.href === "/old/chronik") return resolvedSettings.pageVisibility.public.timeline;
     return true;
   });
   const maintenanceModeEnabled = resolvedSettings.maintenanceMode;

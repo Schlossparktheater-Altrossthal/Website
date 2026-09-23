@@ -12,9 +12,9 @@ Statische bzw. bildbasierte Seiten und rechtliche Pflichtseiten.
 
 ## Wichtige Komponenten
 
-- `src/app/(site)/galerie/page.tsx`
-- `src/app/(site)/datenschutz/page.tsx`
-- `src/app/(site)/impressum/page.tsx`
+- `src/app/old/galerie/page.tsx`
+- `src/app/old/datenschutz/page.tsx`
+- `src/app/old/impressum/page.tsx`
 
 ## Datenfluss
 

@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   description:
     "Rechtliche Informationen und Kontaktangaben des BSZ für Agrarwirtschaft und Ernährung Dresden.",
   alternates: {
-    canonical: "/impressum",
+    canonical: "/old/impressum",
   },
   openGraph: {
     title: "Impressum",
     description:
       "Verantwortliche Stelle und Kontakt des BSZ für Agrarwirtschaft und Ernährung Dresden.",
-    url: "/impressum",
+    url: "/old/impressum",
     type: "website",
     images: [
       {

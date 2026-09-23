@@ -42,13 +42,13 @@ const baseMetadata: Metadata = {
   description:
     "Wir erinnern uns an Dieter Dennis von Altroßthal, die grau getigerte Schulkatze des BSZ Altrossthal, und erzählen seine Geschichte.",
   alternates: {
-    canonical: "/unsere-schulkatze",
+    canonical: "/old/unsere-schulkatze",
   },
   openGraph: {
     title: "Unsere Schulkatze | Sommertheater Altrossthal",
     description:
       "Porträt und Erinnerungen an Dieter, unsere grau getigerte Schulkatze, die uns über viele Jahre begleitet hat.",
-    url: "/unsere-schulkatze",
+    url: "/old/unsere-schulkatze",
     type: "website",
   },
 };
@@ -59,7 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...baseMetadata,
     alternates: {
-      canonical: "/unsere-schulkatze",
+      canonical: "/old/unsere-schulkatze",
     },
     robots: {
       index: enabled,

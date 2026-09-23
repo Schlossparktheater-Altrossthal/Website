@@ -98,7 +98,7 @@ export function SiteHeader({
   const pathname = usePathname();
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
-  const isHomePage = pathname === "/";
+  const isHomePage = pathname === "/old";
   const isTransparentHomeHeader = isHomePage && !scrolled;
 
   const visibleNavigationItems = useMemo(() => navigationItems, [navigationItems]);
@@ -205,7 +205,7 @@ export function SiteHeader({
                 ? "text-primary hover:opacity-90"
                 : "text-white drop-shadow-lg hover:text-white/90"
             }`}
-            href="/"
+            href="/old"
             title={siteTitle}
           >
             <span className="hidden md:inline">{siteTitle}</span>

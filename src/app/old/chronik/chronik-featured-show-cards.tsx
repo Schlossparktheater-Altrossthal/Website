@@ -19,7 +19,7 @@ function ChronikFeaturedShowCardsCard({ item, index }: { item: ChronikItem; inde
   const meta: ChronikMeta = item.meta ?? {};
   const sources = toStringArray(meta.sources);
   const posterSources = item.posterSources;
-  const detailHref = `/chronik/${item.id}`;
+  const detailHref = `/old/chronik/${item.id}`;
   const headingId = `chronik-${item.id}-heading`;
 
   const isInteractiveTarget = (target: EventTarget | null) => {

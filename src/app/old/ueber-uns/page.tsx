@@ -22,7 +22,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CarouselHint } from "@/app/(site)/ueber-uns/carousel-hint";
+import { CarouselHint } from "@/app/old/ueber-uns/carousel-hint";
 import { Heading, Text } from "@/components/ui/typography";
 import { getCurrentProductionEnsembleStats } from "@/lib/ensemble";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
@@ -58,13 +58,13 @@ const baseMetadata: Metadata = {
   description:
     "Lerne das Sommertheater Altrossthal kennen – unser Ensemble, unsere Werte und die Menschen, die jeden Sommer magische Abende im Schlosspark schaffen.",
   alternates: {
-    canonical: "/ueber-uns",
+    canonical: "/old/ueber-uns",
   },
   openGraph: {
     title: "Über uns | Sommertheater Altrossthal",
     description:
       "Unser Ensemble, unsere Geschichte und unsere Mission: Sommertheater Altrossthal im Portrait.",
-    url: "/ueber-uns",
+    url: "/old/ueber-uns",
     type: "website",
   },
 };
@@ -75,7 +75,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...baseMetadata,
     alternates: {
-      canonical: "/ueber-uns",
+      canonical: "/old/ueber-uns",
     },
     robots: {
       index: enabled,

@@ -7,22 +7,22 @@ export type NavigationItem = {
 export const primaryNavigation: NavigationItem[] = [
   {
     label: "Über uns",
-    href: "/ueber-uns",
+    href: "/old/ueber-uns",
     description: "Lerne Ensemble, Geschichte und Werte des Sommertheaters kennen.",
   },
   {
     label: "Das Geheimnis",
-    href: "/mystery",
+    href: "/old/mystery",
     description: "Tauche in die Welt hinter dem mystischen Vorhang ein.",
   },
   {
     label: "Unsere Schulkatze",
-    href: "/unsere-schulkatze",
+    href: "/old/unsere-schulkatze",
     description: "Lerne Dieter kennen – Pausenbegleiter und Herz unserer Schule.",
   },
   {
     label: "Chronik",
-    href: "/chronik",
+    href: "/old/chronik",
     description: "Alle Meilensteine und Produktionen der vergangenen Jahre.",
   },
 ];
@@ -34,6 +34,6 @@ export const secondaryNavigation: NavigationItem[] = [
   },
   {
     label: "Impressum",
-    href: "/impressum",
+    href: "/old/impressum",
   },
 ];

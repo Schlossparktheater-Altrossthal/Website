@@ -11,10 +11,10 @@ Galerie.
 
 ## Wichtige Komponenten
 
-- `src/app/(site)/unsere-schulkatze/page.tsx`
-- `src/app/(site)/unsere-schulkatze/encounters-section.tsx`
-- `src/app/(site)/unsere-schulkatze/schulkatze-gallery.tsx`
-- `src/app/(site)/unsere-schulkatze/image-rotator.tsx`
+- `src/app/old/unsere-schulkatze/page.tsx`
+- `src/app/old/unsere-schulkatze/encounters-section.tsx`
+- `src/app/old/unsere-schulkatze/schulkatze-gallery.tsx`
+- `src/app/old/unsere-schulkatze/image-rotator.tsx`
 
 ## Datenfluss
 

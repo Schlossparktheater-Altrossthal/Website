@@ -11,10 +11,10 @@ Darstellung vergangener Produktionen mit Bildern, Daten und Besetzung.
 
 ## Wichtige Komponenten
 
-- `src/app/(site)/chronik/page.tsx`
-- `src/app/(site)/chronik/[showId]/page.tsx`
-- `src/app/(site)/chronik/chronik-featured-show-cards.tsx`
-- `src/app/(site)/chronik/editable-performance-dates-card.tsx`
+- `src/app/old/chronik/page.tsx`
+- `src/app/old/chronik/[showId]/page.tsx`
+- `src/app/old/chronik/chronik-featured-show-cards.tsx`
+- `src/app/old/chronik/editable-performance-dates-card.tsx`
 
 ## Datenfluss
 

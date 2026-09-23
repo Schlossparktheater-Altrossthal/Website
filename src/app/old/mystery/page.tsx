@@ -25,13 +25,13 @@ const baseMetadata: Metadata = {
   description:
     "Entschlüssele Hinweise, verfolge das Countdown-Ritual und teile deine Tipps für das große Sommertheater-Mysterium im Schlosspark.",
   alternates: {
-    canonical: "/mystery",
+    canonical: "/old/mystery",
   },
   openGraph: {
     title: "Das Geheimnis des Sommertheaters",
     description:
       "Alle freigeschalteten Rätsel, das Countdown-Ritual und die Bestenliste des Sommertheater-Mysteriums auf einen Blick.",
-    url: "/mystery",
+    url: "/old/mystery",
     type: "website",
     images: [
       {
@@ -56,7 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...baseMetadata,
     alternates: {
-      canonical: "/mystery",
+      canonical: "/old/mystery",
     },
     robots: {
       index: enabled,

@@ -14,13 +14,13 @@ const baseMetadata: Metadata = {
   description:
     "Erkunde die Chronik vergangener Sommertheater-Saisons und entdecke Aufführungen, Highlights und Geschichten aus dem Schlosspark.",
   alternates: {
-    canonical: "/chronik",
+    canonical: "/old/chronik",
   },
   openGraph: {
     title: "Chronik vergangener Sommer",
     description:
       "Jahreschronik des Sommertheaters Altrossthal mit prägnanten Momenten, Inszenierungen und Bildern vergangener Spielzeiten.",
-    url: "/chronik",
+    url: "/old/chronik",
     type: "website",
     images: [
       {
@@ -102,7 +102,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     ...baseMetadata,
     alternates: {
-      canonical: "/chronik",
+      canonical: "/old/chronik",
     },
     robots: {
       index: enabled,

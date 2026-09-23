@@ -114,10 +114,10 @@ export function SiteFooter({
         <div className="mt-12 flex flex-col gap-4 border-t border-border/50 pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 Sommertheater-Altrossthal</p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Link className="transition-colors hover:text-primary" href="/impressum">
+            <Link className="transition-colors hover:text-primary" href="/old/impressum">
               Impressum
             </Link>
-            <Link className="transition-colors hover:text-primary" href="/datenschutz">
+            <Link className="transition-colors hover:text-primary" href="/old/datenschutz">
               Datenschutzerklärung
             </Link>
           </div>
