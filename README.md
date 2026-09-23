@@ -49,7 +49,12 @@ See [docs/development.md](docs/development.md) for more details and troubleshoot
    app **without** a trailing slash. NextAuth uses it for callback URLs while
    notification emails and cron jobs rely on `NEXT_PUBLIC_BASE_URL`.
 5. Configure your email transport via `EMAIL_SERVER` or `EMAIL_SERVICE` + API key.
-6. Toggle offline support with `NEXT_PUBLIC_PWA_ENABLED` (set to `1` to register
+   Password reset mails are sent by Authentik, not by the app.
+6. Optional single sign-on via Authentik: set `AUTHENTIK_ISSUER`,
+   `AUTHENTIK_CLIENT_ID`, `AUTHENTIK_CLIENT_SECRET` and `AUTHENTIK_API_TOKEN`
+   (plus the transitional `AUTHENTIK_LEGACY_LOGIN_UNTIL`). Details in
+   `docs/seiten/login.md`.
+7. Toggle offline support with `NEXT_PUBLIC_PWA_ENABLED` (set to `1` to register
    the service worker) and adjust the background sync throughput with
    `SYNC_BATCH_LIMIT`.
 

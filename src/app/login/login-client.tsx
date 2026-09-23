@@ -1,6 +1,6 @@
 "use client";
 
-import { MailCheckIcon } from "@/components/ui/action-icons";
+import { MailCheckIcon, ShieldCheckIcon } from "@/components/ui/action-icons";
 
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -68,11 +68,18 @@ const TEST_LOGIN_OPTIONS: TestLoginOption[] = (() => {
     });
 })();
 
-const magicSchema = z.object({ email: z.string().email() });
+const resetSchema = z.object({ email: z.string().email() });
 const passwordSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6, "Mindestens 6 Zeichen"),
 });
+
+const DEACTIVATED_MESSAGE =
+  "Dieses Konto wurde deaktiviert. Bitte wende dich an einen Admin oder tritt der neuen Produktion bei.";
+const AUTHENTIK_MIGRATED_MESSAGE =
+  "Dein Passwort liegt jetzt in deinem Theater-Konto. Bitte melde dich über „Mit Theater-Konto anmelden“ an.";
+const LEGACY_CLOSED_MESSAGE =
+  "Die Anmeldung mit dem alten Formular ist beendet. Bitte melde dich über „Mit Theater-Konto anmelden“ an.";
 
 function parseReasonFromUrl(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -84,14 +91,41 @@ function parseReasonFromUrl(url: string | null | undefined): string | null {
   }
 }
 
-export function LoginPageClient() {
+export type LoginPageClientProps = {
+  /** Anmeldung über Authentik (SSO) ist konfiguriert. */
+  authentikEnabled: boolean;
+  /** ÜBERGANGSPHASE: altes Passwortformular noch sichtbar. */
+  legacyLoginActive: boolean;
+  /** ÜBERGANGSPHASE: Stichtag für das alte Formular (ISO-String) oder null. */
+  legacyLoginDeadline: string | null;
+};
+
+function formatDeadline(iso: string | null): string | null {
+  if (!iso) return null;
+  const deadline = new Date(iso);
+  if (Number.isNaN(deadline.valueOf())) return null;
+  // Letzter Tag, an dem das Formular noch funktioniert (Stichtag exklusiv).
+  const date = new Date(deadline.valueOf() - 1);
+  return date.toLocaleDateString("de-DE", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Berlin",
+  });
+}
+
+export function LoginPageClient({
+  authentikEnabled,
+  legacyLoginActive,
+  legacyLoginDeadline,
+}: LoginPageClientProps) {
   // Use only NEXT_PUBLIC_ var to keep SSR/CSR consistent and avoid hydration mismatches
   const devNoDb = process.env.NEXT_PUBLIC_AUTH_DEV_NO_DB === "1";
   const [loading, setLoading] = useState(false);
-  const [magicDialogOpen, setMagicDialogOpen] = useState(false);
-  const [showMagicSuggestion, setShowMagicSuggestion] = useState(false);
-  const magicForm = useForm<z.infer<typeof magicSchema>>({
-    resolver: zodResolver(magicSchema),
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [showResetSuggestion, setShowResetSuggestion] = useState(false);
+  const resetForm = useForm<z.infer<typeof resetSchema>>({
+    resolver: zodResolver(resetSchema),
     defaultValues: { email: "" },
   });
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -100,6 +134,10 @@ export function LoginPageClient() {
   });
   const router = useRouter();
   const sp = useSearchParams();
+  const callbackUrl = sp?.get("callbackUrl") ?? "/mitglieder";
+  const onboardingToken = sp?.get("onboardingToken") ?? undefined;
+  const canResetPassword = authentikEnabled && !devNoDb;
+  const deadlineLabel = formatDeadline(legacyLoginDeadline);
 
   // Surface NextAuth error from ?error=...
   useEffect(() => {
@@ -107,10 +145,14 @@ export function LoginPageClient() {
     const reason = sp?.get("reason");
     if (err) {
       if (err === "AccessDenied" && reason === "deactivated") {
+        toast.error(DEACTIVATED_MESSAGE);
+        setShowResetSuggestion(false);
+        return;
+      }
+      if (err === "AccessDenied" && reason === "not-a-member") {
         toast.error(
-          "Dieses Konto wurde deaktiviert. Bitte wende dich an einen Admin oder tritt der neuen Produktion bei.",
+          "Zu diesem Theater-Konto gibt es kein Mitgliedsprofil. Bitte wende dich an einen Admin.",
         );
-        setShowMagicSuggestion(false);
         return;
       }
       const map: Record<string, string> = {
@@ -121,34 +163,53 @@ export function LoginPageClient() {
         default: "Login fehlgeschlagen",
       };
       toast.error(map[err] ?? map.default);
-      setShowMagicSuggestion(err === "CredentialsSignin");
+      setShowResetSuggestion(err === "CredentialsSignin");
     }
   }, [sp]);
 
-  async function onMagicSubmit(values: z.infer<typeof magicSchema>) {
+  async function onAuthentikSignIn() {
+    setLoading(true);
+    if (onboardingToken) {
+      // Wird im signIn-Callback gelesen, um deaktivierte Rückkehrer zu reaktivieren.
+      await fetch("/api/auth/onboarding-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: onboardingToken }),
+      }).catch((error: unknown) => {
+        console.error("[login] Onboarding-Token konnte nicht gespeichert werden", error);
+      });
+    }
+    try {
+      await signIn("authentik", { callbackUrl });
+    } catch {
+      toast.error("Weiterleitung zum Theater-Konto fehlgeschlagen");
+      setLoading(false);
+    }
+  }
+
+  async function onResetSubmit(values: z.infer<typeof resetSchema>) {
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/request-magic-link", {
+      const res = await fetch("/api/auth/password-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: values.email }),
       });
       const data = (await res.json().catch(() => null)) as {
         message?: string;
+        error?: string;
       } | null;
-      if (res.status === 429) {
-        toast.error(data?.message ?? "Zu viele Versuche, bitte später erneut versuchen");
-      } else if (!res.ok) {
-        toast.error("E-Mail Versand fehlgeschlagen");
+      if (!res.ok) {
+        toast.error(data?.error ?? "E-Mail Versand fehlgeschlagen");
       } else {
         toast.success(
           data?.message ??
             "Falls ein Konto mit dieser E-Mail existiert, erhältst du in Kürze eine E-Mail.",
         );
-        setMagicDialogOpen(false);
+        setResetDialogOpen(false);
       }
     } catch {
-      toast.error("Login fehlgeschlagen");
+      toast.error("E-Mail Versand fehlgeschlagen");
     } finally {
       setLoading(false);
     }
@@ -157,8 +218,6 @@ export function LoginPageClient() {
   async function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
     setLoading(true);
     try {
-      const onboardingToken = sp?.get("onboardingToken") ?? undefined;
-      const callbackUrl = sp?.get("callbackUrl") ?? "/mitglieder";
       const res: SignInResponse | undefined = await signIn("credentials", {
         email: values.email,
         password: values.password,
@@ -168,24 +227,24 @@ export function LoginPageClient() {
       });
       if (res?.error) {
         if (parseReasonFromUrl(res.url) === "deactivated") {
-          toast.error(
-            "Dieses Konto wurde deaktiviert. Bitte wende dich an einen Admin oder tritt der neuen Produktion bei.",
-          );
+          toast.error(DEACTIVATED_MESSAGE);
+        } else if (res.code === "authentik_migrated") {
+          toast.info(AUTHENTIK_MIGRATED_MESSAGE);
+        } else if (res.code === "legacy_login_closed") {
+          toast.info(LEGACY_CLOSED_MESSAGE);
         } else {
           toast.error(res.error || "Anmeldung fehlgeschlagen");
-          setShowMagicSuggestion(true);
-          magicForm.setValue("email", values.email);
+          setShowResetSuggestion(canResetPassword);
+          resetForm.setValue("email", values.email);
         }
       } else {
         toast.success("Erfolgreich angemeldet");
-        setShowMagicSuggestion(false);
+        setShowResetSuggestion(false);
         if (res?.url) router.push(res.url);
         else router.push(callbackUrl);
       }
     } catch {
       toast.error("Login fehlgeschlagen");
-      setShowMagicSuggestion(true);
-      magicForm.setValue("email", values.email);
     } finally {
       setLoading(false);
     }
@@ -215,20 +274,32 @@ export function LoginPageClient() {
     }
   }
 
-  const handleOpenMagic = () => {
-    if (devNoDb) return;
+  const handleOpenReset = () => {
     const emailFromPassword = passwordForm.getValues("email");
     if (emailFromPassword) {
-      magicForm.setValue("email", emailFromPassword);
+      resetForm.setValue("email", emailFromPassword);
     }
   };
 
   return (
-    <Dialog open={magicDialogOpen} onOpenChange={setMagicDialogOpen}>
+    <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
       <div className="max-w-sm mx-auto space-y-6">
         <h1 className="font-serif text-3xl">Login</h1>
 
-        {!devNoDb && (
+        {authentikEnabled && !devNoDb && (
+          <div className="space-y-3">
+            <Button type="button" className="w-full" onClick={onAuthentikSignIn} disabled={loading}>
+              <ShieldCheckIcon className="h-4 w-4" />
+              Mit Theater-Konto anmelden
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Ein Konto für den Mitgliederbereich und weitere Dienste des Sommertheaters – Anmeldung
+              mit Passwort oder Passkey.
+            </p>
+          </div>
+        )}
+
+        {canResetPassword && (
           <div className="rounded-2xl border border-border/60 bg-gradient-to-r from-muted/70 via-muted/40 to-transparent p-4 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
@@ -238,12 +309,12 @@ export function LoginPageClient() {
                 <div className="space-y-1">
                   <p className="text-sm font-semibold">Kein Passwort zur Hand?</p>
                   <p className="text-sm text-muted-foreground">
-                    Lass dir einen Link zum Zurücksetzen deines Passworts senden.
+                    Lass dir einen Link zum Festlegen eines neuen Passworts senden.
                   </p>
                 </div>
               </div>
               <DialogTrigger asChild>
-                <Button type="button" size="sm" variant="outline" onClick={handleOpenMagic}>
+                <Button type="button" size="sm" variant="outline" onClick={handleOpenReset}>
                   Passwort vergessen
                 </Button>
               </DialogTrigger>
@@ -251,59 +322,78 @@ export function LoginPageClient() {
           </div>
         )}
 
-        <form
-          onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
-          className="space-y-3"
-          aria-label="Passwort Login"
-        >
-          <div className="grid gap-3">
-            <label className="block text-sm">
-              <span>E-Mail</span>
-              <Input
-                type="email"
-                placeholder="du@example.com"
-                autoComplete="email"
-                {...passwordForm.register("email")}
-                aria-required
-              />
-            </label>
-            <label className="block text-sm">
-              <span>Passwort</span>
-              <PasswordInput
-                placeholder="••••••••"
-                autoComplete="current-password"
-                {...passwordForm.register("password")}
-                aria-required
-              />
-            </label>
+        {legacyLoginActive && (
+          <div className="space-y-3">
+            {authentikEnabled && !devNoDb && (
+              <div className="space-y-1 border-t border-border pt-6">
+                <h2 className="text-sm font-semibold">Mit bisherigem Passwort anmelden</h2>
+                <p className="text-sm text-muted-foreground">
+                  Beim ersten Login wird dein Passwort in dein Theater-Konto übernommen. Danach
+                  meldest du dich über den Button oben an.
+                  {deadlineLabel ? ` Dieses Formular gibt es noch bis zum ${deadlineLabel}.` : ""}
+                </p>
+              </div>
+            )}
+            <form
+              onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+              className="space-y-3"
+              aria-label="Passwort Login"
+            >
+              <div className="grid gap-3">
+                <label className="block text-sm">
+                  <span>E-Mail</span>
+                  <Input
+                    type="email"
+                    placeholder="du@example.com"
+                    autoComplete="email"
+                    {...passwordForm.register("email")}
+                    aria-required
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span>Passwort</span>
+                  <PasswordInput
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    {...passwordForm.register("password")}
+                    aria-required
+                  />
+                </label>
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                variant={authentikEnabled && !devNoDb ? "outline" : "default"}
+                disabled={loading}
+              >
+                {loading ? "Wird geprüft…" : "Anmelden"}
+              </Button>
+            </form>
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Wird geprüft…" : "Anmelden"}
-          </Button>
-        </form>
+        )}
 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Passwort zurücksetzen</DialogTitle>
             <DialogDescription>
-              Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link zum Zurücksetzen deines
-              Passworts.
+              Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link, mit dem du ein neues
+              Passwort für dein Theater-Konto festlegst.
             </DialogDescription>
           </DialogHeader>
           <form
-            onSubmit={magicForm.handleSubmit(onMagicSubmit)}
+            onSubmit={resetForm.handleSubmit(onResetSubmit)}
             className="space-y-4"
-            aria-label="Login per E-Mail Link"
+            aria-label="Passwort zurücksetzen"
           >
             <Input
               type="email"
               placeholder="du@example.com"
               autoComplete="email"
-              {...magicForm.register("email")}
+              {...resetForm.register("email")}
               aria-required
             />
             <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={() => setMagicDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setResetDialogOpen(false)}>
                 Abbrechen
               </Button>
               <Button type="submit" disabled={loading}>
@@ -313,12 +403,13 @@ export function LoginPageClient() {
           </form>
         </DialogContent>
 
-        {showMagicSuggestion && !devNoDb && (
+        {showResetSuggestion && (
           <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm text-primary">
             <p className="font-semibold">Passwort vergessen?</p>
             <p className="mt-1">
-              Versuch es mit einem einmaligen Login-Link. Wir schicken dir eine E-Mail an{" "}
-              {magicForm.getValues("email") || "deine Adresse"}.
+              Über „Passwort vergessen“ schicken wir dir einen Link an{" "}
+              {resetForm.getValues("email") || "deine Adresse"}, mit dem du ein neues Passwort
+              festlegst.
             </p>
           </div>
         )}

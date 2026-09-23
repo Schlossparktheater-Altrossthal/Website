@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
+
+import {
+  getLegacyPasswordLoginDeadline,
+  isAuthentikEnabled,
+  isLegacyPasswordLoginActive,
+} from "@/lib/authentik/config";
 
 import { LoginPageClient } from "./login-client";
 
@@ -29,11 +36,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Authentik-Konfiguration und Stichtag kommen zur Laufzeit aus der Umgebung.
+  await connection();
+  const authentikEnabled = isAuthentikEnabled();
+  const legacyLoginActive = isLegacyPasswordLoginActive();
+  const legacyLoginDeadline = authentikEnabled
+    ? (getLegacyPasswordLoginDeadline()?.toISOString() ?? null)
+    : null;
+
   return (
     <main id="main" className="min-h-svh px-4 py-16">
       <Suspense fallback={null}>
-        <LoginPageClient />
+        <LoginPageClient
+          authentikEnabled={authentikEnabled}
+          legacyLoginActive={legacyLoginActive}
+          legacyLoginDeadline={legacyLoginDeadline}
+        />
       </Suspense>
     </main>
   );

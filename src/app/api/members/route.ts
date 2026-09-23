@@ -3,6 +3,7 @@ import { requireAuth, ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { sortRoles, type Role, withAutoCast } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
+import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { Prisma } from "@prisma/client";
 import { hasPermission } from "@/lib/permissions";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
@@ -141,6 +142,9 @@ export async function POST(request: NextRequest) {
         roles: { select: { role: true } },
       },
     });
+
+    // ÜBERGANGSPHASE: Passwort direkt nach Authentik übertragen.
+    await migratePasswordToAuthentik(user.id, password);
 
     const allRoles = sortRoles([user.role, ...user.roles.map((r) => r.role as Role)]);
     const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;

@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import type { Adapter } from "@auth/core/adapters";
 import type { JWT } from "next-auth/jwt";
 import type { AvatarSource, Role } from "@prisma/client";
-import EmailProvider from "next-auth/providers/email";
 import Credentials from "next-auth/providers/credentials";
+import Authentik from "next-auth/providers/authentik";
 import type { CredentialInput } from "next-auth/providers/credentials";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { sortRoles, ROLES } from "@/lib/roles";
 import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
@@ -18,10 +18,13 @@ import { ensureDevTestUser } from "@/lib/dev-auth";
 import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
 import { getAuthSecret } from "@/lib/auth-secret";
 import {
-  normalizeMagicLinkEmail,
-  recordMagicLinkAttempt,
-  sendMagicLinkEmail,
-} from "@/lib/auth/magic-link";
+  AUTHENTIK_PROVIDER_ID,
+  ONBOARDING_TOKEN_COOKIE,
+  getAuthentikOidcConfig,
+  isLegacyPasswordLoginActive,
+} from "@/lib/authentik/config";
+import { hasAuthentikAccount } from "@/lib/authentik/account-link";
+import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 
 type MutableToken = JWT & {
   id?: string;
@@ -183,6 +186,39 @@ function extractRolesFromSource(source: RoleSource | undefined): Role[] | undefi
 // when NEXTAUTH_URL points to an https domain (avoids login redirect loops).
 const useSecureCookies = process.env.NODE_ENV === "production";
 
+/** Passwort liegt schon in Authentik; das Login-Formular zeigt dann den SSO-Hinweis. */
+class AuthentikMigratedSignin extends CredentialsSignin {
+  code = "authentik_migrated";
+}
+
+/** ÜBERGANGSPHASE vorbei: alter Passwort-Login ist abgeschaltet. */
+class LegacyLoginClosedSignin extends CredentialsSignin {
+  code = "legacy_login_closed";
+}
+
+const authentikOidcConfig = getAuthentikOidcConfig();
+
+const authentikProviders = authentikOidcConfig
+  ? [
+      Authentik({
+        issuer: authentikOidcConfig.issuer,
+        clientId: authentikOidcConfig.clientId,
+        clientSecret: authentikOidcConfig.clientSecret,
+        // Konten in Authentik legt nur der Mitgliederbereich an (gleiche
+        // E-Mail), daher ist die Verknüpfung über die E-Mail unkritisch. Wer
+        // kein Mitglied ist, wird im signIn-Callback abgewiesen.
+        allowDangerousEmailAccountLinking: true,
+        profile(profile) {
+          return {
+            id: profile.sub,
+            email: typeof profile.email === "string" ? profile.email.toLowerCase() : null,
+            name: typeof profile.name === "string" ? profile.name : null,
+          };
+        },
+      }),
+    ]
+  : [];
+
 const credentialInputs: Record<string, CredentialInput> = {
   email: { label: "Email", type: "email" },
   password: { label: "Passwort", type: "password" },
@@ -207,46 +243,39 @@ async function resolveActiveOnboardingInviteId(token: string | undefined): Promi
   return invite.id;
 }
 
-const baseAdapter = PrismaAdapter(prisma);
-
-const authAdapter: Adapter = {
-  ...baseAdapter,
-  async createVerificationToken(verificationToken) {
-    const email = normalizeMagicLinkEmail(verificationToken.identifier);
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    if (!user) {
-      return null;
-    }
-
-    return baseAdapter.createVerificationToken?.({
-      ...verificationToken,
-      identifier: email,
-    });
-  },
-  async useVerificationToken(params) {
-    const verificationToken = await baseAdapter.useVerificationToken?.(params);
-    if (!verificationToken || verificationToken.expires.valueOf() < Date.now()) {
-      return null;
-    }
-
-    const email = normalizeMagicLinkEmail(verificationToken.identifier);
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    if (!user) {
-      return null;
-    }
-
-    return {
-      ...verificationToken,
-      identifier: email,
-    };
-  },
-};
+/**
+ * Authentik-Login nur für bestehende Mitglieder: zuerst über die gespeicherte
+ * Verknüpfung (sub), sonst über die E-Mail. Neue Profile entstehen nie über
+ * Authentik, sondern weiterhin über Onboarding bzw. Mitgliederverwaltung.
+ */
+async function authorizeAuthentikSignIn(
+  sub: string,
+  rawEmail: string | null | undefined,
+): Promise<boolean | string> {
+  const memberSelect = { id: true, deactivatedAt: true } as const;
+  const linked = await prisma.account.findUnique({
+    where: {
+      provider_providerAccountId: { provider: AUTHENTIK_PROVIDER_ID, providerAccountId: sub },
+    },
+    select: { user: { select: memberSelect } },
+  });
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  const member =
+    linked?.user ??
+    (email ? await prisma.user.findUnique({ where: { email }, select: memberSelect }) : null);
+  if (!member) return "/login?error=AccessDenied&reason=not-a-member";
+  if (member.deactivatedAt) {
+    // Rückkehrer aus dem Onboarding: Die Login-Seite legt den Einladungs-Token
+    // vor dem Sprung zu Authentik in ein kurzlebiges Cookie.
+    const cookieStore = await cookies();
+    const onboardingToken = cookieStore.get(ONBOARDING_TOKEN_COOKIE)?.value;
+    const inviteId = await resolveActiveOnboardingInviteId(onboardingToken);
+    if (!inviteId) return "/login?error=AccessDenied&reason=deactivated";
+    await prisma.user.update({ where: { id: member.id }, data: { deactivatedAt: null } });
+    cookieStore.delete(ONBOARDING_TOKEN_COOKIE);
+  }
+  return true;
+}
 
 const credentialsProvider = Credentials({
   name: "Passwort Login",
@@ -286,10 +315,21 @@ const credentialsProvider = Credentials({
       throw new CredentialsSignin("Passwort erforderlich");
     }
 
+    // ÜBERGANGSPHASE: Nach dem Stichtag AUTHENTIK_LEGACY_LOGIN_UNTIL ist nur
+    // noch die Anmeldung über Authentik möglich.
+    if (!isLegacyPasswordLoginActive()) {
+      throw new LegacyLoginClosedSignin();
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
       include: { roles: true },
     });
+
+    if (user && !user.passwordHash && (await hasAuthentikAccount(user.id))) {
+      // Passwort liegt bereits in Authentik (migriert oder dort gesetzt).
+      throw new AuthentikMigratedSignin();
+    }
 
     if (!user || !user.passwordHash) {
       throw new CredentialsSignin("Ungültige Zugangsdaten");
@@ -311,6 +351,11 @@ const credentialsProvider = Credentials({
       });
     }
 
+    // ÜBERGANGSPHASE: Passwort nach Authentik übertragen und lokalen Hash
+    // löschen. Scheitert das (z. B. Authentik nicht erreichbar), klappt der
+    // Login trotzdem und der nächste Login versucht es erneut.
+    await migratePasswordToAuthentik(user.id, rawPassword);
+
     const combinedRoles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
 
     return {
@@ -328,9 +373,9 @@ const credentialsProvider = Credentials({
 });
 
 const authConfig = {
-  adapter: authAdapter,
+  adapter: PrismaAdapter(prisma),
   useSecureCookies,
-  // Use JWT sessions for reliability in dev (works with Credentials + Email).
+  // JWT sessions (works with Credentials and OIDC).
   session: {
     strategy: "jwt",
     // Keep logins valid for roughly one month and refresh them regularly when the
@@ -338,54 +383,12 @@ const authConfig = {
     maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
     updateAge: 24 * 60 * 60, // refresh token after one day of inactivity
   },
-  providers: [
-    ...(process.env.EMAIL_SERVER
-      ? [
-          EmailProvider({
-            server: process.env.EMAIL_SERVER,
-            from: process.env.EMAIL_FROM,
-            async sendVerificationRequest({ identifier, url, provider }) {
-              const email = normalizeMagicLinkEmail(identifier);
-              const user = await prisma.user.findUnique({
-                where: { email },
-                select: { id: true },
-              });
-              if (!user) {
-                return;
-              }
-
-              try {
-                await sendMagicLinkEmail({ identifier: email, url, provider });
-              } catch (error) {
-                console.error("[MAGIC LINK ERROR]", error);
-              }
-            },
-          }),
-        ]
-      : []),
-    credentialsProvider,
-  ],
+  providers: [...authentikProviders, credentialsProvider],
   pages: { signIn: "/login", error: "/login" },
   callbacks: {
-    async signIn({ user, account, email }) {
-      if (account?.provider === "email") {
-        const rawEmail = typeof user?.email === "string" ? user.email : null;
-        if (!rawEmail) return "/login?error=Verification";
-
-        const normalizedEmail = normalizeMagicLinkEmail(rawEmail);
-
-        if (email?.verificationRequest) {
-          const rateLimit = recordMagicLinkAttempt(normalizedEmail, "nextauth-direct");
-          if (!rateLimit.allowed) return false;
-        }
-
-        const dbUser = await prisma.user.findUnique({
-          where: { email: normalizedEmail },
-          select: { id: true, deactivatedAt: true },
-        });
-        if (!dbUser) return "/login?error=Verification";
-        if (dbUser.deactivatedAt) return "/login?error=AccessDenied&reason=deactivated";
-        return true;
+    async signIn({ user, account }) {
+      if (account?.provider === AUTHENTIK_PROVIDER_ID) {
+        return authorizeAuthentikSignIn(account.providerAccountId, user?.email);
       }
 
       const userId = typeof user?.id === "string" ? user.id : null;

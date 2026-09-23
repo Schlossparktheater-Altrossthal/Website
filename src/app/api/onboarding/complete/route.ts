@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { isInviteUsable } from "@/lib/member-invites";
 import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
 import { hashPassword } from "@/lib/password";
+import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { combineNameParts } from "@/lib/names";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { broadcastOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard-events";
@@ -576,6 +577,9 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("[onboarding.complete] realtime update failed", error);
     }
+
+    // ÜBERGANGSPHASE: Passwort direkt nach Authentik übertragen.
+    await migratePasswordToAuthentik(result.userId, password);
 
     return NextResponse.json({ ok: true, user: result });
   } catch (error) {

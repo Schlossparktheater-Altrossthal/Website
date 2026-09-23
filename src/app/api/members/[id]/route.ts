@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
+import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { hasPermission } from "@/lib/permissions";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
@@ -133,6 +134,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data: updates,
       select: { id: true, email: true, firstName: true, lastName: true, name: true },
     });
+
+    if (typeof body.password === "string" && body.password.length > 0) {
+      // ÜBERGANGSPHASE: neues Passwort direkt nach Authentik übertragen.
+      await migratePasswordToAuthentik(user.id, body.password);
+    }
 
     const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;
 

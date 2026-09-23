@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
+import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { sortRoles, type Role } from "@/lib/roles";
 import type { AvatarSource, PayoutMethod } from "@prisma/client";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
@@ -537,6 +538,7 @@ export async function PUT(request: NextRequest) {
     updates.payoutNote = parsedPayoutNote;
   }
 
+  let newPassword: string | null = null;
   if ("password" in body) {
     const passwordValue = body.password;
     if (typeof passwordValue !== "string" || passwordValue.length < 6) {
@@ -546,6 +548,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     updates.passwordHash = await hashPassword(passwordValue);
+    newPassword = passwordValue;
   }
 
   if ("dateOfBirth" in body) {
@@ -701,6 +704,11 @@ export async function PUT(request: NextRequest) {
         payoutNote: true,
       },
     });
+
+    if (newPassword) {
+      // ÜBERGANGSPHASE: neues Passwort direkt nach Authentik übertragen.
+      await migratePasswordToAuthentik(updated.id, newPassword);
+    }
 
     const roles = sortRoles([updated.role as Role, ...updated.roles.map((r) => r.role as Role)]);
     const userFullName =

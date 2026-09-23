@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashOwnerSetupToken } from "@/lib/owner-setup";
 import { hashPassword } from "@/lib/password";
+import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -148,6 +149,9 @@ export async function POST(request: NextRequest) {
 
       return created;
     });
+
+    // ÜBERGANGSPHASE: Passwort direkt nach Authentik übertragen.
+    await migratePasswordToAuthentik(user.id, password);
 
     return NextResponse.json({ ok: true, user });
   } catch (error: unknown) {

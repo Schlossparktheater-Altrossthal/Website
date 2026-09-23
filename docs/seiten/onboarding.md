@@ -35,8 +35,9 @@ Fotoerlaubnis) sowie Rückkehrer-Aktualisierung und Talentprofile.
 - „Ich habe bereits einen Account" führt zur Anmeldung (E-Mail + Passwort); ein deaktiviertes,
   vorhandenes Konto wird dabei reaktiviert (`deactivatedAt = null`) und anschließend über den
   Rückkehrer-Wizard aktualisiert.
-- Der normale Login ohne gültigen Link sowie der Magic-Link bleiben für deaktivierte Konten
-  gesperrt.
+- Der normale Login ohne gültigen Link bleibt für deaktivierte Konten gesperrt. Beim Login über
+  Authentik trägt die Login-Seite den Token vorher in ein kurzlebiges Cookie ein (siehe
+  [login.md](login.md)).
 - `POST /api/onboarding/update` legt bei Abschluss die `ProductionMembership` für die
   zugehörige Produktion an (über das mitgesendete Einladungs-Token).
 
