@@ -67,8 +67,18 @@ export function UserNav({ className }: { className?: string }) {
   );
   const { firstName: derivedFirstName } = splitFullName(name);
   const firstNameDisplay = session.user.firstName?.trim() ?? derivedFirstName ?? name;
+  const authentikLogoutUrl = session.authentikLogoutUrl ?? null;
   async function onLogout() {
     try {
+      if (authentikLogoutUrl) {
+        // Single Sign-out: erst die Sitzung hier, dann die Authentik-Session
+        // beenden; Authentik leitet anschließend zur Startseite zurück.
+        await signOut({ redirect: false });
+        const target = new URL(authentikLogoutUrl);
+        target.searchParams.set("next", `${window.location.origin}/`);
+        window.location.assign(target.toString());
+        return;
+      }
       await signOut({ callbackUrl: "/" });
       toast.success("Abgemeldet");
     } catch {

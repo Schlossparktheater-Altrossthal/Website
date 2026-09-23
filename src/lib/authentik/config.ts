@@ -19,6 +19,7 @@ export const AUTHENTIK_MANAGED_USER_PATH = "mitgliederbereich";
 export const ONBOARDING_TOKEN_COOKIE = "theater-onboarding-token";
 
 const DEFAULT_RECOVERY_EMAIL_STAGE = "theater-recovery-email";
+const DEFAULT_LOGOUT_FLOW = "theater-logout";
 
 export type AuthentikOidcConfig = {
   issuer: string;
@@ -51,11 +52,9 @@ export function getAuthentikOidcConfig(): AuthentikOidcConfig | null {
  * bewusst die öffentliche Domain: Authentik wählt Brand und Recovery-Flow
  * anhand des Hosts der Anfrage.
  */
-export function getAuthentikApiConfig(): AuthentikApiConfig | null {
-  const token = readEnv("AUTHENTIK_API_TOKEN");
-  const explicitBase = readEnv("AUTHENTIK_URL");
+function getAuthentikBaseUrl(): string | null {
+  let baseUrl = readEnv("AUTHENTIK_URL");
   const issuer = readEnv("AUTHENTIK_ISSUER");
-  let baseUrl = explicitBase;
   if (!baseUrl && issuer) {
     try {
       baseUrl = new URL(issuer).origin;
@@ -63,12 +62,32 @@ export function getAuthentikApiConfig(): AuthentikApiConfig | null {
       console.error("[authentik] AUTHENTIK_ISSUER ist keine gültige URL", error);
     }
   }
+  return baseUrl ? baseUrl.replace(/\/+$/, "") : null;
+}
+
+export function getAuthentikApiConfig(): AuthentikApiConfig | null {
+  const token = readEnv("AUTHENTIK_API_TOKEN");
+  const baseUrl = getAuthentikBaseUrl();
   if (!token || !baseUrl) return null;
   return {
-    baseUrl: baseUrl.replace(/\/+$/, ""),
+    baseUrl,
     token,
     recoveryEmailStage: readEnv("AUTHENTIK_RECOVERY_EMAIL_STAGE") ?? DEFAULT_RECOVERY_EMAIL_STAGE,
   };
+}
+
+/**
+ * Abmelde-Flow in Authentik (Blueprint "theater-logout"). Beendet die
+ * Authentik-Session und leitet über `?next=` zurück zur Website. Bewusst nicht
+ * der OIDC-Endpunkt end-session: Der verlangt in Authentik 2025.4 eine aktive
+ * Session und ignoriert post_logout_redirect_uri.
+ */
+export function getAuthentikLogoutUrl(): string | null {
+  if (!isAuthentikLoginEnabled()) return null;
+  const baseUrl = getAuthentikBaseUrl();
+  if (!baseUrl) return null;
+  const flow = readEnv("AUTHENTIK_LOGOUT_FLOW") ?? DEFAULT_LOGOUT_FLOW;
+  return `${baseUrl}/if/flow/${encodeURIComponent(flow)}/`;
 }
 
 /** Anmeldung über Authentik ist möglich, sobald der OIDC-Client konfiguriert ist. */

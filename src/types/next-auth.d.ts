@@ -19,6 +19,8 @@ declare module "next-auth" {
       deactivatedAt?: string | null;
     };
     analyticsSessionId?: string | null;
+    /** Gesetzt, wenn die Anmeldung über Authentik lief: Abmelden beendet auch dort die Session. */
+    authentikLogoutUrl?: string | null;
     impersonation?: ImpersonationDetails | null;
   }
   interface User {

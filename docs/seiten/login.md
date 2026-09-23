@@ -36,6 +36,20 @@ Passwort-Reset).
 
 3. Deaktivierte Profile werden abgewiesen, außer die Anmeldung kommt aus dem Rückkehrer-Link.
 
+## Abmelden
+
+Lief die Anmeldung über Authentik, merkt sich die Sitzung das (`authProvider` im JWT,
+`session.authentikLogoutUrl`). „Logout“ beendet dann erst die Sitzung im Mitgliederbereich und
+leitet anschließend zum Authentik-Flow `theater-logout` weiter
+(`/if/flow/theater-logout/?next=<Startseite>`). Der beendet die Authentik-Session und leitet
+zurück; als Ziel akzeptiert der Flow nur `https` auf den Theater-Domains. Wer sich danach wieder
+anmeldet, muss E-Mail und Passwort (bzw. Passkey) erneut eingeben.
+
+Der OIDC-Endpunkt `end-session` wird bewusst nicht genutzt: In Authentik 2025.4 verlangt er eine
+aktive Authentik-Session (sonst Login-Seite) und ignoriert `post_logout_redirect_uri`.
+Anmeldungen über das alte Passwortformular haben keine Authentik-Session und melden sich nur
+lokal ab. Sitzungen, die vor dieser Änderung entstanden sind, ebenfalls.
+
 ## Übergangsphase (befristet)
 
 - Bis zum Stichtag `AUTHENTIK_LEGACY_LOGIN_UNTIL` funktioniert das alte Passwortformular. Nach
@@ -81,6 +95,7 @@ Passwort-Reset).
 | `AUTHENTIK_API_TOKEN`            | Token des Service-Accounts `mitgliederbereich-api` (Vault)                   |
 | `AUTHENTIK_URL`                  | optional, Standard: Origin des Issuers                                       |
 | `AUTHENTIK_RECOVERY_EMAIL_STAGE` | optional, Standard: `theater-recovery-email`                                 |
+| `AUTHENTIK_LOGOUT_FLOW`          | optional, Standard: `theater-logout`                                         |
 | `AUTHENTIK_LEGACY_LOGIN_UNTIL`   | Stichtag (ISO-Datum) für das alte Passwortformular                           |
 
 Mit Issuer und Client-ID/-Secret ist der Login über Authentik aktiv. Erst mit dem API-Token
@@ -99,8 +114,8 @@ das neue Profil das Konto (inklusive Passwort-Übernahme beim alten Login).
 
 ## Bekannte Baustellen
 
-- Abmelden beendet nur die Sitzung im Mitgliederbereich, nicht die Authentik-Sitzung
-  (Single Logout folgt).
+- Abmelden beendet die Authentik-Session, aber nicht die Sitzungen anderer Dienste, die sich
+  bereits über Authentik angemeldet haben (kein Back-Channel-Logout).
 - Zugriff auf weitere Dienste (Nextcloud usw.) soll über Dienst-Rechte (`SSO.*`) und
   Authentik-Gruppen gesteuert werden; deaktivierte Profile verlieren dann diese Gruppen.
 - Die Tabelle `VerificationToken` wird seit dem Wegfall des Magic-Links nicht mehr genutzt.

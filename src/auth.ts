@@ -19,6 +19,7 @@ import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
 import { getAuthSecret } from "@/lib/auth-secret";
 import {
   AUTHENTIK_PROVIDER_ID,
+  getAuthentikLogoutUrl,
   ONBOARDING_TOKEN_COOKIE,
   getAuthentikOidcConfig,
   isLegacyPasswordLoginActive,
@@ -40,6 +41,8 @@ type MutableToken = JWT & {
   deactivatedAt?: string | null;
   sessionVersion?: number;
   analyticsSessionId?: string | null;
+  /** Provider der Anmeldung (z. B. "authentik" oder "credentials"). */
+  authProvider?: string | null;
 };
 
 type RoleSource = { role?: unknown; roles?: unknown };
@@ -427,7 +430,7 @@ const authConfig = {
       }
       return true;
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, account, trigger, session }) {
       const mutableToken = token as MutableToken;
       const applyRoles = (roles?: Role[]) => {
         if (!roles || roles.length === 0) return;
@@ -438,6 +441,7 @@ const authConfig = {
 
       if (user && isRecord(user)) {
         mutableToken.analyticsSessionId = randomUUID();
+        mutableToken.authProvider = account?.provider ?? null;
         const id = extractString(user.id);
         if (id) mutableToken.id = id;
         const email = extractString(user.email);
@@ -550,6 +554,11 @@ const authConfig = {
       session.analyticsSessionId =
         typeof (token as MutableToken).analyticsSessionId === "string"
           ? (token as MutableToken).analyticsSessionId
+          : null;
+      // Anmeldung über Authentik: Abmelden beendet auch die Authentik-Session.
+      session.authentikLogoutUrl =
+        (token as MutableToken).authProvider === AUTHENTIK_PROVIDER_ID
+          ? getAuthentikLogoutUrl()
           : null;
       return session;
     },

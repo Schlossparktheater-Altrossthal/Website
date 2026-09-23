@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getAuthentikApiConfig,
+  getAuthentikLogoutUrl,
   isAuthentikLoginEnabled,
   isAuthentikProvisioningEnabled,
   isLegacyPasswordLoginActive,
@@ -43,6 +44,19 @@ describe("authentik config", () => {
       baseUrl: "https://auth.example.org",
       recoveryEmailStage: "theater-recovery-email",
     });
+  });
+
+  it("builds the logout flow URL, also without API token", () => {
+    enableAuthentik();
+    vi.stubEnv("AUTHENTIK_API_TOKEN", "");
+    expect(getAuthentikLogoutUrl()).toBe("https://auth.example.org/if/flow/theater-logout/");
+    vi.stubEnv("AUTHENTIK_LOGOUT_FLOW", "other-logout");
+    expect(getAuthentikLogoutUrl()).toBe("https://auth.example.org/if/flow/other-logout/");
+  });
+
+  it("has no logout URL without OIDC configuration", () => {
+    vi.stubEnv("AUTHENTIK_ISSUER", "");
+    expect(getAuthentikLogoutUrl()).toBeNull();
   });
 
   it("closes the legacy login after the deadline", () => {
