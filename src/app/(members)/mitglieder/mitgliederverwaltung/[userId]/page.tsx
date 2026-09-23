@@ -6,6 +6,7 @@ import type {
   OnboardingFocus,
   PhotoConsentStatus,
   PayoutMethod,
+  ProductionMembershipStatus,
   Prisma,
   TaskStatus,
 } from "@prisma/client";
@@ -35,6 +36,7 @@ import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/ro
 import { cn } from "@/lib/utils";
 import { formatRelativeFromNow } from "@/lib/datetime";
 import { getUserDisplayName } from "@/lib/names";
+import { buildProductionHistory } from "@/lib/produktionen/production-history";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { ImpersonationButton } from "./impersonation-button";
@@ -112,6 +114,20 @@ const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
   acting: "Schauspiel",
   tech: "Gewerke",
   both: "Schauspiel & Gewerke",
+};
+
+const HISTORY_MEMBERSHIP_LABELS: Record<ProductionMembershipStatus, string> = {
+  active: "Aktiv",
+  invited: "Eingeladen",
+  onboarding: "Im Onboarding",
+  left: "Ausgeschieden",
+};
+
+const HISTORY_PHOTO_LABELS: Record<PhotoConsentStatus | "none", string> = {
+  none: "fehlt",
+  pending: "ausstehend",
+  approved: "erteilt",
+  rejected: "abgelehnt",
 };
 
 // Photo consent types and labels
@@ -395,6 +411,18 @@ const memberSelect = {
   payoutBankName: true,
   payoutPaypalHandle: true,
   payoutNote: true,
+  productionMemberships: {
+    select: {
+      showId: true,
+      status: true,
+      roles: true,
+      function: true,
+      joinedAt: true,
+      leftAt: true,
+      show: { select: { title: true, year: true, status: true } },
+    },
+  },
+  productionOnboardings: { select: { showId: true, completedAt: true, isReturning: true } },
   onboardingProfile: {
     select: {
       memberSinceYear: true,
@@ -410,10 +438,10 @@ const memberSelect = {
   },
   // Neueste Fotoerlaubnis; sie gilt nur für die angegebene Produktion.
   photoConsents: {
-    where: { revokedAt: null },
     orderBy: { createdAt: "desc" },
-    take: 1,
     select: {
+      showId: true,
+      revokedAt: true,
       status: true,
       consentGiven: true,
       updatedAt: true,
@@ -780,7 +808,13 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     ),
   );
 
-  const latestPhotoConsent = member.photoConsents[0] ?? null;
+  const productionHistory = buildProductionHistory(
+    member.productionMemberships,
+    member.productionOnboardings,
+    member.photoConsents,
+  );
+  const latestPhotoConsent =
+    member.photoConsents.find((consent) => consent.revokedAt === null) ?? null;
   const photoConsentInfo = resolvePhotoConsent(latestPhotoConsent);
   const photoConsentShowLabel = latestPhotoConsent
     ? (latestPhotoConsent.show.title ?? `Produktion ${latestPhotoConsent.show.year}`)
@@ -1193,6 +1227,55 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                   hasEmail={Boolean(email)}
                 />
               ) : null}
+
+              <Card className="border border-border/70">
+                <CardHeader className="space-y-2">
+                  <CardTitle>Produktionen</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    In welchen Produktionen war {displayName} dabei – mit Rollen, Onboarding und
+                    Fotoerlaubnis der jeweiligen Produktion.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {productionHistory.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Noch keiner Produktion zugeordnet.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {productionHistory.map((entry) => (
+                        <li key={entry.showId} className="space-y-1 py-3 text-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <Link
+                              href={`/mitglieder/produktionen/${entry.showId}/ensemble`}
+                              className="font-medium text-foreground hover:underline"
+                            >
+                              {entry.title} ({entry.year})
+                            </Link>
+                            <Badge variant="outline">
+                              {HISTORY_MEMBERSHIP_LABELS[entry.membershipStatus]}
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground">
+                            {[
+                              entry.roles.map((role) => ROLE_LABELS[role]).join(", ") || null,
+                              entry.function,
+                              entry.onboardingCompletedAt
+                                ? entry.isReturning
+                                  ? "Onboarding als Rückkehr"
+                                  : "Onboarding abgeschlossen"
+                                : "Onboarding offen",
+                              `Fotoerlaubnis: ${HISTORY_PHOTO_LABELS[entry.photoConsentStatus]}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
 
               <Card className="border border-border/70">
                 <CardHeader className="space-y-2">
