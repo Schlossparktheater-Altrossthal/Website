@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   userUpdate: vi.fn(),
   sync: vi.fn(),
   syncRoles: vi.fn(),
+  inviteUpdate: vi.fn(),
 }));
 
 vi.mock("@/lib/authentik/service-groups", () => ({ requestServiceGroupSync: mocks.sync }));
@@ -40,6 +41,7 @@ vi.mock("@/lib/prisma", () => {
     photoConsent: { upsert: mocks.consentUpsert },
     productionMembership: { upsert: mocks.membershipUpsert },
     user: { update: mocks.userUpdate },
+    memberInvite: { update: mocks.inviteUpdate },
   };
   return {
     prisma: {
@@ -208,5 +210,29 @@ describe("Rückkehrer-Onboarding: Reaktivierung", () => {
       data: { onboardingUpdatedAt: expect.any(Date) },
     });
     expect(mocks.sync).not.toHaveBeenCalled();
+  });
+});
+
+describe("Rückkehrer-Onboarding: Einladung verbrauchen", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.inviteFindUnique.mockResolvedValue({ id: "invite-1", showId: "show-2027" });
+    mocks.getActiveProductionId.mockResolvedValue("show-2026");
+  });
+
+  it("zählt die Nutzung der Einladung hoch", async () => {
+    await POST(request("token-abc"));
+
+    expect(mocks.inviteUpdate).toHaveBeenCalledWith({
+      where: { id: "invite-1" },
+      data: { usageCount: { increment: 1 } },
+    });
+  });
+
+  it("zählt ohne Einladung nichts", async () => {
+    await POST(request());
+
+    expect(mocks.inviteUpdate).not.toHaveBeenCalled();
   });
 });

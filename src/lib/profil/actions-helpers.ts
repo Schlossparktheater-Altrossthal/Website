@@ -1,6 +1,7 @@
+import { getAppBaseUrl } from "@/lib/app-url";
 import { cookies } from "next/headers";
 
-const BASE_URL = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+const BASE_URL = getAppBaseUrl();
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 

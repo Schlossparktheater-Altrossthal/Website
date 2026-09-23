@@ -13,12 +13,18 @@ import {
   type ProductionActionResult,
 } from "@/lib/produktionen/actions-helpers";
 import { sanitizeProductionRoles, syncProductionRoles } from "@/lib/produktionen/production-roles";
+import { createConfiguredMailSender } from "@/lib/email/send";
+import {
+  inviteFormerMembers,
+  type ReturneeInviteOutcome,
+} from "@/lib/produktionen/returnee-invites";
 
 async function ensureManager() {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE"))) {
     throw new Error("Du hast keinen Zugriff auf die Produktionsplanung.");
   }
+  return session;
 }
 
 function ensemblePath(showId: string) {
@@ -116,5 +122,49 @@ export async function removeProductionMemberAction(
   } catch (error) {
     console.error("removeProductionMemberAction", error);
     return actionFailure(error, "Mitgliedschaft konnte nicht beendet werden.");
+  }
+}
+
+export type InviteFormerMembersResult =
+  { ok: true; message: string; outcomes: ReturneeInviteOutcome[] } | { ok: false; error: string };
+
+/** Lädt ausgewählte ehemalige Mitglieder mit persönlichem Link zur Produktion ein. */
+export async function inviteFormerMembersAction(
+  formData: FormData,
+): Promise<InviteFormerMembersResult> {
+  try {
+    const session = await ensureManager();
+    const showId = readString(formData, "showId", { label: "Produktion" });
+    const userIds = formData
+      .getAll("userIds")
+      .filter((value): value is string => typeof value === "string" && value.length > 0);
+    if (userIds.length === 0) {
+      throw new Error("Bitte wähle mindestens eine Person aus.");
+    }
+    if (userIds.length > 100) {
+      throw new Error("Bitte lade höchstens 100 Personen auf einmal ein.");
+    }
+    const createdById = session.user?.id;
+    if (!createdById) {
+      throw new Error("Nicht angemeldet.");
+    }
+
+    const sender = await createConfiguredMailSender();
+    const outcomes = await inviteFormerMembers({ showId, userIds, createdById, sender });
+
+    revalidateShow(showId, ensemblePath(showId));
+    const sent = outcomes.filter((outcome) => outcome.status === "sent").length;
+    const withLink = outcomes.length - sent;
+    const message =
+      withLink === 0
+        ? `${sent} Einladungen per Mail verschickt.`
+        : `${sent} Einladungen per Mail verschickt, ${withLink} Links bitte selbst weitergeben.`;
+    return { ok: true, message, outcomes };
+  } catch (error) {
+    console.error("inviteFormerMembersAction", error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Einladungen konnten nicht erstellt werden.",
+    };
   }
 }

@@ -204,7 +204,8 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
   - Offen: Nach dem Setzen des Passworts in Authentik führt kein automatischer Rücksprung zum Einladungslink; Eingaben aus einem abgebrochenen Neu-Onboarding (409) werden nicht übernommen, der Rückkehrer-Wizard füllt aus dem alten Profil vor.
 - [ ] Schritt 5 – Verwaltungsoberflächen
   - [x] 5a Ensemble pro Produktion + Rollen (`/mitglieder/produktionen/[showId]/ensemble`): aufnehmen (ongeboardet → aktiv, sonst eingeladen), Ensemble/Technik + Funktion pro Mitgliedschaft, Mitgliedschaft beenden; Status von Onboarding und Fotoerlaubnis je Person. Globale Rollen `cast`/`tech` werden per `syncProductionRoles` aus den laufenden Mitgliedschaften abgeleitet (ohne `withAutoCast`; mit Prod-Dump geprüft: 0 Änderungen im Bestand). Der Rollen-Editor der Mitgliederverwaltung schreibt Ensemble/Technik in die Mitgliedschaft der ausgewählten Produktion.
-  - [ ] 5b Ehemalige einladen (Mail mit persönlichem Link)
+  - [x] 5b Ehemalige einladen: Auswahl auf der Ensemble-Seite → persönliche Einladung (einmal nutzbar, 30 Tage), Mitgliedschaft „eingeladen“, Mail über die SMTP-Server-Einstellungen (`src/lib/email/send.ts`); ohne SMTP/E-Mail werden die Links zum Weitergeben angezeigt. Rückkehrer-Onboarding zählt die Einladungsnutzung jetzt mit (vorher nie → „einmal nutzbar“ griff nicht).
+    - Offen: Persönliche Links sind nicht an das Konto gebunden (wer den Link hat, kann ihn einmal nutzen).
   - [ ] 5c Onboarding-Status + Erinnerungen, Fotoerlaubnis-Übersicht mit Export
   - [ ] 5d Produktionshistorie im Profil, Dubletten zusammenführen, Aufbewahrung
 - [ ] Phase C – Aufräum-Migration

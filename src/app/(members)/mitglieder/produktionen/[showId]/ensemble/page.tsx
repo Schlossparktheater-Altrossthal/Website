@@ -14,9 +14,11 @@ import { requireAuth } from "@/lib/rbac";
 
 import {
   AddMemberForm,
+  InviteFormerMembersForm,
   MemberRoleForm,
   RemoveMemberForm,
   type AddableMember,
+  type FormerMember,
 } from "./ensemble-forms-client";
 
 const MEMBERSHIP_STATUS_LABELS: Record<ProductionMembershipStatus, string> = {
@@ -121,6 +123,12 @@ export default async function ProduktionEnsemblePage({
       name: true,
       email: true,
       deactivatedAt: true,
+      productionMemberships: {
+        where: { showId: { not: show.id } },
+        orderBy: { joinedAt: "desc" },
+        take: 1,
+        select: { show: { select: { title: true, year: true } } },
+      },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
@@ -130,6 +138,19 @@ export default async function ProduktionEnsemblePage({
       user.deactivatedAt ? " (ehemalig)" : ""
     }`,
   }));
+
+  // Ehemalige: waren in einer anderen Produktion, sind in dieser (noch) nicht dabei.
+  const formerMembers: FormerMember[] = users
+    .filter((user) => user.productionMemberships.length > 0)
+    .map((user) => {
+      const last = user.productionMemberships[0].show;
+      return {
+        id: user.id,
+        name: getUserDisplayName(user, user.email ?? "Unbekannt"),
+        lastProduction: last.title?.trim() || `Produktion ${last.year}`,
+        hasEmail: Boolean(user.email),
+      };
+    });
 
   const counts = {
     active: members.filter((member) => member.status === "active").length,
@@ -163,6 +184,20 @@ export default async function ProduktionEnsemblePage({
         <Badge variant="outline">Eingeladen/Onboarding offen: {counts.open}</Badge>
         <Badge variant="outline">Ohne erteilte Fotoerlaubnis: {counts.missingPhoto}</Badge>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ehemalige einladen</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Jede Person bekommt einen persönlichen Link. Damit meldet sie sich mit ihrem bisherigen
+            Konto an, prüft ihre vorausgefüllten Angaben und gibt die Fotoerlaubnis für diese
+            Produktion. Erst danach ist sie wieder freigeschaltet.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <InviteFormerMembersForm showId={show.id} formerMembers={formerMembers} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

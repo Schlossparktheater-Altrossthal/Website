@@ -386,6 +386,14 @@ export async function POST(request: NextRequest) {
         await syncProductionRoles([userId], tx);
       }
 
+      // Auch Rückkehrer verbrauchen die Einladung (persönliche Links sind einmal nutzbar).
+      if (targetInviteId) {
+        await tx.memberInvite.update({
+          where: { id: targetInviteId },
+          data: { usageCount: { increment: 1 } },
+        });
+      }
+
       await tx.user.update({
         where: { id: userId },
         data: {

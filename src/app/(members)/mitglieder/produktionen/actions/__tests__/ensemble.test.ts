@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   addProductionMemberAction,
+  inviteFormerMembersAction,
   removeProductionMemberAction,
   updateProductionMemberAction,
 } from "../ensemble";
@@ -15,7 +16,14 @@ const mocks = vi.hoisted(() => ({
   membershipUpdate: vi.fn(),
   syncRoles: vi.fn(),
   groupSync: vi.fn(),
+  inviteFormerMembers: vi.fn(),
+  createSender: vi.fn(),
 }));
+
+vi.mock("@/lib/produktionen/returnee-invites", () => ({
+  inviteFormerMembers: mocks.inviteFormerMembers,
+}));
+vi.mock("@/lib/email/send", () => ({ createConfiguredMailSender: mocks.createSender }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/rbac", () => ({ requireAuth: async () => ({ user: { id: "admin-1" } }) }));
@@ -127,5 +135,61 @@ describe("Ensemble-Verwaltung", () => {
       select: { showId: true, userId: true },
     });
     expect(mocks.syncRoles).toHaveBeenCalledWith(["user-1"]);
+  });
+});
+
+describe("Ehemalige einladen", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.hasPermission.mockResolvedValue(true);
+    mocks.createSender.mockResolvedValue(null);
+  });
+
+  it("verlangt eine Auswahl", async () => {
+    const result = await inviteFormerMembersAction(formData([["showId", "show-1"]]));
+
+    expect(result).toEqual({ ok: false, error: "Bitte wähle mindestens eine Person aus." });
+    expect(mocks.inviteFormerMembers).not.toHaveBeenCalled();
+  });
+
+  it("lädt ein und fasst das Ergebnis zusammen", async () => {
+    mocks.inviteFormerMembers.mockResolvedValue([
+      { userId: "a", name: "A", status: "sent", link: null },
+      { userId: "b", name: "B", status: "no-email", link: "https://x" },
+    ]);
+
+    const result = await inviteFormerMembersAction(
+      formData([
+        ["showId", "show-1"],
+        ["userIds", "a"],
+        ["userIds", "b"],
+      ]),
+    );
+
+    expect(mocks.inviteFormerMembers).toHaveBeenCalledWith({
+      showId: "show-1",
+      userIds: ["a", "b"],
+      createdById: "admin-1",
+      sender: null,
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      message: "1 Einladungen per Mail verschickt, 1 Links bitte selbst weitergeben.",
+    });
+  });
+
+  it("verweigert ohne Berechtigung", async () => {
+    mocks.hasPermission.mockResolvedValue(false);
+
+    const result = await inviteFormerMembersAction(
+      formData([
+        ["showId", "show-1"],
+        ["userIds", "a"],
+      ]),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(mocks.inviteFormerMembers).not.toHaveBeenCalled();
   });
 });
