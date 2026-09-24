@@ -257,6 +257,7 @@ Fließtext oder kurze natürliche Aufzählung — nur wenn wirklich nötig.
 `type(scope): description`
 
 Regeln:
+
 - Kein Emoji in Titel oder Body
 - Kein steifer Formular-Stil ("Fundstelle", "Akzeptanzkriterien" etc.)
 - Natürlicher Ton, aktive Sprache, auf Deutsch
