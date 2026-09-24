@@ -492,9 +492,16 @@ const authConfig = {
           const tokenVersion = mutableToken.sessionVersion;
           const versionMismatch =
             typeof tokenVersion === "number" && dbUser.sessionVersion !== tokenVersion;
+          // Beim Deaktivieren steigt die Sitzungsversion: Ältere Logins sind damit
+          // beendet (Auth.js löscht das Cookie), statt dauerhaft als deaktiviert zu
+          // gelten, auch nachdem das Konto wieder aktiviert wurde (Rückkehrer-
+          // Onboarding, "Aktivieren" in der Mitgliederverwaltung).
+          if (versionMismatch) {
+            return null;
+          }
           const isDeactivatedNow = Boolean(dbUser.deactivatedAt);
 
-          if (isDeactivatedNow || versionMismatch) {
+          if (isDeactivatedNow) {
             mutableToken.isDeactivated = true;
             mutableToken.deactivatedAt = dbUser.deactivatedAt
               ? dbUser.deactivatedAt.toISOString()
