@@ -237,30 +237,41 @@ Status-Spalten: Backlog → Ready → In Progress → In Review → Done
 - Typ: `type: security`, `type: architecture`, `type: bug`, `type: dx`, `type: testing`, `type: ops`, `type: docs`
 - Aufwand: `effort: S`, `effort: M`, `effort: L`
 
+### Issue-Format
+
+Issues sind keine Ticket-Formulare. Sie erklären kurz und klar was aufgefallen ist
+und was dagegen zu tun ist — so wie ein Entwickler es einem Kollegen erklären würde.
+
+Jeder Issue-Body folgt dieser Struktur:
+
+**Was ist aufgefallen**
+Das Problem in eigenen Worten. Was ist falsch, wo liegt es, warum ist es ein Problem.
+Datei und Zeile nennen wenn bekannt. Konkret, nicht abstrakt.
+
+**Was zu tun ist**
+Was geändert werden muss und warum das die richtige Lösung ist.
+Fließtext oder kurze natürliche Aufzählung — nur wenn wirklich nötig.
+
+**Commit-Vorschlag**
+`type(scope): description`
+
+Regeln:
+- Kein Emoji in Titel oder Body
+- Kein steifer Formular-Stil ("Fundstelle", "Akzeptanzkriterien" etc.)
+- Natürlicher Ton, aktive Sprache, auf Deutsch
+- Technisch präzise, so kurz wie möglich
+- Labels immer: priority:* + type:* + effort:*
+- Jeder Issue hat einen Milestone (Release-Schema: v0.1, v0.2, v1.0)
+
 ### Review-Workflow
 
 Wenn ein Code-Review durchgeführt wird, gilt folgender Prozess:
 
 1. **Review durchführen** mit dem DeepSeek-Review-Prompt (siehe `docs/review-prompt.md`)
-2. **Issues erstellen** — jeder Finding wird ein eigenes Issue mit:
+2. **Issues erstellen** — jeder Finding wird ein eigenes Issue (Format siehe oben), mit:
    - Titel: kurz, präzise, Deutsch, kein Emoji
    - Labels: immer `priority:*` + `type:*` + `effort:*`
    - Milestone: passendes Release
-   - Body-Struktur:
-     ```text
-     ## Fundstelle
-     `Datei:Zeile`
-
-     ## Beschreibung
-     Was ist das Problem und warum.
-
-     ## Akzeptanzkriterien
-     - [ ] Konkreter Fix
-     - [ ] `pnpm lint && pnpm test && pnpm build` läuft sauber durch
-
-     ## Commit-Vorschlag
-     `type(scope): description`
-     ```
 3. **Issues dem Project zuweisen** — Status initial auf Backlog
 4. **AGENTS.md aktualisieren** — neue Standards oder geänderte Prozesse sofort dokumentieren
 
