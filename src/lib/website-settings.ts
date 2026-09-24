@@ -29,7 +29,6 @@ export type PageVisibilitySettings = {
   pages: {
     general: boolean;
     maintenance: boolean;
-    ui: boolean;
     websiteTheme: boolean;
   };
   public: {
@@ -51,7 +50,7 @@ export type PageVisibilitySettings = {
 };
 
 export const DEFAULT_PAGE_VISIBILITY: PageVisibilitySettings = {
-  pages: { general: true, maintenance: true, ui: true, websiteTheme: true },
+  pages: { general: true, maintenance: true, websiteTheme: true },
   public: { about: true, mystery: true, schoolCat: true, timeline: true },
   members: {},
   categories: {
@@ -86,7 +85,6 @@ function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
     pages: {
       general: pick(pages.general, true),
       maintenance: pick(pages.maintenance, true),
-      ui: pick(pages.ui, true),
       websiteTheme: pick(pages.websiteTheme, true),
     },
     public: {

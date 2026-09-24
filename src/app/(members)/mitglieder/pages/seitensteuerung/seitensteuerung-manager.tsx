@@ -54,7 +54,7 @@ export function SeitensteuerungManager() {
   const [pageVisibility, setPageVisibility] = useState<ClientWebsiteSettings["pageVisibility"]>({
     public: { about: true, mystery: true, schoolCat: true, timeline: true },
     members: {},
-    pages: { general: true, maintenance: true, ui: true, websiteTheme: true },
+    pages: { general: true, maintenance: true, websiteTheme: true },
     categories: {
       dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true },
     },

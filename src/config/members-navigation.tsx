@@ -348,12 +348,6 @@ export const membersNavigation = [
     label: "Pages",
     items: [
       {
-        href: "/mitglieder/pages/ui",
-        label: "UI",
-        permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",
-        icon: DashboardIcon,
-      },
-      {
         href: "/mitglieder/website",
         label: "Website & Theme",
         permissionKey: "PRIVATE.ADMIN.PAGES.MANAGE",

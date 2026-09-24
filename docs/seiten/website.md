@@ -10,7 +10,6 @@ Inhalte und Seitensteuerung (Sichtbarkeit von Seiten).
 - `/mitglieder/website` – Theme & Branding
 - `/mitglieder/website/inhalte` – Inhalte
 - `/mitglieder/pages/seitensteuerung` – Seitensteuerung
-- `/mitglieder/pages/ui` – UI-Steuerung
 
 ## Permissions
 
