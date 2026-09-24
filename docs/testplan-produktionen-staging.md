@@ -37,6 +37,7 @@ Vorbereitung:
 
 - [ ] Testproduktion anlegen (Status „In Planung“), WhatsApp-Link setzen.
 - [ ] Mitgliederverwaltung → Einladungslinks → „Link erstellen“ für die Testproduktion.
+- [ ] Beim Erstellen sind nur geplante/aktive Produktionen wählbar (nicht „Die unendliche Geschichte“, falls beendet).
 - [ ] Link im privaten Fenster öffnen → „Los geht's“ → bei E-Mail die Adresse von A eintippen und Feld verlassen →
       Hinweis „Diese Adresse kennen wir schon … Jetzt anmelden“.
 - [ ] Mit neuer Adresse komplett durchlaufen → neues Konto ist im Ensemble der Testproduktion **Aktiv**, Onboarding
@@ -46,6 +47,9 @@ Vorbereitung:
 
 - [ ] Konto B deaktivieren.
 - [ ] Ensemble der Testproduktion → „Ehemalige einladen“ → B auswählen → ✉️ Mail kommt an (sonst Link kopieren).
+- [ ] Den persönlichen Link von B zuerst angemeldet als A öffnen → „Link für eine andere Person“.
+- [ ] Mitgliederverwaltung → Einladungslinks: der persönliche Link von B erscheint **nicht** in der Liste, stattdessen
+      der Hinweis auf ausgeblendete Rückkehr-Einladungen.
 - [ ] Link öffnen → Anmelden (Authentik) → Hinweis „Zugang wird nach Abschluss freigeschaltet“.
 - [ ] Während des Wizards `/mitglieder` direkt aufrufen → **kein** Zugriff.
 - [ ] Wizard: Allergien sind vorausgefüllt; Absenden ohne Bestätigungs-Häkchen → Fehlermeldung; mit Häkchen → ok.
