@@ -34,7 +34,7 @@ Registry-URL `https://tweakcn.com/r/themes/<name>.json`) und wieder exportieren.
 - [x] 3. `globals.css`/Layout: Schriften, Schatten, Tracking aus dem Theme. Schriften-Pakete.
 - [x] 4. Editor neu: Import/Export, Farbwähler pro Variable (Light/Dark), Vorschau.
 - [x] 5a. Drupal-Theme als Preset „Sommertheater (Drupal)“ (`src/lib/theme/presets`).
-- [ ] 5b. Öffentlicher CSS-Endpunkt `/api/website/theme.css`.
+- [x] 5b. Öffentlicher CSS-Endpunkt `/api/website/theme.css`.
 - [ ] 6. Drupal-Theme lädt den Endpunkt (Repo `Theme-Drupal-Sommertheater`).
 - [ ] C. Aufräumen nach Staging-Test: Migration schreibt alle Themes ins neue Format, alter
       Ableitungscode, `tokens.json`-Parameter und `build-design-tokens.mjs` entfallen.
