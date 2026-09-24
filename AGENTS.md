@@ -226,11 +226,13 @@ Die GitHub-Projektstruktur folgt einem Release-basierten Schema.
 Status-Spalten: Backlog → Ready → In Progress → In Review → Done
 
 **Milestones:** Release-basiert nach Schema v0.x / v1.x
+
 - v0.1: Sicherheitskritische Findings und Blocker aus dem Code-Review: API-Validierung (Allergien), Dockerfile-Härtung (non-root, HEALTHCHECK), CSP unsafe-eval und Ersatz nativer Browser-Dialoge.
 - v0.2: Architektur und Code-Qualität: Namenskollisionen auflösen, Regelverstöße beheben, "use client"-Bereinigung, Datei-Aufteilung und UI-Pattern-Konsistenz.
 - v1.0: Cleanup, Dokumentation und Ops: tote Codepfade, Design-Token-Konsistenz, Ladezustände, ENV-/Doku-Pflege und Deployment-Härtung.
 
 **Labels:**
+
 - Priorität: `priority: critical`, `priority: high`, `priority: low`
 - Typ: `type: security`, `type: architecture`, `type: bug`, `type: dx`, `type: testing`, `type: ops`, `type: docs`
 - Aufwand: `effort: S`, `effort: M`, `effort: L`
