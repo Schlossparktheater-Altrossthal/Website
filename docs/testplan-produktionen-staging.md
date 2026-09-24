@@ -1,14 +1,48 @@
 # Testplan Staging: Produktionen, Onboarding & Fotoerlaubnis
 
-Vor dem Prod-Release (Migrationen `20260923120000` … `20260924140000`) einmal auf Staging durchgehen.
+Vor dem Prod-Release (Migrationen `20260923120000` … `20260924140000`).
 Plan und Hintergründe: `docs/produktionen-mitglieder-plan.md`.
 
-Vorbereitung:
+## Automatisiert: Integrationstests
+
+Die Abschnitte 1–7 unten sind als Integrationstests abgedeckt (`tests/integration/`, eine Datei pro
+Abschnitt). Sie laufen gegen einen echten Postgres mit dem Prod-Dump:
+
+```bash
+npm run test:integration
+```
+
+- `global-setup.ts` legt die Datenbank `mb_it` neu an, lädt den Dump, ergänzt die zweite Produktion
+  „???“ (2027) wie in Prod, merkt sich den Stand vor der Migration und führt `prisma migrate deploy` aus.
+- Voreinstellung: Container `mb-test-pg` (Port 15432, Passwort `pw`), Dump `~/theater_prod_dump.sql`;
+  anpassbar über `IT_PG_CONTAINER`, `IT_PG_URL`, `IT_DB_NAME`, `IT_DUMP`. Für einen aktuellen Stand
+  vorher einen frischen Prod-Dump ziehen.
+- Echt sind Datenbank, Rechteprüfung, API-Routen und Server-Actions. Ersetzt werden nur Login
+  (Authentik), Mailversand (Mails werden mitgeschrieben), Authentik-Gruppen, Next-Cache/Cookies, Realtime.
+- Dateien laufen nach Namen; `01-migration` prüft den unberührten Stand, die übrigen legen eigene
+  Testkonten (`it-…@example.org`) und Testproduktionen an.
+
+Nicht automatisiert, daher als **Smoke-Test auf Staging** (ca. 10 Minuten):
+
+- [ ] Nach Deploy + db-sync: Produktionsübersicht, Ensemble, Fotoerlaubnis-Verwaltung und Datenpflege
+      laden ohne Fehler und zeigen die Werte aus Abschnitt 1.
+- [ ] Rückkehrer-Login mit echtem Authentik: Testkonto deaktivieren → „Ehemalige einladen“ → Link kopieren
+      (Staging verschickt keine Mails, `MAIL_DISABLED`) → Anmelden → Wizard (Allergien vorausgefüllt,
+      Bestätigungs-Häkchen) → Mitgliederbereich erreichbar.
+- [ ] „Fotoliste (CSV)“ in Excel/LibreOffice öffnen (Umlaute, Spalten).
+- [ ] Aufräumen: Testproduktion archivieren, Testkonto deaktivieren.
+
+Mails (✉️) einmalig nach dem Prod-Release mit einem eigenen Testkonto prüfen.
+
+---
+
+Die folgende ausführliche Checkliste dient als Referenz für die Tests bzw. für manuelle Nachtests.
+
+Vorbereitung (manuell):
 
 - Staging frisch aus Prod synchronisieren (db-sync-Job), damit die Migrationen wie in Prod am Stück laufen.
-- Zwei Testkonten: **A** (normales Mitglied) und **B** (Mitglied, das später deaktiviert wird). Beide mit echter,
-  erreichbarer E-Mail-Adresse.
-- Mailversand in den Server-Einstellungen eingerichtet (SMTP), sonst Punkte mit ✉️ über die angezeigten Links testen.
+- Zwei Testkonten: **A** (normales Mitglied) und **B** (Mitglied, das später deaktiviert wird).
+- Staging verschickt keine Mails (`MAIL_DISABLED=true`): Punkte mit ✉️ über die angezeigten Links testen.
 
 ## 1. Migration (direkt nach dem Deploy)
 
