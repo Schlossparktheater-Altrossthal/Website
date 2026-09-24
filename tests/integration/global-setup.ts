@@ -45,12 +45,18 @@ export default function setup() {
   );
 
   // Prod hat zusätzlich den Teaser „???“ (2027) – genau das brach die ersten Backfills.
-  psql(
-    `INSERT INTO "Show" (id, year, title, dates) VALUES ('show2027', 2027, '???', 'null'::jsonb);`,
-  );
+  // Ältere Dumps (Juni) kennen ihn noch nicht.
+  psql(`INSERT INTO "Show" (id, year, title, dates)
+    SELECT 'show2027', 2027, '???', 'null'::jsonb
+    WHERE NOT EXISTS (SELECT 1 FROM "Show" WHERE title = '???');`);
 
   const snapshot = {
     consents: Number(psql(`SELECT count(*) FROM "PhotoConsent"`)),
+    // Mitgliedschaften, die es in „???“ schon vor der Migration gab (z. B. der Owner, der sie anlegte).
+    teaserMembers: psql(`SELECT pm."userId" FROM "ProductionMembership" pm
+      JOIN "Show" s ON s.id = pm."showId" WHERE s.title = '???' ORDER BY 1`)
+      .split("\n")
+      .filter(Boolean),
     consentStatus: JSON.parse(
       psql(`SELECT coalesce(json_object_agg("userId", status), '{}') FROM "PhotoConsent"`),
     ) as Record<string, string>,

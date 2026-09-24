@@ -14,6 +14,7 @@ import {
   itState,
   resetItState,
   signInAsAdmin,
+  teaserShow,
 } from "./harness";
 
 // Testplan Abschnitt 2: Aktive Produktion wechseln & Saisonabschluss.
@@ -24,10 +25,10 @@ describe("Aktive Produktion & Saisonabschluss", () => {
     await signInAsAdmin();
     const activeBefore = await prisma.user.count({ where: { deactivatedAt: null } });
 
-    const result = await setActiveProductionAction(form({ showId: "show2027" }));
+    const result = await setActiveProductionAction(form({ showId: (await teaserShow()).id }));
 
     expect(result).toMatchObject({ ok: true });
-    expect(itState.cookies.get("active-production")).toBe("show2027");
+    expect(itState.cookies.get("active-production")).toBe((await teaserShow()).id);
     expect(await prisma.user.count({ where: { deactivatedAt: null } })).toBe(activeBefore);
   });
 

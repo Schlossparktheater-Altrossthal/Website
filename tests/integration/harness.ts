@@ -30,6 +30,7 @@ export const LEGACY_SHOW_TITLE = "Die unendliche Geschichte";
 
 export type PreMigrationSnapshot = {
   consents: number;
+  teaserMembers: string[];
   consentStatus: Record<string, string>;
   activeUsers: string[];
   roles: Record<string, string[]>;
@@ -43,6 +44,10 @@ export function readPreMigrationSnapshot(): PreMigrationSnapshot {
 
 export async function legacyShow() {
   return prisma.show.findFirstOrThrow({ where: { title: LEGACY_SHOW_TITLE } });
+}
+
+export async function teaserShow() {
+  return prisma.show.findFirstOrThrow({ where: { title: "???" } });
 }
 
 const tag = () => randomUUID().slice(0, 8);
