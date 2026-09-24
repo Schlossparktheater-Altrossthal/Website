@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import "./design-tokens.css";
 import "./globals.css";
+import "./theme-fonts";
 import type { Viewport } from "next";
 import type { Session } from "next-auth";
 import { ColorModeScript } from "@/components/theme/color-mode-script";

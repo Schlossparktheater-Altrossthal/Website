@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { themeDescriptionSchema, themeIdSchema, themeNameSchema } from "../theme-schemas";
+import {
+  themeDescriptionSchema,
+  themeIdSchema,
+  themeImportSourceSchema,
+  themeNameSchema,
+} from "../theme-schemas";
 
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { resolveThemeImport } from "@/lib/theme/import";
+import { ThemeImportError } from "@/lib/theme/tweakcn";
 import {
   createWebsiteTheme,
   listWebsiteThemes,
@@ -16,6 +23,7 @@ const createThemeSchema = z
     name: themeNameSchema.optional(),
     description: themeDescriptionSchema,
     sourceThemeId: themeIdSchema.optional(),
+    importSource: themeImportSourceSchema.optional(),
   })
   .optional();
 
@@ -69,8 +77,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: issue?.message ?? "Ungültige Eingabe." }, { status: 400 });
   }
 
+  const { importSource, ...options } = parsed.data ?? {};
+  let imported: Awaited<ReturnType<typeof resolveThemeImport>> | null = null;
+  if (importSource) {
+    try {
+      imported = await resolveThemeImport(importSource);
+    } catch (error) {
+      if (error instanceof ThemeImportError) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      console.error("Failed to import website theme", error);
+      return NextResponse.json({ error: "Theme konnte nicht importiert werden." }, { status: 500 });
+    }
+  }
+
   try {
-    const theme = await createWebsiteTheme(parsed.data ?? {});
+    const theme = await createWebsiteTheme({
+      ...options,
+      name:
+        options.name ?? imported?.suggestedName ?? (imported ? "Importiertes Theme" : undefined),
+      tokens: imported?.theme,
+    });
     const summary: ClientWebsiteThemeSummary = {
       id: theme.id,
       name: theme.name,

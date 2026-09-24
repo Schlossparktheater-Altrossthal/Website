@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { sanitiseThemeTokens } from "@/lib/website-settings";
+import { sanitiseThemeTokens, toTweakcnTheme } from "@/lib/website-settings";
 
 const PARAMETERS_PAYLOAD = {
   families: {
@@ -62,5 +62,36 @@ describe("sanitiseThemeTokens", () => {
     expect(modes.dark.primary).toBe("oklch(0.73 0.12 40)");
     expect(modes.contrast.special).toBe("#ff00ff");
     expect(tokens.meta?.modes).toEqual(["light", "dark", "contrast"]);
+  });
+});
+
+describe("toTweakcnTheme", () => {
+  test("übernimmt alte Themes mit identischen Farbwerten", () => {
+    const legacy = sanitiseThemeTokens({
+      radius: { base: "0.75rem" },
+      parameters: PARAMETERS_PAYLOAD,
+    });
+    const modes = legacy.modes as Record<string, Record<string, string>>;
+    const theme = toTweakcnTheme({ radius: { base: "0.75rem" }, parameters: PARAMETERS_PAYLOAD });
+
+    expect(theme.format).toBe("tweakcn");
+    expect(theme.theme.radius).toBe("0.75rem");
+    for (const scheme of ["light", "dark"] as const) {
+      for (const [name, value] of Object.entries(modes[scheme])) {
+        expect(theme[scheme][name]).toBe(value);
+      }
+    }
+  });
+
+  test("lässt tweakcn-Themes unverändert und ist idempotent", () => {
+    const theme = toTweakcnTheme({
+      format: "tweakcn",
+      theme: { "font-sans": "Outfit, sans-serif" },
+      light: { primary: "#e58a08" },
+      dark: { primary: "#e58a08" },
+    });
+    expect(theme.light.primary).toBe("#e58a08");
+    expect(theme.theme["font-sans"]).toBe("Outfit, sans-serif");
+    expect(toTweakcnTheme(theme)).toEqual(theme);
   });
 });

@@ -2,6 +2,13 @@ import { randomUUID } from "crypto";
 
 import { designTokens } from "@/design-system";
 import { prisma } from "@/lib/prisma";
+import { SOMMERTHEATER_DRUPAL_THEME_CSS } from "@/lib/theme/presets/sommertheater-drupal";
+import {
+  isTweakcnTheme,
+  parseThemeCss,
+  sanitiseTweakcnTheme,
+  type TweakcnTheme,
+} from "@/lib/theme/tweakcn";
 import type { Prisma, WebsiteSettings, WebsiteTheme } from "@prisma/client";
 
 export const DEFAULT_THEME_ID = "default-website-theme" as const;
@@ -972,10 +979,18 @@ type WebsiteThemePresetDefinition = {
   id: string;
   name: string;
   description: string;
-  createTokens: () => ThemeTokens;
+  createTokens: () => ThemeTokens | TweakcnTheme;
 };
 
+export const SOMMERTHEATER_DRUPAL_THEME_ID = "sommertheater-drupal" as const;
+
 const PRESET_THEME_DEFINITIONS: WebsiteThemePresetDefinition[] = [
+  {
+    id: SOMMERTHEATER_DRUPAL_THEME_ID,
+    name: "Sommertheater (Drupal)",
+    description: "Gleiches Theme wie die öffentliche Drupal-Website (theme.css).",
+    createTokens: () => parseThemeCss(SOMMERTHEATER_DRUPAL_THEME_CSS),
+  },
   {
     id: "theatre-sunset-glow",
     name: "Sommertheater Sonnenuntergang",
@@ -1086,7 +1101,24 @@ export function sanitiseThemeTokens(value: unknown): ThemeTokens {
   return base;
 }
 
-function tokensToJson(tokens: ThemeTokens): Prisma.JsonObject {
+/**
+ * Wandelt ein gespeichertes Theme in das tweakcn-Format um. Alte Themes (Farbfamilien +
+ * Ableitungsregeln) werden über ihre berechneten Modi übernommen und sehen daher gleich aus.
+ */
+export function toTweakcnTheme(value: unknown): TweakcnTheme {
+  if (isTweakcnTheme(value)) {
+    return sanitiseTweakcnTheme(value);
+  }
+  const legacy = sanitiseThemeTokens(value);
+  const modes = legacy.modes as Record<string, Record<string, string> | undefined>;
+  return sanitiseTweakcnTheme({
+    theme: { radius: legacy.radius.base },
+    light: modes.light,
+    dark: modes.dark,
+  });
+}
+
+function tokensToJson(tokens: TweakcnTheme): Prisma.JsonObject {
   return JSON.parse(JSON.stringify(tokens)) as Prisma.JsonObject;
 }
 
@@ -1144,7 +1176,7 @@ export type ResolvedWebsiteTheme = {
   id: string;
   name: string;
   description: string | null;
-  tokens: ThemeTokens;
+  tokens: TweakcnTheme;
   isDefault: boolean;
   isPreset: boolean;
   updatedAt: Date | null;
@@ -1164,7 +1196,7 @@ const FALLBACK_THEME: ResolvedWebsiteTheme = {
   id: "__design-system__",
   name: "Designsystem",
   description: "Standardfarben aus dem Designsystem.",
-  tokens: cloneDefaultTokens(),
+  tokens: toTweakcnTheme(cloneDefaultTokens()),
   isDefault: true,
   isPreset: true,
   updatedAt: null,
@@ -1179,7 +1211,7 @@ export function resolveWebsiteTheme(record: WebsiteTheme | null | undefined): Re
     id: record.id,
     name: record.name,
     description: record.description ?? null,
-    tokens: sanitiseThemeTokens(record.tokens ?? designTokens),
+    tokens: toTweakcnTheme(record.tokens ?? designTokens),
     isDefault: record.isDefault ?? false,
     isPreset: PRESET_THEME_IDS.has(record.id) || Boolean(record.isDefault),
     updatedAt: record.updatedAt ?? null,
@@ -1207,7 +1239,7 @@ export type ClientWebsiteTheme = {
   id: string;
   name: string;
   description: string | null;
-  tokens: ThemeTokens;
+  tokens: TweakcnTheme;
   isDefault: boolean;
   isPreset: boolean;
   updatedAt: string | null;
@@ -1237,7 +1269,7 @@ export function toClientWebsiteTheme(resolved: ResolvedWebsiteTheme): ClientWebs
     id: resolved.id,
     name: resolved.name,
     description: resolved.description,
-    tokens: cloneThemeTokens(resolved.tokens),
+    tokens: deepClone(resolved.tokens),
     isDefault: resolved.isDefault,
     isPreset: resolved.isPreset,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
@@ -1297,7 +1329,7 @@ export async function ensureWebsiteTheme(preferredId?: string | null) {
       name: "Sommertheater Standard",
       description: "Standard-Theme basierend auf dem aktuellen Designsystem.",
       isDefault: true,
-      tokens: tokensToJson(cloneDefaultTokens()),
+      tokens: tokensToJson(toTweakcnTheme(cloneDefaultTokens())),
     },
   });
 }
@@ -1428,10 +1460,11 @@ export async function saveWebsiteTheme(id: string, input: WebsiteThemeInput) {
     input.description,
     existing?.description ?? null,
   );
-  const resolvedTokens =
-    input.tokens !== undefined
-      ? tokensToJson(sanitiseThemeTokens(input.tokens))
-      : tokensToJson(sanitiseThemeTokens(existing?.tokens ?? cloneDefaultTokens()));
+  const resolvedTokens = tokensToJson(
+    toTweakcnTheme(
+      input.tokens !== undefined ? input.tokens : (existing?.tokens ?? cloneDefaultTokens()),
+    ),
+  );
 
   if (existing) {
     return prisma.websiteTheme.update({
@@ -1459,6 +1492,8 @@ export type CreateWebsiteThemeOptions = {
   name?: string | null;
   description?: string | null;
   sourceThemeId?: string | null;
+  /** Direkt übergebenes Theme, z. B. aus einem tweakcn-Import. */
+  tokens?: TweakcnTheme | null;
 };
 
 function sortResolvedThemes(themes: ResolvedWebsiteTheme[]) {
@@ -1480,10 +1515,10 @@ export async function ensurePresetWebsiteThemes() {
     select: { id: true, tokens: true },
   });
   const existingMap = new Map(existingThemes.map((theme) => [theme.id, theme] as const));
-  const fallbackTokens = sanitiseThemeTokens(cloneDefaultTokens());
+  const fallbackTokens = toTweakcnTheme(cloneDefaultTokens());
 
   for (const preset of PRESET_THEME_DEFINITIONS) {
-    const desiredTokens = sanitiseThemeTokens(preset.createTokens());
+    const desiredTokens = toTweakcnTheme(preset.createTokens());
     const existing = existingMap.get(preset.id);
 
     if (!existing) {
@@ -1499,16 +1534,12 @@ export async function ensurePresetWebsiteThemes() {
       continue;
     }
 
-    const existingTokens = sanitiseThemeTokens(existing.tokens ?? cloneDefaultTokens());
-    const desiredModesJson = JSON.stringify(desiredTokens.modes);
-    const existingModesJson = JSON.stringify(existingTokens.modes);
-
-    if (existingModesJson === desiredModesJson) {
+    // Presets, die noch die Standardfarben tragen (z. B. nach fehlerhafter Anlage), reparieren.
+    const existingJson = JSON.stringify(toTweakcnTheme(existing.tokens ?? cloneDefaultTokens()));
+    if (existingJson === JSON.stringify(desiredTokens)) {
       continue;
     }
-
-    const fallbackModesJson = JSON.stringify(fallbackTokens.modes);
-    if (existingModesJson !== fallbackModesJson) {
+    if (existingJson !== JSON.stringify(fallbackTokens)) {
       continue;
     }
 
@@ -1574,7 +1605,7 @@ export async function createWebsiteTheme(
     ? await prisma.websiteTheme.findUnique({ where: { id: sourceId } })
     : null;
 
-  const baseTokens = sourceTheme?.tokens ?? cloneDefaultTokens();
+  const baseTokens = options.tokens ?? sourceTheme?.tokens ?? cloneDefaultTokens();
   const fallbackName = sourceTheme ? `${sourceTheme.name} Kopie` : "Neues Theme";
   const newId = randomUUID();
 

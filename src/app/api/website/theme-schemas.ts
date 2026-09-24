@@ -2,80 +2,22 @@ import { z } from "zod";
 
 export const themeIdSchema = z.string().trim().min(1);
 
-export function createModeSchema() {
-  return z
-    .record(z.string().trim().min(1), z.string().trim().min(1).max(200))
-    .refine((value) => Object.keys(value).length > 0, {
-      message: "Jeder Modus benötigt mindestens ein Token.",
-    });
-}
+const themeVariablesSchema = z
+  .record(z.string().trim().min(1).max(66), z.string().trim().min(1).max(400))
+  .refine((value) => Object.keys(value).length <= 200, {
+    message: "Zu viele Theme-Variablen.",
+  });
 
-const oklchSchema = z.object({
-  l: z.number(),
-  c: z.number(),
-  h: z.number(),
-  alpha: z.number().min(0).max(1).optional(),
-});
-
-const familyModesSchema = z.record(z.string().min(1), oklchSchema);
-
-const familiesSchema = z.record(z.string().min(1), familyModesSchema);
-
-export const tokenAdjustmentSchema = z.object({
-  deltaL: z.number().optional(),
-  l: z.number().optional(),
-  scaleL: z.number().optional(),
-  deltaC: z.number().optional(),
-  c: z.number().optional(),
-  scaleC: z.number().optional(),
-  h: z.number().optional(),
-  deltaH: z.number().optional(),
-  alpha: z.number().optional(),
-  deltaAlpha: z.number().optional(),
-  scaleAlpha: z.number().optional(),
-  value: z.string().trim().min(1).optional(),
-  family: z.string().trim().min(1).optional(),
-});
-
-const tokenMetaSchema = z.object({
-  description: z.string().trim().max(400).optional(),
-  notes: z.string().trim().max(1000).optional(),
-  tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
-});
-
-const semanticTokenSchema = tokenMetaSchema
-  .extend({ family: z.string().trim().min(1) })
-  .catchall(tokenAdjustmentSchema);
-
-export const parametersSchema = z.object({
-  families: familiesSchema,
-  tokens: z.record(z.string().min(1), semanticTokenSchema),
-});
-
-const tokensMetaSchema = z
-  .object({
-    modes: z.array(z.string().trim().min(1)).optional(),
-    generatedAt: z.string().trim().optional(),
-  })
-  .catchall(z.any())
-  .optional();
-
-const modeValuesSchema = createModeSchema();
-
-const themeModesSchema = z
-  .object({
-    light: modeValuesSchema.optional(),
-    dark: modeValuesSchema.optional(),
-  })
-  .catchall(modeValuesSchema)
-  .optional();
-
+/** Theme im tweakcn-Format; Werte werden serverseitig zusätzlich bereinigt. */
 export const themeTokensSchema = z.object({
-  radius: z.object({ base: z.string().trim().min(1).max(120) }),
-  parameters: parametersSchema,
-  modes: themeModesSchema,
-  meta: tokensMetaSchema,
+  format: z.literal("tweakcn"),
+  theme: themeVariablesSchema,
+  light: themeVariablesSchema,
+  dark: themeVariablesSchema,
 });
+
+/** Eingefügtes CSS/JSON oder ein tweakcn-Link. */
+export const themeImportSourceSchema = z.string().trim().min(1).max(200_000);
 
 export const themeNameSchema = z.string().trim().min(2).max(120);
 

@@ -1,8 +1,7 @@
-import { createThemeCss } from "@/lib/theme-css";
-import type { ThemeTokens } from "@/lib/website-settings";
+import { createTweakcnThemeCss, type TweakcnTheme } from "@/lib/theme/tweakcn";
 
-export function ThemeStyleRegistry({ tokens }: { tokens: ThemeTokens }) {
-  const css = createThemeCss(tokens);
+export function ThemeStyleRegistry({ tokens }: { tokens: TweakcnTheme }) {
+  const css = createTweakcnThemeCss(tokens, { resolveFonts: true });
   return (
     <style
       id="website-theme-style"
