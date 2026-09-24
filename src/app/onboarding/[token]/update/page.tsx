@@ -127,6 +127,21 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     );
   }
 
+  if (invite.personalForUserId && invite.personalForUserId !== userId) {
+    return (
+      <main id="main" className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <div className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+          <h1 className="text-3xl font-semibold text-foreground">Link für eine andere Person</h1>
+          <p className="text-muted-foreground">
+            Dieser persönliche Einladungslink gehört zu einem anderen Konto. Bitte melde dich mit
+            dem Konto an, an das die Einladung ging, oder frag die Produktionsleitung nach einem
+            eigenen Link.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const [
     existingProfile,
     existingDietary,

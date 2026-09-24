@@ -180,6 +180,7 @@ export async function POST(request: NextRequest) {
         id: true,
         showId: true,
         roles: true,
+        personalForUserId: true,
         expiresAt: true,
         maxUses: true,
         usageCount: true,
@@ -188,6 +189,12 @@ export async function POST(request: NextRequest) {
     });
     if (invite) {
       const status = calculateInviteStatus(invite);
+      if (invite.personalForUserId && invite.personalForUserId !== userId) {
+        return NextResponse.json(
+          { error: "Dieser Einladungslink ist für eine andere Person bestimmt." },
+          { status: 403 },
+        );
+      }
       if (status.isActive && invite.showId) {
         targetShowId = invite.showId;
         targetInviteId = invite.id;

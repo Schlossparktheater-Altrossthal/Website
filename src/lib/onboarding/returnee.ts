@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hashInviteToken, isInviteUsable } from "@/lib/member-invites";
 
-export type ActiveInvite = { id: string; showId: string };
+export type ActiveInvite = { id: string; showId: string; personalForUserId: string | null };
 
 /** Nimmt den Klartext-Token oder dessen Hash aus einem Einladungslink entgegen. */
 export function normalizeInviteTokenHash(token: string): string {
@@ -20,6 +20,7 @@ export async function resolveActiveInvite(
     select: {
       id: true,
       showId: true,
+      personalForUserId: true,
       expiresAt: true,
       maxUses: true,
       usageCount: true,
@@ -27,7 +28,7 @@ export async function resolveActiveInvite(
     },
   });
   if (!invite || !isInviteUsable(invite, now)) return null;
-  return { id: invite.id, showId: invite.showId };
+  return { id: invite.id, showId: invite.showId, personalForUserId: invite.personalForUserId };
 }
 
 /**
@@ -36,8 +37,17 @@ export async function resolveActiveInvite(
  * abgeschlossen haben.
  */
 export function canSignInAsReturnee(
-  member: { deactivatedAt: Date | null },
+  member: { id: string; deactivatedAt: Date | null },
   invite: ActiveInvite | null,
 ): boolean {
-  return !member.deactivatedAt || invite !== null;
+  if (!member.deactivatedAt) return true;
+  return invite !== null && isInviteForMember(invite, member.id);
+}
+
+/** Persönliche Einladungen gelten nur für das Konto, für das sie erstellt wurden. */
+export function isInviteForMember(
+  invite: { personalForUserId: string | null },
+  userId: string,
+): boolean {
+  return invite.personalForUserId === null || invite.personalForUserId === userId;
 }

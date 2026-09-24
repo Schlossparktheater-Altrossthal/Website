@@ -331,6 +331,7 @@ model User {
   characterCastings      CharacterCasting[]
   breakdownAssignments   SceneBreakdownItem[] @relation("BreakdownAssignee")
   inviteLinksCreated     MemberInvite[]       @relation("MemberInvitesCreated")
+  personalInvites        MemberInvite[]       @relation("MemberInvitesPersonal")
   inviteRedemptions      MemberInviteRedemption[]
   onboardingProfile      MemberOnboardingProfile?
   interests              UserInterest[]
@@ -1375,12 +1376,17 @@ model MemberInvite {
   isDisabled  Boolean  @default(false)
   createdById String
   showId      String
+  /// Persönliche Rückkehr-Einladung: nur dieses Konto darf den Link nutzen.
+  personalForUserId String?
 
   createdBy   User     @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  personalFor User?    @relation("MemberInvitesPersonal", fields: [personalForUserId], references: [id], onDelete: SetNull)
   redemptions MemberInviteRedemption[]
   onboardings MemberOnboardingProfile[]
   productionOnboardings ProductionOnboarding[]
   show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@index([personalForUserId])
 }
 
 model MemberInviteRedemption {

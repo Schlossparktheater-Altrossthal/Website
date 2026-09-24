@@ -68,12 +68,33 @@ describe("Passwort vergessen für Rückkehrer", () => {
       email: "a@example.org",
       deactivatedAt: new Date(),
     });
-    mocks.resolveActiveInvite.mockResolvedValue({ id: "invite-1", showId: "show-1" });
+    mocks.resolveActiveInvite.mockResolvedValue({
+      id: "invite-1",
+      showId: "show-1",
+      personalForUserId: null,
+    });
 
     await POST(request({ email: "a@example.org", onboardingToken: "token-abc" }));
 
     expect(mocks.resolveActiveInvite).toHaveBeenCalledWith("token-abc");
     expect(mocks.sendMail).toHaveBeenCalled();
+  });
+
+  it("ignoriert persönliche Links, die für jemand anderen sind", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      id: "user-1",
+      email: "a@example.org",
+      deactivatedAt: new Date(),
+    });
+    mocks.resolveActiveInvite.mockResolvedValue({
+      id: "invite-1",
+      showId: "show-1",
+      personalForUserId: "user-9",
+    });
+
+    await POST(request({ email: "a@example.org", onboardingToken: "token-abc" }));
+
+    expect(mocks.sendMail).not.toHaveBeenCalled();
   });
 
   it("ignoriert ungültige Einladungslinks", async () => {

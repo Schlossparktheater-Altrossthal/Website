@@ -81,6 +81,7 @@ describe("inviteFormerMembers", () => {
       roles: ["member", "tech"],
       showId: "show-2027",
       createdById: "admin-1",
+      personalForUserId: "anna",
       expiresAt: new Date("2026-10-23T10:00:00Z"),
     });
     expect(mocks.membershipUpsert).toHaveBeenCalledWith({

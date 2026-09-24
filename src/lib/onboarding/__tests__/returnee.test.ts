@@ -5,11 +5,17 @@ vi.mock("@/lib/prisma", () => ({ prisma: { memberInvite: { findUnique } } }));
 
 import { hashInviteToken } from "@/lib/member-invites";
 
-import { canSignInAsReturnee, normalizeInviteTokenHash, resolveActiveInvite } from "../returnee";
+import {
+  canSignInAsReturnee,
+  isInviteForMember,
+  normalizeInviteTokenHash,
+  resolveActiveInvite,
+} from "../returnee";
 
 const usableInvite = {
   id: "invite-1",
   showId: "show-2027",
+  personalForUserId: null,
   expiresAt: null,
   maxUses: null,
   usageCount: 0,
@@ -27,7 +33,11 @@ describe("Rückkehrer-Einladungen", () => {
 
   it("liefert nur benutzbare Einladungen", async () => {
     findUnique.mockResolvedValueOnce(usableInvite);
-    expect(await resolveActiveInvite("token")).toEqual({ id: "invite-1", showId: "show-2027" });
+    expect(await resolveActiveInvite("token")).toEqual({
+      id: "invite-1",
+      showId: "show-2027",
+      personalForUserId: null,
+    });
 
     findUnique.mockResolvedValueOnce({ ...usableInvite, isDisabled: true });
     expect(await resolveActiveInvite("token")).toBeNull();
@@ -43,9 +53,17 @@ describe("Rückkehrer-Einladungen", () => {
   });
 
   it("lässt deaktivierte Konten nur mit Einladung zum Login", () => {
-    const invite = { id: "invite-1", showId: "show-2027" };
-    expect(canSignInAsReturnee({ deactivatedAt: null }, null)).toBe(true);
-    expect(canSignInAsReturnee({ deactivatedAt: new Date() }, null)).toBe(false);
-    expect(canSignInAsReturnee({ deactivatedAt: new Date() }, invite)).toBe(true);
+    const invite = { id: "invite-1", showId: "show-2027", personalForUserId: null };
+    expect(canSignInAsReturnee({ id: "u1", deactivatedAt: null }, null)).toBe(true);
+    expect(canSignInAsReturnee({ id: "u1", deactivatedAt: new Date() }, null)).toBe(false);
+    expect(canSignInAsReturnee({ id: "u1", deactivatedAt: new Date() }, invite)).toBe(true);
+  });
+
+  it("bindet persönliche Einladungen an das eingeladene Konto", () => {
+    const personal = { id: "invite-2", showId: "show-2027", personalForUserId: "u1" };
+    expect(canSignInAsReturnee({ id: "u1", deactivatedAt: new Date() }, personal)).toBe(true);
+    expect(canSignInAsReturnee({ id: "u2", deactivatedAt: new Date() }, personal)).toBe(false);
+    expect(isInviteForMember(personal, "u2")).toBe(false);
+    expect(isInviteForMember({ personalForUserId: null }, "u2")).toBe(true);
   });
 });

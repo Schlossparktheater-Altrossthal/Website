@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { calculateInviteStatus, describeInvite } from "@/lib/member-invites";
 import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
+import { isCurrentProductionStatus } from "@/lib/produktionen/status";
 
 const DATE_LIMIT_YEARS = 5;
 
@@ -110,13 +111,26 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
     const show = await prisma.show.findUnique({
       where: { id: rawShowId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
     if (!show) {
       return NextResponse.json({ error: "Produktion wurde nicht gefunden" }, { status: 404 });
     }
 
+    // Umhängen nur auf geplante oder aktive Produktionen; die bisherige bleibt erlaubt.
+    if (!isCurrentProductionStatus(show.status)) {
+      const current = await prisma.memberInvite.findUnique({
+        where: { id },
+        select: { showId: true },
+      });
+      if (current?.showId !== show.id) {
+        return NextResponse.json(
+          { error: "Einladungen lassen sich nicht auf beendete Produktionen umstellen." },
+          { status: 400 },
+        );
+      }
+    }
     data.showId = show.id;
   }
 

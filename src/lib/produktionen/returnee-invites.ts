@@ -102,6 +102,7 @@ export async function inviteFormerMembers(input: {
           roles,
           showId: show.id,
           createdById: input.createdById,
+          personalForUserId: user.id,
         },
       }),
       prisma.productionMembership.upsert({

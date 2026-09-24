@@ -130,9 +130,16 @@ type ProductionSummary = {
   title: string | null;
   year: number;
   whatsappLink: string | null;
+  /** Nur geplante/aktive Produktionen bekommen neue Links. */
+  acceptsNewInvites?: boolean;
 };
 
+function acceptsNewInvites(production: ProductionSummary) {
+  return production.acceptsNewInvites !== false;
+}
+
 function findValidShowId(productions: ProductionSummary[], candidateId: string) {
+  productions = productions.filter(acceptsNewInvites);
   if (candidateId && productions.some((production) => production.id === candidateId)) {
     return candidateId;
   }
@@ -224,6 +231,7 @@ type OnboardingSettingsDialogState = {
 
 export function MemberInviteManager() {
   const [invites, setInvites] = useState<InviteSummary[]>([]);
+  const [personalInviteCount, setPersonalInviteCount] = useState(0);
   const [productions, setProductions] = useState<ProductionSummary[]>([]);
   const [preferredShowId, setPreferredShowId] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -428,6 +436,9 @@ export function MemberInviteManager() {
         };
       });
       setInvites(normalizedInvites);
+      setPersonalInviteCount(
+        typeof data?.personalInviteCount === "number" ? data.personalInviteCount : 0,
+      );
       const defaultShowIdFromResponse =
         typeof data?.defaultShowId === "string" ? data.defaultShowId : "";
       const resolvedDefaultShowId = findValidShowId(productionsPayload, defaultShowIdFromResponse);
@@ -946,6 +957,12 @@ export function MemberInviteManager() {
         <Button onClick={() => setModalOpen(true)}>Link erstellen</Button>
       </CardHeader>
       <CardContent className="space-y-6">
+        {personalInviteCount > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {personalInviteCount} persönliche Rückkehr-Einladungen sind hier ausgeblendet. Wer
+            eingeladen ist, siehst du im Ensemble der jeweiligen Produktion (Status „Eingeladen“).
+          </p>
+        ) : null}
         {freshInvite && (
           <div className="rounded-lg border border-primary/50 bg-primary/10 p-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1514,9 +1531,9 @@ export function MemberInviteManager() {
                   ))}
                 </SelectContent>
               </Select>
-              {productions.length === 0 ? (
+              {!productions.some(acceptsNewInvites) ? (
                 <span className="text-xs text-muted-foreground">
-                  Keine Produktionen vorhanden – lege zuerst eine Produktion an.
+                  Keine geplante oder aktive Produktion – lege zuerst eine Produktion an.
                 </span>
               ) : (
                 <span className="text-xs text-muted-foreground">
@@ -1665,22 +1682,22 @@ export function MemberInviteManager() {
               <Select
                 value={form.showId}
                 onValueChange={(value) => setForm((prev) => ({ ...prev, showId: value }))}
-                disabled={productions.length === 0}
+                disabled={!productions.some(acceptsNewInvites)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Produktion wählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  {productions.map((production) => (
+                  {productions.filter(acceptsNewInvites).map((production) => (
                     <SelectItem key={`create-production-${production.id}`} value={production.id}>
                       {formatProductionLabel(production)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {productions.length === 0 ? (
+              {!productions.some(acceptsNewInvites) ? (
                 <span className="text-xs text-muted-foreground">
-                  Keine Produktionen vorhanden – lege zuerst eine Produktion an.
+                  Keine geplante oder aktive Produktion – lege zuerst eine Produktion an.
                 </span>
               ) : (
                 <span className="text-xs text-muted-foreground">

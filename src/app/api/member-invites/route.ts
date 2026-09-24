@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
+import { isCurrentProductionStatus } from "@/lib/produktionen/status";
 import {
   describeInvite,
   generateInviteToken,
@@ -85,7 +86,9 @@ export async function GET() {
     : Promise.resolve<{ showId: string }[]>([]);
 
   const [invites, productions, activeMemberships] = await Promise.all([
+    // Persönliche Rückkehr-Einladungen werden auf den Ensemble-Seiten verwaltet.
     prisma.memberInvite.findMany({
+      where: { personalForUserId: null },
       orderBy: { createdAt: "desc" },
       include: {
         createdBy: { select: { id: true, name: true, email: true } },
@@ -98,10 +101,13 @@ export async function GET() {
     }),
     prisma.show.findMany({
       orderBy: { year: "desc" },
-      select: { id: true, title: true, year: true, meta: true },
+      select: { id: true, title: true, year: true, meta: true, status: true },
     }),
     activeMembershipPromise,
   ]);
+  const personalInviteCount = await prisma.memberInvite.count({
+    where: { personalForUserId: { not: null } },
+  });
 
   const now = new Date();
   const formatted = invites.map((invite) => {
@@ -148,6 +154,8 @@ export async function GET() {
     title: show.title,
     year: show.year,
     whatsappLink: getOnboardingWhatsAppLink(show.meta),
+    // Neue Links nur für geplante oder aktive Produktionen.
+    acceptsNewInvites: isCurrentProductionStatus(show.status),
   }));
 
   let defaultShowId = "";
@@ -158,7 +166,10 @@ export async function GET() {
     defaultShowId = activeProductionId ?? "";
   }
 
-  if (defaultShowId && !formattedProductions.some((show) => show.id === defaultShowId)) {
+  if (
+    defaultShowId &&
+    !formattedProductions.some((show) => show.id === defaultShowId && show.acceptsNewInvites)
+  ) {
     defaultShowId = "";
   }
 
@@ -166,6 +177,7 @@ export async function GET() {
     invites: formatted,
     productions: formattedProductions,
     defaultShowId: defaultShowId || null,
+    personalInviteCount,
   });
 }
 
@@ -200,11 +212,17 @@ export async function POST(request: NextRequest) {
 
   const show = await prisma.show.findUnique({
     where: { id: rawShowId },
-    select: { id: true, title: true, year: true },
+    select: { id: true, title: true, year: true, status: true },
   });
 
   if (!show) {
     return NextResponse.json({ error: "Produktion wurde nicht gefunden" }, { status: 404 });
+  }
+  if (!isCurrentProductionStatus(show.status)) {
+    return NextResponse.json(
+      { error: "Für beendete oder archivierte Produktionen gibt es keine neuen Einladungslinks." },
+      { status: 400 },
+    );
   }
 
   const token = generateInviteToken();

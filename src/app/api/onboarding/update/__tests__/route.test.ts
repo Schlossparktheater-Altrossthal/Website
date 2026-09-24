@@ -236,3 +236,35 @@ describe("Rückkehrer-Onboarding: Einladung verbrauchen", () => {
     expect(mocks.inviteUpdate).not.toHaveBeenCalled();
   });
 });
+
+describe("Rückkehrer-Onboarding: persönliche Einladungen", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.auth.mockResolvedValue({ user: { id: "user-2" } });
+    mocks.getActiveProductionId.mockResolvedValue("show-2026");
+  });
+
+  it("lehnt persönliche Links anderer Personen ab", async () => {
+    mocks.inviteFindUnique.mockResolvedValue({
+      id: "invite-1",
+      showId: "show-2027",
+      personalForUserId: "user-1",
+    });
+
+    const response = await POST(request("token-abc"));
+
+    expect(response.status).toBe(403);
+    expect(mocks.consentUpsert).not.toHaveBeenCalled();
+    expect(mocks.inviteUpdate).not.toHaveBeenCalled();
+  });
+
+  it("akzeptiert den eigenen persönlichen Link", async () => {
+    mocks.inviteFindUnique.mockResolvedValue({
+      id: "invite-1",
+      showId: "show-2027",
+      personalForUserId: "user-2",
+    });
+
+    expect((await POST(request("token-abc"))).status).toBe(200);
+  });
+});
