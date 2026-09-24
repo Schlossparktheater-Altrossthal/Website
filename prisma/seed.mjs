@@ -9,7 +9,6 @@ import bcrypt from "bcryptjs";
 
 const require = createRequire(import.meta.url);
 const chronikAltrossthal = require("../src/data/chronik-altrossthal.json");
-const designTokens = require("../src/design-system/tokens.json");
 const prisma = new PrismaClient();
 
 function splitFullName(value) {
@@ -45,38 +44,17 @@ function combineName(firstName, lastName) {
 }
 
 async function main() {
-  const defaultThemeId = "default-website-theme";
-  const themeTokens = JSON.parse(JSON.stringify(designTokens));
-
-  await prisma.websiteTheme.upsert({
-    where: { id: defaultThemeId },
-    update: {
-      name: "Sommertheater Standard",
-      description: "Dynamisches Theme basierend auf dem aktuellen Designsystem.",
-      tokens: themeTokens,
-      isDefault: true,
-    },
-    create: {
-      id: defaultThemeId,
-      name: "Sommertheater Standard",
-      description: "Dynamisches Theme basierend auf dem aktuellen Designsystem.",
-      tokens: themeTokens,
-      isDefault: true,
-    },
-  });
-
+  // Das Standard-Theme legt die App beim ersten Zugriff selbst an (ensureWebsiteSettingsRecord).
   await prisma.websiteSettings.upsert({
     where: { id: "public" },
     update: {
       siteTitle: "Sommertheater im Schlosspark",
       colorMode: "dark",
-      theme: { connect: { id: defaultThemeId } },
     },
     create: {
       id: "public",
       siteTitle: "Sommertheater im Schlosspark",
       colorMode: "dark",
-      theme: { connect: { id: defaultThemeId } },
     },
   });
 

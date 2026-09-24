@@ -8,20 +8,11 @@ Dieser Leitfaden bündelt die aktualisierten Design Tokens, Typografie- und Spac
 - **Formulare:** react-hook-form + zod
 - **Icons:** lucide-react
 - **Realtime:** Socket.io Hooks (`@/hooks/useRealtime`)
-- **Design-Tokens:** `src/design-system/tokens.json` bündelt jetzt einen parametrischen Aufbau (`parameters` mit Farbfamilien und Token-Regeln) und die daraus berechneten `modes`. Nach jeder Änderung `pnpm design-system:tokens` ausführen – das aktualisiert sowohl `src/app/design-tokens.css` als auch die aufbereiteten Tokenwerte im JSON.
+- **Themes:** Farben, Schriften, Radius und Schatten kommen aus dem aktiven Website-Theme im tweakcn-/shadcn-Format (Mitglieder → Website & Theme). Themes lassen sich von [tweakcn.com](https://tweakcn.com) importieren und als `theme.css` exportieren. Details: `docs/tweakcn-theming-plan.md`, Code in `src/lib/theme/`.
 
 ## Farbpalette
 
-Die Farbwerte liegen vollständig in OKLCH vor und werden parametriert aus Farbfamilien (Basis-Hue, Chroma, Lightness) generiert. Für helle und dunkle Modi sorgen dynamische Delta-Regeln für konsistente Kontrastabstände. Die Hex-Werte dienen zur schnellen visuellen Referenz (Swatches unter `docs/swatches`).
-
-## Parametrisches Farbsystem
-
-Die Token-Konfiguration besteht aus zwei Ebenen:
-
-1. **Farbfamilien (`parameters.families`)** definieren neutrale und farbige Grundwerte in OKLCH – z. B. `neutral`, `brand`, `accent`, `success`. Jede Familie besitzt pro Modus eine Ausgangs-Lightness, Chroma und Hue, was spätere Anpassungen (z. B. leicht andere Chroma-Werte im Dark-Mode) erlaubt.
-2. **Semantische Tokens (`parameters.tokens`)** greifen auf diese Familien zu und modifizieren sie parametrisch (`deltaL`, `scaleC`, absolute `l`/`c`/`h`-Werte). Dadurch bleiben Abstände wie „Primärfarbe ist 0.48 Lightness heller als die neutrale Ausgangsfläche“ nachvollziehbar und können zentral verändert werden.
-
-Der Build-Script schreibt daraus die finalen `modes` (Light/Dark) zurück ins JSON und erzeugt die CSS-Custom-Properties. Änderungen an Familienparametern wirken sich automatisch auf sämtliche abhängige Tokens aus – die Wartung reduziert sich auf wenige Kernwerte.
+Farbwerte sind CSS-Variablen im shadcn-Schema (`--background`, `--primary`, `--card` …) plus die eigenen Statusfarben `--success`, `--warning`, `--info` (jeweils mit `-foreground`). Das aktive Theme setzt sie pro Modus in `:root` bzw. `.dark`; fehlende Variablen ergänzt `completeTweakcnTheme` aus dem Standard-Theme (`src/lib/theme/presets/builtin.ts`). Die Hex-Werte der Tabelle dienen nur als visuelle Referenz des Standard-Themes (Swatches unter `docs/swatches`).
 
 | Rolle                  | Token                                        | Vorschau                                                          |
 | ---------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
@@ -233,7 +224,7 @@ Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch di
 
 ## Pflege & Workflow
 
-1. Tokens bearbeiten (`src/design-system/tokens.json`), anschließend `pnpm design-system:tokens` ausführen.
+1. Farben im Mitgliederbereich unter „Website & Theme“ bearbeiten oder ein Theme von tweakcn.com importieren. Eingebaute Themes liegen in `src/lib/theme/presets/`.
 2. Farbänderungen in `docs/swatches/palette.sample.json` pflegen und per `pnpm swatches:gen` aktualisieren.
 3. Typografie/Spacing-Anpassungen in `src/app/globals.css` dokumentieren und in diesem Leitfaden vermerken.
 4. Für UI-Komponenten Beispiele in Storybook/Playground ergänzen (falls vorhanden) und die Varianten in Commit-Messages erwähnen.

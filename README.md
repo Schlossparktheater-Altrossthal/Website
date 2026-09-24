@@ -83,8 +83,7 @@ on [http://localhost:3000](http://localhost:3000).
 - `pnpm db:seed` – repopulate the database with seed data.
 - `pnpm start:combined` – run the production build and realtime server without Docker.
 - `pnpm start:proxy` – emulate the Docker proxy setup locally.
-- `pnpm swatches:gen` / `pnpm design-system:tokens` – update color palettes and
-  design tokens.
+- `pnpm swatches:gen` – update the color swatches in `docs/swatches`.
 - `pnpm tsx scripts/cron/aggregate-http-metrics.ts` – aggregate raw HTTP
   analytics into the summary tables.
 - `pnpm tsx scripts/cron/aggregate-session-metrics.ts` – derive session,
@@ -333,4 +332,4 @@ whenever you need to add another owner.
 After authentication you can browse to
 [http://localhost:3000](http://localhost:3000) to explore the site. The landing
 page is primarily composed of server components; UI patterns live under
-`src/components` and `src/design-system`.
+`src/components`.

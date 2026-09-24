@@ -11,7 +11,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 ## Design-System & Layout-System
 
 - **Design-Tokens statt hard-coded Farben:** Nur semantische Tokens verwenden (`bg-card`, `text-foreground`, `border-border`, `bg-muted` etc.), keine Tailwind-Farben (`bg-white`, `text-slate-*`, `bg-gray-*`). Alle Komponenten müssen in Light & Dark Mode funktionieren.
-- `src/app/design-tokens.css` wird von `scripts/build-design-tokens.mjs` generiert und muss im Root-Layout (`src/app/layout.tsx`) per JS-Import geladen werden – **nicht** per CSS-`@import` in `globals.css`. Relative CSS-`@import`-Pfade werden vom Bundler nicht zuverlässig relativ zur Datei aufgelöst (`Can't resolve './design-tokens.css'`).
+- Farben, Schriften, Radius und Schatten kommen aus dem aktiven Website-Theme (tweakcn-Format, `src/lib/theme/`), das `ThemeStyleRegistry` im Root-Layout als `:root`/`.dark`-Variablen ausgibt. Keine eigenen Farbwerte in `globals.css` ergänzen; neue Variablen in `src/lib/theme/tweakcn.ts` (inkl. Standardwert) aufnehmen.
 - **Mitgliederbereich-Layout:** `MembersAppShell` übernimmt Container und Padding. Seiten nur `<div className="space-y-6">` — keine eigenen `mx-auto`, `px-*`, `py-*` oder `<main>`-Wrapper.
 - **Custom-Layouts:** Nur bei Bedarf `<MembersContentLayout width="..." padding="..." />` verwenden.
 - **Legacy-Code:** Bestehende Komponenten mit hard-coded Farben nutzen CSS-Override-Strategie. Neue Komponenten immer mit Design-Tokens bauen.
@@ -24,7 +24,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Zentrale Skripte: `pnpm lint`, `pnpm test`, `pnpm build` und `pnpm format:check` müssen vor jedem Commit sauber durchlaufen.
 - Formatierung: Prettier ist der verbindliche Formatter (Konfiguration in `.prettierrc`). `pnpm format` formatiert das gesamte Repo, `pnpm format:check` prüft in CI. Keine manuellen Stil-Anpassungen gegen Prettier.
 - DB-Skripte: `pnpm prisma:generate`, `pnpm db:migrate`, `pnpm db:seed`.
-- Token-Workflows: `pnpm swatches:gen` und `pnpm design-system:tokens`.
+- Swatches für die Doku: `pnpm swatches:gen`.
 - Docker-Compose stellt Postgres & Mailpit bereit. Bei DB-Änderungen `.env.example` aktualisieren.
 
 ## Architektur- & Code-Richtlinien
@@ -152,7 +152,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 ## Design-Tokens
 
-- Farben immer über semantische CSS-Variablen aus `src/design-system/tokens.json` verwenden, z. B. `text-primary`, `text-destructive`, `bg-muted`.
+- Farben immer über semantische CSS-Variablen des Themes verwenden, z. B. `text-primary`, `text-destructive`, `bg-muted`.
 - Hardcodierte Farbwerte sind nicht erlaubt.
 - Kategorie- und Identitätsfarben (Rollen, Gewerke, Interessen) ausschließlich zentral in `src/config/category-colors.ts` pflegen – nie in Komponenten hardcoden.
 - Die autoritative Token-Referenz ist `docs/design-system.md`. Bei Konflikten hat `AGENTS.md` Vorrang.

@@ -30,6 +30,6 @@ Beispiel:
 
 ## Tokens einsetzen
 
-Alle Patterns lesen Farben und Radii aus den generierten CSS-Variablen (`src/app/design-tokens.css`). Änderungen an den Tokens erfolgen in `src/design-system/tokens.json`. Anschließend `pnpm design-system:tokens` ausführen, damit die Styles aktualisiert werden.
+Alle Patterns lesen Farben und Radii aus den CSS-Variablen des aktiven Website-Themes (tweakcn-Format, siehe `docs/design-system.md`).
 
 Weitere Patterns (z. B. Guided Steps, Toolbar-Layouts) sollten dem Schema folgen: Wiederverwendbarer Container + klar dokumentierte Props in dieser Datei.

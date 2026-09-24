@@ -1,4 +1,4 @@
-import { designTokens } from "@/design-system";
+import { DEFAULT_WEBSITE_THEME } from "@/lib/theme/presets/builtin";
 
 /**
  * Theme-Format kompatibel zu tweakcn.com bzw. shadcn-Registry (`cssVars`).
@@ -108,7 +108,7 @@ export const DEFAULT_THEME_VARIABLES: ThemeVariables = {
   "font-sans": "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
   "font-serif": 'ui-serif, Georgia, Cambria, "Times New Roman", serif',
   "font-mono": "var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace",
-  radius: designTokens.radius.base,
+  radius: DEFAULT_WEBSITE_THEME.theme.radius,
   "tracking-normal": "0em",
 };
 
@@ -135,8 +135,8 @@ const DERIVED_VARIABLES: [string, string][] = [
   ["chart-5", "muted-foreground"],
 ];
 
-function designTokenFallback(scheme: ThemeColorScheme): ThemeVariables {
-  return { ...(designTokens.modes[scheme] as ThemeVariables) };
+function defaultColors(scheme: ThemeColorScheme): ThemeVariables {
+  return { ...DEFAULT_WEBSITE_THEME[scheme] };
 }
 
 /**
@@ -219,7 +219,7 @@ export function completeTweakcnTheme(input: TweakcnTheme): TweakcnTheme {
   const result: TweakcnTheme = { format: TWEAKCN_THEME_FORMAT, theme, light: {}, dark: {} };
 
   for (const scheme of THEME_COLOR_SCHEMES) {
-    const fallback = designTokenFallback(scheme);
+    const fallback = defaultColors(scheme);
     // Fehlt ein Modus komplett (z. B. Theme nur mit :root), dient der andere als Basis.
     const other = scheme === "light" ? input.dark : input.light;
     const own = Object.keys(input[scheme]).length > 0 ? input[scheme] : other;

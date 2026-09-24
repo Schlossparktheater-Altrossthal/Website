@@ -37,5 +37,5 @@ Registry-URL `https://tweakcn.com/r/themes/<name>.json`) und wieder exportieren.
 - [x] 5b. Öffentlicher CSS-Endpunkt `/api/website/theme.css`.
 - [ ] 6. _Zurückgestellt (2026-09-24):_ Vorerst werden Drupal- und Mitgliederbereich-Theme getrennt
       gepflegt, Austausch per Export/Import. Später: Drupal-Theme lädt den Endpunkt.
-- [ ] C. Aufräumen nach Staging-Test: Migration schreibt alle Themes ins neue Format, alter
+- [x] C. Aufräumen nach Staging-Test (2026-09-24, Migration 20260924150000, gegen Prod-Dump geprüft): Migration schreibt alle Themes ins neue Format, alter
       Ableitungscode, `tokens.json`-Parameter und `build-design-tokens.mjs` entfallen.
