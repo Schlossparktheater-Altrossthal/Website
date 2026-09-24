@@ -74,6 +74,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Vitest-Tests liegen nahe am Quellcode. React-Komponenten mit `@testing-library/react` testen.
 - Beim Umbau oder bei der Migration einer Komponente/eines Moduls die zugehörigen Tests und `vi.mock`-Mocks mitpflegen: neue interne Abhängigkeiten müssen auch im Mock bereitstehen, sonst brechen Tests zur Laufzeit.
 - UI-Änderungen visuell mit Preview-Deployments absichern.
+- Bei UI-Arbeit konsequent mit Screenshots arbeiten: Vorher/Nachher aufnehmen und zur Verifikation heranziehen. Die visuelle Prüfung erfolgt anhand der Screenshots, nicht nur anhand der Beschreibung – Screenshots im Review mitliefern. Wo relevant, in Light- und Dark-Mode prüfen.
 
 ## Commits
 
