@@ -75,7 +75,7 @@ const passwordSchema = z.object({
 });
 
 const DEACTIVATED_MESSAGE =
-  "Dieses Konto wurde deaktiviert. Bitte wende dich an einen Admin oder tritt der neuen Produktion bei.";
+  "Dieses Konto ist deaktiviert. Hast du eine Einladung zur neuen Produktion bekommen? Dann öffne den Link aus der Mail und melde dich dort an. Sonst wende dich an einen Admin.";
 const AUTHENTIK_MIGRATED_MESSAGE =
   "Dein Passwort liegt jetzt in deinem Theater-Konto. Bitte melde dich über „Mit Theater-Konto anmelden“ an.";
 const LEGACY_CLOSED_MESSAGE =
@@ -113,6 +113,17 @@ function formatDeadline(iso: string | null): string | null {
     month: "long",
     year: "numeric",
     timeZone: "Europe/Berlin",
+  });
+}
+
+/** Legt den Einladungs-Token in ein kurzlebiges httpOnly-Cookie (siehe API-Route). */
+async function rememberOnboardingToken(token: string) {
+  await fetch("/api/auth/onboarding-token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  }).catch((error: unknown) => {
+    console.error("[login] Onboarding-Token konnte nicht gespeichert werden", error);
   });
 }
 
@@ -170,17 +181,17 @@ export function LoginPageClient({
     }
   }, [sp]);
 
+  // Einladung schon beim Öffnen merken: Rückkehrer, die erst per Mail ein
+  // Passwort festlegen, kommen danach meist ohne Einladungslink zurück.
+  useEffect(() => {
+    if (onboardingToken) void rememberOnboardingToken(onboardingToken);
+  }, [onboardingToken]);
+
   async function onAuthentikSignIn() {
     setLoading(true);
     if (onboardingToken) {
       // Wird im signIn-Callback gelesen, um deaktivierte Rückkehrer zu reaktivieren.
-      await fetch("/api/auth/onboarding-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: onboardingToken }),
-      }).catch((error: unknown) => {
-        console.error("[login] Onboarding-Token konnte nicht gespeichert werden", error);
-      });
+      await rememberOnboardingToken(onboardingToken);
     }
     try {
       await signIn("authentik", { callbackUrl });

@@ -11,7 +11,11 @@ import {
 import { getRequestIp, recordPasswordEmailAttempt } from "@/lib/auth/rate-limit";
 import { createLogger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { canSignInAsReturnee, resolveActiveInvite } from "@/lib/onboarding/returnee";
+import {
+  canSignInAsReturnee,
+  readOnboardingTokenCookie,
+  resolveActiveInvite,
+} from "@/lib/onboarding/returnee";
 
 const PASSWORD_EMAIL_SUCCESS_MESSAGE =
   "Falls ein Konto mit dieser E-Mail existiert, erhältst du in Kürze eine E-Mail.";
@@ -63,10 +67,11 @@ export async function POST(request: Request) {
     select: { ...memberIdentitySelect, deactivatedAt: true },
   });
   // Deaktivierte Mitglieder bekommen die Mail nur als Rückkehrer mit gültigem Einladungslink.
-  const invite =
-    member?.deactivatedAt && parsed.data.onboardingToken
-      ? await resolveActiveInvite(parsed.data.onboardingToken)
-      : null;
+  // Der Token kommt aus dem Formular oder aus dem Cookie der Login-Seite.
+  const onboardingToken = member?.deactivatedAt
+    ? (parsed.data.onboardingToken ?? (await readOnboardingTokenCookie()))
+    : undefined;
+  const invite = onboardingToken ? await resolveActiveInvite(onboardingToken) : null;
   const identity = member && canSignInAsReturnee(member, invite) ? toMemberIdentity(member) : null;
   if (!identity) {
     return NextResponse.json({ message: PASSWORD_EMAIL_SUCCESS_MESSAGE });

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { isAdminRole, type Role } from "@/lib/roles";
 import { applyImpersonation } from "@/lib/auth/impersonation";
+import { resolveReturneeOnboardingPath } from "@/lib/onboarding/returnee";
 
 export { ROLES, type Role } from "@/lib/roles";
 
@@ -41,7 +42,12 @@ export async function getSession(options?: SessionOptions) {
 export async function requireAuth(roles?: Role[], options?: SessionOptions) {
   const session = await getSession(options);
   if (!session?.user) redirect("/login");
-  if (session.user.isDeactivated) redirect("/login?error=AccessDenied&reason=deactivated");
+  if (session.user.isDeactivated) {
+    const returneePath = session.user.id
+      ? await resolveReturneeOnboardingPath(session.user.id)
+      : null;
+    redirect(returneePath ?? "/login?error=AccessDenied&reason=deactivated");
+  }
   if (roles && !hasRole(session.user, ...roles)) redirect("/");
   return session;
 }

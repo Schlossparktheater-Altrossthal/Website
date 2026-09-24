@@ -1,3 +1,6 @@
+import { cookies } from "next/headers";
+
+import { ONBOARDING_TOKEN_COOKIE } from "@/lib/authentik/config";
 import { prisma } from "@/lib/prisma";
 import { hashInviteToken, isInviteUsable } from "@/lib/member-invites";
 
@@ -50,4 +53,23 @@ export function isInviteForMember(
   userId: string,
 ): boolean {
   return invite.personalForUserId === null || invite.personalForUserId === userId;
+}
+
+/** Onboarding-Token aus dem Cookie, das die Login-Seite mit Einladungslink setzt. */
+export async function readOnboardingTokenCookie(): Promise<string | undefined> {
+  const cookieStore = await cookies();
+  return cookieStore.get(ONBOARDING_TOKEN_COOKIE)?.value;
+}
+
+/**
+ * Deaktivierte Rückkehrer mit gemerkter Einladung gehören ins Rückkehrer-Onboarding
+ * statt auf die Meldung "Konto deaktiviert" (z. B. nach dem Login über Authentik,
+ * wenn das Anmeldeziel verloren gegangen ist).
+ */
+export async function resolveReturneeOnboardingPath(userId: string): Promise<string | null> {
+  const token = (await readOnboardingTokenCookie())?.trim();
+  if (!token) return null;
+  const invite = await resolveActiveInvite(token);
+  if (!invite || !isInviteForMember(invite, userId)) return null;
+  return `/onboarding/${encodeURIComponent(token)}/update`;
 }

@@ -7,20 +7,22 @@ import type { AvatarSource, Role } from "@prisma/client";
 import Credentials from "next-auth/providers/credentials";
 import Authentik from "next-auth/providers/authentik";
 import type { CredentialInput } from "next-auth/providers/credentials";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { sortRoles, ROLES } from "@/lib/roles";
 import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
 import { combineNameParts } from "@/lib/names";
-import { canSignInAsReturnee, resolveActiveInvite } from "@/lib/onboarding/returnee";
+import {
+  canSignInAsReturnee,
+  readOnboardingTokenCookie,
+  resolveActiveInvite,
+} from "@/lib/onboarding/returnee";
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
 import { getAuthSecret } from "@/lib/auth-secret";
 import {
   AUTHENTIK_PROVIDER_ID,
   getAuthentikLogoutUrl,
-  ONBOARDING_TOKEN_COOKIE,
   getAuthentikOidcConfig,
   isLegacyPasswordLoginActive,
 } from "@/lib/authentik/config";
@@ -269,14 +271,13 @@ async function authorizeAuthentikSignIn(
 
   if (member.deactivatedAt) {
     // Rückkehrer aus dem Onboarding: Die Login-Seite legt den Einladungs-Token
-    // vor dem Sprung zu Authentik in ein kurzlebiges Cookie. Das Konto bleibt
-    // deaktiviert, bis das Rückkehrer-Onboarding abgeschlossen ist.
-    const cookieStore = await cookies();
-    const invite = await resolveActiveInvite(cookieStore.get(ONBOARDING_TOKEN_COOKIE)?.value);
+    // in ein kurzlebiges Cookie. Das Konto bleibt deaktiviert, bis das
+    // Rückkehrer-Onboarding abgeschlossen ist; bis dahin schickt `requireAuth`
+    // mit demselben Cookie zum Onboarding (der Abschluss löscht es).
+    const invite = await resolveActiveInvite(await readOnboardingTokenCookie());
     if (!canSignInAsReturnee(member, invite)) {
       return "/login?error=AccessDenied&reason=deactivated";
     }
-    cookieStore.delete(ONBOARDING_TOKEN_COOKIE);
   }
 
   if (!linked) {
@@ -358,7 +359,9 @@ const credentialsProvider = Credentials({
     }
 
     const onboardingToken =
-      typeof credentials?.onboardingToken === "string" ? credentials.onboardingToken : undefined;
+      typeof credentials?.onboardingToken === "string" && credentials.onboardingToken.trim()
+        ? credentials.onboardingToken
+        : await readOnboardingTokenCookie();
     // Ohne gültige Einladung lehnt der signIn-Callback deaktivierte Konten ab.
     const returneeInvite = user.deactivatedAt ? await resolveActiveInvite(onboardingToken) : null;
 

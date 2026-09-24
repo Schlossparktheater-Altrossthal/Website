@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   userFindUnique: vi.fn(),
   userUpdate: vi.fn(),
   resolveActiveInvite: vi.fn(),
+  readOnboardingTokenCookie: vi.fn(),
   ensureUser: vi.fn(),
   sendMail: vi.fn(),
 }));
@@ -11,7 +12,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: { user: { findUnique: mocks.userFindUnique, update: mocks.userUpdate } },
 }));
-vi.mock("@/lib/authentik/config", () => ({ isAuthentikProvisioningEnabled: () => true }));
+vi.mock("@/lib/authentik/config", () => ({
+  isAuthentikProvisioningEnabled: () => true,
+  ONBOARDING_TOKEN_COOKIE: "theater-onboarding-token",
+}));
 vi.mock("@/lib/authentik/client", () => ({ sendAuthentikPasswordEmail: mocks.sendMail }));
 vi.mock("@/lib/authentik/sync", () => ({
   memberIdentitySelect: { id: true, email: true },
@@ -31,7 +35,11 @@ vi.mock("@/lib/logger", () => ({
 }));
 vi.mock("@/lib/onboarding/returnee", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/onboarding/returnee")>();
-  return { ...original, resolveActiveInvite: mocks.resolveActiveInvite };
+  return {
+    ...original,
+    resolveActiveInvite: mocks.resolveActiveInvite,
+    readOnboardingTokenCookie: mocks.readOnboardingTokenCookie,
+  };
 });
 
 import { POST } from "../route";
@@ -46,6 +54,26 @@ describe("Passwort vergessen für Rückkehrer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.ensureUser.mockResolvedValue({ user: { pk: 1 } });
+    mocks.readOnboardingTokenCookie.mockResolvedValue(undefined);
+  });
+
+  it("nimmt die Einladung aus dem Cookie der Login-Seite, wenn das Formular keine schickt", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      id: "user-1",
+      email: "a@example.org",
+      deactivatedAt: new Date(),
+    });
+    mocks.readOnboardingTokenCookie.mockResolvedValue("token-aus-cookie");
+    mocks.resolveActiveInvite.mockResolvedValue({
+      id: "invite-1",
+      showId: "show-1",
+      personalForUserId: null,
+    });
+
+    await POST(request({ email: "a@example.org" }));
+
+    expect(mocks.resolveActiveInvite).toHaveBeenCalledWith("token-aus-cookie");
+    expect(mocks.sendMail).toHaveBeenCalledTimes(1);
   });
 
   it("schickt deaktivierten Mitgliedern ohne Einladung keine Mail", async () => {

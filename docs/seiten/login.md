@@ -16,8 +16,16 @@ Passwort-Reset).
 - `POST /api/auth/password-email` – „Passwort vergessen“: legt das Konto bei Bedarf in Authentik
   an und verschickt dort die Mail „Passwort festlegen“ (max. 3 pro Adresse und 10 pro IP und
   Stunde)
-- `POST /api/auth/onboarding-token` – merkt sich den Onboarding-Token vor dem Sprung zu
-  Authentik (httpOnly-Cookie, 15 Minuten), damit deaktivierte Rückkehrer reaktiviert werden
+- `POST /api/auth/onboarding-token` – merkt sich den Onboarding-Token, sobald `/login` mit
+  `?onboardingToken=` geöffnet wird (httpOnly-Cookie, 2 Stunden wie der Link „Passwort
+  festlegen“). Damit dürfen deaktivierte Rückkehrer sich anmelden, „Passwort vergessen“
+  verschickt ihnen die Mail auch ohne Token im Formular, und `requireAuth` schickt sie statt
+  zur Meldung „Konto deaktiviert“ zu `/onboarding/<token>/update`. Der Abschluss des
+  Rückkehrer-Onboardings löscht das Cookie.
+- Nach „Passwort festlegen“ leitet Authentik Konten aus dem Mitgliederbereich (Pfad
+  `mitgliederbereich`) zurück nach `/login` (Policy `theater-recovery-redirect`).
+- Sitzungen aus der Zeit vor einer Deaktivierung (veraltete `sessionVersion`) beendet Auth.js;
+  sie gelten nicht mehr dauerhaft als deaktiviert.
 
 ## Ablauf
 

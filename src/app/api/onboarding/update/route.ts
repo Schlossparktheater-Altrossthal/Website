@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
+import { ONBOARDING_TOKEN_COOKIE } from "@/lib/authentik/config";
 import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
 import {
@@ -414,7 +415,10 @@ export async function POST(request: NextRequest) {
       requestServiceGroupSync();
     }
 
-    return NextResponse.json({ success: true, reactivated: reactivate }, { status: 200 });
+    const response = NextResponse.json({ success: true, reactivated: reactivate }, { status: 200 });
+    // Die gemerkte Einladung ist verbraucht (siehe /api/auth/onboarding-token).
+    response.cookies.delete(ONBOARDING_TOKEN_COOKIE);
+    return response;
   } catch (error) {
     console.error("[Onboarding][Update] update failed", error);
     return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });

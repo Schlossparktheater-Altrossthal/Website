@@ -18,6 +18,13 @@ export const AUTHENTIK_MANAGED_USER_PATH = "mitgliederbereich";
  */
 export const ONBOARDING_TOKEN_COOKIE = "theater-onboarding-token";
 
+/**
+ * Gültigkeit des Onboarding-Cookies: so lange wie der Link "Passwort festlegen"
+ * aus der Authentik-Mail, damit Rückkehrer nach dem Festlegen des Passworts
+ * noch als Rückkehrer erkannt werden.
+ */
+export const ONBOARDING_TOKEN_COOKIE_MAX_AGE_SECONDS = 2 * 60 * 60;
+
 const DEFAULT_RECOVERY_EMAIL_STAGE = "theater-recovery-email";
 const DEFAULT_LOGOUT_FLOW = "theater-logout";
 

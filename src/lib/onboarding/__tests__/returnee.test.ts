@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findUnique } = vi.hoisted(() => ({ findUnique: vi.fn() }));
+const { findUnique, cookieGet } = vi.hoisted(() => ({
+  findUnique: vi.fn(),
+  cookieGet: vi.fn(),
+}));
 vi.mock("@/lib/prisma", () => ({ prisma: { memberInvite: { findUnique } } }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: cookieGet }) }));
 
 import { hashInviteToken } from "@/lib/member-invites";
 
@@ -10,6 +14,7 @@ import {
   isInviteForMember,
   normalizeInviteTokenHash,
   resolveActiveInvite,
+  resolveReturneeOnboardingPath,
 } from "../returnee";
 
 const usableInvite = {
@@ -65,5 +70,25 @@ describe("Rückkehrer-Einladungen", () => {
     expect(canSignInAsReturnee({ id: "u2", deactivatedAt: new Date() }, personal)).toBe(false);
     expect(isInviteForMember(personal, "u2")).toBe(false);
     expect(isInviteForMember({ personalForUserId: null }, "u2")).toBe(true);
+  });
+
+  it("schickt Rückkehrer mit gemerkter Einladung zum Rückkehrer-Onboarding", async () => {
+    cookieGet.mockReturnValue({ value: "token/mit sonderzeichen" });
+    findUnique.mockResolvedValueOnce({ ...usableInvite, personalForUserId: "u1" });
+    expect(await resolveReturneeOnboardingPath("u1")).toBe(
+      "/onboarding/token%2Fmit%20sonderzeichen/update",
+    );
+
+    findUnique.mockResolvedValueOnce({ ...usableInvite, personalForUserId: "u1" });
+    expect(await resolveReturneeOnboardingPath("u2")).toBeNull();
+
+    findUnique.mockResolvedValueOnce({ ...usableInvite, isDisabled: true });
+    expect(await resolveReturneeOnboardingPath("u1")).toBeNull();
+  });
+
+  it("leitet ohne gemerkte Einladung nicht um", async () => {
+    cookieGet.mockReturnValue(undefined);
+    expect(await resolveReturneeOnboardingPath("u1")).toBeNull();
+    expect(findUnique).not.toHaveBeenCalled();
   });
 });
