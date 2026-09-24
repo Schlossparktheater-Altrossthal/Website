@@ -222,7 +222,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 Die GitHub-Projektstruktur folgt einem Release-basierten Schema.
 
-**Project Board:** https://github.com/orgs/Schlossparktheater-Altrossthal/projects/3
+**Project Board:** https://github.com/orgs/Schlossparktheater-Altrossthal/projects/2
 Status-Spalten: Backlog → Ready → In Progress → In Review → Done
 
 **Milestones:** Release-basiert nach Schema v0.x / v1.x
