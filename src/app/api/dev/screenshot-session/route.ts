@@ -63,6 +63,7 @@ async function createSessionCookie({ email, role }: { email: string; role: Role 
     name: devUser.name ?? undefined,
     email: devUser.email,
     sub: devUser.id,
+    id: devUser.id,
     role: devUser.role,
     roles: devUser.roles,
     firstName: devUser.firstName,
