@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-24, 95 Modelle, 41 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-24, 94 Modelle, 41 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -216,7 +216,6 @@ erDiagram
     User ||--o{ GalleryItem : ""
     User |o--o{ Task : "Legacy-Aufgaben"
     WebsiteTheme |o--o{ WebsiteSettings : ""
-    User |o--o{ WebsiteContent : "zuletzt bearbeitet"
     User |o--o{ ServerSettings : "Elterneinwilligung hochgeladen"
     Ticket ||--o{ TicketScanEvent : ""
     SyncMutation |o--o{ SyncEvent : ""
@@ -349,7 +348,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `galleryItems`                    | → `GalleryItem[]`              |                                                                                          |
 | `fileLibraryFoldersCreated`       | → `FileLibraryFolder[]`        | @relation("FileLibraryFoldersCreated")                                                   |
 | `fileLibraryItemsUploaded`        | → `FileLibraryItem[]`          | @relation("FileLibraryItemsUploaded")                                                    |
-| `websiteContentEdits`             | → `WebsiteContent[]`           |                                                                                          |
 | `parentalConsentTemplatesUpdated` | → `ServerSettings[]`           | @relation("ServerSettingsParentalConsentUploader")                                       |
 
 ### `Account`
@@ -1632,21 +1630,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `bildMimeType` | `String?`  |                          |
 | `createdAt`    | `DateTime` | @default(now())          |
 | `updatedAt`    | `DateTime` | @updatedAt               |
-
-### `WebsiteContent`
-
-| Feld          | Typ        | Attribute / Beschreibung                                              |
-| ------------- | ---------- | --------------------------------------------------------------------- |
-| `id`          | `String`   | @id                                                                   |
-| `page`        | `String`   |                                                                       |
-| `label`       | `String`   |                                                                       |
-| `type`        | `String`   | @default("json")                                                      |
-| `content`     | `Json`     |                                                                       |
-| `updatedAt`   | `DateTime` | @updatedAt                                                            |
-| `updatedById` | `String?`  |                                                                       |
-| `updatedBy`   | → `User?`  | @relation(fields: [updatedById], references: [id], onDelete: SetNull) |
-
-- `@@index([page])`
 
 ### `WebsiteTheme`
 
