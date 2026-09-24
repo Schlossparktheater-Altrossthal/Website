@@ -13,7 +13,7 @@ import {
   resolvePremiereCountdownSettings,
 } from "@/lib/premiere-countdown-settings";
 import React from "react";
-import { readFaqContent } from "@/lib/website-content";
+import { HOME_FAQ } from "@/lib/website-content";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 
 export default async function PublicHomePage() {
@@ -39,7 +39,7 @@ export default async function PublicHomePage() {
       productionFlyer = await readProductionFlyerSettings();
     } catch {}
   }
-  const faqContent = await readFaqContent();
+  const faqContent = HOME_FAQ;
   const effectiveCountdownTargetIso = resolvedCountdown.effectiveCountdownTarget.toISOString();
   const initialCountdownTargetIso = resolvedCountdown.countdownTarget
     ? resolvedCountdown.countdownTarget.toISOString()

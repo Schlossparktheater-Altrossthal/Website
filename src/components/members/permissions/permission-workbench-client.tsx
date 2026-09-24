@@ -79,7 +79,7 @@ const GROUPS: PermissionGroup[] = [
     category: "public",
     label: "Öffentliche Inhalte",
     description: "Regelt zentrale Inhalte der öffentlichen Website.",
-    keys: ["PUBLIC.HOME.COUNTDOWN.EDIT", "PUBLIC.CONTENT.MANAGE"],
+    keys: ["PUBLIC.HOME.COUNTDOWN.EDIT"],
   },
 ];
 

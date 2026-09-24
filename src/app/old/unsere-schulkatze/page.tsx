@@ -8,7 +8,7 @@ import { notFound } from "next/navigation";
 
 import { Heading, Text } from "@/components/ui/typography";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
-import { readSchulkatzeIntro } from "@/lib/website-content";
+import { SCHULKATZE_INTRO } from "@/lib/website-content";
 
 import { CatMemorySection } from "./encounters-section";
 import { CatGallery } from "./schulkatze-gallery";
@@ -73,7 +73,7 @@ export default async function SchoolCatPage() {
   if (!visibility.schoolCat) {
     notFound();
   }
-  const introContent = await readSchulkatzeIntro();
+  const introContent = SCHULKATZE_INTRO;
   return (
     <div className="relative isolate">
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">

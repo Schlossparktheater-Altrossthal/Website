@@ -1,14 +1,13 @@
-# Website & Inhalte
+# Website & Theme
 
 ## Zweck
 
-Branding- und Darstellungseinstellungen der öffentlichen Website: Theme (Farben/Tokens),
-Inhalte und Seitensteuerung (Sichtbarkeit von Seiten).
+Branding- und Darstellungseinstellungen der öffentlichen Website: Theme (Farben/Tokens)
+und Seitensteuerung (Sichtbarkeit von Seiten).
 
 ## Routen
 
 - `/mitglieder/website` – Theme & Branding
-- `/mitglieder/website/inhalte` – Inhalte
 - `/mitglieder/pages/seitensteuerung` – Seitensteuerung
 
 ## Permissions
@@ -30,6 +29,8 @@ Inhalte und Seitensteuerung (Sichtbarkeit von Seiten).
 
 ## Besonderheiten / Altlasten
 
+- Das frühere Seiteninhalte-CMS (`/mitglieder/website/inhalte`, `PUBLIC.CONTENT.MANAGE`) wurde
+  entfernt. Die Texte der öffentlichen Seiten liegen statisch in `src/lib/website-content.ts`.
 - Branded Types erfordern gelegentlich gezielte Konvertierungen (siehe `theme-settings-manager.tsx`).
 - Der Theme-Editor arbeitet mit OKLCH-Parametern; Tokens werden über
   `pnpm design-system:tokens` gebaut.

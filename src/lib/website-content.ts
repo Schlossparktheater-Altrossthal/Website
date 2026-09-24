@@ -1,154 +1,255 @@
-﻿import { Prisma } from "@prisma/client";
+// Statische Inhalte der öffentlichen Website.
+// Die Texte sind fest im Code hinterlegt und werden nicht mehr über ein CMS gepflegt.
 
-import { prisma } from "@/lib/prisma";
-import {
-  DEFAULT_HOME_FAQ,
-  DEFAULT_SCHULKATZE_INTRO,
-  DEFAULT_UEBER_UNS_INTRO,
-  DEFAULT_UEBER_UNS_MILESTONES,
-  DEFAULT_UEBER_UNS_SIGNATURE,
-  DEFAULT_UEBER_UNS_STATS,
-  DEFAULT_UEBER_UNS_TRADES,
-  DEFAULT_UEBER_UNS_VALUES,
-  WEBSITE_CONTENT_IDS,
-  faqContentSchema,
-  iconItemsContentSchema,
-  milestonesContentSchema,
-  paragraphsContentSchema,
-  statsContentSchema,
-  type FaqContent,
-  type IconItemsContent,
-  type MilestonesContent,
-  type ParagraphsContent,
-  type StatsContent,
-  type WebsiteContentId,
-} from "@/lib/website-content-schemas";
-
-// Re-export everything so server-side code keeps working with a single import
-export * from "@/lib/website-content-schemas";
-
-// Maps each content ID to the public page path it belongs to (for revalidation)
-export const CONTENT_REVALIDATION_PATHS: Record<WebsiteContentId, string> = {
-  "home.faq": "/old",
-  "schulkatze.intro": "/old/unsere-schulkatze",
-  "ueber-uns.intro": "/old/ueber-uns",
-  "ueber-uns.stats": "/old/ueber-uns",
-  "ueber-uns.milestones": "/old/ueber-uns",
-  "ueber-uns.signature": "/old/ueber-uns",
-  "ueber-uns.values": "/old/ueber-uns",
-  "ueber-uns.trades": "/old/ueber-uns",
+export type FaqItem = {
+  question: string;
+  answer: string;
 };
 
-const CONTENT_METADATA: Record<WebsiteContentId, { label: string; page: string }> = {
-  "home.faq": { label: "FAQ", page: "home" },
-  "schulkatze.intro": { label: "Einleitungstext", page: "schulkatze" },
-  "ueber-uns.intro": { label: "Einleitungstext", page: "ueber-uns" },
-  "ueber-uns.stats": { label: "Kennzahlen", page: "ueber-uns" },
-  "ueber-uns.milestones": { label: "Meilensteine", page: "ueber-uns" },
-  "ueber-uns.signature": { label: "Signature-Elemente", page: "ueber-uns" },
-  "ueber-uns.values": { label: "Unsere Werte", page: "ueber-uns" },
-  "ueber-uns.trades": { label: "Gewerke", page: "ueber-uns" },
+export type FaqContent = {
+  items: FaqItem[];
 };
 
-// ── Generic read helper ───────────────────────────────────────────────────────
+export type ParagraphsContent = {
+  paragraphs: string[];
+};
 
-async function readContent(id: WebsiteContentId): Promise<unknown> {
-  if (!process.env.DATABASE_URL) return null;
-  try {
-    const record = await prisma.websiteContent.findUnique({ where: { id } });
-    return record?.content ?? null;
-  } catch {
-    return null;
-  }
-}
+export type StatItem = {
+  label: string;
+  value: string;
+  detail: string;
+};
 
-// ── Typed read functions ──────────────────────────────────────────────────────
+export type StatsContent = {
+  items: StatItem[];
+};
 
-export async function readFaqContent(): Promise<FaqContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.HOME_FAQ);
-  const parsed = faqContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_HOME_FAQ;
-}
+export type MilestoneItem = {
+  year: string;
+  title: string;
+  description: string;
+};
 
-export async function readSchulkatzeIntro(): Promise<ParagraphsContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.SCHULKATZE_INTRO);
-  const parsed = paragraphsContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_SCHULKATZE_INTRO;
-}
+export type MilestonesContent = {
+  items: MilestoneItem[];
+};
 
-export async function readUeberUnsIntro(): Promise<ParagraphsContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.UEBER_UNS_INTRO);
-  const parsed = paragraphsContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_UEBER_UNS_INTRO;
-}
+export type IconItem = {
+  icon: string;
+  title: string;
+  description: string;
+};
 
-export async function readUeberUnsStats(): Promise<StatsContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.UEBER_UNS_STATS);
-  const parsed = statsContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_UEBER_UNS_STATS;
-}
+export type IconItemsContent = {
+  items: IconItem[];
+};
 
-export async function readUeberUnsMilestones(): Promise<MilestonesContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.UEBER_UNS_MILESTONES);
-  const parsed = milestonesContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_UEBER_UNS_MILESTONES;
-}
-
-export async function readUeberUnsSignature(): Promise<IconItemsContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.UEBER_UNS_SIGNATURE);
-  const parsed = iconItemsContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_UEBER_UNS_SIGNATURE;
-}
-
-export async function readUeberUnsValues(): Promise<IconItemsContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.UEBER_UNS_VALUES);
-  const parsed = iconItemsContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_UEBER_UNS_VALUES;
-}
-
-export async function readUeberUnsTrades(): Promise<IconItemsContent> {
-  const raw = await readContent(WEBSITE_CONTENT_IDS.UEBER_UNS_TRADES);
-  const parsed = iconItemsContentSchema.safeParse(raw);
-  return parsed.success ? parsed.data : DEFAULT_UEBER_UNS_TRADES;
-}
-
-// ── Write function ────────────────────────────────────────────────────────────
-
-export async function saveWebsiteContent(
-  id: WebsiteContentId,
-  content: unknown,
-  updatedById?: string,
-): Promise<void> {
-  const meta = CONTENT_METADATA[id];
-  await prisma.websiteContent.upsert({
-    where: { id },
-    create: {
-      id,
-      page: meta.page,
-      label: meta.label,
-      content: content as Prisma.InputJsonValue,
-      updatedById: updatedById ?? null,
+export const HOME_FAQ: FaqContent = {
+  items: [
+    {
+      question: "Was ist das Sommertheater im Schlosspark?",
+      answer:
+        "Unser Sommertheater vereint Musik, Schauspiel und eine Prise Geheimnis vor der einzigartigen Kulisse des Schlossparks. Wir gestalten jedes Jahr ein neues Stück, das unser Publikum aller Altersgruppen begeistert und zum Staunen einlädt.",
     },
-    update: {
-      content: content as Prisma.InputJsonValue,
-      updatedById: updatedById ?? null,
+    {
+      question: "Wann startet der Ticketverkauf?",
+      answer:
+        "Der Ticketverkauf wird über den Instagram-Kanal der Schule bekanntgegeben. Folge uns dort, um nichts zu verpassen.",
     },
-  });
-}
+    {
+      question: "Wo finden die Aufführungen statt?",
+      answer:
+        "Die Vorstellungen finden im Schlosspark Altroßthal statt. Adresse: BSZ für Agrarwirtschaft und Ernährung Dresden, Altroßthal 1, 01169 Dresden.",
+    },
+    {
+      question: "Wie lange dauern die Vorstellungen?",
+      answer: "Die Vorstellungen dauern durchschnittlich 1,5 Stunden und beinhalten eine Pause.",
+    },
+    {
+      question: "Gibt es eine Altersempfehlung?",
+      answer: "Das Stück richtet sich an alle Altersgruppen.",
+    },
+  ],
+};
 
-// ── Batch reader for CMS (all content for a page) ─────────────────────────────
+export const SCHULKATZE_INTRO: ParagraphsContent = {
+  paragraphs: [
+    "Dieter Dennis von Altroßthal – von allen nur Dieter genannt – war unsere grau getigerte Schulkatze. Über Generationen hinweg streifte er über das Schulgelände und wurde zum vertrauten Gesicht des BSZ Altroßthal.",
+    "Niemand wusste genau, seit wann er da war; gefühlt waren es weit über fünfzehn Jahre. Seine stille Präsenz begleitete Unterricht, Proben und Aufführungen gleichermaßen.",
+    "2025 mussten wir uns von Dieter verabschieden. Die Erinnerungen an ihn, seine Gelassenheit und die Fürsorge der Schulgemeinschaft bleiben und prägen, wie wir auch künftig füreinander da sind.",
+  ],
+};
 
-export async function readAllContentForPage(
-  page: "home" | "schulkatze" | "ueber-uns",
-): Promise<Record<string, unknown>> {
-  if (!process.env.DATABASE_URL) return {};
-  try {
-    const records = await prisma.websiteContent.findMany({
-      where: { page },
-      select: { id: true, content: true, updatedAt: true },
-    });
-    return Object.fromEntries(records.map((r) => [r.id, r.content]));
-  } catch {
-    return {};
-  }
-}
+export const UEBER_UNS_INTRO: ParagraphsContent = {
+  paragraphs: [
+    "Wir erzählen Geschichten für laue Sommernächte. Unser Ensemble verbindet professionelle Theaterarbeit mit ehrenamtlichem Herzblut – mitten im Schlosspark Altrossthal.",
+    "Gegründet wurde das Sommertheater 2009 vom damaligen Schüler Toni Burghard Friedrich. Seitdem treffen sich Lernende, Alumni und Freund:innen des BSZ Altroßthal, um eine Bühne zu schaffen, die weit über klassischen Unterricht hinausgeht.",
+    "Das Ensemble besteht aus Schüler:innen des Beruflichen Gymnasiums und der Fachoberschule, Auszubildenden aus Landwirtschaft, Floristik, Konditorei und vielen weiteren Gewerken sowie Freund:innen des Beruflichen Schulzentrums für Agrarwirtschaft und Ernährung Dresden.",
+    "Die Regie übernehmen meist professionelle Schauspieler:innen oder Regisseur:innen, die ihre Erfahrung teilen und gemeinsam mit uns neue Sommerstücke entwickeln.",
+  ],
+};
+
+export const UEBER_UNS_STATS: StatsContent = {
+  items: [
+    {
+      label: "Gründung",
+      value: "2009",
+      detail: 'Premiere mit "Die lustigen Weiber von Windsor" im Schlosspark',
+    },
+    { label: "Ensemble", value: "45+", detail: "Darstellende, Musiker:innen und helfende Hände" },
+    { label: "Publikum", value: "400+", detail: "Gäste pro Aufführung" },
+    { label: "Aufführungen", value: "4", detail: "pro Saison" },
+  ],
+};
+
+export const UEBER_UNS_MILESTONES: MilestonesContent = {
+  items: [
+    {
+      year: "2008",
+      title: "Theatergruppe im Kulturpalast",
+      description:
+        'Schüler:innen des BSZ schließen sich erstmals als Theatergruppe zusammen und zeigen "Fluch(t)weg" im Studiotheater des Kulturpalastes.',
+    },
+    {
+      year: "2009",
+      title: "Die erste Inszenierung",
+      description:
+        'Toni Burghard Friedrich initiiert das Sommertheater mit "Die lustigen Weiber von Windsor" und schafft einen neuen Ort für Schüler:innen des BSZ.',
+    },
+    {
+      year: "2017",
+      title: "Werkstatt-Ateliers",
+      description:
+        "Neue Workshops ermöglichen Schüler:innen, sich in Lichttechnik, Metallbau und Kostümhandwerk auszuprobieren und Verantwortung zu übernehmen.",
+    },
+    {
+      year: "2023",
+      title: "Digital verbunden",
+      description:
+        "Livestreams für Menschen, die nicht vor Ort sein können, und ein hybrides Probenformat für unser Ensemble.",
+    },
+    {
+      year: "2023",
+      title: "Headsets für präzisen Klang",
+      description:
+        "Erstes Theaterstück, bei dem Headsets eingesetzt werden, um Stimmen auf der Freiluftbühne noch klarer zu transportieren.",
+    },
+    {
+      year: "2025",
+      title: "Eigene Webseite für Produktionen",
+      description:
+        "Alle Produktionen und Meilensteine erhalten ein digitales Zuhause – die neue Webseite bündelt seitdem Archiv, Tickets und Rückblicke.",
+    },
+  ],
+};
+
+export const UEBER_UNS_SIGNATURE: IconItemsContent = {
+  items: [
+    {
+      icon: "Drama",
+      title: "Freiluftbühne im Schlosspark",
+      description:
+        "Wir verwandeln historische Mauern und alte Baumkronen in eine Bühne voller Atmosphären, Licht und Klang.",
+    },
+    {
+      icon: "Sparkles",
+      title: "Storytelling mit Tiefgang",
+      description:
+        "Jedes Stück entsteht eigens für Altrossthal – poetisch, geheimnisvoll und nah an den Menschen, die uns umgeben.",
+    },
+    {
+      icon: "Trees",
+      title: "Schulgelände voller Gewerke",
+      description:
+        "Schüler:innen des BSZ Altroßthal bringen Floristik, Holz- und Metallbau ein – so wachsen Bühne, Kostüm und Szenografie Hand in Hand.",
+    },
+  ],
+};
+
+export const UEBER_UNS_VALUES: IconItemsContent = {
+  items: [
+    {
+      icon: "HeartHandshake",
+      title: "Gemeinschaft",
+      description:
+        "Im Ensemble wirken Generationen zusammen. Ehrenamt, Professionalität und Nachbarschaft greifen ineinander.",
+    },
+    {
+      icon: "Users",
+      title: "Offenheit",
+      description:
+        "Wir schaffen Räume, in denen neue Stimmen hörbar werden – auf der Bühne, in den Werkstätten und beim Ausprobieren neuer Gewerke.",
+    },
+    {
+      icon: "CalendarHeart",
+      title: "Sorgfalt",
+      description:
+        "Jedes Detail zählt: von der Dramaturgie über die Kostüme bis zur letzten Bankreihe im Park.",
+    },
+  ],
+};
+
+export const UEBER_UNS_TRADES: IconItemsContent = {
+  items: [
+    {
+      icon: "Drama",
+      title: "Schauspiel",
+      description:
+        "Wir entwickeln Szenen gemeinsam und finden für jede Person die passende Herausforderung – vom leisen Spiel bis zur großen Hauptrolle.",
+    },
+    {
+      icon: "Package",
+      title: "Requisite",
+      description:
+        "Vom alten Koffer bis zum magischen Artefakt – die Requisite recherchiert, baut und pflegt alles, was Figuren in den Händen halten.",
+    },
+    {
+      icon: "Shirt",
+      title: "Kostüm",
+      description:
+        "Outfits werden entworfen, zugeschnitten und veredelt. So erzählen Stoffe, Farben und Accessoires eigene Geschichten.",
+    },
+    {
+      icon: "WandSparkles",
+      title: "Maske",
+      description:
+        "Mit Pinseln, Airbrush und viel Fingerspitzengefühl entstehen Charaktere – vom sommerlichen Glow bis hin zu fantastischen Wesen.",
+    },
+    {
+      icon: "Megaphone",
+      title: "Werbung",
+      description:
+        "Stories, Reels und Plakatideen machen Probenprozesse sichtbar und laden unser Publikum frühzeitig in den Schlosspark ein.",
+    },
+    {
+      icon: "AudioLines",
+      title: "Soufflage",
+      description:
+        "Mit Textbuch und Ruhe bewahren die Souffleur:innen den Überblick – und geben im richtigen Moment leise Stichworte.",
+    },
+    {
+      icon: "Music3",
+      title: "Musik",
+      description:
+        "Eigenkompositionen, Chorarrangements und choreografierte Bewegungen verweben Klang und Rhythmus mit der Handlung.",
+    },
+    {
+      icon: "UtensilsCrossed",
+      title: "Verpflegung",
+      description:
+        "Snacks für lange Probentage und liebevoll gedeckte Buffets vor den Shows halten Ensemble und Gäste bei Kräften.",
+    },
+    {
+      icon: "ClipboardList",
+      title: "Regieassistenz & Organisation",
+      description:
+        "Spielpläne, Probenprotokolle und Kontaktlisten laufen hier zusammen – damit jede Premiere punktgenau gelingt.",
+    },
+    {
+      icon: "Zap",
+      title: "Technik & Licht",
+      description:
+        "Von der ersten Probe bis zur Premiere: Unser Technikteam steuert Licht und Ton – damit jeder Moment auf der Bühne sitzt.",
+    },
+  ],
+};

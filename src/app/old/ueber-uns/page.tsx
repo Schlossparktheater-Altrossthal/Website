@@ -27,12 +27,12 @@ import { Heading, Text } from "@/components/ui/typography";
 import { getCurrentProductionEnsembleStats } from "@/lib/ensemble";
 import { getPublicPageVisibility } from "@/lib/public-page-visibility";
 import {
-  readUeberUnsIntro,
-  readUeberUnsMilestones,
-  readUeberUnsSignature,
-  readUeberUnsStats,
-  readUeberUnsTrades,
-  readUeberUnsValues,
+  UEBER_UNS_INTRO,
+  UEBER_UNS_MILESTONES,
+  UEBER_UNS_SIGNATURE,
+  UEBER_UNS_STATS,
+  UEBER_UNS_TRADES,
+  UEBER_UNS_VALUES,
 } from "@/lib/website-content";
 
 const ICON_MAP: Record<string, IconComponent> = {
@@ -101,16 +101,13 @@ export default async function PublicAboutPage() {
     notFound();
   }
   const baseUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
-  const [ensembleStats, intro, statsContent, milestones, signature, values, trades] =
-    await Promise.all([
-      getCurrentProductionEnsembleStats(),
-      readUeberUnsIntro(),
-      readUeberUnsStats(),
-      readUeberUnsMilestones(),
-      readUeberUnsSignature(),
-      readUeberUnsValues(),
-      readUeberUnsTrades(),
-    ]);
+  const ensembleStats = await getCurrentProductionEnsembleStats();
+  const intro = UEBER_UNS_INTRO;
+  const statsContent = UEBER_UNS_STATS;
+  const milestones = UEBER_UNS_MILESTONES;
+  const signature = UEBER_UNS_SIGNATURE;
+  const values = UEBER_UNS_VALUES;
+  const trades = UEBER_UNS_TRADES;
 
   const statisticItems = statsContent.items.map<StatisticItem>((item) => {
     if (item.label !== "Ensemble" || !ensembleStats) {

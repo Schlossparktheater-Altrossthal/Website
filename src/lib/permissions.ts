@@ -173,12 +173,6 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "pages",
   },
   {
-    key: "PUBLIC.CONTENT.MANAGE",
-    label: "Seiteninhalte verwalten",
-    description: "FAQ, Über-uns-Seite und Schulkatze-Seite im integrierten CMS bearbeiten.",
-    category: "pages",
-  },
-  {
     key: "PUBLIC.CHRONIK.DATES.EDIT",
     label: "Chronik-Termine pflegen",
     description: "Aufführungstermine der öffentlichen Chronik direkt im Frontend bearbeiten.",

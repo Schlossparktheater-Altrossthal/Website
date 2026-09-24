@@ -19,7 +19,7 @@ Galerie.
 ## Datenfluss
 
 - Bilder werden aus `public/images/katze` gelesen (`resolveCatImages`).
-- Intro-Inhalte über `src/lib/website-content.ts` (`readSchulkatzeIntro`).
+- Intro-Inhalte liegen statisch in `src/lib/website-content.ts` (`SCHULKATZE_INTRO`).
 
 ## Besonderheiten / Altlasten
 

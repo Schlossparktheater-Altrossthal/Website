@@ -17,9 +17,10 @@ Startseite der öffentlichen Website mit Hero-Bereich und Premieren-Countdown.
 ## Datenfluss
 
 - Premieren-Countdown-Einstellungen über `src/lib/premiere-countdown-settings.ts`.
+- FAQ-Inhalte liegen statisch in `src/lib/website-content.ts` (`HOME_FAQ`).
 
 ## Realtime / Besonderheiten
 
 - Sichtbarkeit des Countdowns über die Website-Settings.
-- Inhalte sind über das Frontend-Editing editierbar (Feature-Keys in
+- Countdown und Flyer sind über das Frontend-Editing editierbar (Feature-Keys in
   `src/lib/frontend-editing.ts`).
