@@ -213,3 +213,66 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Warnhinweise verwenden bg-warning/10 border border-warning text-warning-foreground rounded-lg p-4.
 - Fehlerhinweise verwenden bg-destructive/10 border border-destructive text-destructive-foreground rounded-lg p-4.
 - Nie eigene Farben oder hardcodierte Hintergründe für Hinweisboxen.
+
+---
+
+## GitHub-Projektstruktur & Review-Workflow
+
+### Projektstruktur
+
+Die GitHub-Projektstruktur folgt einem Release-basierten Schema.
+
+**Project Board:** https://github.com/orgs/Schlossparktheater-Altrossthal/projects/3
+Status-Spalten: Backlog → Ready → In Progress → In Review → Done
+
+**Milestones:** Release-basiert nach Schema v0.x / v1.x
+- v0.1: Sicherheitskritische Findings und Blocker aus dem Code-Review: API-Validierung (Allergien), Dockerfile-Härtung (non-root, HEALTHCHECK), CSP unsafe-eval und Ersatz nativer Browser-Dialoge.
+- v0.2: Architektur und Code-Qualität: Namenskollisionen auflösen, Regelverstöße beheben, "use client"-Bereinigung, Datei-Aufteilung und UI-Pattern-Konsistenz.
+- v1.0: Cleanup, Dokumentation und Ops: tote Codepfade, Design-Token-Konsistenz, Ladezustände, ENV-/Doku-Pflege und Deployment-Härtung.
+
+**Labels:**
+- Priorität: `priority: critical`, `priority: high`, `priority: low`
+- Typ: `type: security`, `type: architecture`, `type: bug`, `type: dx`, `type: testing`, `type: ops`, `type: docs`
+- Aufwand: `effort: S`, `effort: M`, `effort: L`
+
+### Review-Workflow
+
+Wenn ein Code-Review durchgeführt wird, gilt folgender Prozess:
+
+1. **Review durchführen** mit dem DeepSeek-Review-Prompt (siehe `docs/review-prompt.md`)
+2. **Issues erstellen** — jeder Finding wird ein eigenes Issue mit:
+   - Titel: kurz, präzise, Deutsch, kein Emoji
+   - Labels: immer `priority:*` + `type:*` + `effort:*`
+   - Milestone: passendes Release
+   - Body-Struktur:
+     ```text
+     ## Fundstelle
+     `Datei:Zeile`
+
+     ## Beschreibung
+     Was ist das Problem und warum.
+
+     ## Akzeptanzkriterien
+     - [ ] Konkreter Fix
+     - [ ] `pnpm lint && pnpm test && pnpm build` läuft sauber durch
+
+     ## Commit-Vorschlag
+     `type(scope): description`
+     ```
+3. **Issues dem Project zuweisen** — Status initial auf Backlog
+4. **AGENTS.md aktualisieren** — neue Standards oder geänderte Prozesse sofort dokumentieren
+
+### Regeln für Issues
+
+- Kein Emoji in Titeln oder Bodies
+- Jedes Issue = genau ein abgeschlossener Fix
+- Kein Issue ohne Label und Milestone
+- `window.confirm` / `window.prompt` immer als `priority: critical` + `type: bug`
+- Sicherheitsprobleme immer ins früheste Release
+
+### Regeln für Milestones
+
+- Schema: v0.1, v0.2, v1.0
+- Sicherheit und Blocker immer in v0.1
+- Ein Milestone wird geschlossen sobald alle Issues darin Done sind
+- Neue Milestones werden beim nächsten Review-Zyklus angelegt
