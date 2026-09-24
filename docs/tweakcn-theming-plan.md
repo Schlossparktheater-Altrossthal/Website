@@ -35,6 +35,7 @@ Registry-URL `https://tweakcn.com/r/themes/<name>.json`) und wieder exportieren.
 - [x] 4. Editor neu: Import/Export, Farbwähler pro Variable (Light/Dark), Vorschau.
 - [x] 5a. Drupal-Theme als Preset „Sommertheater (Drupal)“ (`src/lib/theme/presets`).
 - [x] 5b. Öffentlicher CSS-Endpunkt `/api/website/theme.css`.
-- [ ] 6. Drupal-Theme lädt den Endpunkt (Repo `Theme-Drupal-Sommertheater`).
+- [ ] 6. _Zurückgestellt (2026-09-24):_ Vorerst werden Drupal- und Mitgliederbereich-Theme getrennt
+      gepflegt, Austausch per Export/Import. Später: Drupal-Theme lädt den Endpunkt.
 - [ ] C. Aufräumen nach Staging-Test: Migration schreibt alle Themes ins neue Format, alter
       Ableitungscode, `tokens.json`-Parameter und `build-design-tokens.mjs` entfallen.
