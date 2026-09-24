@@ -1,6 +1,9 @@
 import { devices, defineConfig } from "@playwright/test";
 
-const baseURL = process.env.SCAN_E2E_BASE_URL ?? "http://127.0.0.1:3000";
+import { E2E_BASE_URL } from "./e2e/env";
+
+// Lokal: `pnpm e2e` gegen next dev. Staging: `pnpm e2e:env` einmal, dann
+// `E2E_BASE_URL=https://staging.sommertheater-altrossthal.de pnpm e2e` (docs/e2e-tests.md).
 const startCommand = process.env.SCAN_E2E_START_COMMAND;
 
 export default defineConfig({
@@ -12,7 +15,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL,
+    baseURL: E2E_BASE_URL,
     trace: "retain-on-failure",
     video: "retain-on-failure",
     screenshot: "only-on-failure",
@@ -21,7 +24,7 @@ export default defineConfig({
     ? {
         webServer: {
           command: startCommand,
-          url: baseURL,
+          url: E2E_BASE_URL,
           reuseExistingServer: !process.env.CI,
           stdout: "pipe",
           stderr: "pipe",
@@ -30,9 +33,11 @@ export default defineConfig({
       }
     : {}),
   projects: [
+    { name: "setup", testMatch: /.*\.setup\.ts/ },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
     },
   ],
 });

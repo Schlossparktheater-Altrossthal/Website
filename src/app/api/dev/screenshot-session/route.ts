@@ -7,11 +7,15 @@ import { DEV_TEST_USERS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-user
 import { ensureDevTestUser } from "@/lib/dev-auth";
 import { ROLES, type Role } from "@/lib/roles";
 import { getAuthSecret } from "@/lib/auth-secret";
+import { E2E_LOGIN_HEADER, isE2eLoginEnabled, isValidE2eLoginSecret } from "@/lib/e2e-login";
 
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
-const SESSION_COOKIE_NAME = IS_PRODUCTION
-  ? "__Secure-authjs.session-token"
-  : "authjs.session-token";
+function isProduction() {
+  return process.env.NODE_ENV === "production";
+}
+
+function sessionCookieName() {
+  return isProduction() ? "__Secure-authjs.session-token" : "authjs.session-token";
+}
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
 const ROLE_SET = new Set<Role>(ROLES);
@@ -52,6 +56,7 @@ function shouldReturnJson(url: URL) {
 
 async function createSessionCookie({ email, role }: { email: string; role: Role }) {
   const secret = getAuthSecret();
+  const cookieName = sessionCookieName();
 
   const devUser = await ensureDevTestUser(email, role);
   const now = Math.floor(Date.now() / 1000);
@@ -80,11 +85,12 @@ async function createSessionCookie({ email, role }: { email: string; role: Role 
   const sessionToken = await encode({
     token: tokenPayload,
     secret,
-    salt: SESSION_COOKIE_NAME,
+    salt: cookieName,
     maxAge: SESSION_MAX_AGE,
   });
 
   return {
+    cookieName,
     sessionToken,
     devUser,
   };
@@ -128,8 +134,16 @@ function ensureEmail(role: Role, emailParam: string | null): string {
 }
 
 export async function GET(request: NextRequest) {
-  if (IS_PRODUCTION) {
-    return new NextResponse("Not found", { status: 404 });
+  // In Production-Builds nur mit gültigem E2E-Secret (nur Staging, docs/e2e-tests.md).
+  // Auch mit Secret nur die festen Testnutzer – nie echte Mitglieder.
+  const e2eMode = isProduction();
+  if (e2eMode) {
+    if (!isE2eLoginEnabled()) {
+      return new NextResponse("Not found", { status: 404 });
+    }
+    if (!isValidE2eLoginSecret(request.headers.get(E2E_LOGIN_HEADER))) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   try {
@@ -140,8 +154,14 @@ export async function GET(request: NextRequest) {
       email: normalizeEmail(url.searchParams.get("email")),
     });
     const email = ensureEmail(role, url.searchParams.get("email"));
+    if (e2eMode && DEV_TEST_USER_ROLE_MAP[email] !== role) {
+      return NextResponse.json(
+        { ok: false, error: "Nur feste Testnutzer erlaubt" },
+        { status: 400 },
+      );
+    }
     const target = sanitizeTarget(url.searchParams.get("target") ?? url.searchParams.get("to"));
-    const { sessionToken, devUser } = await createSessionCookie({ email, role });
+    const { cookieName, sessionToken, devUser } = await createSessionCookie({ email, role });
 
     const response = wantsJson
       ? NextResponse.json({
@@ -154,11 +174,11 @@ export async function GET(request: NextRequest) {
       : NextResponse.redirect(new URL(target, url.origin));
 
     response.cookies.set({
-      name: SESSION_COOKIE_NAME,
+      name: cookieName,
       value: sessionToken,
       httpOnly: true,
       sameSite: "lax",
-      secure: IS_PRODUCTION,
+      secure: isProduction(),
       maxAge: SESSION_MAX_AGE,
       path: "/",
     });

@@ -145,6 +145,11 @@ email, generated names, `roles: [role]`, `avatarSource: null`) so automation can
 keep working without Prisma access. Responses in JSON mode include an
 `offlineProfile` flag to signal the fallback.
 
+On staging the same route works in production builds when `E2E_LOGIN_SECRET`
+is set and the request carries it in the `x-e2e-login-secret` header (fixed
+test users only). Playwright setup, screenshot script and the local-only
+Playwright MCP are described in `docs/e2e-tests.md`.
+
 ## Docker overview
 
 - `Dockerfile.dev` builds the development image that serves the Next.js app via

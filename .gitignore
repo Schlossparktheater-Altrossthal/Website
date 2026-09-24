@@ -54,3 +54,8 @@ next-env.d.ts
 # local-only compose files
 docker-compose.internal.yml
 tests/integration/.pre-migration.json
+
+# Playwright (Sessions enthalten Cookies)
+e2e/.auth/
+playwright-report/
+test-results/
