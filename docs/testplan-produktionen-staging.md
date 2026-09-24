@@ -1,6 +1,6 @@
 # Testplan Staging: Produktionen, Onboarding & Fotoerlaubnis
 
-Vor dem Prod-Release (Migrationen `20260923120000` … `20260924120000`) einmal auf Staging durchgehen.
+Vor dem Prod-Release (Migrationen `20260923120000` … `20260924140000`) einmal auf Staging durchgehen.
 Plan und Hintergründe: `docs/produktionen-mitglieder-plan.md`.
 
 Vorbereitung:
