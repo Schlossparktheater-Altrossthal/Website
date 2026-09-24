@@ -6,6 +6,7 @@ import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { deactivateMemberInAuthentik, syncMemberToAuthentik } from "@/lib/authentik/sync";
 import { hasPermission } from "@/lib/permissions";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
+import { anonymizeAccount } from "@/lib/retention";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -216,8 +217,18 @@ export async function DELETE(
   try {
     // Authentik-Konto vorher deaktivieren (braucht noch die Profil-ID).
     await deactivateMemberInAuthentik(target.id);
-    await prisma.user.delete({ where: { id: target.id } });
-    return NextResponse.json({ ok: true });
+    try {
+      await prisma.user.delete({ where: { id: target.id } });
+      return NextResponse.json({ ok: true, anonymized: false });
+    } catch (error: unknown) {
+      // P2003: Fachdaten (Buchungen, Einladungen, Protokolle …) verweisen per Restrict-FK
+      // auf das Konto. Dann bleibt es als "Ehemaliges Mitglied" erhalten statt gelöscht.
+      if (!(error && typeof error === "object" && "code" in error && error.code === "P2003")) {
+        throw error;
+      }
+      await anonymizeAccount(target.id);
+      return NextResponse.json({ ok: true, anonymized: true });
+    }
   } catch (error: unknown) {
     console.error("[members] Löschen fehlgeschlagen", error);
     return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });

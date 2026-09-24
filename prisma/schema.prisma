@@ -440,7 +440,7 @@ model FinalRehearsalDuty {
   updatedAt   DateTime @updatedAt
   show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
   assignee    User?    @relation("FinalRehearsalDutyAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  createdBy   User     @relation("FinalRehearsalDutyCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("FinalRehearsalDutyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([showId, date])
   @@index([assigneeId])
@@ -490,7 +490,7 @@ model DepartmentTask {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  creator       User       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  creator       User       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
   assignments   DepartmentTaskAssignment[]
 
   @@index([departmentId, status])
@@ -531,7 +531,7 @@ model DepartmentEvent {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy     User       @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy     User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([departmentId, start])
 }
@@ -888,7 +888,7 @@ model RehearsalAttendanceLog {
   changedById   String
   rehearsal     Rehearsal         @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
   user          User              @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)
-  changedBy     User              @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Cascade)
+  changedBy     User              @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Restrict)
 
   @@index([rehearsalId, changedAt])
 }
@@ -1126,9 +1126,9 @@ model FinanceEntry {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
-  show           Show           @relation(fields: [showId], references: [id], onDelete: Cascade)
+  show           Show           @relation(fields: [showId], references: [id], onDelete: Restrict)
   budget         FinanceBudget? @relation(fields: [budgetId], references: [id], onDelete: SetNull)
-  createdBy      User           @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy      User           @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   approvedBy     User?          @relation("FinanceEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
   memberPaidBy   User?          @relation("FinanceEntryMemberPaidBy", fields: [memberPaidById], references: [id], onDelete: SetNull)
   attachments    FinanceAttachment[]
@@ -1162,7 +1162,7 @@ model FinanceBudget {
   notes         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  show          Show           @relation(fields: [showId], references: [id], onDelete: Cascade)
+  show          Show           @relation(fields: [showId], references: [id], onDelete: Restrict)
   entries       FinanceEntry[]
 
   @@index([showId, category])
@@ -1237,7 +1237,7 @@ model IssueComment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  author    User     @relation("IssueCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  author    User     @relation("IssueCommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
 
   @@index([issueId])
 }
@@ -1271,7 +1271,7 @@ model PhotoConsent {
   signatureCapturedAt DateTime?
   signaturePayload    Json?
   user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  show             Show                @relation(fields: [showId], references: [id], onDelete: Cascade)
+  show             Show                @relation(fields: [showId], references: [id], onDelete: Restrict)
   approvedBy       User?               @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
 
   @@unique([userId, showId])
@@ -1290,7 +1290,7 @@ model GalleryItem {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   uploadedById String
-  uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
 
   @@index([year, createdAt])
 }
@@ -1365,7 +1365,7 @@ model MemberInvite {
   /// Persönliche Rückkehr-Einladung: nur dieses Konto darf den Link nutzen.
   personalForUserId String?
 
-  createdBy   User     @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy   User     @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Restrict)
   personalFor User?    @relation("MemberInvitesPersonal", fields: [personalForUserId], references: [id], onDelete: SetNull)
   redemptions MemberInviteRedemption[]
   onboardings MemberOnboardingProfile[]

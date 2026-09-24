@@ -252,7 +252,11 @@ Mögliche Werte von `Role`: `member`, `cast`, `tech`, `board`, `finance`, `owner
   - FinalRehearsalDuty: assignee, createdBy
   - PhotoConsent: user, approvedBy
   - MemberInvite: createdBy, personalFor
-- **Löschverhalten** (`onDelete`) steht in der Referenz unten bei jedem Relationsfeld.
+- **Löschverhalten** (`onDelete`) steht in der Referenz unten bei jedem Relationsfeld. Grundsatz seit 2026-09-24:
+  - `Cascade` nur für Daten, die der Person selbst gehören (Account, Session, Maße, Allergien, Verfügbarkeit, Interessen, Mitgliedschaften).
+  - `Restrict` für Fachdaten des Vereins mit Pflicht-Ersteller: `FinanceEntry.createdBy`, `MemberInvite.createdBy`, `RehearsalAttendanceLog.changedBy`, `DepartmentTask.creator`, `DepartmentEvent.createdBy`, `FinalRehearsalDuty.createdBy`, `IssueComment.author`, `GalleryItem.uploadedBy`.
+  - `Restrict` von `Show` auf `FinanceEntry`, `FinanceBudget` und `PhotoConsent`: Produktionen werden archiviert, nicht gelöscht.
+  - `DELETE /api/members/[id]` versucht erst ein echtes Löschen. Scheitert es an einem Restrict-FK (P2003), wird das Konto per `anonymizeAccount` (`src/lib/retention.ts`) anonymisiert.
 - **Singletons:** `*Settings`, `HomepageCountdown` und `HomepageFlyer` haben eine feste ID und damit genau eine Zeile.
 
 ## Aktualisierung
@@ -531,7 +535,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `createdById`           | `String`                      |                                                                                                      |
 | `showId`                | `String`                      |                                                                                                      |
 | `personalForUserId`     | `String?`                     | Persönliche Rückkehr-Einladung: nur dieses Konto darf den Link nutzen.                               |
-| `createdBy`             | → `User`                      | @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Cascade)        |
+| `createdBy`             | → `User`                      | @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Restrict)       |
 | `personalFor`           | → `User?`                     | @relation("MemberInvitesPersonal", fields: [personalForUserId], references: [id], onDelete: SetNull) |
 | `redemptions`           | → `MemberInviteRedemption[]`  |                                                                                                      |
 | `onboardings`           | → `MemberOnboardingProfile[]` |                                                                                                      |
@@ -646,7 +650,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `signatureCapturedAt` | `DateTime?`                 |                                                                             |
 | `signaturePayload`    | `Json?`                     |                                                                             |
 | `user`                | → `User`                    | @relation(fields: [userId], references: [id], onDelete: Cascade)            |
-| `show`                | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Cascade)            |
+| `show`                | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Restrict)           |
 | `approvedBy`          | → `User?`                   | @relation("PhotoConsentApprover", fields: [approvedById], references: [id]) |
 
 - `@@unique([userId, showId])`
@@ -793,20 +797,20 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `DepartmentTask`
 
-| Feld           | Typ                            | Attribute / Beschreibung                                                                       |
-| -------------- | ------------------------------ | ---------------------------------------------------------------------------------------------- |
-| `id`           | `String`                       | @id @default(cuid())                                                                           |
-| `departmentId` | `String`                       |                                                                                                |
-| `title`        | `String`                       |                                                                                                |
-| `description`  | `String?`                      |                                                                                                |
-| `status`       | `TaskStatus` (enum)            | @default(todo)                                                                                 |
-| `dueAt`        | `DateTime?`                    |                                                                                                |
-| `createdById`  | `String`                       |                                                                                                |
-| `createdAt`    | `DateTime`                     | @default(now())                                                                                |
-| `updatedAt`    | `DateTime`                     | @updatedAt                                                                                     |
-| `department`   | → `Department`                 | @relation(fields: [departmentId], references: [id], onDelete: Cascade)                         |
-| `creator`      | → `User`                       | @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Cascade) |
-| `assignments`  | → `DepartmentTaskAssignment[]` |                                                                                                |
+| Feld           | Typ                            | Attribute / Beschreibung                                                                        |
+| -------------- | ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `id`           | `String`                       | @id @default(cuid())                                                                            |
+| `departmentId` | `String`                       |                                                                                                 |
+| `title`        | `String`                       |                                                                                                 |
+| `description`  | `String?`                      |                                                                                                 |
+| `status`       | `TaskStatus` (enum)            | @default(todo)                                                                                  |
+| `dueAt`        | `DateTime?`                    |                                                                                                 |
+| `createdById`  | `String`                       |                                                                                                 |
+| `createdAt`    | `DateTime`                     | @default(now())                                                                                 |
+| `updatedAt`    | `DateTime`                     | @updatedAt                                                                                      |
+| `department`   | → `Department`                 | @relation(fields: [departmentId], references: [id], onDelete: Cascade)                          |
+| `creator`      | → `User`                       | @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict) |
+| `assignments`  | → `DepartmentTaskAssignment[]` |                                                                                                 |
 
 - `@@index([departmentId, status])`
 - `@@index([createdAt])`
@@ -852,7 +856,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `createdAt`    | `DateTime`     | @default(now())                                                        |
 | `updatedAt`    | `DateTime`     | @updatedAt                                                             |
 | `department`   | → `Department` | @relation(fields: [departmentId], references: [id], onDelete: Cascade) |
-| `createdBy`    | → `User`       | @relation(fields: [createdById], references: [id], onDelete: Cascade)  |
+| `createdBy`    | → `User`       | @relation(fields: [createdById], references: [id], onDelete: Restrict) |
 
 - `@@index([departmentId, start])`
 
@@ -951,19 +955,19 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `RehearsalAttendanceLog`
 
-| Feld          | Typ                        | Attribute / Beschreibung                                                                     |
-| ------------- | -------------------------- | -------------------------------------------------------------------------------------------- |
-| `id`          | `String`                   | @id @default(cuid())                                                                         |
-| `rehearsalId` | `String`                   |                                                                                              |
-| `userId`      | `String`                   |                                                                                              |
-| `previous`    | `AttendanceStatus?` (enum) |                                                                                              |
-| `next`        | `AttendanceStatus?` (enum) |                                                                                              |
-| `comment`     | `String?`                  |                                                                                              |
-| `changedAt`   | `DateTime`                 | @default(now())                                                                              |
-| `changedById` | `String`                   |                                                                                              |
-| `rehearsal`   | → `Rehearsal`              | @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)                        |
-| `user`        | → `User`                   | @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)      |
-| `changedBy`   | → `User`                   | @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Cascade) |
+| Feld          | Typ                        | Attribute / Beschreibung                                                                      |
+| ------------- | -------------------------- | --------------------------------------------------------------------------------------------- |
+| `id`          | `String`                   | @id @default(cuid())                                                                          |
+| `rehearsalId` | `String`                   |                                                                                               |
+| `userId`      | `String`                   |                                                                                               |
+| `previous`    | `AttendanceStatus?` (enum) |                                                                                               |
+| `next`        | `AttendanceStatus?` (enum) |                                                                                               |
+| `comment`     | `String?`                  |                                                                                               |
+| `changedAt`   | `DateTime`                 | @default(now())                                                                               |
+| `changedById` | `String`                   |                                                                                               |
+| `rehearsal`   | → `Rehearsal`              | @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)                         |
+| `user`        | → `User`                   | @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)       |
+| `changedBy`   | → `User`                   | @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Restrict) |
 
 - `@@index([rehearsalId, changedAt])`
 
@@ -994,23 +998,23 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `FinalRehearsalDuty`
 
-| Feld          | Typ        | Attribute / Beschreibung                                                                             |
-| ------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
-| `id`          | `String`   | @id @default(cuid())                                                                                 |
-| `showId`      | `String`   |                                                                                                      |
-| `date`        | `DateTime` |                                                                                                      |
-| `title`       | `String`   |                                                                                                      |
-| `description` | `String?`  |                                                                                                      |
-| `location`    | `String?`  |                                                                                                      |
-| `startTime`   | `Int?`     |                                                                                                      |
-| `endTime`     | `Int?`     |                                                                                                      |
-| `assigneeId`  | `String?`  |                                                                                                      |
-| `createdById` | `String`   |                                                                                                      |
-| `createdAt`   | `DateTime` | @default(now())                                                                                      |
-| `updatedAt`   | `DateTime` | @updatedAt                                                                                           |
-| `show`        | → `Show`   | @relation(fields: [showId], references: [id], onDelete: Cascade)                                     |
-| `assignee`    | → `User?`  | @relation("FinalRehearsalDutyAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)   |
-| `createdBy`   | → `User`   | @relation("FinalRehearsalDutyCreatedBy", fields: [createdById], references: [id], onDelete: Cascade) |
+| Feld          | Typ        | Attribute / Beschreibung                                                                              |
+| ------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| `id`          | `String`   | @id @default(cuid())                                                                                  |
+| `showId`      | `String`   |                                                                                                       |
+| `date`        | `DateTime` |                                                                                                       |
+| `title`       | `String`   |                                                                                                       |
+| `description` | `String?`  |                                                                                                       |
+| `location`    | `String?`  |                                                                                                       |
+| `startTime`   | `Int?`     |                                                                                                       |
+| `endTime`     | `Int?`     |                                                                                                       |
+| `assigneeId`  | `String?`  |                                                                                                       |
+| `createdById` | `String`   |                                                                                                       |
+| `createdAt`   | `DateTime` | @default(now())                                                                                       |
+| `updatedAt`   | `DateTime` | @updatedAt                                                                                            |
+| `show`        | → `Show`   | @relation(fields: [showId], references: [id], onDelete: Cascade)                                      |
+| `assignee`    | → `User?`  | @relation("FinalRehearsalDutyAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)    |
+| `createdBy`   | → `User`   | @relation("FinalRehearsalDutyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict) |
 
 - `@@index([showId, date])`
 - `@@index([assigneeId])`
@@ -1195,18 +1199,18 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `FinanceBudget`
 
-| Feld            | Typ                | Attribute / Beschreibung                                         |
-| --------------- | ------------------ | ---------------------------------------------------------------- |
-| `id`            | `String`           | @id @default(cuid())                                             |
-| `showId`        | `String`           |                                                                  |
-| `category`      | `String`           |                                                                  |
-| `plannedAmount` | `Float`            | @default(0)                                                      |
-| `currency`      | `String`           | @default("EUR")                                                  |
-| `notes`         | `String?`          |                                                                  |
-| `createdAt`     | `DateTime`         | @default(now())                                                  |
-| `updatedAt`     | `DateTime`         | @updatedAt                                                       |
-| `show`          | → `Show`           | @relation(fields: [showId], references: [id], onDelete: Cascade) |
-| `entries`       | → `FinanceEntry[]` |                                                                  |
+| Feld            | Typ                | Attribute / Beschreibung                                          |
+| --------------- | ------------------ | ----------------------------------------------------------------- |
+| `id`            | `String`           | @id @default(cuid())                                              |
+| `showId`        | `String`           |                                                                   |
+| `category`      | `String`           |                                                                   |
+| `plannedAmount` | `Float`            | @default(0)                                                       |
+| `currency`      | `String`           | @default("EUR")                                                   |
+| `notes`         | `String?`          |                                                                   |
+| `createdAt`     | `DateTime`         | @default(now())                                                   |
+| `updatedAt`     | `DateTime`         | @updatedAt                                                        |
+| `show`          | → `Show`           | @relation(fields: [showId], references: [id], onDelete: Restrict) |
+| `entries`       | → `FinanceEntry[]` |                                                                   |
 
 - `@@index([showId, category])`
 
@@ -1240,9 +1244,9 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `approvedAt`      | `DateTime?`                 |                                                                                                      |
 | `createdAt`       | `DateTime`                  | @default(now())                                                                                      |
 | `updatedAt`       | `DateTime`                  | @updatedAt                                                                                           |
-| `show`            | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Cascade)                                     |
+| `show`            | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Restrict)                                    |
 | `budget`          | → `FinanceBudget?`          | @relation(fields: [budgetId], references: [id], onDelete: SetNull)                                   |
-| `createdBy`       | → `User`                    | @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)       |
+| `createdBy`       | → `User`                    | @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)      |
 | `approvedBy`      | → `User?`                   | @relation("FinanceEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)     |
 | `memberPaidBy`    | → `User?`                   | @relation("FinanceEntryMemberPaidBy", fields: [memberPaidById], references: [id], onDelete: SetNull) |
 | `attachments`     | → `FinanceAttachment[]`     |                                                                                                      |
@@ -1422,20 +1426,20 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `GalleryItem`
 
-| Feld           | Typ                       | Attribute / Beschreibung                                               |
-| -------------- | ------------------------- | ---------------------------------------------------------------------- |
-| `id`           | `String`                  | @id @default(cuid())                                                   |
-| `year`         | `Int`                     |                                                                        |
-| `description`  | `String?`                 |                                                                        |
-| `fileName`     | `String`                  |                                                                        |
-| `mimeType`     | `String`                  |                                                                        |
-| `fileSize`     | `Int`                     |                                                                        |
-| `mediaType`    | `GalleryMediaType` (enum) |                                                                        |
-| `data`         | `Bytes`                   |                                                                        |
-| `createdAt`    | `DateTime`                | @default(now())                                                        |
-| `updatedAt`    | `DateTime`                | @updatedAt                                                             |
-| `uploadedById` | `String`                  |                                                                        |
-| `uploadedBy`   | → `User`                  | @relation(fields: [uploadedById], references: [id], onDelete: Cascade) |
+| Feld           | Typ                       | Attribute / Beschreibung                                                |
+| -------------- | ------------------------- | ----------------------------------------------------------------------- |
+| `id`           | `String`                  | @id @default(cuid())                                                    |
+| `year`         | `Int`                     |                                                                         |
+| `description`  | `String?`                 |                                                                         |
+| `fileName`     | `String`                  |                                                                         |
+| `mimeType`     | `String`                  |                                                                         |
+| `fileSize`     | `Int`                     |                                                                         |
+| `mediaType`    | `GalleryMediaType` (enum) |                                                                         |
+| `data`         | `Bytes`                   |                                                                         |
+| `createdAt`    | `DateTime`                | @default(now())                                                         |
+| `updatedAt`    | `DateTime`                | @updatedAt                                                              |
+| `uploadedById` | `String`                  |                                                                         |
+| `uploadedBy`   | → `User`                  | @relation(fields: [uploadedById], references: [id], onDelete: Restrict) |
 
 - `@@index([year, createdAt])`
 
@@ -1467,16 +1471,16 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `IssueComment`
 
-| Feld        | Typ        | Attribute / Beschreibung                                                                 |
-| ----------- | ---------- | ---------------------------------------------------------------------------------------- |
-| `id`        | `String`   | @id @default(cuid())                                                                     |
-| `issueId`   | `String`   |                                                                                          |
-| `authorId`  | `String`   |                                                                                          |
-| `body`      | `String`   |                                                                                          |
-| `createdAt` | `DateTime` | @default(now())                                                                          |
-| `updatedAt` | `DateTime` | @updatedAt                                                                               |
-| `issue`     | → `Issue`  | @relation(fields: [issueId], references: [id], onDelete: Cascade)                        |
-| `author`    | → `User`   | @relation("IssueCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade) |
+| Feld        | Typ        | Attribute / Beschreibung                                                                  |
+| ----------- | ---------- | ----------------------------------------------------------------------------------------- |
+| `id`        | `String`   | @id @default(cuid())                                                                      |
+| `issueId`   | `String`   |                                                                                           |
+| `authorId`  | `String`   |                                                                                           |
+| `body`      | `String`   |                                                                                           |
+| `createdAt` | `DateTime` | @default(now())                                                                           |
+| `updatedAt` | `DateTime` | @updatedAt                                                                                |
+| `issue`     | → `Issue`  | @relation(fields: [issueId], references: [id], onDelete: Cascade)                         |
+| `author`    | → `User`   | @relation("IssueCommentAuthor", fields: [authorId], references: [id], onDelete: Restrict) |
 
 - `@@index([issueId])`
 

@@ -679,11 +679,19 @@ function MemberDeleteModal({ user, onClose, onDeleted }: MemberDeleteModalProps)
     setLoading(true);
     try {
       const response = await fetch(`/api/members/${user.id}`, { method: "DELETE" });
-      const data = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        anonymized?: boolean;
+        error?: string;
+      };
       if (!response.ok) {
         throw new Error(data?.error ?? "Löschen fehlgeschlagen");
       }
-      toast.success("Mitglied erfolgreich gelöscht");
+      toast.success(
+        data.anonymized
+          ? "Mitglied anonymisiert (verknüpfte Vereinsdaten bleiben erhalten)"
+          : "Mitglied erfolgreich gelöscht",
+      );
       onDeleted(user.id);
       onClose();
     } catch (error) {
