@@ -1,4 +1,7 @@
 import { notFound, redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { OnboardingSessionNotice } from "@/components/onboarding/onboarding-session-notice";
+import { onboardingSessionNotice } from "@/lib/onboarding/session-notice";
 
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus, generateInviteToken, hashInviteToken } from "@/lib/member-invites";
@@ -80,9 +83,16 @@ export default async function OnboardingInvitePage({
   });
 
   const whatsappLink = getOnboardingWhatsAppLink(invite.show?.meta);
+  const notice = onboardingSessionNotice(await auth());
 
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+      {notice ? (
+        <OnboardingSessionNotice
+          {...notice}
+          continueHref={`/onboarding/${encodeURIComponent(token)}/update`}
+        />
+      ) : null}
       <OnboardingWizard
         token={token}
         sessionToken={redemption.sessionToken}

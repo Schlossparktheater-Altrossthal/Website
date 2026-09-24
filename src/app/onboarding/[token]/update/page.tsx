@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { OnboardingSessionNotice } from "@/components/onboarding/onboarding-session-notice";
 import { ReturneeUpdateWizard } from "@/components/onboarding/returnee-update-wizard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/auth";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
+import { onboardingSessionNotice } from "@/lib/onboarding/session-notice";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -93,6 +95,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
 
   const session = await auth();
   const userId = session?.user?.id ?? null;
+  const notice = onboardingSessionNotice(session);
 
   if (!userId) {
     return (
@@ -137,6 +140,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
             dem Konto an, an das die Einladung ging, oder frag die Produktionsleitung nach einem
             eigenen Link.
           </p>
+          {notice ? <OnboardingSessionNotice {...notice} /> : null}
         </div>
       </main>
     );
@@ -223,6 +227,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
 
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+      {notice ? <OnboardingSessionNotice {...notice} /> : null}
       {session?.user?.isDeactivated ? (
         <p
           role="status"
