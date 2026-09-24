@@ -6,7 +6,8 @@ vi.mock("@/lib/server-settings", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/server-settings")>()),
   loadResolvedServerSettings: mocks.settings,
 }));
-vi.mock("../transporter", () => ({
+vi.mock("../transporter", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../transporter")>()),
   createTransporterFromSettings: () => ({ sendMail: mocks.sendMail }),
 }));
 
@@ -26,7 +27,17 @@ const baseSettings = {
 };
 
 describe("createConfiguredMailSender", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("liefert mit MAIL_DISABLED keinen Versender, obwohl SMTP konfiguriert ist", async () => {
+    vi.stubEnv("MAIL_DISABLED", "true");
+    mocks.settings.mockResolvedValue(baseSettings);
+    expect(await createConfiguredMailSender()).toBeNull();
+    expect(mocks.sendMail).not.toHaveBeenCalled();
+  });
 
   it("liefert ohne SMTP-Server keinen Versender", async () => {
     mocks.settings.mockResolvedValue({ ...baseSettings, mailHost: null });

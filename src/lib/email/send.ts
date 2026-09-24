@@ -1,6 +1,6 @@
 import { formatSenderAddress, loadResolvedServerSettings } from "@/lib/server-settings";
 
-import { createTransporterFromSettings } from "./transporter";
+import { createTransporterFromSettings, isMailDisabled } from "./transporter";
 
 export type OutgoingMail = {
   to: string;
@@ -15,6 +15,9 @@ export type MailSender = (mail: OutgoingMail) => Promise<void>;
  * wenn kein Mailserver bzw. Absender konfiguriert ist.
  */
 export async function createConfiguredMailSender(): Promise<MailSender | null> {
+  if (isMailDisabled()) {
+    return null;
+  }
   const settings = await loadResolvedServerSettings();
   const from = formatSenderAddress(settings);
   if (!settings.mailHost || !from) {
