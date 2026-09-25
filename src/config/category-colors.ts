@@ -53,3 +53,11 @@ export const RANKING_ROLE_STYLES: Record<string, string> = {
     "border-amber-300/55 bg-amber-400/10 dark:border-amber-300/40 dark:bg-amber-400/5",
   default: "border-border/60 bg-muted/30",
 };
+
+/** Kennfarbe (Streifen/Punkt) je Personengruppe in Team-Übersichten, passend zum Fokus. */
+export const MEMBER_GROUP_ACCENTS: Record<"actors" | "crew" | "both" | "other", string> = {
+  actors: "bg-violet-500",
+  crew: "bg-cyan-500",
+  both: "bg-indigo-500",
+  other: "bg-muted-foreground/50",
+};

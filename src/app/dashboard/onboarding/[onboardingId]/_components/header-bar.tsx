@@ -88,8 +88,8 @@ export function HeaderBar({
   }, []);
 
   return (
-    <Card className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card/70 p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <Card className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card/70 p-4 shadow-sm xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-1 flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold leading-tight tracking-tight sm:text-2xl">
@@ -102,7 +102,7 @@ export function HeaderBar({
             Teilnehmende
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <Select value={selectedId} onValueChange={onSelect} disabled={isOffline}>
             <SelectTrigger className="w-full min-w-[220px] sm:w-60">
               <SelectValue placeholder="Onboarding auswählen" />

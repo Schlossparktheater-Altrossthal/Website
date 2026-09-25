@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { DAY_TIER_LABELS, type DayInfo } from "@/lib/sperrliste/day-tiers";
+import { MEMBER_GROUP_ACCENTS } from "@/config/category-colors";
 import { cn } from "@/lib/utils";
 
 import { CalendarEntryList, CalendarLegend, DayChips, formatLongDate } from "./day-parts";
@@ -432,9 +433,13 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                 <th
                   colSpan={days.length + 1}
                   scope="colgroup"
-                  className="border-b border-border bg-muted/40 px-2 py-1 text-left text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground sm:px-3"
+                  className="border-y border-border bg-muted px-2 py-1.5 text-left text-[0.6875rem] font-semibold uppercase tracking-wide text-foreground/80 sm:px-3"
                 >
-                  <span className="sticky left-2">
+                  <span className="sticky left-2 inline-flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className={cn("h-2 w-2 rounded-full", MEMBER_GROUP_ACCENTS[group])}
+                    />
                     {MEMBER_GROUP_LABELS[group]} · {groupMembers.length}
                   </span>
                 </th>
@@ -445,7 +450,14 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                     scope="row"
                     className="sticky left-0 z-10 border-b border-r border-border bg-card px-2 py-0 text-left font-normal group-hover/row:bg-muted sm:px-3"
                   >
-                    <span className="flex h-8 items-center gap-2">
+                    <span className="relative flex h-8 items-center gap-2">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "absolute -left-2 top-1 bottom-1 w-0.5 rounded-full sm:-left-3",
+                          MEMBER_GROUP_ACCENTS[group],
+                        )}
+                      />
                       <span
                         aria-hidden
                         className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[0.625rem] font-semibold text-muted-foreground sm:flex"
@@ -464,8 +476,8 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                       <td
                         key={day.key}
                         className={cn(
-                          "border-b border-border/60 p-[3px] group-hover/row:bg-muted/60",
-                          day.tier === "core" && "bg-muted/30",
+                          "border-b border-border p-[3px] group-hover/row:bg-foreground/10",
+                          day.tier === "core" && "bg-foreground/[0.04] dark:bg-foreground/[0.07]",
                         )}
                       >
                         <MatrixCell entry={entry} canPlan={canPlan} />
@@ -484,7 +496,12 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
 
 function MatrixCell({ entry, canPlan }: { entry: TeamEntry | undefined; canPlan: boolean }) {
   if (!entry) {
-    return <span aria-hidden className="block h-6 rounded-[3px] bg-muted/50" />;
+    return (
+      <span
+        aria-hidden
+        className="block h-6 rounded-[3px] border border-border/70 bg-foreground/[0.03] dark:bg-foreground/[0.06]"
+      />
+    );
   }
   const style = AVAILABILITY_STATUS[entry.status];
   const label = canPlan && entry.reason ? `${style.label}: ${entry.reason}` : style.label;
