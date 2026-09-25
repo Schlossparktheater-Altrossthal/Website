@@ -50,6 +50,7 @@ export function ProfileClient({
   allergies: initialAllergies,
   checklist: initialChecklist,
   availableOnboardings,
+  history,
 }: ProfileClientProps) {
   const { update: refreshSession } = useSession();
   const searchParams = useSearchParams();
@@ -263,7 +264,7 @@ export function ProfileClient({
   return (
     <div className="space-y-4 lg:space-y-6">
       <div className={cn(mobileSection ? "hidden lg:block" : "block")}>
-        <ProfileHeader user={user} displayName={displayName} summary={summary} />
+        <ProfileHeader user={user} displayName={displayName} summary={summary} history={history} />
       </div>
 
       <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">

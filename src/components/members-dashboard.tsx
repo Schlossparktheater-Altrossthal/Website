@@ -498,13 +498,27 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       />
 
       <div className="space-y-4 pb-10 sm:space-y-6">
-        <div className="space-y-0.5">
-          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Hallo, {firstName}</h2>
-          {productionLabel ? (
-            <p className="text-sm text-muted-foreground">
-              Aktuelle Produktion: <span className="text-foreground">{productionLabel}</span>
-            </p>
-          ) : null}
+        <div className="relative overflow-hidden rounded-xl border border-primary/25 bg-gradient-to-br from-primary/15 via-card to-card p-4 shadow-sm sm:p-5">
+          <div
+            className="pointer-events-none absolute -right-16 -top-10 h-40 w-40 rounded-full bg-primary/20 opacity-60 blur-3xl"
+            aria-hidden
+          />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/12 text-primary">
+              <SparklesIcon className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-0.5">
+              <h2 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
+                Hallo, {firstName}
+              </h2>
+              {productionLabel ? (
+                <p className="truncate text-sm text-muted-foreground">
+                  Aktuelle Produktion:{" "}
+                  <span className="font-medium text-primary">{productionLabel}</span>
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
 
         {isOfflineFallback ? (
@@ -547,6 +561,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             label="Proben diese Woche"
             value={overviewLoaded ? numberFormatter.format(stats.rehearsalsThisWeek) : "–"}
             icon={<CalendarIcon />}
+            tone="primary"
             href="/mitglieder/meine-proben"
           />
           <StatTile label="Gerade online" value={onlineValue} tone="success" icon={<WifiIcon />} />
@@ -554,6 +569,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             label="Mitglieder"
             value={overviewLoaded ? numberFormatter.format(stats.totalMembers) : "–"}
             icon={<UsersIcon />}
+            tone="info"
           />
         </section>
 
@@ -599,7 +615,11 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
           <div className="flex flex-col gap-4 lg:gap-6">
             {profileCompletion && !profileCompletion.complete ? (
-              <Card variant="plain" size="flush" className="order-first lg:order-none">
+              <Card
+                variant="plain"
+                size="flush"
+                className="order-first border-warning/30 bg-gradient-to-br from-warning/10 via-card to-card lg:order-none"
+              >
                 <div className="flex items-center gap-3 p-4 pb-2">
                   <ProgressRing value={profileCompletion.completed} max={profileCompletion.total} />
                   <SectionHeader
@@ -646,7 +666,11 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                         key={link.href}
                         density="compact"
                         href={link.href}
-                        leading={<Icon className="h-4 w-4 text-muted-foreground" />}
+                        leading={
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                        }
                         title={link.label}
                       />
                     );
@@ -656,7 +680,11 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                       density="compact"
                       href={whatsapp.link}
                       external
-                      leading={<MessageCircleIcon className="h-4 w-4 text-muted-foreground" />}
+                      leading={
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/15 text-success">
+                          <MessageCircleIcon className="h-4 w-4" />
+                        </span>
+                      }
                       title="Team-Chat (WhatsApp)"
                     />
                   ) : null}

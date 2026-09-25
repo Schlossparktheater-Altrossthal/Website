@@ -8,6 +8,7 @@ import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { getAvailableOnboardings } from "@/lib/onboarding/dashboard-service";
 import { prisma } from "@/lib/prisma";
 import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
+import { loadMemberHistory } from "@/lib/member-history";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
@@ -104,7 +105,7 @@ export default async function ProfilePage() {
     notFound();
   }
 
-  const [allergiesRaw, availableOnboardings] = await Promise.all([
+  const [allergiesRaw, availableOnboardings, history] = await Promise.all([
     prisma.dietaryRestriction.findMany({
       where: { userId, isActive: true },
       orderBy: { allergen: "asc" },
@@ -119,6 +120,7 @@ export default async function ProfilePage() {
       },
     }),
     getAvailableOnboardings(),
+    loadMemberHistory(userId, user.onboardingProfile?.memberSinceYear ?? null),
   ]);
 
   const displayName = getUserDisplayName(
@@ -242,6 +244,7 @@ export default async function ProfilePage() {
     <div className="space-y-6">
       <PageHeader title="Mein Profil" breadcrumbs={[membersBreadcrumb]} />
       <ProfileClient
+        history={history}
         user={{
           id: user.id,
           email: user.email ?? "",

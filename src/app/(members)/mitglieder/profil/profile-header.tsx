@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { UserAvatar } from "@/components/user-avatar";
+import type { MemberHistory } from "@/lib/member-history";
 import type { ProfileCompletionSummary } from "@/lib/profile-completion";
 import { ROLE_LABELS, sortRoles } from "@/lib/roles";
 
@@ -12,12 +13,21 @@ type ProfileHeaderProps = {
   user: ProfileUser;
   displayName: string;
   summary: ProfileCompletionSummary;
+  history: MemberHistory;
 };
 
 /** Kopf der Profilseite: Bild, Name, Rollen und Vollständigkeit auf einen Blick. */
-export function ProfileHeader({ user, displayName, summary }: ProfileHeaderProps) {
+export function ProfileHeader({ user, displayName, summary, history }: ProfileHeaderProps) {
   const roles = sortRoles([...new Set(user.roles)]);
   const openCount = summary.total - summary.completed;
+  const historyLabel = [
+    history.sinceYear ? `Dabei seit ${history.sinceYear}` : null,
+    history.productionCount
+      ? `${history.productionCount} ${history.productionCount === 1 ? "Produktion" : "Produktionen"}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="flex items-center gap-4 rounded-lg border border-border/60 bg-card p-4 shadow-sm">
@@ -37,6 +47,7 @@ export function ProfileHeader({ user, displayName, summary }: ProfileHeaderProps
           {displayName}
         </h2>
         {user.email ? <p className="truncate text-sm text-muted-foreground">{user.email}</p> : null}
+        {historyLabel ? <p className="text-xs font-medium text-primary">{historyLabel}</p> : null}
         <div className="flex flex-wrap gap-1 pt-0.5">
           {roles.map((role) => (
             <Badge key={role} variant="muted" size="sm">

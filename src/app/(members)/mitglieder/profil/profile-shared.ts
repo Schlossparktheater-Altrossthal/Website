@@ -1,3 +1,4 @@
+import type { MemberHistory } from "@/lib/member-history";
 import { z } from "zod";
 import { type DietaryStrictnessOption, type DietaryStyleOption } from "@/data/dietary-preferences";
 import {
@@ -135,6 +136,7 @@ export function formatDateLabel(value: string | null | undefined) {
 }
 
 export type ProfileClientProps = {
+  history: MemberHistory;
   user: {
     id: string;
     email: string;
