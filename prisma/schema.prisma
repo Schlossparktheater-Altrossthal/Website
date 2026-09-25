@@ -86,23 +86,11 @@ enum AvatarSource {
   INITIALS
 }
 
-enum ClueType {
-  text
-  image
-  audio
-  riddle
-}
-
 enum AttendanceStatus {
   yes
   no
   emergency
   maybe
-}
-
-enum GalleryMediaType {
-  image
-  video
 }
 
 enum FileLibraryAccessType {
@@ -302,7 +290,6 @@ model User {
 
   accounts     Account[]
   sessions     Session[]
-  guesses      Guess[]
   attendance   RehearsalAttendance[]
   availability Availability[]
   tasks        Task[]                @relation("TaskAssignee")
@@ -348,7 +335,6 @@ model User {
   financeLogsAuthored    FinanceLog[]           @relation("FinanceLogChangedBy")
   finalRehearsalDutiesAssigned FinalRehearsalDuty[] @relation("FinalRehearsalDutyAssignee")
   finalRehearsalDutiesCreated  FinalRehearsalDuty[] @relation("FinalRehearsalDutyCreatedBy")
-  galleryItems           GalleryItem[]
   fileLibraryFoldersCreated FileLibraryFolder[] @relation("FileLibraryFoldersCreated")
   fileLibraryItemsUploaded  FileLibraryItem[]   @relation("FileLibraryItemsUploaded")
   parentalConsentTemplatesUpdated ServerSettings[] @relation("ServerSettingsParentalConsentUploader")
@@ -410,11 +396,9 @@ model Show {
   status     ProductionStatus @default(planning)
   statusChangedAt DateTime?
   archivedAt DateTime?
-  clues      Clue[]
   rehearsals Rehearsal[]
   finance    FinanceEntry[]
   budgets    FinanceBudget[]
-  guesses    Guess[]
   proposals  RehearsalProposal[]
   characters Character[]
   scenes     Scene[]
@@ -641,51 +625,6 @@ model SceneBreakdownItem {
   @@index([sceneId, departmentId])
 }
 
-model Clue {
-  id        String   @id @default(cuid())
-  showId    String
-  index     Int
-  type      ClueType
-  content   Json
-  releaseAt DateTime
-  points    Int
-  published Boolean  @default(false)
-  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
-  tipSubmissions MysteryTipSubmission[]
-
-  @@unique([showId, index], name: "showId_index")
-  @@index([showId, published, releaseAt])
-}
-
-model HomepageCountdown {
-  id              String   @id @default("public")
-  countdownTarget DateTime?
-  termine         Json?
-  nachSommerText  String   @default("Bis zum nächsten Sommer!")
-  disabled        Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model HomepageFlyer {
-  id           String   @id @default("public")
-  aktiv        Boolean  @default(false)
-  titel        String?
-  beschreibung String?
-  bildData     Bytes?
-  bildMimeType String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model MysterySettings {
-  id                 String   @id @default("default")
-  countdownTarget    DateTime?
-  expirationMessage  String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-}
-
 model WebsiteTheme {
   id          String            @id @default(cuid())
   name        String
@@ -756,46 +695,6 @@ model SeasonResetSettings {
   protectedRoles Json?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-}
-
-model MysteryTip {
-  id             String   @id @default(cuid())
-  text           String
-  normalizedText String   @unique
-  count          Int      @default(1)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  submissions    MysteryTipSubmission[]
-}
-
-model MysteryTipSubmission {
-  id             String   @id @default(cuid())
-  tipId          String
-  clueId         String?
-  playerName     String
-  tipText        String
-  normalizedText String
-  isCorrect      Boolean  @default(false)
-  score          Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  tip            MysteryTip @relation(fields: [tipId], references: [id], onDelete: Cascade)
-  clue           Clue?      @relation(fields: [clueId], references: [id], onDelete: SetNull)
-
-  @@index([clueId])
-  @@index([playerName])
-  @@index([tipId])
-}
-
-model Guess {
-  id        String   @id @default(cuid())
-  userId    String
-  showId    String
-  guessText String
-  score     Int      @default(0)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
 }
 
 model Rehearsal {
@@ -1278,23 +1177,6 @@ model PhotoConsent {
 
   @@unique([userId, showId])
   @@index([showId, status])
-}
-
-model GalleryItem {
-  id           String           @id @default(cuid())
-  year         Int
-  description  String?
-  fileName     String
-  mimeType     String
-  fileSize     Int
-  mediaType    GalleryMediaType
-  data         Bytes
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  uploadedById String
-  uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
-
-  @@index([year, createdAt])
 }
 
 model FileLibraryFolder {

@@ -71,19 +71,6 @@ async function main() {
     create: { id: "default" },
   });
 
-  await prisma.homepageCountdown.upsert({
-    where: { id: "public" },
-    update: {
-      countdownTarget: new Date("2026-06-18T17:00:00.000Z"),
-      disabled: false,
-    },
-    create: {
-      id: "public",
-      countdownTarget: new Date("2026-06-18T17:00:00.000Z"),
-      disabled: false,
-    },
-  });
-
   // --- Chronik: use ONLY the provided Altroßthal data below ---
 
   // Altroßthal data provided (curated demo -> replace with real assets later)
@@ -99,7 +86,7 @@ async function main() {
       sources: d.sources ?? [],
       evidence: d.evidence_snippets ?? [],
       quotes: d.press_quotes ?? [],
-      gallery: d.images ?? [],
+      gallery: [],
       ticket_info: d.ticket_info ?? null,
       transport: d.transport ?? null,
       cast: d.cast ?? null,
@@ -112,7 +99,7 @@ async function main() {
         title: d.title,
         synopsis: d.author ? `${d.author}` : null,
         dates: d.dates ?? null,
-        posterUrl: d.posterUrl ?? `https://picsum.photos/seed/${d.year}/800/1200`,
+        posterUrl: `https://picsum.photos/seed/${d.year}/800/1200`,
         revealedAt,
         meta,
       },
@@ -122,7 +109,7 @@ async function main() {
         title: d.title,
         synopsis: d.author ? `${d.author}` : null,
         dates: d.dates ?? null,
-        posterUrl: d.posterUrl ?? `https://picsum.photos/seed/${d.year}/800/1200`,
+        posterUrl: `https://picsum.photos/seed/${d.year}/800/1200`,
         revealedAt,
         meta,
       },
