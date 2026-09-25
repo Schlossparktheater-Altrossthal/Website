@@ -59,8 +59,8 @@ const nextConfig = {
       },
     ];
   },
-  experimental: {
-    turbopackRoot: process.cwd(),
+  turbopack: {
+    root: process.cwd(),
   },
   webpack: (config, { dev }) => {
     if (dev) {
