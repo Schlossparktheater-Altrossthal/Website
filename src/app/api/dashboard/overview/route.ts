@@ -6,7 +6,9 @@ import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
-import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
+import { loadProfileChecklist } from "@/lib/profile-completion-server";
+import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
+import { getWhatsappNoticeKey, readDismissedNoticeKeys } from "@/lib/notice-dismissals";
 import { databaseEnabled } from "@/lib/dev-database";
 import { DEV_DASHBOARD_OVERVIEW_FIXTURE } from "@/lib/dev-dashboard-fixture";
 
@@ -55,6 +57,7 @@ export async function GET() {
             year: true,
             finalRehearsalWeekStart: true,
             finalRehearsalWeekEnd: true,
+            meta: true,
           },
         })
       : null;
@@ -67,9 +70,9 @@ export async function GET() {
       recentRehearsals,
       upcomingRehearsals,
       totalRehearsalsThisMonth,
+      profileChecklist,
       onboardingProfile,
-      photoConsent,
-      userRecord,
+      departmentEvents,
       membershipRecords,
     ] = await Promise.all([
       prisma.user.count(),
@@ -106,17 +109,15 @@ export async function GET() {
         },
       }),
       prisma.rehearsal.findMany({
-        where: {
-          start: {
-            gt: now,
-          },
-        },
+        where: { start: { gt: now }, status: { not: "DRAFT" } },
         orderBy: { start: "asc" },
         take: 5,
         select: {
           id: true,
           title: true,
           start: true,
+          end: true,
+          location: true,
         },
       }),
       prisma.rehearsal.count({
@@ -127,34 +128,22 @@ export async function GET() {
           },
         },
       }),
+      loadProfileChecklist(userId, activeProductionId),
       prisma.memberOnboardingProfile.findUnique({
         where: { userId },
-        select: { dietaryPreference: true },
+        select: { whatsappLinkVisitedAt: true },
       }),
-      prisma.photoConsent.findFirst({
-        where: activeProductionId
-          ? { userId, showId: activeProductionId, revokedAt: null }
-          : { id: { in: [] } },
+      prisma.departmentEvent.findMany({
+        where: { start: { gt: now }, department: { memberships: { some: { userId } } } },
+        orderBy: { start: "asc" },
+        take: 5,
         select: {
-          status: true,
-          consentGiven: true,
-          documentUploadedAt: true,
-          updatedAt: true,
-        },
-      }),
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
-          dateOfBirth: true,
-          payoutMethod: true,
-          payoutAccountHolder: true,
-          payoutIban: true,
-          payoutBankName: true,
-          payoutPaypalHandle: true,
-          payoutNote: true,
+          id: true,
+          title: true,
+          start: true,
+          end: true,
+          location: true,
+          department: { select: { name: true, slug: true } },
         },
       }),
       prisma.productionMembership.findMany({
@@ -202,23 +191,6 @@ export async function GET() {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, 10);
 
-    const hasPaymentDetails = isPaymentDetailsComplete({
-      payoutMethod: userRecord?.payoutMethod,
-      payoutAccountHolder: userRecord?.payoutAccountHolder,
-      payoutIban: userRecord?.payoutIban,
-      payoutBankName: userRecord?.payoutBankName,
-      payoutPaypalHandle: userRecord?.payoutPaypalHandle,
-      payoutNote: userRecord?.payoutNote,
-    });
-
-    const profileChecklist = buildProfileChecklist({
-      hasBasicData: Boolean(userRecord?.firstName && userRecord?.lastName && userRecord?.email),
-      hasBirthdate: Boolean(userRecord?.dateOfBirth),
-      hasPaymentDetails,
-      hasDietaryPreference: Boolean(onboardingProfile?.dietaryPreference?.trim()),
-      photoConsent: { consentGiven: Boolean(photoConsent?.consentGiven) },
-    });
-
     const nowTimestamp = Date.now();
     const membershipSummaries: MembershipSummary[] = membershipRecords
       .map((membership) => {
@@ -251,6 +223,37 @@ export async function GET() {
         }
       : null;
 
+    const upcomingEvents = [
+      ...upcomingRehearsals.map((rehearsal) => ({
+        id: rehearsal.id,
+        kind: "rehearsal" as const,
+        title: rehearsal.title,
+        start: rehearsal.start.toISOString(),
+        end: rehearsal.end.toISOString(),
+        location: rehearsal.location || null,
+        context: null,
+        href: "/mitglieder/meine-proben",
+      })),
+      ...departmentEvents.map((event) => ({
+        id: event.id,
+        kind: "department" as const,
+        title: event.title,
+        start: event.start.toISOString(),
+        end: event.end?.toISOString() ?? null,
+        location: event.location ?? null,
+        context: event.department.name,
+        href: `/mitglieder/meine-gewerke/${event.department.slug}`,
+      })),
+    ]
+      .sort((a, b) => a.start.localeCompare(b.start))
+      .slice(0, 5);
+
+    const whatsappLink = activeProduction ? getOnboardingWhatsAppLink(activeProduction.meta) : null;
+    const whatsappNoticeKey = activeProduction ? getWhatsappNoticeKey(activeProduction.id) : null;
+    const dismissedNotices = whatsappNoticeKey
+      ? await readDismissedNoticeKeys(userId, [whatsappNoticeKey])
+      : new Set<string>();
+
     return NextResponse.json({
       offline: false,
       stats: {
@@ -260,18 +263,37 @@ export async function GET() {
         totalRehearsalsThisMonth,
       },
       upcomingRehearsals,
+      upcomingEvents,
       recentActivities: activities,
       finalRehearsalWeek,
-      profileCompletion: {
-        complete: profileChecklist.complete,
-        completed: profileChecklist.completed,
-        total: profileChecklist.total,
-      },
+      profileCompletion: profileChecklist
+        ? {
+            complete: profileChecklist.complete,
+            completed: profileChecklist.completed,
+            total: profileChecklist.total,
+            openItems: profileChecklist.items
+              .filter((item) => !item.complete)
+              .map((item) => ({
+                id: item.id,
+                label: item.actionLabel,
+                targetSection: item.targetSection ?? null,
+              })),
+          }
+        : null,
       activeProduction: activeProduction
         ? {
             id: activeProduction.id,
             title: activeProduction.title,
             year: activeProduction.year,
+            whatsapp:
+              whatsappLink && whatsappNoticeKey
+                ? {
+                    link: whatsappLink,
+                    noticeKey: whatsappNoticeKey,
+                    visited: Boolean(onboardingProfile?.whatsappLinkVisitedAt),
+                    dismissed: dismissedNotices.has(whatsappNoticeKey),
+                  }
+                : null,
           }
         : null,
       productionMemberships: membershipSummaries,

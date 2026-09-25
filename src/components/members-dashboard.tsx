@@ -1,14 +1,13 @@
 "use client";
 
 import {
-  ArrowUpRightIcon,
   CalendarCheckIcon,
   CalendarCogIcon,
   CalendarIcon,
-  CalendarRangeIcon,
   CheckCircle2Icon,
   HammerIcon,
   IconComponent,
+  MessageCircleIcon,
   ShieldCheckIcon,
   SparklesIcon,
   UserRoundIcon,
@@ -18,22 +17,26 @@ import {
   WifiOffIcon,
 } from "@/components/ui/action-icons";
 
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRealtime, useNotificationRealtime } from "@/hooks/useRealtime";
 import { useOnlineStats } from "@/hooks/useOnlineStats";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { DismissibleNotice } from "@/components/ui/dismissible-notice";
+import { ListRow, ListRowGroup } from "@/components/ui/list-row";
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { SectionHeader } from "@/components/ui/section-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile, type StatTileTone } from "@/components/ui/stat-tile";
+import { UserAvatar } from "@/components/user-avatar";
 import { MembersContentLayout } from "@/components/members/members-app-shell";
 import { useMembersPermissions } from "@/components/members/permissions-context";
 import { ConnectionStatusBadge } from "@/components/members/connection-status-badge";
 import { PageHeader } from "@/components/members/page-header";
-import { cn } from "@/lib/utils";
 
 interface DashboardStats {
-  totalOnline: number;
   totalMembers: number;
   rehearsalsThisWeek: number;
   unreadNotifications: number;
@@ -47,8 +50,32 @@ interface FinalRehearsalWeekInfo {
   endDate: Date | null;
 }
 
+type UpcomingEvent = {
+  id: string;
+  kind: "rehearsal" | "department";
+  title: string;
+  start: Date;
+  end: Date | null;
+  location: string | null;
+  context: string | null;
+  href: string;
+};
+
+type ProfileCompletion = {
+  complete: boolean;
+  completed: number;
+  total: number;
+  openItems: Array<{ id: string; label: string; targetSection: string | null }>;
+};
+
+type ActiveProduction = {
+  id: string;
+  title: string | null;
+  year: number;
+  whatsapp: { link: string; noticeKey: string; visited: boolean; dismissed: boolean } | null;
+};
+
 const INITIAL_STATS: DashboardStats = {
-  totalOnline: 0,
   totalMembers: 0,
   rehearsalsThisWeek: 0,
   unreadNotifications: 0,
@@ -61,52 +88,8 @@ type QuickActionLink = {
   permissionKey?: string;
 };
 
-type MetricTone = "neutral" | "accent" | "positive" | "warning" | "destructive";
-
-type MetricItem = {
-  key: string;
-  label: string;
-  value: string;
-  hint?: string | null;
-  icon: ReactNode;
-  tone: MetricTone;
-};
-
 const DAY_IN_MS = 86_400_000;
-
-// Zentralisiertes Card-Design-System
-const CARD_VARIANTS = {
-  surface: "rounded-2xl border border-border bg-card shadow-lg",
-  elevated: "rounded-2xl border border-border bg-card shadow-xl shadow-primary/5",
-  accent:
-    "rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/8 to-primary/4 shadow-lg shadow-primary/10",
-  metric: "rounded-2xl border border-border bg-gradient-to-br from-card to-background shadow-md",
-} as const;
-
-const METRIC_CARD_CLASSES: Record<MetricTone, string> = {
-  neutral: `${CARD_VARIANTS.metric}`,
-  accent: `rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg shadow-primary/8 text-primary`,
-  positive: `rounded-2xl border border-success/30 bg-gradient-to-br from-success/10 to-success/5 shadow-lg shadow-success/8 text-success`,
-  warning: `rounded-2xl border border-warning/30 bg-gradient-to-br from-warning/10 to-warning/5 shadow-lg shadow-warning/8 text-warning`,
-  destructive: `rounded-2xl border border-destructive/30 bg-gradient-to-br from-destructive/10 to-destructive/5 shadow-lg shadow-destructive/8 text-destructive`,
-};
-
-const METRIC_ICON_CLASSES: Record<MetricTone, string> = {
-  neutral: "border border-border bg-background text-muted-foreground",
-  accent: "border border-primary/30 bg-primary/12 text-primary",
-  positive: "border border-success/30 bg-success/12 text-success",
-  warning: "border border-warning/30 bg-warning/12 text-warning",
-  destructive: "border border-destructive/30 bg-destructive/12 text-destructive",
-};
-
-// Konsistente Spacing-Konstanten
-const SPACING = {
-  cardPadding: "p-6",
-  cardCompact: "p-4",
-  cardHeader: "p-6 pb-4",
-  cardContent: "p-6 pt-0",
-  sectionGap: "space-y-6",
-} as const;
+const TIME_ZONE = "Europe/Berlin";
 
 interface MembersDashboardProps {
   permissions?: readonly string[];
@@ -114,16 +97,16 @@ interface MembersDashboardProps {
 
 const QUICK_ACTION_LINKS = [
   {
-    href: "/mitglieder/profil",
-    label: "Profil öffnen",
-    icon: UserRoundIcon,
-    permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
-  },
-  {
     href: "/mitglieder/meine-proben",
     label: "Meine Termine",
     icon: CalendarCheckIcon,
     permissionKey: "PRIVATE.REHEARSAL.OWN.VIEW",
+  },
+  {
+    href: "/mitglieder/profil",
+    label: "Mein Profil",
+    icon: UserRoundIcon,
+    permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
   },
   {
     href: "/mitglieder/meine-gewerke",
@@ -151,21 +134,25 @@ const QUICK_ACTION_LINKS = [
   },
 ] satisfies QuickActionLink[];
 
-type OverviewStatsPayload = {
-  totalMembers?: unknown;
-  rehearsalsThisWeek?: unknown;
-  unreadNotifications?: unknown;
-};
-
 type OverviewResponse = {
   offline?: boolean;
-  stats?: OverviewStatsPayload;
+  stats?: unknown;
   finalRehearsalWeek?: unknown;
   profileCompletion?: unknown;
+  upcomingEvents?: unknown;
+  activeProduction?: unknown;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function parseIsoDate(value: unknown): Date | null {
@@ -186,45 +173,146 @@ function parseIsoDate(value: unknown): Date | null {
 function parseFinalRehearsalWeek(value: unknown): FinalRehearsalWeekInfo | null {
   if (!isRecord(value)) return null;
 
-  const rawShowId = value.showId;
-  if (typeof rawShowId !== "string") return null;
-  const showId = rawShowId.trim();
+  const showId = readString(value.showId)?.trim();
   if (!showId) return null;
 
   const startDate = parseIsoDate(value.startDate);
   if (!startDate) return null;
 
-  const endDate = parseIsoDate(value.endDate);
-
-  const title = typeof value.title === "string" && value.title.trim() ? value.title : null;
-  const yearRaw = value.year;
-  const year =
-    typeof yearRaw === "number" && Number.isFinite(yearRaw) ? yearRaw : startDate.getFullYear();
-
   return {
     showId,
-    title,
-    year,
+    title: readString(value.title),
+    year: readNumber(value.year) ?? startDate.getFullYear(),
     startDate,
-    endDate,
+    endDate: parseIsoDate(value.endDate),
   };
 }
 
-function parseProfileCompletion(
-  value: unknown,
-): { complete: boolean; completed: number; total: number } | null {
+function parseProfileCompletion(value: unknown): ProfileCompletion | null {
   if (!isRecord(value)) return null;
-  const totalRaw = value.total;
-  const completedRaw = value.completed;
-  const complete = Boolean(value.complete);
-  const total = typeof totalRaw === "number" && Number.isFinite(totalRaw) ? totalRaw : 0;
-  const completed =
-    typeof completedRaw === "number" && Number.isFinite(completedRaw) ? completedRaw : 0;
-  return { complete, completed, total };
+  const openItems = Array.isArray(value.openItems)
+    ? value.openItems.flatMap((item) => {
+        if (!isRecord(item)) return [];
+        const id = readString(item.id);
+        const label = readString(item.label);
+        if (!id || !label) return [];
+        return [{ id, label, targetSection: readString(item.targetSection) }];
+      })
+    : [];
+  return {
+    complete: Boolean(value.complete),
+    completed: readNumber(value.completed) ?? 0,
+    total: readNumber(value.total) ?? 0,
+    openItems,
+  };
+}
+
+function parseUpcomingEvents(value: unknown): UpcomingEvent[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!isRecord(entry)) return [];
+    const id = readString(entry.id);
+    const title = readString(entry.title);
+    const start = parseIsoDate(entry.start);
+    const href = readString(entry.href);
+    if (!id || !title || !start || !href) return [];
+    return [
+      {
+        id,
+        kind: entry.kind === "department" ? "department" : "rehearsal",
+        title,
+        start,
+        end: parseIsoDate(entry.end),
+        location: readString(entry.location),
+        context: readString(entry.context),
+        href,
+      } satisfies UpcomingEvent,
+    ];
+  });
+}
+
+function parseActiveProduction(value: unknown): ActiveProduction | null {
+  if (!isRecord(value)) return null;
+  const id = readString(value.id);
+  if (!id) return null;
+  const whatsappRaw = value.whatsapp;
+  const link = isRecord(whatsappRaw) ? readString(whatsappRaw.link) : null;
+  const noticeKey = isRecord(whatsappRaw) ? readString(whatsappRaw.noticeKey) : null;
+  return {
+    id,
+    title: readString(value.title),
+    year: readNumber(value.year) ?? new Date().getFullYear(),
+    whatsapp:
+      isRecord(whatsappRaw) && link && noticeKey
+        ? {
+            link,
+            noticeKey,
+            visited: Boolean(whatsappRaw.visited),
+            dismissed: Boolean(whatsappRaw.dismissed),
+          }
+        : null,
+  };
+}
+
+const weekdayFormatter = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  timeZone: TIME_ZONE,
+});
+const dayFormatter = new Intl.DateTimeFormat("de-DE", { day: "numeric", timeZone: TIME_ZONE });
+const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "short", timeZone: TIME_ZONE });
+const timeFormatter = new Intl.DateTimeFormat("de-DE", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: TIME_ZONE,
+});
+const shortDateFormatter = new Intl.DateTimeFormat("de-DE", {
+  day: "numeric",
+  month: "short",
+  timeZone: TIME_ZONE,
+});
+
+function DateBadge({ date }: { date: Date }) {
+  return (
+    <span className="flex h-11 w-11 flex-col items-center justify-center rounded-md bg-muted/60 leading-none">
+      <span className="text-[0.625rem] font-medium uppercase text-muted-foreground">
+        {weekdayFormatter.format(date).replace(".", "")}
+      </span>
+      <span className="text-base font-semibold tabular-nums text-foreground">
+        {dayFormatter.format(date).replace(".", "")}
+      </span>
+      <span className="sr-only">{monthFormatter.format(date)}</span>
+    </span>
+  );
+}
+
+function formatEventTime(event: UpcomingEvent) {
+  const start = timeFormatter.format(event.start);
+  const end = event.end ? timeFormatter.format(event.end) : null;
+  return end ? `${start}–${end}` : start;
+}
+
+function getFirstName(name: string | null | undefined) {
+  const trimmed = name?.trim();
+  if (!trimmed) return null;
+  return trimmed.split(/\s+/)[0] ?? trimmed;
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-label="Dashboard wird geladen">
+      <Skeleton className="h-7 w-48" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-20" />
+        ))}
+      </div>
+      <Skeleton className="h-56" />
+    </div>
+  );
 }
 
 export function MembersDashboard({ permissions: permissionsProp }: MembersDashboardProps = {}) {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const { connectionStatus } = useRealtime();
   const { totalOnline: liveOnline, onlineUsers, isLoading: onlineLoading } = useOnlineStats();
   const contextPermissions = useMembersPermissions();
@@ -232,16 +320,11 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
   const [finalRehearsalWeek, setFinalRehearsalWeek] = useState<FinalRehearsalWeekInfo | null>(null);
-  const [profileCompletion, setProfileCompletion] = useState<{
-    complete: boolean;
-    completed: number;
-    total: number;
-  } | null>(null);
+  const [profileCompletion, setProfileCompletion] = useState<ProfileCompletion | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [activeProduction, setActiveProduction] = useState<ActiveProduction | null>(null);
+  const [overviewLoaded, setOverviewLoaded] = useState(false);
   const [isOfflineFallback, setIsOfflineFallback] = useState(false);
-
-  useEffect(() => {
-    setStats((prev) => ({ ...prev, totalOnline: liveOnline }));
-  }, [liveOnline]);
 
   useEffect(() => {
     let cancelled = false;
@@ -258,33 +341,28 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
         setIsOfflineFallback(payload?.offline === true);
 
-        setStats((prev) => {
-          const statsPayload = isRecord(payload?.stats) ? payload.stats : {};
-          const next: DashboardStats = {
-            totalOnline: prev.totalOnline,
-            totalMembers:
-              typeof statsPayload.totalMembers === "number"
-                ? statsPayload.totalMembers
-                : prev.totalMembers,
-            rehearsalsThisWeek:
-              typeof statsPayload.rehearsalsThisWeek === "number"
-                ? statsPayload.rehearsalsThisWeek
-                : prev.rehearsalsThisWeek,
-            unreadNotifications:
-              typeof statsPayload.unreadNotifications === "number"
-                ? statsPayload.unreadNotifications
-                : prev.unreadNotifications,
-          };
-          return next;
-        });
+        const statsPayload = isRecord(payload?.stats) ? payload.stats : {};
+        setStats((prev) => ({
+          totalMembers: readNumber(statsPayload.totalMembers) ?? prev.totalMembers,
+          rehearsalsThisWeek:
+            readNumber(statsPayload.rehearsalsThisWeek) ?? prev.rehearsalsThisWeek,
+          unreadNotifications:
+            readNumber(statsPayload.unreadNotifications) ?? prev.unreadNotifications,
+        }));
 
         setFinalRehearsalWeek(parseFinalRehearsalWeek(payload?.finalRehearsalWeek));
         setProfileCompletion(parseProfileCompletion(payload?.profileCompletion));
+        setUpcomingEvents(parseUpcomingEvents(payload?.upcomingEvents));
+        setActiveProduction(parseActiveProduction(payload?.activeProduction));
       } catch (error) {
         if (!cancelled) {
           setIsOfflineFallback(false);
         }
         console.error("[Dashboard] Error loading overview", error);
+      } finally {
+        if (!cancelled) {
+          setOverviewLoaded(true);
+        }
       }
     }
 
@@ -300,37 +378,19 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
   useNotificationRealtime(handleNotificationRealtime);
 
-  const formatTimeAgo = useCallback((date: Date) => {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) return "gerade eben";
-    if (diffInSeconds < 3600) return `vor ${Math.floor(diffInSeconds / 60)} Min`;
-    if (diffInSeconds < 86400) return `vor ${Math.floor(diffInSeconds / 3600)} Std`;
-    return `vor ${Math.floor(diffInSeconds / 86400)} Tag(en)`;
-  }, []);
-
-  const onlineList = useMemo(() => onlineUsers.slice(0, 10), [onlineUsers]);
-
-  const availableQuickActions = useMemo(() => {
-    if (!effectivePermissions.length) {
-      return QUICK_ACTION_LINKS.filter((link) => !link.permissionKey);
-    }
-
+  const quickActions = useMemo(() => {
     const permissionSet = new Set(effectivePermissions);
     return QUICK_ACTION_LINKS.filter(
       (link) => !link.permissionKey || permissionSet.has(link.permissionKey),
     );
   }, [effectivePermissions]);
 
-  const quickActions = useMemo(() => availableQuickActions.slice(0, 6), [availableQuickActions]);
-
   const connectionMeta = useMemo(() => {
     if (connectionStatus === "connected") {
       return {
         state: "online" as const,
         icon: <WifiIcon className="h-4 w-4" />,
-        label: "Live verbunden",
+        label: "Live",
       };
     }
 
@@ -346,7 +406,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       return {
         state: "warning" as const,
         icon: <WifiIcon className="h-4 w-4 animate-pulse" />,
-        label: "Verbindung wird aufgebaut",
+        label: "Verbinde …",
       };
     }
 
@@ -361,10 +421,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     if (!finalRehearsalWeek) return null;
 
     const startDate = finalRehearsalWeek.startDate;
-    const showLabel = finalRehearsalWeek.title
-      ? finalRehearsalWeek.title
-      : `Produktion ${finalRehearsalWeek.year}`;
-    const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
     const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const endDay = finalRehearsalWeek.endDate
       ? new Date(
@@ -373,385 +429,264 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           finalRehearsalWeek.endDate.getDate(),
         )
       : null;
-    const formattedStart = formatter.format(startDay);
-    const formattedEnd = endDay ? formatter.format(endDay) : null;
-    const rangeHint = formattedEnd
-      ? `${showLabel} · ${formattedStart} – ${formattedEnd}`
-      : `${showLabel} · Start am ${formattedStart}`;
     const effectiveEnd = endDay ?? new Date(startDay.getTime() + 6 * DAY_IN_MS);
+    const hint = `ab ${shortDateFormatter.format(startDay)}`;
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffMs = startDay.getTime() - today.getTime();
-    const diffDays = Math.round(diffMs / DAY_IN_MS);
+    const diffDays = Math.round((startDay.getTime() - today.getTime()) / DAY_IN_MS);
 
     if (diffDays > 0) {
-      let tone: "info" | "warning" | "destructive" = "info";
-      if (diffDays <= 3) {
-        tone = "destructive";
-      } else if (diffDays <= 7) {
-        tone = "warning";
-      }
+      const tone: StatTileTone =
+        diffDays <= 3 ? "destructive" : diffDays <= 7 ? "warning" : "primary";
       return {
-        label: "Tage bis Endprobenwoche",
-        value: diffDays,
-        hint: rangeHint,
+        label: "Tage bis Endproben",
+        value: String(diffDays),
+        hint,
         tone,
-      } as const;
+      };
     }
-
     if (diffDays === 0) {
-      return {
-        label: "Endprobenwoche",
-        value: "Heute",
-        hint: rangeHint,
-        tone: "warning" as const,
-      };
+      return { label: "Endprobenwoche", value: "Heute", hint, tone: "warning" as const };
     }
-
     if (effectiveEnd.getTime() >= today.getTime()) {
-      return {
-        label: "Endprobenwoche",
-        value: "Läuft",
-        hint: rangeHint,
-        tone: "warning" as const,
-      };
+      return { label: "Endprobenwoche", value: "Läuft", hint, tone: "warning" as const };
     }
-
-    return {
-      label: "Endprobenwoche",
-      value: "Abgeschlossen",
-      hint: rangeHint,
-      tone: "positive" as const,
-    };
+    return null;
   }, [finalRehearsalWeek]);
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE"), []);
 
-  const onlineUpdatedHint = onlineLoading
-    ? "Aktualisiert …"
-    : `Aktualisiert ${formatTimeAgo(new Date())}`;
-
-  const metrics = useMemo(() => {
-    const items: MetricItem[] = [
-      {
-        key: "online",
-        label: "Online Mitglieder",
-        value: numberFormatter.format(stats.totalOnline),
-        hint: onlineUpdatedHint,
-        icon: <UsersIcon className="h-4 w-4" />,
-        tone: "positive",
-      },
-      {
-        key: "members",
-        label: "Mitglieder gesamt",
-        value: numberFormatter.format(stats.totalMembers),
-        hint: "inkl. Ensemble und Technik",
-        icon: <UsersIcon className="h-4 w-4" />,
-        tone: "positive",
-      },
-      {
-        key: "rehearsals",
-        label: "Proben diese Woche",
-        value: numberFormatter.format(stats.rehearsalsThisWeek),
-        hint: "Termine der laufenden Kalenderwoche",
-        icon: <CalendarIcon className="h-4 w-4" />,
-        tone: "accent",
-      },
-    ];
-
-    if (finalRehearsalMetric) {
-      const rehearsalTone: MetricTone =
-        finalRehearsalMetric.tone === "destructive"
-          ? "destructive"
-          : finalRehearsalMetric.tone === "warning"
-            ? "warning"
-            : finalRehearsalMetric.tone === "positive"
-              ? "positive"
-              : "accent";
-
-      items.unshift({
-        key: "final-rehearsal",
-        label: finalRehearsalMetric.label,
-        value:
-          typeof finalRehearsalMetric.value === "number"
-            ? numberFormatter.format(finalRehearsalMetric.value)
-            : finalRehearsalMetric.value,
-        hint: finalRehearsalMetric.hint,
-        icon: <SparklesIcon className="h-4 w-4" />,
-        tone: rehearsalTone,
-      });
-    }
-
-    return items;
-  }, [
-    finalRehearsalMetric,
-    numberFormatter,
-    onlineUpdatedHint,
-    stats.rehearsalsThisWeek,
-    stats.totalMembers,
-    stats.totalOnline,
-  ]);
-
-  const profileReminder = useMemo(() => {
-    if (!profileCompletion) {
-      return null;
-    }
-
-    const percentCompleteRaw = profileCompletion.total
-      ? Math.round((profileCompletion.completed / profileCompletion.total) * 100)
-      : 0;
-    const percentComplete = Math.min(100, Math.max(0, percentCompleteRaw));
-    const percentLabel = (
-      <>
-        Zu <span className="font-semibold text-warning">{percentComplete}%</span> erledigt
-      </>
-    );
-
-    if (!profileCompletion.complete) {
-      return (
-        <div
-          className="flex flex-col gap-4 rounded-lg border border-warning bg-warning/15 p-4 text-sm text-warning shadow-lg"
-          role="alert"
-          aria-live="polite"
-        >
-          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
-            <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-warning/30 bg-warning/20 text-warning"
-                aria-hidden="true"
-              >
-                <CalendarRangeIcon className="h-5 w-5" />
-              </div>
-              <p className="text-base font-semibold">Profilangaben unvollständig</p>
-            </div>
-            {profileCompletion.total ? (
-              <Badge
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-warning/30 bg-warning/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warning shadow-sm"
-                aria-label={`Profil zu ${percentComplete} Prozent vollständig`}
-              >
-                {percentLabel}
-              </Badge>
-            ) : null}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="border-warning/30 bg-warning/20 text-warning shadow-sm transition-all duration-200 hover:border-warning hover:bg-warning/25 focus:ring-2 focus:ring-warning/30"
-            asChild
-          >
-            <Link href="/mitglieder/profil">Profil aktualisieren</Link>
-          </Button>
-        </div>
-      );
-    }
-
+  if (sessionStatus === "loading" || !session?.user) {
     return (
-      <div
-        className="flex items-start gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-success"
-        role="status"
-        aria-live="polite"
-      >
-        <div
-          className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg border border-success/30 bg-success/15"
-          aria-hidden="true"
-        >
-          <CheckCircle2Icon className="h-4 w-4" />
-        </div>
-        <div>
-          <p className="font-semibold">Profil vollständig</p>
-          <p className="text-xs text-success/90">Alle Angaben sind auf dem aktuellen Stand.</p>
-        </div>
-      </div>
-    );
-  }, [profileCompletion]);
-
-  if (!session?.user) {
-    return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              Bitte melden Sie sich an, um das Mitglieder-Dashboard zu sehen.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Fragment>
+        <MembersContentLayout width="2xl" spacing="comfortable" gap="lg" />
+        <PageHeader title="Dashboard" />
+        <DashboardSkeleton />
+      </Fragment>
     );
   }
+
+  const firstName = getFirstName(session.user.name) ?? "schön, dass du da bist";
+  const productionLabel = activeProduction
+    ? (activeProduction.title ?? `Produktion ${activeProduction.year}`)
+    : null;
+  const whatsapp = activeProduction?.whatsapp ?? null;
+  const showWhatsappNotice = Boolean(whatsapp && !whatsapp.visited && !whatsapp.dismissed);
+  const openProfileItems = profileCompletion?.openItems ?? [];
+  const onlinePreview = onlineUsers.slice(0, 8);
+  const liveUnavailable = connectionStatus === "error";
+  const onlineValue = liveUnavailable || onlineLoading ? "–" : numberFormatter.format(liveOnline);
+  const onlineDescription = liveUnavailable
+    ? "Live-Status gerade nicht verfügbar."
+    : onlineLoading
+      ? "Lade Live-Daten …"
+      : onlineUsers.length
+        ? undefined
+        : "Derzeit ist niemand online.";
 
   return (
     <Fragment>
       <MembersContentLayout width="2xl" spacing="comfortable" gap="lg" />
       <PageHeader
-        title="Mitglieder-Dashboard"
-        description="Aktuelle Kennzahlen, Aktivitäten und Schnellzugriffe auf einen Blick."
+        title="Dashboard"
         status={
           <ConnectionStatusBadge state={connectionMeta.state} icon={connectionMeta.icon}>
             {connectionMeta.label}
           </ConnectionStatusBadge>
         }
-        actions={
-          profileCompletion?.complete ? (
-            <Badge variant="outline" className="border-success/40 bg-success/10 text-success">
-              Profil aktualisiert
-            </Badge>
-          ) : null
-        }
       />
 
-      <div className="space-y-10 pb-12">
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          {isOfflineFallback ? (
-            <div className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 xl:col-span-2">
-              <p className="text-sm font-semibold text-warning">Offline-Demo-Modus</p>
-              <p className="text-xs text-warning/80">
-                Der Dashboard-Endpunkt liefert Beispielwerte, da keine Datenbank verbunden ist.
-              </p>
-            </div>
+      <div className="space-y-4 pb-10 sm:space-y-6">
+        <div className="space-y-0.5">
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Hallo, {firstName}</h2>
+          {productionLabel ? (
+            <p className="text-sm text-muted-foreground">
+              Aktuelle Produktion: <span className="text-foreground">{productionLabel}</span>
+            </p>
           ) : null}
-          <Card className={cn(CARD_VARIANTS.accent, "relative overflow-hidden")}>
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-24 top-0 h-40 w-40 rounded-full bg-primary/15 opacity-40 blur-2xl"
+        </div>
+
+        {isOfflineFallback ? (
+          <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+            <p className="text-sm font-semibold text-foreground">Offline-Demo-Modus</p>
+            <p className="text-xs text-muted-foreground">
+              Der Dashboard-Endpunkt liefert Beispielwerte, da keine Datenbank verbunden ist.
+            </p>
+          </div>
+        ) : null}
+
+        {showWhatsappNotice && whatsapp ? (
+          <DismissibleNotice
+            noticeKey={whatsapp.noticeKey}
+            tone="success"
+            icon={<MessageCircleIcon />}
+            title="Team-Chat beitreten"
+            description="Infos zur Produktion per WhatsApp"
+            action={
+              <Button asChild size="sm" variant="outline">
+                <a href={whatsapp.link} target="_blank" rel="noopener noreferrer">
+                  Öffnen
+                </a>
+              </Button>
+            }
+          />
+        ) : null}
+
+        <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {finalRehearsalMetric ? (
+            <StatTile
+              label={finalRehearsalMetric.label}
+              value={finalRehearsalMetric.value}
+              hint={finalRehearsalMetric.hint}
+              tone={finalRehearsalMetric.tone}
+              icon={<SparklesIcon />}
             />
-            <CardContent className={cn(SPACING.cardPadding, SPACING.sectionGap)}>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/12 text-primary">
-                    <SparklesIcon className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Willkommen zurück</p>
-                    <h2 className="text-2xl font-semibold tracking-tight">
-                      {session?.user?.name || session?.user?.email || "Mitglied"}
-                    </h2>
-                  </div>
+          ) : null}
+          <StatTile
+            label="Proben diese Woche"
+            value={overviewLoaded ? numberFormatter.format(stats.rehearsalsThisWeek) : "–"}
+            icon={<CalendarIcon />}
+            href="/mitglieder/meine-proben"
+          />
+          <StatTile label="Gerade online" value={onlineValue} tone="success" icon={<WifiIcon />} />
+          <StatTile
+            label="Mitglieder"
+            value={overviewLoaded ? numberFormatter.format(stats.totalMembers) : "–"}
+            icon={<UsersIcon />}
+          />
+        </section>
+
+        <div className="grid gap-4 lg:grid-cols-3 lg:gap-6">
+          <Card variant="plain" size="flush" className="lg:col-span-2">
+            <div className="p-4 pb-2">
+              <SectionHeader
+                title="Nächste Termine"
+                action={
+                  <Button asChild size="xs" variant="ghost">
+                    <Link href="/mitglieder/meine-proben">Alle</Link>
+                  </Button>
+                }
+              />
+            </div>
+            <div className="px-1 pb-2">
+              {!overviewLoaded ? (
+                <div className="space-y-2 px-3 py-2">
+                  <Skeleton className="h-11" />
+                  <Skeleton className="h-11" />
                 </div>
-                {onlineUsers.length ? (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
-                    <UsersIcon className="h-3.5 w-3.5" />
-                    <span>{numberFormatter.format(onlineUsers.length)} online</span>
-                  </div>
-                ) : null}
-              </div>
-              {profileReminder ? <div>{profileReminder}</div> : null}
-            </CardContent>
+              ) : upcomingEvents.length ? (
+                <ListRowGroup>
+                  {upcomingEvents.map((event) => (
+                    <ListRow
+                      key={`${event.kind}-${event.id}`}
+                      href={event.href}
+                      leading={<DateBadge date={event.start} />}
+                      title={event.title}
+                      description={[formatEventTime(event), event.context, event.location]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    />
+                  ))}
+                </ListRowGroup>
+              ) : (
+                <p className="px-3 py-4 text-sm text-muted-foreground">
+                  Keine anstehenden Termine.
+                </p>
+              )}
+            </div>
           </Card>
-          <Card className="p-0">
-            <CardHeader className="mb-0 border-b border-border/60 px-6 py-5">
-              <CardTitle className="text-base font-semibold">Schnellaktionen</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 px-6 py-5 xl:py-4">
-              {quickActions.length ? (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+
+          <div className="flex flex-col gap-4 lg:gap-6">
+            {profileCompletion && !profileCompletion.complete ? (
+              <Card variant="plain" size="flush" className="order-first lg:order-none">
+                <div className="flex items-center gap-3 p-4 pb-2">
+                  <ProgressRing value={profileCompletion.completed} max={profileCompletion.total} />
+                  <SectionHeader
+                    title="Profil vervollständigen"
+                    description={`${openProfileItems.length} ${
+                      openProfileItems.length === 1 ? "Angabe fehlt" : "Angaben fehlen"
+                    }`}
+                  />
+                </div>
+                <div className="px-1 pb-2">
+                  <ListRowGroup>
+                    {openProfileItems.map((item) => (
+                      <ListRow
+                        key={item.id}
+                        density="compact"
+                        href={
+                          item.targetSection
+                            ? `/mitglieder/profil?bereich=${item.targetSection}`
+                            : "/mitglieder/profil"
+                        }
+                        title={item.label}
+                      />
+                    ))}
+                  </ListRowGroup>
+                </div>
+              </Card>
+            ) : profileCompletion?.complete ? (
+              <p className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm text-foreground">
+                <CheckCircle2Icon className="h-4 w-4 text-success" aria-hidden />
+                Dein Profil ist vollständig.
+              </p>
+            ) : null}
+
+            <Card variant="plain" size="flush">
+              <div className="p-4 pb-2">
+                <SectionHeader title="Schnellzugriff" />
+              </div>
+              <div className="px-1 pb-2">
+                <ListRowGroup>
                   {quickActions.map((link) => {
                     const Icon = link.icon;
                     return (
-                      <Link
+                      <ListRow
                         key={link.href}
+                        density="compact"
                         href={link.href}
-                        className={cn(
-                          "group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm xl:py-2 2xl:py-3 font-medium shadow-sm transition",
-                          "hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2",
-                        )}
-                      >
-                        <span className="flex min-w-0 items-center gap-3">
-                          <span
-                            className={cn(
-                              "flex h-10 w-10 shrink-0 items-center xl:h-8 xl:w-8 2xl:h-10 2xl:w-10 justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors",
-                              "group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground",
-                            )}
-                          >
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <span className="min-w-0 break-words text-left font-medium leading-tight">
-                            {link.label}
-                          </span>
-                        </span>
-                        <ArrowUpRightIcon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
-                      </Link>
+                        leading={<Icon className="h-4 w-4 text-muted-foreground" />}
+                        title={link.label}
+                      />
                     );
                   })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Keine Schnellaktionen verfügbar.</p>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-
-        <section
-          className={cn(
-            "grid gap-4 sm:grid-cols-2",
-            metrics.length === 3 ? "xl:grid-cols-3" : "xl:grid-cols-4",
-          )}
-        >
-          {metrics.map((metric) => (
-            <Card key={metric.key} className={METRIC_CARD_CLASSES[metric.tone]}>
-              <CardHeader className={cn(SPACING.cardPadding, "space-y-4")}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {metric.label}
-                    </p>
-                    <p className="text-2xl font-bold tracking-tight">{metric.value}</p>
-                  </div>
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-lg",
-                      METRIC_ICON_CLASSES[metric.tone],
-                    )}
-                  >
-                    {metric.icon}
-                  </div>
-                </div>
-                {metric.hint ? (
-                  <p className="text-xs text-muted-foreground leading-relaxed">{metric.hint}</p>
-                ) : null}
-              </CardHeader>
+                  {whatsapp ? (
+                    <ListRow
+                      density="compact"
+                      href={whatsapp.link}
+                      external
+                      leading={<MessageCircleIcon className="h-4 w-4 text-muted-foreground" />}
+                      title="Team-Chat (WhatsApp)"
+                    />
+                  ) : null}
+                </ListRowGroup>
+              </div>
             </Card>
-          ))}
-        </section>
 
-        <section>
-          <Card className="p-0">
-            <CardHeader className="mb-0 border-b border-border/60 px-6 py-5">
-              <CardTitle>Aktive Mitglieder</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Wer ist gerade online? Live-Ansicht aktualisiert automatisch.
-              </p>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 px-6 py-5">
-              {onlineList.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-                  {onlineLoading ? "Lade Live-Daten …" : "Derzeit ist niemand online."}
-                </div>
-              ) : (
-                <ul className="grid gap-3 sm:grid-cols-2">
-                  {onlineList.map((user) => (
+            <Card variant="plain" size="md">
+              <SectionHeader title="Gerade online" description={onlineDescription} />
+              {onlinePreview.length ? (
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {onlinePreview.map((user) => (
                     <li
                       key={`${user.id}-${user.joinedAt.getTime()}`}
-                      className="group flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-medium shadow-sm transition hover:border-success/40 hover:bg-success/10"
+                      className="flex items-center gap-2 rounded-full bg-muted/50 py-1 pl-1 pr-3 text-sm"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="relative flex h-2.5 w-2.5 items-center justify-center">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/40" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-success shadow-sm" />
-                        </span>
-                        <span className="truncate">{user.name}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatTimeAgo(user.joinedAt)}
-                      </span>
+                      <UserAvatar userId={user.id} name={user.name} size={24} />
+                      <span className="max-w-[9rem] truncate">{user.name}</span>
                     </li>
                   ))}
+                  {onlineUsers.length > onlinePreview.length ? (
+                    <li className="flex items-center rounded-full bg-muted/50 px-3 py-1 text-sm text-muted-foreground">
+                      +{onlineUsers.length - onlinePreview.length}
+                    </li>
+                  ) : null}
                 </ul>
-              )}
-            </CardContent>
-          </Card>
-        </section>
+              ) : null}
+            </Card>
+          </div>
+        </div>
       </div>
     </Fragment>
   );

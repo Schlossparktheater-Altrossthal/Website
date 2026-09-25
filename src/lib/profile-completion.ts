@@ -7,6 +7,8 @@ export type ProfileChecklistTarget =
 export type ProfileChecklistItem = {
   id: ProfileChecklistItemId;
   label: string;
+  /** Aufforderung für Aufgabenlisten, z. B. „Geburtsdatum eintragen“. */
+  actionLabel: string;
   description: string;
   complete: boolean;
   targetSection?: ProfileChecklistTarget;
@@ -67,6 +69,7 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
     {
       id: "basics",
       label: "Stammdaten aktualisiert",
+      actionLabel: "Stammdaten ergänzen",
       description: "Vorname, Nachname und Kontaktadresse hinterlegt.",
       complete: input.hasBasicData,
       targetSection: "stammdaten",
@@ -74,6 +77,7 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
     {
       id: "birthdate",
       label: "Geburtsdatum eingetragen",
+      actionLabel: "Geburtsdatum eintragen",
       description: "Hilft bei der Verwaltung notwendiger Einverständnisse.",
       complete: input.hasBirthdate,
       targetSection: "stammdaten",
@@ -81,6 +85,7 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
     {
       id: "payments",
       label: "Zahlungsdaten hinterlegt",
+      actionLabel: "Zahlungsdaten hinterlegen",
       description: "Stelle sicher, dass wir Auszahlungen veranlassen können.",
       complete: Boolean(input.hasPaymentDetails),
       targetSection: "zahlungen",
@@ -88,6 +93,7 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
     {
       id: "dietary",
       label: "Ernährungsstil gepflegt",
+      actionLabel: "Ernährungsstil angeben",
       description: "Informationen für Verpflegung & Eventplanung.",
       complete: input.hasDietaryPreference,
       targetSection: "ernaehrung",
@@ -98,6 +104,7 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
     items.push({
       id: "whatsapp",
       label: "WhatsApp-Infokanal bestätigt",
+      actionLabel: "WhatsApp-Infokanal öffnen",
       description: "Bestätige den Zugriff auf unseren WhatsApp-Infokanal.",
       complete: Boolean(input.hasWhatsappVisit),
       targetSection: "onboarding",
@@ -108,6 +115,7 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
     items.push({
       id: "photo-consent",
       label: "Fotoeinverständnis bestätigt",
+      actionLabel: "Fotoeinverständnis geben",
       description: "Notwendig für Medienarbeit und Außendarstellung.",
       complete: Boolean(input.photoConsent.consentGiven),
       targetSection: "freigaben",
