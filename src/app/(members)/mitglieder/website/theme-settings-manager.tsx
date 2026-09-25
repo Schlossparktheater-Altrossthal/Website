@@ -229,11 +229,9 @@ export function WebsiteThemeSettingsManager({
     colorMode: initialSettings.colorMode,
     updatedAt: initialSettings.updatedAt,
     activeThemeId: initialSettings.theme.id,
-    maintenanceMode: initialSettings.maintenanceMode,
   }));
   const [siteTitle, setSiteTitle] = useState(initialSettings.siteTitle);
   const [colorMode, setColorMode] = useState<ThemeColorMode>(initialSettings.colorMode);
-  const [maintenanceMode, setMaintenanceMode] = useState(initialSettings.maintenanceMode);
   const [availableThemes, setAvailableThemes] =
     useState<ClientWebsiteThemeSummary[]>(mergedThemeSummaries);
   const [themeBaselines, setThemeBaselines] = useState<Record<string, ClientWebsiteTheme>>({
@@ -288,9 +286,6 @@ export function WebsiteThemeSettingsManager({
     if (colorMode !== siteSnapshot.colorMode) {
       return true;
     }
-    if (maintenanceMode !== siteSnapshot.maintenanceMode) {
-      return true;
-    }
     if (themeName.trim() !== currentTheme.name.trim()) {
       return true;
     }
@@ -298,16 +293,7 @@ export function WebsiteThemeSettingsManager({
       return true;
     }
     return JSON.stringify(previewTheme) !== JSON.stringify(buildTheme(currentTheme.tokens));
-  }, [
-    siteTitle,
-    colorMode,
-    themeName,
-    themeDescription,
-    previewTheme,
-    siteSnapshot,
-    currentTheme,
-    maintenanceMode,
-  ]);
+  }, [siteTitle, colorMode, themeName, themeDescription, previewTheme, siteSnapshot, currentTheme]);
 
   const renameDisabled = isRenaming || isSaving || isLoadingTheme || themeEditingLocked;
 
@@ -364,7 +350,6 @@ export function WebsiteThemeSettingsManager({
   function resetToBaseline() {
     setSiteTitle(siteSnapshot.siteTitle);
     setColorMode(siteSnapshot.colorMode);
-    setMaintenanceMode(siteSnapshot.maintenanceMode);
     populateFormFromTheme(currentTheme);
   }
 
@@ -645,11 +630,9 @@ export function WebsiteThemeSettingsManager({
         colorMode: nextSettings.colorMode,
         updatedAt: nextSettings.updatedAt,
         activeThemeId: nextSettings.theme.id,
-        maintenanceMode: nextSettings.maintenanceMode,
       });
       setSiteTitle(nextSettings.siteTitle);
       setColorMode(nextSettings.colorMode);
-      setMaintenanceMode(nextSettings.maintenanceMode);
       setAvailableThemes((prev) => {
         const map = new Map(prev.map((entry) => [entry.id, entry] as const));
         map.set(nextSettings.theme.id, themeToSummary(nextSettings.theme));
@@ -673,7 +656,6 @@ export function WebsiteThemeSettingsManager({
       const settingsPayload: Record<string, unknown> = {
         siteTitle,
         colorMode,
-        maintenanceMode,
       };
       if (activateTheme) {
         settingsPayload.themeId = currentTheme.id;
@@ -719,11 +701,9 @@ export function WebsiteThemeSettingsManager({
         colorMode: nextSettings.colorMode,
         updatedAt: nextSettings.updatedAt,
         activeThemeId: nextSettings.theme.id,
-        maintenanceMode: nextSettings.maintenanceMode,
       });
       setSiteTitle(nextSettings.siteTitle);
       setColorMode(nextSettings.colorMode);
-      setMaintenanceMode(nextSettings.maintenanceMode);
 
       setAvailableThemes((prev) => {
         const map = new Map(prev.map((theme) => [theme.id, theme] as const));

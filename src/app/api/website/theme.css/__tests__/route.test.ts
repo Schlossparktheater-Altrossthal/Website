@@ -22,7 +22,6 @@ describe("GET /api/website/theme.css", () => {
       id: "public",
       siteTitle: "Sommertheater",
       colorMode: "dark",
-      maintenanceMode: false,
       pageVisibility: null,
       themeId: "t1",
       createdAt: new Date(),

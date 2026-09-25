@@ -23,88 +23,33 @@ export const DEFAULT_THEME_ID = "default-website-theme" as const;
 export const DEFAULT_WEBSITE_SETTINGS_ID = "public" as const;
 export const DEFAULT_SITE_TITLE = "Sommertheater Altrossthal" as const;
 export const DEFAULT_COLOR_MODE = "dark" as const;
-export const DEFAULT_MAINTENANCE_MODE = false as const;
 
+/**
+ * Sichtbarkeit der Mitglieder-Seiten. Die frühere Steuerung öffentlicher Seiten
+ * (Seiteninhalte-CMS, Homepage-Bausteine) entfällt, weil der öffentliche Auftritt
+ * auf Drupal läuft.
+ */
 export type PageVisibilitySettings = {
-  pages: {
-    general: boolean;
-    maintenance: boolean;
-    websiteTheme: boolean;
-  };
-  public: {
-    about: boolean;
-    mystery: boolean;
-    schoolCat: boolean;
-    timeline: boolean;
-  };
   members: Record<string, boolean>;
-  categories: {
-    dateisystem: {
-      enabled: boolean;
-      archive: boolean;
-      images: boolean;
-      timeline: boolean;
-      data: boolean;
-    };
-  };
 };
 
 export const DEFAULT_PAGE_VISIBILITY: PageVisibilitySettings = {
-  pages: { general: true, maintenance: true, websiteTheme: true },
-  public: { about: true, mystery: true, schoolCat: true, timeline: true },
   members: {},
-  categories: {
-    dateisystem: { enabled: true, archive: true, images: true, timeline: true, data: true },
-  },
 };
 
 function sanitisePageVisibility(input: unknown): PageVisibilitySettings {
   const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
-  const pages =
-    source.pages && typeof source.pages === "object"
-      ? (source.pages as Record<string, unknown>)
-      : {};
-  const publicPages =
-    source.public && typeof source.public === "object"
-      ? (source.public as Record<string, unknown>)
-      : {};
   const members =
     source.members && typeof source.members === "object"
       ? (source.members as Record<string, unknown>)
       : {};
-  const categories =
-    source.categories && typeof source.categories === "object"
-      ? (source.categories as Record<string, unknown>)
-      : {};
-  const dateisystem =
-    categories.dateisystem && typeof categories.dateisystem === "object"
-      ? (categories.dateisystem as Record<string, unknown>)
-      : {};
-  const pick = (v: unknown, d: boolean) => (typeof v === "boolean" ? v : d);
   return {
-    pages: {
-      general: pick(pages.general, true),
-      maintenance: pick(pages.maintenance, true),
-      websiteTheme: pick(pages.websiteTheme, true),
-    },
-    public: {
-      about: pick(publicPages.about, true),
-      mystery: pick(publicPages.mystery, true),
-      schoolCat: pick(publicPages.schoolCat, true),
-      timeline: pick(publicPages.timeline, true),
-    },
     members: Object.fromEntries(
-      Object.entries(members).map(([key, value]) => [key, pick(value, true)]),
+      Object.entries(members).map(([key, value]) => [
+        key,
+        typeof value === "boolean" ? value : true,
+      ]),
     ),
-    categories: {
-      dateisystem: {
-        enabled: pick(dateisystem.enabled, true),
-        archive: pick(dateisystem.archive, true),
-        images: pick(dateisystem.images, true),
-        timeline: pick(dateisystem.timeline, true),
-        data: pick(dateisystem.data, true),
-      },
-    },
   };
 }
 export const THEME_COLOR_MODES = ["light", "dark", "system"] as const;
@@ -247,24 +192,6 @@ function sanitiseColorMode(value: unknown): ThemeColorMode {
     : DEFAULT_COLOR_MODE;
 }
 
-function sanitiseMaintenanceMode(value: unknown): boolean {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const normalised = value.trim().toLowerCase();
-    if (["1", "true", "yes", "on"].includes(normalised)) {
-      return true;
-    }
-    if (["0", "false", "no", "off"].includes(normalised)) {
-      return false;
-    }
-  }
-
-  return Boolean(value);
-}
-
 export type WebsiteSettingsRecord = (WebsiteSettings & { theme: WebsiteTheme | null }) | null;
 
 export class LockedWebsiteThemeError extends Error {
@@ -290,7 +217,6 @@ export type ResolvedWebsiteSettings = {
   id: string;
   siteTitle: string;
   colorMode: ThemeColorMode;
-  maintenanceMode: boolean;
   pageVisibility: PageVisibilitySettings;
   updatedAt: Date | null;
   theme: ResolvedWebsiteTheme;
@@ -328,9 +254,6 @@ export function resolveWebsiteSettings(record: WebsiteSettingsRecord): ResolvedW
     id: record?.id ?? DEFAULT_WEBSITE_SETTINGS_ID,
     siteTitle: record ? sanitiseSiteTitle(record.siteTitle) : DEFAULT_SITE_TITLE,
     colorMode: record ? sanitiseColorMode(record.colorMode) : DEFAULT_COLOR_MODE,
-    maintenanceMode: record
-      ? sanitiseMaintenanceMode(record.maintenanceMode)
-      : DEFAULT_MAINTENANCE_MODE,
     pageVisibility: record
       ? sanitisePageVisibility(record.pageVisibility)
       : DEFAULT_PAGE_VISIBILITY,
@@ -362,7 +285,6 @@ export type ClientWebsiteSettings = {
   id: string;
   siteTitle: string;
   colorMode: ThemeColorMode;
-  maintenanceMode: boolean;
   pageVisibility: PageVisibilitySettings;
   updatedAt: string | null;
   theme: ClientWebsiteTheme;
@@ -398,7 +320,6 @@ export function toClientWebsiteSettings(resolved: ResolvedWebsiteSettings): Clie
     id: resolved.id,
     siteTitle: resolved.siteTitle,
     colorMode: resolved.colorMode,
-    maintenanceMode: resolved.maintenanceMode,
     pageVisibility: resolved.pageVisibility,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
     theme: toClientWebsiteTheme(resolved.theme),
@@ -477,7 +398,6 @@ export async function ensureWebsiteSettingsRecord() {
       id: DEFAULT_WEBSITE_SETTINGS_ID,
       siteTitle: DEFAULT_SITE_TITLE,
       colorMode: DEFAULT_COLOR_MODE,
-      maintenanceMode: DEFAULT_MAINTENANCE_MODE,
       pageVisibility: DEFAULT_PAGE_VISIBILITY as Prisma.InputJsonValue,
       theme: { connect: { id: theme.id } },
     },
@@ -488,7 +408,6 @@ export async function ensureWebsiteSettingsRecord() {
 export type WebsiteSettingsInput = {
   siteTitle?: string | null;
   colorMode?: ThemeColorMode | null;
-  maintenanceMode?: boolean | null;
   // Unvalidiertes Client-Input; wird intern über sanitisePageVisibility normalisiert.
   pageVisibility?: unknown;
   themeId?: string | null;
@@ -500,7 +419,6 @@ export async function saveWebsiteSettings(input: WebsiteSettingsInput) {
     id: DEFAULT_WEBSITE_SETTINGS_ID,
     siteTitle: DEFAULT_SITE_TITLE,
     colorMode: DEFAULT_COLOR_MODE,
-    maintenanceMode: DEFAULT_MAINTENANCE_MODE,
     pageVisibility: DEFAULT_PAGE_VISIBILITY as Prisma.InputJsonValue,
   };
 
@@ -514,12 +432,6 @@ export async function saveWebsiteSettings(input: WebsiteSettingsInput) {
     const mode = sanitiseColorMode(input.colorMode);
     update.colorMode = mode;
     create.colorMode = mode;
-  }
-
-  if (input.maintenanceMode !== undefined) {
-    const maintenanceMode = sanitiseMaintenanceMode(input.maintenanceMode);
-    update.maintenanceMode = maintenanceMode;
-    create.maintenanceMode = maintenanceMode;
   }
 
   if (input.pageVisibility !== undefined) {

@@ -1,48 +1,10 @@
 import type { MetadataRoute } from "next";
 
-import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
-
-export const dynamic = "force-dynamic";
-
-const BASE_URL = (
-  process.env.NEXT_PUBLIC_BASE_URL ?? "https://sommertheater-altrossthal.de"
-).replace(/\/$/, "");
-
-const publicRouteMap = {
-  about: "/old/ueber-uns",
-  mystery: "/old/mystery",
-  schoolCat: "/old/unsere-schulkatze",
-  timeline: "/old/chronik",
-} as const;
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
-  const baseEntries: MetadataRoute.Sitemap = [
-    { url: `${BASE_URL}/old`, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: `${BASE_URL}/impressum`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
-    {
-      url: `${BASE_URL}/datenschutz`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-  ];
-
-  try {
-    const record = await readWebsiteSettings();
-    const visibility = resolveWebsiteSettings(record).pageVisibility.public;
-
-    const dynamicEntries = Object.entries(publicRouteMap)
-      .filter(([key]) => visibility[key as keyof typeof visibility])
-      .map(([, route]) => ({
-        url: `${BASE_URL}${route}`,
-        lastModified: now,
-        changeFrequency: "weekly" as const,
-        priority: 0.8,
-      }));
-
-    return [...baseEntries, ...dynamicEntries];
-  } catch {
-    return baseEntries;
-  }
+/**
+ * Der öffentliche Auftritt läuft auf Drupal; die Next.js-App liefert nur noch den
+ * login-geschützten Mitgliederbereich aus. Es gibt hier daher keine indexierbaren
+ * Seiten mehr. Die Datei bleibt als bewusst leerer Platzhalter erhalten.
+ */
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [];
 }

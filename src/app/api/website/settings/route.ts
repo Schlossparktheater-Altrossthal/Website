@@ -24,13 +24,17 @@ import {
 
 const colorModeSchema = z.enum(["light", "dark", "system"]);
 
+/** Nur die Sichtbarkeit der Mitglieder-Seiten; öffentliche Seiten steuert Drupal. */
+const pageVisibilitySchema = z.object({
+  members: z.record(z.string(), z.boolean()).optional(),
+});
+
 const updateSchema = z.object({
   settings: z
     .object({
       siteTitle: z.string().trim().min(1).max(160).optional(),
       colorMode: colorModeSchema.optional(),
-      maintenanceMode: z.boolean().optional(),
-      pageVisibility: z.unknown().optional(),
+      pageVisibility: pageVisibilitySchema.optional(),
       themeId: themeIdSchema.optional(),
     })
     .optional(),
@@ -45,7 +49,12 @@ const updateSchema = z.object({
   activateTheme: z.boolean().optional(),
 });
 
-async function ensurePermission() {
+/**
+ * Lesen darf jeder, der eines der beiden Website-Rechte hat. Für Schreibzugriffe
+ * gilt zusätzlich eine Feldprüfung in PUT: Seiten-Sichtbarkeit gehört zu
+ * PRIVATE.ADMIN.PAGES.MANAGE, Theme/Branding zu PRIVATE.SETTINGS.THEME.MANAGE.
+ */
+async function ensureAnyPermission() {
   const session = await requireAuth();
   const canManageWebsite = await hasPermission(session.user, "PRIVATE.SETTINGS.THEME.MANAGE");
   const canManagePages = await hasPermission(session.user, "PRIVATE.ADMIN.PAGES.MANAGE");
@@ -55,8 +64,24 @@ async function ensurePermission() {
   return null;
 }
 
+async function ensureThemePermission() {
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "PRIVATE.SETTINGS.THEME.MANAGE"))) {
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+  }
+  return null;
+}
+
+async function ensurePagesPermission() {
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PAGES.MANAGE"))) {
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+  }
+  return null;
+}
+
 export async function GET() {
-  const permissionResponse = await ensurePermission();
+  const permissionResponse = await ensureAnyPermission();
   if (permissionResponse) {
     return permissionResponse;
   }
@@ -79,7 +104,7 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
-  const permissionResponse = await ensurePermission();
+  const permissionResponse = await ensureAnyPermission();
   if (permissionResponse) {
     return permissionResponse;
   }
@@ -106,6 +131,27 @@ export async function PUT(request: NextRequest) {
   const explicitThemeId = settingsPayload?.themeId;
   const activateTheme =
     parsed.data.activateTheme ?? Boolean(explicitThemeId !== undefined || themePayload);
+
+  const writesThemeSettings =
+    Boolean(themePayload) ||
+    activateTheme ||
+    settingsPayload?.siteTitle !== undefined ||
+    settingsPayload?.colorMode !== undefined ||
+    settingsPayload?.themeId !== undefined;
+
+  if (writesThemeSettings) {
+    const denied = await ensureThemePermission();
+    if (denied) {
+      return denied;
+    }
+  }
+
+  if (settingsPayload?.pageVisibility !== undefined) {
+    const denied = await ensurePagesPermission();
+    if (denied) {
+      return denied;
+    }
+  }
 
   if (!themePayload && !settingsPayload) {
     return NextResponse.json({ error: "Keine Änderungen übermittelt." }, { status: 400 });
@@ -134,7 +180,6 @@ export async function PUT(request: NextRequest) {
       await saveWebsiteSettings({
         siteTitle: settingsPayload?.siteTitle ?? undefined,
         colorMode: settingsPayload?.colorMode ?? undefined,
-        maintenanceMode: settingsPayload?.maintenanceMode ?? undefined,
         pageVisibility: settingsPayload?.pageVisibility ?? undefined,
         themeId: desiredThemeId,
       });

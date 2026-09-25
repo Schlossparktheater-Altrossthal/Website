@@ -640,7 +640,6 @@ model WebsiteSettings {
   id        String   @id @default("public")
   siteTitle String   @default("Sommertheater im Schlosspark")
   colorMode String   @default("dark")
-  maintenanceMode Boolean  @default(false)
   pageVisibility Json?
   themeId   String?
   createdAt DateTime @default(now())
