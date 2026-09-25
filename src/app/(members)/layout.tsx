@@ -149,7 +149,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
     <div className="app-shell bg-background">
       <MysticBackground />
       <SiteHeader siteTitle={siteTitle} navigationItems={visibleNavigationItems} />
-      <main className="relative z-10 flex min-h-0 flex-col pt-[var(--header-height)]">
+      <main className="relative z-10 flex min-h-0 min-w-0 flex-col pt-[var(--header-height)]">
         <SidebarProvider
           defaultOpen={defaultSidebarOpen}
           className="flex-1 min-h-0 bg-background"
@@ -167,6 +167,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               globalFooter={
                 <SiteFooter
                   buildInfo={buildInfo}
+                  compact
                   isAuthenticated={true}
                   isDevBuild={isDevBuild}
                   siteTitle={siteTitle}

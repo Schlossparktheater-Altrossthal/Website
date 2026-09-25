@@ -233,6 +233,8 @@ function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCan
   });
   const [layoutWords, setLayoutWords] = useState<LayoutWord[]>([]);
   const [hasError, setHasError] = useState(false);
+  // d3-cloud misst per Canvas, das keine CSS-Variablen auflöst – daher die berechnete Schrift nutzen.
+  const [fontFamily, setFontFamily] = useState("sans-serif");
 
   useEffect(() => {
     const element = containerRef.current;
@@ -249,6 +251,7 @@ function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCan
     });
 
     observer.observe(element);
+    setFontFamily(getComputedStyle(element).fontFamily || "sans-serif");
 
     return () => observer.disconnect();
   }, []);
@@ -270,7 +273,7 @@ function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCan
         .words(words.map((word) => ({ ...word })) as LayoutWord[])
         .padding(2)
         .rotate((datum) => computeRotation(datum.text ?? ""))
-        .font("var(--font-sans)")
+        .font(fontFamily)
         .fontStyle("normal")
         .fontWeight("600")
         .fontSize((datum) => computeFontSize(datum.value ?? 0, maxWeight, maxFont))
@@ -295,7 +298,7 @@ function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCan
       setHasError(true);
       return undefined;
     }
-  }, [dimensions.height, dimensions.width, maxFont, maxWeight, words]);
+  }, [dimensions.height, dimensions.width, fontFamily, maxFont, maxWeight, words]);
 
   const width = Math.max(1, Math.floor(dimensions.width));
   const height = Math.max(1, Math.floor(dimensions.height));
@@ -330,7 +333,7 @@ function WordCloudCanvas({ words, maxWeight, maxFont, colorScale }: WordCloudCan
               <text
                 key={`${word.text}-${word.x ?? 0}-${word.y ?? 0}-${word.size ?? 0}`}
                 textAnchor="middle"
-                fontFamily="var(--font-sans)"
+                fontFamily={fontFamily}
                 fontWeight={600}
                 fontStyle="normal"
                 fontSize={word.size ?? MIN_FONT_SIZE}

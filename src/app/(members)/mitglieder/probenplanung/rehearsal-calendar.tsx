@@ -570,10 +570,17 @@ export function RehearsalCalendar({
                   <div className="flex h-full flex-col justify-between gap-2.5 text-[11px] sm:text-xs">
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="space-y-0.5">
-                        <p className="font-semibold leading-tight text-foreground">
+                        <p
+                          className={cn(
+                            "font-semibold leading-tight text-foreground",
+                            !dayRehearsals.length && "hidden sm:block",
+                          )}
+                        >
                           {rehearsalSummary}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">{availableLabel}</p>
+                        <p className="hidden text-[10px] text-muted-foreground sm:block">
+                          {availableLabel}
+                        </p>
                       </div>
                     </div>
                     {dayRehearsals.length ? (
@@ -589,7 +596,7 @@ export function RehearsalCalendar({
                               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-primary">
                                 {timeLabel}
                               </span>
-                              <span className="truncate text-[10px] leading-snug text-muted-foreground">
+                              <span className="hidden truncate text-[10px] leading-snug text-muted-foreground sm:inline">
                                 {entry.title}
                               </span>
                             </li>
@@ -602,7 +609,7 @@ export function RehearsalCalendar({
                         ) : null}
                       </ul>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="hidden text-[10px] text-muted-foreground sm:inline">
                         Keine Proben geplant
                       </span>
                     )}
@@ -621,7 +628,7 @@ export function RehearsalCalendar({
                           aria-hidden
                         />
                       </div>
-                      <span className="text-[10px] font-medium text-muted-foreground">
+                      <span className="hidden text-[10px] font-medium text-muted-foreground sm:inline">
                         {Math.round(availClamped * 100)}%
                       </span>
                     </div>

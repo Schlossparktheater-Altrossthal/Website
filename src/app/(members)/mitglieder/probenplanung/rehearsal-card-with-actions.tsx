@@ -78,11 +78,11 @@ export function RehearsalCardWithActions({
         open={forceOpen ? true : undefined}
       >
         <summary className="list-none cursor-pointer px-5 py-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
               <Link
                 href={`/mitglieder/proben/${rehearsal.id}`}
-                className="text-lg font-semibold text-primary hover:underline"
+                className="break-words text-lg font-semibold text-primary hover:underline"
               >
                 {rehearsal.title}
               </Link>

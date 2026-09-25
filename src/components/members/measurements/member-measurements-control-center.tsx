@@ -340,7 +340,7 @@ export function MemberMeasurementsControlCenter({
             ? entry.note
             : entry?.updatedAt
               ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
-              : "Keine Notiz";
+              : null;
 
           return (
             <button
@@ -358,7 +358,7 @@ export function MemberMeasurementsControlCenter({
                 "flex h-full w-full flex-col gap-1 rounded-md border border-transparent px-2 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 entry
                   ? "hover:border-primary/40 hover:bg-primary/5"
-                  : "border-dashed border-destructive/60 bg-destructive/10 hover:border-destructive/70",
+                  : "text-muted-foreground hover:border-dashed hover:border-destructive/50 hover:bg-destructive/5",
               )}
               title={entry?.note ?? undefined}
             >
@@ -369,13 +369,17 @@ export function MemberMeasurementsControlCenter({
                 <span
                   className={cn(
                     "text-[10px]",
-                    entry ? "text-muted-foreground" : "text-destructive",
+                    entry ? "text-muted-foreground" : "text-destructive/80",
                   )}
                 >
                   {entry ? (unitLabel ?? entry.unit) : "Fehlt"}
                 </span>
               </div>
-              <span className="truncate text-[10px] text-muted-foreground/80">{secondaryText}</span>
+              {secondaryText ? (
+                <span className="truncate text-[10px] text-muted-foreground/80">
+                  {secondaryText}
+                </span>
+              ) : null}
             </button>
           );
         },
@@ -625,7 +629,7 @@ export function MemberMeasurementsControlCenter({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full justify-between border-warning/60 text-warning hover:border-warning/80 hover:text-warning sm:w-auto"
+                    className="justify-between gap-2 border-warning/60 text-warning hover:border-warning/80 hover:text-warning"
                   >
                     Export
                     <FileDownIcon className="h-4 w-4 text-warning" />
@@ -761,7 +765,7 @@ export function MemberMeasurementsControlCenter({
                         <span
                           className={cn(
                             "text-xs",
-                            entry ? "text-muted-foreground" : "text-destructive",
+                            entry ? "text-muted-foreground" : "text-destructive/80",
                           )}
                         >
                           {entry ? (unitLabel ?? entry.unit) : "Fehlt"}

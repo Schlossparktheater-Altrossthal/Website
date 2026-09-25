@@ -593,16 +593,11 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           </ConnectionStatusBadge>
         }
         actions={
-          <>
-            <ConnectionStatusBadge state={connectionMeta.state} icon={connectionMeta.icon}>
-              {connectionMeta.label}
-            </ConnectionStatusBadge>
-            {profileCompletion?.complete ? (
-              <Badge variant="outline" className="border-success/40 bg-success/10 text-success">
-                Profil aktualisiert
-              </Badge>
-            ) : null}
-          </>
+          profileCompletion?.complete ? (
+            <Badge variant="outline" className="border-success/40 bg-success/10 text-success">
+              Profil aktualisiert
+            </Badge>
+          ) : null
         }
       />
 
@@ -648,9 +643,9 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             <CardHeader className="mb-0 border-b border-border/60 px-6 py-5">
               <CardTitle className="text-base font-semibold">Schnellaktionen</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 px-6 py-5">
+            <CardContent className="space-y-4 px-6 py-5 xl:py-4">
               {quickActions.length ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                   {quickActions.map((link) => {
                     const Icon = link.icon;
                     return (
@@ -658,22 +653,24 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                         key={link.href}
                         href={link.href}
                         className={cn(
-                          "group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm font-medium shadow-sm transition",
+                          "group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-sm xl:py-2 2xl:py-3 font-medium shadow-sm transition",
                           "hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2",
                         )}
                       >
-                        <span className="flex items-center gap-3">
+                        <span className="flex min-w-0 items-center gap-3">
                           <span
                             className={cn(
-                              "flex h-10 w-10 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors",
+                              "flex h-10 w-10 shrink-0 items-center xl:h-8 xl:w-8 2xl:h-10 2xl:w-10 justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors",
                               "group-hover:border-primary/40 group-hover:bg-primary group-hover:text-primary-foreground",
                             )}
                           >
                             <Icon className="h-4 w-4" />
                           </span>
-                          <span className="text-left font-medium leading-tight">{link.label}</span>
+                          <span className="min-w-0 break-words text-left font-medium leading-tight">
+                            {link.label}
+                          </span>
                         </span>
-                        <ArrowUpRightIcon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                        <ArrowUpRightIcon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
                       </Link>
                     );
                   })}
@@ -685,7 +682,12 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           </Card>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section
+          className={cn(
+            "grid gap-4 sm:grid-cols-2",
+            metrics.length === 3 ? "xl:grid-cols-3" : "xl:grid-cols-4",
+          )}
+        >
           {metrics.map((metric) => (
             <Card key={metric.key} className={METRIC_CARD_CLASSES[metric.tone]}>
               <CardHeader className={cn(SPACING.cardPadding, "space-y-4")}>

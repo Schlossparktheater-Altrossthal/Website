@@ -20,6 +20,8 @@ type SiteFooterProps = {
   siteTitle: string;
   isAuthenticated: boolean;
   primaryNavigationItems?: NavigationItem[];
+  /** Nur die untere Leiste (Copyright, Rechtliches, Stand) – für den Mitgliederbereich. */
+  compact?: boolean;
 };
 
 export function SiteFooter({
@@ -28,7 +30,67 @@ export function SiteFooter({
   siteTitle,
   isAuthenticated,
   primaryNavigationItems = primaryNavigation,
+  compact = false,
 }: SiteFooterProps) {
+  const bottomBar = (
+    <div
+      className={
+        compact
+          ? "flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+          : "mt-12 flex flex-col gap-4 border-t border-border/50 pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+      }
+    >
+      <p>© 2026 Sommertheater-Altrossthal</p>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <Link className="transition-colors hover:text-primary" href="/old/impressum">
+          Impressum
+        </Link>
+        <Link className="transition-colors hover:text-primary" href="/old/datenschutz">
+          Datenschutzerklärung
+        </Link>
+      </div>
+      {isAuthenticated ? (
+        <p className="text-xs text-muted-foreground/80 sm:text-sm">
+          {isDevBuild ? (
+            <>
+              Build{" "}
+              {buildInfo.commit ? (
+                <a
+                  href={`https://github.com/Schlossparktheater-Altrossthal/Website/commit/${buildInfo.commit.full}`}
+                  className="underline hover:no-underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  #{buildInfo.commit.short}
+                </a>
+              ) : (
+                "#unbekannt"
+              )}{" "}
+              ·{" "}
+              <BuildInfoTimestamp
+                formattedTimestamp={buildInfo.timestamp}
+                isoTimestamp={buildInfo.isoTimestamp}
+              />
+            </>
+          ) : (
+            <BuildInfoTimestamp
+              formattedTimestamp={buildInfo.timestamp}
+              isoTimestamp={buildInfo.isoTimestamp}
+            />
+          )}
+        </p>
+      ) : null}
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <footer className="relative z-20 border-t border-border/60 bg-background/80 backdrop-blur">
+        <div className="layout-container py-6">{bottomBar}</div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="relative z-20 border-t border-border/60 bg-background/80 backdrop-blur">
       <div className="layout-container py-12 sm:py-16">
@@ -111,48 +173,7 @@ export function SiteFooter({
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-4 border-t border-border/50 pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Sommertheater-Altrossthal</p>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <Link className="transition-colors hover:text-primary" href="/old/impressum">
-              Impressum
-            </Link>
-            <Link className="transition-colors hover:text-primary" href="/old/datenschutz">
-              Datenschutzerklärung
-            </Link>
-          </div>
-          {isAuthenticated ? (
-            <p className="text-xs text-muted-foreground/80 sm:text-sm">
-              {isDevBuild ? (
-                <>
-                  Build{" "}
-                  {buildInfo.commit ? (
-                    <a
-                      href={`https://github.com/Schlossparktheater-Altrossthal/Website/commit/${buildInfo.commit.full}`}
-                      className="underline hover:no-underline"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      #{buildInfo.commit.short}
-                    </a>
-                  ) : (
-                    "#unbekannt"
-                  )}{" "}
-                  ·{" "}
-                  <BuildInfoTimestamp
-                    formattedTimestamp={buildInfo.timestamp}
-                    isoTimestamp={buildInfo.isoTimestamp}
-                  />
-                </>
-              ) : (
-                <BuildInfoTimestamp
-                  formattedTimestamp={buildInfo.timestamp}
-                  isoTimestamp={buildInfo.isoTimestamp}
-                />
-              )}
-            </p>
-          ) : null}
-        </div>
+        {bottomBar}
       </div>
     </footer>
   );

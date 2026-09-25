@@ -695,7 +695,7 @@ export function BlockCalendar({
         content: (
           <>
             {day.isToday ? (
-              <span className="pointer-events-none absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary shadow-sm ring-1 ring-primary/40 dark:bg-primary/25">
+              <span className="pointer-events-none absolute right-2 top-2 hidden items-center gap-1 rounded-full sm:inline-flex bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary shadow-sm ring-1 ring-primary/40 dark:bg-primary/25">
                 <CalendarDaysIcon className="h-3 w-3" aria-hidden />
                 <span>Heute</span>
               </span>
@@ -729,7 +729,9 @@ export function BlockCalendar({
                 </span>
               </span>
             ) : (
-              <span className="mt-auto text-xs leading-5 text-muted-foreground">Frei</span>
+              <span className="mt-auto hidden text-xs leading-5 text-muted-foreground sm:inline">
+                Frei
+              </span>
             )}
           </>
         ),

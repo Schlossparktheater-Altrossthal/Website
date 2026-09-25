@@ -266,7 +266,7 @@ function MembersTopbarContent({
     <Button asChild variant="ghost" size="sm" className="gap-1.5 whitespace-nowrap">
       <Link href={PUBLIC_SITE_URL} aria-label="Zur Hauptseite">
         <ArrowLeftIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>Zur Hauptseite</span>
+        <span className="hidden sm:inline">Zur Hauptseite</span>
       </Link>
     </Button>
   );

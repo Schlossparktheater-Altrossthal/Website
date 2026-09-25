@@ -442,7 +442,7 @@ export function PhotoConsentAdminPanel() {
             oder fordere zusätzliche Unterlagen an.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-foreground/60">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/60">
           <Badge variant="secondary">Wartend: {summary.pending}</Badge>
           <Badge variant="outline">Fehlende Geburtsdaten: {summary.missingBirthdays}</Badge>
           <Badge variant="destructive">Abgelehnt: {summary.rejected}</Badge>

@@ -90,7 +90,7 @@ export default async function MemberMeasurementsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Körpermaße"
-        description="Futuristisches Control Center für das Kostüm-Team: Synchronisiere, vergleiche und aktualisiere die Körpermaße des gesamten Ensembles in einem Blick."
+        description="Körpermaße des Ensembles für das Kostüm-Team: vergleichen, ergänzen und exportieren."
         breadcrumbs={breadcrumbs}
       />
       <MemberMeasurementsControlCenter
