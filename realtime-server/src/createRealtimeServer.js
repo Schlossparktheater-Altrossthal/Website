@@ -205,12 +205,10 @@ export function createRealtimeServer(options = {}) {
       return;
     }
     try {
-      const result = analyticsRecorder.record(eventType, new Date());
-      if (result && typeof result.catch === "function") {
-        result.catch((error) =>
-          logError(`[Realtime] Failed to record analytics event ${eventType}`, error),
-        );
-      }
+      // record() ist asynchron: der abgelehnte Promise darf den Socket-Handler nicht stören.
+      void Promise.resolve(analyticsRecorder.record(eventType, new Date())).catch((error) =>
+        logError(`[Realtime] Failed to record analytics event ${eventType}`, error),
+      );
     } catch (error) {
       logError(`[Realtime] Failed to submit analytics event ${eventType}`, error);
     }
