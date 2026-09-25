@@ -11,6 +11,13 @@ import { Card } from "@/components/ui/card";
 import { DateBadge } from "@/components/ui/date-badge";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CALENDAR_EVENT_KINDS,
   CALENDAR_EVENT_KIND_LABELS,
   expandEntryDayKeys,
@@ -56,6 +63,11 @@ function weekdayOf(key: string) {
 }
 
 type KindFilter = "all" | (typeof CALENDAR_EVENT_KINDS)[number];
+
+const KIND_FILTERS: { value: KindFilter; label: string }[] = [
+  { value: "all", label: "Alle" },
+  ...CALENDAR_EVENT_KINDS.map((value) => ({ value, label: CALENDAR_EVENT_KIND_LABELS[value] })),
+];
 
 const MONTH = new Intl.DateTimeFormat("de-DE", {
   month: "long",
@@ -134,18 +146,31 @@ export function EventPlanningClient({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
+        {/* Mobil ein Auswahlfeld: fünf Arten passen nicht nebeneinander. */}
+        <Select
+          value={kind}
+          onValueChange={(value) => {
+            const next = KIND_FILTERS.find((entry) => entry.value === value);
+            if (next) setKind(next.value);
+          }}
+        >
+          <SelectTrigger className="h-9 w-40 sm:hidden" aria-label="Nach Art filtern">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {KIND_FILTERS.map((entry) => (
+              <SelectItem key={entry.value} value={entry.value}>
+                {entry.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <SegmentedControl
           aria-label="Nach Art filtern"
           value={kind}
           onValueChange={setKind}
-          className="max-w-full overflow-x-auto"
-          options={[
-            { value: "all", label: "Alle" },
-            ...CALENDAR_EVENT_KINDS.map((value) => ({
-              value,
-              label: CALENDAR_EVENT_KIND_LABELS[value],
-            })),
-          ]}
+          className="hidden sm:inline-flex"
+          options={KIND_FILTERS}
         />
         <Button
           type="button"
