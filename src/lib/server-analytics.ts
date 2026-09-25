@@ -806,11 +806,6 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
   let sessionInsights: SessionInsight[] = DEFAULT_ANALYTICS.sessionInsights.map((entry) => ({
     ...entry,
   }));
-  let optimizationInsights: OptimizationInsight[] = DEFAULT_ANALYTICS.optimizationInsights.map(
-    (entry) => ({
-      ...entry,
-    }),
-  );
   let latestHttpSummary: AnalyticsHttpSummary | null = null;
   let hasDynamicOptimizationData = false;
   const databaseSegments: Record<
@@ -1012,7 +1007,7 @@ export async function collectServerAnalytics(): Promise<ServerAnalytics> {
 
   const hasDatabaseData = Object.values(databaseSegments).some(Boolean);
 
-  optimizationInsights = deriveOptimizationInsights({
+  const optimizationInsights = deriveOptimizationInsights({
     publicPages,
     memberPages,
     deviceStats: deviceBreakdown,
