@@ -42,5 +42,36 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
     },
+    {
+      name: "mobile",
+      testMatch: /responsive-overflow\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      },
+      dependencies: ["setup"],
+    },
+    {
+      name: "tablet-portrait",
+      testMatch: /responsive-overflow\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 834, height: 1112 },
+        hasTouch: true,
+      },
+      dependencies: ["setup"],
+    },
+    {
+      name: "tablet-landscape",
+      testMatch: /responsive-overflow\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1024, height: 768 },
+        hasTouch: true,
+      },
+      dependencies: ["setup"],
+    },
   ],
 });

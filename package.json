@@ -31,6 +31,8 @@
     "test": "vitest run",
     "test:integration": "vitest run -c vitest.integration.config.ts",
     "e2e": "playwright test",
+    "e2e:desktop": "playwright test --project=chromium",
+    "e2e:responsive": "playwright test responsive-overflow",
     "e2e:env": "node scripts/e2e-env.mjs",
     "e2e:screenshots": "node scripts/e2e-screenshots.mjs",
     "typecheck": "tsc --noEmit --project tsconfig.typecheck.json",
