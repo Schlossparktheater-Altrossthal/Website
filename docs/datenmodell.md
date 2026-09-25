@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-24, 94 Modelle, 41 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-25, 87 Modelle, 39 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -25,7 +25,6 @@ flowchart LR
     Show --- Stueck[Character, Scene, Casting]
     Show --- Proben[Rehearsal, Proposal, Duty]
     Show --- Fin[FinanceBudget / FinanceEntry]
-    Show --- Myst[Clue / Guess]
     Show --- Onb[Invite, Onboarding, PhotoConsent]
     Dept((Department)) --- Stueck
     Dept --- DeptX[Tasks, Events, Docs, Permissions]
@@ -36,7 +35,7 @@ flowchart LR
 - **`Show`** ist die zentrale Klammer für alles, was eine Produktion betrifft.
 - **`ProductionMembership`** verbindet User und Show (n:m) und trägt Status sowie produktionsbezogene Rollen.
 - **`Department`** (Gewerk) ist produktionsunabhängig. Es hängt nur indirekt über `SceneBreakdownItem → Scene → Show` an einer Produktion.
-- Ohne Fremdschlüssel zu User oder Show: Singleton-Einstellungen (`*Settings`, `HomepageCountdown`, `HomepageFlyer` mit festen IDs wie `"default"` bzw. `"public"`), `InventoryItem`, `Ticket`, `Announcement`, `Sync*` und die `Analytics*`-Tabellen.
+- Ohne Fremdschlüssel zu User oder Show: Singleton-Einstellungen (`*Settings` mit festen IDs wie `"default"` bzw. `"public"`), `InventoryItem`, `Ticket`, `Announcement`, `Sync*` und die `Analytics*`-Tabellen.
 
 ## ER-Diagramme
 
@@ -175,7 +174,7 @@ erDiagram
     }
 ```
 
-### Finanzen, Mystery-Spiel, persönliche Daten
+### Finanzen und persönliche Daten
 
 ```mermaid
 erDiagram
@@ -186,11 +185,6 @@ erDiagram
     FinanceEntry ||--o{ FinanceLog : "Statusverlauf"
     User ||--o{ FinanceEntry : "erstellt / genehmigt / ausgelegt"
     User |o--o{ FinanceLog : "geändert von"
-    Show ||--o{ Clue : "Hinweise"
-    Show ||--o{ Guess : ""
-    User ||--o{ Guess : "rät"
-    MysteryTip ||--o{ MysteryTipSubmission : ""
-    Clue |o--o{ MysteryTipSubmission : ""
     User ||--o{ MemberMeasurement : "Maße"
     User ||--o{ MemberSize : "Größen"
     User ||--o{ DietaryRestriction : "Allergien"
@@ -200,7 +194,7 @@ erDiagram
     User ||--o{ MemberRolePreference : "acting/crew"
 ```
 
-### Dateien, Issues, Galerie, Website, Tickets, Sync
+### Dateien, Issues, Website, Tickets, Sync
 
 ```mermaid
 erDiagram
@@ -213,7 +207,6 @@ erDiagram
     User |o--o{ Issue : "erstellt / geändert"
     Issue ||--o{ IssueComment : ""
     User ||--o{ IssueComment : ""
-    User ||--o{ GalleryItem : ""
     User |o--o{ Task : "Legacy-Aufgaben"
     WebsiteTheme |o--o{ WebsiteSettings : ""
     User |o--o{ ServerSettings : "Elterneinwilligung hochgeladen"
@@ -244,7 +237,7 @@ Mögliche Werte von `Role`: `member`, `cast`, `tech`, `board`, `finance`, `owner
 - **Einladungen:** Ein `MemberInvite` ist immer an eine Show gebunden und kann persönlich (`personalFor`) oder offen sein. Jede Einlösung erzeugt eine `MemberInviteRedemption`, die mit maximal einem Onboarding-Datensatz verknüpft ist.
 - **Verfügbarkeit:** `Availability` ist Legacy (Zeitfenster mit Status). Neu sind `AvailabilityDay` (Einträge pro Tag) und `AvailabilityTemplate` (wiederkehrend). `BlockedDay` ist die Sperrliste.
 - **Aufgaben:** `Task` sind globale Legacy-Aufgaben. `DepartmentTask` sind Aufgaben eines Gewerks mit mehreren Zuständigen.
-- **Show-Bezug:** Nur optional bei `Rehearsal`, `RehearsalProposal` und `MemberOnboardingProfile`. Pflicht bei Character, Scene, Finance*, Clue, Guess, PhotoConsent, ProductionMembership, ProductionOnboarding, MemberInvite und FinalRehearsalDuty.
+- **Show-Bezug:** Nur optional bei `Rehearsal`, `RehearsalProposal` und `MemberOnboardingProfile`. Pflicht bei Character, Scene, Finance*, PhotoConsent, ProductionMembership, ProductionOnboarding, MemberInvite und FinalRehearsalDuty.
 - **Mehrfachrelationen zu User** werden über benannte `@relation` unterschieden:
   - FinanceEntry: createdBy, approvedBy, memberPaidBy
   - Issue: createdBy, updatedBy
@@ -254,10 +247,10 @@ Mögliche Werte von `Role`: `member`, `cast`, `tech`, `board`, `finance`, `owner
   - MemberInvite: createdBy, personalFor
 - **Löschverhalten** (`onDelete`) steht in der Referenz unten bei jedem Relationsfeld. Grundsatz seit 2026-09-24:
   - `Cascade` nur für Daten, die der Person selbst gehören (Account, Session, Maße, Allergien, Verfügbarkeit, Interessen, Mitgliedschaften).
-  - `Restrict` für Fachdaten des Vereins mit Pflicht-Ersteller: `FinanceEntry.createdBy`, `MemberInvite.createdBy`, `RehearsalAttendanceLog.changedBy`, `DepartmentTask.creator`, `DepartmentEvent.createdBy`, `FinalRehearsalDuty.createdBy`, `IssueComment.author`, `GalleryItem.uploadedBy`.
+  - `Restrict` für Fachdaten des Vereins mit Pflicht-Ersteller: `FinanceEntry.createdBy`, `MemberInvite.createdBy`, `RehearsalAttendanceLog.changedBy`, `DepartmentTask.creator`, `DepartmentEvent.createdBy`, `FinalRehearsalDuty.createdBy`, `IssueComment.author`.
   - `Restrict` von `Show` auf `FinanceEntry`, `FinanceBudget` und `PhotoConsent`: Produktionen werden archiviert, nicht gelöscht.
   - `DELETE /api/members/[id]` versucht erst ein echtes Löschen. Scheitert es an einem Restrict-FK (P2003), wird das Konto per `anonymizeAccount` (`src/lib/retention.ts`) anonymisiert.
-- **Singletons:** `*Settings`, `HomepageCountdown` und `HomepageFlyer` haben eine feste ID und damit genau eine Zeile.
+- **Singletons:** `*Settings` haben eine feste ID und damit genau eine Zeile.
 
 ## Aktualisierung
 
@@ -305,7 +298,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `payoutNote`                      | `String?`                      |                                                                                          |
 | `accounts`                        | → `Account[]`                  |                                                                                          |
 | `sessions`                        | → `Session[]`                  |                                                                                          |
-| `guesses`                         | → `Guess[]`                    |                                                                                          |
 | `attendance`                      | → `RehearsalAttendance[]`      |                                                                                          |
 | `availability`                    | → `Availability[]`             |                                                                                          |
 | `tasks`                           | → `Task[]`                     | @relation("TaskAssignee")                                                                |
@@ -349,7 +341,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `financeLogsAuthored`             | → `FinanceLog[]`               | @relation("FinanceLogChangedBy")                                                         |
 | `finalRehearsalDutiesAssigned`    | → `FinalRehearsalDuty[]`       | @relation("FinalRehearsalDutyAssignee")                                                  |
 | `finalRehearsalDutiesCreated`     | → `FinalRehearsalDuty[]`       | @relation("FinalRehearsalDutyCreatedBy")                                                 |
-| `galleryItems`                    | → `GalleryItem[]`              |                                                                                          |
 | `fileLibraryFoldersCreated`       | → `FileLibraryFolder[]`        | @relation("FileLibraryFoldersCreated")                                                   |
 | `fileLibraryItemsUploaded`        | → `FileLibraryItem[]`          | @relation("FileLibraryItemsUploaded")                                                    |
 | `parentalConsentTemplatesUpdated` | → `ServerSettings[]`           | @relation("ServerSettingsParentalConsentUploader")                                       |
@@ -483,11 +474,9 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `status`                  | `ProductionStatus` (enum)     | @default(planning)       |
 | `statusChangedAt`         | `DateTime?`                   |                          |
 | `archivedAt`              | `DateTime?`                   |                          |
-| `clues`                   | → `Clue[]`                    |                          |
 | `rehearsals`              | → `Rehearsal[]`               |                          |
 | `finance`                 | → `FinanceEntry[]`            |                          |
 | `budgets`                 | → `FinanceBudget[]`           |                          |
-| `guesses`                 | → `Guess[]`                   |                          |
 | `proposals`               | → `RehearsalProposal[]`       |                          |
 | `characters`              | → `Character[]`               |                          |
 | `scenes`                  | → `Scene[]`                   |                          |
@@ -1289,83 +1278,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 - `@@index([entryId])`
 - `@@index([changedById])`
 
-## Mystery-Spiel
-
-### `Clue`
-
-| Feld             | Typ                        | Attribute / Beschreibung                                         |
-| ---------------- | -------------------------- | ---------------------------------------------------------------- |
-| `id`             | `String`                   | @id @default(cuid())                                             |
-| `showId`         | `String`                   |                                                                  |
-| `index`          | `Int`                      |                                                                  |
-| `type`           | `ClueType` (enum)          |                                                                  |
-| `content`        | `Json`                     |                                                                  |
-| `releaseAt`      | `DateTime`                 |                                                                  |
-| `points`         | `Int`                      |                                                                  |
-| `published`      | `Boolean`                  | @default(false)                                                  |
-| `show`           | → `Show`                   | @relation(fields: [showId], references: [id], onDelete: Cascade) |
-| `tipSubmissions` | → `MysteryTipSubmission[]` |                                                                  |
-
-- `@@unique([showId, index], name: "showId_index")`
-- `@@index([showId, published, releaseAt])`
-
-### `Guess`
-
-| Feld        | Typ        | Attribute / Beschreibung                                         |
-| ----------- | ---------- | ---------------------------------------------------------------- |
-| `id`        | `String`   | @id @default(cuid())                                             |
-| `userId`    | `String`   |                                                                  |
-| `showId`    | `String`   |                                                                  |
-| `guessText` | `String`   |                                                                  |
-| `score`     | `Int`      | @default(0)                                                      |
-| `createdAt` | `DateTime` | @default(now())                                                  |
-| `user`      | → `User`   | @relation(fields: [userId], references: [id], onDelete: Cascade) |
-| `show`      | → `Show`   | @relation(fields: [showId], references: [id], onDelete: Cascade) |
-
-### `MysteryTip`
-
-| Feld             | Typ                        | Attribute / Beschreibung |
-| ---------------- | -------------------------- | ------------------------ |
-| `id`             | `String`                   | @id @default(cuid())     |
-| `text`           | `String`                   |                          |
-| `normalizedText` | `String`                   | @unique                  |
-| `count`          | `Int`                      | @default(1)              |
-| `createdAt`      | `DateTime`                 | @default(now())          |
-| `updatedAt`      | `DateTime`                 | @updatedAt               |
-| `submissions`    | → `MysteryTipSubmission[]` |                          |
-
-### `MysteryTipSubmission`
-
-| Feld             | Typ            | Attribute / Beschreibung                                         |
-| ---------------- | -------------- | ---------------------------------------------------------------- |
-| `id`             | `String`       | @id @default(cuid())                                             |
-| `tipId`          | `String`       |                                                                  |
-| `clueId`         | `String?`      |                                                                  |
-| `playerName`     | `String`       |                                                                  |
-| `tipText`        | `String`       |                                                                  |
-| `normalizedText` | `String`       |                                                                  |
-| `isCorrect`      | `Boolean`      | @default(false)                                                  |
-| `score`          | `Int`          | @default(0)                                                      |
-| `createdAt`      | `DateTime`     | @default(now())                                                  |
-| `updatedAt`      | `DateTime`     | @updatedAt                                                       |
-| `tip`            | → `MysteryTip` | @relation(fields: [tipId], references: [id], onDelete: Cascade)  |
-| `clue`           | → `Clue?`      | @relation(fields: [clueId], references: [id], onDelete: SetNull) |
-
-- `@@index([clueId])`
-- `@@index([playerName])`
-- `@@index([tipId])`
-
-### `MysterySettings`
-
-| Feld                | Typ         | Attribute / Beschreibung |
-| ------------------- | ----------- | ------------------------ |
-| `id`                | `String`    | @id @default("default")  |
-| `countdownTarget`   | `DateTime?` |                          |
-| `expirationMessage` | `String?`   |                          |
-| `createdAt`         | `DateTime`  | @default(now())          |
-| `updatedAt`         | `DateTime`  | @updatedAt               |
-
-## Dateien, Galerie, Issues, Aufgaben
+## Dateien, Issues, Aufgaben
 
 ### `FileLibraryFolder`
 
@@ -1423,25 +1336,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 - `@@index([folderId, accessType])`
 - `@@unique([folderId, accessType, systemRole, appRoleId])`
-
-### `GalleryItem`
-
-| Feld           | Typ                       | Attribute / Beschreibung                                                |
-| -------------- | ------------------------- | ----------------------------------------------------------------------- |
-| `id`           | `String`                  | @id @default(cuid())                                                    |
-| `year`         | `Int`                     |                                                                         |
-| `description`  | `String?`                 |                                                                         |
-| `fileName`     | `String`                  |                                                                         |
-| `mimeType`     | `String`                  |                                                                         |
-| `fileSize`     | `Int`                     |                                                                         |
-| `mediaType`    | `GalleryMediaType` (enum) |                                                                         |
-| `data`         | `Bytes`                   |                                                                         |
-| `createdAt`    | `DateTime`                | @default(now())                                                         |
-| `updatedAt`    | `DateTime`                | @updatedAt                                                              |
-| `uploadedById` | `String`                  |                                                                         |
-| `uploadedBy`   | → `User`                  | @relation(fields: [uploadedById], references: [id], onDelete: Restrict) |
-
-- `@@index([year, createdAt])`
 
 ### `Issue`
 
@@ -1609,31 +1503,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 - `@@index([scope, clientId])`
 
 ## Website & Einstellungen (Singletons)
-
-### `HomepageCountdown`
-
-| Feld              | Typ         | Attribute / Beschreibung             |
-| ----------------- | ----------- | ------------------------------------ |
-| `id`              | `String`    | @id @default("public")               |
-| `countdownTarget` | `DateTime?` |                                      |
-| `termine`         | `Json?`     |                                      |
-| `nachSommerText`  | `String`    | @default("Bis zum nächsten Sommer!") |
-| `disabled`        | `Boolean`   | @default(false)                      |
-| `createdAt`       | `DateTime`  | @default(now())                      |
-| `updatedAt`       | `DateTime`  | @updatedAt                           |
-
-### `HomepageFlyer`
-
-| Feld           | Typ        | Attribute / Beschreibung |
-| -------------- | ---------- | ------------------------ |
-| `id`           | `String`   | @id @default("public")   |
-| `aktiv`        | `Boolean`  | @default(false)          |
-| `titel`        | `String?`  |                          |
-| `beschreibung` | `String?`  |                          |
-| `bildData`     | `Bytes?`   |                          |
-| `bildMimeType` | `String?`  |                          |
-| `createdAt`    | `DateTime` | @default(now())          |
-| `updatedAt`    | `DateTime` | @updatedAt               |
 
 ### `WebsiteTheme`
 
@@ -2061,9 +1930,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `CharacterCastingType`        | `primary`, `alternate`, `cover`, `cameo`                                                                                                                                                                                                                                                                      |
 | `BreakdownStatus`             | `planned`, `in_progress`, `blocked`, `ready`, `done`                                                                                                                                                                                                                                                          |
 | `AvatarSource`                | `GRAVATAR`, `UPLOAD`, `INITIALS`                                                                                                                                                                                                                                                                              |
-| `ClueType`                    | `text`, `image`, `audio`, `riddle`                                                                                                                                                                                                                                                                            |
 | `AttendanceStatus`            | `yes`, `no`, `emergency`, `maybe`                                                                                                                                                                                                                                                                             |
-| `GalleryMediaType`            | `image`, `video`                                                                                                                                                                                                                                                                                              |
 | `FileLibraryAccessType`       | `VIEW`, `DOWNLOAD`, `UPLOAD`                                                                                                                                                                                                                                                                                  |
 | `FileLibraryAccessTargetType` | `SYSTEM_ROLE`, `APP_ROLE`                                                                                                                                                                                                                                                                                     |
 | `AvailabilityStatus`          | `blocked`, `available`                                                                                                                                                                                                                                                                                        |

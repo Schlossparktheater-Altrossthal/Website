@@ -21,7 +21,7 @@ Bisher existiert genau eine Produktion: **„Die unendliche Geschichte“** – 
 | 6   | (Korrigiert) Authentik-Login mit Einladungslink reaktivierte deaktivierte Rückkehrer bereits – aber sofort beim Login, vor dem Onboarding; Passwort-Reset war für Deaktivierte gesperrt                                                                | `src/auth.ts`, `api/auth/password-email`                             |
 | 7   | Normales Onboarding mit bekannter E-Mail endet erst beim Absenden mit 409 „Konto existiert bereits“ – Eingaben verloren                                                                                                                                | `api/onboarding/complete/route.ts:360`                               |
 | 8   | Drei Rollensysteme (`User.role`, `UserRole`, `AppRole`), alle global; `DepartmentMembership` global statt pro Produktion                                                                                                                               | Schema                                                               |
-| 9   | `GalleryItem` hängt an `year` statt `showId`; `Show.dates` als JSON-String; `ProductionMembership` ohne Status/Funktion                                                                                                                                | Schema                                                               |
+| 9   | `Show.dates` als JSON-String; `ProductionMembership` ohne Status/Funktion                                                                                                                                                                              | Schema                                                               |
 
 ## Zielbild
 
@@ -77,7 +77,6 @@ model PhotoConsent {
 
 model MemberRolePreference { showId String  @@unique([userId, showId, code]) }
 model DepartmentMembership { showId String? @@unique([departmentId, userId, showId]) }
-model GalleryItem          { showId String? }
 ```
 
 `Show`-Relationen, die heute `onDelete: Cascade` haben, bleiben technisch so, aber Löschen wird in der UI
@@ -128,7 +127,6 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
    - `MemberOnboardingProfile` → `ProductionOnboarding` (inkl. `inviteId`, `redemptionId`, `completedAt = user.onboardingCompletedAt`).
    - `MemberRolePreference.showId`, `DepartmentMembership.showId` = diese Show.
    - Nicht deaktivierte Nutzer ohne `ProductionMembership` → Membership anlegen; alle Memberships `status = active` bzw. `left`, wenn `leftAt` gesetzt.
-   - `GalleryItem.showId` über `year` zuordnen.
    - WhatsApp-Link aus `Show.meta.onboarding` nach `onboardingConfig` kopieren.
 3. Vorher auf Staging mit frischem Prod-Dump testen (siehe Staging-DB-Sync; `pg_dump --clean`-Falle beachten).
 

@@ -51,7 +51,6 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Geteilte Module des Realtime-Servers (`src/lib/realtime/shared/*`, `src/lib/server-analytics-*`) bleiben handgepflegt als `.js` + `.d.ts`. Der Realtime-Server hat keine Build-Stufe und kann `.ts` nicht laden – keine TS-Migration. Bei Änderungen an der `.js` die zugehörige `.d.ts` synchron halten.
 - Änderungen an `src/lib/realtime/shared/core.js` mit `node --check` und den Realtime-Tests (`src/lib/realtime/__tests__`) absichern, bevor sie committet werden.
 - Neue Permission-Keys müssen in `DEFAULT_PERMISSION_DEFINITIONS` in `src/lib/permissions.ts` registriert werden, bevor sie verwendet werden.
-- Neue Feature-Keys für öffentliche Seiten müssen in `FEATURE_DEFINITIONS` in `src/lib/frontend-editing.ts` eingetragen werden.
 - Bei Umbenennung von Permission-Keys eine neue Prisma-Migration erstellen, die alte Keys in der DB umbenennt.
 
 ## UI, UX & Content
@@ -121,9 +120,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 ## Benennungskonventionen
 
 - Permission-Keys folgen dem Schema `VISIBILITY.PAGE.CONTEXT.ACTION`.
-  - `VISIBILITY` ist `PUBLIC` für öffentliche Seiten (Home, Mystery, Chronik, Über uns, Schulkatze).
   - `VISIBILITY` ist `PRIVATE` für den Mitgliederbereich.
-- Feature-Keys folgen dem Schema `FEATURE.PAGE.CONTEXT`.
 - TypeScript-Variablen verwenden `camelCase` mit beschreibenden englischen Namen.
 - Konstanten verwenden `SCREAMING_SNAKE_CASE`.
 - React-Komponenten verwenden `PascalCase`.

@@ -247,9 +247,6 @@ Inhaltsverzeichnis
   pflegbar (z. B. `PublicHint`-Modell mit Veröffentlichungsdatum und
   Target-Monat).
 
-- **Mystery-Route**: Nutzung der bestehenden `Clue`-Struktur zur
-  gestaffelten Veröffentlichung von Rätseln.
-
 ### 4.3. Organisations-Module
 
 - **Archiv**: Upload & Kategorisierung von Dokumenten, Fotos,
@@ -413,9 +410,6 @@ keine Datenbank angebunden ist, und müssen nach Go-Live entfernt werden.
 
 - `AvailabilityDay` / `AvailabilityTemplate`: feingranulare
   Verfügbarkeiten.
-
-- `Show`, `Clue`, `Guess`: Mystery- & Spiel-Mechanik für das öffentliche
-  Rätsel.
 
 - `FinanceEntry`, `Task`, `InventoryItem`, `Announcement`:
   organisatorische Module.
