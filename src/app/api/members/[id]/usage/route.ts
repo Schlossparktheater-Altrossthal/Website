@@ -81,7 +81,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     inviteRedemptions,
     sessions,
     accounts,
-    guesses,
     userAppRoles,
     interestsAuthored,
     rehearsalProposalsApproved,
@@ -121,7 +120,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.memberInviteRedemption.count({ where: { userId: id } }),
     prisma.session.count({ where: { userId: id } }),
     prisma.account.count({ where: { userId: id } }),
-    prisma.guess.count({ where: { userId: id } }),
     prisma.userAppRole.count({ where: { userId: id } }),
     prisma.interest.count({ where: { createdById: id } }),
     prisma.rehearsalProposal.count({ where: { approvedBy: id } }),
@@ -280,7 +278,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     { key: "rolePreferences", label: "Rollenpräferenzen", count: rolePreferences },
     { key: "interests", label: "Interessensgebiete", count: interests },
     { key: "userAppRoles", label: "Zusätzliche Rollen (Custom)", count: userAppRoles },
-    { key: "guesses", label: "Mystery-Gewinnspielteilnahmen", count: guesses },
   ].filter((item) => item.count > 0);
 
   addSection({
