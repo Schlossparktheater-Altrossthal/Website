@@ -280,6 +280,9 @@ Tages; Verfügbarkeit als Balken; Zeiträume als Band. Zuerst in der Sperrliste 
 - `MonthGrid`: Monatsraster Mo–So, passt mobil ohne horizontales Scrollen. Pro Tag `status`
   (getönte Fläche), `emphasis` (`strong` Probentag, `faint` Randtag), `markers` (Punkte für
   Termine `primary` und Proben `info`), `band` (`final` Endprobenwoche, `holiday` Ferien).
+- `MonthGrid` mit `showWeekNumbers` (KW-Spalte) und `renderDetails` (Inhalt ab `lg`, z. B.
+  Termintitel); mobil mind. 52 px hohe Zellen.
+- `StatusPicker`: große Statusauswahl (2×2 mobil) für Verfügbarkeit.
 - `MonthSwitcher`: Monatstitel mit Vor/Zurück und „Heute“.
 - `AvailabilityBar`: „40/43 verfügbar“ als dreifarbiger Balken.
 - `SegmentedControl`: Auswahl aus 2–4 Optionen (Filter, Status). Für Seitenbereiche weiter

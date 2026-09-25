@@ -11,16 +11,21 @@ Probenplanung freie Zeiten kennt.
 
 ## Aufbau
 
-Zwei Reiter (mobil als Auswahlfeld):
+Zwei Ansichten, umgeschaltet per `SegmentedControl` (`?ansicht=team`):
 
-- **Mein Kalender** – Monatsraster (`MonthGrid`), daneben/darunter die Agenda des gewählten
-  Tages mit Stufe, Ferien, Terminen und eigenem Status als Umschalter
-  (Frei/Bevorzugt/Eingeschränkt/Gesperrt) samt optionalem Grund. „Zeitraum“ trägt mehrere Tage
-  auf einmal ein (`/api/block-days/bulk`). Liste „Meine Einträge“ ab heute.
-- **Team** – Desktop (ab `lg`): Matrix Personen × Tage, leere Zellen = frei, Kopf mit Anzahl
-  Verfügbarer, Terminen und Bändern. Mobil: Tagesliste mit `AvailabilityBar` und nur den Namen
-  der Ausnahmen. Tipp auf einen Tag öffnet die Tagesdetails. Filter Schauspiel/Gewerke,
-  Namenssuche (Desktop), Schalter „Alle Tage“.
+- **Mein Kalender** – Monatsraster mit Kalenderwochen (`MonthGrid`). Am Desktop zeigen die
+  Zellen Termine; rechts stehen die Tagesdetails. Mobil öffnet ein Tipp auf einen Tag ein
+  Bottom-Sheet mit Terminen und der Statusauswahl (`StatusPicker`, 2×2 große Flächen) samt
+  optionalem Grund. „Zeitraum“ trägt mehrere Tage ein (`/api/block-days/bulk`). Liste „Meine
+  Einträge“ ab heute.
+- **Team** – auf allen Geräten gleich, zwei Darstellungen: „Tage“ (Karten je relevantem Tag mit
+  `AvailabilityBar` und nur den Ausnahmen, Planer sehen Gründe) und „Personen“ (Matrix Personen ×
+  Tage, leere Zellen = frei). Filter Schauspiel/Gewerke, Namenssuche, „Alle Tage“.
+- **Einstellungen** – Dialog (mobil Sheet): Probentage per Tipp (Probentag → Ausnahmetag → aus),
+  Sperrfrist, Ferien-/Feiertagsquellen mit Prüfen.
+
+Termine pflegen Planer zusätzlich unter **Terminplanung** (`/mitglieder/terminplanung`): Liste
+nach Monaten, Filter nach Art, je Termin Verfügbarkeit und wer fehlt (mit Grund).
 
 Tag-Stufen (`src/lib/sperrliste/day-tiers.ts`): `core` = bevorzugte Probentage (Einstellungen)
 und Endprobenwoche der aktiven Produktion, `possible` = Ausnahme-Wochentage, Ferien, Feiertage,
