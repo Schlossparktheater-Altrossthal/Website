@@ -9,7 +9,8 @@ Profilbereiche, Schnellzugriff und wer gerade online ist. Mobil einspaltig.
 
 ## Routen
 
-- `/mitglieder/dashboard`
+- `/mitglieder` – Dashboard (Einstiegsseite des Mitgliederbereichs)
+- `/mitglieder/dashboard` – Redirect auf `/mitglieder`
 
 ## Permissions
 

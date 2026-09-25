@@ -51,5 +51,6 @@ Fotoerlaubnis-Signaturen.
 
 - Die Bereiche enthalten noch `set-state-in-effect`-Hinweise (React-Compiler-Warnungen, bewusst
   auf „warn" gestellt).
-- Rollenwünsche, Fokus und Team-Notizen sind noch personenbezogen (nicht pro Produktion).
+- Rollenwünsche, Fokus und Team-Notizen sind produktionsbezogen (aktive Produktion aus der
+  Seitenleiste, `readProductionPreferences`, Migration `production_scoped_preferences`).
 - Profilbild-Bearbeitung nutzt `react-easy-crop`.
