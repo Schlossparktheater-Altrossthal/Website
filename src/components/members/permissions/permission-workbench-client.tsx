@@ -43,7 +43,6 @@ const CATEGORY_ORDER = [
   "department",
   "pages",
   "admin",
-  "public",
   "communication",
   "analytics",
 ] as const;
@@ -73,13 +72,6 @@ const GROUPS: PermissionGroup[] = [
       "PRIVATE.PROFILE.SIZES.MANAGE",
       "PRIVATE.PROFILE.DIETARY.MANAGE",
     ],
-  },
-  {
-    id: "group-public-content",
-    category: "public",
-    label: "Öffentliche Inhalte",
-    description: "Regelt zentrale Inhalte der öffentlichen Website.",
-    keys: ["PUBLIC.HOME.COUNTDOWN.EDIT"],
   },
 ];
 

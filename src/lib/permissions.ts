@@ -9,7 +9,6 @@ type PermissionCategoryKey =
   | "department"
   | "pages"
   | "admin"
-  | "public"
   | "analytics"
   | "communication"
   | "services";
@@ -20,7 +19,6 @@ export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> =
   department: "Gewerke",
   pages: "Pages",
   admin: "Verwaltung",
-  public: "Öffentliche Seiten",
   analytics: "Analysen",
   communication: "Kommunikation",
   services: "Dienste",
@@ -161,64 +159,10 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "pages",
   },
   {
-    key: "PUBLIC.HOME.COUNTDOWN.EDIT",
-    label: "Premieren-Countdown verwalten",
-    description: "Countdown zur ersten Aufführung auf der öffentlichen Startseite einstellen.",
-    category: "pages",
-  },
-  {
-    key: "PUBLIC.HOME.FLYER.EDIT",
-    label: "Homepage-Flyer verwalten",
-    description: "Flyer-Sektion auf der öffentlichen Startseite einstellen.",
-    category: "pages",
-  },
-  {
-    key: "PUBLIC.CHRONIK.DATES.EDIT",
-    label: "Chronik-Termine pflegen",
-    description: "Aufführungstermine der öffentlichen Chronik direkt im Frontend bearbeiten.",
-    category: "pages",
-  },
-  {
-    key: "PRIVATE.CHRONIK.MANAGE",
-    label: "Chronik verwalten",
-    description: "Chronik-Produktionen anlegen, bearbeiten und löschen.",
-    category: "public",
-  },
-  {
     key: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
     label: "Fotoerlaubnisse verwalten",
     description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
     category: "admin",
-  },
-  {
-    key: "PUBLIC.MYSTERY.TIMER.EDIT",
-    label: "Mystery-Timer bearbeiten",
-    description: "Countdown und Hinweistext für das öffentliche Geheimnis pflegen.",
-    category: "public",
-  },
-  {
-    key: "PUBLIC.MYSTERY.PUZZLE.MANAGE",
-    label: "Mystery-Rätsel verwalten",
-    description: "Rätsel erstellen, bearbeiten und veröffentlichen.",
-    category: "public",
-  },
-  {
-    key: "PUBLIC.MYSTERY.TIPS.MANAGE",
-    label: "Mystery-Tipps verwalten",
-    description: "Community-Tipps moderieren und löschen.",
-    category: "public",
-  },
-  {
-    key: "PUBLIC.MYSTERY.SCOREBOARD.MANAGE",
-    label: "Mystery-Scoreboard verwalten",
-    description: "Punkte vergeben und Scoreboard-Einträge bearbeiten.",
-    category: "public",
-  },
-  {
-    key: "PUBLIC.MYSTERY.HINTS.MANAGE",
-    label: "Mystery-Hinweise verwalten",
-    description: "Hinweise freischalten und hinzufügen.",
-    category: "public",
   },
   {
     key: "PRIVATE.ADMIN.ONBOARDING.ANALYTICS",
