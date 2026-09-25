@@ -16,6 +16,7 @@ type ListRowBaseProps = {
   chevron?: boolean;
   density?: "compact" | "comfortable";
   className?: string;
+  "aria-current"?: "page" | "step" | "true";
 };
 
 type ListRowProps = ListRowBaseProps &
@@ -39,6 +40,7 @@ export function ListRow({
   href,
   onClick,
   external,
+  "aria-current": ariaCurrent,
 }: ListRowProps) {
   const interactive = Boolean(href || onClick);
   const showChevron = chevron ?? interactive;
@@ -75,7 +77,7 @@ export function ListRow({
         {content}
       </a>
     ) : (
-      <Link href={href} className={classes}>
+      <Link href={href} className={classes} aria-current={ariaCurrent}>
         {content}
       </Link>
     );
