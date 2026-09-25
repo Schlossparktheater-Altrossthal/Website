@@ -4,12 +4,12 @@ import { PageHeader } from "@/components/members/page-header";
 import { readCalendarEvents } from "@/lib/calendar/entries";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import { getUserDisplayName } from "@/lib/names";
+import { compareMembersByLastName, getUserDisplayName } from "@/lib/names";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
-import { EventPlanningClient, type EventAbsence } from "./page-client";
+import { EventPlanningClient, type PlanningAvailability, type PlanningMember } from "./page-client";
 
 export default async function EventPlanningPage() {
   const session = await requireAuth();
@@ -21,32 +21,38 @@ export default async function EventPlanningPage() {
   const from = addMonths(startOfMonth(new Date()), -1);
   const to = addMonths(from, 14);
 
-  const [events, memberCount] = await Promise.all([
+  const [events, users] = await Promise.all([
     readCalendarEvents({ from, to }),
-    prisma.user.count({ where: { deactivatedAt: null } }),
+    prisma.user.findMany({
+      where: { deactivatedAt: null },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        email: true,
+        // Alle Einträge im Zeitraum – auch neu angelegte Termine zeigen sofort, wer kann.
+        blockedDays: {
+          where: { date: { gte: from, lt: to } },
+          select: { date: true, kind: true, reason: true },
+        },
+      },
+    }),
   ]);
 
-  // Alle Abwesenheiten im Zeitraum – auch neu angelegte Termine zeigen sofort, wer fehlt.
-  const blockedDays = await prisma.blockedDay.findMany({
-    where: {
-      date: { gte: from, lt: to },
-      kind: { in: ["BLOCKED", "LIMITED"] },
-      user: { deactivatedAt: null },
-    },
-    select: {
-      date: true,
-      kind: true,
-      reason: true,
-      user: { select: { firstName: true, lastName: true, name: true, email: true } },
-    },
-  });
-
-  const absences: EventAbsence[] = blockedDays.map((entry) => ({
-    date: format(entry.date, "yyyy-MM-dd"),
-    status: entry.kind === "BLOCKED" ? "blocked" : "limited",
-    name: getUserDisplayName(entry.user),
-    reason: entry.reason?.trim() || null,
+  const members: PlanningMember[] = [...users].sort(compareMembersByLastName).map((user) => ({
+    id: user.id,
+    name: getUserDisplayName(user),
   }));
+  const availability: PlanningAvailability[] = users.flatMap((user) =>
+    user.blockedDays.map((entry) => ({
+      userId: user.id,
+      date: format(entry.date, "yyyy-MM-dd"),
+      status:
+        entry.kind === "BLOCKED" ? "blocked" : entry.kind === "LIMITED" ? "limited" : "preferred",
+      reason: entry.reason?.trim() || null,
+    })),
+  );
 
   return (
     <div className="space-y-6">
@@ -55,7 +61,7 @@ export default async function EventPlanningPage() {
         description="Termine der Organisation anlegen – mit Blick darauf, wer an dem Tag kann."
         breadcrumbs={[membersNavigationBreadcrumb("/mitglieder/terminplanung")]}
       />
-      <EventPlanningClient events={events} absences={absences} memberCount={memberCount} />
+      <EventPlanningClient events={events} members={members} availability={availability} />
     </div>
   );
 }
