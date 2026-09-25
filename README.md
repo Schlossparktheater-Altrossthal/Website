@@ -1,7 +1,8 @@
 # Theater Website
 
-This repository combines the public Next.js 16 website and the Socket.IO based
-realtime server for the theater collective. Both services run inside the same
+This repository contains the Next.js 16 member area and the Socket.IO based
+realtime server for the theater collective. The public website is served
+separately by Drupal. Both services run inside the same
 Node.js process and expose the realtime API under `/realtime` (websocket path
 `/realtime/socket.io`). The published Docker images wrap the combined server in a
 lightweight reverse proxy so external deployments only have to expose a single

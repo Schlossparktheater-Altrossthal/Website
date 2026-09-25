@@ -1519,17 +1519,16 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `WebsiteSettings`
 
-| Feld              | Typ               | Attribute / Beschreibung                                          |
-| ----------------- | ----------------- | ----------------------------------------------------------------- |
-| `id`              | `String`          | @id @default("public")                                            |
-| `siteTitle`       | `String`          | @default("Sommertheater im Schlosspark")                          |
-| `colorMode`       | `String`          | @default("dark")                                                  |
-| `maintenanceMode` | `Boolean`         | @default(false)                                                   |
-| `pageVisibility`  | `Json?`           |                                                                   |
-| `themeId`         | `String?`         |                                                                   |
-| `createdAt`       | `DateTime`        | @default(now())                                                   |
-| `updatedAt`       | `DateTime`        | @updatedAt                                                        |
-| `theme`           | → `WebsiteTheme?` | @relation(fields: [themeId], references: [id], onDelete: SetNull) |
+| Feld             | Typ               | Attribute / Beschreibung                                          |
+| ---------------- | ----------------- | ----------------------------------------------------------------- |
+| `id`             | `String`          | @id @default("public")                                            |
+| `siteTitle`      | `String`          | @default("Sommertheater im Schlosspark")                          |
+| `colorMode`      | `String`          | @default("dark")                                                  |
+| `pageVisibility` | `Json?`           |                                                                   |
+| `themeId`        | `String?`         |                                                                   |
+| `createdAt`      | `DateTime`        | @default(now())                                                   |
+| `updatedAt`      | `DateTime`        | @updatedAt                                                        |
+| `theme`          | → `WebsiteTheme?` | @relation(fields: [themeId], references: [id], onDelete: SetNull) |
 
 - `@@index([themeId])`
 
