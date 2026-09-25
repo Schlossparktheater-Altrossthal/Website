@@ -29,7 +29,7 @@ export default async function ProfilePage() {
   if (!allowed) {
     return (
       <div className="space-y-6">
-        <div className="rounded-md border border-border/60 bg-background/80 p-4 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive-foreground">
           Kein Zugriff auf den Profilbereich
         </div>
       </div>

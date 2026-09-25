@@ -498,7 +498,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       />
 
       <div className="space-y-4 pb-10 sm:space-y-6">
-        <div className="relative overflow-hidden rounded-xl border border-primary/25 bg-gradient-to-br from-primary/15 via-card to-card p-4 shadow-sm sm:p-5">
+        <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-primary/15 via-card to-card p-4 shadow-sm sm:p-5">
           <div
             className="pointer-events-none absolute -right-16 -top-10 h-40 w-40 rounded-full bg-primary/20 opacity-60 blur-3xl"
             aria-hidden
@@ -618,7 +618,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               <Card
                 variant="plain"
                 size="flush"
-                className="order-first border-warning/30 bg-gradient-to-br from-warning/10 via-card to-card lg:order-none"
+                className="order-first border-border bg-gradient-to-br from-warning/10 via-card to-card lg:order-none"
               >
                 <div className="flex items-center gap-3 p-4 pb-2">
                   <ProgressRing value={profileCompletion.completed} max={profileCompletion.total} />
