@@ -9,12 +9,6 @@ const nextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "i.imgur.com" },
-      { protocol: "https", hostname: "www.elbmargarita.de" },
-      { protocol: "https", hostname: "www.dresden.de" },
-      { protocol: "https", hostname: "radiodresden.de" },
-      { protocol: "https", hostname: "www.felix-hitzig.de" },
       { protocol: "https", hostname: "www.gravatar.com" },
     ],
   },
@@ -35,15 +29,7 @@ const nextConfig = {
         destination: "/mitglieder/endproben-woche/essenplanung",
         permanent: true,
       },
-      // Die öffentliche Website läuft jetzt in Drupal (sommertheater-altrossthal.de);
-      // das alte Frontend bleibt nur zur Referenz unter /old erreichbar.
       { source: "/", destination: "/mitglieder", permanent: false },
-      {
-        source:
-          "/:page(chronik|datenschutz|galerie|impressum|mystery|ueber-uns|unsere-schulkatze)/:rest*",
-        destination: "/old/:page/:rest*",
-        permanent: false,
-      },
     ];
   },
   async headers() {
@@ -51,17 +37,7 @@ const nextConfig = {
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      [
-        "img-src 'self' data: blob:",
-        "https://www.gravatar.com",
-        "https://picsum.photos",
-        "https://images.unsplash.com",
-        "https://i.imgur.com",
-        "https://www.elbmargarita.de",
-        "https://www.dresden.de",
-        "https://radiodresden.de",
-        "https://www.felix-hitzig.de",
-      ].join(" "),
+      ["img-src 'self' data: blob:", "https://www.gravatar.com", "https://picsum.photos"].join(" "),
       "font-src 'self' data:",
       "connect-src 'self' ws: wss:",
       "media-src 'self' blob: data:",

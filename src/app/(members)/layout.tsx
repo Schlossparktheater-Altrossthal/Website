@@ -5,7 +5,6 @@ import { execSync } from "node:child_process";
 import { MysticBackground } from "@/components/mystic-background";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { primaryNavigation } from "@/config/navigation";
 import type { AssignmentFocus } from "@/components/members-nav";
 import { MembersPermissionsProvider } from "@/components/members/permissions-context";
 import { MembersAppShell } from "@/components/members/members-app-shell";
@@ -105,14 +104,6 @@ export default async function MembersLayout({ children }: { children: React.Reac
   }
 
   const siteTitle = resolvedSettings.siteTitle;
-  const visibleNavigationItems = primaryNavigation.filter((item) => {
-    if (item.href === "/old/ueber-uns") return resolvedSettings.pageVisibility.public.about;
-    if (item.href === "/old/mystery") return resolvedSettings.pageVisibility.public.mystery;
-    if (item.href === "/old/unsere-schulkatze")
-      return resolvedSettings.pageVisibility.public.schoolCat;
-    if (item.href === "/old/chronik") return resolvedSettings.pageVisibility.public.timeline;
-    return true;
-  });
 
   let assignmentFocus: AssignmentFocus = "none";
   const userId = session.user?.id;
@@ -148,7 +139,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
   return (
     <div className="app-shell bg-background">
       <MysticBackground />
-      <SiteHeader siteTitle={siteTitle} navigationItems={visibleNavigationItems} />
+      <SiteHeader siteTitle={siteTitle} />
       <main className="relative z-10 flex min-h-0 min-w-0 flex-col pt-[var(--header-height)]">
         <SidebarProvider
           defaultOpen={defaultSidebarOpen}
@@ -165,14 +156,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               isDepartmentLead={isDepartmentLead}
               impersonation={session.impersonation ?? null}
               globalFooter={
-                <SiteFooter
-                  buildInfo={buildInfo}
-                  compact
-                  isAuthenticated={true}
-                  isDevBuild={isDevBuild}
-                  siteTitle={siteTitle}
-                  primaryNavigationItems={visibleNavigationItems}
-                />
+                <SiteFooter buildInfo={buildInfo} isAuthenticated={true} isDevBuild={isDevBuild} />
               }
             >
               {children}

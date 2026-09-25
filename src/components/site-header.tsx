@@ -2,14 +2,11 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { type CSSProperties, useLayoutEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserNav } from "@/components/user-nav";
-import { primaryNavigation, type NavigationItem } from "@/config/navigation";
-import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { PUBLIC_SITE_URL } from "@/config/public-site";
 
@@ -78,31 +75,11 @@ const drawerLinkPaddingStyles = {
   paddingBlock: HEADER_SPACING.mobile.linkPaddingBlock,
 } satisfies CSSProperties;
 
-const drawerLinkDescriptionStyles = {
-  marginTop: HEADER_SPACING.mobile.linkDescriptionMarginTop,
-} satisfies CSSProperties;
-
-const heroGradientStyles = {
-  height: HEADER_SPACING.gradientHeight,
-} satisfies CSSProperties;
-
-export function SiteHeader({
-  siteTitle,
-  navigationItems = primaryNavigation,
-}: {
-  siteTitle: string;
-  navigationItems?: NavigationItem[];
-}) {
+export function SiteHeader({ siteTitle }: { siteTitle: string }) {
   const headerRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const pathname = usePathname();
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
-  const isHomePage = pathname === "/old";
-  const isTransparentHomeHeader = isHomePage && !scrolled;
-
-  const visibleNavigationItems = useMemo(() => navigationItems, [navigationItems]);
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") {
@@ -168,44 +145,19 @@ export function SiteHeader({
     };
   }, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 100);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <header
         ref={headerRef}
-        className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-          !isTransparentHomeHeader
-            ? "border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg"
-            : "bg-gradient-to-b from-black/40 via-black/25 via-black/12 to-transparent backdrop-blur-[1px]"
-        }`}
+        className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg transition-all duration-300"
       >
-        <div
-          style={isTransparentHomeHeader ? heroGradientStyles : undefined}
-          className={`${
-            isTransparentHomeHeader
-              ? "absolute inset-x-0 top-full bg-gradient-to-b from-transparent via-transparent to-transparent"
-              : ""
-          }`}
-        />
         <nav
           aria-label="Hauptnavigation"
           style={navSpacingStyles}
           className="layout-container flex flex-nowrap items-center gap-[var(--nav-gap)] py-[var(--nav-padding-y)] sm:[--nav-gap:var(--space-sm)] md:[--nav-gap:var(--space-md)] md:[--nav-padding-y:var(--space-sm)]"
         >
           <Link
-            className={`flex-1 min-w-0 truncate font-serif text-lg transition-all duration-300 sm:text-xl ${
-              !isTransparentHomeHeader
-                ? "text-primary hover:opacity-90"
-                : "text-white drop-shadow-lg hover:text-white/90"
-            }`}
+            className="flex-1 min-w-0 truncate font-serif text-lg text-primary transition-all duration-300 hover:opacity-90 sm:text-xl"
             href={PUBLIC_SITE_URL}
             title={siteTitle}
           >
@@ -223,30 +175,6 @@ export function SiteHeader({
             </span>
           </Link>
 
-          <div className="hidden items-center gap-[var(--space-md)] md:flex">
-            {visibleNavigationItems.map((item) => {
-              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-
-              return (
-                <Link
-                  key={item.href}
-                  className={cn(
-                    "relative inline-flex items-center font-medium transition-all duration-300",
-                    "after:absolute after:-bottom-[var(--space-3xs)] after:left-0 after:h-[2px] after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-[var(--primary)] after:opacity-95 after:transition-transform after:duration-300 after:content-[''] after:transform",
-                    !isTransparentHomeHeader
-                      ? "text-foreground/90 hover:text-[var(--primary)] hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-[var(--primary)] focus-visible:after:scale-x-100 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:after:scale-x-100"
-                      : "text-white drop-shadow-lg hover:text-white/90 hover:after:scale-x-100 focus-visible:outline-none focus-visible:text-white focus-visible:after:scale-x-100 data-[active=true]:font-semibold data-[active=true]:text-white data-[active=true]:after:scale-x-100",
-                  )}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  data-active={isActive ? "true" : undefined}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-
           <div
             style={actionsSpacingStyles}
             className="ml-auto flex flex-shrink-0 items-center gap-[var(--header-actions-gap)] sm:[--header-actions-gap:var(--space-xs)]"
@@ -259,11 +187,7 @@ export function SiteHeader({
               <button
                 type="button"
                 aria-label="Menü öffnen"
-                className={`inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-ring md:hidden ${
-                  !isTransparentHomeHeader
-                    ? "border border-border/60 text-foreground hover:bg-accent/30"
-                    : "border border-border/60 text-white drop-shadow-lg hover:bg-accent/20"
-                }`}
+                className="inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md border border-border/60 text-foreground transition-all duration-300 hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-ring md:hidden"
               >
                 <span className="sr-only">Menü</span>
                 <svg
@@ -292,34 +216,6 @@ export function SiteHeader({
         className="flex h-screen flex-col gap-[var(--drawer-gap)] border-l border-border/60 bg-card/95 p-[var(--drawer-padding)] pt-[var(--drawer-padding-top)] shadow-2xl backdrop-blur-md md:hidden"
       >
         <div style={drawerLinkGroupStyles} className="flex flex-col gap-[var(--drawer-link-gap)]">
-          {visibleNavigationItems.map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-
-            return (
-              <Link
-                key={item.href}
-                onClick={() => setOpen(false)}
-                style={drawerLinkPaddingStyles}
-                className={cn(
-                  "block rounded-lg text-foreground/90 transition-colors duration-200 hover:bg-accent/30 hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  "data-[active=true]:bg-accent/20 data-[active=true]:font-semibold data-[active=true]:text-[var(--primary)] data-[active=true]:ring-1 data-[active=true]:ring-inset data-[active=true]:ring-[var(--primary)]",
-                )}
-                href={item.href}
-                aria-current={isActive ? "page" : undefined}
-                data-active={isActive ? "true" : undefined}
-              >
-                <span className="block font-medium">{item.label}</span>
-                {item.description ? (
-                  <span
-                    style={drawerLinkDescriptionStyles}
-                    className="block text-sm text-muted-foreground"
-                  >
-                    {item.description}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
           {!isAuthenticated ? (
             <Link
               onClick={() => setOpen(false)}

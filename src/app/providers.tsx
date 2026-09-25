@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import * as React from "react";
 import { SessionProvider, useSession } from "next-auth/react";
-import { FrontendEditingProvider } from "@/components/frontend-editing/frontend-editing-provider";
 import { RealtimeProvider } from "@/hooks/useRealtime";
 import { useWebVitals } from "@/hooks/useWebVitals";
 import { OfflineSyncStatusProvider } from "@/lib/offline/hooks";
@@ -32,16 +31,8 @@ export function Providers({
           <OfflineSyncStatusProvider authToken={syncToken}>
             <PwaProvider>
               <RealtimeProvider>
-                <FrontendEditingProvider>
-                  {children}
-                  <Toaster
-                    richColors
-                    position="top-right"
-                    expand={true}
-                    visibleToasts={5}
-                    gap={8}
-                  />
-                </FrontendEditingProvider>
+                {children}
+                <Toaster richColors position="top-right" expand={true} visibleToasts={5} gap={8} />
               </RealtimeProvider>
             </PwaProvider>
           </OfflineSyncStatusProvider>
