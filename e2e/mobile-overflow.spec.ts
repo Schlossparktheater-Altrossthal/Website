@@ -30,9 +30,11 @@ test.describe("mobil ohne horizontales Überlaufen", () => {
   for (const route of ROUTES) {
     test(route, async ({ page }) => {
       await page.goto(route, { waitUntil: "networkidle" });
-      // Nicht window.innerWidth: beim Herauszoomen wächst es mit.
-      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-      expect(scrollWidth).toBeLessThanOrEqual(390 + 1);
+      // Nicht window.innerWidth: beim Herauszoomen wächst es mit. Wiederholt messen,
+      // weil einblendende Elemente kurz nach dem Laden noch überstehen können.
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth), { timeout: 5_000 })
+        .toBeLessThanOrEqual(390 + 1);
     });
   }
 });
