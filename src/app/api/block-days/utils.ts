@@ -2,6 +2,12 @@ import { format } from "date-fns";
 import { z } from "zod";
 import { BlockedDayKind } from "@prisma/client";
 
+import {
+  DEFAULT_FREEZE_DAYS,
+  readSperrlisteSettings,
+  resolveBlocklistSettings,
+} from "@/lib/sperrliste-settings";
+
 export const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
 export const reasonSchema = z
@@ -46,4 +52,17 @@ export function toResponse(entry: {
     kind: entry.kind,
     createdAt: entry.createdAt.toISOString(),
   };
+}
+
+/** Sperrfrist aus den Einstellungen (Tage ab heute, in denen nicht mehr gesperrt werden darf). */
+export async function resolveFreezeDays() {
+  try {
+    const resolved = resolveBlocklistSettings(await readSperrlisteSettings());
+    return Number.isFinite(resolved.freezeDays)
+      ? Math.max(0, Math.floor(resolved.freezeDays))
+      : DEFAULT_FREEZE_DAYS;
+  } catch (error) {
+    console.error("[block-days:freeze]", error);
+    return DEFAULT_FREEZE_DAYS;
+  }
 }

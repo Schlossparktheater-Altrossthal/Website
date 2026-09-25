@@ -10,11 +10,13 @@ import {
   DEV_SPERRLISTE_OFFLINE_MESSAGE,
 } from "@/lib/dev-sperrliste-fixture";
 import {
-  DEFAULT_FREEZE_DAYS,
-  readSperrlisteSettings,
-  resolveBlocklistSettings,
-} from "@/lib/sperrliste-settings";
-import { isoDate, normaliseReason, toDateOnly, toResponse, reasonSchema } from "./utils";
+  isoDate,
+  normaliseReason,
+  toDateOnly,
+  toResponse,
+  reasonSchema,
+  resolveFreezeDays,
+} from "./utils";
 
 type SessionUser = { id?: string } | null | undefined;
 
@@ -57,19 +59,6 @@ export async function GET() {
     offline: false,
     blockedDays: entries.map(toResponse),
   });
-}
-
-async function resolveFreezeDays() {
-  try {
-    const record = await readSperrlisteSettings();
-    const resolved = resolveBlocklistSettings(record);
-    return Number.isFinite(resolved.freezeDays)
-      ? Math.max(0, Math.floor(resolved.freezeDays))
-      : DEFAULT_FREEZE_DAYS;
-  } catch (error) {
-    console.error("[block-days:freeze]", error);
-    return DEFAULT_FREEZE_DAYS;
-  }
 }
 
 function formatFreezeDate(date: Date) {

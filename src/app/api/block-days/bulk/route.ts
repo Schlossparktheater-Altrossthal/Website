@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { z } from "zod";
-import { isoDate, normaliseReason, toDateOnly, toResponse } from "../utils";
+import { hasPermission } from "@/lib/permissions";
+import { isoDate, normaliseReason, resolveFreezeDays, toDateOnly, toResponse } from "../utils";
 import { BlockedDayKind } from "@prisma/client";
 
 type SessionUser = { id?: string } | null | undefined;
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
   const session = await requireAuth();
   const userId = (session.user as SessionUser)?.id;
   if (!userId) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+  }
 
   const parsed = bulkCreateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
     if (kind === BlockedDayKind.BLOCKED) {
       const todayKey = new Date().toISOString().slice(0, 10);
       const today = toDateOnly(todayKey);
-      const cutoff = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const cutoff = new Date(today.getTime() + (await resolveFreezeDays()) * 24 * 60 * 60 * 1000);
       allowed = parsedDates.filter((p) => p.date.getTime() >= cutoff.getTime());
       skipped = parsedDates.filter((p) => p.date.getTime() < cutoff.getTime()).map((p) => p.key);
     }
@@ -63,6 +67,9 @@ export async function DELETE(request: Request) {
   const session = await requireAuth();
   const userId = (session.user as SessionUser)?.id;
   if (!userId) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+  }
 
   const parsed = bulkDeleteSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
