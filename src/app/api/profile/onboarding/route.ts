@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { OnboardingFocus } from "@prisma/client";
 import { z } from "zod";
 
+import { getActiveProductionId } from "@/lib/active-production";
 import { prisma } from "@/lib/prisma";
 import {
   broadcastOnboardingDashboardForUser,
@@ -104,6 +105,15 @@ export async function PUT(request: NextRequest) {
         showId: true,
       },
     });
+
+    // Notizen gelten pro Produktion; das Onboarding-Profil behält den letzten Stand als Vorlage.
+    const activeShowId = await getActiveProductionId(userId);
+    if (activeShowId) {
+      await prisma.productionOnboarding.updateMany({
+        where: { userId, showId: activeShowId },
+        data: { notes: data.notes, focus: data.focus },
+      });
+    }
 
     try {
       if (profile.showId) {

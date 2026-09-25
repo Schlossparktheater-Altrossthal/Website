@@ -7,6 +7,10 @@ import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 import { databaseEnabled } from "@/lib/dev-database";
 import { DEV_ONBOARDING_ANALYTICS_FIXTURE } from "@/lib/dev-onboarding-analytics-fixture";
 
+function userShowKey(userId: string, showId: string | null) {
+  return `${userId}:${showId ?? ""}`;
+}
+
 export type OnboardingInviteSummary = {
   id: string;
   label: string | null;
@@ -224,7 +228,7 @@ export async function collectOnboardingAnalytics(
       },
     }),
     prisma.memberRolePreference.findMany({
-      select: { userId: true, code: true, domain: true, weight: true },
+      select: { userId: true, showId: true, code: true, domain: true, weight: true },
     }),
     prisma.userInterest.findMany({ include: { interest: true } }),
     prisma.dietaryRestriction.groupBy({
@@ -333,9 +337,11 @@ export async function collectOnboardingAnalytics(
     const bucket = prefMap.get(key)!;
     bucket.total += pref.weight;
     bucket.responses += 1;
-    const userPrefs = preferencesByUser.get(pref.userId) ?? [];
+    // Wünsche gelten pro Produktion; Einträge ohne Produktion stammen aus der Zeit davor.
+    const userKey = userShowKey(pref.userId, pref.showId);
+    const userPrefs = preferencesByUser.get(userKey) ?? [];
     userPrefs.push({ code: pref.code, domain: pref.domain, weight: pref.weight });
-    preferencesByUser.set(pref.userId, userPrefs);
+    preferencesByUser.set(userKey, userPrefs);
   }
   for (const [userId, entries] of preferencesByUser) {
     entries.sort((a, b) => b.weight - a.weight || a.code.localeCompare(b.code));
@@ -408,11 +414,14 @@ export async function collectOnboardingAnalytics(
       const user = profile.user;
       const userId = user?.id ?? profile.userId;
       const completedAt = profile.completedAt ?? profile.redemption?.completedAt ?? null;
-      const preferences = preferencesByUser.get(userId) ?? [];
+      const show = profile.show ?? profile.invite?.show ?? null;
+      const preferences =
+        (show ? preferencesByUser.get(userShowKey(userId, show.id)) : undefined) ??
+        preferencesByUser.get(userShowKey(userId, null)) ??
+        [];
       const interestsForUser = interestsByUser.get(userId) ?? [];
       const dietaryEntries = dietaryByUser.get(userId) ?? [];
       const age = calculateAge(user?.dateOfBirth ?? null);
-      const show = profile.show ?? profile.invite?.show ?? null;
       const consent = show
         ? (user?.photoConsents.find((entry) => entry.showId === show.id) ?? null)
         : null;

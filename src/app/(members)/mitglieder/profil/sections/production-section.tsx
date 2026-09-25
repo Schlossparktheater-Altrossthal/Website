@@ -1,7 +1,5 @@
 "use client";
 
-import type { OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
-
 import type { ProfileClientProps } from "../profile-shared";
 import { OnboardingSection } from "./onboarding-section";
 import { RolePreferencesSection } from "./role-preferences-section";
@@ -12,7 +10,7 @@ type ProductionSectionProps = {
   rolePreferences: ProfileClientProps["rolePreferences"];
   onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
   onWhatsAppVisit: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
-  availableOnboardings: OnboardingSummary[];
+  preferencesInheritedFrom: string | null;
 };
 
 /** „Meine Produktion“: Produktion und Team-Chat, Rollenwünsche, Angaben zur Person. */
@@ -22,7 +20,7 @@ export function ProductionSection({
   rolePreferences,
   onRolePreferencesChange,
   onWhatsAppVisit,
-  availableOnboardings,
+  preferencesInheritedFrom,
 }: ProductionSectionProps) {
   return (
     <div className="space-y-4">
@@ -30,7 +28,6 @@ export function ProductionSection({
         onboarding={onboarding}
         onOnboardingChange={onOnboardingChange}
         rolePreferences={rolePreferences}
-        availableOnboardings={availableOnboardings}
         whatsappVisitedAt={onboarding?.whatsappLinkVisitedAt ?? null}
         onWhatsAppVisit={onWhatsAppVisit}
       >
@@ -39,6 +36,7 @@ export function ProductionSection({
           rolePreferences={rolePreferences}
           onRolePreferencesChange={onRolePreferencesChange}
           onOnboardingChange={onOnboardingChange}
+          inheritedFromLabel={preferencesInheritedFrom}
         />
       </OnboardingSection>
     </div>

@@ -496,11 +496,16 @@ async function computeOnboardingDashboardData(
 
   const profileUserIds = onboardingProfiles.map((profile) => profile.user.id);
 
-  const [rolePreferences, interests, memberships] = await Promise.all([
+  const [rawRolePreferences, interests, memberships] = await Promise.all([
     prisma.memberRolePreference.findMany({
-      where: { userId: { in: profileUserIds } },
+      // Wünsche dieser Produktion; ältere Einträge ohne Produktion nur als Rückfall (s. u.).
+      where: {
+        userId: { in: profileUserIds },
+        OR: [{ showId: onboardingId }, { showId: null }],
+      },
       select: {
         userId: true,
+        showId: true,
         code: true,
         domain: true,
         weight: true,
@@ -522,6 +527,13 @@ async function computeOnboardingDashboardData(
       },
     }),
   ]);
+
+  const usersWithShowPreferences = new Set(
+    rawRolePreferences.filter((pref) => pref.showId === onboardingId).map((pref) => pref.userId),
+  );
+  const rolePreferences = rawRolePreferences.filter(
+    (pref) => pref.showId === onboardingId || !usersWithShowPreferences.has(pref.userId),
+  );
 
   const range = extractDateRange(show.dates);
   const status = deriveStatus(show, range);

@@ -46,6 +46,8 @@ type RolePreferencesSectionProps = {
   rolePreferences: ProfileClientProps["rolePreferences"];
   onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
+  /** Herkunft der Wünsche, wenn sie aus einer früheren Produktion vorgeschlagen werden. */
+  inheritedFromLabel?: string | null;
 };
 
 export function RolePreferencesSection({
@@ -53,6 +55,7 @@ export function RolePreferencesSection({
   rolePreferences,
   onRolePreferencesChange,
   onOnboardingChange,
+  inheritedFromLabel = null,
 }: RolePreferencesSectionProps) {
   const initialPreferences = useMemo(
     () => buildPreferenceFormState(rolePreferences),
@@ -108,8 +111,11 @@ export function RolePreferencesSection({
   );
 
   const dirty = useMemo(
-    () => JSON.stringify(preferenceForm) !== JSON.stringify(initialPreferences),
-    [initialPreferences, preferenceForm],
+    // Vorschläge aus einer früheren Produktion gelten erst nach dem Speichern.
+    () =>
+      Boolean(inheritedFromLabel) ||
+      JSON.stringify(preferenceForm) !== JSON.stringify(initialPreferences),
+    [inheritedFromLabel, initialPreferences, preferenceForm],
   );
 
   const handlePreferenceSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -187,6 +193,12 @@ export function RolePreferencesSection({
             ) : null
           }
         />
+        {inheritedFromLabel ? (
+          <p className="rounded-md border border-info/30 bg-info/10 px-3 py-2 text-xs text-foreground">
+            Vorschlag aus {inheritedFromLabel}. Prüfe die Auswahl und speichere sie für diese
+            Produktion.
+          </p>
+        ) : null}
         {groups.map((group) => (
           <section key={group.domain} className="space-y-1">
             <h4 className="text-xs font-medium text-muted-foreground">{group.title}</h4>

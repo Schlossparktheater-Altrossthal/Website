@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/auth";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 import { onboardingSessionNotice } from "@/lib/onboarding/session-notice";
+import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -178,15 +179,8 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         note: true,
       },
     }),
-    prisma.memberRolePreference.findMany({
-      where: { userId },
-      select: {
-        code: true,
-        domain: true,
-        weight: true,
-      },
-      orderBy: [{ domain: "asc" }, { code: "asc" }],
-    }),
+    // Wünsche dieser Produktion, sonst die zuletzt gespeicherten als Vorschlag.
+    readProductionPreferences(userId, invite.show.id).then((result) => result.preferences),
     // Fotoerlaubnis gilt pro Produktion: nur eine bereits für diese Produktion erteilte vorausfüllen.
     prisma.photoConsent.findFirst({
       where: { userId, showId: invite.show.id, revokedAt: null },

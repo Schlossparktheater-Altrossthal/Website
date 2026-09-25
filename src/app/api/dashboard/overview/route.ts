@@ -72,6 +72,7 @@ export async function GET() {
       totalRehearsalsThisMonth,
       profileChecklist,
       onboardingProfile,
+      productionOnboarding,
       departmentEvents,
       membershipRecords,
     ] = await Promise.all([
@@ -131,8 +132,14 @@ export async function GET() {
       loadProfileChecklist(userId, activeProductionId),
       prisma.memberOnboardingProfile.findUnique({
         where: { userId },
-        select: { whatsappLinkVisitedAt: true },
+        select: { whatsappLinkVisitedAt: true, showId: true },
       }),
+      activeProductionId
+        ? prisma.productionOnboarding.findUnique({
+            where: { userId_showId: { userId, showId: activeProductionId } },
+            select: { whatsappLinkVisitedAt: true },
+          })
+        : null,
       prisma.departmentEvent.findMany({
         where: { start: { gt: now }, department: { memberships: { some: { userId } } } },
         orderBy: { start: "asc" },
@@ -290,7 +297,13 @@ export async function GET() {
                 ? {
                     link: whatsappLink,
                     noticeKey: whatsappNoticeKey,
-                    visited: Boolean(onboardingProfile?.whatsappLinkVisitedAt),
+                    // Pro Produktion; ältere Besuche stehen nur im Onboarding-Profil derselben Produktion.
+                    visited: Boolean(
+                      productionOnboarding?.whatsappLinkVisitedAt ??
+                      (onboardingProfile?.showId === activeProduction.id
+                        ? onboardingProfile.whatsappLinkVisitedAt
+                        : null),
+                    ),
                     dismissed: dismissedNotices.has(whatsappNoticeKey),
                   }
                 : null,

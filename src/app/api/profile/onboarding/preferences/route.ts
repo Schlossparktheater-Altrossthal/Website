@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { getActiveProductionId } from "@/lib/active-production";
+import { replaceProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import {
@@ -77,50 +79,12 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
+    const showId = await getActiveProductionId(userId);
     const { preferences: updated, focus: nextFocus } = await prisma.$transaction(async (tx) => {
-      const existing = await tx.memberRolePreference.findMany({
-        where: { userId },
-        select: { id: true, code: true, domain: true, weight: true },
-      });
-
-      const existingByCode = new Map(existing.map((pref) => [pref.code, pref]));
-      const targetCodes = new Set(sanitized.map((pref) => pref.code));
-
-      const removeIds = existing
-        .filter((pref) => !targetCodes.has(pref.code))
-        .map((pref) => pref.id);
-
-      if (removeIds.length) {
-        await tx.memberRolePreference.deleteMany({ where: { id: { in: removeIds } } });
-      }
-
-      for (const pref of sanitized) {
-        const current = existingByCode.get(pref.code);
-        if (!current) {
-          await tx.memberRolePreference.create({
-            data: {
-              userId,
-              code: pref.code,
-              domain: pref.domain,
-              weight: pref.weight,
-            },
-          });
-          continue;
-        }
-
-        if (current.domain !== pref.domain || current.weight !== pref.weight) {
-          await tx.memberRolePreference.update({
-            where: { id: current.id },
-            data: {
-              domain: pref.domain,
-              weight: pref.weight,
-            },
-          });
-        }
-      }
-
+      await replaceProductionPreferences(tx, userId, showId, sanitized);
+      // Direkt lesen: Nach dem Leeren sollen keine Vorschläge aus früheren Produktionen erscheinen.
       const preferences = await tx.memberRolePreference.findMany({
-        where: { userId },
+        where: { userId, showId },
         select: { code: true, domain: true, weight: true },
         orderBy: [{ domain: "asc" }, { code: "asc" }],
       });
@@ -132,6 +96,9 @@ export async function PUT(request: NextRequest) {
           update: { focus },
           create: { userId, focus },
         });
+        if (showId) {
+          await tx.productionOnboarding.updateMany({ where: { userId, showId }, data: { focus } });
+        }
       }
 
       return { preferences, focus };

@@ -8,6 +8,7 @@ import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { getAvailableOnboardings } from "@/lib/onboarding/dashboard-service";
 import { prisma } from "@/lib/prisma";
 import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
+import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { loadMemberHistory } from "@/lib/member-history";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
@@ -55,7 +56,6 @@ export default async function ProfilePage() {
       avatarImageUpdatedAt: true,
       role: true,
       roles: { select: { role: true } },
-      rolePreferences: { select: { code: true, domain: true, weight: true } },
       appRoles: {
         select: {
           role: { select: { id: true, name: true, systemRole: true, isSystem: true } },
@@ -105,23 +105,40 @@ export default async function ProfilePage() {
     notFound();
   }
 
-  const [allergiesRaw, availableOnboardings, history] = await Promise.all([
-    prisma.dietaryRestriction.findMany({
-      where: { userId, isActive: true },
-      orderBy: { allergen: "asc" },
-      select: {
-        id: true,
-        allergen: true,
-        level: true,
-        symptoms: true,
-        treatment: true,
-        note: true,
-        updatedAt: true,
-      },
-    }),
-    getAvailableOnboardings(),
-    loadMemberHistory(userId, user.onboardingProfile?.memberSinceYear ?? null),
-  ]);
+  const [allergiesRaw, availableOnboardings, history, productionPreferences, activeShow] =
+    await Promise.all([
+      prisma.dietaryRestriction.findMany({
+        where: { userId, isActive: true },
+        orderBy: { allergen: "asc" },
+        select: {
+          id: true,
+          allergen: true,
+          level: true,
+          symptoms: true,
+          treatment: true,
+          note: true,
+          updatedAt: true,
+        },
+      }),
+      getAvailableOnboardings(),
+      loadMemberHistory(userId, user.onboardingProfile?.memberSinceYear ?? null),
+      readProductionPreferences(userId, photoConsentShowId),
+      photoConsentShowId
+        ? prisma.show.findUnique({
+            where: { id: photoConsentShowId },
+            select: {
+              id: true,
+              meta: true,
+              title: true,
+              year: true,
+              productionOnboardings: {
+                where: { userId },
+                select: { notes: true, whatsappLinkVisitedAt: true, focus: true },
+              },
+            },
+          })
+        : null,
+    ]);
 
   const displayName = getUserDisplayName(
     {
@@ -135,11 +152,14 @@ export default async function ProfilePage() {
 
   const roles = sortRoles([user.role as Role, ...user.roles.map((entry) => entry.role as Role)]);
 
-  const preferenceSummaries = user.rolePreferences.map((preference) => ({
-    code: preference.code,
-    domain: preference.domain,
-    weight: preference.weight,
-  }));
+  const preferenceSummaries = productionPreferences.preferences;
+  const inherited = productionPreferences.inheritedFrom;
+  const rolePreferencesInheritedFrom =
+    inherited === "legacy"
+      ? "deinen bisherigen Angaben"
+      : inherited
+        ? (inherited.title ?? `Produktion ${inherited.year}`)
+        : null;
 
   const customRoles = user.appRoles
     .map((entry) => entry.role)
@@ -199,13 +219,20 @@ export default async function ProfilePage() {
     payoutNote: user.payoutNote,
   });
 
+  // „Meine Produktion“ bezieht sich immer auf die aktive Produktion (Umschalter in der Seitenleiste).
   const onboardingProfile = user.onboardingProfile;
-  const whatsappLink = onboardingProfile?.show
-    ? getOnboardingWhatsAppLink(onboardingProfile.show.meta)
+  const productionOnboarding = activeShow?.productionOnboardings[0] ?? null;
+  const profileMatchesShow = Boolean(activeShow && onboardingProfile?.show?.id === activeShow.id);
+  const whatsappLink = activeShow ? getOnboardingWhatsAppLink(activeShow.meta) : null;
+  const onboardingSummary = activeShow
+    ? availableOnboardings.find((entry) => entry.id === activeShow.id)
     : null;
-  const onboardingSummary = onboardingProfile?.show
-    ? availableOnboardings.find((entry) => entry.id === onboardingProfile.show?.id)
-    : null;
+  const productionNotes =
+    productionOnboarding?.notes ?? (profileMatchesShow ? onboardingProfile?.notes : null) ?? null;
+  const whatsappVisitedAt =
+    productionOnboarding?.whatsappLinkVisitedAt ??
+    (profileMatchesShow ? onboardingProfile?.whatsappLinkVisitedAt : null) ??
+    null;
 
   const checklist = buildProfileChecklist({
     hasBasicData,
@@ -215,30 +242,31 @@ export default async function ProfilePage() {
     photoConsent: { consentGiven: photoConsentSummary.status === "approved" },
   });
 
-  const onboarding = onboardingProfile
-    ? {
-        focus: onboardingProfile.focus,
-        background: onboardingProfile.background ?? null,
-        backgroundClass: onboardingProfile.backgroundClass ?? null,
-        notes: onboardingProfile.notes ?? null,
-        memberSinceYear: onboardingProfile.memberSinceYear ?? null,
-        dietaryPreference: onboardingProfile.dietaryPreference ?? null,
-        dietaryPreferenceStrictness: onboardingProfile.dietaryPreferenceStrictness ?? null,
-        whatsappLinkVisitedAt: onboardingProfile.whatsappLinkVisitedAt?.toISOString() ?? null,
-        updatedAt: onboardingProfile.updatedAt?.toISOString() ?? null,
-        preferences: preferenceSummaries,
-        show: onboardingProfile.show
-          ? {
-              id: onboardingProfile.show.id,
-              title: onboardingProfile.show.title ?? null,
-              year: onboardingProfile.show.year,
-              periodLabel: onboardingSummary?.periodLabel ?? null,
-              status: onboardingSummary?.status ?? "draft",
-            }
-          : null,
-        whatsappLink,
-      }
-    : null;
+  const onboarding =
+    onboardingProfile || activeShow
+      ? {
+          focus: productionOnboarding?.focus ?? onboardingProfile?.focus ?? "acting",
+          background: onboardingProfile?.background ?? null,
+          backgroundClass: onboardingProfile?.backgroundClass ?? null,
+          notes: productionNotes,
+          memberSinceYear: onboardingProfile?.memberSinceYear ?? null,
+          dietaryPreference: onboardingProfile?.dietaryPreference ?? null,
+          dietaryPreferenceStrictness: onboardingProfile?.dietaryPreferenceStrictness ?? null,
+          whatsappLinkVisitedAt: whatsappVisitedAt?.toISOString() ?? null,
+          updatedAt: onboardingProfile?.updatedAt?.toISOString() ?? null,
+          preferences: preferenceSummaries,
+          show: activeShow
+            ? {
+                id: activeShow.id,
+                title: activeShow.title ?? null,
+                year: activeShow.year,
+                periodLabel: onboardingSummary?.periodLabel ?? null,
+                status: onboardingSummary?.status ?? "draft",
+              }
+            : null,
+          whatsappLink,
+        }
+      : null;
 
   return (
     <div className="space-y-6">
@@ -269,7 +297,7 @@ export default async function ProfilePage() {
         interests={interestNames}
         allergies={allergies}
         checklist={checklist}
-        availableOnboardings={availableOnboardings}
+        rolePreferencesInheritedFrom={rolePreferencesInheritedFrom}
       />
     </div>
   );

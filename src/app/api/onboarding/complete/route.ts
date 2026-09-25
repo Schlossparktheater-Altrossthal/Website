@@ -490,6 +490,8 @@ export async function POST(request: NextRequest) {
           redemptionId: redemption.id,
           focus,
           completedAt: new Date(),
+          notes: notes ?? undefined,
+          whatsappLinkVisitedAt: whatsappLinkVisitedAt ?? undefined,
           profileSnapshot: buildProfileSnapshot({
             dietaryPreference: dietaryStyleDisplay,
             dietaryPreferenceStrictness: dietaryStrictnessDisplay,
@@ -513,6 +515,7 @@ export async function POST(request: NextRequest) {
         await tx.memberRolePreference.createMany({
           data: preferences.map((pref) => ({
             userId: user.id,
+            showId: invite.showId,
             code: pref.code,
             domain: pref.domain,
             weight: pref.weight,

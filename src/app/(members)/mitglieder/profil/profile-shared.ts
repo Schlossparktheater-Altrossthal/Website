@@ -196,7 +196,8 @@ export type ProfileClientProps = {
     updatedAt: string | null;
   }>;
   checklist: ProfileCompletionSummary;
-  availableOnboardings: OnboardingSummary[];
+  /** Label der Produktion, aus der die Rollenwünsche als Vorschlag stammen. */
+  rolePreferencesInheritedFrom: string | null;
 };
 
 export type ProfileUser = ProfileClientProps["user"];

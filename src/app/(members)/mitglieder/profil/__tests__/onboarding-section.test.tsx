@@ -48,7 +48,6 @@ function createProps(overrides: Partial<OnboardingSectionProps> = {}): Onboardin
     onboarding,
     onOnboardingChange: vi.fn(),
     rolePreferences: [],
-    availableOnboardings: [],
     whatsappVisitedAt,
     onWhatsAppVisit: defaultOnWhatsAppVisit,
     ...overrides,

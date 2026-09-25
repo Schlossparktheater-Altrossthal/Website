@@ -29,6 +29,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/user-avatar";
+import { getActiveProductionId } from "@/lib/active-production";
+import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
@@ -449,13 +451,6 @@ const memberSelect = {
       show: { select: { title: true, year: true } },
     },
   },
-  rolePreferences: {
-    select: {
-      code: true,
-      domain: true,
-      weight: true,
-    },
-  },
 } satisfies Prisma.UserSelect;
 
 export default async function MemberProfileAdminPage({ params }: PageProps) {
@@ -485,6 +480,18 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   if (!member) {
     notFound();
   }
+
+  // Rollenwünsche und Notizen gelten pro Produktion: die gerade ausgewählte Produktion zeigen.
+  const viewedShowId = await getActiveProductionId(session.user?.id);
+  const [viewedPreferences, viewedOnboarding] = await Promise.all([
+    readProductionPreferences(member.id, viewedShowId),
+    viewedShowId
+      ? prisma.productionOnboarding.findUnique({
+          where: { userId_showId: { userId: member.id, showId: viewedShowId } },
+          select: { notes: true, focus: true, show: { select: { title: true, year: true } } },
+        })
+      : null,
+  ]);
 
   const now = new Date();
   const oneYearAgo = new Date(now);
@@ -825,15 +832,23 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     ? `Seit ${member.onboardingProfile.memberSinceYear}`
     : `Seit ${formatDate(member.createdAt)}`;
 
-  const onboardingFocus = (member.onboardingProfile?.focus ?? null) as OnboardingFocus | null;
+  const onboardingFocus = (viewedOnboarding?.focus ??
+    member.onboardingProfile?.focus ??
+    null) as OnboardingFocus | null;
   const onboardingFocusLabel = onboardingFocus
     ? ONBOARDING_FOCUS_LABELS[onboardingFocus]
     : "Kein Schwerpunkt hinterlegt";
 
   const onboardingBackground = member.onboardingProfile?.background?.trim() ?? null;
-  const onboardingNotes = member.onboardingProfile?.notes?.trim() ?? null;
+  const onboardingNotes =
+    (viewedOnboarding ? viewedOnboarding.notes : member.onboardingProfile?.notes)?.trim() || null;
+  const preferencesSource = viewedPreferences.inheritedFrom
+    ? viewedPreferences.inheritedFrom === "legacy"
+      ? "Ältere Angaben ohne Produktionsbezug"
+      : `Aus ${viewedPreferences.inheritedFrom.title ?? `Produktion ${viewedPreferences.inheritedFrom.year}`} – für diese Produktion noch nicht bestätigt`
+    : null;
 
-  const rolePreferences: RolePreferenceEntry[] = (member.rolePreferences ?? []).map(
+  const rolePreferences: RolePreferenceEntry[] = viewedPreferences.preferences.map(
     (preference) => ({
       code: preference.code,
       domain: preference.domain as RolePreferenceEntry["domain"],
@@ -1045,6 +1060,9 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       <ListChecksIcon className="h-4 w-4" aria-hidden />
                       Rollen &amp; Gewerke aus dem Onboarding
                     </div>
+                    {preferencesSource ? (
+                      <p className="mt-1 text-xs text-muted-foreground">{preferencesSource}</p>
+                    ) : null}
                     {hasRolePreferences ? (
                       <div className="mt-3 space-y-4">
                         {actingRolePreferences.length ? (

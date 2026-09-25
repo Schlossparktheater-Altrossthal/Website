@@ -1,29 +1,21 @@
 "use client";
 
-import {
-  ArrowRightIcon,
-  CheckCircle2Icon,
-  Loader2Icon,
-  MessageCircleIcon,
-} from "@/components/ui/action-icons";
+import { CheckCircle2Icon, MessageCircleIcon } from "@/components/ui/action-icons";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Card } from "@/components/ui/card";
 import { FormSaveBar } from "@/components/ui/form-save-bar";
 import { SectionHeader } from "@/components/ui/section-header";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BACKGROUND_TAGS, normalizeBackgroundLabel } from "@/data/onboarding-backgrounds";
 import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
 import { deriveOnboardingFocusFromPreferences } from "@/lib/onboarding/role-preference-utils";
 import { cn } from "@/lib/utils";
-import type { OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
 import { type OnboardingFocus } from "@prisma/client";
-import { saveOnboardingAction, startOnboardingAction } from "../actions/onboarding";
+import { saveOnboardingAction } from "../actions/onboarding";
 import {
   CURRENT_YEAR,
   PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
@@ -40,7 +32,6 @@ export type OnboardingSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
   rolePreferences: ProfileClientProps["rolePreferences"];
-  availableOnboardings: OnboardingSummary[];
   whatsappVisitedAt: string | null;
   /** Wird zwischen Produktionskarte und „Über dich“ angezeigt (Rollenwünsche). */
   children?: React.ReactNode;
@@ -51,7 +42,6 @@ export function OnboardingSection({
   onboarding,
   onOnboardingChange,
   rolePreferences,
-  availableOnboardings,
   whatsappVisitedAt,
   onWhatsAppVisit,
   children,
@@ -77,11 +67,6 @@ export function OnboardingSection({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const dirty = JSON.stringify(formState) !== JSON.stringify(initialForm);
-  const [showDialogOpen, setShowDialogOpen] = useState(false);
-  const [selectedShowId, setSelectedShowId] = useState<string>(() => currentShow?.id ?? "");
-  const [showSubmitting, setShowSubmitting] = useState(false);
-  const [showError, setShowError] = useState<string | null>(null);
-  const hasOnboardingOptions = availableOnboardings.length > 0;
   const showTitle =
     currentShow?.title && currentShow.title.trim().length ? currentShow.title.trim() : null;
   const showYear = typeof currentShow?.year === "number" ? currentShow.year : null;
@@ -93,10 +78,10 @@ export function OnboardingSection({
       : showYear
         ? `Produktion ${showYear}`
         : "Produktion"
-    : "Noch keine Produktion verknüpft";
+    : "Keine aktive Produktion";
   const showHelper = currentShow
     ? (currentShow.periodLabel ?? "Zeitraum wird noch geplant.")
-    : "Wähle eine Produktion, um mit dem Onboarding zu starten.";
+    : "Sobald du einer Produktion angehörst, kannst du hier deine Wünsche dafür angeben.";
   const showStatusLabel = currentShow
     ? (ONBOARDING_STATUS_LABELS[currentShow.status] ?? currentShow.status)
     : null;
@@ -126,74 +111,8 @@ export function OnboardingSection({
   const focusForSubmission = effectiveFocus ?? "acting";
 
   useEffect(() => {
-    setSelectedShowId(currentShow?.id ?? "");
-  }, [currentShow?.id]);
-
-  useEffect(() => {
     setFormState(initialForm);
   }, [initialForm]);
-
-  const handleShowAssign = async () => {
-    if (!selectedShowId) {
-      setShowError("Bitte wähle eine Produktion.");
-      return;
-    }
-
-    setShowSubmitting(true);
-    setShowError(null);
-
-    try {
-      const result = await startOnboardingAction(selectedShowId);
-      if (!result.ok) {
-        setShowError(result.error);
-        toast.error(result.error);
-        return;
-      }
-
-      const payload = result.data.onboarding;
-      const option = availableOnboardings.find((entry) => entry.id === payload.show.id) ?? null;
-      const nextShow = {
-        id: payload.show.id,
-        title: payload.show.title,
-        year: payload.show.year,
-        periodLabel: option?.periodLabel ?? payload.show.periodLabel ?? null,
-        status: (option?.status ?? payload.show.status ?? "draft") as OnboardingSummary["status"],
-      } satisfies NonNullable<OnboardingProfile["show"]>;
-
-      const nextOnboarding: OnboardingProfile = onboarding
-        ? {
-            ...onboarding,
-            focus: focusForSubmission,
-            show: nextShow,
-            whatsappLink: payload.whatsappLink,
-            whatsappLinkVisitedAt: payload.whatsappLinkVisitedAt,
-          }
-        : ({
-            focus: focusForSubmission,
-            background: formState.background.trim() ? formState.background.trim() : null,
-            backgroundClass: formState.backgroundClass.trim()
-              ? formState.backgroundClass.trim()
-              : null,
-            notes: formState.notes.trim() ? formState.notes.trim() : null,
-            memberSinceYear: formState.memberSinceYear
-              ? Number.parseInt(formState.memberSinceYear, 10)
-              : null,
-            dietaryPreference: null,
-            dietaryPreferenceStrictness: null,
-            whatsappLinkVisitedAt: payload.whatsappLinkVisitedAt,
-            updatedAt: null,
-            preferences: rolePreferences,
-            show: nextShow,
-            whatsappLink: payload.whatsappLink,
-          } satisfies OnboardingProfile);
-
-      onOnboardingChange(nextOnboarding);
-      toast.success(onboarding?.show ? "Produktion aktualisiert" : "Onboarding gestartet");
-      setShowDialogOpen(false);
-    } finally {
-      setShowSubmitting(false);
-    }
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -319,24 +238,6 @@ export function OnboardingSection({
             </Badge>
           ) : null}
         </div>
-        {hasOnboardingOptions ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setShowDialogOpen(true);
-              setShowError(null);
-            }}
-          >
-            {currentShow ? "Produktion wechseln" : "Onboarding starten"}
-          </Button>
-        ) : currentShow ? null : (
-          <p className="text-xs text-muted-foreground">
-            Aktuell sind keine Produktionen verfügbar.
-          </p>
-        )}
-
         {whatsappLink ? (
           <div className="flex items-center gap-3 border-t border-border/60 pt-3">
             <span
@@ -491,106 +392,6 @@ export function OnboardingSection({
           />
         </form>
       </Card>
-
-      <Dialog
-        open={showDialogOpen}
-        onOpenChange={(open) => {
-          setShowDialogOpen(open);
-          if (!open) {
-            setShowError(null);
-            setSelectedShowId(currentShow?.id ?? "");
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Produktion auswählen</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {hasOnboardingOptions ? (
-              <div className="grid gap-2">
-                {availableOnboardings.map((option) => {
-                  const active = option.id === selectedShowId;
-                  return (
-                    <button
-                      type="button"
-                      key={option.id}
-                      onClick={() => setSelectedShowId(option.id)}
-                      className={cn(
-                        "w-full rounded-lg border px-4 py-3 text-left transition",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-                        active
-                          ? "border-primary/60 bg-primary/10 shadow-sm"
-                          : "border-border/60 bg-background hover:border-primary/40",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-foreground">{option.title}</p>
-                          {option.periodLabel ? (
-                            <p className="text-xs text-muted-foreground">{option.periodLabel}</p>
-                          ) : null}
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className="rounded-full border-border/60 px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"
-                        >
-                          {ONBOARDING_STATUS_LABELS[option.status] ?? option.status}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 flex items-center gap-2 text-xs">
-                        {active ? (
-                          <>
-                            <CheckCircle2Icon className="h-4 w-4 text-primary" aria-hidden="true" />
-                            <span className="font-medium text-primary">Ausgewählt</span>
-                          </>
-                        ) : (
-                          <>
-                            <ArrowRightIcon
-                              className="h-4 w-4 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                            <span className="text-muted-foreground">Auswählen</span>
-                          </>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Es sind keine Produktionen verfügbar.</p>
-            )}
-            {showError ? <p className="text-sm text-destructive">{showError}</p> : null}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowDialogOpen(false)}
-              disabled={showSubmitting}
-            >
-              Abbrechen
-            </Button>
-            <Button
-              type="button"
-              onClick={handleShowAssign}
-              disabled={showSubmitting || !selectedShowId}
-            >
-              {showSubmitting ? (
-                <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Speichern…
-                </>
-              ) : currentShow ? (
-                "Produktion wechseln"
-              ) : (
-                "Onboarding starten"
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

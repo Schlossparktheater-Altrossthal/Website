@@ -49,7 +49,7 @@ export function ProfileClient({
   interests: initialInterests,
   allergies: initialAllergies,
   checklist: initialChecklist,
-  availableOnboardings,
+  rolePreferencesInheritedFrom,
   history,
 }: ProfileClientProps) {
   const { update: refreshSession } = useSession();
@@ -62,6 +62,13 @@ export function ProfileClient({
   const [onboarding, setOnboarding] = useState<ProfileClientProps["onboarding"]>(initialOnboarding);
   const [rolePreferences, setRolePreferences] =
     useState<ProfileClientProps["rolePreferences"]>(initialRolePreferences);
+  const [preferencesInheritedFrom, setPreferencesInheritedFrom] = useState(
+    rolePreferencesInheritedFrom,
+  );
+  const handleRolePreferencesChange = useCallback((next: ProfileClientProps["rolePreferences"]) => {
+    setRolePreferences(next);
+    setPreferencesInheritedFrom(null);
+  }, []);
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
   const [photoConsentGiven, setPhotoConsentGiven] = useState<boolean | undefined>(
@@ -250,9 +257,9 @@ export function ProfileClient({
             onboarding={onboarding}
             onOnboardingChange={setOnboarding}
             rolePreferences={rolePreferences}
-            onRolePreferencesChange={setRolePreferences}
+            onRolePreferencesChange={handleRolePreferencesChange}
             onWhatsAppVisit={handleWhatsAppVisit}
-            availableOnboardings={availableOnboardings}
+            preferencesInheritedFrom={preferencesInheritedFrom}
           />
         );
     }

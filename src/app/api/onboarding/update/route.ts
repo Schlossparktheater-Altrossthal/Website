@@ -3,6 +3,7 @@ import { AllergyLevel } from "@prisma/client";
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { replaceProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
 import { ONBOARDING_TOKEN_COOKIE } from "@/lib/authentik/config";
@@ -274,6 +275,7 @@ export async function POST(request: NextRequest) {
           update: {
             completedAt: now,
             profileSnapshot,
+            notes,
             ...(targetInviteId ? { inviteId: targetInviteId } : {}),
           },
           create: {
@@ -284,24 +286,12 @@ export async function POST(request: NextRequest) {
             isReturning: true,
             completedAt: now,
             profileSnapshot,
+            notes,
           },
         });
       }
 
-      await tx.memberRolePreference.deleteMany({
-        where: { userId },
-      });
-
-      if (preferences.length > 0) {
-        await tx.memberRolePreference.createMany({
-          data: preferences.map((preference) => ({
-            userId,
-            code: preference.code,
-            domain: preference.domain,
-            weight: preference.weight,
-          })),
-        });
-      }
+      await replaceProductionPreferences(tx, userId, consentShowId, preferences);
 
       await Promise.all(
         uniqueDietaryEntries.map((entry) =>

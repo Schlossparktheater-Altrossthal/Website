@@ -422,6 +422,7 @@ model Show {
   memberships ProductionMembership[]
   photoConsents PhotoConsent[]
   productionOnboardings ProductionOnboarding[]
+  memberRolePreferences MemberRolePreference[]
   onboardingProfiles MemberOnboardingProfile[]
   invites    MemberInvite[]
 }
@@ -1417,9 +1418,12 @@ model UserInterest {
   @@unique([userId, interestId])
 }
 
+/// Rollen- und Gewerkewünsche gelten pro Produktion (`showId`). Einträge ohne `showId`
+/// stammen aus der Zeit vor der Umstellung und dienen nur noch als Vorschlag.
 model MemberRolePreference {
   id        String               @id @default(cuid())
   userId    String
+  showId    String?
   code      String
   domain    RolePreferenceDomain
   weight    Int
@@ -1427,8 +1431,10 @@ model MemberRolePreference {
   updatedAt DateTime             @updatedAt
 
   user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show      Show?                @relation(fields: [showId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, code])
+  @@unique([userId, showId, code])
+  @@index([showId])
 }
 
 /// Vom Mitglied ausgeblendete Hinweise (z. B. `whatsapp:<showId>`), geräteübergreifend.
@@ -1487,6 +1493,9 @@ model ProductionOnboarding {
   focus           OnboardingFocus
   /// Bestätigte Profildaten zum Zeitpunkt des Onboardings (Ernährung, Allergien, Rollenwünsche …).
   profileSnapshot Json?
+  /// Hinweise ans Team für diese Produktion.
+  notes           String?
+  whatsappLinkVisitedAt DateTime?
   isReturning     Boolean         @default(false)
   completedAt     DateTime?
   createdAt       DateTime        @default(now())
