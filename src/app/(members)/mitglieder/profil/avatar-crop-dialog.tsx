@@ -124,7 +124,7 @@ export function AvatarCropDialog({
         <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted">
           {imageUrl ? (
             <Cropper
-              key={`${imageUrl ?? "no-image"}-${initialSelection ? `${initialSelection.x}-${initialSelection.y}-${initialSelection.width}-${initialSelection.height}` : "default"}`}
+              key={`${imageUrl}-${initialSelection ? `${initialSelection.x}-${initialSelection.y}-${initialSelection.width}-${initialSelection.height}` : "default"}`}
               image={imageUrl}
               crop={crop}
               zoom={zoom}
