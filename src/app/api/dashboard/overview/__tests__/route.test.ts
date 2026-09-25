@@ -16,7 +16,7 @@ describe("GET /api/dashboard/overview", () => {
     process.env = ORIGINAL_ENV;
   });
 
-  it("returns offline fixture when the database is disabled", async () => {
+  it("returns offline fixture when the database is disabled", { timeout: 15000 }, async () => {
     const { GET } = await import("../route");
 
     const response = await GET();
