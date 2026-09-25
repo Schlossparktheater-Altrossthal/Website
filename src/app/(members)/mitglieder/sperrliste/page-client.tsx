@@ -90,11 +90,13 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
   );
 
   const actions = (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex shrink-0 items-center justify-end gap-2">
       {data.canPlan && !data.readOnly ? (
+        // Mobil legt man Termine über das Tagesblatt oder die Terminplanung an.
         <Button
           type="button"
           size="sm"
+          className="hidden sm:inline-flex"
           onClick={() => openCreate(toDayKey(new Date()))}
           aria-label="Termin anlegen"
         >
@@ -145,7 +147,7 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
           size="md"
           value={tab}
           onValueChange={setTab}
-          className="flex-1 sm:flex-none [&>button]:h-11 [&>button]:flex-1 [&>button]:px-4 sm:[&>button]:flex-none"
+          className="min-w-0 flex-1 sm:flex-none [&>button]:h-11 [&>button]:flex-1 [&>button]:px-4 sm:[&>button]:flex-none"
           options={[
             {
               value: "mine",

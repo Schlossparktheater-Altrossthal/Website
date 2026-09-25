@@ -36,14 +36,14 @@ export type MonthGridMarker = "event" | "rehearsal";
 
 export type MonthGridDayState = {
   status?: AvailabilityStatus;
-  /** `strong` = Probentag, `faint` = Randtag. */
+  /** `strong` = Kerntag, `faint` = Randtag. */
   emphasis?: "strong" | "normal" | "faint";
   markers?: MonthGridMarker[];
   /** Durchgehendes Band am unteren Rand: Endprobenwoche oder Ferien. */
   band?: "final" | "holiday";
   isToday?: boolean;
   disabled?: boolean;
-  /** Zusatz für Screenreader, z. B. „Probentag, Termin: Vorstellung“. */
+  /** Zusatz für Screenreader, z. B. „Kerntag, Termin: Vorstellung“. */
   description?: string;
 };
 
@@ -51,8 +51,10 @@ type MonthGridProps = {
   month: Date;
   getDayState: (key: string, date: Date) => MonthGridDayState;
   selectedKey?: string | null;
+  /** Mehrfachauswahl, z. B. mehrere Tage auf einmal sperren. */
+  selectedKeys?: ReadonlySet<string>;
   onSelect?: (key: string, date: Date) => void;
-  /** Wochentage, deren Spaltenkopf betont wird (z. B. Probentage). */
+  /** Wochentage, deren Spaltenkopf betont wird (z. B. Kerntage). */
   emphasizedWeekdays?: ReadonlySet<number>;
   /** Kalenderwochen als erste Spalte. */
   showWeekNumbers?: boolean;
@@ -77,6 +79,7 @@ export function MonthGrid({
   month,
   getDayState,
   selectedKey,
+  selectedKeys,
   onSelect,
   emphasizedWeekdays,
   showWeekNumbers = false,
@@ -145,7 +148,10 @@ export function MonthGrid({
                 date={date}
                 inMonth={isSameMonth(date, month)}
                 state={getDayState(format(date, "yyyy-MM-dd"), date)}
-                selected={selectedKey === format(date, "yyyy-MM-dd")}
+                selected={
+                  selectedKey === format(date, "yyyy-MM-dd") ||
+                  Boolean(selectedKeys?.has(format(date, "yyyy-MM-dd")))
+                }
                 onSelect={onSelect}
                 details={renderDetails?.(format(date, "yyyy-MM-dd"), date)}
               />
@@ -193,7 +199,7 @@ function DayCell({
       onClick={() => onSelect?.(key, date)}
       className={cn(
         // Mobil: mind. 52 px hohe Tipp-Fläche; Desktop: hohe Zelle mit Details.
-        "relative flex h-13 min-w-0 flex-col items-center overflow-hidden rounded-lg border pt-1.5 text-sm transition-[color,background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] disabled:cursor-default lg:h-28 lg:items-stretch lg:px-2 lg:pt-1.5 lg:active:scale-100",
+        "relative flex h-13 min-w-0 flex-col items-center overflow-hidden rounded-lg border pt-1.5 text-sm transition-[color,background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] disabled:cursor-default lg:h-24 lg:items-stretch lg:px-2 lg:pt-1.5 lg:active:scale-100",
         status
           ? cn(AVAILABILITY_STATUS[status].surface, "border-transparent")
           : state.emphasis === "strong"

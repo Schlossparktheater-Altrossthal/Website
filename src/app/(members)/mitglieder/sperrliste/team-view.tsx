@@ -10,6 +10,7 @@ import {
   StatusLegend,
   type AvailabilityStatus,
 } from "@/components/ui/availability-status";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DateBadge } from "@/components/ui/date-badge";
@@ -24,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { DAY_TIER_LABELS, type DayInfo } from "@/lib/sperrliste/day-tiers";
 import { cn } from "@/lib/utils";
@@ -154,7 +156,7 @@ export function TeamView({
 
       {days.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
-          In diesem Monat gibt es keine Probentage.
+          In diesem Monat gibt es keine Kern- oder Ausnahmetage.
         </p>
       ) : (
         <>
@@ -310,7 +312,10 @@ type MatrixProps = {
   onOpenDay: (key: string) => void;
 };
 
-/** Desktop: Personen × Tage. Leere Zellen bedeuten frei – nur Ausnahmen sind eingefärbt. */
+/**
+ * Personen × Tage. Kompakte Kacheln, damit Kern- und Ausnahmetage eines Monats auch mobil ohne
+ * Querscrollen passen. Leer = frei, nur Ausnahmen sind eingefärbt.
+ */
 function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: MatrixProps) {
   const statusByMemberDay = useMemo(() => {
     const map = new Map<string, TeamEntry>();
@@ -332,78 +337,87 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
   }
 
   return (
-    <div className="max-h-[calc(100vh-10rem)] overflow-auto rounded-lg border border-border">
-      <table className="w-full border-separate border-spacing-0 text-sm">
+    <div className="-mx-3 max-h-[calc(100dvh-12rem)] overflow-auto border-y border-border sm:mx-0 sm:rounded-lg sm:border">
+      <table
+        className="w-full table-fixed border-separate border-spacing-0 text-sm"
+        style={{ minWidth: `calc(5.5rem + ${days.length} * 1.25rem)` }}
+      >
+        <colgroup>
+          <col className="w-[5.5rem] sm:w-44" />
+          {days.map((day) => (
+            <col key={day.key} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
             <th
               scope="col"
-              className="sticky left-0 top-0 z-30 min-w-28 sm:min-w-44 border-b border-border/60 bg-card px-3 text-left align-bottom text-xs font-medium text-muted-foreground"
+              className="sticky left-0 top-0 z-30 border-b border-border bg-card px-2 pb-1.5 text-left align-bottom text-[0.6875rem] font-medium text-muted-foreground sm:px-3"
             >
-              <span className="block pb-2">{members.length} Personen</span>
+              verfügbar
             </th>
             {days.map((day) => {
               const entries = entriesFor(day.key);
-              const blocked = entries.filter((entry) => entry.status === "blocked").length;
-              const limited = entries.filter((entry) => entry.status === "limited").length;
+              const unavailable = entries.filter((entry) => entry.status !== "preferred").length;
+              const available = members.length - unavailable;
               const events = model.entriesByDay.get(day.key) ?? [];
+              const low = available / Math.max(members.length, 1) < 0.85;
               return (
                 <th
                   key={day.key}
                   scope="col"
-                  className={cn(
-                    "sticky top-0 z-20 min-w-11 border-b border-border/60 bg-card p-0 align-bottom font-normal",
-                    day.tier === "core" && "bg-muted",
-                  )}
+                  className="sticky top-0 z-20 border-b border-border bg-card p-0 align-bottom font-normal"
                 >
                   <button
                     type="button"
                     onClick={() => onOpenDay(day.key)}
+                    aria-label={`${formatLongDate(day.date)}: ${available} von ${members.length} verfügbar`}
                     title={[
                       formatLongDate(day.date),
                       ...day.holidays.map((holiday) => holiday.title),
                       ...events.map((event) => event.title),
                     ].join(" · ")}
-                    className="relative flex w-full flex-col items-center gap-1 px-1 pb-2 pt-2 transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    className={cn(
+                      "relative flex w-full flex-col items-center pb-1.5 pt-2 leading-none transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      day.tier === "core" && "bg-muted/60",
+                    )}
                   >
                     {day.isFinalWeek ? (
                       <span className="absolute inset-x-0 top-0 h-1 bg-primary" aria-hidden />
                     ) : day.isSchoolHoliday ? (
                       <span className="absolute inset-x-0 top-0 h-1 bg-info/60" aria-hidden />
                     ) : null}
-                    <span className="text-[0.625rem] uppercase text-muted-foreground">
-                      {WEEKDAY_SHORT.format(day.date).replace(".", "")}
+                    <span className="text-[0.625rem] text-muted-foreground">
+                      {WEEKDAY_SHORT.format(day.date).slice(0, 2)}
                     </span>
                     <span
                       className={cn(
-                        "flex h-6 min-w-6 items-center justify-center rounded-full text-sm tabular-nums",
+                        "mt-0.5 flex h-5 min-w-5 items-center justify-center rounded-full text-xs tabular-nums",
                         day.tier === "core" ? "font-semibold" : "text-muted-foreground",
                         day.isToday && "bg-primary text-primary-foreground",
                       )}
                     >
                       {day.date.getDate()}
                     </span>
-                    <span className="flex h-1.5 gap-0.5" aria-hidden>
-                      {events.slice(0, 3).map((event) => (
-                        <span
-                          key={event.id}
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            event.source === "rehearsal" ? "bg-info" : "bg-primary",
-                          )}
-                        />
-                      ))}
-                    </span>
                     <span
+                      aria-hidden
                       className={cn(
-                        "text-[0.6875rem] tabular-nums",
-                        (members.length - blocked - limited) / Math.max(members.length, 1) < 0.85
-                          ? "font-semibold text-destructive"
-                          : "text-muted-foreground",
+                        "mt-1 h-1 w-1 rounded-full",
+                        events.length
+                          ? events.some((event) => event.source === "event")
+                            ? "bg-primary"
+                            : "bg-info"
+                          : "bg-transparent",
                       )}
-                      aria-label={`${members.length - blocked - limited} von ${members.length} verfügbar`}
+                    />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "mt-1 text-[0.6875rem] tabular-nums",
+                        low ? "font-semibold text-destructive" : "text-muted-foreground",
+                      )}
                     >
-                      {members.length - blocked - limited}
+                      {available}
                     </span>
                   </button>
                 </th>
@@ -418,25 +432,30 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                 <th
                   colSpan={days.length + 1}
                   scope="colgroup"
-                  className="sticky left-0 border-b border-border/60 bg-card px-3 pb-1 pt-3 text-left text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground"
+                  className="border-b border-border bg-muted/40 px-2 py-1 text-left text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground sm:px-3"
                 >
-                  {MEMBER_GROUP_LABELS[group]} · {groupMembers.length}
+                  <span className="sticky left-2">
+                    {MEMBER_GROUP_LABELS[group]} · {groupMembers.length}
+                  </span>
                 </th>
               </tr>
               {groupMembers.map((member) => (
                 <tr key={member.id} className="group/row">
                   <th
                     scope="row"
-                    className="sticky left-0 z-10 border-b border-border/70 bg-card px-3 py-1.5 text-left font-normal group-hover/row:bg-muted"
+                    className="sticky left-0 z-10 border-b border-r border-border bg-card px-2 py-0 text-left font-normal group-hover/row:bg-muted sm:px-3"
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex h-8 items-center gap-2">
                       <span
                         aria-hidden
-                        className="hidden h-6 w-6 sm:flex shrink-0 items-center justify-center rounded-full bg-muted text-[0.625rem] font-semibold text-muted-foreground"
+                        className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[0.625rem] font-semibold text-muted-foreground sm:flex"
                       >
                         {member.initials}
                       </span>
-                      <span className="max-w-24 truncate text-sm sm:max-w-none">{member.name}</span>
+                      <span className="truncate text-xs sm:text-sm" title={member.name}>
+                        <span className="sm:hidden">{shortName(member.name)}</span>
+                        <span className="hidden sm:inline">{member.name}</span>
+                      </span>
                     </span>
                   </th>
                   {days.map((day) => {
@@ -445,11 +464,11 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                       <td
                         key={day.key}
                         className={cn(
-                          "border-b border-border/70 p-0.5 text-center group-hover/row:bg-muted/60",
-                          day.tier === "core" && "bg-muted/40",
+                          "border-b border-border/60 p-[3px] group-hover/row:bg-muted/60",
+                          day.tier === "core" && "bg-muted/30",
                         )}
                       >
-                        {entry ? <MatrixCell entry={entry} canPlan={canPlan} /> : null}
+                        <MatrixCell entry={entry} canPlan={canPlan} />
                       </td>
                     );
                   })}
@@ -463,18 +482,24 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
   );
 }
 
-function MatrixCell({ entry, canPlan }: { entry: TeamEntry; canPlan: boolean }) {
+function MatrixCell({ entry, canPlan }: { entry: TeamEntry | undefined; canPlan: boolean }) {
+  if (!entry) {
+    return <span aria-hidden className="block h-6 rounded-[3px] bg-muted/50" />;
+  }
   const style = AVAILABILITY_STATUS[entry.status];
   const label = canPlan && entry.reason ? `${style.label}: ${entry.reason}` : style.label;
   return (
     <span
       title={label}
       className={cn(
-        "mx-auto flex h-7 w-full min-w-9 items-center justify-center rounded",
-        style.surface,
+        "flex h-6 items-center justify-center rounded-[3px]",
+        entry.status === "blocked"
+          ? "bg-destructive"
+          : entry.status === "limited"
+            ? "bg-warning"
+            : "bg-success/40",
       )}
     >
-      <StatusDot status={entry.status} />
       <span className="sr-only">{label}</span>
     </span>
   );
@@ -512,79 +537,92 @@ function TeamDayDialog({
   onCreateEvent,
   onEditEvent,
 }: TeamDayDialogProps) {
+  const isDesktop = useMediaQuery("(min-width: 640px)");
   const events = day ? (model.entriesByDay.get(day.key) ?? []) : [];
   const blocked = entries.filter((entry) => entry.status === "blocked").length;
   const limited = entries.filter((entry) => entry.status === "limited").length;
+  const onOpenChange = (open: boolean) => (!open ? onClose() : undefined);
+  const title = day ? formatLongDate(day.date) : "";
+  const summary = `${total - blocked - limited} von ${total} verfügbar`;
+
+  const body = day ? (
+    <div className="space-y-4">
+      <DayChips day={day} />
+      <AvailabilityBar total={total} blocked={blocked} limited={limited} />
+      {events.length || canPlan ? (
+        <section className="space-y-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-medium text-muted-foreground">Termine</h3>
+            {canPlan && !readOnly ? (
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                onClick={() => onCreateEvent(day.key)}
+              >
+                <CalendarPlusIcon className="h-3.5 w-3.5" aria-hidden />
+                Termin anlegen
+              </Button>
+            ) : null}
+          </div>
+          {events.length ? (
+            <CalendarEntryList entries={events} onSelect={canPlan ? onEditEvent : undefined} />
+          ) : (
+            <p className="text-xs text-muted-foreground">Noch kein Termin.</p>
+          )}
+        </section>
+      ) : null}
+      {DIALOG_SECTIONS.map(({ status, title }) => {
+        const list = entries.filter((entry) => entry.status === status);
+        if (!list.length) return null;
+        return (
+          <section key={status} className="space-y-1.5">
+            <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <StatusDot status={status} /> {title} · {list.length}
+            </h3>
+            <ul className="space-y-1">
+              {list.map((entry) => (
+                <li key={entry.userId} className="text-sm">
+                  <span className="font-medium">
+                    {memberById.get(entry.userId)?.name ?? "Unbekannt"}
+                  </span>
+                  {canPlan && entry.reason ? (
+                    <span className="text-muted-foreground"> – {entry.reason}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+      {!entries.length ? (
+        <p className="text-sm text-muted-foreground">Keine Einträge – alle verfügbar.</p>
+      ) : null}
+    </div>
+  ) : null;
+
+  if (!isDesktop) {
+    return (
+      <BottomSheet
+        open={Boolean(day)}
+        onOpenChange={onOpenChange}
+        title={title}
+        description={summary}
+        showDescription
+      >
+        {body}
+      </BottomSheet>
+    );
+  }
 
   return (
-    <Dialog open={Boolean(day)} onOpenChange={(open) => (!open ? onClose() : undefined)}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
-        {day ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>{formatLongDate(day.date)}</DialogTitle>
-              <DialogDescription>
-                {total - blocked - limited} von {total} verfügbar
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <DayChips day={day} />
-              <AvailabilityBar total={total} blocked={blocked} limited={limited} />
-              {events.length || canPlan ? (
-                <section className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-medium text-muted-foreground">Termine</h3>
-                    {canPlan && !readOnly ? (
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => onCreateEvent(day.key)}
-                      >
-                        <CalendarPlusIcon className="h-3.5 w-3.5" aria-hidden />
-                        Termin anlegen
-                      </Button>
-                    ) : null}
-                  </div>
-                  {events.length ? (
-                    <CalendarEntryList
-                      entries={events}
-                      onSelect={canPlan ? onEditEvent : undefined}
-                    />
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Noch kein Termin.</p>
-                  )}
-                </section>
-              ) : null}
-              {DIALOG_SECTIONS.map(({ status, title }) => {
-                const list = entries.filter((entry) => entry.status === status);
-                if (!list.length) return null;
-                return (
-                  <section key={status} className="space-y-1.5">
-                    <h3 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <StatusDot status={status} /> {title} · {list.length}
-                    </h3>
-                    <ul className="space-y-1">
-                      {list.map((entry) => (
-                        <li key={entry.userId} className="text-sm">
-                          <span className="font-medium">
-                            {memberById.get(entry.userId)?.name ?? "Unbekannt"}
-                          </span>
-                          {canPlan && entry.reason ? (
-                            <span className="text-muted-foreground"> – {entry.reason}</span>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-              {!entries.length ? (
-                <p className="text-sm text-muted-foreground">Keine Einträge – alle verfügbar.</p>
-              ) : null}
-            </div>
-          </>
-        ) : null}
+    <Dialog open={Boolean(day)} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{summary}</DialogDescription>
+        </DialogHeader>
+        {body}
       </DialogContent>
     </Dialog>
   );

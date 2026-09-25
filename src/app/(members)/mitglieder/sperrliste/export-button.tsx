@@ -62,7 +62,7 @@ export function ExportButton({
       { preferredWeekdays, exceptionWeekdays, holidays, finalWeek },
     ).filter((day) => day.tier !== "off");
     if (!days.length) {
-      toast.info("Keine Probentage in den nächsten zwei Wochen", { duration: 2000 });
+      toast.info("Keine Kerntage in den nächsten zwei Wochen", { duration: 2000 });
       return;
     }
 

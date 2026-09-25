@@ -6,7 +6,7 @@ export const DAY_KEY_FORMAT = "yyyy-MM-dd";
 
 /**
  * Wie wichtig ein Tag für die Planung ist:
- * - `core`: bevorzugter Probentag (derzeit Fr–So) oder Endprobenwoche
+ * - `core`: Kerntag, an dem üblicherweise geprobt wird (derzeit Fr–So) oder Endprobenwoche
  * - `possible`: nur in Ausnahmefällen – Ausnahme-Wochentage, Ferien, Feiertage, Tage mit Termin
  * - `off`: übrige Wochentage
  */
@@ -114,7 +114,7 @@ export function buildDayInfos(range: { start: Date; end: Date }, options: DayTie
 }
 
 export const DAY_TIER_LABELS: Record<DayTier, string> = {
-  core: "Probentag",
+  core: "Kerntag",
   possible: "Ausnahmetag",
   off: "Randtag",
 };
