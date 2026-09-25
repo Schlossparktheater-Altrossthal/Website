@@ -21,13 +21,13 @@ Zwei Ansichten, umgeschaltet per `SegmentedControl` (`?ansicht=team`):
 - **Team** – auf allen Geräten gleich, zwei Darstellungen: „Tage“ (Karten je relevantem Tag mit
   `AvailabilityBar` und nur den Ausnahmen, Planer sehen Gründe) und „Personen“ (Matrix Personen ×
   Tage, leere Zellen = frei). Filter Schauspiel/Gewerke, Namenssuche, „Alle Tage“.
-- **Einstellungen** – Dialog (mobil Sheet): Probentage per Tipp (Probentag → Ausnahmetag → aus),
+- **Einstellungen** – Dialog (mobil Sheet): Kerntage per Tipp (Kerntag → Ausnahmetag → aus),
   Sperrfrist, Ferien-/Feiertagsquellen mit Prüfen.
 
 Termine pflegen Planer zusätzlich unter **Terminplanung** (`/mitglieder/terminplanung`): Liste
 nach Monaten, Filter nach Art, je Termin Verfügbarkeit und wer fehlt (mit Grund).
 
-Tag-Stufen (`src/lib/sperrliste/day-tiers.ts`): `core` = bevorzugte Probentage (Einstellungen)
+Tag-Stufen (`src/lib/sperrliste/day-tiers.ts`): `core` = Kerntage (Einstellungen)
 und Endprobenwoche der aktiven Produktion, `possible` = Ausnahme-Wochentage, Ferien, Feiertage,
 Tage mit Termin/Probe, `off` = übrige Tage (in der Team-Ansicht standardmäßig ausgeblendet).
 Hintergrund und Entscheidungen: `docs/sperrliste-redesign-plan.md`.
@@ -73,3 +73,12 @@ Hintergrund und Entscheidungen: `docs/sperrliste-redesign-plan.md`.
 ## Besonderheiten / Altlasten
 
 - Feiertage werden über eine externe ICS-Quelle geladen.
+
+## Stand 2026-09 (Runde 3)
+
+- „Probentag“ heißt jetzt „Kerntag“ – ein Tag wird erst durch eine angesetzte Probe zum Probentag.
+- Mehrfachauswahl: im Tagesdetail „Mehrere Tage auswählen“, dann Tage antippen und Status für alle setzen (Bulk-Route, Sperrfrist wird übersprungen).
+- Mobile Blätter (`src/components/ui/bottom-sheet.tsx`) sind auf `90dvh` begrenzt, scrollen innen und lassen sich am Griff nach unten wegwischen.
+- Team „Personen“: kompakte Kachelmatrix, die mobil ohne Querscrollen passt.
+- Terminplanung zeigt je Termin „Können nicht“, „Eingeschränkt“ (mit Gründen) und „Können“; mehrtägige Termine werten den ungünstigsten Tag.
+- Mehrtägige Termine ohne Endzeit laufen bis 23:59 des letzten Tages. Vorher gespeicherte Termine dieser Art einmal neu speichern.
