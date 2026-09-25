@@ -50,7 +50,13 @@ export function resolveCalendarEventTimes(input: CalendarEventInput) {
     };
   }
   const start = parseDateTimeInTimeZone(input.date, input.startTime ?? "00:00");
-  const end = input.endTime ? parseDateTimeInTimeZone(endDate, input.endTime) : null;
+  const multiDay = endDate > input.date;
+  // Mehrtägig ohne Endzeit: bis zum Ende des letzten Tages, sonst ginge der Zeitraum verloren.
+  const end = input.endTime
+    ? parseDateTimeInTimeZone(endDate, input.endTime)
+    : multiDay
+      ? parseDateTimeInTimeZone(endDate, "23:59")
+      : null;
   if (end && end.getTime() <= start.getTime()) {
     return { start, end: null };
   }
