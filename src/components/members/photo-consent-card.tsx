@@ -9,7 +9,7 @@ import { CameraIcon, ChevronDownIcon, RefreshIcon, UploadIcon } from "@/componen
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -172,7 +172,7 @@ function ConsentDocumentPreview({
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+    <div className="space-y-3 rounded-lg border border-border/60 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Digitale Unterschrift
@@ -266,10 +266,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
       <Badge
         variant={statusVariants[status]}
         size="sm"
-        className={cn(
-          "whitespace-nowrap rounded-full px-4 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] transition-all duration-200 backdrop-blur-sm",
-          statusBadgeClasses[status],
-        )}
+        className={cn("whitespace-nowrap", statusBadgeClasses[status])}
       >
         {statusLabels[status]}
       </Badge>
@@ -477,8 +474,6 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
     }
   };
 
-  const showIntro = !loading && status !== "approved";
-
   const handleStartEditing = () => {
     setEditing(true);
     setConfirm(false);
@@ -505,67 +500,37 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
   }, [isCollapsible]);
 
   return (
-    <Card className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background p-0 shadow-xl shadow-primary/10">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -left-24 top-0 h-44 w-44 rounded-full bg-primary/20 opacity-70 blur-3xl dark:bg-primary/30"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-20 top-16 h-40 w-40 rounded-full bg-warning/20 opacity-60 blur-3xl"
-      />
-      <CardHeader className="flex flex-col gap-4 border-b border-primary/20 px-6 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-7 sm:py-7">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary shadow-inner shadow-primary/10">
-            <CameraIcon className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <div className="space-y-1 text-center sm:text-left">
-            <CardTitle className="text-xl font-semibold leading-tight">
-              Darf dein Bühnenmoment sichtbar sein?
-            </CardTitle>
-            <p className="max-w-2xl text-sm text-foreground/70">
-              Wie bei einem Cookiebanner entscheidest du hier, ob wir Fotos von Proben und
-              Aufführungen teilen dürfen.
-            </p>
-          </div>
+    <Card variant="plain" size="flush">
+      <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CameraIcon className="h-4 w-4" aria-hidden="true" />
+          <span>Status</span>
+          {statusBadge}
         </div>
-        <div className="flex flex-col items-stretch gap-3 sm:items-end">
-          <div className="flex items-center gap-2 self-start rounded-full border border-primary/25 bg-background/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/60 shadow-sm backdrop-blur sm:self-end">
-            <Badge
-              variant="outline"
-              size="sm"
-              className="border-transparent bg-transparent px-0 py-0 text-[11px] uppercase tracking-[0.18em] text-foreground/60"
-            >
-              Status
-            </Badge>
-            {statusBadge}
-          </div>
-          {isCollapsible && (
-            <Button
-              type="button"
-              variant="toggle"
-              data-state={expanded ? "active" : "inactive"}
-              onClick={() => setExpanded((prev) => !prev)}
-              aria-expanded={expanded}
-              className="group self-start rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] sm:self-end"
-            >
-              <span>{expanded ? "Details ausblenden" : "Details anzeigen"}</span>
-              <ChevronDownIcon
-                className={cn("h-4 w-4 transition-transform", expanded ? "rotate-180" : "rotate-0")}
-                aria-hidden="true"
-              />
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="relative space-y-5 px-6 pb-6 pt-5 text-sm sm:px-7 sm:pb-7">
+        {isCollapsible && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-expanded={expanded}
+          >
+            {expanded ? "Weniger" : "Details"}
+            <ChevronDownIcon
+              className={cn("h-4 w-4 transition-transform", expanded ? "rotate-180" : "rotate-0")}
+              aria-hidden="true"
+            />
+          </Button>
+        )}
+      </div>
+      <CardContent className="space-y-4 p-4 text-sm">
         {isCollapsible && !showContent ? (
           <div
             className={cn(
-              "space-y-2 rounded-xl border p-4 text-foreground",
+              "space-y-2 rounded-lg border p-3 text-foreground",
               status === "approved"
-                ? "border-success/45 bg-success/15 text-success"
-                : "border-destructive/45 bg-destructive/15 text-destructive",
+                ? "border-success/40 bg-success/10"
+                : "border-destructive/40 bg-destructive/10",
             )}
           >
             <p>
@@ -574,12 +539,12 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                 : "Deine Fotoeinwilligung wurde abgelehnt."}
             </p>
             {status === "approved" ? (
-              <p className="text-xs text-success/90">
+              <p className="text-xs text-muted-foreground">
                 Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
                 {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
               </p>
             ) : (
-              <p className="text-xs text-destructive/80">
+              <p className="text-xs text-muted-foreground">
                 Zuletzt bearbeitet am{" "}
                 {formatDate(summary?.updatedAt) ?? formatDate(summary?.submittedAt) ?? "unbekannt"}.
               </p>
@@ -589,9 +554,6 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                 Deine Ausschlüsse: {summary.exclusionNote}
               </p>
             )}
-            <p className="text-xs text-foreground/70">
-              Tippe auf „Details anzeigen“, um alle Informationen und Optionen einzublenden.
-            </p>
             {status === "approved" && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
@@ -612,18 +574,6 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
           </div>
         ) : (
           <>
-            {showIntro && (
-              <div className="rounded-xl border border-primary/25 bg-background/90 p-4 text-sm text-foreground/80 backdrop-blur">
-                <p className="font-semibold text-foreground">
-                  Mit deinem „Okay“ hilfst du unserem Auftrittsteam.
-                </p>
-                <p className="mt-1 text-foreground/70">
-                  Du kannst deine Entscheidung jederzeit hier im Profil anpassen – ganz wie beim
-                  Cookiebanner am Seitenrand.
-                </p>
-              </div>
-            )}
-
             {loading ? (
               <p className="text-muted-foreground">Lade Status …</p>
             ) : error ? (
@@ -634,17 +584,19 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                 </Button>
               </div>
             ) : requiresDateOfBirth ? (
-              <div className="rounded-md border border-warning/45 bg-warning/15 p-3 text-warning">
-                Bitte hinterlege dein Geburtsdatum im{" "}
-                <Link className="underline" href="/mitglieder/profil">
-                  Profil
-                </Link>
-                , damit wir prüfen können, ob ein Elternformular notwendig ist.
+              <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-foreground">
+                <p>
+                  Bitte trage zuerst dein Geburtsdatum ein. Daran sehen wir, ob zusätzlich eine
+                  Einwilligung der Eltern nötig ist.
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link href="/mitglieder/profil?bereich=stammdaten">Geburtsdatum eintragen</Link>
+                </Button>
               </div>
             ) : status === "approved" && !editing ? (
-              <div className="space-y-2 rounded-md border border-success/45 bg-success/15 p-3 text-success">
+              <div className="space-y-2 rounded-lg border border-success/40 bg-success/10 p-3 text-foreground">
                 <p>Vielen Dank – deine Fotoeinwilligung ist freigegeben.</p>
-                <ul className="text-xs text-success/90">
+                <ul className="text-xs text-muted-foreground">
                   <li>
                     Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
                     {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
@@ -687,7 +639,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                   </div>
                 )}
 
-                <div className="rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+                <div className="rounded-lg border border-border/60 p-3">
                   <label className="flex items-start gap-3">
                     <input
                       type="checkbox"
@@ -708,7 +660,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                   </p>
                 </div>
 
-                <div className="space-y-2 rounded-xl border border-primary/25 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+                <div className="space-y-2 rounded-lg border border-border/60 p-3">
                   <div className="text-sm font-semibold text-foreground">
                     Optional: Bereiche ausschließen
                   </div>
@@ -739,7 +691,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                 </div>
 
                 {requiresDocument ? (
-                  <div className="space-y-3 rounded-xl border border-dashed border-primary/30 bg-background/80 p-4 shadow-sm backdrop-blur">
+                  <div className="space-y-3 rounded-lg border border-border/60 p-3">
                     <div className="font-medium text-foreground">
                       Elterliche Einwilligung (PDF oder JPG/PNG)
                     </div>
@@ -762,7 +714,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                     {documentError && <p className="text-sm text-destructive">{documentError}</p>}
                   </div>
                 ) : (
-                  <div className="space-y-4 rounded-xl border border-primary/30 bg-background/80 p-4 shadow-inner shadow-primary/5 backdrop-blur">
+                  <div className="space-y-4 rounded-lg border border-border/60 p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
@@ -864,8 +816,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                 <div className="flex flex-wrap items-center gap-3">
                   <Button
                     type="submit"
-                    size="lg"
-                    className=" transition-shadow duration-200 hover:"
+                    size="md"
                     disabled={
                       submitting ||
                       !confirm ||
