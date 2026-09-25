@@ -48,6 +48,23 @@ jobs:
   playwright:
     runs-on: ubuntu-latest
     needs: [lint, test]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: theater_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/theater_test?schema=public
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -61,7 +78,14 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
+      - name: Apply database migrations
+        run: pnpm exec prisma migrate deploy
+      - name: Seed database
+        run: pnpm db:seed
       - name: Run Playwright tests
         env:
           CI: "true"
+          # Playwright startet damit selbst den Dev-Server (playwright.config.ts webServer),
+          # weil der Test-Login /api/dev/screenshot-session nur außerhalb von Production greift.
+          SCAN_E2E_START_COMMAND: pnpm exec next dev --turbo
         run: pnpm exec playwright test
