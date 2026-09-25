@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { endOfWeek, startOfWeek } from "date-fns";
 
 import { requireAuth } from "@/lib/rbac";
+import { CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
@@ -75,6 +76,7 @@ export async function GET() {
       productionOnboarding,
       departmentEvents,
       membershipRecords,
+      calendarEvents,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.rehearsal.count({
@@ -166,6 +168,12 @@ export async function GET() {
           },
         },
       }),
+      prisma.calendarEvent.findMany({
+        where: { start: { gt: now } },
+        orderBy: { start: "asc" },
+        take: 5,
+        select: { id: true, title: true, kind: true, start: true, end: true, location: true },
+      }),
     ]);
 
     const activeProduction = activeProductionPromise ? await activeProductionPromise : null;
@@ -250,6 +258,16 @@ export async function GET() {
         location: event.location ?? null,
         context: event.department.name,
         href: `/mitglieder/meine-gewerke/${event.department.slug}`,
+      })),
+      ...calendarEvents.map((event) => ({
+        id: event.id,
+        kind: "event" as const,
+        title: event.title,
+        start: event.start.toISOString(),
+        end: event.end?.toISOString() ?? null,
+        location: event.location ?? null,
+        context: CALENDAR_EVENT_KIND_LABELS[event.kind],
+        href: "/mitglieder/sperrliste",
       })),
     ]
       .sort((a, b) => a.start.localeCompare(b.start))

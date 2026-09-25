@@ -314,6 +314,7 @@ model User {
   departmentTaskAssignments    DepartmentTaskAssignment[]
   departmentTasksCreated       DepartmentTask[] @relation("DepartmentTaskCreator")
   departmentEventsCreated      DepartmentEvent[]
+  calendarEventsCreated        CalendarEvent[]
   departmentDocumentsUploaded  DepartmentDocument[]
   characterCastings      CharacterCasting[]
   breakdownAssignments   SceneBreakdownItem[] @relation("BreakdownAssignee")
@@ -406,6 +407,7 @@ model Show {
   memberships ProductionMembership[]
   photoConsents PhotoConsent[]
   productionOnboardings ProductionOnboarding[]
+  calendarEvents CalendarEvent[]
   memberRolePreferences MemberRolePreference[]
   onboardingProfiles MemberOnboardingProfile[]
   invites    MemberInvite[]
@@ -917,6 +919,34 @@ model Availability {
   end    DateTime
   status AvailabilityStatus
   user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum CalendarEventKind {
+  PERFORMANCE
+  MEETING
+  WORK_DAY
+  SOCIAL
+  OTHER
+}
+
+/// Termine der Organisation (Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
+model CalendarEvent {
+  id          String            @id @default(cuid())
+  title       String
+  kind        CalendarEventKind @default(OTHER)
+  start       DateTime
+  end         DateTime?
+  allDay      Boolean           @default(false)
+  location    String?
+  description String?
+  showId      String?
+  createdById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  show        Show?             @relation(fields: [showId], references: [id], onDelete: SetNull)
+  createdBy   User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([start])
 }
 
 model BlockedDay {

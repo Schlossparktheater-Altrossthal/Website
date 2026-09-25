@@ -25,6 +25,7 @@ import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DismissibleNotice } from "@/components/ui/dismissible-notice";
+import { DateBadge } from "@/components/ui/date-badge";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -52,7 +53,7 @@ interface FinalRehearsalWeekInfo {
 
 type UpcomingEvent = {
   id: string;
-  kind: "rehearsal" | "department";
+  kind: "rehearsal" | "department" | "event";
   title: string;
   start: Date;
   end: Date | null;
@@ -219,7 +220,7 @@ function parseUpcomingEvents(value: unknown): UpcomingEvent[] {
     return [
       {
         id,
-        kind: entry.kind === "department" ? "department" : "rehearsal",
+        kind: entry.kind === "department" || entry.kind === "event" ? entry.kind : "rehearsal",
         title,
         start,
         end: parseIsoDate(entry.end),
@@ -254,12 +255,6 @@ function parseActiveProduction(value: unknown): ActiveProduction | null {
   };
 }
 
-const weekdayFormatter = new Intl.DateTimeFormat("de-DE", {
-  weekday: "short",
-  timeZone: TIME_ZONE,
-});
-const dayFormatter = new Intl.DateTimeFormat("de-DE", { day: "numeric", timeZone: TIME_ZONE });
-const monthFormatter = new Intl.DateTimeFormat("de-DE", { month: "short", timeZone: TIME_ZONE });
 const timeFormatter = new Intl.DateTimeFormat("de-DE", {
   hour: "2-digit",
   minute: "2-digit",
@@ -270,20 +265,6 @@ const shortDateFormatter = new Intl.DateTimeFormat("de-DE", {
   month: "short",
   timeZone: TIME_ZONE,
 });
-
-function DateBadge({ date }: { date: Date }) {
-  return (
-    <span className="flex h-11 w-11 flex-col items-center justify-center rounded-md bg-muted/60 leading-none">
-      <span className="text-[0.625rem] font-medium uppercase text-muted-foreground">
-        {weekdayFormatter.format(date).replace(".", "")}
-      </span>
-      <span className="text-base font-semibold tabular-nums text-foreground">
-        {dayFormatter.format(date).replace(".", "")}
-      </span>
-      <span className="sr-only">{monthFormatter.format(date)}</span>
-    </span>
-  );
-}
 
 function formatEventTime(event: UpcomingEvent) {
   const start = timeFormatter.format(event.start);
