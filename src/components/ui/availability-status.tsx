@@ -124,3 +124,65 @@ export function StatusLegend({
     </div>
   );
 }
+
+const STATUS_HINTS: Record<AvailabilityStatus, string> = {
+  free: "Ich kann",
+  preferred: "Gern an diesem Tag",
+  limited: "Nur zeitweise",
+  blocked: "Ich kann nicht",
+};
+
+/** Große, gut tippbare Statusauswahl (2×2 mobil, 4 nebeneinander ab `sm`). */
+export function StatusPicker({
+  value,
+  onValueChange,
+  disabled,
+  isDisabled,
+  className,
+}: {
+  value: AvailabilityStatus;
+  onValueChange: (value: AvailabilityStatus) => void;
+  disabled?: boolean;
+  isDisabled?: (value: AvailabilityStatus) => boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Verfügbarkeit"
+      className={cn("grid grid-cols-2 gap-2 sm:grid-cols-4", className)}
+    >
+      {AVAILABILITY_STATUS_ORDER.map((status) => {
+        const active = status === value;
+        const style = AVAILABILITY_STATUS[status];
+        return (
+          <button
+            key={status}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled || isDisabled?.(status)}
+            onClick={() => onValueChange(status)}
+            className={cn(
+              "flex min-h-14 flex-col items-start justify-center gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45",
+              active
+                ? cn(
+                    "border-current ring-1 ring-current",
+                    status === "free" ? "bg-muted text-foreground" : [style.surface, style.text],
+                  )
+                : "border-border bg-card text-foreground hover:border-foreground/30",
+            )}
+          >
+            <span className="flex items-center gap-1.5 text-sm font-semibold">
+              <StatusDot status={status} className={status === "free" ? "bg-success" : undefined} />
+              {style.label}
+            </span>
+            <span className={cn("text-xs", active ? "opacity-80" : "text-muted-foreground")}>
+              {STATUS_HINTS[status]}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
