@@ -336,6 +336,7 @@ model User {
   onboardingProfile      MemberOnboardingProfile?
   interests              UserInterest[]
   rolePreferences        MemberRolePreference[]
+  noticeDismissals       UserNoticeDismissal[]
   productionMemberships  ProductionMembership[]
   interestsAuthored      Interest[]             @relation("InterestCreatedBy")
   issuesCreated          Issue[]                @relation("IssueCreatedBy")
@@ -1428,6 +1429,17 @@ model MemberRolePreference {
   user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, code])
+}
+
+/// Vom Mitglied ausgeblendete Hinweise (z. B. `whatsapp:<showId>`), geräteübergreifend.
+model UserNoticeDismissal {
+  userId      String
+  key         String
+  dismissedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
 }
 
 model MemberOnboardingProfile {
