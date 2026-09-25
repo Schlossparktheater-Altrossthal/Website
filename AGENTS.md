@@ -283,6 +283,13 @@ Wenn ein Code-Review durchgeführt wird, gilt folgender Prozess:
 3. **Issues dem Project zuweisen** — Status initial auf Backlog
 4. **AGENTS.md aktualisieren** — neue Standards oder geänderte Prozesse sofort dokumentieren
 
+Zusätzlich zum manuellen Review meldet GitHub unter „Security and quality → Code quality" automatische CodeQL-Findings mit den Scores für Maintainability und Reliability. Diese Findings hängen nicht an der `code-scanning`-API — `gh api repos/<owner>/<repo>/code-scanning/alerts` antwortet dort mit 404 („no analysis found"). Richtig ist:
+
+- Liste der offenen Findings: `gh api repos/<owner>/<repo>/code-quality/findings?state=open`
+- Details je Finding (Pfad, Zeile, Meldungstext): `gh api repos/<owner>/<repo>/code-quality/findings/<nummer>`
+
+Rein mechanische Findings (tote Zuweisung, triviale Bedingung, nicht geschlossene Datei, fehlendes `await`) werden direkt behoben und als eigener `fix(...)`-Commit abgelegt; sie brauchen kein Issue und keinen Milestone. Issues entstehen nur für Findings mit Entscheidungsbedarf oder Verhaltensänderung.
+
 ### Regeln für Issues
 
 - Kein Emoji in Titeln oder Bodies
