@@ -1,5 +1,6 @@
 "use client";
 
+import { HeartIcon } from "@/components/ui/action-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,12 @@ const PREFERENCE_LEVELS: ReadonlyArray<{ value: PreferenceLevel; label: string }
 const LEVEL_WEIGHTS: Record<Exclude<PreferenceLevel, "off">, number> = {
   like: DEFAULT_ROLE_PREFERENCE_WEIGHT,
   love: 90,
+};
+
+const NEXT_LEVEL: Record<PreferenceLevel, PreferenceLevel> = {
+  off: "like",
+  like: "love",
+  love: "off",
 };
 
 function getPreferenceLevel(entry: RolePreferenceFormEntry): PreferenceLevel {
@@ -180,7 +187,7 @@ export function RolePreferencesSection({
       <form onSubmit={handlePreferenceSubmit} className="space-y-4">
         <SectionHeader
           title="Rollen- und Gewerkewünsche"
-          description="Wo möchtest du mitmachen? Mehrfachauswahl möglich."
+          description="Wo möchtest du mitmachen?"
           action={
             effectiveFocus ? (
               <Badge
@@ -199,68 +206,66 @@ export function RolePreferencesSection({
             Produktion.
           </p>
         ) : null}
-        {groups.map((group) => (
-          <section key={group.domain} className="space-y-1">
-            <h4 className="text-xs font-medium text-muted-foreground">{group.title}</h4>
-            <ul className="divide-y divide-border/50">
-              {group.entries.map((pref) => {
-                const level = getPreferenceLevel(pref);
-                return (
-                  <li key={pref.code} className="flex items-center gap-3 py-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium leading-snug text-foreground">
-                        {pref.title}
-                        {pref.isCustom ? (
-                          <span className="ml-1 text-xs font-normal text-muted-foreground">
-                            (individuell)
-                          </span>
-                        ) : null}
-                      </p>
-                      {pref.description ? (
-                        <p
-                          className="line-clamp-1 text-xs text-muted-foreground"
-                          title={pref.description}
-                        >
-                          {pref.description}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div
-                      role="radiogroup"
-                      aria-label={pref.title}
-                      className="inline-flex shrink-0 rounded-md bg-muted/60 p-0.5"
-                    >
-                      {PREFERENCE_LEVELS.map((option) => {
-                        const active = level === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={active}
-                            onClick={() =>
-                              setPreferenceLevel(group.domain, pref.code, option.value)
-                            }
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span>Antippen wechselt:</span>
+          <span className="inline-flex items-center gap-1">
+            <HeartIcon className="h-3.5 w-3.5 text-primary" aria-hidden /> Gern
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <HeartIcon className="h-3.5 w-3.5 fill-current text-primary" aria-hidden /> Sehr gern
+          </span>
+          <span>→ wieder aus</span>
+        </p>
+        {groups.map((group) => {
+          const chosen = group.entries.filter((pref) => getPreferenceLevel(pref) !== "off").length;
+          return (
+            <section key={group.domain} className="space-y-2">
+              <h4 className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                {group.title}
+                {chosen ? <span className="text-primary">{chosen} gewählt</span> : null}
+              </h4>
+              <ul className="flex flex-wrap gap-2">
+                {group.entries.map((pref) => {
+                  const level = getPreferenceLevel(pref);
+                  const next = NEXT_LEVEL[level];
+                  const levelLabel = PREFERENCE_LEVELS.find((o) => o.value === level)?.label;
+                  return (
+                    <li key={pref.code}>
+                      <button
+                        type="button"
+                        title={pref.description ?? undefined}
+                        aria-label={`${pref.title}: ${levelLabel}`}
+                        aria-pressed={level !== "off"}
+                        onClick={() => setPreferenceLevel(group.domain, pref.code, next)}
+                        className={cn(
+                          "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition active:scale-95",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          level === "off" &&
+                            "border-border/70 bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                          level === "like" && "border-primary/50 bg-primary/12 text-foreground",
+                          level === "love" &&
+                            "border-primary bg-primary text-primary-foreground shadow-sm",
+                        )}
+                      >
+                        {level !== "off" ? (
+                          <HeartIcon
                             className={cn(
-                              "min-h-8 rounded px-2 text-xs font-medium transition sm:px-2.5",
-                              active
-                                ? option.value === "off"
-                                  ? "bg-background text-foreground shadow-sm"
-                                  : "bg-primary text-primary-foreground shadow-sm"
-                                : "text-muted-foreground hover:text-foreground",
+                              "h-4 w-4",
+                              level === "love" ? "fill-current" : "text-primary",
                             )}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
+                            aria-hidden
+                          />
+                        ) : null}
+                        {pref.title}
+                        {pref.isCustom ? <span className="text-xs opacity-70">(eigen)</span> : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })}
 
         {preferenceError ? <p className="text-sm text-destructive">{preferenceError}</p> : null}
         <FormSaveBar
