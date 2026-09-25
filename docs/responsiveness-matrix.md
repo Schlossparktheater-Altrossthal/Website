@@ -36,7 +36,7 @@ Projekten `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1
 | `/mitglieder/rollenverwaltung`                           | –                                                         | ➖    | ➖     | ➖      | –                                 | Redirect                                                                                                                                                             |
 | `/mitglieder/rechte`                                     | Karten↔Tabelle (`md:hidden`/`hidden md:block`)            | ✅    | ✅     | ✅      | automatisch                       | Umschaltung erst bei `md` (768) – Tablet-Grenzfall (Phase 2)                                                                                                         |
 | `/mitglieder/website`                                    | `sm:grid-cols-2`, `lg:grid-cols-3`                        | ✅    | ✅     | ✅      | automatisch                       | –                                                                                                                                                                    |
-| `/mitglieder/pages/seitensteuerung`                      | Flex-Zeilen/Switches                                      | ❓    | ❓     | ❓      | automatisch                       | `seitensteuerung-manager.tsx` ohne Breakpoint-Klassen – Verhalten klären (Phase 2)                                                                                   |
+| `/mitglieder/pages/seitensteuerung`                      | Flex-Zeilen/Switches                                      | ✅    | ✅     | ✅      | visuell (Screenshots)             | –                                                                                                                                                                    |
 | `/mitglieder/server-analytics`                           | Karten↔Tabelle (`md:hidden`/`hidden md:block`)            | ✅    | ✅     | ✅      | automatisch                       | Umschaltung erst bei `md` (768) – Tablet-Grenzfall (Phase 2)                                                                                                         |
 | `/mitglieder/server-einstellungen`                       | `md:grid-cols-2`                                          | ✅    | ✅     | ✅      | automatisch                       | –                                                                                                                                                                    |
 | `/mitglieder/onboarding`                                 | `lg:flex-row`                                             | ✅    | ✅     | ✅      | automatisch                       | –                                                                                                                                                                    |
@@ -52,9 +52,8 @@ Projekten `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1
    Sticky-Spalte `w-[280px]` plus sieben Tagesspalten à `min-w-[110px]` (≈1050px). Auf Tablet
    scrollt die Seite dadurch horizontal. Der Overflow-Test überspringt `/mitglieder/sperrliste`
    deshalb auf den Tablet-Projekten (`e2e/responsive-overflow.spec.ts`).
-2. **Seitensteuerung + Ensemble:** `pages/seitensteuerung/seitensteuerung-manager.tsx` und
-   `produktionen/[showId]/ensemble/ensemble-forms-client.tsx` haben keine Breakpoint-Klassen –
-   Verhalten auf Handy/Tablet prüfen und Muster ergänzen.
+2. **Ensemble:** `produktionen/[showId]/ensemble/ensemble-forms-client.tsx` hat keine
+   Breakpoint-Klassen – Verhalten auf Handy/Tablet prüfen und Muster ergänzen.
 3. **Rechte / Server-Analytics:** schalten erst bei `md` (768px) auf Tabellen um; Tablet liegt
    genau auf der Grenze – gezielt bei 768px prüfen.
 4. **Alle 32 Seiten systematisch:** dynamische Routen (IDs) visuell per Screenshot nachziehen und
