@@ -138,9 +138,10 @@ export function ExportButton({
       isLoading={busy}
       loadingText="PDF …"
       onClick={handleExport}
+      aria-label="PDF exportieren"
     >
       <FileDownIcon className="h-4 w-4" aria-hidden />
-      PDF
+      <span className="hidden sm:inline">PDF</span>
     </AsyncButton>
   );
 }

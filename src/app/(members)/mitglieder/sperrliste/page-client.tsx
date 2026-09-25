@@ -1,17 +1,18 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { CalendarCheckIcon, CalendarPlusIcon, UsersRoundIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import type { FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import { toDayKey } from "@/lib/sperrliste/day-tiers";
 import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 import type { HolidayRange } from "@/types/holidays";
 
-import { EventDialog, type EventDialogState } from "./event-dialog";
+import { EventDialog, type EventDialogState } from "@/components/calendar/event-dialog";
 import { ExportButton } from "./export-button";
 import { MyCalendar } from "./my-calendar";
 import { BlocklistSettingsDialog } from "./settings-dialog";
@@ -39,7 +40,17 @@ export type BlocklistPageData = {
 };
 
 export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
-  const [tab, setTab] = useState("mine");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("ansicht") === "team" ? "team" : "mine";
+  const setTab = (next: "mine" | "team") => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "team") params.set("ansicht", "team");
+    else params.delete("ansicht");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -81,9 +92,14 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
   const actions = (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {data.canPlan && !data.readOnly ? (
-        <Button type="button" size="sm" onClick={() => openCreate(toDayKey(new Date()))}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => openCreate(toDayKey(new Date()))}
+          aria-label="Termin anlegen"
+        >
           <CalendarPlusIcon className="h-4 w-4" aria-hidden />
-          Termin
+          <span className="hidden sm:inline">Termin</span>
         </Button>
       ) : null}
       {data.canExport && !data.readOnly && tab === "team" ? (
@@ -123,50 +139,64 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
           Offline-Demo: Änderungen werden nicht gespeichert.
         </div>
       ) : null}
-      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList>
-            <TabsTrigger value="mine" className="gap-2">
-              <CalendarCheckIcon className="h-4 w-4" aria-hidden />
-              Mein Kalender
-            </TabsTrigger>
-            <TabsTrigger value="team" className="gap-2">
-              <UsersRoundIcon className="h-4 w-4" aria-hidden />
-              Team
-            </TabsTrigger>
-          </TabsList>
-          {actions}
-        </div>
+      <div className="flex items-center gap-2">
+        <SegmentedControl
+          aria-label="Ansicht"
+          size="md"
+          value={tab}
+          onValueChange={setTab}
+          className="flex-1 sm:flex-none [&>button]:h-11 [&>button]:flex-1 [&>button]:px-4 sm:[&>button]:flex-none"
+          options={[
+            {
+              value: "mine",
+              label: (
+                <>
+                  <CalendarCheckIcon className="h-4 w-4" aria-hidden />
+                  Mein Kalender
+                </>
+              ),
+            },
+            {
+              value: "team",
+              label: (
+                <>
+                  <UsersRoundIcon className="h-4 w-4" aria-hidden />
+                  Team
+                </>
+              ),
+            },
+          ]}
+        />
+        <div className="ml-auto">{actions}</div>
+      </div>
 
-        <TabsContent value="mine">
-          <MyCalendar
-            month={month}
-            onMonthChange={setMonth}
-            model={model}
-            entries={entries}
-            pendingKey={pendingKey}
-            readOnly={data.readOnly}
-            freezeDays={settings.freezeDays}
-            canPlan={data.canPlan}
-            onSetDay={setDay}
-            onAddRange={addRange}
-            onCreateEvent={openCreate}
-            onEditEvent={openEdit}
-          />
-        </TabsContent>
-        <TabsContent value="team">
-          <TeamView
-            month={month}
-            onMonthChange={setMonth}
-            model={model}
-            members={data.members}
-            canPlan={data.canPlan}
-            readOnly={data.readOnly}
-            onCreateEvent={openCreate}
-            onEditEvent={openEdit}
-          />
-        </TabsContent>
-      </Tabs>
+      {tab === "mine" ? (
+        <MyCalendar
+          month={month}
+          onMonthChange={setMonth}
+          model={model}
+          entries={entries}
+          pendingKey={pendingKey}
+          readOnly={data.readOnly}
+          freezeDays={settings.freezeDays}
+          canPlan={data.canPlan}
+          onSetDay={setDay}
+          onAddRange={addRange}
+          onCreateEvent={openCreate}
+          onEditEvent={openEdit}
+        />
+      ) : (
+        <TeamView
+          month={month}
+          onMonthChange={setMonth}
+          model={model}
+          members={data.members}
+          canPlan={data.canPlan}
+          readOnly={data.readOnly}
+          onCreateEvent={openCreate}
+          onEditEvent={openEdit}
+        />
+      )}
 
       <EventDialog
         state={eventDialog}

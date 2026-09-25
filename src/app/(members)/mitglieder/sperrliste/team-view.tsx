@@ -72,6 +72,7 @@ export function TeamView({
 }: TeamViewProps) {
   const [groupFilter, setGroupFilter] = useState<GroupFilter>("all");
   const [allDays, setAllDays] = useState(false);
+  const [mode, setMode] = useState<"days" | "people">("days");
   const [query, setQuery] = useState("");
   const [openDayKey, setOpenDayKey] = useState<string | null>(null);
 
@@ -104,7 +105,7 @@ export function TeamView({
   const openDay = openDayKey ? model.dayMap.get(openDayKey) : undefined;
 
   return (
-    <Card variant="plain" size="flush" className="space-y-3 p-3 sm:p-4">
+    <Card variant="plain" size="flush" className="space-y-3 border-border p-3 sm:p-4">
       <MonthSwitcher
         month={month}
         isCurrentMonth={isCurrentMonth}
@@ -113,6 +114,15 @@ export function TeamView({
         onToday={() => onMonthChange(new Date(now.getFullYear(), now.getMonth(), 1))}
       />
       <div className="flex flex-wrap items-center gap-2">
+        <SegmentedControl
+          aria-label="Darstellung"
+          value={mode}
+          onValueChange={setMode}
+          options={[
+            { value: "days", label: "Tage" },
+            { value: "people", label: "Personen" },
+          ]}
+        />
         <SegmentedControl
           aria-label="Personen filtern"
           value={groupFilter}
@@ -127,7 +137,7 @@ export function TeamView({
           Alle Tage
           <Switch checked={allDays} onCheckedChange={setAllDays} aria-label="Alle Tage anzeigen" />
         </label>
-        <div className="relative hidden w-48 lg:block">
+        <div className="relative w-full sm:w-48">
           <SearchIcon
             className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -137,7 +147,7 @@ export function TeamView({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Name suchen"
             aria-label="Name suchen"
-            className="h-8 pl-8 text-sm"
+            className="h-9 pl-8 text-sm"
           />
         </div>
       </div>
@@ -148,7 +158,7 @@ export function TeamView({
         </p>
       ) : (
         <>
-          <div className="lg:hidden">
+          {mode === "days" ? (
             <TeamDayList
               days={days}
               model={model}
@@ -156,9 +166,9 @@ export function TeamView({
               entriesFor={entriesFor}
               memberById={memberById}
               onOpenDay={setOpenDayKey}
+              canPlan={canPlan}
             />
-          </div>
-          <div className="hidden lg:block">
+          ) : (
             <TeamMatrix
               days={days}
               model={model}
@@ -167,7 +177,7 @@ export function TeamView({
               canPlan={canPlan}
               onOpenDay={setOpenDayKey}
             />
-          </div>
+          )}
         </>
       )}
 
@@ -205,14 +215,23 @@ type DayListProps = {
   entriesFor: (key: string) => TeamEntry[];
   memberById: Map<string, TeamMember>;
   onOpenDay: (key: string) => void;
+  canPlan: boolean;
 };
 
-/** Mobil: eine Zeile pro relevantem Tag, nur die Ausnahmen werden genannt. */
-function TeamDayList({ days, model, total, entriesFor, memberById, onOpenDay }: DayListProps) {
+/** Eine Zeile pro relevantem Tag, nur die Ausnahmen werden genannt. */
+function TeamDayList({
+  days,
+  model,
+  total,
+  entriesFor,
+  memberById,
+  onOpenDay,
+  canPlan,
+}: DayListProps) {
   const upcoming = days.filter((day) => !day.isPast);
   const list = upcoming.length ? upcoming : days;
   return (
-    <ul className="-mx-1 divide-y divide-border/50">
+    <ul className="grid gap-2 lg:grid-cols-2">
       {list.map((day) => {
         const entries = entriesFor(day.key);
         const absent = entries.filter((entry) => entry.status !== "preferred");
@@ -220,16 +239,19 @@ function TeamDayList({ days, model, total, entriesFor, memberById, onOpenDay }: 
         const limited = absent.length - blocked;
         const events = model.entriesByDay.get(day.key) ?? [];
         const headline =
-          [
-            ...events.map((event) => event.title),
-            ...day.holidays.map((holiday) => holiday.title),
-          ].join(" · ") || (day.isFinalWeek ? "Endprobenwoche" : DAY_TIER_LABELS[day.tier]);
+          events.map((event) => event.title).join(" · ") ||
+          (day.isFinalWeek ? "Endprobenwoche" : DAY_TIER_LABELS[day.tier]);
+        const holidayLabel = day.holidays.map((holiday) => holiday.title).join(", ");
         return (
           <li key={day.key}>
             <button
               type="button"
               onClick={() => onOpenDay(day.key)}
-              className="flex w-full items-start gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn(
+                "flex h-full w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:border-foreground/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                day.tier === "core" ? "border-border bg-muted/50" : "border-border/60 bg-card",
+                day.isFinalWeek && "border-l-4 border-l-primary",
+              )}
             >
               <DateBadge date={day.date} tone={day.isToday ? "primary" : "muted"} />
               <span className="min-w-0 flex-1 space-y-1.5">
@@ -240,6 +262,11 @@ function TeamDayList({ days, model, total, entriesFor, memberById, onOpenDay }: 
                   )}
                 >
                   {headline}
+                  {holidayLabel ? (
+                    <span className="ml-2 rounded-full bg-info/15 px-1.5 py-0.5 text-[0.625rem] font-medium text-info">
+                      {holidayLabel}
+                    </span>
+                  ) : null}
                 </span>
                 <AvailabilityBar total={total} blocked={blocked} limited={limited} />
                 {absent.length ? (
@@ -250,7 +277,15 @@ function TeamDayList({ days, model, total, entriesFor, memberById, onOpenDay }: 
                         className="inline-flex items-center gap-1 text-xs text-foreground/80"
                       >
                         <StatusDot status={entry.status} />
-                        {shortName(memberById.get(entry.userId)?.name ?? "Unbekannt")}
+                        <span className="lg:hidden">
+                          {shortName(memberById.get(entry.userId)?.name ?? "Unbekannt")}
+                        </span>
+                        <span className="hidden lg:inline">
+                          {memberById.get(entry.userId)?.name ?? "Unbekannt"}
+                          {canPlan && entry.reason ? (
+                            <span className="text-muted-foreground"> ({entry.reason})</span>
+                          ) : null}
+                        </span>
                       </span>
                     ))}
                   </span>
@@ -297,13 +332,13 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
   }
 
   return (
-    <div className="max-h-[calc(100vh-10rem)] overflow-auto rounded-md border border-border/60">
+    <div className="max-h-[calc(100vh-10rem)] overflow-auto rounded-lg border border-border">
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr>
             <th
               scope="col"
-              className="sticky left-0 top-0 z-30 min-w-44 border-b border-border/60 bg-card px-3 text-left align-bottom text-xs font-medium text-muted-foreground"
+              className="sticky left-0 top-0 z-30 min-w-28 sm:min-w-44 border-b border-border/60 bg-card px-3 text-left align-bottom text-xs font-medium text-muted-foreground"
             >
               <span className="block pb-2">{members.length} Personen</span>
             </th>
@@ -392,16 +427,16 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                 <tr key={member.id} className="group/row">
                   <th
                     scope="row"
-                    className="sticky left-0 z-10 border-b border-border/40 bg-card px-3 py-1.5 text-left font-normal group-hover/row:bg-muted"
+                    className="sticky left-0 z-10 border-b border-border/70 bg-card px-3 py-1.5 text-left font-normal group-hover/row:bg-muted"
                   >
                     <span className="flex items-center gap-2">
                       <span
                         aria-hidden
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[0.625rem] font-semibold text-muted-foreground"
+                        className="hidden h-6 w-6 sm:flex shrink-0 items-center justify-center rounded-full bg-muted text-[0.625rem] font-semibold text-muted-foreground"
                       >
                         {member.initials}
                       </span>
-                      <span className="truncate text-sm">{member.name}</span>
+                      <span className="max-w-24 truncate text-sm sm:max-w-none">{member.name}</span>
                     </span>
                   </th>
                   {days.map((day) => {
@@ -410,7 +445,7 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                       <td
                         key={day.key}
                         className={cn(
-                          "border-b border-border/40 p-0.5 text-center group-hover/row:bg-muted/60",
+                          "border-b border-border/70 p-0.5 text-center group-hover/row:bg-muted/60",
                           day.tier === "core" && "bg-muted/40",
                         )}
                       >

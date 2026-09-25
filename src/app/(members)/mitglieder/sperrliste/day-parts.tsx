@@ -165,3 +165,53 @@ export function CalendarLegend({ className }: { className?: string }) {
     </div>
   );
 }
+
+/** Inhalt einer Kalenderzelle am Desktop: Termine mit Uhrzeit, Ferien/Feiertag. */
+export function DayCellDetails({
+  day,
+  entries,
+}: {
+  day: DayInfo | undefined;
+  entries: CalendarEntry[] | undefined;
+}) {
+  const list = entries ?? [];
+  const holiday = day?.holidays.find((entry) => entry.category === "publicHoliday");
+  if (!list.length && !holiday) return null;
+  return (
+    <>
+      {list.slice(0, 2).map((entry) => (
+        <span
+          key={`${entry.source}-${entry.id}`}
+          className={cn(
+            "flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-[0.6875rem] leading-tight",
+            entry.source === "rehearsal"
+              ? "bg-info/15 text-foreground"
+              : "bg-primary/15 text-foreground",
+          )}
+        >
+          <span
+            aria-hidden
+            className={cn(
+              "h-1.5 w-1.5 shrink-0 rounded-full",
+              entry.source === "rehearsal" ? "bg-info" : "bg-primary",
+            )}
+          />
+          {!entry.allDay ? (
+            <span className="hidden shrink-0 tabular-nums text-muted-foreground 2xl:inline">
+              {formatIsoTimeInTimeZone(entry.start)}
+            </span>
+          ) : null}
+          <span className="truncate font-medium">{entry.title}</span>
+        </span>
+      ))}
+      {list.length > 2 ? (
+        <span className="px-1 text-[0.6875rem] text-muted-foreground">
+          +{list.length - 2} weitere
+        </span>
+      ) : null}
+      {holiday ? (
+        <span className="truncate px-1 text-[0.6875rem] text-warning">{holiday.title}</span>
+      ) : null}
+    </>
+  );
+}
