@@ -4,12 +4,19 @@ import {
   CharacterCastingType,
   BreakdownStatus,
 } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { createRequire } from "node:module";
 import bcrypt from "bcryptjs";
 
 const require = createRequire(import.meta.url);
 const chronikAltrossthal = require("../src/data/chronik-altrossthal.json");
-const prisma = new PrismaClient();
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL environment variable is not set.");
+}
+// Prisma 7 verlangt einen Driver-Adapter (wie in src/lib/prisma.ts).
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+});
 
 function splitFullName(value) {
   if (!value) return { firstName: null, lastName: null };
@@ -320,17 +327,6 @@ async function main() {
         where: { roleId_permissionId: { roleId: boardRoleForProfile.id, permissionId } },
         update: {},
         create: { roleId: boardRoleForProfile.id, permissionId },
-      });
-    }
-  }
-  if (boardRole) {
-    for (const key of boardPermissionKeys) {
-      const permissionId = permissionMap.get(key);
-      if (!permissionId) continue;
-      await prisma.appRolePermission.upsert({
-        where: { roleId_permissionId: { roleId: boardRole.id, permissionId } },
-        update: {},
-        create: { roleId: boardRole.id, permissionId },
       });
     }
   }
