@@ -240,6 +240,7 @@ Status-Spalten: Backlog → Ready → In Progress → In Review → Done
 - Priorität: `priority: critical`, `priority: high`, `priority: low`
 - Typ: `type: security`, `type: architecture`, `type: bug`, `type: dx`, `type: testing`, `type: ops`, `type: docs`
 - Aufwand: `effort: S`, `effort: M`, `effort: L`
+- Feature-Wünsche außerhalb des Review-Workflows erhalten zusätzlich `Feature`, weil die Typ-Liste nur Review-Kategorien abdeckt. `priority:*`, `type:*` und `effort:*` bleiben trotzdem Pflicht.
 
 ### Issue-Format
 
@@ -267,6 +268,7 @@ Regeln:
 - Technisch präzise, so kurz wie möglich
 - Labels immer: priority:* + type:* + effort:*
 - Jeder Issue hat einen Milestone (Release-Schema: v0.1, v0.2, v1.0)
+- Feature-Wünsche sind die Ausnahme: Sie liegen ohne Milestone im Backlog, bis ein Release sie aufnimmt. Der Abschnitt **Was ist aufgefallen** beschreibt dann die Lücke im Ist-Stand statt eines Fehlers.
 
 ### Review-Workflow
 
@@ -284,7 +286,8 @@ Wenn ein Code-Review durchgeführt wird, gilt folgender Prozess:
 
 - Kein Emoji in Titeln oder Bodies
 - Jedes Issue = genau ein abgeschlossener Fix
-- Kein Issue ohne Label und Milestone
+- Kein Issue ohne Label; Review-Findings zusätzlich ohne Ausnahme mit Milestone
+- Feature-Wünsche ohne Milestone nur mit `Feature`-Label, damit sie im Backlog auffindbar bleiben
 - `window.confirm` / `window.prompt` immer als `priority: critical` + `type: bug`
 - Sicherheitsprobleme immer ins früheste Release
 
