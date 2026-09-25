@@ -61,7 +61,7 @@ function extractDateRange(raw: unknown): DateRange {
     return { start: sorted[0], end: sorted[sorted.length - 1] };
   }
 
-  if (typeof raw === "object" && raw) {
+  if (typeof raw === "object") {
     const candidate = raw as Record<string, unknown>;
     const startRaw = candidate.start ?? candidate.begin ?? candidate.from;
     const endRaw = candidate.end ?? candidate.until ?? candidate.to;
