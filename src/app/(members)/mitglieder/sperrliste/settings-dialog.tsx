@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { Settings2Icon } from "@/components/ui/action-icons";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,13 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 
@@ -31,7 +25,7 @@ interface BlocklistSettingsDialogProps {
 }
 
 const TITLE = "Sperrlisten-Einstellungen";
-const DESCRIPTION = "Probentage, Sperrfrist sowie Ferien und Feiertage.";
+const DESCRIPTION = "Kerntage, Sperrfrist sowie Ferien und Feiertage.";
 
 export function BlocklistSettingsDialog(props: BlocklistSettingsDialogProps) {
   const [open, setOpen] = useState(false);
@@ -50,7 +44,7 @@ export function BlocklistSettingsDialog(props: BlocklistSettingsDialogProps) {
       <>
         {trigger}
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-xl">
+          <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>{TITLE}</DialogTitle>
               <DialogDescription>{DESCRIPTION}</DialogDescription>
@@ -65,18 +59,15 @@ export function BlocklistSettingsDialog(props: BlocklistSettingsDialogProps) {
   return (
     <>
       {trigger}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          side="bottom"
-          className="flex max-h-[90vh] flex-col rounded-t-2xl px-4 pb-6 pt-4"
-        >
-          <SheetHeader className="text-left">
-            <SheetTitle>{TITLE}</SheetTitle>
-            <SheetDescription>{DESCRIPTION}</SheetDescription>
-          </SheetHeader>
-          {manager}
-        </SheetContent>
-      </Sheet>
+      <BottomSheet
+        open={open}
+        onOpenChange={setOpen}
+        title={TITLE}
+        description={DESCRIPTION}
+        className="h-[90dvh]"
+      >
+        {manager}
+      </BottomSheet>
     </>
   );
 }

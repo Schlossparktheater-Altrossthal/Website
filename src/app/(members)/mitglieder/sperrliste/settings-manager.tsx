@@ -76,7 +76,7 @@ type ManagerProps = {
   onSaved?: () => void;
 };
 
-/** Einstellungen der Sperrliste: Probentage, Sperrfrist, Ferien- und Feiertagsquellen. */
+/** Einstellungen der Sperrliste: Kerntage, Sperrfrist, Ferien- und Feiertagsquellen. */
 export function BlocklistSettingsManager({
   settings,
   defaultHolidaySourceUrl,
@@ -240,14 +240,14 @@ export function BlocklistSettingsManager({
   const freezeOptions = [...new Set([...FREEZE_PRESETS, freezeDays])].sort((a, b) => a - b);
 
   return (
-    <div className="flex max-h-[inherit] min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-1 pb-4">
         <section className="space-y-3">
           <div>
-            <h3 className="text-sm font-semibold">Probentage</h3>
+            <h3 className="text-sm font-semibold">Kerntage</h3>
             <p className="text-xs text-muted-foreground">
-              Tippe auf einen Tag: Probentag → Ausnahmetag → aus. Probentage sind in Kalender und
-              Team-Ansicht hervorgehoben, Ausnahmetage werden mit angezeigt.
+              An Kerntagen wird üblicherweise geprobt; sie sind hervorgehoben. Ausnahmetage werden
+              mit angezeigt. Tippe auf einen Tag: Kerntag → Ausnahmetag → aus.
             </p>
           </div>
           <div className="grid grid-cols-7 gap-1.5">
@@ -261,11 +261,7 @@ export function BlocklistSettingsManager({
                     setRoles((current) => ({ ...current, [weekday.value]: NEXT_ROLE[role] }))
                   }
                   aria-label={`${weekday.label}: ${
-                    role === "core"
-                      ? "Probentag"
-                      : role === "exception"
-                        ? "Ausnahmetag"
-                        : "kein Probentag"
+                    role === "core" ? "Kerntag" : role === "exception" ? "Ausnahmetag" : "aus"
                   }`}
                   className={cn(
                     "flex h-14 flex-col items-center justify-center rounded-lg border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -274,7 +270,7 @@ export function BlocklistSettingsManager({
                 >
                   {weekday.short}
                   <span className="text-[0.625rem] font-normal opacity-80">
-                    {role === "core" ? "Probe" : role === "exception" ? "Ausn." : "–"}
+                    {role === "core" ? "Kern" : role === "exception" ? "Ausn." : "–"}
                   </span>
                 </button>
               );
