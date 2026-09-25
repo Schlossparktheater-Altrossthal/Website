@@ -1,7 +1,8 @@
 # Erzeugt die Feld-/Enum-Referenz fuer docs/datenmodell.md aus prisma/schema.prisma.
 # Aufruf aus dem Repo-Root: python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 import re,sys
-src=open('prisma/schema.prisma').read().splitlines()
+with open('prisma/schema.prisma') as f:
+    src=f.read().splitlines()
 blocks=[];cur=None;doc=[]
 for l in src:
     s=l.strip()
