@@ -88,7 +88,12 @@ export function PageHeader({
       <MembersTopbar>
         {hasBreadcrumbs ? (
           <MembersTopbarBreadcrumbs>
-            <MembersBreadcrumbs items={breadcrumbItems} />
+            {/* Die aktuelle Seite steht als Titel darunter – der Pfad zeigt nur übergeordnete Bereiche. */}
+            <MembersBreadcrumbs
+              items={breadcrumbItems.slice(0, -1)}
+              lastIsCurrent={false}
+              data-mobile-hidden={breadcrumbItems.length <= 1 ? "" : undefined}
+            />
           </MembersTopbarBreadcrumbs>
         ) : null}
         <MembersTopbarTitle>{title}</MembersTopbarTitle>

@@ -12,6 +12,10 @@ interface MembersBreadcrumbsProps {
   rootLabel?: MembersBreadcrumbItem["label"];
   rootHref?: string;
   className?: string;
+  /** false, wenn die aktuelle Seite nicht im Pfad steht – dann bleiben alle Einträge Links. */
+  lastIsCurrent?: boolean;
+  /** Blendet den Pfad mobil samt Container aus (nur Wurzel übrig). */
+  "data-mobile-hidden"?: string;
 }
 
 function renderBreadcrumbContent(item: MembersBreadcrumbItem) {
@@ -35,6 +39,8 @@ export function MembersBreadcrumbs({
   rootLabel = "Mitgliederbereich",
   rootHref = "/mitglieder",
   className,
+  lastIsCurrent = true,
+  "data-mobile-hidden": mobileHidden,
 }: MembersBreadcrumbsProps) {
   const normalizedItems = includeRoot
     ? ([
@@ -48,10 +54,13 @@ export function MembersBreadcrumbs({
   }
 
   return (
-    <ol className={cn("flex min-w-0 items-center gap-2", className)}>
+    <ol
+      className={cn("flex min-w-0 items-center gap-2", className)}
+      data-mobile-hidden={mobileHidden}
+    >
       {normalizedItems.map((item, index) => {
         const key = item.id ?? item.href ?? `crumb-${index}`;
-        const isCurrent = item.isCurrent ?? index === normalizedItems.length - 1;
+        const isCurrent = item.isCurrent ?? (lastIsCurrent && index === normalizedItems.length - 1);
         const content = renderBreadcrumbContent(item);
 
         return (
