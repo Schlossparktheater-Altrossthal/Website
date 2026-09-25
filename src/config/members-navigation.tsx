@@ -132,6 +132,17 @@ const BlacklistIcon = createMembersNavIcon(
   </>,
 );
 
+const EventPlanningIcon = createMembersNavIcon(
+  <>
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4" />
+    <path d="M8 2v4" />
+    <path d="M3 10h18" />
+    <path d="M12 14v4" />
+    <path d="M10 16h4" />
+  </>,
+);
+
 const RehearsalPlanningIcon = createMembersNavIcon(
   <>
     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -286,6 +297,12 @@ export const membersNavigation = [
         label: "Probenplanung",
         permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
         icon: RehearsalPlanningIcon,
+      },
+      {
+        href: "/mitglieder/terminplanung",
+        label: "Terminplanung",
+        permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
+        icon: EventPlanningIcon,
       },
       {
         href: "/mitglieder/produktionen/besetzung",
