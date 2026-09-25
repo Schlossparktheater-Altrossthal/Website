@@ -23,7 +23,13 @@ const DEFAULT_ROUTES = [
   "/mitglieder/sperrliste",
 ];
 
+// `pnpm e2e:screenshots -- --role x` reicht das `--` durch; parseArgs würde danach alles
+// als Route lesen.
+const args = process.argv.slice(2);
+if (args[0] === "--") args.shift();
+
 const { values, positionals } = parseArgs({
+  args,
   allowPositionals: true,
   options: {
     role: { type: "string", default: "admin" },
@@ -51,8 +57,10 @@ try {
     const context = await browser.newContext({
       baseURL,
       colorScheme,
+      locale: "de-DE",
+      timezoneId: "Europe/Berlin",
       viewport: values.mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 },
-      deviceScaleFactor: values.mobile ? 3 : 1,
+      deviceScaleFactor: values.mobile ? 2 : 1,
     });
     const login = await context.request.get(
       `/api/dev/screenshot-session?role=${encodeURIComponent(values.role)}&mode=json`,
