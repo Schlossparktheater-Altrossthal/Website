@@ -1,4 +1,3 @@
-import { type ReactNode } from "react";
 import { z } from "zod";
 import { type DietaryStrictnessOption, type DietaryStyleOption } from "@/data/dietary-preferences";
 import {
@@ -7,11 +6,7 @@ import {
   listRolePreferenceDefinitions,
 } from "@/lib/onboarding/role-preferences";
 import { normalizeRolePreferenceWeight } from "@/lib/onboarding/role-preference-utils";
-import {
-  isPaymentDetailsComplete,
-  type ProfileChecklistTarget,
-  type ProfileCompletionSummary,
-} from "@/lib/profile-completion";
+import { isPaymentDetailsComplete, type ProfileCompletionSummary } from "@/lib/profile-completion";
 import { getUserDisplayName } from "@/lib/names";
 import type { OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
 import { AllergyLevel, type OnboardingFocus, type PayoutMethod, type Role } from "@prisma/client";
@@ -19,15 +14,6 @@ import { type UpdateProfileBasicsResult } from "./actions/basics";
 
 export const CURRENT_YEAR = new Date().getFullYear();
 export const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
-export const CHECKLIST_TARGETS: ProfileChecklistTarget[] = [
-  "stammdaten",
-  "zahlungen",
-  "ernaehrung",
-  "interessen",
-  "freigaben",
-  "onboarding",
-];
-
 export const PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS = ["Schule", "Ausbildung", "Beruf"] as const;
 
 export const ROLE_PREFERENCE_DEFINITIONS = {
@@ -40,11 +26,6 @@ export const ONBOARDING_FOCUS_LABELS: Record<OnboardingFocus, string> = {
   acting: "Schauspiel",
   tech: "Gewerke",
   both: "Schauspiel & Gewerke",
-};
-export const ONBOARDING_FOCUS_DESCRIPTIONS: Record<OnboardingFocus, string> = {
-  acting: "Du konzentrierst dich aktuell auf Rollen vor der Bühne.",
-  tech: "Du unterstützt hinter den Kulissen in Gewerken und Organisation.",
-  both: "Du bleibst flexibel zwischen Schauspiel und Gewerken.",
 };
 export const ONBOARDING_STATUS_LABELS: Record<OnboardingSummary["status"], string> = {
   draft: "In Vorbereitung",
@@ -311,25 +292,6 @@ export type OnboardingFormState = {
   backgroundClass: string;
   notes: string;
   memberSinceYear: string;
-};
-
-export type ChecklistState = {
-  hasBasicData: boolean;
-  hasBirthdate: boolean;
-  hasPaymentDetails: boolean;
-  hasDietaryPreference: boolean;
-  photoConsentGiven?: boolean;
-  hasWhatsappVisit?: boolean;
-};
-
-export type HighlightTileConfig = {
-  id: string;
-  icon: ReactNode;
-  title: string;
-  description: string;
-  hint?: string | null;
-  tone?: "default" | "info" | "success" | "warning";
-  action?: ReactNode;
 };
 
 export const payoutDetailsSchemaBase = z.object({

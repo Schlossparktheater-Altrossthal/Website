@@ -1,15 +1,14 @@
 "use client";
 
-import { Loader2Icon } from "@/components/ui/action-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { FOCUS_BADGE_STYLES } from "@/config/category-colors";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { FormSaveBar } from "@/components/ui/form-save-bar";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   deriveOnboardingFocusFromPreferences,
-  getRolePreferenceWeightLabel,
   normalizeRolePreferenceWeight,
 } from "@/lib/onboarding/role-preference-utils";
 import { cn } from "@/lib/utils";
@@ -23,6 +22,24 @@ import {
   buildPreferenceFormState,
   ProfileClientProps,
 } from "../profile-shared";
+
+type PreferenceLevel = "off" | "like" | "love";
+
+const PREFERENCE_LEVELS: ReadonlyArray<{ value: PreferenceLevel; label: string }> = [
+  { value: "off", label: "Nein" },
+  { value: "like", label: "Gern" },
+  { value: "love", label: "Sehr gern" },
+];
+
+const LEVEL_WEIGHTS: Record<Exclude<PreferenceLevel, "off">, number> = {
+  like: DEFAULT_ROLE_PREFERENCE_WEIGHT,
+  love: 90,
+};
+
+function getPreferenceLevel(entry: RolePreferenceFormEntry): PreferenceLevel {
+  if (!entry.enabled || entry.weight <= 0) return "off";
+  return entry.weight >= 75 ? "love" : "like";
+}
 
 type RolePreferencesSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
@@ -66,45 +83,33 @@ export function RolePreferencesSection({
     setPreferenceForm(initialPreferences);
   }, [initialPreferences]);
 
-  const toggleRolePreference = useCallback((domain: "acting" | "crew", code: string) => {
-    setPreferenceForm((prev) => {
-      const entries = domain === "acting" ? prev.acting : prev.crew;
-      const nextEntries = entries.map((entry) => {
-        if (entry.code !== code) {
-          return entry;
-        }
-        const nextEnabled = !entry.enabled;
-        const nextWeight = nextEnabled
-          ? entry.weight > 0
-            ? entry.weight
-            : DEFAULT_ROLE_PREFERENCE_WEIGHT
-          : entry.weight;
-        return {
-          ...entry,
-          enabled: nextEnabled,
-          weight: normalizeRolePreferenceWeight(nextWeight),
-        } satisfies RolePreferenceFormEntry;
-      });
-      return domain === "acting"
-        ? { ...prev, acting: nextEntries }
-        : { ...prev, crew: nextEntries };
-    });
-  }, []);
-
-  const changePreferenceWeight = useCallback(
-    (domain: "acting" | "crew", code: string, weight: number) => {
-      const normalized = normalizeRolePreferenceWeight(weight);
+  const setPreferenceLevel = useCallback(
+    (domain: "acting" | "crew", code: string, level: PreferenceLevel) => {
       setPreferenceForm((prev) => {
         const entries = domain === "acting" ? prev.acting : prev.crew;
-        const nextEntries = entries.map((entry) =>
-          entry.code === code ? { ...entry, weight: normalized } : entry,
-        );
+        const nextEntries = entries.map((entry) => {
+          if (entry.code !== code) return entry;
+          if (level === "off") return { ...entry, enabled: false };
+          const currentLevel = getPreferenceLevel(entry);
+          // Bestehende Gewichtung behalten, wenn die Stufe gleich bleibt.
+          const weight = currentLevel === level ? entry.weight : LEVEL_WEIGHTS[level];
+          return {
+            ...entry,
+            enabled: true,
+            weight: normalizeRolePreferenceWeight(weight),
+          } satisfies RolePreferenceFormEntry;
+        });
         return domain === "acting"
           ? { ...prev, acting: nextEntries }
           : { ...prev, crew: nextEntries };
       });
     },
     [],
+  );
+
+  const dirty = useMemo(
+    () => JSON.stringify(preferenceForm) !== JSON.stringify(initialPreferences),
+    [initialPreferences, preferenceForm],
   );
 
   const handlePreferenceSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -159,197 +164,102 @@ export function RolePreferencesSection({
     }
   };
 
-  const actingPreferences = preferenceForm.acting;
-  const crewPreferences = preferenceForm.crew;
+  const groups = [
+    { domain: "acting" as const, title: "Schauspiel", entries: preferenceForm.acting },
+    { domain: "crew" as const, title: "Gewerke", entries: preferenceForm.crew },
+  ];
 
   return (
-    <Card className="border border-border/60">
-      <CardHeader>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base font-semibold">Rollenpräferenzen</CardTitle>
-          {effectiveFocus ? (
-            <Badge
-              variant="outline"
-              className={cn(
-                "w-fit rounded-full border px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide",
-                FOCUS_BADGE_STYLES[effectiveFocus],
-              )}
-            >
-              {ONBOARDING_FOCUS_LABELS[effectiveFocus]}
-            </Badge>
-          ) : null}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Markiere, in welchen Bereichen du aktiv sein möchtest und wie intensiv du dich einbringen
-          willst. Dein Fokus ergibt sich automatisch aus deiner Auswahl.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <form className="space-y-6" onSubmit={handlePreferenceSubmit}>
-          <div className="space-y-6">
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Schauspiel</h4>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {actingPreferences.map((pref) => {
-                  const weightLabel = getRolePreferenceWeightLabel(pref.weight);
-                  return (
-                    <div
-                      key={pref.code}
-                      className={cn(
-                        "flex flex-col gap-3 rounded-lg border p-4 transition",
-                        pref.enabled
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-background",
-                      )}
-                    >
-                      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h5 className="text-sm font-medium">{pref.title}</h5>
-                            {pref.isCustom ? (
-                              <Badge
-                                variant="outline"
-                                className="border-primary/40 bg-primary/10 text-primary"
-                              >
-                                Individuell
-                              </Badge>
-                            ) : null}
-                          </div>
-                          {pref.description ? (
-                            <p className="text-xs text-muted-foreground">{pref.description}</p>
-                          ) : null}
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={pref.enabled ? "default" : "outline"}
-                          onClick={() => toggleRolePreference("acting", pref.code)}
-                          className="w-full sm:w-auto"
+    <Card variant="plain" size="md">
+      <form onSubmit={handlePreferenceSubmit} className="space-y-4">
+        <SectionHeader
+          title="Rollen- und Gewerkewünsche"
+          description="Wo möchtest du mitmachen? Mehrfachauswahl möglich."
+          action={
+            effectiveFocus ? (
+              <Badge
+                variant="outline"
+                size="sm"
+                className={cn("border", FOCUS_BADGE_STYLES[effectiveFocus])}
+              >
+                {ONBOARDING_FOCUS_LABELS[effectiveFocus]}
+              </Badge>
+            ) : null
+          }
+        />
+        {groups.map((group) => (
+          <section key={group.domain} className="space-y-1">
+            <h4 className="text-xs font-medium text-muted-foreground">{group.title}</h4>
+            <ul className="divide-y divide-border/50">
+              {group.entries.map((pref) => {
+                const level = getPreferenceLevel(pref);
+                return (
+                  <li key={pref.code} className="flex items-center gap-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-snug text-foreground">
+                        {pref.title}
+                        {pref.isCustom ? (
+                          <span className="ml-1 text-xs font-normal text-muted-foreground">
+                            (individuell)
+                          </span>
+                        ) : null}
+                      </p>
+                      {pref.description ? (
+                        <p
+                          className="line-clamp-1 text-xs text-muted-foreground"
+                          title={pref.description}
                         >
-                          {pref.enabled ? "Ausgewählt" : "Wählen"}
-                        </Button>
-                      </div>
-                      {pref.enabled ? (
-                        <div className="space-y-2">
-                          <input
-                            type="range"
-                            min={10}
-                            max={100}
-                            step={10}
-                            value={pref.weight}
-                            onChange={(event) =>
-                              changePreferenceWeight(
-                                "acting",
-                                pref.code,
-                                event.currentTarget.valueAsNumber,
-                              )
-                            }
-                            className="w-full accent-primary"
-                          />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Intensität</span>
-                            <span>{weightLabel}</span>
-                          </div>
-                        </div>
+                          {pref.description}
+                        </p>
                       ) : null}
                     </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Gewerke</h4>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {crewPreferences.map((pref) => {
-                  const weightLabel = getRolePreferenceWeightLabel(pref.weight);
-                  return (
                     <div
-                      key={pref.code}
-                      className={cn(
-                        "flex flex-col gap-3 rounded-lg border p-4 transition",
-                        pref.enabled
-                          ? "border-primary/70 bg-primary/5"
-                          : "border-border bg-background",
-                      )}
+                      role="radiogroup"
+                      aria-label={pref.title}
+                      className="inline-flex shrink-0 rounded-md bg-muted/60 p-0.5"
                     >
-                      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
-                        <div className="space-y-1 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h5 className="text-sm font-medium">{pref.title}</h5>
-                            {pref.isCustom ? (
-                              <Badge
-                                variant="outline"
-                                className="border-primary/40 bg-primary/10 text-primary"
-                              >
-                                Individuell
-                              </Badge>
-                            ) : null}
-                          </div>
-                          {pref.description ? (
-                            <p className="text-xs text-muted-foreground">{pref.description}</p>
-                          ) : null}
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={pref.enabled ? "default" : "outline"}
-                          onClick={() => toggleRolePreference("crew", pref.code)}
-                          className="w-full sm:w-auto"
-                        >
-                          {pref.enabled ? "Ausgewählt" : "Wählen"}
-                        </Button>
-                      </div>
-                      {pref.enabled ? (
-                        <div className="space-y-2">
-                          <input
-                            type="range"
-                            min={10}
-                            max={100}
-                            step={10}
-                            value={pref.weight}
-                            onChange={(event) =>
-                              changePreferenceWeight(
-                                "crew",
-                                pref.code,
-                                event.currentTarget.valueAsNumber,
-                              )
+                      {PREFERENCE_LEVELS.map((option) => {
+                        const active = level === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() =>
+                              setPreferenceLevel(group.domain, pref.code, option.value)
                             }
-                            className="w-full accent-primary"
-                          />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Intensität</span>
-                            <span>{weightLabel}</span>
-                          </div>
-                        </div>
-                      ) : null}
+                            className={cn(
+                              "min-h-8 rounded px-2 text-xs font-medium transition sm:px-2.5",
+                              active
+                                ? option.value === "off"
+                                  ? "bg-background text-foreground shadow-sm"
+                                  : "bg-primary text-primary-foreground shadow-sm"
+                                : "text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </section>
-          </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
 
-          {preferenceError ? <p className="text-sm text-destructive">{preferenceError}</p> : null}
-
-          <div className="flex flex-col items-stretch justify-end sm:flex-row sm:items-center">
-            <Button type="submit" disabled={preferenceSubmitting} className="w-full sm:w-auto">
-              {preferenceSubmitting ? (
-                <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Speichern…
-                </>
-              ) : (
-                "Präferenzen speichern"
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
+        {preferenceError ? <p className="text-sm text-destructive">{preferenceError}</p> : null}
+        <FormSaveBar
+          dirty={dirty}
+          submitting={preferenceSubmitting}
+          onReset={() => {
+            setPreferenceForm(initialPreferences);
+            setPreferenceError(null);
+          }}
+        />
+      </form>
     </Card>
   );
 }

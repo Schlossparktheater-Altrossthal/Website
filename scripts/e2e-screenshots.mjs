@@ -50,7 +50,8 @@ const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const outDir = path.resolve(values.out ?? path.join(root, "test-results", "screenshots", stamp));
 mkdirSync(outDir, { recursive: true });
 
-const browser = await chromium.launch();
+// Datumsfelder richten sich nach der Browsersprache, nicht nach dem Kontext-Locale.
+const browser = await chromium.launch({ args: ["--lang=de-DE"] });
 let failed = false;
 try {
   for (const colorScheme of ["light", "dark"]) {

@@ -1,19 +1,11 @@
 "use client";
 
-import { Loader2Icon } from "@/components/ui/action-icons";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { FormSaveBar } from "@/components/ui/form-save-bar";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { type PayoutMethod } from "@prisma/client";
 import { updateProfileBasicsAction } from "../actions/basics";
@@ -24,6 +16,7 @@ import {
   PaymentFormState,
   payoutDetailsSchema,
 } from "../profile-shared";
+import { ProfileField } from "./profile-fieldset";
 
 type PaymentSectionProps = {
   user: ProfileUser;
@@ -60,6 +53,16 @@ export function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
     user.payoutPaypalHandle,
     user.payoutNote,
   ]);
+
+  const storedState: PaymentFormState = {
+    payoutMethod: user.payoutMethod,
+    payoutAccountHolder: user.payoutAccountHolder ?? "",
+    payoutIban: user.payoutIban ?? "",
+    payoutBankName: user.payoutBankName ?? "",
+    payoutPaypalHandle: user.payoutPaypalHandle ?? "",
+    payoutNote: user.payoutNote ?? "",
+  };
+  const dirty = JSON.stringify(formState) !== JSON.stringify(storedState);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -131,143 +134,136 @@ export function PaymentSection({ user, onUserUpdated }: PaymentSectionProps) {
   };
 
   return (
-    <Card className="border border-border/60">
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">Zahlungsdaten</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Hinterlege hier, wie wir Auslagen erstatten oder Gagen auszahlen sollen.
-        </p>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="payoutMethod">Bevorzugte Auszahlung</Label>
-            <Select
-              value={formState.payoutMethod}
-              onValueChange={(value) => handlePayoutMethodChange(value as PayoutMethod)}
+    <Card variant="plain" size="md">
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="space-y-1.5">
+          <p id="payout-method-label" className="text-sm font-medium text-foreground">
+            Auszahlung per
+          </p>
+          <div
+            role="radiogroup"
+            aria-labelledby="payout-method-label"
+            className="grid grid-cols-3 gap-1 rounded-lg bg-muted/60 p-1 sm:inline-grid"
+          >
+            {PAYOUT_METHOD_OPTIONS.map((option) => {
+              const active = formState.payoutMethod === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => handlePayoutMethodChange(option.value)}
+                  className={cn(
+                    "min-h-9 rounded-md px-3 text-sm font-medium transition",
+                    active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {option.value === "BANK_TRANSFER"
+                    ? "Überweisung"
+                    : option.value === "OTHER"
+                      ? "Anders"
+                      : option.label}
+                </button>
+              );
+            })}
+          </div>
+          {fieldErrors.payoutMethod ? (
+            <p className="text-xs text-destructive">{fieldErrors.payoutMethod}</p>
+          ) : null}
+        </div>
+
+        {formState.payoutMethod === "BANK_TRANSFER" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ProfileField
+              label="IBAN"
+              htmlFor="payoutIban"
+              error={fieldErrors.payoutIban}
+              className="sm:col-span-2"
             >
-              <SelectTrigger id="payoutMethod">
-                <SelectValue placeholder="Auszahlungsart wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYOUT_METHOD_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fieldErrors.payoutMethod ? (
-              <p className="text-sm text-destructive">{fieldErrors.payoutMethod}</p>
-            ) : null}
-            <p className="text-xs text-muted-foreground">
-              Diese Angaben nutzen wir, um dir Auslagen zu erstatten oder Gagen auszuzahlen.
-            </p>
-          </div>
-
-          {formState.payoutMethod === "BANK_TRANSFER" ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="payoutAccountHolder">Kontoinhaber</Label>
-                <Input
-                  id="payoutAccountHolder"
-                  name="payoutAccountHolder"
-                  value={formState.payoutAccountHolder}
-                  onChange={handleInputChange}
-                  autoComplete="name"
-                />
-                {fieldErrors.payoutAccountHolder ? (
-                  <p className="text-sm text-destructive">{fieldErrors.payoutAccountHolder}</p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="payoutBankName">Bank</Label>
-                <Input
-                  id="payoutBankName"
-                  name="payoutBankName"
-                  value={formState.payoutBankName}
-                  onChange={handleInputChange}
-                  autoComplete="organization"
-                />
-                {fieldErrors.payoutBankName ? (
-                  <p className="text-sm text-destructive">{fieldErrors.payoutBankName}</p>
-                ) : null}
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="payoutIban">IBAN</Label>
-                <Input
-                  id="payoutIban"
-                  name="payoutIban"
-                  value={formState.payoutIban}
-                  onChange={handleInputChange}
-                  autoComplete="off"
-                />
-                {fieldErrors.payoutIban ? (
-                  <p className="text-sm text-destructive">{fieldErrors.payoutIban}</p>
-                ) : null}
-                <p className="text-xs text-muted-foreground">
-                  Wir speichern die IBAN ohne Leerzeichen.
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {formState.payoutMethod === "PAYPAL" ? (
-            <div className="space-y-2">
-              <Label htmlFor="payoutPaypalHandle">PayPal-Adresse</Label>
               <Input
-                id="payoutPaypalHandle"
-                name="payoutPaypalHandle"
-                value={formState.payoutPaypalHandle}
+                id="payoutIban"
+                name="payoutIban"
+                value={formState.payoutIban}
                 onChange={handleInputChange}
-                placeholder="paypal@example.com oder https://paypal.me/deinname"
                 autoComplete="off"
+                inputMode="text"
+                placeholder="DE00 0000 0000 0000 0000 00"
               />
-              {fieldErrors.payoutPaypalHandle ? (
-                <p className="text-sm text-destructive">{fieldErrors.payoutPaypalHandle}</p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
-                Nutze deine PayPal-E-Mail-Adresse oder einen PayPal.me-Link.
-              </p>
-            </div>
-          ) : null}
-
-          {formState.payoutMethod === "OTHER" ? (
-            <div className="space-y-2">
-              <Label htmlFor="payoutNote">Auszahlungsdetails</Label>
-              <Textarea
-                id="payoutNote"
-                name="payoutNote"
-                value={formState.payoutNote}
+            </ProfileField>
+            <ProfileField
+              label="Kontoinhaber"
+              htmlFor="payoutAccountHolder"
+              error={fieldErrors.payoutAccountHolder}
+            >
+              <Input
+                id="payoutAccountHolder"
+                name="payoutAccountHolder"
+                value={formState.payoutAccountHolder}
                 onChange={handleInputChange}
-                rows={3}
-                placeholder="Beschreibe kurz, wie wir dir Geld senden sollen."
+                autoComplete="name"
               />
-              {fieldErrors.payoutNote ? (
-                <p className="text-sm text-destructive">{fieldErrors.payoutNote}</p>
-              ) : null}
-              <p className="text-xs text-muted-foreground">
-                Zum Beispiel Revolut, Wise oder andere Konten.
-              </p>
-            </div>
-          ) : null}
-
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-          <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
-            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-              {submitting ? (
-                <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Speichern…
-                </>
-              ) : (
-                "Zahlungsdaten speichern"
-              )}
-            </Button>
+            </ProfileField>
+            <ProfileField label="Bank" htmlFor="payoutBankName" error={fieldErrors.payoutBankName}>
+              <Input
+                id="payoutBankName"
+                name="payoutBankName"
+                value={formState.payoutBankName}
+                onChange={handleInputChange}
+                autoComplete="organization"
+              />
+            </ProfileField>
           </div>
-        </form>
-      </CardContent>
+        ) : null}
+
+        {formState.payoutMethod === "PAYPAL" ? (
+          <ProfileField
+            label="PayPal-Adresse"
+            htmlFor="payoutPaypalHandle"
+            error={fieldErrors.payoutPaypalHandle}
+            hint="E-Mail-Adresse oder PayPal.me-Link."
+          >
+            <Input
+              id="payoutPaypalHandle"
+              name="payoutPaypalHandle"
+              value={formState.payoutPaypalHandle}
+              onChange={handleInputChange}
+              placeholder="name@example.com"
+              autoComplete="off"
+            />
+          </ProfileField>
+        ) : null}
+
+        {formState.payoutMethod === "OTHER" ? (
+          <ProfileField
+            label="Wie sollen wir dir Geld senden?"
+            htmlFor="payoutNote"
+            error={fieldErrors.payoutNote}
+            hint="Zum Beispiel Revolut oder Wise."
+          >
+            <Textarea
+              id="payoutNote"
+              name="payoutNote"
+              value={formState.payoutNote}
+              onChange={handleInputChange}
+              rows={2}
+            />
+          </ProfileField>
+        ) : null}
+
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <FormSaveBar
+          dirty={dirty}
+          submitting={submitting}
+          onReset={() => {
+            setFormState(storedState);
+            setFieldErrors({});
+            setError(null);
+          }}
+        />
+      </form>
     </Card>
   );
 }

@@ -1,19 +1,23 @@
 "use client";
 
-import {
-  CheckCircle2Icon,
-  Loader2Icon,
-  PencilIcon,
-  ShieldCheckIcon,
-  Trash2Icon,
-} from "@/components/ui/action-icons";
+import { EditIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AsyncButton } from "@/components/ui/async-button";
+import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { FormSaveBar } from "@/components/ui/form-save-bar";
+import { SectionHeader } from "@/components/ui/section-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -26,11 +30,8 @@ import {
   DEFAULT_STRICTNESS_FOR_NONE,
   DIETARY_STRICTNESS_OPTIONS,
   DIETARY_STYLE_OPTIONS,
-  NONE_STRICTNESS_LABEL,
   parseDietaryStrictnessFromLabel,
   parseDietaryStyleFromLabel,
-  resolveDietaryStrictnessLabel,
-  resolveDietaryStyleLabel,
   type DietaryStrictnessOption,
   type DietaryStyleOption,
 } from "@/data/dietary-preferences";
@@ -45,8 +46,8 @@ import {
   DietaryFormState,
   AllergyFormState,
   allergySchema,
-  formatDate,
 } from "../profile-shared";
+import { ProfileField } from "./profile-fieldset";
 
 type NutritionSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
@@ -85,6 +86,8 @@ export function NutritionSection({
   const [editingAllergyId, setEditingAllergyId] = useState<string | null>(null);
   const [allergyError, setAllergyError] = useState<string | null>(null);
   const [allergySubmitting, setAllergySubmitting] = useState(false);
+  const [allergyDialogOpen, setAllergyDialogOpen] = useState(false);
+  const [pendingDeleteAllergen, setPendingDeleteAllergen] = useState<string | null>(null);
 
   useEffect(() => {
     setDietaryState(initialDietary);
@@ -180,6 +183,7 @@ export function NutritionSection({
       nextAllergies.sort((a, b) => a.allergen.localeCompare(b.allergen));
       onAllergiesChange(nextAllergies);
       toast.success("Allergie gespeichert");
+      setAllergyDialogOpen(false);
       setEditingAllergyId(null);
       setAllergyState({
         allergen: "",
@@ -193,7 +197,22 @@ export function NutritionSection({
     }
   };
 
+  const handleAllergyCreate = () => {
+    setEditingAllergyId(null);
+    setAllergyError(null);
+    setAllergyState({
+      allergen: "",
+      level: AllergyLevel.MILD,
+      symptoms: "",
+      treatment: "",
+      note: "",
+    });
+    setAllergyDialogOpen(true);
+  };
+
   const handleAllergyEdit = (entry: Allergy) => {
+    setAllergyError(null);
+    setAllergyDialogOpen(true);
     setEditingAllergyId(entry.id);
     setAllergyState({
       allergen: entry.allergen,
@@ -230,28 +249,19 @@ export function NutritionSection({
     }
   };
 
-  const dietaryDescription = useMemo(() => {
-    const { label } = resolveDietaryStyleLabel(
-      dietaryState.style,
-      dietaryState.customLabel || undefined,
-    );
-    const strictnessLabel = resolveDietaryStrictnessLabel(
-      dietaryState.style,
-      dietaryState.strictness,
-    );
-    return { label, strictnessLabel };
-  }, [dietaryState.customLabel, dietaryState.strictness, dietaryState.style]);
+  // Ohne gespeicherten Eintrag muss auch die Vorauswahl speicherbar sein.
+  const dietaryDirty =
+    !onboarding?.dietaryPreference ||
+    JSON.stringify(dietaryState) !== JSON.stringify(initialDietary);
+  const strictnessRelevant = dietaryState.style !== "omnivore" && dietaryState.style !== "none";
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card className="border border-border/60">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Ernährungsprofil</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleDietarySubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="dietary-style">Ernährungsstil</Label>
+    <div className="space-y-4">
+      <Card variant="plain" size="md">
+        <form className="space-y-4" onSubmit={handleDietarySubmit}>
+          <SectionHeader title="Ernährungsstil" as="h3" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ProfileField label="Stil" htmlFor="dietary-style">
               <Select
                 value={dietaryState.style}
                 onValueChange={(value) =>
@@ -265,7 +275,7 @@ export function NutritionSection({
                   }))
                 }
               >
-                <SelectTrigger id="dietary-style" aria-label="Ernährungsstil wählen">
+                <SelectTrigger id="dietary-style">
                   <SelectValue placeholder="Wähle deinen Stil" />
                 </SelectTrigger>
                 <SelectContent>
@@ -276,11 +286,33 @@ export function NutritionSection({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
+            </ProfileField>
+            {strictnessRelevant ? (
+              <ProfileField label="Wie streng?" htmlFor="dietary-strictness">
+                <Select
+                  value={dietaryState.strictness}
+                  onValueChange={(value) =>
+                    setDietaryState((prev) => ({
+                      ...prev,
+                      strictness: value as DietaryStrictnessOption,
+                    }))
+                  }
+                >
+                  <SelectTrigger id="dietary-strictness">
+                    <SelectValue placeholder="Strengegrad wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DIETARY_STRICTNESS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ProfileField>
+            ) : null}
             {dietaryState.style === "custom" ? (
-              <div className="space-y-2">
-                <Label htmlFor="customLabel">Bezeichnung</Label>
+              <ProfileField label="Bezeichnung" htmlFor="customLabel" className="sm:col-span-2">
                 <Input
                   id="customLabel"
                   value={dietaryState.customLabel}
@@ -288,226 +320,180 @@ export function NutritionSection({
                     setDietaryState((prev) => ({ ...prev, customLabel: event.target.value }))
                   }
                 />
-              </div>
+              </ProfileField>
             ) : null}
-
-            <div className="space-y-2">
-              <Label htmlFor="dietary-strictness">Strengegrad</Label>
-              <Select
-                value={dietaryState.strictness}
-                onValueChange={(value) =>
-                  setDietaryState((prev) => ({
-                    ...prev,
-                    strictness: value as DietaryStrictnessOption,
-                  }))
-                }
-                disabled={dietaryState.style === "omnivore" || dietaryState.style === "none"}
-              >
-                <SelectTrigger id="dietary-strictness" aria-label="Strengegrad des Ernährungsstils">
-                  <SelectValue placeholder="Strengegrad wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIETARY_STRICTNESS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {dietaryState.style === "omnivore" || dietaryState.style === "none" ? (
-                <p className="text-xs text-muted-foreground">{NONE_STRICTNESS_LABEL}</p>
-              ) : null}
-            </div>
-
-            {dietaryError ? <p className="text-sm text-destructive">{dietaryError}</p> : null}
-
-            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 p-3 text-sm">
-              <div>
-                <p className="font-medium text-foreground">Aktueller Eintrag</p>
-                <p className="text-xs text-muted-foreground">
-                  {dietaryDescription.label} · {dietaryDescription.strictnessLabel}
-                </p>
-              </div>
-              <CheckCircle2Icon className="h-5 w-5 text-success" aria-hidden="true" />
-            </div>
-
-            <div className="flex flex-col items-stretch justify-end sm:flex-row sm:items-center">
-              <Button type="submit" disabled={dietarySubmitting} className="w-full sm:w-auto">
-                {dietarySubmitting ? (
-                  <>
-                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    Speichern…
-                  </>
-                ) : (
-                  "Ernährung speichern"
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
+          </div>
+          {dietaryError ? <p className="text-sm text-destructive">{dietaryError}</p> : null}
+          <FormSaveBar
+            dirty={dietaryDirty}
+            submitting={dietarySubmitting}
+            onReset={() => {
+              setDietaryState(initialDietary);
+              setDietaryError(null);
+            }}
+          />
+        </form>
       </Card>
 
-      <Card className="border border-border/60">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            Allergien &amp; Unverträglichkeiten
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <Card variant="plain" size="md" className="space-y-3">
+        <SectionHeader
+          title="Allergien & Unverträglichkeiten"
+          as="h3"
+          action={
+            <Button type="button" size="sm" variant="outline" onClick={handleAllergyCreate}>
+              <PlusIcon className="h-4 w-4" aria-hidden />
+              Allergie
+            </Button>
+          }
+        />
+        {allergies.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Keine Allergien hinterlegt.</p>
+        ) : (
+          <ul className="divide-y divide-border/50">
+            {allergies.map((entry) => {
+              const style =
+                ALLERGY_LEVEL_STYLES[entry.level as AllergyLevel] ?? ALLERGY_LEVEL_STYLES.MILD;
+              const details = [entry.symptoms, entry.treatment, entry.note]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <li key={entry.id} className="flex items-center gap-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+                      {entry.allergen}
+                      <Badge size="sm" className={cn("border", style.badge)}>
+                        {getAllergyLevelLabel(entry.level as AllergyLevel)}
+                      </Badge>
+                    </p>
+                    {details ? (
+                      <p className="truncate text-xs text-muted-foreground">{details}</p>
+                    ) : null}
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleAllergyEdit(entry)}
+                    aria-label={`${entry.allergen} bearbeiten`}
+                  >
+                    <EditIcon className="h-4 w-4" aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setPendingDeleteAllergen(entry.allergen)}
+                    aria-label={`${entry.allergen} entfernen`}
+                  >
+                    <TrashIcon className="h-4 w-4" aria-hidden />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <Dialog open={allergyDialogOpen} onOpenChange={setAllergyDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAllergyId ? "Allergie bearbeiten" : "Allergie hinzufügen"}
+            </DialogTitle>
+          </DialogHeader>
           <form className="space-y-4" onSubmit={handleAllergySubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="allergen">Allergen</Label>
-              <Input
-                id="allergen"
-                value={allergyState.allergen}
-                onChange={(event) =>
-                  setAllergyState((prev) => ({ ...prev, allergen: event.target.value }))
-                }
-                placeholder="z.B. Erdnüsse"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ProfileField label="Allergen" htmlFor="allergen">
+                <Input
+                  id="allergen"
+                  value={allergyState.allergen}
+                  onChange={(event) =>
+                    setAllergyState((prev) => ({ ...prev, allergen: event.target.value }))
+                  }
+                  placeholder="z. B. Erdnüsse"
+                />
+              </ProfileField>
+              <ProfileField label="Schweregrad" htmlFor="allergy-level">
+                <Select
+                  value={allergyState.level}
+                  onValueChange={(value) =>
+                    setAllergyState((prev) => ({ ...prev, level: value as AllergyLevel }))
+                  }
+                >
+                  <SelectTrigger id="allergy-level">
+                    <SelectValue placeholder="Schweregrad wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(AllergyLevel).map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {getAllergyLevelLabel(level)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ProfileField>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="allergy-level">Schweregrad der Allergie</Label>
-              <Select
-                value={allergyState.level}
-                onValueChange={(value) =>
-                  setAllergyState((prev) => ({ ...prev, level: value as AllergyLevel }))
-                }
-              >
-                <SelectTrigger id="allergy-level" aria-label="Schweregrad der Allergie wählen">
-                  <SelectValue placeholder="Schweregrad wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.values(AllergyLevel) as AllergyLevel[]).map((level) => (
-                    <SelectItem key={level} value={level}>
-                      {getAllergyLevelLabel(level)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="symptoms">Symptome</Label>
+            <ProfileField label="Symptome" htmlFor="symptoms">
               <Textarea
                 id="symptoms"
+                rows={2}
                 value={allergyState.symptoms}
                 onChange={(event) =>
                   setAllergyState((prev) => ({ ...prev, symptoms: event.target.value }))
                 }
-                placeholder="Beschreibe die typischen Symptome"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="treatment">Behandlung / Hinweise</Label>
+            </ProfileField>
+            <ProfileField label="Was hilft im Notfall?" htmlFor="treatment">
               <Textarea
                 id="treatment"
+                rows={2}
                 value={allergyState.treatment}
                 onChange={(event) =>
                   setAllergyState((prev) => ({ ...prev, treatment: event.target.value }))
                 }
-                placeholder="Was hilft im Notfall?"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="note">Zusätzliche Notiz</Label>
+            </ProfileField>
+            <ProfileField label="Notiz" htmlFor="note">
               <Textarea
                 id="note"
+                rows={2}
                 value={allergyState.note}
                 onChange={(event) =>
                   setAllergyState((prev) => ({ ...prev, note: event.target.value }))
                 }
               />
-            </div>
+            </ProfileField>
             {allergyError ? <p className="text-sm text-destructive">{allergyError}</p> : null}
-            <div className="flex flex-col items-stretch justify-end gap-2 sm:flex-row sm:items-center">
-              {editingAllergyId ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingAllergyId(null);
-                    setAllergyState({
-                      allergen: "",
-                      level: AllergyLevel.MILD,
-                      symptoms: "",
-                      treatment: "",
-                      note: "",
-                    });
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  Abbrechen
-                </Button>
-              ) : null}
-              <Button type="submit" disabled={allergySubmitting} className="w-full sm:w-auto">
-                {allergySubmitting ? (
-                  <>
-                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    Speichern…
-                  </>
-                ) : editingAllergyId ? (
-                  "Allergie aktualisieren"
-                ) : (
-                  "Allergie hinzufügen"
-                )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAllergyDialogOpen(false)}>
+                Abbrechen
               </Button>
-            </div>
+              <AsyncButton type="submit" isLoading={allergySubmitting} loadingText="Speichern…">
+                Speichern
+              </AsyncButton>
+            </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
 
-          <div className="space-y-3">
-            {allergies.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Allergien hinterlegt.</p>
-            ) : (
-              allergies.map((entry) => {
-                const style =
-                  ALLERGY_LEVEL_STYLES[entry.level as AllergyLevel] ?? ALLERGY_LEVEL_STYLES.MILD;
-                return (
-                  <div
-                    key={entry.id}
-                    className="rounded-lg border border-border/60 bg-muted/10 p-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <Badge className={cn("border px-2 py-0.5 text-[11px]", style.badge)}>
-                          {getAllergyLevelLabel(entry.level as AllergyLevel)}
-                        </Badge>
-                        <span className="font-medium text-foreground">{entry.allergen}</span>
-                      </div>
-                      <div className="flex gap-2 text-xs">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleAllergyEdit(entry)}
-                        >
-                          <PencilIcon className="h-3 w-3" aria-hidden="true" />
-                          Bearbeiten
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-md border border-destructive/60 px-2 py-1 text-destructive hover:bg-destructive/10"
-                          onClick={() => handleAllergyDelete(entry.allergen)}
-                        >
-                          <Trash2Icon className="h-3 w-3" aria-hidden="true" />
-                          Entfernen
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      {entry.symptoms ? <p>Symptome: {entry.symptoms}</p> : null}
-                      {entry.treatment ? <p>Behandlung: {entry.treatment}</p> : null}
-                      {entry.note ? <p>Hinweis: {entry.note}</p> : null}
-                      <p className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-muted-foreground/70">
-                        <ShieldCheckIcon className="h-3 w-3" aria-hidden="true" />
-                        Aktualisiert am {formatDate(entry.updatedAt) ?? "unbekannt"}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <ConfirmDialog
+        open={pendingDeleteAllergen !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteAllergen(null);
+        }}
+        title="Allergie entfernen?"
+        description={`${pendingDeleteAllergen ?? ""} wird aus deinem Profil gelöscht.`}
+        confirmLabel="Entfernen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onCancel={() => setPendingDeleteAllergen(null)}
+        onConfirm={() => {
+          const allergen = pendingDeleteAllergen;
+          setPendingDeleteAllergen(null);
+          if (allergen) void handleAllergyDelete(allergen);
+        }}
+      />
     </div>
   );
 }

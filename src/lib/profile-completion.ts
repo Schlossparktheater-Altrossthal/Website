@@ -1,8 +1,8 @@
 export type ProfileChecklistItemId =
-  "basics" | "birthdate" | "payments" | "dietary" | "photo-consent" | "whatsapp";
+  "basics" | "birthdate" | "payments" | "dietary" | "photo-consent";
 
 export type ProfileChecklistTarget =
-  "stammdaten" | "zahlungen" | "ernaehrung" | "interessen" | "freigaben" | "onboarding";
+  "stammdaten" | "zahlungen" | "ernaehrung" | "interessen" | "freigaben" | "produktion";
 
 export type ProfileChecklistItem = {
   id: ProfileChecklistItemId;
@@ -27,7 +27,6 @@ type ChecklistInput = {
   hasPaymentDetails?: boolean;
   hasDietaryPreference: boolean;
   photoConsent?: { consentGiven: boolean };
-  hasWhatsappVisit?: boolean;
 };
 
 export type PaymentDetailsInput = {
@@ -99,17 +98,6 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
       targetSection: "ernaehrung",
     },
   ];
-
-  if (input.hasWhatsappVisit !== undefined) {
-    items.push({
-      id: "whatsapp",
-      label: "WhatsApp-Infokanal bestätigt",
-      actionLabel: "WhatsApp-Infokanal öffnen",
-      description: "Bestätige den Zugriff auf unseren WhatsApp-Infokanal.",
-      complete: Boolean(input.hasWhatsappVisit),
-      targetSection: "onboarding",
-    });
-  }
 
   if (input.photoConsent) {
     items.push({

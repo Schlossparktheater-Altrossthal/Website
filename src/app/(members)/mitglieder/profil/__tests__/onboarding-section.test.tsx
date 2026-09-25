@@ -51,7 +51,6 @@ function createProps(overrides: Partial<OnboardingSectionProps> = {}): Onboardin
     availableOnboardings: [],
     whatsappVisitedAt,
     onWhatsAppVisit: defaultOnWhatsAppVisit,
-    dietaryPreference: { label: null, strictnessLabel: null },
     ...overrides,
   };
 }

@@ -1,19 +1,20 @@
 "use client";
 
-import { Loader2Icon } from "@/components/ui/action-icons";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AsyncButton } from "@/components/ui/async-button";
+import { Card } from "@/components/ui/card";
+import { FormSaveBar } from "@/components/ui/form-save-bar";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/user-avatar";
 import { cn } from "@/lib/utils";
 import { updateProfileBasicsAction } from "../actions/basics";
 import { AvatarCropDialog } from "../avatar-crop-dialog";
 import { useAvatarCrop } from "../use-avatar-crop";
+import { ProfileField, ProfileFieldset } from "./profile-fieldset";
 import {
   ProfileUser,
   mapUpdatedUserFromPayload,
@@ -54,6 +55,7 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   useEffect(() => {
     setFormState((prev) => ({
@@ -158,6 +160,43 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
     );
   };
 
+  const storedAvatarSource: BasicsFormState["avatarSource"] =
+    user.avatarSource === "GRAVATAR" ||
+    user.avatarSource === "UPLOAD" ||
+    user.avatarSource === "INITIALS"
+      ? user.avatarSource
+      : "INITIALS";
+  const storedDateOfBirth = user.dateOfBirth ? user.dateOfBirth.slice(0, 10) : "";
+  const dirty =
+    formState.firstName !== user.firstName ||
+    formState.lastName !== user.lastName ||
+    formState.displayName !== user.displayName ||
+    formState.email !== user.email ||
+    formState.dateOfBirth !== storedDateOfBirth ||
+    formState.avatarSource !== storedAvatarSource ||
+    formState.removeAvatar ||
+    Boolean(formState.password) ||
+    Boolean(formState.confirmPassword) ||
+    Boolean(avatarCrop.avatarFile);
+
+  const handleReset = () => {
+    setFormState({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      displayName: user.displayName,
+      email: user.email,
+      dateOfBirth: storedDateOfBirth,
+      password: "",
+      confirmPassword: "",
+      avatarSource: storedAvatarSource,
+      removeAvatar: false,
+    });
+    setFieldErrors({});
+    setError(null);
+    setPasswordOpen(false);
+    avatarCrop.resetAvatarCrop();
+  };
+
   const resetPasswordFields = () => {
     setFormState((prev) => ({ ...prev, password: "", confirmPassword: "" }));
   };
@@ -228,6 +267,7 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
       const nextUser = mapUpdatedUserFromPayload(user, payload);
       await onUserUpdated(nextUser);
       resetPasswordFields();
+      setPasswordOpen(false);
       avatarCrop.resetAvatarCrop();
       setFormState((prev) => ({ ...prev, removeAvatar: false }));
       toast.success("Stammdaten aktualisiert");
@@ -238,15 +278,11 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
 
   return (
     <>
-      <Card className="border border-border/60">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Stammdaten &amp; Zugang</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">Vorname</Label>
+      <Card variant="plain" size="md">
+        <form className="divide-y divide-border/60" onSubmit={handleSubmit} noValidate>
+          <ProfileFieldset title="Persönliches">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ProfileField label="Vorname" htmlFor="firstName" error={fieldErrors.firstName}>
                 <Input
                   id="firstName"
                   name="firstName"
@@ -254,12 +290,8 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                   onChange={handleInputChange}
                   autoComplete="given-name"
                 />
-                {fieldErrors.firstName ? (
-                  <p className="text-sm text-destructive">{fieldErrors.firstName}</p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Nachname</Label>
+              </ProfileField>
+              <ProfileField label="Nachname" htmlFor="lastName" error={fieldErrors.lastName}>
                 <Input
                   id="lastName"
                   name="lastName"
@@ -267,69 +299,61 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                   onChange={handleInputChange}
                   autoComplete="family-name"
                 />
-                {fieldErrors.lastName ? (
-                  <p className="text-sm text-destructive">{fieldErrors.lastName}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Anzeigename</Label>
+              </ProfileField>
+              <ProfileField
+                label="Anzeigename"
+                htmlFor="displayName"
+                error={fieldErrors.displayName}
+                hint="So sehen dich andere im Mitgliederbereich."
+              >
                 <Input
                   id="displayName"
                   name="displayName"
                   value={formState.displayName}
                   onChange={handleInputChange}
                 />
-                {fieldErrors.displayName ? (
-                  <p className="text-sm text-destructive">{fieldErrors.displayName}</p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">E-Mail</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formState.email}
-                  onChange={handleInputChange}
-                  autoComplete="email"
-                />
-                {fieldErrors.email ? (
-                  <p className="text-sm text-destructive">{fieldErrors.email}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="dateOfBirth">Geburtsdatum</Label>
+              </ProfileField>
+              <ProfileField
+                label="Geburtsdatum"
+                htmlFor="dateOfBirth"
+                error={fieldErrors.dateOfBirth}
+                hint="Für Fotoerlaubnis und Altersfreigaben."
+              >
                 <DateInput
                   id="dateOfBirth"
                   name="dateOfBirth"
                   value={formState.dateOfBirth}
                   onChange={handleInputChange}
                 />
-                {fieldErrors.dateOfBirth ? (
-                  <p className="text-sm text-destructive">{fieldErrors.dateOfBirth}</p>
-                ) : null}
-                <p className="text-xs text-muted-foreground">
-                  Benötigt für Fotoeinverständnis und Altersfreigaben.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label id="avatar-source-label">Avatar-Quelle wählen</Label>
+              </ProfileField>
+            </div>
+          </ProfileFieldset>
+
+          <ProfileFieldset title="Profilbild">
+            <div className="flex items-center gap-3">
+              <UserAvatar
+                userId={useStoredUploadPreview ? user.id : undefined}
+                email={formState.email}
+                firstName={formState.firstName}
+                lastName={formState.lastName}
+                name={formState.displayName}
+                size={48}
+                className="h-12 w-12 shrink-0"
+                avatarSource={avatarPreviewState.source}
+                avatarUpdatedAt={useStoredUploadPreview ? user.avatarUpdatedAt : undefined}
+                previewUrl={avatarPreviewState.previewUrl}
+              />
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <div
-                  className="flex flex-wrap gap-2"
-                  role="group"
-                  aria-labelledby="avatar-source-label"
+                  className="grid w-full grid-cols-3 rounded-lg bg-muted/60 p-1 sm:inline-grid sm:w-auto"
+                  role="radiogroup"
+                  aria-label="Quelle des Profilbilds"
                 >
                   {(
                     [
                       { value: "INITIALS", label: "Initialen" },
                       { value: "GRAVATAR", label: "Gravatar" },
-                      { value: "UPLOAD", label: "Eigenes Bild" },
+                      { value: "UPLOAD", label: "Foto" },
                     ] satisfies Array<{ value: BasicsFormState["avatarSource"]; label: string }>
                   ).map((option) => {
                     const active = formState.avatarSource === option.value;
@@ -341,10 +365,10 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                         aria-checked={active}
                         onClick={() => handleAvatarSourceChange(option.value)}
                         className={cn(
-                          "min-h-[44px] rounded-full border px-4 py-2 text-sm font-medium transition",
+                          "min-h-9 whitespace-nowrap rounded-md px-2 text-sm font-medium transition sm:px-3",
                           active
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
                         )}
                       >
                         {option.label}
@@ -352,150 +376,114 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                     );
                   })}
                 </div>
-                <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
-                  <UserAvatar
-                    userId={useStoredUploadPreview ? user.id : undefined}
-                    email={formState.email}
-                    firstName={formState.firstName}
-                    lastName={formState.lastName}
-                    name={formState.displayName}
-                    size={48}
-                    className="h-12 w-12"
-                    avatarSource={avatarPreviewState.source}
-                    avatarUpdatedAt={useStoredUploadPreview ? user.avatarUpdatedAt : undefined}
-                    previewUrl={avatarPreviewState.previewUrl}
-                  />
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-foreground">Aktuelle Vorschau</p>
-                    <p className="text-xs text-muted-foreground">
-                      {avatarPreviewState.description}
-                    </p>
-                  </div>
-                </div>
-                {formState.avatarSource === "GRAVATAR" ? (
-                  <p className="text-xs text-muted-foreground">
-                    Wir nutzen den Gravatar zu deiner E-Mail-Adresse. Stelle sicher, dass dort ein
-                    Bild hinterlegt ist.
-                  </p>
-                ) : null}
-                {formState.avatarSource === "UPLOAD" ? (
-                  <div className="space-y-2 pt-2">
-                    <Input
-                      ref={avatarCrop.fileInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={avatarCrop.handleAvatarFileChange}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG oder WebP bis 8 MB. Wir skalieren dein Bild automatisch und speichern
-                      es optimiert.
-                    </p>
-                    {(avatarCrop.avatarPreviewUrl || user.avatarSource === "UPLOAD") &&
-                    !formState.removeAvatar ? (
-                      <div className="space-y-2">
-                        {avatarCrop.avatarPreviewUrl ? (
-                          <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
-                            <UserAvatar
-                              name={user.displayName}
-                              size={48}
-                              className="h-12 w-12"
-                              previewUrl={avatarCrop.avatarPreviewUrl}
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              Vorschau des neuen Avatars
-                            </span>
-                          </div>
-                        ) : null}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="xs"
-                            onClick={handleAvatarCropReopenClick}
-                            disabled={avatarCrop.avatarCropLoading}
-                          >
-                            {avatarCrop.avatarCropLoading ? (
-                              <>
-                                <Loader2Icon
-                                  className="mr-2 h-3.5 w-3.5 animate-spin"
-                                  aria-hidden
-                                />
-                                Ausschnitt wird geladen…
-                              </>
-                            ) : (
-                              "Bildausschnitt anpassen"
-                            )}
-                          </Button>
-                          {avatarCrop.avatarCropSelection ? (
-                            <span className="text-[0.7rem] text-muted-foreground">
-                              Zuletzt gewählter Ausschnitt bleibt erhalten.
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    ) : null}
-                    {user.avatarSource === "UPLOAD" && !avatarCrop.avatarFile ? (
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground underline transition hover:text-foreground"
-                        onClick={() =>
-                          setFormState((prev) => ({ ...prev, removeAvatar: !prev.removeAvatar }))
-                        }
-                      >
-                        {formState.removeAvatar
-                          ? "Eigenes Bild behalten"
-                          : "Eigenes Bild entfernen"}
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Passwort zurücksetzen</Label>
-              <div className="grid gap-4 md:grid-cols-2">
-                <PasswordInput
-                  name="password"
-                  value={formState.password}
-                  onChange={handleInputChange}
-                  placeholder="Neues Passwort"
-                  autoComplete="new-password"
-                />
-                <PasswordInput
-                  name="confirmPassword"
-                  value={formState.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="Bestätigung"
-                  autoComplete="new-password"
-                />
-              </div>
-              {(fieldErrors.password || fieldErrors.confirmPassword) && (
-                <p className="text-sm text-destructive">
-                  {fieldErrors.password ?? fieldErrors.confirmPassword}
+                <p className="text-xs text-muted-foreground">
+                  {formState.avatarSource === "GRAVATAR"
+                    ? "Bild von gravatar.com zu deiner E-Mail-Adresse."
+                    : avatarPreviewState.description}
                 </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Lasse die Felder leer, wenn das Passwort unverändert bleiben soll.
-              </p>
+              </div>
             </div>
+            {formState.avatarSource === "UPLOAD" ? (
+              <div className="space-y-2">
+                <Input
+                  ref={avatarCrop.fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={avatarCrop.handleAvatarFileChange}
+                  aria-label="Bild hochladen"
+                />
+                <p className="text-xs text-muted-foreground">PNG, JPG oder WebP bis 8 MB.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(avatarCrop.avatarPreviewUrl || user.avatarSource === "UPLOAD") &&
+                  !formState.removeAvatar ? (
+                    <AsyncButton
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={handleAvatarCropReopenClick}
+                      isLoading={avatarCrop.avatarCropLoading}
+                      loadingText="Ausschnitt wird geladen…"
+                    >
+                      Ausschnitt anpassen
+                    </AsyncButton>
+                  ) : null}
+                  {user.avatarSource === "UPLOAD" && !avatarCrop.avatarFile ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      onClick={() =>
+                        setFormState((prev) => ({ ...prev, removeAvatar: !prev.removeAvatar }))
+                      }
+                    >
+                      {formState.removeAvatar ? "Bild behalten" : "Bild entfernen"}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </ProfileFieldset>
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-            <div className="flex flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center">
-              <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-                {submitting ? (
-                  <>
-                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    Speichern…
-                  </>
+          <ProfileFieldset title="Konto">
+            <ProfileField
+              label="E-Mail"
+              htmlFor="email"
+              error={fieldErrors.email}
+              hint="Für Anmeldung und Benachrichtigungen."
+            >
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formState.email}
+                onChange={handleInputChange}
+                autoComplete="email"
+              />
+            </ProfileField>
+            {passwordOpen ? (
+              <div className="space-y-1.5">
+                <p className="text-sm font-medium text-foreground">Neues Passwort</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <PasswordInput
+                    name="password"
+                    value={formState.password}
+                    onChange={handleInputChange}
+                    placeholder="Neues Passwort"
+                    autoComplete="new-password"
+                    aria-label="Neues Passwort"
+                  />
+                  <PasswordInput
+                    name="confirmPassword"
+                    value={formState.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Wiederholen"
+                    autoComplete="new-password"
+                    aria-label="Neues Passwort wiederholen"
+                  />
+                </div>
+                {fieldErrors.password || fieldErrors.confirmPassword ? (
+                  <p className="text-xs text-destructive">
+                    {fieldErrors.password ?? fieldErrors.confirmPassword}
+                  </p>
                 ) : (
-                  "Änderungen speichern"
+                  <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen.</p>
                 )}
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPasswordOpen(true)}
+              >
+                Passwort ändern
               </Button>
-            </div>
-          </form>
-        </CardContent>
+            )}
+          </ProfileFieldset>
+
+          {error ? <p className="py-2 text-sm text-destructive">{error}</p> : null}
+          <FormSaveBar dirty={dirty} submitting={submitting} onReset={handleReset} />
+        </form>
       </Card>
       <AvatarCropDialog
         open={Boolean(avatarCrop.cropDialogOpen && avatarCrop.cropImageUrl)}

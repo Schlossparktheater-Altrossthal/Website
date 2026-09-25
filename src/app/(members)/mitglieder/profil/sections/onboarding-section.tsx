@@ -1,20 +1,21 @@
 "use client";
 
 import {
-  AlertTriangleIcon,
   ArrowRightIcon,
   CheckCircle2Icon,
   Loader2Icon,
+  MessageCircleIcon,
 } from "@/components/ui/action-icons";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FOCUS_BADGE_STYLES } from "@/config/category-colors";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AsyncButton } from "@/components/ui/async-button";
+import { Card } from "@/components/ui/card";
+import { FormSaveBar } from "@/components/ui/form-save-bar";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BACKGROUND_TAGS, normalizeBackgroundLabel } from "@/data/onboarding-backgrounds";
 import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
@@ -26,8 +27,6 @@ import { saveOnboardingAction, startOnboardingAction } from "../actions/onboardi
 import {
   CURRENT_YEAR,
   PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
-  ONBOARDING_FOCUS_LABELS,
-  ONBOARDING_FOCUS_DESCRIPTIONS,
   ONBOARDING_STATUS_LABELS,
   ProfileClientProps,
   OnboardingProfile,
@@ -35,6 +34,7 @@ import {
   onboardingSchema,
   formatDate,
 } from "../profile-shared";
+import { ProfileField } from "./profile-fieldset";
 
 export type OnboardingSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
@@ -42,8 +42,9 @@ export type OnboardingSectionProps = {
   rolePreferences: ProfileClientProps["rolePreferences"];
   availableOnboardings: OnboardingSummary[];
   whatsappVisitedAt: string | null;
+  /** Wird zwischen Produktionskarte und „Über dich“ angezeigt (Rollenwünsche). */
+  children?: React.ReactNode;
   onWhatsAppVisit?: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
-  dietaryPreference: { label: string | null; strictnessLabel: string | null };
 };
 
 export function OnboardingSection({
@@ -53,7 +54,7 @@ export function OnboardingSection({
   availableOnboardings,
   whatsappVisitedAt,
   onWhatsAppVisit,
-  dietaryPreference,
+  children,
 }: OnboardingSectionProps) {
   const whatsappLink = onboarding?.whatsappLink ?? null;
   const currentShow = onboarding?.show ?? null;
@@ -75,6 +76,7 @@ export function OnboardingSection({
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const dirty = JSON.stringify(formState) !== JSON.stringify(initialForm);
   const [showDialogOpen, setShowDialogOpen] = useState(false);
   const [selectedShowId, setSelectedShowId] = useState<string>(() => currentShow?.id ?? "");
   const [showSubmitting, setShowSubmitting] = useState(false);
@@ -253,6 +255,34 @@ export function OnboardingSection({
     }
   };
 
+  const backgroundOptions = [
+    ...BACKGROUND_TAGS.map((tag) => ({
+      key: `tag-${tag.id}`,
+      label: tag.label,
+      active: activeTag?.id === tag.id,
+      onSelect: () =>
+        setFormState((prev) => ({
+          ...prev,
+          background: tag.value,
+          backgroundClass: tag.requiresClass ? prev.backgroundClass : "",
+        })),
+    })),
+    ...backgroundSuggestions
+      .filter(
+        (suggestion) =>
+          !BACKGROUND_TAGS.some(
+            (tag) => normalizeBackgroundLabel(tag.value) === normalizeBackgroundLabel(suggestion),
+          ),
+      )
+      .slice(0, 4)
+      .map((suggestion) => ({
+        key: `suggestion-${suggestion}`,
+        label: suggestion,
+        active: false,
+        onSelect: () => setFormState((prev) => ({ ...prev, background: suggestion })),
+      })),
+  ];
+
   const handleWhatsAppClick = async () => {
     if (!whatsappLink) {
       return;
@@ -276,285 +306,191 @@ export function OnboardingSection({
   };
 
   return (
-    <Card className="border border-border/60">
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">Onboarding-Angaben</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-3 rounded-lg border border-border/60 bg-muted/15 p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-foreground">{showLabel}</p>
-              <p className="text-xs text-muted-foreground">{showHelper}</p>
-            </div>
-            {currentShow && showStatusLabel ? (
-              <Badge
-                variant="outline"
-                className="self-start rounded-full border-border/60 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide"
-              >
-                {showStatusLabel}
-              </Badge>
-            ) : null}
+    <>
+      <Card variant="plain" size="md" className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-0.5">
+            <p className="truncate text-base font-semibold text-foreground">{showLabel}</p>
+            <p className="text-xs text-muted-foreground">{showHelper}</p>
           </div>
-          {hasOnboardingOptions ? (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowDialogOpen(true);
-                  setShowError(null);
-                }}
-                className="w-full sm:w-auto"
-              >
-                {currentShow ? "Produktion wechseln" : "Onboarding starten"}
-              </Button>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Aktuell sind keine Produktionen verfügbar.
-            </p>
-          )}
+          {currentShow && showStatusLabel ? (
+            <Badge variant="muted" size="sm">
+              {showStatusLabel}
+            </Badge>
+          ) : null}
         </div>
+        {hasOnboardingOptions ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowDialogOpen(true);
+              setShowError(null);
+            }}
+          >
+            {currentShow ? "Produktion wechseln" : "Onboarding starten"}
+          </Button>
+        ) : currentShow ? null : (
+          <p className="text-xs text-muted-foreground">
+            Aktuell sind keine Produktionen verfügbar.
+          </p>
+        )}
 
         {whatsappLink ? (
-          whatsappVisitedAt ? (
-            <div className="flex flex-col flex-wrap items-start gap-3 text-sm sm:flex-row sm:items-center">
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2Icon className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-                {`WhatsApp-Onboarding bestätigt${
-                  whatsappVisitedLabel ? ` am ${whatsappVisitedLabel}` : ""
-                }.`}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleWhatsAppClick}
-                disabled={whatsappSubmitting}
-                className="w-full sm:w-auto"
-              >
-                {whatsappSubmitting ? (
-                  <>
-                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    Aktualisiere…
-                  </>
-                ) : (
-                  "WhatsApp öffnen"
-                )}
-              </Button>
-            </div>
-          ) : (
-            <div
+          <div className="flex items-center gap-3 border-t border-border/60 pt-3">
+            <span
               className={cn(
-                "flex flex-col gap-2 rounded-lg border p-4 text-sm",
-                "border-primary/40 bg-primary/10 text-primary",
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                whatsappVisitedAt ? "bg-success/15 text-success" : "bg-primary/15 text-primary",
               )}
+              aria-hidden
             >
-              <div className="flex items-center gap-2">
-                <AlertTriangleIcon className="h-4 w-4" aria-hidden="true" />
-                <span>WhatsApp-Onboarding steht noch aus.</span>
-              </div>
-              <p className="text-xs text-primary/80">
-                Öffne die Gruppe jetzt – wir markieren dich anschließend als informiert.
+              {whatsappVisitedAt ? (
+                <CheckCircle2Icon className="h-4 w-4" />
+              ) : (
+                <MessageCircleIcon className="h-4 w-4" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">Team-Chat</p>
+              <p className="text-xs text-muted-foreground">
+                {whatsappVisitedAt
+                  ? `WhatsApp-Onboarding bestätigt${
+                      whatsappVisitedLabel ? ` am ${whatsappVisitedLabel}` : ""
+                    }.`
+                  : "WhatsApp-Onboarding steht noch aus."}
               </p>
-              <Button
-                size="sm"
-                onClick={handleWhatsAppClick}
-                disabled={whatsappSubmitting}
-                className="w-full sm:w-auto"
-              >
-                {whatsappSubmitting ? (
-                  <>
-                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                    Aktualisiere…
-                  </>
-                ) : (
-                  "WhatsApp öffnen"
-                )}
-              </Button>
             </div>
-          )
-        ) : null}
-
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-3">
-            <Label>Onboarding-Fokus</Label>
-            {effectiveFocus ? (
-              <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/15 p-4">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "w-fit rounded-full border px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide",
-                    FOCUS_BADGE_STYLES[effectiveFocus],
-                  )}
-                >
-                  {ONBOARDING_FOCUS_LABELS[effectiveFocus]}
-                </Badge>
-                <p className="text-sm text-muted-foreground">
-                  {ONBOARDING_FOCUS_DESCRIPTIONS[effectiveFocus]}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
-                Sobald du Rollenpräferenzen auswählst, bestimmen wir automatisch deinen Fokus.
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Passe deine Rollenpräferenzen an, um den Fokus zu verändern – wir übernehmen die
-              Berechnung automatisch.
-            </p>
+            <AsyncButton
+              size="sm"
+              variant={whatsappVisitedAt ? "outline" : "primary"}
+              onClick={handleWhatsAppClick}
+              isLoading={whatsappSubmitting}
+              loadingText="Öffne…"
+            >
+              WhatsApp öffnen
+            </AsyncButton>
           </div>
+        ) : null}
+      </Card>
 
-          <div className="space-y-3">
-            <Label htmlFor="background">Schulischer / beruflicher Hintergrund</Label>
+      {children}
+
+      <Card variant="plain" size="md">
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <SectionHeader
+            title="Über dich"
+            description="Hilft uns bei der Planung von Teams und Proben."
+          />
+          <ProfileField
+            label="Schule, Ausbildung oder Beruf"
+            htmlFor="background"
+            hint={
+              <span className="flex flex-wrap gap-1.5 pt-1">
+                {backgroundOptions.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-xs transition",
+                      option.active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+                    )}
+                    onClick={option.onSelect}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </span>
+            }
+          >
             <Input
               id="background"
               value={formState.background}
               onChange={(event) =>
                 setFormState((prev) => ({ ...prev, background: event.target.value }))
               }
-              placeholder="z.B. BSZ Altroßthal – Berufsschule"
+              placeholder="z. B. BSZ Altroßthal – Berufsschule"
             />
-            <div className="flex flex-wrap gap-2">
-              {BACKGROUND_TAGS.map((tag) => {
-                const active = activeTag?.id === tag.id;
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs transition",
-                      active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary hover:text-primary",
-                    )}
-                    onClick={() =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        background: tag.value,
-                        backgroundClass: tag.requiresClass ? prev.backgroundClass : "",
-                      }))
-                    }
-                  >
-                    {tag.label}
-                  </button>
-                );
-              })}
-              {backgroundSuggestions
-                .filter(
-                  (suggestion) =>
-                    !BACKGROUND_TAGS.some(
-                      (tag) =>
-                        normalizeBackgroundLabel(tag.value) ===
-                        normalizeBackgroundLabel(suggestion),
-                    ),
-                )
-                .slice(0, 6)
-                .map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                    onClick={() =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        background: suggestion,
-                        backgroundClass: prev.backgroundClass,
-                      }))
-                    }
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-            </div>
-          </div>
+          </ProfileField>
 
           {requiresClass ? (
-            <div className="space-y-2">
-              <Label htmlFor="backgroundClass">{activeTag?.classLabel ?? "Klasse"}</Label>
+            <ProfileField
+              label={activeTag?.classLabel ?? "Klasse"}
+              htmlFor="backgroundClass"
+              hint={
+                classSuggestions.length ? (
+                  <span className="flex flex-wrap gap-1.5 pt-1">
+                    {classSuggestions.slice(0, 8).map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                        onClick={() =>
+                          setFormState((prev) => ({ ...prev, backgroundClass: suggestion }))
+                        }
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </span>
+                ) : (
+                  (activeTag?.classHelper ?? "Hilft uns bei der Zuordnung.")
+                )
+              }
+            >
               <Input
                 id="backgroundClass"
                 value={formState.backgroundClass}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, backgroundClass: event.target.value }))
                 }
-                placeholder={activeTag?.classPlaceholder ?? "z.B. BG 12"}
+                placeholder={activeTag?.classPlaceholder ?? "z. B. BG 12"}
               />
-              <p className="text-xs text-muted-foreground">
-                {activeTag?.classHelper ?? "Hilft uns bei der Zuordnung."}
-              </p>
-              {classSuggestions.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {classSuggestions.slice(0, 8).map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      type="button"
-                      className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                      onClick={() =>
-                        setFormState((prev) => ({ ...prev, backgroundClass: suggestion }))
-                      }
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            </ProfileField>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="memberSinceYear">Mitglied seit</Label>
-            <Input
-              id="memberSinceYear"
-              type="number"
-              inputMode="numeric"
-              min="1900"
-              max={String(CURRENT_YEAR)}
-              value={formState.memberSinceYear}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, memberSinceYear: event.target.value }))
-              }
-              placeholder={`z.B. ${CURRENT_YEAR}`}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Team-Notizen</Label>
-            <Textarea
-              id="notes"
-              value={formState.notes}
-              onChange={(event) => setFormState((prev) => ({ ...prev, notes: event.target.value }))}
-              placeholder="Infos für das Team"
-            />
-          </div>
-
-          <div className="space-y-1 rounded-md border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
-            <p>
-              Aktuelles Ernährungsprofil: {dietaryPreference.label ?? "Noch kein Eintrag"}
-              {dietaryPreference.strictnessLabel ? ` · ${dietaryPreference.strictnessLabel}` : ""}
-            </p>
-            {onboarding?.updatedAt ? (
-              <p>Zuletzt aktualisiert am {formatDate(onboarding.updatedAt) ?? "unbekannt"}</p>
-            ) : null}
+          <div className="grid gap-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+            <ProfileField label="Dabei seit" htmlFor="memberSinceYear">
+              <Input
+                id="memberSinceYear"
+                type="number"
+                inputMode="numeric"
+                min="1900"
+                max={String(CURRENT_YEAR)}
+                value={formState.memberSinceYear}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, memberSinceYear: event.target.value }))
+                }
+                placeholder={String(CURRENT_YEAR)}
+              />
+            </ProfileField>
+            <ProfileField label="Notiz ans Team" htmlFor="notes">
+              <Textarea
+                id="notes"
+                rows={2}
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="z. B. Termine, an denen du sicher nicht kannst"
+              />
+            </ProfileField>
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-          <div className="flex flex-col items-stretch justify-end sm:flex-row sm:items-center">
-            <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
-              {submitting ? (
-                <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Speichern…
-                </>
-              ) : (
-                "Onboarding speichern"
-              )}
-            </Button>
-          </div>
+          <FormSaveBar
+            dirty={dirty}
+            submitting={submitting}
+            onReset={() => {
+              setFormState(initialForm);
+              setError(null);
+            }}
+          />
         </form>
-      </CardContent>
+      </Card>
 
       <Dialog
         open={showDialogOpen}
@@ -655,6 +591,6 @@ export function OnboardingSection({
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }

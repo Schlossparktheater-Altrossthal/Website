@@ -211,7 +211,6 @@ export default async function ProfilePage() {
     hasPaymentDetails,
     hasDietaryPreference,
     photoConsent: { consentGiven: photoConsentSummary.status === "approved" },
-    hasWhatsappVisit: whatsappLink ? Boolean(onboardingProfile?.whatsappLinkVisitedAt) : undefined,
   });
 
   const onboarding = onboardingProfile
@@ -239,16 +238,9 @@ export default async function ProfilePage() {
       }
     : null;
 
-  const headerDescription =
-    "Pflege deine Stammdaten, Zahlungsdaten, Ernährungspräferenzen und Freigaben für unser Ensemble.";
-
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Mein Profil"
-        description={headerDescription}
-        breadcrumbs={[membersBreadcrumb]}
-      />
+      <PageHeader title="Mein Profil" breadcrumbs={[membersBreadcrumb]} />
       <ProfileClient
         user={{
           id: user.id,

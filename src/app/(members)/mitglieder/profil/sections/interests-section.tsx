@@ -1,12 +1,10 @@
 "use client";
 
-import { Loader2Icon } from "@/components/ui/action-icons";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { FormSaveBar } from "@/components/ui/form-save-bar";
+import { PlusIcon, XIcon } from "@/components/ui/action-icons";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { useInterestSuggestions } from "@/hooks/useInterestSuggestions";
 import { saveInterestsAction } from "../actions/interests";
@@ -22,6 +20,9 @@ type InterestsSectionProps = {
   onInterestsChange: (next: string[]) => void;
 };
 
+// Lange Freitexte aus alten Einträgen sind als Vorschlag unbrauchbar.
+const SUGGESTION_MAX_LENGTH = 24;
+
 export function InterestsSection({ interests, onInterestsChange }: InterestsSectionProps) {
   const [state, setState] = useState<InterestsState>({ items: interests, dirty: false });
   const [input, setInput] = useState("");
@@ -32,8 +33,13 @@ export function InterestsSection({ interests, onInterestsChange }: InterestsSect
   const availableInterestSuggestions = useMemo(() => {
     const selected = new Set(state.items.map((item) => item.toLowerCase()));
     return interestSuggestions
-      .filter((suggestion) => suggestion.name && !selected.has(suggestion.name.toLowerCase()))
-      .slice(0, 12);
+      .filter(
+        (suggestion) =>
+          suggestion.name &&
+          suggestion.name.length <= SUGGESTION_MAX_LENGTH &&
+          !selected.has(suggestion.name.toLowerCase()),
+      )
+      .slice(0, 10);
   }, [interestSuggestions, state.items]);
 
   useEffect(() => {
@@ -120,116 +126,87 @@ export function InterestsSection({ interests, onInterestsChange }: InterestsSect
   };
 
   return (
-    <Card className="border border-border/60">
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">Interessen</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="interestInput">Neues Interesse</Label>
-            <div className="flex flex-wrap gap-2">
-              <Input
-                id="interestInput"
-                value={input}
-                onChange={(event) => handleInputChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addInterest();
-                  }
-                }}
-                placeholder="z.B. Regie, Lichttechnik"
-                className="max-w-xs"
-              />
-              <Button type="button" variant="outline" onClick={addInterest}>
-                Hinzufügen
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Maximal {MAX_INTERESTS_PER_USER} Einträge. Du kannst mehrere Begriffe nacheinander
-              hinzufügen.
-            </p>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {state.items.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Noch keine Interessen hinterlegt.</p>
-            ) : (
-              state.items.map((interest) => (
-                <span
-                  key={interest}
-                  className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/20 px-3 py-1 text-xs"
+    <Card variant="plain" size="md">
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="space-y-1.5">
+          <label htmlFor="interestInput" className="text-sm font-medium text-foreground">
+            Deine Interessen
+          </label>
+          <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring">
+            {state.items.map((interest) => (
+              <span
+                key={interest}
+                className="inline-flex max-w-full items-center gap-1 rounded-full bg-primary/10 py-0.5 pl-2.5 pr-1 text-sm text-foreground"
+              >
+                <span className="truncate">{interest}</span>
+                <button
+                  type="button"
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  aria-label={`${interest} entfernen`}
+                  onClick={() => removeInterest(interest)}
                 >
-                  {interest}
-                  <button
-                    type="button"
-                    className="ml-1 text-muted-foreground transition hover:text-destructive"
-                    aria-label={`${interest} entfernen`}
-                    onClick={() => removeInterest(interest)}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))
-            )}
+                  <XIcon className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              </span>
+            ))}
+            <input
+              id="interestInput"
+              value={input}
+              onChange={(event) => handleInputChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addInterest();
+                } else if (event.key === "Backspace" && !input && state.items.length) {
+                  removeInterest(state.items[state.items.length - 1]);
+                }
+              }}
+              onBlur={() => {
+                if (input.trim()) addInterest();
+              }}
+              enterKeyHint="done"
+              placeholder={state.items.length ? "Weiteres …" : "z. B. Licht, Nähen, Gesang"}
+              className="min-w-[8rem] flex-1 bg-transparent px-1 py-1 text-base outline-none placeholder:text-muted-foreground md:text-sm"
+            />
           </div>
+          {error ? (
+            <p className="text-xs text-destructive">{error}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Mit Enter oder Komma hinzufügen · höchstens {MAX_INTERESTS_PER_USER}
+            </p>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Beliebte Tags</p>
-            <div className="flex flex-wrap gap-2">
+        {suggestionsLoading || availableInterestSuggestions.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">Vorschläge</p>
+            <div className="flex flex-wrap gap-1.5">
               {suggestionsLoading ? (
                 <span className="text-xs text-muted-foreground">Lade Vorschläge …</span>
-              ) : availableInterestSuggestions.length > 0 ? (
+              ) : (
                 availableInterestSuggestions.map((suggestion) => (
                   <button
                     key={suggestion.name}
                     type="button"
-                    className="flex items-center gap-2 rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                    className="inline-flex min-h-8 items-center gap-1 rounded-full border border-border/70 px-3 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
                     onClick={() => {
                       if (tryAddInterest(suggestion.name)) {
                         setInput("");
                       }
                     }}
                   >
-                    <span>{suggestion.name}</span>
-                    {suggestion.usage > 0 ? (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                        {suggestion.usage}
-                      </span>
-                    ) : null}
+                    <PlusIcon className="h-3 w-3" aria-hidden />
+                    {suggestion.name}
                   </button>
                 ))
-              ) : (
-                <span className="text-xs text-muted-foreground">Keine Vorschläge verfügbar.</span>
               )}
             </div>
           </div>
+        ) : null}
 
-          <div className="flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-center">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={resetInterests}
-              disabled={!state.dirty}
-              className="w-full sm:w-auto"
-            >
-              Änderungen verwerfen
-            </Button>
-            <Button type="submit" disabled={!state.dirty || saving} className="w-full sm:w-auto">
-              {saving ? (
-                <>
-                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Speichern…
-                </>
-              ) : (
-                "Interessen speichern"
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
+        <FormSaveBar dirty={state.dirty} submitting={saving} onReset={resetInterests} />
+      </form>
     </Card>
   );
 }
