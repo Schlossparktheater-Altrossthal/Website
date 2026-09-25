@@ -27,22 +27,43 @@ aus `src/lib/auth-dev-test-users.ts` (`member@example.com` … `owner@example.co
 
 ```bash
 pnpm dev                 # http://localhost:3000 (nicht 127.0.0.1 – next dev blockt fremde Origins)
-pnpm e2e                 # Setup legt Sessions an (e2e/.auth/, ignoriert), dann Tests
+pnpm e2e                 # Setup legt Sessions an (e2e/.auth/, ignoriert), dann Tests (alle Viewports)
+pnpm e2e:desktop         # nur chromium (Desktop Chrome, schneller Pfad)
+pnpm e2e:responsive      # nur der Overflow-Test über Handy/Tablet/Desktop
 pnpm e2e:screenshots -- --role admin /mitglieder /mitglieder/profil
+pnpm e2e:screenshots -- --viewport all
 ```
+
+## CI
+
+Der `playwright`-Job in `.github/workflows/ci.yml` bringt einen Postgres-16-Service mit, wendet
+`prisma migrate deploy` an und seedet die Testdaten. Playwright startet den Dev-Server selbst über
+`SCAN_E2E_START_COMMAND=pnpm exec next dev --turbo` (`playwright.config.ts` → `webServer`).
+Der Dev-Modus ist nötig, weil `/api/dev/screenshot-session` außerhalb von `next dev` ein
+`E2E_LOGIN_SECRET` verlangt (siehe Tabelle oben).
 
 ## Staging
 
 ```bash
 pnpm e2e:env             # holt das Secret per kubectl nach .env.e2e.local (ignoriert)
 pnpm e2e                 # E2E_BASE_URL kommt aus .env.e2e.local
-pnpm e2e:screenshots -- --role member --mobile
+pnpm e2e:screenshots -- --role member --viewport tablet-portrait
 ```
 
 - `E2E_ROLES=member,admin,owner` wählt die Rollen für das Setup (Standard: `member,admin`).
-- Screenshots: hell + dunkel, ganze Seite, nach `test-results/screenshots/<Zeit>/`
-  oder `--out <dir>`. Nicht committen (keine Binärdateien im Repo).
+- Screenshots: hell + dunkel, ganze Seite, nach `test-results/screenshots/<Zeit>/<viewport>/`
+  oder `--out <dir>` (dort ebenfalls in `<viewport>`-Unterordnern). Nicht committen (keine Binärdateien im Repo).
 - Das Skript wartet auf `.animate-pulse`/`aria-busy`, damit die Client-Session geladen ist.
+
+## Viewports & Playwright-Projekte
+
+Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in vier Projekten
+(`playwright.config.ts`): `chromium` (1280×720), `mobile` (390×844), `tablet-portrait`
+(834×1112) und `tablet-landscape` (1024×768). Smoke/Sync laufen nur in `chromium`.
+
+Für Screenshots akzeptiert `--viewport` die Presets `mobile`, `tablet-portrait`,
+`tablet-small` (768×1024), `tablet-landscape`, `desktop` sowie Komma-Listen und `all`.
+`--mobile` bleibt als Alias für `mobile` erhalten.
 
 ## Playwright-MCP (nur lokal)
 

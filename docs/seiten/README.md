@@ -24,4 +24,4 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 
 - **Permissions** folgen dem Schema `VISIBILITY.PAGE.CONTEXT.ACTION` (siehe `AGENTS.md`).
 - **Design-Tokens** statt harter Farben; Details in `docs/design-system.md`.
-- **Responsive Muster** (Tabs, Header, Sidebar) sind in `AGENTS.md` unter „Responsive Design Patterns" festgehalten.
+- **Responsive Muster** (Tabs, Header, Sidebar) sind in `AGENTS.md` unter „RESPONSIVE DESIGN PATTERNS" festgehalten; Breakpoints/Nutzerklassen in `docs/design-system.md`, Status je Seite in `docs/responsiveness-matrix.md`.

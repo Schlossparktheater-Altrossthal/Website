@@ -61,12 +61,14 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 
 ## RESPONSIVE DESIGN PATTERNS
 
-- Die zentrale Dokumentation für responsive Navigationsmuster liegt in `src/config/responsive.ts`. Neue projektweite Breakpoint-Entscheidungen dort typisiert ergänzen.
-- Es gelten die Tailwind-Default-Breakpoints; es sind keine custom Breakpoints in `tailwind.config.js` definiert.
+- Die autoritative Referenz für Breakpoints, Nutzerklassen und Container liegt in `docs/design-system.md` (Abschnitt „Breakpoints & Responsive"). Den Vollstatus je Seite führt `docs/responsiveness-matrix.md`.
+- Es gelten drei Nutzerklassen: Handy (<640px), Tablet (768–1023px), Desktop (≥1024px). Basis sind die Tailwind-Default-Breakpoints; `globals.css` (`@theme inline`) überschreibt `--breakpoint-xs: 20rem` (reserviert, derzeit ungenutzt) und `--breakpoint-2xl: 120rem` (=1920px). Weitere custom Breakpoints gibt es nicht.
+- **Tablet ist eine eigene Kategorie:** Auf Tablet darf keine Seite erzwungen horizontal scrollen. Breite Tabellen/Kalender brauchen einen Tablet-Fallback oder einen inneren `overflow-x-auto`-Container innerhalb ihrer Karte. Prüfung bei 768px, 834px und 1024px.
 - Tabs verwenden das gemeinsame TabsList-Pattern: unter `sm` (640px) shadcn `Select`, ab `sm` Pill-Tabs. Horizontal scrolling auf Tab-Listen ist ausdrücklich verboten.
-- Seiten mit vielen Unterbereichen (z. B. Profil): statt Tabs eine Bereichsliste mit Drill-down per `?bereich=` – mobil erst die Liste, dann der Bereich mit „‹ Zurück“, ab `lg` Liste als linke Navigation. So funktionieren Browser-Zurück und Deep-Links (Beispiel: `src/app/(members)/mitglieder/profil`).
+- Seiten mit vielen Unterbereichen (z. B. Profil): statt Tabs eine Bereichsliste mit Drill-down per `?bereich=` – mobil erst die Liste, dann der Bereich mit „‹ Zurück", ab `lg` Liste als linke Navigation. So funktionieren Browser-Zurück und Deep-Links (Beispiel: `src/app/(members)/mitglieder/profil`).
 - Header-Navigation: unter `md` (768px) `Sheet`, ab `md` horizontale Navigation.
-- Sidebar: bis 1023px `Sheet`, ab 1024px feste Sidebar.
+- Sidebar: bis 1023px `Sheet`, ab 1024px feste Sidebar (JS-Breakpoint `SIDEBAR_MOBILE_BREAKPOINT` in `src/components/ui/sidebar.tsx`).
+- **Responsive-Verifikation:** Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in den Playwright-Projekten `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768). UI-Änderungen zusätzlich visuell per Screenshot in Handy/Tablet/Desktop, hell+dunkel, absichern: `pnpm e2e:screenshots --viewport all` (Screenshots ins Review mitliefern).
 
 ## Tests, Qualitätssicherung & Reviews
 

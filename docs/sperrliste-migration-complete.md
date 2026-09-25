@@ -111,6 +111,8 @@ Die Sperrlistenübersicht wurde erfolgreich von der Spielplatz-Implementierung (
 
 ## Responsive Design
 
+> Hinweis: Diese Aufschlüsselung nutzt das historische Sperrlisten-Modell (`sm` als „Tablet"). Projektweit gilt die einheitliche Definition aus `docs/design-system.md`: Handy <640px, Tablet 768–1023px, Desktop ≥1024px.
+
 ### Mobile (xs: <640px)
 
 - WeekStrip: 3 Spalten

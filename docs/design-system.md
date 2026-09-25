@@ -140,14 +140,54 @@ Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `global
 </>
 ```
 
-**Status Quo (Stand: Oktober 2025):**
-Von ~94 Seiten im Mitgliederbereich nutzen nur 3 explizit `<MembersContentLayout>`:
+**Status Quo (Stand: September 2026):**
+Von 32 `page.tsx` im Mitgliederbereich nutzen zwei Stellen explizit `<MembersContentLayout>`:
 
-- `inventar-aufkleber`: `width="full" padding="compact"`
-- `scan`: `width="xl" padding="compact"`
-- `finanzen`: Custom Layout-Config
+- `mitglieder/koerpermasse/layout.tsx`: `width="full"`
+- `members-dashboard.tsx` (Dashboard unter `/mitglieder`): `width="2xl" spacing="comfortable" gap="lg"`
 
-Die meisten Seiten verwenden korrekt nur `<div className="space-y-6">` ohne eigene Container/Padding-Definitionen.
+Die übrigen Seiten verwenden korrekt nur `<div className="space-y-6">` ohne eigene Container/Padding-Definitionen.
+
+## Breakpoints & Responsive
+
+Drei Nutzerklassen bestimmen die Breakpoint-Entscheidungen im Mitgliederbereich. Basis sind die Tailwind-Default-Breakpoints; zusätzlich überschreibt `globals.css` (`@theme inline`) zwei Werte.
+
+### Nutzerklassen
+
+| Klasse  | Bereich    | Tailwind-Varianten                             |
+| ------- | ---------- | ---------------------------------------------- |
+| Handy   | < 640px    | Basis (mobile-first)                           |
+| Tablet  | 768–1023px | `md:` (768), Zwischenzone 640–767px über `sm:` |
+| Desktop | ≥ 1024px   | `lg:` (1024), `xl:` (1280), `2xl:` (1920)      |
+
+- **Handy:** einspaltig, Touch-Targets ≥ 44px (`min-h-11`, `ListRow` ≥ 48px), keine seitlichen Scrollbereiche außerhalb von Karten.
+- **Tablet:** eigene Kategorie (768–1023px). Kein erzwungenes horizontales Scrollen – breite Tabellen brauchen hier einen Tablet-Fallback oder einen inneren `overflow-x-auto`-Container **innerhalb** der Karte, nicht auf der Seite.
+- **Desktop:** mehrspaltige Grids, linke Navigationen, Tabellen.
+
+### Tailwind-Breakpoints im Projekt
+
+| Variante | Breite | Anmerkung                                                                       |
+| -------- | ------ | ------------------------------------------------------------------------------- |
+| `sm:`    | 640px  | Tabs-Umschaltung, Karten↔Tabelle in vielen Übersichten                          |
+| `md:`    | 768px  | Header (Sheet → Navigation), einige Karten↔Tabelle-Umschaltungen                |
+| `lg:`    | 1024px | Sidebar (Sheet → fest), Profil-Drill-down (Liste → linke Navigation)            |
+| `xl:`    | 1280px | breite Grids (z. B. Mitgliederverwaltung)                                       |
+| `2xl:`   | 1920px | `--breakpoint-2xl: 120rem` (überschrieben in `globals.css`; Default wäre 96rem) |
+
+`--breakpoint-xs: 20rem` ist definiert, wird aber derzeit nicht genutzt (reserviert). Der Breakpoint `2xl:` (1920px) ist unabhängig von der Containerbreite `members-container--width-2xl` (96rem), die im Mitgliederbereich den Standard-Container beschreibt.
+
+### Wiederkehrende Muster
+
+- **Tabs ↔ Select:** `TabsList` (`src/components/ui/tabs.tsx`) rendert unter `sm` automatisch ein `Select`, ab `sm` Pill-Tabs. Horizontal scrollende Tab-Listen sind verboten.
+- **Karten ↔ Tabelle:** getrennte Markup-Zweige `space-y-4 sm:hidden` (Karten) und `hidden sm:block` (Tabelle) – z. B. `members-table.tsx`, `member-measurements-control-center.tsx`, Sperrliste.
+- **Drill-down per URL:** Bereiche über `?bereich=` statt Tabs – mobil Liste, ab `lg` linke Navigation (Beispiel `profil`).
+- **Sidebar/Header:** JS-Breakpoint `SIDEBAR_MOBILE_BREAKPOINT = "(max-width: 1023px)"` in `src/components/ui/sidebar.tsx`; Header unter `md` im `Sheet`.
+
+### Verifikation
+
+- Automatisierter Overflow-Test: `e2e/responsive-overflow.spec.ts` läuft in den Playwright-Projekten `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768).
+- Screenshots: `pnpm e2e:screenshots --viewport all` erzeugt Handy/Tablet/Desktop in hell + dunkel.
+- Vollständige Status-Übersicht: `docs/responsiveness-matrix.md`.
 
 ## Komponentenrichtlinien
 
