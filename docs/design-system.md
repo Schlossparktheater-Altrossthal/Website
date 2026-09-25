@@ -214,6 +214,20 @@ import { CalendarCog } from "lucide-react";
 - Standardmäßig pill-förmig (`rounded-full`) mit getönten Hintergründen; Outline-Variante erzeugt Hover-Hervorhebung.
 - SVG-Icons skalieren automatisch (`[&>svg]:size-3`).
 
+### Kompakte Übersichts-Bausteine (`@/components/ui/*`)
+
+- `Card`: `variant` (`default`, `plain`, `muted`, `accent`, `ghost`) und `size` (`flush`, `sm`,
+  `md`, `lg`). Ohne Angaben bleibt das bisherige Aussehen.
+- `StatTile`: Kennzahl mit Label, Wert, optionalem Hinweis/Link; im Raster `grid-cols-2
+lg:grid-cols-4`.
+- `ListRow`/`ListRowGroup`: Listenzeilen (Termine, Aufgaben, Navigation), mind. 44 px hoch,
+  Chevron bei Links.
+- `SectionHeader`: Titel links, Aktion rechts, ohne Trennlinie.
+- `ProgressRing`: kreisförmiger Fortschritt (z. B. Profil 2/5).
+- `DismissibleNotice`: Hinweis mit Schließen-Knopf, geräteübergreifend ausgeblendet.
+- `FormSaveBar`: Speichern/Verwerfen; haftet bei ungespeicherten Änderungen am unteren Rand.
+  Muss direktes Kind des `<form>` sein, sonst greift `sticky` nicht.
+
 ## Utility-Übersicht
 
 Die neuen Utilities werden in `src/app/globals.css` gepflegt und können auch direkt in Tailwind-Klassen genutzt werden:

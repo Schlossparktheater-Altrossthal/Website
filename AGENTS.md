@@ -65,6 +65,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Die zentrale Dokumentation für responsive Navigationsmuster liegt in `src/config/responsive.ts`. Neue projektweite Breakpoint-Entscheidungen dort typisiert ergänzen.
 - Es gelten die Tailwind-Default-Breakpoints; es sind keine custom Breakpoints in `tailwind.config.js` definiert.
 - Tabs verwenden das gemeinsame TabsList-Pattern: unter `sm` (640px) shadcn `Select`, ab `sm` Pill-Tabs. Horizontal scrolling auf Tab-Listen ist ausdrücklich verboten.
+- Seiten mit vielen Unterbereichen (z. B. Profil): statt Tabs eine Bereichsliste mit Drill-down per `?bereich=` – mobil erst die Liste, dann der Bereich mit „‹ Zurück“, ab `lg` Liste als linke Navigation. So funktionieren Browser-Zurück und Deep-Links (Beispiel: `src/app/(members)/mitglieder/profil`).
 - Header-Navigation: unter `md` (768px) `Sheet`, ab `md` horizontale Navigation.
 - Sidebar: bis 1023px `Sheet`, ab 1024px feste Sidebar.
 
