@@ -1,5 +1,8 @@
 version: 2
 updates:
+  # npm ist der Sammel-Ecosystem-Wert für npm/pnpm/yarn. Dependabot wählt das Manifest
+  # über die vorhandenen Lockfiles; im Root existiert ausschließlich pnpm-lock.yaml
+  # (package-lock.json ist in .gitignore).
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -16,7 +19,7 @@ updates:
       include: scope
     labels:
       - dependencies
-      - npm
+      - pnpm
     groups:
       production-dependencies:
         dependency-type: production
