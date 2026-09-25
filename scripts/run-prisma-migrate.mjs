@@ -31,6 +31,13 @@ function includesFailedMigrationHint(error) {
   return /P3009/.test(output) || /failed migrations?/i.test(output);
 }
 
+function includesModifiedMigrationHint(error) {
+  if (!error) return false;
+  const output = collectErrorOutput(error);
+  if (!output) return false;
+  return /was modified after it was applied/i.test(output) || /checksum/i.test(output);
+}
+
 function parseFailedMigrations(output) {
   if (!output) return [];
 
@@ -71,7 +78,16 @@ function parseFailedMigrations(output) {
   return result;
 }
 
-function resolveFailedMigrations(prismaExecutable) {
+function resolveFailedMigrations(prismaExecutable, deployErrorOutput = "") {
+  // The original `migrate deploy` failure already names the failed migration(s)
+  // in its P3009 message. Parse that first: it is more reliable than
+  // `migrate status`, whose output format changed across Prisma versions and
+  // silently broke automatic recovery before.
+  const deployFailures = parseFailedMigrations(deployErrorOutput);
+  if (deployFailures.length > 0) {
+    return resolveByName(prismaExecutable, deployFailures);
+  }
+
   let statusOutput = "";
   try {
     statusOutput = execFileSync(prismaExecutable, ["migrate", "status", "--schema", schemaPath], {
@@ -96,8 +112,12 @@ function resolveFailedMigrations(prismaExecutable) {
     return [];
   }
 
+  return resolveByName(prismaExecutable, failedMigrations);
+}
+
+function resolveByName(prismaExecutable, migrationNames) {
   const resolved = [];
-  for (const migrationName of failedMigrations) {
+  for (const migrationName of migrationNames) {
     console.warn(
       `[prisma-migrate] Detected failed migration \"${migrationName}\". Marking as rolled back before retrying...`,
     );
@@ -237,12 +257,22 @@ async function main() {
     runMigrateDeploy(prismaExecutable);
     console.log("[prisma-migrate] Prisma migrations applied successfully.");
   } catch (error) {
+    if (includesModifiedMigrationHint(error)) {
+      console.error(
+        "[prisma-migrate] A migration that was already applied has been modified. " +
+          "Do not edit applied migrations and do not resolve them as rolled back. " +
+          'Recover manually: align the checksum in "_prisma_migrations" with the file in the deployed image, ' +
+          "or add a follow-up migration, then restart.",
+      );
+      process.exit(typeof error?.status === "number" ? error.status : 1);
+    }
+
     if (includesFailedMigrationHint(error)) {
       console.warn(
         "[prisma-migrate] Detected failed migrations in the target database. Attempting automatic recovery...",
       );
       try {
-        const resolved = resolveFailedMigrations(prismaExecutable);
+        const resolved = resolveFailedMigrations(prismaExecutable, collectErrorOutput(error));
         if (resolved.length > 0) {
           console.log(
             `[prisma-migrate] Resolved ${resolved.length} failed migration(s). Retrying prisma migrate deploy...`,
