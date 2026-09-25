@@ -214,10 +214,10 @@ export function SiteHeader({
               <Image
                 src="/Logo-Sommertheater.png"
                 alt={siteTitle}
-                width={140}
+                width={40}
                 height={40}
                 sizes="40px"
-                className="h-10 w-auto"
+                className="h-10 w-10"
                 priority
               />
             </span>
