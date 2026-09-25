@@ -267,6 +267,23 @@ lg:grid-cols-4`.
 - `DismissibleNotice`: Hinweis mit Schließen-Knopf, geräteübergreifend ausgeblendet.
 - `FormSaveBar`: Speichern/Verwerfen; haftet bei ungespeicherten Änderungen am unteren Rand.
   Muss direktes Kind des `<form>` sein, sonst greift `sticky` nicht.
+- `DateBadge`: Kalenderblatt (Wochentag + Tag) als `leading` für `ListRow`.
+
+### Kalender & Verfügbarkeit (`@/components/ui/*`)
+
+Vorbild sind moderne Kalender: kompakter Monat mit Punkten, darunter die Agenda des gewählten
+Tages; Verfügbarkeit als Balken; Zeiträume als Band. Zuerst in der Sperrliste eingesetzt.
+
+- `availability-status`: zentrale Farben für Verfügbarkeit – frei neutral, bevorzugt `success`,
+  eingeschränkt `warning`, gesperrt `destructive`. `StatusDot`, `StatusBadge`, `StatusLegend`.
+  Nirgends eigene Farben für diese Zustände vergeben.
+- `MonthGrid`: Monatsraster Mo–So, passt mobil ohne horizontales Scrollen. Pro Tag `status`
+  (getönte Fläche), `emphasis` (`strong` Probentag, `faint` Randtag), `markers` (Punkte für
+  Termine `primary` und Proben `info`), `band` (`final` Endprobenwoche, `holiday` Ferien).
+- `MonthSwitcher`: Monatstitel mit Vor/Zurück und „Heute“.
+- `AvailabilityBar`: „40/43 verfügbar“ als dreifarbiger Balken.
+- `SegmentedControl`: Auswahl aus 2–4 Optionen (Filter, Status). Für Seitenbereiche weiter
+  `Tabs` verwenden.
 
 ## Utility-Übersicht
 
@@ -379,9 +396,9 @@ Zuordnungen dort auf Tokens umgestellt.
 
 ### CSS-Override-Strategie für Legacy-Komponenten
 
-Für bestehende Komponenten mit vielen hard-coded Farben (z.B. Sperrlistenübersicht) kann eine CSS-Override-Strategie verwendet werden:
+Für bestehende Komponenten mit vielen hard-coded Farben kann eine CSS-Override-Strategie verwendet werden. Die Sperrliste nutzte sie bis 2026-09 und wurde inzwischen auf Tokens umgebaut; das Beispiel zeigt das Muster.
 
-**Beispiel: `sperrliste-styles.css`**
+**Beispiel (ehemals `sperrliste-styles.css`)**
 
 ```css
 @layer components {
