@@ -1,110 +1,187 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
+import { CalendarCheckIcon, CalendarPlusIcon, UsersRoundIcon } from "@/components/ui/action-icons";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { CalendarEntry } from "@/lib/calendar/event-kinds";
+import type { FinalWeekRange } from "@/lib/sperrliste/day-tiers";
+import { toDayKey } from "@/lib/sperrliste/day-tiers";
 import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 import type { HolidayRange } from "@/types/holidays";
 
-import type { BlockedDay } from "./block-calendar";
-import type { OverviewMember } from "./block-overview";
+import { EventDialog, type EventDialogState } from "./event-dialog";
+import { ExportButton } from "./export-button";
+import { MyCalendar } from "./my-calendar";
 import { BlocklistSettingsDialog } from "./settings-dialog";
-import { BlocklistTabs } from "./sperrliste-tabs";
+import { TeamView } from "./team-view";
+import type { MyBlockedDay, TeamEntry, TeamMember } from "./types";
+import { useCalendarModel } from "./use-calendar-model";
+import { useMyEntries } from "./use-my-entries";
 
-interface BlocklistPageClientProps {
-  initialBlockedDays: BlockedDay[];
-  initialHolidays: HolidayRange[];
-  overviewMembers: OverviewMember[];
-  initialSettings: ClientSperrlisteSettings;
-  canManageSettings: boolean;
-  canExport: boolean;
+export type BlocklistPageData = {
+  currentUserId: string;
+  myEntries: MyBlockedDay[];
+  members: TeamMember[];
+  teamEntries: TeamEntry[];
+  holidays: HolidayRange[];
+  calendarEntries: CalendarEntry[];
+  finalWeek: FinalWeekRange;
+  settings: ClientSperrlisteSettings;
   defaultHolidaySourceUrl: string;
   defaultPublicHolidaySourceUrl: string;
-  isOffline?: boolean;
-  offlineMessage?: string;
-}
+  /** Plant: sieht Gründe, pflegt Termine. */
+  canPlan: boolean;
+  canManageSettings: boolean;
+  canExport: boolean;
+  readOnly: boolean;
+};
 
-export function BlocklistPageClient({
-  initialBlockedDays,
-  initialHolidays,
-  overviewMembers,
-  initialSettings,
-  canManageSettings,
-  canExport,
-  defaultHolidaySourceUrl,
-  defaultPublicHolidaySourceUrl,
-  isOffline = false,
-  offlineMessage,
-}: BlocklistPageClientProps) {
-  const [settings, setSettings] = useState<ClientSperrlisteSettings>(initialSettings);
-  const [holidays, setHolidays] = useState<HolidayRange[]>(initialHolidays);
-  const [defaultHolidayUrl, setDefaultHolidayUrl] = useState(defaultHolidaySourceUrl);
-  const [defaultPublicHolidayUrl, setDefaultPublicHolidayUrl] = useState(
-    defaultPublicHolidaySourceUrl,
+export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
+  const [tab, setTab] = useState("mine");
+  const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [settings, setSettings] = useState(data.settings);
+  const [holidays, setHolidays] = useState(data.holidays);
+  const [defaults, setDefaults] = useState({
+    holiday: data.defaultHolidaySourceUrl,
+    publicHoliday: data.defaultPublicHolidaySourceUrl,
+  });
+  const [teamEntries, setTeamEntries] = useState(data.teamEntries);
+  const [calendarEntries, setCalendarEntries] = useState(data.calendarEntries);
+  const [eventDialog, setEventDialog] = useState<EventDialogState>(null);
+
+  const { entries, setDay, addRange, pendingKey } = useMyEntries({
+    initialEntries: data.myEntries,
+    currentUserId: data.currentUserId,
+    showReasonsInTeam: data.canPlan,
+    onTeamChange: setTeamEntries,
+  });
+
+  const model = useCalendarModel({
+    month,
+    holidays,
+    calendarEntries,
+    teamEntries,
+    finalWeek: data.finalWeek,
+    preferredWeekdays: settings.preferredWeekdays,
+    exceptionWeekdays: settings.exceptionWeekdays,
+    freezeDays: settings.freezeDays,
+  });
+
+  const openCreate = useCallback((date: string) => setEventDialog({ mode: "create", date }), []);
+  const openEdit = useCallback(
+    (entry: CalendarEntry) => setEventDialog({ mode: "edit", entry }),
+    [],
   );
-  const [offline, setOffline] = useState<boolean>(Boolean(isOffline));
-  const [offlineNotice, setOfflineNotice] = useState<string | null>(
-    isOffline ? (offlineMessage ?? null) : null,
+
+  const actions = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {data.canPlan && !data.readOnly ? (
+        <Button type="button" size="sm" onClick={() => openCreate(toDayKey(new Date()))}>
+          <CalendarPlusIcon className="h-4 w-4" aria-hidden />
+          Termin
+        </Button>
+      ) : null}
+      {data.canExport && !data.readOnly && tab === "team" ? (
+        <ExportButton
+          members={data.members}
+          entries={teamEntries}
+          holidays={holidays}
+          finalWeek={data.finalWeek}
+          preferredWeekdays={settings.preferredWeekdays}
+          exceptionWeekdays={settings.exceptionWeekdays}
+        />
+      ) : null}
+      {data.canManageSettings && !data.readOnly ? (
+        <BlocklistSettingsDialog
+          settings={settings}
+          defaultHolidaySourceUrl={defaults.holiday}
+          defaultPublicHolidaySourceUrl={defaults.publicHoliday}
+          onSettingsChange={(payload) => {
+            setSettings(payload.settings);
+            if (payload.holidays) setHolidays(payload.holidays);
+            if (payload.defaults) {
+              setDefaults((current) => ({
+                holiday: payload.defaults?.holidaySourceUrl ?? current.holiday,
+                publicHoliday: payload.defaults?.publicHolidaySourceUrl ?? current.publicHoliday,
+              }));
+            }
+          }}
+        />
+      ) : null}
+    </div>
   );
-  const defaultOfflineDescription =
-    offlineMessage ??
-    "Der Sperrlistenbereich läuft im Offline-Demo-Modus. Änderungen werden nicht gespeichert.";
-
-  useEffect(() => {
-    setOffline(Boolean(isOffline));
-  }, [isOffline]);
-
-  useEffect(() => {
-    if (!isOffline) {
-      setOfflineNotice(null);
-      return;
-    }
-    setOfflineNotice(defaultOfflineDescription);
-  }, [defaultOfflineDescription, isOffline]);
 
   return (
-    <div className="space-y-6">
-      {offline ? (
-        <div className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3">
-          <p className="text-sm font-semibold text-warning">Offline-Demo-Modus</p>
-          <p className="text-xs text-warning/80">{offlineNotice ?? defaultOfflineDescription}</p>
+    <div className="space-y-4">
+      {data.readOnly ? (
+        <div className="rounded-lg border border-warning bg-warning/10 p-4 text-sm text-warning-foreground">
+          Offline-Demo: Änderungen werden nicht gespeichert.
         </div>
       ) : null}
-      <BlocklistTabs
-        initialBlockedDays={initialBlockedDays}
-        holidays={holidays}
-        overviewMembers={overviewMembers}
-        freezeDays={settings.freezeDays}
-        preferredWeekdays={settings.preferredWeekdays}
-        exceptionWeekdays={settings.exceptionWeekdays}
-        canExport={canExport && !offline}
-        readOnly={offline}
-        readOnlyMessage={offlineNotice ?? undefined}
-        actions={
-          canManageSettings && !offline ? (
-            <BlocklistSettingsDialog
-              settings={settings}
-              defaultHolidaySourceUrl={defaultHolidayUrl}
-              defaultPublicHolidaySourceUrl={defaultPublicHolidayUrl}
-              onSettingsChange={(payload) => {
-                setSettings(payload.settings);
-                if (payload.holidays) {
-                  setHolidays(payload.holidays);
-                }
-                if (payload.defaults?.holidaySourceUrl) {
-                  setDefaultHolidayUrl(payload.defaults.holidaySourceUrl);
-                }
-                if (payload.defaults?.publicHolidaySourceUrl) {
-                  setDefaultPublicHolidayUrl(payload.defaults.publicHolidaySourceUrl);
-                }
-                if (typeof payload.offline === "boolean") {
-                  setOffline(payload.offline);
-                  setOfflineNotice(
-                    payload.offline ? (payload.message ?? defaultOfflineDescription) : null,
-                  );
-                }
-              }}
-            />
-          ) : null
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <TabsList>
+            <TabsTrigger value="mine" className="gap-2">
+              <CalendarCheckIcon className="h-4 w-4" aria-hidden />
+              Mein Kalender
+            </TabsTrigger>
+            <TabsTrigger value="team" className="gap-2">
+              <UsersRoundIcon className="h-4 w-4" aria-hidden />
+              Team
+            </TabsTrigger>
+          </TabsList>
+          {actions}
+        </div>
+
+        <TabsContent value="mine">
+          <MyCalendar
+            month={month}
+            onMonthChange={setMonth}
+            model={model}
+            entries={entries}
+            pendingKey={pendingKey}
+            readOnly={data.readOnly}
+            freezeDays={settings.freezeDays}
+            canPlan={data.canPlan}
+            onSetDay={setDay}
+            onAddRange={addRange}
+            onCreateEvent={openCreate}
+            onEditEvent={openEdit}
+          />
+        </TabsContent>
+        <TabsContent value="team">
+          <TeamView
+            month={month}
+            onMonthChange={setMonth}
+            model={model}
+            members={data.members}
+            canPlan={data.canPlan}
+            readOnly={data.readOnly}
+            onCreateEvent={openCreate}
+            onEditEvent={openEdit}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <EventDialog
+        state={eventDialog}
+        onClose={() => setEventDialog(null)}
+        onSaved={(entry, previousId) =>
+          setCalendarEntries((current) =>
+            [...current.filter((item) => item.id !== (previousId ?? entry.id)), entry].sort(
+              (a, b) => a.start.localeCompare(b.start),
+            ),
+          )
+        }
+        onDeleted={(id) =>
+          setCalendarEntries((current) =>
+            current.filter((item) => !(item.source === "event" && item.id === id)),
+          )
         }
       />
     </div>

@@ -1,10 +1,23 @@
+import { addMonths, format, startOfMonth } from "date-fns";
+
 import { PageHeader } from "@/components/members/page-header";
+import { getActiveProductionId } from "@/lib/active-production";
+import { readCalendarEntries } from "@/lib/calendar/entries";
+import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
+import { databaseEnabled } from "@/lib/dev-database";
+import {
+  DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE,
+  DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE,
+  DEV_SPERRLISTE_DEFAULTS_FIXTURE,
+  DEV_SPERRLISTE_HOLIDAYS_FIXTURE,
+  DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE,
+} from "@/lib/dev-sperrliste-fixture";
+import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { compareMembersByLastName, getNameInitials, getUserDisplayName } from "@/lib/names";
+import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
-import { hasPermission } from "@/lib/permissions";
-import { format } from "date-fns";
-import type { BlockedDay as BlockedDayDTO } from "./block-calendar";
-import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import {
   getDefaultHolidaySourceUrl,
   getDefaultPublicHolidaySourceUrl,
@@ -12,18 +25,49 @@ import {
   resolveBlocklistSettings,
   toClientBlocklistSettings,
 } from "@/lib/sperrliste-settings";
-import { BlocklistPageClient } from "./page-client";
-import type { OverviewMember } from "./block-overview";
-import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import { databaseEnabled } from "@/lib/dev-database";
-import {
-  DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE,
-  DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE,
-  DEV_SPERRLISTE_DEFAULTS_FIXTURE,
-  DEV_SPERRLISTE_HOLIDAYS_FIXTURE,
-  DEV_SPERRLISTE_OFFLINE_MESSAGE,
-  DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE,
-} from "@/lib/dev-sperrliste-fixture";
+
+import { BlocklistPageClient, type BlocklistPageData } from "./page-client";
+import { KIND_TO_STATUS, focusToGroup, type TeamEntry, type TeamMember } from "./types";
+
+const DESCRIPTION = "Trage ein, wann du nicht kannst – das Team sieht auf einen Blick, wer fehlt.";
+
+type MemberRecord = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  name: string | null;
+  email: string | null;
+  focus: string | null;
+  blockedDays: {
+    id: string;
+    date: string;
+    kind: "BLOCKED" | "LIMITED" | "PREFERRED";
+    reason: string | null;
+  }[];
+};
+
+function buildTeam(records: MemberRecord[], includeReasons: boolean) {
+  const members: TeamMember[] = [];
+  const entries: TeamEntry[] = [];
+  for (const record of [...records].sort(compareMembersByLastName)) {
+    members.push({
+      id: record.id,
+      name: getUserDisplayName(record),
+      initials: getNameInitials(record),
+      group: focusToGroup(record.focus),
+    });
+    for (const day of record.blockedDays) {
+      entries.push({
+        userId: record.id,
+        date: day.date,
+        status: KIND_TO_STATUS[day.kind],
+        // Gründe sieht nur, wer plant – sie verlassen den Server sonst nicht.
+        reason: includeReasons ? (day.reason?.trim() ?? null) || null : null,
+      });
+    }
+  }
+  return { members, entries };
+}
 
 export default async function BlocklistPage() {
   const session = await requireAuth();
@@ -32,169 +76,144 @@ export default async function BlocklistPage() {
     throw new Error("Benutzerinformationen konnten nicht geladen werden.");
   }
 
-  const databaseOnline = databaseEnabled();
+  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/sperrliste")];
 
-  let allowed = true;
-  let canManageSettings = false;
-  let canExport = false;
-
-  if (databaseOnline) {
-    const [allowedResult, manageResult, exportResult] = await Promise.all([
-      hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"),
-      hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"),
-      hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT"),
-    ]);
-    allowed = allowedResult;
-    canManageSettings = manageResult;
-    canExport = exportResult;
+  if (!databaseEnabled()) {
+    const team = buildTeam(
+      DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE.map((member) => ({
+        ...member,
+        focus: member.onboardingFocus,
+        blockedDays: member.blockedDays.map(({ id, date, kind, reason }) => ({
+          id,
+          date,
+          kind,
+          reason,
+        })),
+      })),
+      false,
+    );
+    const data: BlocklistPageData = {
+      currentUserId: userId,
+      myEntries: DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE.map(({ id, date, kind, reason }) => ({
+        id,
+        date,
+        kind,
+        reason,
+      })),
+      members: team.members,
+      teamEntries: team.entries,
+      holidays: DEV_SPERRLISTE_HOLIDAYS_FIXTURE,
+      calendarEntries: [],
+      finalWeek: null,
+      settings: DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE,
+      defaultHolidaySourceUrl: DEV_SPERRLISTE_DEFAULTS_FIXTURE.holidaySourceUrl,
+      defaultPublicHolidaySourceUrl: DEV_SPERRLISTE_DEFAULTS_FIXTURE.publicHolidaySourceUrl,
+      canPlan: false,
+      canManageSettings: false,
+      canExport: false,
+      readOnly: true,
+    };
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Sperrliste" description={DESCRIPTION} breadcrumbs={breadcrumbs} />
+        <BlocklistPageClient data={data} />
+      </div>
+    );
   }
+
+  const [allowed, canPlan, canManageSettings, canExport] = await Promise.all([
+    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"),
+    hasPermission(session.user, CALENDAR_PLANNER_PERMISSION),
+    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"),
+    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT"),
+  ]);
 
   if (!allowed) {
     return <div className="text-sm text-destructive">Kein Zugriff auf die Sperrliste</div>;
   }
 
-  if (!databaseOnline) {
-    const initialBlockedDays: BlockedDayDTO[] = DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE.map(
-      (entry) => ({
-        id: entry.id,
-        date: entry.date,
-        reason: entry.reason,
-        kind: entry.kind,
-        createdAt: entry.createdAt,
-      }),
-    );
+  // Vergangene Monate sind für die Planung uninteressant: ab Vormonat gut ein Jahr voraus.
+  const from = addMonths(startOfMonth(new Date()), -1);
+  const to = addMonths(from, 14);
 
-    const overviewMembers: OverviewMember[] = DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE.map(
-      (member) => ({
-        id: member.id,
-        firstName: member.firstName,
-        lastName: member.lastName,
-        name: member.name,
-        email: member.email,
-        avatarSource: member.avatarSource,
-        avatarUpdatedAt: member.avatarUpdatedAt,
-        onboardingFocus: member.onboardingFocus,
-        blockedDays: member.blockedDays.map((entry) => ({
-          id: entry.id,
-          date: entry.date,
-          reason: entry.reason,
-          kind: entry.kind,
-          createdAt: entry.createdAt,
-        })),
-      }),
-    );
+  const settings = resolveBlocklistSettings(await readSperrlisteSettings());
+  const activeProductionId = await getActiveProductionId(userId);
 
-    const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/sperrliste")];
-
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Sperrliste" breadcrumbs={breadcrumbs} />
-        <BlocklistPageClient
-          initialBlockedDays={initialBlockedDays}
-          initialHolidays={DEV_SPERRLISTE_HOLIDAYS_FIXTURE}
-          overviewMembers={overviewMembers}
-          initialSettings={DEV_SPERRLISTE_CLIENT_SETTINGS_FIXTURE}
-          canManageSettings={false}
-          canExport={false}
-          defaultHolidaySourceUrl={DEV_SPERRLISTE_DEFAULTS_FIXTURE.holidaySourceUrl}
-          defaultPublicHolidaySourceUrl={DEV_SPERRLISTE_DEFAULTS_FIXTURE.publicHolidaySourceUrl}
-          isOffline
-          offlineMessage={DEV_SPERRLISTE_OFFLINE_MESSAGE}
-        />
-      </div>
-    );
-  }
-
-  const settingsRecord = await readSperrlisteSettings();
-  const resolvedSettingsBefore = resolveBlocklistSettings(settingsRecord);
-
-  const [personalBlockedDays, holidayRanges, overviewUsers] = await Promise.all([
-    prisma.blockedDay.findMany({
-      where: { userId },
-      orderBy: { date: "asc" },
-    }),
-    getSaxonySchoolHolidayRanges(resolvedSettingsBefore.cacheKey),
+  const [holidays, users, calendarEntries, production] = await Promise.all([
+    getSaxonySchoolHolidayRanges(settings.cacheKey),
     prisma.user.findMany({
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
+      where: { deactivatedAt: null },
       select: {
         id: true,
         firstName: true,
         lastName: true,
         name: true,
         email: true,
-        avatarSource: true,
-        avatarImageUpdatedAt: true,
-        onboardingProfile: {
-          select: {
-            focus: true,
-          },
-        },
+        onboardingProfile: { select: { focus: true } },
         blockedDays: {
+          where: { date: { gte: from, lt: to } },
           orderBy: { date: "asc" },
-          select: {
-            id: true,
-            date: true,
-            reason: true,
-            kind: true,
-            createdAt: true,
-          },
+          select: { id: true, date: true, kind: true, reason: true },
         },
       },
     }),
+    readCalendarEntries({ from, to }),
+    activeProductionId
+      ? prisma.show.findUnique({
+          where: { id: activeProductionId },
+          select: { finalRehearsalWeekStart: true, finalRehearsalWeekEnd: true },
+        })
+      : null,
   ]);
 
-  const refreshedSettingsRecord = await readSperrlisteSettings();
-  const resolvedSettings = resolveBlocklistSettings(refreshedSettingsRecord);
-  const clientSettings = toClientBlocklistSettings(resolvedSettings);
-  const defaultHolidaySourceUrl = getDefaultHolidaySourceUrl();
-  const defaultPublicHolidaySourceUrl = getDefaultPublicHolidaySourceUrl();
-
-  const initialBlockedDays: BlockedDayDTO[] = personalBlockedDays.map((entry) => ({
-    id: entry.id,
-    date: format(entry.date, "yyyy-MM-dd"),
-    reason: entry.reason,
-    kind: entry.kind,
-    createdAt: entry.createdAt.toISOString(),
-  }));
-
-  const overviewMembers: OverviewMember[] = overviewUsers.map((user) => ({
+  const records: MemberRecord[] = users.map((user) => ({
     id: user.id,
-    firstName: user.firstName ?? null,
-    lastName: user.lastName ?? null,
-    name: user.name ?? null,
-    email: user.email ?? null,
-    avatarSource: user.avatarSource ?? null,
-    avatarUpdatedAt: user.avatarImageUpdatedAt ? user.avatarImageUpdatedAt.toISOString() : null,
-    onboardingFocus: user.onboardingProfile?.focus ?? null,
-    blockedDays: user.blockedDays.map((entry) => ({
-      id: entry.id,
-      date: format(entry.date, "yyyy-MM-dd"),
-      reason: entry.reason,
-      kind: entry.kind,
-      createdAt: entry.createdAt.toISOString(),
+    firstName: user.firstName,
+    lastName: user.lastName,
+    name: user.name,
+    email: user.email,
+    focus: user.onboardingProfile?.focus ?? null,
+    blockedDays: user.blockedDays.map((day) => ({
+      id: day.id,
+      date: format(day.date, "yyyy-MM-dd"),
+      kind: day.kind,
+      reason: day.reason,
     })),
   }));
+  const team = buildTeam(records, canPlan);
+  const myEntries = records.find((record) => record.id === userId)?.blockedDays ?? [];
 
-  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/sperrliste")];
+  const finalWeek = production?.finalRehearsalWeekStart
+    ? {
+        start: format(production.finalRehearsalWeekStart, "yyyy-MM-dd"),
+        end: production.finalRehearsalWeekEnd
+          ? format(production.finalRehearsalWeekEnd, "yyyy-MM-dd")
+          : null,
+      }
+    : null;
+
+  const data: BlocklistPageData = {
+    currentUserId: userId,
+    myEntries,
+    members: team.members,
+    teamEntries: team.entries,
+    holidays,
+    calendarEntries,
+    finalWeek,
+    // Der Ferienabruf aktualisiert den Prüfstatus der Quellen – deshalb neu lesen.
+    settings: toClientBlocklistSettings(resolveBlocklistSettings(await readSperrlisteSettings())),
+    defaultHolidaySourceUrl: getDefaultHolidaySourceUrl(),
+    defaultPublicHolidaySourceUrl: getDefaultPublicHolidaySourceUrl(),
+    canPlan,
+    canManageSettings,
+    canExport,
+    readOnly: false,
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Sperrliste"
-        description="Markiere Tage, an denen du nicht verfügbar bist, damit das Team die Planung im Blick behält."
-        breadcrumbs={breadcrumbs}
-      />
-      <BlocklistPageClient
-        initialBlockedDays={initialBlockedDays}
-        initialHolidays={holidayRanges}
-        overviewMembers={overviewMembers}
-        initialSettings={clientSettings}
-        canManageSettings={canManageSettings}
-        canExport={canExport}
-        defaultHolidaySourceUrl={defaultHolidaySourceUrl}
-        defaultPublicHolidaySourceUrl={defaultPublicHolidaySourceUrl}
-        isOffline={false}
-      />
+      <PageHeader title="Sperrliste" description={DESCRIPTION} breadcrumbs={breadcrumbs} />
+      <BlocklistPageClient data={data} />
     </div>
   );
 }
