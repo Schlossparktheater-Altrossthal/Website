@@ -88,7 +88,7 @@ export function AllocationTab({ onboardingId, allocation }: AllocationTabProps) 
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <div className="grid gap-6 grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <div className="space-y-4">
         <Card>
           <CardHeader className="space-y-1">

@@ -62,7 +62,7 @@ export function InterestsSection({
   const sortedEdges = [...coOccurrences].sort((a, b) => b.weight - a.weight).slice(0, 8);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
       <DistributionBars title="Top-Interessen" items={topTags} subtitle="Häufigste Angaben" />
       <Card className="h-full">
         <CardHeader className="space-y-1">

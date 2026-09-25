@@ -78,13 +78,13 @@ function RoleDistribution({
 export function GlobalOverviewTab({ data, participants }: GlobalOverviewTabProps) {
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <FocusDistributionSummary items={data.focusDistribution} />
         {data.kpis.map((metric, index) => (
           <MetricCard key={metric.id} metric={metric} index={index} />
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <DistributionBars
           title="Altersgruppen"
           items={data.ageGroups}
@@ -116,7 +116,7 @@ export function GlobalOverviewTab({ data, participants }: GlobalOverviewTabProps
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <RoleDistribution
           title="Rollenpräferenzen (Acting)"
           roles={data.rolesActing}
@@ -141,7 +141,7 @@ export function GlobalOverviewTab({ data, participants }: GlobalOverviewTabProps
         clusters={data.interestClusters}
         diversity={data.diversity}
       />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <NutritionSection data={data.nutrition} totalParticipants={participants} />
         <ProcessSection steps={data.process.steps} documents={data.process.documents} />
       </div>

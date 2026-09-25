@@ -83,7 +83,7 @@ export function HistoryTab({ history }: HistoryTabProps) {
           </div>
         </CardContent>
       </Card>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <DistributionBars title="Teilnehmende" items={participants} />
         <DistributionBars title="Medianalter" items={medianAge} />
       </div>
