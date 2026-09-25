@@ -144,3 +144,29 @@ eine deterministische Demo-Antwort zurück (`offline: true`).
 - Im Frontend erscheint ein dezenter Hinweisbanner, damit Screenshots klar als Demo-Daten gekennzeichnet sind.
 
 Für echte Daten einfach wieder eine gültige `DATABASE_URL` setzen oder den Dev-Stack über `pnpm dev:start` starten.
+
+## Migrationen auf Staging/Prod
+
+Der Staging-Pod führt beim Start einen Init-Container (`migrate`) aus, der
+`node scripts/run-prisma-migrate.mjs` und damit `prisma migrate deploy` laufen
+lässt. Schlägt dieser Lauf fehl, bleibt der Pod in `Init:CrashLoopBackOff` und
+Argo CD meldet die App als `Degraded`.
+
+- **Migrationen nie nachträglich ändern**, wenn sie schon gepusht oder irgendwo
+  angewandt wurden. `migrate deploy` vergleicht die Prüfsumme der Datei mit
+  `_prisma_migrations.checksum` – eine geänderte, bereits angewandte Migration
+  blockiert den Deploy dauerhaft. Korrektur immer als neue Migration.
+- **Prisma wendet Migrationen nicht transaktional an.** Ein Fehler (z. B.
+  `P3009`) hinterlässt Teil-DDL: `ALTER TABLE … ADD COLUMN` bleibt stehen, der
+  Eintrag in `_prisma_migrations` steht auf `failed`. `resolve --rolled-back`
+  allein heilt das nicht, der erneute Lauf scheitert dann an „column already
+  exists".
+
+Recovery (per `kubectl -n theater-website-staging exec postgresql-0 -- psql -U
+theater -d theater_staging`):
+
+1. Teil-DDL zurückrollen: die in der fehlgeschlagenen Migration angelegten
+   Spalten/Indizes/Constraints per `DROP … IF EXISTS` entfernen.
+2. `DELETE FROM "_prisma_migrations" WHERE migration_name = '<name>';`
+3. Pod neu starten (`kubectl delete pod …` oder `rollout restart deploy/website`).
+   Der Init-Container wendet die Migration dann sauber von vorn an.

@@ -46,6 +46,8 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 ## Daten, Backend & Realtime
 
 - Schemaänderungen in `prisma/schema.prisma` stets mit Migration begleiten, danach `pnpm prisma:generate`.
+- Migrationen sind nach dem Push **unveränderlich**: Eine einmal gepushte oder auf Staging/Prod angewandte Migration wird nie mehr editiert. Korrekturen kommen in eine neue Migration. Grund: `prisma migrate deploy` vergleicht Prüfsummen – eine nachträglich geänderte, bereits angewandte Migration blockiert den Staging-Init-Container dauerhaft (`Init:CrashLoopBackOff`).
+- Schlägt `migrate deploy` fehl (P3009), läuft Prisma auf Postgres nicht transaktional: Ein fehlgeschlagener Lauf hinterlässt Teil-DDL (bereits angelegte Spalten bleiben stehen). Recovery: Teil-DDL manuell zurückrollen, den fehlgeschlagenen Eintrag aus `_prisma_migrations` entfernen und neu deployen. Details in `docs/development.md`.
 - ENV-Variablen in `.env.example` und README dokumentieren.
 - Realtime-Ereignisse über `@/hooks/useRealtime` und `realtime-server/src`. Frontend und Backend gleichzeitig pflegen.
 - Geteilte Module des Realtime-Servers (`src/lib/realtime/shared/*`, `src/lib/server-analytics-*`) bleiben handgepflegt als `.js` + `.d.ts`. Der Realtime-Server hat keine Build-Stufe und kann `.ts` nicht laden – keine TS-Migration. Bei Änderungen an der `.js` die zugehörige `.d.ts` synchron halten.
