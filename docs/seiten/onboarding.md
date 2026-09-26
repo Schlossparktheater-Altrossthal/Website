@@ -45,11 +45,13 @@ Fotoerlaubnis) sowie Rückkehrer-Aktualisierung und Talentprofile.
 
 ## Rollen- und Gewerkewünsche
 
-- Onboarding, Rückkehrer-Wizard und Profil nutzen dieselbe Stufenauswahl
-  `role-preference-level-picker.tsx`: Nein · Gern (50) · Sehr gern (75) · Unbedingt (100).
-- Der frühere Prozent-Slider ist entfernt: Er war auf Handys schwer zu greifen, und Prozentwerte
-  wirkten wie ein gemeinsames 100-%-Budget. Jeder Bereich wird einzeln bewertet; alte Gewichte
-  werden der nächstliegenden Stufe zugeordnet (`getRolePreferenceLevel`).
+- Onboarding, Rückkehrer-Wizard und Profil nutzen dieselbe kompakte Zeile
+  `role-preference-level-picker.tsx` mit stufenlosem Radix-Regler (`src/components/ui/slider.tsx`).
+  Ganz links = kein Interesse; angezeigt wird ein Wort (Vielleicht … Unbedingt), keine Prozentzahl,
+  weil Prozente wie ein gemeinsames 100-%-Budget wirkten.
+- Der frühere `<input type="range">` war auf Handys schwer zu greifen (16 px hoch, die Seite
+  scrollte stattdessen). Der Radix-Regler reagiert auf die ganze Spur und sperrt beim Ziehen das
+  Scrollen (`touch-none`).
 
 ## Besonderheiten / Altlasten
 

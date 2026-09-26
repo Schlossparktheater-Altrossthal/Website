@@ -2,39 +2,26 @@
 
 import type { ReactNode } from "react";
 
-import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control";
-import {
-  ROLE_PREFERENCE_LEVELS,
-  getRolePreferenceLevel,
-  getRolePreferenceLevelWeight,
-  type RolePreferenceLevel,
-} from "@/lib/onboarding/role-preference-utils";
+import { Slider } from "@/components/ui/slider";
+import { getRolePreferenceWeightLabel } from "@/lib/onboarding/role-preference-utils";
 import { cn } from "@/lib/utils";
-
-type LevelValue = RolePreferenceLevel | "none";
-
-const LEVEL_OPTIONS: SegmentedOption<LevelValue>[] = [
-  { value: "none", label: "Nein" },
-  ...ROLE_PREFERENCE_LEVELS.map((level) => ({ value: level.value, label: level.label })),
-];
 
 type RolePreferenceLevelPickerProps = {
   title: string;
   description?: string | null;
   /** Zusatz neben dem Titel, z. B. „Eigenes Gewerk“. */
   badge?: ReactNode;
-  /** Aktion rechts oben, z. B. Entfernen eines eigenen Gewerks. */
+  /** Aktion rechts neben dem Label, z. B. Entfernen eines eigenen Gewerks. */
   action?: ReactNode;
   enabled: boolean;
   weight: number;
-  /** `null` = abgewählt, sonst das Gewicht der gewählten Stufe. */
+  /** `null` = ganz links (kein Interesse), sonst das Gewicht 1–100. */
   onChange: (weight: number | null) => void;
 };
 
 /**
- * Ein Rollen-/Gewerkewunsch mit Stufenauswahl (Nein · Gern · Sehr gern · Unbedingt).
- * Ersetzt den früheren Prozent-Slider: große Tippflächen statt schmalem Regler und keine
- * Prozentzahlen, die wie ein gemeinsames 100-%-Budget wirken.
+ * Ein Rollen-/Gewerkewunsch als kompakte Zeile mit stufenlosem Regler. Angezeigt wird ein
+ * Wort statt einer Prozentzahl, damit niemand an ein gemeinsames 100-%-Budget denkt.
  */
 export function RolePreferenceLevelPicker({
   title,
@@ -45,41 +32,40 @@ export function RolePreferenceLevelPicker({
   weight,
   onChange,
 }: RolePreferenceLevelPickerProps) {
-  const level: LevelValue = enabled ? (getRolePreferenceLevel(weight) ?? "none") : "none";
-  const active = level !== "none";
+  const value = enabled ? weight : 0;
+  const active = value > 0;
 
   return (
     <div
       className={cn(
-        "space-y-2 rounded-lg border p-3 transition-colors",
+        "min-w-0 rounded-lg border px-3 pb-1 pt-2 transition-colors",
         active ? "border-primary/60 bg-primary/5" : "border-border/70",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 space-y-0.5">
-          <p className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-foreground">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-foreground">
+          <span className="truncate" title={description ?? undefined}>
             {title}
-            {badge}
-          </p>
-          {description ? (
-            <p className="line-clamp-2 text-xs text-muted-foreground">{description}</p>
-          ) : null}
-        </div>
-        {action}
+          </span>
+          {badge}
+        </p>
+        <span className="flex shrink-0 items-center gap-1">
+          <span
+            className={cn("text-xs", active ? "font-medium text-primary" : "text-muted-foreground")}
+          >
+            {getRolePreferenceWeightLabel(value)}
+          </span>
+          {action}
+        </span>
       </div>
-      <SegmentedControl
-        value={level}
-        onValueChange={(next) =>
-          onChange(next === "none" ? null : getRolePreferenceLevelWeight(next))
-        }
-        options={LEVEL_OPTIONS}
-        aria-label={`Wie gern: ${title}`}
-        size="md"
-        fullWidth
-        className="[&>button]:h-11 [&>button]:px-1 [&>button]:text-xs sm:[&>button]:text-sm"
-        activeClassName={(value) =>
-          value === "none" ? undefined : "bg-primary text-primary-foreground ring-primary"
-        }
+      {description ? <p className="truncate text-xs text-muted-foreground">{description}</p> : null}
+      <Slider
+        min={0}
+        max={100}
+        step={1}
+        value={[value]}
+        onValueChange={([next]) => onChange(next > 0 ? next : null)}
+        thumbLabel={`Wie gern: ${title}`}
       />
     </div>
   );
@@ -89,7 +75,8 @@ export function RolePreferenceLevelPicker({
 export function RolePreferenceLevelHint({ className }: { className?: string }) {
   return (
     <p className={cn("text-xs text-muted-foreground", className)}>
-      Bewerte jeden Bereich für sich – du kannst auch mehrfach „Unbedingt“ wählen.
+      Jeder Regler gilt für sich – es gibt kein Gesamtbudget, du kannst auch mehrere ganz nach
+      rechts schieben.
     </p>
   );
 }
