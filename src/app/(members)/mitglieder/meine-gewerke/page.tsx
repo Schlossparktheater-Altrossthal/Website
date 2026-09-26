@@ -1,157 +1,124 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { hasPermission } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
-import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
-import { hasRole, requireAuth } from "@/lib/rbac";
-import { DEPARTMENT_LEAD_ROLE } from "./utils";
-import {
-  Building2Icon,
-  CalendarDaysIcon,
-  FolderOpenIcon,
-  WrenchIcon,
-} from "@/components/ui/action-icons";
+import { ChevronRightIcon } from "@/components/ui/action-icons";
+import { resolveTeamsViewer } from "@/lib/departments/access";
+import { loadMyTeams, type TeamCard } from "@/lib/departments/portal";
 
-type StatItem = {
-  label: string;
-  value: string;
-  hint: string;
-  icon: typeof Building2Icon;
-};
+import { ColorDot, formatEventDate, TEAM_ROLE_LABELS } from "./team-ui";
 
-export default async function MeineGewerkePage() {
-  const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "PRIVATE.DEPARTMENT.OWN.VIEW");
-  const isBoard = hasRole(session.user, "board");
+export default async function MeineTeamsPage() {
+  const { userId, isManager, production } = await resolveTeamsViewer();
 
-  if (!allowed) {
+  if (!userId || !production) {
     return (
       <div className="space-y-6">
-        <div className="text-sm text-destructive">
-          Kein Zugriff auf die persönliche Gewerkeübersicht.
+        <PageHeader title="Meine Teams" />
+        <div className="py-12 text-center">
+          <p className="text-muted-foreground">Wähle zuerst eine aktive Produktion aus.</p>
         </div>
       </div>
     );
   }
 
-  const userId = session.user?.id;
-  if (!userId) {
-    notFound();
-  }
-
-  if (!isBoard) {
-    const leadCount = await prisma.departmentMembership.count({
-      where: { userId, role: DEPARTMENT_LEAD_ROLE, ...currentDepartmentMembershipWhere() },
-    });
-    if (leadCount === 0) {
-      return (
-        <div className="space-y-6">
-          <div className="text-sm text-destructive">
-            Kein Zugriff auf die persönliche Gewerkeübersicht.
-          </div>
-        </div>
-      );
-    }
-  }
-
-  const memberships = await prisma.departmentMembership.findMany({
-    where: { userId, ...currentDepartmentMembershipWhere() },
-    select: {
-      department: {
-        select: {
-          id: true,
-          slug: true,
-          tasks: { select: { id: true, status: true } },
-          events: { select: { id: true } },
-          documents: { select: { id: true } },
-        },
-      },
-    },
-  });
-
-  const teamCount = memberships.length;
-  const allTasks = memberships.flatMap((entry) => entry.department.tasks);
-  const openTasks = allTasks.filter((task) => task.status !== "done").length;
-  const eventCount = memberships.reduce((sum, entry) => sum + entry.department.events.length, 0);
-  const documentCount = memberships.reduce(
-    (sum, entry) => sum + entry.department.documents.length,
-    0,
-  );
-
-  const stats: StatItem[] = [
-    { label: "Gewerke", value: teamCount.toString(), hint: "Teams mit Zugriff", icon: WrenchIcon },
-    {
-      label: "Offene Aufgaben",
-      value: openTasks.toString(),
-      hint: "Todos in deinen Gewerken",
-      icon: WrenchIcon,
-    },
-    {
-      label: "Termine",
-      value: eventCount.toString(),
-      hint: "Ereignisse in den Teams",
-      icon: CalendarDaysIcon,
-    },
-    {
-      label: "Dokumente",
-      value: documentCount.toString(),
-      hint: "Dateien aus den Gewerken",
-      icon: FolderOpenIcon,
-    },
-  ];
-
-  const firstDepartmentSlug = memberships.find((entry) => entry.department.slug)?.department.slug;
+  const teams = await loadMyTeams(userId, production.id, isManager);
+  const mine = teams.filter((team) => team.role);
+  const others = teams.filter((team) => !team.role);
+  const leadsSomething = mine.some((team) => team.role === "lead");
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Gewerkeplanung"
-        description="Die alte Ansicht wurde entfernt. Hier steht eine schlanke Basis für dein neues Design bereit."
+        title="Meine Teams"
+        description={`Deine Gewerke in ${production.title ?? production.year}.`}
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label}>
-              <CardHeader className="pb-2">
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <CardTitle className="text-2xl">{stat.value}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>{stat.hint}</span>
-                <Icon className="h-4 w-4" aria-hidden />
-              </CardContent>
-            </Card>
-          );
-        })}
-      </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Neue Oberfläche vorbereiten</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Nutze diese Seite als Ausgangspunkt. Authentifizierung, Berechtigungen und
-            Datenanbindung bleiben aktiv.
+      {mine.length === 0 ? (
+        <div className="py-12 text-center">
+          <p className="text-muted-foreground">
+            Du bist noch keinem Gewerk zugewiesen. Die Regie teilt die Gewerke anhand deiner Wünsche
+            aus dem Onboarding zu.
           </p>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href="/mitglieder/meine-gewerke/todos">Aufgaben öffnen</Link>
-          </Button>
-          {firstDepartmentSlug ? (
-            <Button asChild variant="outline">
-              <Link href={`/mitglieder/meine-gewerke/${encodeURIComponent(firstDepartmentSlug)}`}>
-                Erstes Gewerk öffnen
-              </Link>
-            </Button>
-          ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <TeamGrid teams={mine} />
+      )}
+
+      {leadsSomething || isManager ? (
+        <Link
+          href="/mitglieder/produktionen/zuweisung"
+          className="flex min-h-12 items-center justify-between rounded-xl border border-border bg-card px-4 text-sm font-medium hover:bg-muted/40"
+        >
+          Anfragen und Wünsche bearbeiten
+          <ChevronRightIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
+        </Link>
+      ) : null}
+
+      {others.length ? (
+        <section className="space-y-3" aria-labelledby="other-teams">
+          <h2 id="other-teams" className="text-sm font-medium text-muted-foreground">
+            Weitere Gewerke der Produktion
+          </h2>
+          <TeamGrid teams={others} />
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+function TeamGrid({ teams }: { teams: TeamCard[] }) {
+  return (
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {teams.map((team) => (
+        <li key={team.id}>
+          <Link
+            href={`/mitglieder/meine-gewerke/${encodeURIComponent(team.slug)}`}
+            className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex items-center gap-2">
+              <ColorDot color={team.color} className="h-3 w-3" />
+              <span className="min-w-0 flex-1 truncate text-base font-semibold">{team.name}</span>
+              {team.role ? (
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                  {TEAM_ROLE_LABELS[team.role]}
+                </span>
+              ) : null}
+            </span>
+            <span className="grid grid-cols-3 gap-2 text-center">
+              <Stat
+                value={team.memberCount}
+                label={team.memberCount === 1 ? "Person" : "Personen"}
+              />
+              <Stat value={team.myOpenTasks} label="Für mich" />
+              <Stat value={team.openTasks} label="Offen" />
+            </span>
+            <span className="space-y-1 text-sm text-muted-foreground">
+              <span className="block truncate">
+                {team.nextEvent
+                  ? `Nächster Termin: ${formatEventDate(team.nextEvent.start)} · ${team.nextEvent.title}`
+                  : "Kein Termin geplant"}
+              </span>
+              <span className="block truncate">
+                Leitung: {team.leads.length ? team.leads.join(", ") : "noch offen"}
+              </span>
+              {team.requestCount && team.role === "lead" ? (
+                <span className="block text-warning">
+                  {team.requestCount} {team.requestCount === 1 ? "Anfrage" : "Anfragen"}
+                </span>
+              ) : null}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <span className="rounded-lg bg-muted/60 py-2">
+      <span className="block text-lg font-semibold text-foreground">{value}</span>
+      <span className="block text-xs text-muted-foreground">{label}</span>
+    </span>
   );
 }

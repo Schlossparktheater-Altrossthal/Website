@@ -6,8 +6,8 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 
 ## Routen
 
-- `/mitglieder/meine-gewerke` – Übersicht der eigenen Gewerke
-- `/mitglieder/meine-gewerke/[slug]` – Detailansicht eines Gewerks
+- `/mitglieder/meine-gewerke` – „Meine Teams“: Karten der eigenen Gewerke der aktiven Produktion (Regie/Board sehen zusätzlich alle weiteren)
+- `/mitglieder/meine-gewerke/[slug]` – Gewerk-Portal mit `?ansicht=` Übersicht (Für mich, Termine, Ansprechpartner) / aufgaben / team; sichtbar für aktive Mitglieder des Gewerks und Regie/Board
 - `/mitglieder/meine-gewerke/todos` – offene Aufgaben
 
 ## Permissions

@@ -1,414 +1,280 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { addDays, format, startOfToday } from "date-fns";
-import { de } from "date-fns/locale/de";
-import type { ComponentType, SVGProps } from "react";
+import { notFound } from "next/navigation";
+import type { TaskStatus } from "@prisma/client";
 
+import { PageHeader } from "@/components/members/page-header";
+import { ChevronRightIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  CalendarIcon,
-  ListTodoIcon,
-  RulerIcon,
-  SparklesIcon,
-  SuccessIcon,
-  UsersIcon,
-} from "@/components/ui/action-icons";
-import { prisma } from "@/lib/prisma";
-import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
-import { hasRole, requireAuth } from "@/lib/rbac";
-import { hasPermission } from "@/lib/permissions";
-import { sortMeasurements, type MeasurementType, type MeasurementUnit } from "@/data/measurements";
+import { resolveTeamsViewer } from "@/lib/departments/access";
+import { loadDepartmentPortal } from "@/lib/departments/portal";
+import { cn } from "@/lib/utils";
 
-import {
-  DATE_KEY_FORMAT,
-  PLANNING_FREEZE_DAYS,
-  PLANNING_LOOKAHEAD_DAYS,
-  ROLE_BADGE_VARIANTS,
-  ROLE_LABELS,
-  type DepartmentMembershipWithDepartment,
-} from "../utils";
-import { DepartmentCard, type DepartmentMeasurementsByUser } from "../department-card";
-import { DepartmentEventPlanner, type DepartmentEventLite } from "../department-event-planner";
+import { formatDue, formatEventDate, Initials, TEAM_ROLE_LABELS, ViewSwitcher } from "../team-ui";
 
-type SummaryStatIcon = ComponentType<SVGProps<SVGSVGElement>>;
-type SummaryStat = { label: string; value: number; hint?: string; icon: SummaryStatIcon };
+type View = "uebersicht" | "aufgaben" | "team";
 
-type PageProps = { params: Promise<{ slug: string }> };
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: "Offen",
+  doing: "In Arbeit",
+  done: "Erledigt",
+};
 
-export default async function GewerkDetailPage({ params }: PageProps) {
-  const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "PRIVATE.DEPARTMENT.OWN.VIEW");
-  const hasMeasurementPermission = await hasPermission(
-    session.user,
-    "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
-  );
-  const canManageDepartments = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
-  const isEnsembleMember = hasRole(session.user, "cast");
-  const canManageMeasurements = hasMeasurementPermission && isEnsembleMember;
-  if (!allowed) {
-    return (
-      <div className="space-y-6">
-        <div className="text-sm text-destructive">
-          Kein Zugriff auf die persönliche Gewerkeübersicht.
-        </div>
-      </div>
-    );
-  }
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ ansicht?: string }>;
+};
 
-  const userId = session.user?.id;
-  if (!userId) {
-    notFound();
-  }
+export default async function GewerkPortalPage({ params, searchParams }: PageProps) {
+  const [{ slug }, { ansicht }] = await Promise.all([params, searchParams]);
+  const { userId, isManager, production } = await resolveTeamsViewer();
+  if (!userId || !production) notFound();
 
-  const resolvedParams = await params;
-  const rawSlug = resolvedParams?.slug;
-  if (!rawSlug) {
-    notFound();
-  }
+  const portal = await loadDepartmentPortal(production.id, decodeURIComponent(slug), userId);
+  // Sichtbar für Mitglieder des Gewerks sowie Regie/Board.
+  if (!portal || (!portal.viewerRole && !isManager)) notFound();
 
-  const slug = decodeURIComponent(rawSlug);
-
-  const membershipRaw = await prisma.departmentMembership.findFirst({
-    where: { userId, AND: [currentDepartmentMembershipWhere()], department: { slug } },
-    include: {
-      department: {
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          color: true,
-          slug: true,
-          memberships: {
-            where: { status: "active" },
-            include: {
-              user: { select: { id: true, name: true, email: true } },
-            },
-          },
-          tasks: {
-            include: {
-              assignments: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                      firstName: true,
-                      lastName: true,
-                    },
-                  },
-                },
-              },
-            },
-            orderBy: { createdAt: "asc" },
-          },
-          events: {
-            include: {
-              createdBy: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              },
-            },
-            orderBy: { start: "asc" },
-          },
-          documents: {
-            include: {
-              uploadedBy: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              },
-            },
-            orderBy: { createdAt: "desc" },
-          },
-        },
-      },
-    },
-  });
-
-  if (!membershipRaw || !membershipRaw.department) {
-    notFound();
-  }
-
-  const membership = membershipRaw as DepartmentMembershipWithDepartment;
-
-  if (canManageDepartments) {
-    redirect(`/mitglieder/produktionen/gewerke/${membership.department.id}`);
-  }
-
-  const departmentEvents = membership.department.events
-    .map((event) => ({
-      id: event.id,
-      title: event.title,
-      start: event.start.toISOString(),
-      end: event.end ? event.end.toISOString() : null,
-      location: event.location ?? null,
-      description: event.description ?? null,
-      createdBy: event.createdBy
-        ? {
-            id: event.createdBy.id,
-            name: event.createdBy.name ?? null,
-            email: event.createdBy.email ?? null,
-            firstName: event.createdBy.firstName ?? null,
-            lastName: event.createdBy.lastName ?? null,
-          }
-        : null,
-    }))
-    .sort(
-      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
-    ) as DepartmentEventLite[];
-
-  const today = startOfToday();
-  const planningStart = addDays(today, PLANNING_FREEZE_DAYS);
-  const planningEnd = addDays(planningStart, PLANNING_LOOKAHEAD_DAYS);
-
-  const memberIds = membership.department.memberships.map((entry) => entry.userId);
-
-  let departmentMeasurementsByUser: DepartmentMeasurementsByUser | undefined;
-  if (membership.department.slug === "kostuem" && memberIds.length) {
-    const measurementRecords = await prisma.memberMeasurement.findMany({
-      where: { userId: { in: memberIds } },
-      orderBy: { type: "asc" },
-    });
-
-    departmentMeasurementsByUser = {};
-    for (const record of measurementRecords) {
-      const existing = departmentMeasurementsByUser[record.userId] ?? [];
-      existing.push({
-        id: record.id,
-        type: record.type as MeasurementType,
-        value: record.value,
-        unit: record.unit as MeasurementUnit,
-        note: record.note,
-        updatedAt: record.updatedAt,
-      });
-      departmentMeasurementsByUser[record.userId] = existing;
-    }
-
-    for (const [userId, entries] of Object.entries(departmentMeasurementsByUser)) {
-      departmentMeasurementsByUser[userId] = sortMeasurements(entries);
-    }
-  }
-
-  const blockedDays = memberIds.length
-    ? await prisma.blockedDay.findMany({
-        where: {
-          userId: { in: memberIds },
-          date: { gte: today, lte: planningEnd },
-          kind: "BLOCKED",
-        },
-        orderBy: { date: "asc" },
-      })
-    : [];
-
-  const blockedByUser = new Map<string, Set<string>>();
-  for (const entry of blockedDays) {
-    if (entry.kind !== "BLOCKED") continue;
-    const key = format(entry.date, DATE_KEY_FORMAT);
-    const existing = blockedByUser.get(entry.userId);
-    if (existing) {
-      existing.add(key);
-    } else {
-      blockedByUser.set(entry.userId, new Set([key]));
-    }
-  }
-
-  const freezeUntilLabel = format(planningStart, "d. MMMM yyyy", { locale: de });
-  const planningWindowLabel = format(planningEnd, "d. MMMM yyyy", { locale: de });
-  const now = new Date();
-  const isEnsembleDepartment = membership.department.slug?.toLowerCase() === "ensemble";
-  const tasksForStats = isEnsembleDepartment ? [] : membership.department.tasks;
-  const activeTasksCount = tasksForStats.filter((task) => task.status !== "done").length;
-  const completedTasksCount = tasksForStats.filter((task) => task.status === "done").length;
-
-  const summaryStats: SummaryStat[] = [
-    {
-      label: "Teammitglieder",
-      value: membership.department.memberships.length,
-      hint: "Aktive Personen",
-      icon: UsersIcon,
-    },
-    {
-      label: "Aktive Aufgaben",
-      value: activeTasksCount,
-      hint: "Offen & in Arbeit im Gewerk",
-      icon: ListTodoIcon,
-    },
-    {
-      label: "Abgeschlossen",
-      value: completedTasksCount,
-      hint: "Erledigte Gewerke-Aufgaben",
-      icon: SuccessIcon,
-    },
-  ];
-
-  const headerActions = (
-    <>
-      {canManageMeasurements ? (
-        <Button
-          asChild
-          size="sm"
-          variant="outline"
-          className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
-        >
-          <Link href="/mitglieder/koerpermasse" title="Körpermaße verwalten">
-            <RulerIcon aria-hidden className="h-4 w-4" />
-            <span>Körpermaße</span>
-          </Link>
-        </Button>
-      ) : null}
-      <Button
-        asChild
-        size="sm"
-        variant="outline"
-        className="gap-2 rounded-full border-border/70 bg-background/80 px-4 backdrop-blur transition hover:border-primary/50 hover:bg-primary/10"
-      >
-        <Link href="/mitglieder/sperrliste" title="Sperrliste öffnen">
-          <CalendarIcon aria-hidden className="h-4 w-4" />
-          <span>Sperrliste</span>
-        </Link>
-      </Button>
-      <Button
-        asChild
-        size="sm"
-        variant="secondary"
-        className="gap-2 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 text-primary-foreground transition hover:from-primary/90 hover:via-primary/80 hover:to-primary"
-      >
-        <Link href="/mitglieder/meine-gewerke" title="Zur Übersicht">
-          <UsersIcon aria-hidden className="h-4 w-4" />
-          <span>Zur Übersicht</span>
-        </Link>
-      </Button>
-    </>
-  );
-
-  const heroDescription =
-    membership.department.description ??
-    "Alle Aufgaben, Termine und Teamkontakte dieses Gewerks im Fokus.";
-
-  const refreshPath = membership.department.slug
-    ? `/mitglieder/meine-gewerke/${encodeURIComponent(membership.department.slug)}`
-    : "/mitglieder/meine-gewerke";
-
-  const hero = (
-    <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-background/70 p-6 sm:p-10">
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-24 h-72 w-72 rounded-full bg-primary/25 blur-3xl" />
-        <div className="absolute -bottom-32 right-0 h-64 w-64 rounded-full bg-secondary/20 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.08),transparent_55%)]" />
-      </div>
-      <div className="relative flex flex-col gap-8">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1">
-                <SparklesIcon aria-hidden className="h-4 w-4" />
-                <span className="tracking-[0.2em]">Mission Control</span>
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-[11px] font-medium tracking-[0.2em] text-muted-foreground">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: membership.department.color ?? "#94a3b8" }}
-                />
-                {membership.department.slug ?? "Gewerk"}
-              </span>
-            </div>
-            <div className="space-y-4">
-              <h1 className="font-serif text-3xl leading-tight text-foreground sm:text-4xl">
-                {membership.department.name}
-              </h1>
-              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-                {heroDescription}
-              </p>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant={ROLE_BADGE_VARIANTS[membership.role]} size="sm">
-                  {ROLE_LABELS[membership.role]}
-                </Badge>
-                {membership.title ? (
-                  <Badge variant="outline" size="sm" className="border-border/60">
-                    {membership.title}
-                  </Badge>
-                ) : null}
-                {membership.note ? (
-                  <span className="rounded-full border border-border/50 bg-background/80 px-3 py-1 text-[11px]">
-                    Notiz: {membership.note}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3">{headerActions}</div>
-        </div>
-        <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
-          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {summaryStats.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={stat.label}
-                  className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm"
-                >
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <p className="text-xl font-bold leading-tight text-foreground">{stat.value}</p>
-                    {stat.hint ? (
-                      <p className="text-xs text-muted-foreground">{stat.hint}</p>
-                    ) : null}
-                  </div>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
-                    <Icon aria-hidden className="h-4 w-4" />
-                  </span>
-                </div>
-              );
-            })}
-          </dl>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:text-sm">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
-            <CalendarIcon aria-hidden className="h-4 w-4" />
-            Vorschläge berücksichtigen Sperrlisten bis {freezeUntilLabel}
-          </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5">
-            Planungsfenster: {freezeUntilLabel} – {planningWindowLabel}
-          </span>
-        </div>
-      </div>
-    </section>
-  );
+  const view: View = ansicht === "aufgaben" || ansicht === "team" ? ansicht : "uebersicht";
+  const basePath = `/mitglieder/meine-gewerke/${encodeURIComponent(portal.slug)}`;
+  const canManage = isManager || portal.viewerRole === "lead";
+  const leads = portal.members.filter((member) => member.role === "lead");
 
   return (
     <div className="space-y-6">
-      {hero}
-      <DepartmentEventPlanner
-        events={departmentEvents}
-        departmentId={membership.department.id}
-        departmentSlug={membership.department.slug}
-        canManage={membership.role === "lead"}
+      <PageHeader
+        title={portal.name}
+        description={
+          portal.viewerRole
+            ? `Du bist hier ${TEAM_ROLE_LABELS[portal.viewerRole]}.`
+            : "Du siehst dieses Gewerk als Regie."
+        }
+        breadcrumbs={[{ id: "teams", label: "Meine Teams", href: "/mitglieder/meine-gewerke" }]}
       />
-      <DepartmentCard
-        membership={membership}
-        userId={userId}
-        planningStart={planningStart}
-        planningEnd={planningEnd}
-        blockedByUser={blockedByUser}
-        freezeUntilLabel={freezeUntilLabel}
-        planningWindowLabel={planningWindowLabel}
-        now={now}
-        measurementsByUser={departmentMeasurementsByUser}
-        refreshPath={refreshPath}
+
+      <ViewSwitcher<View>
+        basePath={basePath}
+        current={view}
+        options={[
+          { value: "uebersicht", label: "Übersicht" },
+          { value: "aufgaben", label: `Aufgaben ${portal.openTasks.length}` },
+          { value: "team", label: `Team ${portal.members.length}` },
+        ]}
       />
+
+      {view === "uebersicht" ? (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="space-y-4">
+            {portal.description ? (
+              <p className="rounded-xl border border-border bg-card p-4 text-sm">
+                {portal.description}
+              </p>
+            ) : null}
+
+            <Section
+              title="Für mich"
+              action={{ href: `${basePath}?ansicht=aufgaben`, label: "Alle Aufgaben" }}
+            >
+              {portal.myTasks.length ? (
+                <TaskList tasks={portal.myTasks} />
+              ) : (
+                <Empty>Dir ist gerade keine offene Aufgabe zugewiesen.</Empty>
+              )}
+            </Section>
+
+            <Section title="Nächste Termine">
+              {portal.events.length ? (
+                <ul className="divide-y divide-border/60">
+                  {portal.events.slice(0, 5).map((event) => (
+                    <li key={event.id} className="flex min-h-12 flex-col justify-center py-2">
+                      <span className="text-sm font-medium">{event.title}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatEventDate(event.start)}
+                        {event.location ? ` · ${event.location}` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Empty>Noch keine Termine geplant.</Empty>
+              )}
+            </Section>
+          </div>
+
+          <aside className="space-y-4">
+            <Section title="Ansprechpartner">
+              {leads.length ? (
+                <ul className="space-y-2">
+                  {leads.map((member) => (
+                    <MemberRow key={member.id} member={member} />
+                  ))}
+                </ul>
+              ) : (
+                <Empty>Die Leitung ist noch nicht bestimmt.</Empty>
+              )}
+            </Section>
+            <Section title="Stand der Aufgaben">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {(["todo", "doing", "done"] as const).map((status) => (
+                  <span key={status} className="rounded-lg bg-muted/60 py-2">
+                    <span className="block text-lg font-semibold">{portal.taskCounts[status]}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {STATUS_LABELS[status]}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </Section>
+          </aside>
+        </div>
+      ) : null}
+
+      {view === "aufgaben" ? (
+        <Section title="Offene Aufgaben">
+          {portal.openTasks.length ? (
+            <TaskList tasks={portal.openTasks} mine={new Set(portal.myTasks.map((t) => t.id))} />
+          ) : (
+            <Empty>Keine offenen Aufgaben. Das Aufgaben-Board folgt als Nächstes.</Empty>
+          )}
+        </Section>
+      ) : null}
+
+      {view === "team" ? (
+        <div className="space-y-4">
+          {canManage && portal.requests.length ? (
+            <Section
+              title={`Anfragen (${portal.requests.length})`}
+              action={{ href: "/mitglieder/produktionen/zuweisung", label: "Entscheiden" }}
+            >
+              <ul className="space-y-2">
+                {portal.requests.map((member) => (
+                  <MemberRow key={member.id} member={member} hint="möchte mitmachen" />
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+          <Section
+            title="Mitglieder"
+            action={
+              canManage
+                ? { href: "/mitglieder/produktionen/zuweisung", label: "Personen zuweisen" }
+                : undefined
+            }
+          >
+            {portal.members.length ? (
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {portal.members.map((member) => (
+                  <MemberRow key={member.id} member={member} showMail={canManage} />
+                ))}
+              </ul>
+            ) : (
+              <Empty>Noch niemand zugewiesen.</Empty>
+            )}
+          </Section>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: { href: string; label: string };
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+      <header className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {action ? (
+          <Link
+            href={action.href}
+            className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            {action.label}
+            <ChevronRightIcon className="h-4 w-4" aria-hidden />
+          </Link>
+        ) : null}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="py-6 text-center text-sm text-muted-foreground">{children}</p>;
+}
+
+function TaskList({
+  tasks,
+  mine,
+}: {
+  tasks: { id: string; title: string; status: TaskStatus; dueAt: Date | null; overdue: boolean }[];
+  mine?: Set<string>;
+}) {
+  return (
+    <ul className="divide-y divide-border/60">
+      {tasks.map((task) => {
+        return (
+          <li key={task.id} className="flex min-h-12 items-center gap-3 py-2">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{task.title}</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  task.overdue ? "text-destructive" : "text-muted-foreground",
+                )}
+              >
+                {task.dueAt ? `fällig ${formatDue(task.dueAt)}` : "ohne Frist"}
+                {mine?.has(task.id) ? " · dir zugewiesen" : ""}
+              </span>
+            </span>
+            <Badge variant={task.status === "doing" ? "info" : "muted"}>
+              {STATUS_LABELS[task.status]}
+            </Badge>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function MemberRow({
+  member,
+  hint,
+  showMail,
+}: {
+  member: {
+    id: string;
+    name: string;
+    initials: string;
+    email: string | null;
+    role: keyof typeof TEAM_ROLE_LABELS;
+    title: string | null;
+  };
+  hint?: string;
+  showMail?: boolean;
+}) {
+  return (
+    <li className="flex min-h-12 items-center gap-3 rounded-lg bg-muted/40 px-3 py-2">
+      <Initials initials={member.initials} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{member.name}</span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {hint ?? member.title ?? TEAM_ROLE_LABELS[member.role]}
+        </span>
+      </span>
+      {showMail && member.email ? (
+        <a
+          href={`mailto:${member.email}`}
+          className="shrink-0 text-xs text-primary hover:underline"
+          aria-label={`E-Mail an ${member.name}`}
+        >
+          E-Mail
+        </a>
+      ) : null}
+    </li>
   );
 }

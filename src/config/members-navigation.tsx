@@ -355,9 +355,8 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder/meine-gewerke",
-        label: "Gewerkeplanung",
+        label: "Meine Teams",
         permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
-        requiresDepartmentLead: true,
         icon: DepartmentsIcon,
       },
       membersAssignmentsTodoItem,

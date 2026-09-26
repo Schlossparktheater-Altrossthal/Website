@@ -120,7 +120,7 @@ Jede Phase einzeln auf Staging testbar; Schema-Änderungen additiv vor Alt-Entfe
 
 - [x] Phase 1 Datenmodell (2026-09-26: Migration `departments_per_production`, Vorlagen, Status; Alt-Seiten laufen weiter, aber nur mit aktuellen Mitgliedschaften)
 - [x] Phase 2 Zuweisung (2026-09-26: Seite `produktionen/zuweisung`, Anfragen über „Meine Gewerke“ bei Beitrittsprüfung; Rollen-Zuweisung als Reiter)
-- [ ] Phase 3 Portal Basis (gemeinsames Team-Portal-Gerüst für Gewerke und Rollen)
+- [x] Phase 3 Portal Basis (2026-09-26: „Meine Teams“ + Portal Übersicht/Aufgaben/Team, Daten `src/lib/departments/portal.ts`; alte Komponenten department-card/event-planner ungenutzt → Phase 6 entfernen) (gemeinsames Team-Portal-Gerüst für Gewerke und Rollen)
 - [ ] Phase 3b Rollenportal (Szenen, Besetzung, Termine)
 - [ ] Phase 4 Board
 - [ ] Phase 5 Termine
