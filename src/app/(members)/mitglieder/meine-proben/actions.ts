@@ -48,13 +48,13 @@ export async function respondToRehearsal(
 
     const { rehearsalId, status } = parsed.data;
 
-    const rehearsal = await prisma.rehearsal.findUnique({
-      where: { id: rehearsalId },
+    const rehearsal = await prisma.calendarEvent.findFirst({
+      where: { id: rehearsalId, kind: "REHEARSAL" },
       select: {
         id: true,
         status: true,
-        invitees: {
-          where: { userId },
+        participants: {
+          where: { userId, invited: true },
           select: { userId: true },
         },
       },
@@ -64,13 +64,13 @@ export async function respondToRehearsal(
       return { ok: false, error: "Dieser Termin ist nicht mehr verfügbar." };
     }
 
-    if (!rehearsal.invitees.length) {
+    if (!rehearsal.participants.length) {
       return { ok: false, error: "Du bist für diesen Termin nicht eingeladen." };
     }
 
     await updateAttendanceWithLog({
       prisma,
-      rehearsalId,
+      eventId: rehearsalId,
       targetUserId: userId,
       actorUserId: userId,
       nextStatus: status,

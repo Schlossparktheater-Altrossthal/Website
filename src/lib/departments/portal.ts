@@ -1,5 +1,6 @@
 import type { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
 
+import { toEventResponseStatus } from "@/lib/calendar/responses";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 
@@ -144,7 +145,7 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
           start: true,
           end: true,
           location: true,
-          responses: { where: { userId }, select: { status: true } },
+          participants: { where: { userId }, select: { response: true } },
         },
       },
     },
@@ -202,9 +203,9 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
     members,
     requests,
     viewerRole: members.find((member) => member.id === userId)?.role ?? null,
-    events: department.events.map(({ responses, ...event }) => ({
+    events: department.events.map(({ participants, ...event }) => ({
       ...event,
-      myResponse: responses[0]?.status ?? null,
+      myResponse: toEventResponseStatus(participants[0]?.response ?? null),
     })),
     taskCounts: countTasks(department.tasks.map((task) => task.status)),
     myTasks: myTasks.map(toTaskItem),

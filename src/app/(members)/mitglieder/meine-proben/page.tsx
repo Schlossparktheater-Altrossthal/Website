@@ -60,8 +60,8 @@ export default async function MyRehearsalsPage() {
   const now = new Date();
 
   const [upcomingRaw, memberships] = await Promise.all([
-    prisma.rehearsal.findMany({
-      where: { start: { gte: now }, status: { not: "DRAFT" } },
+    prisma.calendarEvent.findMany({
+      where: { kind: "REHEARSAL", start: { gte: now }, status: { not: "DRAFT" } },
       orderBy: { start: "asc" },
       take: 8,
       select: {
@@ -114,7 +114,7 @@ export default async function MyRehearsalsPage() {
     id: rehearsal.id,
     title: rehearsal.title,
     start: rehearsal.start,
-    location: rehearsal.location,
+    location: rehearsal.location ?? "Noch offen",
   }));
 
   const upcomingDepartmentEvents = departmentEventsRaw.flatMap<UpcomingDepartmentEvent>((event) => {

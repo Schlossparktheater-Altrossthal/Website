@@ -111,8 +111,12 @@ export default async function MembersLayout({ children }: { children: React.Reac
   let isDepartmentLead = false;
   if (userId) {
     const [rehearsalAssignments, departmentAssignments, leadAssignments] = await Promise.all([
-      prisma.rehearsalAttendance.count({
-        where: { userId, rehearsal: { status: { not: "DRAFT" } } },
+      prisma.eventParticipant.count({
+        where: {
+          userId,
+          response: { not: null },
+          event: { kind: "REHEARSAL", status: { not: "DRAFT" } },
+        },
       }),
       prisma.departmentMembership.count({
         where: { userId, ...currentDepartmentMembershipWhere() },

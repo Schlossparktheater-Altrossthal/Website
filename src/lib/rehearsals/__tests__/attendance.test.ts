@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AttendanceStatus, PrismaClient, RehearsalAttendance } from "@prisma/client";
+import type { AttendanceStatus, PrismaClient } from "@prisma/client";
 import {
   canManageForeignAttendance,
   normalizeStatus,
@@ -7,34 +7,17 @@ import {
   updateAttendanceWithLog,
 } from "@/lib/rehearsals/attendance";
 
-type AttendanceOverride = Partial<RehearsalAttendance> & {
-  rehearsalId: string;
-  userId: string;
-  status: AttendanceStatus;
-};
+type ParticipantRecord = { invited: boolean; response: AttendanceStatus | null };
 
-const createPrismaMock = (existing?: AttendanceOverride) => {
-  const attendanceRecord: RehearsalAttendance | null = existing
-    ? ({
-        id: existing.id ?? "attendance-existing",
-        rehearsalId: existing.rehearsalId,
-        userId: existing.userId,
-        status: existing.status,
-      } as RehearsalAttendance)
-    : null;
-
+const createPrismaMock = (existing?: ParticipantRecord) => {
   const tx = {
-    rehearsalAttendance: {
-      findUnique: vi.fn().mockResolvedValue(attendanceRecord),
-      upsert: vi.fn().mockImplementation(async ({ create, update }) => ({
-        id: attendanceRecord?.id ?? "attendance-upserted",
-        rehearsalId: create.rehearsalId,
-        userId: create.userId,
-        status: (update?.status ?? create.status) as AttendanceStatus,
-      })),
+    eventParticipant: {
+      findUnique: vi.fn().mockResolvedValue(existing ?? null),
+      upsert: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
       delete: vi.fn().mockResolvedValue(undefined),
     },
-    rehearsalAttendanceLog: {
+    eventResponseLog: {
       create: vi.fn().mockResolvedValue({ id: "log-created" }),
     },
   };
@@ -74,85 +57,66 @@ describe("attendance helpers", () => {
 });
 
 describe("updateAttendanceWithLog", () => {
-  it("creates or updates attendance records with logs", async () => {
-    const { prisma, tx } = createPrismaMock({
-      rehearsalId: "reh-1",
-      userId: "user-1",
-      status: "yes",
-    });
+  it("stores the response and logs the change", async () => {
+    const { prisma, tx } = createPrismaMock({ invited: true, response: "yes" });
 
     const result = await updateAttendanceWithLog({
       prisma,
-      rehearsalId: "reh-1",
+      eventId: "reh-1",
       targetUserId: "user-1",
       actorUserId: "user-1",
-      nextStatus: "yes",
+      nextStatus: "no",
       comment: "  see you there  ",
     });
 
-    expect(tx.rehearsalAttendance.upsert).toHaveBeenCalled();
-    expect(tx.rehearsalAttendanceLog.create).toHaveBeenCalledWith(
+    expect(tx.eventParticipant.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          previous: "yes",
-          next: "yes",
-          comment: "see you there",
-        }),
+        where: { eventId_userId: { eventId: "reh-1", userId: "user-1" } },
+        update: expect.objectContaining({ response: "no" }),
       }),
     );
-    expect(result.attendance?.status).toBe("yes");
-    expect(result.logId).toBe("log-created");
+    expect(tx.eventResponseLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ previous: "yes", next: "no", comment: "see you there" }),
+      }),
+    );
+    expect(result).toEqual({ response: "no", logId: "log-created" });
   });
 
-  it("removes attendance when status is null and logs", async () => {
-    const { prisma, tx } = createPrismaMock({
-      rehearsalId: "reh-2",
-      userId: "user-2",
-      status: "no",
-    });
+  it("keeps an invited participant when the response is withdrawn", async () => {
+    const { prisma, tx } = createPrismaMock({ invited: true, response: "no" });
 
     const result = await updateAttendanceWithLog({
       prisma,
-      rehearsalId: "reh-2",
+      eventId: "reh-2",
       targetUserId: "user-2",
       actorUserId: "actor-2",
       nextStatus: null,
-      comment: null,
     });
 
-    expect(tx.rehearsalAttendance.delete).toHaveBeenCalledWith({
-      where: {
-        rehearsalId_userId: {
-          rehearsalId: "reh-2",
-          userId: "user-2",
-        },
-      },
-    });
-    expect(tx.rehearsalAttendanceLog.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          previous: "no",
-          next: null,
-        }),
-      }),
+    expect(tx.eventParticipant.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ response: null }) }),
     );
-    expect(result.attendance).toBeNull();
+    expect(tx.eventParticipant.delete).not.toHaveBeenCalled();
+    expect(tx.eventResponseLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ previous: "no", next: null }) }),
+    );
+    expect(result.response).toBeNull();
   });
 
-  it("creates new attendance when none exists", async () => {
-    const { prisma, tx } = createPrismaMock();
+  it("removes an uninvited participant when the response is withdrawn", async () => {
+    const { prisma, tx } = createPrismaMock({ invited: false, response: "maybe" });
 
-    const result = await updateAttendanceWithLog({
+    await updateAttendanceWithLog({
       prisma,
-      rehearsalId: "reh-3",
+      eventId: "reh-3",
       targetUserId: "user-3",
-      actorUserId: "actor-3",
-      nextStatus: "yes",
-      comment: "first response",
+      actorUserId: "user-3",
+      nextStatus: null,
     });
 
-    expect(tx.rehearsalAttendance.findUnique).toHaveBeenCalled();
-    expect(tx.rehearsalAttendance.upsert).toHaveBeenCalled();
-    expect(result.attendance?.status).toBe("yes");
+    expect(tx.eventParticipant.delete).toHaveBeenCalledWith({
+      where: { eventId_userId: { eventId: "reh-3", userId: "user-3" } },
+    });
   });
 });

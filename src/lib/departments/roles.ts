@@ -140,12 +140,13 @@ export async function loadRolePortal(showId: string, characterId: string, userId
 
   const castIds = cast.map((person) => person.id);
   const rehearsals = castIds.length
-    ? await prisma.rehearsal.findMany({
+    ? await prisma.calendarEvent.findMany({
         where: {
+          kind: "REHEARSAL",
           start: { gte: now },
-          status: { notIn: ["DRAFT", "CANCELLED"] },
+          status: "SCHEDULED",
           OR: [{ showId }, { showId: null }],
-          invitees: { some: { userId: { in: castIds } } },
+          participants: { some: { userId: { in: castIds }, invited: true } },
         },
         orderBy: { start: "asc" },
         take: 6,
@@ -154,7 +155,10 @@ export async function loadRolePortal(showId: string, characterId: string, userId
           title: true,
           start: true,
           location: true,
-          invitees: { where: { userId: { in: castIds } }, select: { userId: true } },
+          participants: {
+            where: { userId: { in: castIds }, invited: true },
+            select: { userId: true },
+          },
         },
       })
     : [];
@@ -196,7 +200,7 @@ export async function loadRolePortal(showId: string, characterId: string, userId
       location: rehearsal.location,
       // Wer aus der Besetzung eingeladen ist, z. B. nur die Zweitbesetzung.
       castInvited: cast
-        .filter((person) => rehearsal.invitees.some((entry) => entry.userId === person.id))
+        .filter((person) => rehearsal.participants.some((entry) => entry.userId === person.id))
         .map((person) => person.name),
     })),
   };

@@ -1,4 +1,4 @@
-import { AttendanceStatus, PrismaClient, RehearsalAttendance } from "@prisma/client";
+import type { AttendanceStatus, PrismaClient } from "@prisma/client";
 import { hasRole, Role } from "@/lib/rbac";
 
 export const ATTENDANCE_STATUSES: readonly AttendanceStatus[] = ["yes", "no", "emergency", "maybe"];
@@ -22,7 +22,7 @@ export function canManageForeignAttendance(user: { role?: Role } | null | undefi
 
 type UpdateAttendanceArgs = {
   prisma: PrismaClient;
-  rehearsalId: string;
+  eventId: string;
   targetUserId: string;
   actorUserId: string;
   nextStatus: AttendanceStatus | null;
@@ -30,105 +30,62 @@ type UpdateAttendanceArgs = {
 };
 
 export type AttendanceUpdateResult = {
-  attendance: RehearsalAttendance | null;
+  response: AttendanceStatus | null;
   logId: string;
 };
 
+/** Zu-/Absage zu einem Termin setzen (oder zurücknehmen) und im Verlauf festhalten. */
 export async function updateAttendanceWithLog({
   prisma,
-  rehearsalId,
+  eventId,
   targetUserId,
   actorUserId,
   nextStatus,
   comment,
 }: UpdateAttendanceArgs): Promise<AttendanceUpdateResult> {
   const cleanedComment = sanitizeComment(comment);
+  const where = { eventId_userId: { eventId, userId: targetUserId } };
 
   return prisma.$transaction(async (tx) => {
-    const existing = await tx.rehearsalAttendance.findUnique({
-      where: {
-        rehearsalId_userId: {
-          rehearsalId,
-          userId: targetUserId,
-        },
-      },
+    const existing = await tx.eventParticipant.findUnique({
+      where,
+      select: { invited: true, response: true },
     });
 
-    let attendance: RehearsalAttendance | null = existing ?? null;
-
     if (nextStatus) {
-      attendance = await tx.rehearsalAttendance.upsert({
-        where: {
-          rehearsalId_userId: {
-            rehearsalId,
-            userId: targetUserId,
-          },
-        },
-        update: {
-          status: nextStatus,
-        },
+      const respondedAt = new Date();
+      await tx.eventParticipant.upsert({
+        where,
+        update: { response: nextStatus, respondedAt },
         create: {
-          rehearsalId,
+          eventId,
           userId: targetUserId,
-          status: nextStatus,
+          invited: false,
+          response: nextStatus,
+          respondedAt,
         },
+      });
+    } else if (existing?.invited) {
+      await tx.eventParticipant.update({
+        where,
+        data: { response: null, responseNote: null, respondedAt: null },
       });
     } else if (existing) {
-      await tx.rehearsalAttendance.delete({
-        where: {
-          rehearsalId_userId: {
-            rehearsalId,
-            userId: targetUserId,
-          },
-        },
-      });
-      attendance = null;
+      await tx.eventParticipant.delete({ where });
     }
 
-    const log = await tx.rehearsalAttendanceLog.create({
+    const log = await tx.eventResponseLog.create({
       data: {
-        rehearsalId,
+        eventId,
         userId: targetUserId,
-        previous: existing?.status ?? null,
+        previous: existing?.response ?? null,
         next: nextStatus,
         comment: cleanedComment,
         changedById: actorUserId,
       },
-      select: {
-        id: true,
-      },
+      select: { id: true },
     });
 
-    return {
-      attendance,
-      logId: log.id,
-    };
-  });
-}
-
-export async function fetchRecentAttendanceLogs(
-  prisma: PrismaClient,
-  rehearsalId: string,
-  userId: string,
-  limit = 10,
-) {
-  return prisma.rehearsalAttendanceLog.findMany({
-    where: { rehearsalId, userId },
-    orderBy: { changedAt: "desc" },
-    take: limit,
-    select: {
-      id: true,
-      previous: true,
-      next: true,
-      comment: true,
-      changedAt: true,
-      changedBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
+    return { response: nextStatus, logId: log.id };
   });
 }

@@ -8,7 +8,6 @@ import { broadcastRehearsalCreated, sendNotification } from "@/lib/realtime/trig
 import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 
 import {
-  collectInviteeRoles,
   computeEnd,
   draftUpdateSchema,
   ensurePlanner,
@@ -16,7 +15,6 @@ import {
   parseStart,
   publishSchema,
   REHEARSAL_TIME_ZONE,
-  rolesToInputJson,
   sanitizeDescription,
   syncInvitees,
 } from "@/lib/probenplanung/actions-helpers";
@@ -60,16 +58,15 @@ export async function createRehearsalDraftAction(input?: {
   const normalizedTitle = input?.title?.trim() || "Neue Probe";
   const normalizedLocation = input?.location?.trim() || "Noch offen";
 
-  const rehearsal = await prisma.rehearsal.create({
+  const rehearsal = await prisma.calendarEvent.create({
     data: {
+      kind: "REHEARSAL",
       title: normalizedTitle,
       location: normalizedLocation,
       start,
       end,
       description: null,
-      requiredRoles: [],
-      registrationDeadline: null,
-      createdBy: auth.userId,
+      createdById: auth.userId,
       status: "DRAFT",
       showId: auth.showId,
     },
@@ -102,7 +99,7 @@ export async function updateRehearsalDraftAction(input: {
 
   try {
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.rehearsal.findUnique({
+      const existing = await tx.calendarEvent.findUnique({
         where: { id },
         select: { status: true, start: true, end: true },
       });
@@ -113,7 +110,7 @@ export async function updateRehearsalDraftAction(input: {
         throw new Error("not-draft");
       }
 
-      const updateData: Prisma.RehearsalUpdateInput = {};
+      const updateData: Prisma.CalendarEventUpdateInput = {};
 
       if (typeof title === "string") {
         updateData.title = title;
@@ -152,16 +149,12 @@ export async function updateRehearsalDraftAction(input: {
         updateData.end = nextEnd;
       }
 
-      updateData.registrationDeadline = null;
-
       if (invitees) {
         const synced = await syncInvitees(tx, id, invitees);
-        const roles = await collectInviteeRoles(tx, synced);
-        updateData.requiredRoles = rolesToInputJson(roles);
       }
 
       if (Object.keys(updateData).length > 0) {
-        await tx.rehearsal.update({ where: { id }, data: updateData });
+        await tx.calendarEvent.update({ where: { id }, data: updateData });
       }
     });
 
@@ -214,9 +207,9 @@ export async function publishRehearsalAction(input: {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const existing = await tx.rehearsal.findUnique({
+      const existing = await tx.calendarEvent.findUnique({
         where: { id },
-        include: { invitees: { select: { userId: true } } },
+        include: { participants: { where: { invited: true }, select: { userId: true } } },
       });
       if (!existing) {
         throw new Error("not-found");
@@ -234,10 +227,9 @@ export async function publishRehearsalAction(input: {
 
       const inviteeIds = invitees
         ? Array.from(new Set(invitees))
-        : existing.invitees.map((entry) => entry.userId);
+        : existing.participants.map((entry) => entry.userId);
 
       const syncedInvitees = await syncInvitees(tx, id, inviteeIds);
-      const roles = await collectInviteeRoles(tx, syncedInvitees);
       const formatter = new Intl.DateTimeFormat("de-DE", {
         dateStyle: "full",
         timeStyle: "short",
@@ -245,7 +237,7 @@ export async function publishRehearsalAction(input: {
       });
       const notificationBody = `Am ${formatter.format(start)}`;
 
-      const rehearsal = await tx.rehearsal.update({
+      const rehearsal = await tx.calendarEvent.update({
         where: { id },
         data: {
           title,
@@ -253,10 +245,8 @@ export async function publishRehearsalAction(input: {
           end,
           location: normalizedLocation,
           description: safeDescription,
-          status: "PLANNED",
-          requiredRoles: rolesToInputJson(roles),
-          registrationDeadline: null,
-          createdBy: existing.createdBy ?? auth.userId,
+          status: "SCHEDULED",
+          createdById: existing.createdById ?? auth.userId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
       });
@@ -271,7 +261,7 @@ export async function publishRehearsalAction(input: {
             title: `Neue Probe: ${title}`,
             body: notificationBody,
             type: "rehearsal",
-            rehearsalId: rehearsal.id,
+            eventId: rehearsal.id,
             recipients: {
               create: syncedInvitees.map((userId) => ({ userId })),
             },
@@ -290,7 +280,7 @@ export async function publishRehearsalAction(input: {
           id: rehearsal.id,
           title: rehearsal.title,
           start: rehearsal.start.toISOString(),
-          end: rehearsal.end.toISOString(),
+          end: (rehearsal.end ?? rehearsal.start).toISOString(),
           location: rehearsal.location ?? "Noch offen",
         },
         targetUserIds: inviteeIds,
@@ -345,7 +335,7 @@ export async function discardRehearsalDraftAction(input: { id: string }) {
   }
 
   try {
-    await prisma.rehearsal.delete({
+    await prisma.calendarEvent.delete({
       where: { id: input.id, status: "DRAFT" },
     });
     revalidatePath("/mitglieder/probenplanung");

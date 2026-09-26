@@ -12,6 +12,7 @@ import { loadProfileChecklist } from "@/lib/profile-completion-server";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { getWhatsappNoticeKey, readDismissedNoticeKeys } from "@/lib/notice-dismissals";
 import { databaseEnabled } from "@/lib/dev-database";
+import { GENERAL_EVENT_WHERE } from "@/lib/calendar/entries";
 import { DEV_DASHBOARD_OVERVIEW_FIXTURE } from "@/lib/dev-dashboard-fixture";
 
 type MembershipSummary = {
@@ -80,8 +81,9 @@ export async function GET() {
       calendarEvents,
     ] = await Promise.all([
       prisma.user.count(),
-      prisma.rehearsal.count({
+      prisma.calendarEvent.count({
         where: {
+          kind: "REHEARSAL",
           start: {
             gte: startOfCurrentWeek,
             lte: endOfCurrentWeek,
@@ -102,7 +104,8 @@ export async function GET() {
           notification: true,
         },
       }),
-      prisma.rehearsal.findMany({
+      prisma.calendarEvent.findMany({
+        where: { kind: "REHEARSAL" },
         orderBy: { createdAt: "desc" },
         take: 10,
         select: {
@@ -112,8 +115,8 @@ export async function GET() {
           createdAt: true,
         },
       }),
-      prisma.rehearsal.findMany({
-        where: { start: { gt: now }, status: { not: "DRAFT" } },
+      prisma.calendarEvent.findMany({
+        where: { kind: "REHEARSAL", start: { gt: now }, status: { not: "DRAFT" } },
         orderBy: { start: "asc" },
         take: 5,
         select: {
@@ -124,8 +127,9 @@ export async function GET() {
           location: true,
         },
       }),
-      prisma.rehearsal.count({
+      prisma.calendarEvent.count({
         where: {
+          kind: "REHEARSAL",
           start: {
             gte: startOfMonth,
             lte: endOfMonth,
@@ -146,7 +150,7 @@ export async function GET() {
       prisma.calendarEvent.findMany({
         where: {
           start: { gt: now },
-          responses: { none: { userId, status: "no" } },
+          participants: { none: { userId, response: "no" } },
           department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
         },
         orderBy: { start: "asc" },
@@ -174,7 +178,7 @@ export async function GET() {
         },
       }),
       prisma.calendarEvent.findMany({
-        where: { start: { gt: now }, departmentId: null },
+        where: { start: { gt: now }, ...GENERAL_EVENT_WHERE },
         orderBy: { start: "asc" },
         take: 5,
         select: { id: true, title: true, kind: true, start: true, end: true, location: true },
@@ -249,7 +253,7 @@ export async function GET() {
         kind: "rehearsal" as const,
         title: rehearsal.title,
         start: rehearsal.start.toISOString(),
-        end: rehearsal.end.toISOString(),
+        end: (rehearsal.end ?? rehearsal.start).toISOString(),
         location: rehearsal.location || null,
         context: null,
         href: "/mitglieder/meine-proben",

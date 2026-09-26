@@ -6,8 +6,10 @@ import { de } from "date-fns/locale/de";
 import { z } from "zod";
 
 import { resolveCalendarEventTimes } from "@/lib/calendar/event-input";
+import { EVENT_RESPONSE_STATUSES } from "@/lib/calendar/responses";
 import { requireBoardAccess } from "@/lib/departments/board";
 import { prisma } from "@/lib/prisma";
+import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
 import {
   actionFailure,
   actionSuccess,
@@ -154,8 +156,8 @@ export async function deleteTeamEventAction(input: {
     const event = await loadEvent(z.string().parse(input.eventId));
     const access = await requireBoardAccess(event.departmentId);
     if (!access.canManage) throw new Error("Termine planen Leitung, Vertretung und Regie.");
-    const attending = await prisma.calendarEventResponse.findMany({
-      where: { eventId: event.id, status: { in: ["yes", "maybe"] } },
+    const attending = await prisma.eventParticipant.findMany({
+      where: { eventId: event.id, response: { in: ["yes", "maybe"] } },
       select: { userId: true },
     });
     await prisma.calendarEvent.delete({ where: { id: event.id } });
@@ -176,7 +178,7 @@ export async function deleteTeamEventAction(input: {
 
 const responseSchema = z.object({
   eventId: z.string(),
-  status: z.enum(["yes", "maybe", "no"]).nullable(),
+  status: z.enum(EVENT_RESPONSE_STATUSES).nullable(),
 });
 
 /** Eigene Zu-/Absage; `null` nimmt die Antwort zurück. */
@@ -188,17 +190,13 @@ export async function respondTeamEventAction(
     const event = await loadEvent(data.eventId);
     const access = await requireBoardAccess(event.departmentId);
     if (!access.role) throw new Error("Nur Mitglieder des Gewerks können zu- oder absagen.");
-    if (data.status === null) {
-      await prisma.calendarEventResponse.deleteMany({
-        where: { eventId: event.id, userId: access.userId },
-      });
-    } else {
-      await prisma.calendarEventResponse.upsert({
-        where: { eventId_userId: { eventId: event.id, userId: access.userId } },
-        create: { eventId: event.id, userId: access.userId, status: data.status },
-        update: { status: data.status },
-      });
-    }
+    await updateAttendanceWithLog({
+      prisma,
+      eventId: event.id,
+      targetUserId: access.userId,
+      actorUserId: access.userId,
+      nextStatus: data.status,
+    });
     revalidateTeams();
     return actionSuccess();
   } catch (error) {

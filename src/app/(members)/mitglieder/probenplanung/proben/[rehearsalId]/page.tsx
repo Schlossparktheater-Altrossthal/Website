@@ -38,10 +38,10 @@ export default async function RehearsalEditorPage({
     notFound();
   }
 
-  const rehearsal = await prisma.rehearsal.findUnique({
-    where: { id: rehearsalId },
+  const rehearsal = await prisma.calendarEvent.findFirst({
+    where: { id: rehearsalId, kind: "REHEARSAL" },
     include: {
-      invitees: { select: { userId: true } },
+      participants: { where: { invited: true }, select: { userId: true } },
     },
   });
 
@@ -124,9 +124,9 @@ export default async function RehearsalEditorPage({
           title: rehearsal.title,
           start: rehearsal.start.toISOString(),
           end: rehearsal.end ? rehearsal.end.toISOString() : null,
-          location: rehearsal.location,
+          location: rehearsal.location ?? "",
           description: rehearsal.description,
-          inviteeIds: rehearsal.invitees.map((entry) => entry.userId),
+          inviteeIds: rehearsal.participants.map((entry) => entry.userId),
         }}
         members={members}
         initialBlockedUserIds={blocked.map((entry) => entry.userId)}

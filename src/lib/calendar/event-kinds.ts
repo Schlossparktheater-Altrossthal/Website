@@ -16,13 +16,14 @@ export const CALENDAR_EVENT_KIND_LABELS: Record<CalendarEventKind, string> = {
   WORK_DAY: "Arbeitseinsatz",
   SOCIAL: "Geselliges",
   OTHER: "Sonstiges",
+  REHEARSAL: "Probe",
 };
 
 /** Ein Eintrag im Kalender – Termin der Organisation oder Probe. */
 export type CalendarEntry = {
   id: string;
   source: "event" | "rehearsal";
-  kind: CalendarEventKind | "REHEARSAL";
+  kind: CalendarEventKind;
   title: string;
   /** ISO-Zeitpunkte. */
   start: string;
@@ -38,7 +39,7 @@ export type CalendarEntry = {
 };
 
 export function getCalendarEntryKindLabel(kind: CalendarEntry["kind"]) {
-  return kind === "REHEARSAL" ? "Probe" : CALENDAR_EVENT_KIND_LABELS[kind];
+  return CALENDAR_EVENT_KIND_LABELS[kind];
 }
 
 /** Tage (yyyy-MM-dd), die ein Eintrag belegt – mehrtägige Termine zählen für jeden Tag. */

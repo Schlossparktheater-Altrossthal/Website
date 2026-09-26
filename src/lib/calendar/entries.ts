@@ -1,8 +1,14 @@
-import type { CalendarEvent } from "@prisma/client";
+import type { CalendarEvent, Prisma } from "@prisma/client";
 
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
 import { prisma } from "@/lib/prisma";
+
+/** Allgemeine Termine: ohne Gewerk-Termine (Gewerk-Portal) und ohne Proben (Probenplanung). */
+export const GENERAL_EVENT_WHERE = {
+  departmentId: null,
+  kind: { not: "REHEARSAL" },
+} satisfies Prisma.CalendarEventWhereInput;
 
 /** `showId`: nur Einträge dieser Produktion und allgemeine ohne Produktion. */
 type Range = { from: Date; to: Date; showId?: string | null };
@@ -20,8 +26,7 @@ export async function readCalendarEvents({ from, to, showId }: Range): Promise<C
   const events = await prisma.calendarEvent.findMany({
     where: {
       start: { lte: to },
-      // Gewerk-Termine gehören ins Gewerk-Portal, nicht in den allgemeinen Kalender.
-      departmentId: null,
+      ...GENERAL_EVENT_WHERE,
       AND: [{ OR: [{ start: { gte: from } }, { end: { gte: from } }] }, showScope(showId)],
     },
     orderBy: { start: "asc" },
@@ -30,7 +35,7 @@ export async function readCalendarEvents({ from, to, showId }: Range): Promise<C
 }
 
 export async function readCalendarEventById(id: string) {
-  const event = await prisma.calendarEvent.findFirst({ where: { id, departmentId: null } });
+  const event = await prisma.calendarEvent.findFirst({ where: { id, ...GENERAL_EVENT_WHERE } });
   return event ? toCalendarEntry(event) : null;
 }
 
@@ -53,10 +58,11 @@ function toCalendarEntry(event: CalendarEvent): CalendarEntry {
 
 /** Angesetzte Proben im Zeitraum (ohne Entwürfe und Absagen). */
 export async function readRehearsalEntries({ from, to, showId }: Range): Promise<CalendarEntry[]> {
-  const rehearsals = await prisma.rehearsal.findMany({
+  const rehearsals = await prisma.calendarEvent.findMany({
     where: {
+      kind: "REHEARSAL",
       start: { gte: from, lte: to },
-      status: { notIn: ["DRAFT", "CANCELLED"] },
+      status: "SCHEDULED",
       ...showScope(showId),
     },
     orderBy: { start: "asc" },
@@ -76,7 +82,7 @@ export async function readRehearsalEntries({ from, to, showId }: Range): Promise
     kind: "REHEARSAL",
     title: rehearsal.title,
     start: rehearsal.start.toISOString(),
-    end: rehearsal.end.toISOString(),
+    end: (rehearsal.end ?? rehearsal.start).toISOString(),
     allDay: false,
     dayKey: toDayKey(rehearsal.start),
     location: rehearsal.location || null,

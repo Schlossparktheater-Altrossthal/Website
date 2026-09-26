@@ -86,11 +86,14 @@ export async function ensurePlanner(target?: { rehearsalId?: string | null }) {
   }
   let showId: string | null;
   if (target?.rehearsalId) {
-    const rehearsal = await prisma.rehearsal.findUnique({
-      where: { id: target.rehearsalId },
+    const rehearsal = await prisma.calendarEvent.findFirst({
+      where: { id: target.rehearsalId, kind: "REHEARSAL" },
       select: { showId: true },
     });
-    showId = rehearsal?.showId ?? null;
+    if (!rehearsal) {
+      return { ok: false as const, error: "Die Probe wurde nicht gefunden." };
+    }
+    showId = rehearsal.showId;
   } else {
     showId = await getActiveProductionId(userId);
   }
@@ -130,67 +133,33 @@ export async function defaultInviteeIds(showId: string | null): Promise<string[]
   return users.map((user) => user.id);
 }
 
+/** Eingeladene einer Probe setzen; Ausgeladene mit Rückmeldung bleiben als Rückmeldung erhalten. */
 export async function syncInvitees(
   tx: Prisma.TransactionClient,
   rehearsalId: string,
   inviteeIds: string[],
 ) {
   const unique = Array.from(new Set(inviteeIds));
-  if (unique.length === 0) {
-    await tx.rehearsalInvitee.deleteMany({ where: { rehearsalId } });
-    return unique;
-  }
+  const notInvited = { eventId: rehearsalId, NOT: { userId: { in: unique } } };
+  await tx.eventParticipant.deleteMany({ where: { ...notInvited, response: null } });
+  await tx.eventParticipant.updateMany({ where: notInvited, data: { invited: false } });
 
-  await tx.rehearsalInvitee.deleteMany({
-    where: {
-      rehearsalId,
-      NOT: { userId: { in: unique } },
-    },
-  });
-
-  const existing = await tx.rehearsalInvitee.findMany({
-    where: { rehearsalId },
-    select: { userId: true },
-  });
-  const existingSet = new Set(existing.map((entry) => entry.userId));
-  const toCreate = unique.filter((id) => !existingSet.has(id));
-  if (toCreate.length) {
-    await tx.rehearsalInvitee.createMany({
-      data: toCreate.map((userId) => ({ rehearsalId, userId })),
+  if (unique.length) {
+    await tx.eventParticipant.updateMany({
+      where: { eventId: rehearsalId, userId: { in: unique }, invited: false },
+      data: { invited: true },
+    });
+    await tx.eventParticipant.createMany({
+      data: unique.map((userId) => ({ eventId: rehearsalId, userId })),
       skipDuplicates: true,
     });
   }
   return unique;
 }
 
-export async function collectInviteeRoles(tx: Prisma.TransactionClient, inviteeIds: string[]) {
-  if (!inviteeIds.length) return [] as string[];
-  const users = await tx.user.findMany({
-    where: { id: { in: inviteeIds } },
-    select: {
-      role: true,
-      roles: { select: { role: true } },
-    },
-  });
-  const roles = new Set<string>();
-  for (const user of users) {
-    if (user.role) {
-      roles.add(user.role);
-    }
-    for (const entry of user.roles) {
-      roles.add(entry.role);
-    }
-  }
-  return Array.from(roles);
-}
-
-export function rolesToInputJson(roles: readonly string[]): Prisma.InputJsonValue {
-  return [...roles];
-}
-
 export async function fetchInviteeIds(tx: Prisma.TransactionClient, rehearsalId: string) {
-  const entries = await tx.rehearsalInvitee.findMany({
-    where: { rehearsalId },
+  const entries = await tx.eventParticipant.findMany({
+    where: { eventId: rehearsalId, invited: true },
     select: { userId: true },
   });
   return entries.map((entry) => entry.userId);

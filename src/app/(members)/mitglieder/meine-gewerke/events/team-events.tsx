@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import type { EventResponseStatus } from "@prisma/client";
+import type { EventResponseStatus } from "@/lib/calendar/responses";
 import { toast } from "sonner";
 
 import {

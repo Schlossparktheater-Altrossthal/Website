@@ -134,13 +134,6 @@ enum RolePreferenceDomain {
   crew
 }
 
-enum RehearsalProposalStatus {
-  proposed // Automatisch vorgeschlagen
-  approved // Von der Regie freigegeben
-  rejected // Von der Regie abgelehnt
-  scheduled // Als tatsächlicher Probentermin übernommen
-}
-
 // Availability (new, per-day granular)
 enum AvailabilityKind {
   FULL_AVAILABLE
@@ -304,24 +297,22 @@ model User {
 
   accounts                        Account[]
   sessions                        Session[]
-  attendance                      RehearsalAttendance[]
+  eventParticipations             EventParticipant[]
   availability                    Availability[]
   tasks                           Task[]                     @relation("TaskAssignee")
   // New availability relations
   availabilityDays                AvailabilityDay[]
   availabilityTemplates           AvailabilityTemplate[]
-  attendanceLogsAuthored          RehearsalAttendanceLog[]   @relation("AttendanceLogAuthor")
-  attendanceLogsTarget            RehearsalAttendanceLog[]   @relation("AttendanceLogTarget")
+  attendanceLogsAuthored          EventResponseLog[]         @relation("AttendanceLogAuthor")
+  attendanceLogsTarget            EventResponseLog[]         @relation("AttendanceLogTarget")
   dietaryRestrictions             DietaryRestriction[]
   measurements                    MemberMeasurement[]
   sizes                           MemberSize[]
   roles                           UserRole[]
-  approvedProposals               RehearsalProposal[]        @relation("ProposalApprover")
   notifications                   NotificationRecipient[]
   blockedDays                     BlockedDay[]
   calendarFeed                    CalendarFeed?
   appRoles                        UserAppRole[]
-  rehearsalInvites                RehearsalInvitee[]
   photoConsents                   PhotoConsent[]
   productionOnboardings           ProductionOnboarding[]
   approvedPhotoConsents           PhotoConsent[]             @relation("PhotoConsentApprover")
@@ -330,7 +321,6 @@ model User {
   departmentTasksCreated          DepartmentTask[]           @relation("DepartmentTaskCreator")
   departmentMembershipsAssigned   DepartmentMembership[]     @relation("DepartmentMembershipAssignedBy")
   departmentTaskComments          DepartmentTaskComment[]    @relation("DepartmentTaskCommentAuthor")
-  calendarEventResponses          CalendarEventResponse[]
   calendarEventsCreated           CalendarEvent[]
   departmentDocumentsUploaded     DepartmentDocument[]
   characterCastings               CharacterCasting[]
@@ -415,10 +405,8 @@ model Show {
   status                  ProductionStatus          @default(planning)
   statusChangedAt         DateTime?
   archivedAt              DateTime?
-  rehearsals              Rehearsal[]
   finance                 FinanceEntry[]
   budgets                 FinanceBudget[]
-  proposals               RehearsalProposal[]
   characters              Character[]
   scenes                  Scene[]
   acts                    ShowAct[]
@@ -789,103 +777,6 @@ model SeasonResetSettings {
   updatedAt      DateTime @updatedAt
 }
 
-model Rehearsal {
-  id                   String                   @id @default(cuid())
-  showId               String? // Optional - für allgemeine Proben
-  title                String                   @default("Probe")
-  start                DateTime
-  end                  DateTime
-  location             String
-  description          String?
-  requiredRoles        Json
-  registrationDeadline DateTime? // Deadline für An-/Abmeldungen (1 Woche vor Probe)
-  isFromTemplate       Boolean                  @default(false)
-  templateId           String?
-  priority             RehearsalPriority        @default(NORMAL)
-  status               RehearsalStatus          @default(PLANNED)
-  createdBy            String?
-  createdAt            DateTime                 @default(now())
-  updatedAt            DateTime                 @default(now()) @updatedAt
-  show                 Show?                    @relation(fields: [showId], references: [id], onDelete: Cascade)
-  attendance           RehearsalAttendance[]
-  attendanceLogs       RehearsalAttendanceLog[]
-  template             RehearsalTemplate?       @relation(fields: [templateId], references: [id])
-  proposals            RehearsalProposal[]
-  notifications        Notification[]
-  invitees             RehearsalInvitee[]
-}
-
-model RehearsalInvitee {
-  id          String    @id @default(cuid())
-  rehearsalId String
-  userId      String
-  rehearsal   Rehearsal @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([rehearsalId, userId])
-}
-
-model RehearsalTemplate {
-  id            String            @id @default(cuid())
-  name          String
-  description   String?
-  weekday       Int // 0=Sonntag, 1=Montag, etc.
-  startTime     String // HH:MM format
-  endTime       String // HH:MM format
-  location      String
-  requiredRoles Json
-  isActive      Boolean           @default(true)
-  priority      RehearsalPriority @default(NORMAL)
-  validFrom     DateTime?
-  validTo       DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @default(now()) @updatedAt
-  rehearsals    Rehearsal[]
-}
-
-enum RehearsalPriority {
-  LOW
-  NORMAL
-  HIGH
-  CRITICAL
-}
-
-enum RehearsalStatus {
-  DRAFT
-  PLANNED
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-}
-
-model RehearsalAttendance {
-  id              String           @id @default(cuid())
-  rehearsalId     String
-  userId          String
-  status          AttendanceStatus
-  emergencyReason String? // Begründung für Emergency-Absagen
-  rehearsal       Rehearsal        @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([rehearsalId, userId], name: "rehearsalId_userId")
-}
-
-model RehearsalAttendanceLog {
-  id          String            @id @default(cuid())
-  rehearsalId String
-  userId      String
-  previous    AttendanceStatus?
-  next        AttendanceStatus?
-  comment     String?
-  changedAt   DateTime          @default(now())
-  changedById String
-  rehearsal   Rehearsal         @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
-  user        User              @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)
-  changedBy   User              @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Restrict)
-
-  @@index([rehearsalId, changedAt])
-}
-
 model UserRole {
   id     String @id @default(cuid())
   userId String
@@ -979,30 +870,6 @@ model DietaryRestriction {
   @@unique([userId, allergen])
 }
 
-model RehearsalProposal {
-  id              String                  @id @default(cuid())
-  showId          String? // Optional - für allgemeine Proben
-  title           String                  @default("Probenvorschlag")
-  date            DateTime // Vorgeschlagenes Datum
-  startTime       Int // Vorgeschlagene Startzeit (Minuten seit Mitternacht)
-  endTime         Int // Vorgeschlagene Endzeit (Minuten seit Mitternacht)
-  location        String?
-  requiredRoles   Json // Benötigte Rollen für diese Probe
-  status          RehearsalProposalStatus @default(proposed)
-  createdAt       DateTime                @default(now())
-  approvedAt      DateTime? // Wann wurde der Vorschlag freigegeben?
-  approvedBy      String? // Wer hat den Vorschlag freigegeben?
-  rejectionReason String? // Optional: Grund für Ablehnung
-  rehearsalId     String? // Referenz zur tatsächlichen Probe, wenn der Vorschlag angenommen wurde
-
-  show      Show?      @relation(fields: [showId], references: [id])
-  approver  User?      @relation("ProposalApprover", fields: [approvedBy], references: [id])
-  rehearsal Rehearsal? @relation(fields: [rehearsalId], references: [id])
-
-  @@index([date, status])
-  @@index([showId, status])
-}
-
 model Availability {
   id     String             @id @default(cuid())
   userId String
@@ -1013,6 +880,7 @@ model Availability {
 }
 
 enum CalendarEventKind {
+  REHEARSAL
   PERFORMANCE
   MEETING
   WORK_DAY
@@ -1032,50 +900,87 @@ model CalendarFeed {
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// Termine der Organisation (Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
+/// Termine der Organisation (Proben, Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
 model CalendarEvent {
-  id           String                  @id @default(cuid())
-  title        String
-  kind         CalendarEventKind       @default(OTHER)
-  start        DateTime
-  end          DateTime?
-  allDay       Boolean                 @default(false)
-  location     String?
-  description  String?
-  showId       String?
+  id               String             @id @default(cuid())
+  title            String
+  kind             CalendarEventKind  @default(OTHER)
+  status           EventStatus        @default(SCHEDULED)
+  start            DateTime
+  end              DateTime?
+  allDay           Boolean            @default(false)
+  location         String?
+  description      String?
+  /// Frist für Zu-/Absagen.
+  responseDeadline DateTime?
+  showId           String?
   /// Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab.
-  departmentId String?
-  createdById  String?
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
-  show         Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
-  department   Department?             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy    User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  responses    CalendarEventResponse[]
+  departmentId     String?
+  createdById      String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  show             Show?              @relation(fields: [showId], references: [id], onDelete: SetNull)
+  department       Department?        @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy        User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  participants     EventParticipant[]
+  responseLogs     EventResponseLog[]
+  notifications    Notification[]
 
   @@index([start])
   @@index([departmentId, start])
+  @@index([kind, start])
 }
 
-enum EventResponseStatus {
-  yes
-  maybe
-  no
+/// Entwurf nur für die Planung sichtbar; angesetzt lädt ein; abgesagt bleibt sichtbar.
+enum EventStatus {
+  DRAFT
+  SCHEDULED
+  CANCELLED
+}
+
+enum ParticipationLevel {
+  REQUIRED
+  OPTIONAL
+}
+
+/// Person an einem Termin: eingeladen (Proben) und/oder mit Zu-/Absage.
+model EventParticipant {
+  id           String             @id @default(cuid())
+  eventId      String
+  userId       String
+  level        ParticipationLevel @default(REQUIRED)
+  /// Eingeladen; `false` = nur Rückmeldung zu einem Termin für eine ganze Gruppe.
+  invited      Boolean            @default(true)
+  response     AttendanceStatus?
+  responseNote String?
+  respondedAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  event        CalendarEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId], name: "eventId_userId")
+  @@index([userId])
+}
+
+/// Verlauf der Zu-/Absagen (auch durch Planer für andere).
+model EventResponseLog {
+  id          String            @id @default(cuid())
+  eventId     String
+  userId      String
+  previous    AttendanceStatus?
+  next        AttendanceStatus?
+  comment     String?
+  changedAt   DateTime          @default(now())
+  changedById String
+  event       CalendarEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User              @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)
+  changedBy   User              @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([eventId, changedAt])
 }
 
 /// Zu- oder Absage einer Person zu einem Termin.
-model CalendarEventResponse {
-  id        String              @id @default(cuid())
-  eventId   String
-  userId    String
-  status    EventResponseStatus
-  updatedAt DateTime            @updatedAt
-  event     CalendarEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, userId])
-}
-
 model BlockedDay {
   id        String         @id @default(cuid())
   userId    String
@@ -1246,8 +1151,8 @@ model Notification {
   body        String?
   type        String?
   createdAt   DateTime                @default(now())
-  rehearsalId String?
-  rehearsal   Rehearsal?              @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  eventId     String?
+  event       CalendarEvent?          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   recipients  NotificationRecipient[]
 }
 

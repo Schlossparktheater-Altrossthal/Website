@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-25, 87 Modelle, 39 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-26, 89 Modelle, 42 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -23,7 +23,7 @@ flowchart LR
     User --- Pers[Maße, Größen, Allergien, Interessen]
     User --- Avail[Verfügbarkeit / Sperrliste]
     Show --- Stueck[Character, Scene, Casting]
-    Show --- Proben[Rehearsal, Proposal, Duty]
+    Show --- Proben[CalendarEvent, EventParticipant, Duty]
     Show --- Fin[FinanceBudget / FinanceEntry]
     Show --- Onb[Invite, Onboarding, PhotoConsent]
     Dept((Department)) --- Stueck
@@ -118,8 +118,6 @@ erDiagram
     User ||--o{ DepartmentTask : "erstellt"
     DepartmentTask ||--o{ DepartmentTaskAssignment : ""
     User ||--o{ DepartmentTaskAssignment : ""
-    Department ||--o{ DepartmentEvent : ""
-    User ||--o{ DepartmentEvent : "erstellt"
     Department ||--o{ DepartmentDocument : ""
     User |o--o{ DepartmentDocument : "hochgeladen"
     Department ||--o{ DepartmentPermission : ""
@@ -135,24 +133,20 @@ erDiagram
     }
 ```
 
-### Proben, Anwesenheit, Verfügbarkeit
+### Termine, Proben, Anwesenheit, Verfügbarkeit
 
 ```mermaid
 erDiagram
-    Show |o--o{ Rehearsal : ""
-    RehearsalTemplate |o--o{ Rehearsal : "Vorlage"
-    Rehearsal ||--o{ RehearsalInvitee : ""
-    User ||--o{ RehearsalInvitee : "eingeladen"
-    Rehearsal ||--o{ RehearsalAttendance : ""
-    User ||--o{ RehearsalAttendance : "Zu-/Absage"
-    Rehearsal ||--o{ RehearsalAttendanceLog : ""
-    User ||--o{ RehearsalAttendanceLog : "betroffen / geändert von"
-    Show |o--o{ RehearsalProposal : ""
-    Rehearsal |o--o{ RehearsalProposal : "übernommen als"
-    User |o--o{ RehearsalProposal : "genehmigt"
-    Rehearsal |o--o{ Notification : ""
+    Show |o--o{ CalendarEvent : ""
+    Department |o--o{ CalendarEvent : "Gewerk-Termin"
+    CalendarEvent ||--o{ EventParticipant : ""
+    User ||--o{ EventParticipant : "eingeladen / Zu-/Absage"
+    CalendarEvent ||--o{ EventResponseLog : ""
+    User ||--o{ EventResponseLog : "betroffen / geändert von"
+    CalendarEvent |o--o{ Notification : ""
     Notification ||--o{ NotificationRecipient : ""
     User ||--o{ NotificationRecipient : ""
+    User ||--o| CalendarFeed : "Kalender-Abo"
     Show ||--o{ FinalRehearsalDuty : ""
     User |o--o{ FinalRehearsalDuty : "Dienst / erstellt"
     User ||--o{ AvailabilityDay : ""
@@ -160,11 +154,12 @@ erDiagram
     User ||--o{ BlockedDay : "Sperrliste"
     User ||--o{ Availability : "Legacy"
 
-    RehearsalAttendance {
-        AttendanceStatus status "yes|no|maybe|emergency"
+    CalendarEvent {
+        CalendarEventKind kind "REHEARSAL|PERFORMANCE|MEETING|WORK_DAY|SOCIAL|OTHER"
+        EventStatus status "DRAFT|SCHEDULED|CANCELLED"
     }
-    RehearsalProposal {
-        RehearsalProposalStatus status "proposed|approved|rejected|scheduled"
+    EventParticipant {
+        AttendanceStatus response "yes|no|maybe|emergency"
     }
     AvailabilityDay {
         AvailabilityKind kind "UK userId+date"
@@ -236,18 +231,19 @@ Mögliche Werte von `Role`: `member`, `cast`, `tech`, `board`, `finance`, `owner
 - **Onboarding gibt es doppelt:** `MemberOnboardingProfile` gibt es genau einmal pro User (`userId` unique), der Bezug zur Show ist optional. Das ist der ältere, globale Weg. `ProductionOnboarding` ist eindeutig pro (User, Show) und damit der produktionsbezogene Weg.
 - **Einladungen:** Ein `MemberInvite` ist immer an eine Show gebunden und kann persönlich (`personalFor`) oder offen sein. Jede Einlösung erzeugt eine `MemberInviteRedemption`, die mit maximal einem Onboarding-Datensatz verknüpft ist.
 - **Verfügbarkeit:** `Availability` ist Legacy (Zeitfenster mit Status). Neu sind `AvailabilityDay` (Einträge pro Tag) und `AvailabilityTemplate` (wiederkehrend). `BlockedDay` ist die Sperrliste.
+- **Termine:** Proben sind `CalendarEvent` mit `kind = REHEARSAL` (seit 2026-09-26, vorher eigene Tabelle `Rehearsal`). `EventParticipant` vereint Einladung (`invited`) und Zu-/Absage (`response`); bei Terminen für ganze Gruppen (Gewerk, Produktion) gibt es Zeilen nur für Rückmeldungen. Plan: `docs/terminplanung-plan.md`.
 - **Aufgaben:** `Task` sind globale Legacy-Aufgaben. `DepartmentTask` sind Aufgaben eines Gewerks mit mehreren Zuständigen.
-- **Show-Bezug:** Nur optional bei `Rehearsal`, `RehearsalProposal` und `MemberOnboardingProfile`. Pflicht bei Character, Scene, Finance*, PhotoConsent, ProductionMembership, ProductionOnboarding, MemberInvite und FinalRehearsalDuty.
+- **Show-Bezug:** Nur optional bei `CalendarEvent` und `MemberOnboardingProfile`. Pflicht bei Character, Scene, Finance*, PhotoConsent, ProductionMembership, ProductionOnboarding, MemberInvite und FinalRehearsalDuty.
 - **Mehrfachrelationen zu User** werden über benannte `@relation` unterschieden:
   - FinanceEntry: createdBy, approvedBy, memberPaidBy
   - Issue: createdBy, updatedBy
-  - RehearsalAttendanceLog: user, changedBy
+  - EventResponseLog: user, changedBy
   - FinalRehearsalDuty: assignee, createdBy
   - PhotoConsent: user, approvedBy
   - MemberInvite: createdBy, personalFor
 - **Löschverhalten** (`onDelete`) steht in der Referenz unten bei jedem Relationsfeld. Grundsatz seit 2026-09-24:
   - `Cascade` nur für Daten, die der Person selbst gehören (Account, Session, Maße, Allergien, Verfügbarkeit, Interessen, Mitgliedschaften).
-  - `Restrict` für Fachdaten des Vereins mit Pflicht-Ersteller: `FinanceEntry.createdBy`, `MemberInvite.createdBy`, `RehearsalAttendanceLog.changedBy`, `DepartmentTask.creator`, `DepartmentEvent.createdBy`, `FinalRehearsalDuty.createdBy`, `IssueComment.author`.
+  - `Restrict` für Fachdaten des Vereins mit Pflicht-Ersteller: `FinanceEntry.createdBy`, `MemberInvite.createdBy`, `EventResponseLog.changedBy`, `DepartmentTask.creator`, `FinalRehearsalDuty.createdBy`, `IssueComment.author`.
   - `Restrict` von `Show` auf `FinanceEntry`, `FinanceBudget` und `PhotoConsent`: Produktionen werden archiviert, nicht gelöscht.
   - `DELETE /api/members/[id]` versucht erst ein echtes Löschen. Scheitert es an einem Restrict-FK (P2003), wird das Konto per `anonymizeAccount` (`src/lib/retention.ts`) anonymisiert.
 - **Singletons:** `*Settings` haben eine feste ID und damit genau eine Zeile.
@@ -298,29 +294,30 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `payoutNote`                      | `String?`                      |                                                                                          |
 | `accounts`                        | → `Account[]`                  |                                                                                          |
 | `sessions`                        | → `Session[]`                  |                                                                                          |
-| `attendance`                      | → `RehearsalAttendance[]`      |                                                                                          |
+| `eventParticipations`             | → `EventParticipant[]`         |                                                                                          |
 | `availability`                    | → `Availability[]`             |                                                                                          |
 | `tasks`                           | → `Task[]`                     | @relation("TaskAssignee")                                                                |
 | `availabilityDays`                | → `AvailabilityDay[]`          | New availability relations                                                               |
 | `availabilityTemplates`           | → `AvailabilityTemplate[]`     |                                                                                          |
-| `attendanceLogsAuthored`          | → `RehearsalAttendanceLog[]`   | @relation("AttendanceLogAuthor")                                                         |
-| `attendanceLogsTarget`            | → `RehearsalAttendanceLog[]`   | @relation("AttendanceLogTarget")                                                         |
+| `attendanceLogsAuthored`          | → `EventResponseLog[]`         | @relation("AttendanceLogAuthor")                                                         |
+| `attendanceLogsTarget`            | → `EventResponseLog[]`         | @relation("AttendanceLogTarget")                                                         |
 | `dietaryRestrictions`             | → `DietaryRestriction[]`       |                                                                                          |
 | `measurements`                    | → `MemberMeasurement[]`        |                                                                                          |
 | `sizes`                           | → `MemberSize[]`               |                                                                                          |
 | `roles`                           | → `UserRole[]`                 |                                                                                          |
-| `approvedProposals`               | → `RehearsalProposal[]`        | @relation("ProposalApprover")                                                            |
 | `notifications`                   | → `NotificationRecipient[]`    |                                                                                          |
 | `blockedDays`                     | → `BlockedDay[]`               |                                                                                          |
+| `calendarFeed`                    | → `CalendarFeed?`              |                                                                                          |
 | `appRoles`                        | → `UserAppRole[]`              |                                                                                          |
-| `rehearsalInvites`                | → `RehearsalInvitee[]`         |                                                                                          |
 | `photoConsents`                   | → `PhotoConsent[]`             |                                                                                          |
 | `productionOnboardings`           | → `ProductionOnboarding[]`     |                                                                                          |
 | `approvedPhotoConsents`           | → `PhotoConsent[]`             | @relation("PhotoConsentApprover")                                                        |
 | `departmentMemberships`           | → `DepartmentMembership[]`     |                                                                                          |
 | `departmentTaskAssignments`       | → `DepartmentTaskAssignment[]` |                                                                                          |
 | `departmentTasksCreated`          | → `DepartmentTask[]`           | @relation("DepartmentTaskCreator")                                                       |
-| `departmentEventsCreated`         | → `DepartmentEvent[]`          |                                                                                          |
+| `departmentMembershipsAssigned`   | → `DepartmentMembership[]`     | @relation("DepartmentMembershipAssignedBy")                                              |
+| `departmentTaskComments`          | → `DepartmentTaskComment[]`    | @relation("DepartmentTaskCommentAuthor")                                                 |
+| `calendarEventsCreated`           | → `CalendarEvent[]`            |                                                                                          |
 | `departmentDocumentsUploaded`     | → `DepartmentDocument[]`       |                                                                                          |
 | `characterCastings`               | → `CharacterCasting[]`         |                                                                                          |
 | `breakdownAssignments`            | → `SceneBreakdownItem[]`       | @relation("BreakdownAssignee")                                                           |
@@ -330,6 +327,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `onboardingProfile`               | → `MemberOnboardingProfile?`   |                                                                                          |
 | `interests`                       | → `UserInterest[]`             |                                                                                          |
 | `rolePreferences`                 | → `MemberRolePreference[]`     |                                                                                          |
+| `noticeDismissals`                | → `UserNoticeDismissal[]`      |                                                                                          |
 | `productionMemberships`           | → `ProductionMembership[]`     |                                                                                          |
 | `interestsAuthored`               | → `Interest[]`                 | @relation("InterestCreatedBy")                                                           |
 | `issuesCreated`                   | → `Issue[]`                    | @relation("IssueCreatedBy")                                                              |
@@ -344,6 +342,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `fileLibraryFoldersCreated`       | → `FileLibraryFolder[]`        | @relation("FileLibraryFoldersCreated")                                                   |
 | `fileLibraryItemsUploaded`        | → `FileLibraryItem[]`          | @relation("FileLibraryItemsUploaded")                                                    |
 | `parentalConsentTemplatesUpdated` | → `ServerSettings[]`           | @relation("ServerSettingsParentalConsentUploader")                                       |
+| `dataPortalAuditLogs`             | → `DataPortalAuditLog[]`       |                                                                                          |
 
 ### `Account`
 
@@ -474,16 +473,18 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `status`                  | `ProductionStatus` (enum)     | @default(planning)       |
 | `statusChangedAt`         | `DateTime?`                   |                          |
 | `archivedAt`              | `DateTime?`                   |                          |
-| `rehearsals`              | → `Rehearsal[]`               |                          |
 | `finance`                 | → `FinanceEntry[]`            |                          |
 | `budgets`                 | → `FinanceBudget[]`           |                          |
-| `proposals`               | → `RehearsalProposal[]`       |                          |
 | `characters`              | → `Character[]`               |                          |
 | `scenes`                  | → `Scene[]`                   |                          |
+| `acts`                    | → `ShowAct[]`                 |                          |
 | `finalRehearsalDuties`    | → `FinalRehearsalDuty[]`      |                          |
 | `memberships`             | → `ProductionMembership[]`    |                          |
 | `photoConsents`           | → `PhotoConsent[]`            |                          |
 | `productionOnboardings`   | → `ProductionOnboarding[]`    |                          |
+| `calendarEvents`          | → `CalendarEvent[]`           |                          |
+| `memberRolePreferences`   | → `MemberRolePreference[]`    |                          |
+| `departments`             | → `Department[]`              |                          |
 | `onboardingProfiles`      | → `MemberOnboardingProfile[]` |                          |
 | `invites`                 | → `MemberInvite[]`            |                          |
 
@@ -590,23 +591,25 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Onboarding einer Person für eine Produktion. Das MemberOnboardingProfile bleibt der aktuelle Stand (Vorausfüllen), hier stehen die Angaben, die für diese Produktion galten.
 
-| Feld              | Typ                         | Attribute / Beschreibung                                                                      |
-| ----------------- | --------------------------- | --------------------------------------------------------------------------------------------- |
-| `id`              | `String`                    | @id @default(cuid())                                                                          |
-| `userId`          | `String`                    |                                                                                               |
-| `showId`          | `String`                    |                                                                                               |
-| `inviteId`        | `String?`                   |                                                                                               |
-| `redemptionId`    | `String?`                   | @unique                                                                                       |
-| `focus`           | `OnboardingFocus` (enum)    |                                                                                               |
-| `profileSnapshot` | `Json?`                     | Bestätigte Profildaten zum Zeitpunkt des Onboardings (Ernährung, Allergien, Rollenwünsche …). |
-| `isReturning`     | `Boolean`                   | @default(false)                                                                               |
-| `completedAt`     | `DateTime?`                 |                                                                                               |
-| `createdAt`       | `DateTime`                  | @default(now())                                                                               |
-| `updatedAt`       | `DateTime`                  | @updatedAt                                                                                    |
-| `user`            | → `User`                    | @relation(fields: [userId], references: [id], onDelete: Cascade)                              |
-| `show`            | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Cascade)                              |
-| `invite`          | → `MemberInvite?`           | @relation(fields: [inviteId], references: [id], onDelete: SetNull)                            |
-| `redemption`      | → `MemberInviteRedemption?` | @relation(fields: [redemptionId], references: [id], onDelete: SetNull)                        |
+| Feld                    | Typ                         | Attribute / Beschreibung                                                                      |
+| ----------------------- | --------------------------- | --------------------------------------------------------------------------------------------- |
+| `id`                    | `String`                    | @id @default(cuid())                                                                          |
+| `userId`                | `String`                    |                                                                                               |
+| `showId`                | `String`                    |                                                                                               |
+| `inviteId`              | `String?`                   |                                                                                               |
+| `redemptionId`          | `String?`                   | @unique                                                                                       |
+| `focus`                 | `OnboardingFocus` (enum)    |                                                                                               |
+| `profileSnapshot`       | `Json?`                     | Bestätigte Profildaten zum Zeitpunkt des Onboardings (Ernährung, Allergien, Rollenwünsche …). |
+| `notes`                 | `String?`                   | Hinweise ans Team für diese Produktion.                                                       |
+| `whatsappLinkVisitedAt` | `DateTime?`                 |                                                                                               |
+| `isReturning`           | `Boolean`                   | @default(false)                                                                               |
+| `completedAt`           | `DateTime?`                 |                                                                                               |
+| `createdAt`             | `DateTime`                  | @default(now())                                                                               |
+| `updatedAt`             | `DateTime`                  | @updatedAt                                                                                    |
+| `user`                  | → `User`                    | @relation(fields: [userId], references: [id], onDelete: Cascade)                              |
+| `show`                  | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Cascade)                              |
+| `invite`                | → `MemberInvite?`           | @relation(fields: [inviteId], references: [id], onDelete: SetNull)                            |
+| `redemption`            | → `MemberInviteRedemption?` | @relation(fields: [redemptionId], references: [id], onDelete: SetNull)                        |
 
 - `@@unique([userId, showId])`
 - `@@index([showId, completedAt])`
@@ -686,24 +689,25 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `Scene`
 
-| Feld              | Typ                      | Attribute / Beschreibung                                         |
-| ----------------- | ------------------------ | ---------------------------------------------------------------- |
-| `id`              | `String`                 | @id @default(cuid())                                             |
-| `showId`          | `String`                 |                                                                  |
-| `sequence`        | `Int`                    | @default(0)                                                      |
-| `identifier`      | `String?`                |                                                                  |
-| `title`           | `String?`                |                                                                  |
-| `slug`            | `String?`                |                                                                  |
-| `summary`         | `String?`                |                                                                  |
-| `location`        | `String?`                |                                                                  |
-| `timeOfDay`       | `String?`                |                                                                  |
-| `durationMinutes` | `Int?`                   |                                                                  |
-| `notes`           | `String?`                |                                                                  |
-| `createdAt`       | `DateTime`               | @default(now())                                                  |
-| `updatedAt`       | `DateTime`               | @updatedAt                                                       |
-| `show`            | → `Show`                 | @relation(fields: [showId], references: [id], onDelete: Cascade) |
-| `characters`      | → `SceneCharacter[]`     |                                                                  |
-| `breakdownItems`  | → `SceneBreakdownItem[]` |                                                                  |
+| Feld              | Typ                      | Attribute / Beschreibung                                                                                      |
+| ----------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `id`              | `String`                 | @id @default(cuid())                                                                                          |
+| `showId`          | `String`                 |                                                                                                               |
+| `sequence`        | `Int`                    | @default(0)                                                                                                   |
+| `identifier`      | `String?`                |                                                                                                               |
+| `title`           | `String?`                |                                                                                                               |
+| `slug`            | `String?`                |                                                                                                               |
+| `summary`         | `String?`                |                                                                                                               |
+| `location`        | `String?`                |                                                                                                               |
+| `timeOfDay`       | `String?`                |                                                                                                               |
+| `durationMinutes` | `Int?`                   |                                                                                                               |
+| `act`             | `Int`                    | @default(1) Akt (1, 2, …); die Nummer `identifier` ist `akt.position` und wird beim Umsortieren neu vergeben. |
+| `notes`           | `String?`                |                                                                                                               |
+| `createdAt`       | `DateTime`               | @default(now())                                                                                               |
+| `updatedAt`       | `DateTime`               | @updatedAt                                                                                                    |
+| `show`            | → `Show`                 | @relation(fields: [showId], references: [id], onDelete: Cascade)                                              |
+| `characters`      | → `SceneCharacter[]`     |                                                                                                               |
+| `breakdownItems`  | → `SceneBreakdownItem[]` |                                                                                                               |
 
 - `@@unique([showId, slug], name: "showId_slug")`
 - `@@index([showId, sequence])`
@@ -749,40 +753,58 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `Department`
 
-| Feld                   | Typ                        | Attribute / Beschreibung |
-| ---------------------- | -------------------------- | ------------------------ |
-| `id`                   | `String`                   | @id @default(cuid())     |
-| `slug`                 | `String`                   | @unique                  |
-| `name`                 | `String`                   |                          |
-| `description`          | `String?`                  |                          |
-| `color`                | `String?`                  |                          |
-| `isCore`               | `Boolean`                  | @default(true)           |
-| `requiresJoinApproval` | `Boolean`                  | @default(false)          |
-| `createdAt`            | `DateTime`                 | @default(now())          |
-| `updatedAt`            | `DateTime`                 | @updatedAt               |
-| `memberships`          | → `DepartmentMembership[]` |                          |
-| `breakdownItems`       | → `SceneBreakdownItem[]`   |                          |
-| `tasks`                | → `DepartmentTask[]`       |                          |
-| `permissions`          | → `DepartmentPermission[]` |                          |
-| `events`               | → `DepartmentEvent[]`      |                          |
-| `documents`            | → `DepartmentDocument[]`   |                          |
+> Gewerk einer Produktion.
+
+| Feld                   | Typ                         | Attribute / Beschreibung                                             |
+| ---------------------- | --------------------------- | -------------------------------------------------------------------- |
+| `id`                   | `String`                    | @id @default(cuid())                                                 |
+| `showId`               | `String`                    |                                                                      |
+| `templateId`           | `String?`                   |                                                                      |
+| `slug`                 | `String`                    |                                                                      |
+| `name`                 | `String`                    |                                                                      |
+| `description`          | `String?`                   |                                                                      |
+| `color`                | `String?`                   |                                                                      |
+| `isCore`               | `Boolean`                   | @default(true)                                                       |
+| `requiresJoinApproval` | `Boolean`                   | @default(false)                                                      |
+| `sortOrder`            | `Int`                       | @default(0)                                                          |
+| `archivedAt`           | `DateTime?`                 |                                                                      |
+| `createdAt`            | `DateTime`                  | @default(now())                                                      |
+| `updatedAt`            | `DateTime`                  | @updatedAt                                                           |
+| `show`                 | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Cascade)     |
+| `template`             | → `DepartmentTemplate?`     | @relation(fields: [templateId], references: [id], onDelete: SetNull) |
+| `memberships`          | → `DepartmentMembership[]`  |                                                                      |
+| `breakdownItems`       | → `SceneBreakdownItem[]`    |                                                                      |
+| `tasks`                | → `DepartmentTask[]`        |                                                                      |
+| `boardColumns`         | → `DepartmentBoardColumn[]` |                                                                      |
+| `permissions`          | → `DepartmentPermission[]`  |                                                                      |
+| `events`               | → `CalendarEvent[]`         |                                                                      |
+| `documents`            | → `DepartmentDocument[]`    |                                                                      |
+
+- `@@unique([showId, slug], name: "showId_slug")`
+- `@@index([templateId])`
 
 ### `DepartmentMembership`
 
-| Feld           | Typ                               | Attribute / Beschreibung                                               |
-| -------------- | --------------------------------- | ---------------------------------------------------------------------- |
-| `id`           | `String`                          | @id @default(cuid())                                                   |
-| `departmentId` | `String`                          |                                                                        |
-| `userId`       | `String`                          |                                                                        |
-| `role`         | `DepartmentMembershipRole` (enum) | @default(member)                                                       |
-| `title`        | `String?`                         |                                                                        |
-| `note`         | `String?`                         |                                                                        |
-| `createdAt`    | `DateTime`                        | @default(now())                                                        |
-| `updatedAt`    | `DateTime`                        | @updatedAt                                                             |
-| `department`   | → `Department`                    | @relation(fields: [departmentId], references: [id], onDelete: Cascade) |
-| `user`         | → `User`                          | @relation(fields: [userId], references: [id], onDelete: Cascade)       |
+| Feld           | Typ                                 | Attribute / Beschreibung                                                                                 |
+| -------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `id`           | `String`                            | @id @default(cuid())                                                                                     |
+| `departmentId` | `String`                            |                                                                                                          |
+| `userId`       | `String`                            |                                                                                                          |
+| `role`         | `DepartmentMembershipRole` (enum)   | @default(member)                                                                                         |
+| `status`       | `DepartmentMembershipStatus` (enum) | @default(active)                                                                                         |
+| `source`       | `DepartmentAssignmentSource` (enum) | @default(assigned)                                                                                       |
+| `title`        | `String?`                           |                                                                                                          |
+| `note`         | `String?`                           |                                                                                                          |
+| `assignedById` | `String?`                           |                                                                                                          |
+| `decidedAt`    | `DateTime?`                         |                                                                                                          |
+| `createdAt`    | `DateTime`                          | @default(now())                                                                                          |
+| `updatedAt`    | `DateTime`                          | @updatedAt                                                                                               |
+| `department`   | → `Department`                      | @relation(fields: [departmentId], references: [id], onDelete: Cascade)                                   |
+| `user`         | → `User`                            | @relation(fields: [userId], references: [id], onDelete: Cascade)                                         |
+| `assignedBy`   | → `User?`                           | @relation("DepartmentMembershipAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull) |
 
 - `@@unique([departmentId, userId], name: "departmentId_userId")`
+- `@@index([userId, status])`
 
 ### `DepartmentTask`
 
@@ -790,6 +812,9 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | -------------- | ------------------------------ | ----------------------------------------------------------------------------------------------- |
 | `id`           | `String`                       | @id @default(cuid())                                                                            |
 | `departmentId` | `String`                       |                                                                                                 |
+| `columnId`     | `String?`                      |                                                                                                 |
+| `position`     | `Int`                          | @default(0)                                                                                     |
+| `priority`     | `TaskPriority` (enum)          | @default(normal)                                                                                |
 | `title`        | `String`                       |                                                                                                 |
 | `description`  | `String?`                      |                                                                                                 |
 | `status`       | `TaskStatus` (enum)            | @default(todo)                                                                                  |
@@ -798,10 +823,13 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `createdAt`    | `DateTime`                     | @default(now())                                                                                 |
 | `updatedAt`    | `DateTime`                     | @updatedAt                                                                                      |
 | `department`   | → `Department`                 | @relation(fields: [departmentId], references: [id], onDelete: Cascade)                          |
+| `column`       | → `DepartmentBoardColumn?`     | @relation(fields: [columnId], references: [id], onDelete: SetNull)                              |
 | `creator`      | → `User`                       | @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict) |
 | `assignments`  | → `DepartmentTaskAssignment[]` |                                                                                                 |
+| `comments`     | → `DepartmentTaskComment[]`    |                                                                                                 |
 
 - `@@index([departmentId, status])`
+- `@@index([columnId, position])`
 - `@@index([createdAt])`
 
 ### `DepartmentTaskAssignment`
@@ -830,25 +858,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 - `@@unique([departmentId, permissionId])`
 
-### `DepartmentEvent`
-
-| Feld           | Typ            | Attribute / Beschreibung                                               |
-| -------------- | -------------- | ---------------------------------------------------------------------- |
-| `id`           | `String`       | @id @default(cuid())                                                   |
-| `departmentId` | `String`       |                                                                        |
-| `title`        | `String`       |                                                                        |
-| `start`        | `DateTime`     |                                                                        |
-| `end`          | `DateTime?`    |                                                                        |
-| `location`     | `String?`      |                                                                        |
-| `description`  | `String?`      |                                                                        |
-| `createdById`  | `String`       |                                                                        |
-| `createdAt`    | `DateTime`     | @default(now())                                                        |
-| `updatedAt`    | `DateTime`     | @updatedAt                                                             |
-| `department`   | → `Department` | @relation(fields: [departmentId], references: [id], onDelete: Cascade) |
-| `createdBy`    | → `User`       | @relation(fields: [createdById], references: [id], onDelete: Restrict) |
-
-- `@@index([departmentId, start])`
-
 ### `DepartmentDocument`
 
 | Feld           | Typ            | Attribute / Beschreibung                                               |
@@ -866,124 +875,96 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 - `@@index([departmentId, createdAt])`
 
-## Proben & Anwesenheit
+## Termine, Proben & Anwesenheit
 
-### `Rehearsal`
+### `CalendarEvent`
 
-| Feld                   | Typ                          | Attribute / Beschreibung                                         |
-| ---------------------- | ---------------------------- | ---------------------------------------------------------------- |
-| `id`                   | `String`                     | @id @default(cuid())                                             |
-| `showId`               | `String?`                    | Optional - für allgemeine Proben                                 |
-| `title`                | `String`                     | @default("Probe")                                                |
-| `start`                | `DateTime`                   |                                                                  |
-| `end`                  | `DateTime`                   |                                                                  |
-| `location`             | `String`                     |                                                                  |
-| `description`          | `String?`                    |                                                                  |
-| `requiredRoles`        | `Json`                       |                                                                  |
-| `registrationDeadline` | `DateTime?`                  | Deadline für An-/Abmeldungen (1 Woche vor Probe)                 |
-| `isFromTemplate`       | `Boolean`                    | @default(false)                                                  |
-| `templateId`           | `String?`                    |                                                                  |
-| `priority`             | `RehearsalPriority` (enum)   | @default(NORMAL)                                                 |
-| `status`               | `RehearsalStatus` (enum)     | @default(PLANNED)                                                |
-| `createdBy`            | `String?`                    |                                                                  |
-| `createdAt`            | `DateTime`                   | @default(now())                                                  |
-| `updatedAt`            | `DateTime`                   | @default(now()) @updatedAt                                       |
-| `show`                 | → `Show?`                    | @relation(fields: [showId], references: [id], onDelete: Cascade) |
-| `attendance`           | → `RehearsalAttendance[]`    |                                                                  |
-| `attendanceLogs`       | → `RehearsalAttendanceLog[]` |                                                                  |
-| `template`             | → `RehearsalTemplate?`       | @relation(fields: [templateId], references: [id])                |
-| `proposals`            | → `RehearsalProposal[]`      |                                                                  |
-| `notifications`        | → `Notification[]`           |                                                                  |
-| `invitees`             | → `RehearsalInvitee[]`       |                                                                  |
+> Termine der Organisation (Proben, Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
 
-### `RehearsalTemplate`
+| Feld               | Typ                        | Attribute / Beschreibung                                                    |
+| ------------------ | -------------------------- | --------------------------------------------------------------------------- |
+| `id`               | `String`                   | @id @default(cuid())                                                        |
+| `title`            | `String`                   |                                                                             |
+| `kind`             | `CalendarEventKind` (enum) | @default(OTHER)                                                             |
+| `status`           | `EventStatus` (enum)       | @default(SCHEDULED)                                                         |
+| `start`            | `DateTime`                 |                                                                             |
+| `end`              | `DateTime?`                |                                                                             |
+| `allDay`           | `Boolean`                  | @default(false)                                                             |
+| `location`         | `String?`                  |                                                                             |
+| `description`      | `String?`                  |                                                                             |
+| `responseDeadline` | `DateTime?`                | Frist für Zu-/Absagen.                                                      |
+| `showId`           | `String?`                  |                                                                             |
+| `departmentId`     | `String?`                  | Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab. |
+| `createdById`      | `String?`                  |                                                                             |
+| `createdAt`        | `DateTime`                 | @default(now())                                                             |
+| `updatedAt`        | `DateTime`                 | @updatedAt                                                                  |
+| `show`             | → `Show?`                  | @relation(fields: [showId], references: [id], onDelete: SetNull)            |
+| `department`       | → `Department?`            | @relation(fields: [departmentId], references: [id], onDelete: Cascade)      |
+| `createdBy`        | → `User?`                  | @relation(fields: [createdById], references: [id], onDelete: SetNull)       |
+| `participants`     | → `EventParticipant[]`     |                                                                             |
+| `responseLogs`     | → `EventResponseLog[]`     |                                                                             |
+| `notifications`    | → `Notification[]`         |                                                                             |
 
-| Feld            | Typ                        | Attribute / Beschreibung   |
-| --------------- | -------------------------- | -------------------------- |
-| `id`            | `String`                   | @id @default(cuid())       |
-| `name`          | `String`                   |                            |
-| `description`   | `String?`                  |                            |
-| `weekday`       | `Int`                      | 0=Sonntag, 1=Montag, etc.  |
-| `startTime`     | `String`                   | HH:MM format               |
-| `endTime`       | `String`                   | HH:MM format               |
-| `location`      | `String`                   |                            |
-| `requiredRoles` | `Json`                     |                            |
-| `isActive`      | `Boolean`                  | @default(true)             |
-| `priority`      | `RehearsalPriority` (enum) | @default(NORMAL)           |
-| `validFrom`     | `DateTime?`                |                            |
-| `validTo`       | `DateTime?`                |                            |
-| `createdAt`     | `DateTime`                 | @default(now())            |
-| `updatedAt`     | `DateTime`                 | @default(now()) @updatedAt |
-| `rehearsals`    | → `Rehearsal[]`            |                            |
+- `@@index([start])`
+- `@@index([departmentId, start])`
+- `@@index([kind, start])`
 
-### `RehearsalInvitee`
+### `EventParticipant`
 
-| Feld          | Typ           | Attribute / Beschreibung                                              |
-| ------------- | ------------- | --------------------------------------------------------------------- |
-| `id`          | `String`      | @id @default(cuid())                                                  |
-| `rehearsalId` | `String`      |                                                                       |
-| `userId`      | `String`      |                                                                       |
-| `rehearsal`   | → `Rehearsal` | @relation(fields: [rehearsalId], references: [id], onDelete: Cascade) |
-| `user`        | → `User`      | @relation(fields: [userId], references: [id], onDelete: Cascade)      |
+> Person an einem Termin: eingeladen (Proben) und/oder mit Zu-/Absage.
 
-- `@@unique([rehearsalId, userId])`
+| Feld           | Typ                         | Attribute / Beschreibung                                                                    |
+| -------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
+| `id`           | `String`                    | @id @default(cuid())                                                                        |
+| `eventId`      | `String`                    |                                                                                             |
+| `userId`       | `String`                    |                                                                                             |
+| `level`        | `ParticipationLevel` (enum) | @default(REQUIRED)                                                                          |
+| `invited`      | `Boolean`                   | @default(true) Eingeladen; `false` = nur Rückmeldung zu einem Termin für eine ganze Gruppe. |
+| `response`     | `AttendanceStatus?` (enum)  |                                                                                             |
+| `responseNote` | `String?`                   |                                                                                             |
+| `respondedAt`  | `DateTime?`                 |                                                                                             |
+| `createdAt`    | `DateTime`                  | @default(now())                                                                             |
+| `updatedAt`    | `DateTime`                  | @updatedAt                                                                                  |
+| `event`        | → `CalendarEvent`           | @relation(fields: [eventId], references: [id], onDelete: Cascade)                           |
+| `user`         | → `User`                    | @relation(fields: [userId], references: [id], onDelete: Cascade)                            |
 
-### `RehearsalAttendance`
+- `@@unique([eventId, userId], name: "eventId_userId")`
+- `@@index([userId])`
 
-| Feld              | Typ                       | Attribute / Beschreibung                                              |
-| ----------------- | ------------------------- | --------------------------------------------------------------------- |
-| `id`              | `String`                  | @id @default(cuid())                                                  |
-| `rehearsalId`     | `String`                  |                                                                       |
-| `userId`          | `String`                  |                                                                       |
-| `status`          | `AttendanceStatus` (enum) |                                                                       |
-| `emergencyReason` | `String?`                 | Begründung für Emergency-Absagen                                      |
-| `rehearsal`       | → `Rehearsal`             | @relation(fields: [rehearsalId], references: [id], onDelete: Cascade) |
-| `user`            | → `User`                  | @relation(fields: [userId], references: [id], onDelete: Cascade)      |
+### `EventResponseLog`
 
-- `@@unique([rehearsalId, userId], name: "rehearsalId_userId")`
-
-### `RehearsalAttendanceLog`
+> Verlauf der Zu-/Absagen (auch durch Planer für andere).
 
 | Feld          | Typ                        | Attribute / Beschreibung                                                                      |
 | ------------- | -------------------------- | --------------------------------------------------------------------------------------------- |
 | `id`          | `String`                   | @id @default(cuid())                                                                          |
-| `rehearsalId` | `String`                   |                                                                                               |
+| `eventId`     | `String`                   |                                                                                               |
 | `userId`      | `String`                   |                                                                                               |
 | `previous`    | `AttendanceStatus?` (enum) |                                                                                               |
 | `next`        | `AttendanceStatus?` (enum) |                                                                                               |
 | `comment`     | `String?`                  |                                                                                               |
 | `changedAt`   | `DateTime`                 | @default(now())                                                                               |
 | `changedById` | `String`                   |                                                                                               |
-| `rehearsal`   | → `Rehearsal`              | @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)                         |
+| `event`       | → `CalendarEvent`          | @relation(fields: [eventId], references: [id], onDelete: Cascade)                             |
 | `user`        | → `User`                   | @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)       |
 | `changedBy`   | → `User`                   | @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Restrict) |
 
-- `@@index([rehearsalId, changedAt])`
+- `@@index([eventId, changedAt])`
 
-### `RehearsalProposal`
+### `CalendarFeed`
 
-| Feld              | Typ                              | Attribute / Beschreibung                                              |
-| ----------------- | -------------------------------- | --------------------------------------------------------------------- |
-| `id`              | `String`                         | @id @default(cuid())                                                  |
-| `showId`          | `String?`                        | Optional - für allgemeine Proben                                      |
-| `title`           | `String`                         | @default("Probenvorschlag")                                           |
-| `date`            | `DateTime`                       | Vorgeschlagenes Datum                                                 |
-| `startTime`       | `Int`                            | Vorgeschlagene Startzeit (Minuten seit Mitternacht)                   |
-| `endTime`         | `Int`                            | Vorgeschlagene Endzeit (Minuten seit Mitternacht)                     |
-| `location`        | `String?`                        |                                                                       |
-| `requiredRoles`   | `Json`                           | Benötigte Rollen für diese Probe                                      |
-| `status`          | `RehearsalProposalStatus` (enum) | @default(proposed)                                                    |
-| `createdAt`       | `DateTime`                       | @default(now())                                                       |
-| `approvedAt`      | `DateTime?`                      | Wann wurde der Vorschlag freigegeben?                                 |
-| `approvedBy`      | `String?`                        | Wer hat den Vorschlag freigegeben?                                    |
-| `rejectionReason` | `String?`                        | Optional: Grund für Ablehnung                                         |
-| `rehearsalId`     | `String?`                        | Referenz zur tatsächlichen Probe, wenn der Vorschlag angenommen wurde |
-| `show`            | → `Show?`                        | @relation(fields: [showId], references: [id])                         |
-| `approver`        | → `User?`                        | @relation("ProposalApprover", fields: [approvedBy], references: [id]) |
-| `rehearsal`       | → `Rehearsal?`                   | @relation(fields: [rehearsalId], references: [id])                    |
+> Persönlicher Kalender-Abo-Link (ICS). Der Token steht im Link; wer ihn kennt, sieht die Termine.
 
-- `@@index([date, status])`
-- `@@index([showId, status])`
+| Feld                 | Typ         | Attribute / Beschreibung                                         |
+| -------------------- | ----------- | ---------------------------------------------------------------- |
+| `id`                 | `String`    | @id @default(cuid())                                             |
+| `userId`             | `String`    | @unique                                                          |
+| `token`              | `String`    | @unique                                                          |
+| `includeBlockedDays` | `Boolean`   | @default(false)                                                  |
+| `lastAccessedAt`     | `DateTime?` |                                                                  |
+| `createdAt`          | `DateTime`  | @default(now())                                                  |
+| `updatedAt`          | `DateTime`  | @updatedAt                                                       |
+| `user`               | → `User`    | @relation(fields: [userId], references: [id], onDelete: Cascade) |
 
 ### `FinalRehearsalDuty`
 
@@ -1010,16 +991,16 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `Notification`
 
-| Feld          | Typ                         | Attribute / Beschreibung                                              |
-| ------------- | --------------------------- | --------------------------------------------------------------------- |
-| `id`          | `String`                    | @id @default(cuid())                                                  |
-| `title`       | `String`                    |                                                                       |
-| `body`        | `String?`                   |                                                                       |
-| `type`        | `String?`                   |                                                                       |
-| `createdAt`   | `DateTime`                  | @default(now())                                                       |
-| `rehearsalId` | `String?`                   |                                                                       |
-| `rehearsal`   | → `Rehearsal?`              | @relation(fields: [rehearsalId], references: [id], onDelete: Cascade) |
-| `recipients`  | → `NotificationRecipient[]` |                                                                       |
+| Feld         | Typ                         | Attribute / Beschreibung                                          |
+| ------------ | --------------------------- | ----------------------------------------------------------------- |
+| `id`         | `String`                    | @id @default(cuid())                                              |
+| `title`      | `String`                    |                                                                   |
+| `body`       | `String?`                   |                                                                   |
+| `type`       | `String?`                   |                                                                   |
+| `createdAt`  | `DateTime`                  | @default(now())                                                   |
+| `eventId`    | `String?`                   |                                                                   |
+| `event`      | → `CalendarEvent?`          | @relation(fields: [eventId], references: [id], onDelete: Cascade) |
+| `recipients` | → `NotificationRecipient[]` |                                                                   |
 
 ### `NotificationRecipient`
 
@@ -1066,6 +1047,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `user`             | → `User`                  | @relation(fields: [userId], references: [id], onDelete: Cascade) |
 
 ### `BlockedDay`
+
+> Zu- oder Absage einer Person zu einem Termin.
 
 | Feld        | Typ                     | Attribute / Beschreibung                                         |
 | ----------- | ----------------------- | ---------------------------------------------------------------- |
@@ -1171,18 +1154,23 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `MemberRolePreference`
 
+> Rollen- und Gewerkewünsche gelten pro Produktion (`showId`). Einträge ohne `showId` stammen aus der Zeit vor der Umstellung und dienen nur noch als Vorschlag.
+
 | Feld        | Typ                           | Attribute / Beschreibung                                         |
 | ----------- | ----------------------------- | ---------------------------------------------------------------- |
 | `id`        | `String`                      | @id @default(cuid())                                             |
 | `userId`    | `String`                      |                                                                  |
+| `showId`    | `String?`                     |                                                                  |
 | `code`      | `String`                      |                                                                  |
 | `domain`    | `RolePreferenceDomain` (enum) |                                                                  |
 | `weight`    | `Int`                         |                                                                  |
 | `createdAt` | `DateTime`                    | @default(now())                                                  |
 | `updatedAt` | `DateTime`                    | @updatedAt                                                       |
 | `user`      | → `User`                      | @relation(fields: [userId], references: [id], onDelete: Cascade) |
+| `show`      | → `Show?`                     | @relation(fields: [showId], references: [id], onDelete: Cascade) |
 
-- `@@unique([userId, code])`
+- `@@unique([userId, showId, code])`
+- `@@index([showId])`
 
 ## Finanzen
 
@@ -1334,8 +1322,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `folder`     | → `FileLibraryFolder`                | @relation(fields: [folderId], references: [id], onDelete: Cascade)  |
 | `appRole`    | → `AppRole?`                         | @relation(fields: [appRoleId], references: [id], onDelete: Cascade) |
 
-- `@@index([folderId, accessType])`
 - `@@unique([folderId, accessType, systemRole, appRoleId])`
+- `@@index([folderId, accessType])`
 
 ### `Issue`
 
@@ -1504,6 +1492,72 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ## Website & Einstellungen (Singletons)
 
+### `DepartmentTemplate`
+
+> Globale Vorlage für Gewerke. Pro Produktion werden daraus `Department`-Einträge erzeugt.
+
+| Feld                   | Typ              | Attribute / Beschreibung                                                                  |
+| ---------------------- | ---------------- | ----------------------------------------------------------------------------------------- |
+| `id`                   | `String`         | @id @default(cuid())                                                                      |
+| `slug`                 | `String`         | @unique                                                                                   |
+| `name`                 | `String`         |                                                                                           |
+| `description`          | `String?`        |                                                                                           |
+| `color`                | `String?`        |                                                                                           |
+| `preferenceCodes`      | `String[]`       | @default([]) Onboarding-Wunsch-Codes (z. B. `crew_costume`), die zu diesem Gewerk führen. |
+| `requiresJoinApproval` | `Boolean`        | @default(false)                                                                           |
+| `sortOrder`            | `Int`            | @default(0)                                                                               |
+| `createdAt`            | `DateTime`       | @default(now())                                                                           |
+| `updatedAt`            | `DateTime`       | @updatedAt                                                                                |
+| `departments`          | → `Department[]` |                                                                                           |
+
+### `DepartmentBoardColumn`
+
+> Spalte im Aufgaben-Board eines Gewerks. `status` bestimmt, welcher Aufgabenstatus daraus folgt (für Zähler und ältere Ansichten).
+
+| Feld           | Typ                  | Attribute / Beschreibung                                               |
+| -------------- | -------------------- | ---------------------------------------------------------------------- |
+| `id`           | `String`             | @id @default(cuid())                                                   |
+| `departmentId` | `String`             |                                                                        |
+| `name`         | `String`             |                                                                        |
+| `position`     | `Int`                | @default(0)                                                            |
+| `status`       | `TaskStatus` (enum)  | @default(doing)                                                        |
+| `createdAt`    | `DateTime`           | @default(now())                                                        |
+| `updatedAt`    | `DateTime`           | @updatedAt                                                             |
+| `department`   | → `Department`       | @relation(fields: [departmentId], references: [id], onDelete: Cascade) |
+| `tasks`        | → `DepartmentTask[]` |                                                                        |
+
+- `@@index([departmentId, position])`
+
+### `DepartmentTaskComment`
+
+| Feld        | Typ                | Attribute / Beschreibung                                                                          |
+| ----------- | ------------------ | ------------------------------------------------------------------------------------------------- |
+| `id`        | `String`           | @id @default(cuid())                                                                              |
+| `taskId`    | `String`           |                                                                                                   |
+| `authorId`  | `String?`          |                                                                                                   |
+| `body`      | `String`           |                                                                                                   |
+| `createdAt` | `DateTime`         | @default(now())                                                                                   |
+| `task`      | → `DepartmentTask` | @relation(fields: [taskId], references: [id], onDelete: Cascade)                                  |
+| `author`    | → `User?`          | @relation("DepartmentTaskCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull) |
+
+- `@@index([taskId, createdAt])`
+
+### `ShowAct`
+
+> Akt eines Stücks mit optionalem Titel („Akt 2 – Phantásien“).
+
+| Feld        | Typ        | Attribute / Beschreibung                                         |
+| ----------- | ---------- | ---------------------------------------------------------------- |
+| `id`        | `String`   | @id @default(cuid())                                             |
+| `showId`    | `String`   |                                                                  |
+| `number`    | `Int`      |                                                                  |
+| `title`     | `String?`  |                                                                  |
+| `createdAt` | `DateTime` | @default(now())                                                  |
+| `updatedAt` | `DateTime` | @updatedAt                                                       |
+| `show`      | → `Show`   | @relation(fields: [showId], references: [id], onDelete: Cascade) |
+
+- `@@unique([showId, number])`
+
 ### `WebsiteTheme`
 
 | Feld          | Typ                   | Attribute / Beschreibung |
@@ -1584,6 +1638,38 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `protectedRoles` | `Json?`    |                          |
 | `createdAt`      | `DateTime` | @default(now())          |
 | `updatedAt`      | `DateTime` | @updatedAt               |
+
+### `UserNoticeDismissal`
+
+> Vom Mitglied ausgeblendete Hinweise (z. B. `whatsapp:<showId>`), geräteübergreifend.
+
+| Feld          | Typ        | Attribute / Beschreibung                                         |
+| ------------- | ---------- | ---------------------------------------------------------------- |
+| `userId`      | `String`   |                                                                  |
+| `key`         | `String`   |                                                                  |
+| `dismissedAt` | `DateTime` | @default(now())                                                  |
+| `user`        | → `User`   | @relation(fields: [userId], references: [id], onDelete: Cascade) |
+
+- `@@id([userId, key])`
+
+### `DataPortalAuditLog`
+
+> Protokoll der Datenportal-Abfragen und -Exporte (nur Metadaten, keine Ergebniswerte). Wird nach DATA_PORTAL_AUDIT_RETENTION_MONTHS automatisch gelöscht.
+
+| Feld        | Typ        | Attribute / Beschreibung                                         |
+| ----------- | ---------- | ---------------------------------------------------------------- |
+| `id`        | `String`   | @id @default(cuid())                                             |
+| `userId`    | `String`   |                                                                  |
+| `showId`    | `String?`  |                                                                  |
+| `action`    | `String`   |                                                                  |
+| `source`    | `String`   |                                                                  |
+| `fields`    | `String[]` | @default([])                                                     |
+| `rowCount`  | `Int`      |                                                                  |
+| `createdAt` | `DateTime` | @default(now())                                                  |
+| `user`      | → `User`   | @relation(fields: [userId], references: [id], onDelete: Cascade) |
+
+- `@@index([createdAt])`
+- `@@index([userId, createdAt])`
 
 ## Analytics
 
@@ -1669,8 +1755,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `botBlockedRequests`      | `Int`      | @default(0)              |
 | `generatedAt`             | `DateTime` | @default(now())          |
 
-- `@@map("analytics_http_summary")`
 - `@@index([windowEnd])`
+- `@@map("analytics_http_summary")`
 
 ### `AnalyticsHttpPeakHour`
 
@@ -1683,8 +1769,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `share`       | `Float`    | @default(0)              |
 | `generatedAt` | `DateTime` | @default(now())          |
 
-- `@@map("analytics_http_peak_hours")`
 - `@@index([bucketStart])`
+- `@@map("analytics_http_peak_hours")`
 
 ### `AnalyticsPageView`
 
@@ -1752,9 +1838,9 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `weight`               | `Int`      | @default(0)              |
 | `generatedAt`          | `DateTime` | @default(now())          |
 
-- `@@map("analytics_page_metrics")`
 - `@@index([path])`
 - `@@index([scope])`
+- `@@map("analytics_page_metrics")`
 
 ### `AnalyticsDeviceMetric`
 
@@ -1767,8 +1853,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `share`       | `Float`    |                          |
 | `generatedAt` | `DateTime` | @default(now())          |
 
-- `@@map("analytics_device_metrics")`
 - `@@index([device])`
+- `@@map("analytics_device_metrics")`
 
 ### `AnalyticsSession`
 
@@ -1841,8 +1927,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `conversionRate`            | `Float`    |                          |
 | `generatedAt`               | `DateTime` | @default(now())          |
 
-- `@@map("analytics_session_insights")`
 - `@@index([segment])`
+- `@@map("analytics_session_insights")`
 
 ### `AnalyticsTrafficSource`
 
@@ -1856,8 +1942,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `changePercent`             | `Float`    |                          |
 | `generatedAt`               | `DateTime` | @default(now())          |
 
-- `@@map("analytics_traffic_sources")`
 - `@@index([channel])`
+- `@@map("analytics_traffic_sources")`
 
 ### `AnalyticsRealtimeSummary`
 
@@ -1870,8 +1956,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `eventCounts` | `Json?`    |                          |
 | `generatedAt` | `DateTime` | @default(now())          |
 
-- `@@map("analytics_realtime_summary")`
 - `@@index([windowEnd])`
+- `@@map("analytics_realtime_summary")`
 
 ### `AnalyticsSessionSummary`
 
@@ -1886,8 +1972,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `guestAvgSessionDurationSeconds`   | `Float`    | @default(0)              |
 | `generatedAt`                      | `DateTime` | @default(now())          |
 
-- `@@map("analytics_session_summary")`
 - `@@index([windowEnd])`
+- `@@map("analytics_session_summary")`
 
 ### `AnalyticsServerLog`
 
@@ -1910,9 +1996,9 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `lastSeenAt`        | `DateTime`                          | @default(now())          |
 | `fingerprint`       | `String`                            | @unique                  |
 
-- `@@map("analytics_server_logs")`
 - `@@index([severity, lastSeenAt])`
 - `@@index([status, lastSeenAt])`
+- `@@map("analytics_server_logs")`
 
 ## Enums
 
@@ -1926,6 +2012,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `InventoryItemCategory`       | `light`, `sound`, `network`, `video`, `instruments`, `cables`, `cases`, `accessories`                                                                                                                                                                                                                         |
 | `TicketStatus`                | `unused`, `checked_in`, `invalid`                                                                                                                                                                                                                                                                             |
 | `DepartmentMembershipRole`    | `lead`, `member`, `deputy`, `guest`                                                                                                                                                                                                                                                                           |
+| `DepartmentMembershipStatus`  | `requested`, `active`, `left`                                                                                                                                                                                                                                                                                 |
+| `DepartmentAssignmentSource`  | `wish` (aus dem Onboarding-Wunsch übernommen), `self` (von der Person selbst angefragt), `assigned` (von Regie/Leitung zugewiesen)                                                                                                                                                                            |
 | `CharacterCastingType`        | `primary`, `alternate`, `cover`, `cameo`                                                                                                                                                                                                                                                                      |
 | `BreakdownStatus`             | `planned`, `in_progress`, `blocked`, `ready`, `done`                                                                                                                                                                                                                                                          |
 | `AvatarSource`                | `GRAVATAR`, `UPLOAD`, `INITIALS`                                                                                                                                                                                                                                                                              |
@@ -1935,7 +2023,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `AvailabilityStatus`          | `blocked`, `available`                                                                                                                                                                                                                                                                                        |
 | `OnboardingFocus`             | `acting`, `tech`, `both`                                                                                                                                                                                                                                                                                      |
 | `RolePreferenceDomain`        | `acting`, `crew`                                                                                                                                                                                                                                                                                              |
-| `RehearsalProposalStatus`     | `proposed` (Automatisch vorgeschlagen), `approved` (Von der Regie freigegeben), `rejected` (Von der Regie abgelehnt), `scheduled` (Als tatsächlicher Probentermin übernommen)                                                                                                                                 |
 | `AvailabilityKind`            | `FULL_AVAILABLE`, `FULL_UNAVAILABLE`, `PARTIAL`                                                                                                                                                                                                                                                               |
 | `BlockedDayKind`              | `BLOCKED`, `LIMITED`, `PREFERRED`                                                                                                                                                                                                                                                                             |
 | `MeasurementUnit`             | `M` (Meter), `CM` (Zentimeter), `MM` (Millimeter), `EU` (EU-Größe)                                                                                                                                                                                                                                            |
@@ -1951,8 +2038,10 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `IssueStatus`                 | `open`, `in_progress`, `resolved`, `closed`                                                                                                                                                                                                                                                                   |
 | `IssuePriority`               | `low`, `medium`, `high`, `urgent`                                                                                                                                                                                                                                                                             |
 | `IssueVisibility`             | `public`, `private`                                                                                                                                                                                                                                                                                           |
-| `RehearsalPriority`           | `LOW`, `NORMAL`, `HIGH`, `CRITICAL`                                                                                                                                                                                                                                                                           |
-| `RehearsalStatus`             | `DRAFT`, `PLANNED`, `CONFIRMED`, `CANCELLED`, `COMPLETED`                                                                                                                                                                                                                                                     |
+| `TaskPriority`                | `low`, `normal`, `high`                                                                                                                                                                                                                                                                                       |
+| `CalendarEventKind`           | `REHEARSAL`, `PERFORMANCE`, `MEETING`, `WORK_DAY`, `SOCIAL`, `OTHER`                                                                                                                                                                                                                                          |
+| `EventStatus`                 | `DRAFT`, `SCHEDULED`, `CANCELLED`                                                                                                                                                                                                                                                                             |
+| `ParticipationLevel`          | `REQUIRED`, `OPTIONAL`                                                                                                                                                                                                                                                                                        |
 | `PhotoConsentStatus`          | `pending`, `approved`, `rejected`                                                                                                                                                                                                                                                                             |
 | `AnalyticsRequestArea`        | `public`, `members`, `api`, `unknown`                                                                                                                                                                                                                                                                         |
 | `AnalyticsServerLogSeverity`  | `info`, `warning`, `error`                                                                                                                                                                                                                                                                                    |

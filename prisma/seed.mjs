@@ -676,22 +676,23 @@ async function main() {
   // Link a sample rehearsal to the newest chronik show (if present)
   const newest = await prisma.show.findFirst({ orderBy: { year: "desc" } });
   if (newest) {
-    await prisma.rehearsal.upsert({
+    await prisma.calendarEvent.upsert({
       where: { id: `rehearsal-${newest.id}` },
       update: {},
       create: {
         id: `rehearsal-${newest.id}`,
+        kind: "REHEARSAL",
+        title: "Probe",
         showId: newest.id,
         start: new Date(Date.now() + 1000 * 60 * 60 * 24),
         end: new Date(Date.now() + 1000 * 60 * 60 * 26),
         location: "Schlosspark",
-        requiredRoles: ["cast", "tech"],
       },
     });
 
     const seedRehearsalId = `rehearsal-${newest.id}`;
-    const existingLogs = await prisma.rehearsalAttendanceLog.count({
-      where: { rehearsalId: seedRehearsalId },
+    const existingLogs = await prisma.eventResponseLog.count({
+      where: { eventId: seedRehearsalId },
     });
 
     if (existingLogs === 0) {
@@ -703,9 +704,9 @@ async function main() {
         });
 
         for (const target of defaultTargets) {
-          await prisma.rehearsalAttendanceLog.create({
+          await prisma.eventResponseLog.create({
             data: {
-              rehearsalId: seedRehearsalId,
+              eventId: seedRehearsalId,
               userId: target.id,
               next: null,
               comment: "Initial: automatisch eingeplant",
@@ -1014,54 +1015,6 @@ async function main() {
         },
       });
     }
-  }
-
-  // Create default rehearsal templates
-  const defaultTemplates = [
-    {
-      id: "weekend-saturday",
-      name: "Samstag Probe",
-      description: "Standard Samstag-Probe",
-      weekday: 6, // Samstag
-      startTime: "14:00",
-      endTime: "17:00",
-      location: "Schlosspark Altroßthal",
-      requiredRoles: ["cast", "tech"],
-      priority: "NORMAL",
-      isActive: true,
-    },
-    {
-      id: "weekend-sunday",
-      name: "Sonntag Probe",
-      description: "Standard Sonntag-Probe",
-      weekday: 0, // Sonntag
-      startTime: "14:00",
-      endTime: "17:00",
-      location: "Schlosspark Altroßthal",
-      requiredRoles: ["cast", "tech"],
-      priority: "NORMAL",
-      isActive: true,
-    },
-    {
-      id: "tech-rehearsal",
-      name: "Technik-Probe",
-      description: "Technische Probe vor Aufführungen",
-      weekday: 5, // Freitag
-      startTime: "18:00",
-      endTime: "21:00",
-      location: "Schlosspark Altroßthal",
-      requiredRoles: ["cast", "tech"],
-      priority: "HIGH",
-      isActive: false, // Nur bei Bedarf aktivieren
-    },
-  ];
-
-  for (const template of defaultTemplates) {
-    await prisma.rehearsalTemplate.upsert({
-      where: { id: template.id },
-      update: template,
-      create: template,
-    });
   }
 
   // Seed a few availability entries/templates for a test user

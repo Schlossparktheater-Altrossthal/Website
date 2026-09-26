@@ -49,8 +49,8 @@ export default async function RehearsalPlanningPage() {
     : { deactivatedAt: null };
 
   const [publishedRehearsals, blockedDays, memberCount, drafts] = await Promise.all([
-    prisma.rehearsal.findMany({
-      where: { status: { not: "DRAFT" }, ...showFilter },
+    prisma.calendarEvent.findMany({
+      where: { kind: "REHEARSAL", status: { not: "DRAFT" }, ...showFilter },
       orderBy: { start: "asc" },
     }),
     prisma.blockedDay.findMany({
@@ -61,8 +61,8 @@ export default async function RehearsalPlanningPage() {
       where: { kind: "BLOCKED", user: memberFilter },
     }),
     prisma.user.count({ where: memberFilter }),
-    prisma.rehearsal.findMany({
-      where: { status: "DRAFT", ...showFilter },
+    prisma.calendarEvent.findMany({
+      where: { kind: "REHEARSAL", status: "DRAFT", ...showFilter },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,

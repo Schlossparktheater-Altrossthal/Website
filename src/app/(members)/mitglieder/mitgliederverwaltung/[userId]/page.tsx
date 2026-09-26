@@ -504,16 +504,17 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   const oneYearAgo = new Date(now);
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-  const [attendanceRecordsRaw, attendanceLogsRaw, departmentTasks] = await Promise.all([
-    prisma.rehearsalAttendance.findMany({
+  const [participationsRaw, responseLogsRaw, departmentTasks] = await Promise.all([
+    prisma.eventParticipant.findMany({
       where: {
         userId: decodedId,
-        rehearsal: { start: { gte: oneYearAgo }, status: { not: "DRAFT" } },
+        response: { not: null },
+        event: { kind: "REHEARSAL", start: { gte: oneYearAgo }, status: { not: "DRAFT" } },
       },
       select: {
         id: true,
-        status: true,
-        rehearsal: {
+        response: true,
+        event: {
           select: {
             id: true,
             title: true,
@@ -525,8 +526,8 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
         },
       },
     }),
-    prisma.rehearsalAttendanceLog.findMany({
-      where: { userId: decodedId },
+    prisma.eventResponseLog.findMany({
+      where: { userId: decodedId, event: { kind: "REHEARSAL" } },
       orderBy: { changedAt: "desc" },
       take: 40,
       select: {
@@ -544,7 +545,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
             email: true,
           },
         },
-        rehearsal: {
+        event: {
           select: {
             id: true,
             title: true,
@@ -567,6 +568,14 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
       },
     }),
   ]);
+
+  const attendanceRecordsRaw = participationsRaw.flatMap(({ id, response, event }) =>
+    response ? [{ id, status: response, rehearsal: event }] : [],
+  );
+  const attendanceLogsRaw = responseLogsRaw.map(({ event, ...log }) => ({
+    ...log,
+    rehearsal: event,
+  }));
 
   type MonthlyBucket = Record<AttendanceStatus, number> & { total: number };
 

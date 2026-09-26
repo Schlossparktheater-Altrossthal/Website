@@ -1,4 +1,6 @@
-import type { BlockedDayKind, EventResponseStatus } from "@prisma/client";
+import type { BlockedDayKind } from "@prisma/client";
+
+import { toEventResponseStatus, type EventResponseStatus } from "@/lib/calendar/responses";
 
 import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
@@ -69,7 +71,10 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
     end: true,
     location: true,
     description: true,
-    responses: { select: { status: true, user: { select: userSelect } } },
+    participants: {
+      where: { response: { not: null } },
+      select: { response: true, user: { select: userSelect } },
+    },
   } as const;
 
   const [members, upcoming, past, blockedDays] = await Promise.all([
@@ -118,8 +123,12 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
 
   const toEvent = (event: (typeof upcoming)[number], isPast: boolean): TeamEvent => {
     const dayKey = formatIsoDateInTimeZone(event.start.toISOString());
-    const responses = event.responses
-      .map((entry) => ({ person: toPerson(entry.user), status: entry.status }))
+    const responses = event.participants
+      .flatMap((entry) =>
+        entry.response
+          ? [{ person: toPerson(entry.user), status: toEventResponseStatus(entry.response) }]
+          : [],
+      )
       .sort((a, b) => a.person.name.localeCompare(b.person.name, "de"));
     return {
       id: event.id,
@@ -132,7 +141,7 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
       location: event.location,
       description: event.description,
       past: isPast,
-      myResponse: event.responses.find((entry) => entry.user.id === viewerId)?.status ?? null,
+      myResponse: responses.find((entry) => entry.person.id === viewerId)?.status ?? null,
       responses,
       pending: people.filter((person) => !responses.some((entry) => entry.person.id === person.id)),
       blocked: blocksByDay[dayKey] ?? [],

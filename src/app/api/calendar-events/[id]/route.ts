@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { readCalendarEventById } from "@/lib/calendar/entries";
+import { GENERAL_EVENT_WHERE, readCalendarEventById } from "@/lib/calendar/entries";
 import { calendarEventInputSchema, resolveCalendarEventTimes } from "@/lib/calendar/event-input";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { hasPermission } from "@/lib/permissions";
@@ -26,7 +26,7 @@ async function authorise(showIds: Array<string | null | undefined> = [null]) {
 async function readShowId(id: string) {
   // Gewerk-Termine werden im Gewerk-Portal gepflegt.
   const event = await prisma.calendarEvent.findFirst({
-    where: { id, departmentId: null },
+    where: { id, ...GENERAL_EVENT_WHERE },
     select: { showId: true },
   });
   return event ? event.showId : undefined;
@@ -79,7 +79,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   if (denied) return denied;
 
   try {
-    const result = await prisma.calendarEvent.deleteMany({ where: { id, departmentId: null } });
+    const result = await prisma.calendarEvent.deleteMany({ where: { id, ...GENERAL_EVENT_WHERE } });
     if (!result.count) {
       return NextResponse.json({ error: "Termin wurde nicht gefunden." }, { status: 404 });
     }

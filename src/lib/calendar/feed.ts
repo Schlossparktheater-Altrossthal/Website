@@ -5,6 +5,7 @@ import type { BlockedDayKind } from "@prisma/client";
 import { getAppBaseUrl } from "@/lib/app-url";
 import { buildIcsCalendar, type IcsEvent } from "@/lib/calendar/ics";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { GENERAL_EVENT_WHERE } from "@/lib/calendar/entries";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -82,11 +83,12 @@ export async function collectFeedEvents(
   const host = uidHost();
 
   const [rehearsals, calendarEvents, departmentEvents, blockedDays] = await Promise.all([
-    prisma.rehearsal.findMany({
+    prisma.calendarEvent.findMany({
       where: {
+        kind: "REHEARSAL",
         start: { gte: from, lte: to },
         status: { not: "DRAFT" },
-        invitees: { some: { userId } },
+        participants: { some: { userId, invited: true } },
       },
       orderBy: { start: "asc" },
       select: {
@@ -104,7 +106,7 @@ export async function collectFeedEvents(
     prisma.calendarEvent.findMany({
       where: {
         start: { lte: to },
-        departmentId: null,
+        ...GENERAL_EVENT_WHERE,
         AND: [
           { OR: [{ start: { gte: from } }, { end: { gte: from } }] },
           {
@@ -122,7 +124,7 @@ export async function collectFeedEvents(
         start: { gte: from, lte: to },
         department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
         // Abgesagte Termine tauchen im eigenen Kalender nicht mehr auf.
-        responses: { none: { userId, status: "no" } },
+        participants: { none: { userId, response: { in: ["no", "emergency"] } } },
       },
       orderBy: { start: "asc" },
       include: { department: { select: { name: true, slug: true } } },

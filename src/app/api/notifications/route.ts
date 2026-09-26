@@ -37,8 +37,8 @@ export async function GET() {
         body: string | null;
         type: string | null;
         createdAt: Date;
-        rehearsalId: string | null;
-        rehearsal: {
+        eventId: string | null;
+        event: {
           id: string;
           title: string;
           start: Date;
@@ -51,7 +51,7 @@ export async function GET() {
       include: {
         notification: {
           include: {
-            rehearsal: { select: { id: true, title: true, start: true } },
+            event: { select: { id: true, title: true, start: true } },
           },
         },
       },
@@ -60,18 +60,18 @@ export async function GET() {
     });
 
     const rehearsalIds = records
-      .map((record) => record.notification.rehearsalId)
+      .map((record) => record.notification.eventId)
       .filter((id): id is string => Boolean(id));
 
-    const attendance: { rehearsalId: string; status: AttendanceStatus }[] = rehearsalIds.length
-      ? await prisma.rehearsalAttendance.findMany({
-          where: { userId, rehearsalId: { in: rehearsalIds } },
-          select: { rehearsalId: true, status: true },
+    const attendance = rehearsalIds.length
+      ? await prisma.eventParticipant.findMany({
+          where: { userId, eventId: { in: rehearsalIds }, response: { not: null } },
+          select: { eventId: true, response: true },
         })
       : [];
 
     const attendanceMap = new Map<string, AttendanceStatus>(
-      attendance.map((entry) => [entry.rehearsalId, entry.status]),
+      attendance.flatMap((entry) => (entry.response ? [[entry.eventId, entry.response]] : [])),
     );
 
     const notifications: NotificationResponse[] = records.map((record: RecipientRecord) => ({
@@ -81,15 +81,15 @@ export async function GET() {
       createdAt: record.notification.createdAt.toISOString(),
       readAt: record.readAt ? record.readAt.toISOString() : null,
       type: record.notification.type ?? null,
-      rehearsal: record.notification.rehearsal
+      rehearsal: record.notification.event
         ? {
-            id: record.notification.rehearsal.id,
-            title: record.notification.rehearsal.title,
-            start: record.notification.rehearsal.start.toISOString(),
+            id: record.notification.event.id,
+            title: record.notification.event.title,
+            start: record.notification.event.start.toISOString(),
           }
         : null,
-      attendanceStatus: record.notification.rehearsalId
-        ? ((attendanceMap.get(record.notification.rehearsalId) as AttendanceStatus | null) ?? null)
+      attendanceStatus: record.notification.eventId
+        ? (attendanceMap.get(record.notification.eventId) ?? null)
         : null,
     }));
 

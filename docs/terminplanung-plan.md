@@ -1,6 +1,6 @@
 # Plan: Terminplanung mit Zielgruppen, Szenen und Terminfinder
 
-Stand: 2026-09-26. Entwurf, noch nichts umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-26. Phase 1 umgesetzt. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -171,7 +171,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 
 ## Checkliste
 
-- [ ] Phase 1
+- [x] Phase 1 (2026-09-26): Proben sind `CalendarEvent` mit `kind = REHEARSAL` (IDs beibehalten), `EventParticipant` vereint Einladung + Zu-/Absage aller Termine, `EventResponseLog` ersetzt `RehearsalAttendanceLog`, Proposals/Vorlagen/`requiredRoles` entfernt (vorgezogen aus Phase 3). Status `DRAFT/SCHEDULED/CANCELLED`. Bei Gruppen-Terminen (Gewerk/Produktion) gibt es Teilnehmer-Zeilen vorerst nur für Rückmeldungen (`invited = false`); die Auflösung aller Teilnehmer kommt mit dem Zielgruppen-Baukasten in Phase 2.
 - [ ] Phase 2
 - [ ] Phase 3
 - [ ] Phase 4

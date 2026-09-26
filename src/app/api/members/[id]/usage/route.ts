@@ -83,7 +83,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     accounts,
     userAppRoles,
     interestsAuthored,
-    rehearsalProposalsApproved,
     rehearsalsCreated,
   ] = await prisma.$transaction([
     prisma.departmentMembership.count({ where: { userId: id } }),
@@ -92,10 +91,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.task.count({ where: { assigneeId: id } }),
     prisma.departmentTaskAssignment.count({ where: { userId: id } }),
     prisma.departmentTask.count({ where: { createdById: id } }),
-    prisma.rehearsalInvitee.count({ where: { userId: id } }),
-    prisma.rehearsalAttendance.count({ where: { userId: id } }),
-    prisma.rehearsalAttendanceLog.count({ where: { changedById: id } }),
-    prisma.rehearsalAttendanceLog.count({ where: { userId: id } }),
+    prisma.eventParticipant.count({ where: { userId: id, invited: true } }),
+    prisma.eventParticipant.count({ where: { userId: id, response: { not: null } } }),
+    prisma.eventResponseLog.count({ where: { changedById: id } }),
+    prisma.eventResponseLog.count({ where: { userId: id } }),
     prisma.blockedDay.count({ where: { userId: id } }),
     prisma.availability.count({ where: { userId: id } }),
     prisma.availabilityDay.count({ where: { userId: id } }),
@@ -122,8 +121,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.account.count({ where: { userId: id } }),
     prisma.userAppRole.count({ where: { userId: id } }),
     prisma.interest.count({ where: { createdById: id } }),
-    prisma.rehearsalProposal.count({ where: { approvedBy: id } }),
-    prisma.rehearsal.count({ where: { createdBy: id } }),
+    prisma.calendarEvent.count({ where: { createdById: id, kind: "REHEARSAL" } }),
   ]);
 
   const sections: UsageSection[] = [];
@@ -173,11 +171,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       key: "availabilityTemplates",
       label: "Verfügbarkeitsvorlagen",
       count: availabilityTemplateEntries,
-    },
-    {
-      key: "rehearsalProposalsApproved",
-      label: "Freigegebene Probenvorschläge",
-      count: rehearsalProposalsApproved,
     },
   ].filter((item) => item.count > 0);
 

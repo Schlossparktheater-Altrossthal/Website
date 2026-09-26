@@ -42,13 +42,13 @@ export async function POST(request: Request) {
       include: {
         notification: {
           include: {
-            rehearsal: {
+            event: {
               select: {
                 id: true,
                 title: true,
                 start: true,
                 location: true,
-                createdBy: true,
+                createdById: true,
               },
             },
           },
@@ -60,8 +60,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
     }
 
-    const rehearsalId = recipient.notification.rehearsalId;
-    const rehearsal = recipient.notification.rehearsal;
+    const rehearsalId = recipient.notification.eventId;
+    const rehearsal = recipient.notification.event;
     if (!rehearsalId || !rehearsal) {
       return NextResponse.json({ error: "Rehearsal not linked" }, { status: 400 });
     }
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     const locationInfo = rehearsal.location ? ` · Ort: ${rehearsal.location}` : "";
 
     const creatorId =
-      rehearsal.createdBy && rehearsal.createdBy !== userId ? rehearsal.createdBy : null;
+      rehearsal.createdById && rehearsal.createdById !== userId ? rehearsal.createdById : null;
     const creatorNotification = creatorId
       ? (() => {
           if (nextStatus === "emergency") {
@@ -109,10 +109,18 @@ export async function POST(request: Request) {
         data: { readAt: new Date() },
       });
 
-      await tx.rehearsalAttendance.upsert({
-        where: { rehearsalId_userId: { rehearsalId, userId } },
-        update: { status: nextStatus, emergencyReason },
-        create: { rehearsalId, userId, status: nextStatus, emergencyReason },
+      const respondedAt = new Date();
+      await tx.eventParticipant.upsert({
+        where: { eventId_userId: { eventId: rehearsalId, userId } },
+        update: { response: nextStatus, responseNote: emergencyReason, respondedAt },
+        create: {
+          eventId: rehearsalId,
+          userId,
+          invited: false,
+          response: nextStatus,
+          responseNote: emergencyReason,
+          respondedAt,
+        },
       });
 
       if (creatorId && creatorNotification) {
@@ -121,7 +129,7 @@ export async function POST(request: Request) {
             title: creatorNotification.title,
             body: creatorNotification.body,
             type: creatorNotification.type,
-            rehearsalId,
+            eventId: rehearsalId,
             recipients: {
               create: { userId: creatorId },
             },

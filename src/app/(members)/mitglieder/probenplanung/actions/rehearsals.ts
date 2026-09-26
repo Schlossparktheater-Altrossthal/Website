@@ -13,7 +13,6 @@ import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
 import {
   baseSchema,
-  collectInviteeRoles,
   computeEnd,
   deleteSchema,
   defaultInviteeIds,
@@ -22,7 +21,6 @@ import {
   parseEnd,
   parseStart,
   REHEARSAL_TIME_ZONE,
-  rolesToInputJson,
   sanitizeDescription,
   syncInvitees,
   updateSchema,
@@ -63,7 +61,6 @@ export async function createRehearsalAction(input: {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const roles = await collectInviteeRoles(tx, inviteeIds);
       const formatter = new Intl.DateTimeFormat("de-DE", {
         dateStyle: "full",
         timeStyle: "short",
@@ -71,17 +68,16 @@ export async function createRehearsalAction(input: {
       });
       const body = `Am ${formatter.format(start)}`;
 
-      const rehearsal = await tx.rehearsal.create({
+      const rehearsal = await tx.calendarEvent.create({
         data: {
+          kind: "REHEARSAL",
           title,
           start,
           end,
           location: normalizedLocation,
           description: safeDescription,
-          status: "PLANNED",
-          requiredRoles: rolesToInputJson(roles),
-          registrationDeadline: null,
-          createdBy: auth.userId,
+          status: "SCHEDULED",
+          createdById: auth.userId,
           showId: auth.showId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
@@ -94,7 +90,7 @@ export async function createRehearsalAction(input: {
           title: `Neue Probe: ${title}`,
           body,
           type: "rehearsal",
-          rehearsalId: rehearsal.id,
+          eventId: rehearsal.id,
           recipients: {
             create: inviteeIds.map((userId) => ({ userId })),
           },
@@ -111,7 +107,7 @@ export async function createRehearsalAction(input: {
         id: rehearsal.id,
         title: rehearsal.title,
         start: rehearsal.start.toISOString(),
-        end: rehearsal.end.toISOString(),
+        end: (rehearsal.end ?? rehearsal.start).toISOString(),
         location: rehearsal.location ?? "Noch offen",
       },
       targetUserIds: targets,
@@ -170,7 +166,7 @@ export async function updateRehearsalAction(input: {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const existing = await tx.rehearsal.findUnique({
+      const existing = await tx.calendarEvent.findUnique({
         where: { id },
         select: {
           title: true,
@@ -194,12 +190,11 @@ export async function updateRehearsalAction(input: {
         : (existing.location ?? "Noch offen");
 
       let sanitizedDescription: string | null | undefined;
-      const updateData: Prisma.RehearsalUpdateInput = {
+      const updateData: Prisma.CalendarEventUpdateInput = {
         title,
         start,
         end,
         location: normalizedLocation,
-        registrationDeadline: null,
       };
 
       if (description !== undefined) {
@@ -210,14 +205,12 @@ export async function updateRehearsalAction(input: {
       let targetInvitees: string[];
       if (invitees) {
         const synced = await syncInvitees(tx, id, invitees);
-        const roles = await collectInviteeRoles(tx, synced);
-        updateData.requiredRoles = rolesToInputJson(roles);
         targetInvitees = synced;
       } else {
         targetInvitees = await fetchInviteeIds(tx, id);
       }
 
-      const rehearsal = await tx.rehearsal.update({
+      const rehearsal = await tx.calendarEvent.update({
         where: { id },
         data: updateData,
         select: {
@@ -291,7 +284,7 @@ export async function updateRehearsalAction(input: {
           title: updatedTitle,
           body: updatedBody,
           type: NOTIFICATION_TYPES.REHEARSAL_UPDATE,
-          rehearsalId: rehearsal.id,
+          eventId: rehearsal.id,
           recipients: {
             create: targetInvitees.map((userId) => ({ userId })),
           },
@@ -355,10 +348,10 @@ export async function deleteRehearsalAction(input: { id: string }) {
 
   try {
     const rehearsal = await prisma.$transaction(async (tx) => {
-      const existing = await tx.rehearsal.findUnique({
+      const existing = await tx.calendarEvent.findUnique({
         where: { id: parsed.data.id },
         include: {
-          invitees: { select: { userId: true } },
+          participants: { where: { invited: true }, select: { userId: true } },
           notifications: { select: { recipients: { select: { userId: true } } } },
         },
       });
@@ -367,13 +360,13 @@ export async function deleteRehearsalAction(input: { id: string }) {
         throw new Error("not-found");
       }
 
-      await tx.rehearsal.delete({ where: { id: parsed.data.id } });
+      await tx.calendarEvent.delete({ where: { id: parsed.data.id } });
 
       return existing;
     });
 
     const targetUserIds = new Set<string>();
-    rehearsal.invitees.forEach((invitee) => targetUserIds.add(invitee.userId));
+    rehearsal.participants.forEach((invitee) => targetUserIds.add(invitee.userId));
     rehearsal.notifications.forEach((notification) => {
       notification.recipients.forEach((recipient) => targetUserIds.add(recipient.userId));
     });

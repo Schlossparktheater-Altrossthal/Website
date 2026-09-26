@@ -1,3 +1,4 @@
+import type { EventStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import sanitizeHtml from "sanitize-html";
@@ -11,11 +12,10 @@ import { requireAuth } from "@/lib/rbac";
 import { getUserDisplayName } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
-const STATUS_LABELS: Record<string, string> = {
-  PLANNED: "Geplant",
-  CONFIRMED: "Bestätigt",
+const STATUS_LABELS: Record<EventStatus, string> = {
+  DRAFT: "Entwurf",
+  SCHEDULED: "Geplant",
   CANCELLED: "Abgesagt",
-  COMPLETED: "Abgeschlossen",
 };
 
 function sanitizeDescription(html: string | null | undefined) {
@@ -62,10 +62,11 @@ export default async function RehearsalDetailPage({
     notFound();
   }
 
-  const rehearsal = await prisma.rehearsal.findUnique({
-    where: { id: rehearsalId },
+  const rehearsal = await prisma.calendarEvent.findFirst({
+    where: { id: rehearsalId, kind: "REHEARSAL" },
     include: {
-      invitees: {
+      participants: {
+        where: { invited: true },
         include: {
           user: {
             select: {
@@ -104,7 +105,7 @@ export default async function RehearsalDetailPage({
 
   const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
   const sanitizedDescription = sanitizeDescription(rehearsal.description);
-  const invitees = rehearsal.invitees.map((invitee) => ({
+  const invitees = rehearsal.participants.map((invitee) => ({
     id: invitee.userId,
     user: invitee.user,
   }));
@@ -129,7 +130,7 @@ export default async function RehearsalDetailPage({
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="text-xs">
-              {STATUS_LABELS[rehearsal.status] ?? rehearsal.status}
+              {STATUS_LABELS[rehearsal.status]}
             </Badge>
             {canPlan && rehearsal.status === "DRAFT" ? (
               <Badge variant="destructive">Entwurf</Badge>

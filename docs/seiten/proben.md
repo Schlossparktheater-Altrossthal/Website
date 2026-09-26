@@ -27,7 +27,7 @@ Probenplaner verwalten den Gesamtplan.
 
 ## Datenfluss
 
-- Prisma-Modelle: `Rehearsal`, `RehearsalInvitee`
+- Prisma-Modelle: `CalendarEvent` (`kind = REHEARSAL`), `EventParticipant`, `EventResponseLog`
 - Server Actions in `probenplanung/actions.ts` bündeln die Mutationslogik.
 
 ## Realtime
