@@ -340,6 +340,7 @@ model User {
   fileLibraryFoldersCreated FileLibraryFolder[] @relation("FileLibraryFoldersCreated")
   fileLibraryItemsUploaded  FileLibraryItem[]   @relation("FileLibraryItemsUploaded")
   parentalConsentTemplatesUpdated ServerSettings[] @relation("ServerSettingsParentalConsentUploader")
+  dataPortalAuditLogs    DataPortalAuditLog[]
 }
 
 model Account {
@@ -1809,4 +1810,22 @@ model AnalyticsServerLog {
   @@map("analytics_server_logs")
   @@index([severity, lastSeenAt])
   @@index([status, lastSeenAt])
+}
+
+/// Protokoll der Datenportal-Abfragen und -Exporte (nur Metadaten, keine Ergebniswerte).
+/// Wird nach DATA_PORTAL_AUDIT_RETENTION_MONTHS automatisch gelöscht.
+model DataPortalAuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  showId    String?
+  action    String
+  source    String
+  fields    String[] @default([])
+  rowCount  Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }

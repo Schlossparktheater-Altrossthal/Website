@@ -166,6 +166,33 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "admin",
   },
   {
+    key: "PRIVATE.DATA.PORTAL.VIEW",
+    label: "Datenportal öffnen",
+    description:
+      "Auswertungen zu Teilnehmenden einer Produktion erstellen und ansehen (Basisfelder wie Name, Rolle, Funktion).",
+    category: "analytics",
+  },
+  {
+    key: "PRIVATE.DATA.PORTAL.EXPORT",
+    label: "Datenportal: Export",
+    description: "Auswertungen als CSV oder XLSX herunterladen.",
+    category: "analytics",
+  },
+  {
+    key: "PRIVATE.DATA.PORTAL.EDUCATION",
+    label: "Datenportal: Schule und Alter",
+    description:
+      "Felder zu Schule, Klasse, Ausbildung, Geschlecht und Geburtsdatum/Alter auswerten.",
+    category: "analytics",
+  },
+  {
+    key: "PRIVATE.DATA.PORTAL.HEALTH",
+    label: "Datenportal: Allergien und Ernährung",
+    description:
+      "Gesundheitsbezogene Felder (Allergien, Unverträglichkeiten, Ernährung) auswerten. Besondere Datenkategorie nach DSGVO Art. 9.",
+    category: "analytics",
+  },
+  {
     key: "PRIVATE.ADMIN.ONBOARDING.ANALYTICS",
     label: "Onboarding-Analytics öffnen",
     description: "Statistiken zum Einladungs- und Onboarding-Prozess einsehen.",
@@ -365,6 +392,10 @@ export const PRODUCTION_SCOPED_PERMISSION_KEYS: ReadonlySet<string> = new Set([
   "PRIVATE.REHEARSAL.BLOCKLIST.VIEW",
   "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS",
   "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT",
+  "PRIVATE.DATA.PORTAL.VIEW",
+  "PRIVATE.DATA.PORTAL.EXPORT",
+  "PRIVATE.DATA.PORTAL.EDUCATION",
+  "PRIVATE.DATA.PORTAL.HEALTH",
 ]);
 
 export function isProductionScopedPermission(key: string): boolean {

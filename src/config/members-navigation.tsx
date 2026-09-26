@@ -210,6 +210,15 @@ const PhotoConsentIcon = createMembersNavIcon(
   </>,
 );
 
+const DataPortalIcon = createMembersNavIcon(
+  <>
+    <path d="M3 3v18h18" />
+    <path d="M7 15v3" />
+    <path d="M12 9v9" />
+    <path d="M17 12v6" />
+  </>,
+);
+
 const WebsiteIcon = createMembersNavIcon(
   <>
     <path d="M12 22c4.97 0 9-3.6 9-8a7 7 0 0 0-7-7 4 4 0 0 1-4-4 9 9 0 0 0-9 9c0 4.4 4.03 8 9 8Z" />
@@ -390,6 +399,12 @@ export const membersNavigation = [
         label: "Fotoerlaubnisse",
         permissionKey: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
         icon: PhotoConsentIcon,
+      },
+      {
+        href: "/mitglieder/datenportal",
+        label: "Datenportal",
+        permissionKey: "PRIVATE.DATA.PORTAL.VIEW",
+        icon: DataPortalIcon,
       },
       {
         href: "/mitglieder/server-einstellungen",
