@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { replaceProductionPreferences } from "@/lib/onboarding/production-preferences";
+import { legacyBackgroundFromPayload } from "@/lib/education/schools";
 import { normalizeInterestList, replaceUserInterests } from "@/lib/profil/interests";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
@@ -221,6 +222,15 @@ export async function POST(request: NextRequest) {
 
   const consentShowId = targetShowId ?? (await getActiveProductionId(userId));
 
+  const legacyBackground = legacyBackgroundFromPayload({
+    educationCategory: data.educationCategory,
+    educationSchoolName,
+    educationClassName,
+    educationWorkDescription,
+    educationUniversityName,
+    educationOtherDescription,
+  });
+
   try {
     await prisma.$transaction(async (tx) => {
       const onboardingProfile = await tx.memberOnboardingProfile.upsert({
@@ -232,6 +242,7 @@ export async function POST(request: NextRequest) {
           educationWorkDescription,
           educationUniversityName,
           educationOtherDescription,
+          ...legacyBackground,
           notes,
           dietaryPreference,
           dietaryPreferenceStrictness: dietaryPreferenceStrictness,
@@ -245,6 +256,7 @@ export async function POST(request: NextRequest) {
           educationWorkDescription,
           educationUniversityName,
           educationOtherDescription,
+          ...legacyBackground,
           notes,
           dietaryPreference,
           dietaryPreferenceStrictness: dietaryPreferenceStrictness,

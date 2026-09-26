@@ -26,11 +26,13 @@ import {
   OnboardingProfile,
   isProfilePaymentComplete,
 } from "./profile-shared";
+import { EMPTY_EDUCATION, toEducationPayload } from "@/lib/education/schools";
 
 const EMPTY_ONBOARDING: OnboardingProfile = {
   focus: "acting",
   background: null,
   backgroundClass: null,
+  education: toEducationPayload(EMPTY_EDUCATION),
   notes: null,
   memberSinceYear: null,
   dietaryPreference: null,

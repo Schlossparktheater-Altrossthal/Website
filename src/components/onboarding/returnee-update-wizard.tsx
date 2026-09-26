@@ -28,6 +28,13 @@ import {
   getRolePreferenceTitle,
   listRolePreferenceDefinitions,
 } from "@/lib/onboarding/role-preferences";
+import { EducationFields } from "@/components/onboarding/education-fields";
+import {
+  readStoredEducation,
+  toEducationPayload,
+  validateEducation,
+  type EducationValue,
+} from "@/lib/education/schools";
 import { InterestTagInput } from "@/components/members/interest-tag-input";
 import {
   RolePreferenceLevelHint,
@@ -80,8 +87,6 @@ type ReturneeUpdateWizardProps = {
   onboardingToken?: string | null;
 };
 
-type EducationCategory = "school_bsz" | "school_other" | "work" | "university" | "other";
-
 type DietaryEntry = {
   id: string;
   allergen: string;
@@ -92,14 +97,7 @@ type DietaryEntry = {
 };
 
 type FormState = {
-  educationCategory: EducationCategory | "";
-  schoolVariant: "bsz" | "other" | "";
-  educationSchoolName: string;
-  educationClassName: string;
-  educationCampus: string | null;
-  educationWorkDescription: string;
-  educationUniversityName: string;
-  educationOtherDescription: string;
+  education: EducationValue;
   preferences: PreferenceEntry[];
   interests: string[];
   photoConsent: boolean;
@@ -124,11 +122,6 @@ const DIETARY_LEVEL_OPTIONS = [
   { value: "LETHAL", label: "Kritisch" },
 ];
 
-const BSZ_CAMPUS_OPTIONS = [
-  { value: "altroessthal", label: "Altroßthal" },
-  { value: "canalettostrasse", label: "Canalettostraße" },
-] as const;
-
 function createId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -149,19 +142,6 @@ function calculateAge(value: string | null) {
   return age;
 }
 
-function normalizeEducationCategory(value: string | null | undefined): EducationCategory | "" {
-  switch (value) {
-    case "school_bsz":
-    case "school_other":
-    case "work":
-    case "university":
-    case "other":
-      return value;
-    default:
-      return "";
-  }
-}
-
 function createInitialState(
   existingProfile: ExistingProfile,
   existingDietary: ExistingDietary[],
@@ -169,7 +149,6 @@ function createInitialState(
   existingPhotoConsent: boolean | null,
   existingInterests: string[],
 ): FormState {
-  const educationCategory = normalizeEducationCategory(existingProfile.educationCategory);
   const existingPreferencesByCode = new Map(
     existingPreferences.map((preference) => [preference.code, preference]),
   );
@@ -196,19 +175,7 @@ function createInitialState(
     },
   );
   return {
-    educationCategory,
-    schoolVariant:
-      educationCategory === "school_bsz"
-        ? "bsz"
-        : educationCategory === "school_other"
-          ? "other"
-          : "",
-    educationSchoolName: existingProfile.educationSchoolName ?? "",
-    educationClassName: existingProfile.educationClassName ?? "",
-    educationCampus: null,
-    educationWorkDescription: existingProfile.educationWorkDescription ?? "",
-    educationUniversityName: existingProfile.educationUniversityName ?? "",
-    educationOtherDescription: existingProfile.educationOtherDescription ?? "",
+    education: readStoredEducation(existingProfile),
     preferences: [...actingPreferences, ...crewPreferences],
     interests: existingInterests,
     photoConsent: existingPhotoConsent ?? true,
@@ -357,31 +324,6 @@ export function ReturneeUpdateWizard({
     }
   };
 
-  const canContinueStep1 = useMemo(() => {
-    if (!form.educationCategory) return false;
-    if (form.educationCategory === "school_bsz") {
-      return form.educationCampus != null && form.educationClassName.trim().length > 0;
-    }
-    if (form.educationCategory === "school_other") {
-      return form.educationSchoolName.trim().length > 0;
-    }
-    if (form.educationCategory === "work") {
-      return form.educationWorkDescription.trim().length > 0;
-    }
-    if (form.educationCategory === "university") {
-      return form.educationUniversityName.trim().length > 0;
-    }
-    return form.educationOtherDescription.trim().length > 0;
-  }, [
-    form.educationCategory,
-    form.educationCampus,
-    form.educationClassName,
-    form.educationOtherDescription,
-    form.educationSchoolName,
-    form.educationUniversityName,
-    form.educationWorkDescription,
-  ]);
-
   const updatePreference = (code: string, updates: Partial<PreferenceEntry>) => {
     setForm((prev) => ({
       ...prev,
@@ -422,14 +364,9 @@ export function ReturneeUpdateWizard({
   const goNext = () => {
     setError(null);
     if (step === 0) {
-      if (form.educationCategory === "school_bsz" && !form.educationCampus) {
-        setError("Bitte wähle einen Standort aus.");
-        return;
-      }
-      if (!canContinueStep1) {
-        setError(
-          "Bitte fülle die Angaben zu Schule, Beruf, Universität oder Anderem vollständig aus.",
-        );
+      const educationError = validateEducation(form.education);
+      if (educationError) {
+        setError(educationError);
         return;
       }
     }
@@ -474,13 +411,7 @@ export function ReturneeUpdateWizard({
     setLoading(true);
     try {
       const payload = {
-        educationCategory: form.educationCategory || null,
-        educationSchoolName: form.educationSchoolName.trim() || null,
-        educationClassName: form.educationClassName.trim() || null,
-        educationCampus: form.educationCampus?.trim() || null,
-        educationWorkDescription: form.educationWorkDescription.trim() || null,
-        educationUniversityName: form.educationUniversityName.trim() || null,
-        educationOtherDescription: form.educationOtherDescription.trim() || null,
+        ...toEducationPayload(form.education),
         preferences: selectedPreferences.map((preference) => ({
           code: preference.code,
           domain: preference.domain,
@@ -599,190 +530,10 @@ export function ReturneeUpdateWizard({
         </CardHeader>
         <CardContent className="space-y-6">
           {step === 0 ? (
-            <section className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {(["school", "work", "university", "other"] as const).map((choice) => {
-                  const isActive =
-                    choice === "school"
-                      ? form.educationCategory === "school_bsz" ||
-                        form.educationCategory === "school_other"
-                      : form.educationCategory === choice;
-                  return (
-                    <button
-                      key={choice}
-                      type="button"
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          educationCategory:
-                            choice === "school"
-                              ? "school_bsz"
-                              : (choice as Exclude<
-                                  EducationCategory,
-                                  "school_bsz" | "school_other"
-                                >),
-                          schoolVariant: choice === "school" ? "bsz" : "",
-                        }))
-                      }
-                      className={cn(
-                        "rounded-xl border px-4 py-3 text-left text-sm transition",
-                        isActive
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-background text-foreground",
-                      )}
-                    >
-                      {choice === "school"
-                        ? "Schule"
-                        : choice === "work"
-                          ? "Beruf"
-                          : choice === "university"
-                            ? "Universität"
-                            : "Anderes"}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {form.educationCategory === "school_bsz" ||
-              form.educationCategory === "school_other" ? (
-                <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      className={cn(
-                        "rounded-xl border px-4 py-3 text-left text-sm transition",
-                        form.schoolVariant === "bsz"
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-background",
-                      )}
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          schoolVariant: "bsz",
-                          educationCategory: "school_bsz",
-                          educationCampus: null,
-                        }))
-                      }
-                    >
-                      BSZ für Agrarwirtschaft &amp; Ernährung Dresden
-                    </button>
-                    <button
-                      type="button"
-                      className={cn(
-                        "rounded-xl border px-4 py-3 text-left text-sm transition",
-                        form.schoolVariant === "other"
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border bg-background",
-                      )}
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          schoolVariant: "other",
-                          educationCategory: "school_other",
-                          educationCampus: null,
-                        }))
-                      }
-                    >
-                      Andere Schule
-                    </button>
-                  </div>
-
-                  {form.schoolVariant === "bsz" ? (
-                    <div className="space-y-4">
-                      <fieldset>
-                        <legend className="mb-2 text-sm font-medium">Welcher Standort?</legend>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {BSZ_CAMPUS_OPTIONS.map((option) => {
-                            const isActive = form.educationCampus === option.value;
-                            return (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={() =>
-                                  setForm((prev) => ({ ...prev, educationCampus: option.value }))
-                                }
-                                aria-pressed={isActive}
-                                className={cn(
-                                  "rounded-xl border px-4 py-3 text-left text-sm transition",
-                                  isActive
-                                    ? "border-primary bg-primary/10 text-primary"
-                                    : "border-border bg-background",
-                                )}
-                              >
-                                <span className="min-w-0">{option.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </fieldset>
-                      <label className="space-y-2 text-sm">
-                        <span className="font-medium">Klasse</span>
-                        <Input
-                          value={form.educationClassName}
-                          onChange={(event) =>
-                            setForm((prev) => ({ ...prev, educationClassName: event.target.value }))
-                          }
-                          placeholder="z.B. BFS 23A"
-                        />
-                      </label>
-                    </div>
-                  ) : form.schoolVariant === "other" ? (
-                    <label className="space-y-2 text-sm">
-                      <span className="font-medium">Schulname</span>
-                      <Input
-                        value={form.educationSchoolName}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, educationSchoolName: event.target.value }))
-                        }
-                        placeholder="Name deiner Schule"
-                      />
-                    </label>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {form.educationCategory === "work" ? (
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Beruf / Tätigkeit</span>
-                  <Input
-                    value={form.educationWorkDescription}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, educationWorkDescription: event.target.value }))
-                    }
-                    placeholder="z.B. Ausbildung, Job oder Tätigkeit"
-                  />
-                </label>
-              ) : null}
-
-              {form.educationCategory === "university" ? (
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Universität / Hochschule</span>
-                  <Input
-                    value={form.educationUniversityName}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, educationUniversityName: event.target.value }))
-                    }
-                    placeholder="Name deiner Hochschule"
-                  />
-                </label>
-              ) : null}
-
-              {form.educationCategory === "other" ? (
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Beschreibung</span>
-                  <Input
-                    value={form.educationOtherDescription}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        educationOtherDescription: event.target.value,
-                      }))
-                    }
-                    placeholder="Was machst du aktuell?"
-                  />
-                </label>
-              ) : null}
-            </section>
+            <EducationFields
+              value={form.education}
+              onChange={(education) => setForm((prev) => ({ ...prev, education }))}
+            />
           ) : null}
 
           {step === 1 ? (

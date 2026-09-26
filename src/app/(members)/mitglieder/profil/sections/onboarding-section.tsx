@@ -10,15 +10,18 @@ import { FormSaveBar } from "@/components/ui/form-save-bar";
 import { SectionHeader } from "@/components/ui/section-header";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { BACKGROUND_TAGS, normalizeBackgroundLabel } from "@/data/onboarding-backgrounds";
-import { useOnboardingBackgroundData } from "@/components/onboarding/use-onboarding-background-data";
+import { EducationFields } from "@/components/onboarding/education-fields";
+import {
+  readStoredEducation,
+  toEducationPayload,
+  validateEducation,
+} from "@/lib/education/schools";
 import { deriveOnboardingFocusFromPreferences } from "@/lib/onboarding/role-preference-utils";
 import { cn } from "@/lib/utils";
 import { type OnboardingFocus } from "@prisma/client";
 import { saveOnboardingAction } from "../actions/onboarding";
 import {
   CURRENT_YEAR,
-  PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
   ONBOARDING_STATUS_LABELS,
   ProfileClientProps,
   OnboardingProfile,
@@ -50,17 +53,11 @@ export function OnboardingSection({
   const currentShow = onboarding?.show ?? null;
   const initialForm = useMemo<OnboardingFormState>(
     () => ({
-      background: onboarding?.background ?? "",
-      backgroundClass: onboarding?.backgroundClass ?? "",
+      education: readStoredEducation(onboarding?.education),
       notes: onboarding?.notes ?? "",
       memberSinceYear: onboarding?.memberSinceYear ? String(onboarding.memberSinceYear) : "",
     }),
-    [
-      onboarding?.background,
-      onboarding?.backgroundClass,
-      onboarding?.memberSinceYear,
-      onboarding?.notes,
-    ],
+    [onboarding?.education, onboarding?.memberSinceYear, onboarding?.notes],
   );
 
   const [formState, setFormState] = useState<OnboardingFormState>(initialForm);
@@ -85,10 +82,6 @@ export function OnboardingSection({
   const showStatusLabel = currentShow
     ? (ONBOARDING_STATUS_LABELS[currentShow.status] ?? currentShow.status)
     : null;
-  const { backgroundSuggestions, classSuggestions, activeTag, requiresClass } =
-    useOnboardingBackgroundData(formState.background, {
-      initialSuggestions: PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS,
-    });
   const [whatsappSubmitting, setWhatsappSubmitting] = useState(false);
   const whatsappVisitedLabel = useMemo(() => formatDate(whatsappVisitedAt), [whatsappVisitedAt]);
   const preferenceSource = onboarding?.preferences?.length
@@ -124,9 +117,9 @@ export function OnboardingSection({
       return;
     }
 
-    if (requiresClass && !parseResult.data.backgroundClass) {
-      const helper = activeTag?.classRequiredError ?? "Bitte gib deine Klasse an.";
-      setError(helper);
+    const educationError = validateEducation(formState.education);
+    if (educationError) {
+      setError(educationError);
       return;
     }
 
@@ -134,8 +127,7 @@ export function OnboardingSection({
     try {
       const result = await saveOnboardingAction({
         focus: focusForSubmission,
-        background: parseResult.data.background,
-        backgroundClass: parseResult.data.backgroundClass ?? null,
+        education: toEducationPayload(formState.education),
         notes: parseResult.data.notes ?? null,
         memberSinceYear: parseResult.data.memberSinceYear
           ? Number.parseInt(parseResult.data.memberSinceYear, 10)
@@ -151,6 +143,7 @@ export function OnboardingSection({
         focus: payload.focus,
         background: payload.background,
         backgroundClass: payload.backgroundClass,
+        education: payload.education,
         notes: payload.notes,
         memberSinceYear: payload.memberSinceYear,
         updatedAt: payload.updatedAt,
@@ -163,8 +156,7 @@ export function OnboardingSection({
       };
       onOnboardingChange(next);
       setFormState({
-        background: payload.background ?? "",
-        backgroundClass: payload.backgroundClass ?? "",
+        education: readStoredEducation(payload.education),
         notes: payload.notes ?? "",
         memberSinceYear: payload.memberSinceYear ? String(payload.memberSinceYear) : "",
       });
@@ -173,34 +165,6 @@ export function OnboardingSection({
       setSubmitting(false);
     }
   };
-
-  const backgroundOptions = [
-    ...BACKGROUND_TAGS.map((tag) => ({
-      key: `tag-${tag.id}`,
-      label: tag.label,
-      active: activeTag?.id === tag.id,
-      onSelect: () =>
-        setFormState((prev) => ({
-          ...prev,
-          background: tag.value,
-          backgroundClass: tag.requiresClass ? prev.backgroundClass : "",
-        })),
-    })),
-    ...backgroundSuggestions
-      .filter(
-        (suggestion) =>
-          !BACKGROUND_TAGS.some(
-            (tag) => normalizeBackgroundLabel(tag.value) === normalizeBackgroundLabel(suggestion),
-          ),
-      )
-      .slice(0, 4)
-      .map((suggestion) => ({
-        key: `suggestion-${suggestion}`,
-        label: suggestion,
-        active: false,
-        onSelect: () => setFormState((prev) => ({ ...prev, background: suggestion })),
-      })),
-  ];
 
   const handleWhatsAppClick = async () => {
     if (!whatsappLink) {
@@ -284,74 +248,10 @@ export function OnboardingSection({
             title="Über dich"
             description="Hilft uns bei der Planung von Teams und Proben."
           />
-          <ProfileField
-            label="Schule, Ausbildung oder Beruf"
-            htmlFor="background"
-            hint={
-              <span className="flex flex-wrap gap-1.5 pt-1">
-                {backgroundOptions.map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    className={cn(
-                      "rounded-full border px-2.5 py-1 text-xs transition",
-                      option.active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary hover:text-primary",
-                    )}
-                    onClick={option.onSelect}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </span>
-            }
-          >
-            <Input
-              id="background"
-              value={formState.background}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, background: event.target.value }))
-              }
-              placeholder="z. B. BSZ Altroßthal – Berufsschule"
-            />
-          </ProfileField>
-
-          {requiresClass ? (
-            <ProfileField
-              label={activeTag?.classLabel ?? "Klasse"}
-              htmlFor="backgroundClass"
-              hint={
-                classSuggestions.length ? (
-                  <span className="flex flex-wrap gap-1.5 pt-1">
-                    {classSuggestions.slice(0, 8).map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
-                        onClick={() =>
-                          setFormState((prev) => ({ ...prev, backgroundClass: suggestion }))
-                        }
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </span>
-                ) : (
-                  (activeTag?.classHelper ?? "Hilft uns bei der Zuordnung.")
-                )
-              }
-            >
-              <Input
-                id="backgroundClass"
-                value={formState.backgroundClass}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, backgroundClass: event.target.value }))
-                }
-                placeholder={activeTag?.classPlaceholder ?? "z. B. BG 12"}
-              />
-            </ProfileField>
-          ) : null}
+          <EducationFields
+            value={formState.education}
+            onChange={(education) => setFormState((prev) => ({ ...prev, education }))}
+          />
 
           <div className="grid gap-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
             <ProfileField label="Dabei seit" htmlFor="memberSinceYear">

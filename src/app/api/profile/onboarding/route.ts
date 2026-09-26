@@ -9,6 +9,12 @@ import {
   broadcastOnboardingDashboardSnapshot,
 } from "@/lib/onboarding/dashboard-events";
 import { requireAuth } from "@/lib/rbac";
+import {
+  legacyBackgroundFromPayload,
+  readStoredEducation,
+  toEducationPayload,
+  validateEducation,
+} from "@/lib/education/schools";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -22,19 +28,16 @@ const optionalTrimmedString = z.union([z.string(), z.null(), z.undefined()]).tra
 
 const onboardingUpdateSchema = z.object({
   focus: z.nativeEnum(OnboardingFocus),
-  background: z
-    .string()
-    .transform((value) => value.trim())
-    .refine((value) => value.length > 0, {
-      message: "Bitte beschreibe kurz deinen schulischen oder beruflichen Hintergrund.",
-    })
-    .refine((value) => value.length <= 200, {
-      message: "Bitte nutze maximal 200 Zeichen für deinen Hintergrund.",
-    }),
-  backgroundClass: optionalTrimmedString.refine(
-    (value) => !value || value.length <= 120,
-    "Klassenangaben dürfen maximal 120 Zeichen enthalten.",
-  ),
+  education: z.object({
+    educationCategory: z
+      .enum(["school_bsz", "school_other", "work", "university", "other"])
+      .nullable(),
+    educationSchoolName: z.string().max(200).nullable(),
+    educationClassName: z.string().max(120).nullable(),
+    educationWorkDescription: z.string().max(200).nullable(),
+    educationUniversityName: z.string().max(200).nullable(),
+    educationOtherDescription: z.string().max(200).nullable(),
+  }),
   notes: optionalTrimmedString.refine(
     (value) => !value || value.length <= 2000,
     "Notizen dürfen maximal 2000 Zeichen enthalten.",
@@ -76,22 +79,27 @@ export async function PUT(request: NextRequest) {
   }
 
   const data = result.data;
+  // Über Formularzustand normalisieren: BSZ-Standort → kanonischer Schulname.
+  const education = toEducationPayload(readStoredEducation(data.education));
+  const educationError = validateEducation(readStoredEducation(education));
+  if (educationError) {
+    return NextResponse.json({ error: educationError }, { status: 400 });
+  }
+  const educationFields = { ...education, ...legacyBackgroundFromPayload(education) };
 
   try {
     const profile = await prisma.memberOnboardingProfile.upsert({
       where: { userId },
       update: {
         focus: data.focus,
-        background: data.background,
-        backgroundClass: data.backgroundClass,
+        ...educationFields,
         notes: data.notes,
         memberSinceYear: data.memberSinceYear,
       },
       create: {
         userId,
         focus: data.focus,
-        background: data.background,
-        backgroundClass: data.backgroundClass,
+        ...educationFields,
         notes: data.notes,
         memberSinceYear: data.memberSinceYear,
       },
@@ -99,6 +107,12 @@ export async function PUT(request: NextRequest) {
         focus: true,
         background: true,
         backgroundClass: true,
+        educationCategory: true,
+        educationSchoolName: true,
+        educationClassName: true,
+        educationWorkDescription: true,
+        educationUniversityName: true,
+        educationOtherDescription: true,
         notes: true,
         memberSinceYear: true,
         updatedAt: true,
@@ -130,6 +144,7 @@ export async function PUT(request: NextRequest) {
         focus: profile.focus,
         background: profile.background ?? null,
         backgroundClass: profile.backgroundClass ?? null,
+        education: toEducationPayload(readStoredEducation(profile)),
         notes: profile.notes ?? null,
         memberSinceYear: profile.memberSinceYear ?? null,
         updatedAt: profile.updatedAt.toISOString(),

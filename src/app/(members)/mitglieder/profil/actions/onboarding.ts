@@ -2,12 +2,12 @@
 
 import type { OnboardingFocus } from "@prisma/client";
 
+import type { EducationPayload } from "@/lib/education/schools";
 import { authorizedFetch, type ActionResult } from "@/lib/profil/actions-helpers";
 
 export type SaveOnboardingInput = {
   focus: OnboardingFocus;
-  background: string;
-  backgroundClass?: string | null;
+  education: EducationPayload;
   notes?: string | null;
   memberSinceYear?: number | null;
 };
@@ -17,6 +17,7 @@ export type SaveOnboardingResult = {
     focus: OnboardingFocus;
     background: string | null;
     backgroundClass: string | null;
+    education: EducationPayload;
     notes: string | null;
     memberSinceYear: number | null;
     updatedAt: string | null;
@@ -79,6 +80,7 @@ export async function saveOnboardingAction(
           background: typeof onboarding.background === "string" ? onboarding.background : null,
           backgroundClass:
             typeof onboarding.backgroundClass === "string" ? onboarding.backgroundClass : null,
+          education: onboarding.education ?? input.education,
           notes: typeof onboarding.notes === "string" ? onboarding.notes : null,
           memberSinceYear:
             typeof onboarding.memberSinceYear === "number" &&

@@ -1,3 +1,4 @@
+import type { EducationPayload, EducationValue } from "@/lib/education/schools";
 import type { MemberHistory } from "@/lib/member-history";
 import { z } from "zod";
 import { type DietaryStrictnessOption, type DietaryStyleOption } from "@/data/dietary-preferences";
@@ -15,7 +16,6 @@ import { type UpdateProfileBasicsResult } from "./actions/basics";
 
 export const CURRENT_YEAR = new Date().getFullYear();
 export const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
-export const PROFILE_ONBOARDING_BACKGROUND_SUGGESTIONS = ["Schule", "Ausbildung", "Beruf"] as const;
 
 export const ROLE_PREFERENCE_DEFINITIONS = {
   acting: listRolePreferenceDefinitions("acting"),
@@ -165,6 +165,7 @@ export type ProfileClientProps = {
     focus: string;
     background: string | null;
     backgroundClass: string | null;
+    education: EducationPayload;
     notes: string | null;
     memberSinceYear: number | null;
     dietaryPreference: string | null;
@@ -291,8 +292,7 @@ export type InterestsState = {
 };
 
 export type OnboardingFormState = {
-  background: string;
-  backgroundClass: string;
+  education: EducationValue;
   notes: string;
   memberSinceYear: string;
 };
@@ -430,12 +430,6 @@ export const allergySchema = z.object({
 });
 
 export const onboardingSchema = z.object({
-  background: z
-    .string()
-    .trim()
-    .min(1, "Bitte beschreibe deinen schulischen oder beruflichen Hintergrund.")
-    .max(200, "Bitte nutze maximal 200 Zeichen."),
-  backgroundClass: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(2000).optional(),
   memberSinceYear: z
     .string()

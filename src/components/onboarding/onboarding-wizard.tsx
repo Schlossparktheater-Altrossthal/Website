@@ -19,6 +19,13 @@ import {
   RolePreferenceLevelHint,
   RolePreferenceLevelPicker,
 } from "@/components/onboarding/role-preference-level-picker";
+import { EducationFields } from "@/components/onboarding/education-fields";
+import {
+  EMPTY_EDUCATION,
+  formatEducation,
+  toEducationPayload,
+  validateEducation,
+} from "@/lib/education/schools";
 import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,172 +81,6 @@ const genderOptions = [
 type GenderOption = (typeof genderOptions)[number]["value"];
 
 const CURRENT_YEAR = new Date().getFullYear();
-
-const EDUCATION_CATEGORY_OPTIONS = [
-  { value: "school", label: "Schule" },
-  { value: "work", label: "Beruf" },
-  { value: "university", label: "Universität" },
-  { value: "other", label: "Anderes" },
-] as const;
-
-const SCHOOL_VARIANT_OPTIONS = [
-  { value: "bsz", label: "BSZ für Agrarwirtschaft & Ernährung Dresden" },
-  { value: "other", label: "Andere Schule" },
-] as const;
-
-const BSZ_CAMPUS_OPTIONS = [
-  { value: "altroessthal", label: "Altroßthal" },
-  { value: "canalettostrasse", label: "Canalettostraße" },
-] as const;
-
-type EducationCategory = (typeof EDUCATION_CATEGORY_OPTIONS)[number]["value"];
-type SchoolVariant = (typeof SCHOOL_VARIANT_OPTIONS)[number]["value"];
-
-type EducationFormSlice = {
-  educationCategory: "" | EducationCategory;
-  schoolVariant: "" | SchoolVariant;
-  educationSchoolName: string;
-  educationClassName: string;
-  educationWorkDescription: string;
-  educationUniversityName: string;
-  educationOtherDescription: string;
-  educationCampus: string | null;
-};
-
-type EducationApiPayload = {
-  educationCategory: "school_bsz" | "school_other" | "work" | "university" | "other" | null;
-  educationSchoolName: string | null;
-  educationClassName: string | null;
-  educationWorkDescription: string | null;
-  educationUniversityName: string | null;
-  educationOtherDescription: string | null;
-  educationCampus: string | null;
-};
-
-function resolveBszCampusLabel(value: string | null) {
-  const campusLabel = BSZ_CAMPUS_OPTIONS.find((option) => option.value === (value ?? ""))?.label;
-  if (campusLabel) {
-    return campusLabel;
-  }
-  const trimmed = (value ?? "").trim();
-  return trimmed ? trimmed : null;
-}
-
-function mapFormEducationToApi(form: EducationFormSlice): EducationApiPayload {
-  if (!form.educationCategory) {
-    return {
-      educationCategory: null,
-      educationSchoolName: null,
-      educationClassName: null,
-      educationWorkDescription: null,
-      educationUniversityName: null,
-      educationOtherDescription: null,
-      educationCampus: null,
-    };
-  }
-
-  if (form.educationCategory === "school") {
-    if (form.schoolVariant === "bsz") {
-      return {
-        educationCategory: "school_bsz",
-        educationSchoolName: resolveBszCampusLabel(form.educationCampus),
-        educationClassName: form.educationClassName.trim() || null,
-        educationWorkDescription: null,
-        educationUniversityName: null,
-        educationOtherDescription: null,
-        educationCampus: resolveBszCampusLabel(form.educationCampus),
-      };
-    }
-    if (form.schoolVariant === "other") {
-      return {
-        educationCategory: "school_other",
-        educationSchoolName: form.educationSchoolName.trim() || null,
-        educationClassName: null,
-        educationWorkDescription: null,
-        educationUniversityName: null,
-        educationOtherDescription: null,
-        educationCampus: null,
-      };
-    }
-    return {
-      educationCategory: null,
-      educationSchoolName: null,
-      educationClassName: null,
-      educationWorkDescription: null,
-      educationUniversityName: null,
-      educationOtherDescription: null,
-      educationCampus: null,
-    };
-  }
-
-  if (form.educationCategory === "work") {
-    return {
-      educationCategory: "work",
-      educationSchoolName: null,
-      educationClassName: null,
-      educationWorkDescription: form.educationWorkDescription.trim() || null,
-      educationUniversityName: null,
-      educationOtherDescription: null,
-      educationCampus: null,
-    };
-  }
-
-  if (form.educationCategory === "university") {
-    return {
-      educationCategory: "university",
-      educationSchoolName: null,
-      educationClassName: null,
-      educationWorkDescription: null,
-      educationUniversityName: form.educationUniversityName.trim() || null,
-      educationOtherDescription: null,
-      educationCampus: null,
-    };
-  }
-
-  return {
-    educationCategory: "other",
-    educationSchoolName: null,
-    educationClassName: null,
-    educationWorkDescription: null,
-    educationUniversityName: null,
-    educationOtherDescription: form.educationOtherDescription.trim() || null,
-    educationCampus: null,
-  };
-}
-
-function getEducationSummary(form: EducationFormSlice) {
-  if (!form.educationCategory) {
-    return null;
-  }
-
-  const categoryLabel =
-    EDUCATION_CATEGORY_OPTIONS.find((option) => option.value === form.educationCategory)?.label ??
-    form.educationCategory;
-  const details: string[] = [];
-
-  if (form.educationCategory === "school") {
-    if (form.schoolVariant === "bsz") {
-      details.push(SCHOOL_VARIANT_OPTIONS.find((option) => option.value === "bsz")?.label ?? "BSZ");
-      const campusLabel = resolveBszCampusLabel(form.educationCampus);
-      if (campusLabel) {
-        details.push(campusLabel);
-      }
-      if (form.educationClassName.trim()) {
-        details.push(`Klasse ${form.educationClassName.trim()}`);
-      }
-    } else if (form.schoolVariant === "other" && form.educationSchoolName.trim()) {
-      details.push(form.educationSchoolName.trim());
-    }
-  } else if (form.educationCategory === "work" && form.educationWorkDescription.trim()) {
-    details.push(form.educationWorkDescription.trim());
-  } else if (form.educationCategory === "university" && form.educationUniversityName.trim()) {
-    details.push(form.educationUniversityName.trim());
-  } else if (form.educationCategory === "other" && form.educationOtherDescription.trim()) {
-    details.push(form.educationOtherDescription.trim());
-  }
-
-  return { categoryLabel, details };
-}
 
 const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
 
@@ -395,14 +236,7 @@ function createInitialFormState(variant: OnboardingWizardVariant) {
     email: "",
     password: "",
     passwordConfirm: "",
-    educationCategory: "" as "" | EducationCategory,
-    schoolVariant: "" as "" | SchoolVariant,
-    educationSchoolName: "",
-    educationClassName: "",
-    educationWorkDescription: "",
-    educationUniversityName: "",
-    educationOtherDescription: "",
-    educationCampus: null as string | null,
+    education: EMPTY_EDUCATION,
     notes: "",
     dateOfBirth: "",
     genderOption: "no_answer" as GenderOption,
@@ -528,68 +362,10 @@ export function OnboardingWizard({
 
   const age = useMemo(() => calculateAge(form.dateOfBirth || null), [form.dateOfBirth]);
   const isMinor = age !== null && age < 18;
-  const educationCategory = form.educationCategory;
-  const isSchoolEducation = educationCategory === "school";
-  const isWorkEducation = educationCategory === "work";
-  const isUniversityEducation = educationCategory === "university";
-  const isOtherEducation = educationCategory === "other";
-  const isBszSchool = form.schoolVariant === "bsz";
-  const isOtherSchool = form.schoolVariant === "other";
-  const educationSummary = useMemo(() => getEducationSummary(form), [form]);
-
-  useEffect(() => {
-    if (educationCategory === "school") {
-      return;
-    }
-    setForm((prev) => {
-      if (
-        !prev.schoolVariant &&
-        !prev.educationSchoolName &&
-        !prev.educationClassName &&
-        !prev.educationCampus
-      ) {
-        return prev;
-      }
-      return {
-        ...prev,
-        schoolVariant: "",
-        educationSchoolName: "",
-        educationClassName: "",
-        educationCampus: null,
-      };
-    });
-  }, [educationCategory]);
-
-  useEffect(() => {
-    if (isBszSchool) {
-      return;
-    }
-    setForm((prev) => {
-      if (!prev.educationClassName && !prev.educationCampus) {
-        return prev;
-      }
-      return { ...prev, educationClassName: "", educationCampus: null };
-    });
-  }, [isBszSchool]);
-
-  useEffect(() => {
-    if (!isWorkEducation && !isUniversityEducation && !isOtherEducation) {
-      return;
-    }
-    setForm((prev) => {
-      const next = { ...prev };
-      if (!isWorkEducation) {
-        next.educationWorkDescription = "";
-      }
-      if (!isUniversityEducation) {
-        next.educationUniversityName = "";
-      }
-      if (!isOtherEducation) {
-        next.educationOtherDescription = "";
-      }
-      return next;
-    });
-  }, [isOtherEducation, isUniversityEducation, isWorkEducation]);
+  const educationSummary = useMemo(
+    () => formatEducation(toEducationPayload(form.education)),
+    [form.education],
+  );
 
   const genderLabel = useMemo(() => {
     if (form.genderOption === "custom") {
@@ -974,29 +750,10 @@ export function OnboardingWizard({
         setError("Du musst mindestens 10 Jahre alt sein, um teilzunehmen.");
         return;
       }
-      if (!form.educationCategory) {
-        setError("Bitte wähle dein schulisches oder berufliches Umfeld aus.");
+      const educationError = validateEducation(form.education);
+      if (educationError) {
+        setError(educationError);
         return;
-      }
-      if (form.educationCategory === "school") {
-        if (!form.schoolVariant) {
-          setError("Bitte wähle deine Schule aus.");
-          return;
-        }
-        if (form.schoolVariant === "bsz") {
-          if (!form.educationCampus) {
-            setError("Bitte wähle einen Standort aus.");
-            return;
-          }
-          if (!form.educationClassName.trim()) {
-            setError("Bitte gib deine Klasse an.");
-            return;
-          }
-        }
-        if (form.schoolVariant === "other" && !form.educationSchoolName.trim()) {
-          setError("Bitte gib den Namen deiner Schule an.");
-          return;
-        }
       }
       if (form.genderOption === "custom" && !form.genderCustom.trim()) {
         setError("Bitte beschreibe dein Geschlecht oder wähle eine Option aus der Liste.");
@@ -1113,7 +870,7 @@ export function OnboardingWizard({
       const parsedYear = trimmedYear ? Number.parseInt(trimmedYear, 10) : Number.NaN;
       const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
       const notes = form.notes.trim();
-      const educationPayload = mapFormEducationToApi(form);
+      const educationPayload = toEducationPayload(form.education);
       const signatureSubmission =
         documentMode === "signature" && signatureResult
           ? { version: signatureResult.payload.version, payload: signatureResult.payload }
@@ -1533,189 +1290,10 @@ export function OnboardingWizard({
               </div>
             </div>
             <div className="space-y-6">
-              <fieldset className="space-y-3">
-                <legend className="text-sm font-medium">Schulisches / Berufliches</legend>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {EDUCATION_CATEGORY_OPTIONS.map((option) => {
-                    const checked = form.educationCategory === option.value;
-                    return (
-                      <label
-                        key={option.value}
-                        className={cn(
-                          "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
-                          checked
-                            ? "border-primary bg-primary/5 text-foreground"
-                            : "border-border bg-background",
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          name="educationCategory"
-                          value={option.value}
-                          checked={checked}
-                          onChange={() =>
-                            setForm((prev) => ({
-                              ...prev,
-                              educationCategory: option.value,
-                              schoolVariant: option.value === "school" ? prev.schoolVariant : "",
-                              educationSchoolName:
-                                option.value === "school" ? prev.educationSchoolName : "",
-                              educationClassName:
-                                option.value === "school" ? prev.educationClassName : "",
-                            }))
-                          }
-                          className="h-4 w-4 accent-primary"
-                        />
-                        <span>{option.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </fieldset>
-
-              {isSchoolEducation ? (
-                <fieldset className="space-y-3">
-                  <legend className="text-sm font-medium">Schule</legend>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {SCHOOL_VARIANT_OPTIONS.map((option) => {
-                      const checked = form.schoolVariant === option.value;
-                      return (
-                        <label
-                          key={option.value}
-                          className={cn(
-                            "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
-                            checked
-                              ? "border-primary bg-primary/5 text-foreground"
-                              : "border-border bg-background",
-                          )}
-                        >
-                          <input
-                            type="radio"
-                            name="schoolVariant"
-                            value={option.value}
-                            checked={checked}
-                            onChange={() =>
-                              setForm((prev) => ({
-                                ...prev,
-                                schoolVariant: option.value,
-                                educationSchoolName: "",
-                                educationClassName: "",
-                                educationCampus: null,
-                              }))
-                            }
-                            className="h-4 w-4 accent-primary"
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-
-                  {isBszSchool ? (
-                    <div className="space-y-4">
-                      <fieldset className="space-y-3">
-                        <legend className="text-sm font-medium">Welcher Standort?</legend>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {BSZ_CAMPUS_OPTIONS.map((option) => {
-                            const checked = form.educationCampus === option.value;
-                            return (
-                              <label
-                                key={option.value}
-                                className={cn(
-                                  "flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition",
-                                  checked
-                                    ? "border-primary bg-primary/5 text-foreground"
-                                    : "border-border bg-background",
-                                )}
-                              >
-                                <input
-                                  type="radio"
-                                  name="bszCampus"
-                                  value={option.value}
-                                  checked={checked}
-                                  onChange={() =>
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      educationCampus: option.value,
-                                    }))
-                                  }
-                                  className="h-4 w-4 accent-primary"
-                                />
-                                <span className="min-w-0">{option.label}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </fieldset>
-                      <label className="space-y-1 text-sm">
-                        <span className="font-medium">Klasse</span>
-                        <Input
-                          value={form.educationClassName}
-                          onChange={(event) =>
-                            setForm((prev) => ({ ...prev, educationClassName: event.target.value }))
-                          }
-                          placeholder="z.B. BFS 23A"
-                        />
-                      </label>
-                    </div>
-                  ) : null}
-
-                  {isOtherSchool ? (
-                    <label className="space-y-1 text-sm">
-                      <span className="font-medium">Schulname</span>
-                      <Input
-                        value={form.educationSchoolName}
-                        onChange={(event) =>
-                          setForm((prev) => ({ ...prev, educationSchoolName: event.target.value }))
-                        }
-                        placeholder="Name deiner Schule"
-                      />
-                    </label>
-                  ) : null}
-                </fieldset>
-              ) : null}
-
-              {isWorkEducation ? (
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium">Beruf / Tätigkeit (optional)</span>
-                  <Input
-                    value={form.educationWorkDescription}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, educationWorkDescription: event.target.value }))
-                    }
-                    placeholder="z.B. Ausbildung, Job oder Tätigkeit"
-                  />
-                </label>
-              ) : null}
-
-              {isUniversityEducation ? (
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium">Universität / Hochschule (optional)</span>
-                  <Input
-                    value={form.educationUniversityName}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, educationUniversityName: event.target.value }))
-                    }
-                    placeholder="Name deiner Hochschule"
-                  />
-                </label>
-              ) : null}
-
-              {isOtherEducation ? (
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium">Beschreibung (optional)</span>
-                  <Input
-                    value={form.educationOtherDescription}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        educationOtherDescription: event.target.value,
-                      }))
-                    }
-                    placeholder="Kurze Beschreibung deines Umfelds"
-                  />
-                </label>
-              ) : null}
+              <EducationFields
+                value={form.education}
+                onChange={(education) => setForm((prev) => ({ ...prev, education }))}
+              />
 
               <label className="space-y-1 text-sm">
                 <span className="font-medium">Seit wann bist du beim Theater?</span>
@@ -2417,23 +1995,12 @@ export function OnboardingWizard({
                     Kontext
                   </span>
                   {educationSummary ? (
-                    <>
-                      <Badge
-                        variant="outline"
-                        className="border-primary/30 bg-primary/5 text-primary"
-                      >
-                        {educationSummary.categoryLabel}
-                      </Badge>
-                      {educationSummary.details.map((detail) => (
-                        <Badge
-                          key={detail}
-                          variant="outline"
-                          className="border-primary/30 bg-primary/5 text-primary"
-                        >
-                          {detail}
-                        </Badge>
-                      ))}
-                    </>
+                    <Badge
+                      variant="outline"
+                      className="border-primary/30 bg-primary/5 text-primary"
+                    >
+                      {educationSummary}
+                    </Badge>
                   ) : (
                     <span className="text-xs text-muted-foreground">Keine Angaben</span>
                   )}

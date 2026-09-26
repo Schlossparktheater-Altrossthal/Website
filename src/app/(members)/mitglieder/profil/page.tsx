@@ -6,6 +6,7 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { getUserDisplayName } from "@/lib/names";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { getAvailableOnboardings } from "@/lib/onboarding/dashboard-service";
+import { readStoredEducation, toEducationPayload } from "@/lib/education/schools";
 import { prisma } from "@/lib/prisma";
 import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
 import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
@@ -77,6 +78,12 @@ export default async function ProfilePage() {
           focus: true,
           background: true,
           backgroundClass: true,
+          educationCategory: true,
+          educationSchoolName: true,
+          educationClassName: true,
+          educationWorkDescription: true,
+          educationUniversityName: true,
+          educationOtherDescription: true,
           notes: true,
           memberSinceYear: true,
           dietaryPreference: true,
@@ -248,6 +255,7 @@ export default async function ProfilePage() {
           focus: productionOnboarding?.focus ?? onboardingProfile?.focus ?? "acting",
           background: onboardingProfile?.background ?? null,
           backgroundClass: onboardingProfile?.backgroundClass ?? null,
+          education: toEducationPayload(readStoredEducation(onboardingProfile)),
           notes: productionNotes,
           memberSinceYear: onboardingProfile?.memberSinceYear ?? null,
           dietaryPreference: onboardingProfile?.dietaryPreference ?? null,

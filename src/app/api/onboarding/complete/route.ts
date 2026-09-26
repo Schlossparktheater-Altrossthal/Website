@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { legacyBackgroundFromPayload } from "@/lib/education/schools";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 
@@ -473,6 +474,14 @@ export async function POST(request: NextRequest) {
           educationWorkDescription: educationWorkDescription ?? undefined,
           educationUniversityName: educationUniversityName ?? undefined,
           educationOtherDescription: educationOtherDescription ?? undefined,
+          ...legacyBackgroundFromPayload({
+            educationCategory: payload.educationCategory,
+            educationSchoolName,
+            educationClassName,
+            educationWorkDescription,
+            educationUniversityName,
+            educationOtherDescription,
+          }),
           notes: notes ?? undefined,
           gender: genderDisplay,
           memberSinceYear: memberSinceYear ?? undefined,

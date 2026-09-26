@@ -58,3 +58,18 @@ Fotoerlaubnis) sowie Rückkehrer-Aktualisierung und Talentprofile.
 - Die Signatur-Komponenten nutzen Canvas und dadurch harte Farbwerte (bewusste Ausnahme vom
   Token-System).
 - `onboarding-wizard.tsx` enthält eine große Komponente mit vielen Zuständen.
+
+## Schule / Ausbildung (BSZ-Standorte)
+
+- Onboarding, Rückkehrer-Wizard und Profil („Über dich“) nutzen `education-fields.tsx`. Bei
+  „Schule“ wird direkt gefragt: BSZ Altroßthal, BSZ Canalettostraße oder andere Schule.
+- Das Berufliche Schulzentrum für Agrarwirtschaft und Ernährung Dresden hat zwei Standorte:
+  Altroßthal 1 (grüne Berufe) und Canalettostraße 8 (Ernährungsberufe). Gespeichert wird
+  `educationCategory = school_bsz` mit kanonischem `educationSchoolName`
+  („… – Standort Altroßthal“ bzw. „… – Standort Canalettostraße“); Logik in
+  `src/lib/education/schools.ts` (erkennt auch alte Freitexte wie „BSZ Canaletto“).
+- Die alten Felder `background`/`backgroundClass` werden beim Speichern mitgeschrieben, weil
+  Onboarding-Dashboard und Auswertungen sie noch lesen.
+- Vorschläge (Klassen je Standort, andere Schulen, Berufe, Hochschulen) liefert
+  `GET /api/onboarding/education-suggestions` – öffentlich, nur Häufigkeiten, Freitexte erst ab
+  zwei Nennungen.
