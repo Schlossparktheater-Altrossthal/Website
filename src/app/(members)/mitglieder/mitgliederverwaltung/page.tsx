@@ -9,8 +9,7 @@ import { sortRoles, type Role } from "@/lib/roles";
 import { hasPermission } from "@/lib/permissions";
 import { MembersTable } from "@/components/members/members-table";
 import { MemberInviteManager } from "@/components/members/member-invite-manager";
-import { SeasonResetSettingsPanel } from "@/components/members/season-reset-settings-panel";
-import { SeasonCloseoutPanel } from "@/components/members/season-closeout-panel";
+import { SeasonWizard } from "@/components/members/season-wizard";
 import { combineNameParts } from "@/lib/names";
 import { AUTHENTIK_PROVIDER_ID } from "@/lib/authentik/config";
 import { readSeasonResetSettings, resolveProtectedRoles } from "@/lib/season-reset/settings";
@@ -115,17 +114,7 @@ export default async function MemberManagementPage() {
     {
       value: "saison",
       label: "Saisonwechsel",
-      content: (
-        <div className="space-y-4">
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Zum Jahreswechsel in zwei Schritten: Zuerst festlegen, welche Rollen aktiv bleiben, dann
-            die Saison abschließen. Alle anderen werden deaktiviert und kommen über einen
-            Einladungslink zurück.
-          </p>
-          <SeasonResetSettingsPanel initialProtectedRoles={protectedRoles} />
-          <SeasonCloseoutPanel />
-        </div>
-      ),
+      content: <SeasonWizard initialProtectedRoles={protectedRoles} />,
     },
     {
       value: "datenpflege",
