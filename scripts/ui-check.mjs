@@ -2,10 +2,12 @@
 // Interaktiver UI-Check: Seiten öffnen, Schritte ausführen, Überlauf messen, Screenshots und
 // Report schreiben (docs/e2e-tests.md).
 //
-// Warum headless: Playwright prüft vor jedem Klick, ob das Ziel über zwei Animation-Frames
-// stabil liegt. Im versteckten Tab des integrierten Editor-Browsers feuert
-// requestAnimationFrame gar nicht → Klicks laufen in den Timeout und Screenshots werden
-// falsch skaliert. Headless läuft rAF normal, deshalb funktionieren hier normale Klicks.
+// Warum nicht der integrierte Editor-Browser: dessen versteckter Tab hat
+// `document.visibilityState === "hidden"`, dadurch feuert `requestAnimationFrame` gar nicht.
+// Playwright prüft vor jedem Klick, ob das Ziel über zwei Animation-Frames stabil liegt, und
+// bricht sonst mit "element is not stable" ab; Screenshots sind zusätzlich falsch skaliert.
+// Headless läuft rAF normal. Mit `--headed` verhindern die Throttle-Flags aus
+// `scripts/lib/e2e-session.mjs`, dass ein verdecktes Fenster die Klicks blockiert.
 //
 //   pnpm ui:check /mitglieder/datenportal --steps-file test-results/szenario.json --viewport all
 //   pnpm ui:check /mitglieder/proben --viewport mobile --scheme dark
@@ -44,8 +46,9 @@ const USAGE = `pnpm ui:check [/route ...] [Optionen]
   --no-auth               ohne Test-Login (öffentliche Seiten)
   --no-shots              keine Screenshots je Schritt
   --allow-findings        Exit-Code 0 trotz Befunden
-  --headed                Browserfenster zeigen
-  --slow-mo <ms>          Aktionen verlangsamen (mit --headed)`;
+  --headed                Browserfenster zeigen (Klicks live verfolgen)
+  --slow-mo <ms>          Aktionen verlangsamen (mit --headed)
+  --keep-open             Fenster nach dem Lauf offen lassen (Enter beendet)`;
 
 const args = process.argv.slice(2);
 if (args[0] === "--") args.shift();
@@ -68,6 +71,7 @@ try {
       "allow-findings": { type: "boolean", default: false },
       headed: { type: "boolean", default: false },
       "slow-mo": { type: "string", default: "0" },
+      "keep-open": { type: "boolean", default: false },
       timeout: { type: "string", default: "10000" },
     },
   });
@@ -406,6 +410,13 @@ try {
       }
       await context.close();
     }
+  }
+
+  // Für die manuelle Prüfung im Fenster: offen halten, bis Enter gedrückt wird.
+  if (values["keep-open"]) {
+    console.warn("Fenster bleibt offen – Enter beendet den Lauf");
+    process.stdin.resume();
+    await new Promise((resolve) => process.stdin.once("data", resolve));
   }
 } finally {
   await browser.close();

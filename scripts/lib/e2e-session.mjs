@@ -16,10 +16,14 @@ export const VIEWPORTS = {
   desktop: { width: 1440, height: 900, deviceScaleFactor: 1 },
 };
 
-// Legt .env.e2e.local in die Umgebung (Staging-Secret, ignoriert von git).
+// Legt die E2E-Env in die Umgebung: `.env.e2e.local` (Staging-Secret, gitignored) hat Vorrang,
+// `.env` dient als Rückfall für lokale Läufe mit eigenem Secret. loadEnvFile überschreibt
+// nichts, deshalb entscheidet die Reihenfolge.
 export function loadE2EEnv() {
-  const envFile = path.join(SCRIPT_ROOT, ".env.e2e.local");
-  if (existsSync(envFile)) process.loadEnvFile(envFile);
+  for (const name of [".env.e2e.local", ".env"]) {
+    const envFile = path.join(SCRIPT_ROOT, name);
+    if (existsSync(envFile)) process.loadEnvFile(envFile);
+  }
 }
 
 export function resolveBaseURL(explicit) {
@@ -55,7 +59,29 @@ export function resolveViewports({ viewport, mobile } = {}) {
 
 export function launchBrowser({ headed = false, slowMo = 0 } = {}) {
   // `--lang=de-DE`: Datumsfelder richten sich nach der Browsersprache, nicht nach dem Locale im Kontext.
-  return chromium.launch({ headless: !headed, slowMo, args: ["--lang=de-DE"] });
+  // Die Throttle-Flags sind ein Sicherheitsnetz: Playwright prüft Klickziele über laufende
+  // Animation-Frames und bricht sonst mit "element is not stable" ab. Ein echtes Browserfenster
+  // hält den Takt auch verdeckt (gemessen ~60 fps), Chromium drosselt Hintergrundfenster aber
+  // je nach Plattform – die Flags verhindern das (docs/e2e-tests.md).
+  return chromium.launch({
+    headless: !headed,
+    slowMo,
+    args: [
+      "--lang=de-DE",
+      "--disable-backgrounding-occluded-windows",
+      "--disable-renderer-backgrounding",
+      "--disable-background-timer-throttling",
+    ],
+  });
+}
+
+// Hilfestellung, wenn der Test-Login antwortet, aber keine Session liefert.
+function loginHint(baseURL) {
+  const isLocal =
+    baseURL.includes("localhost") || baseURL.includes("127.0.0.1") || baseURL.includes("[::1]");
+  return isLocal
+    ? " – lokal gibt es den Test-Login nur außerhalb eines Production-Builds (pnpm dev statt pnpm start)"
+    : " – für Staging einmal `pnpm e2e:env` ausführen (braucht kubectl-Zugang zum Cluster)";
 }
 
 // Kontext mit Session für die Testrolle. Lokal (next dev) ohne Secret, auf Staging mit E2E_LOGIN_SECRET.
@@ -81,7 +107,9 @@ export async function createAuthedContext(
       { headers: secret ? { "x-e2e-login-secret": secret } : {}, maxRedirects: 0 },
     );
     if (!login.ok()) {
-      throw new Error(`Test-Login fehlgeschlagen (${login.status()}): ${await login.text()}`);
+      throw new Error(
+        `Test-Login fehlgeschlagen (${login.status()}): ${await login.text()}${loginHint(baseURL)}`,
+      );
     }
   }
 
