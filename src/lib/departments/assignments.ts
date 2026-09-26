@@ -41,6 +41,10 @@ export type AssignmentPerson = {
   memberships: AssignmentMembership[];
   castings: { characterId: string; type: CharacterCastingType }[];
   notes: string | null;
+  /** Onboarding für genau diese Produktion abgeschlossen (nur dann gibt es Wünsche). */
+  onboardingDone: boolean;
+  /** Wünsche aus einer früheren Produktion, solange es für diese keine gibt (nur Hinweis). */
+  earlierWishes: { label: string; wishes: AssignmentWish[] } | null;
 };
 
 export type AssignmentCharacter = {
@@ -77,7 +81,7 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
       },
     }),
     prisma.productionMembership.findMany({
-      where: { showId, ...currentMembershipWhere() },
+      where: { showId, ...currentMembershipWhere(), user: { deactivatedAt: null } },
       select: {
         user: {
           select: {
@@ -86,7 +90,6 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
             lastName: true,
             name: true,
             email: true,
-            deactivatedAt: true,
           },
         },
       },
@@ -108,13 +111,17 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
     }),
     prisma.productionOnboarding.findMany({
       where: { showId },
-      select: { userId: true, notes: true },
+      select: { userId: true, notes: true, completedAt: true },
     }),
   ]);
 
   const departmentIds = departments.map((department) => department.id);
   const departmentMemberships = await prisma.departmentMembership.findMany({
-    where: { departmentId: { in: departmentIds }, status: { in: ["requested", "active"] } },
+    where: {
+      departmentId: { in: departmentIds },
+      status: { in: ["requested", "active"] },
+      user: { deactivatedAt: null },
+    },
     select: {
       id: true,
       departmentId: true,
@@ -146,18 +153,16 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
         memberships: [],
         castings: [],
         notes: null,
+        onboardingDone: false,
+        earlierWishes: null,
       };
       people.set(user.id, person);
     }
     return person;
   };
 
+  // Nur aktive Mitglieder dieser Produktion; deaktivierte Konten und Ausgetretene fehlen.
   for (const entry of memberships) {
-    if (entry.user.deactivatedAt) continue;
-    ensurePerson(entry.user);
-  }
-  // Wer bereits einem Gewerk angehört, erscheint auch ohne Produktions-Mitgliedschaft.
-  for (const entry of departmentMemberships) {
     ensurePerson(entry.user);
   }
 
@@ -196,7 +201,50 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
 
   for (const onboarding of onboardings) {
     const person = people.get(onboarding.userId);
-    if (person) person.notes = onboarding.notes?.trim() || null;
+    if (!person) continue;
+    person.notes = onboarding.notes?.trim() || null;
+    person.onboardingDone = Boolean(onboarding.completedAt);
+  }
+
+  // Ohne eigene Wünsche: die zuletzt gespeicherten früherer Produktionen als Hinweis.
+  const withoutWishes = [...people.values()].filter((person) => person.wishes.length === 0);
+  if (withoutWishes.length) {
+    const earlier = await prisma.memberRolePreference.findMany({
+      where: {
+        userId: { in: withoutWishes.map((person) => person.id) },
+        OR: [{ showId: null }, { showId: { not: showId } }],
+        weight: { gt: 0 },
+      },
+      select: {
+        userId: true,
+        showId: true,
+        code: true,
+        domain: true,
+        weight: true,
+        updatedAt: true,
+        show: { select: { title: true, year: true } },
+      },
+    });
+    for (const person of withoutWishes) {
+      const rows = earlier.filter((row) => row.userId === person.id);
+      const latest = rows.reduce<(typeof rows)[number] | null>(
+        (best, row) => (!best || row.updatedAt > best.updatedAt ? row : best),
+        null,
+      );
+      if (!latest) continue;
+      person.earlierWishes = {
+        label: latest.show ? (latest.show.title ?? String(latest.show.year)) : "früher",
+        wishes: rows
+          .filter((row) => row.showId === latest.showId)
+          .map((row) => ({
+            code: row.code,
+            title: getRolePreferenceTitle(row.code),
+            weight: row.weight,
+            domain: row.domain,
+          }))
+          .sort((a, b) => b.weight - a.weight),
+      };
+    }
   }
 
   return {

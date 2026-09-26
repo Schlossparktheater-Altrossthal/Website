@@ -558,7 +558,6 @@ async function main() {
 
   const templatePreferenceCodes = {
     buehnenbild: ["crew_stage"],
-    technik: ["crew_tech"],
     licht: ["crew_tech"],
     ton: ["crew_tech", "crew_music"],
     kostuem: ["crew_costume"],

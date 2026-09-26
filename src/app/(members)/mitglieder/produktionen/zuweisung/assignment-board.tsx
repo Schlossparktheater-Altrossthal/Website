@@ -66,6 +66,21 @@ function membershipOf(person: AssignmentPerson, departmentId: string) {
   return person.memberships.find((entry) => entry.departmentId === departmentId);
 }
 
+/** Crew-Wünsche, für die diese Produktion kein Gewerk hat (z. B. „Regieassistenz & Orga“). */
+function unmappedCrewWishes(person: AssignmentPerson, departments: AssignmentDepartment[]) {
+  return person.wishes.filter(
+    (wish) =>
+      wish.domain === "crew" &&
+      !departments.some((department) => department.preferenceCodes.includes(wish.code)),
+  );
+}
+
+/** Kurztext, wenn es keine Wünsche für diese Produktion gibt. */
+function noWishText(person: AssignmentPerson) {
+  if (!person.onboardingDone) return "Onboarding noch offen";
+  return "Keine Wünsche angegeben";
+}
+
 export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -375,11 +390,13 @@ function PersonRow({
   selected: boolean;
   onSelect: () => void;
 }) {
+  // Gewerke mit Wunsch oder bereits vorhandener Zugehörigkeit/Anfrage.
   const wished = departments
     .map((department) => ({ department, weight: wishWeight(person, department) }))
-    .filter((entry) => entry.weight > 0)
+    .filter((entry) => entry.weight > 0 || membershipOf(person, entry.department.id))
     .sort((a, b) => b.weight - a.weight);
-  const actingWish = person.wishes.find((wish) => wish.domain === "acting");
+  const actingWishes = person.wishes.filter((wish) => wish.domain === "acting");
+  const otherWishes = unmappedCrewWishes(person, departments);
   const assigned = person.memberships.filter((entry) => entry.status === "active").length;
 
   return (
@@ -427,13 +444,25 @@ function PersonRow({
               </span>
             );
           })}
-          {actingWish ? (
+          {actingWishes.length ? (
             <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
-              Schauspiel: {actingWish.title}
+              Schauspiel: {actingWishes.map((wish) => wish.title).join(", ")}
             </span>
           ) : null}
-          {wished.length === 0 && !actingWish ? (
-            <span className="text-xs text-muted-foreground">Keine Wünsche angegeben</span>
+          {otherWishes.map((wish) => (
+            <span
+              key={wish.code}
+              className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground"
+              title="Dafür gibt es in dieser Produktion kein Gewerk"
+            >
+              {wish.title}
+            </span>
+          ))}
+          {person.wishes.length === 0 && wished.length === 0 ? (
+            <span className="text-xs text-muted-foreground">
+              {noWishText(person)}
+              {person.earlierWishes ? " · frühere Wünsche in der Detailansicht" : ""}
+            </span>
           ) : null}
         </span>
       </span>
@@ -473,7 +502,7 @@ function PersonPanel({
     };
     return rank(a) - rank(b) || a.name.localeCompare(b.name, "de");
   });
-  const wishLabels = person.wishes.filter((wish) => wish.domain === "crew");
+  const wishLabels = person.wishes;
 
   return (
     <div className="space-y-4">
@@ -496,10 +525,28 @@ function PersonPanel({
 
       {wishLabels.length ? (
         <p className="text-xs text-muted-foreground">
-          Wünsche:{" "}
+          Wünsche für diese Produktion:{" "}
           {wishLabels
             .map((wish) => `${wish.title} (${getRolePreferenceWeightLabel(wish.weight)})`)
             .join(", ")}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {noWishText(person)}.
+          {person.earlierWishes
+            ? ` Zuletzt (${person.earlierWishes.label}): ${person.earlierWishes.wishes
+                .map((wish) => wish.title)
+                .join(", ")}.`
+            : ""}
+        </p>
+      )}
+      {unmappedCrewWishes(person, departments).length ? (
+        <p className="text-xs text-muted-foreground">
+          Ohne passendes Gewerk in dieser Produktion:{" "}
+          {unmappedCrewWishes(person, departments)
+            .map((wish) => wish.title)
+            .join(", ")}
+          .
         </p>
       ) : null}
 

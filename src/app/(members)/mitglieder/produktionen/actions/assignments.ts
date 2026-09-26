@@ -191,6 +191,13 @@ export async function setCharacterCastingAction(input: {
       select: { id: true, name: true },
     });
     if (!character) throw new Error("Rolle wurde nicht gefunden.");
+    if (input.type) {
+      const target = await prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { deactivatedAt: true },
+      });
+      if (!target || target.deactivatedAt) throw new Error("Person wurde nicht gefunden.");
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.characterCasting.deleteMany({
