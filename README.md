@@ -72,14 +72,16 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The `dev` script executes `scripts/run-prisma-migrate.mjs`, applies pending
-Prisma migrations, runs the seed script (when necessary) and finally launches the
-Next.js turbopack dev server together with the realtime bridge. The app listens
-on [http://localhost:3000](http://localhost:3000).
+The `dev` script regenerates the Prisma client, executes
+`scripts/run-prisma-migrate.mjs`, applies pending Prisma migrations, runs the
+seed script (when necessary) and finally launches the Next.js turbopack dev
+server together with the realtime bridge. The app listens on
+[http://localhost:3000](http://localhost:3000).
 
 ### Useful scripts
 
-- `pnpm prisma:generate` – regenerate the Prisma client after schema changes.
+- `pnpm prisma:generate` – regenerate the Prisma client after schema changes
+  (runs automatically before `pnpm dev` and `pnpm build`).
 - `pnpm db:migrate` – create and apply local development migrations.
 - `pnpm db:seed` – repopulate the database with seed data.
 - `pnpm start:combined` – run the production build and realtime server without Docker.

@@ -37,7 +37,7 @@
     "dev:services:down": "node scripts/setup-dev.mjs services:down",
     "dev:reset": "node scripts/setup-dev.mjs reset",
     "dev:clean": "node scripts/setup-dev.mjs clean",
-    "predev": "pnpm run workbox:copy-lib && node --env-file=.env scripts/run-prisma-migrate.mjs",
+    "predev": "pnpm prisma:generate && pnpm run workbox:copy-lib && node --env-file=.env scripts/run-prisma-migrate.mjs",
     "dev": "next dev --turbo",
     "prebuild": "pnpm prisma:generate && pnpm run workbox:copy-lib",
     "build": "next build",

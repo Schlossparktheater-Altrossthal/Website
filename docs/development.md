@@ -111,14 +111,15 @@ pnpm dev:reset
 
 ### Prisma-Client veraltet (`Unknown argument ...`)
 
-Nach einem `git pull` mit Schemaänderungen kann der generierte Prisma-Client älter sein als
-`prisma/schema.prisma`. Der Dev-Server startet dann normal, aber jeder Datenbankzugriff, der ein
-neues Feld nutzt, scheitert mit `PrismaClientValidationError: Unknown argument 'status'` — die
-Seite antwortet mit 500.
+Symptom: Der Dev-Server startet normal, aber jeder Datenbankzugriff, der ein Feld nutzt, das erst
+kürzlich ins Schema kam, scheitert mit `PrismaClientValidationError: Unknown argument 'status'` —
+die Seite antwortet mit 500.
 
-Grund: `pnpm dev` führt über `predev` nur `prisma migrate deploy` aus, nicht `prisma generate`.
-Generiert wird sonst nur im `postinstall`-Hook, der bei gesetztem `SKIP_PRISMA_POSTINSTALL` und bei
-einem pnpm-Store-Treffer ausbleibt.
+`pnpm dev` und `pnpm build` rufen über ihre `pre`-Skripte `prisma generate` und `prisma migrate
+deploy` auf, ein frischer Start ist deshalb unkritisch. Der Fehler tritt nur auf, wenn der Client
+**während** eines laufenden Prozesses veraltet: nach einem `git pull` mit Schemaänderung bei
+laufendem Dev-Server, nach einem mit `SKIP_PRISMA_POSTINSTALL` abgebrochenen Install oder bei einem
+pnpm-Store-Treffer, der den `postinstall`-Hook überspringt.
 
 ```bash
 pnpm prisma:generate
