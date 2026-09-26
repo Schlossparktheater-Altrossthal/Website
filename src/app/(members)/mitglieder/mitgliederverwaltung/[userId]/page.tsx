@@ -32,7 +32,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { getActiveProductionId } from "@/lib/active-production";
 import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
+import { explainUserPermissions, hasPermission } from "@/lib/permissions";
+import { EffectivePermissions } from "@/components/members/effective-permissions";
 import { requireAuth } from "@/lib/rbac";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 import { cn } from "@/lib/utils";
@@ -464,6 +465,12 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   }
 
   const resolvedParams = await params;
+  const explainedPermissionsPromise = (async () => {
+    const id = Array.isArray(resolvedParams?.userId)
+      ? resolvedParams.userId[0]
+      : resolvedParams?.userId;
+    return id ? explainUserPermissions(id) : [];
+  })();
   const userIdParam = resolvedParams?.userId;
   const userId = Array.isArray(userIdParam) ? userIdParam[0] : userIdParam;
   if (!userId) {
@@ -888,6 +895,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
     session.user?.id && session.user.id !== member.id && !(session.impersonation?.active ?? false),
   );
 
+  const explainedPermissions = await explainedPermissionsPromise;
   return (
     <div className="space-y-6">
       <PageHeader
@@ -921,6 +929,12 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
           >
             <SparklesIcon className="h-4 w-4 text-muted-foreground/80" aria-hidden />
             <span>Profil</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="rights"
+            className="gap-2 px-5 py-2 text-xs font-semibold uppercase tracking-wide sm:text-sm"
+          >
+            <span>Rechte</span>
           </TabsTrigger>
           <TabsTrigger
             value="activity"
@@ -1383,6 +1397,10 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
               </Card>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="rights">
+          <EffectivePermissions permissions={explainedPermissions} />
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-6">

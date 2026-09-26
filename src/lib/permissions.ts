@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { isAdminRole, sortRoles, type Role } from "@/lib/roles";
+import { ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 
 // Categories for permissions
@@ -515,4 +515,111 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   }
 
   return DEFAULT_PERMISSION_KEYS.filter((key) => granted.has(key));
+}
+
+export type PermissionSource =
+  | { kind: "baseline" }
+  | { kind: "admin"; label: string }
+  | { kind: "role"; label: string; viaProductions: string[] }
+  | { kind: "customRole"; label: string }
+  | { kind: "department"; label: string };
+
+export type ExplainedPermission = {
+  key: string;
+  label: string;
+  categoryLabel: string;
+  sources: PermissionSource[];
+};
+
+/**
+ * Alle Rechte eines Mitglieds mit Herkunft, damit Admins nachvollziehen können, *warum*
+ * jemand etwas darf. Spiegelt die Logik von `getUserPermissionKeys`.
+ */
+export async function explainUserPermissions(userId: string): Promise<ExplainedPermission[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      roles: { select: { role: true } },
+      appRoles: { select: { role: { select: { id: true, name: true } } } },
+      departmentMemberships: { select: { department: { select: { id: true, name: true } } } },
+      productionMemberships: {
+        where: {
+          leftAt: null,
+          status: { not: "left" },
+          show: { status: { in: ["planning", "active"] } },
+        },
+        select: { roles: true, show: { select: { title: true, year: true } } },
+      },
+    },
+  });
+  if (!user) return [];
+
+  await ensureSystemRoles();
+  await ensurePermissionDefinitions();
+
+  const systemRoles = sortRoles([user.role as Role, ...user.roles.map((r) => r.role as Role)]);
+  const sources = new Map<string, PermissionSource[]>(
+    DEFAULT_PERMISSION_KEYS.map((key) => [key, []]),
+  );
+  const add = (key: string, source: PermissionSource) => sources.get(key)?.push(source);
+
+  const adminRole = systemRoles.find((role) => role === "owner" || role === "admin");
+  if (adminRole) {
+    for (const key of DEFAULT_PERMISSION_KEYS) {
+      add(key, { kind: "admin", label: ROLE_LABELS[adminRole] });
+    }
+  } else {
+    for (const key of BASELINE_PERMISSION_KEYS) add(key, { kind: "baseline" });
+
+    const viaProductions = (role: Role) =>
+      user.productionMemberships
+        .filter((membership) => membership.roles.includes(role))
+        .map((membership) => membership.show.title ?? String(membership.show.year));
+
+    const roleGrants = await prisma.appRolePermission.findMany({
+      where: {
+        OR: buildRoleFilter(
+          systemRoles,
+          user.appRoles.map((entry) => entry.role.id),
+        ),
+      },
+      select: {
+        permission: { select: { key: true } },
+        role: { select: { id: true, name: true, systemRole: true } },
+      },
+    });
+    for (const grant of roleGrants) {
+      const systemRole = (grant.role.systemRole ??
+        (systemRoles.includes(grant.role.name as Role) ? grant.role.name : null)) as Role | null;
+      if (systemRole && systemRoles.includes(systemRole)) {
+        add(grant.permission.key, {
+          kind: "role",
+          label: ROLE_LABELS[systemRole] ?? systemRole,
+          viaProductions: viaProductions(systemRole),
+        });
+      } else {
+        add(grant.permission.key, { kind: "customRole", label: grant.role.name });
+      }
+    }
+
+    const departments = user.departmentMemberships.map((entry) => entry.department);
+    if (departments.length) {
+      const departmentGrants = await prisma.departmentPermission.findMany({
+        where: { departmentId: { in: departments.map((d) => d.id) } },
+        select: { departmentId: true, permission: { select: { key: true } } },
+      });
+      for (const grant of departmentGrants) {
+        const department = departments.find((d) => d.id === grant.departmentId);
+        if (department) add(grant.permission.key, { kind: "department", label: department.name });
+      }
+    }
+  }
+
+  return DEFAULT_PERMISSION_DEFINITIONS.map((definition) => ({
+    key: definition.key,
+    label: definition.label,
+    categoryLabel: PERMISSION_CATEGORY_LABELS[definition.category] ?? definition.category,
+    sources: sources.get(definition.key) ?? [],
+  }));
 }
