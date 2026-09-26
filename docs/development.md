@@ -146,6 +146,63 @@ rm -rf node_modules pnpm-lock.yaml
 pnpm install
 ```
 
+## Lokaler Login mit eigenem Konto
+
+Ohne `AUTHENTIK_*`-Variablen (Standard in `.env`) läuft lokal nur der Passwort-Login.
+
+- **Passwort-Login** funktioniert nur für Konten mit gesetztem `passwordHash`. Nach einem
+  Datenimport aus Staging betrifft das die übernommenen Altkonten; Owner- und
+  Admin-Konten haben keinen Hash.
+- **Owner-Setup-Link**: jeder `pnpm dev`-Start gibt einen frischen, einmalig gültigen Link
+  `http://localhost:3000/setup/owner/<token>` aus. Damit lässt sich ein eigenes Konto
+  anlegen oder das Passwort erneuern.
+- **„Passwort vergessen“** auf der Login-Seite verschickt eine Mail, die in Mailpit
+  (`http://localhost:8025`) landet – der Reset lässt sich also lokal abschließen.
+- **Test-Login** (`/api/dev/screenshot-session`, siehe `docs/e2e-tests.md`) ist für die
+  festen Testnutzer gedacht. Ein beliebiges `?email=` funktioniert, aber Vorsicht:
+  `ensureDevTestUser` macht ein `upsert` und überschreibt dabei `firstName`, `lastName`,
+  `name` und `role` eines bereits existierenden Kontos. Für echte Konten daher
+  Owner-Setup-Link oder Passwort-Reset nutzen.
+
+## Aktuellen Datenstand lokal laden
+
+Der Server mit Cluster-Zugang steht in `~/.ssh/config`; ein lokaler kubeconfig ist nicht
+nötig. Staging wird täglich um 02:00 aus der Produktion synchronisiert
+(`k8s-infrastructure/applications/website-staging/db-sync.yaml`), hat also denselben
+Datenstand wie Prod – nur bis zu einen Tag älter.
+
+```bash
+# 1. Dump auf dem Server erzeugen
+ssh theater@<server> 'kubectl -n theater-website-staging exec postgresql-0 -- \
+  pg_dump --no-owner --no-acl -U theater -d theater_staging > /tmp/staging.sql'
+
+# 2. Komprimiert herunterladen und auf dem Server aufräumen
+ssh theater@<server> 'gzip -6 -f /tmp/staging.sql'
+scp theater@<server>:/tmp/staging.sql.gz /tmp/
+ssh theater@<server> 'rm -f /tmp/staging.sql.gz'
+
+# 3. Lokale Datenbank ersetzen
+pkill -f "next dev"
+docker exec website-db-1 psql -U postgres -d postgres \
+  -c "DROP DATABASE IF EXISTS theater_dev WITH (FORCE);" -c "CREATE DATABASE theater_dev;"
+gzcat /tmp/staging.sql.gz | docker exec -i website-db-1 psql -U postgres -d theater_dev \
+  -v ON_ERROR_STOP=1 -q -o /dev/null
+
+# 4. Starten – `predev` wendet fehlende Migrationen an
+pnpm dev
+```
+
+Bewusst `DROP DATABASE` statt `pg_dump --clean`: `--clean` entfernt nur Objekte, die in der
+Quelldatenbank existieren – lokal verbliebene Objekte überleben. Das ist die
+`--clean`-Falle, die in `docs/produktionen-mitglieder-plan.md` erwähnt wird.
+
+`kubectl exec … > datei` darf **nicht** über SSH gestreamt werden: bei rund 80 MB bricht der
+Stream ab und die Datei ist stillschweigend unvollständig – ohne Fehler und mit Exit-Code 0.
+Immer eine Datei auf dem Server erzeugen und die Prüfsumme vergleichen.
+
+Die lokale Datenbank wird dabei vollständig ersetzt. Die Dev-Testnutzer für den Test-Login
+legt `/api/dev/screenshot-session` bei Bedarf neu an.
+
 ## Environment Variablen
 
 Das Script generiert automatisch eine `.env` Datei mit:
