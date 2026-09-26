@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { DataPortalChart } from "./data-portal-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ type Preset = {
   source: DataSource;
   columns: string[];
   filters: FilterState[];
+  groupBy?: string;
 };
 
 const PRESETS: Preset[] = [
@@ -67,6 +69,20 @@ const PRESETS: Preset[] = [
     source: "participants",
     columns: ["name", "school", "schoolClass", "age"],
     filters: [{ field: "educationCategory", op: "equals", value: "Schule" }],
+  },
+  {
+    label: "Anzahl je Schule",
+    source: "participants",
+    columns: [],
+    filters: [],
+    groupBy: "school",
+  },
+  {
+    label: "Allergene im Überblick",
+    source: "allergies",
+    columns: [],
+    filters: [],
+    groupBy: "allergen",
   },
   {
     label: "Fotoerlaubnisse",
@@ -97,6 +113,8 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
   const fields = useMemo(() => show.fields[activeSource] ?? [], [show, activeSource]);
   const [columns, setColumns] = useState<string[]>(["name"]);
   const [filters, setFilters] = useState<FilterState[]>([]);
+  const [groupBy, setGroupBy] = useState("");
+  const [chartType, setChartType] = useState<"bar" | "pie">("bar");
   const [includeInactive, setIncludeInactive] = useState(false);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +122,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
 
   const fieldKeys = new Set(fields.map((field) => field.key));
   const activeColumns = columns.filter((key) => fieldKeys.has(key));
+  const activeGroupBy = fieldKeys.has(groupBy) ? groupBy : "";
   const activeFilters = filters.filter((filter) => fieldKeys.has(filter.field));
 
   function applyPreset(preset: Preset) {
@@ -112,6 +131,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
     setSource(preset.source);
     setColumns(preset.columns.filter((key) => keys.has(key)));
     setFilters(preset.filters.filter((filter) => keys.has(filter.field)));
+    setGroupBy(preset.groupBy && keys.has(preset.groupBy) ? preset.groupBy : "");
     setResult(null);
   }
 
@@ -119,7 +139,8 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
     return JSON.stringify({
       source: activeSource,
       showId,
-      columns: activeColumns,
+      columns: activeGroupBy ? [] : activeColumns,
+      groupBy: activeGroupBy || undefined,
       filters: activeFilters.map((filter) => ({
         field: filter.field,
         op: filter.op,
@@ -178,6 +199,8 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
       current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key],
     );
   }
+
+  const resultGrouped = result?.columns.some((column) => column.key === "count") ?? false;
 
   const grouped = (Object.keys(FIELD_GROUP_LABELS) as FieldGroup[])
     .map((group) => ({ group, items: fields.filter((field) => field.group === group) }))
@@ -241,7 +264,30 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
             </label>
           </div>
 
-          <div className="space-y-2">
+          <label className="block space-y-1 text-sm">
+            <span className="text-muted-foreground">
+              Gruppieren nach (zeigt Anzahl je Wert als Diagramm)
+            </span>
+            <select
+              className={`${selectClass} w-full sm:w-80`}
+              value={activeGroupBy}
+              onChange={(event) => {
+                setGroupBy(event.target.value);
+                setResult(null);
+              }}
+            >
+              <option value="">Keine – Einzelzeilen</option>
+              {fields
+                .filter((field) => field.type !== "date")
+                .map((field) => (
+                  <option key={field.key} value={field.key}>
+                    {field.label}
+                  </option>
+                ))}
+            </select>
+          </label>
+
+          <div className={cn("space-y-2", activeGroupBy && "hidden")}>
             <p className="text-sm font-medium">Spalten</p>
             {grouped.map(({ group, items }) => (
               <div key={group} className="space-y-1">
@@ -355,7 +401,11 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
           </label>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={run} disabled={busy || activeColumns.length === 0}>
+            <Button
+              type="button"
+              onClick={run}
+              disabled={busy || (activeColumns.length === 0 && !activeGroupBy)}
+            >
               Auswerten
             </Button>
             {show.canExport ? (
@@ -364,7 +414,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
                   type="button"
                   variant="outline"
                   onClick={() => exportFile("xlsx")}
-                  disabled={busy || activeColumns.length === 0}
+                  disabled={busy || (activeColumns.length === 0 && !activeGroupBy)}
                 >
                   Excel exportieren
                 </Button>
@@ -372,7 +422,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
                   type="button"
                   variant="outline"
                   onClick={() => exportFile("csv")}
-                  disabled={busy || activeColumns.length === 0}
+                  disabled={busy || (activeColumns.length === 0 && !activeGroupBy)}
                 >
                   CSV exportieren
                 </Button>
@@ -380,7 +430,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
                   type="button"
                   variant="outline"
                   onClick={() => exportFile("pdf")}
-                  disabled={busy || activeColumns.length === 0}
+                  disabled={busy || (activeColumns.length === 0 && !activeGroupBy)}
                 >
                   PDF exportieren
                 </Button>
@@ -399,12 +449,36 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {resultGrouped ? (
+              <div className="mb-4 space-y-2">
+                <div className="flex gap-2">
+                  {(["bar", "pie"] as const).map((type) => (
+                    <Button
+                      key={type}
+                      type="button"
+                      size="sm"
+                      variant={chartType === type ? "default" : "outline"}
+                      onClick={() => setChartType(type)}
+                    >
+                      {type === "bar" ? "Balken" : "Kreis"}
+                    </Button>
+                  ))}
+                </div>
+                <DataPortalChart
+                  type={chartType}
+                  data={result.rows.map((row) => ({
+                    name: String(row.group ?? ""),
+                    value: Number(row.count ?? 0),
+                  }))}
+                />
+              </div>
+            ) : null}
             {result.truncated ? (
               <p className="mb-2 text-sm text-warning">
                 Anzeige gekürzt, der Export enthält alle Zeilen.
               </p>
             ) : null}
-            <div className="hidden overflow-x-auto md:block">
+            <div className={cn("overflow-x-auto", !resultGrouped && "hidden md:block")}>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -426,7 +500,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
                 </TableBody>
               </Table>
             </div>
-            <ul className="space-y-3 md:hidden">
+            <ul className={cn("space-y-3 md:hidden", resultGrouped && "hidden")}>
               {result.rows.map((row, index) => (
                 <li key={index} className="rounded-lg border border-border/70 p-3">
                   <dl className="space-y-1 text-sm">

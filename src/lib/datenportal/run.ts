@@ -269,3 +269,39 @@ export function projectRows(
     rows: rows.map((row) => Object.fromEntries(selected.map((f) => [f.key, row[f.key] ?? null]))),
   };
 }
+
+export const GROUP_COUNT_FIELD: FieldDefinition = {
+  key: "count",
+  label: "Anzahl",
+  group: "base",
+  type: "number",
+};
+
+const EMPTY_GROUP_LABEL = "(leer)";
+
+/** Zählt Zeilen je Wert eines Feldes, absteigend nach Anzahl. */
+export function groupRows(
+  rows: readonly PortalRow[],
+  groupField: FieldDefinition,
+): { columns: FieldDefinition[]; rows: PortalRow[] } {
+  if (groupField.type === "date") throw new PortalFieldError(groupField.key);
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const value = row[groupField.key] ?? null;
+    const label = isEmptyValue(value)
+      ? EMPTY_GROUP_LABEL
+      : typeof value === "boolean"
+        ? value
+          ? "ja"
+          : "nein"
+        : String(value);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const grouped = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de"))
+    .map(([label, count]): PortalRow => ({ group: label, count }));
+  return {
+    columns: [{ ...groupField, key: "group", type: "text" }, GROUP_COUNT_FIELD],
+    rows: grouped,
+  };
+}

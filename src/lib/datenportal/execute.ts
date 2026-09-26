@@ -1,6 +1,13 @@
 import { allowedFields, type DataPortalQuery, type FieldDefinition } from "./fields";
 import type { PortalAccess } from "./access";
-import { applyQuery, loadSourceRows, projectRows, type PortalRow } from "./run";
+import {
+  PortalFieldError,
+  applyQuery,
+  groupRows,
+  loadSourceRows,
+  projectRows,
+  type PortalRow,
+} from "./run";
 
 export type PortalResult = { columns: FieldDefinition[]; rows: PortalRow[] };
 
@@ -14,5 +21,10 @@ export async function executePortalQuery(
     includeInactive: query.includeInactive,
   });
   const filtered = applyQuery(rows, query, fields);
+  if (query.groupBy) {
+    const groupField = fields.find((field) => field.key === query.groupBy);
+    if (!groupField) throw new PortalFieldError(query.groupBy);
+    return groupRows(filtered, groupField);
+  }
   return projectRows(filtered, query.columns, fields);
 }

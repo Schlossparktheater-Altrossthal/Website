@@ -99,23 +99,29 @@ export const OPERATORS_BY_TYPE: Record<FieldType, readonly FilterOperator[]> = {
   boolean: ["equals"],
 };
 
-export const dataPortalQuerySchema = z.object({
-  source: z.enum(DATA_SOURCES),
-  showId: z.string().min(1),
-  filters: z
-    .array(
-      z.object({
-        field: z.string().min(1),
-        op: z.enum(FILTER_OPERATORS),
-        value: z.string().max(200).optional(),
-      }),
-    )
-    .max(12)
-    .default([]),
-  columns: z.array(z.string().min(1)).min(1).max(30),
-  sort: z.object({ field: z.string().min(1), dir: z.enum(["asc", "desc"]) }).optional(),
-  includeInactive: z.boolean().default(false),
-});
+export const dataPortalQuerySchema = z
+  .object({
+    source: z.enum(DATA_SOURCES),
+    showId: z.string().min(1),
+    filters: z
+      .array(
+        z.object({
+          field: z.string().min(1),
+          op: z.enum(FILTER_OPERATORS),
+          value: z.string().max(200).optional(),
+        }),
+      )
+      .max(12)
+      .default([]),
+    columns: z.array(z.string().min(1)).max(30).default([]),
+    /** Zählt Zeilen je Wert dieses Feldes (Diagramm/Anzahl-Tabelle) statt Einzelzeilen. */
+    groupBy: z.string().min(1).optional(),
+    sort: z.object({ field: z.string().min(1), dir: z.enum(["asc", "desc"]) }).optional(),
+    includeInactive: z.boolean().default(false),
+  })
+  .refine((query) => query.groupBy !== undefined || query.columns.length > 0, {
+    message: "Spalten oder Gruppierung nötig",
+  });
 export type DataPortalQuery = z.infer<typeof dataPortalQuerySchema>;
 
 /** Felder, die für die gegebenen Rechte sichtbar sind. */

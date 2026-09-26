@@ -1,6 +1,6 @@
 # Datenportal (Report-Builder) – Plan
 
-Stand: 2026-09-26. Status: Phase 1 (MVP) implementiert, lokal committet, noch nicht auf Staging getestet.
+Stand: 2026-09-26. Status: Phase 1 und 2 implementiert (Gruppierung, Balken-/Kreisdiagramm, XLSX/PDF), lokal committet, noch nicht auf Staging getestet. Offen: Phase 3 (gespeicherte Ansichten).
 
 Entscheidungen 2026-09-26: Rechte nur für leitende Personen über die Rechteverwaltung, produktionsbezogen
 (`PRODUCTION_SCOPED_PERMISSION_KEYS`); Audit-Log 12 Monate (`DATA_PORTAL_AUDIT_RETENTION_MONTHS`, Löschung bei jedem Schreiben).

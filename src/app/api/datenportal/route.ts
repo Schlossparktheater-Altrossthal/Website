@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       showId: query.showId,
       action: format === "json" ? "query" : "export",
       source: query.source,
-      fields: result.columns.map((column) => column.key),
+      fields: query.groupBy ? [query.groupBy] : result.columns.map((column) => column.key),
       rowCount: result.rows.length,
     });
 

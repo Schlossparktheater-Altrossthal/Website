@@ -109,3 +109,25 @@ describe("portalRowsToXlsx", () => {
     expect(sheet?.getRow(5).getCell(1).value).toBe("'=SUM(A1)");
   });
 });
+
+describe("groupRows", () => {
+  it("zählt je Wert absteigend und fasst leere Werte zusammen", async () => {
+    const { groupRows } = await import("../run");
+    const school = fields.find((field) => field.key === "school");
+    if (!school) throw new Error("Feld fehlt");
+    const result = groupRows(rows, school);
+    expect(result.rows).toEqual([
+      { group: "Gymnasium Nord", count: 2 },
+      { group: "(leer)", count: 1 },
+      { group: "Oberschule Süd", count: 1 },
+    ]);
+    expect(result.columns.map((column) => column.label)).toEqual(["Schule", "Anzahl"]);
+  });
+
+  it("gruppiert keine Datumsfelder", async () => {
+    const { groupRows } = await import("../run");
+    const date = fields.find((field) => field.type === "date");
+    if (!date) throw new Error("Feld fehlt");
+    expect(() => groupRows(rows, date)).toThrow(PortalFieldError);
+  });
+});
