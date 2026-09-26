@@ -29,6 +29,11 @@ export default defineConfig({
       },
     ],
   },
+  // Vite 8 transformiert mit Oxc und übernimmt sonst `jsx: "preserve"` aus der tsconfig
+  // (für Next.js nötig) – Tests brauchen umgewandeltes JSX.
+  oxc: {
+    jsx: { runtime: "automatic" },
+  },
   css: {
     postcss: {
       plugins: [],
