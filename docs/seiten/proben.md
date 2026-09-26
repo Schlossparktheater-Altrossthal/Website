@@ -8,6 +8,7 @@ Probenplaner verwalten den Gesamtplan.
 ## Routen
 
 - `/mitglieder/probenplanung` – Gesamtplanung
+- `/mitglieder/terminplanung` – organisationsweite Termine (für Planer; Liste nach Monaten)
 - `/mitglieder/probenplanung/proben/[rehearsalId]` – Probe bearbeiten
 - `/mitglieder/proben/[rehearsalId]` – Detailansicht einer Probe
 - `/mitglieder/meine-proben` – eigene Probentermine
@@ -37,4 +38,6 @@ Probenplaner verwalten den Gesamtplan.
 
 - `probenplanung/actions.ts` ist sehr groß (700+ Zeilen) – aufgeteilt in Aufgabe „Actions-Dateien
   aufteilen" (P5).
+- Die Gesamtplanung bietet zwei Ansichten (Kalenderansicht / Wochenend-Fokus) über ein
+  `SegmentedControl` (`src/components/ui/segmented-control.tsx`).
 - Zeitlogik läuft über `DEFAULT_TIME_ZONE` aus `src/lib/date-time.ts`.

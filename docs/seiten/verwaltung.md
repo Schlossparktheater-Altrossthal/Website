@@ -18,6 +18,13 @@ Berechtigungen konfigurieren.
 - `PRIVATE.ADMIN.INVITES.MANAGE` – Einladungen
 - `PRIVATE.ADMIN.PERMISSIONS.MANAGE` – Berechtigungen
 
+## Aufbau
+
+- `/mitglieder/mitgliederverwaltung`: vier Bereiche über `SectionNav` mit Zustand in der URL
+  (`?tab=`): Mitglieder, Einladungen, Saisonwechsel, Datenpflege. Ab vier Einträgen zeigt die
+  Leiste auf Mobil ein Auswahlfeld statt der Pills.
+- `/mitglieder/mitgliederverwaltung/[userId]`: Bereiche Profil, Rechte, Aktivität.
+
 ## Wichtige Komponenten
 
 - `src/app/(members)/mitglieder/mitgliederverwaltung/` – Mitgliederseiten
