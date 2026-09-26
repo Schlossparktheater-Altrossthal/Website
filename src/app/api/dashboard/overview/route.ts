@@ -116,7 +116,12 @@ export async function GET() {
         },
       }),
       prisma.calendarEvent.findMany({
-        where: { kind: "REHEARSAL", start: { gt: now }, status: { not: "DRAFT" } },
+        where: {
+          kind: "REHEARSAL",
+          start: { gt: now },
+          status: "SCHEDULED",
+          participants: { some: { userId, invited: true } },
+        },
         orderBy: { start: "asc" },
         take: 5,
         select: {
