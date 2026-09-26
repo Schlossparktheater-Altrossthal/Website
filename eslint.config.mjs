@@ -14,6 +14,9 @@ const eslintConfig = [
       "public/workbox/**",
       "deploy-service/**",
       "eslint.config.mjs",
+      // Playwright-Berichte und Artefakte (gebündeltes JS, nicht versioniert).
+      "playwright-report/**",
+      "test-results/**",
     ],
   },
   {
