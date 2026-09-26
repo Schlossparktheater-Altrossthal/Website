@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AlertTriangleIcon, PlusIcon, SearchIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
+import { SectionNav } from "@/components/ui/section-nav";
 import type { RolesScenesData, RsRole } from "@/lib/produktionen/roles-scenes";
 import { getRoleSizeTitle } from "@/lib/produktionen/role-sizes";
 import { cn } from "@/lib/utils";
@@ -70,32 +70,20 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
 
   return (
     <div className="space-y-4">
-      <nav
-        aria-label="Ansicht"
-        className="flex w-full gap-0.5 rounded-lg bg-muted/70 p-0.5 sm:inline-flex sm:w-auto"
-      >
-        {(Object.keys(VIEW_LABELS) as StueckView[]).map((key) => (
-          <Link
-            key={key}
-            href={key === "ablauf" ? BASE_PATH : `${BASE_PATH}?ansicht=${key}`}
-            aria-current={key === view ? "page" : undefined}
-            scroll={false}
-            className={cn(
-              "inline-flex h-10 flex-1 items-center justify-center rounded-md px-4 text-sm font-medium sm:flex-none",
-              key === view
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {VIEW_LABELS[key]}
-            {key === "ablauf"
-              ? ` ${data.scenes.length}`
+      <SectionNav
+        ariaLabel="Ansicht"
+        activeId={view}
+        items={(Object.keys(VIEW_LABELS) as StueckView[]).map((key) => ({
+          id: key,
+          href: key === "ablauf" ? BASE_PATH : `${BASE_PATH}?ansicht=${key}`,
+          label:
+            key === "ablauf"
+              ? `${VIEW_LABELS[key]} ${data.scenes.length}`
               : key === "rollen"
-                ? ` ${data.roles.length}`
-                : ""}
-          </Link>
-        ))}
-      </nav>
+                ? `${VIEW_LABELS[key]} ${data.roles.length}`
+                : VIEW_LABELS[key],
+        }))}
+      />
 
       {view !== "auftritte" ? (
         <div className="flex items-center gap-2">

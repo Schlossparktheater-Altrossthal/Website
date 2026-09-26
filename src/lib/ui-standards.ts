@@ -29,8 +29,23 @@ export interface ModalFormDialogProps {
   saveLabel?: string;
 }
 
+export interface SectionNavItem {
+  /** Kennung der Ansicht; entspricht dem Wert in der URL (z. B. `?ansicht=`). */
+  id: string;
+  label: React.ReactNode;
+  href: string;
+}
+
+export interface SectionNavProps {
+  items: readonly SectionNavItem[];
+  activeId: string;
+  ariaLabel?: string;
+  className?: string;
+}
+
 export const UI_PATTERNS = {
   confirmDialog: "confirm-dialog",
   asyncButton: "async-button",
   modalFormDialog: "modal-form-dialog",
+  sectionNav: "section-nav",
 } as const;
