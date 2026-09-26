@@ -4,6 +4,7 @@ import {
   PERMISSION_CATEGORY_LABELS,
   ensurePermissionDefinitions,
   ensureSystemRoles,
+  isProductionScopedPermission,
 } from "@/lib/permissions";
 import { PermissionWorkbenchClient } from "@/components/members/permissions/permission-workbench-client";
 
@@ -59,6 +60,7 @@ export async function PermissionWorkbench() {
       description: match?.description ?? definition.description ?? null,
       categoryKey,
       categoryLabel: PERMISSION_CATEGORY_LABELS[categoryKey] ?? categoryKey,
+      productionScoped: isProductionScopedPermission(definition.key),
     };
   });
 

@@ -77,6 +77,7 @@ type MatrixRow = {
   label: string;
   description: string;
   keys: string[];
+  productionScoped?: boolean;
 };
 
 type MatrixCategory = { key: string; label: string; rows: MatrixRow[] };
@@ -156,6 +157,7 @@ export function PermissionWorkbenchClient({
             label: p.label,
             description: p.description ?? "",
             keys: [p.key],
+            productionScoped: p.productionScoped,
             searchText: `${p.label} ${p.key} ${p.description ?? ""}`,
           })),
       ].filter((row) => matches(row.searchText));
@@ -372,7 +374,17 @@ export function PermissionWorkbenchClient({
                         return (
                           <li key={row.id} className="flex items-center gap-3 px-4 py-2.5">
                             <label htmlFor={id} className="min-w-0 flex-1">
-                              <span className="block text-sm font-medium">{row.label}</span>
+                              <span className="block text-sm font-medium">
+                                {row.label}
+                                {row.productionScoped ? (
+                                  <span
+                                    className="ml-2 inline-block whitespace-nowrap rounded-full border border-info/40 bg-info/10 px-1.5 py-px align-middle text-[10px] font-normal text-info"
+                                    title="Ensemble- und Technik-Rollen wirken hier nur in der Produktion, in der die Person mitspielt. Andere Rollen gelten überall."
+                                  >
+                                    pro Produktion
+                                  </span>
+                                ) : null}
+                              </span>
                               {row.description ? (
                                 <span className="block text-xs text-muted-foreground">
                                   {row.description}
@@ -451,7 +463,17 @@ export function PermissionWorkbenchClient({
                   {category.rows.map((row) => (
                     <tr key={row.id} className="group">
                       <td className="sticky left-0 z-10 border-b border-border/40 bg-card px-4 py-2 group-hover:bg-muted">
-                        <span className="block font-medium text-foreground">{row.label}</span>
+                        <span className="block font-medium text-foreground">
+                          {row.label}
+                          {row.productionScoped ? (
+                            <span
+                              className="ml-2 inline-block whitespace-nowrap rounded-full border border-info/40 bg-info/10 px-1.5 py-px align-middle text-[10px] font-normal text-info"
+                              title="Ensemble- und Technik-Rollen wirken hier nur in der Produktion, in der die Person mitspielt. Andere Rollen gelten überall."
+                            >
+                              pro Produktion
+                            </span>
+                          ) : null}
+                        </span>
                         {row.description ? (
                           <span
                             className="line-clamp-1 max-w-md text-xs text-muted-foreground"

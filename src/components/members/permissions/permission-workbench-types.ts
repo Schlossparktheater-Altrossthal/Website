@@ -5,6 +5,8 @@ export type PermissionWorkbenchPermission = {
   description: string | null;
   categoryKey: string;
   categoryLabel: string;
+  /** Gilt nur in der jeweiligen Produktion (Phase 2). */
+  productionScoped?: boolean;
 };
 
 export type PermissionWorkbenchRole = {

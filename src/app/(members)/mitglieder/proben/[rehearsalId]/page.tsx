@@ -47,12 +47,12 @@ export default async function RehearsalDetailPage({
   params: Promise<{ rehearsalId: string }>;
 }) {
   const session = await requireAuth();
-  const [canViewOwn, canPlan] = await Promise.all([
+  const [canViewOwn, canPlanAnywhere] = await Promise.all([
     hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW"),
     hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE"),
   ]);
 
-  if (!canViewOwn && !canPlan) {
+  if (!canViewOwn && !canPlanAnywhere) {
     return <div className="text-sm text-destructive">Kein Zugriff auf die Probenansicht.</div>;
   }
 
@@ -85,6 +85,14 @@ export default async function RehearsalDetailPage({
   if (!rehearsal) {
     return <div className="text-sm text-destructive">Diese Probe existiert nicht.</div>;
   }
+
+  // Produktionsrollen planen nur Proben ihrer eigenen Produktion.
+  const canPlan =
+    canPlanAnywhere &&
+    (!rehearsal.showId ||
+      (await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE", {
+        showId: rehearsal.showId,
+      })));
 
   if (rehearsal.status === "DRAFT" && !canPlan) {
     return (

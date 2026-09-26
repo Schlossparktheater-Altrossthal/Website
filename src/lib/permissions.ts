@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
+import { isProductionRole } from "@/lib/produktionen/production-role-keys";
 
 // Categories for permissions
 type PermissionCategoryKey =
@@ -353,7 +354,47 @@ async function ensureProfileAdminDefaultAssignments() {
   }
 }
 
-async function resolveRoleContext(user: UserLike): Promise<ResolvedRoleContext> {
+/**
+ * Rechte, die nur in einer bestimmten Produktion gelten (Phase 2). Wird bei der Prüfung eine
+ * `showId` übergeben, zählen Produktionsrollen (Ensemble, Technik) nur aus der Mitgliedschaft
+ * in genau dieser Produktion. Globale Rollen (Vorstand, Finanzen, eigene Rollen, Gewerke)
+ * wirken weiterhin in allen Produktionen, Owner/Admin haben immer alles (Entscheidung E4).
+ */
+export const PRODUCTION_SCOPED_PERMISSION_KEYS: ReadonlySet<string> = new Set([
+  "PRIVATE.REHEARSAL.PLANNING.MANAGE",
+  "PRIVATE.REHEARSAL.BLOCKLIST.VIEW",
+  "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS",
+  "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT",
+]);
+
+export function isProductionScopedPermission(key: string): boolean {
+  return PRODUCTION_SCOPED_PERMISSION_KEYS.has(key);
+}
+
+/**
+ * Systemrollen für eine Prüfung im Kontext einer Produktion: globale Rollen ohne die
+ * (global gespiegelten) Produktionsrollen, plus die Rollen aus der Mitgliedschaft dieser
+ * Produktion (`null` = nicht dabei).
+ */
+export function scopeSystemRolesToProduction(
+  globalRoles: readonly Role[],
+  membershipRoles: readonly Role[] | null,
+): Role[] {
+  return sortRoles([
+    ...globalRoles.filter((role) => !isProductionRole(role)),
+    ...(membershipRoles ?? []).filter((role) => isProductionRole(role)),
+  ]);
+}
+
+type PermissionCheckOptions = {
+  /** Produktion, in deren Kontext geprüft wird; wirkt nur bei produktionsbezogenen Rechten. */
+  showId?: string | null;
+};
+
+async function resolveRoleContext(
+  user: UserLike,
+  showId?: string | null,
+): Promise<ResolvedRoleContext> {
   if (!user?.id) {
     return { systemRoles: [], customRoleIds: [], departmentIds: [] };
   }
@@ -372,10 +413,21 @@ async function resolveRoleContext(user: UserLike): Promise<ResolvedRoleContext> 
     return { systemRoles: [], customRoleIds: [], departmentIds: [] };
   }
 
-  const systemRoles = sortRoles([
+  let systemRoles = sortRoles([
     dbUser.role as Role,
     ...dbUser.roles.map((entry) => entry.role as Role),
   ]);
+
+  if (showId && !isAdminRole(new Set(systemRoles))) {
+    const membership = await prisma.productionMembership.findFirst({
+      where: { userId: user.id, showId, leftAt: null, status: { not: "left" } },
+      select: { roles: true },
+    });
+    systemRoles = scopeSystemRolesToProduction(
+      systemRoles,
+      membership ? (membership.roles as Role[]) : null,
+    );
+  }
 
   const customRoleIds = Array.from(new Set(dbUser.appRoles.map((entry) => entry.roleId)));
 
@@ -423,11 +475,19 @@ function buildRoleFilter(
   return roleFilters;
 }
 
-export async function hasPermission(user: UserLike, permissionKey: string): Promise<boolean> {
+export async function hasPermission(
+  user: UserLike,
+  permissionKey: string,
+  options?: PermissionCheckOptions,
+): Promise<boolean> {
   if (!user?.id) return false;
   if (!isKnownPermissionKey(permissionKey)) return false;
 
-  const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(user);
+  const scopedShowId = isProductionScopedPermission(permissionKey) ? options?.showId : null;
+  const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(
+    user,
+    scopedShowId,
+  );
   const owned = new Set(systemRoles);
 
   if (isAdminRole(owned)) return true;

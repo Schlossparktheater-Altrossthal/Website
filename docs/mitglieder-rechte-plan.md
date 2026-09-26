@@ -127,7 +127,7 @@ Alles tweakcn-Theme-Tokens, hell/dunkel, keine festen Farben.
 - E1: Tabs per URL-Parameter statt Unterseiten (ein Ladevorgang, verlinkbar). → angenommen
 - E2: Produktionsrollen werden nur auf Produktions-/Besetzungsseite vergeben, Mitgliederverwaltung zeigt sie an. → angenommen
 - E3: Phase 2 erst nach Prod-Release von Phase 1 und nur mit Migrationstest auf Prod-Kopie (`website-staging-db-sync`). → angenommen
-- E4 (offen): Sollen Vorstand/Admin produktionsbezogene Rechte automatisch in allen Produktionen haben? Vorschlag: ja für Admin/Owner, Vorstand nur Lesen.
+- E4: Admin/Owner haben in allen Produktionen alles; globale Rollen (Vorstand, Finanzen, eigene Rollen, Gewerke) wirken überall mit dem, was ihnen in der Matrix gegeben ist – „Vorstand nur lesen“ steuert man also über die Haken der Rolle Vorstand. Nur Ensemble/Technik sind pro Produktion. → angenommen (2026-09-26)
 
 ## Checkliste
 
@@ -137,20 +137,20 @@ Alles tweakcn-Theme-Tokens, hell/dunkel, keine festen Farben.
 - [x] 1.2 `FilterBar`, `StatusDot`, `RoleChips` bauen; Mitgliedertabelle kompakt mit „⋯“-Menü, Standardfilter Aktiv
 - [x] 1.3 Spalte Produktion/Funktion + Produktionsfilter
 - [x] 1.4 Mobile Listenansicht mit BottomSheet-Filter und FAB
-- [ ] 1.5 Mehrfachauswahl + Bulk-Aktionen
+- [x] 1.5 Mehrfachauswahl + Bulk-Aktionen
 - [x] 1.6 Rechte-Matrix: deutsche Labels, sticky Kopf/Spalte, aufgeklappt, Owner/Admin-Spalte, Sofort-Speichern mit Rückgängig
 - [x] 1.7 Tab „Rollen“ (Rollenliste statt Icons im Matrixkopf)
 - [x] 1.8 Mobile Matrix: sticky Select, Zähler, Switches
-- [ ] 1.9 Saison-Assistent (Geschützte Rollen + Abschluss)
-- [ ] 1.10 Detailseite gliedern + „Effektive Rechte mit Herkunft“
+- [x] 1.9 Saison-Assistent (Geschützte Rollen + Abschluss)
+- [x] 1.10 Detailseite gliedern + „Effektive Rechte mit Herkunft“
 - [ ] 1.11 E2E-Tests + Screenshots (mobile, tablet, desktop, hell/dunkel), Staging, Release
 
 ### Phase 2 – Produktionsbezogene Rechte
 
-- [ ] 2.1 Scope je Permission (`global`/`production`) in `DEFAULT_PERMISSION_DEFINITIONS`
-- [ ] 2.2 `hasPermission`/`getUserPermissionKeys` mit optionalem `showId`; Tests
-- [ ] 2.3 Aufrufer produktionsbezogener Rechte auf `showId` umstellen (v. a. `PRIVATE.PRODUCTION.SHOW.MANAGE`, Probenplanung, Sperrliste)
-- [ ] 2.4 `computeEffectiveRoles`-Spiegelung entfernen, Migration `UserRole` bereinigen
-- [ ] 2.5 Regie als Produktionsrolle, Migration der `AppRole` „regie“
-- [ ] 2.6 Matrix-Umschalter Global/Produktion, Scope-Badges
+- [x] 2.1 Scope je Permission (`global`/`production`) in `DEFAULT_PERMISSION_DEFINITIONS`
+- [x] 2.2 `hasPermission`/`getUserPermissionKeys` mit optionalem `showId`; Tests
+- [ ] 2.3 (teilweise: Proben-Detailseiten prüfen mit `showId`; offen: Probenplanung-Übersicht, `ensurePlanner`, Sperrliste und APIs – dafür muss die Probenplanung erst nach Produktion filtern) Aufrufer produktionsbezogener Rechte auf `showId` umstellen (v. a. `PRIVATE.PRODUCTION.SHOW.MANAGE`, Probenplanung, Sperrliste)
+- [ ] 2.4 (erst nach 2.3 komplett; vorher Rechtevergabe in Prod prüfen: welche Rollen haben produktionsbezogene Rechte?) `computeEffectiveRoles`-Spiegelung entfernen, Migration `UserRole` bereinigen
+- [ ] 2.5 (Daten prüfen: gibt es die Rolle „regie“ in Prod, wem ist sie zugewiesen?) Regie als Produktionsrolle, Migration der `AppRole` „regie“
+- [x] 2.6 Matrix-Umschalter Global/Produktion, Scope-Badges
 - [ ] 2.7 Migrationstest auf Prod-Kopie, Staging, Release

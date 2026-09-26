@@ -49,6 +49,20 @@ export default async function RehearsalEditorPage({
     notFound();
   }
 
+  // Produktionsrollen planen nur Proben ihrer eigenen Produktion.
+  if (
+    rehearsal.showId &&
+    !(await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE", {
+      showId: rehearsal.showId,
+    }))
+  ) {
+    return (
+      <div className="text-sm text-destructive">
+        Kein Zugriff: Diese Probe gehört zu einer anderen Produktion.
+      </div>
+    );
+  }
+
   // Allow editing both DRAFT and published rehearsals
   // Drafts use updateRehearsalDraftAction, published use updateRehearsalAction
 
