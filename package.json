@@ -55,6 +55,7 @@
     "e2e:responsive": "playwright test responsive-overflow",
     "e2e:env": "node scripts/e2e-env.mjs",
     "e2e:screenshots": "node scripts/e2e-screenshots.mjs",
+    "ui:check": "node scripts/ui-check.mjs",
     "typecheck": "tsc --noEmit --project tsconfig.typecheck.json",
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate dev --name init",
