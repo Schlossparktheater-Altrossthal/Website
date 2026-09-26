@@ -326,7 +326,9 @@ export function OnboardingWizard({
   const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
   const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
-  const { suggestions: interestSuggestions, loading: interestsLoading } = useInterestSuggestions();
+  const { suggestions: interestSuggestions, loading: interestsLoading } = useInterestSuggestions({
+    onboardingToken: token,
+  });
   const [form, setForm] = useState(() => createInitialFormState(variant));
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
   const derivedFocus = useMemo(() => {
@@ -807,7 +809,7 @@ export function OnboardingWizard({
       }
       if (form.photoConsent.consent && !form.photoConsent.skipDocument && !documentFile) {
         setError(
-          "Bitte lade dein unterschriebenes Einverständnis hoch, unterschreibe digital oder markiere, dass du es später nachreichst.",
+          "Bitte lade dein unterschriebenes Einverständnis hoch oder unterschreibe digital.",
         );
         return;
       }
@@ -1531,8 +1533,7 @@ export function OnboardingWizard({
                 <p className="font-medium">Du bist unter 18 Jahre alt</p>
                 <p>
                   Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner
-                  Erziehungsberechtigten. Lade das Dokument als PDF oder Bilddatei hoch oder
-                  markiere unten, dass du es später nachreichst.
+                  Erziehungsberechtigten. Lade das Dokument als PDF oder Bilddatei hoch.
                 </p>
                 <p>
                   Deine eigene Zustimmung gibst du direkt über das Kästchen oben – sie ist

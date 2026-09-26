@@ -375,7 +375,8 @@ export function ReturneeUpdateWizard({
       return;
     }
     if (step === 3) {
-      if (!documentFile) {
+      // Wie im Onboarding: Ohne Zustimmung braucht es kein Formular.
+      if (form.photoConsent && !documentFile) {
         setError(
           isMinor
             ? "Bitte lade das unterschriebene Elternformular hoch."

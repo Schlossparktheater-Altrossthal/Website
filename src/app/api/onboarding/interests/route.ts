@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/rbac";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-  const session = await getSession();
-  if (!session?.user?.id) {
+import { hasOnboardingSuggestionAccess } from "@/lib/onboarding/suggestion-access";
+import { prisma } from "@/lib/prisma";
+
+export async function GET(request: NextRequest) {
+  if (!(await hasOnboardingSuggestionAccess(request))) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 

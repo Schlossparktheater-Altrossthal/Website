@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@/auth";
-import { hashInviteToken, isInviteUsable } from "@/lib/member-invites";
+import { hasOnboardingSuggestionAccess } from "@/lib/onboarding/suggestion-access";
 
 import { readStoredEducation, type BszCampusId } from "@/lib/education/schools";
 import { prisma } from "@/lib/prisma";
@@ -31,21 +30,8 @@ function top(counter: Counter, minCount = 1) {
     .map((entry) => entry.name);
 }
 
-async function hasAccess(request: NextRequest) {
-  const session = await auth();
-  if (session?.user?.id) return true;
-  const token = request.nextUrl.searchParams.get("token")?.trim();
-  if (!token) return false;
-  const tokenHash = /^[0-9a-f]{64}$/i.test(token) ? token.toLowerCase() : hashInviteToken(token);
-  const invite = await prisma.memberInvite.findUnique({
-    where: { tokenHash },
-    select: { expiresAt: true, maxUses: true, usageCount: true, isDisabled: true },
-  });
-  return Boolean(invite && isInviteUsable(invite));
-}
-
 export async function GET(request: NextRequest) {
-  if (!(await hasAccess(request))) {
+  if (!(await hasOnboardingSuggestionAccess(request))) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
 

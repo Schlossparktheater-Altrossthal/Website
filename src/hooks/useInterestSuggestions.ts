@@ -7,6 +7,8 @@ import { parseInterestSuggestions, type InterestSuggestion } from "@/lib/interes
 type Options = {
   immediate?: boolean;
   initial?: InterestSuggestion[];
+  /** Onboarding-Link für Vorschläge ohne Anmeldung (neue Mitglieder). */
+  onboardingToken?: string;
 };
 
 function isAbortError(error: unknown): error is DOMException {
@@ -14,44 +16,51 @@ function isAbortError(error: unknown): error is DOMException {
 }
 
 export function useInterestSuggestions(options?: Options) {
-  const { immediate = true, initial = [] } = options ?? {};
+  const { immediate = true, initial = [], onboardingToken } = options ?? {};
   const [suggestions, setSuggestions] = useState<InterestSuggestion[]>(initial);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    await Promise.resolve();
-    if (signal?.aborted) {
-      return;
-    }
-    setLoading(true);
-    try {
-      const response = await fetch("/api/onboarding/interests", { cache: "no-store", signal });
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-      const data = await response.json().catch(() => null);
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      await Promise.resolve();
       if (signal?.aborted) {
         return;
       }
-      const parsed = parseInterestSuggestions(data);
-      setSuggestions(parsed);
-      setError(null);
-    } catch (error) {
-      if (isAbortError(error)) {
-        return;
+      setLoading(true);
+      try {
+        const query = onboardingToken ? `?token=${encodeURIComponent(onboardingToken)}` : "";
+        const response = await fetch(`/api/onboarding/interests${query}`, {
+          cache: "no-store",
+          signal,
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        const data = await response.json().catch(() => null);
+        if (signal?.aborted) {
+          return;
+        }
+        const parsed = parseInterestSuggestions(data);
+        setSuggestions(parsed);
+        setError(null);
+      } catch (error) {
+        if (isAbortError(error)) {
+          return;
+        }
+        console.error("[useInterestSuggestions]", error);
+        setError("Vorschläge konnten nicht geladen werden.");
+        if (!signal?.aborted) {
+          setSuggestions([]);
+        }
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
-      console.error("[useInterestSuggestions]", error);
-      setError("Vorschläge konnten nicht geladen werden.");
-      if (!signal?.aborted) {
-        setSuggestions([]);
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
-    }
-  }, []);
+    },
+    [onboardingToken],
+  );
 
   useEffect(() => {
     if (!immediate) {
