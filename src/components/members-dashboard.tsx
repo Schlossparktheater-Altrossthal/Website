@@ -111,7 +111,7 @@ const QUICK_ACTION_LINKS = [
   },
   {
     href: "/mitglieder/meine-gewerke",
-    label: "Gewerkeplanung",
+    label: "Meine Teams",
     icon: HammerIcon,
     permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
   },

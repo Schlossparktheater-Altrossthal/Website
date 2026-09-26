@@ -90,8 +90,9 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   },
   {
     key: "PRIVATE.DEPARTMENT.OWN.VIEW",
-    label: "Gewerkeplanung einsehen",
-    description: 'Zugang zum Bereich "Gewerkeplanung" mit Aufgabenübersicht und Terminvorschlägen.',
+    label: "Meine Teams einsehen",
+    description:
+      "Zugang zu „Meine Teams“: Gewerk-Portale mit Aufgaben, Terminen, Team und Dateien.",
     category: "department",
   },
   {
