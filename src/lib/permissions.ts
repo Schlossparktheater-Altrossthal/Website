@@ -244,6 +244,9 @@ const MEASUREMENT_DEFAULT_ROLE_NAMES = [
 ] as const satisfies readonly Role[];
 
 // Baseline permissions that every authenticated user should retain even when not explicitly granted
+/** Jede aktive Gewerk-Zugehörigkeit erlaubt die Gewerkeplanung. */
+const DEPARTMENT_MEMBER_PERMISSION_KEY = "PRIVATE.DEPARTMENT.OWN.VIEW";
+
 const BASELINE_PERMISSION_KEYS = new Set([
   "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
   "PRIVATE.PROFILE.OWN.VIEW",
@@ -539,6 +542,11 @@ export async function hasPermission(
   const perm = await prisma.permission.findUnique({ where: { key: permissionKey } });
   if (!perm) return false;
 
+  // Wer einem Gewerk angehört, sieht die Gewerkeplanung – ohne gespeicherte Rolle.
+  if (permissionKey === DEPARTMENT_MEMBER_PERMISSION_KEY && departmentIds.length) {
+    return true;
+  }
+
   if (departmentIds.length) {
     const departmentGrant = await prisma.departmentPermission.count({
       where: { permissionId: perm.id, departmentId: { in: departmentIds } },
@@ -596,6 +604,7 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   }
 
   if (departmentIds.length) {
+    granted.add(DEPARTMENT_MEMBER_PERMISSION_KEY);
     const departmentPermissions = await prisma.departmentPermission.findMany({
       where: { departmentId: { in: departmentIds } },
       select: { permission: { select: { key: true } } },
@@ -710,6 +719,9 @@ export async function explainUserPermissions(userId: string): Promise<ExplainedP
       for (const grant of departmentGrants) {
         const department = departments.find((d) => d.id === grant.departmentId);
         if (department) add(grant.permission.key, { kind: "department", label: department.name });
+      }
+      for (const department of departments) {
+        add(DEPARTMENT_MEMBER_PERMISSION_KEY, { kind: "department", label: department.name });
       }
     }
   }

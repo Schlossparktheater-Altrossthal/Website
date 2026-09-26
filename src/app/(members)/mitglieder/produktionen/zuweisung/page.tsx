@@ -35,7 +35,11 @@ export default async function ZuweisungPage() {
     <div className="space-y-4">
       <PageHeader
         title="Teams & Zuweisung"
-        description="Wünsche aus dem Onboarding ansehen und Personen Gewerken oder Rollen zuweisen."
+        description={
+          isManager
+            ? "Wünsche aus dem Onboarding ansehen und Personen Gewerken oder Rollen zuweisen."
+            : "Anfragen und Wünsche für die Gewerke, die du leitest."
+        }
         breadcrumbs={[membersNavigationBreadcrumb(currentPath)]}
       />
       {activeProduction ? (

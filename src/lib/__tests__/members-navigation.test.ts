@@ -61,7 +61,21 @@ describe("filterMembersNavigationByPermissions", () => {
 
     expect(assignments).toBeDefined();
     const hrefs = assignments!.items.map((item) => item.href);
-    expect(hrefs).toEqual(["/mitglieder/meine-gewerke", membersAssignmentsTodoItem.href]);
+    expect(hrefs).toEqual([
+      "/mitglieder/produktionen/zuweisung",
+      "/mitglieder/meine-gewerke",
+      membersAssignmentsTodoItem.href,
+    ]);
+  });
+
+  it("hides the assignment page from members who do not lead a department", () => {
+    const { groups: filtered } = filterMembersNavigationByPermissions(
+      selectMembersNavigation(),
+      ["PRIVATE.DEPARTMENT.OWN.VIEW"],
+      { isDepartmentLead: false },
+    );
+    const hrefs = filtered.flatMap((group) => group.items.map((item) => item.href));
+    expect(hrefs).not.toContain("/mitglieder/produktionen/zuweisung");
   });
 });
 

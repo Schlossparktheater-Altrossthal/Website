@@ -71,7 +71,7 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [pending, startTransition] = React.useTransition();
   const [busyKey, setBusyKey] = React.useState<string | null>(null);
-  const [view, setView] = React.useState<View>("person");
+  const [view, setView] = React.useState<View>(manageAll ? "person" : "department");
   const [filter, setFilter] = React.useState<Filter>("all");
   const [query, setQuery] = React.useState("");
   const [personId, setPersonId] = React.useState<string | null>(null);
@@ -603,7 +603,11 @@ function PersonPanel({
                     </Button>
                   )}
                 </div>
-              ) : null}
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {membership?.status === "active" ? "" : "Entscheidet die Leitung"}
+                </span>
+              )}
             </li>
           );
         })}

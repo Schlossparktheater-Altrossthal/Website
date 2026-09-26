@@ -36,3 +36,5 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 - Mobil öffnet die Detailansicht als Bottom-Sheet, ab `lg` steht sie rechts daneben.
 - Code: `src/lib/departments/assignments.ts` (Daten), `produktionen/actions/assignments.ts` (Actions, Benachrichtigung an die Person), `produktionen/zuweisung/`.
 - Gewerke gehören zu einer Produktion; Vorlagen: `DepartmentTemplate` (Wunsch-Codes → Gewerk), Anlage über `ensureProductionDepartments`.
+- Leitungen: Wer ein Gewerk leitet, sieht „Teams & Zuweisung“ im Menü (auch ohne Produktionsrecht), startet in der Gewerke-Ansicht und sieht nur die eigenen Gewerke. Eine Person kann in einem Gewerk Leitung und in anderen Mitglied sein. Die Leitung ernennen nur Regie/Board.
+- Keine automatische Zuteilung aus Wünschen: Wünsche sind nur Vorschläge, Zugehörigkeit entsteht ausschließlich durch Zuweisung oder angenommene Anfrage. Wer aktiv in einem Gewerk ist, erhält die Gewerkeplanung (`PRIVATE.DEPARTMENT.OWN.VIEW`) direkt aus der Zugehörigkeit.

@@ -113,6 +113,7 @@ export function filterMembersNavigationByPermissions(
   const filteredGroups = groups
     .map((group) => {
       const items = group.items.filter((item) => {
+        if (item.showForDepartmentLead && isDepartmentLead) return true;
         if (item.requiresBoardRole && !isBoard) return false;
         if (item.requiresDepartmentLead && !isDepartmentLead) return false;
         if (!item.permissionKey || !permissionSet) return true;

@@ -18,6 +18,8 @@ export interface MembersNavItem {
   permissionKey?: string;
   requiresBoardRole?: boolean;
   requiresDepartmentLead?: boolean;
+  /** Zusätzlich zur Berechtigung für Gewerk-Leitungen sichtbar (z. B. „Teams & Zuweisung“). */
+  showForDepartmentLead?: boolean;
   ariaLabel?: string;
   badge?: ReactNode;
 }
@@ -348,6 +350,7 @@ export const membersNavigation = [
         href: "/mitglieder/produktionen/zuweisung",
         label: "Teams & Zuweisung",
         permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
+        showForDepartmentLead: true,
         icon: DepartmentsIcon,
       },
       {
