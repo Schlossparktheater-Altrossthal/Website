@@ -133,14 +133,14 @@ Alles tweakcn-Theme-Tokens, hell/dunkel, keine festen Farben.
 
 ### Phase 1 – UI (ohne Schemaänderung)
 
-- [ ] 1.1 Tabs Mitglieder/Einladungen/Saison/Datenpflege, Navigation umbenennen (Mitglieder, Rollen & Rechte)
-- [ ] 1.2 `FilterBar`, `StatusDot`, `RoleChips` bauen; Mitgliedertabelle kompakt mit „⋯“-Menü, Standardfilter Aktiv
-- [ ] 1.3 Spalte Produktion/Funktion + Produktionsfilter
-- [ ] 1.4 Mobile Listenansicht mit BottomSheet-Filter und FAB
+- [x] 1.1 Tabs Mitglieder/Einladungen/Saison/Datenpflege, Navigation umbenennen (Mitglieder, Rollen & Rechte)
+- [x] 1.2 `FilterBar`, `StatusDot`, `RoleChips` bauen; Mitgliedertabelle kompakt mit „⋯“-Menü, Standardfilter Aktiv
+- [x] 1.3 Spalte Produktion/Funktion + Produktionsfilter
+- [x] 1.4 Mobile Listenansicht mit BottomSheet-Filter und FAB
 - [ ] 1.5 Mehrfachauswahl + Bulk-Aktionen
-- [ ] 1.6 Rechte-Matrix: deutsche Labels, sticky Kopf/Spalte, aufgeklappt, Owner/Admin-Spalte, Sofort-Speichern mit Rückgängig
-- [ ] 1.7 Tab „Rollen“ (Rollenliste statt Icons im Matrixkopf)
-- [ ] 1.8 Mobile Matrix: sticky Select, Zähler, Switches
+- [x] 1.6 Rechte-Matrix: deutsche Labels, sticky Kopf/Spalte, aufgeklappt, Owner/Admin-Spalte, Sofort-Speichern mit Rückgängig
+- [x] 1.7 Tab „Rollen“ (Rollenliste statt Icons im Matrixkopf)
+- [x] 1.8 Mobile Matrix: sticky Select, Zähler, Switches
 - [ ] 1.9 Saison-Assistent (Geschützte Rollen + Abschluss)
 - [ ] 1.10 Detailseite gliedern + „Effektive Rechte mit Herkunft“
 - [ ] 1.11 E2E-Tests + Screenshots (mobile, tablet, desktop, hell/dunkel), Staging, Release

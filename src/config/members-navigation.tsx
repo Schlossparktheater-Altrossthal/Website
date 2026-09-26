@@ -375,13 +375,13 @@ export const membersNavigation = [
     items: [
       {
         href: "/mitglieder/mitgliederverwaltung",
-        label: "Mitgliederverwaltung",
+        label: "Mitglieder",
         permissionKey: "PRIVATE.ADMIN.MEMBERS.MANAGE",
         icon: MembersAdminIcon,
       },
       {
         href: "/mitglieder/rechte",
-        label: "Rechteverwaltung",
+        label: "Rollen & Rechte",
         permissionKey: "PRIVATE.ADMIN.PERMISSIONS.MANAGE",
         icon: PermissionsIcon,
       },

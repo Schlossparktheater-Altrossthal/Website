@@ -10,6 +10,7 @@ type PermissionToggleProps = {
   disabled?: boolean;
   className?: string;
   onCheckedChange?: (checked: PermissionToggleState) => void;
+  "aria-label"?: string;
 };
 
 export function PermissionToggle({
@@ -17,6 +18,7 @@ export function PermissionToggle({
   disabled = false,
   className,
   onCheckedChange,
+  "aria-label": ariaLabel,
 }: PermissionToggleProps) {
   const isChecked = checked === true;
   const isIndeterminate = checked === "indeterminate";
@@ -25,6 +27,7 @@ export function PermissionToggle({
     <button
       type="button"
       role="checkbox"
+      aria-label={ariaLabel}
       aria-checked={isIndeterminate ? "mixed" : isChecked}
       disabled={disabled}
       onClick={() => onCheckedChange?.(isChecked ? false : true)}

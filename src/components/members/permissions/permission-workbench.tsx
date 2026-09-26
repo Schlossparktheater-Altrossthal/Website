@@ -31,6 +31,22 @@ export async function PermissionWorkbench() {
     }),
   ]);
 
+  const memberCounts: Record<string, number> = {};
+  await Promise.all(
+    roles.map(async (role) => {
+      memberCounts[role.id] = role.systemRole
+        ? await prisma.user.count({
+            where: {
+              deactivatedAt: null,
+              OR: [{ role: role.systemRole }, { roles: { some: { role: role.systemRole } } }],
+            },
+          })
+        : await prisma.userAppRole.count({
+            where: { roleId: role.id, user: { deactivatedAt: null } },
+          });
+    }),
+  );
+
   const permissionMap = new Map(permissions.map((permission) => [permission.key, permission]));
 
   const orderedPermissions = DEFAULT_PERMISSION_DEFINITIONS.map((definition) => {
@@ -82,6 +98,7 @@ export async function PermissionWorkbench() {
       departments={departments}
       roleGrants={roleGrantMap}
       departmentGrants={departmentGrantMap}
+      memberCounts={memberCounts}
     />
   );
 }

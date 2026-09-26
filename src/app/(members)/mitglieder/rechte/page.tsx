@@ -11,11 +11,12 @@ export default async function RechteVerwaltungPage() {
     return <div className="text-sm text-destructive">Kein Zugriff auf die Rechteverwaltung</div>;
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Rechteverwaltung</h1>
-        <p className="text-sm text-foreground/70">
-          Lege Rollen an und weise ihnen Rechte zu. Owner/Admin haben automatisch Vollzugriff.
+        <h1 className="text-2xl font-semibold">Rollen &amp; Rechte</h1>
+        <p className="text-sm text-muted-foreground">
+          Haken setzen erlaubt der Rolle das Recht. Änderungen gelten sofort. Rollen vergibst du in
+          der Mitgliederverwaltung.
         </p>
       </div>
       <PermissionWorkbench />

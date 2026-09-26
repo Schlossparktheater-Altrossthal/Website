@@ -123,13 +123,13 @@ const QUICK_ACTION_LINKS = [
   },
   {
     href: "/mitglieder/mitgliederverwaltung",
-    label: "Mitgliederverwaltung",
+    label: "Mitglieder",
     icon: UsersRoundIcon,
     permissionKey: "PRIVATE.ADMIN.MEMBERS.MANAGE",
   },
   {
     href: "/mitglieder/rechte",
-    label: "Rechteverwaltung",
+    label: "Rollen & Rechte",
     icon: ShieldCheckIcon,
     permissionKey: "PRIVATE.ADMIN.PERMISSIONS.MANAGE",
   },
