@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/names";
 import { toast } from "sonner";
@@ -486,306 +486,318 @@ export function RehearsalCalendar({
         </DialogContent>
       </Dialog>
 
-      <Tabs
-        value={viewMode}
-        onValueChange={(value) => setViewMode(value as RehearsalCalendarView)}
-        className="space-y-6"
-      >
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-end">
-          <TabsList>
-            <TabsTrigger value="calendar">Kalenderansicht</TabsTrigger>
-            <TabsTrigger value="weekend">Wochenend-Fokus</TabsTrigger>
-          </TabsList>
-        </div>
+      <div className="space-y-6">
+        <SegmentedControl
+          value={viewMode}
+          onValueChange={setViewMode}
+          aria-label="Kalenderansicht"
+          size="md"
+          fullWidth
+          className="sm:w-auto"
+          options={[
+            { value: "calendar", label: "Kalenderansicht" },
+            { value: "weekend", label: "Wochenend-Fokus" },
+          ]}
+        />
 
-        <TabsContent value="calendar" className="space-y-6">
-          <MonthCalendar
-            month={currentMonth}
-            onMonthChange={setCurrentMonth}
-            title={currentMonthLabel}
-            subtitle="Monatsansicht · Umschalter für Wochenend-Fokus oben nutzen"
-            className="rounded-3xl border border-border/60 bg-card/80 p-2 shadow-sm sm:p-3"
-            headerActions={
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handlePlanNextWeekend}
-                className="w-full sm:w-auto px-4"
-              >
-                Probe fürs Wochenende planen
-              </Button>
-            }
-            renderDay={(day) => {
-              const dayBlocked = blockedByDay.get(day.key) ?? [];
-              const dayRehearsals = rehearsalsByDay.get(day.key) ?? [];
-              const blockedCount = dayBlocked.length;
-              const availableCount = Math.max(0, memberCount - blockedCount);
-              const availRatio = memberCount > 0 ? availableCount / memberCount : 0;
-              const availClamped = Math.max(0, Math.min(1, availRatio));
-              const availableLabel =
-                memberCount > 0
-                  ? `${availableCount} / ${memberCount} verfügbar`
-                  : `${availableCount} verfügbar`;
-              const rehearsalSummary = dayRehearsals.length
-                ? `${dayRehearsals.length} ${
-                    dayRehearsals.length === 1 ? "Probe" : "Proben"
-                  } geplant`
-                : "Noch frei";
-              const displayedRehearsals = dayRehearsals.slice(0, 2);
-              const remainingCount = Math.max(0, dayRehearsals.length - displayedRehearsals.length);
-              const isWeekend = WEEKEND_DAY_INDICES.has(day.date.getDay());
-              const isSelected = selectedDayKey === day.key;
-
-              const ariaLabelParts: string[] = [
-                format(day.date, "EEEE, d. MMMM yyyy", { locale: de }),
-              ];
-              if (isWeekend) {
-                ariaLabelParts.push("Wochenendtag");
+        {viewMode === "calendar" ? (
+          <div className="space-y-6">
+            <MonthCalendar
+              month={currentMonth}
+              onMonthChange={setCurrentMonth}
+              title={currentMonthLabel}
+              subtitle="Monatsansicht · Umschalter für Wochenend-Fokus oben nutzen"
+              className="rounded-3xl border border-border/60 bg-card/80 p-2 shadow-sm sm:p-3"
+              headerActions={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handlePlanNextWeekend}
+                  className="w-full sm:w-auto px-4"
+                >
+                  Probe fürs Wochenende planen
+                </Button>
               }
-              ariaLabelParts.push(
-                memberCount > 0
-                  ? `${availableCount} von ${memberCount} Mitgliedern verfügbar`
-                  : `${availableCount} verfügbar`,
-              );
-              ariaLabelParts.push(
-                dayRehearsals.length
+              renderDay={(day) => {
+                const dayBlocked = blockedByDay.get(day.key) ?? [];
+                const dayRehearsals = rehearsalsByDay.get(day.key) ?? [];
+                const blockedCount = dayBlocked.length;
+                const availableCount = Math.max(0, memberCount - blockedCount);
+                const availRatio = memberCount > 0 ? availableCount / memberCount : 0;
+                const availClamped = Math.max(0, Math.min(1, availRatio));
+                const availableLabel =
+                  memberCount > 0
+                    ? `${availableCount} / ${memberCount} verfügbar`
+                    : `${availableCount} verfügbar`;
+                const rehearsalSummary = dayRehearsals.length
                   ? `${dayRehearsals.length} ${
                       dayRehearsals.length === 1 ? "Probe" : "Proben"
                     } geplant`
-                  : "Keine Probe geplant",
-              );
+                  : "Noch frei";
+                const displayedRehearsals = dayRehearsals.slice(0, 2);
+                const remainingCount = Math.max(
+                  0,
+                  dayRehearsals.length - displayedRehearsals.length,
+                );
+                const isWeekend = WEEKEND_DAY_INDICES.has(day.date.getDay());
+                const isSelected = selectedDayKey === day.key;
 
-              return {
-                onClick: () => handleDaySelect(day),
-                className: cn(
-                  "transition",
-                  dayRehearsals.length > 0 && "border-primary/50 bg-primary/5",
-                  availRatio <= 0.5 && "border-destructive/60 bg-destructive/10",
-                  availRatio > 0.5 && availRatio <= 0.75 && "border-warning/60 bg-warning/10",
-                  isSelected && "border-primary/70 bg-primary/10",
-                ),
-                "aria-label": ariaLabelParts.join(". "),
-                "aria-pressed": isSelected,
-                content: (
-                  <div className="flex h-full flex-col justify-between gap-2.5 text-[11px] sm:text-xs">
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="space-y-0.5">
-                        <p
-                          className={cn(
-                            "font-semibold leading-tight text-foreground",
-                            !dayRehearsals.length && "hidden sm:block",
-                          )}
-                        >
-                          {rehearsalSummary}
-                        </p>
-                        <p className="hidden text-[10px] text-muted-foreground sm:block">
-                          {availableLabel}
-                        </p>
+                const ariaLabelParts: string[] = [
+                  format(day.date, "EEEE, d. MMMM yyyy", { locale: de }),
+                ];
+                if (isWeekend) {
+                  ariaLabelParts.push("Wochenendtag");
+                }
+                ariaLabelParts.push(
+                  memberCount > 0
+                    ? `${availableCount} von ${memberCount} Mitgliedern verfügbar`
+                    : `${availableCount} verfügbar`,
+                );
+                ariaLabelParts.push(
+                  dayRehearsals.length
+                    ? `${dayRehearsals.length} ${
+                        dayRehearsals.length === 1 ? "Probe" : "Proben"
+                      } geplant`
+                    : "Keine Probe geplant",
+                );
+
+                return {
+                  onClick: () => handleDaySelect(day),
+                  className: cn(
+                    "transition",
+                    dayRehearsals.length > 0 && "border-primary/50 bg-primary/5",
+                    availRatio <= 0.5 && "border-destructive/60 bg-destructive/10",
+                    availRatio > 0.5 && availRatio <= 0.75 && "border-warning/60 bg-warning/10",
+                    isSelected && "border-primary/70 bg-primary/10",
+                  ),
+                  "aria-label": ariaLabelParts.join(". "),
+                  "aria-pressed": isSelected,
+                  content: (
+                    <div className="flex h-full flex-col justify-between gap-2.5 text-[11px] sm:text-xs">
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="space-y-0.5">
+                          <p
+                            className={cn(
+                              "font-semibold leading-tight text-foreground",
+                              !dayRehearsals.length && "hidden sm:block",
+                            )}
+                          >
+                            {rehearsalSummary}
+                          </p>
+                          <p className="hidden text-[10px] text-muted-foreground sm:block">
+                            {availableLabel}
+                          </p>
+                        </div>
+                      </div>
+                      {dayRehearsals.length ? (
+                        <ul className="space-y-1.5">
+                          {displayedRehearsals.map((entry) => {
+                            const startDate = parseISO(entry.start);
+                            const endDate = entry.end ? parseISO(entry.end) : null;
+                            const timeLabel = endDate
+                              ? `${fmtTime(startDate)} – ${fmtTime(endDate)}`
+                              : fmtTime(startDate);
+                            return (
+                              <li key={entry.id} className="flex items-center gap-1.5">
+                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-primary">
+                                  {timeLabel}
+                                </span>
+                                <span className="hidden truncate text-[10px] leading-snug text-muted-foreground sm:inline">
+                                  {entry.title}
+                                </span>
+                              </li>
+                            );
+                          })}
+                          {remainingCount > 0 ? (
+                            <li className="text-[10px] font-medium text-muted-foreground">
+                              +{remainingCount} weitere {remainingCount === 1 ? "Probe" : "Proben"}
+                            </li>
+                          ) : null}
+                        </ul>
+                      ) : (
+                        <span className="hidden text-[10px] text-muted-foreground sm:inline">
+                          Keine Proben geplant
+                        </span>
+                      )}
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                          <span
+                            className={cn(
+                              "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
+                              availRatio <= 0.5
+                                ? "bg-destructive/80"
+                                : availRatio <= 0.75
+                                  ? "bg-warning"
+                                  : "bg-primary/70",
+                            )}
+                            style={{ width: `${availClamped * 100}%` }}
+                            aria-hidden
+                          />
+                        </div>
+                        <span className="hidden text-[10px] font-medium text-muted-foreground sm:inline">
+                          {Math.round(availClamped * 100)}%
+                        </span>
                       </div>
                     </div>
-                    {dayRehearsals.length ? (
-                      <ul className="space-y-1.5">
-                        {displayedRehearsals.map((entry) => {
-                          const startDate = parseISO(entry.start);
-                          const endDate = entry.end ? parseISO(entry.end) : null;
-                          const timeLabel = endDate
-                            ? `${fmtTime(startDate)} – ${fmtTime(endDate)}`
-                            : fmtTime(startDate);
+                  ),
+                };
+              }}
+              additionalContent={
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="relative block h-1.5 w-10 overflow-hidden rounded-full bg-muted"
+                      aria-hidden
+                    >
+                      <span className="absolute inset-y-0 left-0 w-2/3 rounded-full bg-primary/70" />
+                    </span>
+                    <span>Balken = Anteil verfügbarer Mitglieder</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-warning" />
+                    <span>51&nbsp;–&nbsp;75&nbsp;% verfügbar</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-destructive/70" />
+                    <span>Bis 50&nbsp;% verfügbar</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-gradient-to-br from-primary/60 via-primary/20 to-transparent" />
+                    <span>Freitag bis Sonntag hervorgehoben</span>
+                  </div>
+                </div>
+              }
+            />
+          </div>
+        ) : null}
+
+        {viewMode === "weekend" ? (
+          <div>
+            {weekendFocusGroups.length ? (
+              <div className="rounded-3xl border border-border/60 bg-background/90 p-5 shadow-sm">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold">Wochenend-Fokus</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Freitag bis Sonntag immer im Blick. Tippe auf eine Karte, um den Tagesplan zu
+                    öffnen.
+                  </p>
+                </div>
+                <div className="mt-4 space-y-5">
+                  {weekendFocusGroups.map((group) => (
+                    <div key={group.key} className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <span className="rounded-full bg-muted px-3 py-1 text-xs">
+                          KW {group.weekNumber}
+                        </span>
+                        <span className="text-[10px] font-medium normal-case text-muted-foreground">
+                          {group.isoYear}
+                        </span>
+                        {group.rangeLabel ? (
+                          <span className="text-[10px] font-medium normal-case text-muted-foreground/80">
+                            {group.rangeLabel}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] sm:grid sm:auto-rows-fr sm:grid-cols-3 sm:gap-5 lg:grid lg:grid-cols-4 lg:overflow-visible">
+                        {group.days.map((entry) => {
+                          const dayBlocked = blockedByDay.get(entry.key) ?? [];
+                          const dayRehearsals = rehearsalsByDay.get(entry.key) ?? [];
+                          const blockedCount = dayBlocked.length;
+                          const availableCount = Math.max(0, memberCount - blockedCount);
+                          const availRatio = memberCount > 0 ? availableCount / memberCount : 0;
+                          const availClamped = Math.max(0, Math.min(1, availRatio));
+                          const isSelected = selectedDayKey === entry.key;
+                          const summary = dayRehearsals.length
+                            ? `${dayRehearsals.length} ${
+                                dayRehearsals.length === 1 ? "Probe" : "Proben"
+                              }`
+                            : "Noch frei";
+                          const firstRehearsal = dayRehearsals[0];
+                          const timePreview = firstRehearsal
+                            ? (() => {
+                                const startDate = parseISO(firstRehearsal.start);
+                                const endDate = firstRehearsal.end
+                                  ? parseISO(firstRehearsal.end)
+                                  : null;
+                                const startLabel = fmtTime(startDate);
+                                const endLabel = endDate ? fmtTime(endDate) : null;
+                                return endLabel
+                                  ? `${startLabel} – ${endLabel}`
+                                  : `Start ${startLabel}`;
+                              })()
+                            : null;
+                          const label = format(entry.date, "EEE, d. MMM", {
+                            locale: de,
+                          });
+
                           return (
-                            <li key={entry.id} className="flex items-center gap-1.5">
-                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-primary">
-                                {timeLabel}
-                              </span>
-                              <span className="hidden truncate text-[10px] leading-snug text-muted-foreground sm:inline">
-                                {entry.title}
-                              </span>
-                            </li>
+                            <button
+                              key={entry.key}
+                              type="button"
+                              onClick={() => {
+                                handleSelectDayByKey(entry.key);
+                                setPlanOpen(true);
+                              }}
+                              className={cn(
+                                "group relative flex min-w-[200px] snap-start flex-col rounded-2xl border border-border/60 bg-card/70 p-5 text-left transition hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-w-0 sm:h-full",
+                                isSelected && "border-primary/60 bg-primary/10 shadow-lg",
+                              )}
+                              aria-pressed={isSelected}
+                              aria-label={`Wochenende ${label}: ${summary}`}
+                            >
+                              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                <span>{format(entry.date, "EEE", { locale: de })}</span>
+                                <span>{format(entry.date, "d. MMM", { locale: de })}</span>
+                              </div>
+                              <div className="mt-2 text-sm font-semibold text-foreground">
+                                {summary}
+                              </div>
+                              <div className="mt-2 flex items-center gap-2.5 text-[10px] text-muted-foreground">
+                                <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                  <span
+                                    className={cn(
+                                      "absolute inset-y-0 left-0 rounded-full",
+                                      availRatio <= 0.5
+                                        ? "bg-destructive/80"
+                                        : availRatio <= 0.75
+                                          ? "bg-warning"
+                                          : "bg-primary/70",
+                                    )}
+                                    style={{ width: `${availClamped * 100}%` }}
+                                    aria-hidden
+                                  />
+                                </div>
+                                <span>
+                                  {availableCount}
+                                  {memberCount ? ` / ${memberCount}` : ""}
+                                </span>
+                              </div>
+                              {timePreview ? (
+                                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-muted px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground">
+                                  <span
+                                    className="h-1.5 w-1.5 rounded-full bg-primary"
+                                    aria-hidden
+                                  />
+                                  {timePreview}
+                                </div>
+                              ) : null}
+                            </button>
                           );
                         })}
-                        {remainingCount > 0 ? (
-                          <li className="text-[10px] font-medium text-muted-foreground">
-                            +{remainingCount} weitere {remainingCount === 1 ? "Probe" : "Proben"}
-                          </li>
-                        ) : null}
-                      </ul>
-                    ) : (
-                      <span className="hidden text-[10px] text-muted-foreground sm:inline">
-                        Keine Proben geplant
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ease-out",
-                            availRatio <= 0.5
-                              ? "bg-destructive/80"
-                              : availRatio <= 0.75
-                                ? "bg-warning"
-                                : "bg-primary/70",
-                          )}
-                          style={{ width: `${availClamped * 100}%` }}
-                          aria-hidden
-                        />
                       </div>
-                      <span className="hidden text-[10px] font-medium text-muted-foreground sm:inline">
-                        {Math.round(availClamped * 100)}%
-                      </span>
                     </div>
-                  </div>
-                ),
-              };
-            }}
-            additionalContent={
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="relative block h-1.5 w-10 overflow-hidden rounded-full bg-muted"
-                    aria-hidden
-                  >
-                    <span className="absolute inset-y-0 left-0 w-2/3 rounded-full bg-primary/70" />
-                  </span>
-                  <span>Balken = Anteil verfügbarer Mitglieder</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-warning" />
-                  <span>51&nbsp;–&nbsp;75&nbsp;% verfügbar</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-destructive/70" />
-                  <span>Bis 50&nbsp;% verfügbar</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-gradient-to-br from-primary/60 via-primary/20 to-transparent" />
-                  <span>Freitag bis Sonntag hervorgehoben</span>
+                  ))}
                 </div>
               </div>
-            }
-          />
-        </TabsContent>
-
-        <TabsContent value="weekend">
-          {weekendFocusGroups.length ? (
-            <div className="rounded-3xl border border-border/60 bg-background/90 p-5 shadow-sm">
-              <div className="space-y-1">
-                <h3 className="text-sm font-semibold">Wochenend-Fokus</h3>
-                <p className="text-xs text-muted-foreground">
-                  Freitag bis Sonntag immer im Blick. Tippe auf eine Karte, um den Tagesplan zu
-                  öffnen.
-                </p>
+            ) : (
+              <div className="rounded-3xl border border-border/60 bg-card/70 p-6 text-sm text-muted-foreground shadow-sm">
+                Aktuell gibt es keine Wochenendtermine im gewählten Zeitraum. Nutze die
+                Kalenderansicht, um andere Tage zu planen.
               </div>
-              <div className="mt-4 space-y-5">
-                {weekendFocusGroups.map((group) => (
-                  <div key={group.key} className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      <span className="rounded-full bg-muted px-3 py-1 text-xs">
-                        KW {group.weekNumber}
-                      </span>
-                      <span className="text-[10px] font-medium normal-case text-muted-foreground">
-                        {group.isoYear}
-                      </span>
-                      {group.rangeLabel ? (
-                        <span className="text-[10px] font-medium normal-case text-muted-foreground/80">
-                          {group.rangeLabel}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] sm:grid sm:auto-rows-fr sm:grid-cols-3 sm:gap-5 lg:grid lg:grid-cols-4 lg:overflow-visible">
-                      {group.days.map((entry) => {
-                        const dayBlocked = blockedByDay.get(entry.key) ?? [];
-                        const dayRehearsals = rehearsalsByDay.get(entry.key) ?? [];
-                        const blockedCount = dayBlocked.length;
-                        const availableCount = Math.max(0, memberCount - blockedCount);
-                        const availRatio = memberCount > 0 ? availableCount / memberCount : 0;
-                        const availClamped = Math.max(0, Math.min(1, availRatio));
-                        const isSelected = selectedDayKey === entry.key;
-                        const summary = dayRehearsals.length
-                          ? `${dayRehearsals.length} ${
-                              dayRehearsals.length === 1 ? "Probe" : "Proben"
-                            }`
-                          : "Noch frei";
-                        const firstRehearsal = dayRehearsals[0];
-                        const timePreview = firstRehearsal
-                          ? (() => {
-                              const startDate = parseISO(firstRehearsal.start);
-                              const endDate = firstRehearsal.end
-                                ? parseISO(firstRehearsal.end)
-                                : null;
-                              const startLabel = fmtTime(startDate);
-                              const endLabel = endDate ? fmtTime(endDate) : null;
-                              return endLabel
-                                ? `${startLabel} – ${endLabel}`
-                                : `Start ${startLabel}`;
-                            })()
-                          : null;
-                        const label = format(entry.date, "EEE, d. MMM", {
-                          locale: de,
-                        });
-
-                        return (
-                          <button
-                            key={entry.key}
-                            type="button"
-                            onClick={() => {
-                              handleSelectDayByKey(entry.key);
-                              setPlanOpen(true);
-                            }}
-                            className={cn(
-                              "group relative flex min-w-[200px] snap-start flex-col rounded-2xl border border-border/60 bg-card/70 p-5 text-left transition hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-w-0 sm:h-full",
-                              isSelected && "border-primary/60 bg-primary/10 shadow-lg",
-                            )}
-                            aria-pressed={isSelected}
-                            aria-label={`Wochenende ${label}: ${summary}`}
-                          >
-                            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                              <span>{format(entry.date, "EEE", { locale: de })}</span>
-                              <span>{format(entry.date, "d. MMM", { locale: de })}</span>
-                            </div>
-                            <div className="mt-2 text-sm font-semibold text-foreground">
-                              {summary}
-                            </div>
-                            <div className="mt-2 flex items-center gap-2.5 text-[10px] text-muted-foreground">
-                              <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                <span
-                                  className={cn(
-                                    "absolute inset-y-0 left-0 rounded-full",
-                                    availRatio <= 0.5
-                                      ? "bg-destructive/80"
-                                      : availRatio <= 0.75
-                                        ? "bg-warning"
-                                        : "bg-primary/70",
-                                  )}
-                                  style={{ width: `${availClamped * 100}%` }}
-                                  aria-hidden
-                                />
-                              </div>
-                              <span>
-                                {availableCount}
-                                {memberCount ? ` / ${memberCount}` : ""}
-                              </span>
-                            </div>
-                            {timePreview ? (
-                              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-muted px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground">
-                                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                                {timePreview}
-                              </div>
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-3xl border border-border/60 bg-card/70 p-6 text-sm text-muted-foreground shadow-sm">
-              Aktuell gibt es keine Wochenendtermine im gewählten Zeitraum. Nutze die
-              Kalenderansicht, um andere Tage zu planen.
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            )}
+          </div>
+        ) : null}
+      </div>
 
       {/* Migration completed: All calendar interactions now use draft-based system */}
     </section>

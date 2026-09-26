@@ -25,7 +25,7 @@ type SegmentedControlProps<T extends string> = {
   activeClassName?: (value: T) => string | undefined;
 };
 
-/** Kleine Auswahl aus 2–4 Optionen (Filter, Status). Für Seitenbereiche `Tabs` verwenden. */
+/** Kleine Auswahl aus 2–4 Optionen (Filter, Status). Für Seitenbereiche `SectionNav` verwenden. */
 export function SegmentedControl<T extends string>({
   value,
   onValueChange,
