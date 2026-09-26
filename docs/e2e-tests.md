@@ -34,6 +34,10 @@ pnpm e2e:screenshots -- --role admin /mitglieder /mitglieder/profil
 pnpm e2e:screenshots -- --viewport all
 ```
 
+Im `next dev`-Betrieb braucht der Test-Login **kein** Secret – geprüft wird es nur in
+Production-Builds. Ein lokales `E2E_LOGIN_SECRET` in `.env` wird von den Skripten ebenfalls
+gelesen, `.env.e2e.local` hat dabei Vorrang.
+
 ## CI
 
 Der `playwright`-Job in `.github/workflows/ci.yml` bringt einen Postgres-16-Service mit, wendet
@@ -51,6 +55,9 @@ pnpm e2e:screenshots -- --role member --viewport tablet-portrait
 ```
 
 - `E2E_ROLES=member,admin,owner` wählt die Rollen für das Setup (Standard: `member,admin`).
+- `pnpm e2e:env` braucht einen erreichbaren kubectl-Kontext. Ohne gesetztes `KUBECONFIG` fällt das
+  Skript auf `~/.kube/theater-config-lens` zurück, wenn `~/.kube/config` fehlt. Der Cluster ist nur
+  im LAN erreichbar – `kubectl get ns` prüft den Zugang.
 - Screenshots: hell + dunkel, ganze Seite, nach `test-results/screenshots/<Zeit>/<viewport>/`
   oder `--out <dir>` (dort ebenfalls in `<viewport>`-Unterordnern). Nicht committen (keine Binärdateien im Repo).
 - Das Skript wartet auf `.animate-pulse`/`aria-busy`, damit die Client-Session geladen ist.
@@ -96,6 +103,18 @@ horizontaler Überlauf.
 
 Die Überlaufmessung meldet nur Elemente, die nicht in einem inneren Scroll-Container liegen –
 breite Tabellen und Kalender dürfen laut `AGENTS.md` innerhalb ihrer Karte scrollen.
+
+### Live verfolgen
+
+```bash
+pnpm ui:check /mitglieder/proben --headed --slow-mo 200 --keep-open
+```
+
+`--headed` öffnet ein echtes Browserfenster mit normalen Klicks (gemessen ~60 Animation-Frames pro
+Sekunde, auch wenn das Fenster hinter VS Code liegt), `--slow-mo` verlangsamt die Schritte
+(Millisekunden je Aktion) und `--keep-open` lässt das Fenster nach dem Lauf offen, bis Enter
+gedrückt wird. Die Throttle-Flags in `scripts/lib/e2e-session.mjs` sind ein Sicherheitsnetz gegen
+Chromiums Hintergrund-Drosselung, die Klicks mit `element is not stable` abbrechen lässt.
 
 ### Warum dieser Check headless läuft
 
