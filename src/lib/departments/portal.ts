@@ -124,7 +124,14 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
         where: { start: { gte: now } },
         orderBy: { start: "asc" },
         take: 10,
-        select: { id: true, title: true, start: true, end: true, location: true },
+        select: {
+          id: true,
+          title: true,
+          start: true,
+          end: true,
+          location: true,
+          responses: { where: { userId }, select: { status: true } },
+        },
       },
     },
   });
@@ -171,7 +178,10 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
     members,
     requests,
     viewerRole: members.find((member) => member.id === userId)?.role ?? null,
-    events: department.events,
+    events: department.events.map(({ responses, ...event }) => ({
+      ...event,
+      myResponse: responses[0]?.status ?? null,
+    })),
     taskCounts: countTasks(department.tasks.map((task) => task.status)),
     myTasks: myTasks.map(toTaskItem),
     openTasks: openTasks.map(toTaskItem),

@@ -90,7 +90,7 @@ export default async function MyRehearsalsPage() {
   const membershipByDepartment = new Map(memberships.map((entry) => [entry.departmentId, entry]));
 
   const departmentEventsRaw = membershipByDepartment.size
-    ? await prisma.departmentEvent.findMany({
+    ? await prisma.calendarEvent.findMany({
         where: {
           departmentId: { in: Array.from(membershipByDepartment.keys()) },
           start: { gte: now },
@@ -117,7 +117,8 @@ export default async function MyRehearsalsPage() {
     location: rehearsal.location,
   }));
 
-  const upcomingDepartmentEvents: UpcomingDepartmentEvent[] = departmentEventsRaw.map((event) => {
+  const upcomingDepartmentEvents = departmentEventsRaw.flatMap<UpcomingDepartmentEvent>((event) => {
+    if (!event.departmentId || !event.department) return [];
     const membership = membershipByDepartment.get(event.departmentId);
     return {
       kind: "department" as const,

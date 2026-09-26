@@ -20,6 +20,8 @@ export async function readCalendarEvents({ from, to, showId }: Range): Promise<C
   const events = await prisma.calendarEvent.findMany({
     where: {
       start: { lte: to },
+      // Gewerk-Termine gehören ins Gewerk-Portal, nicht in den allgemeinen Kalender.
+      departmentId: null,
       AND: [{ OR: [{ start: { gte: from } }, { end: { gte: from } }] }, showScope(showId)],
     },
     orderBy: { start: "asc" },
@@ -28,7 +30,7 @@ export async function readCalendarEvents({ from, to, showId }: Range): Promise<C
 }
 
 export async function readCalendarEventById(id: string) {
-  const event = await prisma.calendarEvent.findUnique({ where: { id } });
+  const event = await prisma.calendarEvent.findFirst({ where: { id, departmentId: null } });
   return event ? toCalendarEntry(event) : null;
 }
 

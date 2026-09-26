@@ -330,7 +330,7 @@ model User {
   departmentTasksCreated          DepartmentTask[]           @relation("DepartmentTaskCreator")
   departmentMembershipsAssigned   DepartmentMembership[]     @relation("DepartmentMembershipAssignedBy")
   departmentTaskComments          DepartmentTaskComment[]    @relation("DepartmentTaskCommentAuthor")
-  departmentEventsCreated         DepartmentEvent[]
+  calendarEventResponses          CalendarEventResponse[]
   calendarEventsCreated           CalendarEvent[]
   departmentDocumentsUploaded     DepartmentDocument[]
   characterCastings               CharacterCasting[]
@@ -491,7 +491,7 @@ model Department {
   tasks                DepartmentTask[]
   boardColumns         DepartmentBoardColumn[]
   permissions          DepartmentPermission[]
-  events               DepartmentEvent[]
+  events               CalendarEvent[]
   documents            DepartmentDocument[]
 
   @@unique([showId, slug], name: "showId_slug")
@@ -597,23 +597,6 @@ model DepartmentPermission {
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([departmentId, permissionId])
-}
-
-model DepartmentEvent {
-  id           String     @id @default(cuid())
-  departmentId String
-  title        String
-  start        DateTime
-  end          DateTime?
-  location     String?
-  description  String?
-  createdById  String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
-
-  @@index([departmentId, start])
 }
 
 model DepartmentDocument {
@@ -1035,22 +1018,46 @@ model CalendarFeed {
 
 /// Termine der Organisation (Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
 model CalendarEvent {
-  id          String            @id @default(cuid())
-  title       String
-  kind        CalendarEventKind @default(OTHER)
-  start       DateTime
-  end         DateTime?
-  allDay      Boolean           @default(false)
-  location    String?
-  description String?
-  showId      String?
-  createdById String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  show        Show?             @relation(fields: [showId], references: [id], onDelete: SetNull)
-  createdBy   User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  id           String                  @id @default(cuid())
+  title        String
+  kind         CalendarEventKind       @default(OTHER)
+  start        DateTime
+  end          DateTime?
+  allDay       Boolean                 @default(false)
+  location     String?
+  description  String?
+  showId       String?
+  /// Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab.
+  departmentId String?
+  createdById  String?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  show         Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
+  department   Department?             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy    User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  responses    CalendarEventResponse[]
 
   @@index([start])
+  @@index([departmentId, start])
+}
+
+enum EventResponseStatus {
+  yes
+  maybe
+  no
+}
+
+/// Zu- oder Absage einer Person zu einem Termin.
+model CalendarEventResponse {
+  id        String              @id @default(cuid())
+  eventId   String
+  userId    String
+  status    EventResponseStatus
+  updatedAt DateTime            @updatedAt
+  event     CalendarEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
 }
 
 model BlockedDay {

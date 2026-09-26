@@ -24,7 +24,11 @@ async function authorise(showIds: Array<string | null | undefined> = [null]) {
 }
 
 async function readShowId(id: string) {
-  const event = await prisma.calendarEvent.findUnique({ where: { id }, select: { showId: true } });
+  // Gewerk-Termine werden im Gewerk-Portal gepflegt.
+  const event = await prisma.calendarEvent.findFirst({
+    where: { id, departmentId: null },
+    select: { showId: true },
+  });
   return event ? event.showId : undefined;
 }
 
@@ -75,7 +79,7 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   if (denied) return denied;
 
   try {
-    const result = await prisma.calendarEvent.deleteMany({ where: { id } });
+    const result = await prisma.calendarEvent.deleteMany({ where: { id, departmentId: null } });
     if (!result.count) {
       return NextResponse.json({ error: "Termin wurde nicht gefunden." }, { status: 404 });
     }

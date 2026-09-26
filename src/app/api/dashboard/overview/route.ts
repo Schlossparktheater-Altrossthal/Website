@@ -143,9 +143,10 @@ export async function GET() {
             select: { whatsappLinkVisitedAt: true },
           })
         : null,
-      prisma.departmentEvent.findMany({
+      prisma.calendarEvent.findMany({
         where: {
           start: { gt: now },
+          responses: { none: { userId, status: "no" } },
           department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
         },
         orderBy: { start: "asc" },
@@ -173,7 +174,7 @@ export async function GET() {
         },
       }),
       prisma.calendarEvent.findMany({
-        where: { start: { gt: now } },
+        where: { start: { gt: now }, departmentId: null },
         orderBy: { start: "asc" },
         take: 5,
         select: { id: true, title: true, kind: true, start: true, end: true, location: true },
@@ -260,8 +261,8 @@ export async function GET() {
         start: event.start.toISOString(),
         end: event.end?.toISOString() ?? null,
         location: event.location ?? null,
-        context: event.department.name,
-        href: `/mitglieder/meine-gewerke/${event.department.slug}`,
+        context: event.department?.name ?? null,
+        href: `/mitglieder/meine-gewerke/${event.department?.slug ?? ""}?ansicht=termine`,
       })),
       ...calendarEvents.map((event) => ({
         id: event.id,

@@ -123,6 +123,6 @@ Jede Phase einzeln auf Staging testbar; Schema-Änderungen additiv vor Alt-Entfe
 - [x] Phase 3 Portal Basis (2026-09-26: „Meine Teams“ + Portal Übersicht/Aufgaben/Team, Daten `src/lib/departments/portal.ts`; alte Komponenten department-card/event-planner ungenutzt → Phase 6 entfernen) (gemeinsames Team-Portal-Gerüst für Gewerke und Rollen)
 - [ ] Phase 3b Rollenportal (Szenen, Besetzung, Termine)
 - [x] Phase 4 Board (2026-09-27: `DepartmentBoardColumn` mit Status-Bedeutung, Position/Priorität/Kommentare, Migration `department_board`; Desktop Drag & Drop, mobil Spalten-Umschalter + Bottom-Sheet; Spalten verwalten Leitung/Vertretung/Regie)
-- [ ] Phase 5 Termine
+- [x] Phase 5 Termine (CalendarEvent mit departmentId, Zu-/Absagen, Sperrlisten-Hinweis, ICS/Dashboard)
 - [ ] Phase 6 Dateien/Module/Aufräumen
 - [ ] Phase 7 E2E/Release

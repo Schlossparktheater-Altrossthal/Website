@@ -10,10 +10,12 @@ import {
 } from "@/components/ui/action-icons";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { loadBoard } from "@/lib/departments/board";
+import { loadTeamEvents } from "@/lib/departments/events";
 import { loadDepartmentPortal } from "@/lib/departments/portal";
 import { cn } from "@/lib/utils";
 
 import { DepartmentBoard } from "../board/board";
+import { TeamEvents } from "../events/team-events";
 import {
   formatDue,
   formatEventDate,
@@ -23,7 +25,7 @@ import {
   ViewSwitcher,
 } from "../team-ui";
 
-type View = "uebersicht" | "aufgaben" | "team";
+type View = "uebersicht" | "aufgaben" | "termine" | "team";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -39,7 +41,8 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
   // Sichtbar für Mitglieder des Gewerks sowie Regie/Board.
   if (!portal || (!portal.viewerRole && !isManager)) notFound();
 
-  const view: View = ansicht === "aufgaben" || ansicht === "team" ? ansicht : "uebersicht";
+  const view: View =
+    ansicht === "aufgaben" || ansicht === "termine" || ansicht === "team" ? ansicht : "uebersicht";
   const basePath = `/mitglieder/meine-gewerke/${encodeURIComponent(portal.slug)}`;
   const canManage = isManager || portal.viewerRole === "lead";
   const leads = portal.members.filter((member) => member.role === "lead");
@@ -55,15 +58,26 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
       when: task.overdue ? "überfällig" : task.dueAt ? formatDue(task.dueAt) : "ohne Frist",
       detail: task.status === "doing" ? "In Arbeit" : null,
     })),
-    ...portal.events.slice(0, 5).map((event) => ({
-      key: `event-${event.id}`,
-      kind: "event" as const,
-      title: event.title,
-      at: event.start,
-      overdue: false,
-      when: formatEventDate(event.start),
-      detail: event.location,
-    })),
+    // Abgesagte Termine blenden wir aus, offene Antworten fallen auf.
+    ...portal.events
+      .filter((event) => event.myResponse !== "no")
+      .slice(0, 5)
+      .map((event) => ({
+        key: `event-${event.id}`,
+        kind: "event" as const,
+        title: event.title,
+        at: event.start,
+        overdue: false,
+        when: formatEventDate(event.start),
+        detail:
+          [
+            event.location,
+            portal.viewerRole && !event.myResponse ? "Antwort offen" : null,
+            event.myResponse === "maybe" ? "Vielleicht" : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || null,
+      })),
   ].sort(
     (a, b) =>
       Number(b.overdue) - Number(a.overdue) ||
@@ -128,9 +142,10 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         basePath={basePath}
         current={view}
         options={[
-          { value: "uebersicht", label: "Als Nächstes" },
-          { value: "aufgaben", label: `Aufgaben (${portal.openTasks.length})` },
-          { value: "team", label: `Team (${portal.members.length})` },
+          { value: "uebersicht", label: "Nächstes" },
+          { value: "aufgaben", label: `Aufgaben ${portal.openTasks.length}` },
+          { value: "termine", label: `Termine ${portal.events.length}` },
+          { value: "team", label: `Team ${portal.members.length}` },
         ]}
       />
 
@@ -168,7 +183,10 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
                       <ListTodoIcon className="h-4 w-4" />
                     )}
                   </span>
-                  <span className="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2">
+                  <Link
+                    href={`${basePath}?ansicht=${item.kind === "event" ? "termine" : "aufgaben"}`}
+                    className="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2 transition-colors hover:bg-muted/40"
+                  >
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-sm font-medium">{item.title}</span>
                       <span
@@ -185,7 +203,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
                         {item.detail}
                       </span>
                     ) : null}
-                  </span>
+                  </Link>
                 </li>
               ))}
             </ol>
@@ -200,6 +218,14 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           data={await loadBoard(portal.id)}
           viewerId={userId}
           canEdit={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
+          canManage={isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"}
+        />
+      ) : null}
+
+      {view === "termine" ? (
+        <TeamEvents
+          data={await loadTeamEvents(portal.id, userId)}
+          canRespond={portal.viewerRole !== null}
           canManage={isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"}
         />
       ) : null}

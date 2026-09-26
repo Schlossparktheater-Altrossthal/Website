@@ -104,6 +104,7 @@ export async function collectFeedEvents(
     prisma.calendarEvent.findMany({
       where: {
         start: { lte: to },
+        departmentId: null,
         AND: [
           { OR: [{ start: { gte: from } }, { end: { gte: from } }] },
           {
@@ -116,13 +117,15 @@ export async function collectFeedEvents(
       },
       orderBy: { start: "asc" },
     }),
-    prisma.departmentEvent.findMany({
+    prisma.calendarEvent.findMany({
       where: {
         start: { gte: from, lte: to },
         department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
+        // Abgesagte Termine tauchen im eigenen Kalender nicht mehr auf.
+        responses: { none: { userId, status: "no" } },
       },
       orderBy: { start: "asc" },
-      include: { department: { select: { name: true } } },
+      include: { department: { select: { name: true, slug: true } } },
     }),
     includeBlockedDays
       ? prisma.blockedDay.findMany({
@@ -179,11 +182,14 @@ export async function collectFeedEvents(
   for (const event of departmentEvents) {
     events.push({
       uid: `department-event-${event.id}@${host}`,
-      summary: `${PREFIX}${event.title} (${event.department.name})`,
+      summary: `${PREFIX}${event.title} (${event.department?.name ?? "Gewerk"})`,
       start: { kind: "dateTime", value: event.start },
       end: { kind: "dateTime", value: timedEnd(event.start, event.end) },
       location: event.location,
-      description: withLink(event.description, "/mitglieder/meine-proben"),
+      description: withLink(
+        event.description,
+        `/mitglieder/meine-gewerke/${event.department?.slug ?? ""}?ansicht=termine`,
+      ),
       lastModified: event.updatedAt,
     });
   }
