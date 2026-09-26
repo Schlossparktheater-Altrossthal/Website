@@ -8,13 +8,24 @@ import { compareMembersByLastName, getUserDisplayName } from "@/lib/names";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+import { getActiveProduction } from "@/lib/active-production";
+import { currentMembershipWhere } from "@/lib/produktionen/status";
 
 import { EventPlanningClient, type PlanningAvailability, type PlanningMember } from "./page-client";
 
 export default async function EventPlanningPage() {
   const session = await requireAuth();
-  if (!(await hasPermission(session.user, CALENDAR_PLANNER_PERMISSION))) {
-    return <div className="text-sm text-destructive">Kein Zugriff auf die Terminplanung</div>;
+  const production = await getActiveProduction(session.user?.id);
+  const showId = production?.id ?? null;
+  const productionTitle = production ? (production.title ?? String(production.year)) : null;
+  if (!(await hasPermission(session.user, CALENDAR_PLANNER_PERMISSION, { showId }))) {
+    return (
+      <div className="text-sm text-destructive">
+        {productionTitle
+          ? `Kein Zugriff auf die Terminplanung von „${productionTitle}“.`
+          : "Kein Zugriff auf die Terminplanung"}
+      </div>
+    );
   }
 
   // Ab Vormonat, damit gerade vergangene Termine noch nachbearbeitet werden können.
@@ -22,9 +33,15 @@ export default async function EventPlanningPage() {
   const to = addMonths(from, 14);
 
   const [events, users] = await Promise.all([
-    readCalendarEvents({ from, to }),
+    // Termine der gewählten Produktion plus allgemeine; Verfügbarkeit ihrer Mitglieder.
+    readCalendarEvents({ from, to, showId }),
     prisma.user.findMany({
-      where: { deactivatedAt: null },
+      where: {
+        deactivatedAt: null,
+        ...(showId
+          ? { productionMemberships: { some: { showId, ...currentMembershipWhere() } } }
+          : {}),
+      },
       select: {
         id: true,
         firstName: true,
@@ -58,10 +75,21 @@ export default async function EventPlanningPage() {
     <div className="space-y-6">
       <PageHeader
         title="Terminplanung"
-        description="Termine der Organisation anlegen – mit Blick darauf, wer an dem Tag kann."
+        description={
+          productionTitle
+            ? `Termine für „${productionTitle}“ und allgemeine Vereinstermine – mit Blick darauf, wer aus der Produktion kann.`
+            : "Termine der Organisation anlegen – mit Blick darauf, wer an dem Tag kann."
+        }
         breadcrumbs={[membersNavigationBreadcrumb("/mitglieder/terminplanung")]}
       />
-      <EventPlanningClient events={events} members={members} availability={availability} />
+      <EventPlanningClient
+        events={events}
+        members={members}
+        availability={availability}
+        production={
+          production && productionTitle ? { id: production.id, title: productionTitle } : null
+        }
+      />
     </div>
   );
 }

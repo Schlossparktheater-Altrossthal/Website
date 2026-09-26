@@ -149,7 +149,7 @@ Alles tweakcn-Theme-Tokens, hell/dunkel, keine festen Farben.
 
 - [x] 2.1 Scope je Permission (`global`/`production`) in `DEFAULT_PERMISSION_DEFINITIONS`
 - [x] 2.2 `hasPermission`/`getUserPermissionKeys` mit optionalem `showId`; Tests
-- [x] 2.3 Proben-Detailseiten, Probenplanung (Übersicht nach Produktion + allgemeine, `ensurePlanner` mit Produktion, neue Proben bekommen die gewählte Produktion, Standard-Einladung = aktive Mitglieder der Produktion), Sperrliste (Team = Mitglieder der Produktion, Rechte pro Produktion; Sperrtermine bleiben pro Person), `api/rehearsals/blocked`
+- [x] 2.3 Proben-Detailseiten, Probenplanung (Übersicht nach Produktion + allgemeine, `ensurePlanner` mit Produktion, neue Proben bekommen die gewählte Produktion, Standard-Einladung = aktive Mitglieder der Produktion), Sperrliste (Team = Mitglieder der Produktion, Rechte pro Produktion; Sperrtermine bleiben pro Person), `api/rehearsals/blocked`, Terminplanung (Termine der Produktion + allgemeine, Dialog „Gilt für“, API-Rechte je Produktion des Termins; Bearbeiten löschte vorher die Produktion)
 - [x] 2.4 Entschieden: Spiegelung bleibt. Datencheck 2026-09-26 (Staging = Prod-Kopie): Ensemble/Technik haben nur „Körpermaße“, keine produktionsbezogenen Rechte; `UserRole` wird noch von Authentik-Gruppen und Rollenfiltern genutzt. Produktionsbezogene Prüfungen ignorieren die Spiegelung über `scopeSystemRolesToProduction`.
 - [ ] 2.5 Zurückgestellt: „regie“ hat keine Rechte und ist einer Person zugewiesen – als `function` („Regie“) in der Produktionsmitgliedschaft pflegen und die eigene Rolle dann löschen (manuell, kein Code nötig).
 - [x] 2.6 Matrix-Umschalter Global/Produktion, Scope-Badges

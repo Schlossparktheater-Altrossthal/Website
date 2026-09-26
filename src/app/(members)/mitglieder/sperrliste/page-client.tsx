@@ -37,6 +37,8 @@ export type BlocklistPageData = {
   canManageSettings: boolean;
   canExport: boolean;
   readOnly: boolean;
+  /** Gewählte Produktion, neue Termine gehören standardmäßig dazu. */
+  production?: { id: string; title: string } | null;
 };
 
 export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
@@ -203,6 +205,7 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
       <EventDialog
         state={eventDialog}
         onClose={() => setEventDialog(null)}
+        production={data.production ?? null}
         onSaved={(entry, previousId) =>
           setCalendarEntries((current) =>
             [...current.filter((item) => item.id !== (previousId ?? entry.id)), entry].sort(

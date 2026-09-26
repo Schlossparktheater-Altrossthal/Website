@@ -9,20 +9,26 @@ import { requireAuth } from "@/lib/rbac";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-async function authorise() {
+/** Planungsrecht in allen betroffenen Produktionen (bisherige und ggf. neue). */
+async function authorise(showIds: Array<string | null | undefined> = [null]) {
   const session = await requireAuth();
   if (!session.user?.id) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-  if (!(await hasPermission(session.user, CALENDAR_PLANNER_PERMISSION))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+  for (const showId of new Set(showIds.map((id) => id ?? null))) {
+    if (!(await hasPermission(session.user, CALENDAR_PLANNER_PERMISSION, { showId }))) {
+      return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+    }
   }
   return null;
 }
 
+async function readShowId(id: string) {
+  const event = await prisma.calendarEvent.findUnique({ where: { id }, select: { showId: true } });
+  return event ? event.showId : undefined;
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const denied = await authorise();
-  if (denied) return denied;
   const { id } = await params;
 
   const parsed = calendarEventInputSchema.safeParse(await request.json().catch(() => null));
@@ -35,10 +41,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const input = parsed.data;
   const { start, end } = resolveCalendarEventTimes(input);
-  const existing = await prisma.calendarEvent.findUnique({ where: { id }, select: { id: true } });
-  if (!existing) {
+  const existingShowId = await readShowId(id);
+  if (existingShowId === undefined) {
     return NextResponse.json({ error: "Termin wurde nicht gefunden." }, { status: 404 });
   }
+  const denied = await authorise([existingShowId, input.showId]);
+  if (denied) return denied;
 
   try {
     const event = await prisma.calendarEvent.update({
@@ -62,9 +70,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 export async function DELETE(_: Request, { params }: RouteParams) {
-  const denied = await authorise();
-  if (denied) return denied;
   const { id } = await params;
+  const denied = await authorise([(await readShowId(id)) ?? null]);
+  if (denied) return denied;
 
   try {
     const result = await prisma.calendarEvent.deleteMany({ where: { id } });

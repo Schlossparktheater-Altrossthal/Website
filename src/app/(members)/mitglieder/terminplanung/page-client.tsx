@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from "react";
 
-import { EventDialog, type EventDialogState } from "@/components/calendar/event-dialog";
+import {
+  EventDialog,
+  type EventDialogState,
+  type EventDialogProduction,
+} from "@/components/calendar/event-dialog";
 import { CalendarPlusIcon } from "@/components/ui/action-icons";
 import { AvailabilityBar } from "@/components/ui/availability-bar";
 import { StatusDot } from "@/components/ui/availability-status";
@@ -88,10 +92,12 @@ export function EventPlanningClient({
   events: initialEvents,
   members,
   availability,
+  production = null,
 }: {
   events: CalendarEntry[];
   members: PlanningMember[];
   availability: PlanningAvailability[];
+  production?: EventDialogProduction;
 }) {
   const [events, setEvents] = useState(initialEvents);
   const [dialog, setDialog] = useState<EventDialogState>(null);
@@ -202,6 +208,7 @@ export function EventPlanningClient({
             <Card variant="plain" size="flush" className="divide-y divide-border border-border">
               {list.map((event) => (
                 <EventRow
+                  general={Boolean(production) && !event.showId}
                   key={event.id}
                   event={event}
                   attendance={attendanceFor(event)}
@@ -217,6 +224,7 @@ export function EventPlanningClient({
       <EventDialog
         state={dialog}
         onClose={() => setDialog(null)}
+        production={production}
         onSaved={(entry, previousId) =>
           setEvents((current) =>
             [...current.filter((item) => item.id !== (previousId ?? entry.id)), entry].sort(
@@ -237,11 +245,14 @@ function EventRow({
   attendance,
   past,
   onEdit,
+  general = false,
 }: {
   event: CalendarEntry;
   attendance: Attendance[];
   past: boolean;
   onEdit: () => void;
+  /** Termin gilt für alle Produktionen. */
+  general?: boolean;
 }) {
   const [showAvailable, setShowAvailable] = useState(false);
   const blocked = attendance.filter((entry) => entry.answer === "blocked");
@@ -264,7 +275,12 @@ function EventRow({
             {event.title}
           </button>
           <p className="truncate text-xs text-muted-foreground">
-            {[getCalendarEntryKindLabel(event.kind), formatWhen(event), event.location]
+            {[
+              getCalendarEntryKindLabel(event.kind),
+              formatWhen(event),
+              event.location,
+              general ? "alle Produktionen" : null,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </p>

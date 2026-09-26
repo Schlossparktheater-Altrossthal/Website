@@ -33,6 +33,8 @@ export type CalendarEntry = {
   location: string | null;
   description: string | null;
   href: string | null;
+  /** Produktion des Eintrags; null = gilt für alle Produktionen. */
+  showId?: string | null;
 };
 
 export function getCalendarEntryKindLabel(kind: CalendarEntry["kind"]) {

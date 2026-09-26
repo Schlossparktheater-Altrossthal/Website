@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { TimeInput } from "@/components/ui/time-input";
@@ -42,9 +43,17 @@ type FormState = {
   endTime: string;
   location: string;
   description: string;
+  /** Produktion des Termins; null = alle Produktionen. */
+  showId: string | null;
 };
 
-function toFormState(state: NonNullable<EventDialogState>): FormState {
+/** Gewählte Produktion, der neue Termine standardmäßig zugeordnet werden. */
+export type EventDialogProduction = { id: string; title: string } | null;
+
+function toFormState(
+  state: NonNullable<EventDialogState>,
+  production: EventDialogProduction,
+): FormState {
   if (state.mode === "create") {
     return {
       title: "",
@@ -56,6 +65,7 @@ function toFormState(state: NonNullable<EventDialogState>): FormState {
       endTime: "",
       location: "",
       description: "",
+      showId: production?.id ?? null,
     };
   }
   const { entry } = state;
@@ -69,6 +79,7 @@ function toFormState(state: NonNullable<EventDialogState>): FormState {
     endTime: !entry.allDay && entry.end ? formatIsoTimeInTimeZone(entry.end) : "",
     location: entry.location ?? "",
     description: entry.description ?? "",
+    showId: entry.showId ?? null,
   };
 }
 
@@ -77,16 +88,23 @@ type EventDialogProps = {
   onClose: () => void;
   onSaved: (entry: CalendarEntry, previousId?: string) => void;
   onDeleted: (id: string) => void;
+  production?: EventDialogProduction;
 };
 
-export function EventDialog({ state, onClose, onSaved, onDeleted }: EventDialogProps) {
+export function EventDialog({
+  state,
+  onClose,
+  onSaved,
+  onDeleted,
+  production = null,
+}: EventDialogProps) {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
-    setForm(state ? toFormState(state) : null);
-  }, [state]);
+    setForm(state ? toFormState(state, production) : null);
+  }, [state, production]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => (current ? { ...current, [key]: value } : current));
@@ -117,6 +135,7 @@ export function EventDialog({ state, onClose, onSaved, onDeleted }: EventDialogP
             endTime: form.allDay ? null : form.endTime || null,
             location: form.location,
             description: form.description,
+            showId: form.showId,
           }),
         },
       );
@@ -164,7 +183,7 @@ export function EventDialog({ state, onClose, onSaved, onDeleted }: EventDialogP
     <>
       <ModalFormDialog
         title={editingId ? "Termin bearbeiten" : "Termin anlegen"}
-        description="Termine erscheinen im Kalender aller Mitglieder und im Dashboard."
+        description="Termine erscheinen im Kalender und im Dashboard der Mitglieder."
         open={Boolean(state)}
         onOpenChange={(open) => {
           if (!open) onClose();
@@ -275,6 +294,37 @@ export function EventDialog({ state, onClose, onSaved, onDeleted }: EventDialogP
                     onChange={(event) => update("endTime", event.target.value)}
                   />
                 </div>
+              </div>
+            ) : null}
+            {production || form.showId ? (
+              <div className="space-y-1.5">
+                <Label>Gilt für</Label>
+                <SegmentedControl
+                  aria-label="Gilt für"
+                  fullWidth
+                  value={form.showId ? "production" : "all"}
+                  onValueChange={(value) =>
+                    update(
+                      "showId",
+                      value === "production" ? (form.showId ?? production?.id ?? null) : null,
+                    )
+                  }
+                  options={[
+                    {
+                      value: "production",
+                      label:
+                        form.showId && form.showId !== production?.id
+                          ? "Andere Produktion"
+                          : (production?.title ?? "Produktion"),
+                    },
+                    { value: "all", label: "Alle Produktionen" },
+                  ]}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {form.showId
+                    ? "Erscheint nur in dieser Produktion."
+                    : "Erscheint in jeder Produktion, z. B. Vereinstermine."}
+                </p>
               </div>
             ) : null}
             <div className="space-y-1.5">

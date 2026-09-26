@@ -45,6 +45,7 @@ function toCalendarEntry(event: CalendarEvent): CalendarEntry {
     location: event.location,
     description: event.description,
     href: null,
+    showId: event.showId,
   };
 }
 
@@ -57,7 +58,15 @@ export async function readRehearsalEntries({ from, to, showId }: Range): Promise
       ...showScope(showId),
     },
     orderBy: { start: "asc" },
-    select: { id: true, title: true, start: true, end: true, location: true, description: true },
+    select: {
+      id: true,
+      title: true,
+      start: true,
+      end: true,
+      location: true,
+      description: true,
+      showId: true,
+    },
   });
   return rehearsals.map((rehearsal) => ({
     id: rehearsal.id,
@@ -71,6 +80,7 @@ export async function readRehearsalEntries({ from, to, showId }: Range): Promise
     location: rehearsal.location || null,
     description: rehearsal.description,
     href: "/mitglieder/meine-proben",
+    showId: rehearsal.showId,
   }));
 }
 

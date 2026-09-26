@@ -179,7 +179,13 @@ export default async function BlocklistPage() {
     activeProductionId
       ? prisma.show.findUnique({
           where: { id: activeProductionId },
-          select: { finalRehearsalWeekStart: true, finalRehearsalWeekEnd: true },
+          select: {
+            id: true,
+            title: true,
+            year: true,
+            finalRehearsalWeekStart: true,
+            finalRehearsalWeekEnd: true,
+          },
         })
       : null,
   ]);
@@ -226,6 +232,9 @@ export default async function BlocklistPage() {
     canManageSettings,
     canExport,
     readOnly: false,
+    production: production
+      ? { id: production.id, title: production.title ?? String(production.year) }
+      : null,
   };
 
   return (

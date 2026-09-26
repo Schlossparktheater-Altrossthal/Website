@@ -13,10 +13,6 @@ export async function POST(request: Request) {
   if (!userId) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-  if (!(await hasPermission(session.user, CALENDAR_PLANNER_PERMISSION))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
-
   const parsed = calendarEventInputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
@@ -26,6 +22,14 @@ export async function POST(request: Request) {
   }
 
   const input = parsed.data;
+  // Termine einer Produktion darf planen, wer dort planen darf.
+  if (
+    !(await hasPermission(session.user, CALENDAR_PLANNER_PERMISSION, {
+      showId: input.showId ?? null,
+    }))
+  ) {
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+  }
   const { start, end } = resolveCalendarEventTimes(input);
   try {
     const event = await prisma.calendarEvent.create({
