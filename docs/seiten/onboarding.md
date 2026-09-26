@@ -51,7 +51,7 @@ Fotoerlaubnis) sowie Rückkehrer-Aktualisierung und Talentprofile.
   weil Prozente wie ein gemeinsames 100-%-Budget wirkten.
 - Der frühere `<input type="range">` war auf Handys schwer zu greifen (16 px hoch, die Seite
   scrollte stattdessen). Der Radix-Regler reagiert auf die ganze Spur und sperrt beim Ziehen das
-  Scrollen (`touch-none`).
+  Scrollen nicht. Bei Touch bewegt nur der Griff den Wert; über die Spur scrollt die Seite (`touch-pan-y`, implizites Pointer-Capture wird freigegeben).
 
 ## Besonderheiten / Altlasten
 
