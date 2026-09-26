@@ -11,6 +11,7 @@ import { MembersAppShell } from "@/components/members/members-app-shell";
 import { SidebarProvider, SIDEBAR_COOKIE_NAME } from "@/components/ui/sidebar";
 import { getActiveProduction } from "@/lib/active-production";
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { getUserPermissionKeys } from "@/lib/permissions";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
@@ -114,8 +115,12 @@ export default async function MembersLayout({ children }: { children: React.Reac
       prisma.rehearsalAttendance.count({
         where: { userId, rehearsal: { status: { not: "DRAFT" } } },
       }),
-      prisma.departmentMembership.count({ where: { userId } }),
-      prisma.departmentMembership.count({ where: { userId, role: DEPARTMENT_LEAD_ROLE } }),
+      prisma.departmentMembership.count({
+        where: { userId, ...currentDepartmentMembershipWhere() },
+      }),
+      prisma.departmentMembership.count({
+        where: { userId, role: DEPARTMENT_LEAD_ROLE, ...currentDepartmentMembershipWhere() },
+      }),
     ]);
 
     departmentAssignmentCount = departmentAssignments;

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { isProductionRole } from "@/lib/produktionen/production-role-keys";
@@ -436,7 +437,10 @@ async function resolveRoleContext(
       role: true,
       roles: { select: { role: true } },
       appRoles: { select: { roleId: true } },
-      departmentMemberships: { select: { departmentId: true } },
+      departmentMemberships: {
+        where: currentDepartmentMembershipWhere(),
+        select: { departmentId: true },
+      },
     },
   });
 
@@ -633,7 +637,10 @@ export async function explainUserPermissions(userId: string): Promise<ExplainedP
       role: true,
       roles: { select: { role: true } },
       appRoles: { select: { role: { select: { id: true, name: true } } } },
-      departmentMemberships: { select: { department: { select: { id: true, name: true } } } },
+      departmentMemberships: {
+        where: currentDepartmentMembershipWhere(),
+        select: { department: { select: { id: true, name: true } } },
+      },
       productionMemberships: {
         where: {
           leftAt: null,

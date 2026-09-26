@@ -161,13 +161,14 @@ export function slugify(value: string) {
     .slice(0, 60);
 }
 
-export async function ensureUniqueDepartmentSlug(base: string, excludeId?: string) {
+export async function ensureUniqueDepartmentSlug(showId: string, base: string, excludeId?: string) {
   const normalized = base || `gewerk-${Math.random().toString(36).slice(2, 8)}`;
   let candidate = normalized;
   let counter = 2;
   while (true) {
     const existing = await prisma.department.findFirst({
       where: {
+        showId,
         slug: candidate,
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },

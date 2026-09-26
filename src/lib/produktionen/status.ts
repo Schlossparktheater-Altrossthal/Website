@@ -55,3 +55,14 @@ export function buildProductionStatusUpdate(
 export function shouldCloseMemberships(status: ProductionStatus): boolean {
   return !isCurrentProductionStatus(status);
 }
+
+/** Gewerk-Zugehörigkeit, die aktuell gilt: bestätigt, Gewerk nicht archiviert, Produktion laufend oder geplant. */
+export function currentDepartmentMembershipWhere(): Prisma.DepartmentMembershipWhereInput {
+  return {
+    status: "active",
+    department: {
+      archivedAt: null,
+      show: { status: { in: [...CURRENT_PRODUCTION_STATUSES] } },
+    },
+  };
+}

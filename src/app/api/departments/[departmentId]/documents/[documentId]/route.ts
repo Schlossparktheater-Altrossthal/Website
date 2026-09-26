@@ -39,7 +39,7 @@ export async function GET(
   const [hasGlobalAccess, membership] = await Promise.all([
     hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE"),
     prisma.departmentMembership.findFirst({
-      where: { departmentId, userId },
+      where: { departmentId, userId, status: "active" },
       select: { id: true },
     }),
   ]);

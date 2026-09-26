@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/members/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { requireAuth } from "@/lib/rbac";
 import {
   CheckSquareIcon,
@@ -39,7 +40,7 @@ export default async function DepartmentTodosPage() {
   }
 
   const memberships = await prisma.departmentMembership.findMany({
-    where: { userId },
+    where: { userId, ...currentDepartmentMembershipWhere() },
     select: {
       id: true,
       department: {

@@ -6,7 +6,10 @@ import { getAppBaseUrl } from "@/lib/app-url";
 import { buildIcsCalendar, type IcsEvent } from "@/lib/calendar/ics";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
 import { prisma } from "@/lib/prisma";
-import { currentMembershipWhere } from "@/lib/produktionen/status";
+import {
+  currentDepartmentMembershipWhere,
+  currentMembershipWhere,
+} from "@/lib/produktionen/status";
 
 /** Wie weit der Feed zurück- und vorausreicht. */
 const PAST_DAYS = 60;
@@ -116,7 +119,7 @@ export async function collectFeedEvents(
     prisma.departmentEvent.findMany({
       where: {
         start: { gte: from, lte: to },
-        department: { memberships: { some: { userId } } },
+        department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
       },
       orderBy: { start: "asc" },
       include: { department: { select: { name: true } } },

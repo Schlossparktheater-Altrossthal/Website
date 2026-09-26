@@ -53,12 +53,13 @@ export default async function ProduktionsGewerkePage() {
 
   const memberCount = activeProduction
     ? await prisma.departmentMembership.count({
-        where: {},
+        where: { status: "active", department: { showId: activeProduction.id } },
       })
     : 0;
 
   const departments = activeProduction
     ? await prisma.department.findMany({
+        where: { showId: activeProduction.id, archivedAt: null },
         select: {
           id: true,
           name: true,
@@ -72,6 +73,7 @@ export default async function ProduktionsGewerkePage() {
   const doneTaskCount = activeProduction
     ? await prisma.departmentTask.count({
         where: {
+          department: { showId: activeProduction.id },
           status: "done",
         },
       })

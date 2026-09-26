@@ -65,6 +65,20 @@ enum DepartmentMembershipRole {
   guest
 }
 
+/// Status der Zugehörigkeit zu einem Gewerk. `requested` = Anfrage/Wunsch, noch nicht entschieden.
+enum DepartmentMembershipStatus {
+  requested
+  active
+  left
+}
+
+/// Woher eine Gewerk-Zugehörigkeit stammt (Nachvollziehbarkeit für die Zuweisung).
+enum DepartmentAssignmentSource {
+  wish // aus dem Onboarding-Wunsch übernommen
+  self // von der Person selbst angefragt
+  assigned // von Regie/Leitung zugewiesen
+}
+
 enum CharacterCastingType {
   primary
   alternate
@@ -121,10 +135,10 @@ enum RolePreferenceDomain {
 }
 
 enum RehearsalProposalStatus {
-  proposed    // Automatisch vorgeschlagen
-  approved    // Von der Regie freigegeben
-  rejected    // Von der Regie abgelehnt
-  scheduled   // Als tatsächlicher Probentermin übernommen
+  proposed // Automatisch vorgeschlagen
+  approved // Von der Regie freigegeben
+  rejected // Von der Regie abgelehnt
+  scheduled // Als tatsächlicher Probentermin übernommen
 }
 
 // Availability (new, per-day granular)
@@ -142,34 +156,34 @@ enum BlockedDayKind {
 
 // Einheiten für Maße
 enum MeasurementUnit {
-  M     // Meter
-  CM    // Zentimeter
-  MM    // Millimeter
-  EU    // EU-Größe
+  M // Meter
+  CM // Zentimeter
+  MM // Millimeter
+  EU // EU-Größe
 }
 
 // Arten von Maßen
 enum MeasurementType {
-  HEIGHT        // Körperlänge
-  CHEST         // Brustumfang
-  WAIST         // Taillenumfang
-  HIPS          // Gesäßumfang
-  INSEAM        // Innenbeinlänge
-  OUTSEAM       // Außenbeinlänge
-  CHEST_DEPTH   // Brusttiefe
-  WAIST_LENGTH  // Taillenlänge
-  SHOULDER      // Rückenbreite
-  SLEEVE        // Armlänge
-  SHOE_SIZE     // Schuhgröße
-  HEAD          // Kopfumfang
+  HEIGHT // Körperlänge
+  CHEST // Brustumfang
+  WAIST // Taillenumfang
+  HIPS // Gesäßumfang
+  INSEAM // Innenbeinlänge
+  OUTSEAM // Außenbeinlänge
+  CHEST_DEPTH // Brusttiefe
+  WAIST_LENGTH // Taillenlänge
+  SHOULDER // Rückenbreite
+  SLEEVE // Armlänge
+  SHOE_SIZE // Schuhgröße
+  HEAD // Kopfumfang
 }
 
 // Schweregrad von Unverträglichkeiten
 enum AllergyLevel {
-  MILD         // Leicht (Unbehagen)
-  MODERATE     // Mittel (Allergische Reaktion)
-  SEVERE       // Schwer (Notfall möglich)
-  LETHAL       // Lebensbedrohlich
+  MILD // Leicht (Unbehagen)
+  MODERATE // Mittel (Allergische Reaktion)
+  SEVERE // Schwer (Notfall möglich)
+  LETHAL // Lebensbedrohlich
 }
 
 model AvailabilityDay {
@@ -188,7 +202,7 @@ model AvailabilityDay {
 model AvailabilityTemplate {
   id               String           @id @default(cuid())
   userId           String
-  weekday          Int              // 0=Sonntag … 6=Samstag
+  weekday          Int // 0=Sonntag … 6=Samstag
   kind             AvailabilityKind
   availableFromMin Int?
   availableToMin   Int?
@@ -261,86 +275,87 @@ enum IssueVisibility {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  firstName String?
-  lastName  String?
-  name      String?
-  email     String?  @unique
-  emailVerified DateTime?
-  role      Role     @default(member)
-  passwordHash String?
-  createdAt DateTime @default(now())
-  dateOfBirth DateTime?
-  deactivatedAt DateTime?
+  id                    String       @id @default(cuid())
+  firstName             String?
+  lastName              String?
+  name                  String?
+  email                 String?      @unique
+  emailVerified         DateTime?
+  role                  Role         @default(member)
+  passwordHash          String?
+  createdAt             DateTime     @default(now())
+  dateOfBirth           DateTime?
+  deactivatedAt         DateTime?
   /// Gesetzt, wenn personenbezogene Daten nach Ablauf der Aufbewahrungsfrist entfernt wurden.
-  anonymizedAt  DateTime?
-  sessionVersion Int      @default(0)
+  anonymizedAt          DateTime?
+  sessionVersion        Int          @default(0)
   onboardingCompletedAt DateTime?
-  onboardingUpdatedAt DateTime?
-  avatarSource        AvatarSource @default(GRAVATAR)
-  avatarImage         Bytes?
-  avatarImageMime     String?
-  avatarImageUpdatedAt DateTime?
-  payoutMethod         PayoutMethod @default(BANK_TRANSFER)
-  payoutAccountHolder  String?
-  payoutIban           String?
-  payoutBankName       String?
-  payoutPaypalHandle   String?
-  payoutNote           String?
+  onboardingUpdatedAt   DateTime?
+  avatarSource          AvatarSource @default(GRAVATAR)
+  avatarImage           Bytes?
+  avatarImageMime       String?
+  avatarImageUpdatedAt  DateTime?
+  payoutMethod          PayoutMethod @default(BANK_TRANSFER)
+  payoutAccountHolder   String?
+  payoutIban            String?
+  payoutBankName        String?
+  payoutPaypalHandle    String?
+  payoutNote            String?
 
-  accounts     Account[]
-  sessions     Session[]
-  attendance   RehearsalAttendance[]
-  availability Availability[]
-  tasks        Task[]                @relation("TaskAssignee")
+  accounts                        Account[]
+  sessions                        Session[]
+  attendance                      RehearsalAttendance[]
+  availability                    Availability[]
+  tasks                           Task[]                     @relation("TaskAssignee")
   // New availability relations
-  availabilityDays       AvailabilityDay[]
-  availabilityTemplates  AvailabilityTemplate[]
-  attendanceLogsAuthored RehearsalAttendanceLog[] @relation("AttendanceLogAuthor")
-  attendanceLogsTarget   RehearsalAttendanceLog[] @relation("AttendanceLogTarget")
-  dietaryRestrictions  DietaryRestriction[]
-  measurements           MemberMeasurement[]
-  sizes                  MemberSize[]
-  roles                  UserRole[]
-  approvedProposals      RehearsalProposal[] @relation("ProposalApprover")
-  notifications         NotificationRecipient[]
-  blockedDays            BlockedDay[]
-  calendarFeed           CalendarFeed?
-  appRoles               UserAppRole[]
-  rehearsalInvites       RehearsalInvitee[]
-  photoConsents          PhotoConsent[]
-  productionOnboardings  ProductionOnboarding[]
-  approvedPhotoConsents  PhotoConsent[] @relation("PhotoConsentApprover")
-  departmentMemberships        DepartmentMembership[]
-  departmentTaskAssignments    DepartmentTaskAssignment[]
-  departmentTasksCreated       DepartmentTask[] @relation("DepartmentTaskCreator")
-  departmentEventsCreated      DepartmentEvent[]
-  calendarEventsCreated        CalendarEvent[]
-  departmentDocumentsUploaded  DepartmentDocument[]
-  characterCastings      CharacterCasting[]
-  breakdownAssignments   SceneBreakdownItem[] @relation("BreakdownAssignee")
-  inviteLinksCreated     MemberInvite[]       @relation("MemberInvitesCreated")
-  personalInvites        MemberInvite[]       @relation("MemberInvitesPersonal")
-  inviteRedemptions      MemberInviteRedemption[]
-  onboardingProfile      MemberOnboardingProfile?
-  interests              UserInterest[]
-  rolePreferences        MemberRolePreference[]
-  noticeDismissals       UserNoticeDismissal[]
-  productionMemberships  ProductionMembership[]
-  interestsAuthored      Interest[]             @relation("InterestCreatedBy")
-  issuesCreated          Issue[]                @relation("IssueCreatedBy")
-  issuesUpdated          Issue[]                @relation("IssueUpdatedBy")
-  issueComments          IssueComment[]         @relation("IssueCommentAuthor")
-  financeEntriesCreated  FinanceEntry[]         @relation("FinanceEntryCreatedBy")
-  financeEntriesApproved FinanceEntry[]         @relation("FinanceEntryApprovedBy")
-  financeEntriesPaidFor  FinanceEntry[]         @relation("FinanceEntryMemberPaidBy")
-  financeLogsAuthored    FinanceLog[]           @relation("FinanceLogChangedBy")
-  finalRehearsalDutiesAssigned FinalRehearsalDuty[] @relation("FinalRehearsalDutyAssignee")
-  finalRehearsalDutiesCreated  FinalRehearsalDuty[] @relation("FinalRehearsalDutyCreatedBy")
-  fileLibraryFoldersCreated FileLibraryFolder[] @relation("FileLibraryFoldersCreated")
-  fileLibraryItemsUploaded  FileLibraryItem[]   @relation("FileLibraryItemsUploaded")
-  parentalConsentTemplatesUpdated ServerSettings[] @relation("ServerSettingsParentalConsentUploader")
-  dataPortalAuditLogs    DataPortalAuditLog[]
+  availabilityDays                AvailabilityDay[]
+  availabilityTemplates           AvailabilityTemplate[]
+  attendanceLogsAuthored          RehearsalAttendanceLog[]   @relation("AttendanceLogAuthor")
+  attendanceLogsTarget            RehearsalAttendanceLog[]   @relation("AttendanceLogTarget")
+  dietaryRestrictions             DietaryRestriction[]
+  measurements                    MemberMeasurement[]
+  sizes                           MemberSize[]
+  roles                           UserRole[]
+  approvedProposals               RehearsalProposal[]        @relation("ProposalApprover")
+  notifications                   NotificationRecipient[]
+  blockedDays                     BlockedDay[]
+  calendarFeed                    CalendarFeed?
+  appRoles                        UserAppRole[]
+  rehearsalInvites                RehearsalInvitee[]
+  photoConsents                   PhotoConsent[]
+  productionOnboardings           ProductionOnboarding[]
+  approvedPhotoConsents           PhotoConsent[]             @relation("PhotoConsentApprover")
+  departmentMemberships           DepartmentMembership[]
+  departmentTaskAssignments       DepartmentTaskAssignment[]
+  departmentTasksCreated          DepartmentTask[]           @relation("DepartmentTaskCreator")
+  departmentMembershipsAssigned   DepartmentMembership[]     @relation("DepartmentMembershipAssignedBy")
+  departmentEventsCreated         DepartmentEvent[]
+  calendarEventsCreated           CalendarEvent[]
+  departmentDocumentsUploaded     DepartmentDocument[]
+  characterCastings               CharacterCasting[]
+  breakdownAssignments            SceneBreakdownItem[]       @relation("BreakdownAssignee")
+  inviteLinksCreated              MemberInvite[]             @relation("MemberInvitesCreated")
+  personalInvites                 MemberInvite[]             @relation("MemberInvitesPersonal")
+  inviteRedemptions               MemberInviteRedemption[]
+  onboardingProfile               MemberOnboardingProfile?
+  interests                       UserInterest[]
+  rolePreferences                 MemberRolePreference[]
+  noticeDismissals                UserNoticeDismissal[]
+  productionMemberships           ProductionMembership[]
+  interestsAuthored               Interest[]                 @relation("InterestCreatedBy")
+  issuesCreated                   Issue[]                    @relation("IssueCreatedBy")
+  issuesUpdated                   Issue[]                    @relation("IssueUpdatedBy")
+  issueComments                   IssueComment[]             @relation("IssueCommentAuthor")
+  financeEntriesCreated           FinanceEntry[]             @relation("FinanceEntryCreatedBy")
+  financeEntriesApproved          FinanceEntry[]             @relation("FinanceEntryApprovedBy")
+  financeEntriesPaidFor           FinanceEntry[]             @relation("FinanceEntryMemberPaidBy")
+  financeLogsAuthored             FinanceLog[]               @relation("FinanceLogChangedBy")
+  finalRehearsalDutiesAssigned    FinalRehearsalDuty[]       @relation("FinalRehearsalDutyAssignee")
+  finalRehearsalDutiesCreated     FinalRehearsalDuty[]       @relation("FinalRehearsalDutyCreatedBy")
+  fileLibraryFoldersCreated       FileLibraryFolder[]        @relation("FileLibraryFoldersCreated")
+  fileLibraryItemsUploaded        FileLibraryItem[]          @relation("FileLibraryItemsUploaded")
+  parentalConsentTemplatesUpdated ServerSettings[]           @relation("ServerSettingsParentalConsentUploader")
+  dataPortalAuditLogs             DataPortalAuditLog[]
 }
 
 model Account {
@@ -379,40 +394,41 @@ model VerificationToken {
 }
 
 model OwnerSetupToken {
-  id         String   @id @default(cuid())
-  tokenHash  String   @unique
-  createdAt  DateTime @default(now())
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  createdAt  DateTime  @default(now())
   consumedAt DateTime?
 }
 
 model Show {
-  id         String         @id @default(cuid())
-  year       Int
-  title      String?
-  synopsis   String?
-  dates      Json
-  posterUrl  String?
-  revealedAt DateTime?
+  id                      String                    @id @default(cuid())
+  year                    Int
+  title                   String?
+  synopsis                String?
+  dates                   Json
+  posterUrl               String?
+  revealedAt              DateTime?
   finalRehearsalWeekStart DateTime?
   finalRehearsalWeekEnd   DateTime?
-  meta       Json?
-  status     ProductionStatus @default(planning)
-  statusChangedAt DateTime?
-  archivedAt DateTime?
-  rehearsals Rehearsal[]
-  finance    FinanceEntry[]
-  budgets    FinanceBudget[]
-  proposals  RehearsalProposal[]
-  characters Character[]
-  scenes     Scene[]
-  finalRehearsalDuties FinalRehearsalDuty[]
-  memberships ProductionMembership[]
-  photoConsents PhotoConsent[]
-  productionOnboardings ProductionOnboarding[]
-  calendarEvents CalendarEvent[]
-  memberRolePreferences MemberRolePreference[]
-  onboardingProfiles MemberOnboardingProfile[]
-  invites    MemberInvite[]
+  meta                    Json?
+  status                  ProductionStatus          @default(planning)
+  statusChangedAt         DateTime?
+  archivedAt              DateTime?
+  rehearsals              Rehearsal[]
+  finance                 FinanceEntry[]
+  budgets                 FinanceBudget[]
+  proposals               RehearsalProposal[]
+  characters              Character[]
+  scenes                  Scene[]
+  finalRehearsalDuties    FinalRehearsalDuty[]
+  memberships             ProductionMembership[]
+  photoConsents           PhotoConsent[]
+  productionOnboardings   ProductionOnboarding[]
+  calendarEvents          CalendarEvent[]
+  memberRolePreferences   MemberRolePreference[]
+  departments             Department[]
+  onboardingProfiles      MemberOnboardingProfile[]
+  invites                 MemberInvite[]
 }
 
 model FinalRehearsalDuty {
@@ -436,62 +452,94 @@ model FinalRehearsalDuty {
   @@index([assigneeId])
 }
 
+/// Globale Vorlage für Gewerke. Pro Produktion werden daraus `Department`-Einträge erzeugt.
+model DepartmentTemplate {
+  id                   String       @id @default(cuid())
+  slug                 String       @unique
+  name                 String
+  description          String?
+  color                String?
+  /// Onboarding-Wunsch-Codes (z. B. `crew_costume`), die zu diesem Gewerk führen.
+  preferenceCodes      String[]     @default([])
+  requiresJoinApproval Boolean      @default(false)
+  sortOrder            Int          @default(0)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  departments          Department[]
+}
+
+/// Gewerk einer Produktion.
 model Department {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  name        String
-  description String?
-  color       String?
-  isCore      Boolean  @default(true)
-  requiresJoinApproval Boolean @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  memberships DepartmentMembership[]
-  breakdownItems SceneBreakdownItem[]
-  tasks        DepartmentTask[]
-  permissions  DepartmentPermission[]
-  events       DepartmentEvent[]
-  documents    DepartmentDocument[]
+  id                   String                 @id @default(cuid())
+  showId               String
+  templateId           String?
+  slug                 String
+  name                 String
+  description          String?
+  color                String?
+  isCore               Boolean                @default(true)
+  requiresJoinApproval Boolean                @default(false)
+  sortOrder            Int                    @default(0)
+  archivedAt           DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  show                 Show                   @relation(fields: [showId], references: [id], onDelete: Cascade)
+  template             DepartmentTemplate?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  memberships          DepartmentMembership[]
+  breakdownItems       SceneBreakdownItem[]
+  tasks                DepartmentTask[]
+  permissions          DepartmentPermission[]
+  events               DepartmentEvent[]
+  documents            DepartmentDocument[]
+
+  @@unique([showId, slug], name: "showId_slug")
+  @@index([templateId])
 }
 
 model DepartmentMembership {
-  id           String                  @id @default(cuid())
+  id           String                     @id @default(cuid())
   departmentId String
   userId       String
-  role         DepartmentMembershipRole @default(member)
+  role         DepartmentMembershipRole   @default(member)
+  status       DepartmentMembershipStatus @default(active)
+  source       DepartmentAssignmentSource @default(assigned)
   title        String?
   note         String?
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
-  department   Department              @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedById String?
+  decidedAt    DateTime?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  department   Department                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  user         User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy   User?                      @relation("DepartmentMembershipAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   @@unique([departmentId, userId], name: "departmentId_userId")
+  @@index([userId, status])
 }
 
 model DepartmentTask {
-  id            String     @id @default(cuid())
-  departmentId  String
-  title         String
-  description   String?
-  status        TaskStatus @default(todo)
-  dueAt         DateTime?
-  createdById   String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  creator       User       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  assignments   DepartmentTaskAssignment[]
+  id           String                     @id @default(cuid())
+  departmentId String
+  title        String
+  description  String?
+  status       TaskStatus                 @default(todo)
+  dueAt        DateTime?
+  createdById  String
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  department   Department                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  creator      User                       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignments  DepartmentTaskAssignment[]
 
   @@index([departmentId, status])
   @@index([createdAt])
 }
 
 model DepartmentTaskAssignment {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   taskId    String
   userId    String
-  createdAt DateTime @default(now())
+  createdAt DateTime       @default(now())
   task      DepartmentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -510,52 +558,52 @@ model DepartmentPermission {
 }
 
 model DepartmentEvent {
-  id            String     @id @default(cuid())
-  departmentId  String
-  title         String
-  start         DateTime
-  end           DateTime?
-  location      String?
-  description   String?
-  createdById   String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy     User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  id           String     @id @default(cuid())
+  departmentId String
+  title        String
+  start        DateTime
+  end          DateTime?
+  location     String?
+  description  String?
+  createdById  String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([departmentId, start])
 }
 
 model DepartmentDocument {
-  id            String     @id @default(cuid())
-  departmentId  String
-  fileName      String
-  mimeType      String
-  fileSize      Int
-  data          Bytes
-  uploadedById  String?
-  createdAt     DateTime   @default(now())
-  department    Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  uploadedBy    User?      @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  id           String     @id @default(cuid())
+  departmentId String
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  data         Bytes
+  uploadedById String?
+  createdAt    DateTime   @default(now())
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  uploadedBy   User?      @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([departmentId, createdAt])
 }
 
 model Character {
-  id             String            @id @default(cuid())
-  showId         String
-  name           String
-  shortName      String?
+  id                 String             @id @default(cuid())
+  showId             String
+  name               String
+  shortName          String?
   rolePreferenceCode String?
-  description    String?
-  notes          String?
-  color          String?
-  order          Int               @default(0)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  show           Show              @relation(fields: [showId], references: [id], onDelete: Cascade)
-  castings       CharacterCasting[]
-  sceneAppearances SceneCharacter[]
+  description        String?
+  notes              String?
+  color              String?
+  order              Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  show               Show               @relation(fields: [showId], references: [id], onDelete: Cascade)
+  castings           CharacterCasting[]
+  sceneAppearances   SceneCharacter[]
 
   @@index([showId, order])
 }
@@ -575,9 +623,9 @@ model CharacterCasting {
 }
 
 model Scene {
-  id              String   @id @default(cuid())
+  id              String               @id @default(cuid())
   showId          String
-  sequence        Int      @default(0)
+  sequence        Int                  @default(0)
   identifier      String?
   title           String?
   slug            String?
@@ -586,9 +634,9 @@ model Scene {
   timeOfDay       String?
   durationMinutes Int?
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  show            Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  show            Show                 @relation(fields: [showId], references: [id], onDelete: Cascade)
   characters      SceneCharacter[]
   breakdownItems  SceneBreakdownItem[]
 
@@ -597,13 +645,13 @@ model Scene {
 }
 
 model SceneCharacter {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   sceneId     String
   characterId String
-  isFeatured  Boolean  @default(false)
+  isFeatured  Boolean   @default(false)
   note        String?
-  order       Int      @default(0)
-  scene       Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  order       Int       @default(0)
+  scene       Scene     @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
   @@unique([sceneId, characterId], name: "sceneId_characterId")
@@ -611,20 +659,20 @@ model SceneCharacter {
 }
 
 model SceneBreakdownItem {
-  id            String          @id @default(cuid())
-  sceneId       String
-  departmentId  String
-  title         String
-  description   String?
-  status        BreakdownStatus @default(planned)
-  neededBy      DateTime?
-  note          String?
-  assignedToId  String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  scene         Scene           @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  department    Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  assignedTo    User?           @relation("BreakdownAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  id           String          @id @default(cuid())
+  sceneId      String
+  departmentId String
+  title        String
+  description  String?
+  status       BreakdownStatus @default(planned)
+  neededBy     DateTime?
+  note         String?
+  assignedToId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  scene        Scene           @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  department   Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  assignedTo   User?           @relation("BreakdownAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   @@index([sceneId, departmentId])
 }
@@ -641,56 +689,56 @@ model WebsiteTheme {
 }
 
 model WebsiteSettings {
-  id        String   @id @default("public")
-  siteTitle String   @default("Sommertheater im Schlosspark")
-  colorMode String   @default("dark")
+  id             String        @id @default("public")
+  siteTitle      String        @default("Sommertheater im Schlosspark")
+  colorMode      String        @default("dark")
   pageVisibility Json?
-  themeId   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  theme     WebsiteTheme? @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  themeId        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  theme          WebsiteTheme? @relation(fields: [themeId], references: [id], onDelete: SetNull)
 
   @@index([themeId])
 }
 
 model SperrlisteSettings {
-  id                     String   @id @default("default")
-  holidaySourceMode      String   @default("default")
-  holidaySourceUrl       String?
-  holidaySourceStatus    String   @default("unknown")
-  holidaySourceMessage   String?
-  holidaySourceCheckedAt DateTime?
-  publicHolidaySourceMode      String   @default("default")
+  id                           String    @id @default("default")
+  holidaySourceMode            String    @default("default")
+  holidaySourceUrl             String?
+  holidaySourceStatus          String    @default("unknown")
+  holidaySourceMessage         String?
+  holidaySourceCheckedAt       DateTime?
+  publicHolidaySourceMode      String    @default("default")
   publicHolidaySourceUrl       String?
-  publicHolidaySourceStatus    String   @default("unknown")
+  publicHolidaySourceStatus    String    @default("unknown")
   publicHolidaySourceMessage   String?
   publicHolidaySourceCheckedAt DateTime?
-  freezeDays             Int      @default(7)
-  preferredWeekdays      Json?
-  exceptionWeekdays      Json?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  freezeDays                   Int       @default(7)
+  preferredWeekdays            Json?
+  exceptionWeekdays            Json?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 }
 
 model ServerSettings {
-  id                           String    @id @default("default")
-  mailHost                     String?
-  mailPort                     Int       @default(587)
-  mailSecure                   Boolean   @default(false)
-  mailUsername                 String?
-  mailPassword                 String?
-  mailFromAddress              String?
-  mailFromName                 String?
-  mailReplyTo                  String?
-  createdAt                    DateTime  @default(now())
-  updatedAt                    DateTime  @updatedAt
-  parentalConsentData          Bytes?
-  parentalConsentName          String?
-  parentalConsentMime          String?
-  parentalConsentSize          Int?
-  parentalConsentUploadedAt    DateTime?
-  parentalConsentUploadedById  String?
-  parentalConsentUploadedBy    User? @relation("ServerSettingsParentalConsentUploader", fields: [parentalConsentUploadedById], references: [id], onDelete: SetNull)
+  id                          String    @id @default("default")
+  mailHost                    String?
+  mailPort                    Int       @default(587)
+  mailSecure                  Boolean   @default(false)
+  mailUsername                String?
+  mailPassword                String?
+  mailFromAddress             String?
+  mailFromName                String?
+  mailReplyTo                 String?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+  parentalConsentData         Bytes?
+  parentalConsentName         String?
+  parentalConsentMime         String?
+  parentalConsentSize         Int?
+  parentalConsentUploadedAt   DateTime?
+  parentalConsentUploadedById String?
+  parentalConsentUploadedBy   User?     @relation("ServerSettingsParentalConsentUploader", fields: [parentalConsentUploadedById], references: [id], onDelete: SetNull)
 }
 
 model SeasonResetSettings {
@@ -701,29 +749,29 @@ model SeasonResetSettings {
 }
 
 model Rehearsal {
-  id                  String                @id @default(cuid())
-  showId              String?               // Optional - für allgemeine Proben
-  title               String                @default("Probe")
-  start               DateTime
-  end                 DateTime
-  location            String
-  description         String?
-  requiredRoles       Json
-  registrationDeadline DateTime?            // Deadline für An-/Abmeldungen (1 Woche vor Probe)
-  isFromTemplate      Boolean              @default(false)
-  templateId    String?
-  priority      RehearsalPriority     @default(NORMAL)
-  status        RehearsalStatus       @default(PLANNED)
-  createdBy     String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @default(now()) @updatedAt
-  show          Show?                 @relation(fields: [showId], references: [id], onDelete: Cascade)
-  attendance     RehearsalAttendance[]
-  attendanceLogs RehearsalAttendanceLog[]
-  template       RehearsalTemplate?    @relation(fields: [templateId], references: [id])
-  proposals      RehearsalProposal[]
-  notifications  Notification[]
-  invitees       RehearsalInvitee[]
+  id                   String                   @id @default(cuid())
+  showId               String? // Optional - für allgemeine Proben
+  title                String                   @default("Probe")
+  start                DateTime
+  end                  DateTime
+  location             String
+  description          String?
+  requiredRoles        Json
+  registrationDeadline DateTime? // Deadline für An-/Abmeldungen (1 Woche vor Probe)
+  isFromTemplate       Boolean                  @default(false)
+  templateId           String?
+  priority             RehearsalPriority        @default(NORMAL)
+  status               RehearsalStatus          @default(PLANNED)
+  createdBy            String?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @default(now()) @updatedAt
+  show                 Show?                    @relation(fields: [showId], references: [id], onDelete: Cascade)
+  attendance           RehearsalAttendance[]
+  attendanceLogs       RehearsalAttendanceLog[]
+  template             RehearsalTemplate?       @relation(fields: [templateId], references: [id])
+  proposals            RehearsalProposal[]
+  notifications        Notification[]
+  invitees             RehearsalInvitee[]
 }
 
 model RehearsalInvitee {
@@ -737,20 +785,20 @@ model RehearsalInvitee {
 }
 
 model RehearsalTemplate {
-  id            String              @id @default(cuid())
+  id            String            @id @default(cuid())
   name          String
   description   String?
-  weekday       Int                 // 0=Sonntag, 1=Montag, etc.
-  startTime     String              // HH:MM format
-  endTime       String              // HH:MM format
+  weekday       Int // 0=Sonntag, 1=Montag, etc.
+  startTime     String // HH:MM format
+  endTime       String // HH:MM format
   location      String
   requiredRoles Json
-  isActive      Boolean             @default(true)
-  priority      RehearsalPriority   @default(NORMAL)
+  isActive      Boolean           @default(true)
+  priority      RehearsalPriority @default(NORMAL)
   validFrom     DateTime?
   validTo       DateTime?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @default(now()) @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @default(now()) @updatedAt
   rehearsals    Rehearsal[]
 }
 
@@ -774,7 +822,7 @@ model RehearsalAttendance {
   rehearsalId     String
   userId          String
   status          AttendanceStatus
-  emergencyReason String?         // Begründung für Emergency-Absagen
+  emergencyReason String? // Begründung für Emergency-Absagen
   rehearsal       Rehearsal        @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -782,17 +830,17 @@ model RehearsalAttendance {
 }
 
 model RehearsalAttendanceLog {
-  id            String             @id @default(cuid())
-  rehearsalId   String
-  userId        String
-  previous      AttendanceStatus?
-  next          AttendanceStatus?
-  comment       String?
-  changedAt     DateTime          @default(now())
-  changedById   String
-  rehearsal     Rehearsal         @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
-  user          User              @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)
-  changedBy     User              @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Restrict)
+  id          String            @id @default(cuid())
+  rehearsalId String
+  userId      String
+  previous    AttendanceStatus?
+  next        AttendanceStatus?
+  comment     String?
+  changedAt   DateTime          @default(now())
+  changedById String
+  rehearsal   Rehearsal         @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  user        User              @relation("AttendanceLogTarget", fields: [userId], references: [id], onDelete: Cascade)
+  changedBy   User              @relation("AttendanceLogAuthor", fields: [changedById], references: [id], onDelete: Restrict)
 
   @@index([rehearsalId, changedAt])
 }
@@ -808,22 +856,22 @@ model UserRole {
 
 // Permission system (matrix)
 model Permission {
-  id          String @id @default(cuid())
-  key         String @unique
-  label       String?
-  description String?
-  grants      AppRolePermission[]
+  id               String                 @id @default(cuid())
+  key              String                 @unique
+  label            String?
+  description      String?
+  grants           AppRolePermission[]
   departmentGrants DepartmentPermission[]
 }
 
 model AppRole {
-  id         String  @id @default(cuid())
-  name       String  @unique
-  isSystem   Boolean @default(false)
-  systemRole Role?
-  sortIndex  Int     @default(0)
-  grants     AppRolePermission[]
-  users      UserAppRole[]
+  id                  String                    @id @default(cuid())
+  name                String                    @unique
+  isSystem            Boolean                   @default(false)
+  systemRole          Role?
+  sortIndex           Int                       @default(0)
+  grants              AppRolePermission[]
+  users               UserAppRole[]
   fileLibraryAccesses FileLibraryFolderAccess[]
 }
 
@@ -855,20 +903,20 @@ model MemberMeasurement {
   value     Float
   unit      MeasurementUnit
   note      String?
-  updatedAt DateTime       @updatedAt
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, type])
 }
 
 // Konfektionsgrößen
 model MemberSize {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
-  category  String    // z.B. "Oberteil", "Hose", "Schuhe"
-  size      String    // Die tatsächliche Größe
+  category  String // z.B. "Oberteil", "Hose", "Schuhe"
+  size      String // Die tatsächliche Größe
   note      String?
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, category])
@@ -876,40 +924,40 @@ model MemberSize {
 
 // Allergien und Unverträglichkeiten
 model DietaryRestriction {
-  id          String       @id @default(cuid())
-  userId      String
-  allergen    String      // Was die Allergie/Unverträglichkeit auslöst
-  level       AllergyLevel
-  symptoms    String?     // Beschreibung der Symptome
-  treatment   String?     // Notfallbehandlung
-  note        String?
-  isActive    Boolean     @default(true)
-  updatedAt   DateTime    @updatedAt
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String       @id @default(cuid())
+  userId    String
+  allergen  String // Was die Allergie/Unverträglichkeit auslöst
+  level     AllergyLevel
+  symptoms  String? // Beschreibung der Symptome
+  treatment String? // Notfallbehandlung
+  note      String?
+  isActive  Boolean      @default(true)
+  updatedAt DateTime     @updatedAt
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, allergen])
 }
 
 model RehearsalProposal {
-  id               String                 @id @default(cuid())
-  showId           String?                // Optional - für allgemeine Proben
-  title            String                 @default("Probenvorschlag")
-  date             DateTime               // Vorgeschlagenes Datum
-  startTime        Int                    // Vorgeschlagene Startzeit (Minuten seit Mitternacht)
-  endTime          Int                    // Vorgeschlagene Endzeit (Minuten seit Mitternacht)
-  location         String?
-  requiredRoles    Json                   // Benötigte Rollen für diese Probe
-  status           RehearsalProposalStatus @default(proposed)
-  createdAt        DateTime               @default(now())
-  approvedAt       DateTime?              // Wann wurde der Vorschlag freigegeben?
-  approvedBy       String?                // Wer hat den Vorschlag freigegeben?
-  rejectionReason  String?                // Optional: Grund für Ablehnung
-  rehearsalId      String?                // Referenz zur tatsächlichen Probe, wenn der Vorschlag angenommen wurde
-  
-  show             Show?                  @relation(fields: [showId], references: [id])
-  approver         User?                  @relation("ProposalApprover", fields: [approvedBy], references: [id])
-  rehearsal        Rehearsal?             @relation(fields: [rehearsalId], references: [id])
-  
+  id              String                  @id @default(cuid())
+  showId          String? // Optional - für allgemeine Proben
+  title           String                  @default("Probenvorschlag")
+  date            DateTime // Vorgeschlagenes Datum
+  startTime       Int // Vorgeschlagene Startzeit (Minuten seit Mitternacht)
+  endTime         Int // Vorgeschlagene Endzeit (Minuten seit Mitternacht)
+  location        String?
+  requiredRoles   Json // Benötigte Rollen für diese Probe
+  status          RehearsalProposalStatus @default(proposed)
+  createdAt       DateTime                @default(now())
+  approvedAt      DateTime? // Wann wurde der Vorschlag freigegeben?
+  approvedBy      String? // Wer hat den Vorschlag freigegeben?
+  rejectionReason String? // Optional: Grund für Ablehnung
+  rehearsalId     String? // Referenz zur tatsächlichen Probe, wenn der Vorschlag angenommen wurde
+
+  show      Show?      @relation(fields: [showId], references: [id])
+  approver  User?      @relation("ProposalApprover", fields: [approvedBy], references: [id])
+  rehearsal Rehearsal? @relation(fields: [rehearsalId], references: [id])
+
   @@index([date, status])
   @@index([showId, status])
 }
@@ -964,14 +1012,14 @@ model CalendarEvent {
 }
 
 model BlockedDay {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   userId    String
   date      DateTime
   reason    String?
   kind      BlockedDayKind @default(BLOCKED)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
 }
@@ -988,28 +1036,28 @@ model Task {
 }
 
 model InventoryItem {
-  id        String  @id @default(cuid())
-  sku       String  @unique @default(cuid())
-  name      String
-  manufacturer     String?
-  itemType         String?
-  qty       Int
-  location  String?
-  owner     String?
-  condition String?
-  acquisitionCost  Float?
-  totalValue       Float?
-  purchaseDate     DateTime?
-  category         InventoryItemCategory @default(accessories)
-  details          String?
-  lastUsedAt       DateTime?
-  lastInventoryAt  DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  id              String                @id @default(cuid())
+  sku             String                @unique @default(cuid())
+  name            String
+  manufacturer    String?
+  itemType        String?
+  qty             Int
+  location        String?
+  owner           String?
+  condition       String?
+  acquisitionCost Float?
+  totalValue      Float?
+  purchaseDate    DateTime?
+  category        InventoryItemCategory @default(accessories)
+  details         String?
+  lastUsedAt      DateTime?
+  lastInventoryAt DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 }
 
 model SyncEvent {
-  id               String    @id @default(cuid())
+  id               String        @id @default(cuid())
   scope            SyncScope
   clientId         String
   clientMutationId String
@@ -1017,9 +1065,9 @@ model SyncEvent {
   type             String
   payload          Json
   occurredAt       DateTime
-  serverSeq        Int       @unique @default(autoincrement())
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  serverSeq        Int           @unique @default(autoincrement())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   mutation         SyncMutation? @relation(fields: [clientMutationId], references: [clientMutationId], onDelete: Cascade)
 
   @@index([scope, serverSeq])
@@ -1028,15 +1076,15 @@ model SyncEvent {
 }
 
 model SyncMutation {
-  clientMutationId String   @id
+  clientMutationId String      @id
   clientId         String
   scope            SyncScope
   eventCount       Int
   firstServerSeq   Int?
   lastServerSeq    Int?
   acknowledgedSeq  Int
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
   events           SyncEvent[]
 
   @@index([scope, clientId])
@@ -1070,13 +1118,13 @@ model FinanceEntry {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
-  show           Show           @relation(fields: [showId], references: [id], onDelete: Restrict)
-  budget         FinanceBudget? @relation(fields: [budgetId], references: [id], onDelete: SetNull)
-  createdBy      User           @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  approvedBy     User?          @relation("FinanceEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  memberPaidBy   User?          @relation("FinanceEntryMemberPaidBy", fields: [memberPaidById], references: [id], onDelete: SetNull)
-  attachments    FinanceAttachment[]
-  logs           FinanceLog[]
+  show         Show                @relation(fields: [showId], references: [id], onDelete: Restrict)
+  budget       FinanceBudget?      @relation(fields: [budgetId], references: [id], onDelete: SetNull)
+  createdBy    User                @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy   User?               @relation("FinanceEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  memberPaidBy User?               @relation("FinanceEntryMemberPaidBy", fields: [memberPaidById], references: [id], onDelete: SetNull)
+  attachments  FinanceAttachment[]
+  logs         FinanceLog[]
 
   @@index([showId, status])
   @@index([budgetId])
@@ -1084,15 +1132,15 @@ model FinanceEntry {
 }
 
 model FinanceAttachment {
-  id        String        @id @default(cuid())
+  id        String       @id @default(cuid())
   entryId   String
   filename  String
   url       String?
   mimeType  String?
   size      Int?
   meta      Json?
-  createdAt DateTime      @default(now())
-  entry     FinanceEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  entry     FinanceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
 
   @@index([entryId])
 }
@@ -1113,58 +1161,58 @@ model FinanceBudget {
 }
 
 model FinanceLog {
-  id          String             @id @default(cuid())
+  id          String              @id @default(cuid())
   entryId     String
   changedById String?
   fromStatus  FinanceEntryStatus?
   toStatus    FinanceEntryStatus
   note        String?
-  createdAt   DateTime           @default(now())
-  entry       FinanceEntry       @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  changedBy   User?              @relation("FinanceLogChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime            @default(now())
+  entry       FinanceEntry        @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  changedBy   User?               @relation("FinanceLogChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
 
   @@index([entryId])
   @@index([changedById])
 }
 
 model Notification {
-  id          String   @id @default(cuid())
+  id          String                  @id @default(cuid())
   title       String
   body        String?
   type        String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime                @default(now())
   rehearsalId String?
-  rehearsal   Rehearsal? @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
+  rehearsal   Rehearsal?              @relation(fields: [rehearsalId], references: [id], onDelete: Cascade)
   recipients  NotificationRecipient[]
 }
 
 model NotificationRecipient {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   notificationId String
   userId         String
   readAt         DateTime?
-  notification   Notification  @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([notificationId, userId])
 }
 
 model Issue {
-  id             String        @id @default(cuid())
+  id             String          @id @default(cuid())
   title          String
   description    String
-  category       IssueCategory  @default(general)
-  status         IssueStatus    @default(open)
-  priority       IssuePriority  @default(medium)
+  category       IssueCategory   @default(general)
+  status         IssueStatus     @default(open)
+  priority       IssuePriority   @default(medium)
   visibility     IssueVisibility @default(public)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  lastActivityAt DateTime       @default(now())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  lastActivityAt DateTime        @default(now())
   resolvedAt     DateTime?
   createdById    String?
   updatedById    String?
-  createdBy      User?          @relation("IssueCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy      User?          @relation("IssueUpdatedBy", fields: [updatedById], references: [id])
+  createdBy      User?           @relation("IssueCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User?           @relation("IssueUpdatedBy", fields: [updatedById], references: [id])
   comments       IssueComment[]
 
   @@index([status, lastActivityAt])
@@ -1194,57 +1242,57 @@ enum PhotoConsentStatus {
 
 /// Fotoerlaubnis gilt pro Produktion und muss für jede Produktion neu erteilt werden.
 model PhotoConsent {
-  id               String              @id @default(cuid())
-  userId           String
-  showId           String
-  revokedAt        DateTime?
-  status           PhotoConsentStatus  @default(pending)
-  consentGiven     Boolean             @default(true)
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  approvedAt       DateTime?
-  approvedById     String?
-  rejectionReason  String?
-  exclusionNote    String?             @db.Text
-  documentName     String?
-  documentMime     String?
-  documentSize     Int?
-  documentUploadedAt DateTime?
-  documentData     Bytes?
+  id                  String             @id @default(cuid())
+  userId              String
+  showId              String
+  revokedAt           DateTime?
+  status              PhotoConsentStatus @default(pending)
+  consentGiven        Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  approvedAt          DateTime?
+  approvedById        String?
+  rejectionReason     String?
+  exclusionNote       String?            @db.Text
+  documentName        String?
+  documentMime        String?
+  documentSize        Int?
+  documentUploadedAt  DateTime?
+  documentData        Bytes?
   signatureVersion    String?
   signatureCapturedAt DateTime?
   signaturePayload    Json?
-  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  show             Show                @relation(fields: [showId], references: [id], onDelete: Restrict)
-  approvedBy       User?               @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show                Show               @relation(fields: [showId], references: [id], onDelete: Restrict)
+  approvedBy          User?              @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
 
   @@unique([userId, showId])
   @@index([showId, status])
 }
 
 model FileLibraryFolder {
-  id              String                    @id @default(cuid())
-  parentId        String?
-  name            String
-  description     String?
-  allowAllView    Boolean                   @default(true)
-  allowAllDownload Boolean                  @default(true)
-  allowAllUpload  Boolean                   @default(false)
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
-  createdById     String?
+  id               String   @id @default(cuid())
+  parentId         String?
+  name             String
+  description      String?
+  allowAllView     Boolean  @default(true)
+  allowAllDownload Boolean  @default(true)
+  allowAllUpload   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  createdById      String?
 
-  parent          FileLibraryFolder?        @relation("FileLibraryFolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children        FileLibraryFolder[]       @relation("FileLibraryFolderHierarchy")
-  createdBy       User?                     @relation("FileLibraryFoldersCreated", fields: [createdById], references: [id], onDelete: SetNull)
-  files           FileLibraryItem[]
-  accessRules     FileLibraryFolderAccess[]
+  parent      FileLibraryFolder?        @relation("FileLibraryFolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    FileLibraryFolder[]       @relation("FileLibraryFolderHierarchy")
+  createdBy   User?                     @relation("FileLibraryFoldersCreated", fields: [createdById], references: [id], onDelete: SetNull)
+  files       FileLibraryItem[]
+  accessRules FileLibraryFolderAccess[]
 
   @@index([parentId])
 }
 
 model FileLibraryItem {
-  id           String             @id @default(cuid())
+  id           String   @id @default(cuid())
   folderId     String
   fileName     String
   mimeType     String
@@ -1252,82 +1300,82 @@ model FileLibraryItem {
   data         Bytes
   description  String?
   uploadedById String?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  folder       FileLibraryFolder  @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  uploadedBy   User?              @relation("FileLibraryItemsUploaded", fields: [uploadedById], references: [id], onDelete: SetNull)
+  folder     FileLibraryFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  uploadedBy User?             @relation("FileLibraryItemsUploaded", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([folderId, createdAt])
 }
 
 model FileLibraryFolderAccess {
-  id          String                     @id @default(cuid())
-  folderId    String
-  accessType  FileLibraryAccessType
-  targetType  FileLibraryAccessTargetType
-  systemRole  Role?
-  appRoleId   String?
+  id         String                      @id @default(cuid())
+  folderId   String
+  accessType FileLibraryAccessType
+  targetType FileLibraryAccessTargetType
+  systemRole Role?
+  appRoleId  String?
 
-  folder      FileLibraryFolder          @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  appRole     AppRole?                   @relation(fields: [appRoleId], references: [id], onDelete: Cascade)
+  folder  FileLibraryFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  appRole AppRole?          @relation(fields: [appRoleId], references: [id], onDelete: Cascade)
 
-  @@index([folderId, accessType])
   @@unique([folderId, accessType, systemRole, appRoleId])
+  @@index([folderId, accessType])
 }
 
 model MemberInvite {
-  id          String   @id @default(cuid())
-  tokenHash   String   @unique
-  label       String?
-  note        String?
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime?
-  maxUses     Int?
-  usageCount  Int      @default(0)
-  roles       Role[]
-  isDisabled  Boolean  @default(false)
-  createdById String
-  showId      String
+  id                String    @id @default(cuid())
+  tokenHash         String    @unique
+  label             String?
+  note              String?
+  createdAt         DateTime  @default(now())
+  expiresAt         DateTime?
+  maxUses           Int?
+  usageCount        Int       @default(0)
+  roles             Role[]
+  isDisabled        Boolean   @default(false)
+  createdById       String
+  showId            String
   /// Persönliche Rückkehr-Einladung: nur dieses Konto darf den Link nutzen.
   personalForUserId String?
 
-  createdBy   User     @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Restrict)
-  personalFor User?    @relation("MemberInvitesPersonal", fields: [personalForUserId], references: [id], onDelete: SetNull)
-  redemptions MemberInviteRedemption[]
-  onboardings MemberOnboardingProfile[]
+  createdBy             User                      @relation("MemberInvitesCreated", fields: [createdById], references: [id], onDelete: Restrict)
+  personalFor           User?                     @relation("MemberInvitesPersonal", fields: [personalForUserId], references: [id], onDelete: SetNull)
+  redemptions           MemberInviteRedemption[]
+  onboardings           MemberOnboardingProfile[]
   productionOnboardings ProductionOnboarding[]
-  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  show                  Show                      @relation(fields: [showId], references: [id], onDelete: Cascade)
 
   @@index([personalForUserId])
 }
 
 model MemberInviteRedemption {
-  id           String    @id @default(cuid())
-  inviteId     String
-  sessionToken String    @unique
-  email        String?
-  userId       String?
-  createdAt    DateTime  @default(now())
-  completedAt  DateTime?
-  payload      Json?
+  id                    String    @id @default(cuid())
+  inviteId              String
+  sessionToken          String    @unique
+  email                 String?
+  userId                String?
+  createdAt             DateTime  @default(now())
+  completedAt           DateTime?
+  payload               Json?
   whatsappLinkVisitedAt DateTime?
 
-  invite   MemberInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
-  user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  profile  MemberOnboardingProfile? @relation("OnboardingProfileRedemption")
+  invite               MemberInvite             @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  user                 User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  profile              MemberOnboardingProfile? @relation("OnboardingProfileRedemption")
   productionOnboarding ProductionOnboarding?
 
   @@index([inviteId])
 }
 
 model Interest {
-  id           String          @id @default(cuid())
-  name         String          @unique
-  createdAt    DateTime        @default(now())
-  createdById  String?
+  id          String   @id @default(cuid())
+  name        String   @unique
+  createdAt   DateTime @default(now())
+  createdById String?
 
-  createdBy    User?           @relation("InterestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy    User?          @relation("InterestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   userInterest UserInterest[]
 }
 
@@ -1337,8 +1385,8 @@ model UserInterest {
   interestId String
   createdAt  DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  interest  Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interest Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
 
   @@unique([userId, interestId])
 }
@@ -1355,8 +1403,8 @@ model MemberRolePreference {
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
 
-  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  show      Show?                @relation(fields: [showId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show Show? @relation(fields: [showId], references: [id], onDelete: Cascade)
 
   @@unique([userId, showId, code])
   @@index([showId])
@@ -1374,35 +1422,35 @@ model UserNoticeDismissal {
 }
 
 model MemberOnboardingProfile {
-  id           String           @id @default(cuid())
-  userId       String           @unique
-  inviteId     String?
-  redemptionId String?         @unique
-  showId       String?
-  focus        OnboardingFocus
-  educationCategory String?
-  educationSchoolName String?
-  educationClassName String?
-  educationWorkDescription String?
-  educationUniversityName String?
-  educationOtherDescription String?
+  id                          String          @id @default(cuid())
+  userId                      String          @unique
+  inviteId                    String?
+  redemptionId                String?         @unique
+  showId                      String?
+  focus                       OnboardingFocus
+  educationCategory           String?
+  educationSchoolName         String?
+  educationClassName          String?
+  educationWorkDescription    String?
+  educationUniversityName     String?
+  educationOtherDescription   String?
   /// @deprecated Use educationCategory and the structured education fields instead.
-  background   String?
+  background                  String?
   /// @deprecated Use educationCategory and the structured education fields instead.
-  backgroundClass String?
-  notes        String?
-  gender       String?
-  memberSinceYear Int?
-  dietaryPreference String?
+  backgroundClass             String?
+  notes                       String?
+  gender                      String?
+  memberSinceYear             Int?
+  dietaryPreference           String?
   dietaryPreferenceStrictness String?
-  whatsappLinkVisitedAt DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  whatsappLinkVisitedAt       DateTime?
+  createdAt                   DateTime        @default(now())
+  updatedAt                   DateTime        @updatedAt
 
-  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invite     MemberInvite?            @relation(fields: [inviteId], references: [id], onDelete: SetNull)
-  redemption MemberInviteRedemption?  @relation("OnboardingProfileRedemption", fields: [redemptionId], references: [id], onDelete: SetNull)
-  show       Show?                    @relation(fields: [showId], references: [id], onDelete: SetNull)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invite     MemberInvite?           @relation(fields: [inviteId], references: [id], onDelete: SetNull)
+  redemption MemberInviteRedemption? @relation("OnboardingProfileRedemption", fields: [redemptionId], references: [id], onDelete: SetNull)
+  show       Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
 
   @@index([inviteId])
 }
@@ -1410,21 +1458,21 @@ model MemberOnboardingProfile {
 /// Onboarding einer Person für eine Produktion. Das MemberOnboardingProfile bleibt der
 /// aktuelle Stand (Vorausfüllen), hier stehen die Angaben, die für diese Produktion galten.
 model ProductionOnboarding {
-  id              String          @id @default(cuid())
-  userId          String
-  showId          String
-  inviteId        String?
-  redemptionId    String?         @unique
-  focus           OnboardingFocus
+  id                    String          @id @default(cuid())
+  userId                String
+  showId                String
+  inviteId              String?
+  redemptionId          String?         @unique
+  focus                 OnboardingFocus
   /// Bestätigte Profildaten zum Zeitpunkt des Onboardings (Ernährung, Allergien, Rollenwünsche …).
-  profileSnapshot Json?
+  profileSnapshot       Json?
   /// Hinweise ans Team für diese Produktion.
-  notes           String?
+  notes                 String?
   whatsappLinkVisitedAt DateTime?
-  isReturning     Boolean         @default(false)
-  completedAt     DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  isReturning           Boolean         @default(false)
+  completedAt           DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
   user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   show       Show                    @relation(fields: [showId], references: [id], onDelete: Cascade)
@@ -1437,18 +1485,18 @@ model ProductionOnboarding {
 }
 
 model ProductionMembership {
-  id        String   @id @default(cuid())
-  showId    String
-  userId    String
-  joinedAt  DateTime @default(now())
-  leftAt    DateTime?
-  status    ProductionMembershipStatus @default(active)
+  id       String                     @id @default(cuid())
+  showId   String
+  userId   String
+  joinedAt DateTime                   @default(now())
+  leftAt   DateTime?
+  status   ProductionMembershipStatus @default(active)
   /// Produktionsbezogene Rollen (z. B. cast, tech); werden von Admins vergeben.
-  roles     Role[]   @default([])
-  function  String?
+  roles    Role[]                     @default([])
+  function String?
 
-  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show Show @relation(fields: [showId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([showId, userId])
   @@index([userId, leftAt])
@@ -1499,15 +1547,15 @@ model AnalyticsSettings {
 }
 
 model AnalyticsHttpRequest {
-  id           String                @id @default(cuid())
-  timestamp    DateTime              @default(now())
-  method       String                @default("GET")
+  id           String               @id @default(cuid())
+  timestamp    DateTime             @default(now())
+  method       String               @default("GET")
   route        String
   area         AnalyticsRequestArea
   statusCode   Int
   durationMs   Int
-  payloadBytes Int                   @default(0)
-  createdAt    DateTime              @default(now())
+  payloadBytes Int                  @default(0)
+  createdAt    DateTime             @default(now())
 
   @@index([timestamp])
   @@index([area, timestamp])
@@ -1527,37 +1575,37 @@ model AnalyticsUptimeHeartbeat {
 }
 
 model AnalyticsHttpSummary {
-  id                        String   @id @default(cuid())
-  windowStart               DateTime
-  windowEnd                 DateTime
-  totalRequests             Int      @default(0)
-  successfulRequests        Int      @default(0)
-  clientErrorRequests       Int      @default(0)
-  serverErrorRequests       Int      @default(0)
-  averageDurationMs         Float    @default(0)
-  p95DurationMs             Int?
-  averagePayloadBytes       Float    @default(0)
-  uptimePercentage          Float?
-  frontendRequests          Int      @default(0)
-  frontendAvgResponseMs     Float    @default(0)
-  frontendAvgPayloadBytes   Float    @default(0)
-  cacheHitRate              Float    @default(0)
-  frontendCacheHitRate      Float    @default(0)
-  membersRequests           Int      @default(0)
-  membersAvgResponseMs      Float    @default(0)
-  guestRequests             Int      @default(0)
-  guestAvgResponseMs        Float    @default(0)
-  apiRequests               Int      @default(0)
-  apiAvgResponseMs          Float    @default(0)
-  apiErrorRate              Float    @default(0)
-  apiBackgroundJobs         Int      @default(0)
-  botRequests               Int      @default(0)
-  botAvgResponseMs          Float    @default(0)
-  botBlockedRequests        Int      @default(0)
-  generatedAt               DateTime @default(now())
+  id                      String   @id @default(cuid())
+  windowStart             DateTime
+  windowEnd               DateTime
+  totalRequests           Int      @default(0)
+  successfulRequests      Int      @default(0)
+  clientErrorRequests     Int      @default(0)
+  serverErrorRequests     Int      @default(0)
+  averageDurationMs       Float    @default(0)
+  p95DurationMs           Int?
+  averagePayloadBytes     Float    @default(0)
+  uptimePercentage        Float?
+  frontendRequests        Int      @default(0)
+  frontendAvgResponseMs   Float    @default(0)
+  frontendAvgPayloadBytes Float    @default(0)
+  cacheHitRate            Float    @default(0)
+  frontendCacheHitRate    Float    @default(0)
+  membersRequests         Int      @default(0)
+  membersAvgResponseMs    Float    @default(0)
+  guestRequests           Int      @default(0)
+  guestAvgResponseMs      Float    @default(0)
+  apiRequests             Int      @default(0)
+  apiAvgResponseMs        Float    @default(0)
+  apiErrorRate            Float    @default(0)
+  apiBackgroundJobs       Int      @default(0)
+  botRequests             Int      @default(0)
+  botAvgResponseMs        Float    @default(0)
+  botBlockedRequests      Int      @default(0)
+  generatedAt             DateTime @default(now())
 
-  @@map("analytics_http_summary")
   @@index([windowEnd])
+  @@map("analytics_http_summary")
 }
 
 model AnalyticsHttpPeakHour {
@@ -1568,22 +1616,22 @@ model AnalyticsHttpPeakHour {
   share       Float    @default(0)
   generatedAt DateTime @default(now())
 
-  @@map("analytics_http_peak_hours")
   @@index([bucketStart])
+  @@map("analytics_http_peak_hours")
 }
 
 model AnalyticsPageView {
-  id         String   @id @default(cuid())
-  sessionId  String?  @unique
-  path       String
-  scope      String?
-  userAgent  String?
-  deviceHint String?
-  lcpMs      Float?
-  loadTimeMs Float?
-  timeOnPageMs Int?
-  weight     Int      @default(1)
-  createdAt  DateTime @default(now())
+  id                 String            @id @default(cuid())
+  sessionId          String?           @unique
+  path               String
+  scope              String?
+  userAgent          String?
+  deviceHint         String?
+  lcpMs              Float?
+  loadTimeMs         Float?
+  timeOnPageMs       Int?
+  weight             Int               @default(1)
+  createdAt          DateTime          @default(now())
   analyticsSessionId String?
   analyticsSession   AnalyticsSession? @relation(fields: [analyticsSessionId], references: [id], onDelete: SetNull)
 
@@ -1595,72 +1643,72 @@ model AnalyticsPageView {
 }
 
 model AnalyticsDeviceSnapshot {
-  id                    String   @id @default(cuid())
-  sessionId             String?  @unique
-  deviceHint            String?
-  userAgent             String?
-  platform              String?
-  hardwareConcurrency   Int?
-  deviceMemoryGb        Float?
-  touchSupport          Int?
-  reducedMotion         Boolean?
-  prefersDarkMode       Boolean?
-  colorScheme           String?
-  connectionType        String?
+  id                      String   @id @default(cuid())
+  sessionId               String?  @unique
+  deviceHint              String?
+  userAgent               String?
+  platform                String?
+  hardwareConcurrency     Int?
+  deviceMemoryGb          Float?
+  touchSupport            Int?
+  reducedMotion           Boolean?
+  prefersDarkMode         Boolean?
+  colorScheme             String?
+  connectionType          String?
   connectionEffectiveType String?
-  connectionRttMs       Float?
-  connectionDownlinkMbps Float?
-  viewportWidth         Int?
-  viewportHeight        Int?
-  pixelRatio            Float?
-  language              String?
-  timezone              String?
-  createdAt             DateTime @default(now())
+  connectionRttMs         Float?
+  connectionDownlinkMbps  Float?
+  viewportWidth           Int?
+  viewportHeight          Int?
+  pixelRatio              Float?
+  language                String?
+  timezone                String?
+  createdAt               DateTime @default(now())
 
   @@index([deviceHint])
   @@index([createdAt])
 }
 
 model AnalyticsPageMetric {
-  id         String   @id @default(cuid())
-  path       String
-  scope      String?
-  avgLoadMs  Float    @map("avg_load")
-  lcpMs      Float?   @map("lcp")
-  avgTimeOnPageSeconds Float? @map("avg_time_on_page")
-  weight     Int      @default(0)
-  generatedAt DateTime @default(now())
+  id                   String   @id @default(cuid())
+  path                 String
+  scope                String?
+  avgLoadMs            Float    @map("avg_load")
+  lcpMs                Float?   @map("lcp")
+  avgTimeOnPageSeconds Float?   @map("avg_time_on_page")
+  weight               Int      @default(0)
+  generatedAt          DateTime @default(now())
 
-  @@map("analytics_page_metrics")
   @@index([path])
   @@index([scope])
+  @@map("analytics_page_metrics")
 }
 
 model AnalyticsDeviceMetric {
-  id         String   @id @default(cuid())
-  device     String
-  sessions   Int
-  avgLoadMs  Float   @map("avg_load")
-  share      Float
+  id          String   @id @default(cuid())
+  device      String
+  sessions    Int
+  avgLoadMs   Float    @map("avg_load")
+  share       Float
   generatedAt DateTime @default(now())
 
-  @@map("analytics_device_metrics")
   @@index([device])
+  @@map("analytics_device_metrics")
 }
 
 model AnalyticsSession {
-  id               String   @id
-  userId           String?
-  membershipRole   String?
-  isMember         Boolean  @default(false)
-  startedAt        DateTime @default(now())
-  lastSeenAt       DateTime @default(now())
-  endedAt          DateTime?
-  durationSeconds  Int?
-  pagePaths        String[] @default([])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  pageViews        AnalyticsPageView[]
+  id                 String                        @id
+  userId             String?
+  membershipRole     String?
+  isMember           Boolean                       @default(false)
+  startedAt          DateTime                      @default(now())
+  lastSeenAt         DateTime                      @default(now())
+  endedAt            DateTime?
+  durationSeconds    Int?
+  pagePaths          String[]                      @default([])
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+  pageViews          AnalyticsPageView[]
   trafficAttribution AnalyticsTrafficAttribution[]
 
   @@index([userId])
@@ -1668,8 +1716,8 @@ model AnalyticsSession {
 }
 
 model AnalyticsTrafficAttribution {
-  id                 String   @id @default(cuid())
-  sessionId          String   @unique
+  id                 String            @id @default(cuid())
+  sessionId          String            @unique
   analyticsSessionId String?
   path               String
   referrer           String?
@@ -1679,8 +1727,8 @@ model AnalyticsTrafficAttribution {
   utmCampaign        String?
   utmTerm            String?
   utmContent         String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
   analyticsSession   AnalyticsSession? @relation(fields: [analyticsSessionId], references: [id], onDelete: SetNull)
 
   @@index([analyticsSessionId])
@@ -1710,8 +1758,8 @@ model AnalyticsSessionInsight {
   conversionRate            Float
   generatedAt               DateTime @default(now())
 
-  @@map("analytics_session_insights")
   @@index([segment])
+  @@map("analytics_session_insights")
 }
 
 model AnalyticsTrafficSource {
@@ -1723,18 +1771,18 @@ model AnalyticsTrafficSource {
   changePercent             Float
   generatedAt               DateTime @default(now())
 
-  @@map("analytics_traffic_sources")
   @@index([channel])
+  @@map("analytics_traffic_sources")
 }
 
 model Ticket {
-  id         String        @id @default(cuid())
-  code       String        @unique
+  id         String       @id @default(cuid())
+  code       String       @unique
   eventId    String
   holderName String?
-  status     TicketStatus  @default(unused)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  status     TicketStatus @default(unused)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 
   scanEvents TicketScanEvent[]
 
@@ -1742,21 +1790,21 @@ model Ticket {
 }
 
 model TicketScanEvent {
-  id               String        @id @default(cuid())
+  id               String       @id @default(cuid())
   ticketId         String
   code             String
   statusBefore     TicketStatus
   statusAfter      TicketStatus
   source           String?
   occurredAt       DateTime
-  dedupeKey        String?       @unique
+  dedupeKey        String?      @unique
   serverSeq        Int?
   processedAt      DateTime?
-  provisional      Boolean       @default(false)
+  provisional      Boolean      @default(false)
   clientId         String?
   clientMutationId String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
@@ -1771,45 +1819,45 @@ model AnalyticsRealtimeSummary {
   eventCounts Json?
   generatedAt DateTime @default(now())
 
-  @@map("analytics_realtime_summary")
   @@index([windowEnd])
+  @@map("analytics_realtime_summary")
 }
 
 model AnalyticsSessionSummary {
-  id                                 String   @id @default(cuid())
-  windowStart                        DateTime
-  windowEnd                          DateTime
-  peakConcurrentUsers                Int      @default(0)
-  membersRealtimeEvents              Int      @default(0)
-  membersAvgSessionDurationSeconds   Float    @default(0)
-  guestAvgSessionDurationSeconds     Float    @default(0)
-  generatedAt                        DateTime @default(now())
+  id                               String   @id @default(cuid())
+  windowStart                      DateTime
+  windowEnd                        DateTime
+  peakConcurrentUsers              Int      @default(0)
+  membersRealtimeEvents            Int      @default(0)
+  membersAvgSessionDurationSeconds Float    @default(0)
+  guestAvgSessionDurationSeconds   Float    @default(0)
+  generatedAt                      DateTime @default(now())
 
-  @@map("analytics_session_summary")
   @@index([windowEnd])
+  @@map("analytics_session_summary")
 }
 
 model AnalyticsServerLog {
-  id                String                    @id @default(cuid())
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
+  id                String                     @id @default(cuid())
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
   severity          AnalyticsServerLogSeverity
   service           String
   message           String
   description       String?
   metadata          Json?
-  tags              String[]                  @default([])
-  status            AnalyticsServerLogStatus  @default(open)
-  occurrences       Int                       @default(1)
+  tags              String[]                   @default([])
+  status            AnalyticsServerLogStatus   @default(open)
+  occurrences       Int                        @default(1)
   affectedUsers     Int?
   recommendedAction String?
-  firstSeenAt       DateTime                  @default(now())
-  lastSeenAt        DateTime                  @default(now())
-  fingerprint       String                    @unique
+  firstSeenAt       DateTime                   @default(now())
+  lastSeenAt        DateTime                   @default(now())
+  fingerprint       String                     @unique
 
-  @@map("analytics_server_logs")
   @@index([severity, lastSeenAt])
   @@index([status, lastSeenAt])
+  @@map("analytics_server_logs")
 }
 
 /// Protokoll der Datenportal-Abfragen und -Exporte (nur Metadaten, keine Ergebniswerte).

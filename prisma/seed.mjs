@@ -556,26 +556,56 @@ async function main() {
     },
   ];
 
-  for (const dept of departmentSeeds) {
-    await prisma.department.upsert({
+  const templatePreferenceCodes = {
+    buehnenbild: ["crew_stage"],
+    technik: ["crew_tech"],
+    licht: ["crew_tech"],
+    ton: ["crew_tech", "crew_music"],
+    kostuem: ["crew_costume"],
+    maske: ["crew_makeup"],
+    requisite: ["crew_props"],
+    "werbung-social": ["crew_marketing"],
+  };
+
+  for (const [index, dept] of departmentSeeds.entries()) {
+    const data = {
+      name: dept.name,
+      description: dept.description ?? null,
+      color: dept.color ?? null,
+      requiresJoinApproval: dept.requiresJoinApproval ?? false,
+      preferenceCodes: templatePreferenceCodes[dept.slug] ?? [],
+      sortOrder: index,
+    };
+    await prisma.departmentTemplate.upsert({
       where: { slug: dept.slug },
-      update: {
-        name: dept.name,
-        description: dept.description ?? null,
-        color: dept.color ?? null,
-        isCore: true,
-        requiresJoinApproval: dept.requiresJoinApproval ?? false,
-      },
-      create: {
-        slug: dept.slug,
-        name: dept.name,
-        description: dept.description ?? null,
-        color: dept.color ?? null,
-        isCore: true,
-        requiresJoinApproval: dept.requiresJoinApproval ?? false,
-      },
+      update: data,
+      create: { slug: dept.slug, ...data },
     });
   }
+
+  // Gewerke gehören zu einer Produktion: aus den Vorlagen für jede vorhandene Produktion anlegen.
+  const templates = await prisma.departmentTemplate.findMany();
+  const seedShows = await prisma.show.findMany({ select: { id: true } });
+  for (const show of seedShows) {
+    for (const template of templates) {
+      await prisma.department.upsert({
+        where: { showId_slug: { showId: show.id, slug: template.slug } },
+        update: {},
+        create: {
+          showId: show.id,
+          templateId: template.id,
+          slug: template.slug,
+          name: template.name,
+          description: template.description,
+          color: template.color,
+          isCore: true,
+          requiresJoinApproval: template.requiresJoinApproval,
+          sortOrder: template.sortOrder,
+        },
+      });
+    }
+  }
+  const departmentShow = await prisma.show.findFirst({ orderBy: { year: "desc" } });
 
   const membershipSeeds = [
     {
@@ -618,9 +648,11 @@ async function main() {
   ];
 
   for (const membership of membershipSeeds) {
-    const department = await prisma.department.findUnique({
-      where: { slug: membership.departmentSlug },
-    });
+    const department = departmentShow
+      ? await prisma.department.findUnique({
+          where: { showId_slug: { showId: departmentShow.id, slug: membership.departmentSlug } },
+        })
+      : null;
     const user = await prisma.user.findUnique({ where: { email: membership.email } });
     if (!department || !user) continue;
 
@@ -630,6 +662,7 @@ async function main() {
         role: membership.role,
         title: membership.title ?? null,
         note: membership.note ?? null,
+        status: "active",
       },
       create: {
         departmentId: department.id,
@@ -917,7 +950,7 @@ async function main() {
     }
 
     const breakdownDepartments = await prisma.department.findMany({
-      where: { slug: { in: ["buehnenbild", "technik", "licht", "maske"] } },
+      where: { showId: newest.id, slug: { in: ["buehnenbild", "technik", "licht", "maske"] } },
       select: { id: true, slug: true },
     });
     const breakdownMap = new Map(breakdownDepartments.map((entry) => [entry.slug, entry.id]));

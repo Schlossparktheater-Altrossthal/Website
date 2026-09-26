@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/members/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
@@ -71,7 +72,7 @@ export default async function MyRehearsalsPage() {
       },
     }),
     prisma.departmentMembership.findMany({
-      where: { userId },
+      where: { userId, ...currentDepartmentMembershipWhere() },
       select: {
         departmentId: true,
         role: true,

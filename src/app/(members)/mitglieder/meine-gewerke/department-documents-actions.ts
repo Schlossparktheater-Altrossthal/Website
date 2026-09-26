@@ -104,7 +104,7 @@ export async function uploadDepartmentDocumentAction(formData: FormData) {
   let canManage = canManageByPermission;
   if (!canManage) {
     const membership = await prisma.departmentMembership.findFirst({
-      where: { departmentId, userId },
+      where: { departmentId, userId, status: "active" },
       select: { role: true },
     });
     canManage = Boolean(
@@ -189,7 +189,7 @@ export async function deleteDepartmentDocumentAction(formData: FormData) {
   let canManage = canManageByPermission;
   if (!canManage) {
     const membership = await prisma.departmentMembership.findFirst({
-      where: { departmentId: document.departmentId, userId },
+      where: { departmentId: document.departmentId, userId, status: "active" },
       select: { role: true },
     });
     canManage = Boolean(

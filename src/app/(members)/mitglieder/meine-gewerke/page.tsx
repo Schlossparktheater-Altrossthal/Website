@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { DEPARTMENT_LEAD_ROLE } from "./utils";
 import {
@@ -44,7 +45,7 @@ export default async function MeineGewerkePage() {
 
   if (!isBoard) {
     const leadCount = await prisma.departmentMembership.count({
-      where: { userId, role: DEPARTMENT_LEAD_ROLE },
+      where: { userId, role: DEPARTMENT_LEAD_ROLE, ...currentDepartmentMembershipWhere() },
     });
     if (leadCount === 0) {
       return (
@@ -58,7 +59,7 @@ export default async function MeineGewerkePage() {
   }
 
   const memberships = await prisma.departmentMembership.findMany({
-    where: { userId },
+    where: { userId, ...currentDepartmentMembershipWhere() },
     select: {
       department: {
         select: {

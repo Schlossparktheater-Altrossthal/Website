@@ -91,6 +91,7 @@ export default async function ProduktionsSzenenPage() {
       },
     }),
     prisma.department.findMany({
+      where: { showId: activeProduction.id, archivedAt: null },
       orderBy: { name: "asc" },
       select: { id: true, name: true, slug: true, color: true },
     }),

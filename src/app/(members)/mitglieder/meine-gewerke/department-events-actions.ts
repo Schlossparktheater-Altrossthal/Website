@@ -67,7 +67,7 @@ async function ensureDepartmentLead(departmentId: string) {
   }
 
   const membership = await prisma.departmentMembership.findFirst({
-    where: { departmentId, userId },
+    where: { departmentId, userId, status: "active" },
     select: { role: true },
   });
 

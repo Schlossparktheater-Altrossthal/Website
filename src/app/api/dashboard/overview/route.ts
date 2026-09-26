@@ -5,6 +5,7 @@ import { endOfWeek, startOfWeek } from "date-fns";
 import { requireAuth } from "@/lib/rbac";
 import { CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { loadProfileChecklist } from "@/lib/profile-completion-server";
@@ -143,7 +144,10 @@ export async function GET() {
           })
         : null,
       prisma.departmentEvent.findMany({
-        where: { start: { gt: now }, department: { memberships: { some: { userId } } } },
+        where: {
+          start: { gt: now },
+          department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
+        },
         orderBy: { start: "asc" },
         take: 5,
         select: {

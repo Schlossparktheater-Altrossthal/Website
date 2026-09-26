@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { ensureProductionDepartments } from "@/lib/departments/templates";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
@@ -157,6 +158,7 @@ export async function createProductionAction(formData: FormData): Promise<Produc
       },
       select: { id: true },
     });
+    await ensureProductionDepartments(show.id);
 
     if (setActive) {
       const cookieStore = await cookies();

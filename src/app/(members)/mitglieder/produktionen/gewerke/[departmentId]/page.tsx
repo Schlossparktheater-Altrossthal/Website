@@ -67,6 +67,7 @@ async function loadDepartmentWithRelations(id: string) {
     where: { id },
     include: {
       memberships: {
+        where: { status: "active" },
         include: {
           user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
         },

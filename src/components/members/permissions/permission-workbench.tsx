@@ -24,6 +24,7 @@ export async function PermissionWorkbench() {
       select: { roleId: true, permission: { select: { key: true } } },
     }),
     prisma.department.findMany({
+      where: { archivedAt: null, show: { status: { in: ["planning", "active"] } } },
       orderBy: [{ name: "asc" }],
       select: { id: true, name: true, slug: true, requiresJoinApproval: true },
     }),

@@ -20,7 +20,7 @@ import {
 } from "@/lib/produktionen/actions-helpers";
 
 export async function createDepartmentAction(formData: FormData): Promise<void> {
-  await requireProductionManager();
+  const { activeProduction } = await requireActiveProductionManager();
   const redirectPath = parseRedirectPath(formData);
   try {
     const name = readString(formData, "name", { label: "Name", minLength: 2, maxLength: 80 });
@@ -37,10 +37,11 @@ export async function createDepartmentAction(formData: FormData): Promise<void> 
     );
     const requiresApproval = parseCheckbox(formData.get("requiresApproval"));
     const baseSlug = slugify(slugInput ?? name);
-    const slug = await ensureUniqueDepartmentSlug(baseSlug);
+    const slug = await ensureUniqueDepartmentSlug(activeProduction.id, baseSlug);
 
     await prisma.department.create({
       data: {
+        showId: activeProduction.id,
         name,
         slug,
         description: description ?? null,
@@ -83,7 +84,7 @@ export async function updateDepartmentAction(formData: FormData): Promise<void> 
     let slug = department.slug;
     if (slugInput) {
       const baseSlug = slugify(slugInput);
-      slug = await ensureUniqueDepartmentSlug(baseSlug, department.id);
+      slug = await ensureUniqueDepartmentSlug(department.showId, baseSlug, department.id);
     }
 
     await prisma.department.update({

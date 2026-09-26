@@ -62,11 +62,14 @@ export async function joinDepartmentAction(formData: FormData) {
 
   await prisma.departmentMembership.upsert({
     where: { departmentId_userId: { departmentId: department.id, userId } },
-    update: {},
+    update: { status: "active", decidedAt: new Date() },
     create: {
       departmentId: department.id,
       userId,
       role: DepartmentMembershipRole.member,
+      status: "active",
+      source: "self",
+      decidedAt: new Date(),
     },
   });
 

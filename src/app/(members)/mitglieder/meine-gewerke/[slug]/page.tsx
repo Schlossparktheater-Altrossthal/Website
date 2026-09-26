@@ -15,6 +15,7 @@ import {
   UsersIcon,
 } from "@/components/ui/action-icons";
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { sortMeasurements, type MeasurementType, type MeasurementUnit } from "@/data/measurements";
@@ -69,7 +70,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
   const slug = decodeURIComponent(rawSlug);
 
   const membershipRaw = await prisma.departmentMembership.findFirst({
-    where: { userId, department: { slug } },
+    where: { userId, AND: [currentDepartmentMembershipWhere()], department: { slug } },
     include: {
       department: {
         select: {
@@ -79,6 +80,7 @@ export default async function GewerkDetailPage({ params }: PageProps) {
           color: true,
           slug: true,
           memberships: {
+            where: { status: "active" },
             include: {
               user: { select: { id: true, name: true, email: true } },
             },
