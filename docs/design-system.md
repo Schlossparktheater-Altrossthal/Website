@@ -610,3 +610,4 @@ Beim Erstellen oder Refactoren von Komponenten:
 - [ ] Bereichs-Navigation läuft über `SectionNav` (keine eigene Pill-Leiste, keine orange gefüllten Tabs)
 - [ ] Werkzeugzeile: Suche links, primäre Aktion rechts, einzeilig
 - [ ] Leerzustand `py-12 text-center` mit `text-muted-foreground`
+- [ ] Auf Handy, Tablet und Desktop in hell und dunkel per Screenshot geprüft (Pflicht, nie nur am Code)
