@@ -149,8 +149,8 @@ Alles tweakcn-Theme-Tokens, hell/dunkel, keine festen Farben.
 
 - [x] 2.1 Scope je Permission (`global`/`production`) in `DEFAULT_PERMISSION_DEFINITIONS`
 - [x] 2.2 `hasPermission`/`getUserPermissionKeys` mit optionalem `showId`; Tests
-- [ ] 2.3 (teilweise: Proben-Detailseiten prüfen mit `showId`; offen: Probenplanung-Übersicht, `ensurePlanner`, Sperrliste und APIs – dafür muss die Probenplanung erst nach Produktion filtern) Aufrufer produktionsbezogener Rechte auf `showId` umstellen (v. a. `PRIVATE.PRODUCTION.SHOW.MANAGE`, Probenplanung, Sperrliste)
-- [ ] 2.4 (erst nach 2.3 komplett; vorher Rechtevergabe in Prod prüfen: welche Rollen haben produktionsbezogene Rechte?) `computeEffectiveRoles`-Spiegelung entfernen, Migration `UserRole` bereinigen
-- [ ] 2.5 (Daten prüfen: gibt es die Rolle „regie“ in Prod, wem ist sie zugewiesen?) Regie als Produktionsrolle, Migration der `AppRole` „regie“
+- [x] 2.3 Proben-Detailseiten, Probenplanung (Übersicht nach Produktion + allgemeine, `ensurePlanner` mit Produktion, neue Proben bekommen die gewählte Produktion, Standard-Einladung = aktive Mitglieder der Produktion), Sperrliste (Team = Mitglieder der Produktion, Rechte pro Produktion; Sperrtermine bleiben pro Person), `api/rehearsals/blocked`
+- [x] 2.4 Entschieden: Spiegelung bleibt. Datencheck 2026-09-26 (Staging = Prod-Kopie): Ensemble/Technik haben nur „Körpermaße“, keine produktionsbezogenen Rechte; `UserRole` wird noch von Authentik-Gruppen und Rollenfiltern genutzt. Produktionsbezogene Prüfungen ignorieren die Spiegelung über `scopeSystemRolesToProduction`.
+- [ ] 2.5 Zurückgestellt: „regie“ hat keine Rechte und ist einer Person zugewiesen – als `function` („Regie“) in der Produktionsmitgliedschaft pflegen und die eigene Rolle dann löschen (manuell, kein Code nötig).
 - [x] 2.6 Matrix-Umschalter Global/Produktion, Scope-Badges
-- [ ] 2.7 Migrationstest auf Prod-Kopie, Staging, Release
+- [ ] 2.7 (keine Schemaänderung nötig; Hinweis: alle 13 Bestandsproben haben `showId = null` und erscheinen als allgemeine Proben) Migrationstest auf Prod-Kopie, Staging, Release

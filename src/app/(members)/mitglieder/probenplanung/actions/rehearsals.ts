@@ -16,6 +16,7 @@ import {
   collectInviteeRoles,
   computeEnd,
   deleteSchema,
+  defaultInviteeIds,
   ensurePlanner,
   fetchInviteeIds,
   parseEnd,
@@ -54,7 +55,7 @@ export async function createRehearsalAction(input: {
 
   const inviteeIds = invitees
     ? Array.from(new Set(invitees))
-    : (await prisma.user.findMany({ select: { id: true } })).map((entry) => entry.id);
+    : await defaultInviteeIds(auth.showId);
 
   if (!inviteeIds.length) {
     return { error: "Es wurden keine Mitglieder gefunden." } as const;
@@ -81,6 +82,7 @@ export async function createRehearsalAction(input: {
           requiredRoles: rolesToInputJson(roles),
           registrationDeadline: null,
           createdBy: auth.userId,
+          showId: auth.showId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
       });
@@ -154,7 +156,7 @@ export async function updateRehearsalAction(input: {
   description?: string;
   invitees?: string[];
 }) {
-  const auth = await ensurePlanner();
+  const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
     return { error: auth.error } as const;
   }
@@ -341,7 +343,7 @@ export async function updateRehearsalAction(input: {
 }
 
 export async function deleteRehearsalAction(input: { id: string }) {
-  const auth = await ensurePlanner();
+  const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
     return { error: auth.error } as const;
   }

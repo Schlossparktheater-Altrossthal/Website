@@ -4,6 +4,8 @@ import type { Prisma } from "@prisma/client";
 
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import { getActiveProductionId } from "@/lib/active-production";
 import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -71,17 +73,61 @@ export function computeEnd(start: Date, previousStart?: Date | null, previousEnd
   return new Date(start.getTime() + 2 * 60 * 60 * 1000);
 }
 
-export async function ensurePlanner() {
+/**
+ * Prüft das Planungsrecht im Kontext einer Produktion: bei bestehenden Proben deren
+ * Produktion, sonst die gerade gewählte. `showId` ist die Produktion, der neue Proben
+ * zugeordnet werden (null = allgemeine Probe ohne Produktion).
+ */
+export async function ensurePlanner(target?: { rehearsalId?: string | null }) {
   const session = await requireAuth();
   const userId = session.user?.id;
   if (!userId) {
     return { ok: false as const, error: "Keine Berechtigung." };
   }
-  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
-  if (!allowed) {
-    return { ok: false as const, error: "Keine Berechtigung." };
+  let showId: string | null;
+  if (target?.rehearsalId) {
+    const rehearsal = await prisma.rehearsal.findUnique({
+      where: { id: target.rehearsalId },
+      select: { showId: true },
+    });
+    showId = rehearsal?.showId ?? null;
+  } else {
+    showId = await getActiveProductionId(userId);
   }
-  return { ok: true as const, userId };
+  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE", {
+    showId,
+  });
+  if (!allowed) {
+    return {
+      ok: false as const,
+      error: showId
+        ? "Keine Berechtigung für die Probenplanung dieser Produktion."
+        : "Keine Berechtigung.",
+    };
+  }
+  return { ok: true as const, userId, showId };
+}
+
+/** Standard-Einladung: aktive Mitglieder der Produktion, ohne Produktion alle Aktiven. */
+export async function defaultInviteeIds(showId: string | null): Promise<string[]> {
+  const users = await prisma.user.findMany({
+    where: {
+      deactivatedAt: null,
+      ...(showId
+        ? {
+            productionMemberships: {
+              some: {
+                showId,
+                status: "active",
+                OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
+              },
+            },
+          }
+        : {}),
+    },
+    select: { id: true },
+  });
+  return users.map((user) => user.id);
 }
 
 export async function syncInvitees(

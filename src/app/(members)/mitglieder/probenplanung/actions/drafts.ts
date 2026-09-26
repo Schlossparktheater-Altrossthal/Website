@@ -71,6 +71,7 @@ export async function createRehearsalDraftAction(input?: {
       registrationDeadline: null,
       createdBy: auth.userId,
       status: "DRAFT",
+      showId: auth.showId,
     },
     select: { id: true },
   });
@@ -87,7 +88,7 @@ export async function updateRehearsalDraftAction(input: {
   description?: string;
   invitees?: string[];
 }) {
-  const auth = await ensurePlanner();
+  const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
     return { error: auth.error } as const;
   }
@@ -199,7 +200,7 @@ export async function publishRehearsalAction(input: {
   description?: string;
   invitees?: string[];
 }) {
-  const auth = await ensurePlanner();
+  const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
     return { error: auth.error } as const;
   }
@@ -334,7 +335,7 @@ export async function publishRehearsalAction(input: {
 }
 
 export async function discardRehearsalDraftAction(input: { id: string }) {
-  const auth = await ensurePlanner();
+  const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
     return { error: auth.error } as const;
   }

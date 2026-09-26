@@ -4,18 +4,23 @@ import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
 import { prisma } from "@/lib/prisma";
 
-type Range = { from: Date; to: Date };
+/** `showId`: nur Einträge dieser Produktion und allgemeine ohne Produktion. */
+type Range = { from: Date; to: Date; showId?: string | null };
+
+function showScope(showId: string | null | undefined) {
+  return showId ? { OR: [{ showId }, { showId: null }] } : {};
+}
 
 function toDayKey(date: Date) {
   return formatIsoDateInTimeZone(date.toISOString());
 }
 
 /** Termine der Organisation im Zeitraum (Beginn innerhalb oder mehrtägig überlappend). */
-export async function readCalendarEvents({ from, to }: Range): Promise<CalendarEntry[]> {
+export async function readCalendarEvents({ from, to, showId }: Range): Promise<CalendarEntry[]> {
   const events = await prisma.calendarEvent.findMany({
     where: {
       start: { lte: to },
-      OR: [{ start: { gte: from } }, { end: { gte: from } }],
+      AND: [{ OR: [{ start: { gte: from } }, { end: { gte: from } }] }, showScope(showId)],
     },
     orderBy: { start: "asc" },
   });
@@ -44,9 +49,13 @@ function toCalendarEntry(event: CalendarEvent): CalendarEntry {
 }
 
 /** Angesetzte Proben im Zeitraum (ohne Entwürfe und Absagen). */
-export async function readRehearsalEntries({ from, to }: Range): Promise<CalendarEntry[]> {
+export async function readRehearsalEntries({ from, to, showId }: Range): Promise<CalendarEntry[]> {
   const rehearsals = await prisma.rehearsal.findMany({
-    where: { start: { gte: from, lte: to }, status: { notIn: ["DRAFT", "CANCELLED"] } },
+    where: {
+      start: { gte: from, lte: to },
+      status: { notIn: ["DRAFT", "CANCELLED"] },
+      ...showScope(showId),
+    },
     orderBy: { start: "asc" },
     select: { id: true, title: true, start: true, end: true, location: true, description: true },
   });

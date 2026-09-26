@@ -20,16 +20,37 @@ import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
 import { combineNameParts } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { getActiveProduction } from "@/lib/active-production";
+import { currentMembershipWhere } from "@/lib/produktionen/status";
 export default async function RehearsalPlanningPage() {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
+  const production = await getActiveProduction(session.user?.id);
+  const showId = production?.id ?? null;
+  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE", {
+    showId,
+  });
   if (!allowed) {
-    return <div className="text-sm text-destructive">Kein Zugriff auf die Probenplanung</div>;
+    return (
+      <div className="text-sm text-destructive">
+        {production
+          ? `Kein Zugriff auf die Probenplanung von „${production.title ?? production.year}“.`
+          : "Kein Zugriff auf die Probenplanung"}
+      </div>
+    );
   }
+
+  // Proben der gewählten Produktion plus allgemeine Proben ohne Produktion.
+  const showFilter = showId ? { OR: [{ showId }, { showId: null }] } : {};
+  const memberFilter = showId
+    ? {
+        deactivatedAt: null,
+        productionMemberships: { some: { showId, ...currentMembershipWhere() } },
+      }
+    : { deactivatedAt: null };
 
   const [publishedRehearsals, blockedDays, memberCount, drafts] = await Promise.all([
     prisma.rehearsal.findMany({
-      where: { status: { not: "DRAFT" } },
+      where: { status: { not: "DRAFT" }, ...showFilter },
       orderBy: { start: "asc" },
     }),
     prisma.blockedDay.findMany({
@@ -37,11 +58,11 @@ export default async function RehearsalPlanningPage() {
       include: {
         user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
       },
-      where: { kind: "BLOCKED" },
+      where: { kind: "BLOCKED", user: memberFilter },
     }),
-    prisma.user.count(),
+    prisma.user.count({ where: memberFilter }),
     prisma.rehearsal.findMany({
-      where: { status: "DRAFT" },
+      where: { status: "DRAFT", ...showFilter },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -101,7 +122,11 @@ export default async function RehearsalPlanningPage() {
     <div className="space-y-6">
       <PageHeader
         title="Probenplanung"
-        description="Lege neue Proben an, verwalte Termine und Einladungen."
+        description={
+          production
+            ? `Proben für „${production.title ?? production.year}“ und allgemeine Proben. Die Produktion wechselst du oben links.`
+            : "Lege neue Proben an, verwalte Termine und Einladungen."
+        }
         breadcrumbs={breadcrumbs}
       />
 

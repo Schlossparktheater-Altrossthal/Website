@@ -3,6 +3,7 @@ import { addMonths, format, startOfMonth } from "date-fns";
 import { PageHeader } from "@/components/members/page-header";
 import { getActiveProductionId } from "@/lib/active-production";
 import { readCalendarEntries } from "@/lib/calendar/entries";
+import { currentMembershipWhere } from "@/lib/produktionen/status";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { databaseEnabled } from "@/lib/dev-database";
 import {
@@ -121,11 +122,15 @@ export default async function BlocklistPage() {
     );
   }
 
+  // Sperrtermine gehören der Person (wer nicht kann, kann für keine Produktion); die
+  // Team-Ansicht und die Rechte richten sich nach der gewählten Produktion.
+  const activeProductionId = await getActiveProductionId(userId);
+  const scope = { showId: activeProductionId };
   const [allowed, canPlan, canManageSettings, canExport] = await Promise.all([
-    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"),
-    hasPermission(session.user, CALENDAR_PLANNER_PERMISSION),
-    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS"),
-    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT"),
+    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW", scope),
+    hasPermission(session.user, CALENDAR_PLANNER_PERMISSION, scope),
+    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS", scope),
+    hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT", scope),
   ]);
 
   if (!allowed) {
@@ -137,12 +142,25 @@ export default async function BlocklistPage() {
   const to = addMonths(from, 14);
 
   const settings = resolveBlocklistSettings(await readSperrlisteSettings());
-  const activeProductionId = await getActiveProductionId(userId);
 
   const [holidays, users, calendarEntries, production] = await Promise.all([
     getSaxonySchoolHolidayRanges(settings.cacheKey),
     prisma.user.findMany({
-      where: { deactivatedAt: null },
+      where: {
+        deactivatedAt: null,
+        ...(activeProductionId
+          ? {
+              OR: [
+                { id: userId },
+                {
+                  productionMemberships: {
+                    some: { showId: activeProductionId, ...currentMembershipWhere() },
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
       select: {
         id: true,
         firstName: true,
@@ -157,7 +175,7 @@ export default async function BlocklistPage() {
         },
       },
     }),
-    readCalendarEntries({ from, to }),
+    readCalendarEntries({ from, to, showId: activeProductionId }),
     activeProductionId
       ? prisma.show.findUnique({
           where: { id: activeProductionId },

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
+import { getActiveProductionId } from "@/lib/active-production";
 
 function parseDate(date: string) {
   const value = new Date(`${date}T00:00:00`);
@@ -14,7 +15,10 @@ function parseDate(date: string) {
 
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
+  const showId = await getActiveProductionId(session.user?.id ?? null);
+  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE", {
+    showId,
+  });
   if (!allowed) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
