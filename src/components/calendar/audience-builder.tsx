@@ -91,12 +91,18 @@ export function AudienceBuilder({
   value,
   onChange,
   availability,
+  conflicts = {},
+  declined = {},
 }: {
   context: AudienceContext;
   value: AudienceValue;
   onChange: (value: AudienceValue) => void;
   /** Sperrliste am Termintag. */
   availability: DayAvailability;
+  /** Parallel zu einer anderen Probe eingeladen (Person → Titel). */
+  conflicts?: Partial<Record<string, string>>;
+  /** Abgesagt (Person → Begründung). */
+  declined?: Record<string, string | null>;
 }) {
   const [query, setQuery] = useState("");
   const resolved = useMemo(
@@ -104,8 +110,15 @@ export function AudienceBuilder({
     [value, context],
   );
   const invited = resolved.filter((entry) => !entry.excluded);
-  const blockedCount = invited.filter((entry) => availability[entry.userId] === "blocked").length;
-  const limitedCount = invited.filter((entry) => availability[entry.userId] === "limited").length;
+  const isOpen = (entry: ResolvedParticipant) => !(entry.userId in declined);
+  const blockedCount = invited.filter(
+    (entry) => isOpen(entry) && availability[entry.userId] === "blocked",
+  ).length;
+  const limitedCount = invited.filter(
+    (entry) => isOpen(entry) && availability[entry.userId] === "limited",
+  ).length;
+  const conflictCount = invited.filter((entry) => conflicts[entry.userId]).length;
+  const declinedCount = invited.filter((entry) => entry.userId in declined).length;
 
   const addRule = (rule: AudienceRule) => {
     if (value.rules.some((entry) => sameRule(entry, rule))) return;
@@ -158,9 +171,11 @@ export function AudienceBuilder({
       <p className="text-sm text-muted-foreground" aria-live="polite">
         <span className="font-medium text-foreground">{invited.length} eingeladen</span>
         {" · "}
-        {invited.length - blockedCount - limitedCount} können
+        {invited.length - blockedCount - limitedCount - declinedCount} können
         {limitedCount ? ` · ${limitedCount} eingeschränkt` : ""}
         {blockedCount ? ` · ${blockedCount} gesperrt` : ""}
+        {declinedCount ? ` · ${declinedCount} abgesagt` : ""}
+        {conflictCount ? ` · ${conflictCount} mit Terminüberschneidung` : ""}
       </p>
 
       <div className="space-y-2">
@@ -311,6 +326,16 @@ export function AudienceBuilder({
                         {entry.excluded ? "ausgenommen · " : ""}
                         {entry.reasons.join(" · ")}
                       </span>
+                      {entry.userId in declined && !entry.excluded ? (
+                        <span className="block text-xs text-destructive">
+                          Abgesagt{declined[entry.userId] ? `: „${declined[entry.userId]}“` : ""}
+                        </span>
+                      ) : null}
+                      {conflicts[entry.userId] && !entry.excluded ? (
+                        <span className="block text-xs text-warning">
+                          Zur selben Zeit eingeladen: {conflicts[entry.userId]}
+                        </span>
+                      ) : null}
                     </span>
                   </label>
                   <div className="flex items-center gap-3 pl-8 sm:pl-0">

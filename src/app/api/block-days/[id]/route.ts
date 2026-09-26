@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyPlannersOfNewBlocks } from "@/lib/calendar/decline-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -69,6 +70,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     where: { id: existing.id },
     data: updateData,
   });
+
+  if (updated.kind === BlockedDayKind.BLOCKED && existing.kind !== BlockedDayKind.BLOCKED) {
+    await notifyPlannersOfNewBlocks(updated.userId, [updated]).catch((error) =>
+      console.error("[block-days:PATCH] Planung nicht benachrichtigt", error),
+    );
+  }
 
   return NextResponse.json(toResponse(updated));
 }

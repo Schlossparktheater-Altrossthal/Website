@@ -16,3 +16,30 @@ export async function readDayAvailability(dateKey: string): Promise<DayAvailabil
     entries.map((entry) => [entry.userId, entry.kind === "BLOCKED" ? "blocked" : "limited"]),
   );
 }
+
+/** Wer im Zeitraum schon zu einer anderen angesetzten Probe eingeladen ist (Person → Titel). */
+export async function readParallelRehearsals({
+  start,
+  end,
+  excludeEventId,
+}: {
+  start: Date;
+  end: Date;
+  excludeEventId: string;
+}): Promise<Partial<Record<string, string>>> {
+  const participants = await prisma.eventParticipant.findMany({
+    where: {
+      invited: true,
+      response: { notIn: ["no", "emergency"] },
+      event: {
+        id: { not: excludeEventId },
+        kind: "REHEARSAL",
+        status: "SCHEDULED",
+        start: { lt: end },
+        end: { gt: start },
+      },
+    },
+    select: { userId: true, event: { select: { title: true } } },
+  });
+  return Object.fromEntries(participants.map((entry) => [entry.userId, entry.event.title]));
+}

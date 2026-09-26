@@ -27,6 +27,8 @@ type UpdateAttendanceArgs = {
   actorUserId: string;
   nextStatus: AttendanceStatus | null;
   comment?: string | null;
+  /** Begründung, die an der Rückmeldung gespeichert wird (z. B. bei Absagen). */
+  note?: string | null;
 };
 
 export type AttendanceUpdateResult = {
@@ -42,6 +44,7 @@ export async function updateAttendanceWithLog({
   actorUserId,
   nextStatus,
   comment,
+  note,
 }: UpdateAttendanceArgs): Promise<AttendanceUpdateResult> {
   const cleanedComment = sanitizeComment(comment);
   const where = { eventId_userId: { eventId, userId: targetUserId } };
@@ -56,12 +59,13 @@ export async function updateAttendanceWithLog({
       const respondedAt = new Date();
       await tx.eventParticipant.upsert({
         where,
-        update: { response: nextStatus, respondedAt },
+        update: { response: nextStatus, responseNote: sanitizeComment(note), respondedAt },
         create: {
           eventId,
           userId: targetUserId,
           invited: false,
           response: nextStatus,
+          responseNote: sanitizeComment(note),
           respondedAt,
         },
       });

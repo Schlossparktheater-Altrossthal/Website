@@ -6,82 +6,102 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { notifyPlannersOfDecline } from "@/lib/calendar/decline-notifications";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
 
-export type AttendanceActionState = {
-  ok: boolean;
-  error: string | null;
-};
-
-const RESPOND_SCHEMA = z.object({
-  rehearsalId: z.string().min(1, "Termin konnte nicht gefunden werden."),
-  status: z.enum(["yes", "no", "emergency"], { error: "Ungültige Auswahl." }),
+const DECLINE_SCHEMA = z.object({
+  eventId: z.string().min(1),
+  reason: z
+    .string()
+    .trim()
+    .min(3, "Bitte gib kurz an, warum du nicht kannst.")
+    .max(500, "Die Begründung ist zu lang."),
 });
 
-export const INITIAL_ATTENDANCE_STATE: AttendanceActionState = {
-  ok: false,
-  error: null,
-};
+/** Fehler, deren Text direkt angezeigt werden darf. */
+class RespondError extends Error {}
 
-export async function respondToRehearsal(
-  _prevState: AttendanceActionState,
-  formData: FormData,
-): Promise<AttendanceActionState> {
+async function loadOwnRehearsal(eventId: string) {
+  const session = await requireAuth();
+  const userId = session.user?.id ?? null;
+  if (!userId || !(await hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW"))) {
+    throw new RespondError("Du darfst auf diesen Termin nicht antworten.");
+  }
+  const rehearsal = await prisma.calendarEvent.findFirst({
+    where: {
+      id: eventId,
+      kind: "REHEARSAL",
+      status: "SCHEDULED",
+      participants: { some: { userId, invited: true } },
+    },
+    select: { id: true, start: true },
+  });
+  if (!rehearsal) throw new RespondError("Du bist für diesen Termin nicht eingeladen.");
+  if (rehearsal.start <= new Date()) throw new RespondError("Der Termin hat schon begonnen.");
+  return { userId, rehearsal };
+}
+
+function revalidateOwn(eventId: string) {
+  revalidatePath("/mitglieder/meine-proben");
+  revalidatePath(`/mitglieder/proben/${eventId}`);
+  revalidatePath(`/mitglieder/probenplanung/proben/${eventId}`);
+}
+
+/** Absage mit Begründung; die Planung wird bei benötigten Personen benachrichtigt. */
+export async function declineRehearsalAction(input: { eventId: string; reason: string }) {
+  const parsed = DECLINE_SCHEMA.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." };
+  }
   try {
-    const session = await requireAuth();
-    const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW");
-    const userId = session.user?.id ?? null;
-
-    if (!allowed || !userId) {
-      return { ok: false, error: "Du darfst auf diesen Termin nicht antworten." };
-    }
-
-    const parsed = RESPOND_SCHEMA.safeParse({
-      rehearsalId: formData.get("rehearsalId"),
-      status: formData.get("status"),
-    });
-
-    if (!parsed.success) {
-      const message = parsed.error.issues[0]?.message ?? "Ungültige Eingabe.";
-      return { ok: false, error: message };
-    }
-
-    const { rehearsalId, status } = parsed.data;
-
-    const rehearsal = await prisma.calendarEvent.findFirst({
-      where: { id: rehearsalId, kind: "REHEARSAL" },
-      select: {
-        id: true,
-        status: true,
-        participants: {
-          where: { userId, invited: true },
-          select: { userId: true },
-        },
-      },
-    });
-
-    if (!rehearsal || rehearsal.status === "DRAFT") {
-      return { ok: false, error: "Dieser Termin ist nicht mehr verfügbar." };
-    }
-
-    if (!rehearsal.participants.length) {
-      return { ok: false, error: "Du bist für diesen Termin nicht eingeladen." };
-    }
-
+    const { userId, rehearsal } = await loadOwnRehearsal(parsed.data.eventId);
     await updateAttendanceWithLog({
       prisma,
-      eventId: rehearsalId,
+      eventId: rehearsal.id,
       targetUserId: userId,
       actorUserId: userId,
-      nextStatus: status,
+      nextStatus: "no",
+      comment: parsed.data.reason,
+      note: parsed.data.reason,
     });
-
-    revalidatePath("/mitglieder/meine-proben");
-    revalidatePath(`/mitglieder/proben/${rehearsalId}`);
-
-    return { ok: true, error: null };
+    await notifyPlannersOfDecline({
+      eventId: rehearsal.id,
+      userId,
+      reason: parsed.data.reason,
+    }).catch((error) => console.error("[decline] Planung nicht benachrichtigt", error));
+    revalidateOwn(rehearsal.id);
+    return { ok: true as const };
   } catch (error) {
-    console.error("Error responding to rehearsal from Meine Termine", error);
-    return { ok: false, error: "Die Rückmeldung konnte nicht gespeichert werden." };
+    console.error("Error declining rehearsal", error);
+    return {
+      ok: false as const,
+      error:
+        error instanceof RespondError
+          ? error.message
+          : "Die Absage konnte nicht gespeichert werden.",
+    };
+  }
+}
+
+/** Absage zurücknehmen – die Person gilt wieder als dabei. */
+export async function withdrawDeclineAction(input: { eventId: string }) {
+  try {
+    const { userId, rehearsal } = await loadOwnRehearsal(z.string().min(1).parse(input.eventId));
+    await updateAttendanceWithLog({
+      prisma,
+      eventId: rehearsal.id,
+      targetUserId: userId,
+      actorUserId: userId,
+      nextStatus: null,
+      comment: "Absage zurückgenommen",
+    });
+    revalidateOwn(rehearsal.id);
+    return { ok: true as const };
+  } catch (error) {
+    console.error("Error withdrawing decline", error);
+    return {
+      ok: false as const,
+      error: error instanceof RespondError ? error.message : "Das hat nicht geklappt.",
+    };
   }
 }

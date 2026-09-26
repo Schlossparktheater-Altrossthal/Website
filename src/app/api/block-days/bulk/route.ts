@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyPlannersOfNewBlocks } from "@/lib/calendar/decline-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { z } from "zod";
@@ -55,6 +56,12 @@ export async function POST(request: Request) {
       where: { userId, date: { in: payload.map((p) => p.date) } },
       orderBy: { date: "asc" },
     });
+
+    if (kind === BlockedDayKind.BLOCKED) {
+      await notifyPlannersOfNewBlocks(userId, created).catch((error) =>
+        console.error("[block-days:bulk POST] Planung nicht benachrichtigt", error),
+      );
+    }
 
     return NextResponse.json({ created: created.map(toResponse), skipped });
   } catch (error) {

@@ -91,6 +91,7 @@ export default async function RehearsalEditorPage({
         audience={{ rules: audience.rules, overrides: audience.overrides }}
         invited={audience.invited}
         initialAvailability={availability}
+        declined={audience.declined}
       />
     </div>
   );

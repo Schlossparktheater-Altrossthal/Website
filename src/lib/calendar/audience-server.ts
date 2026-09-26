@@ -142,6 +142,8 @@ export async function readEventAudience(eventId: string) {
         level: true,
         override: true,
         levelOverride: true,
+        response: true,
+        responseNote: true,
         user: { select: userSelect },
       },
     }),
@@ -160,7 +162,13 @@ export async function readEventAudience(eventId: string) {
       name: getUserDisplayName(entry.user),
       level: entry.level,
     }));
-  return { rules: rules satisfies AudienceRule[], overrides, invited };
+  /** Absagen (Person → Begründung) für die Anzeige in der Planung. */
+  const declined: Record<string, string | null> = Object.fromEntries(
+    participants
+      .filter((entry) => entry.response === "no" || entry.response === "emergency")
+      .map((entry) => [entry.userId, entry.responseNote]),
+  );
+  return { rules: rules satisfies AudienceRule[], overrides, invited, declined };
 }
 
 /**

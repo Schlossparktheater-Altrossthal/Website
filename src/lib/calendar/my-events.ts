@@ -21,6 +21,8 @@ export type MyEventItem = {
   group: MyEventGroup;
   /** Warum die Person dabei ist. */
   reasons: string[];
+  /** Nur bei eigenen Proben: Absage möglich und ggf. schon abgesagt (mit Grund). */
+  decline: { declined: boolean; note: string | null } | null;
 };
 
 const TAKE = 30;
@@ -39,6 +41,8 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       select: {
         level: true,
         reasons: true,
+        response: true,
+        responseNote: true,
         event: {
           select: { id: true, title: true, start: true, end: true, location: true },
         },
@@ -96,7 +100,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
   ]);
 
   const items: MyEventItem[] = [
-    ...rehearsals.map(({ level, reasons, event }) => ({
+    ...rehearsals.map(({ level, reasons, response, responseNote, event }) => ({
       id: event.id,
       title: event.title,
       label: "Probe",
@@ -107,6 +111,10 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       href: `/mitglieder/proben/${event.id}`,
       group: level === "OPTIONAL" ? ("optional" as const) : ("required" as const),
       reasons: Array.isArray(reasons) ? reasons.filter((entry) => typeof entry === "string") : [],
+      decline: {
+        declined: response === "no" || response === "emergency",
+        note: responseNote,
+      },
     })),
     ...departmentEvents.flatMap((event) => {
       if (!event.department) return [];
@@ -124,6 +132,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         reasons: [
           guest ? `Gast im Gewerk ${event.department.name}` : `Gewerk ${event.department.name}`,
         ],
+        decline: null,
       };
     }),
     ...generalEvents.map((event) => ({
@@ -137,6 +146,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       href: null,
       group: "club" as const,
       reasons: [event.show ? "Termin deiner Produktion" : "Termin für alle"],
+      decline: null,
     })),
   ];
 

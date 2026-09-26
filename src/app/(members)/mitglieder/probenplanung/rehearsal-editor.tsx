@@ -18,7 +18,12 @@ import {
   type AudienceContext,
 } from "@/lib/calendar/audience";
 import type { DayAvailability } from "@/lib/calendar/day-availability";
-import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
+import {
+  DEFAULT_TIME_ZONE,
+  formatIsoDateInTimeZone,
+  formatIsoTimeInTimeZone,
+  parseDateTimeInTimeZone,
+} from "@/lib/date-time";
 
 import {
   discardRehearsalDraftAction,
@@ -42,6 +47,7 @@ type RehearsalEditorProps = {
   /** Aktuell Eingeladene (für den Hinweis auf geänderte Besetzung). */
   invited: { userId: string; name: string; level: "REQUIRED" | "OPTIONAL" }[];
   initialAvailability: DayAvailability;
+  declined: Record<string, string | null>;
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -52,6 +58,7 @@ export function RehearsalEditor({
   audience: initialAudience,
   invited,
   initialAvailability,
+  declined,
 }: RehearsalEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
@@ -69,6 +76,7 @@ export function RehearsalEditor({
   // Abweichungen übernommen hat – sonst keine stillen Einladungen.
   const [audienceTouched, setAudienceTouched] = useState(isDraft);
   const [availability, setAvailability] = useState<DayAvailability>(initialAvailability);
+  const [conflicts, setConflicts] = useState<Partial<Record<string, string>>>({});
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -98,26 +106,48 @@ export function RehearsalEditor({
     setAudienceTouched(true);
   }, []);
 
-  const fetchBlockedForDate = useCallback(async (dateValue: string) => {
-    setIsCheckingBlocks(true);
-    try {
-      const response = await fetch(`/api/rehearsals/blocked?date=${dateValue}`);
-      if (!response.ok) {
-        throw new Error("Request failed");
+  const fetchDayChecks = useCallback(
+    async (dateValue: string, timeValue: string, endValue: string) => {
+      setIsCheckingBlocks(true);
+      try {
+        const params = new URLSearchParams({ date: dateValue, eventId: rehearsal.id });
+        try {
+          const start = parseDateTimeInTimeZone(dateValue, timeValue, DEFAULT_TIME_ZONE);
+          let end = endValue
+            ? parseDateTimeInTimeZone(dateValue, endValue, DEFAULT_TIME_ZONE)
+            : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+          if (end < start) end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+          params.set("start", start.toISOString());
+          params.set("end", end.toISOString());
+        } catch {
+          // Unvollständige Uhrzeit: nur die Sperrliste prüfen.
+        }
+        const response = await fetch(`/api/rehearsals/blocked?${params}`);
+        if (!response.ok) {
+          throw new Error("Request failed");
+        }
+        const data = (await response.json()) as {
+          availability?: DayAvailability;
+          conflicts?: Partial<Record<string, string>>;
+        };
+        setAvailability(data.availability ?? {});
+        setConflicts(data.conflicts ?? {});
+      } catch (error) {
+        console.error("Failed to load blocked members", error);
+        toast.error("Sperrtermine konnten nicht geladen werden.");
+      } finally {
+        setIsCheckingBlocks(false);
       }
-      const data = (await response.json()) as { availability?: DayAvailability };
-      setAvailability(data.availability ?? {});
-    } catch (error) {
-      console.error("Failed to load blocked members", error);
-      toast.error("Sperrtermine konnten nicht geladen werden.");
-    } finally {
-      setIsCheckingBlocks(false);
-    }
-  }, []);
+    },
+    [rehearsal.id],
+  );
 
   useEffect(() => {
-    fetchBlockedForDate(date).catch(() => null);
-  }, [date, fetchBlockedForDate]);
+    const handle = setTimeout(() => {
+      fetchDayChecks(date, time, endTime.trim()).catch(() => null);
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [date, time, endTime, fetchDayChecks]);
 
   const skipInitialSave = useRef(true);
 
@@ -374,6 +404,8 @@ export function RehearsalEditor({
             value={audience}
             onChange={changeAudience}
             availability={availability}
+            conflicts={conflicts}
+            declined={declined}
           />
         </CardContent>
       </Card>

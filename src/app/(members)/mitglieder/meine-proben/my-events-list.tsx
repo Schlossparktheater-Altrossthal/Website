@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { MyEventGroup, MyEventItem } from "@/lib/calendar/my-events";
 
+import { DeclineControl } from "./decline-control";
+
 type Filter = "all" | MyEventGroup;
 
 const FILTER_LABELS: Record<Filter, string> = {
@@ -89,6 +91,14 @@ export function MyEventsList({ items }: { items: MyEventItem[] }) {
                   <span className="font-medium text-foreground">Dabei als:</span>{" "}
                   {item.reasons.join(" · ")}
                 </p>
+              ) : null}
+              {item.decline ? (
+                <DeclineControl
+                  eventId={item.id}
+                  title={item.title}
+                  declined={item.decline.declined}
+                  note={item.decline.note}
+                />
               ) : null}
             </li>
           ))}

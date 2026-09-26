@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { readDayAvailability } from "@/lib/calendar/day-availability";
+import { readDayAvailability, readParallelRehearsals } from "@/lib/calendar/day-availability";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
@@ -25,9 +25,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
   }
 
-  const availability = await readDayAvailability(date);
+  const start = new Date(searchParams.get("start") ?? "");
+  const end = new Date(searchParams.get("end") ?? "");
+  const eventId = searchParams.get("eventId");
+  const withConflicts =
+    eventId && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start;
+
+  const [availability, conflicts] = await Promise.all([
+    readDayAvailability(date),
+    withConflicts ? readParallelRehearsals({ start, end, excludeEventId: eventId }) : {},
+  ]);
   return NextResponse.json({
     availability,
+    conflicts,
     userIds: Object.keys(availability).filter((userId) => availability[userId] === "blocked"),
   });
 }

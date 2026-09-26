@@ -65,8 +65,8 @@ export default async function MyRehearsalsPage() {
                   damit Ersatz organisiert werden kann.
                 </li>
                 <li>
-                  Neue Termine gelten als zugesagt. Du musst keine Zusage- oder Absage-Buttons mehr
-                  verwenden.
+                  Neue Termine gelten als zugesagt. Kannst du doch nicht, sag über „Absagen“ mit
+                  kurzer Begründung ab – die Planung wird sofort informiert.
                 </li>
                 <li>
                   Nach dem Eintrag in die Sperrliste kannst du den Termin aus deinem Kalender

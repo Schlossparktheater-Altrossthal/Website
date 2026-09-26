@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
-import { sendNotification } from "@/lib/realtime/triggers";
-import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
+import { notifyPlannersOfDecline } from "@/lib/calendar/decline-notifications";
 
 type SessionUser = { id?: string | null; name?: string | null; email?: string | null };
 
@@ -48,7 +47,6 @@ export async function POST(request: Request) {
                 title: true,
                 start: true,
                 location: true,
-                createdById: true,
               },
             },
           },
@@ -69,40 +67,6 @@ export async function POST(request: Request) {
     const nextStatus = response === "emergency" ? "emergency" : response;
     const emergencyReason = response === "emergency" ? trimmedReason : null;
 
-    const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
-    const actorDisplayName =
-      session.user?.name?.trim() || session.user?.email?.trim() || "Ein Mitglied";
-    const formattedStart = formatter.format(rehearsal.start);
-    const locationInfo = rehearsal.location ? ` · Ort: ${rehearsal.location}` : "";
-
-    const creatorId =
-      rehearsal.createdById && rehearsal.createdById !== userId ? rehearsal.createdById : null;
-    const creatorNotification = creatorId
-      ? (() => {
-          if (nextStatus === "emergency") {
-            const bodyParts = [
-              `${actorDisplayName} hat einen Notfall gemeldet und kann am ${formattedStart}${locationInfo} nicht teilnehmen.`,
-            ];
-            if (emergencyReason) {
-              bodyParts.push(`Grund: ${emergencyReason}`);
-            }
-            return {
-              title: `Notfall: ${actorDisplayName} fällt für ${rehearsal.title || "die Probe"} aus`,
-              body: bodyParts.join(" "),
-              type: NOTIFICATION_TYPES.REHEARSAL_EMERGENCY,
-              severity: "error" as const,
-            };
-          }
-
-          return {
-            title: `Absage: ${actorDisplayName} kann nicht teilnehmen`,
-            body: `${actorDisplayName} hat für die Probe am ${formattedStart}${locationInfo} abgesagt.`,
-            type: NOTIFICATION_TYPES.REHEARSAL_ATTENDANCE,
-            severity: "warning" as const,
-          };
-        })()
-      : null;
-
     await prisma.$transaction(async (tx) => {
       await tx.notificationRecipient.update({
         where: { id: recipientId },
@@ -122,30 +86,16 @@ export async function POST(request: Request) {
           respondedAt,
         },
       });
-
-      if (creatorId && creatorNotification) {
-        await tx.notification.create({
-          data: {
-            title: creatorNotification.title,
-            body: creatorNotification.body,
-            type: creatorNotification.type,
-            eventId: rehearsalId,
-            recipients: {
-              create: { userId: creatorId },
-            },
-          },
-        });
-      }
     });
 
-    if (creatorId && creatorNotification) {
-      await sendNotification({
-        targetUserId: creatorId,
-        title: creatorNotification.title,
-        body: creatorNotification.body,
-        type: creatorNotification.severity,
-        metadata: { rehearsalId },
-      });
+    if (nextStatus !== "yes") {
+      await notifyPlannersOfDecline({
+        eventId: rehearsalId,
+        userId,
+        reason: emergencyReason,
+      }).catch((error) =>
+        console.error("[notifications/respond] Planung nicht benachrichtigt", error),
+      );
     }
 
     return NextResponse.json({ ok: true, status: nextStatus });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Prisma, BlockedDayKind } from "@prisma/client";
+import { notifyPlannersOfNewBlocks } from "@/lib/calendar/decline-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -149,6 +150,12 @@ export async function POST(request: Request) {
         kind,
       },
     });
+
+    if (kind === BlockedDayKind.BLOCKED) {
+      await notifyPlannersOfNewBlocks(userId, [entry]).catch((error) =>
+        console.error("[block-days:POST] Planung nicht benachrichtigt", error),
+      );
+    }
 
     return NextResponse.json(toResponse(entry));
   } catch (error) {
