@@ -57,7 +57,8 @@ test.describe("als admin", () => {
     // Datei im Team-Tab
     await page.getByRole("link", { name: /^Team \d/ }).click();
     const file = path.join(os.tmpdir(), `e2e-${stamp}.txt`);
-    writeFileSync(file, "E2E Datei\n");
+    // 2 MB: über dem 1-MB-Limit von Server Actions, prüft die Upload-Route samt Ingress.
+    writeFileSync(file, "E2E Datei\n".repeat(200_000));
     await page.locator("input[type=file]").setInputFiles(file);
     await expect(page.getByText(`e2e-${stamp}.txt`)).toBeVisible();
 
