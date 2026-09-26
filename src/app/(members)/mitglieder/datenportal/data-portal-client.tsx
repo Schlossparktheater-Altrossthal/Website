@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -114,7 +115,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
     setResult(null);
   }
 
-  function buildBody(format: "json" | "csv") {
+  function buildBody(format: "json" | "csv" | "xlsx" | "pdf") {
     return JSON.stringify({
       source: activeSource,
       showId,
@@ -149,13 +150,13 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
     }
   }
 
-  async function exportCsv() {
+  async function exportFile(format: "csv" | "xlsx" | "pdf") {
     setBusy(true);
     try {
       const response = await fetch("/api/datenportal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: buildBody("csv"),
+        body: buildBody(format),
       });
       if (!response.ok) {
         setError("Export nicht möglich.");
@@ -164,7 +165,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url;
-      link.download = `datenportal-${activeSource}.csv`;
+      link.download = `datenportal-${activeSource}.${format}`;
       link.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -358,14 +359,32 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
               Auswerten
             </Button>
             {show.canExport ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={exportCsv}
-                disabled={busy || activeColumns.length === 0}
-              >
-                CSV exportieren
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => exportFile("xlsx")}
+                  disabled={busy || activeColumns.length === 0}
+                >
+                  Excel exportieren
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => exportFile("csv")}
+                  disabled={busy || activeColumns.length === 0}
+                >
+                  CSV exportieren
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => exportFile("pdf")}
+                  disabled={busy || activeColumns.length === 0}
+                >
+                  PDF exportieren
+                </Button>
+              </>
             ) : null}
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -385,7 +404,7 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
                 Anzeige gekürzt, der Export enthält alle Zeilen.
               </p>
             ) : null}
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -407,6 +426,27 @@ export function DataPortalClient({ shows }: { shows: PortalShow[] }) {
                 </TableBody>
               </Table>
             </div>
+            <ul className="space-y-3 md:hidden">
+              {result.rows.map((row, index) => (
+                <li key={index} className="rounded-lg border border-border/70 p-3">
+                  <dl className="space-y-1 text-sm">
+                    {result.columns.map((column, columnIndex) => (
+                      <div key={column.key} className="flex justify-between gap-3">
+                        <dt className="text-muted-foreground">{column.label}</dt>
+                        <dd
+                          className={cn(
+                            "break-words text-right",
+                            columnIndex === 0 && "font-medium",
+                          )}
+                        >
+                          {formatCell(row[column.key], column.type) || "–"}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       ) : null}

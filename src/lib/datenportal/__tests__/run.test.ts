@@ -95,3 +95,17 @@ describe("portalRowsToCsv", () => {
     expect(csv.startsWith('﻿"Name"')).toBe(true);
   });
 });
+
+describe("portalRowsToXlsx", () => {
+  it("erzeugt eine lesbare Arbeitsmappe mit Kopfzeile und Textschutz", async () => {
+    const { portalRowsToXlsx } = await import("../xlsx");
+    const ExcelJS = (await import("exceljs")).default;
+    const { columns, rows: projected } = projectRows(rows, ["name", "age"], fields);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await portalRowsToXlsx(columns, projected));
+    const sheet = workbook.getWorksheet("Auswertung");
+    expect(sheet?.getRow(1).getCell(1).value).toBe("Name");
+    expect(sheet?.getRow(2).getCell(2).value).toBe(14);
+    expect(sheet?.getRow(5).getCell(1).value).toBe("'=SUM(A1)");
+  });
+});

@@ -106,6 +106,7 @@
     "d3-scale-chromatic": "^3.1.0",
     "date-fns": "^4.1.0",
     "dexie": "4.4.4",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.23.22",
     "geist": "^1.5.1",
     "http-proxy": "^1.18.1",

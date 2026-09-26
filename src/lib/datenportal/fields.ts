@@ -37,7 +37,7 @@ export type DataSource = (typeof DATA_SOURCES)[number];
 
 export const DATA_SOURCE_LABELS: Record<DataSource, string> = {
   participants: "Teilnehmende einer Produktion",
-  allergies: "Allergien & Unverträglichkeiten (eine Zeile je Eintrag)",
+  allergies: "Allergien (eine Zeile je Eintrag)",
 };
 
 /** Feldkatalog je Datenquelle. Nur hier gelistete Felder sind abfragbar. */

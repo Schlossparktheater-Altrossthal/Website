@@ -1,10 +1,12 @@
 import type { PdfTemplate } from "../types";
+import { dataPortalTableTemplate } from "./data-portal-table";
 import { onboardingInviteTemplate } from "./onboarding-invite";
 import { onboardingStatisticsTemplate } from "./onboarding-statistics";
 import { productionCastingTemplate } from "./production-casting";
 import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
 
 const templates = [
+  dataPortalTableTemplate,
   onboardingInviteTemplate,
   onboardingStatisticsTemplate,
   productionCastingTemplate,

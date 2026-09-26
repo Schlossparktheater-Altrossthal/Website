@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { resolvePortalAccess, writeAuditLog } from "@/lib/datenportal/access";
-import { portalRowsToCsv } from "@/lib/datenportal/csv";
+import { formatValue, portalRowsToCsv } from "@/lib/datenportal/csv";
+import { portalRowsToXlsx } from "@/lib/datenportal/xlsx";
 import { executePortalQuery } from "@/lib/datenportal/execute";
-import { dataPortalQuerySchema } from "@/lib/datenportal/fields";
+import { DATA_SOURCE_LABELS, dataPortalQuerySchema } from "@/lib/datenportal/fields";
 import { PortalFieldError } from "@/lib/datenportal/run";
+import { renderPdfTemplate } from "@/lib/pdf/engine";
+import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
 const requestSchema = dataPortalQuerySchema.extend({
-  format: z.enum(["json", "csv"]).default("json"),
+  format: z.enum(["json", "csv", "xlsx", "pdf"]).default("json"),
 });
 
 const MAX_ROWS = 5000;
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
   const { format, ...query } = parsed.data;
 
   const access = await resolvePortalAccess(session.user, query.showId);
-  if (!access.canView || (format === "csv" && !access.canExport)) {
+  if (!access.canView || (format !== "json" && !access.canExport)) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
@@ -46,7 +49,7 @@ export async function POST(request: NextRequest) {
     await writeAuditLog({
       userId,
       showId: query.showId,
-      action: format === "csv" ? "export" : "query",
+      action: format === "json" ? "query" : "export",
       source: query.source,
       fields: result.columns.map((column) => column.key),
       rowCount: result.rows.length,
@@ -57,6 +60,37 @@ export async function POST(request: NextRequest) {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
           "Content-Disposition": `attachment; filename="datenportal-${slugify(query.source)}.csv"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+    if (format === "pdf") {
+      const show = await prisma.show.findUnique({
+        where: { id: query.showId },
+        select: { title: true, year: true },
+      });
+      const pdf = await renderPdfTemplate("data-portal-table", {
+        title: DATA_SOURCE_LABELS[query.source],
+        subtitle: show ? `Produktion: ${show.title?.trim() || show.year}` : null,
+        generatedAt: new Date(),
+        columns: result.columns.map((column) => column.label),
+        rows: result.rows.map((row) =>
+          result.columns.map((column) => formatValue(row[column.key] ?? null)),
+        ),
+      });
+      return new NextResponse(new Uint8Array(pdf.buffer), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="datenportal-${slugify(query.source)}.pdf"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+    if (format === "xlsx") {
+      return new NextResponse(new Uint8Array(await portalRowsToXlsx(result.columns, result.rows)), {
+        headers: {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="datenportal-${slugify(query.source)}.xlsx"`,
           "Cache-Control": "no-store",
         },
       });

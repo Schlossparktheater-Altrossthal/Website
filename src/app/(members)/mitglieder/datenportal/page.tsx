@@ -1,5 +1,5 @@
 import { resolvePortalAccess } from "@/lib/datenportal/access";
-import { SOURCE_FIELDS, allowedFields, DATA_SOURCES } from "@/lib/datenportal/fields";
+import { allowedFields, DATA_SOURCES } from "@/lib/datenportal/fields";
 import { ensurePermissionDefinitions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -55,9 +55,8 @@ export default async function DatenportalPage() {
         <h1 className="text-2xl font-semibold">Datenportal</h1>
         <p className="text-sm text-muted-foreground">
           Auswertungen zu Teilnehmenden einer Produktion. Abfragen und Exporte werden protokolliert
-          ({Object.keys(SOURCE_FIELDS).length} Datenquellen, Aufbewahrung des Protokolls: 12
-          Monate). Personenbezogene Daten nur für den vorgesehenen Zweck nutzen und Exporte nach
-          Gebrauch löschen.
+          (Aufbewahrung des Protokolls: 12 Monate). Personenbezogene Daten nur für den vorgesehenen
+          Zweck nutzen und Exporte nach Gebrauch löschen.
         </p>
       </div>
       <DataPortalClient shows={accessible} />

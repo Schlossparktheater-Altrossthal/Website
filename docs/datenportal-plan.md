@@ -19,7 +19,7 @@ Chart** ansehen sowie als **CSV/XLSX** exportieren.
 - Zugriff über die bestehende Rechteverwaltung (`src/lib/permissions.ts`), Rechte werden nur an leitende
   Personen vergeben. Keine Sonderlogik nach Rolle im Code.
 - Kein freier SQL-Zugriff. Feld-Registry als Whitelist, Abfragen über Prisma.
-- Ausgabe: Web-Tabelle, Web-Chart (recharts, bereits vorhanden), CSV, XLSX. PDF optional später (pdfkit vorhanden).
+- Ausgabe: Web-Tabelle (mobil als Karten), Web-Chart (recharts, Phase 2), CSV, XLSX und PDF (pdfkit-Vorlage `data-portal-table`, Querformat). CSV/XLSX/PDF sind seit Phase 1 fertig (Wunsch 2026-09-26).
 - Neue Abhängigkeit: `exceljs` (nur für XLSX).
 
 ## Rechte
