@@ -857,7 +857,10 @@ function RolesList({
     return (
       <EmptyHint>
         Für diese Produktion sind noch keine Rollen angelegt.{" "}
-        <Link href="/mitglieder/produktionen/besetzung" className="text-primary underline">
+        <Link
+          href="/mitglieder/produktionen/stueck?ansicht=rollen"
+          className="text-primary underline"
+        >
           Rolle anlegen
         </Link>
       </EmptyHint>
@@ -866,7 +869,7 @@ function RolesList({
   return (
     <div className="space-y-2">
       <Link
-        href="/mitglieder/produktionen/besetzung"
+        href="/mitglieder/produktionen/stueck?ansicht=rollen"
         className="flex min-h-11 items-center justify-between rounded-xl border border-border bg-card px-3 text-sm font-medium text-primary hover:bg-muted/40"
       >
         Rollen und Szenen verwalten

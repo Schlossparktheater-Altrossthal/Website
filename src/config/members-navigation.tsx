@@ -175,15 +175,6 @@ const DepartmentsOverviewIcon = createMembersNavIcon(
   </>,
 );
 
-const CastIcon = createMembersNavIcon(
-  <>
-    <circle cx="9" cy="8" r="3" />
-    <path d="M4 20c0-3 2.239-5.5 5-5.5S14 17 14 20" />
-    <path d="M17 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-    <path d="M20.5 20c0-2.485-2.015-4.5-4.5-4.5" />
-  </>,
-);
-
 const ScenesIcon = createMembersNavIcon(
   <>
     <path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -316,14 +307,8 @@ export const membersNavigation = [
         icon: EventPlanningIcon,
       },
       {
-        href: "/mitglieder/produktionen/besetzung",
-        label: "Besetzung",
-        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
-        icon: CastIcon,
-      },
-      {
-        href: "/mitglieder/produktionen/szenen",
-        label: "Szenen",
+        href: "/mitglieder/produktionen/stueck",
+        label: "Stück",
         permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
         icon: ScenesIcon,
       },

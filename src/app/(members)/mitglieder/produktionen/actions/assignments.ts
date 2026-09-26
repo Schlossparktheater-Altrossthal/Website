@@ -223,7 +223,7 @@ export async function setCharacterCastingAction(input: {
     }
 
     revalidateAssignments();
-    revalidatePath("/mitglieder/produktionen/besetzung");
+    revalidatePath("/mitglieder/produktionen/stueck");
     return actionSuccess();
   } catch (error) {
     return actionFailure(error, "Besetzung konnte nicht gespeichert werden.");

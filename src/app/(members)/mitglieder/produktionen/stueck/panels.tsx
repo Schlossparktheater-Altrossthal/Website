@@ -2,15 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import type { BreakdownStatus, CharacterCastingType } from "@prisma/client";
 import { toast } from "sonner";
 
 import {
   ChevronRightIcon,
-  MapPinIcon,
   PlusIcon,
-  SearchIcon,
   StarIcon,
   TrashIcon,
   XIcon,
@@ -27,6 +24,7 @@ import type {
   RsRole,
   RsScene,
 } from "@/lib/produktionen/roles-scenes";
+import { ROLE_SIZE_OPTIONS } from "@/lib/produktionen/role-sizes";
 import { cn } from "@/lib/utils";
 
 import { setCharacterCastingAction } from "../actions/assignments";
@@ -39,401 +37,20 @@ import {
   saveSceneAction,
   setRoleScenesAction,
 } from "../actions/roles-scenes";
+import {
+  BREAKDOWN_STATUSES,
+  CAST_LABELS,
+  Field,
+  inputClass,
+  PanelSection,
+  sceneLabel,
+  STATUS_LABELS,
+  STATUS_TONE,
+  ToggleChip,
+  useRun,
+} from "./ui";
 
-type Result = { ok: boolean; error?: string };
-
-const CAST_LABELS: Record<CharacterCastingType, string> = {
-  primary: "Haupt",
-  alternate: "Zweit",
-  cover: "Cover",
-  cameo: "Cameo",
-};
-
-const STATUS_LABELS: Record<BreakdownStatus, string> = {
-  planned: "Geplant",
-  in_progress: "In Arbeit",
-  blocked: "Blockiert",
-  ready: "Bereit",
-  done: "Erledigt",
-};
-
-const BREAKDOWN_STATUSES: BreakdownStatus[] = [
-  "planned",
-  "in_progress",
-  "blocked",
-  "ready",
-  "done",
-];
-
-const STATUS_TONE: Record<BreakdownStatus, string> = {
-  planned: "bg-muted text-muted-foreground",
-  in_progress: "bg-info/15 text-info",
-  blocked: "bg-destructive/10 text-destructive",
-  ready: "bg-success/15 text-success",
-  done: "bg-success/15 text-success",
-};
-
-const inputClass =
-  "h-11 w-full rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm";
-
-function sceneLabel(scene: Pick<RsScene, "identifier">) {
-  return scene.identifier ?? "–";
-}
-
-function useRun() {
-  const router = useRouter();
-  return async (action: () => Promise<Result>, success?: string) => {
-    const result = await action();
-    if (!result.ok) {
-      toast.error("Das hat nicht geklappt", { description: result.error, duration: 5000 });
-      return false;
-    }
-    if (success) toast.success(success, { duration: 3000 });
-    router.refresh();
-    return true;
-  };
-}
-
-export function RolesScenesClient({
-  data,
-  view,
-}: {
-  data: RolesScenesData;
-  view: "rollen" | "szenen";
-}) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [query, setQuery] = React.useState("");
-  const [onlyOpen, setOnlyOpen] = React.useState(false);
-  const openId = searchParams.get(view === "rollen" ? "rolle" : "szene");
-  const [creating, setCreating] = React.useState(false);
-
-  // Panel-Zustand in der URL (`?rolle=` / `?szene=`), damit Links aus Portal und Zuweisung direkt öffnen.
-  const basePath =
-    view === "rollen" ? "/mitglieder/produktionen/besetzung" : "/mitglieder/produktionen/szenen";
-  const open = (id: string | null) => {
-    const key = view === "rollen" ? "rolle" : "szene";
-    router.replace(id ? `${basePath}?${key}=${encodeURIComponent(id)}` : basePath, {
-      scroll: false,
-    });
-  };
-
-  const needle = query.trim().toLowerCase();
-  const roles = data.roles.filter(
-    (role) =>
-      (!onlyOpen || !role.cast.some((entry) => entry.type === "primary")) &&
-      (!needle ||
-        role.name.toLowerCase().includes(needle) ||
-        role.cast.some((entry) => entry.person.name.toLowerCase().includes(needle))),
-  );
-  const scenes = data.scenes.filter(
-    (scene) =>
-      (!onlyOpen || scene.roles.length === 0) &&
-      (!needle ||
-        [scene.identifier, scene.title, scene.location].some((value) =>
-          value?.toLowerCase().includes(needle),
-        )),
-  );
-  const unassignedRoles = data.roles.filter(
-    (role) => !role.cast.some((entry) => entry.type === "primary"),
-  ).length;
-  const emptyScenes = data.scenes.filter((scene) => scene.roles.length === 0).length;
-
-  const openRole =
-    view === "rollen" ? (data.roles.find((role) => role.id === openId) ?? null) : null;
-  const openScene =
-    view === "szenen" ? (data.scenes.find((scene) => scene.id === openId) ?? null) : null;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Suchen</span>
-          <SearchIcon
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <input
-            className={cn(inputClass, "pl-9")}
-            value={query}
-            placeholder={view === "rollen" ? "Rolle oder Person suchen" : "Szene oder Ort suchen"}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
-        <Button type="button" className="h-11 shrink-0" onClick={() => setCreating(true)}>
-          <PlusIcon className="h-4 w-4" aria-hidden />
-          {view === "rollen" ? "Rolle" : "Szene"}
-        </Button>
-      </div>
-
-      <SegmentedControl<"all" | "open">
-        aria-label="Filter"
-        size="md"
-        fullWidth
-        className="sm:max-w-sm"
-        value={onlyOpen ? "open" : "all"}
-        onValueChange={(value) => setOnlyOpen(value === "open")}
-        options={[
-          {
-            value: "all",
-            label: `Alle ${view === "rollen" ? data.roles.length : data.scenes.length}`,
-          },
-          {
-            value: "open",
-            label:
-              view === "rollen" ? `Unbesetzt ${unassignedRoles}` : `Ohne Rollen ${emptyScenes}`,
-          },
-        ]}
-      />
-
-      {view === "rollen" ? (
-        roles.length ? (
-          <ul className="grid gap-2 lg:grid-cols-2">
-            {roles.map((role) => (
-              <RoleRow key={role.id} role={role} onOpen={() => open(role.id)} />
-            ))}
-          </ul>
-        ) : (
-          <Empty>{data.roles.length ? "Keine Treffer." : "Noch keine Rollen angelegt."}</Empty>
-        )
-      ) : scenes.length ? (
-        <ul className="grid gap-2 lg:grid-cols-2">
-          {scenes.map((scene) => (
-            <SceneRow key={scene.id} scene={scene} data={data} onOpen={() => open(scene.id)} />
-          ))}
-        </ul>
-      ) : (
-        <Empty>{data.scenes.length ? "Keine Treffer." : "Noch keine Szenen angelegt."}</Empty>
-      )}
-
-      {view === "rollen" ? (
-        <RolePanel
-          key={openRole?.id ?? (creating ? "new" : "closed")}
-          open={creating || openRole !== null}
-          role={openRole}
-          data={data}
-          onClose={() => {
-            setCreating(false);
-            if (openId) open(null);
-          }}
-          onCreated={(id) => {
-            setCreating(false);
-            open(id);
-          }}
-        />
-      ) : (
-        <ScenePanel
-          key={openScene?.id ?? (creating ? "new" : "closed")}
-          open={creating || openScene !== null}
-          scene={openScene}
-          data={data}
-          onClose={() => {
-            setCreating(false);
-            if (openId) open(null);
-          }}
-          onCreated={(id) => {
-            setCreating(false);
-            open(id);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="py-12 text-center text-sm text-muted-foreground">{children}</p>;
-}
-
-function RoleDot({
-  role,
-  className,
-}: {
-  role: Pick<RsRole, "name" | "color">;
-  className?: string;
-}) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-        className,
-      )}
-      style={{
-        backgroundColor: `color-mix(in oklab, ${role.color ?? "var(--muted-foreground)"} 40%, transparent)`,
-      }}
-    >
-      {role.name.slice(0, 1)}
-    </span>
-  );
-}
-
-function RoleRow({ role, onOpen }: { role: RsRole; onOpen: () => void }) {
-  const primary = role.cast.filter((entry) => entry.type === "primary");
-  const others = role.cast.filter((entry) => entry.type !== "primary");
-  return (
-    <li className="min-w-0">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted/40"
-      >
-        <RoleDot role={role} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{role.name}</span>
-          <span className="block truncate text-xs">
-            {primary.length ? (
-              <span>{primary.map((entry) => entry.person.name).join(", ")}</span>
-            ) : (
-              <span className="font-medium text-destructive">Nicht besetzt</span>
-            )}
-            {others.length ? (
-              <span className="text-muted-foreground">
-                {" "}
-                · Zweit: {others.map((entry) => entry.person.name).join(", ")}
-              </span>
-            ) : null}
-          </span>
-        </span>
-        <span className="shrink-0 text-xs text-muted-foreground">
-          {role.sceneIds.length} {role.sceneIds.length === 1 ? "Szene" : "Szenen"}
-        </span>
-        <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-      </button>
-    </li>
-  );
-}
-
-function SceneRow({
-  scene,
-  data,
-  onOpen,
-}: {
-  scene: RsScene;
-  data: RolesScenesData;
-  onOpen: () => void;
-}) {
-  const roles = scene.roles.flatMap((entry) => {
-    const role = data.roles.find((item) => item.id === entry.characterId);
-    return role ? [{ role, featured: entry.featured }] : [];
-  });
-  const blocked = scene.breakdown.filter((item) => item.status === "blocked").length;
-  const open = scene.breakdown.filter((item) => item.status !== "done" && item.status !== "ready");
-  return (
-    <li className="min-w-0">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex w-full items-start gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:bg-muted/40"
-      >
-        <span className="flex h-10 min-w-10 shrink-0 items-center justify-center rounded-lg bg-muted px-2 text-sm font-semibold tabular-nums">
-          {sceneLabel(scene)}
-        </span>
-        <span className="min-w-0 flex-1 space-y-1">
-          <span className="block truncate text-sm font-semibold">
-            {scene.title ?? `Szene ${sceneLabel(scene)}`}
-          </span>
-          {scene.location || scene.timeOfDay || scene.durationMinutes ? (
-            <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-              {scene.location ? <MapPinIcon className="h-3 w-3 shrink-0" aria-hidden /> : null}
-              <span className="truncate">
-                {[
-                  scene.location,
-                  scene.timeOfDay,
-                  scene.durationMinutes ? `${scene.durationMinutes} Min.` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            </span>
-          ) : null}
-          <span className="flex flex-wrap gap-1">
-            {roles.length ? (
-              roles.map(({ role, featured }) => (
-                <span
-                  key={role.id}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
-                  style={{
-                    backgroundColor: `color-mix(in oklab, ${role.color ?? "var(--muted-foreground)"} 22%, transparent)`,
-                  }}
-                >
-                  {featured ? <StarIcon className="h-3 w-3" aria-label="Hauptszene" /> : null}
-                  {role.name}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">Keine Rollen</span>
-            )}
-          </span>
-          {scene.breakdown.length ? (
-            <span className="block text-xs text-muted-foreground">
-              Ausstattung: {open.length} offen
-              {blocked ? (
-                <span className="font-medium text-destructive"> · {blocked} blockiert</span>
-              ) : null}
-            </span>
-          ) : null}
-        </span>
-        <ChevronRightIcon className="mt-3 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-      </button>
-    </li>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block min-w-0 space-y-1">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function PanelSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2 border-t border-border/60 pt-4">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
-function ToggleChip({
-  active,
-  onClick,
-  children,
-  color,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  color?: string | null;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm",
-        active
-          ? "border-primary bg-primary/10 font-medium text-primary"
-          : "border-border text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {color !== undefined ? (
-        <span
-          aria-hidden
-          className="h-2.5 w-2.5 rounded-full"
-          style={{ backgroundColor: color ?? "var(--muted-foreground)" }}
-        />
-      ) : null}
-      {children}
-    </button>
-  );
-}
-
-function RolePanel({
+export function RolePanel({
   open,
   role,
   data,
@@ -450,6 +67,7 @@ function RolePanel({
   const [name, setName] = React.useState(role?.name ?? "");
   const [description, setDescription] = React.useState(role?.description ?? "");
   const [color, setColor] = React.useState<string | null>(role?.color ?? ROLE_COLOR_OPTIONS[0]);
+  const [size, setSize] = React.useState<string | null>(role?.size ?? null);
   const [saving, setSaving] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [adding, setAdding] = React.useState<CharacterCastingType | null>(null);
@@ -463,6 +81,7 @@ function RolePanel({
       name,
       description,
       color,
+      size,
     });
     setSaving(false);
     if (!result.ok) {
@@ -544,6 +163,20 @@ function RolePanel({
               onChange={(event) => setDescription(event.target.value)}
             />
           </Field>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Rollengröße</span>
+            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Rollengröße">
+              {ROLE_SIZE_OPTIONS.map((option) => (
+                <ToggleChip
+                  key={option.code}
+                  active={size === option.code}
+                  onClick={() => setSize(size === option.code ? null : option.code)}
+                >
+                  {option.title}
+                </ToggleChip>
+              ))}
+            </div>
+          </div>
           <div className="space-y-1">
             <span className="text-xs font-medium text-muted-foreground">Farbe</span>
             <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Farbe">
@@ -684,7 +317,7 @@ function RolePanel({
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     Noch keine Szenen –{" "}
-                    <Link href="/mitglieder/produktionen/szenen" className="text-primary underline">
+                    <Link href="/mitglieder/produktionen/stueck" className="text-primary underline">
                       Szenen anlegen
                     </Link>
                   </p>
@@ -727,7 +360,7 @@ function RolePanel({
 }
 
 type SceneDraft = {
-  identifier: string;
+  act: number;
   title: string;
   location: string;
   timeOfDay: string;
@@ -736,30 +369,25 @@ type SceneDraft = {
   roles: { characterId: string; featured: boolean }[];
 };
 
-function nextIdentifier(scenes: RsScene[]) {
-  const last = scenes.at(-1)?.identifier;
-  if (!last) return "1";
-  const parts = last.split(".");
-  parts[parts.length - 1] = String((Number.parseInt(parts.at(-1) ?? "0", 10) || 0) + 1);
-  return parts.join(".");
-}
-
-function ScenePanel({
+export function ScenePanel({
   open,
   scene,
+  defaultAct,
   data,
   onClose,
   onCreated,
 }: {
   open: boolean;
   scene: RsScene | null;
+  /** Akt für eine neue Szene. */
+  defaultAct: number;
   data: RolesScenesData;
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
   const run = useRun();
   const [draft, setDraft] = React.useState<SceneDraft>(() => ({
-    identifier: scene?.identifier ?? nextIdentifier(data.scenes),
+    act: scene?.act ?? defaultAct,
     title: scene?.title ?? "",
     location: scene?.location ?? "",
     timeOfDay: scene?.timeOfDay ?? "",
@@ -793,7 +421,7 @@ function ScenePanel({
     const result = await saveSceneAction({
       showId: data.showId,
       id: scene?.id,
-      identifier: draft.identifier,
+      act: draft.act,
       title: draft.title,
       location: draft.location,
       timeOfDay: draft.timeOfDay,
@@ -836,7 +464,7 @@ function ScenePanel({
               className="h-11 flex-1"
               isLoading={saving}
               loadingText="Speichert …"
-              disabled={!draft.identifier.trim()}
+              disabled={saving}
               onClick={save}
             >
               {scene ? "Speichern" : "Anlegen"}
@@ -845,15 +473,21 @@ function ScenePanel({
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-[5.5rem_1fr] gap-2">
-            <Field label="Nummer">
-              <input
-                className={inputClass}
-                value={draft.identifier}
-                inputMode="decimal"
-                placeholder="1.3"
-                onChange={(event) => update("identifier", event.target.value)}
-              />
+          <div className="grid grid-cols-[6.5rem_1fr] gap-2">
+            <Field label="Akt">
+              <select
+                className={cn(inputClass, "px-2")}
+                value={draft.act}
+                onChange={(event) => update("act", Number(event.target.value))}
+              >
+                {[...data.acts, { number: (data.acts.at(-1)?.number ?? 0) + 1, title: null }].map(
+                  (act, index) => (
+                    <option key={act.number} value={act.number}>
+                      {index === data.acts.length ? `Neuer Akt ${act.number}` : `Akt ${act.number}`}
+                    </option>
+                  ),
+                )}
+              </select>
             </Field>
             <Field label="Titel">
               <input
@@ -929,7 +563,10 @@ function ScenePanel({
             ) : (
               <p className="text-sm text-muted-foreground">
                 Noch keine Rollen –{" "}
-                <Link href="/mitglieder/produktionen/besetzung" className="text-primary underline">
+                <Link
+                  href="/mitglieder/produktionen/stueck?ansicht=rollen"
+                  className="text-primary underline"
+                >
                   Rollen anlegen
                 </Link>
               </p>

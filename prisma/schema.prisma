@@ -421,6 +421,7 @@ model Show {
   proposals               RehearsalProposal[]
   characters              Character[]
   scenes                  Scene[]
+  acts                    ShowAct[]
   finalRehearsalDuties    FinalRehearsalDuty[]
   memberships             ProductionMembership[]
   photoConsents           PhotoConsent[]
@@ -658,6 +659,8 @@ model Scene {
   location        String?
   timeOfDay       String?
   durationMinutes Int?
+  /// Akt (1, 2, …); die Nummer `identifier` ist `akt.position` und wird beim Umsortieren neu vergeben.
+  act             Int                  @default(1)
   notes           String?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
@@ -667,6 +670,19 @@ model Scene {
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([showId, sequence])
+}
+
+/// Akt eines Stücks mit optionalem Titel („Akt 2 – Phantásien“).
+model ShowAct {
+  id        String   @id @default(cuid())
+  showId    String
+  number    Int
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, number])
 }
 
 model SceneCharacter {

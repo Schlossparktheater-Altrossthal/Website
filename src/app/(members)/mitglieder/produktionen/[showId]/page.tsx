@@ -150,10 +150,10 @@ export default async function ProduktionDetailPage({
               <Link href={`/mitglieder/produktionen/${show.id}/ensemble`}>Ensemble</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/mitglieder/produktionen/besetzung">Besetzung</Link>
+              <Link href="/mitglieder/produktionen/stueck?ansicht=rollen">Rollen</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/mitglieder/produktionen/szenen">Szenen</Link>
+              <Link href="/mitglieder/produktionen/stueck">Stück</Link>
             </Button>
             <Button asChild variant="outline">
               <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>

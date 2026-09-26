@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ProductionWorkspaceNav } from "./workspace-nav";
 import { ClapperboardIcon } from "@/components/ui/action-icons";
 
-type WorkspaceKey = "overview" | "departments" | "assignments" | "casting" | "scenes" | "feedback";
+type WorkspaceKey = "overview" | "departments" | "assignments" | "piece" | "feedback";
 
 type ProductionSummary = {
   id: string;

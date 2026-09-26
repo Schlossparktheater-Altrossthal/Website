@@ -2,14 +2,13 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-type WorkspaceKey = "overview" | "departments" | "assignments" | "casting" | "scenes" | "feedback";
+type WorkspaceKey = "overview" | "departments" | "assignments" | "piece" | "feedback";
 
 const NAVIGATION: { key: WorkspaceKey; label: string; href: string }[] = [
   { key: "overview", label: "Überblick", href: "/mitglieder/produktionen" },
   { key: "departments", label: "Gewerke & Teams", href: "/mitglieder/produktionen/gewerke" },
   { key: "assignments", label: "Teams & Zuweisung", href: "/mitglieder/produktionen/zuweisung" },
-  { key: "casting", label: "Besetzung", href: "/mitglieder/produktionen/besetzung" },
-  { key: "scenes", label: "Szenen", href: "/mitglieder/produktionen/szenen" },
+  { key: "piece", label: "Stück", href: "/mitglieder/produktionen/stueck" },
   {
     key: "feedback",
     label: "Rückmeldungen & Auswertung",

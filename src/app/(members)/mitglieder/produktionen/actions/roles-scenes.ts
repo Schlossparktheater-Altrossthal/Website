@@ -12,14 +12,12 @@ import {
   slugify,
   type ProductionActionResult,
 } from "@/lib/produktionen/actions-helpers";
-import { compareSceneIdentifiers } from "@/lib/produktionen/roles-scenes";
+import { getRoleSizeCodes } from "@/lib/produktionen/role-sizes";
 
 const hexColor = /^#[0-9a-f]{6}$/i;
-const sceneIdentifier = /^\d+(?:\.\d+)?$/;
 
 function revalidateRolesScenes() {
-  revalidatePath("/mitglieder/produktionen/besetzung");
-  revalidatePath("/mitglieder/produktionen/szenen");
+  revalidatePath("/mitglieder/produktionen/stueck");
   revalidatePath("/mitglieder/produktionen/zuweisung");
   revalidatePath("/mitglieder/meine-gewerke", "layout");
 }
@@ -55,21 +53,52 @@ async function loadScene(id: string) {
   return scene;
 }
 
-/** Szenen-Reihenfolge (`sequence`) aus den Nummern neu setzen, damit Portale richtig sortieren. */
-async function resequenceScenes(showId: string) {
+/**
+ * Nummern und Reihenfolge neu vergeben: `identifier` = „Akt.Position“, `sequence` fortlaufend.
+ * `order` legt die neue Reihenfolge fest (IDs); sonst bleibt die bisherige.
+ */
+async function renumberScenes(showId: string, order?: { id: string; act: number }[]) {
   const scenes = await prisma.scene.findMany({
     where: { showId },
-    select: { id: true, identifier: true, sequence: true },
+    orderBy: [{ act: "asc" }, { sequence: "asc" }],
+    select: { id: true, act: true, identifier: true, sequence: true },
   });
-  scenes.sort((a, b) => compareSceneIdentifiers(a.identifier, b.identifier));
-  await prisma.$transaction(
-    scenes
-      .map((scene, index) => ({ scene, index }))
-      .filter(({ scene, index }) => scene.sequence !== index + 1)
-      .map(({ scene, index }) =>
-        prisma.scene.update({ where: { id: scene.id }, data: { sequence: index + 1 } }),
-      ),
-  );
+  const byId = new Map(scenes.map((scene) => [scene.id, scene]));
+  const ordered = order
+    ? [
+        ...order.flatMap((entry) => {
+          const scene = byId.get(entry.id);
+          return scene ? [{ ...scene, act: entry.act }] : [];
+        }),
+        ...scenes.filter((scene) => !order.some((entry) => entry.id === scene.id)),
+      ].sort((a, b) => a.act - b.act)
+    : scenes;
+  const positions = new Map<number, number>();
+  const updates = ordered.flatMap((scene, index) => {
+    const position = (positions.get(scene.act) ?? 0) + 1;
+    positions.set(scene.act, position);
+    const identifier = `${scene.act}.${position}`;
+    const current = byId.get(scene.id);
+    if (
+      current?.identifier === identifier &&
+      current.sequence === index + 1 &&
+      current.act === scene.act
+    ) {
+      return [];
+    }
+    return [
+      prisma.scene.update({
+        where: { id: scene.id },
+        data: { act: scene.act, identifier, sequence: index + 1 },
+      }),
+    ];
+  });
+  if (updates.length) await prisma.$transaction(updates);
+  // Akte bleiben bestehen, auch wenn sie leer werden (löschen nur ausdrücklich).
+  await prisma.showAct.createMany({
+    data: [...new Set(ordered.map((scene) => scene.act))].map((number) => ({ showId, number })),
+    skipDuplicates: true,
+  });
 }
 
 const roleSchema = z.object({
@@ -78,6 +107,10 @@ const roleSchema = z.object({
   name: z.string().trim().min(1, "Name fehlt.").max(120),
   description: optionalText(500),
   color: z.string().regex(hexColor).nullish(),
+  size: z
+    .string()
+    .nullish()
+    .refine((value) => !value || getRoleSizeCodes().includes(value), "Unbekannte Rollengröße."),
 });
 
 /** Rolle anlegen oder bearbeiten; gibt die ID zurück, damit das Panel offen bleiben kann. */
@@ -88,7 +121,12 @@ export async function saveRoleAction(
     await requireProductionManager();
     const data = roleSchema.parse(input);
     await assertShow(data.showId);
-    const fields = { name: data.name, description: data.description, color: data.color ?? null };
+    const fields = {
+      name: data.name,
+      description: data.description,
+      color: data.color ?? null,
+      rolePreferenceCode: data.size || null,
+    };
     let id = data.id;
     if (id) {
       const character = await loadCharacter(id);
@@ -160,7 +198,7 @@ export async function setRoleScenesAction(
 const sceneSchema = z.object({
   showId: z.string(),
   id: z.string().optional(),
-  identifier: z.string().trim().regex(sceneIdentifier, "Nummer wie 1 oder 1.3 angeben."),
+  act: z.number().int().min(1).max(20),
   title: optionalText(160),
   location: optionalText(120),
   timeOfDay: optionalText(60),
@@ -172,6 +210,7 @@ const sceneSchema = z.object({
     .optional(),
 });
 
+/** Szene anlegen (ans Ende des Akts) oder bearbeiten; Akt-Wechsel hängt sie dort hinten an. */
 export async function saveSceneAction(
   input: z.input<typeof sceneSchema>,
 ): Promise<ProductionActionResult & { id?: string }> {
@@ -179,33 +218,34 @@ export async function saveSceneAction(
     await requireProductionManager();
     const data = sceneSchema.parse(input);
     await assertShow(data.showId);
-    const duplicate = await prisma.scene.findFirst({
-      where: {
-        showId: data.showId,
-        identifier: data.identifier,
-        ...(data.id ? { NOT: { id: data.id } } : {}),
-      },
-      select: { id: true },
-    });
-    if (duplicate) throw new Error(`Szene ${data.identifier} gibt es schon.`);
-
     const fields = {
-      identifier: data.identifier,
+      act: data.act,
       title: data.title,
       location: data.location,
       timeOfDay: data.timeOfDay,
       durationMinutes: data.durationMinutes ?? null,
       summary: data.summary,
     };
+    const last = await prisma.scene.aggregate({
+      where: { showId: data.showId },
+      _max: { sequence: true },
+    });
+    const end = (last._max.sequence ?? 0) + 1;
     let id = data.id;
     if (id) {
-      const scene = await loadScene(id);
-      if (scene.showId !== data.showId) throw new Error("Szene gehört nicht hierher.");
-      await prisma.scene.update({ where: { id }, data: fields });
+      const scene = await prisma.scene.findUnique({
+        where: { id },
+        select: { showId: true, act: true },
+      });
+      if (!scene || scene.showId !== data.showId) throw new Error("Szene wurde nicht gefunden.");
+      await prisma.scene.update({
+        where: { id },
+        data: { ...fields, ...(scene.act !== data.act ? { sequence: end } : {}) },
+      });
     } else {
-      const slug = await ensureUniqueSceneSlug(data.showId, slugify(data.identifier));
+      const slug = await ensureUniqueSceneSlug(data.showId, slugify(`szene-${Date.now()}`));
       const created = await prisma.scene.create({
-        data: { ...fields, showId: data.showId, slug },
+        data: { ...fields, showId: data.showId, slug, sequence: end },
       });
       id = created.id;
     }
@@ -232,11 +272,117 @@ export async function saveSceneAction(
       ]);
     }
 
-    await resequenceScenes(data.showId);
+    await renumberScenes(data.showId);
     revalidateRolesScenes();
     return { ...actionSuccess(), id };
   } catch (error) {
     return actionFailure(error, "Szene konnte nicht gespeichert werden.");
+  }
+}
+
+const orderSchema = z.object({
+  showId: z.string(),
+  order: z.array(z.object({ id: z.string(), act: z.number().int().min(1).max(20) })).max(500),
+});
+
+/** Neue Reihenfolge aller Szenen (Ziehen oder Hoch/Runter); vergibt die Nummern neu. */
+export async function reorderScenesAction(
+  input: z.input<typeof orderSchema>,
+): Promise<ProductionActionResult> {
+  try {
+    await requireProductionManager();
+    const data = orderSchema.parse(input);
+    await assertShow(data.showId);
+    await renumberScenes(data.showId, data.order);
+    revalidateRolesScenes();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Reihenfolge konnte nicht gespeichert werden.");
+  }
+}
+
+const actSchema = z.object({
+  showId: z.string(),
+  number: z.number().int().min(1).max(20),
+  title: optionalText(80),
+});
+
+/** Akt anlegen oder umbenennen. */
+export async function saveActAction(
+  input: z.input<typeof actSchema>,
+): Promise<ProductionActionResult> {
+  try {
+    await requireProductionManager();
+    const data = actSchema.parse(input);
+    await assertShow(data.showId);
+    await prisma.showAct.upsert({
+      where: { showId_number: { showId: data.showId, number: data.number } },
+      create: { showId: data.showId, number: data.number, title: data.title },
+      update: { title: data.title },
+    });
+    revalidateRolesScenes();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Akt konnte nicht gespeichert werden.");
+  }
+}
+
+/** Leeren Akt entfernen. */
+export async function deleteActAction(input: {
+  showId: string;
+  number: number;
+}): Promise<ProductionActionResult> {
+  try {
+    await requireProductionManager();
+    const data = actSchema.pick({ showId: true, number: true }).parse(input);
+    const scenes = await prisma.scene.count({ where: { showId: data.showId, act: data.number } });
+    if (scenes) throw new Error("Im Akt sind noch Szenen. Verschiebe oder lösche sie zuerst.");
+    await prisma.showAct.deleteMany({ where: { showId: data.showId, number: data.number } });
+    revalidateRolesScenes();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Akt konnte nicht gelöscht werden.");
+  }
+}
+
+const cellSchema = z.object({
+  sceneId: z.string(),
+  characterId: z.string(),
+  state: z.enum(["none", "in", "featured"]),
+});
+
+/** Eine Zelle im Auftrittsplan: Rolle in Szene nicht dabei, dabei oder Hauptszene. */
+export async function setSceneRoleAction(
+  input: z.input<typeof cellSchema>,
+): Promise<ProductionActionResult> {
+  try {
+    await requireProductionManager();
+    const data = cellSchema.parse(input);
+    const [scene, character] = await Promise.all([
+      loadScene(data.sceneId),
+      loadCharacter(data.characterId),
+    ]);
+    if (scene.showId !== character.showId) throw new Error("Rolle gehört nicht zum Stück.");
+    const key = { sceneId_characterId: { sceneId: scene.id, characterId: character.id } };
+    if (data.state === "none") {
+      await prisma.sceneCharacter.deleteMany({
+        where: { sceneId: scene.id, characterId: character.id },
+      });
+    } else {
+      await prisma.sceneCharacter.upsert({
+        where: key,
+        create: {
+          sceneId: scene.id,
+          characterId: character.id,
+          isFeatured: data.state === "featured",
+        },
+        update: { isFeatured: data.state === "featured" },
+      });
+    }
+    revalidateRolesScenes();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Auftritt konnte nicht gespeichert werden.");
   }
 }
 
@@ -245,7 +391,7 @@ export async function deleteSceneAction(input: { id: string }): Promise<Producti
     await requireProductionManager();
     const scene = await loadScene(z.string().parse(input.id));
     await prisma.scene.delete({ where: { id: scene.id } });
-    await resequenceScenes(scene.showId);
+    await renumberScenes(scene.showId);
     revalidateRolesScenes();
     return actionSuccess();
   } catch (error) {

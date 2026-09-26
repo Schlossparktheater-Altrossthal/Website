@@ -9,10 +9,10 @@ Auswertung der Rückmeldungen.
 
 - `/mitglieder/produktionen` – Übersicht
 - `/mitglieder/produktionen/[showId]` – Detail einer Produktion
-- `/mitglieder/produktionen/besetzung` – Rollen & Besetzung (`?rolle=<id>` öffnet die Rolle)
+- `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte; `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
+- `/mitglieder/produktionen/besetzung`, `/szenen` – leiten auf das Stück weiter
 - `/mitglieder/produktionen/gewerke` – Gewerke-Übersicht
 - `/mitglieder/produktionen/gewerke/[departmentId]` – einzelnes Gewerk
-- `/mitglieder/produktionen/szenen` – Szenen mit Rollen und Ausstattung (`?szene=<id>`)
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung
 
 ## Permissions
@@ -24,7 +24,7 @@ Auswertung der Rückmeldungen.
 
 - `src/app/(members)/mitglieder/produktionen/actions.ts` – Server Actions
 - `src/app/(members)/mitglieder/produktionen/production-forms-client.tsx` – Formulare
-- `src/app/(members)/mitglieder/produktionen/rollen-szenen/` – gemeinsame Rollen-/Szenenverwaltung (Seiten `besetzung` und `szenen` sind nur Hüllen)
+- `src/app/(members)/mitglieder/produktionen/stueck/` – Stück (Ablauf, Rollen, Auftrittsplan, Panels)
 
 ## Datenfluss
 
@@ -43,4 +43,9 @@ Auswertung der Rückmeldungen.
 ## Besonderheiten / Altlasten
 
 - `produktionen/actions.ts` ist mit 1200+ Zeilen die größte Actions-Datei (Aufteilung in P5).
-- Rollen und Szenen: kompakte Listen, Bearbeiten im Bottom-Sheet (mobil) bzw. Dialog. Rolle: Name, Beschreibung, Farbe (`ROLE_COLOR_OPTIONS`), Besetzung Haupt/Zweit (sofort gespeichert, mit Benachrichtigung), Szenen (sofort). Szene: Nummer (1 oder 1.3, eindeutig), Titel, Ort, Tageszeit, Dauer, Rollen (Tippen: dabei → Hauptszene → entfernen), Ausstattung je Gewerk mit Status. `Scene.sequence` wird aus den Nummern neu gesetzt. Actions in `actions/roles-scenes.ts`, Loader `src/lib/produktionen/roles-scenes.ts`. Nur Regie/Board.
+- Stück (nur Regie/Board):
+  - Ablauf: Szenen nach Akten (`Scene.act`, Akte mit Titel in `ShowAct`, bleiben auch leer bestehen), Spielzeit je Akt und gesamt. Umsortieren per Ziehen (Desktop) bzw. Pfeilen (mobil, am Aktrand in den Nachbarakt); Nummern `Akt.Position` und `sequence` werden dabei neu vergeben.
+  - Rollen: unbesetzte oben, je Rolle Besetzung, Szenen, Bühnenzeit, Rollengröße (Onboarding-Code `acting_*`) und Auftrittsbereich.
+  - Auftritte: Matrix Rollen × Szenen (Desktop), mobil Szenen mit Rollen-Chips; Tippen: dabei → Hauptszene → nicht dabei.
+  - Panels: Rolle (Name, Beschreibung, Rollengröße, Farbe, Besetzung Haupt/Zweit und Szenen sofort gespeichert), Szene (Akt, Titel, Ort, Tageszeit, Dauer, Inhalt, Rollen, Ausstattung je Gewerk mit Status).
+  - Actions `actions/roles-scenes.ts`, Loader `src/lib/produktionen/roles-scenes.ts`, Rollengrößen `src/lib/produktionen/role-sizes.ts`.

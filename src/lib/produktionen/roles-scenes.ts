@@ -9,6 +9,8 @@ export type RsRole = {
   id: string;
   name: string;
   shortName: string | null;
+  /** Rollengröße als Onboarding-Code (`acting_lead` …). */
+  size: string | null;
   description: string | null;
   notes: string | null;
   color: string | null;
@@ -26,6 +28,7 @@ export type RsBreakdownItem = {
 
 export type RsScene = {
   id: string;
+  act: number;
   identifier: string | null;
   title: string | null;
   location: string | null;
@@ -36,8 +39,12 @@ export type RsScene = {
   breakdown: RsBreakdownItem[];
 };
 
+export type RsAct = { number: number; title: string | null };
+
 export type RolesScenesData = {
   showId: string;
+  /** Alle Akte mit Szenen oder Titel, aufsteigend. */
+  acts: RsAct[];
   roles: RsRole[];
   scenes: RsScene[];
   departments: { id: string; name: string; color: string | null }[];
@@ -71,7 +78,7 @@ export function compareSceneIdentifiers(a: string | null, b: string | null) {
 /** Rollen, Szenen, Ausstattung und Personen einer Produktion für die Verwaltung. */
 export async function loadRolesAndScenes(showId: string): Promise<RolesScenesData> {
   const now = new Date();
-  const [characters, scenes, departments, members] = await Promise.all([
+  const [characters, scenes, departments, members, acts] = await Promise.all([
     prisma.character.findMany({
       where: { showId },
       orderBy: [{ order: "asc" }, { name: "asc" }],
@@ -79,6 +86,7 @@ export async function loadRolesAndScenes(showId: string): Promise<RolesScenesDat
         id: true,
         name: true,
         shortName: true,
+        rolePreferenceCode: true,
         description: true,
         notes: true,
         color: true,
@@ -93,6 +101,7 @@ export async function loadRolesAndScenes(showId: string): Promise<RolesScenesDat
       where: { showId },
       select: {
         id: true,
+        act: true,
         identifier: true,
         title: true,
         location: true,
@@ -124,14 +133,32 @@ export async function loadRolesAndScenes(showId: string): Promise<RolesScenesDat
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { name: "asc" }],
       select: userSelect,
     }),
+    prisma.showAct.findMany({
+      where: { showId },
+      orderBy: { number: "asc" },
+      select: { number: true, title: true },
+    }),
   ]);
+
+  const actNumbers = new Set([
+    ...acts.map((act) => act.number),
+    ...scenes.map((scene) => scene.act),
+  ]);
+  if (!actNumbers.size) actNumbers.add(1);
 
   return {
     showId,
+    acts: [...actNumbers]
+      .sort((a, b) => a - b)
+      .map((number) => ({
+        number,
+        title: acts.find((act) => act.number === number)?.title ?? null,
+      })),
     roles: characters.map((character) => ({
       id: character.id,
       name: character.name,
       shortName: character.shortName,
+      size: character.rolePreferenceCode,
       description: character.description,
       notes: character.notes,
       color: character.color,
@@ -144,9 +171,10 @@ export async function loadRolesAndScenes(showId: string): Promise<RolesScenesDat
       sceneIds: character.sceneAppearances.map((entry) => entry.sceneId),
     })),
     scenes: scenes
-      .sort((a, b) => compareSceneIdentifiers(a.identifier, b.identifier))
+      .sort((a, b) => a.act - b.act || compareSceneIdentifiers(a.identifier, b.identifier))
       .map((scene) => ({
         id: scene.id,
+        act: scene.act,
         identifier: scene.identifier,
         title: scene.title,
         location: scene.location,

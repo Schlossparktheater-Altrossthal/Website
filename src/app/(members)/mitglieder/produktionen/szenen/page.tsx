@@ -1,5 +1,9 @@
-import { RolesScenesPage } from "../rollen-szenen/page-shell";
+import { redirect } from "next/navigation";
 
-export default function ProduktionsSzenenPage() {
-  return <RolesScenesPage view="szenen" />;
+type PageProps = { searchParams: Promise<{ szene?: string }> };
+
+/** Alte Adresse: jetzt Ansicht „Ablauf“ im Stück. */
+export default async function ProduktionsSzenenPage({ searchParams }: PageProps) {
+  const { szene } = await searchParams;
+  redirect(`/mitglieder/produktionen/stueck${szene ? `?szene=${encodeURIComponent(szene)}` : ""}`);
 }

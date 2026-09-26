@@ -74,7 +74,7 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
           </span>
           {isManager ? (
             <Link
-              href={`/mitglieder/produktionen/besetzung?rolle=${encodeURIComponent(role.id)}`}
+              href={`/mitglieder/produktionen/stueck?ansicht=rollen&rolle=${encodeURIComponent(role.id)}`}
               className="inline-flex min-h-9 items-center gap-1 rounded-full border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted"
             >
               <EditIcon className="h-3.5 w-3.5" aria-hidden />

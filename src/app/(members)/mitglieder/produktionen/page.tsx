@@ -101,10 +101,10 @@ export default async function ProduktionenPage() {
   const summaryActions = activeProduction ? (
     <>
       <Button asChild>
-        <Link href="/mitglieder/produktionen/besetzung">Besetzung öffnen</Link>
+        <Link href="/mitglieder/produktionen/stueck?ansicht=rollen">Rollen öffnen</Link>
       </Button>
       <Button asChild variant="outline">
-        <Link href="/mitglieder/produktionen/szenen">Szenen öffnen</Link>
+        <Link href="/mitglieder/produktionen/stueck">Stück öffnen</Link>
       </Button>
       <Button asChild variant="outline">
         <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams verwalten</Link>
@@ -159,10 +159,10 @@ export default async function ProduktionenPage() {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline">
-              <Link href="/mitglieder/produktionen/besetzung">Besetzung öffnen</Link>
+              <Link href="/mitglieder/produktionen/stueck?ansicht=rollen">Rollen öffnen</Link>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link href="/mitglieder/produktionen/szenen">Szenenbereich öffnen</Link>
+              <Link href="/mitglieder/produktionen/stueck">Stück öffnen</Link>
             </Button>
           </CardContent>
         </Card>
