@@ -218,32 +218,35 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
 
       {isDesktop ? (
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div
-            className="grid gap-3"
-            style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(15rem, 1fr))` }}
-          >
-            {columns.map((column) => (
-              <ColumnDrop key={column.id} column={column} count={visibleTasks(column).length}>
-                {visibleTasks(column).map((task) => (
-                  <DraggableCard
-                    key={task.id}
-                    task={task}
-                    today={data.today}
-                    draggable={canEdit}
-                    onOpen={() => setOpenTask({ task, columnId: column.id })}
-                  />
-                ))}
-                {canEdit ? (
-                  <button
-                    type="button"
-                    onClick={() => setOpenTask({ task: null, columnId: column.id })}
-                    className="flex h-10 w-full items-center justify-center gap-1 rounded-lg text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  >
-                    <PlusIcon className="h-4 w-4" /> Hinzufügen
-                  </button>
-                ) : null}
-              </ColumnDrop>
-            ))}
+          {/* Viele Spalten scrollen innerhalb des Boards, nicht die ganze Seite (Tablet quer). */}
+          <div className="-mx-1 overflow-x-auto px-1 pb-1">
+            <div
+              className="grid gap-3"
+              style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(13.5rem, 1fr))` }}
+            >
+              {columns.map((column) => (
+                <ColumnDrop key={column.id} column={column} count={visibleTasks(column).length}>
+                  {visibleTasks(column).map((task) => (
+                    <DraggableCard
+                      key={task.id}
+                      task={task}
+                      today={data.today}
+                      draggable={canEdit}
+                      onOpen={() => setOpenTask({ task, columnId: column.id })}
+                    />
+                  ))}
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => setOpenTask({ task: null, columnId: column.id })}
+                      className="flex h-10 w-full items-center justify-center gap-1 rounded-lg text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    >
+                      <PlusIcon className="h-4 w-4" /> Hinzufügen
+                    </button>
+                  ) : null}
+                </ColumnDrop>
+              ))}
+            </div>
           </div>
           <DragOverlay>
             {dragging ? <TaskCard task={dragging} today={data.today} lifted /> : null}
