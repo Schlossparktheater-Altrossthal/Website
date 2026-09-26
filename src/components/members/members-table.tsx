@@ -1,12 +1,15 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
 import {
   EditIcon,
   EyeIcon,
   LoadingIcon,
+  SearchIcon,
   ShieldCheckIcon,
   TrashIcon,
   UserCheckIcon,
@@ -24,11 +27,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ROLE_BADGE_VARIANTS, ROLE_LABELS, ROLES, sortRoles, type Role } from "@/lib/roles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { ROLES, type Role } from "@/lib/roles";
+import { RoleChips } from "@/components/members/role-chips";
 import { RoleManager } from "@/components/members/role-manager";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSource } from "@/components/user-avatar";
 import { combineNameParts } from "@/lib/names";
+import { ROLE_LABELS } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 export type MembersTableUser = {
@@ -45,55 +58,38 @@ export type MembersTableUser = {
   deactivatedAt?: string | null;
   /** Konto ist mit Authentik verknüpft (Login bzw. Passwort-Übernahme hat geklappt). */
   hasAuthentikAccount: boolean;
+  /** Mitgliedschaft in der gerade gewählten Produktion (null = nicht dabei). */
+  production?: { roles: Role[]; function: string | null; pending: boolean } | null;
 };
+
+type StatusFilter = "active" | "deactivated" | "all";
+type ProductionFilter = "all" | "in" | "out";
 
 function getDisplayName(user: MembersTableUser): string {
   return combineNameParts(user.firstName, user.lastName) ?? user.name ?? "";
 }
 
-function MemberName({
-  displayName,
-  isDeactivated,
-  hasAuthentikAccount,
-}: {
-  displayName: string;
-  isDeactivated: boolean;
-  hasAuthentikAccount: boolean;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 font-medium">
-      <span>{displayName || "—"}</span>
-      {isDeactivated && (
-        <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
-          Deaktiviert
-        </Badge>
-      )}
-      {hasAuthentikAccount && (
-        <Badge
-          variant="success"
-          className="px-2 py-0.5 text-[10px] uppercase tracking-wide"
-          title="Die Anmeldung über Authentik (Theater-Konto) funktioniert für dieses Mitglied."
-        >
-          <ShieldCheckIcon className="h-3 w-3" />
-          Authentik
-        </Badge>
-      )}
-    </div>
-  );
+/** „Ensemble · Phileas Fogg“ bzw. „eingeladen“ für die Produktionsspalte. */
+function describeProduction(user: MembersTableUser): string | null {
+  const membership = user.production;
+  if (!membership) return null;
+  const parts = [
+    membership.roles.map((role) => ROLE_LABELS[role] ?? role).join(", "),
+    membership.function,
+  ].filter(Boolean);
+  const text = parts.join(" · ") || "Dabei";
+  return membership.pending ? `${text} (Onboarding offen)` : text;
 }
 
-function MemberRoleChips({ roles, className }: { roles: Role[]; className?: string }) {
+function AuthentikMark({ show }: { show: boolean }) {
+  if (!show) return null;
   return (
-    <div className={cn("flex flex-wrap gap-1", className)}>
-      {sortRoles(roles).map((r) => (
-        <span
-          key={r}
-          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[r]}`}
-        >
-          {ROLE_LABELS[r] ?? r}
-        </span>
-      ))}
-    </div>
+    <ShieldCheckIcon
+      className="h-3.5 w-3.5 shrink-0 text-success"
+      aria-label="Anmeldung über Theater-Konto (Authentik) eingerichtet"
+    >
+      <title>Anmeldung über Theater-Konto (Authentik) eingerichtet</title>
+    </ShieldCheckIcon>
   );
 }
 
@@ -101,15 +97,23 @@ export function MembersTable({
   users,
   canEditOwner,
   availableCustomRoles,
+  productionTitle = null,
+  addMemberSlot,
 }: {
   users: MembersTableUser[];
   canEditOwner: boolean;
   availableCustomRoles: { id: string; name: string }[];
+  /** Titel der gewählten Produktion; ohne Produktion entfällt die Spalte. */
+  productionTitle?: string | null;
+  addMemberSlot?: React.ReactNode;
 }) {
+  const router = useRouter();
   const [openFor, setOpenFor] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<MembersTableUser[]>(users);
-  const [roleFilter, setRoleFilter] = useState<Role | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [productionFilter, setProductionFilter] = useState<ProductionFilter>("all");
   const [statusTarget, setStatusTarget] = useState<MembersTableUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MembersTableUser | null>(null);
 
@@ -118,259 +122,361 @@ export function MembersTable({
     setRows(users);
   }, [users]);
 
+  const counts = useMemo(() => {
+    const deactivated = rows.filter((r) => r.isDeactivated).length;
+    return { all: rows.length, deactivated, active: rows.length - deactivated };
+  }, [rows]);
+
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
+      if (statusFilter === "active" && r.isDeactivated) return false;
+      if (statusFilter === "deactivated" && !r.isDeactivated) return false;
+      if (productionFilter === "in" && !r.production) return false;
+      if (productionFilter === "out" && r.production) return false;
+      if (roleFilter !== "all") {
+        const matchesRole = roleFilter.startsWith("custom:")
+          ? r.customRoles.some((cr) => `custom:${cr.id}` === roleFilter)
+          : r.roles.includes(roleFilter as Role);
+        if (!matchesRole) return false;
+      }
+      if (!q) return true;
       const name = getDisplayName(r).toLowerCase();
       const email = (r.email ?? "").toLowerCase();
-      const matchesQuery = !q || name.includes(q) || email.includes(q);
-      const matchesRole = !roleFilter || r.roles.includes(roleFilter);
-      return matchesQuery && matchesRole;
+      return name.includes(q) || email.includes(q);
     });
-  }, [rows, query, roleFilter]);
+  }, [rows, query, roleFilter, statusFilter, productionFilter]);
+
+  const hasExtraFilters = roleFilter !== "all" || productionFilter !== "all" || query !== "";
+  const resetFilters = () => {
+    setQuery("");
+    setRoleFilter("all");
+    setProductionFilter("all");
+    setStatusFilter("active");
+  };
+
+  const editUser = rows.find((row) => row.id === openFor) ?? null;
+
+  const actionsFor = (u: MembersTableUser) => {
+    const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
+    return (
+      <ActionDropdownMenu
+        label={`Aktionen für ${getDisplayName(u) || u.email || "Mitglied"}`}
+        className="h-8 w-8 border-transparent bg-transparent shadow-none"
+        items={[
+          {
+            label: "Profil öffnen",
+            icon: <EyeIcon className="h-4 w-4" aria-hidden />,
+            onSelect: () => router.push(profileHref),
+          },
+          {
+            label: "Rollen & Daten bearbeiten",
+            icon: <EditIcon className="h-4 w-4" aria-hidden />,
+            onSelect: () => setOpenFor(u.id),
+          },
+          {
+            label: u.isDeactivated ? "Reaktivieren" : "Deaktivieren",
+            icon: u.isDeactivated ? (
+              <UserCheckIcon className="h-4 w-4" aria-hidden />
+            ) : (
+              <UserXIcon className="h-4 w-4" aria-hidden />
+            ),
+            onSelect: () => setStatusTarget(u),
+          },
+          {
+            label: "Löschen …",
+            icon: <TrashIcon className="h-4 w-4" aria-hidden />,
+            variant: "destructive",
+            onSelect: () => setDeleteTarget(u),
+          },
+        ]}
+      />
+    );
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="toggle"
-          data-state={!roleFilter ? "active" : "inactive"}
-          className="h-auto px-3 py-1.5"
-          onClick={() => setRoleFilter(null)}
-        >
-          Alle Rollen
-        </Button>
-        {ROLES.map((role) => (
-          <Button
-            key={role}
-            type="button"
-            variant="toggle"
-            data-state={roleFilter === role ? "active" : "inactive"}
-            className="h-auto px-3 py-1.5"
-            onClick={() => setRoleFilter((prev) => (prev === role ? null : role))}
-          >
-            {ROLE_LABELS[role] ?? role}
-          </Button>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <SearchIcon
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
           <Input
-            placeholder="Suche nach Name oder E-Mail..."
+            type="search"
+            placeholder="Name oder E-Mail suchen"
+            aria-label="Mitglieder durchsuchen"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="max-w-sm"
+            className="pl-9"
           />
         </div>
-        <div className="text-sm text-muted-foreground">
-          {filteredRows.length} von {rows.length} Mitgliedern
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="sm:w-44" aria-label="Nach Rolle filtern">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Rollen</SelectItem>
+              {ROLES.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {ROLE_LABELS[role] ?? role}
+                </SelectItem>
+              ))}
+              {availableCustomRoles.map((cr) => (
+                <SelectItem key={cr.id} value={`custom:${cr.id}`}>
+                  {cr.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {productionTitle ? (
+            <Select
+              value={productionFilter}
+              onValueChange={(value) => setProductionFilter(value as ProductionFilter)}
+            >
+              <SelectTrigger className="sm:w-52" aria-label="Nach Produktion filtern">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Produktionen</SelectItem>
+                <SelectItem value="in">In „{productionTitle}“</SelectItem>
+                <SelectItem value="out">Nicht in „{productionTitle}“</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
+          {addMemberSlot ? <div className="col-span-2 sm:col-span-1">{addMemberSlot}</div> : null}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SegmentedControl
+          aria-label="Status"
+          value={statusFilter}
+          onValueChange={setStatusFilter}
+          options={[
+            { value: "active", label: `Aktiv ${counts.active}` },
+            { value: "deactivated", label: `Deaktiviert ${counts.deactivated}` },
+            { value: "all", label: `Alle ${counts.all}` },
+          ]}
+        />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span aria-live="polite">
+            {filteredRows.length} {filteredRows.length === 1 ? "Mitglied" : "Mitglieder"}
+          </span>
+          {hasExtraFilters ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0"
+              onClick={resetFilters}
+            >
+              Filter zurücksetzen
+            </Button>
+          ) : null}
         </div>
       </div>
 
       {!filteredRows.length ? (
-        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Keine Mitglieder gefunden.
+        <div className="space-y-2 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+          <p>Keine Mitglieder gefunden.</p>
+          {hasExtraFilters || statusFilter !== "active" ? (
+            <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
+              Filter zurücksetzen
+            </Button>
+          ) : null}
         </div>
       ) : (
         <>
-          <div className="space-y-4 sm:hidden">
+          <ul className="divide-y rounded-md border bg-card md:hidden">
             {filteredRows.map((u) => {
               const displayName = getDisplayName(u);
-              const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
+              const productionText = describeProduction(u);
               return (
-                <div
-                  key={u.id}
-                  className={cn(
-                    "rounded-md border bg-card p-3",
-                    u.isDeactivated && "border-dashed bg-muted/40",
-                  )}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <UserAvatar
-                        userId={u.id}
-                        email={u.email}
-                        firstName={u.firstName}
-                        lastName={u.lastName}
-                        name={displayName}
-                        size={40}
-                        className="h-10 w-10"
-                        avatarSource={u.avatarSource}
-                        avatarUpdatedAt={u.avatarUpdatedAt}
-                      />
-                      <div>
-                        <MemberName
-                          displayName={displayName}
-                          isDeactivated={u.isDeactivated}
-                          hasAuthentikAccount={u.hasAuthentikAccount}
-                        />
-                        <MemberRoleChips roles={u.roles} className="mt-2" />
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <MemberActionButtons
-                        user={u}
-                        profileHref={profileHref}
-                        onEdit={() => setOpenFor(u.id)}
-                        onToggleStatus={() => setStatusTarget(u)}
-                        onDelete={() => setDeleteTarget(u)}
-                        className="justify-end"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <li key={u.id} className="flex items-center gap-3 px-3 py-2">
+                  <Link
+                    href={`/mitglieder/mitgliederverwaltung/${u.id}`}
+                    className="flex min-h-11 min-w-0 flex-1 items-center gap-3"
+                  >
+                    <UserAvatar
+                      userId={u.id}
+                      email={u.email}
+                      firstName={u.firstName}
+                      lastName={u.lastName}
+                      name={displayName}
+                      size={36}
+                      className={cn("h-9 w-9 shrink-0", u.isDeactivated && "opacity-50")}
+                      avatarSource={u.avatarSource}
+                      avatarUpdatedAt={u.avatarUpdatedAt}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <span
+                          className={cn("truncate", u.isDeactivated && "text-muted-foreground")}
+                        >
+                          {displayName || u.email || "—"}
+                        </span>
+                        <AuthentikMark show={u.hasAuthentikAccount} />
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {u.isDeactivated
+                          ? "Deaktiviert"
+                          : [productionText, ...u.customRoles.map((cr) => cr.name)]
+                              .filter(Boolean)
+                              .join(" · ") || u.email}
+                      </span>
+                    </span>
+                  </Link>
+                  <RoleChips roles={u.roles} max={1} hideMember className="shrink-0" />
+                  {actionsFor(u)}
+                </li>
               );
             })}
-          </div>
+          </ul>
 
-          <div className="hidden sm:block">
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/30 text-left">
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">E-Mail</th>
-                    <th className="px-3 py-2 font-medium">Rollen</th>
-                    <th className="px-3 py-2 font-medium">Zusätzliche Rollen</th>
-                    <th className="px-3 py-2 font-medium text-right">Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.map((u) => {
-                    const displayName = getDisplayName(u);
-                    const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
-                    return (
-                      <tr
-                        key={u.id}
-                        className={cn(
-                          "border-b hover:bg-accent/10",
-                          u.isDeactivated && "bg-muted/40",
-                        )}
-                      >
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <UserAvatar
-                              userId={u.id}
-                              email={u.email}
-                              firstName={u.firstName}
-                              lastName={u.lastName}
-                              name={displayName}
-                              size={32}
-                              className="h-8 w-8"
-                              avatarSource={u.avatarSource}
-                              avatarUpdatedAt={u.avatarUpdatedAt}
-                            />
-                            <MemberName
-                              displayName={displayName}
-                              isDeactivated={u.isDeactivated}
-                              hasAuthentikAccount={u.hasAuthentikAccount}
-                            />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
-                          {u.email || "—"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <MemberRoleChips roles={u.roles} />
-                        </td>
-                        <td className="px-3 py-2">
-                          {u.customRoles.length ? (
-                            <div className="flex flex-wrap gap-1">
-                              {u.customRoles.map((cr) => (
-                                <Badge key={cr.id} variant="secondary">
-                                  {cr.name}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-right">
-                          <MemberActionButtons
-                            user={u}
-                            profileHref={profileHref}
-                            onEdit={() => setOpenFor(u.id)}
-                            onToggleStatus={() => setStatusTarget(u)}
-                            onDelete={() => setDeleteTarget(u)}
-                            className="ml-auto justify-end"
+          <div className="hidden overflow-x-auto rounded-md border md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b bg-muted/30 text-left text-xs text-muted-foreground">
+                  <th className="px-3 py-2 font-medium">Name</th>
+                  {productionTitle ? (
+                    <th className="px-3 py-2 font-medium">{productionTitle}</th>
+                  ) : null}
+                  <th className="px-3 py-2 font-medium">Rollen</th>
+                  <th className="px-3 py-2">
+                    <span className="sr-only">Aktionen</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((u) => {
+                  const displayName = getDisplayName(u);
+                  const productionText = describeProduction(u);
+                  return (
+                    <tr
+                      key={u.id}
+                      className={cn(
+                        "border-b last:border-b-0 hover:bg-accent/10",
+                        u.isDeactivated && "text-muted-foreground",
+                      )}
+                    >
+                      <td className="px-3 py-1.5">
+                        <Link
+                          href={`/mitglieder/mitgliederverwaltung/${u.id}`}
+                          className="flex items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <UserAvatar
+                            userId={u.id}
+                            email={u.email}
+                            firstName={u.firstName}
+                            lastName={u.lastName}
+                            name={displayName}
+                            size={28}
+                            className={cn("h-7 w-7 shrink-0", u.isDeactivated && "opacity-50")}
+                            avatarSource={u.avatarSource}
+                            avatarUpdatedAt={u.avatarUpdatedAt}
                           />
-                          <Dialog
-                            open={openFor === u.id}
-                            onOpenChange={(nextOpen) => {
-                              if (!nextOpen) {
-                                setOpenFor((prev) => (prev === u.id ? null : prev));
-                              }
-                            }}
-                          >
-                            <DialogContent className="sm:max-w-3xl overflow-visible">
-                              <DialogHeader>
-                                <DialogTitle>Benutzer bearbeiten</DialogTitle>
-                                <DialogDescription>Rollen und Daten bearbeiten</DialogDescription>
-                              </DialogHeader>
-                              <RoleManager
-                                userId={u.id}
-                                email={u.email}
-                                firstName={u.firstName}
-                                lastName={u.lastName}
-                                name={displayName}
-                                initialRoles={u.roles}
-                                canEditOwner={canEditOwner}
-                                availableCustomRoles={availableCustomRoles}
-                                initialCustomRoleIds={u.customRoles.map((r) => r.id)}
-                                onSaved={({ roles, customRoleIds }) => {
-                                  setRows((prev) =>
-                                    prev.map((row) =>
-                                      row.id === u.id
-                                        ? {
-                                            ...row,
-                                            roles,
-                                            customRoles: availableCustomRoles.filter((cr) =>
-                                              customRoleIds.includes(cr.id),
-                                            ),
-                                          }
-                                        : row,
-                                    ),
-                                  );
-                                }}
-                                onUserUpdated={({ email, firstName, lastName, name }) => {
-                                  setRows((prev) =>
-                                    prev.map((row) =>
-                                      row.id === u.id
-                                        ? {
-                                            ...row,
-                                            email: email ?? row.email,
-                                            firstName:
-                                              firstName !== undefined ? firstName : row.firstName,
-                                            lastName:
-                                              lastName !== undefined ? lastName : row.lastName,
-                                            name:
-                                              name ??
-                                              combineNameParts(
-                                                firstName !== undefined ? firstName : row.firstName,
-                                                lastName !== undefined ? lastName : row.lastName,
-                                              ) ??
-                                              row.name,
-                                          }
-                                        : row,
-                                    ),
-                                  );
-                                }}
-                              />
-                            </DialogContent>
-                          </Dialog>
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5 font-medium text-foreground hover:underline">
+                              <span className={cn(u.isDeactivated && "text-muted-foreground")}>
+                                {displayName || "—"}
+                              </span>
+                              <AuthentikMark show={u.hasAuthentikAccount} />
+                              {u.isDeactivated ? (
+                                <Badge
+                                  variant="outline"
+                                  className="px-1.5 py-0 text-[10px] font-normal"
+                                >
+                                  deaktiviert
+                                </Badge>
+                              ) : null}
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {u.email || "keine E-Mail"}
+                            </span>
+                          </span>
+                        </Link>
+                      </td>
+                      {productionTitle ? (
+                        <td className="px-3 py-1.5 text-muted-foreground">
+                          {productionText ?? <span aria-label="nicht dabei">—</span>}
                         </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      ) : null}
+                      <td className="px-3 py-1.5">
+                        <RoleChips roles={u.roles} customRoles={u.customRoles} hideMember />
+                      </td>
+                      <td className="w-10 px-2 py-1.5 text-right">{actionsFor(u)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </>
       )}
+      <Dialog
+        open={Boolean(editUser)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setOpenFor(null);
+        }}
+      >
+        {editUser ? (
+          <DialogContent className="sm:max-w-3xl overflow-visible">
+            <DialogHeader>
+              <DialogTitle>{getDisplayName(editUser) || "Mitglied"} bearbeiten</DialogTitle>
+              <DialogDescription>Rollen und Kontaktdaten</DialogDescription>
+            </DialogHeader>
+            <RoleManager
+              userId={editUser.id}
+              email={editUser.email}
+              firstName={editUser.firstName}
+              lastName={editUser.lastName}
+              name={getDisplayName(editUser)}
+              initialRoles={editUser.roles}
+              canEditOwner={canEditOwner}
+              availableCustomRoles={availableCustomRoles}
+              initialCustomRoleIds={editUser.customRoles.map((r) => r.id)}
+              onSaved={({ roles, customRoleIds }) => {
+                setRows((prev) =>
+                  prev.map((row) =>
+                    row.id === editUser.id
+                      ? {
+                          ...row,
+                          roles,
+                          customRoles: availableCustomRoles.filter((cr) =>
+                            customRoleIds.includes(cr.id),
+                          ),
+                        }
+                      : row,
+                  ),
+                );
+              }}
+              onUserUpdated={({ email, firstName, lastName, name }) => {
+                setRows((prev) =>
+                  prev.map((row) =>
+                    row.id === editUser.id
+                      ? {
+                          ...row,
+                          email: email ?? row.email,
+                          firstName: firstName !== undefined ? firstName : row.firstName,
+                          lastName: lastName !== undefined ? lastName : row.lastName,
+                          name:
+                            name ??
+                            combineNameParts(
+                              firstName !== undefined ? firstName : row.firstName,
+                              lastName !== undefined ? lastName : row.lastName,
+                            ) ??
+                            row.name,
+                        }
+                      : row,
+                  ),
+                );
+              }}
+            />
+          </DialogContent>
+        ) : null}
+      </Dialog>
       <MemberStatusModal
         user={statusTarget}
         onClose={() => setStatusTarget(null)}
@@ -399,101 +505,6 @@ export function MembersTable({
           setOpenFor((prev) => (prev === id ? null : prev));
         }}
       />
-    </div>
-  );
-}
-
-type MemberActionButtonsProps = {
-  user: MembersTableUser;
-  profileHref: string;
-  onEdit: () => void;
-  onToggleStatus: () => void;
-  onDelete: () => void;
-  className?: string;
-};
-
-function MemberActionButtons({
-  user,
-  profileHref,
-  onEdit,
-  onToggleStatus,
-  onDelete,
-  className,
-}: MemberActionButtonsProps) {
-  const displayName = getDisplayName(user);
-  const actionTarget = displayName || user.email || "dieses Mitglied";
-  const statusLabel = user.isDeactivated ? "Aktivieren" : "Deaktivieren";
-  const statusTitle = user.isDeactivated
-    ? `${actionTarget} reaktivieren`
-    : `${actionTarget} deaktivieren`;
-  const StatusIcon = user.isDeactivated ? UserCheckIcon : UserXIcon;
-  const baseButtonClass = "rounded-full border shadow-sm";
-  const statusButtonClass = user.isDeactivated
-    ? "border-success/60 bg-success/10 text-success hover:bg-success/20 hover:text-success-foreground"
-    : "border-warning/60 bg-warning/10 text-warning hover:bg-warning/20 hover:text-warning-foreground";
-
-  return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
-      <Button
-        asChild
-        size="icon"
-        variant="ghost"
-        className={cn(
-          baseButtonClass,
-          "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
-        )}
-      >
-        <Link
-          href={profileHref}
-          aria-label={`Profil von ${actionTarget} öffnen`}
-          title={`Profil von ${actionTarget} öffnen`}
-        >
-          <EyeIcon className="h-4 w-4" aria-hidden />
-          <span className="sr-only">Profil</span>
-        </Link>
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className={cn(
-          baseButtonClass,
-          "border-border/60 bg-muted/40 text-foreground/70 hover:bg-muted/60 hover:text-foreground",
-        )}
-        onClick={onEdit}
-        aria-label={`${actionTarget} bearbeiten`}
-        title={`${actionTarget} bearbeiten`}
-      >
-        <EditIcon className="h-4 w-4" aria-hidden />
-        <span className="sr-only">Bearbeiten</span>
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className={cn(baseButtonClass, statusButtonClass)}
-        onClick={onToggleStatus}
-        aria-label={`${statusLabel} ${actionTarget}`}
-        title={statusTitle}
-      >
-        <StatusIcon className="h-4 w-4" aria-hidden />
-        <span className="sr-only">{statusLabel}</span>
-      </Button>
-      <Button
-        type="button"
-        size="icon"
-        variant="ghost"
-        className={cn(
-          baseButtonClass,
-          "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20",
-        )}
-        onClick={onDelete}
-        aria-label={`${actionTarget} löschen`}
-        title={`${actionTarget} löschen`}
-      >
-        <TrashIcon className="h-4 w-4" aria-hidden />
-        <span className="sr-only">Löschen</span>
-      </Button>
     </div>
   );
 }

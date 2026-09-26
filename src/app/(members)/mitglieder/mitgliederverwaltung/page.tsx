@@ -14,6 +14,8 @@ import { SeasonCloseoutPanel } from "@/components/members/season-closeout-panel"
 import { combineNameParts } from "@/lib/names";
 import { AUTHENTIK_PROVIDER_ID } from "@/lib/authentik/config";
 import { readSeasonResetSettings, resolveProtectedRoles } from "@/lib/season-reset/settings";
+import { getActiveProduction } from "@/lib/active-production";
+import { UrlTabs, type UrlTab } from "@/components/ui/url-tabs";
 
 export default async function MemberManagementPage() {
   const session = await requireAuth();
@@ -26,6 +28,8 @@ export default async function MemberManagementPage() {
 
   const canManageInvites =
     (await hasPermission(session.user, "PRIVATE.ADMIN.INVITES.MANAGE")) || allowed;
+
+  const production = await getActiveProduction(session.user?.id);
 
   const [users, customRoles, seasonResetRecord] = await Promise.all([
     prisma.user.findMany({
@@ -42,6 +46,13 @@ export default async function MemberManagementPage() {
         avatarSource: true,
         avatarImageUpdatedAt: true,
         deactivatedAt: true,
+        productionMemberships: production
+          ? {
+              where: { showId: production.id },
+              select: { roles: true, function: true, status: true, leftAt: true },
+              take: 1,
+            }
+          : false,
         accounts: { where: { provider: AUTHENTIK_PROVIDER_ID }, select: { id: true }, take: 1 },
       },
     }),
@@ -72,41 +83,75 @@ export default async function MemberManagementPage() {
       isDeactivated: Boolean(user.deactivatedAt),
       deactivatedAt: user.deactivatedAt?.toISOString() ?? null,
       hasAuthentikAccount: user.accounts.length > 0,
+      production: (() => {
+        const membership = user.productionMemberships?.[0];
+        if (!membership || membership.leftAt || membership.status === "left") return null;
+        return {
+          roles: sortRoles(membership.roles as Role[]),
+          function: membership.function,
+          pending: membership.status !== "active",
+        };
+      })(),
     };
   });
 
+  const tabs: UrlTab[] = [
+    {
+      value: "mitglieder",
+      label: "Mitglieder",
+      content: (
+        <MembersTable
+          users={formatted}
+          canEditOwner={(session.user?.roles ?? []).includes("owner")}
+          availableCustomRoles={customRoles}
+          productionTitle={production?.title ?? null}
+          addMemberSlot={<AddMemberModal />}
+        />
+      ),
+    },
+    ...(canManageInvites
+      ? [{ value: "einladungen", label: "Einladungen", content: <MemberInviteManager /> }]
+      : []),
+    {
+      value: "saison",
+      label: "Saisonwechsel",
+      content: (
+        <div className="space-y-4">
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Zum Jahreswechsel in zwei Schritten: Zuerst festlegen, welche Rollen aktiv bleiben, dann
+            die Saison abschließen. Alle anderen werden deaktiviert und kommen über einen
+            Einladungslink zurück.
+          </p>
+          <SeasonResetSettingsPanel initialProtectedRoles={protectedRoles} />
+          <SeasonCloseoutPanel />
+        </div>
+      ),
+    },
+    {
+      value: "datenpflege",
+      label: "Datenpflege",
+      content: (
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle>Löschfristen &amp; Doppel-Konten</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Abgelaufene Daten anonymisieren und doppelt angelegte Konten zusammenführen.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/mitglieder/mitgliederverwaltung/aufbewahrung">Öffnen</Link>
+            </Button>
+          </CardHeader>
+        </Card>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Mitgliederverwaltung</h1>
-        <p className="text-sm text-foreground/70">
-          Erstelle neue Mitgliederprofile und verwalte Rollen für bestehende Nutzer in einer
-          Tabelle.
-        </p>
-      </div>
-
-      {canManageInvites && <MemberInviteManager />}
-
-      <SeasonResetSettingsPanel initialProtectedRoles={protectedRoles} />
-      <SeasonCloseoutPanel />
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <CardTitle>Datenpflege: Löschfristen &amp; Doppel-Konten</CardTitle>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/mitglieder/mitgliederverwaltung/aufbewahrung">Öffnen</Link>
-          </Button>
-        </CardHeader>
-      </Card>
-
-      <div className="flex justify-end">
-        <AddMemberModal />
-      </div>
-
-      <MembersTable
-        users={formatted}
-        canEditOwner={(session.user?.roles ?? []).includes("owner")}
-        availableCustomRoles={customRoles}
-      />
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">Mitglieder</h1>
+      <UrlTabs tabs={tabs} />
     </div>
   );
 }
