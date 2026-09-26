@@ -15,7 +15,6 @@ import { loadDepartmentPortal } from "@/lib/departments/portal";
 import { cn } from "@/lib/utils";
 
 import {
-  AvatarStack,
   formatDue,
   formatEventDate,
   Initials,
@@ -115,12 +114,8 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-2.5">
           <Link href={`${basePath}?ansicht=team`} className="flex min-h-9 items-center gap-2">
-            <AvatarStack
-              initials={portal.members.slice(0, 5).map((member) => member.initials)}
-              total={portal.members.length}
-              size="md"
-            />
             <span className="text-xs text-muted-foreground">
+              {portal.members.length} {portal.members.length === 1 ? "Person" : "Personen"} · Du:{" "}
               {portal.viewerRole ? TEAM_ROLE_LABELS[portal.viewerRole] : "Einblick als Regie"}
             </span>
           </Link>

@@ -5,7 +5,9 @@ import { ChevronRightIcon } from "@/components/ui/action-icons";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { loadMyTeams, type TeamCard } from "@/lib/departments/portal";
 
-import { AvatarStack, TEAM_ROLE_LABELS, tint } from "./team-ui";
+import { CalendarIcon, ListTodoIcon } from "@/components/ui/action-icons";
+
+import { formatShortDate, TEAM_ROLE_LABELS, tint } from "./team-ui";
 
 export default async function MeineTeamsPage() {
   const { userId, isManager, production } = await resolveTeamsViewer();
@@ -94,16 +96,30 @@ function TeamGrid({ teams }: { teams: TeamCard[] }) {
                 {team.name}
               </span>
               <span className="block text-xs text-muted-foreground">
-                {team.role ? TEAM_ROLE_LABELS[team.role] : "Einblick"}
+                {team.role ? TEAM_ROLE_LABELS[team.role] : "Einblick"} · {team.memberCount}{" "}
+                {team.memberCount === 1 ? "Person" : "Personen"}
               </span>
             </span>
-            <span className="mt-auto flex items-center justify-between gap-2">
-              <AvatarStack initials={team.avatars} total={team.memberCount} />
-              {team.myOpenTasks ? (
-                <span className="text-xs font-medium text-foreground">
-                  {team.myOpenTasks} für dich
+            <span className="mt-auto space-y-0.5 text-xs">
+              <span className="flex items-center gap-1.5 text-foreground/90">
+                <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="truncate">
+                  {team.nextEvent
+                    ? `${formatShortDate(team.nextEvent.start)} ${team.nextEvent.title}`
+                    : "Kein Termin"}
                 </span>
-              ) : null}
+              </span>
+              <span className="flex items-center gap-1.5 text-foreground/90">
+                <ListTodoIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="truncate">
+                  {team.myOpenTasks
+                    ? `${team.myOpenTasks} für dich · ${team.openTasks} offen`
+                    : `${team.openTasks} offen`}
+                </span>
+              </span>
+              <span className="block truncate text-muted-foreground">
+                {team.leads.length ? `Leitung: ${team.leads.join(", ")}` : "Leitung offen"}
+              </span>
             </span>
           </Link>
         </li>

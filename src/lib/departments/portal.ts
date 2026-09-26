@@ -12,8 +12,6 @@ export type TeamCard = {
   color: string | null;
   role: DepartmentMembershipRole | null;
   leads: string[];
-  /** Initialen der ersten Mitglieder für den Personen-Stapel. */
-  avatars: string[];
   memberCount: number;
   openTasks: number;
   myOpenTasks: number;
@@ -69,11 +67,6 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
       leads: active
         .filter((entry) => entry.role === "lead")
         .map((entry) => getUserDisplayName(entry.user)),
-      avatars: active
-        .slice()
-        .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
-        .slice(0, 3)
-        .map((entry) => getNameInitials(entry.user)),
       memberCount: active.length,
       openTasks: department.tasks.length,
       myOpenTasks: department.tasks.filter((task) =>
