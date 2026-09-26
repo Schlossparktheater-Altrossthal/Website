@@ -107,7 +107,7 @@ export default async function ProduktionenPage() {
         <Link href="/mitglieder/produktionen/stueck">Stück öffnen</Link>
       </Button>
       <Button asChild variant="outline">
-        <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams verwalten</Link>
+        <Link href="/mitglieder/meine-gewerke">Gewerke &amp; Teams verwalten</Link>
       </Button>
       <ClearActiveProductionForm
         redirectPath="/mitglieder/produktionen"
@@ -145,7 +145,7 @@ export default async function ProduktionenPage() {
           </CardHeader>
           <CardContent>
             <Button asChild size="sm">
-              <Link href="/mitglieder/produktionen/gewerke">Zum Team-Workspace</Link>
+              <Link href="/mitglieder/produktionen/zuweisung">Zur Zuweisung</Link>
             </Button>
           </CardContent>
         </Card>

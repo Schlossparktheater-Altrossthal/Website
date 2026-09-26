@@ -15,7 +15,6 @@ import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { getUserPermissionKeys } from "@/lib/permissions";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
-import { DEPARTMENT_LEAD_ROLE } from "@/app/(members)/mitglieder/meine-gewerke/utils";
 
 type CommitInfo = {
   short: string;
@@ -119,7 +118,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
         where: { userId, ...currentDepartmentMembershipWhere() },
       }),
       prisma.departmentMembership.count({
-        where: { userId, role: DEPARTMENT_LEAD_ROLE, ...currentDepartmentMembershipWhere() },
+        where: { userId, role: "lead", ...currentDepartmentMembershipWhere() },
       }),
     ]);
 

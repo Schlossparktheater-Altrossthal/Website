@@ -2,11 +2,10 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-type WorkspaceKey = "overview" | "departments" | "assignments" | "piece" | "feedback";
+type WorkspaceKey = "overview" | "assignments" | "piece" | "feedback";
 
 const NAVIGATION: { key: WorkspaceKey; label: string; href: string }[] = [
   { key: "overview", label: "Überblick", href: "/mitglieder/produktionen" },
-  { key: "departments", label: "Gewerke & Teams", href: "/mitglieder/produktionen/gewerke" },
   { key: "assignments", label: "Teams & Zuweisung", href: "/mitglieder/produktionen/zuweisung" },
   { key: "piece", label: "Stück", href: "/mitglieder/produktionen/stueck" },
   {

@@ -11,8 +11,6 @@ Auswertung der Rückmeldungen.
 - `/mitglieder/produktionen/[showId]` – Detail einer Produktion
 - `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte; `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
 - `/mitglieder/produktionen/besetzung`, `/szenen` – leiten auf das Stück weiter
-- `/mitglieder/produktionen/gewerke` – Gewerke-Übersicht
-- `/mitglieder/produktionen/gewerke/[departmentId]` – einzelnes Gewerk
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung
 
 ## Permissions

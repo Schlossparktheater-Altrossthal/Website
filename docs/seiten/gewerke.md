@@ -8,7 +8,6 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 
 - `/mitglieder/meine-gewerke` – „Meine Teams“: Karten der eigenen Gewerke der aktiven Produktion (Regie/Board sehen zusätzlich alle weiteren)
 - `/mitglieder/meine-gewerke/[slug]` – Gewerk-Portal mit `?ansicht=` Übersicht (Als Nächstes) / aufgaben / termine / team; sichtbar für aktive Mitglieder des Gewerks und Regie/Board
-- `/mitglieder/meine-gewerke/todos` – offene Aufgaben
 
 ## Permissions
 
@@ -55,3 +54,9 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 - Sichtbar für Besetzung, Regie/Board und aktive Gewerk-Mitglieder der Produktion (z. B. Kostüm, Maske).
 - Ansichten: Überblick (Besetzung inkl. Zweitbesetzung, nächste Proben der Besetzung, gemeinsame Rollennotizen – pflegen Besetzung und Regie), Szenen (Szenen der Rolle mit Partnern), Ausstattung (Breakdown-Einträge der Gewerke für diese Szenen mit Status).
 - Loader `src/lib/departments/roles.ts`, Action `meine-gewerke/role-actions.ts`.
+
+## Gewerke verwalten, Beitritt und Dateien (Phase 6)
+
+- Regie/Board: „Gewerk anlegen“-Kachel in „Meine Teams“, „Bearbeiten“ im Portal-Kopf (Name, Beschreibung, Farbe, Beitritt mit Prüfung, Archivieren). Actions `produktionen/actions/department-settings.ts`. Die alten Seiten `produktionen/gewerke/*` und `meine-gewerke/todos` sind entfernt.
+- Mitglieder: „Weitere Gewerke – mitmachen?“ in „Meine Teams“: Beitreten (ohne Prüfung) oder Anfrage (Leitung/Vertretung werden benachrichtigt), Anfrage zurückziehen (`meine-gewerke/actions.ts`).
+- Dateien im Team-Tab: `DepartmentDocument` (statt FileLibrary, die keine Gewerk-Rechte kennt). Upload per `POST /api/departments/[id]/documents` (je bis 15 MB, Mitglieder ohne Gäste), Download über `GET …/documents/[documentId]`, Löschen durch Hochladende oder Leitung/Vertretung/Regie.

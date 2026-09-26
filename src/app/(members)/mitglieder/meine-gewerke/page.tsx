@@ -3,11 +3,13 @@ import Link from "next/link";
 import { PageHeader } from "@/components/members/page-header";
 import { ChevronRightIcon } from "@/components/ui/action-icons";
 import { resolveTeamsViewer } from "@/lib/departments/access";
-import { loadMyTeams, type TeamCard } from "@/lib/departments/portal";
+import { loadJoinableTeams, loadMyTeams, type TeamCard } from "@/lib/departments/portal";
 import { CASTING_TYPE_LABELS, loadMyRoles, type RoleCard } from "@/lib/departments/roles";
 
 import { CalendarIcon, ListTodoIcon } from "@/components/ui/action-icons";
 
+import { DepartmentSettingsButton } from "./department-settings-panel";
+import { JoinList } from "./join-list";
 import { formatShortDate, TEAM_ROLE_LABELS, tint } from "./team-ui";
 
 export default async function MeineTeamsPage() {
@@ -24,9 +26,10 @@ export default async function MeineTeamsPage() {
     );
   }
 
-  const [teams, roles] = await Promise.all([
+  const [teams, roles, joinable] = await Promise.all([
     loadMyTeams(userId, production.id, isManager),
     loadMyRoles(userId, production.id, isManager),
+    isManager ? Promise.resolve([]) : loadJoinableTeams(userId, production.id),
   ]);
   const myRoles = roles.filter((role) => role.myCasting);
   const otherRoles = roles.filter((role) => !role.myCasting);
@@ -80,7 +83,26 @@ export default async function MeineTeamsPage() {
           <h2 id="other-teams" className="text-sm font-medium text-muted-foreground">
             {mine.length ? "Weitere Gewerke der Produktion" : "Alle Gewerke der Produktion"}
           </h2>
-          <TeamGrid teams={others} />
+          <TeamGrid
+            teams={others}
+            extra={
+              isManager ? <DepartmentSettingsButton showId={production.id} variant="tile" /> : null
+            }
+          />
+        </section>
+      ) : isManager ? (
+        <TeamGrid
+          teams={[]}
+          extra={<DepartmentSettingsButton showId={production.id} variant="tile" />}
+        />
+      ) : null}
+
+      {joinable.length ? (
+        <section className="space-y-3" aria-labelledby="join-teams">
+          <h2 id="join-teams" className="text-sm font-medium text-muted-foreground">
+            Weitere Gewerke – mitmachen?
+          </h2>
+          <JoinList teams={joinable} />
         </section>
       ) : null}
 
@@ -96,7 +118,7 @@ export default async function MeineTeamsPage() {
   );
 }
 
-function TeamGrid({ teams }: { teams: TeamCard[] }) {
+function TeamGrid({ teams, extra }: { teams: TeamCard[]; extra?: React.ReactNode }) {
   return (
     <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
       {teams.map((team) => (
@@ -155,6 +177,7 @@ function TeamGrid({ teams }: { teams: TeamCard[] }) {
           </Link>
         </li>
       ))}
+      {extra ? <li>{extra}</li> : null}
     </ul>
   );
 }

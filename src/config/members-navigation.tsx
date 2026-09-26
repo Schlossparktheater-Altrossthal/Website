@@ -102,17 +102,6 @@ const DepartmentsIcon = createMembersNavIcon(
   </>,
 );
 
-const DepartmentTodosIcon = createMembersNavIcon(
-  <>
-    <path d="M4 6l1.5 1.5L7 6" />
-    <path d="M4 12l1.5 1.5L7 12" />
-    <path d="M4 18l1.5 1.5L7 18" />
-    <path d="M9 6h11" />
-    <path d="M9 12h11" />
-    <path d="M9 18h11" />
-  </>,
-);
-
 const BodyMeasurementsIcon = createMembersNavIcon(
   <>
     <rect x="3" y="6" width="18" height="12" rx="2" />
@@ -160,18 +149,6 @@ const ProductionIcon = createMembersNavIcon(
     <path d="M5 8v12h14V8" />
     <path d="M9 12h6" />
     <path d="M9 16h6" />
-  </>,
-);
-
-const DepartmentsOverviewIcon = createMembersNavIcon(
-  <>
-    <circle cx="7" cy="7" r="2.5" />
-    <circle cx="17" cy="7" r="2.5" />
-    <circle cx="12" cy="17" r="2.5" />
-    <path d="M9.5 7h5" />
-    <path d="M9.4 8.6 12 12" />
-    <path d="M14.6 8.6 12 12" />
-    <path d="M12 14.5V12" />
   </>,
 );
 
@@ -246,13 +223,6 @@ const ServerSettingsIcon = createMembersNavIcon(
 
 const DefaultIcon = createMembersNavIcon(<circle cx="12" cy="12" r="2" />);
 
-export const membersAssignmentsTodoItem: MembersNavItem = {
-  href: "/mitglieder/meine-gewerke/todos",
-  label: "Aufgaben",
-  permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
-  icon: DepartmentTodosIcon,
-};
-
 export const membersNavigation = [
   {
     id: "general",
@@ -325,13 +295,6 @@ export const membersNavigation = [
     label: "Gewerke",
     items: [
       {
-        href: "/mitglieder/produktionen/gewerke",
-        label: "Allgemeines",
-        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
-        requiresBoardRole: true,
-        icon: DepartmentsOverviewIcon,
-      },
-      {
         href: "/mitglieder/produktionen/zuweisung",
         label: "Teams & Zuweisung",
         permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
@@ -344,7 +307,6 @@ export const membersNavigation = [
         permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
         icon: DepartmentsIcon,
       },
-      membersAssignmentsTodoItem,
       {
         href: "/mitglieder/koerpermasse",
         label: "Körpermaße",

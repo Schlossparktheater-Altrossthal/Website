@@ -1,100 +1,116 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { DepartmentMembershipRole } from "@prisma/client";
+import { z } from "zod";
 
+import { getActiveProduction } from "@/lib/active-production";
+import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
+import {
+  actionFailure,
+  actionSuccess,
+  type ProductionActionResult,
+} from "@/lib/produktionen/actions-helpers";
 import { requireAuth } from "@/lib/rbac";
 
-const DEPARTMENT_MEMBER_ROLE_NAME = "department-member";
-const DEPARTMENT_PERMISSION_KEY = "PRIVATE.DEPARTMENT.OWN.VIEW";
-
-async function ensureDepartmentMemberAppRole() {
-  const [role, permission] = await Promise.all([
-    prisma.appRole.upsert({
-      where: { name: DEPARTMENT_MEMBER_ROLE_NAME },
-      update: {},
-      create: {
-        name: DEPARTMENT_MEMBER_ROLE_NAME,
-        isSystem: false,
-      },
-    }),
-    prisma.permission.findUnique({ where: { key: DEPARTMENT_PERMISSION_KEY } }),
-  ]);
-
-  if (!permission) {
-    throw new Error("Berechtigung für Gewerke konnte nicht gefunden werden.");
-  }
-
-  await prisma.appRolePermission.upsert({
-    where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
-    update: {},
-    create: { roleId: role.id, permissionId: permission.id },
-  });
-
-  return role.id;
+function revalidateTeams() {
+  revalidatePath("/mitglieder", "layout");
+  revalidatePath("/mitglieder/produktionen/zuweisung");
 }
 
-export async function joinDepartmentAction(formData: FormData) {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) {
-    throw new Error("Benutzer konnte nicht ermittelt werden.");
-  }
+/**
+ * Selbst einem Gewerk der aktiven Produktion beitreten. Mit Beitrittsprüfung entsteht eine
+ * Anfrage, die Leitung oder Regie unter „Teams & Zuweisung“ entscheiden (Leitung wird benachrichtigt).
+ */
+export async function joinDepartmentAction(input: {
+  departmentId: string;
+}): Promise<ProductionActionResult> {
+  try {
+    const session = await requireAuth();
+    const userId = session.user?.id;
+    if (!userId) throw new Error("Nicht angemeldet.");
+    const departmentId = z.string().parse(input.departmentId);
+    const production = await getActiveProduction(userId);
+    const department = await prisma.department.findFirst({
+      where: { id: departmentId, showId: production?.id ?? "", archivedAt: null },
+      select: { id: true, name: true, requiresJoinApproval: true },
+    });
+    if (!department) throw new Error("Das Gewerk gibt es in dieser Produktion nicht.");
 
-  const departmentIdValue = formData.get("departmentId");
-  if (typeof departmentIdValue !== "string" || !departmentIdValue.trim()) {
-    throw new Error("Ungültiges Gewerk ausgewählt.");
-  }
+    const existing = await prisma.departmentMembership.findUnique({
+      where: { departmentId_userId: { departmentId: department.id, userId } },
+      select: { status: true },
+    });
+    if (existing?.status === "active") return actionSuccess("Du bist schon dabei.");
 
-  const department = await prisma.department.findUnique({
-    where: { id: departmentIdValue },
-    select: { id: true, requiresJoinApproval: true },
-  });
-
-  if (!department) {
-    throw new Error("Das ausgewählte Gewerk existiert nicht mehr.");
-  }
-
-  if (department.requiresJoinApproval) {
-    // Anfrage statt Beitritt: Regie oder Leitung entscheidet unter „Teams & Zuweisung“.
+    const status = department.requiresJoinApproval ? "requested" : "active";
     await prisma.departmentMembership.upsert({
       where: { departmentId_userId: { departmentId: department.id, userId } },
-      update: {},
+      update: {
+        status,
+        source: "self",
+        role: "member",
+        decidedAt: status === "active" ? new Date() : null,
+      },
       create: {
         departmentId: department.id,
         userId,
-        role: DepartmentMembershipRole.member,
-        status: "requested",
+        role: "member",
+        status,
         source: "self",
+        decidedAt: status === "active" ? new Date() : null,
       },
     });
-    return;
+
+    if (status === "requested") {
+      const [leads, user] = await Promise.all([
+        prisma.departmentMembership.findMany({
+          where: {
+            departmentId: department.id,
+            status: "active",
+            role: { in: ["lead", "deputy"] },
+          },
+          select: { userId: true },
+        }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true, name: true, email: true },
+        }),
+      ]);
+      if (leads.length) {
+        await prisma.notification.create({
+          data: {
+            title: `Anfrage für ${department.name}: ${user ? getUserDisplayName(user) : "Jemand"} möchte mitmachen`,
+            type: "department-request",
+            recipients: { create: leads.map((entry) => ({ userId: entry.userId })) },
+          },
+        });
+      }
+    }
+
+    revalidateTeams();
+    return actionSuccess(
+      status === "requested" ? "Anfrage gesendet" : `Willkommen bei ${department.name}`,
+    );
+  } catch (error) {
+    return actionFailure(error, "Das hat nicht geklappt.");
   }
+}
 
-  await prisma.departmentMembership.upsert({
-    where: { departmentId_userId: { departmentId: department.id, userId } },
-    update: { status: "active", decidedAt: new Date() },
-    create: {
-      departmentId: department.id,
-      userId,
-      role: DepartmentMembershipRole.member,
-      status: "active",
-      source: "self",
-      decidedAt: new Date(),
-    },
-  });
-
-  const appRoleId = await ensureDepartmentMemberAppRole();
-
-  await prisma.userAppRole.upsert({
-    where: { userId_roleId: { userId, roleId: appRoleId } },
-    update: {},
-    create: { userId, roleId: appRoleId },
-  });
-
-  revalidatePath("/mitglieder", "layout");
-  revalidatePath("/mitglieder");
-  revalidatePath("/mitglieder/meine-gewerke");
-  revalidatePath("/mitglieder/meine-gewerke/todos");
+/** Eigene offene Anfrage zurückziehen. */
+export async function withdrawJoinRequestAction(input: {
+  departmentId: string;
+}): Promise<ProductionActionResult> {
+  try {
+    const session = await requireAuth();
+    const userId = session.user?.id;
+    if (!userId) throw new Error("Nicht angemeldet.");
+    await prisma.departmentMembership.deleteMany({
+      where: { departmentId: z.string().parse(input.departmentId), userId, status: "requested" },
+    });
+    revalidateTeams();
+    return actionSuccess("Anfrage zurückgezogen");
+  } catch (error) {
+    return actionFailure(error, "Das hat nicht geklappt.");
+  }
 }

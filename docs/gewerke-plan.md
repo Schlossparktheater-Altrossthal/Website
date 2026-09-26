@@ -124,5 +124,5 @@ Jede Phase einzeln auf Staging testbar; Schema-Änderungen additiv vor Alt-Entfe
 - [x] Phase 3b Rollenportal (Szenen, Besetzung, Proben, Ausstattung, Notizen)
 - [x] Phase 4 Board (2026-09-27: `DepartmentBoardColumn` mit Status-Bedeutung, Position/Priorität/Kommentare, Migration `department_board`; Desktop Drag & Drop, mobil Spalten-Umschalter + Bottom-Sheet; Spalten verwalten Leitung/Vertretung/Regie)
 - [x] Phase 5 Termine (CalendarEvent mit departmentId, Zu-/Absagen, Sperrlisten-Hinweis, ICS/Dashboard)
-- [ ] Phase 6 Dateien/Module/Aufräumen
+- [x] Phase 6 Dateien/Aufräumen (Dateien über `DepartmentDocument` statt FileLibrary, Gewerke-Einstellungen, Beitritt/Anfrage, Altseiten entfernt)
 - [ ] Phase 7 E2E/Release

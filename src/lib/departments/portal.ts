@@ -98,7 +98,21 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
       name: true,
       description: true,
       color: true,
+      requiresJoinApproval: true,
       archivedAt: true,
+      documents: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          fileName: true,
+          mimeType: true,
+          fileSize: true,
+          createdAt: true,
+          uploadedBy: {
+            select: { id: true, firstName: true, lastName: true, name: true, email: true },
+          },
+        },
+      },
       memberships: {
         where: { status: { in: ["active", "requested"] }, user: { deactivatedAt: null } },
         select: {
@@ -175,6 +189,16 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
     name: department.name,
     description: department.description,
     color: department.color,
+    requiresJoinApproval: department.requiresJoinApproval,
+    files: department.documents.map((document) => ({
+      id: document.id,
+      fileName: document.fileName,
+      mimeType: document.mimeType,
+      fileSize: document.fileSize,
+      createdAt: document.createdAt.toISOString(),
+      uploaderId: document.uploadedBy?.id ?? null,
+      uploaderName: document.uploadedBy ? getUserDisplayName(document.uploadedBy) : null,
+    })),
     members,
     requests,
     viewerRole: members.find((member) => member.id === userId)?.role ?? null,
@@ -194,4 +218,37 @@ function countTasks(statuses: TaskStatus[]) {
     doing: statuses.filter((status) => status === "doing").length,
     done: statuses.filter((status) => status === "done").length,
   };
+}
+
+export type JoinableTeam = {
+  id: string;
+  name: string;
+  color: string | null;
+  description: string | null;
+  requiresJoinApproval: boolean;
+  requested: boolean;
+};
+
+/** Gewerke der Produktion, in denen die Person (noch) nicht aktiv ist – zum Beitreten/Anfragen. */
+export async function loadJoinableTeams(userId: string, showId: string) {
+  const departments = await prisma.department.findMany({
+    where: {
+      showId,
+      archivedAt: null,
+      memberships: { none: { userId, status: "active" } },
+    },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      description: true,
+      requiresJoinApproval: true,
+      memberships: { where: { userId, status: "requested" }, select: { id: true } },
+    },
+  });
+  return departments.map<JoinableTeam>(({ memberships, ...department }) => ({
+    ...department,
+    requested: memberships.length > 0,
+  }));
 }

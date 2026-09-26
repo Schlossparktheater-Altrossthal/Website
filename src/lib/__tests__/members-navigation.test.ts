@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
-  membersAssignmentsTodoItem,
 } from "@/config/members-navigation";
 import {
   filterMembersNavigationByPermissions,
@@ -13,22 +12,6 @@ import {
 } from "@/lib/members-navigation";
 
 describe("selectMembersNavigation", () => {
-  it("keeps the department todo item next to the Gewerke overview", () => {
-    const groups = selectMembersNavigation();
-    const assignments = groups.find((group) => group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID);
-
-    expect(assignments).toBeDefined();
-    const todoIndex = assignments!.items.findIndex(
-      (item) => item.href === membersAssignmentsTodoItem.href,
-    );
-    const departmentsIndex = assignments!.items.findIndex(
-      (item) => item.href === "/mitglieder/meine-gewerke",
-    );
-
-    expect(todoIndex).toBeGreaterThan(-1);
-    expect(todoIndex).toBe(departmentsIndex + 1);
-  });
-
   it("adds an active production shortcut with badge and aria label", () => {
     const activeProduction: ActiveProductionNavInfo = {
       id: "show-123",
@@ -61,11 +44,7 @@ describe("filterMembersNavigationByPermissions", () => {
 
     expect(assignments).toBeDefined();
     const hrefs = assignments!.items.map((item) => item.href);
-    expect(hrefs).toEqual([
-      "/mitglieder/produktionen/zuweisung",
-      "/mitglieder/meine-gewerke",
-      membersAssignmentsTodoItem.href,
-    ]);
+    expect(hrefs).toEqual(["/mitglieder/produktionen/zuweisung", "/mitglieder/meine-gewerke"]);
   });
 
   it("hides the assignment page from members who do not lead a department", () => {

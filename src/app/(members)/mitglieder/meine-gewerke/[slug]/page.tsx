@@ -15,7 +15,9 @@ import { loadDepartmentPortal } from "@/lib/departments/portal";
 import { cn } from "@/lib/utils";
 
 import { DepartmentBoard } from "../board/board";
+import { DepartmentSettingsButton } from "../department-settings-panel";
 import { TeamEvents } from "../events/team-events";
+import { TeamFiles } from "../files/team-files";
 import {
   formatDue,
   formatEventDate,
@@ -127,14 +129,28 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
               {portal.viewerRole ? TEAM_ROLE_LABELS[portal.viewerRole] : "Einblick als Regie"}
             </span>
           </Link>
-          {canManage && portal.requests.length ? (
-            <Link
-              href={`${basePath}?ansicht=team`}
-              className="rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-warning-foreground"
-            >
-              {portal.requests.length} {portal.requests.length === 1 ? "Anfrage" : "Anfragen"}
-            </Link>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            {isManager ? (
+              <DepartmentSettingsButton
+                showId={production.id}
+                department={{
+                  id: portal.id,
+                  name: portal.name,
+                  description: portal.description,
+                  color: portal.color,
+                  requiresJoinApproval: portal.requiresJoinApproval,
+                }}
+              />
+            ) : null}
+            {canManage && portal.requests.length ? (
+              <Link
+                href={`${basePath}?ansicht=team`}
+                className="rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-warning-foreground"
+              >
+                {portal.requests.length} {portal.requests.length === 1 ? "Anfrage" : "Anfragen"}
+              </Link>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -261,6 +277,17 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
             ) : (
               <Empty>Noch niemand zugewiesen.</Empty>
             )}
+          </Section>
+          <Section title={`Dateien (${portal.files.length})`}>
+            <TeamFiles
+              departmentId={portal.id}
+              files={portal.files}
+              viewerId={userId}
+              canUpload={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
+              canManage={
+                isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"
+              }
+            />
           </Section>
         </div>
       ) : null}

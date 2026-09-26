@@ -156,7 +156,7 @@ export default async function ProduktionDetailPage({
               <Link href="/mitglieder/produktionen/stueck">Stück</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/mitglieder/produktionen/gewerke">Gewerke &amp; Teams</Link>
+              <Link href="/mitglieder/meine-gewerke">Gewerke &amp; Teams</Link>
             </Button>
             {!isActive ? (
               <SetActiveProductionForm

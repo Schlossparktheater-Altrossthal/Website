@@ -17,7 +17,6 @@ const CASTING_TYPES: CharacterCastingType[] = ["primary", "alternate"];
 
 const REVALIDATE_PATHS = [
   "/mitglieder/produktionen/zuweisung",
-  "/mitglieder/produktionen/gewerke",
   "/mitglieder/meine-gewerke",
   "/mitglieder",
 ];
