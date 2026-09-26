@@ -20,7 +20,7 @@ import { DateBadge } from "@/components/ui/date-badge";
 import type { EventBlock, TeamEvent, TeamEventsData } from "@/lib/departments/events";
 import { cn } from "@/lib/utils";
 
-import { ResponsivePanel } from "../board/panel";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import type { ActionResult } from "../board/shared";
 import {
   deleteTeamEventAction,

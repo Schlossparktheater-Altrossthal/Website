@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
-import { CalendarIcon, MapPinIcon } from "@/components/ui/action-icons";
+import { CalendarIcon, EditIcon, MapPinIcon } from "@/components/ui/action-icons";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import {
   BREAKDOWN_STATUS_LABELS,
@@ -67,9 +67,20 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
             ) : null}
           </div>
         </div>
-        <div className="border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
-          {role.scenes.length} {role.scenes.length === 1 ? "Szene" : "Szenen"} · Du:{" "}
-          {role.myCasting ? CASTING_TYPE_LABELS[role.myCasting] : "Einblick"}
+        <div className="flex min-h-11 items-center justify-between gap-3 border-t border-border/60 px-4 py-1.5 text-xs text-muted-foreground">
+          <span>
+            {role.scenes.length} {role.scenes.length === 1 ? "Szene" : "Szenen"} · Du:{" "}
+            {role.myCasting ? CASTING_TYPE_LABELS[role.myCasting] : "Einblick"}
+          </span>
+          {isManager ? (
+            <Link
+              href={`/mitglieder/produktionen/besetzung?rolle=${encodeURIComponent(role.id)}`}
+              className="inline-flex min-h-9 items-center gap-1 rounded-full border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <EditIcon className="h-3.5 w-3.5" aria-hidden />
+              Bearbeiten
+            </Link>
+          ) : null}
         </div>
       </section>
 

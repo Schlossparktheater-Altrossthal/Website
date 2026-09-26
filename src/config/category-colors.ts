@@ -61,3 +61,15 @@ export const MEMBER_GROUP_ACCENTS: Record<"actors" | "crew" | "both" | "other", 
   both: "bg-indigo-500",
   other: "bg-muted-foreground/50",
 };
+
+/** Auswahl für Rollenfarben (Kacheln, Szenen-Chips). Gespeichert wird der Hex-Wert. */
+export const ROLE_COLOR_OPTIONS = [
+  "#e8590c",
+  "#f08c00",
+  "#2f9e44",
+  "#0c8599",
+  "#1971c2",
+  "#7048e8",
+  "#c2255c",
+  "#868e96",
+] as const;

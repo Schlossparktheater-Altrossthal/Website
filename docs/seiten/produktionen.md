@@ -9,10 +9,10 @@ Auswertung der Rückmeldungen.
 
 - `/mitglieder/produktionen` – Übersicht
 - `/mitglieder/produktionen/[showId]` – Detail einer Produktion
-- `/mitglieder/produktionen/besetzung` – Besetzung
+- `/mitglieder/produktionen/besetzung` – Rollen & Besetzung (`?rolle=<id>` öffnet die Rolle)
 - `/mitglieder/produktionen/gewerke` – Gewerke-Übersicht
 - `/mitglieder/produktionen/gewerke/[departmentId]` – einzelnes Gewerk
-- `/mitglieder/produktionen/szenen` – Szenen
+- `/mitglieder/produktionen/szenen` – Szenen mit Rollen und Ausstattung (`?szene=<id>`)
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung
 
 ## Permissions
@@ -24,7 +24,7 @@ Auswertung der Rückmeldungen.
 
 - `src/app/(members)/mitglieder/produktionen/actions.ts` – Server Actions
 - `src/app/(members)/mitglieder/produktionen/production-forms-client.tsx` – Formulare
-- `src/app/(members)/mitglieder/produktionen/besetzung/` – Besetzungsbereich
+- `src/app/(members)/mitglieder/produktionen/rollen-szenen/` – gemeinsame Rollen-/Szenenverwaltung (Seiten `besetzung` und `szenen` sind nur Hüllen)
 
 ## Datenfluss
 
@@ -43,4 +43,4 @@ Auswertung der Rückmeldungen.
 ## Besonderheiten / Altlasten
 
 - `produktionen/actions.ts` ist mit 1200+ Zeilen die größte Actions-Datei (Aufteilung in P5).
-- Der Besetzungsbereich hat eigene Utils (`casting-utils.ts`).
+- Rollen und Szenen: kompakte Listen, Bearbeiten im Bottom-Sheet (mobil) bzw. Dialog. Rolle: Name, Beschreibung, Farbe (`ROLE_COLOR_OPTIONS`), Besetzung Haupt/Zweit (sofort gespeichert, mit Benachrichtigung), Szenen (sofort). Szene: Nummer (1 oder 1.3, eindeutig), Titel, Ort, Tageszeit, Dauer, Rollen (Tippen: dabei → Hauptszene → entfernen), Ausstattung je Gewerk mit Status. `Scene.sequence` wird aus den Nummern neu gesetzt. Actions in `actions/roles-scenes.ts`, Loader `src/lib/produktionen/roles-scenes.ts`. Nur Regie/Board.

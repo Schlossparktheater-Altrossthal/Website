@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { CheckIcon, SearchIcon, XIcon } from "@/components/ui/action-icons";
+import { CheckIcon, ChevronRightIcon, SearchIcon, XIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -855,59 +856,71 @@ function RolesList({
   if (characters.length === 0) {
     return (
       <EmptyHint>
-        Für diese Produktion sind noch keine Rollen angelegt. Rollen legst du unter „Besetzung“ an.
+        Für diese Produktion sind noch keine Rollen angelegt.{" "}
+        <Link href="/mitglieder/produktionen/besetzung" className="text-primary underline">
+          Rolle anlegen
+        </Link>
       </EmptyHint>
     );
   }
   return (
-    <ul
-      className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card"
-      aria-label="Rollen"
-    >
-      {characters.map((character) => {
-        const cast = people.flatMap((person) =>
-          person.castings
-            .filter((entry) => entry.characterId === character.id)
-            .map((entry) => ({ person, type: entry.type })),
-        );
-        return (
-          <li key={character.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(character.id)}
-              aria-pressed={character.id === selectedId}
-              className={cn(
-                "flex min-h-14 w-full items-start gap-3 px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                character.id === selectedId && "bg-primary/5",
-              )}
-            >
-              <span
-                aria-hidden
-                className="mt-1 h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: character.color ?? "var(--muted-foreground)" }}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-medium">{character.name}</span>
-                  {character.sizeLabel ? (
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {character.sizeLabel}
-                    </span>
-                  ) : null}
+    <div className="space-y-2">
+      <Link
+        href="/mitglieder/produktionen/besetzung"
+        className="flex min-h-11 items-center justify-between rounded-xl border border-border bg-card px-3 text-sm font-medium text-primary hover:bg-muted/40"
+      >
+        Rollen und Szenen verwalten
+        <ChevronRightIcon className="h-4 w-4" aria-hidden />
+      </Link>
+      <ul
+        className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card"
+        aria-label="Rollen"
+      >
+        {characters.map((character) => {
+          const cast = people.flatMap((person) =>
+            person.castings
+              .filter((entry) => entry.characterId === character.id)
+              .map((entry) => ({ person, type: entry.type })),
+          );
+          return (
+            <li key={character.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(character.id)}
+                aria-pressed={character.id === selectedId}
+                className={cn(
+                  "flex min-h-14 w-full items-start gap-3 px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  character.id === selectedId && "bg-primary/5",
+                )}
+              >
+                <span
+                  aria-hidden
+                  className="mt-1 h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: character.color ?? "var(--muted-foreground)" }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium">{character.name}</span>
+                    {character.sizeLabel ? (
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {character.sizeLabel}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {cast.length
+                      ? cast
+                          .map(({ person, type }) => `${person.name} (${castLabel(type)})`)
+                          .join(", ")
+                      : "Noch nicht besetzt"}
+                  </span>
                 </span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {cast.length
-                    ? cast
-                        .map(({ person, type }) => `${person.name} (${castLabel(type)})`)
-                        .join(", ")
-                    : "Noch nicht besetzt"}
-                </span>
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

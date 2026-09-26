@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { BoardColumn } from "@/lib/departments/board";
 
-import { ResponsivePanel } from "./panel";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 
 const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: "todo", label: "zählt als offen" },

@@ -13,7 +13,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { BoardColumn, BoardPerson, BoardTask } from "@/lib/departments/board";
 import { cn } from "@/lib/utils";
 
-import { ResponsivePanel } from "./panel";
+import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { PRIORITY_LABELS, toDateInput } from "./shared";
 
 export type TaskDraft = {
