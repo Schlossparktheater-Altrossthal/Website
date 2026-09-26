@@ -57,6 +57,9 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<"renew" | "disable" | null>(null);
   const [qr, setQr] = useState<string | null>(null);
+  const [isAndroid] = useState(
+    () => typeof navigator !== "undefined" && /android/i.test(navigator.userAgent),
+  );
 
   useEffect(() => {
     let active = true;
@@ -152,20 +155,35 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Button asChild>
-          <a href={webcalUrl(feed.url)}>
-            <CalendarIcon className="h-4 w-4" aria-hidden />
-            In Kalender-App öffnen
-          </a>
-        </Button>
-        <Button asChild variant="outline">
-          <a href={googleUrl(feed.url)} target="_blank" rel="noopener noreferrer">
-            <ExternalLinkIcon className="h-4 w-4" aria-hidden />
-            Google Kalender
-          </a>
-        </Button>
-      </div>
+      {isAndroid ? (
+        // Android kennt kein webcal:// – Google Kalender ist dort der Weg.
+        <div className="space-y-2">
+          <Button asChild className="w-full">
+            <a href={googleUrl(feed.url)} target="_blank" rel="noopener noreferrer">
+              <ExternalLinkIcon className="h-4 w-4" aria-hidden />
+              Zu Google Kalender hinzufügen
+            </a>
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Andere Kalender-Apps (z. B. ICSx⁵) mit dem kopierten Link einrichten.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button asChild>
+            <a href={webcalUrl(feed.url)}>
+              <CalendarIcon className="h-4 w-4" aria-hidden />
+              In Kalender-App öffnen
+            </a>
+          </Button>
+          <Button asChild variant="outline">
+            <a href={googleUrl(feed.url)} target="_blank" rel="noopener noreferrer">
+              <ExternalLinkIcon className="h-4 w-4" aria-hidden />
+              Google Kalender
+            </a>
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-2">
         <label htmlFor="calendar-feed-url" className="text-sm font-medium">
