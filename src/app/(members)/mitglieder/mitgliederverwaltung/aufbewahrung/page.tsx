@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/members/page-header";
 import { hasPermission } from "@/lib/permissions";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
 import { findPossibleDuplicates } from "@/lib/member-duplicates";
 import { prisma } from "@/lib/prisma";
@@ -49,11 +50,8 @@ export default async function AufbewahrungPage() {
         title="Aufbewahrung & Löschfristen"
         description={`Fristen ab dem Ende der letzten Produktion einer Person: Ernährung und Allergien ${RETENTION_YEARS.dietary} Jahre, Fotoerlaubnisse ${RETENTION_YEARS.photoConsent} Jahre nach Ende der jeweiligen Produktion, Konten ${RETENTION_YEARS.account} Jahre. Wer in einer geplanten oder aktiven Produktion ist, wird nie aufgeführt. Nichts wird automatisch gelöscht.`}
         breadcrumbs={[
-          {
-            id: "mitgliederverwaltung",
-            label: "Mitgliederverwaltung",
-            href: "/mitglieder/mitgliederverwaltung",
-          },
+          membersNavigationBreadcrumb("/mitglieder/mitgliederverwaltung"),
+          { id: "aufbewahrung", label: "Aufbewahrung", isCurrent: true },
         ]}
         actions={
           <Button asChild variant="outline" size="sm" className="whitespace-nowrap">

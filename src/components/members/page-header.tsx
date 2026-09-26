@@ -45,7 +45,10 @@ export function PageHeader({
       breadcrumbs ? createMembersBreadcrumbItems(breadcrumbs) : ([] as MembersBreadcrumbItem[]),
     [breadcrumbs],
   );
-  const hasBreadcrumbs = breadcrumbItems.length > 0;
+  // Die aktuelle Seite steht als Titel darunter – im Pfad bleiben nur übergeordnete Bereiche.
+  // Ohne echten Elternteil entfällt die Pfadzeile, sonst trüge sie nur die immer gleiche Wurzel.
+  const parentCrumbs = React.useMemo(() => breadcrumbItems.slice(0, -1), [breadcrumbItems]);
+  const hasBreadcrumbs = parentCrumbs.length > 0;
 
   if (variant === "section") {
     return (
@@ -88,11 +91,11 @@ export function PageHeader({
       <MembersTopbar>
         {hasBreadcrumbs ? (
           <MembersTopbarBreadcrumbs>
-            {/* Die aktuelle Seite steht als Titel darunter – der Pfad zeigt nur übergeordnete Bereiche. */}
             <MembersBreadcrumbs
-              items={breadcrumbItems.slice(0, -1)}
+              items={parentCrumbs}
+              includeRoot={false}
               lastIsCurrent={false}
-              data-mobile-hidden={breadcrumbItems.length <= 1 ? "" : undefined}
+              data-mobile-hidden={parentCrumbs.length <= 1 ? "" : undefined}
             />
           </MembersTopbarBreadcrumbs>
         ) : null}
