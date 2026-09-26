@@ -81,3 +81,49 @@ export function ViewSwitcher<T extends string>({
     </nav>
   );
 }
+
+/** Farbige Fläche aus der Gewerk-Farbe, in hell und dunkel lesbar. */
+export function tint(color: string | null, amount: number) {
+  return `color-mix(in oklab, ${color ?? "var(--muted-foreground)"} ${amount}%, transparent)`;
+}
+
+export function AvatarStack({
+  initials,
+  total,
+  size = "sm",
+}: {
+  initials: string[];
+  total: number;
+  size?: "sm" | "md";
+}) {
+  const extra = total - initials.length;
+  const box = size === "md" ? "h-8 w-8 text-[11px]" : "h-7 w-7 text-[10px]";
+  if (total === 0) return null;
+  return (
+    <span className="flex items-center -space-x-1" aria-label={`${total} Personen`}>
+      {initials.map((value, index) => (
+        <span
+          key={`${value}-${index}`}
+          aria-hidden
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-foreground/80 ring-2 ring-card",
+            box,
+          )}
+        >
+          {value}
+        </span>
+      ))}
+      {extra > 0 ? (
+        <span
+          aria-hidden
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-full bg-muted font-medium text-muted-foreground ring-2 ring-card",
+            box,
+          )}
+        >
+          +{extra}
+        </span>
+      ) : null}
+    </span>
+  );
+}

@@ -3,13 +3,26 @@ import { notFound } from "next/navigation";
 import type { TaskStatus } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
-import { ChevronRightIcon } from "@/components/ui/action-icons";
+import {
+  AlertTriangleIcon,
+  CalendarIcon,
+  ChevronRightIcon,
+  ListTodoIcon,
+} from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { loadDepartmentPortal } from "@/lib/departments/portal";
 import { cn } from "@/lib/utils";
 
-import { formatDue, formatEventDate, Initials, TEAM_ROLE_LABELS, ViewSwitcher } from "../team-ui";
+import {
+  AvatarStack,
+  formatDue,
+  formatEventDate,
+  Initials,
+  TEAM_ROLE_LABELS,
+  tint,
+  ViewSwitcher,
+} from "../team-ui";
 
 type View = "uebersicht" | "aufgaben" | "team";
 
@@ -38,6 +51,32 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
   const canManage = isManager || portal.viewerRole === "lead";
   const leads = portal.members.filter((member) => member.role === "lead");
 
+  // Eigene offene Aufgaben und Termine in einer Zeitleiste: Überfälliges zuerst, ohne Frist ans Ende.
+  const timeline = [
+    ...portal.myTasks.map((task) => ({
+      key: `task-${task.id}`,
+      kind: "task" as const,
+      title: task.title,
+      at: task.dueAt,
+      overdue: task.overdue,
+      when: task.overdue ? "überfällig" : task.dueAt ? formatDue(task.dueAt) : "ohne Frist",
+      detail: task.status === "doing" ? "In Arbeit" : null,
+    })),
+    ...portal.events.slice(0, 5).map((event) => ({
+      key: `event-${event.id}`,
+      kind: "event" as const,
+      title: event.title,
+      at: event.start,
+      overdue: false,
+      when: formatEventDate(event.start),
+      detail: event.location,
+    })),
+  ].sort(
+    (a, b) =>
+      Number(b.overdue) - Number(a.overdue) ||
+      (a.at?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.at?.getTime() ?? Number.MAX_SAFE_INTEGER),
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -45,65 +84,126 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         breadcrumbs={[{ id: "teams", label: "Meine Teams", href: "/mitglieder/meine-gewerke" }]}
       />
 
+      <section
+        className="overflow-hidden rounded-2xl border border-border bg-card"
+        style={{
+          backgroundImage: `linear-gradient(135deg, ${tint(portal.color, 32)}, transparent 75%)`,
+        }}
+        aria-label={portal.name}
+      >
+        <div className="flex items-start gap-3 p-4">
+          <span
+            aria-hidden
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-bold"
+            style={{ backgroundColor: tint(portal.color, 50) }}
+          >
+            {portal.name.slice(0, 1)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-lg font-semibold leading-tight">{portal.name}</h2>
+            <p className="truncate text-sm text-muted-foreground">
+              {leads.length
+                ? `Leitung: ${leads.map((member) => member.name).join(", ")}`
+                : "Leitung noch offen"}
+            </p>
+            {portal.description ? (
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                {portal.description}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-2.5">
+          <Link href={`${basePath}?ansicht=team`} className="flex min-h-9 items-center gap-2">
+            <AvatarStack
+              initials={portal.members.slice(0, 5).map((member) => member.initials)}
+              total={portal.members.length}
+              size="md"
+            />
+            <span className="text-xs text-muted-foreground">
+              {portal.viewerRole ? TEAM_ROLE_LABELS[portal.viewerRole] : "Einblick als Regie"}
+            </span>
+          </Link>
+          {canManage && portal.requests.length ? (
+            <Link
+              href={`${basePath}?ansicht=team`}
+              className="rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-warning-foreground"
+            >
+              {portal.requests.length} {portal.requests.length === 1 ? "Anfrage" : "Anfragen"}
+            </Link>
+          ) : null}
+        </div>
+      </section>
+
       <ViewSwitcher<View>
         basePath={basePath}
         current={view}
         options={[
-          { value: "uebersicht", label: "Übersicht" },
+          { value: "uebersicht", label: "Als Nächstes" },
           { value: "aufgaben", label: `Aufgaben (${portal.openTasks.length})` },
           { value: "team", label: `Team (${portal.members.length})` },
         ]}
       />
 
       {view === "uebersicht" ? (
-        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4 lg:space-y-0">
-          <div className="space-y-4">
-            <Section
-              title="Für mich"
-              action={{ href: `${basePath}?ansicht=aufgaben`, label: "Alle" }}
-            >
-              {portal.myTasks.length ? (
-                <TaskList tasks={portal.myTasks} />
-              ) : (
-                <Empty>Keine offene Aufgabe für dich.</Empty>
-              )}
-            </Section>
-
-            <Section title="Termine">
-              {portal.events.length ? (
-                <ul className="divide-y divide-border/60">
-                  {portal.events.slice(0, 5).map((event) => (
-                    <li key={event.id} className="flex min-h-11 flex-col justify-center py-1.5">
-                      <span className="truncate text-sm font-medium">{event.title}</span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {formatEventDate(event.start)}
-                        {event.location ? ` · ${event.location}` : ""}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <Empty>Noch keine Termine.</Empty>
-              )}
-            </Section>
+        <section className="space-y-2" aria-labelledby="next-heading">
+          <div className="flex items-center justify-between">
+            <h2 id="next-heading" className="text-sm font-semibold">
+              Als Nächstes
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {portal.taskCounts.todo + portal.taskCounts.doing} offen · {portal.taskCounts.done}{" "}
+              erledigt
+            </span>
           </div>
-
-          <aside className="space-y-1 px-1 text-sm text-muted-foreground lg:space-y-3 lg:rounded-xl lg:border lg:border-border lg:bg-card lg:p-4">
-            {portal.description ? <p>{portal.description}</p> : null}
-            <p>
-              <span className="text-foreground">Deine Funktion:</span>{" "}
-              {portal.viewerRole ? TEAM_ROLE_LABELS[portal.viewerRole] : "Regie (Einblick)"}
-            </p>
-            <p>
-              <span className="text-foreground">Leitung:</span>{" "}
-              {leads.length ? leads.map((member) => member.name).join(", ") : "noch offen"}
-            </p>
-            <p>
-              <span className="text-foreground">Aufgaben:</span> {portal.taskCounts.todo} offen ·{" "}
-              {portal.taskCounts.doing} in Arbeit · {portal.taskCounts.done} erledigt
-            </p>
-          </aside>
-        </div>
+          {timeline.length ? (
+            <ol className="relative space-y-2 before:absolute before:bottom-3 before:left-[1.1rem] before:top-3 before:w-px before:bg-border">
+              {timeline.map((item) => (
+                <li key={item.key} className="relative flex items-center gap-3">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-4 ring-background",
+                      item.kind === "event"
+                        ? "bg-info/15 text-info"
+                        : item.overdue
+                          ? "bg-destructive/15 text-destructive"
+                          : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {item.kind === "event" ? (
+                      <CalendarIcon className="h-4 w-4" />
+                    ) : item.overdue ? (
+                      <AlertTriangleIcon className="h-4 w-4" />
+                    ) : (
+                      <ListTodoIcon className="h-4 w-4" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-sm font-medium">{item.title}</span>
+                      <span
+                        className={cn(
+                          "shrink-0 text-xs",
+                          item.overdue ? "font-medium text-destructive" : "text-muted-foreground",
+                        )}
+                      >
+                        {item.when}
+                      </span>
+                    </span>
+                    {item.detail ? (
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {item.detail}
+                      </span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <Empty>Gerade steht nichts an – keine Aufgaben für dich und keine Termine.</Empty>
+          )}
+        </section>
       ) : null}
 
       {view === "aufgaben" ? (
