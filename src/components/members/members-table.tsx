@@ -18,6 +18,17 @@ import {
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { ROLES, type Role } from "@/lib/roles";
+import { ROLES, sortRoles, type Role } from "@/lib/roles";
 import { RoleChips } from "@/components/members/role-chips";
 import { RoleManager } from "@/components/members/role-manager";
 import { UserAvatar } from "@/components/user-avatar";
@@ -116,6 +127,9 @@ export function MembersTable({
   const [productionFilter, setProductionFilter] = useState<ProductionFilter>("all");
   const [statusTarget, setStatusTarget] = useState<MembersTableUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MembersTableUser | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false);
 
   // keep local rows in sync when server re-fetches
   useEffect(() => {
@@ -154,6 +168,119 @@ export function MembersTable({
     setProductionFilter("all");
     setStatusFilter("active");
   };
+
+  const selectedRows = rows.filter((row) => selected.has(row.id));
+  const visibleSelected = filteredRows.filter((row) => selected.has(row.id)).length;
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAllVisible = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allOn = filteredRows.every((row) => next.has(row.id));
+      for (const row of filteredRows) {
+        if (allOn) next.delete(row.id);
+        else next.add(row.id);
+      }
+      return next;
+    });
+
+  /** Führt eine Aktion nacheinander für alle Ausgewählten aus und meldet das Ergebnis. */
+  const runBulk = async (
+    label: string,
+    targets: MembersTableUser[],
+    action: (user: MembersTableUser) => Promise<Partial<MembersTableUser> | null>,
+  ) => {
+    if (!targets.length) {
+      toast.info("Für die Auswahl gibt es nichts zu ändern.");
+      return;
+    }
+    setBulkBusy(true);
+    let ok = 0;
+    const errors: string[] = [];
+    for (const user of targets) {
+      try {
+        const patch = await action(user);
+        if (patch) {
+          setRows((prev) => prev.map((row) => (row.id === user.id ? { ...row, ...patch } : row)));
+        }
+        ok += 1;
+      } catch (error) {
+        errors.push(
+          `${getDisplayName(user) || user.email}: ${error instanceof Error ? error.message : "Fehler"}`,
+        );
+      }
+    }
+    setBulkBusy(false);
+    if (errors.length) {
+      toast.error(`${label}: ${ok} erledigt, ${errors.length} fehlgeschlagen`, {
+        description: errors.slice(0, 3).join("\n"),
+        duration: 8000,
+      });
+    } else {
+      toast.success(`${label}: ${ok} ${ok === 1 ? "Mitglied" : "Mitglieder"} geändert`);
+      setSelected(new Set());
+    }
+  };
+
+  const putRoles = async (user: MembersTableUser, roles: Role[]) => {
+    const response = await fetch("/api/members/roles", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        roles,
+        customRoleIds: user.customRoles.map((role) => role.id),
+      }),
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      user?: { roles?: Role[] };
+    };
+    if (!response.ok) throw new Error(data.error ?? "Speichern fehlgeschlagen");
+    return { roles: sortRoles(data.user?.roles ?? roles) };
+  };
+
+  const bulkRole = (role: Role, add: boolean) =>
+    runBulk(
+      `${ROLE_LABELS[role]} ${add ? "hinzugefügt" : "entfernt"}`,
+      selectedRows.filter((user) => user.roles.includes(role) !== add),
+      (user) =>
+        putRoles(
+          user,
+          add
+            ? [...user.roles, role]
+            : user.roles.filter((r) => r !== role).length
+              ? user.roles.filter((r) => r !== role)
+              : ["member"],
+        ),
+    );
+
+  const bulkStatus = (deactivate: boolean) =>
+    runBulk(
+      deactivate ? "Deaktiviert" : "Reaktiviert",
+      selectedRows.filter((user) => user.isDeactivated !== deactivate),
+      async (user) => {
+        const response = await fetch(`/api/members/${user.id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deactivated: deactivate }),
+        });
+        const data = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          user?: { deactivatedAt?: string | null };
+        };
+        if (!response.ok) throw new Error(data.error ?? "Aktualisierung fehlgeschlagen");
+        const deactivatedAt = data.user?.deactivatedAt ?? null;
+        return { isDeactivated: Boolean(deactivatedAt), deactivatedAt };
+      },
+    );
+
+  const assignableRoles = ROLES.filter((role) => canEditOwner || role !== "owner");
 
   const editUser = rows.find((row) => row.id === openFor) ?? null;
 
@@ -339,6 +466,19 @@ export function MembersTable({
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b bg-muted/30 text-left text-xs text-muted-foreground">
+                  <th className="w-10 py-2 pl-3">
+                    <Checkbox
+                      aria-label="Alle angezeigten auswählen"
+                      checked={
+                        visibleSelected === 0
+                          ? false
+                          : visibleSelected === filteredRows.length
+                            ? true
+                            : "indeterminate"
+                      }
+                      onCheckedChange={toggleAllVisible}
+                    />
+                  </th>
                   <th className="px-3 py-2 font-medium">Name</th>
                   {productionTitle ? (
                     <th className="px-3 py-2 font-medium">{productionTitle}</th>
@@ -359,8 +499,16 @@ export function MembersTable({
                       className={cn(
                         "border-b last:border-b-0 hover:bg-accent/10",
                         u.isDeactivated && "text-muted-foreground",
+                        selected.has(u.id) && "bg-primary/5",
                       )}
                     >
+                      <td className="py-1.5 pl-3">
+                        <Checkbox
+                          aria-label={`${displayName || u.email} auswählen`}
+                          checked={selected.has(u.id)}
+                          onCheckedChange={() => toggleSelected(u.id)}
+                        />
+                      </td>
                       <td className="px-3 py-1.5">
                         <Link
                           href={`/mitglieder/mitgliederverwaltung/${u.id}`}
@@ -415,6 +563,76 @@ export function MembersTable({
           </div>
         </>
       )}
+      <BulkActionBar
+        count={selected.size}
+        noun={["Mitglied", "Mitglieder"]}
+        onClear={() => setSelected(new Set())}
+        className="hidden md:flex"
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" size="sm" disabled={bulkBusy}>
+              Rollen …
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            <DropdownMenuLabel>Rolle hinzufügen</DropdownMenuLabel>
+            {assignableRoles
+              .filter((role) => role !== "member")
+              .map((role) => (
+                <DropdownMenuItem key={`add-${role}`} onSelect={() => void bulkRole(role, true)}>
+                  + {ROLE_LABELS[role]}
+                </DropdownMenuItem>
+              ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Rolle entfernen</DropdownMenuLabel>
+            {assignableRoles
+              .filter((role) => role !== "member")
+              .map((role) => (
+                <DropdownMenuItem key={`rm-${role}`} onSelect={() => void bulkRole(role, false)}>
+                  − {ROLE_LABELS[role]}
+                </DropdownMenuItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {selectedRows.some((user) => user.isDeactivated) ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={bulkBusy}
+            onClick={() => void bulkStatus(false)}
+          >
+            Reaktivieren
+          </Button>
+        ) : null}
+        {selectedRows.some((user) => !user.isDeactivated) ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive"
+            disabled={bulkBusy}
+            onClick={() => setBulkDeactivateOpen(true)}
+          >
+            Deaktivieren
+          </Button>
+        ) : null}
+      </BulkActionBar>
+      <ConfirmDialog
+        open={bulkDeactivateOpen}
+        onOpenChange={setBulkDeactivateOpen}
+        title="Ausgewählte deaktivieren?"
+        description={`${selectedRows.filter((u) => !u.isDeactivated).length} Mitglieder werden abgemeldet und verlieren ihre Rechte. Reaktivieren ist jederzeit möglich.`}
+        confirmLabel="Deaktivieren"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onCancel={() => setBulkDeactivateOpen(false)}
+        onConfirm={() => {
+          setBulkDeactivateOpen(false);
+          void bulkStatus(true);
+        }}
+      />
       <Dialog
         open={Boolean(editUser)}
         onOpenChange={(nextOpen) => {
