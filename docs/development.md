@@ -75,6 +75,14 @@ docker image ls | grep theater-website          # Projekt-Images anzeigen
 docker volume ls | grep theater-website         # Projekt-Volumes anzeigen
 ```
 
+## Dependencies und Advisories
+
+Einziges Lockfile ist `pnpm-lock.yaml`, jede Installation läuft über `pnpm` (`pnpm install --frozen-lockfile` in CI). `package-lock.json` ist in `.gitignore` und darf nicht committet werden – sonst scannt Dependabot zwei Manifeste und meldet jedes Advisory doppelt.
+
+Gibt es für ein verwundbares transitives Paket kein Parent-Update, wird es über `pnpm.overrides` in `package.json` gepinnt. Jede Override-Zeile braucht eine Begründung im Commit; Major-Sprünge nur, wenn der tatsächliche API-Aufruf des Parents geprüft ist (Beispiel: `uuid` 8.3.2 → 11.1.1, weil `exceljs` ausschließlich `const {v4: uuidv4}` destrukturiert und uuid 11.1.1 weiterhin ein CJS-Build mit benanntem `v4`-Export liefert).
+
+Stand 2026-09-26: `pnpm audit --prod` meldet nur noch `quill` (low, GHSA-v3m3-f69x-jf25/CVE-2025-15056). Es gibt keinen Patch – die Advisory nennt keine „patched version", `quill@2.0.3` ist die neueste Veröffentlichung und wird von `react-quill-new@3.8.3` als `~2.0.3` gepinnt. Der zugehörige Dependabot-Alert ist deshalb bewusst als `tolerable_risk` geschlossen: Der betroffene Export `Quill#getSemanticHTML` speist ausschließlich den Rich-Text-Editor der Probenplanung (`src/components/ui/rich-text-editor.tsx` → `rehearsal-editor.tsx`), und dessen HTML-Output wird beim Speichern (`src/lib/probenplanung/actions-helpers.ts`) wie beim Rendern (`src/app/(members)/mitglieder/proben/[rehearsalId]/page.tsx`) durch `sanitize-html` bereinigt. XSS ist damit nicht ausführbar. Wird der Editor ersetzt, diese Notiz mitpflegen und den Alert neu bewerten.
+
 ## Troubleshooting
 
 ### Port bereits belegt
