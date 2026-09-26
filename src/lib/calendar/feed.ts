@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import type { BlockedDayKind } from "@prisma/client";
+import type { BlockedDayKind, FeedScope } from "@prisma/client";
 
 import { getAppBaseUrl } from "@/lib/app-url";
 import { buildIcsCalendar, type IcsEvent } from "@/lib/calendar/ics";
@@ -61,6 +61,15 @@ function withLink(description: string | null, path: string) {
   return description?.trim() ? `${description.trim()}\n\n${link}` : link;
 }
 
+function describeParticipation(participants: { reasons: unknown }[]) {
+  const [participant] = participants;
+  if (!participant) return "Du bist für diese Probe nicht eingeladen.";
+  const reasons = Array.isArray(participant.reasons)
+    ? participant.reasons.filter((entry): entry is string => typeof entry === "string")
+    : [];
+  return reasons.length ? `Dabei als: ${reasons.join(" · ")}` : null;
+}
+
 function uidHost() {
   try {
     return new URL(getAppBaseUrl()).host;
@@ -75,7 +84,7 @@ function uidHost() {
  */
 export async function collectFeedEvents(
   userId: string,
-  { includeBlockedDays }: { includeBlockedDays: boolean },
+  { includeBlockedDays, scope = "MINE" }: { includeBlockedDays: boolean; scope?: FeedScope },
   now: Date = new Date(),
 ): Promise<IcsEvent[]> {
   const from = new Date(now.getTime() - PAST_DAYS * 86_400_000);
@@ -88,7 +97,13 @@ export async function collectFeedEvents(
         kind: "REHEARSAL",
         start: { gte: from, lte: to },
         status: { not: "DRAFT" },
-        participants: { some: { userId, invited: true } },
+        OR: [
+          { participants: { some: { userId, invited: true } } },
+          // „Alles aus meinen Produktionen“: auch Proben ohne eigene Einladung.
+          ...(scope === "PRODUCTIONS"
+            ? [{ show: { memberships: { some: { userId, ...currentMembershipWhere(now) } } } }]
+            : []),
+        ],
       },
       orderBy: { start: "asc" },
       select: {
@@ -101,6 +116,7 @@ export async function collectFeedEvents(
         status: true,
         updatedAt: true,
         show: { select: { title: true } },
+        participants: { where: { userId, invited: true }, select: { reasons: true } },
       },
     }),
     prisma.calendarEvent.findMany({
@@ -149,9 +165,17 @@ export async function collectFeedEvents(
       end: { kind: "dateTime", value: timedEnd(rehearsal.start, rehearsal.end) },
       location,
       description: withLink(
-        [rehearsal.show?.title, rehearsal.description].filter(Boolean).join("\n\n") || null,
+        [
+          rehearsal.show?.title,
+          describeParticipation(rehearsal.participants),
+          rehearsal.description,
+        ]
+          .filter(Boolean)
+          .join("\n\n") || null,
         `/mitglieder/proben/${rehearsal.id}`,
       ),
+      // Nicht eingeladen: nur zur Info, belegt keine Zeit.
+      transparent: rehearsal.participants.length === 0,
       cancelled: rehearsal.status === "CANCELLED",
       lastModified: rehearsal.updatedAt,
     });
@@ -223,7 +247,7 @@ export async function renderCalendarFeed(token: string, now: Date = new Date()) 
 
   const events = await collectFeedEvents(
     feed.userId,
-    { includeBlockedDays: feed.includeBlockedDays },
+    { includeBlockedDays: feed.includeBlockedDays, scope: feed.scope },
     now,
   );
 

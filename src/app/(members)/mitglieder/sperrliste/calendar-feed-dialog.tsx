@@ -25,10 +25,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
-type Feed = { url: string; includeBlockedDays: boolean; lastAccessedAt: string | null };
+type FeedScope = "MINE" | "PRODUCTIONS";
+
+type Feed = {
+  url: string;
+  scope: FeedScope;
+  includeBlockedDays: boolean;
+  lastAccessedAt: string | null;
+};
+
+const SCOPE_OPTIONS: { value: FeedScope; label: string }[] = [
+  { value: "MINE", label: "Nur meine Termine" },
+  { value: "PRODUCTIONS", label: "Alle Proben" },
+];
 
 const TITLE = "Kalender abonnieren";
 const DESCRIPTION =
@@ -216,6 +229,31 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
           </p>
         </div>
       ) : null}
+
+      <div className="space-y-2 rounded-lg border border-border/60 p-3">
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium">Welche Proben?</p>
+          <p className="text-xs text-muted-foreground">
+            {feed.scope === "PRODUCTIONS"
+              ? "Auch Proben deiner Produktionen, zu denen du nicht eingeladen bist – als freie Zeit."
+              : "Nur Proben, zu denen du eingeladen bist. Gewerk- und Vereinstermine sind immer dabei."}
+          </p>
+        </div>
+        <SegmentedControl
+          value={feed.scope}
+          onValueChange={(scope) =>
+            void run(
+              "PATCH",
+              { scope },
+              scope === "PRODUCTIONS" ? "Alle Proben werden angezeigt" : "Nur deine Termine",
+              "Einstellung konnte nicht gespeichert werden.",
+            )
+          }
+          options={SCOPE_OPTIONS.map((option) => ({ ...option, disabled: busy }))}
+          fullWidth
+          aria-label="Welche Proben im Kalender-Abo"
+        />
+      </div>
 
       <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 p-3">
         <div className="space-y-0.5">

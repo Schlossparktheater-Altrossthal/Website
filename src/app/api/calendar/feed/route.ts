@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { FeedScope } from "@prisma/client";
 
 import { buildFeedUrl, generateFeedToken } from "@/lib/calendar/feed";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
-type FeedRecord = { token: string; includeBlockedDays: boolean; lastAccessedAt: Date | null };
+type FeedRecord = {
+  token: string;
+  scope: FeedScope;
+  includeBlockedDays: boolean;
+  lastAccessedAt: Date | null;
+};
 
 function toResponse(feed: FeedRecord | null) {
   return NextResponse.json(
     feed
       ? {
           url: buildFeedUrl(feed.token),
+          scope: feed.scope,
           includeBlockedDays: feed.includeBlockedDays,
           lastAccessedAt: feed.lastAccessedAt?.toISOString() ?? null,
         }
@@ -46,7 +53,9 @@ export async function POST() {
   return toResponse(feed);
 }
 
-const patchSchema = z.object({ includeBlockedDays: z.boolean() });
+const patchSchema = z
+  .object({ includeBlockedDays: z.boolean(), scope: z.enum(["MINE", "PRODUCTIONS"]) })
+  .partial();
 
 export async function PATCH(request: Request) {
   const userId = await currentUserId();
@@ -61,7 +70,7 @@ export async function PATCH(request: Request) {
   }
   const feed = await prisma.calendarFeed.update({
     where: { userId },
-    data: { includeBlockedDays: parsed.data.includeBlockedDays },
+    data: parsed.data,
   });
   return toResponse(feed);
 }
