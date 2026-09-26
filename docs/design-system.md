@@ -565,32 +565,47 @@ export default function BrEiteSeite() {
 </div>
 ```
 
-### 6. Seiten-Muster (Referenz: Stück)
+### 6. Seiten-Muster der acht Hauptbereiche
 
-`/mitglieder/produktionen/stueck` ist die Referenz für den Aufbau einer Seite im
-Mitgliederbereich. Alle Seiten folgen diesem Skelett:
+Dashboard, Profil, Meine Teams, Teams & Zuweisung, Sperrliste, Stück, Mitglieder und
+Terminplanung folgen diesem Aufbau (Stand 2026-09-26):
 
-1. **Seitenkopf** — `PageHeader` einzeilig: `title`, optional `description` und `actions`.
-   Eigene `<h1>` auf Seitenebene sind tabu. `breadcrumbs` nur mit echtem Elternteil und die
-   aktuelle Seite als letzter Eintrag (`[eltern, aktuelle Seite]`) – die frühere Wurzelzeile
-   „Mitgliederbereich“ entfällt, weil sie auf jeder Seite dasselbe Wort trug.
-2. **Bereichs-Navigation** — `SectionNav` (`src/components/ui/section-nav.tsx`) direkt unter
-   dem Kopf: Pill-Leiste, aktiv `bg-background text-foreground shadow-sm ring-1 ring-border`,
-   inaktiv `text-muted-foreground hover:text-foreground`. Zustand in der URL (`?ansicht=`),
-   mobil volle Breite (`flex-1` je Eintrag). Bei mehr als drei Einträgen oder langen Labels
-   mobil zusätzlich `Select`.
-3. **Werkzeugzeile** — Suche links (`h-11`, `min-w-0 flex-1`, Suchicon `pl-9`), primäre Aktion
-   rechts (`Button` primary, `h-11 shrink-0`), in einer Zeile; auf Mobil bricht sie nicht um.
+1. **Seitenkopf** — `PageHeader` aus `src/components/members/page-header.tsx`, einzeilig:
+   `title`, optional `description`, `actions`, `status`. `breadcrumbs` nur mit echtem Elternteil
+   und die aktuelle Seite als letzter Eintrag (`[eltern, aktuelle Seite]`); die frühere
+   Wurzelzeile „Mitgliederbereich“ entfällt, weil sie auf jeder Seite dasselbe Wort trug.
+2. **Bereichs-Navigation** — je nach Art des Zustands eines dieser vier Muster:
+   - `SectionNav` (`src/components/ui/section-nav.tsx`) — Pills mit Zustand in der URL
+     (`?ansicht=`, `?tab=`), mobil volle Breite; ab vier Einträgen dort ein `Select`.
+     Einsatz: Stück, Mitgliederverwaltung.
+   - `SegmentedControl` (`src/components/ui/segmented-control.tsx`) — dieselbe Optik, aber
+     Client-State (`role=radiogroup`). Einsatz: Sperrliste, Teams & Zuweisung, Terminplanung.
+   - `ViewSwitcher` (eigene Pills in `meine-gewerke/team-ui.tsx`) — Ansichten eines Portals.
+     Einsatz: Meine Teams.
+   - `ProfileSectionNav` (Bereichsliste mit Drill-down) — Profil: mobil erst die Liste, dann der
+     Bereich mit „‹ Zurück“, ab `lg` als linke Navigation (`?bereich=`).
+     Aktiv ist jeweils ein heller Eintrag mit Ring (`bg-background text-foreground shadow-sm
+ring-1 ring-border`) oder eine gleichwertige Aktivklasse; horizontal gescrollt wird nie.
+3. **Werkzeugzeile** — Suche links (`h-11`, Suchicon `pl-9`), primäre Aktion rechts
+   (`Button` primary, `h-11 shrink-0`) in einer Zeile. Einsatz: Stück, Mitgliederverwaltung.
 4. **Inhalt** — Karten `rounded-xl border border-border bg-card`; Listenzeilen
    `min-h-16 rounded-xl border border-border bg-card p-3` mit `hover:bg-muted/40`.
-5. **Leerzustand** — `py-12 text-center text-sm text-muted-foreground`.
-6. **Rückmeldung** — `sonner`: Erfolg `duration: 3000`, Fehler mit `description` und
+5. **Leerzustand** — `py-12 text-center text-sm text-muted-foreground`; in Kartenlisten
+   kompakter (`px-3 py-4`, z. B. Dashboard).
+6. **Überschriften im Inhalt** — mit den Größen der Skala direkt am Element: Seitentitel
+   `text-3xl`/`text-2xl font-semibold`, Abschnitt `text-sm font-semibold` oder
+   `text-sm font-medium text-muted-foreground`, Label `text-xs font-medium uppercase
+tracking-wide text-muted-foreground`. `Heading` und `Text` stehen bereit, sind im Bestand
+   aber nicht durchgängig im Einsatz.
+7. **Rückmeldung** — `sonner`: Erfolg `duration: 3000`, Fehler mit `description` und
    `duration: 5000`.
-7. **Abstände** — Seite `space-y-6`, innerhalb einer Karte `space-y-4`.
+8. **Abstände** — Seite `space-y-6`; dichtere Arbeitsseiten (`Stück`, `Teams & Zuweisung`)
+   `space-y-4`.
 
-`SegmentedControl` nutzt dieselbe Optik wie `SectionNav`, ist aber für Umschalter **innerhalb**
-einer Karte gedacht (Client-State, `role=radiogroup`, z. B. die Verfügbarkeit eines Tages).
-Orange gefüllte `TabsList`-Pills sind für die Bereichs-Navigation nicht mehr vorgesehen.
+Neben diesen acht Seiten gibt es Bestand außerhalb des Musters: `/mitglieder/produktionen`
+setzt einen eigenen Workspace-Header (`components/production/workspace-header.tsx`), die
+Detailseiten von Produktionen und einige Einstellungsseiten ein eigenes `<h1>`; Mitglieder-Detail,
+Server-Analytics und Website & Theme nutzen noch orange gefüllte `TabsList`-Pills.
 
 ## Checkliste: Design System Compliance
 
@@ -606,8 +621,8 @@ Beim Erstellen oder Refactoren von Komponenten:
 - [ ] Typografie nutzt definierte Utilities (`.text-h1`, `.text-body`, etc.)
 - [ ] Fokus-States sind sichtbar (`focus-visible:ring-*`)
 - [ ] Komponente funktioniert in Light & Dark Mode
-- [ ] Seitenkopf ist einzeilig über `PageHeader` (kein eigenes `<h1>`, keine Wurzel-Breadcrumb)
-- [ ] Bereichs-Navigation läuft über `SectionNav` (keine eigene Pill-Leiste, keine orange gefüllten Tabs)
-- [ ] Werkzeugzeile: Suche links, primäre Aktion rechts, einzeilig
+- [ ] Seitenkopf über `PageHeader` (einzeilig, kein Wurzel-Breadcrumb)
+- [ ] Bereichs-Navigation über eines der vier Muster; kein horizontal scrollender Umschalter
+- [ ] Überschriften mit den Größen der Skala (Seitentitel `text-2xl`/`text-3xl` im Inhalt)
 - [ ] Leerzustand `py-12 text-center` mit `text-muted-foreground`
 - [ ] Auf Handy, Tablet und Desktop in hell und dunkel per Screenshot geprüft (Pflicht, nie nur am Code)

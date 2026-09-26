@@ -68,8 +68,8 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Die autoritative Referenz für Breakpoints, Nutzerklassen und Container liegt in `docs/design-system.md` (Abschnitt „Breakpoints & Responsive"). Den Vollstatus je Seite führt `docs/responsiveness-matrix.md`.
 - Es gelten drei Nutzerklassen: Handy (<640px), Tablet (768–1023px), Desktop (≥1024px). Basis sind die Tailwind-Default-Breakpoints; `globals.css` (`@theme inline`) überschreibt `--breakpoint-xs: 20rem` (reserviert, derzeit ungenutzt) und `--breakpoint-2xl: 120rem` (=1920px). Weitere custom Breakpoints gibt es nicht.
 - **Tablet ist eine eigene Kategorie:** Auf Tablet darf keine Seite erzwungen horizontal scrollen. Breite Tabellen/Kalender brauchen einen Tablet-Fallback oder einen inneren `overflow-x-auto`-Container innerhalb ihrer Karte. Prüfung bei 768px, 834px und 1024px.
-- Bereichs-Navigation einer Seite läuft über `SectionNav` (`src/components/ui/section-nav.tsx`, Referenz: Stück) — Pill-Leiste direkt unter dem Seitenkopf, Einträge als Links mit Zustand in der URL (`?ansicht=`), aktiver Eintrag `bg-background shadow-sm ring-1 ring-border`, mobil volle Breite. Bei mehr als drei Einträgen oder langen Labels mobil zusätzlich `Select`. Horizontal scrolling auf Umschaltern ist verboten, eigene Pill-Leisten ebenso.
-- `SegmentedControl` nutzt dieselbe Optik, ist aber für Umschalter **innerhalb** einer Karte gedacht (Client-State, `role=radiogroup`, z. B. die Verfügbarkeit eines Tages). Orange gefüllte `TabsList`-Pills entfallen für die Bereichs-Navigation.
+- Bereichs-Navigation einer Seite: `SectionNav` (`src/components/ui/section-nav.tsx`) für Zustand in der URL — Pills direkt unter dem Seitenkopf, aktiv `bg-background shadow-sm ring-1 ring-border`, mobil volle Breite, ab vier Einträgen dort `Select` (Stück, Mitgliederverwaltung). Für Client-State dieselbe Optik als `SegmentedControl` (Sperrliste, Teams & Zuweisung, Terminplanung), für Portale der `ViewSwitcher` (Meine Teams), für Drill-downs die Bereichsliste (Profil). Horizontal scrolling auf Umschaltern ist verboten.
+- `SegmentedControl` deckt auch Umschalter **innerhalb** einer Karte ab (Client-State, `role=radiogroup`, z. B. die Verfügbarkeit eines Tages). Orange gefüllte `TabsList`-Pills sind für die Bereichs-Navigation nicht vorgesehen; im Bestand stehen sie noch auf Mitglieder-Detail, Server-Analytics und Website & Theme.
 - Tages-Details auf Mobilgeräten öffnen als Bottom-`Sheet`, damit ein Tipp sichtbar etwas auslöst; am Desktop stehen sie daneben.
 - Seiten mit vielen Unterbereichen (z. B. Profil): statt Tabs eine Bereichsliste mit Drill-down per `?bereich=` – mobil erst die Liste, dann der Bereich mit „‹ Zurück", ab `lg` Liste als linke Navigation. So funktionieren Browser-Zurück und Deep-Links (Beispiel: `src/app/(members)/mitglieder/profil`).
 - Header-Navigation: unter `md` (768px) `Sheet`, ab `md` horizontale Navigation.
@@ -183,12 +183,12 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 ## Seiten-Patterns
 
-- Seiten-Header verwenden das `PageHeader`-Pattern aus `src/components/members/page-header.tsx` und bleiben einzeilig. Eigene `<h1>` auf Seitenebene sind tabu; `breadcrumbs` nur mit echtem Elternteil (`[eltern, aktuelle Seite]`), die Wurzelzeile „Mitgliederbereich“ entfällt.
-- Seiten folgen dem Aufbau der Stück-Seite (`/mitglieder/produktionen/stueck`, dokumentiert in `docs/design-system.md` Abschnitt „Seiten-Muster“): Kopf → `SectionNav` → Werkzeugzeile (Suche links, primäre Aktion rechts, einzeilig) → Inhalt in Cards → Leerzustand `py-12 text-center text-sm text-muted-foreground`.
+- Die acht Hauptbereiche (Dashboard, Profil, Meine Teams, Teams & Zuweisung, Sperrliste, Stück, Mitglieder, Terminplanung) verwenden den `PageHeader` aus `src/components/members/page-header.tsx` und bleiben einzeilig; `breadcrumbs` nur mit echtem Elternteil (`[eltern, aktuelle Seite]`), die Wurzelzeile „Mitgliederbereich“ entfällt.
+- Aufbau dieser Seiten (Details in `docs/design-system.md`, Abschnitt „Seiten-Muster“): Kopf → Bereichs-Navigation (eines der vier Muster) → bei Bedarf Werkzeugzeile (Suche links, primäre Aktion rechts, einzeilig) → Inhalt in Cards → Leerzustand `py-12 text-center text-sm text-muted-foreground`.
 
 ## Typografie & Abstände
 
-- Folge der Typografie-Skala aus `docs/design-system.md` (`text-h1`, `text-h2`, `text-body` usw.). Verwende `Heading`- und `Text`-Komponenten aus `@/components/ui/typography`.
+- Folge der Typografie-Skala aus `docs/design-system.md` (`text-h1`, `text-h2`, `text-body` usw.). Im Bestand stehen die Größen direkt am Element (rohe `<h1>`–`<h3>` mit Tailwind-Klassen); die Komponenten `Heading` und `Text` aus `@/components/ui/typography` stehen für neue Stellen bereit.
 
 ## Badge & Status
 
