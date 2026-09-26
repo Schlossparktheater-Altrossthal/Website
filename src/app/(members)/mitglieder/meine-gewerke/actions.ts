@@ -57,7 +57,19 @@ export async function joinDepartmentAction(formData: FormData) {
   }
 
   if (department.requiresJoinApproval) {
-    throw new Error("Dieses Gewerk benötigt eine Zustimmung durch die Leitung.");
+    // Anfrage statt Beitritt: Regie oder Leitung entscheidet unter „Teams & Zuweisung“.
+    await prisma.departmentMembership.upsert({
+      where: { departmentId_userId: { departmentId: department.id, userId } },
+      update: {},
+      create: {
+        departmentId: department.id,
+        userId,
+        role: DepartmentMembershipRole.member,
+        status: "requested",
+        source: "self",
+      },
+    });
+    return;
   }
 
   await prisma.departmentMembership.upsert({

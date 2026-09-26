@@ -41,7 +41,9 @@ export default async function ProduktionsGewerkePage() {
   const activeProduction = await getActiveProduction(session.user?.id);
   const breadcrumbs = [membersNavigationBreadcrumb(currentPath)];
 
-  const departmentCount = activeProduction ? await prisma.department.count() : 0;
+  const departmentCount = activeProduction
+    ? await prisma.department.count({ where: { showId: activeProduction.id, archivedAt: null } })
+    : 0;
 
   const openTaskCount = activeProduction
     ? await prisma.departmentTask.count({

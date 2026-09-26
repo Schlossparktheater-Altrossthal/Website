@@ -345,6 +345,12 @@ export const membersNavigation = [
         icon: DepartmentsOverviewIcon,
       },
       {
+        href: "/mitglieder/produktionen/zuweisung",
+        label: "Teams & Zuweisung",
+        permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
+        icon: DepartmentsIcon,
+      },
+      {
         href: "/mitglieder/meine-gewerke",
         label: "Gewerkeplanung",
         permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",

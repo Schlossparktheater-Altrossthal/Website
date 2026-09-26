@@ -28,3 +28,11 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 
 - Enthält einen „todo"-Status, der in der Navigation neben der Gewerke-Übersicht angezeigt wird
   (siehe `members-navigation.test.ts`).
+
+## Teams & Zuweisung (Produktion)
+
+- Route `/mitglieder/produktionen/zuweisung` – Regie/Board (`PRIVATE.PRODUCTION.SHOW.MANAGE`) sehen alles, Gewerk-Leitungen nur ihre Gewerke (Rollen-Reiter nur Regie/Board).
+- Ansichten: Personen (Wünsche aus dem Onboarding, Zuweisung zu mehreren Gewerken, Funktion), Gewerke (Team, Anfragen, „Möchten mitmachen“), Rollen (Haupt-/Zweitbesetzung nach Schauspiel-Wunsch).
+- Mobil öffnet die Detailansicht als Bottom-Sheet, ab `lg` steht sie rechts daneben.
+- Code: `src/lib/departments/assignments.ts` (Daten), `produktionen/actions/assignments.ts` (Actions, Benachrichtigung an die Person), `produktionen/zuweisung/`.
+- Gewerke gehören zu einer Produktion; Vorlagen: `DepartmentTemplate` (Wunsch-Codes → Gewerk), Anlage über `ensureProductionDepartments`.

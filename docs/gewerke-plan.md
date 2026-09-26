@@ -119,7 +119,7 @@ Jede Phase einzeln auf Staging testbar; Schema-Änderungen additiv vor Alt-Entfe
 ## Checkliste
 
 - [x] Phase 1 Datenmodell (2026-09-26: Migration `departments_per_production`, Vorlagen, Status; Alt-Seiten laufen weiter, aber nur mit aktuellen Mitgliedschaften)
-- [ ] Phase 2 Zuweisung
+- [x] Phase 2 Zuweisung (2026-09-26: Seite `produktionen/zuweisung`, Anfragen über „Meine Gewerke“ bei Beitrittsprüfung; Rollen-Zuweisung als Reiter)
 - [ ] Phase 3 Portal Basis (gemeinsames Team-Portal-Gerüst für Gewerke und Rollen)
 - [ ] Phase 3b Rollenportal (Szenen, Besetzung, Termine)
 - [ ] Phase 4 Board
