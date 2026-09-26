@@ -47,3 +47,11 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 - Anlegen, Bearbeiten, Löschen: Leitung, Vertretung, Regie/Board. Neue Termine benachrichtigen das Team, verschobene ebenfalls, gelöschte die Zusagenden.
 - Sperrliste: Karte und Detail zeigen, wer laut Sperrliste an dem Tag gesperrt oder eingeschränkt ist; das Formular warnt schon bei der Datumswahl.
 - Server-Actions in `meine-gewerke/event-actions.ts`, Loader `src/lib/departments/events.ts`, UI `meine-gewerke/events/team-events.tsx`.
+
+## Rollenportal (`/mitglieder/meine-gewerke/rolle/[id]`)
+
+- „Meine Teams“ zeigt oben „Meine Rolle(n)“ als Kacheln (Besetzungsart, Szenenzahl, Partner/Zweitbesetzung); Regie/Board sehen zusätzlich alle Rollen der Produktion.
+- Eine Besetzung in einer laufenden/geplanten Produktion gibt wie eine Gewerk-Zugehörigkeit `PRIVATE.DEPARTMENT.OWN.VIEW` (Darsteller ohne Gewerk sehen „Meine Teams“).
+- Sichtbar für Besetzung, Regie/Board und aktive Gewerk-Mitglieder der Produktion (z. B. Kostüm, Maske).
+- Ansichten: Überblick (Besetzung inkl. Zweitbesetzung, nächste Proben der Besetzung, gemeinsame Rollennotizen – pflegen Besetzung und Regie), Szenen (Szenen der Rolle mit Partnern), Ausstattung (Breakdown-Einträge der Gewerke für diese Szenen mit Status).
+- Loader `src/lib/departments/roles.ts`, Action `meine-gewerke/role-actions.ts`.

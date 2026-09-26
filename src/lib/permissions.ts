@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
+import { currentCastingWhere, currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { isProductionRole } from "@/lib/produktionen/production-role-keys";
@@ -42,6 +42,8 @@ type ResolvedRoleContext = {
   systemRoles: Role[];
   customRoleIds: string[];
   departmentIds: string[];
+  /** Besetzt in einer Rolle – öffnet „Meine Teams“ wie eine Gewerk-Zugehörigkeit. */
+  hasCasting: boolean;
 };
 
 // Shared keys for profile data gatekeeping
@@ -431,7 +433,7 @@ async function resolveRoleContext(
   showId?: string | null,
 ): Promise<ResolvedRoleContext> {
   if (!user?.id) {
-    return { systemRoles: [], customRoleIds: [], departmentIds: [] };
+    return { systemRoles: [], customRoleIds: [], departmentIds: [], hasCasting: false };
   }
 
   const dbUser = await prisma.user.findUnique({
@@ -444,11 +446,12 @@ async function resolveRoleContext(
         where: currentDepartmentMembershipWhere(),
         select: { departmentId: true },
       },
+      characterCastings: { where: currentCastingWhere(), select: { id: true }, take: 1 },
     },
   });
 
   if (!dbUser) {
-    return { systemRoles: [], customRoleIds: [], departmentIds: [] };
+    return { systemRoles: [], customRoleIds: [], departmentIds: [], hasCasting: false };
   }
 
   let systemRoles = sortRoles([
@@ -473,7 +476,12 @@ async function resolveRoleContext(
     new Set(dbUser.departmentMemberships.map((membership) => membership.departmentId)),
   );
 
-  return { systemRoles, customRoleIds, departmentIds };
+  return {
+    systemRoles,
+    customRoleIds,
+    departmentIds,
+    hasCasting: dbUser.characterCastings.length > 0,
+  };
 }
 
 export type PermissionRoleContext = ResolvedRoleContext;
@@ -522,7 +530,7 @@ export async function hasPermission(
   if (!isKnownPermissionKey(permissionKey)) return false;
 
   const scopedShowId = isProductionScopedPermission(permissionKey) ? options?.showId : null;
-  const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(
+  const { systemRoles, customRoleIds, departmentIds, hasCasting } = await resolveRoleContext(
     user,
     scopedShowId,
   );
@@ -537,6 +545,7 @@ export async function hasPermission(
   await ensureSystemRoles();
   await ensurePermissionDefinitions();
 
+  if (permissionKey === DEPARTMENT_MEMBER_PERMISSION_KEY && hasCasting) return true;
   if (!systemRoles.length && !customRoleIds.length && !departmentIds.length) return false;
 
   const perm = await prisma.permission.findUnique({ where: { key: permissionKey } });
@@ -575,7 +584,7 @@ export async function hasPermission(
 export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   if (!user?.id) return [];
 
-  const { systemRoles, customRoleIds, departmentIds } = await resolveRoleContext(user);
+  const { systemRoles, customRoleIds, departmentIds, hasCasting } = await resolveRoleContext(user);
   const owned = new Set(systemRoles);
 
   if (isAdminRole(owned)) {
@@ -583,6 +592,7 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   }
 
   const granted = getBaselinePermissions(user);
+  if (hasCasting) granted.add(DEPARTMENT_MEMBER_PERMISSION_KEY);
 
   await ensureSystemRoles();
   await ensurePermissionDefinitions();
