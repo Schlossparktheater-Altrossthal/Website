@@ -8,6 +8,7 @@ Probenplanung freie Zeiten kennt.
 ## Routen
 
 - `/mitglieder/sperrliste`
+- `/api/calendar/feed/<token>.ics` – persönlicher Kalender-Feed (ohne Anmeldung, Token ist die Berechtigung)
 
 ## Aufbau
 
@@ -43,7 +44,8 @@ Hintergrund und Entscheidungen: `docs/sperrliste-redesign-plan.md`.
 ## Wichtige Komponenten
 
 - `page.tsx` – lädt Einträge (ab Vormonat), Mitglieder, Ferien, Termine, Endprobenwoche
-- `page-client.tsx` – Reiter, Aktionen (Termin, PDF, Einstellungen), gemeinsamer Monat
+- `page-client.tsx` – Reiter, Aktionen (Termin, PDF, Abonnieren, Einstellungen), gemeinsamer Monat
+- `calendar-feed-dialog.tsx` – Kalender-Abo: Link erzeugen/erneuern/abschalten, eigene Sperren ein/aus
 - `my-calendar.tsx`, `range-dialog.tsx` – eigener Kalender
 - `team-view.tsx` – Team-Matrix, mobile Tagesliste, Tagesdetails
 - `event-dialog.tsx` – Termine anlegen/bearbeiten/löschen
@@ -66,6 +68,13 @@ Hintergrund und Entscheidungen: `docs/sperrliste-redesign-plan.md`.
   Beschreibung, optional Produktion), API `src/app/api/calendar-events` (POST, PATCH, DELETE).
   `src/lib/calendar/entries.ts` führt Termine und angesetzte Proben zusammen; das Dashboard zeigt
   sie unter „Nächste Termine“.
+- Kalender-Abo: Modell `CalendarFeed` (ein Link pro Person, Token, `includeBlockedDays`,
+  `lastAccessedAt`), verwaltet über `src/app/api/calendar/feed/route.ts` (GET/POST/PATCH/DELETE).
+  `src/lib/calendar/feed.ts` berechnet den Feed bei jedem Abruf neu: Proben mit Einladung
+  (Absagen als `CANCELLED`, keine Entwürfe), `CalendarEvent`s ohne Produktion oder der eigenen
+  aktuellen Produktionen, Gewerke-Termine, optional eigene Sperren (ganztägig, `TRANSPARENT`).
+  Zeitraum 60 Tage zurück bis ca. 18 Monate voraus; deaktivierte Personen erhalten 404.
+  `src/lib/calendar/ics.ts` erzeugt das iCalendar-Format.
 - Feiertage werden über `src/lib/holidays.ts` aus externen ICS-Quellen geladen (konfigurierbar,
   mit statischen Fallbacks in `src/data/saxony-*.ts`); der Prüfstatus wird in
   `SperrlisteSettings` persistiert.

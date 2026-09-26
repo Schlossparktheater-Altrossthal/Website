@@ -305,6 +305,7 @@ model User {
   approvedProposals      RehearsalProposal[] @relation("ProposalApprover")
   notifications         NotificationRecipient[]
   blockedDays            BlockedDay[]
+  calendarFeed           CalendarFeed?
   appRoles               UserAppRole[]
   rehearsalInvites       RehearsalInvitee[]
   photoConsents          PhotoConsent[]
@@ -927,6 +928,18 @@ enum CalendarEventKind {
   WORK_DAY
   SOCIAL
   OTHER
+}
+
+/// Persönlicher Kalender-Abo-Link (ICS). Der Token steht im Link; wer ihn kennt, sieht die Termine.
+model CalendarFeed {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  token              String    @unique
+  includeBlockedDays Boolean   @default(false)
+  lastAccessedAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// Termine der Organisation (Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.

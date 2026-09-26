@@ -13,6 +13,7 @@ import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 import type { HolidayRange } from "@/types/holidays";
 
 import { EventDialog, type EventDialogState } from "@/components/calendar/event-dialog";
+import { CalendarFeedDialog } from "./calendar-feed-dialog";
 import { ExportButton } from "./export-button";
 import { MyCalendar } from "./my-calendar";
 import { BlocklistSettingsDialog } from "./settings-dialog";
@@ -116,6 +117,7 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
           exceptionWeekdays={settings.exceptionWeekdays}
         />
       ) : null}
+      {!data.readOnly ? <CalendarFeedDialog /> : null}
       {data.canManageSettings && !data.readOnly ? (
         <BlocklistSettingsDialog
           settings={settings}
