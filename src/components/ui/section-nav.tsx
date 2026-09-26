@@ -35,7 +35,9 @@ export function SectionNav({
         aria-label={ariaLabel}
         className={cn(
           "gap-0.5 rounded-lg bg-muted/70 p-0.5",
-          withSelect ? "hidden sm:flex sm:w-auto" : "flex w-full sm:inline-flex sm:w-auto",
+          // inline-flex statt flex: sonst zieht sich die Leiste über die volle Breite
+          // und die Pills wirken gestreckt (Stück-Muster ist kompakt).
+          withSelect ? "hidden sm:inline-flex sm:w-auto" : "flex w-full sm:inline-flex sm:w-auto",
         )}
       >
         {items.map((item) => {
