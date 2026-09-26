@@ -109,6 +109,31 @@ docker compose restart db
 pnpm dev:reset
 ```
 
+### Prisma-Client veraltet (`Unknown argument ...`)
+
+Nach einem `git pull` mit Schemaänderungen kann der generierte Prisma-Client älter sein als
+`prisma/schema.prisma`. Der Dev-Server startet dann normal, aber jeder Datenbankzugriff, der ein
+neues Feld nutzt, scheitert mit `PrismaClientValidationError: Unknown argument 'status'` — die
+Seite antwortet mit 500.
+
+Grund: `pnpm dev` führt über `predev` nur `prisma migrate deploy` aus, nicht `prisma generate`.
+Generiert wird sonst nur im `postinstall`-Hook, der bei gesetztem `SKIP_PRISMA_POSTINSTALL` und bei
+einem pnpm-Store-Treffer ausbleibt.
+
+```bash
+pnpm prisma:generate
+
+# Der neue Client greift erst nach einem Neustart: Turbopack cached node_modules.
+pkill -f "next dev"
+rm -rf .next
+pnpm dev
+```
+
+Seit Prisma 7 liegt der Client unter
+`node_modules/.pnpm/@prisma+client@*/node_modules/@prisma/client`. Der alte Pfad
+`node_modules/.prisma/client` existiert nicht mehr — ein `ls` darauf ist deshalb kein Beleg für
+einen fehlenden Client.
+
 ### Node.js/pnpm Probleme
 
 ```bash
