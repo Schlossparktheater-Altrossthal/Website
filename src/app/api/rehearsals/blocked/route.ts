@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
+import { readDayAvailability } from "@/lib/calendar/day-availability";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
-
-function parseDate(date: string) {
-  const value = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(value.getTime())) {
-    return null;
-  }
-  return value;
-}
 
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
@@ -29,22 +21,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Datum fehlt" }, { status: 400 });
   }
 
-  const dayStart = parseDate(date);
-  if (!dayStart) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
   }
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
-  const blocked = await prisma.blockedDay.findMany({
-    where: {
-      date: {
-        gte: dayStart,
-        lt: dayEnd,
-      },
-      kind: "BLOCKED",
-    },
-    select: { userId: true },
+  const availability = await readDayAvailability(date);
+  return NextResponse.json({
+    availability,
+    userIds: Object.keys(availability).filter((userId) => availability[userId] === "blocked"),
   });
-
-  return NextResponse.json({ userIds: blocked.map((entry) => entry.userId) });
 }

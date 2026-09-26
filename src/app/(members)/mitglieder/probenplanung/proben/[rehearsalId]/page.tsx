@@ -7,19 +7,9 @@ import { requireAuth } from "@/lib/rbac";
 
 import { RehearsalEditor } from "../../rehearsal-editor";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import {
-  DEFAULT_TIME_ZONE,
-  formatIsoDateInTimeZone,
-  parseDateTimeInTimeZone,
-} from "@/lib/date-time";
-
-type MemberOption = {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: string;
-  extraRoles: string[];
-};
+import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { loadAudienceContext, readEventAudience } from "@/lib/calendar/audience-server";
+import { readDayAvailability } from "@/lib/calendar/day-availability";
 
 export default async function RehearsalEditorPage({
   params,
@@ -40,9 +30,6 @@ export default async function RehearsalEditorPage({
 
   const rehearsal = await prisma.calendarEvent.findFirst({
     where: { id: rehearsalId, kind: "REHEARSAL" },
-    include: {
-      participants: { where: { invited: true }, select: { userId: true } },
-    },
   });
 
   if (!rehearsal) {
@@ -66,39 +53,12 @@ export default async function RehearsalEditorPage({
   // Allow editing both DRAFT and published rehearsals
   // Drafts use updateRehearsalDraftAction, published use updateRehearsalAction
 
-  const membersRaw = await prisma.user.findMany({
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      roles: { select: { role: true } },
-    },
-  });
-
   const dateKey = formatIsoDateInTimeZone(rehearsal.start.toISOString(), DEFAULT_TIME_ZONE);
-  const dayStart = parseDateTimeInTimeZone(dateKey, "00:00", DEFAULT_TIME_ZONE);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-
-  const blocked = await prisma.blockedDay.findMany({
-    where: {
-      date: {
-        gte: dayStart,
-        lt: dayEnd,
-      },
-      kind: "BLOCKED",
-    },
-    select: { userId: true },
-  });
-
-  const members: MemberOption[] = membersRaw.map((member) => ({
-    id: member.id,
-    name: member.name,
-    email: member.email,
-    role: member.role,
-    extraRoles: member.roles.map((entry) => entry.role),
-  }));
+  const [context, audience, availability] = await Promise.all([
+    loadAudienceContext(rehearsal.showId),
+    readEventAudience(rehearsal.id),
+    readDayAvailability(dateKey),
+  ]);
 
   const breadcrumbs = [
     membersNavigationBreadcrumb("/mitglieder/probenplanung"),
@@ -126,10 +86,11 @@ export default async function RehearsalEditorPage({
           end: rehearsal.end ? rehearsal.end.toISOString() : null,
           location: rehearsal.location ?? "",
           description: rehearsal.description,
-          inviteeIds: rehearsal.participants.map((entry) => entry.userId),
         }}
-        members={members}
-        initialBlockedUserIds={blocked.map((entry) => entry.userId)}
+        context={context}
+        audience={{ rules: audience.rules, overrides: audience.overrides }}
+        invited={audience.invited}
+        initialAvailability={availability}
       />
     </div>
   );

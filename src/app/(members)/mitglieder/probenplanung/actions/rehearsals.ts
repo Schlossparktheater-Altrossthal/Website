@@ -4,143 +4,25 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import {
-  broadcastRehearsalCreated,
-  broadcastRehearsalUpdated,
-  sendNotification,
-} from "@/lib/realtime/triggers";
+import { broadcastRehearsalUpdated, sendNotification } from "@/lib/realtime/triggers";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
+import {
+  loadAudienceContext,
+  saveEventAudience,
+  type AudienceInput,
+} from "@/lib/calendar/audience-server";
 
 import {
-  baseSchema,
   computeEnd,
   deleteSchema,
-  defaultInviteeIds,
   ensurePlanner,
   fetchInviteeIds,
   parseEnd,
   parseStart,
   REHEARSAL_TIME_ZONE,
   sanitizeDescription,
-  syncInvitees,
   updateSchema,
 } from "@/lib/probenplanung/actions-helpers";
-
-export async function createRehearsalAction(input: {
-  title: string;
-  date: string;
-  time: string;
-  endTime?: string;
-  location?: string;
-  description?: string;
-  invitees?: string[];
-}) {
-  const auth = await ensurePlanner();
-  if (!auth.ok) {
-    return { error: auth.error } as const;
-  }
-
-  const parsed = baseSchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: "Bitte Titel, Datum und Uhrzeit prüfen." } as const;
-  }
-
-  const { title, date, time, endTime, location, description, invitees } = parsed.data;
-  const start = parseStart(date, time);
-  const end = endTime ? parseEnd(date, endTime, start) : computeEnd(start);
-  const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
-  const safeDescription = sanitizeDescription(description);
-
-  const inviteeIds = invitees
-    ? Array.from(new Set(invitees))
-    : await defaultInviteeIds(auth.showId);
-
-  if (!inviteeIds.length) {
-    return { error: "Es wurden keine Mitglieder gefunden." } as const;
-  }
-
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      const formatter = new Intl.DateTimeFormat("de-DE", {
-        dateStyle: "full",
-        timeStyle: "short",
-        timeZone: REHEARSAL_TIME_ZONE,
-      });
-      const body = `Am ${formatter.format(start)}`;
-
-      const rehearsal = await tx.calendarEvent.create({
-        data: {
-          kind: "REHEARSAL",
-          title,
-          start,
-          end,
-          location: normalizedLocation,
-          description: safeDescription,
-          status: "SCHEDULED",
-          createdById: auth.userId,
-          showId: auth.showId,
-        },
-        select: { id: true, title: true, start: true, end: true, location: true },
-      });
-
-      await syncInvitees(tx, rehearsal.id, inviteeIds);
-
-      await tx.notification.create({
-        data: {
-          title: `Neue Probe: ${title}`,
-          body,
-          type: "rehearsal",
-          eventId: rehearsal.id,
-          recipients: {
-            create: inviteeIds.map((userId) => ({ userId })),
-          },
-        },
-      });
-
-      return { rehearsal, inviteeIds, body };
-    });
-
-    const { rehearsal, inviteeIds: targets, body } = result;
-
-    await broadcastRehearsalCreated({
-      rehearsal: {
-        id: rehearsal.id,
-        title: rehearsal.title,
-        start: rehearsal.start.toISOString(),
-        end: (rehearsal.end ?? rehearsal.start).toISOString(),
-        location: rehearsal.location ?? "Noch offen",
-      },
-      targetUserIds: targets,
-    });
-
-    await Promise.all(
-      targets.map((userId) =>
-        sendNotification({
-          targetUserId: userId,
-          title: `Neue Probe: ${rehearsal.title}`,
-          body,
-          type: "info",
-          metadata: { rehearsalId: rehearsal.id },
-        }),
-      ),
-    );
-
-    revalidatePath("/mitglieder/probenplanung");
-    revalidatePath("/mitglieder/meine-proben");
-    revalidatePath(`/mitglieder/proben/${rehearsal.id}`);
-
-    return { success: true as const, id: rehearsal.id };
-  } catch (error) {
-    if (error instanceof Error && error.message === "Endzeit muss nach der Startzeit liegen.") {
-      return { error: error.message } as const;
-    }
-    if (error instanceof Error && error.message === "Ungültige Endzeit.") {
-      return { error: error.message } as const;
-    }
-    console.error("Error creating rehearsal", error);
-    return { error: "Die Probe konnte nicht gespeichert werden." } as const;
-  }
-}
 
 export async function updateRehearsalAction(input: {
   id: string;
@@ -150,7 +32,7 @@ export async function updateRehearsalAction(input: {
   endTime?: string;
   location?: string;
   description?: string;
-  invitees?: string[];
+  audience?: AudienceInput;
 }) {
   const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
@@ -162,7 +44,8 @@ export async function updateRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, invitees } = parsed.data;
+  const { id, title, date, time, endTime, location, description, audience } = parsed.data;
+  const context = audience ? await loadAudienceContext(auth.showId) : null;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -203,9 +86,13 @@ export async function updateRehearsalAction(input: {
       }
 
       let targetInvitees: string[];
-      if (invitees) {
-        const synced = await syncInvitees(tx, id, invitees);
-        targetInvitees = synced;
+      let addedIds: string[] = [];
+      let removedIds: string[] = [];
+      if (audience && context) {
+        const saved = await saveEventAudience(tx, id, audience, context);
+        targetInvitees = saved.invitedIds;
+        addedIds = saved.addedIds;
+        removedIds = saved.removedIds;
       } else {
         targetInvitees = await fetchInviteeIds(tx, id);
       }
@@ -227,10 +114,18 @@ export async function updateRehearsalAction(input: {
           ? (sanitizedDescription ?? null) !== (existing.description ?? null)
           : false;
 
-      return { rehearsal, targetInvitees, previous: existing, descriptionChanged };
+      return {
+        rehearsal,
+        targetInvitees,
+        addedIds,
+        removedIds,
+        previous: existing,
+        descriptionChanged,
+      };
     });
 
-    const { rehearsal, targetInvitees, previous, descriptionChanged } = result;
+    const { rehearsal, targetInvitees, addedIds, removedIds, previous, descriptionChanged } =
+      result;
     const formatter = new Intl.DateTimeFormat("de-DE", {
       dateStyle: "full",
       timeStyle: "short",
@@ -274,23 +169,56 @@ export async function updateRehearsalAction(input: {
       updates.push("Beschreibung aktualisiert.");
     }
 
-    const updatedBody = updates.length
-      ? updates.map((entry) => `• ${entry}`).join("\n")
-      : "Details der Probe wurden aktualisiert.";
-
-    if (targetInvitees.length) {
+    const notifyUsers = async (userIds: string[], title: string, body: string, type: string) => {
+      if (!userIds.length) return;
       await prisma.notification.create({
         data: {
-          title: updatedTitle,
-          body: updatedBody,
-          type: NOTIFICATION_TYPES.REHEARSAL_UPDATE,
+          title,
+          body,
+          type,
           eventId: rehearsal.id,
-          recipients: {
-            create: targetInvitees.map((userId) => ({ userId })),
-          },
+          recipients: { create: userIds.map((userId) => ({ userId })) },
         },
       });
+      await Promise.all(
+        userIds.map((userId) =>
+          sendNotification({
+            targetUserId: userId,
+            title,
+            body,
+            type: "info",
+            metadata: { rehearsalId: rehearsal.id },
+          }),
+        ),
+      );
+    };
 
+    // Bisherige Teilnehmer nur bei echten Änderungen benachrichtigen, nicht bei jeder Auswahl.
+    const addedSet = new Set(addedIds);
+    const existingInvitees = targetInvitees.filter((userId) => !addedSet.has(userId));
+    if (updates.length) {
+      await notifyUsers(
+        existingInvitees,
+        updatedTitle,
+        updates.map((entry) => `• ${entry}`).join("\n"),
+        NOTIFICATION_TYPES.REHEARSAL_UPDATE,
+      );
+    }
+    await notifyUsers(
+      addedIds,
+      `Neue Probe: ${rehearsal.title}`,
+      `Am ${formatter.format(rehearsal.start)}`,
+      "rehearsal",
+    );
+    await notifyUsers(
+      removedIds,
+      `Nicht mehr eingeplant: ${rehearsal.title}`,
+      `Du wirst am ${formatter.format(rehearsal.start)} nicht mehr benötigt.`,
+      NOTIFICATION_TYPES.REHEARSAL_UPDATE,
+    );
+
+    const touched = [...new Set([...targetInvitees, ...removedIds])];
+    if (touched.length) {
       await broadcastRehearsalUpdated({
         rehearsalId: rehearsal.id,
         changes: {
@@ -299,20 +227,8 @@ export async function updateRehearsalAction(input: {
           end: rehearsal.end ? rehearsal.end.toISOString() : undefined,
           location: rehearsal.location ?? undefined,
         },
-        targetUserIds: targetInvitees,
+        targetUserIds: touched,
       });
-
-      await Promise.all(
-        targetInvitees.map((userId) =>
-          sendNotification({
-            targetUserId: userId,
-            title: updatedTitle,
-            body: updatedBody,
-            type: "info",
-            metadata: { rehearsalId: rehearsal.id },
-          }),
-        ),
-      );
     }
 
     revalidatePath("/mitglieder/probenplanung");

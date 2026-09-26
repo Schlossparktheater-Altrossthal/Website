@@ -888,11 +888,18 @@ enum CalendarEventKind {
   OTHER
 }
 
+enum FeedScope {
+  MINE
+  PRODUCTIONS
+}
+
 /// Persönlicher Kalender-Abo-Link (ICS). Der Token steht im Link; wer ihn kennt, sieht die Termine.
 model CalendarFeed {
   id                 String    @id @default(cuid())
   userId             String    @unique
   token              String    @unique
+  /// MINE: nur eigene Termine; PRODUCTIONS: zusätzlich alle Proben der eigenen Produktionen.
+  scope              FeedScope @default(MINE)
   includeBlockedDays Boolean   @default(false)
   lastAccessedAt     DateTime?
   createdAt          DateTime  @default(now())
@@ -902,13 +909,13 @@ model CalendarFeed {
 
 /// Termine der Organisation (Proben, Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
 model CalendarEvent {
-  id               String             @id @default(cuid())
+  id               String              @id @default(cuid())
   title            String
-  kind             CalendarEventKind  @default(OTHER)
-  status           EventStatus        @default(SCHEDULED)
+  kind             CalendarEventKind   @default(OTHER)
+  status           EventStatus         @default(SCHEDULED)
   start            DateTime
   end              DateTime?
-  allDay           Boolean            @default(false)
+  allDay           Boolean             @default(false)
   location         String?
   description      String?
   /// Frist für Zu-/Absagen.
@@ -917,12 +924,13 @@ model CalendarEvent {
   /// Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab.
   departmentId     String?
   createdById      String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  show             Show?              @relation(fields: [showId], references: [id], onDelete: SetNull)
-  department       Department?        @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy        User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  show             Show?               @relation(fields: [showId], references: [id], onDelete: SetNull)
+  department       Department?         @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy        User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
   participants     EventParticipant[]
+  audienceRules    EventAudienceRule[]
   responseLogs     EventResponseLog[]
   notifications    Notification[]
 
@@ -943,21 +951,58 @@ enum ParticipationLevel {
   OPTIONAL
 }
 
+/// Wer zu einem Termin gehört: Regeln schlagen Teilnehmer vor, Handänderungen gehen vor.
+enum AudienceRuleType {
+  /// Alle der Produktion (ohne Produktion: alle aktiven Mitglieder)
+  PRODUCTION_ALL
+  ALL_CAST
+  ALL_CREW
+  DEPARTMENT
+  CHARACTER
+  /// Besetzung aller Rollen der Szene
+  SCENE
+  USER
+}
+
+enum ParticipantOverride {
+  INCLUDED
+  EXCLUDED
+}
+
+model EventAudienceRule {
+  id        String             @id @default(cuid())
+  eventId   String
+  type      AudienceRuleType
+  /// departmentId / characterId / sceneId / userId, je nach Typ
+  targetId  String?
+  level     ParticipationLevel @default(REQUIRED)
+  sortOrder Int                @default(0)
+  event     CalendarEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
 /// Person an einem Termin: eingeladen (Proben) und/oder mit Zu-/Absage.
 model EventParticipant {
-  id           String             @id @default(cuid())
-  eventId      String
-  userId       String
-  level        ParticipationLevel @default(REQUIRED)
+  id            String               @id @default(cuid())
+  eventId       String
+  userId        String
+  level         ParticipationLevel   @default(REQUIRED)
   /// Eingeladen; `false` = nur Rückmeldung zu einem Termin für eine ganze Gruppe.
-  invited      Boolean            @default(true)
-  response     AttendanceStatus?
-  responseNote String?
-  respondedAt  DateTime?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  event        CalendarEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invited       Boolean              @default(true)
+  /// Warum die Person dabei ist, z. B. ["Bastian (Sz. 3, 5)", "Gewerk Technik"].
+  reasons       Json                 @default("[]")
+  /// Handentscheidung der Planung; übersteht jede Neuberechnung aus den Regeln.
+  override      ParticipantOverride?
+  /// Von Hand gesetzte Verbindlichkeit (sonst aus den Regeln).
+  levelOverride ParticipationLevel?
+  response      AttendanceStatus?
+  responseNote  String?
+  respondedAt   DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  event         CalendarEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId], name: "eventId_userId")
   @@index([userId])
@@ -1146,14 +1191,14 @@ model FinanceLog {
 }
 
 model Notification {
-  id          String                  @id @default(cuid())
-  title       String
-  body        String?
-  type        String?
-  createdAt   DateTime                @default(now())
-  eventId     String?
-  event       CalendarEvent?          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  recipients  NotificationRecipient[]
+  id         String                  @id @default(cuid())
+  title      String
+  body       String?
+  type       String?
+  createdAt  DateTime                @default(now())
+  eventId    String?
+  event      CalendarEvent?          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipients NotificationRecipient[]
 }
 
 model NotificationRecipient {

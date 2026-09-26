@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
+import { audienceInputSchema } from "@/lib/calendar/audience-server";
 import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -19,7 +20,7 @@ export const baseSchema = z.object({
   endTime: z.string().regex(ISO_TIME, "Ungültige Uhrzeit").optional(),
   location: z.string().trim().min(2, "Ort ist zu kurz").max(120, "Ort ist zu lang").optional(),
   description: z.string().max(10_000).optional(),
-  invitees: z.array(z.string().min(1)).optional(),
+  audience: audienceInputSchema.optional(),
 });
 
 export const draftUpdateSchema = baseSchema.partial().extend({ id: z.string().min(1) });
@@ -56,6 +57,10 @@ export function parseEnd(date: string, endTime: string, start: Date) {
   } catch (error) {
     console.error("Failed to parse rehearsal end", error);
     throw new Error("Ungültige Endzeit.");
+  }
+  // Endzeit vor der Startzeit: Probe geht über Mitternacht (z. B. 22:00–00:30).
+  if (end.getTime() < start.getTime()) {
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
   }
   if (end.getTime() <= start.getTime()) {
     throw new Error("Endzeit muss nach der Startzeit liegen.");
@@ -109,52 +114,6 @@ export async function ensurePlanner(target?: { rehearsalId?: string | null }) {
     };
   }
   return { ok: true as const, userId, showId };
-}
-
-/** Standard-Einladung: aktive Mitglieder der Produktion, ohne Produktion alle Aktiven. */
-export async function defaultInviteeIds(showId: string | null): Promise<string[]> {
-  const users = await prisma.user.findMany({
-    where: {
-      deactivatedAt: null,
-      ...(showId
-        ? {
-            productionMemberships: {
-              some: {
-                showId,
-                status: "active",
-                OR: [{ leftAt: null }, { leftAt: { gt: new Date() } }],
-              },
-            },
-          }
-        : {}),
-    },
-    select: { id: true },
-  });
-  return users.map((user) => user.id);
-}
-
-/** Eingeladene einer Probe setzen; Ausgeladene mit Rückmeldung bleiben als Rückmeldung erhalten. */
-export async function syncInvitees(
-  tx: Prisma.TransactionClient,
-  rehearsalId: string,
-  inviteeIds: string[],
-) {
-  const unique = Array.from(new Set(inviteeIds));
-  const notInvited = { eventId: rehearsalId, NOT: { userId: { in: unique } } };
-  await tx.eventParticipant.deleteMany({ where: { ...notInvited, response: null } });
-  await tx.eventParticipant.updateMany({ where: notInvited, data: { invited: false } });
-
-  if (unique.length) {
-    await tx.eventParticipant.updateMany({
-      where: { eventId: rehearsalId, userId: { in: unique }, invited: false },
-      data: { invited: true },
-    });
-    await tx.eventParticipant.createMany({
-      data: unique.map((userId) => ({ eventId: rehearsalId, userId })),
-      skipDuplicates: true,
-    });
-  }
-  return unique;
 }
 
 export async function fetchInviteeIds(tx: Prisma.TransactionClient, rehearsalId: string) {

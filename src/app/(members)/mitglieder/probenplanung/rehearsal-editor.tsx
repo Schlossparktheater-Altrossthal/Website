@@ -4,15 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
+import { AudienceBuilder, type AudienceValue } from "@/components/calendar/audience-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/ui/time-input";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { ROLE_LABELS, ROLES } from "@/lib/roles";
-import { cn } from "@/lib/utils";
+import {
+  computeAudienceDrift,
+  hasAudienceDrift,
+  resolveAudience,
+  type AudienceContext,
+} from "@/lib/calendar/audience";
+import type { DayAvailability } from "@/lib/calendar/day-availability";
 import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 
 import {
@@ -21,14 +26,6 @@ import {
   updateRehearsalDraftAction,
 } from "./actions/drafts";
 import { updateRehearsalAction } from "./actions/rehearsals";
-
-type MemberOption = {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: string;
-  extraRoles: string[];
-};
 
 type RehearsalEditorProps = {
   rehearsal: {
@@ -39,22 +36,22 @@ type RehearsalEditorProps = {
     end: string | null;
     location: string;
     description: string | null;
-    inviteeIds: string[];
   };
-  members: MemberOption[];
-  initialBlockedUserIds: string[];
+  context: AudienceContext;
+  audience: AudienceValue;
+  /** Aktuell Eingeladene (für den Hinweis auf geänderte Besetzung). */
+  invited: { userId: string; name: string; level: "REQUIRED" | "OPTIONAL" }[];
+  initialAvailability: DayAvailability;
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-function displayName(member: MemberOption) {
-  return member.name?.trim() || member.email?.trim() || "Unbekannt";
-}
-
 export function RehearsalEditor({
   rehearsal,
-  members,
-  initialBlockedUserIds,
+  context,
+  audience: initialAudience,
+  invited,
+  initialAvailability,
 }: RehearsalEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
@@ -67,47 +64,38 @@ export function RehearsalEditor({
   );
   const [location, setLocation] = useState(rehearsal.location);
   const [description, setDescription] = useState(rehearsal.description ?? "");
-  const [selectedInvitees, setSelectedInvitees] = useState<string[]>(() =>
-    Array.from(new Set(rehearsal.inviteeIds)),
-  );
-  const [blockedUserIds, setBlockedUserIds] = useState<Set<string>>(
-    () => new Set(initialBlockedUserIds),
-  );
+  const [audience, setAudience] = useState<AudienceValue>(initialAudience);
+  // Veröffentlichte Proben: Zielgruppe nur senden, wenn die Planung sie geändert oder
+  // Abweichungen übernommen hat – sonst keine stillen Einladungen.
+  const [audienceTouched, setAudienceTouched] = useState(isDraft);
+  const [availability, setAvailability] = useState<DayAvailability>(initialAvailability);
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isPublishing, startPublish] = useTransition();
   const [isDiscarding, startDiscard] = useTransition();
 
-  const groupedMembers = useMemo(() => {
-    const map = new Map<string, MemberOption[]>();
-    for (const member of members) {
-      if (blockedUserIds.has(member.id)) {
-        continue;
-      }
-      const primaryRole = member.role ?? "member";
-      const list = map.get(primaryRole) ?? [];
-      list.push(member);
-      map.set(primaryRole, list);
-    }
-    const orderedRoles = [...ROLES];
-    return orderedRoles
-      .map((role) => [role, map.get(role) ?? []] as const)
-      .filter(([, list]) => list.length > 0);
-  }, [blockedUserIds, members]);
+  const invitedCount = useMemo(
+    () =>
+      resolveAudience(audience.rules, audience.overrides, context).filter(
+        (entry) => !entry.excluded,
+      ).length,
+    [audience, context],
+  );
+  const drift = useMemo(
+    () =>
+      isDraft || audienceTouched
+        ? null
+        : computeAudienceDrift(
+            invited,
+            resolveAudience(initialAudience.rules, initialAudience.overrides, context),
+          ),
+    [isDraft, audienceTouched, invited, initialAudience, context],
+  );
 
-  const selectedSet = useMemo(() => new Set(selectedInvitees), [selectedInvitees]);
-
-  const toggleInvitee = useCallback((memberId: string) => {
-    setSelectedInvitees((prev) => {
-      const set = new Set(prev);
-      if (set.has(memberId)) {
-        set.delete(memberId);
-      } else {
-        set.add(memberId);
-      }
-      return Array.from(set);
-    });
+  const changeAudience = useCallback((next: AudienceValue) => {
+    setAudience(next);
+    setAudienceTouched(true);
   }, []);
 
   const fetchBlockedForDate = useCallback(async (dateValue: string) => {
@@ -117,8 +105,8 @@ export function RehearsalEditor({
       if (!response.ok) {
         throw new Error("Request failed");
       }
-      const data = (await response.json()) as { userIds?: string[] };
-      setBlockedUserIds(new Set(data.userIds ?? []));
+      const data = (await response.json()) as { availability?: DayAvailability };
+      setAvailability(data.availability ?? {});
     } catch (error) {
       console.error("Failed to load blocked members", error);
       toast.error("Sperrtermine konnten nicht geladen werden.");
@@ -130,16 +118,6 @@ export function RehearsalEditor({
   useEffect(() => {
     fetchBlockedForDate(date).catch(() => null);
   }, [date, fetchBlockedForDate]);
-
-  useEffect(() => {
-    setSelectedInvitees((prev) => {
-      const filtered = prev.filter((id) => !blockedUserIds.has(id));
-      if (filtered.length === prev.length) {
-        return prev;
-      }
-      return filtered;
-    });
-  }, [blockedUserIds]);
 
   const skipInitialSave = useRef(true);
 
@@ -161,7 +139,7 @@ export function RehearsalEditor({
         ...(trimmedEndTime ? { endTime: trimmedEndTime } : {}),
         location,
         description,
-        invitees: selectedInvitees,
+        ...(audienceTouched ? { audience } : {}),
       };
 
       updateAction(actionParams)
@@ -187,7 +165,18 @@ export function RehearsalEditor({
     }, 800);
 
     return () => clearTimeout(handle);
-  }, [description, date, time, endTime, title, location, selectedInvitees, rehearsal.id, isDraft]);
+  }, [
+    description,
+    date,
+    time,
+    endTime,
+    title,
+    location,
+    audience,
+    audienceTouched,
+    rehearsal.id,
+    isDraft,
+  ]);
 
   const handlePublish = () => {
     startPublish(() => {
@@ -200,7 +189,7 @@ export function RehearsalEditor({
         ...(trimmedEndTime ? { endTime: trimmedEndTime } : {}),
         location,
         description,
-        invitees: selectedInvitees,
+        audience,
       })
         .then((result) => {
           if (result?.success && result.id) {
@@ -350,77 +339,42 @@ export function RehearsalEditor({
 
       <Card>
         <CardHeader>
-          <CardTitle>Teilnehmer auswählen</CardTitle>
+          <CardTitle>Wer ist dabei?</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Wähle aus, wer zur Probe eingeladen werden soll. Gesperrte Personen sind entsprechend
-            gekennzeichnet.
-            {isCheckingBlocks ? " (aktualisiere…)" : null}
+            Gruppen, Rollen und Szenen schlagen Teilnehmer vor. Einzelne Personen kannst du
+            jederzeit ausnehmen oder hinzufügen.
+            {isCheckingBlocks ? " (Sperrliste wird aktualisiert…)" : null}
           </p>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {groupedMembers.map(([role, list]) => (
-              <section key={role} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-foreground/90">
-                    {ROLE_LABELS[role as keyof typeof ROLE_LABELS] ?? role}
-                  </h4>
-                  <Badge variant="outline">{list.length}</Badge>
-                </div>
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {list.map((member) => {
-                    const isSelected = selectedSet.has(member.id);
-                    const isBlocked = blockedUserIds.has(member.id);
-                    const extraRoles = Array.from(new Set(member.extraRoles)).filter(
-                      (extra) => extra !== member.role,
-                    );
-
-                    return (
-                      <label
-                        key={member.id}
-                        className={cn(
-                          "flex cursor-pointer items-start gap-3 rounded-lg border bg-background/70 px-3 py-3 text-sm shadow-sm transition",
-                          isSelected
-                            ? "border-primary/70 ring-1 ring-primary/40"
-                            : "border-border/60 hover:border-primary/40",
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-1 h-4 w-4"
-                          checked={isSelected}
-                          onChange={() => toggleInvitee(member.id)}
-                        />
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium text-foreground">
-                              {displayName(member)}
-                            </span>
-                            {isBlocked && <Badge variant="destructive">gesperrt</Badge>}
-                          </div>
-                          {member.email && (
-                            <p className="text-xs text-muted-foreground">{member.email}</p>
-                          )}
-                          {extraRoles.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {extraRoles.map((roleKey) => (
-                                <Badge key={roleKey} variant="outline" className="text-[10px]">
-                                  {ROLE_LABELS[roleKey as keyof typeof ROLE_LABELS] ?? roleKey}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-            {!groupedMembers.length && (
-              <p className="text-sm text-muted-foreground">Es wurden keine Mitglieder gefunden.</p>
-            )}
-          </div>
+        <CardContent className="space-y-4">
+          {drift && hasAudienceDrift(drift) ? (
+            <div className="space-y-3 rounded-lg border border-warning bg-warning/10 p-4 text-sm">
+              <p className="font-medium">Die Besetzung hat sich seit dem Ansetzen geändert.</p>
+              <ul className="space-y-1 text-muted-foreground">
+                {drift.added.length ? (
+                  <li>Neu dabei: {drift.added.map((entry) => entry.name).join(", ")}</li>
+                ) : null}
+                {drift.removed.length ? (
+                  <li>Nicht mehr dabei: {drift.removed.map((entry) => entry.name).join(", ")}</li>
+                ) : null}
+                {drift.levelChanged.length ? (
+                  <li>
+                    Verbindlichkeit geändert:{" "}
+                    {drift.levelChanged.map((entry) => entry.name).join(", ")}
+                  </li>
+                ) : null}
+              </ul>
+              <Button type="button" size="sm" onClick={() => setAudienceTouched(true)}>
+                Änderungen übernehmen
+              </Button>
+            </div>
+          ) : null}
+          <AudienceBuilder
+            context={context}
+            value={audience}
+            onChange={changeAudience}
+            availability={availability}
+          />
         </CardContent>
       </Card>
 
@@ -437,7 +391,7 @@ export function RehearsalEditor({
               <Button
                 type="button"
                 onClick={handlePublish}
-                disabled={isPublishing || !selectedInvitees.length}
+                disabled={isPublishing || !invitedCount}
               >
                 {isPublishing ? "Veröffentliche…" : "Probe veröffentlichen"}
               </Button>

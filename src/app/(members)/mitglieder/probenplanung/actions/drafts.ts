@@ -16,8 +16,13 @@ import {
   publishSchema,
   REHEARSAL_TIME_ZONE,
   sanitizeDescription,
-  syncInvitees,
 } from "@/lib/probenplanung/actions-helpers";
+import {
+  loadAudienceContext,
+  readEventAudience,
+  saveEventAudience,
+  type AudienceInput,
+} from "@/lib/calendar/audience-server";
 
 export async function createRehearsalDraftAction(input?: {
   title?: string;
@@ -73,6 +78,17 @@ export async function createRehearsalDraftAction(input?: {
     select: { id: true },
   });
 
+  // Vorschlag: ganze Produktion; die Planung grenzt im Editor ein.
+  const context = await loadAudienceContext(auth.showId);
+  await prisma.$transaction((tx) =>
+    saveEventAudience(
+      tx,
+      rehearsal.id,
+      { rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }], overrides: [] },
+      context,
+    ),
+  );
+
   return { success: true as const, id: rehearsal.id };
 }
 
@@ -83,7 +99,7 @@ export async function updateRehearsalDraftAction(input: {
   time?: string;
   location?: string;
   description?: string;
-  invitees?: string[];
+  audience?: AudienceInput;
 }) {
   const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
@@ -95,7 +111,8 @@ export async function updateRehearsalDraftAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, invitees } = parsed.data;
+  const { id, title, date, time, endTime, location, description, audience } = parsed.data;
+  const context = audience ? await loadAudienceContext(auth.showId) : null;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -149,8 +166,8 @@ export async function updateRehearsalDraftAction(input: {
         updateData.end = nextEnd;
       }
 
-      if (invitees) {
-        const synced = await syncInvitees(tx, id, invitees);
+      if (audience && context) {
+        await saveEventAudience(tx, id, audience, context);
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -191,7 +208,7 @@ export async function publishRehearsalAction(input: {
   endTime?: string;
   location?: string;
   description?: string;
-  invitees?: string[];
+  audience?: AudienceInput;
 }) {
   const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
@@ -203,13 +220,21 @@ export async function publishRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, invitees } = parsed.data;
+  const { id, title, date, time, endTime, location, description, audience } = parsed.data;
+  const [context, stored] = await Promise.all([
+    loadAudienceContext(auth.showId),
+    audience ? null : readEventAudience(id),
+  ]);
+  const currentAudience = audience ?? {
+    rules: stored?.rules ?? [],
+    overrides: stored?.overrides ?? [],
+  };
 
   try {
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.calendarEvent.findUnique({
         where: { id },
-        include: { participants: { where: { invited: true }, select: { userId: true } } },
+        select: { status: true, start: true, end: true, createdById: true },
       });
       if (!existing) {
         throw new Error("not-found");
@@ -225,11 +250,15 @@ export async function publishRehearsalAction(input: {
       const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
       const safeDescription = sanitizeDescription(description);
 
-      const inviteeIds = invitees
-        ? Array.from(new Set(invitees))
-        : existing.participants.map((entry) => entry.userId);
-
-      const syncedInvitees = await syncInvitees(tx, id, inviteeIds);
+      const { invitedIds: syncedInvitees } = await saveEventAudience(
+        tx,
+        id,
+        currentAudience,
+        context,
+      );
+      if (!syncedInvitees.length) {
+        throw new Error("no-invitees");
+      }
       const formatter = new Intl.DateTimeFormat("de-DE", {
         dateStyle: "full",
         timeStyle: "short",
@@ -309,6 +338,9 @@ export async function publishRehearsalAction(input: {
     }
     if (error instanceof Error && error.message === "not-draft") {
       return { error: "Die Probe wurde bereits veröffentlicht." } as const;
+    }
+    if (error instanceof Error && error.message === "no-invitees") {
+      return { error: "Bitte wähle mindestens eine Person aus." } as const;
     }
     if (error instanceof Error && error.message === "missing-end") {
       return { error: "Die Probe konnte keine Endzeit speichern." } as const;
