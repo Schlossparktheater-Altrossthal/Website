@@ -455,23 +455,29 @@ Für bestehende Komponenten mit vielen hard-coded Farben kann eine CSS-Override-
 
 ```tsx
 import { PageHeader } from "@/components/members/page-header";
-import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { SectionNav } from "@/components/ui/section-nav";
 
-export default async function MeineSeitePage() {
-  // Data Fetching
-  const data = await fetchData();
-
-  const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/meine-seite")];
+export default async function MeineSeitePage({ searchParams }) {
+  const { ansicht } = await searchParams;
+  const view = ansicht === "zweite" ? "zweite" : "erste";
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Seitentitel"
-        description="Kurze Beschreibung der Seite"
-        breadcrumbs={breadcrumbs}
+      <PageHeader title="Seitentitel" description="Kurze Beschreibung der Seite" />
+
+      <SectionNav
+        activeId={view}
+        items={[
+          { id: "erste", label: "Erste Ansicht", href: "/mitglieder/meine-seite" },
+          {
+            id: "zweite",
+            label: "Zweite Ansicht",
+            href: "/mitglieder/meine-seite?ansicht=zweite",
+          },
+        ]}
       />
 
-      {/* Content */}
+      {/* Werkzeugzeile: Suche links, primäre Aktion rechts – einzeilig */}
       <section className="space-y-4">{/* Komponenten */}</section>
     </div>
   );
@@ -559,6 +565,33 @@ export default function BrEiteSeite() {
 </div>
 ```
 
+### 6. Seiten-Muster (Referenz: Stück)
+
+`/mitglieder/produktionen/stueck` ist die Referenz für den Aufbau einer Seite im
+Mitgliederbereich. Alle Seiten folgen diesem Skelett:
+
+1. **Seitenkopf** — `PageHeader` einzeilig: `title`, optional `description` und `actions`.
+   Eigene `<h1>` auf Seitenebene sind tabu. `breadcrumbs` nur mit echtem Elternteil und die
+   aktuelle Seite als letzter Eintrag (`[eltern, aktuelle Seite]`) – die frühere Wurzelzeile
+   „Mitgliederbereich“ entfällt, weil sie auf jeder Seite dasselbe Wort trug.
+2. **Bereichs-Navigation** — `SectionNav` (`src/components/ui/section-nav.tsx`) direkt unter
+   dem Kopf: Pill-Leiste, aktiv `bg-background text-foreground shadow-sm ring-1 ring-border`,
+   inaktiv `text-muted-foreground hover:text-foreground`. Zustand in der URL (`?ansicht=`),
+   mobil volle Breite (`flex-1` je Eintrag). Bei mehr als drei Einträgen oder langen Labels
+   mobil zusätzlich `Select`.
+3. **Werkzeugzeile** — Suche links (`h-11`, `min-w-0 flex-1`, Suchicon `pl-9`), primäre Aktion
+   rechts (`Button` primary, `h-11 shrink-0`), in einer Zeile; auf Mobil bricht sie nicht um.
+4. **Inhalt** — Karten `rounded-xl border border-border bg-card`; Listenzeilen
+   `min-h-16 rounded-xl border border-border bg-card p-3` mit `hover:bg-muted/40`.
+5. **Leerzustand** — `py-12 text-center text-sm text-muted-foreground`.
+6. **Rückmeldung** — `sonner`: Erfolg `duration: 3000`, Fehler mit `description` und
+   `duration: 5000`.
+7. **Abstände** — Seite `space-y-6`, innerhalb einer Karte `space-y-4`.
+
+`SegmentedControl` nutzt dieselbe Optik wie `SectionNav`, ist aber für Umschalter **innerhalb**
+einer Karte gedacht (Client-State, `role=radiogroup`, z. B. die Verfügbarkeit eines Tages).
+Orange gefüllte `TabsList`-Pills sind für die Bereichs-Navigation nicht mehr vorgesehen.
+
 ## Checkliste: Design System Compliance
 
 Beim Erstellen oder Refactoren von Komponenten:
@@ -573,3 +606,7 @@ Beim Erstellen oder Refactoren von Komponenten:
 - [ ] Typografie nutzt definierte Utilities (`.text-h1`, `.text-body`, etc.)
 - [ ] Fokus-States sind sichtbar (`focus-visible:ring-*`)
 - [ ] Komponente funktioniert in Light & Dark Mode
+- [ ] Seitenkopf ist einzeilig über `PageHeader` (kein eigenes `<h1>`, keine Wurzel-Breadcrumb)
+- [ ] Bereichs-Navigation läuft über `SectionNav` (keine eigene Pill-Leiste, keine orange gefüllten Tabs)
+- [ ] Werkzeugzeile: Suche links, primäre Aktion rechts, einzeilig
+- [ ] Leerzustand `py-12 text-center` mit `text-muted-foreground`

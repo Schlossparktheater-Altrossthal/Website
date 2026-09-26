@@ -68,8 +68,8 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Die autoritative Referenz für Breakpoints, Nutzerklassen und Container liegt in `docs/design-system.md` (Abschnitt „Breakpoints & Responsive"). Den Vollstatus je Seite führt `docs/responsiveness-matrix.md`.
 - Es gelten drei Nutzerklassen: Handy (<640px), Tablet (768–1023px), Desktop (≥1024px). Basis sind die Tailwind-Default-Breakpoints; `globals.css` (`@theme inline`) überschreibt `--breakpoint-xs: 20rem` (reserviert, derzeit ungenutzt) und `--breakpoint-2xl: 120rem` (=1920px). Weitere custom Breakpoints gibt es nicht.
 - **Tablet ist eine eigene Kategorie:** Auf Tablet darf keine Seite erzwungen horizontal scrollen. Breite Tabellen/Kalender brauchen einen Tablet-Fallback oder einen inneren `overflow-x-auto`-Container innerhalb ihrer Karte. Prüfung bei 768px, 834px und 1024px.
-- Tabs verwenden das gemeinsame TabsList-Pattern: unter `sm` (640px) shadcn `Select`, ab `sm` Pill-Tabs. Horizontal scrolling auf Tab-Listen ist ausdrücklich verboten.
-- Ausnahme: Genau zwei oder drei kurze Ansichten (z. B. Sperrliste „Mein Kalender“/„Team“) als `SegmentedControl` in voller Breite, Zustand per `?ansicht=` in der URL. Ein Auswahlfeld versteckt hier die Alternative (Nutzer-Feedback 2026-09).
+- Bereichs-Navigation einer Seite läuft über `SectionNav` (`src/components/ui/section-nav.tsx`, Referenz: Stück) — Pill-Leiste direkt unter dem Seitenkopf, Einträge als Links mit Zustand in der URL (`?ansicht=`), aktiver Eintrag `bg-background shadow-sm ring-1 ring-border`, mobil volle Breite. Bei mehr als drei Einträgen oder langen Labels mobil zusätzlich `Select`. Horizontal scrolling auf Umschaltern ist verboten, eigene Pill-Leisten ebenso.
+- `SegmentedControl` nutzt dieselbe Optik, ist aber für Umschalter **innerhalb** einer Karte gedacht (Client-State, `role=radiogroup`, z. B. die Verfügbarkeit eines Tages). Orange gefüllte `TabsList`-Pills entfallen für die Bereichs-Navigation.
 - Tages-Details auf Mobilgeräten öffnen als Bottom-`Sheet`, damit ein Tipp sichtbar etwas auslöst; am Desktop stehen sie daneben.
 - Seiten mit vielen Unterbereichen (z. B. Profil): statt Tabs eine Bereichsliste mit Drill-down per `?bereich=` – mobil erst die Liste, dann der Bereich mit „‹ Zurück", ab `lg` Liste als linke Navigation. So funktionieren Browser-Zurück und Deep-Links (Beispiel: `src/app/(members)/mitglieder/profil`).
 - Header-Navigation: unter `md` (768px) `Sheet`, ab `md` horizontale Navigation.
@@ -182,7 +182,8 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 
 ## Seiten-Patterns
 
-- Seiten-Header verwenden das `PageHeader`-Pattern aus `src/components/members/page-header.tsx`.
+- Seiten-Header verwenden das `PageHeader`-Pattern aus `src/components/members/page-header.tsx` und bleiben einzeilig. Eigene `<h1>` auf Seitenebene sind tabu; `breadcrumbs` nur mit echtem Elternteil (`[eltern, aktuelle Seite]`), die Wurzelzeile „Mitgliederbereich“ entfällt.
+- Seiten folgen dem Aufbau der Stück-Seite (`/mitglieder/produktionen/stueck`, dokumentiert in `docs/design-system.md` Abschnitt „Seiten-Muster“): Kopf → `SectionNav` → Werkzeugzeile (Suche links, primäre Aktion rechts, einzeilig) → Inhalt in Cards → Leerzustand `py-12 text-center text-sm text-muted-foreground`.
 
 ## Typografie & Abstände
 
