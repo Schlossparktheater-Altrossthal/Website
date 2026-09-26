@@ -42,11 +42,6 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
     <div className="space-y-6">
       <PageHeader
         title={portal.name}
-        description={
-          portal.viewerRole
-            ? `Du bist hier ${TEAM_ROLE_LABELS[portal.viewerRole]}.`
-            : "Du siehst dieses Gewerk als Regie."
-        }
         breadcrumbs={[{ id: "teams", label: "Meine Teams", href: "/mitglieder/meine-gewerke" }]}
       />
 
@@ -55,38 +50,32 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         current={view}
         options={[
           { value: "uebersicht", label: "Übersicht" },
-          { value: "aufgaben", label: `Aufgaben ${portal.openTasks.length}` },
-          { value: "team", label: `Team ${portal.members.length}` },
+          { value: "aufgaben", label: `Aufgaben (${portal.openTasks.length})` },
+          { value: "team", label: `Team (${portal.members.length})` },
         ]}
       />
 
       {view === "uebersicht" ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4 lg:space-y-0">
           <div className="space-y-4">
-            {portal.description ? (
-              <p className="rounded-xl border border-border bg-card p-4 text-sm">
-                {portal.description}
-              </p>
-            ) : null}
-
             <Section
               title="Für mich"
-              action={{ href: `${basePath}?ansicht=aufgaben`, label: "Alle Aufgaben" }}
+              action={{ href: `${basePath}?ansicht=aufgaben`, label: "Alle" }}
             >
               {portal.myTasks.length ? (
                 <TaskList tasks={portal.myTasks} />
               ) : (
-                <Empty>Dir ist gerade keine offene Aufgabe zugewiesen.</Empty>
+                <Empty>Keine offene Aufgabe für dich.</Empty>
               )}
             </Section>
 
-            <Section title="Nächste Termine">
+            <Section title="Termine">
               {portal.events.length ? (
                 <ul className="divide-y divide-border/60">
                   {portal.events.slice(0, 5).map((event) => (
-                    <li key={event.id} className="flex min-h-12 flex-col justify-center py-2">
-                      <span className="text-sm font-medium">{event.title}</span>
-                      <span className="text-xs text-muted-foreground">
+                    <li key={event.id} className="flex min-h-11 flex-col justify-center py-1.5">
+                      <span className="truncate text-sm font-medium">{event.title}</span>
+                      <span className="truncate text-xs text-muted-foreground">
                         {formatEventDate(event.start)}
                         {event.location ? ` · ${event.location}` : ""}
                       </span>
@@ -94,35 +83,25 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
                   ))}
                 </ul>
               ) : (
-                <Empty>Noch keine Termine geplant.</Empty>
+                <Empty>Noch keine Termine.</Empty>
               )}
             </Section>
           </div>
 
-          <aside className="space-y-4">
-            <Section title="Ansprechpartner">
-              {leads.length ? (
-                <ul className="space-y-2">
-                  {leads.map((member) => (
-                    <MemberRow key={member.id} member={member} />
-                  ))}
-                </ul>
-              ) : (
-                <Empty>Die Leitung ist noch nicht bestimmt.</Empty>
-              )}
-            </Section>
-            <Section title="Stand der Aufgaben">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                {(["todo", "doing", "done"] as const).map((status) => (
-                  <span key={status} className="rounded-lg bg-muted/60 py-2">
-                    <span className="block text-lg font-semibold">{portal.taskCounts[status]}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {STATUS_LABELS[status]}
-                    </span>
-                  </span>
-                ))}
-              </div>
-            </Section>
+          <aside className="space-y-1 px-1 text-sm text-muted-foreground lg:space-y-3 lg:rounded-xl lg:border lg:border-border lg:bg-card lg:p-4">
+            {portal.description ? <p>{portal.description}</p> : null}
+            <p>
+              <span className="text-foreground">Deine Funktion:</span>{" "}
+              {portal.viewerRole ? TEAM_ROLE_LABELS[portal.viewerRole] : "Regie (Einblick)"}
+            </p>
+            <p>
+              <span className="text-foreground">Leitung:</span>{" "}
+              {leads.length ? leads.map((member) => member.name).join(", ") : "noch offen"}
+            </p>
+            <p>
+              <span className="text-foreground">Aufgaben:</span> {portal.taskCounts.todo} offen ·{" "}
+              {portal.taskCounts.doing} in Arbeit · {portal.taskCounts.done} erledigt
+            </p>
           </aside>
         </div>
       ) : null}
@@ -144,7 +123,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
               title={`Anfragen (${portal.requests.length})`}
               action={{ href: "/mitglieder/produktionen/zuweisung", label: "Entscheiden" }}
             >
-              <ul className="space-y-2">
+              <ul className="divide-y divide-border/60">
                 {portal.requests.map((member) => (
                   <MemberRow key={member.id} member={member} hint="möchte mitmachen" />
                 ))}
@@ -160,7 +139,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
             }
           >
             {portal.members.length ? (
-              <ul className="grid gap-2 sm:grid-cols-2">
+              <ul className="divide-y divide-border/60 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:divide-y-0">
                 {portal.members.map((member) => (
                   <MemberRow key={member.id} member={member} showMail={canManage} />
                 ))}
@@ -185,13 +164,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+    <section className="space-y-1 rounded-xl border border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3">
       <header className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{title}</h2>
+        <h2 className="text-sm font-semibold">{title}</h2>
         {action ? (
           <Link
             href={action.href}
-            className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-primary hover:underline"
+            className="-mr-1 inline-flex min-h-10 items-center gap-0.5 px-1 text-sm font-medium text-primary hover:underline"
           >
             {action.label}
             <ChevronRightIcon className="h-4 w-4" aria-hidden />
@@ -204,7 +183,7 @@ function Section({
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="py-6 text-center text-sm text-muted-foreground">{children}</p>;
+  return <p className="py-3 text-center text-sm text-muted-foreground">{children}</p>;
 }
 
 function TaskList({
@@ -218,7 +197,7 @@ function TaskList({
     <ul className="divide-y divide-border/60">
       {tasks.map((task) => {
         return (
-          <li key={task.id} className="flex min-h-12 items-center gap-3 py-2">
+          <li key={task.id} className="flex min-h-11 items-center gap-3 py-1.5">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{task.title}</span>
               <span
@@ -258,8 +237,8 @@ function MemberRow({
   showMail?: boolean;
 }) {
   return (
-    <li className="flex min-h-12 items-center gap-3 rounded-lg bg-muted/40 px-3 py-2">
-      <Initials initials={member.initials} />
+    <li className="flex min-h-11 items-center gap-3 py-1.5">
+      <Initials initials={member.initials} className="h-8 w-8" />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{member.name}</span>
         <span className="block truncate text-xs text-muted-foreground">

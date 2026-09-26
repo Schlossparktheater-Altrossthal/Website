@@ -28,10 +28,7 @@ export default async function MeineTeamsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Meine Teams"
-        description={`Deine Gewerke in ${production.title ?? production.year}.`}
-      />
+      <PageHeader title="Meine Teams" />
 
       {mine.length === 0 ? (
         <div className="py-12 text-center">
@@ -47,7 +44,7 @@ export default async function MeineTeamsPage() {
       {leadsSomething || isManager ? (
         <Link
           href="/mitglieder/produktionen/zuweisung"
-          className="flex min-h-12 items-center justify-between rounded-xl border border-border bg-card px-4 text-sm font-medium hover:bg-muted/40"
+          className="flex min-h-11 items-center justify-between rounded-xl border border-border bg-card px-3 text-sm font-medium hover:bg-muted/40"
         >
           Anfragen und Wünsche bearbeiten
           <ChevronRightIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -68,57 +65,44 @@ export default async function MeineTeamsPage() {
 
 function TeamGrid({ teams }: { teams: TeamCard[] }) {
   return (
-    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {teams.map((team) => (
-        <li key={team.id}>
-          <Link
-            href={`/mitglieder/meine-gewerke/${encodeURIComponent(team.slug)}`}
-            className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span className="flex items-center gap-2">
+    <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card lg:grid lg:grid-cols-2 lg:divide-y-0 lg:gap-px lg:bg-border/60">
+      {teams.map((team) => {
+        const meta = [
+          team.myOpenTasks
+            ? `${team.myOpenTasks} ${team.myOpenTasks === 1 ? "Aufgabe" : "Aufgaben"} für dich`
+            : `${team.openTasks} offen`,
+          team.nextEvent ? formatEventDate(team.nextEvent.start) : null,
+        ].filter(Boolean);
+        return (
+          <li key={team.id} className="bg-card">
+            <Link
+              href={`/mitglieder/meine-gewerke/${encodeURIComponent(team.slug)}`}
+              className="flex min-h-14 items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            >
               <ColorDot color={team.color} className="h-3 w-3" />
-              <span className="min-w-0 flex-1 truncate text-base font-semibold">{team.name}</span>
-              {team.role ? (
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                  {TEAM_ROLE_LABELS[team.role]}
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-sm font-semibold">{team.name}</span>
+                  {team.role ? (
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {TEAM_ROLE_LABELS[team.role]}
+                    </span>
+                  ) : null}
                 </span>
-              ) : null}
-            </span>
-            <span className="grid grid-cols-3 gap-2 text-center">
-              <Stat
-                value={team.memberCount}
-                label={team.memberCount === 1 ? "Person" : "Personen"}
-              />
-              <Stat value={team.myOpenTasks} label="Für mich" />
-              <Stat value={team.openTasks} label="Offen" />
-            </span>
-            <span className="space-y-1 text-sm text-muted-foreground">
-              <span className="block truncate">
-                {team.nextEvent
-                  ? `Nächster Termin: ${formatEventDate(team.nextEvent.start)} · ${team.nextEvent.title}`
-                  : "Kein Termin geplant"}
-              </span>
-              <span className="block truncate">
-                Leitung: {team.leads.length ? team.leads.join(", ") : "noch offen"}
+                <span className="block truncate text-xs text-muted-foreground">
+                  {meta.join(" · ")}
+                </span>
               </span>
               {team.requestCount && team.role === "lead" ? (
-                <span className="block text-warning">
-                  {team.requestCount} {team.requestCount === 1 ? "Anfrage" : "Anfragen"}
+                <span className="shrink-0 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
+                  {team.requestCount} neu
                 </span>
               ) : null}
-            </span>
-          </Link>
-        </li>
-      ))}
+              <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            </Link>
+          </li>
+        );
+      })}
     </ul>
-  );
-}
-
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <span className="rounded-lg bg-muted/60 py-2">
-      <span className="block text-lg font-semibold text-foreground">{value}</span>
-      <span className="block text-xs text-muted-foreground">{label}</span>
-    </span>
   );
 }
