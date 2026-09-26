@@ -1,6 +1,6 @@
 # Plan: Terminplanung mit Zielgruppen, Szenen und Terminfinder
 
-Stand: 2026-09-26. Phase 1 und 2 umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-26. Phase 1–3 umgesetzt. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -173,6 +173,6 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 
 - [x] Phase 1 (2026-09-26): Proben sind `CalendarEvent` mit `kind = REHEARSAL` (IDs beibehalten), `EventParticipant` vereint Einladung + Zu-/Absage aller Termine, `EventResponseLog` ersetzt `RehearsalAttendanceLog`, Proposals/Vorlagen/`requiredRoles` entfernt (vorgezogen aus Phase 3). Status `DRAFT/SCHEDULED/CANCELLED`. Bei Gruppen-Terminen (Gewerk/Produktion) gibt es Teilnehmer-Zeilen vorerst nur für Rückmeldungen (`invited = false`); die Auflösung aller Teilnehmer kommt mit dem Zielgruppen-Baukasten in Phase 2.
 - [x] Phase 2 (2026-09-26): Zielgruppen-Baukasten im Probeneditor (`EventAudienceRule`, Auflöser `src/lib/calendar/audience.ts`, Handänderungen `override`/`levelOverride`, Gründe `reasons`), Hinweis „Besetzung geändert – übernehmen?“ nach dem Ansetzen, Einladung/Ausladung einzeln benachrichtigt, Proben über Mitternacht erlaubt. „Meine Termine“ und Dashboard nur mit eigenen Proben, Filter und „Dabei als“. Kalender-Abo: `scope` MINE/PRODUCTIONS, Gründe in der Beschreibung. Offen: Baukasten auch für Termine der Terminplanung und des Gewerk-Portals (dort gilt weiter „alle der Gruppe“).
-- [ ] Phase 3
+- [x] Phase 3 (2026-09-26): Absage-Knopf mit Pflicht-Begründung in „Meine Termine“ (plus „Doch dabei“), Absagen benötigter Personen – per Knopf, Glocke oder neuer Sperre auf einem Probentag – gehen an Ersteller und alle mit Planungsrecht (App + Mail) mit betroffenen Szenen und möglicher Zweitbesetzung; kurzfristig (< 48 h, vorerst fest) hervorgehoben. Editor zeigt Absagen und parallele Proben. Altlasten wurden schon in Phase 1 entfernt.
 - [ ] Phase 4
 - [ ] Phase 5
