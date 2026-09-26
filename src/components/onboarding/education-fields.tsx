@@ -25,11 +25,12 @@ const EMPTY_SUGGESTIONS: EducationSuggestions = {
   universities: [],
 };
 
-function useEducationSuggestions() {
+function useEducationSuggestions(onboardingToken?: string) {
   const [suggestions, setSuggestions] = useState<EducationSuggestions>(EMPTY_SUGGESTIONS);
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/onboarding/education-suggestions")
+    const query = onboardingToken ? `?token=${encodeURIComponent(onboardingToken)}` : "";
+    fetch(`/api/onboarding/education-suggestions${query}`)
       .then((response) => (response.ok ? response.json() : null))
       .then((data: EducationSuggestions | null) => {
         if (!cancelled && data) setSuggestions({ ...EMPTY_SUGGESTIONS, ...data });
@@ -38,7 +39,7 @@ function useEducationSuggestions() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onboardingToken]);
   return suggestions;
 }
 
@@ -120,6 +121,8 @@ function TextWithSuggestions({
 type EducationFieldsProps = {
   value: EducationValue;
   onChange: (next: EducationValue) => void;
+  /** Onboarding-Link für Vorschläge ohne Anmeldung (neue Mitglieder). */
+  onboardingToken?: string;
   className?: string;
 };
 
@@ -128,8 +131,13 @@ type EducationFieldsProps = {
  * Altroßthal, an der Canalettostraße oder an einer anderen Schule ist – die beiden
  * BSZ-Standorte müssen sauber zuordenbar sein. Vorschläge stammen aus Angaben anderer.
  */
-export function EducationFields({ value, onChange, className }: EducationFieldsProps) {
-  const suggestions = useEducationSuggestions();
+export function EducationFields({
+  value,
+  onChange,
+  onboardingToken,
+  className,
+}: EducationFieldsProps) {
+  const suggestions = useEducationSuggestions(onboardingToken);
   const update = (patch: Partial<EducationValue>) => onChange({ ...value, ...patch });
 
   return (

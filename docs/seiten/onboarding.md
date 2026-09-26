@@ -71,5 +71,5 @@ Fotoerlaubnis) sowie Rückkehrer-Aktualisierung und Talentprofile.
 - Die alten Felder `background`/`backgroundClass` werden beim Speichern mitgeschrieben, weil
   Onboarding-Dashboard und Auswertungen sie noch lesen.
 - Vorschläge (Klassen je Standort, andere Schulen, Berufe, Hochschulen) liefert
-  `GET /api/onboarding/education-suggestions` – öffentlich, nur Häufigkeiten, Freitexte erst ab
+  `GET /api/onboarding/education-suggestions` – nur mit Anmeldung oder gültigem Onboarding-Link (`?token=`), nur Häufigkeiten, Freitexte erst ab
   zwei Nennungen.

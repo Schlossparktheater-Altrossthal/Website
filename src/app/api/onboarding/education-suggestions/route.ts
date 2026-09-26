@@ -1,10 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+import { auth } from "@/auth";
+import { hashInviteToken, isInviteUsable } from "@/lib/member-invites";
 
 import { readStoredEducation, type BszCampusId } from "@/lib/education/schools";
 import { prisma } from "@/lib/prisma";
 
-// Öffentlich, weil neue Mitglieder im Onboarding noch kein Konto haben. Geliefert werden nur
-// Häufigkeiten; freie Texte (Schulen, Berufe, Hochschulen) erst ab MIN_SHARED_COUNT Nennungen,
+// Neue Mitglieder haben im Onboarding noch kein Konto: Zugriff mit Anmeldung oder mit einem
+// gültigen Onboarding-Link (`?token=`, Klartext oder Hash). Geliefert werden nur Häufigkeiten; freie Texte (Schulen, Berufe, Hochschulen) erst ab MIN_SHARED_COUNT Nennungen,
 // damit keine Einzelangaben durchsickern. Klassenbezeichnungen am BSZ sind unkritisch.
 const MIN_SHARED_COUNT = 2;
 const MAX_ENTRIES = 12;
@@ -28,7 +31,24 @@ function top(counter: Counter, minCount = 1) {
     .map((entry) => entry.name);
 }
 
-export async function GET() {
+async function hasAccess(request: NextRequest) {
+  const session = await auth();
+  if (session?.user?.id) return true;
+  const token = request.nextUrl.searchParams.get("token")?.trim();
+  if (!token) return false;
+  const tokenHash = /^[0-9a-f]{64}$/i.test(token) ? token.toLowerCase() : hashInviteToken(token);
+  const invite = await prisma.memberInvite.findUnique({
+    where: { tokenHash },
+    select: { expiresAt: true, maxUses: true, usageCount: true, isDisabled: true },
+  });
+  return Boolean(invite && isInviteUsable(invite));
+}
+
+export async function GET(request: NextRequest) {
+  if (!(await hasAccess(request))) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+  }
+
   const profiles = await prisma.memberOnboardingProfile.findMany({
     select: {
       educationCategory: true,

@@ -1291,6 +1291,7 @@ export function OnboardingWizard({
             </div>
             <div className="space-y-6">
               <EducationFields
+                onboardingToken={token}
                 value={form.education}
                 onChange={(education) => setForm((prev) => ({ ...prev, education }))}
               />
