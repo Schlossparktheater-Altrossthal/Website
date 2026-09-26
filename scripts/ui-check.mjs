@@ -223,6 +223,7 @@ if (schemes.some((scheme) => scheme !== "light" && scheme !== "dark")) {
 const timeout = Number(values.timeout);
 const shotEach = !values["no-shots"];
 const baseURL = resolveBaseURL(values["base-url"]);
+const targetOrigin = new URL(baseURL).origin;
 const secret = process.env.E2E_LOGIN_SECRET ?? "";
 const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const outDir = path.resolve(
@@ -234,7 +235,7 @@ const findings = [];
 const runs = [];
 const addFinding = (run, message, kind = "error") => {
   findings.push({ kind, route: run.route, viewport: run.viewport, scheme: run.scheme, message });
-  console.error(`  ✗ ${message}`);
+  console.error(`  ${kind === "warning" ? "⚠" : "✗"} ${message}`);
 };
 
 const viewports = resolveViewports({ viewport: values.viewport });
@@ -258,9 +259,16 @@ try {
 
       // Fehler der Seite und der Konsole mitschneiden; sie gehören zum jeweiligen Lauf.
       let pageErrors = [];
-      page.on("pageerror", (error) => pageErrors.push(`pageerror: ${error.message}`));
+      page.on("pageerror", (error) => pageErrors.push({ message: `pageerror: ${error.message}` }));
       page.on("console", (message) => {
-        if (message.type() === "error") pageErrors.push(`console: ${message.text()}`);
+        if (message.type() !== "error") return;
+        // Die URL macht 404-Meldungen ("Failed to load resource") auswertbar.
+        const url = message.location()?.url;
+        pageErrors.push({
+          message: `console: ${message.text()}${url ? ` @ ${url}` : ""}`,
+          // Fremde Endpunkte ohne Bild (etwa Gravatar mit `d=404`) sind kein Seitenfehler.
+          kind: url && !url.startsWith(targetOrigin) ? "warning" : "error",
+        });
       });
 
       for (const route of routes) {
@@ -400,7 +408,7 @@ try {
           }
 
           run.errors = [...pageErrors];
-          for (const error of run.errors) addFinding(run, error);
+          for (const error of run.errors) addFinding(run, error.message, error.kind);
           run.steps.forEach((step) => {
             if (step.ok) console.warn(`  ✓ ${step.index}. ${step.action} (${step.ms} ms)`);
           });
@@ -436,7 +444,10 @@ for (const run of runs) {
   if (Object.keys(run.reads).length) console.warn(`  gelesen: ${JSON.stringify(run.reads)}`);
 }
 console.warn(`Bericht: ${reportFile}`);
-console.warn(`Befunde: ${findings.length}`);
+const warnings = findings.filter((finding) => finding.kind === "warning").length;
+console.warn(
+  `Befunde: ${findings.length - warnings}${warnings ? ` (+${warnings} Warnungen)` : ""}`,
+);
 
-const failed = findings.length > 0 && !values["allow-findings"];
+const failed = findings.some((finding) => finding.kind !== "warning") && !values["allow-findings"];
 process.exit(failed ? 1 : 0);

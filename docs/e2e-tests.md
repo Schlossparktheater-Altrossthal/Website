@@ -99,7 +99,8 @@ Nach jeder verändernden Aktion (Klick, Eingabe, Auswahl) folgen automatisch ein
 Überlaufmessung. `--no-shots` schaltet die Screenshots je Schritt ab, `--allow-findings` erzwingt
 Exit-Code 0 trotz Befunden. Ausgabe landet in `test-results/ui-check/<Zeitstempel>` (gitignored).
 Befunde sind: fehlgeschlagene Schritte, `pageerror`/Konsolenfehler, Weiterleitung zum Login und
-horizontaler Überlauf.
+horizontaler Überlauf. 404s fremder Ressourcen (etwa Gravatar-Avatare mit `d=404`) werden als
+Warnung geführt und lassen den Lauf nicht scheitern; die Ressourcen-URL steht in der Meldung.
 
 Die Überlaufmessung meldet nur Elemente, die nicht in einem inneren Scroll-Container liegen –
 breite Tabellen und Kalender dürfen laut `AGENTS.md` innerhalb ihrer Karte scrollen.
