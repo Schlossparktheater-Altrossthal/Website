@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { TaskStatus } from "@prisma/client";
 
 import { PageHeader } from "@/components/members/page-header";
 import {
@@ -9,11 +8,12 @@ import {
   ChevronRightIcon,
   ListTodoIcon,
 } from "@/components/ui/action-icons";
-import { Badge } from "@/components/ui/badge";
 import { resolveTeamsViewer } from "@/lib/departments/access";
+import { loadBoard } from "@/lib/departments/board";
 import { loadDepartmentPortal } from "@/lib/departments/portal";
 import { cn } from "@/lib/utils";
 
+import { DepartmentBoard } from "../board/board";
 import {
   formatDue,
   formatEventDate,
@@ -24,12 +24,6 @@ import {
 } from "../team-ui";
 
 type View = "uebersicht" | "aufgaben" | "team";
-
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: "Offen",
-  doing: "In Arbeit",
-  done: "Erledigt",
-};
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -202,13 +196,12 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
       ) : null}
 
       {view === "aufgaben" ? (
-        <Section title="Offene Aufgaben">
-          {portal.openTasks.length ? (
-            <TaskList tasks={portal.openTasks} mine={new Set(portal.myTasks.map((t) => t.id))} />
-          ) : (
-            <Empty>Keine offenen Aufgaben. Das Aufgaben-Board folgt als Nächstes.</Empty>
-          )}
-        </Section>
+        <DepartmentBoard
+          data={await loadBoard(portal.id)}
+          viewerId={userId}
+          canEdit={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
+          canManage={isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"}
+        />
       ) : null}
 
       {view === "team" ? (
@@ -279,40 +272,6 @@ function Section({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="py-3 text-center text-sm text-muted-foreground">{children}</p>;
-}
-
-function TaskList({
-  tasks,
-  mine,
-}: {
-  tasks: { id: string; title: string; status: TaskStatus; dueAt: Date | null; overdue: boolean }[];
-  mine?: Set<string>;
-}) {
-  return (
-    <ul className="divide-y divide-border/60">
-      {tasks.map((task) => {
-        return (
-          <li key={task.id} className="flex min-h-11 items-center gap-3 py-1.5">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{task.title}</span>
-              <span
-                className={cn(
-                  "text-xs",
-                  task.overdue ? "text-destructive" : "text-muted-foreground",
-                )}
-              >
-                {task.dueAt ? `fällig ${formatDue(task.dueAt)}` : "ohne Frist"}
-                {mine?.has(task.id) ? " · dir zugewiesen" : ""}
-              </span>
-            </span>
-            <Badge variant={task.status === "doing" ? "info" : "muted"}>
-              {STATUS_LABELS[task.status]}
-            </Badge>
-          </li>
-        );
-      })}
-    </ul>
-  );
 }
 
 function MemberRow({

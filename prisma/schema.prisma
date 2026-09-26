@@ -329,6 +329,7 @@ model User {
   departmentTaskAssignments       DepartmentTaskAssignment[]
   departmentTasksCreated          DepartmentTask[]           @relation("DepartmentTaskCreator")
   departmentMembershipsAssigned   DepartmentMembership[]     @relation("DepartmentMembershipAssignedBy")
+  departmentTaskComments          DepartmentTaskComment[]    @relation("DepartmentTaskCommentAuthor")
   departmentEventsCreated         DepartmentEvent[]
   calendarEventsCreated           CalendarEvent[]
   departmentDocumentsUploaded     DepartmentDocument[]
@@ -470,24 +471,25 @@ model DepartmentTemplate {
 
 /// Gewerk einer Produktion.
 model Department {
-  id                   String                 @id @default(cuid())
+  id                   String                  @id @default(cuid())
   showId               String
   templateId           String?
   slug                 String
   name                 String
   description          String?
   color                String?
-  isCore               Boolean                @default(true)
-  requiresJoinApproval Boolean                @default(false)
-  sortOrder            Int                    @default(0)
+  isCore               Boolean                 @default(true)
+  requiresJoinApproval Boolean                 @default(false)
+  sortOrder            Int                     @default(0)
   archivedAt           DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  show                 Show                   @relation(fields: [showId], references: [id], onDelete: Cascade)
-  template             DepartmentTemplate?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  show                 Show                    @relation(fields: [showId], references: [id], onDelete: Cascade)
+  template             DepartmentTemplate?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
   memberships          DepartmentMembership[]
   breakdownItems       SceneBreakdownItem[]
   tasks                DepartmentTask[]
+  boardColumns         DepartmentBoardColumn[]
   permissions          DepartmentPermission[]
   events               DepartmentEvent[]
   documents            DepartmentDocument[]
@@ -517,9 +519,34 @@ model DepartmentMembership {
   @@index([userId, status])
 }
 
+/// Spalte im Aufgaben-Board eines Gewerks. `status` bestimmt, welcher Aufgabenstatus
+/// daraus folgt (für Zähler und ältere Ansichten).
+model DepartmentBoardColumn {
+  id           String           @id @default(cuid())
+  departmentId String
+  name         String
+  position     Int              @default(0)
+  status       TaskStatus       @default(doing)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  department   Department       @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  tasks        DepartmentTask[]
+
+  @@index([departmentId, position])
+}
+
+enum TaskPriority {
+  low
+  normal
+  high
+}
+
 model DepartmentTask {
   id           String                     @id @default(cuid())
   departmentId String
+  columnId     String?
+  position     Int                        @default(0)
+  priority     TaskPriority               @default(normal)
   title        String
   description  String?
   status       TaskStatus                 @default(todo)
@@ -528,11 +555,26 @@ model DepartmentTask {
   createdAt    DateTime                   @default(now())
   updatedAt    DateTime                   @updatedAt
   department   Department                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  column       DepartmentBoardColumn?     @relation(fields: [columnId], references: [id], onDelete: SetNull)
   creator      User                       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
   assignments  DepartmentTaskAssignment[]
+  comments     DepartmentTaskComment[]
 
   @@index([departmentId, status])
+  @@index([columnId, position])
   @@index([createdAt])
+}
+
+model DepartmentTaskComment {
+  id        String         @id @default(cuid())
+  taskId    String
+  authorId  String?
+  body      String
+  createdAt DateTime       @default(now())
+  task      DepartmentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User?          @relation("DepartmentTaskCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
 }
 
 model DepartmentTaskAssignment {
