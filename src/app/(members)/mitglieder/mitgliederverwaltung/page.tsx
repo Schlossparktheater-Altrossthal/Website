@@ -14,10 +14,15 @@ import { combineNameParts } from "@/lib/names";
 import { AUTHENTIK_PROVIDER_ID } from "@/lib/authentik/config";
 import { readSeasonResetSettings, resolveProtectedRoles } from "@/lib/season-reset/settings";
 import { getActiveProduction } from "@/lib/active-production";
-import { UrlTabs, type UrlTab } from "@/components/ui/url-tabs";
 import { PageHeader } from "@/components/members/page-header";
+import { SectionNav } from "@/components/ui/section-nav";
 
-export default async function MemberManagementPage() {
+export default async function MemberManagementPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE");
   if (!allowed) {
@@ -97,11 +102,28 @@ export default async function MemberManagementPage() {
     };
   });
 
-  const tabs: UrlTab[] = [
-    {
-      value: "mitglieder",
-      label: "Mitglieder",
-      content: (
+  const areas = [
+    { id: "mitglieder", label: "Mitglieder" },
+    ...(canManageInvites ? [{ id: "einladungen", label: "Einladungen" }] : []),
+    { id: "saison", label: "Saisonwechsel" },
+    { id: "datenpflege", label: "Datenpflege" },
+  ];
+  const activeArea = tab && areas.some((area) => area.id === tab) ? tab : "mitglieder";
+  const areaHref = (id: string) =>
+    id === "mitglieder"
+      ? "/mitglieder/mitgliederverwaltung"
+      : `/mitglieder/mitgliederverwaltung?tab=${id}`;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Mitglieder" />
+      <SectionNav
+        ariaLabel="Bereiche der Mitgliederverwaltung"
+        activeId={activeArea}
+        items={areas.map((area) => ({ id: area.id, label: area.label, href: areaHref(area.id) }))}
+      />
+
+      {activeArea === "mitglieder" ? (
         <MembersTable
           users={formatted}
           canEditOwner={(session.user?.roles ?? []).includes("owner")}
@@ -109,20 +131,13 @@ export default async function MemberManagementPage() {
           productionTitle={production?.title ?? null}
           addMemberSlot={<AddMemberModal />}
         />
-      ),
-    },
-    ...(canManageInvites
-      ? [{ value: "einladungen", label: "Einladungen", content: <MemberInviteManager /> }]
-      : []),
-    {
-      value: "saison",
-      label: "Saisonwechsel",
-      content: <SeasonWizard initialProtectedRoles={protectedRoles} />,
-    },
-    {
-      value: "datenpflege",
-      label: "Datenpflege",
-      content: (
+      ) : null}
+
+      {activeArea === "einladungen" && canManageInvites ? <MemberInviteManager /> : null}
+
+      {activeArea === "saison" ? <SeasonWizard initialProtectedRoles={protectedRoles} /> : null}
+
+      {activeArea === "datenpflege" ? (
         <Card>
           <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
             <div className="space-y-1">
@@ -136,14 +151,7 @@ export default async function MemberManagementPage() {
             </Button>
           </CardHeader>
         </Card>
-      ),
-    },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Mitglieder" />
-      <UrlTabs tabs={tabs} />
+      ) : null}
     </div>
   );
 }
