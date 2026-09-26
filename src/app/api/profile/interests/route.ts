@@ -4,19 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { broadcastOnboardingDashboardForUser } from "@/lib/onboarding/dashboard-events";
-
-const MAX_INTEREST_LENGTH = 80;
-
-type NormalizedInterest = { value: string; lower: string };
-
-function normalizeInterest(raw: string): NormalizedInterest | null {
-  if (typeof raw !== "string") return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const limited = trimmed.slice(0, MAX_INTEREST_LENGTH);
-  const lower = limited.toLowerCase();
-  return { value: limited, lower };
-}
+import {
+  normalizeInterest,
+  replaceUserInterests,
+  type NormalizedInterest,
+} from "@/lib/profil/interests";
 
 export async function GET() {
   const session = await requireAuth();
@@ -82,75 +74,9 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const updatedNames = await prisma.$transaction(async (tx) => {
-      const existing = await tx.userInterest.findMany({
-        where: { userId },
-        include: { interest: { select: { id: true, name: true } } },
-      });
-
-      const targetLowers = new Set(normalized.map((entry) => entry.lower));
-      const keepMap = new Map<string, { interestId: string }>();
-      const removeIds: string[] = [];
-
-      for (const link of existing) {
-        const interestName = link.interest?.name ?? "";
-        const lower = interestName.toLowerCase();
-        if (targetLowers.has(lower)) {
-          keepMap.set(lower, { interestId: link.interestId });
-        } else {
-          removeIds.push(link.id);
-        }
-      }
-
-      if (removeIds.length) {
-        await tx.userInterest.deleteMany({ where: { id: { in: removeIds } } });
-      }
-
-      if (!normalized.length) {
-        return [] as string[];
-      }
-
-      const filters = normalized.map((entry) => ({
-        name: { equals: entry.value, mode: "insensitive" as const },
-      }));
-
-      let interestRecords = await tx.interest.findMany({
-        where: { OR: filters },
-      });
-
-      const interestByLower = new Map<string, { id: string; name: string }>();
-      for (const record of interestRecords) {
-        interestByLower.set(record.name.toLowerCase(), { id: record.id, name: record.name });
-      }
-
-      const toCreate = normalized
-        .filter((entry) => !interestByLower.has(entry.lower))
-        .map((entry) => ({ name: entry.value, createdById: userId }));
-
-      if (toCreate.length) {
-        await tx.interest.createMany({ data: toCreate, skipDuplicates: true });
-        interestRecords = await tx.interest.findMany({ where: { OR: filters } });
-        interestByLower.clear();
-        for (const record of interestRecords) {
-          interestByLower.set(record.name.toLowerCase(), { id: record.id, name: record.name });
-        }
-      }
-
-      const toLink = normalized
-        .filter((entry) => !keepMap.has(entry.lower))
-        .map((entry) => {
-          const interest = interestByLower.get(entry.lower);
-          if (!interest) return null;
-          return { userId, interestId: interest.id };
-        })
-        .filter((entry): entry is { userId: string; interestId: string } => Boolean(entry));
-
-      if (toLink.length) {
-        await tx.userInterest.createMany({ data: toLink, skipDuplicates: true });
-      }
-
-      return normalized.map((entry) => interestByLower.get(entry.lower)?.name ?? entry.value);
-    });
+    const updatedNames = await prisma.$transaction((tx) =>
+      replaceUserInterests(tx, userId, normalized),
+    );
 
     try {
       await broadcastOnboardingDashboardForUser(userId);

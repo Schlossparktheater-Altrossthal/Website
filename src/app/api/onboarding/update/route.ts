@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { replaceProductionPreferences } from "@/lib/onboarding/production-preferences";
+import { normalizeInterestList, replaceUserInterests } from "@/lib/profil/interests";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
 import { ONBOARDING_TOKEN_COOKIE } from "@/lib/authentik/config";
@@ -61,6 +62,8 @@ const payloadSchema = z.object({
   dietary: z.array(dietarySchema),
   notes: z.string().nullable(),
   photoConsent: z.boolean(),
+  /** Fehlt das Feld, bleiben die Interessen unverändert (ältere Clients). */
+  interests: z.array(z.string()).optional(),
 });
 
 function normalizeNullableString(value: string | null) {
@@ -292,6 +295,10 @@ export async function POST(request: NextRequest) {
       }
 
       await replaceProductionPreferences(tx, userId, consentShowId, preferences);
+
+      if (data.interests) {
+        await replaceUserInterests(tx, userId, normalizeInterestList(data.interests));
+      }
 
       await Promise.all(
         uniqueDietaryEntries.map((entry) =>

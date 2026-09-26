@@ -39,7 +39,17 @@ Fotoerlaubnis) sowie Rückkehrer-Aktualisierung und Talentprofile.
   Authentik trägt die Login-Seite den Token vorher in ein kurzlebiges Cookie ein (siehe
   [login.md](login.md)).
 - `POST /api/onboarding/update` legt bei Abschluss die `ProductionMembership` für die
-  zugehörige Produktion an (über das mitgesendete Einladungs-Token).
+  zugehörige Produktion an (über das mitgesendete Einladungs-Token). Seit 2026-09 fragt der
+  Rückkehrer-Wizard auch die Interessen ab (optionales Feld `interests`, gespeichert über
+  `src/lib/profil/interests.ts`).
+
+## Rollen- und Gewerkewünsche
+
+- Onboarding, Rückkehrer-Wizard und Profil nutzen dieselbe Stufenauswahl
+  `role-preference-level-picker.tsx`: Nein · Gern (50) · Sehr gern (75) · Unbedingt (100).
+- Der frühere Prozent-Slider ist entfernt: Er war auf Handys schwer zu greifen, und Prozentwerte
+  wirkten wie ein gemeinsames 100-%-Budget. Jeder Bereich wird einzeln bewertet; alte Gewichte
+  werden der nächstliegenden Stufe zugeordnet (`getRolePreferenceLevel`).
 
 ## Besonderheiten / Altlasten
 

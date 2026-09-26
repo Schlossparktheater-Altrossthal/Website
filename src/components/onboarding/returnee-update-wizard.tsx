@@ -24,9 +24,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
+  getRolePreferenceDefinition,
   getRolePreferenceTitle,
   listRolePreferenceDefinitions,
 } from "@/lib/onboarding/role-preferences";
+import { InterestTagInput } from "@/components/members/interest-tag-input";
+import {
+  RolePreferenceLevelHint,
+  RolePreferenceLevelPicker,
+} from "@/components/onboarding/role-preference-level-picker";
 import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
 
 type ExistingProfile = {
@@ -68,6 +74,7 @@ type ReturneeUpdateWizardProps = {
   existingDietary: ExistingDietary[];
   existingPreferences: ExistingPreference[];
   existingPhotoConsent: boolean | null;
+  existingInterests: string[];
   dateOfBirth: string | null;
   isLoggedIn: boolean;
   onboardingToken?: string | null;
@@ -94,6 +101,7 @@ type FormState = {
   educationUniversityName: string;
   educationOtherDescription: string;
   preferences: PreferenceEntry[];
+  interests: string[];
   photoConsent: boolean;
   dietaryPreference: string;
   dietaryPreferenceStrictness: string;
@@ -104,6 +112,7 @@ type FormState = {
 const steps = [
   { title: "Schulisches / Berufliches" },
   { title: "Bereiche" },
+  { title: "Interessen" },
   { title: "Fotos" },
   { title: "Essen & Hinweise" },
 ];
@@ -158,6 +167,7 @@ function createInitialState(
   existingDietary: ExistingDietary[],
   existingPreferences: ExistingPreference[],
   existingPhotoConsent: boolean | null,
+  existingInterests: string[],
 ): FormState {
   const educationCategory = normalizeEducationCategory(existingProfile.educationCategory);
   const existingPreferencesByCode = new Map(
@@ -200,6 +210,7 @@ function createInitialState(
     educationUniversityName: existingProfile.educationUniversityName ?? "",
     educationOtherDescription: existingProfile.educationOtherDescription ?? "",
     preferences: [...actingPreferences, ...crewPreferences],
+    interests: existingInterests,
     photoConsent: existingPhotoConsent ?? true,
     dietaryPreference: existingProfile.dietaryPreference ?? "",
     dietaryPreferenceStrictness: existingProfile.dietaryPreferenceStrictness ?? "",
@@ -228,6 +239,7 @@ export function ReturneeUpdateWizard({
   existingDietary,
   existingPreferences,
   existingPhotoConsent,
+  existingInterests,
   dateOfBirth,
   isLoggedIn,
   onboardingToken,
@@ -237,7 +249,13 @@ export function ReturneeUpdateWizard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(() =>
-    createInitialState(existingProfile, existingDietary, existingPreferences, existingPhotoConsent),
+    createInitialState(
+      existingProfile,
+      existingDietary,
+      existingPreferences,
+      existingPhotoConsent,
+      existingInterests,
+    ),
   );
   const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -416,10 +434,10 @@ export function ReturneeUpdateWizard({
       }
     }
     if (step === 1 && !selectedPreferences.length) {
-      setError("Bitte wähle mindestens einen Bereich mit Gewichtung über 0.");
+      setError("Bitte wähle mindestens einen Bereich aus.");
       return;
     }
-    if (step === 2) {
+    if (step === 3) {
       if (!documentFile) {
         setError(
           isMinor
@@ -442,14 +460,14 @@ export function ReturneeUpdateWizard({
     setError(null);
 
     if (!selectedPreferences.length) {
-      setError("Bitte wähle mindestens einen Bereich mit Gewichtung über 0.");
+      setError("Bitte wähle mindestens einen Bereich aus.");
       setStep(1);
       return;
     }
 
     if (hasPrefilledDietary && !dietaryConfirmed) {
       setError("Bitte bestätige, dass deine Angaben zu Ernährung und Allergien noch stimmen.");
-      setStep(3);
+      setStep(4);
       return;
     }
 
@@ -468,6 +486,7 @@ export function ReturneeUpdateWizard({
           domain: preference.domain,
           weight: preference.weight,
         })),
+        interests: form.interests,
         photoConsent: form.photoConsent,
         dietaryPreference: form.dietaryPreference.trim() || null,
         dietaryPreferenceStrictness: form.dietaryPreferenceStrictness.trim() || null,
@@ -768,76 +787,51 @@ export function ReturneeUpdateWizard({
 
           {step === 1 ? (
             <section className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Reiche nur die Bereiche ein, die aktuell für dich passen. Die Gewichtung bleibt
-                erhalten.
-              </p>
-              <div className="grid gap-4 md:grid-cols-2">
-                {form.preferences.map((preference) => {
-                  const active = preference.enabled;
-                  return (
-                    <div
-                      key={preference.code}
-                      className={cn(
-                        "flex flex-col gap-4 rounded-xl border p-4",
-                        active ? "border-primary bg-primary/5" : "border-border bg-background",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <h4 className="font-medium">{getRolePreferenceTitle(preference.code)}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            Bereich: {preference.domain}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={active ? "primary" : "outline"}
-                          onClick={() =>
-                            updatePreference(preference.code, {
-                              enabled: !active,
-                              weight: active ? 0 : 50,
-                            })
+              <RolePreferenceLevelHint />
+              {(["acting", "crew"] as const).map((domain) => (
+                <div key={domain} className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {domain === "acting" ? "Schauspiel" : "Gewerke & Teams"}
+                  </h3>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {form.preferences
+                      .filter((preference) => preference.domain === domain)
+                      .map((preference) => (
+                        <RolePreferenceLevelPicker
+                          key={preference.code}
+                          title={getRolePreferenceTitle(preference.code)}
+                          description={getRolePreferenceDefinition(preference.code)?.description}
+                          enabled={preference.enabled}
+                          weight={preference.weight}
+                          onChange={(weight) =>
+                            updatePreference(
+                              preference.code,
+                              weight === null ? { enabled: false } : { enabled: true, weight },
+                            )
                           }
-                        >
-                          {active ? "Aktiv" : "Wählen"}
-                        </Button>
-                      </div>
-                      {active ? (
-                        <div className="space-y-2">
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            step={10}
-                            value={preference.weight}
-                            onChange={(event) =>
-                              updatePreference(preference.code, {
-                                weight: event.currentTarget.valueAsNumber,
-                              })
-                            }
-                            onInput={(event) =>
-                              updatePreference(preference.code, {
-                                weight: event.currentTarget.valueAsNumber,
-                              })
-                            }
-                            className="w-full accent-primary"
-                          />
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Intensität</span>
-                            <span>{preference.weight}%</span>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+                        />
+                      ))}
+                  </div>
+                </div>
+              ))}
             </section>
           ) : null}
 
           {step === 2 ? (
+            <section className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Stimmen deine Interessen noch? Sie helfen bei der Einteilung in Teams und Workshops.
+              </p>
+              <InterestTagInput
+                id="returnee-interests"
+                label="Deine Interessen"
+                value={form.interests}
+                onChange={(interests) => setForm((prev) => ({ ...prev, interests }))}
+              />
+            </section>
+          ) : null}
+
+          {step === 3 ? (
             <section className="space-y-4">
               <label className="flex items-start gap-3 rounded-lg border border-border/70 p-4">
                 <Checkbox
@@ -939,7 +933,7 @@ export function ReturneeUpdateWizard({
             </section>
           ) : null}
 
-          {step === 3 ? (
+          {step === 4 ? (
             <section className="space-y-6">
               {hasPrefilledDietary ? (
                 <p className="rounded-md border border-border bg-muted/50 p-3 text-sm">

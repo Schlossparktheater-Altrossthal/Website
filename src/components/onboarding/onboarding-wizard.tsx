@@ -15,6 +15,10 @@ import { signIn } from "next-auth/react";
 import { AllergyLevel, type Role } from "@prisma/client";
 import { toast } from "sonner";
 
+import {
+  RolePreferenceLevelHint,
+  RolePreferenceLevelPicker,
+} from "@/components/onboarding/role-preference-level-picker";
 import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FOCUS_ACCENT_STYLES, FOCUS_BADGE_STYLES } from "@/config/category-colors";
+import { FOCUS_BADGE_STYLES } from "@/config/category-colors";
 import { useInterestSuggestions } from "@/hooks/useInterestSuggestions";
 import { cn } from "@/lib/utils";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
@@ -696,26 +700,16 @@ export function OnboardingWizard({
     }));
   }, []);
 
-  const togglePreference = useCallback((domain: "acting" | "crew", code: string) => {
-    setForm((prev) => {
-      const key = domain === "acting" ? "actingPreferences" : "crewPreferences";
-      const updated = prev[key].map((pref) =>
-        pref.code === code ? { ...pref, enabled: !pref.enabled } : pref,
-      );
-      return { ...prev, [key]: updated };
-    });
-  }, []);
-
-  const updatePreferenceWeight = useCallback(
-    (domain: "acting" | "crew", code: string, weight: number) => {
-      if (!Number.isFinite(weight)) {
-        return;
-      }
-      const normalizedWeight = normalizeRolePreferenceWeight(weight);
+  const setPreferenceWeight = useCallback(
+    (domain: "acting" | "crew", code: string, weight: number | null) => {
       setForm((prev) => {
         const key = domain === "acting" ? "actingPreferences" : "crewPreferences";
         const updated = prev[key].map((pref) =>
-          pref.code === code ? { ...pref, weight: normalizedWeight } : pref,
+          pref.code === code
+            ? weight === null
+              ? { ...pref, enabled: false }
+              : { ...pref, enabled: true, weight: normalizeRolePreferenceWeight(weight) }
+            : pref,
         );
         return { ...prev, [key]: updated };
       });
@@ -753,20 +747,6 @@ export function OnboardingWizard({
       .map((pref) => mapEntry(pref, "crew"));
     return { acting, crew };
   }, [form.actingPreferences, form.crewPreferences, isRegieVariant]);
-
-  const preferenceStats = useMemo(() => {
-    const compute = (entries: PreferenceSummaryEntry[]) => {
-      if (!entries.length) {
-        return { count: 0, average: 0 } as const;
-      }
-      const sum = entries.reduce((total, entry) => total + entry.weight, 0);
-      return { count: entries.length, average: Math.round(sum / entries.length) } as const;
-    };
-    return {
-      acting: compute(preferenceSummary.acting),
-      crew: compute(preferenceSummary.crew),
-    };
-  }, [preferenceSummary]);
 
   const photoConsentMessage = useMemo(() => {
     if (!form.photoConsent.consent) {
@@ -1774,189 +1754,81 @@ export function OnboardingWizard({
                 : "Markiere die Bereiche, in denen du dich einbringen möchtest. Deinen Onboarding-Fokus berechnen wir automatisch aus deiner Auswahl."}
             </p>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
             {isRegieVariant ? (
-              <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-left">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-primary">Regie &amp; Organisation</p>
-                    <p className="text-xs text-muted-foreground sm:text-sm">
-                      Dein Fokus liegt auf Probenplanung, Call Sheets und Teamkoordination. Unten
-                      kannst du deine Schwerpunkte präzisieren.
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="w-fit border-primary/40 bg-primary/5 text-primary"
-                  >
-                    Automatisch gesetzt
-                  </Badge>
-                </div>
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted p-3 text-left">
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  <span className="font-semibold text-foreground">Regie &amp; Organisation</span> ·
+                  Probenplanung, Call Sheets und Teamkoordination. Unten kannst du deine
+                  Schwerpunkte präzisieren.
+                </p>
+                <Badge variant="outline" size="sm" className="shrink-0">
+                  Automatisch
+                </Badge>
               </div>
-            ) : (
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-left text-xs text-muted-foreground sm:text-sm">
-                Wir zeigen dir Schauspiel und Gewerke gleichzeitig. Wähle einfach die Aufgaben aus,
-                die zu dir passen – den Fokus berechnet der Wizard im Hintergrund.
-              </div>
-            )}
+            ) : null}
+            <RolePreferenceLevelHint />
 
             {!isRegieVariant && (
-              <section className="space-y-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Schauspiel
                 </h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {form.actingPreferences.map((pref) => {
-                    const active = pref.enabled;
-                    const weightLabel = getRolePreferenceWeightLabel(pref.weight);
-                    return (
-                      <div
-                        key={pref.code}
-                        className={cn(
-                          "flex flex-col gap-4 rounded-xl border p-4 transition",
-                          active ? "border-primary bg-primary/5" : "border-border bg-background",
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h4 className="font-medium">{pref.title}</h4>
-                            <p className="text-sm text-muted-foreground">{pref.description}</p>
-                          </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={active ? "default" : "outline"}
-                            onClick={() => togglePreference("acting", pref.code)}
-                          >
-                            {active ? "Ausgewählt" : "Wählen"}
-                          </Button>
-                        </div>
-                        {active && (
-                          <div className="space-y-2">
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              step={10}
-                              value={pref.weight}
-                              onChange={(event) =>
-                                updatePreferenceWeight(
-                                  "acting",
-                                  pref.code,
-                                  event.currentTarget.valueAsNumber,
-                                )
-                              }
-                              onInput={(event) =>
-                                updatePreferenceWeight(
-                                  "acting",
-                                  pref.code,
-                                  event.currentTarget.valueAsNumber,
-                                )
-                              }
-                              className="w-full accent-primary"
-                            />
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>Intensität</span>
-                              <span>{weightLabel}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="grid gap-2 md:grid-cols-2">
+                  {form.actingPreferences.map((pref) => (
+                    <RolePreferenceLevelPicker
+                      key={pref.code}
+                      title={pref.title}
+                      description={pref.description}
+                      enabled={pref.enabled}
+                      weight={pref.weight}
+                      onChange={(weight) => setPreferenceWeight("acting", pref.code, weight)}
+                    />
+                  ))}
                 </div>
               </section>
             )}
 
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {getCrewSectionHeading(variant)}
-              </h3>
-              <p className="text-xs text-muted-foreground">{getCrewSectionDescription(variant)}</p>
-              <div className="grid gap-4 md:grid-cols-2">
-                {form.crewPreferences.map((pref) => {
-                  const active = pref.enabled;
-                  const weightLabel = getRolePreferenceWeightLabel(pref.weight);
-                  return (
-                    <div
-                      key={pref.code}
-                      className={cn(
-                        "flex flex-col gap-4 rounded-2xl border p-4 transition",
-                        active
-                          ? "border-primary/70 bg-primary/5 shadow-sm"
-                          : "border-border bg-background/90",
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{pref.title}</h4>
-                            {pref.isCustom && (
-                              <Badge
-                                variant="outline"
-                                className="border-primary/40 bg-primary/10 text-primary"
-                              >
-                                Eigenes Gewerk
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {pref.description || "Individuelle Aufgabe im Team"}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={active ? "default" : "outline"}
-                            onClick={() => togglePreference("crew", pref.code)}
-                          >
-                            {active ? "Ausgewählt" : "Wählen"}
-                          </Button>
-                          {pref.isCustom && (
-                            <button
-                              type="button"
-                              className="text-xs text-destructive transition hover:underline"
-                              onClick={() => removeCustomCrewPreference(pref.code)}
-                            >
-                              Entfernen
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {active && (
-                        <div className="space-y-2">
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            step={10}
-                            value={pref.weight}
-                            onChange={(event) =>
-                              updatePreferenceWeight(
-                                "crew",
-                                pref.code,
-                                event.currentTarget.valueAsNumber,
-                              )
-                            }
-                            onInput={(event) =>
-                              updatePreferenceWeight(
-                                "crew",
-                                pref.code,
-                                event.currentTarget.valueAsNumber,
-                              )
-                            }
-                            className="w-full accent-primary"
-                          />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Intensität</span>
-                            <span>{weightLabel}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+            <section className="space-y-2">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {getCrewSectionHeading(variant)}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {getCrewSectionDescription(variant)}
+                </p>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {form.crewPreferences.map((pref) => (
+                  <RolePreferenceLevelPicker
+                    key={pref.code}
+                    title={pref.title}
+                    description={pref.description || "Individuelle Aufgabe im Team"}
+                    badge={
+                      pref.isCustom ? (
+                        <Badge variant="outline" size="sm">
+                          Eigenes Gewerk
+                        </Badge>
+                      ) : null
+                    }
+                    action={
+                      pref.isCustom ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => removeCustomCrewPreference(pref.code)}
+                        >
+                          Entfernen
+                        </Button>
+                      ) : null
+                    }
+                    enabled={pref.enabled}
+                    weight={pref.weight}
+                    onChange={(weight) => setPreferenceWeight("crew", pref.code, weight)}
+                  />
+                ))}
               </div>
             </section>
           </CardContent>
@@ -2613,7 +2485,6 @@ export function OnboardingWizard({
                   {(isRegieVariant ? (["crew"] as const) : (["acting", "crew"] as const)).map(
                     (domain) => {
                       const entries = preferenceSummary[domain];
-                      const stats = preferenceStats[domain];
                       return (
                         <div
                           key={domain}
@@ -2622,40 +2493,30 @@ export function OnboardingWizard({
                           <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
                             <span>{getDomainLabel(domain, variant)}</span>
                             <span>
-                              {stats.count} Auswahl{stats.count === 1 ? "" : "en"}
+                              {entries.length} Auswahl{entries.length === 1 ? "" : "en"}
                             </span>
                           </div>
                           {entries.length ? (
-                            <div className="space-y-3">
+                            <ul className="space-y-1.5">
                               {entries.map((pref) => (
-                                <div key={pref.code} className="space-y-1.5">
-                                  <div className="flex items-center justify-between text-sm font-medium text-foreground">
-                                    <div className="flex items-center gap-2">
-                                      <span>{pref.title}</span>
-                                      {pref.isCustom && (
-                                        <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-                                          Eigenes Gewerk
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span>{pref.weight}%</span>
-                                  </div>
-                                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/40">
-                                    <div
-                                      className={cn(
-                                        "h-full rounded-full bg-gradient-to-r",
-                                        FOCUS_ACCENT_STYLES[pref.domain],
-                                      )}
-                                      style={{ width: `${pref.weight}%` }}
-                                    />
-                                  </div>
-                                  <p className="text-[11px] text-muted-foreground">{pref.label}</p>
-                                </div>
+                                <li
+                                  key={pref.code}
+                                  className="flex items-center justify-between gap-2 text-sm"
+                                >
+                                  <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
+                                    <span className="truncate">{pref.title}</span>
+                                    {pref.isCustom && (
+                                      <Badge variant="outline" size="sm">
+                                        Eigenes Gewerk
+                                      </Badge>
+                                    )}
+                                  </span>
+                                  <span className="shrink-0 text-xs text-muted-foreground">
+                                    {pref.label}
+                                  </span>
+                                </li>
                               ))}
-                              <p className="text-[11px] text-muted-foreground">
-                                Ø Intensität: {stats.average}%
-                              </p>
-                            </div>
+                            </ul>
                           ) : (
                             <p className="text-xs text-muted-foreground">Keine Angaben</p>
                           )}

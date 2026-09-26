@@ -153,6 +153,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     existingPreferences,
     existingPhotoConsent,
     existingUser,
+    existingInterests,
   ] = await Promise.all([
     prisma.memberOnboardingProfile.findUnique({
       where: { userId },
@@ -189,6 +190,11 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     prisma.user.findUnique({
       where: { id: userId },
       select: { dateOfBirth: true },
+    }),
+    prisma.userInterest.findMany({
+      where: { userId },
+      select: { interest: { select: { name: true } } },
+      orderBy: { interest: { name: "asc" } },
     }),
   ]);
 
@@ -237,6 +243,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         existingDietary={dietary}
         existingPreferences={preferences}
         existingPhotoConsent={existingPhotoConsent?.consentGiven ?? null}
+        existingInterests={existingInterests.map((entry) => entry.interest.name)}
         dateOfBirth={existingUser?.dateOfBirth ? existingUser.dateOfBirth.toISOString() : null}
         isLoggedIn={true}
         onboardingToken={token}

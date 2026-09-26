@@ -1,9 +1,12 @@
 "use client";
 
-import { HeartIcon } from "@/components/ui/action-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import {
+  RolePreferenceLevelHint,
+  RolePreferenceLevelPicker,
+} from "@/components/onboarding/role-preference-level-picker";
 import { FOCUS_BADGE_STYLES } from "@/config/category-colors";
 import { Card } from "@/components/ui/card";
 import { FormSaveBar } from "@/components/ui/form-save-bar";
@@ -16,37 +19,12 @@ import { cn } from "@/lib/utils";
 import { type OnboardingFocus } from "@prisma/client";
 import { saveRolePreferencesAction, type SaveRolePreferencesInput } from "../actions/onboarding";
 import {
-  DEFAULT_ROLE_PREFERENCE_WEIGHT,
   ONBOARDING_FOCUS_LABELS,
   RolePreferenceFormEntry,
   RolePreferenceFormState,
   buildPreferenceFormState,
   ProfileClientProps,
 } from "../profile-shared";
-
-type PreferenceLevel = "off" | "like" | "love";
-
-const PREFERENCE_LEVELS: ReadonlyArray<{ value: PreferenceLevel; label: string }> = [
-  { value: "off", label: "Nein" },
-  { value: "like", label: "Gern" },
-  { value: "love", label: "Sehr gern" },
-];
-
-const LEVEL_WEIGHTS: Record<Exclude<PreferenceLevel, "off">, number> = {
-  like: DEFAULT_ROLE_PREFERENCE_WEIGHT,
-  love: 90,
-};
-
-const NEXT_LEVEL: Record<PreferenceLevel, PreferenceLevel> = {
-  off: "like",
-  like: "love",
-  love: "off",
-};
-
-function getPreferenceLevel(entry: RolePreferenceFormEntry): PreferenceLevel {
-  if (!entry.enabled || entry.weight <= 0) return "off";
-  return entry.weight >= 75 ? "love" : "like";
-}
 
 type RolePreferencesSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
@@ -93,16 +71,13 @@ export function RolePreferencesSection({
     setPreferenceForm(initialPreferences);
   }, [initialPreferences]);
 
-  const setPreferenceLevel = useCallback(
-    (domain: "acting" | "crew", code: string, level: PreferenceLevel) => {
+  const setPreferenceWeight = useCallback(
+    (domain: "acting" | "crew", code: string, weight: number | null) => {
       setPreferenceForm((prev) => {
         const entries = domain === "acting" ? prev.acting : prev.crew;
         const nextEntries = entries.map((entry) => {
           if (entry.code !== code) return entry;
-          if (level === "off") return { ...entry, enabled: false };
-          const currentLevel = getPreferenceLevel(entry);
-          // Bestehende Gewichtung behalten, wenn die Stufe gleich bleibt.
-          const weight = currentLevel === level ? entry.weight : LEVEL_WEIGHTS[level];
+          if (weight === null) return { ...entry, enabled: false };
           return {
             ...entry,
             enabled: true,
@@ -206,63 +181,34 @@ export function RolePreferencesSection({
             Produktion.
           </p>
         ) : null}
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>Antippen wechselt:</span>
-          <span className="inline-flex items-center gap-1">
-            <HeartIcon className="h-3.5 w-3.5 text-primary" aria-hidden /> Gern
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <HeartIcon className="h-3.5 w-3.5 fill-current text-primary" aria-hidden /> Sehr gern
-          </span>
-          <span>→ wieder aus</span>
-        </p>
+        <RolePreferenceLevelHint />
         {groups.map((group) => {
-          const chosen = group.entries.filter((pref) => getPreferenceLevel(pref) !== "off").length;
+          const chosen = group.entries.filter((pref) => pref.enabled && pref.weight > 0).length;
           return (
             <section key={group.domain} className="space-y-2">
               <h4 className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                 {group.title}
                 {chosen ? <span className="text-primary">{chosen} gewählt</span> : null}
               </h4>
-              <ul className="flex flex-wrap gap-2">
-                {group.entries.map((pref) => {
-                  const level = getPreferenceLevel(pref);
-                  const next = NEXT_LEVEL[level];
-                  const levelLabel = PREFERENCE_LEVELS.find((o) => o.value === level)?.label;
-                  return (
-                    <li key={pref.code}>
-                      <button
-                        type="button"
-                        title={pref.description ?? undefined}
-                        aria-label={`${pref.title}: ${levelLabel}`}
-                        aria-pressed={level !== "off"}
-                        onClick={() => setPreferenceLevel(group.domain, pref.code, next)}
-                        className={cn(
-                          "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition active:scale-95",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          level === "off" &&
-                            "border-border/70 bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground",
-                          level === "like" && "border-primary/50 bg-primary/12 text-foreground",
-                          level === "love" &&
-                            "border-primary bg-primary text-primary-foreground shadow-sm",
-                        )}
-                      >
-                        {level !== "off" ? (
-                          <HeartIcon
-                            className={cn(
-                              "h-4 w-4",
-                              level === "love" ? "fill-current" : "text-primary",
-                            )}
-                            aria-hidden
-                          />
-                        ) : null}
-                        {pref.title}
-                        {pref.isCustom ? <span className="text-xs opacity-70">(eigen)</span> : null}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="grid gap-2 xl:grid-cols-2">
+                {group.entries.map((pref) => (
+                  <RolePreferenceLevelPicker
+                    key={pref.code}
+                    title={pref.title}
+                    description={pref.description}
+                    badge={
+                      pref.isCustom ? (
+                        <Badge variant="outline" size="sm">
+                          Eigenes Gewerk
+                        </Badge>
+                      ) : null
+                    }
+                    enabled={pref.enabled}
+                    weight={pref.weight}
+                    onChange={(weight) => setPreferenceWeight(group.domain, pref.code, weight)}
+                  />
+                ))}
+              </div>
             </section>
           );
         })}

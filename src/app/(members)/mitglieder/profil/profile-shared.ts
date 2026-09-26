@@ -452,15 +452,6 @@ export const onboardingSchema = z.object({
     ),
 });
 
-export const interestSchema = z
-  .string()
-  .trim()
-  .min(2, "Interesse ist zu kurz")
-  .max(80, "Interesse ist zu lang");
-
-export const INTEREST_SEPARATOR_PATTERN = /[;,\n]/;
-export const INTEREST_SEPARATOR_SPLIT_PATTERN = /[,;\n]+/;
-
 export function formatDate(value: string | null | undefined) {
   if (!value) return null;
   const parsed = new Date(value);

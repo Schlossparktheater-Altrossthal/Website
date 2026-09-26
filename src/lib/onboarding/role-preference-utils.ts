@@ -1,22 +1,33 @@
 import type { OnboardingFocus } from "@prisma/client";
 
-export const ROLE_PREFERENCE_WEIGHT_LABELS: ReadonlyArray<{
-  threshold: number;
-  label: string;
-}> = [
-  { threshold: 0, label: "Nur mal reinschauen" },
-  { threshold: 25, label: "Locker interessiert" },
-  { threshold: 50, label: "Motiviert" },
-  { threshold: 75, label: "Sehr engagiert" },
-  { threshold: 90, label: "Herzensprojekt" },
-];
+/**
+ * Stufen für Rollen- und Gewerkewünsche. Jeder Bereich wird einzeln bewertet – die Gewichte
+ * sind kein Budget, das sich auf 100 summieren muss. Gespeichert wird weiterhin `weight` (0–100).
+ */
+export const ROLE_PREFERENCE_LEVELS = [
+  { value: "like", label: "Gern", weight: 50 },
+  { value: "keen", label: "Sehr gern", weight: 75 },
+  { value: "love", label: "Unbedingt", weight: 100 },
+] as const;
+
+export type RolePreferenceLevel = (typeof ROLE_PREFERENCE_LEVELS)[number]["value"];
+
+/** Ordnet ein gespeichertes Gewicht (auch alte Slider-Werte) der nächstliegenden Stufe zu. */
+export function getRolePreferenceLevel(weight: number): RolePreferenceLevel | null {
+  const normalized = normalizeRolePreferenceWeight(weight);
+  if (normalized <= 0) return null;
+  if (normalized < 63) return "like";
+  if (normalized < 88) return "keen";
+  return "love";
+}
+
+export function getRolePreferenceLevelWeight(level: RolePreferenceLevel): number {
+  return ROLE_PREFERENCE_LEVELS.find((entry) => entry.value === level)?.weight ?? 50;
+}
 
 export function getRolePreferenceWeightLabel(weight: number): string {
-  const normalized = normalizeRolePreferenceWeight(weight);
-  const match = [...ROLE_PREFERENCE_WEIGHT_LABELS]
-    .reverse()
-    .find((entry) => normalized >= entry.threshold);
-  return match?.label ?? "Interesse";
+  const level = getRolePreferenceLevel(weight);
+  return ROLE_PREFERENCE_LEVELS.find((entry) => entry.value === level)?.label ?? "Kein Interesse";
 }
 
 export function normalizeRolePreferenceWeight(weight: number): number {
