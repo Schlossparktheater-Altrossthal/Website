@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/members/page-header";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { findPossibleDuplicates } from "@/lib/member-duplicates";
@@ -19,10 +20,8 @@ export default async function AufbewahrungPage() {
   const session = await requireAuth();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
     return (
-      <div className="space-y-6">
-        <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
-          Kein Zugriff auf die Mitgliederverwaltung.
-        </div>
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive-foreground">
+        Kein Zugriff auf die Mitgliederverwaltung.
       </div>
     );
   }
@@ -46,23 +45,22 @@ export default async function AufbewahrungPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-foreground">
-            Aufbewahrung &amp; Löschfristen
-          </h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Fristen ab dem Ende der letzten Produktion einer Person: Ernährung und Allergien{" "}
-            {RETENTION_YEARS.dietary} Jahre, Fotoerlaubnisse {RETENTION_YEARS.photoConsent} Jahre
-            nach Ende der jeweiligen Produktion, Konten {RETENTION_YEARS.account} Jahre. Wer in
-            einer geplanten oder aktiven Produktion ist, wird nie aufgeführt. Nichts wird
-            automatisch gelöscht.
-          </p>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/mitglieder/mitgliederverwaltung">Zur Mitgliederverwaltung</Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="Aufbewahrung & Löschfristen"
+        description={`Fristen ab dem Ende der letzten Produktion einer Person: Ernährung und Allergien ${RETENTION_YEARS.dietary} Jahre, Fotoerlaubnisse ${RETENTION_YEARS.photoConsent} Jahre nach Ende der jeweiligen Produktion, Konten ${RETENTION_YEARS.account} Jahre. Wer in einer geplanten oder aktiven Produktion ist, wird nie aufgeführt. Nichts wird automatisch gelöscht.`}
+        breadcrumbs={[
+          {
+            id: "mitgliederverwaltung",
+            label: "Mitgliederverwaltung",
+            href: "/mitglieder/mitgliederverwaltung",
+          },
+        ]}
+        actions={
+          <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
+            <Link href="/mitglieder/mitgliederverwaltung">Zur Mitgliederverwaltung</Link>
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>

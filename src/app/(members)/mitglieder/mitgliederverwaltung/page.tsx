@@ -15,13 +15,16 @@ import { AUTHENTIK_PROVIDER_ID } from "@/lib/authentik/config";
 import { readSeasonResetSettings, resolveProtectedRoles } from "@/lib/season-reset/settings";
 import { getActiveProduction } from "@/lib/active-production";
 import { UrlTabs, type UrlTab } from "@/components/ui/url-tabs";
+import { PageHeader } from "@/components/members/page-header";
 
 export default async function MemberManagementPage() {
   const session = await requireAuth();
   const allowed = await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE");
   if (!allowed) {
     return (
-      <div className="text-sm text-destructive">Kein Zugriff auf die Mitgliederverwaltung</div>
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm text-destructive-foreground">
+        Kein Zugriff auf die Mitgliederverwaltung
+      </div>
     );
   }
 
@@ -138,8 +141,8 @@ export default async function MemberManagementPage() {
   ];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Mitglieder</h1>
+    <div className="space-y-6">
+      <PageHeader title="Mitglieder" />
       <UrlTabs tabs={tabs} />
     </div>
   );
