@@ -65,6 +65,49 @@ Für Screenshots akzeptiert `--viewport` die Presets `mobile`, `tablet-portrait`
 `tablet-small` (768×1024), `tablet-landscape`, `desktop` sowie Komma-Listen und `all`.
 `--mobile` bleibt als Alias für `mobile` erhalten.
 
+## Interaktiver UI-Check (`pnpm ui:check`)
+
+`scripts/ui-check.mjs` öffnet eine Seite, führt eine Klickfolge aus, misst horizontales Überlaufen
+und legt Screenshots plus `report.json` ab. Gedacht für Prüfungen, bei denen nicht nur ein
+Screenshot gebraucht wird, sondern der Zustand _nach_ einer Interaktion.
+
+```bash
+# Szenario als Datei
+pnpm ui:check /mitglieder/datenportal --steps-file test-results/szenario.json --viewport all
+# Einzelne Schritte direkt
+pnpm ui:check /mitglieder/proben --viewport mobile --scheme dark --steps '[{"action":"click","target":"button"}]'
+```
+
+Schritte sind Objekte mit `action` und optional `target`, `value`, `name`, `ms`, `fullPage`:
+
+| `action`                                                                                       | Wirkung                                                                                     |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `goto`, `click`, `dblclick`, `fill`, `press`, `select`, `check`, `uncheck`, `hover`, `waitFor` | Playwright-Aktion auf `target`                                                              |
+| `wait`                                                                                         | Wartezeit `ms` (Standard 500)                                                               |
+| `read`                                                                                         | Textinhalt von `target` – mit `attribute` stattdessen das Attribut – im Report unter `name` |
+| `count`                                                                                        | Trefferzahl von `target`, im Report unter `name` abgelegt                                   |
+| `screenshot`                                                                                   | Screenshot ohne Zustandsänderung                                                            |
+
+Nach jeder verändernden Aktion (Klick, Eingabe, Auswahl) folgen automatisch ein Screenshot und eine
+Überlaufmessung. `--no-shots` schaltet die Screenshots je Schritt ab, `--allow-findings` erzwingt
+Exit-Code 0 trotz Befunden. Ausgabe landet in `test-results/ui-check/<Zeitstempel>` (gitignored).
+Befunde sind: fehlgeschlagene Schritte, `pageerror`/Konsolenfehler, Weiterleitung zum Login und
+horizontaler Überlauf.
+
+Die Überlaufmessung meldet nur Elemente, die nicht in einem inneren Scroll-Container liegen –
+breite Tabellen und Kalender dürfen laut `AGENTS.md` innerhalb ihrer Karte scrollen.
+
+### Warum dieser Check headless läuft
+
+Playwright prüft vor jeder Aktion, ob das Ziel über zwei aufeinanderfolgende Animation-Frames
+stabil liegt. Im versteckten Tab des integrierten Editor-Browsers
+(`document.visibilityState === "hidden"`) feuert `requestAnimationFrame` gar nicht: normale Klicks
+laufen in den Timeout (`element is not stable`), und Screenshots sind nach einem Viewport-Wechsel
+falsch skaliert. Headless läuft rAF normal, deshalb funktionieren hier Klicks ohne `force`.
+
+Gemeinsame Bausteine (Viewport-Presets, Test-Login, Warten auf Skeletons) liegen in
+`scripts/lib/e2e-session.mjs` und werden von `e2e-screenshots.mjs` und `ui-check.mjs` genutzt.
+
 ## Playwright-MCP (nur lokal)
 
 Für interaktives Debugging durch Claude Code: den Playwright-MCP nur im lokalen

@@ -74,7 +74,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Seiten mit vielen Unterbereichen (z. B. Profil): statt Tabs eine Bereichsliste mit Drill-down per `?bereich=` – mobil erst die Liste, dann der Bereich mit „‹ Zurück", ab `lg` Liste als linke Navigation. So funktionieren Browser-Zurück und Deep-Links (Beispiel: `src/app/(members)/mitglieder/profil`).
 - Header-Navigation: unter `md` (768px) `Sheet`, ab `md` horizontale Navigation.
 - Sidebar: bis 1023px `Sheet`, ab 1024px feste Sidebar (JS-Breakpoint `SIDEBAR_MOBILE_BREAKPOINT` in `src/components/ui/sidebar.tsx`).
-- **Responsive-Verifikation:** Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in den Playwright-Projekten `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768). UI-Änderungen zusätzlich visuell per Screenshot in Handy/Tablet/Desktop, hell+dunkel, absichern: `pnpm e2e:screenshots --viewport all` (Screenshots ins Review mitliefern).
+- **Responsive-Verifikation:** Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in den Playwright-Projekten `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768). UI-Änderungen zusätzlich visuell per Screenshot in Handy/Tablet/Desktop, hell+dunkel, absichern: `pnpm e2e:screenshots --viewport all` (Screenshots ins Review mitliefern). Abläufe **nach einer Interaktion** prüft `pnpm ui:check <route> --steps-file <datei>` (Klickfolge, Überlaufmessung, Screenshots, `report.json` in `test-results/ui-check/`, Details in `docs/e2e-tests.md`). Beide Skripte laufen headless – nur dort feuert `requestAnimationFrame`, im versteckten Tab des integrierten Browsers scheitern normale Klicks und Screenshots.
 
 ## Tests, Qualitätssicherung & Reviews
 
@@ -307,3 +307,13 @@ Rein mechanische Findings (tote Zuweisung, triviale Bedingung, nicht geschlossen
 - Sicherheit und Blocker immer in v0.1
 - Ein Milestone wird geschlossen sobald alle Issues darin Done sind
 - Neue Milestones werden beim nächsten Review-Zyklus angelegt
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
