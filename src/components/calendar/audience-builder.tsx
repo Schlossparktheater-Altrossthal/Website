@@ -93,6 +93,7 @@ export function AudienceBuilder({
   availability,
   conflicts = {},
   declined = {},
+  hideSceneRules = false,
 }: {
   context: AudienceContext;
   value: AudienceValue;
@@ -103,6 +104,8 @@ export function AudienceBuilder({
   conflicts?: Partial<Record<string, string>>;
   /** Abgesagt (Person → Begründung). */
   declined?: Record<string, string | null>;
+  /** Szenen werden in einer eigenen Karte gepflegt (Proben). */
+  hideSceneRules?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const resolved = useMemo(
@@ -227,14 +230,16 @@ export function AudienceBuilder({
             }))}
             onSelect={(id) => addRule({ type: "CHARACTER", targetId: id, level: "REQUIRED" })}
           />
-          <AddSelect
-            placeholder="+ Szene"
-            options={unused("SCENE", context.scenes).map((entry) => ({
-              id: entry.id,
-              label: entry.label,
-            }))}
-            onSelect={(id) => addRule({ type: "SCENE", targetId: id, level: "REQUIRED" })}
-          />
+          {!hideSceneRules ? (
+            <AddSelect
+              placeholder="+ Szene"
+              options={unused("SCENE", context.scenes).map((entry) => ({
+                id: entry.id,
+                label: entry.label,
+              }))}
+              onSelect={(id) => addRule({ type: "SCENE", targetId: id, level: "REQUIRED" })}
+            />
+          ) : null}
           <AddSelect
             placeholder="+ Person"
             options={context.members
@@ -244,39 +249,41 @@ export function AudienceBuilder({
           />
         </div>
 
-        {value.rules.length ? (
+        {value.rules.some((rule) => !hideSceneRules || rule.type !== "SCENE") ? (
           <ul className="space-y-2">
-            {value.rules.map((rule, index) => (
-              <li
-                key={`${rule.type}:${rule.targetId ?? ""}`}
-                className="flex flex-col gap-2 rounded-lg bg-muted p-3 sm:flex-row sm:items-center"
-              >
-                <span className="min-w-0 flex-1 text-sm font-medium">
-                  {describeAudienceRule(rule, context)}{" "}
-                  <span className="font-normal text-muted-foreground">
-                    ({countAudienceRule(rule, context)})
+            {value.rules.map((rule, index) =>
+              hideSceneRules && rule.type === "SCENE" ? null : (
+                <li
+                  key={`${rule.type}:${rule.targetId ?? ""}`}
+                  className="flex flex-col gap-2 rounded-lg bg-muted p-3 sm:flex-row sm:items-center"
+                >
+                  <span className="min-w-0 flex-1 text-sm font-medium">
+                    {describeAudienceRule(rule, context)}{" "}
+                    <span className="font-normal text-muted-foreground">
+                      ({countAudienceRule(rule, context)})
+                    </span>
                   </span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <SegmentedControl
-                    value={rule.level}
-                    onValueChange={(level) => updateRule(index, level)}
-                    options={LEVEL_OPTIONS}
-                    aria-label={`Verbindlichkeit für ${describeAudienceRule(rule, context)}`}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 w-9 p-0"
-                    onClick={() => removeRule(index)}
-                    aria-label={`${describeAudienceRule(rule, context)} entfernen`}
-                  >
-                    <CloseIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-              </li>
-            ))}
+                  <div className="flex items-center gap-2">
+                    <SegmentedControl
+                      value={rule.level}
+                      onValueChange={(level) => updateRule(index, level)}
+                      options={LEVEL_OPTIONS}
+                      aria-label={`Verbindlichkeit für ${describeAudienceRule(rule, context)}`}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      onClick={() => removeRule(index)}
+                      aria-label={`${describeAudienceRule(rule, context)} entfernen`}
+                    >
+                      <CloseIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </li>
+              ),
+            )}
           </ul>
         ) : null}
       </div>

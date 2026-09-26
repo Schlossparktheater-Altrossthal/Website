@@ -59,7 +59,7 @@ export type AudienceContext = {
   members: { id: string; name: string }[];
   castings: { characterId: string; userId: string; type: CharacterCastingType }[];
   characters: { id: string; name: string }[];
-  scenes: { id: string; label: string; characterIds: string[] }[];
+  scenes: { id: string; label: string; characterIds: string[]; durationMinutes?: number | null }[];
   departments: { id: string; name: string; memberIds: string[] }[];
 };
 

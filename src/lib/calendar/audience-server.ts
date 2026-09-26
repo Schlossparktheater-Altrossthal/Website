@@ -84,6 +84,7 @@ export async function loadAudienceContext(showId: string | null): Promise<Audien
             identifier: true,
             sequence: true,
             title: true,
+            durationMinutes: true,
             characters: { select: { characterId: true } },
           },
         })
@@ -117,6 +118,7 @@ export async function loadAudienceContext(showId: string | null): Promise<Audien
       id: scene.id,
       label: `Sz. ${scene.identifier || scene.sequence}${scene.title ? ` ${scene.title}` : ""}`,
       characterIds: scene.characters.map((entry) => entry.characterId),
+      durationMinutes: scene.durationMinutes,
     })),
     departments: departments.map((department) => ({
       id: department.id,

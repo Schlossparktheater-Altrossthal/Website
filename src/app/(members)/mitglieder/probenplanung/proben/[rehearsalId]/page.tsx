@@ -10,6 +10,7 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
 import { loadAudienceContext, readEventAudience } from "@/lib/calendar/audience-server";
 import { readDayAvailability } from "@/lib/calendar/day-availability";
+import { loadSceneStats, readEventSchedule } from "@/lib/calendar/scene-schedule-server";
 
 export default async function RehearsalEditorPage({
   params,
@@ -54,10 +55,12 @@ export default async function RehearsalEditorPage({
   // Drafts use updateRehearsalDraftAction, published use updateRehearsalAction
 
   const dateKey = formatIsoDateInTimeZone(rehearsal.start.toISOString(), DEFAULT_TIME_ZONE);
-  const [context, audience, availability] = await Promise.all([
+  const [context, audience, availability, schedule, sceneStats] = await Promise.all([
     loadAudienceContext(rehearsal.showId),
     readEventAudience(rehearsal.id),
     readDayAvailability(dateKey),
+    readEventSchedule(rehearsal.id),
+    loadSceneStats(rehearsal.showId),
   ]);
 
   const breadcrumbs = [
@@ -92,6 +95,8 @@ export default async function RehearsalEditorPage({
         invited={audience.invited}
         initialAvailability={availability}
         declined={audience.declined}
+        schedule={schedule}
+        sceneStats={sceneStats}
       />
     </div>
   );

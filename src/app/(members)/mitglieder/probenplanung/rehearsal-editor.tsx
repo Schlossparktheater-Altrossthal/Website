@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { AudienceBuilder, type AudienceValue } from "@/components/calendar/audience-builder";
+import {
+  SceneScheduleEditor,
+  type SceneScheduleValue,
+  type SceneStatsView,
+} from "@/components/calendar/scene-schedule-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateInput } from "@/components/ui/date-input";
@@ -48,6 +53,8 @@ type RehearsalEditorProps = {
   invited: { userId: string; name: string; level: "REQUIRED" | "OPTIONAL" }[];
   initialAvailability: DayAvailability;
   declined: Record<string, string | null>;
+  schedule: SceneScheduleValue;
+  sceneStats: SceneStatsView;
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -59,6 +66,8 @@ export function RehearsalEditor({
   invited,
   initialAvailability,
   declined,
+  schedule: initialSchedule,
+  sceneStats,
 }: RehearsalEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
@@ -76,6 +85,19 @@ export function RehearsalEditor({
   // Abweichungen übernommen hat – sonst keine stillen Einladungen.
   const [audienceTouched, setAudienceTouched] = useState(isDraft);
   const [availability, setAvailability] = useState<DayAvailability>(initialAvailability);
+  const [schedule, setSchedule] = useState<SceneScheduleValue>(initialSchedule);
+  // Nur vollständige Uhrzeiten speichern; halb ausgefüllte Felder blockieren sonst das Speichern.
+  const scheduleToSave = useMemo<SceneScheduleValue>(
+    () => ({
+      mode: schedule.mode,
+      times: Object.fromEntries(
+        Object.entries(schedule.times).filter(([, time]) =>
+          [time.start, time.end].every((value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value)),
+        ),
+      ),
+    }),
+    [schedule],
+  );
   const [conflicts, setConflicts] = useState<Partial<Record<string, string>>>({});
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -83,13 +105,16 @@ export function RehearsalEditor({
   const [isPublishing, startPublish] = useTransition();
   const [isDiscarding, startDiscard] = useTransition();
 
-  const invitedCount = useMemo(
+  const invitedIds = useMemo(
     () =>
-      resolveAudience(audience.rules, audience.overrides, context).filter(
-        (entry) => !entry.excluded,
-      ).length,
+      new Set(
+        resolveAudience(audience.rules, audience.overrides, context)
+          .filter((entry) => !entry.excluded)
+          .map((entry) => entry.userId),
+      ),
     [audience, context],
   );
+  const invitedCount = invitedIds.size;
   const drift = useMemo(
     () =>
       isDraft || audienceTouched
@@ -105,6 +130,35 @@ export function RehearsalEditor({
     setAudience(next);
     setAudienceTouched(true);
   }, []);
+
+  const sceneIds = useMemo(
+    () =>
+      audience.rules.flatMap((rule) =>
+        rule.type === "SCENE" && rule.targetId ? [rule.targetId] : [],
+      ),
+    [audience.rules],
+  );
+  const changeScenes = useCallback(
+    (nextSceneIds: string[]) => {
+      const levels = new Map(
+        audience.rules
+          .filter((rule) => rule.type === "SCENE")
+          .map((rule) => [rule.targetId, rule.level]),
+      );
+      changeAudience({
+        ...audience,
+        rules: [
+          ...audience.rules.filter((rule) => rule.type !== "SCENE"),
+          ...nextSceneIds.map((targetId) => ({
+            type: "SCENE" as const,
+            targetId,
+            level: levels.get(targetId) ?? ("REQUIRED" as const),
+          })),
+        ],
+      });
+    },
+    [audience, changeAudience],
+  );
 
   const fetchDayChecks = useCallback(
     async (dateValue: string, timeValue: string, endValue: string) => {
@@ -170,6 +224,7 @@ export function RehearsalEditor({
         location,
         description,
         ...(audienceTouched ? { audience } : {}),
+        schedule: scheduleToSave,
       };
 
       updateAction(actionParams)
@@ -204,6 +259,7 @@ export function RehearsalEditor({
     location,
     audience,
     audienceTouched,
+    scheduleToSave,
     rehearsal.id,
     isDraft,
   ]);
@@ -220,6 +276,7 @@ export function RehearsalEditor({
         location,
         description,
         audience,
+        schedule: scheduleToSave,
       })
         .then((result) => {
           if (result?.success && result.id) {
@@ -367,6 +424,29 @@ export function RehearsalEditor({
         </CardContent>
       </Card>
 
+      {context.scenes.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Szenen & Ablauf</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Welche Szenen geprobt werden – mit Blick darauf, was schon wie oft dran war.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <SceneScheduleEditor
+              context={context}
+              sceneIds={sceneIds}
+              onScenesChange={changeScenes}
+              schedule={schedule}
+              onScheduleChange={setSchedule}
+              stats={sceneStats}
+              eventStartTime={time}
+              invitedIds={invitedIds}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Wer ist dabei?</CardTitle>
@@ -406,6 +486,7 @@ export function RehearsalEditor({
             availability={availability}
             conflicts={conflicts}
             declined={declined}
+            hideSceneRules={context.scenes.length > 0}
           />
         </CardContent>
       </Card>

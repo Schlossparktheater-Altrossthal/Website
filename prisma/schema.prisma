@@ -655,6 +655,7 @@ model Scene {
   show            Show                 @relation(fields: [showId], references: [id], onDelete: Cascade)
   characters      SceneCharacter[]
   breakdownItems  SceneBreakdownItem[]
+  rehearsals      EventScene[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([showId, sequence])
@@ -920,6 +921,8 @@ model CalendarEvent {
   description      String?
   /// Frist für Zu-/Absagen.
   responseDeadline DateTime?
+  /// Proben: alle zur Terminzeit oder gestaffelt mit Uhrzeit pro Szene.
+  scheduleMode     EventScheduleMode   @default(TOGETHER)
   showId           String?
   /// Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab.
   departmentId     String?
@@ -931,6 +934,7 @@ model CalendarEvent {
   createdBy        User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
   participants     EventParticipant[]
   audienceRules    EventAudienceRule[]
+  scenes           EventScene[]
   responseLogs     EventResponseLog[]
   notifications    Notification[]
 
@@ -962,6 +966,34 @@ enum AudienceRuleType {
   /// Besetzung aller Rollen der Szene
   SCENE
   USER
+}
+
+enum EventScheduleMode {
+  TOGETHER
+  STAGGERED
+}
+
+enum SceneRehearsalOutcome {
+  DONE
+  PARTIAL
+  SKIPPED
+}
+
+/// Szene einer Probe in Reihenfolge, optional mit Uhrzeit; nach der Probe mit Ergebnis.
+model EventScene {
+  id       String                 @id @default(cuid())
+  eventId  String
+  sceneId  String
+  order    Int                    @default(0)
+  startsAt DateTime?
+  endsAt   DateTime?
+  outcome  SceneRehearsalOutcome?
+  note     String?
+  event    CalendarEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scene    Scene                  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, sceneId])
+  @@index([sceneId])
 }
 
 enum ParticipantOverride {
@@ -996,6 +1028,11 @@ model EventParticipant {
   override      ParticipantOverride?
   /// Von Hand gesetzte Verbindlichkeit (sonst aus den Regeln).
   levelOverride ParticipationLevel?
+  /// Gestaffelte Probe: persönliches Zeitfenster aus den eigenen Szenen.
+  personalStart DateTime?
+  personalEnd   DateTime?
+  /// Anwesenheit laut Nachbereitung (null = nicht erfasst).
+  attended      Boolean?
   response      AttendanceStatus?
   responseNote  String?
   respondedAt   DateTime?

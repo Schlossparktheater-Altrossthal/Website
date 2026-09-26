@@ -15,8 +15,11 @@ import {
   parseStart,
   publishSchema,
   REHEARSAL_TIME_ZONE,
+  readEventSchedule,
   sanitizeDescription,
+  syncRehearsalSchedule,
 } from "@/lib/probenplanung/actions-helpers";
+import type { ScheduleInput } from "@/lib/calendar/scene-schedule-server";
 import {
   loadAudienceContext,
   readEventAudience,
@@ -100,6 +103,7 @@ export async function updateRehearsalDraftAction(input: {
   location?: string;
   description?: string;
   audience?: AudienceInput;
+  schedule?: ScheduleInput;
 }) {
   const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
@@ -111,8 +115,11 @@ export async function updateRehearsalDraftAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, audience } = parsed.data;
-  const context = audience ? await loadAudienceContext(auth.showId) : null;
+  const { id, title, date, time, endTime, location, description, audience, schedule } = parsed.data;
+  const [context, storedSchedule] = await Promise.all([
+    loadAudienceContext(auth.showId),
+    readEventSchedule(id),
+  ]);
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -166,13 +173,21 @@ export async function updateRehearsalDraftAction(input: {
         updateData.end = nextEnd;
       }
 
-      if (audience && context) {
+      if (audience) {
         await saveEventAudience(tx, id, audience, context);
       }
 
       if (Object.keys(updateData).length > 0) {
         await tx.calendarEvent.update({ where: { id }, data: updateData });
       }
+      await syncRehearsalSchedule(tx, {
+        eventId: id,
+        start: nextStart,
+        audience,
+        schedule,
+        storedSchedule,
+        context,
+      });
     });
 
     return { success: true as const };
@@ -209,6 +224,7 @@ export async function publishRehearsalAction(input: {
   location?: string;
   description?: string;
   audience?: AudienceInput;
+  schedule?: ScheduleInput;
 }) {
   const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
@@ -220,10 +236,11 @@ export async function publishRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, audience } = parsed.data;
-  const [context, stored] = await Promise.all([
+  const { id, title, date, time, endTime, location, description, audience, schedule } = parsed.data;
+  const [context, stored, storedSchedule] = await Promise.all([
     loadAudienceContext(auth.showId),
     audience ? null : readEventAudience(id),
+    readEventSchedule(id),
   ]);
   const currentAudience = audience ?? {
     rules: stored?.rules ?? [],
@@ -259,6 +276,14 @@ export async function publishRehearsalAction(input: {
       if (!syncedInvitees.length) {
         throw new Error("no-invitees");
       }
+      await syncRehearsalSchedule(tx, {
+        eventId: id,
+        start,
+        audience: currentAudience,
+        schedule,
+        storedSchedule,
+        context,
+      });
       const formatter = new Intl.DateTimeFormat("de-DE", {
         dateStyle: "full",
         timeStyle: "short",

@@ -20,9 +20,12 @@ import {
   parseEnd,
   parseStart,
   REHEARSAL_TIME_ZONE,
+  readEventSchedule,
   sanitizeDescription,
+  syncRehearsalSchedule,
   updateSchema,
 } from "@/lib/probenplanung/actions-helpers";
+import type { ScheduleInput } from "@/lib/calendar/scene-schedule-server";
 
 export async function updateRehearsalAction(input: {
   id: string;
@@ -33,6 +36,7 @@ export async function updateRehearsalAction(input: {
   location?: string;
   description?: string;
   audience?: AudienceInput;
+  schedule?: ScheduleInput;
 }) {
   const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
@@ -44,8 +48,11 @@ export async function updateRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, audience } = parsed.data;
-  const context = audience ? await loadAudienceContext(auth.showId) : null;
+  const { id, title, date, time, endTime, location, description, audience, schedule } = parsed.data;
+  const [context, storedSchedule] = await Promise.all([
+    loadAudienceContext(auth.showId),
+    readEventSchedule(id),
+  ]);
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -88,7 +95,7 @@ export async function updateRehearsalAction(input: {
       let targetInvitees: string[];
       let addedIds: string[] = [];
       let removedIds: string[] = [];
-      if (audience && context) {
+      if (audience) {
         const saved = await saveEventAudience(tx, id, audience, context);
         targetInvitees = saved.invitedIds;
         addedIds = saved.addedIds;
@@ -107,6 +114,14 @@ export async function updateRehearsalAction(input: {
           end: true,
           location: true,
         },
+      });
+      await syncRehearsalSchedule(tx, {
+        eventId: id,
+        start,
+        audience,
+        schedule,
+        storedSchedule,
+        context,
       });
 
       const descriptionChanged =

@@ -6,8 +6,19 @@ import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getActiveProductionId } from "@/lib/active-production";
-import { audienceInputSchema } from "@/lib/calendar/audience-server";
-import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
+import { audienceInputSchema, type AudienceInput } from "@/lib/calendar/audience-server";
+import type { AudienceContext } from "@/lib/calendar/audience";
+import {
+  readEventSchedule,
+  saveEventSchedule,
+  scheduleInputSchema,
+  type ScheduleInput,
+} from "@/lib/calendar/scene-schedule-server";
+import {
+  DEFAULT_TIME_ZONE,
+  formatIsoDateInTimeZone,
+  parseDateTimeInTimeZone,
+} from "@/lib/date-time";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^\d{2}:\d{2}$/;
@@ -21,6 +32,7 @@ export const baseSchema = z.object({
   location: z.string().trim().min(2, "Ort ist zu kurz").max(120, "Ort ist zu lang").optional(),
   description: z.string().max(10_000).optional(),
   audience: audienceInputSchema.optional(),
+  schedule: scheduleInputSchema.optional(),
 });
 
 export const draftUpdateSchema = baseSchema.partial().extend({ id: z.string().min(1) });
@@ -123,3 +135,44 @@ export async function fetchInviteeIds(tx: Prisma.TransactionClient, rehearsalId:
   });
   return entries.map((entry) => entry.userId);
 }
+
+/**
+ * Szenen der Probe mit den Szenen-Regeln abgleichen und den Ablauf speichern – nach jeder
+ * Änderung an Zielgruppe, Zeitplan oder Datum.
+ */
+export async function syncRehearsalSchedule(
+  tx: Prisma.TransactionClient,
+  {
+    eventId,
+    start,
+    audience,
+    schedule,
+    storedSchedule,
+    context,
+  }: {
+    eventId: string;
+    start: Date;
+    audience?: AudienceInput;
+    schedule?: ScheduleInput;
+    storedSchedule: ScheduleInput;
+    context: AudienceContext;
+  },
+) {
+  const sceneRules = audience
+    ? audience.rules.filter((rule) => rule.type === "SCENE")
+    : await tx.eventAudienceRule.findMany({
+        where: { eventId, type: "SCENE" },
+        orderBy: { sortOrder: "asc" },
+        select: { targetId: true },
+      });
+  await saveEventSchedule(tx, {
+    eventId,
+    sceneIds: sceneRules.flatMap((rule) => (rule.targetId ? [rule.targetId] : [])),
+    schedule: schedule ?? storedSchedule,
+    dateKey: formatIsoDateInTimeZone(start.toISOString(), REHEARSAL_TIME_ZONE),
+    eventStart: start,
+    context,
+  });
+}
+
+export { readEventSchedule };
