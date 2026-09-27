@@ -13,16 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ChoiceMenu } from "@/components/ui/choice-menu";
 import {
   countAudienceRule,
   describeAudienceRule,
@@ -62,30 +53,6 @@ function withOverride(
   const next = { ...current, ...patch };
   const rest = overrides.filter((entry) => entry.userId !== userId);
   return next.override || next.level ? [...rest, next] : rest;
-}
-
-function AddSubmenu({
-  label,
-  options,
-  onSelect,
-}: {
-  label: string;
-  options: { id: string; label: string }[];
-  onSelect: (id: string) => void;
-}) {
-  if (!options.length) return null;
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>{label}</DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
-        {options.map((option) => (
-          <DropdownMenuItem key={option.id} onSelect={() => onSelect(option.id)}>
-            {option.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  );
 }
 
 const NO_BLOCKS: readonly AudienceBlock[] = [];
@@ -202,8 +169,10 @@ export function AudienceBuilder({
       </p>
 
       <div className="space-y-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <ChoiceMenu
+          title="Einladen"
+          align="start"
+          trigger={
             <Button
               type="button"
               variant="outline"
@@ -213,52 +182,64 @@ export function AudienceBuilder({
               <PlusIcon className="h-4 w-4" aria-hidden />
               Einladen …
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-60">
-            {groupOptions.map((option) => (
-              <DropdownMenuItem
-                key={option.type}
-                onSelect={() => addRule({ type: option.type, targetId: null, level: "REQUIRED" })}
-              >
-                {option.label}
-              </DropdownMenuItem>
-            ))}
-            {groupOptions.length ? <DropdownMenuSeparator /> : null}
-            <AddSubmenu
-              label="Gewerk"
-              options={unused("DEPARTMENT", context.departments).map((entry) => ({
+          }
+          entries={[
+            ...groupOptions.map((option) => ({
+              id: option.type,
+              label: option.label,
+              onSelect: () => addRule({ type: option.type, targetId: null, level: "REQUIRED" }),
+            })),
+            {
+              id: "DEPARTMENT",
+              label: "Gewerk",
+              separatorBefore: groupOptions.length > 0,
+              items: unused("DEPARTMENT", context.departments).map((entry) => ({
                 id: entry.id,
                 label: entry.name,
-              }))}
-              onSelect={(id) => addRule({ type: "DEPARTMENT", targetId: id, level: "REQUIRED" })}
-            />
-            <AddSubmenu
-              label="Rolle"
-              options={unused("CHARACTER", context.characters).map((entry) => ({
+              })),
+              onSelect: (id?: string) => {
+                if (id) addRule({ type: "DEPARTMENT", targetId: id, level: "REQUIRED" });
+              },
+            },
+            {
+              id: "CHARACTER",
+              label: "Rolle",
+              items: unused("CHARACTER", context.characters).map((entry) => ({
                 id: entry.id,
                 label: entry.name,
-              }))}
-              onSelect={(id) => addRule({ type: "CHARACTER", targetId: id, level: "REQUIRED" })}
-            />
-            {!hideSceneRules ? (
-              <AddSubmenu
-                label="Szene"
-                options={unused("SCENE", context.scenes).map((entry) => ({
-                  id: entry.id,
-                  label: entry.label,
-                }))}
-                onSelect={(id) => addRule({ type: "SCENE", targetId: id, level: "REQUIRED" })}
-              />
-            ) : null}
-            <AddSubmenu
-              label="Einzelne Person"
-              options={context.members
+              })),
+              onSelect: (id?: string) => {
+                if (id) addRule({ type: "CHARACTER", targetId: id, level: "REQUIRED" });
+              },
+            },
+            ...(!hideSceneRules
+              ? [
+                  {
+                    id: "SCENE",
+                    label: "Szene",
+                    items: unused("SCENE", context.scenes).map((entry) => ({
+                      id: entry.id,
+                      label: entry.label,
+                    })),
+                    onSelect: (id?: string) => {
+                      if (id) addRule({ type: "SCENE", targetId: id, level: "REQUIRED" });
+                    },
+                  },
+                ]
+              : []),
+            {
+              id: "PERSON",
+              label: "Einzelne Person",
+              keepOpen: true,
+              items: context.members
                 .filter((member) => !selectedIds.has(member.id))
-                .map((member) => ({ id: member.id, label: member.name }))}
-              onSelect={addPerson}
-            />
-          </DropdownMenuContent>
-        </DropdownMenu>
+                .map((member) => ({ id: member.id, label: member.name })),
+              onSelect: (id?: string) => {
+                if (id) addPerson(id);
+              },
+            },
+          ]}
+        />
 
         {value.rules.some((rule) => !hideSceneRules || rule.type !== "SCENE") ? (
           <ul className="divide-y divide-border rounded-lg border border-border">

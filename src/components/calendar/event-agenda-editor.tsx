@@ -14,11 +14,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ChoiceMenu } from "@/components/ui/choice-menu";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TimeInput } from "@/components/ui/time-input";
@@ -277,58 +275,56 @@ export function EventAgendaEditor({
   const isEmpty = !scenes.length && !blocks.length;
 
   const addMenu = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <ChoiceMenu
+      title="Programmpunkt hinzufügen"
+      trigger={
         <Button type="button" variant="outline" size="sm" className="h-10 sm:h-9">
           <PlusIcon className="h-4 w-4" aria-hidden />
           Programmpunkt
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        {context.scenes.length ? (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger disabled={!availableScenes.length}>
-              Szene proben
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto">
-              {availableScenes.map((scene) => (
-                <DropdownMenuItem
-                  key={scene.id}
-                  onSelect={() => onScenesChange([...sceneIds, scene.id])}
-                  className="flex-col items-start gap-0"
-                >
-                  <span>{scene.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {describeSceneStats(stats[scene.id])}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        ) : null}
-        {context.departments.length ? (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Gewerk arbeitet</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
-              {context.departments.map((department) => (
-                <DropdownMenuItem
-                  key={department.id}
-                  onSelect={() =>
-                    onBlocksChange([...blocks, newBlock("DEPARTMENT", department.id)])
-                  }
-                >
-                  {department.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        ) : null}
-        <DropdownMenuItem onSelect={() => onBlocksChange([...blocks, newBlock("CUSTOM")])}>
-          Sonstiges
-          <span className="ml-auto text-xs text-muted-foreground">z. B. Einsingen</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      }
+      entries={[
+        ...(context.scenes.length
+          ? [
+              {
+                id: "scene",
+                label: "Szene proben",
+                hint: "Die Besetzung wird eingeladen",
+                items: availableScenes.map((scene) => ({
+                  id: scene.id,
+                  label: scene.label,
+                  hint: describeSceneStats(stats[scene.id]),
+                })),
+                onSelect: (id?: string) => {
+                  if (id) onScenesChange([...sceneIds, id]);
+                },
+              },
+            ]
+          : []),
+        ...(context.departments.length
+          ? [
+              {
+                id: "department",
+                label: "Gewerk arbeitet",
+                hint: "Das Gewerk wird eingeladen, die Leitung plant Details",
+                items: context.departments.map((department) => ({
+                  id: department.id,
+                  label: department.name,
+                })),
+                onSelect: (id?: string) => {
+                  if (id) onBlocksChange([...blocks, newBlock("DEPARTMENT", id)]);
+                },
+              },
+            ]
+          : []),
+        {
+          id: "custom",
+          label: "Sonstiges",
+          hint: "z. B. Einsingen, Besprechung",
+          onSelect: () => onBlocksChange([...blocks, newBlock("CUSTOM")]),
+        },
+      ]}
+    />
   );
 
   return (
