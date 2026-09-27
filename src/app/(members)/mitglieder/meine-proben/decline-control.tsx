@@ -13,9 +13,12 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { declineRehearsalAction, withdrawDeclineAction } from "./actions";
 
+const MIN_REASON = 3;
+
 /**
- * Absage mit Begründung (bei vorgemerkten Proben freiwillig) – oder eine Absage wieder
- * zurücknehmen.
+ * Absage – innerhalb der Sperrfrist als Notfall mit Pflicht-Begründung, sonst als normale Sperre
+ * mit freiwilligem Grund. Beides legt einen Eintrag in der Sperrliste an; „Doch dabei" nimmt ihn
+ * wieder weg.
  */
 export function DeclineControl({
   eventId,
@@ -23,12 +26,18 @@ export function DeclineControl({
   declined,
   note,
   tentative = false,
+  emergency = false,
+  withinFreeze = false,
 }: {
   eventId: string;
   title: string;
   declined: boolean;
   note: string | null;
   tentative?: boolean;
+  /** Die Absage war ein Notfall (innerhalb der Sperrfrist). */
+  emergency?: boolean;
+  /** Der Termin liegt innerhalb der Sperrfrist: Absage nur im Notfall, Grund ist Pflicht. */
+  withinFreeze?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -42,8 +51,10 @@ export function DeclineControl({
         toast.error("Absage nicht gespeichert", { description: result.error, duration: 5000 });
         return;
       }
-      toast.success("Abgesagt", {
-        description: "Die Planung ist informiert.",
+      toast.success(result.emergency ? "Notfall-Absage gespeichert" : "Abgesagt", {
+        description: result.emergency
+          ? "Die Planung ist informiert; der Tag steht in der Sperrliste als Notfall."
+          : "Der Tag steht in der Sperrliste als gesperrt.",
         duration: 3000,
       });
       setOpen(false);
@@ -58,7 +69,10 @@ export function DeclineControl({
         toast.error("Das hat nicht geklappt", { description: result.error, duration: 5000 });
         return;
       }
-      toast.success("Du bist wieder dabei", { duration: 3000 });
+      toast.success("Du bist wieder dabei", {
+        description: "Der Eintrag in der Sperrliste ist entfernt.",
+        duration: 3000,
+      });
       router.refresh();
     });
 
@@ -66,7 +80,7 @@ export function DeclineControl({
     return (
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <Badge variant="outline" className="border-destructive bg-destructive/10 text-destructive">
-          abgesagt
+          {emergency ? "abgesagt (Notfall)" : "abgesagt"}
         </Badge>
         {note ? <span className="text-xs text-muted-foreground">„{note}“</span> : null}
         <AsyncButton
@@ -90,11 +104,13 @@ export function DeclineControl({
         Absagen
       </Button>
       <ModalFormDialog
-        title="Absagen"
+        title={withinFreeze ? "Notfall-Absage" : "Absagen"}
         description={
-          tentative
-            ? `„${title}“ ist erst vorgemerkt. Sag ruhig schon jetzt ab, dann kann die Planung das berücksichtigen.`
-            : `Du kannst nicht zu „${title}“ kommen? Die Planung wird benachrichtigt.`
+          withinFreeze
+            ? `„${title}“ liegt innerhalb der Sperrfrist. Sag nur im Notfall ab: Die Planung wird sofort informiert und der Tag erscheint in der Sperrliste als Notfall.`
+            : tentative
+              ? `„${title}“ ist erst vorgemerkt. Sag ruhig schon jetzt ab, dann kann die Planung das berücksichtigen.`
+              : `Du kannst nicht zu „${title}“ kommen? Die Planung wird benachrichtigt; der Tag erscheint in der Sperrliste als gesperrt.`
         }
         open={open}
         onOpenChange={setOpen}
@@ -104,15 +120,17 @@ export function DeclineControl({
             variant="destructive"
             isLoading={pending}
             loadingText="Sagt ab…"
-            disabled={!tentative && reason.trim().length < 3}
+            disabled={withinFreeze && reason.trim().length < MIN_REASON}
             onClick={submit}
           >
-            Absage senden
+            {withinFreeze ? "Notfall-Absage senden" : "Absage senden"}
           </AsyncButton>
         }
       >
         <div className="space-y-2">
-          <Label htmlFor={fieldId}>Warum kannst du nicht?{tentative ? " (freiwillig)" : ""}</Label>
+          <Label htmlFor={fieldId}>
+            Warum kannst du nicht?{withinFreeze ? " (Pflicht)" : " (freiwillig)"}
+          </Label>
           <Textarea
             id={fieldId}
             value={reason}
@@ -122,7 +140,9 @@ export function DeclineControl({
             placeholder="z. B. krank, Schichtdienst"
           />
           <p className="text-xs text-muted-foreground">
-            Bekannte Abwesenheiten trägst du am besten schon vorher in die Sperrliste ein.
+            {withinFreeze
+              ? "Der Grund ist für die Planung sichtbar und steht in der Sperrliste am Termintag."
+              : "Bekannte Abwesenheiten trägst du am besten schon vorher in die Sperrliste ein."}
           </p>
         </div>
       </ModalFormDialog>

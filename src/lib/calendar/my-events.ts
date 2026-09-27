@@ -2,6 +2,7 @@ import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/en
 import { getCalendarEntryKindLabel } from "@/lib/calendar/event-kinds";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { isWithinFreeze, readFreezeDays } from "@/lib/calendar/block-list-link";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -29,12 +30,20 @@ export type MyEventItem = {
   group: MyEventGroup;
   /** Abschnitt: heute & morgen, Rest der Woche, später oder vergangen. */
   bucket: MyEventBucket;
+  /** Termin liegt innerhalb der Sperrfrist: eine Absage wäre ein Notfall. */
+  withinFreeze: boolean;
   /** Warum die Person dabei ist. */
   reasons: string[];
   /** Gestaffelte Probe: Zeit der gesamten Probe, während `start`/`end` die eigene Zeit zeigen. */
   fullTime: { start: string; end: string | null } | null;
   /** Nur bei eigenen Proben: Absage möglich und ggf. schon abgesagt (mit Grund). */
-  decline: { declined: boolean; note: string | null; tentative: boolean } | null;
+  decline: {
+    declined: boolean;
+    note: string | null;
+    tentative: boolean;
+    /** Absage innerhalb der Sperrfrist – sie zählt als Notfall. */
+    emergency: boolean;
+  } | null;
 };
 
 const TAKE = 30;
@@ -152,12 +161,18 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         end: true,
         allDay: true,
         location: true,
+        status: true,
         show: { select: { title: true, year: true } },
+        participants: {
+          where: { userId },
+          select: { response: true, responseNote: true },
+          take: 1,
+        },
       },
     }),
   ]);
 
-  const items: Omit<MyEventItem, "bucket">[] = [
+  const items: Omit<MyEventItem, "bucket" | "withinFreeze">[] = [
     ...rehearsals.map(
       ({ level, reasons, response, responseNote, personalStart, personalEnd, event }) => ({
         id: event.id,
@@ -177,6 +192,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
           declined: response === "no" || response === "emergency",
           note: responseNote,
           tentative: event.status === "TENTATIVE",
+          emergency: response === "emergency",
         },
       }),
     ),
@@ -201,23 +217,37 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       };
     }),
     // Ohne eigene Einladung: Termin für alle (Eingeladene stehen oben mit Absage).
-    ...generalEvents.map((event) => ({
-      id: event.id,
-      title: event.title,
-      label: event.show ? (event.show.title ?? String(event.show.year)) : "Allgemein",
-      start: event.start.toISOString(),
-      end: event.end?.toISOString() ?? null,
-      allDay: event.allDay,
-      ...readLocation(event.location),
-      href: null,
-      group: "club" as const,
-      reasons: [event.show ? "Termin deiner Produktion" : "Termin für alle"],
-      fullTime: null,
-      decline: null,
-    })),
+    ...generalEvents.map((event) => {
+      const own = event.participants[0] ?? null;
+      const response = own?.response ?? null;
+      return {
+        id: event.id,
+        title: event.title,
+        label: event.show ? (event.show.title ?? String(event.show.year)) : "Allgemein",
+        start: event.start.toISOString(),
+        end: event.end?.toISOString() ?? null,
+        allDay: event.allDay,
+        ...readLocation(event.location),
+        href: null,
+        group: "club" as const,
+        reasons: [event.show ? "Termin deiner Produktion" : "Termin für alle"],
+        fullTime: null,
+        decline: {
+          declined: response === "no" || response === "emergency",
+          note: own?.responseNote ?? null,
+          tentative: event.status === "TENTATIVE",
+          emergency: response === "emergency",
+        },
+      };
+    }),
   ];
 
+  const freezeDays = await readFreezeDays();
   return items
-    .map((item) => ({ ...item, bucket: resolveEventBucket(new Date(item.start), now) }))
+    .map((item) => ({
+      ...item,
+      bucket: resolveEventBucket(new Date(item.start), now),
+      withinFreeze: isWithinFreeze(new Date(item.start), freezeDays, now),
+    }))
     .sort((a, b) => a.start.localeCompare(b.start));
 }

@@ -110,6 +110,8 @@ function MyEventRow({ item }: { item: MyEventItem }) {
             declined={item.decline.declined}
             note={item.decline.note}
             tentative={item.decline.tentative}
+            emergency={item.decline.emergency}
+            withinFreeze={item.withinFreeze}
           />
         ) : null}
       </div>

@@ -3,11 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import {
+  createBlockForDecline,
+  isWithinFreeze,
+  readFreezeDays,
+  removeBlockForDecline,
+} from "@/lib/calendar/block-list-link";
+import {
+  notifyPlannersOfDecline,
+  notifyPlannersOfNewBlocks,
+} from "@/lib/calendar/decline-notifications";
+import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { visibleEventStatus } from "@/lib/calendar/status";
-import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { prisma } from "@/lib/prisma";
+import { currentMembershipWhere } from "@/lib/produktionen/status";
 import { requireAuth } from "@/lib/rbac";
-import { notifyPlannersOfDecline } from "@/lib/calendar/decline-notifications";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
 
 const DECLINE_SCHEMA = z.object({
@@ -15,69 +26,110 @@ const DECLINE_SCHEMA = z.object({
   reason: z.string().trim().max(500, "Die Begründung ist zu lang."),
 });
 
-/** Bei angesetzten Proben ist die Begründung Pflicht, bei vorgemerkten freiwillig. */
+/** Innerhalb der Sperrfrist ist die Begründung Pflicht, außerhalb freiwillig. */
 const MIN_REASON = 3;
 
 /** Fehler, deren Text direkt angezeigt werden darf. */
 class RespondError extends Error {}
 
-async function loadOwnRehearsal(eventId: string) {
+/**
+ * Der eigene Termin: entweder eine persönliche Einladung oder ein „Für alle"-Termin der eigenen
+ * Produktion. Die Sichtbarkeit wird serverseitig nachgeprüft – sonst ließe sich mit einer fremden
+ * Termin-Kennung eine Absage auslösen. Gewerk-Termine antworten weiter über ihr Portal.
+ */
+async function loadOwnEvent(eventId: string) {
   const session = await requireAuth();
   const userId = session.user?.id ?? null;
   if (!userId || !(await hasPermission(session.user, "PRIVATE.REHEARSAL.OWN.VIEW"))) {
     throw new RespondError("Du darfst auf diesen Termin nicht antworten.");
   }
-  const rehearsal = await prisma.calendarEvent.findFirst({
+
+  const event = await prisma.calendarEvent.findFirst({
     where: {
       id: eventId,
-      // Jede persönliche Einladung (Probe oder anderer Termin); Gewerk-Termine haben eigene Wege.
-      departmentId: null,
       status: visibleEventStatus,
-      participants: { some: { userId, invited: true } },
+      OR: [
+        { departmentId: null, participants: { some: { userId, invited: true } } },
+        {
+          ...GENERAL_EVENT_WHERE,
+          AND: [
+            {
+              OR: [
+                { showId: null },
+                { show: { memberships: { some: { userId, ...currentMembershipWhere() } } } },
+              ],
+            },
+            visibleGeneralEventWhere(userId),
+          ],
+        },
+      ],
     },
-    select: { id: true, start: true, status: true },
+    select: { id: true, start: true },
   });
-  if (!rehearsal) throw new RespondError("Du bist für diesen Termin nicht eingeladen.");
-  if (rehearsal.start <= new Date()) throw new RespondError("Der Termin hat schon begonnen.");
-  return { userId, rehearsal };
+
+  if (!event) throw new RespondError("Du bist für diesen Termin nicht eingeladen.");
+  if (event.start <= new Date()) throw new RespondError("Der Termin hat schon begonnen.");
+  return { userId, event };
 }
 
 function revalidateOwn(eventId: string) {
   revalidatePath("/mitglieder/meine-proben");
+  revalidatePath("/mitglieder/sperrliste");
   revalidatePath(`/mitglieder/proben/${eventId}`);
   revalidatePath(`/mitglieder/terminplanung/${eventId}`);
 }
 
-/** Absage mit Begründung; die Planung wird bei benötigten Personen benachrichtigt. */
+/** Absage mit Begründung; die Planung wird genau einmal benachrichtigt, sofern jemand zuständig ist. */
 export async function declineRehearsalAction(input: { eventId: string; reason: string }) {
   const parsed = DECLINE_SCHEMA.safeParse(input);
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." };
   }
+
   try {
-    const { userId, rehearsal } = await loadOwnRehearsal(parsed.data.eventId);
+    const { userId, event } = await loadOwnEvent(parsed.data.eventId);
     const reason = parsed.data.reason || null;
-    if (rehearsal.status === "SCHEDULED" && (reason?.length ?? 0) < MIN_REASON) {
+    // Innerhalb der Sperrfrist würde die Sperrliste den Tag nicht mehr aufnehmen: Notfall.
+    const emergency = isWithinFreeze(event.start, await readFreezeDays());
+    if (emergency && (reason?.length ?? 0) < MIN_REASON) {
       throw new RespondError("Bitte gib kurz an, warum du nicht kannst.");
     }
+
     await updateAttendanceWithLog({
       prisma,
-      eventId: rehearsal.id,
+      eventId: event.id,
       targetUserId: userId,
       actorUserId: userId,
-      nextStatus: "no",
+      nextStatus: emergency ? "emergency" : "no",
       comment: reason ?? undefined,
       note: reason ?? undefined,
     });
-    await notifyPlannersOfDecline({
-      eventId: rehearsal.id,
+
+    const block = await createBlockForDecline({
+      eventId: event.id,
       userId,
+      start: event.start,
       reason,
-    }).catch((error) => console.error("[decline] Planung nicht benachrichtigt", error));
-    revalidateOwn(rehearsal.id);
-    return { ok: true as const };
+    });
+
+    const notified = await notifyPlannersOfDecline({ eventId: event.id, userId, reason }).catch(
+      (error) => {
+        console.error("[decline] Planung nicht benachrichtigt", error);
+        return false;
+      },
+    );
+    if (!notified && block.created) {
+      // Hat die Absage niemanden erreicht (z. B. „Für alle" ohne zuständige Person), meldet der
+      // Sperrlisten-Eintrag die Abwesenheit – nie doppelt, aber mindestens einmal.
+      await notifyPlannersOfNewBlocks(userId, [
+        { date: new Date(`${block.dayKey}T00:00:00.000Z`), reason },
+      ]).catch((error) => console.error("[decline] Sperrlisten-Hinweis fehlgeschlagen", error));
+    }
+
+    revalidateOwn(event.id);
+    return { ok: true as const, emergency };
   } catch (error) {
-    console.error("Error declining rehearsal", error);
+    console.error("Error declining event", error);
     return {
       ok: false as const,
       error:
@@ -88,19 +140,20 @@ export async function declineRehearsalAction(input: { eventId: string; reason: s
   }
 }
 
-/** Absage zurücknehmen – die Person gilt wieder als dabei. */
+/** Absage zurücknehmen – die Person gilt wieder als dabei, der Eintrag verschwindet mit. */
 export async function withdrawDeclineAction(input: { eventId: string }) {
   try {
-    const { userId, rehearsal } = await loadOwnRehearsal(z.string().min(1).parse(input.eventId));
+    const { userId, event } = await loadOwnEvent(z.string().min(1).parse(input.eventId));
     await updateAttendanceWithLog({
       prisma,
-      eventId: rehearsal.id,
+      eventId: event.id,
       targetUserId: userId,
       actorUserId: userId,
       nextStatus: null,
       comment: "Absage zurückgenommen",
     });
-    revalidateOwn(rehearsal.id);
+    await removeBlockForDecline({ eventId: event.id, userId });
+    revalidateOwn(event.id);
     return { ok: true as const };
   } catch (error) {
     console.error("Error withdrawing decline", error);

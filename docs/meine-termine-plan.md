@@ -190,19 +190,28 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 
 ### Phase 1 – Fundament: Absage-Logik und Sperrlisten-Verknüpfung
 
-- Migrationen 1 + 2 (siehe oben), danach `pnpm prisma:generate`.
-- `lib/calendar/my-events.ts`: pro Termin zusätzlich Tageskeys, `freezeDays` aufgelöst,
-  `withinFreeze`, `conflict` (Sperr-Zustand am Tag), `past`, `linkable`.
-- `lib/calendar/block-list-link.ts` (neu): `createBlockForDecline(...)` und
-  `removeBlockForDecline(...)` — eine Stelle für Anlegen/Entfernen, inkl. „es existiert schon ein
-  Eintrag" und „mehrere Absagen am selben Tag".
-- `meine-proben/actions.ts`: `declineRehearsalAction` unterscheidet Frist (Notfall = Pflicht-Grund,
-  sonst optional), legt den Eintrag an und stellt die Meldung an die Planung genau einmal sicher;
-  `withdrawDeclineAction` entfernt den verknüpften Eintrag.
-- „Für alle"-Termine absagbar: Einladungs-Logik so erweitern, dass `loadOwnRehearsal` sie akzeptiert.
-- Revalidierung um `/mitglieder/sperrliste` ergänzen.
-- Tests: Frist-Entscheidung, Pflicht-Grund nur im Notfall, Eintrag wird erzeugt/entfernt,
-  kein Doppel-Eintrag, keine Doppel-Benachrichtigung.
+- [x] Migrationen 1 + 2 (siehe oben), danach `pnpm prisma:generate`.
+- [x] `lib/calendar/block-list-link.ts` (neu): `readFreezeDays`, `isWithinFreeze`, `blockDayKey`,
+      `createBlockForDecline` (legt den Tag des Termins an — `EMERGENCY` innerhalb der Sperrfrist,
+      sonst `BLOCKED`; ein schon vorhandener eigener Eintrag bleibt unangetastet und wird **nicht**
+      verknüpft) und `removeBlockForDecline` (entfernt den Eintrag; ist am selben Tag noch ein anderer
+      Termin abgesagt, wird nur die Verknüpfung gelöst).
+- [x] `lib/calendar/my-events.ts`: `withinFreeze` pro Termin und — bei „Für alle"-Terminen — der
+      eigene Antwortzustand aus `EventParticipant`, damit auch sie einen Absage-Knopf bekommen.
+- [x] `meine-proben/actions.ts`: `loadOwnEvent` prüft serverseitig die Sichtbarkeit (persönliche
+      Einladung **oder** „Für alle" der eigenen Produktion); `declineRehearsalAction` behandelt einen
+      Termin innerhalb der Frist als Notfall (`emergency` in der Antwort, Pflicht-Grund), sonst als
+      normale Absage mit freiwilligem Grund, legt den Sperrlisten-Eintrag an und meldet genau einmal
+      (die Absage meldet, sonst übernimmt der Sperrlisten-Eintrag); `withdrawDeclineAction` entfernt
+      den verknüpften Eintrag.
+- [x] Revalidierung um `/mitglieder/sperrliste` ergänzt.
+- [x] Tests: `lib/calendar/__tests__/block-list-link.test.ts` (Tagesgrenze, Frist-Grenze, keine
+      Frist). Ende-zu-Ende per `pnpm ui:check` belegt: „Doch dabei" entfernt den Eintrag wieder
+      (Sperrliste danach ohne „Notfall"), die erneute Absage legt ihn als „Notfall" an.
+- Offen für Phase 3/4: Sperr-Konflikt am Termintag (`conflict`) und vergangene Termine (`past`).
+- Bekannte Grenze: Eine „Für alle"-Absage meldet die Planung nur, wenn es eine zuständige Person
+  gibt — bei einem Termin ohne persönliche Einladung findet `notifyPlannersOfNewBlocks` niemanden.
+  Die Abwesenheit steht dann nur in der Sperrliste.
 
 ### Phase 2 – Liste und Optik
 
@@ -249,7 +258,7 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 - `EMERGENCY` steht in der Legende und im Tagesdetail, erscheint aber **nicht** in der
   Statusauswahl; der Eintrag bleibt wie gewohnt entfernbar.
 - Kalender-Feed und Export: `EMERGENCY` zählt wie `BLOCKED`.
-- `docs/sperrliste*.md` und `docs/datenmodell.md` nachziehen.
+- [ ] `docs/sperrliste*.md` und `docs/datenmodell.md` nachziehen.
 
 ### Phase 6 – Doku, Tests, Freigabe
 
@@ -290,7 +299,7 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 ## Checkliste
 
 - [x] Phase 0 – Lokales Termin-Fixture für die Sichtprüfung (`pnpm dev:termine`)
-- [ ] Phase 1 – Migrationen, Absage-Logik mit Frist, Sperrlisten-Verknüpfung, „Für alle" absagbar
+- [x] Phase 1 (2026-09-27) – Migrationen, Absage-Logik mit Frist, Sperrlisten-Verknüpfung, „Für alle" absagbar
 - [x] Phase 2 (2026-09-27) – Kalenderblatt-Zeilen, Gruppierung, Zähler, Ort-Hinweis, Zeitformat, Skeleton
 - [ ] Phase 3 – Werkzeugzeile, URL-Zustand, Kalenderansicht, „Mehr laden"
 - [ ] Phase 4 – „Nächster Termin", Konflikt-Hinweis, Tipps-Callout
