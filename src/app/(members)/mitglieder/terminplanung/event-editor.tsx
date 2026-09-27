@@ -83,10 +83,8 @@ type EventEditorProps = {
 };
 
 const KIND_OPTIONS: CalendarEventKind[] = ["REHEARSAL", ...CALENDAR_EVENT_KINDS];
-const DEFAULT_AUDIENCE: AudienceValue = {
-  rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }],
-  overrides: [],
-};
+/** Keine Vorauswahl: Wer eingeladen ist, wählt die Planung bewusst aus. */
+const EMPTY_AUDIENCE: AudienceValue = { rules: [], overrides: [] };
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -280,7 +278,6 @@ export function EventEditor({
     if (next === "REHEARSAL" && open) {
       // Proben brauchen Eingeladene.
       setOpen(false);
-      if (!audience.rules.length) changeAudience(DEFAULT_AUDIENCE);
       setShowBlocks(true);
     }
   };
@@ -288,7 +285,7 @@ export function EventEditor({
   const changeScope = (next: "production" | "all") => {
     setScope(next);
     // Gewerke, Rollen und Szenen gehören zur Produktion: Zielgruppe neu beginnen.
-    changeAudience(next === "all" ? { rules: [], overrides: [] } : DEFAULT_AUDIENCE);
+    changeAudience(EMPTY_AUDIENCE);
     if (next === "all") setOpen(true);
   };
 
@@ -705,9 +702,6 @@ export function EventEditor({
             onValueChange={(value) => {
               setOpen(value === "all");
               setAudienceTouched(true);
-              if (value === "targeted" && !audience.rules.length && !audience.overrides.length) {
-                setAudience(DEFAULT_AUDIENCE);
-              }
             }}
             options={[
               { value: "all", label: "Alle" },
@@ -763,6 +757,7 @@ export function EventEditor({
           size="sm"
           className="text-destructive hover:text-destructive"
           disabled={isDiscarding}
+          aria-label={isDraft ? "Verwerfen" : "Löschen"}
           onClick={() => setConfirm(isDraft ? "discard" : "delete")}
         >
           <TrashIcon className="h-4 w-4" aria-hidden />

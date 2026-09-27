@@ -96,14 +96,10 @@ export async function createRehearsalDraftAction(input?: {
     select: { id: true },
   });
 
-  // Proben: Vorschlag ganze Produktion, die Planung grenzt im Editor ein. Andere Termine
+  // Proben: noch niemand eingeladen, die Planung wählt im Editor aus. Andere Termine
   // gelten zunächst für alle, ohne Einladung.
   const parsedAudience = input?.audience ? audienceInputSchema.safeParse(input.audience) : null;
-  const audience: AudienceInput = parsedAudience?.success
-    ? parsedAudience.data
-    : isRehearsal
-      ? { rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }], overrides: [] }
-      : OPEN_AUDIENCE;
+  const audience: AudienceInput = parsedAudience?.success ? parsedAudience.data : OPEN_AUDIENCE;
   const context = await loadAudienceContext(auth.showId);
   await prisma.$transaction(async (tx) => {
     await saveEventAudience(tx, rehearsal.id, audience, context);
