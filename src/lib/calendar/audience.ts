@@ -202,7 +202,7 @@ export function resolveAudience(
   for (const block of blocks) {
     const department = context.departments.find((entry) => entry.id === block.departmentId);
     if (!department) continue;
-    const reason = `Baustein ${block.title?.trim() || department.name}`;
+    const reason = `Ablauf: ${block.title?.trim() || `Gewerk ${department.name}`}`;
     for (const userId of department.memberIds) {
       addCandidate(candidates, userId, "REQUIRED", reason);
     }

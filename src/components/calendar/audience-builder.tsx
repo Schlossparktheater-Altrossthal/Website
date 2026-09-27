@@ -14,12 +14,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   countAudienceRule,
   describeAudienceRule,
@@ -61,29 +64,27 @@ function withOverride(
   return next.override || next.level ? [...rest, next] : rest;
 }
 
-function AddSelect({
-  placeholder,
+function AddSubmenu({
+  label,
   options,
   onSelect,
 }: {
-  placeholder: string;
+  label: string;
   options: { id: string; label: string }[];
   onSelect: (id: string) => void;
 }) {
   if (!options.length) return null;
   return (
-    <Select value="" onValueChange={onSelect}>
-      <SelectTrigger className="h-11 w-full sm:h-9 sm:w-auto sm:min-w-36" aria-label={placeholder}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>{label}</DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
         {options.map((option) => (
-          <SelectItem key={option.id} value={option.id}>
+          <DropdownMenuItem key={option.id} onSelect={() => onSelect(option.id)}>
             {option.label}
-          </SelectItem>
+          </DropdownMenuItem>
         ))}
-      </SelectContent>
-    </Select>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 
@@ -170,6 +171,18 @@ export function AudienceBuilder({
       (item) => !value.rules.some((rule) => sameRule(rule, { type, targetId: item.id })),
     );
   const selectedIds = new Set(invited.map((entry) => entry.userId));
+  const groupOptions = [
+    {
+      type: "PRODUCTION_ALL" as const,
+      label: context.hasProduction ? "Ganze Produktion" : "Alle Mitglieder",
+    },
+    ...(context.characters.length
+      ? [{ type: "ALL_CAST" as const, label: "Alle Schauspieler" }]
+      : []),
+    ...(context.departments.length ? [{ type: "ALL_CREW" as const, label: "Alle Gewerke" }] : []),
+  ].filter(
+    (option) => !value.rules.some((rule) => sameRule(rule, { type: option.type, targetId: null })),
+  );
   const normalizedQuery = query.trim().toLocaleLowerCase("de");
   const visible = normalizedQuery
     ? resolved.filter((entry) => entry.name.toLocaleLowerCase("de").includes(normalizedQuery))
@@ -189,80 +202,71 @@ export function AudienceBuilder({
       </p>
 
       <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {[
-            {
-              type: "PRODUCTION_ALL" as const,
-              label: context.hasProduction ? "Ganze Produktion" : "Alle Mitglieder",
-              short: context.hasProduction ? "Produktion" : "Alle",
-            },
-            ...(context.characters.length
-              ? [{ type: "ALL_CAST" as const, label: "Alle Schauspieler", short: "Schauspieler" }]
-              : []),
-            ...(context.departments.length
-              ? [{ type: "ALL_CREW" as const, label: "Alle Gewerke", short: "Gewerke" }]
-              : []),
-          ]
-            .filter(
-              (option) =>
-                !value.rules.some((rule) => sameRule(rule, { type: option.type, targetId: null })),
-            )
-            .map((option) => (
-              <Button
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-10 w-full sm:h-9 sm:w-auto"
+            >
+              <PlusIcon className="h-4 w-4" aria-hidden />
+              Einladen …
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-60">
+            {groupOptions.map((option) => (
+              <DropdownMenuItem
                 key={option.type}
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-11 justify-start px-3 sm:h-9"
-                onClick={() => addRule({ type: option.type, targetId: null, level: "REQUIRED" })}
+                onSelect={() => addRule({ type: option.type, targetId: null, level: "REQUIRED" })}
               >
-                <PlusIcon className="h-4 w-4" />
-                <span className="sm:hidden">{option.short}</span>
-                <span className="hidden sm:inline">{option.label}</span>
-              </Button>
+                {option.label}
+              </DropdownMenuItem>
             ))}
-          <AddSelect
-            placeholder="+ Gewerk"
-            options={unused("DEPARTMENT", context.departments).map((entry) => ({
-              id: entry.id,
-              label: entry.name,
-            }))}
-            onSelect={(id) => addRule({ type: "DEPARTMENT", targetId: id, level: "REQUIRED" })}
-          />
-          <AddSelect
-            placeholder="+ Rolle"
-            options={unused("CHARACTER", context.characters).map((entry) => ({
-              id: entry.id,
-              label: entry.name,
-            }))}
-            onSelect={(id) => addRule({ type: "CHARACTER", targetId: id, level: "REQUIRED" })}
-          />
-          {!hideSceneRules ? (
-            <AddSelect
-              placeholder="+ Szene"
-              options={unused("SCENE", context.scenes).map((entry) => ({
+            {groupOptions.length ? <DropdownMenuSeparator /> : null}
+            <AddSubmenu
+              label="Gewerk"
+              options={unused("DEPARTMENT", context.departments).map((entry) => ({
                 id: entry.id,
-                label: entry.label,
+                label: entry.name,
               }))}
-              onSelect={(id) => addRule({ type: "SCENE", targetId: id, level: "REQUIRED" })}
+              onSelect={(id) => addRule({ type: "DEPARTMENT", targetId: id, level: "REQUIRED" })}
             />
-          ) : null}
-          <AddSelect
-            placeholder="+ Person"
-            options={context.members
-              .filter((member) => !selectedIds.has(member.id))
-              .map((member) => ({ id: member.id, label: member.name }))}
-            onSelect={addPerson}
-          />
-        </div>
+            <AddSubmenu
+              label="Rolle"
+              options={unused("CHARACTER", context.characters).map((entry) => ({
+                id: entry.id,
+                label: entry.name,
+              }))}
+              onSelect={(id) => addRule({ type: "CHARACTER", targetId: id, level: "REQUIRED" })}
+            />
+            {!hideSceneRules ? (
+              <AddSubmenu
+                label="Szene"
+                options={unused("SCENE", context.scenes).map((entry) => ({
+                  id: entry.id,
+                  label: entry.label,
+                }))}
+                onSelect={(id) => addRule({ type: "SCENE", targetId: id, level: "REQUIRED" })}
+              />
+            ) : null}
+            <AddSubmenu
+              label="Einzelne Person"
+              options={context.members
+                .filter((member) => !selectedIds.has(member.id))
+                .map((member) => ({ id: member.id, label: member.name }))}
+              onSelect={addPerson}
+            />
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {value.rules.some((rule) => !hideSceneRules || rule.type !== "SCENE") ? (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-border rounded-lg border border-border">
             {value.rules.map((rule, index) =>
               hideSceneRules && rule.type === "SCENE" ? null : (
                 <li
                   key={`${rule.type}:${rule.targetId ?? ""}`}
-                  className="flex flex-col gap-2 rounded-lg bg-muted p-3 sm:flex-row sm:items-center"
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5 pl-3 pr-1"
                 >
                   <span className="min-w-0 flex-1 text-sm font-medium">
                     {describeAudienceRule(rule, context)}{" "}
@@ -310,7 +314,7 @@ export function AudienceBuilder({
           ) : null}
         </div>
         {visible.length ? (
-          <ul className="divide-y divide-border rounded-lg border border-border">
+          <ul className="max-h-[32rem] divide-y divide-border overflow-y-auto rounded-lg border border-border">
             {visible.map((entry) => {
               const status: AvailabilityStatus | null = availability
                 ? (availability[entry.userId] ?? "free")
@@ -319,11 +323,11 @@ export function AudienceBuilder({
                 <li
                   key={entry.userId}
                   className={cn(
-                    "flex flex-col gap-2 p-3 sm:flex-row sm:items-center",
+                    "flex items-center gap-2 py-1 pl-3 pr-2",
                     entry.excluded && "bg-muted/50",
                   )}
                 >
-                  <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3">
+                  <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 py-1">
                     <Checkbox
                       checked={!entry.excluded}
                       onCheckedChange={() => toggle(entry)}
@@ -338,9 +342,25 @@ export function AudienceBuilder({
                       >
                         {entry.name}
                       </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {entry.excluded ? "ausgenommen · " : ""}
-                        {entry.reasons.join(" · ")}
+                      <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                        {status && !entry.excluded ? (
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 items-center gap-1",
+                              AVAILABILITY_STATUS[status].text,
+                            )}
+                          >
+                            <StatusDot status={status} />
+                            {status === "free" ? "kann" : AVAILABILITY_STATUS[status].short}
+                            <span aria-hidden className="text-muted-foreground">
+                              ·
+                            </span>
+                          </span>
+                        ) : null}
+                        <span className="truncate">
+                          {entry.excluded ? "ausgenommen · " : ""}
+                          {entry.reasons.join(" · ")}
+                        </span>
                       </span>
                       {entry.userId in declined && !entry.excluded ? (
                         <span className="block text-xs text-destructive">
@@ -354,27 +374,24 @@ export function AudienceBuilder({
                       ) : null}
                     </span>
                   </label>
-                  <div className="flex items-center gap-3 pl-8 sm:pl-0">
-                    {status ? (
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1.5 text-xs",
-                          AVAILABILITY_STATUS[status].text,
-                        )}
-                      >
-                        <StatusDot status={status} />
-                        {status === "free" ? "kann" : AVAILABILITY_STATUS[status].short}
-                      </span>
-                    ) : null}
-                    {!entry.excluded ? (
-                      <SegmentedControl
-                        value={entry.level}
-                        onValueChange={(level) => setLevel(entry, level)}
-                        options={LEVEL_OPTIONS}
-                        aria-label={`Verbindlichkeit für ${entry.name}`}
-                      />
-                    ) : null}
-                  </div>
+                  {!entry.excluded ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLevel(entry, entry.level === "REQUIRED" ? "OPTIONAL" : "REQUIRED")
+                      }
+                      aria-label={`Verbindlichkeit für ${entry.name}: ${PARTICIPATION_LEVEL_LABELS[entry.level]} – umschalten`}
+                      title="Tippen zum Umschalten"
+                      className={cn(
+                        "min-h-9 shrink-0 rounded-full border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        entry.level === "REQUIRED"
+                          ? "border-foreground/20 bg-foreground/10 text-foreground"
+                          : "border-dashed border-border text-muted-foreground",
+                      )}
+                    >
+                      {PARTICIPATION_LEVEL_LABELS[entry.level]}
+                    </button>
+                  ) : null}
                 </li>
               );
             })}
@@ -383,7 +400,7 @@ export function AudienceBuilder({
           <div className="py-12 text-center text-sm text-muted-foreground">
             {resolved.length
               ? "Niemand passt zur Suche."
-              : "Noch niemand ausgewählt. Füge oben eine Gruppe, Rolle, Szene oder Person hinzu."}
+              : "Noch niemand eingeladen. Über „Einladen …“ Gruppen, Gewerke, Rollen oder Personen wählen."}
           </div>
         )}
       </div>

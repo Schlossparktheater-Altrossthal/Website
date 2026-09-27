@@ -42,7 +42,7 @@ describe("resolveAudience", () => {
     );
     const max = result.find((entry) => entry.userId === "max");
     expect(max?.level).toBe("REQUIRED");
-    expect(max?.reasons).toContain("Baustein Lichtaufbau");
+    expect(max?.reasons).toContain("Ablauf: Lichtaufbau");
     expect(result.find((entry) => entry.userId === "tom")?.excluded).toBe(true);
   });
 

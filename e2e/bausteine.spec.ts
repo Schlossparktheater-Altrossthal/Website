@@ -39,7 +39,9 @@ test.describe("als admin", () => {
     await deleteRehearsal(page);
   });
 
-  test("Gewerk-Baustein anlegen, vormerken und im Gewerk organisieren", async ({ page }) => {
+  test("Gewerk-Arbeit im Ablauf anlegen, vormerken und im Gewerk organisieren", async ({
+    page,
+  }) => {
     const errors = await collectErrors(page);
 
     await page.goto("/mitglieder/terminplanung");
@@ -55,15 +57,16 @@ test.describe("als admin", () => {
 
     await page.getByLabel("Titel", { exact: true }).fill(title);
 
-    // Gewerk-Baustein: erstes Gewerk der Produktion
-    const departmentSelect = page.getByRole("combobox", { name: "Gewerk-Baustein" });
-    test.skip(!(await departmentSelect.count()), "Produktion ohne Gewerke");
-    await departmentSelect.click();
-    const option = page.getByRole("option").first();
+    // Programmpunkt „Gewerk arbeitet“: erstes Gewerk der Produktion
+    await page.getByRole("button", { name: "Programmpunkt" }).click();
+    const departmentMenu = page.getByRole("menuitem", { name: "Gewerk arbeitet" });
+    test.skip(!(await departmentMenu.count()), "Produktion ohne Gewerke");
+    await departmentMenu.click();
+    const option = page.getByRole("menu").last().getByRole("menuitem").first();
     const department = (await option.innerText()).trim();
     await option.click();
-    await page.getByPlaceholder("z. B. Bühnenbau").fill("E2E Baustein");
-    await expect(page.getByText("Baustein E2E Baustein").first()).toBeVisible();
+    await page.getByPlaceholder("Was steht an? z. B. Podeste bauen").fill("E2E Baustein");
+    await expect(page.getByText("Ablauf: E2E Baustein").first()).toBeVisible();
     await expect(page.getByText(/^Gespeichert/)).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: "Vormerken" }).click();

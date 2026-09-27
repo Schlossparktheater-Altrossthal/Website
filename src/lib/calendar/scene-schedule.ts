@@ -90,5 +90,5 @@ export function blockLabel(block: BlockLabelSource) {
     const name = block.department?.name ?? "Gewerk";
     return `${block.title ? `${block.title} (Gewerk ${name})` : `Gewerk ${name}`}${room}`;
   }
-  return `${block.title || "Baustein"}${room}`;
+  return `${block.title || "Programmpunkt"}${room}`;
 }

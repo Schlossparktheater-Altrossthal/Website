@@ -7,13 +7,13 @@ import type { CalendarEventKind } from "@prisma/client";
 import { toast } from "sonner";
 
 import { AudienceBuilder, type AudienceValue } from "@/components/calendar/audience-builder";
-import { EventBlocksEditor, type EventBlockValue } from "@/components/calendar/event-blocks-editor";
 import {
-  SceneScheduleEditor,
+  EventAgendaEditor,
+  type EventBlockValue,
   type SceneScheduleValue,
   type SceneStatsView,
-} from "@/components/calendar/scene-schedule-editor";
-import { PlusIcon, TrashIcon } from "@/components/ui/action-icons";
+} from "@/components/calendar/event-agenda-editor";
+import { MapPinIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -473,277 +473,304 @@ export function EventEditor({
   const statusLabel = isDraft ? "Entwurf" : isTentative ? "Vorgemerkt" : "Angesetzt";
   const kindLocked = sceneIds.length > 0;
 
+  const kindOptions = KIND_OPTIONS.map((value) => ({
+    value,
+    label: CALENDAR_EVENT_KIND_LABELS[value],
+  }));
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4 pb-4">
-      <Card variant="plain" size="flush" className="space-y-4 border-border p-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 font-medium",
-              isDraft
-                ? "bg-muted text-foreground/80"
-                : isTentative
-                  ? "bg-warning/20 text-warning"
-                  : "bg-success/15 text-success",
-            )}
-          >
-            {statusLabel}
-          </span>
-          <span className="text-muted-foreground" aria-live="polite">
-            {saveLabel}
-          </span>
-        </div>
+    <div className="space-y-4 pb-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start">
+        <div className="min-w-0 space-y-4">
+          <Card variant="plain" size="flush" className="space-y-3 border-border p-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 font-medium",
+                  isDraft
+                    ? "bg-muted text-foreground/80"
+                    : isTentative
+                      ? "bg-warning/20 text-warning"
+                      : "bg-success/15 text-success",
+                )}
+              >
+                {statusLabel}
+              </span>
+              <span className="text-muted-foreground" aria-live="polite">
+                {saveLabel}
+              </span>
+            </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="event-title">Titel</Label>
-          <Input
-            id="event-title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            minLength={3}
-            maxLength={120}
-            required
-            className="h-11"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="event-kind">Art</Label>
-          <Select
-            value={effectiveKind}
-            disabled={kindLocked}
-            onValueChange={(value) => {
-              const next = KIND_OPTIONS.find((entry) => entry === value);
-              if (next) changeKind(next);
-            }}
-          >
-            <SelectTrigger id="event-kind" className="h-11">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KIND_OPTIONS.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {CALENDAR_EVENT_KIND_LABELS[value]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {kindLocked ? (
-            <p className="text-xs text-muted-foreground">Mit Szenen ist es immer eine Probe.</p>
-          ) : null}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="col-span-2 space-y-1.5 sm:col-span-1">
-            <Label htmlFor="event-date">{multiDay ? "Von" : "Datum"}</Label>
-            <DateInput
-              id="event-date"
-              value={date}
-              onChange={(event) => {
-                const value = event.target.value;
-                setDate(value);
-                if (endDate && endDate < value) setEndDate(value);
-              }}
+            <Input
+              id="event-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              minLength={3}
+              maxLength={120}
               required
+              placeholder={`Titel ${isRehearsal ? "der Probe" : "des Termins"}`}
+              aria-label="Titel"
+              className="h-12 text-base font-semibold sm:text-lg"
             />
-          </div>
-          {!allDay ? (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="event-time">Beginn</Label>
-                <TimeInput
-                  id="event-time"
-                  value={time}
-                  onChange={(event) => setTime(event.target.value)}
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="col-span-2 space-y-1 sm:col-span-1">
+                <Label htmlFor="event-kind" className="text-xs text-muted-foreground">
+                  Art
+                </Label>
+                <Select
+                  value={effectiveKind}
+                  disabled={kindLocked}
+                  onValueChange={(value) => {
+                    const next = KIND_OPTIONS.find((entry) => entry === value);
+                    if (next) changeKind(next);
+                  }}
+                >
+                  <SelectTrigger
+                    id="event-kind"
+                    className="h-10"
+                    title={kindLocked ? "Mit Szenen ist es immer eine Probe." : undefined}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kindOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 space-y-1 sm:col-span-1">
+                <Label htmlFor="event-date" className="text-xs text-muted-foreground">
+                  {multiDay ? "Von" : "Datum"}
+                </Label>
+                <DateInput
+                  id="event-date"
+                  value={date}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setDate(value);
+                    if (endDate && endDate < value) setEndDate(value);
+                  }}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="event-end">Ende</Label>
-                <TimeInput
-                  id="event-end"
-                  value={endTime}
-                  onChange={(event) => setEndTime(event.target.value)}
+              {!allDay ? (
+                <>
+                  <div className="space-y-1">
+                    <Label htmlFor="event-time" className="text-xs text-muted-foreground">
+                      Beginn
+                    </Label>
+                    <TimeInput
+                      id="event-time"
+                      value={time}
+                      onChange={(event) => setTime(event.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="event-end" className="text-xs text-muted-foreground">
+                      Ende
+                    </Label>
+                    <TimeInput
+                      id="event-end"
+                      value={endTime}
+                      onChange={(event) => setEndTime(event.target.value)}
+                    />
+                  </div>
+                </>
+              ) : null}
+              {multiDay ? (
+                <div className="col-span-2 space-y-1 sm:col-span-1">
+                  <Label htmlFor="event-end-date" className="text-xs text-muted-foreground">
+                    Bis
+                  </Label>
+                  <DateInput
+                    id="event-end-date"
+                    value={endDate}
+                    min={date}
+                    onChange={(event) => setEndDate(event.target.value)}
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+              <label className="flex min-h-10 items-center gap-2">
+                <Switch checked={allDay} onCheckedChange={setAllDay} />
+                Ganztägig
+              </label>
+              <label className="flex min-h-10 items-center gap-2">
+                <Switch
+                  checked={multiDay}
+                  onCheckedChange={(value) => {
+                    setMultiDay(value);
+                    if (value && !endDate) setEndDate(date);
+                  }}
                 />
-              </div>
-            </>
-          ) : null}
-          {multiDay ? (
-            <div className="col-span-2 space-y-1.5 sm:col-span-1">
-              <Label htmlFor="event-end-date">Bis</Label>
-              <DateInput
-                id="event-end-date"
-                value={endDate}
-                min={date}
-                onChange={(event) => setEndDate(event.target.value)}
+                Mehrtägig
+              </label>
+            </div>
+
+            <div className="relative">
+              <MapPinIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="event-location"
+                value={location}
+                onChange={(event) => setLocation(event.target.value)}
+                placeholder={isRehearsal ? "Ort – leer lassen, wenn noch offen" : "Ort (optional)"}
+                aria-label="Ort"
+                className="h-10 pl-9"
               />
             </div>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          <label className="flex items-center gap-2">
-            <Switch checked={allDay} onCheckedChange={setAllDay} />
-            Ganztägig
-          </label>
-          <label className="flex items-center gap-2">
-            <Switch
-              checked={multiDay}
-              onCheckedChange={(value) => {
-                setMultiDay(value);
-                if (value && !endDate) setEndDate(date);
-              }}
-            />
-            Mehrere Tage
-          </label>
-        </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="event-location">Ort</Label>
-          <Input
-            id="event-location"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            placeholder={isRehearsal ? "z. B. Probenraum – leer = noch offen" : "optional"}
-            className="h-11"
-          />
-        </div>
-
-        {showDescription ? (
-          <div className="space-y-1.5">
-            <Label>Beschreibung</Label>
-            <RichTextEditor
-              value={description}
-              onChange={setDescription}
-              placeholder="Ablauf, Ziele oder Materialien"
-            />
-          </div>
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="-ml-2"
-            onClick={() => setShowDescription(true)}
-          >
-            <PlusIcon className="h-4 w-4" aria-hidden />
-            Beschreibung
-          </Button>
-        )}
-
-        {production && !isRehearsal ? (
-          <div className="space-y-1.5 border-t border-border pt-4">
-            <Label>Gilt für</Label>
-            <SegmentedControl
-              aria-label="Gilt für"
-              fullWidth
-              size="md"
-              value={scope}
-              onValueChange={changeScope}
-              options={[
-                { value: "production", label: production.title },
-                { value: "all", label: "Alle Produktionen" },
-              ]}
-            />
-          </div>
-        ) : null}
-      </Card>
-
-      <Card variant="plain" size="flush" className="space-y-4 border-border p-4">
-        <SectionHeader
-          title="Ablauf & Bausteine"
-          description={
-            showBlocks
-              ? "Szenen, Gewerke und freie Bausteine – auch parallel in eigenen Räumen."
-              : "Optional: Szenen, Gewerke oder eigene Programmpunkte."
-          }
-          action={
-            showBlocks ? null : (
-              <Button type="button" size="sm" variant="outline" onClick={() => setShowBlocks(true)}>
+            {showDescription ? (
+              <RichTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Beschreibung: Ablauf, Ziele oder Materialien"
+              />
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="-ml-2"
+                onClick={() => setShowDescription(true)}
+              >
                 <PlusIcon className="h-4 w-4" aria-hidden />
-                Hinzufügen
+                Beschreibung
               </Button>
-            )
-          }
-        />
-        {showBlocks ? (
-          <div className="space-y-6">
-            {context.scenes.length ? (
-              <SceneScheduleEditor
+            )}
+
+            {production && !isRehearsal ? (
+              <div className="flex flex-col gap-1.5 border-t border-border pt-3 sm:flex-row sm:items-center sm:gap-3">
+                <span className="shrink-0 text-xs text-muted-foreground">Gilt für</span>
+                <SegmentedControl
+                  aria-label="Gilt für"
+                  fullWidth
+                  size="md"
+                  value={scope}
+                  onValueChange={changeScope}
+                  options={[
+                    { value: "production", label: production.title },
+                    { value: "all", label: "Alle Produktionen" },
+                  ]}
+                />
+              </div>
+            ) : null}
+          </Card>
+
+          <Card variant="plain" size="flush" className="space-y-3 border-border p-4">
+            <SectionHeader
+              title="Ablauf"
+              size="sm"
+              description={
+                showBlocks
+                  ? "Szenen, Gewerk-Arbeit und sonstige Punkte – auch parallel in eigenen Räumen."
+                  : undefined
+              }
+              action={
+                showBlocks ? null : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowBlocks(true)}
+                  >
+                    <PlusIcon className="h-4 w-4" aria-hidden />
+                    Ablauf planen
+                  </Button>
+                )
+              }
+            />
+            {showBlocks ? (
+              <EventAgendaEditor
                 context={context}
                 sceneIds={sceneIds}
                 onScenesChange={changeScenes}
                 schedule={schedule}
                 onScheduleChange={setSchedule}
                 stats={sceneStats}
+                blocks={blocks}
+                onBlocksChange={changeBlocks}
                 eventStartTime={time}
                 invitedIds={invitedIds}
               />
             ) : null}
-            <EventBlocksEditor context={context} blocks={blocks} onChange={changeBlocks} />
-          </div>
-        ) : null}
-      </Card>
+          </Card>
+        </div>
 
-      <Card variant="plain" size="flush" className="space-y-4 border-border p-4">
-        <SectionHeader
-          title="Wer ist dabei?"
-          description={
-            openAudience
-              ? "Der Termin erscheint bei allen – ohne Einladung und Zusage."
-              : `${invitedCount} eingeladen${isCheckingBlocks ? " · Sperrliste wird geprüft …" : ""}`
-          }
-        />
-        {!isRehearsal ? (
-          <SegmentedControl
-            aria-label="Wer ist eingeladen?"
-            fullWidth
-            size="md"
-            value={openAudience ? "all" : "targeted"}
-            onValueChange={(value) => {
-              setOpen(value === "all");
-              setAudienceTouched(true);
-            }}
-            options={[
-              { value: "all", label: "Alle" },
-              { value: "targeted", label: "Bestimmte Personen" },
-            ]}
+        <Card
+          variant="plain"
+          size="flush"
+          className="min-w-0 space-y-3 border-border p-4 lg:sticky lg:top-4"
+        >
+          <SectionHeader
+            title="Wer ist dabei?"
+            size="sm"
+            description={
+              openAudience
+                ? "Der Termin erscheint bei allen – ohne Einladung und Zusage."
+                : isCheckingBlocks
+                  ? "Sperrliste wird geprüft …"
+                  : undefined
+            }
           />
-        ) : null}
-        {drift && hasAudienceDrift(drift) ? (
-          <div className="space-y-3 rounded-lg border border-warning bg-warning/10 p-3 text-sm">
-            <p className="font-medium">Die Besetzung hat sich seit dem Ansetzen geändert.</p>
-            <ul className="space-y-1 text-muted-foreground">
-              {drift.added.length ? (
-                <li>Neu dabei: {drift.added.map((entry) => entry.name).join(", ")}</li>
-              ) : null}
-              {drift.removed.length ? (
-                <li>Nicht mehr dabei: {drift.removed.map((entry) => entry.name).join(", ")}</li>
-              ) : null}
-              {drift.levelChanged.length ? (
-                <li>
-                  Verbindlichkeit geändert:{" "}
-                  {drift.levelChanged.map((entry) => entry.name).join(", ")}
-                </li>
-              ) : null}
-            </ul>
-            <Button type="button" size="sm" onClick={() => setAudienceTouched(true)}>
-              Änderungen übernehmen
-            </Button>
-          </div>
-        ) : null}
-        {!openAudience ? (
-          <AudienceBuilder
-            context={context}
-            value={audience}
-            onChange={changeAudience}
-            availability={availability}
-            conflicts={conflicts}
-            declined={declined}
-            blocks={currentBlocks}
-            hideSceneRules={showBlocks && context.scenes.length > 0}
-          />
-        ) : null}
-      </Card>
+          {!isRehearsal ? (
+            <SegmentedControl
+              aria-label="Wer ist eingeladen?"
+              fullWidth
+              size="md"
+              value={openAudience ? "all" : "targeted"}
+              onValueChange={(value) => {
+                setOpen(value === "all");
+                setAudienceTouched(true);
+              }}
+              options={[
+                { value: "all", label: "Alle" },
+                { value: "targeted", label: "Bestimmte Personen" },
+              ]}
+            />
+          ) : null}
+          {drift && hasAudienceDrift(drift) ? (
+            <div className="space-y-3 rounded-lg border border-warning bg-warning/10 p-3 text-sm">
+              <p className="font-medium">Die Besetzung hat sich seit dem Ansetzen geändert.</p>
+              <ul className="space-y-1 text-muted-foreground">
+                {drift.added.length ? (
+                  <li>Neu dabei: {drift.added.map((entry) => entry.name).join(", ")}</li>
+                ) : null}
+                {drift.removed.length ? (
+                  <li>Nicht mehr dabei: {drift.removed.map((entry) => entry.name).join(", ")}</li>
+                ) : null}
+                {drift.levelChanged.length ? (
+                  <li>
+                    Verbindlichkeit geändert:{" "}
+                    {drift.levelChanged.map((entry) => entry.name).join(", ")}
+                  </li>
+                ) : null}
+              </ul>
+              <Button type="button" size="sm" onClick={() => setAudienceTouched(true)}>
+                Änderungen übernehmen
+              </Button>
+            </div>
+          ) : null}
+          {!openAudience ? (
+            <AudienceBuilder
+              context={context}
+              value={audience}
+              onChange={changeAudience}
+              availability={availability}
+              conflicts={conflicts}
+              declined={declined}
+              blocks={currentBlocks}
+              hideSceneRules={showBlocks && context.scenes.length > 0}
+            />
+          ) : null}
+        </Card>
+      </div>
 
       {/* Aktionsleiste: bleibt beim Scrollen unten sichtbar. */}
       <div
