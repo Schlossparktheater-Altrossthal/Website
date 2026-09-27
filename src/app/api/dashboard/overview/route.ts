@@ -6,7 +6,10 @@ import { requireAuth } from "@/lib/rbac";
 import { CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
-import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
+import {
+  currentDepartmentMembershipWhere,
+  currentMembershipWhere,
+} from "@/lib/produktionen/status";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { loadProfileChecklist } from "@/lib/profile-completion-server";
@@ -67,7 +70,7 @@ export async function GET() {
       : null;
 
     const [
-      totalMembers,
+      productionMembers,
       rehearsalsThisWeek,
       unreadNotifications,
       recentNotifications,
@@ -81,7 +84,12 @@ export async function GET() {
       membershipRecords,
       calendarEvents,
     ] = await Promise.all([
-      prisma.user.count(),
+      // Mitglieder der aktiven Produktion, nicht alle Konten des Vereins.
+      activeProductionId
+        ? prisma.productionMembership.count({
+            where: { showId: activeProductionId, ...currentMembershipWhere() },
+          })
+        : Promise.resolve(0),
       prisma.calendarEvent.count({
         where: {
           kind: "REHEARSAL",
@@ -297,7 +305,7 @@ export async function GET() {
     return NextResponse.json({
       offline: false,
       stats: {
-        totalMembers,
+        productionMembers,
         rehearsalsThisWeek,
         unreadNotifications,
         totalRehearsalsThisMonth,

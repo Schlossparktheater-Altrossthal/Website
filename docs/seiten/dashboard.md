@@ -4,8 +4,9 @@
 
 Einstiegsseite des Mitgliederbereichs: Begrüßung mit aktueller Produktion, ausblendbarer
 Team-Chat-Hinweis, kleine Kennzahlen (Tage bis Endproben, Proben diese Woche, online,
-Mitglieder), eigene nächste Termine, „Profil vervollständigen“ mit direkten Links in die
-Profilbereiche, Schnellzugriff und wer gerade online ist. Mobil einspaltig.
+Mitglieder der aktiven Produktion), eigene nächste Termine, „Profil vervollständigen“ mit
+direkten Links in die Profilbereiche, Schnellzugriff und wer gerade online ist. Mobil
+einspaltig.
 
 ## Routen
 

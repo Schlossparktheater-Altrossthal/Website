@@ -14,7 +14,7 @@ export type DevDashboardRehearsal = {
 export const DEV_DASHBOARD_OVERVIEW_FIXTURE = {
   offline: true,
   stats: {
-    totalMembers: 128,
+    productionMembers: 128,
     rehearsalsThisWeek: 5,
     unreadNotifications: 3,
     totalRehearsalsThisMonth: 18,

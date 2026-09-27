@@ -38,7 +38,8 @@ import { ConnectionStatusBadge } from "@/components/members/connection-status-ba
 import { PageHeader } from "@/components/members/page-header";
 
 interface DashboardStats {
-  totalMembers: number;
+  /** Mitglieder der aktiven Produktion (nicht alle Konten des Vereins). */
+  productionMembers: number;
   rehearsalsThisWeek: number;
   unreadNotifications: number;
 }
@@ -77,7 +78,7 @@ type ActiveProduction = {
 };
 
 const INITIAL_STATS: DashboardStats = {
-  totalMembers: 0,
+  productionMembers: 0,
   rehearsalsThisWeek: 0,
   unreadNotifications: 0,
 };
@@ -324,7 +325,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
 
         const statsPayload = isRecord(payload?.stats) ? payload.stats : {};
         setStats((prev) => ({
-          totalMembers: readNumber(statsPayload.totalMembers) ?? prev.totalMembers,
+          productionMembers: readNumber(statsPayload.productionMembers) ?? prev.productionMembers,
           rehearsalsThisWeek:
             readNumber(statsPayload.rehearsalsThisWeek) ?? prev.rehearsalsThisWeek,
           unreadNotifications:
@@ -548,7 +549,12 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           <StatTile label="Gerade online" value={onlineValue} tone="success" icon={<WifiIcon />} />
           <StatTile
             label="Mitglieder"
-            value={overviewLoaded ? numberFormatter.format(stats.totalMembers) : "–"}
+            value={
+              overviewLoaded && activeProduction
+                ? numberFormatter.format(stats.productionMembers)
+                : "–"
+            }
+            hint={activeProduction ? "in dieser Produktion" : "Keine aktive Produktion"}
             icon={<UsersIcon />}
             tone="info"
           />
