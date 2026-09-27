@@ -54,3 +54,7 @@ Fotoerlaubnis-Signaturen.
 - Rollenwünsche, Fokus und Team-Notizen sind produktionsbezogen (aktive Produktion aus der
   Seitenleiste, `readProductionPreferences`, Migration `production_scoped_preferences`).
 - Profilbild-Bearbeitung nutzt `react-easy-crop`.
+
+## Benachrichtigungen (`?bereich=benachrichtigungen`)
+
+Push auf diesem Gerät ein-/ausschalten und testen, Push je Bereich (Aufgaben und Dringendes kommen immer), Ruhezeit, angemeldete Geräte entfernen. Details: [benachrichtigungen.md](benachrichtigungen.md).

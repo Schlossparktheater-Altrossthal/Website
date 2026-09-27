@@ -1,12 +1,12 @@
 import type { ProfileChecklistTarget } from "@/lib/profile-completion";
 
-export type ProfileSectionId = ProfileChecklistTarget;
+export type ProfileSectionId = ProfileChecklistTarget | "benachrichtigungen";
 
 export type ProfileSectionDefinition = {
   id: ProfileSectionId;
   label: string;
   description: string;
-  group: "person" | "production";
+  group: "person" | "production" | "settings";
 };
 
 /** Reihenfolge und Texte der Profilbereiche (`/mitglieder/profil?bereich=<id>`). */
@@ -47,11 +47,18 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
     description: "Rollen- und Gewerkewünsche, Hintergrund und Team-Chat.",
     group: "production",
   },
+  {
+    id: "benachrichtigungen",
+    label: "Benachrichtigungen",
+    description: "Push aufs Handy, Ruhezeit und angemeldete Geräte.",
+    group: "settings",
+  },
 ];
 
 export const PROFILE_SECTION_GROUP_LABELS: Record<ProfileSectionDefinition["group"], string> = {
   person: "Über mich",
   production: "Produktion",
+  settings: "Einstellungen",
 };
 
 export function resolveProfileSection(value: string | null | undefined): ProfileSectionId | null {

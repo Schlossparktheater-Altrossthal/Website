@@ -3,7 +3,7 @@ import webpush, { WebPushError } from "web-push";
 import { prisma } from "@/lib/prisma";
 
 import type { PreparedNotification } from "./notify";
-import { shouldPush } from "./preferences";
+import { isInQuietHours, shouldPush } from "./preferences";
 import { NOTIFICATION_TYPES } from "./types";
 
 /** Web Push per VAPID (ohne Fremddienst). Schlüssel aus Vault, siehe `.env.example`. */
@@ -105,7 +105,7 @@ async function openCount(userId: string) {
 export async function pushNotification(prepared: PreparedNotification) {
   if (!isPushConfigured()) return;
 
-  const [subscriptions, preferences] = await Promise.all([
+  const [subscriptions, preferences, settings] = await Promise.all([
     prisma.pushSubscription.findMany({
       where: { userId: { in: prepared.recipientIds } },
       select: { id: true, userId: true, endpoint: true, p256dh: true, auth: true },
@@ -114,15 +114,31 @@ export async function pushNotification(prepared: PreparedNotification) {
       where: { userId: { in: prepared.recipientIds }, category: prepared.category },
       select: { userId: true, category: true, push: true },
     }),
+    prisma.notificationSettings.findMany({
+      where: { userId: { in: prepared.recipientIds }, quietStart: { not: null } },
+      select: { userId: true, quietStart: true, quietEnd: true },
+    }),
   ]);
   if (!subscriptions.length) return;
 
   const preferenceByUser = new Map(preferences.map((entry) => [entry.userId, entry]));
+  const quietUsers = new Set(
+    settings
+      .filter(
+        (entry) =>
+          entry.quietStart !== null &&
+          entry.quietEnd !== null &&
+          isInQuietHours({ start: entry.quietStart, end: entry.quietEnd }),
+      )
+      .map((entry) => entry.userId),
+  );
   const byUser = new Map<string, Subscription[]>();
   for (const { userId, ...subscription } of subscriptions) {
     // Testbenachrichtigungen sollen genau das zeigen: ob Push ankommt.
     const isTest = TEST_TYPES.has(prepared.type);
     if (!isTest && !shouldPush(prepared, preferenceByUser.get(userId))) continue;
+    // Ruhezeit: nur Dringendes kommt durch; der Eintrag bleibt in der Glocke.
+    if (!isTest && prepared.priority !== "urgent" && quietUsers.has(userId)) continue;
     byUser.set(userId, [...(byUser.get(userId) ?? []), subscription]);
   }
 

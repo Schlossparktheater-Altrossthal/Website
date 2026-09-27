@@ -11,6 +11,7 @@ import { getUserDisplayName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 import { ProfileHeader } from "./profile-header";
+import { NotificationsSection } from "./sections/notifications-section";
 import { PROFILE_SECTIONS, resolveProfileSection, type ProfileSectionId } from "./profile-sections";
 import { ProfileSectionNav, type ProfileSectionStatus } from "./profile-section-nav";
 import { BasicsSection } from "./sections/basics-section";
@@ -223,6 +224,7 @@ export function ProfileClient({
             ? `${rolePreferences.filter((pref) => pref.weight > 0).length} Wünsche`
             : "Rollen- und Gewerkewünsche",
       },
+      benachrichtigungen: { missing: false, summary: "Push, Ruhezeit, Geräte" },
     };
   }, [
     allergies.length,
@@ -264,6 +266,8 @@ export function ProfileClient({
             preferencesInheritedFrom={preferencesInheritedFrom}
           />
         );
+      case "benachrichtigungen":
+        return <NotificationsSection />;
     }
   };
 

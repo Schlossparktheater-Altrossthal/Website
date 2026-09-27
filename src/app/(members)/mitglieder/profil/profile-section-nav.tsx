@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BellIcon,
   CameraIcon,
   CreditCardIcon,
   HeartIcon,
@@ -31,6 +32,7 @@ const SECTION_ICONS: Record<ProfileSectionId, IconComponent> = {
   freigaben: CameraIcon,
   interessen: HeartIcon,
   produktion: TheaterIcon,
+  benachrichtigungen: BellIcon,
 };
 
 type ProfileSectionNavProps = {
@@ -43,7 +45,7 @@ type ProfileSectionNavProps = {
  * Desktop die linke Navigation mit markiertem aktivem Bereich.
  */
 export function ProfileSectionNav({ activeSection, status }: ProfileSectionNavProps) {
-  const groups = (["person", "production"] as const).map((group) => ({
+  const groups = (["person", "production", "settings"] as const).map((group) => ({
     group,
     sections: PROFILE_SECTIONS.filter((section) => section.group === group),
   }));

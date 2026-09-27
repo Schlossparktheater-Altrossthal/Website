@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import { BellIcon, BellRingIcon, CheckCheckIcon } from "@/components/ui/action-icons";
+import { BellIcon, BellRingIcon, CheckCheckIcon, SettingsIcon } from "@/components/ui/action-icons";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { DismissibleNotice } from "@/components/ui/dismissible-notice";
@@ -209,13 +209,31 @@ export function NotificationBell({ className }: { className?: string }) {
     </div>
   );
 
-  const markAllButton =
-    openCount > 0 ? (
-      <Button size="sm" variant="ghost" onClick={markAllRead} className="h-8 gap-1.5 px-2 text-xs">
-        <CheckCheckIcon className="h-3.5 w-3.5" />
-        Alle gelesen
+  const headerActions = (
+    <div className="flex items-center gap-1">
+      {openCount > 0 ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={markAllRead}
+          className="h-8 gap-1.5 px-2 text-xs"
+        >
+          <CheckCheckIcon className="h-3.5 w-3.5" />
+          Alle gelesen
+        </Button>
+      ) : null}
+      <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
+        <Link
+          href="/mitglieder/profil?bereich=benachrichtigungen"
+          onClick={close}
+          aria-label="Einstellungen für Benachrichtigungen"
+          title="Einstellungen"
+        >
+          <SettingsIcon className="h-4 w-4" />
+        </Link>
       </Button>
-    ) : null;
+    </div>
+  );
 
   if (status === "loading") {
     return <Skeleton className={cn(className, "h-9 w-9 rounded-full")} aria-hidden />;
@@ -267,7 +285,7 @@ export function NotificationBell({ className }: { className?: string }) {
           onOpenChange={handleOpenChange}
           title="Benachrichtigungen"
           description="Was zu tun ist und was neu ist"
-          headerAction={markAllButton}
+          headerAction={headerActions}
           footer={footer}
           className="h-[85dvh]"
         >
@@ -288,7 +306,7 @@ export function NotificationBell({ className }: { className?: string }) {
       >
         <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5">
           <h2 className="text-sm font-semibold">Benachrichtigungen</h2>
-          {markAllButton}
+          {headerActions}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto py-3">{content}</div>
         <div className="border-t border-border/60 p-2">{footer}</div>

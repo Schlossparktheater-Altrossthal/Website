@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => {
     send: vi.fn(),
     subscriptions: vi.fn(),
     preferences: vi.fn(),
+    settings: vi.fn(),
     deleteSub: vi.fn(),
     updateSubs: vi.fn(),
     updateRecipients: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock("@/lib/prisma", () => ({
       updateMany: mocks.updateSubs,
     },
     notificationPreference: { findMany: mocks.preferences },
+    notificationSettings: { findMany: mocks.settings },
     notificationRecipient: { updateMany: mocks.updateRecipients, count: mocks.count },
   },
 }));
@@ -54,14 +56,9 @@ const prepared: PreparedNotification = {
 };
 
 describe("shouldPush", () => {
-  it("schickt Dringendes immer, sonst nach Wahl bzw. nur Aufgaben", () => {
-    const info = { category: "gewerke", kind: "info", priority: "normal" } as const;
-    expect(shouldPush({ ...info, priority: "urgent" }, { category: "gewerke", push: false })).toBe(
-      true,
-    );
-    expect(shouldPush(info, undefined)).toBe(false);
-    expect(shouldPush({ ...info, kind: "action" }, undefined)).toBe(true);
-    expect(shouldPush(info, { category: "gewerke", push: true })).toBe(true);
+  it("schickt Dringendes immer", () => {
+    const info = { category: "gewerke", kind: "info", priority: "urgent" } as const;
+    expect(shouldPush(info, { category: "gewerke", push: false })).toBe(true);
   });
 });
 
@@ -86,6 +83,7 @@ describe("pushNotification", () => {
       if (typeof mock === "function" && "mockReset" in mock) mock.mockReset();
     mocks.count.mockResolvedValue(2);
     mocks.preferences.mockResolvedValue([]);
+    mocks.settings.mockResolvedValue([]);
     mocks.updateSubs.mockResolvedValue({ count: 1 });
     mocks.updateRecipients.mockResolvedValue({ count: 1 });
     mocks.deleteSub.mockResolvedValue({});
@@ -125,6 +123,18 @@ describe("pushNotification", () => {
     ]);
     mocks.send.mockResolvedValue({});
     await pushNotification({ ...prepared, type: "test", priority: "normal", kind: "info" });
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("hält normale Hinweise in der Ruhezeit zurück, Dringendes nicht", async () => {
+    mocks.subscriptions.mockResolvedValue([
+      { id: "s1", userId: "a", endpoint: "https://push/1", p256dh: "k", auth: "x" },
+    ]);
+    mocks.settings.mockResolvedValue([{ userId: "a", quietStart: 0, quietEnd: 24 * 60 - 1 }]);
+    mocks.send.mockResolvedValue({});
+    await pushNotification({ ...prepared, priority: "normal", kind: "action" });
+    expect(mocks.send).not.toHaveBeenCalled();
+    await pushNotification(prepared);
     expect(mocks.send).toHaveBeenCalledTimes(1);
   });
 

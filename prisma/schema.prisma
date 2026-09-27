@@ -312,6 +312,7 @@ model User {
   notifications                   NotificationRecipient[]
   pushSubscriptions               PushSubscription[]
   notificationPreferences         NotificationPreference[]
+  notificationSettings            NotificationSettings?
   blockedDays                     BlockedDay[]
   calendarFeed                    CalendarFeed?
   appRoles                        UserAppRole[]
@@ -1316,6 +1317,15 @@ model NotificationPreference {
   user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, category])
+}
+
+/// Allgemeine Benachrichtigungs-Einstellungen, z. B. Ruhezeit für Push (Minuten ab Mitternacht,
+/// Europe/Berlin; Ende kleiner als Beginn = über Mitternacht). Dringendes kommt trotzdem.
+model NotificationSettings {
+  userId     String @id
+  quietStart Int?
+  quietEnd   Int?
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Issue {
