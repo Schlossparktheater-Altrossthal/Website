@@ -145,6 +145,15 @@ type OverviewResponse = {
   activeProduction?: unknown;
 };
 
+/** Kennzahl zur Endprobenwoche; `href` nur gesetzt, wenn das Datum nachgetragen werden kann. */
+type FinalRehearsalTile = {
+  label: string;
+  value: string;
+  hint?: string;
+  tone: StatTileTone;
+  href?: string;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -261,12 +270,6 @@ const timeFormatter = new Intl.DateTimeFormat("de-DE", {
   minute: "2-digit",
   timeZone: TIME_ZONE,
 });
-const shortDateFormatter = new Intl.DateTimeFormat("de-DE", {
-  day: "numeric",
-  month: "short",
-  timeZone: TIME_ZONE,
-});
-
 function formatEventTime(event: UpcomingEvent) {
   const start = timeFormatter.format(event.start);
   const end = event.end ? timeFormatter.format(event.end) : null;
@@ -399,8 +402,24 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
     };
   }, [connectionStatus]);
 
-  const finalRehearsalMetric = useMemo(() => {
-    if (!finalRehearsalWeek) return null;
+  const canManageProduction = useMemo(
+    () => effectivePermissions.includes("PRIVATE.PRODUCTION.SHOW.MANAGE"),
+    [effectivePermissions],
+  );
+
+  // Fehlt der Start der Endprobenwoche, bleibt die Kachel stehen und zeigt einen Leerwert;
+  // nur wer die Produktion pflegen darf, kommt per Klick direkt zum Nachtragen.
+  const finalRehearsalTile = useMemo<FinalRehearsalTile | null>(() => {
+    if (!finalRehearsalWeek) {
+      if (!activeProduction) return null;
+      return {
+        label: "Tage bis Endproben",
+        value: "–",
+        hint: "Noch kein Termin gesetzt",
+        tone: "neutral",
+        href: canManageProduction ? `/mitglieder/produktionen/${activeProduction.id}` : undefined,
+      };
+    }
 
     const startDate = finalRehearsalWeek.startDate;
     const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
@@ -412,7 +431,6 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         )
       : null;
     const effectiveEnd = endDay ?? new Date(startDay.getTime() + 6 * DAY_IN_MS);
-    const hint = `ab ${shortDateFormatter.format(startDay)}`;
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -424,18 +442,17 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
       return {
         label: "Tage bis Endproben",
         value: String(diffDays),
-        hint,
         tone,
       };
     }
     if (diffDays === 0) {
-      return { label: "Endprobenwoche", value: "Heute", hint, tone: "warning" as const };
+      return { label: "Endprobenwoche", value: "Heute", tone: "warning" as const };
     }
     if (effectiveEnd.getTime() >= today.getTime()) {
-      return { label: "Endprobenwoche", value: "Läuft", hint, tone: "warning" as const };
+      return { label: "Endprobenwoche", value: "Läuft", tone: "warning" as const };
     }
     return null;
-  }, [finalRehearsalWeek]);
+  }, [finalRehearsalWeek, activeProduction, canManageProduction]);
 
   const numberFormatter = useMemo(() => new Intl.NumberFormat("de-DE"), []);
 
@@ -530,12 +547,13 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
         ) : null}
 
         <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {finalRehearsalMetric ? (
+          {finalRehearsalTile ? (
             <StatTile
-              label={finalRehearsalMetric.label}
-              value={finalRehearsalMetric.value}
-              hint={finalRehearsalMetric.hint}
-              tone={finalRehearsalMetric.tone}
+              label={finalRehearsalTile.label}
+              value={finalRehearsalTile.value}
+              hint={finalRehearsalTile.hint}
+              tone={finalRehearsalTile.tone}
+              href={finalRehearsalTile.href}
               icon={<SparklesIcon />}
             />
           ) : null}

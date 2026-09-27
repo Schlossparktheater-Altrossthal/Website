@@ -201,6 +201,9 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Leere Zustände immer mit zentriertem Text und muted-foreground Farbe darstellen.
 - Struktur: umschließende div mit py-12 text-center, Icon optional in text-muted-foreground, darunter p mit text-muted-foreground.
 - Kein window.confirm, kein gestrichelter Box-Eigenbau ohne diese Struktur.
+- Kennzahl-Kacheln (`StatTile`) verschwinden nicht, wenn ein Wert fehlt: Sie zeigen `–` plus eine Hinweiszeile in `tone="neutral"` und bleiben im Raster.
+- Eine Kachel entfällt nur, wenn ihr Bezug fehlt (z. B. keine aktive Produktion) oder der Meilenstein vorbei ist (Endprobenwoche).
+- Kacheln, die einen fehlenden Pflegewert melden, verlinken ihn für Berechtigte direkt auf die zuständige Seite (`href` nur setzen, wenn das Recht geprüft ist).
 
 ## Skeleton & Ladezeichen
 

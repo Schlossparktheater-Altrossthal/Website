@@ -171,7 +171,7 @@ export default async function ProduktionDetailPage({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="endprobenwoche" className="scroll-mt-20">
         <CardHeader className="space-y-2">
           <CardTitle className="text-lg font-semibold">Endprobenwoche</CardTitle>
         </CardHeader>
