@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
-import { SearchIcon } from "@/components/ui/action-icons";
+import { AlertIcon, CalendarCheckIcon, SearchIcon, TrashIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateBadge } from "@/components/ui/date-badge";
 import { Input } from "@/components/ui/input";
 import { SectionNav } from "@/components/ui/section-nav";
 import {
@@ -211,31 +212,46 @@ export default async function MyRehearsalsPage({
             <CardHeader>
               <CardTitle>Dein nächster Termin</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-4">
               {next ? (
                 <>
-                  <p className="text-sm font-semibold">{next.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">
+                  <div className="flex items-start gap-3">
+                    <DateBadge date={new Date(next.start)} tone="primary" />
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm font-semibold">{next.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatWhen(next)}
+                        {next.location
+                          ? ` · ${next.location}`
+                          : next.locationOpen
+                            ? " · Ort noch offen"
+                            : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg bg-muted px-3 py-2">
+                    <p className="text-2xl font-semibold tracking-tight">
                       {formatCountdown(new Date(next.start), now)}
-                    </span>
-                    {" · "}
-                    {formatWhen(next)}
-                    {next.location
-                      ? ` · ${next.location}`
-                      : next.locationOpen
-                        ? " · Ort noch offen"
-                        : ""}
-                  </p>
-                  {next.reasons.length ? (
-                    <p className="text-xs text-muted-foreground">
-                      Dabei als: {next.reasons.join(" · ")}
                     </p>
-                  ) : null}
+                    {next.reasons.length ? (
+                      <p className="text-xs text-muted-foreground">
+                        Dabei als: {next.reasons.join(" · ")}
+                      </p>
+                    ) : null}
+                  </div>
+
                   {next.withinFreeze && next.decline ? (
-                    <p className="text-xs text-warning">
+                    <p className="flex items-start gap-1.5 text-xs text-warning">
+                      <AlertIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                       Innerhalb der Sperrfrist – absagen geht nur als Notfall mit Begründung.
                     </p>
+                  ) : null}
+
+                  {next.href ? (
+                    <Button asChild variant="outline" size="sm" className="w-full">
+                      <Link href={next.href}>Zum Termin</Link>
+                    </Button>
                   ) : null}
                 </>
               ) : (
@@ -244,20 +260,22 @@ export default async function MyRehearsalsPage({
             </CardContent>
           </Card>
 
-          <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
-            <h2 className="mb-2 text-sm font-semibold text-foreground">Kurz gemerkt</h2>
-            <ul className="list-disc space-y-2 pl-5">
-              <li>
-                Trage bekannte Abwesenheiten früh in die Sperrliste ein – dann weiß die Planung
-                Bescheid.
+          <div className="rounded-lg border border-border bg-muted p-4">
+            <h2 className="mb-3 text-sm font-semibold text-foreground">Kurz gemerkt</h2>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li className="flex gap-2.5">
+                <CalendarCheckIcon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>
+                  Abwesenheiten früh in die Sperrliste eintragen – dann weiß die Planung Bescheid.
+                </span>
               </li>
-              <li>
-                Innerhalb der Sperrfrist geht eine Absage nur noch als Notfall, mit kurzer
-                Begründung. Die Planung wird sofort informiert.
+              <li className="flex gap-2.5">
+                <AlertIcon className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+                <span>Kurzfristig nur noch als Notfall absagen, mit kurzer Begründung.</span>
               </li>
-              <li>
-                Einträge in der Sperrliste lassen sich jederzeit wieder entfernen – auch innerhalb
-                der Frist.
+              <li className="flex gap-2.5">
+                <TrashIcon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>Einträge in der Sperrliste lassen sich jederzeit wieder entfernen.</span>
               </li>
             </ul>
           </div>
