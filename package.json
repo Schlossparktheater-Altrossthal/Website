@@ -61,6 +61,7 @@
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "node prisma/seed.mjs",
+    "demo:bausteine": "tsx --tsconfig tsconfig.json scripts/demo-bausteine.ts",
     "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc",
     "workbox:copy-lib": "pnpm exec workbox copyLibraries public/workbox",
     "prepare": "husky"

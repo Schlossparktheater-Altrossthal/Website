@@ -1,0 +1,9 @@
+[
+  { "action": "click", "target": "role=button[name=\"Demo: Stellprobe + Bautag öffnen\"]" },
+  { "action": "click", "target": "role=button[name=\"Baustein organisieren\"]" },
+  { "action": "fill", "target": "role=textbox[name=\"Raum\"]", "value": "Werkstatt" },
+  { "action": "click", "target": "role=button[name=\"Speichern\"]" },
+  { "action": "waitFor", "target": "text=Baustein gespeichert" },
+  { "action": "click", "target": "role=button[name=\"Demo: Stellprobe + Bautag öffnen\"]" },
+  { "action": "read", "target": "text=/18:30–21:00 · Werkstatt/", "name": "baustein" }
+]

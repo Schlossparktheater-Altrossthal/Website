@@ -369,7 +369,7 @@ function EventCard({
   const yes = event.responses.filter((entry) => entry.status === "yes").length;
   const no = event.responses.filter((entry) => entry.status === "no").length;
   return (
-    <li className="rounded-xl border border-border bg-card">
+    <li className="min-w-0 rounded-xl border border-border bg-card">
       <button
         type="button"
         onClick={onOpen}

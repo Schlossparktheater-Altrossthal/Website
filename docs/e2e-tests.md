@@ -62,6 +62,29 @@ pnpm e2e:screenshots -- --role member --viewport tablet-portrait
   oder `--out <dir>` (dort ebenfalls in `<viewport>`-Unterordnern). Nicht committen (keine Binärdateien im Repo).
 - Das Skript wartet auf `.animate-pulse`/`aria-busy`, damit die Client-Session geladen ist.
 
+## Demo-Daten: Termin mit Bausteinen
+
+Für Terminplanung Phase 6 (`docs/terminplanung-plan.md`) gibt es einen wiederholbaren Demo-Termin:
+
+```bash
+DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine           # (neu) anlegen
+DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine --remove  # entfernen
+```
+
+- Legt „Demo: Stellprobe + Bautag“ (vorgemerkt, in 11 Tagen) mit zwei Szenen, einem Gewerk- und
+  einem freien Baustein an; `admin@example.com` wird Leitung des Gewerks. Läuft nur gegen
+  `localhost`-Datenbanken.
+- Die DB muss die sein, mit der `next dev` läuft (`DATABASE_URL` des Dev-Servers).
+- Das Skript gibt die Routen und fertige Befehle aus: `pnpm e2e:screenshots … --viewport mobile,desktop`
+  und `pnpm ui:check … --steps-file e2e/scenarios/baustein-organisieren.json` (klickt
+  „Baustein organisieren“ → Raum → Speichern, liest „Euer Teil …“ zurück).
+- Der Playwright-Test `e2e/bausteine.spec.ts` braucht keine Demo-Daten: Er legt über die
+  Oberfläche eine Probe mit Gewerk-Baustein an, merkt sie vor, organisiert den Baustein im
+  Gewerk-Dashboard, prüft den seitlichen Überlauf und löscht die Probe wieder
+  (`pnpm e2e:desktop bausteine`).
+- Fehler wie „Value 'TENTATIVE' not found in enum“ bedeuten einen veralteten Prisma-Client im
+  laufenden `next dev` (nach neuen Migrationen): Dev-Server neu starten.
+
 ## Viewports & Playwright-Projekte
 
 Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in vier Projekten
