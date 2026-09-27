@@ -20,7 +20,7 @@ import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
 import { cn } from "@/lib/utils";
 import type { ImpersonationDetails } from "@/lib/auth/impersonation";
 import { ImpersonationBanner } from "@/components/members/impersonation-banner/impersonation-banner";
-import { PUBLIC_SITE_URL } from "@/config/public-site";
+import { useMembersBackTarget } from "@/hooks/useMembersBackTarget";
 
 const membersContentSectionVariants = cva("py-6 sm:py-8", {
   variants: {
@@ -262,14 +262,15 @@ function MembersTopbarContent({
     </div>
   ) : null;
 
-  const homeLink = (
+  const backTarget = useMembersBackTarget();
+  const backLink = backTarget ? (
     <Button asChild variant="ghost" size="sm" className="gap-1.5 whitespace-nowrap">
-      <Link href={PUBLIC_SITE_URL} aria-label="Zur Hauptseite">
+      <Link href={backTarget} aria-label="Zurück zur vorherigen Seite">
         <ArrowLeftIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className="hidden sm:inline">Zur Hauptseite</span>
+        <span className="hidden sm:inline">Zurück</span>
       </Link>
     </Button>
-  );
+  ) : null;
 
   return (
     <header
@@ -302,12 +303,12 @@ function MembersTopbarContent({
           <div className="flex flex-shrink-0 items-center gap-2">
             {desktopStatus}
             {desktopQuickActions}
-            {homeLink}
+            {backLink}
           </div>
         ) : (
           <div className="flex flex-1 flex-wrap items-center justify-end gap-2 gap-y-2">
             {mobileQuickActions}
-            {homeLink}
+            {backLink}
           </div>
         )}
       </div>
