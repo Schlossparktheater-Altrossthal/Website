@@ -106,6 +106,7 @@ export function MyEventsList({ items }: { items: MyEventItem[] }) {
                   title={item.title}
                   declined={item.decline.declined}
                   note={item.decline.note}
+                  tentative={item.decline.tentative}
                 />
               ) : null}
             </li>

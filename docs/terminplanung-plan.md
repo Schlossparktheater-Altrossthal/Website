@@ -201,7 +201,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 
 1. [x] Gewerk-Dashboard: angesetzte Termine mit Regel `DEPARTMENT` anzeigen (2026-09-27): Kennzeichen „Gemeinsam“/„Probe“, nicht bearbeitbar, Zu-/Absage für Eingeladene, Proben über „Meine Termine“.
 2. [x] Migration (2026-09-27, 20260928130000 + 20260928130100): `EventStatus.TENTATIVE`, `EventScene` → `EventBlock` per Umbenennung (Daten bleiben, `type = SCENE`), neue Felder `type`, `departmentId`, `title`, `description`, `location`; `CalendarEvent.scenes` heißt jetzt `blocks` (Szenen-Abfragen filtern `type = SCENE`).
-3. Status „vorgemerkt“: Sichtbarkeit, Absage, Konflikte in Terminfinder/Sperrliste, Feed.
+3. [x] Status „vorgemerkt“ (2026-09-27, vorerst nur im Probeneditor): Entwurf → „Vormerken“ oder „Probe ansetzen“, vorgemerkt → „Jetzt verbindlich ansetzen“ (Absagen bleiben). Sichtbar in Meine Termine/Kalender/Feed/Gewerk-Dashboard mit Kennzeichen „vorgemerkt“, Absage mit freiwilligem Grund, Planung wird bei Absagen benachrichtigt, Terminfinder und Konfliktprüfung zählen vorgemerkte Proben mit (`src/lib/calendar/status.ts`). Für allgemeine Termine kommt es mit dem gemeinsamen Editor (Schritt 5).
 4. Bausteine allgemein + parallel, Teilnehmer-Auflösung aus Bausteinen, Gewerk-Bausteine mit Rechten der Gewerk-Leitung.
 5. Editoren zusammenführen, `GENERAL_EVENT_WHERE` und `kind: "REHEARSAL"`-Filter bereinigen, Navigation vereinen.
 6. E2E + Release zusammen mit Phase 5b (Prod hat die Terminplanung noch nicht).

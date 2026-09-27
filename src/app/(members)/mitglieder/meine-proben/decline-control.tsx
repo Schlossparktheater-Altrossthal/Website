@@ -13,17 +13,22 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { declineRehearsalAction, withdrawDeclineAction } from "./actions";
 
-/** Absage mit Pflicht-Begründung – oder eine Absage wieder zurücknehmen. */
+/**
+ * Absage mit Begründung (bei vorgemerkten Proben freiwillig) – oder eine Absage wieder
+ * zurücknehmen.
+ */
 export function DeclineControl({
   eventId,
   title,
   declined,
   note,
+  tentative = false,
 }: {
   eventId: string;
   title: string;
   declined: boolean;
   note: string | null;
+  tentative?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -86,7 +91,11 @@ export function DeclineControl({
       </Button>
       <ModalFormDialog
         title="Absagen"
-        description={`Du kannst nicht zu „${title}“ kommen? Die Planung wird benachrichtigt.`}
+        description={
+          tentative
+            ? `„${title}“ ist erst vorgemerkt. Sag ruhig schon jetzt ab, dann kann die Planung das berücksichtigen.`
+            : `Du kannst nicht zu „${title}“ kommen? Die Planung wird benachrichtigt.`
+        }
         open={open}
         onOpenChange={setOpen}
         footer={
@@ -95,7 +104,7 @@ export function DeclineControl({
             variant="destructive"
             isLoading={pending}
             loadingText="Sagt ab…"
-            disabled={reason.trim().length < 3}
+            disabled={!tentative && reason.trim().length < 3}
             onClick={submit}
           >
             Absage senden
@@ -103,7 +112,7 @@ export function DeclineControl({
         }
       >
         <div className="space-y-2">
-          <Label htmlFor={fieldId}>Warum kannst du nicht?</Label>
+          <Label htmlFor={fieldId}>Warum kannst du nicht?{tentative ? " (freiwillig)" : ""}</Label>
           <Textarea
             id={fieldId}
             value={reason}

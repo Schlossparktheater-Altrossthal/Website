@@ -25,7 +25,7 @@ export type MyEventItem = {
   /** Gestaffelte Probe: Zeit der gesamten Probe, während `start`/`end` die eigene Zeit zeigen. */
   fullTime: { start: string; end: string | null } | null;
   /** Nur bei eigenen Proben: Absage möglich und ggf. schon abgesagt (mit Grund). */
-  decline: { declined: boolean; note: string | null } | null;
+  decline: { declined: boolean; note: string | null; tentative: boolean } | null;
 };
 
 const TAKE = 30;
@@ -130,6 +130,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         decline: {
           declined: response === "no" || response === "emergency",
           note: responseNote,
+          tentative: event.status === "TENTATIVE",
         },
       }),
     ),

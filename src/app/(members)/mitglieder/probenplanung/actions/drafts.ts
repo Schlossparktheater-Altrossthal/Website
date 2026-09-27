@@ -236,6 +236,7 @@ export async function publishRehearsalAction(input: {
   description?: string;
   audience?: AudienceInput;
   schedule?: ScheduleInput;
+  target?: "TENTATIVE" | "SCHEDULED";
 }) {
   const auth = await ensurePlanner({ rehearsalId: input?.id });
   if (!auth.ok) {
@@ -247,7 +248,8 @@ export async function publishRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, audience, schedule } = parsed.data;
+  const { id, title, date, time, endTime, location, description, audience, schedule, target } =
+    parsed.data;
   const [context, stored, storedSchedule] = await Promise.all([
     loadAudienceContext(auth.showId),
     audience ? null : readEventAudience(id),
@@ -267,9 +269,13 @@ export async function publishRehearsalAction(input: {
       if (!existing) {
         throw new Error("not-found");
       }
-      if (existing.status !== "DRAFT") {
+      // Entwurf → vorgemerkt/angesetzt, vorgemerkt → angesetzt.
+      const allowed =
+        existing.status === "DRAFT" || (existing.status === "TENTATIVE" && target === "SCHEDULED");
+      if (!allowed) {
         throw new Error("not-draft");
       }
+      const wasTentative = existing.status === "TENTATIVE";
 
       const start = parseStart(date, time);
       const end = endTime
@@ -300,7 +306,16 @@ export async function publishRehearsalAction(input: {
         timeStyle: "short",
         timeZone: REHEARSAL_TIME_ZONE,
       });
-      const notificationBody = `Am ${formatter.format(start)}`;
+      const notificationBody =
+        target === "TENTATIVE"
+          ? `Vorgemerkt für ${formatter.format(start)} – noch nicht verbindlich. Wenn du nicht kannst, sag gern schon ab.`
+          : `Am ${formatter.format(start)}`;
+      const notificationTitle =
+        target === "TENTATIVE"
+          ? `Probe vorgemerkt: ${title}`
+          : wasTentative
+            ? `Probe angesetzt: ${title}`
+            : `Neue Probe: ${title}`;
 
       const rehearsal = await tx.calendarEvent.update({
         where: { id },
@@ -310,7 +325,7 @@ export async function publishRehearsalAction(input: {
           end,
           location: normalizedLocation,
           description: safeDescription,
-          status: "SCHEDULED",
+          status: target,
           createdById: existing.createdById ?? auth.userId,
         },
         select: { id: true, title: true, start: true, end: true, location: true },
@@ -323,7 +338,7 @@ export async function publishRehearsalAction(input: {
       if (syncedInvitees.length) {
         await tx.notification.create({
           data: {
-            title: `Neue Probe: ${title}`,
+            title: notificationTitle,
             body: notificationBody,
             type: "rehearsal",
             eventId: rehearsal.id,
@@ -334,10 +349,15 @@ export async function publishRehearsalAction(input: {
         });
       }
 
-      return { rehearsal, inviteeIds: syncedInvitees, body: notificationBody };
+      return {
+        rehearsal,
+        inviteeIds: syncedInvitees,
+        body: notificationBody,
+        notificationTitle,
+      };
     });
 
-    const { rehearsal, inviteeIds, body } = result;
+    const { rehearsal, inviteeIds, body, notificationTitle } = result;
 
     if (inviteeIds.length) {
       await broadcastRehearsalCreated({
@@ -355,7 +375,7 @@ export async function publishRehearsalAction(input: {
         inviteeIds.map((userId) =>
           sendNotification({
             targetUserId: userId,
-            title: `Neue Probe: ${rehearsal.title}`,
+            title: notificationTitle,
             body,
             type: "info",
             metadata: { rehearsalId: rehearsal.id },
@@ -373,7 +393,7 @@ export async function publishRehearsalAction(input: {
       return { error: "Probe wurde nicht gefunden." } as const;
     }
     if (error instanceof Error && error.message === "not-draft") {
-      return { error: "Die Probe wurde bereits veröffentlicht." } as const;
+      return { error: "Die Probe wurde bereits angesetzt." } as const;
     }
     if (error instanceof Error && error.message === "no-invitees") {
       return { error: "Bitte wähle mindestens eine Person aus." } as const;

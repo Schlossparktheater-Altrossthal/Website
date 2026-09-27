@@ -36,7 +36,11 @@ export const baseSchema = z.object({
 });
 
 export const draftUpdateSchema = baseSchema.partial().extend({ id: z.string().min(1) });
-export const publishSchema = baseSchema.extend({ id: z.string().min(1) });
+export const publishSchema = baseSchema.extend({
+  id: z.string().min(1),
+  /** Vormerken (Zielgruppe sieht die Probe, Absagen möglich) oder verbindlich ansetzen. */
+  target: z.enum(["TENTATIVE", "SCHEDULED"]).default("SCHEDULED"),
+});
 export const updateSchema = baseSchema.extend({ id: z.string().min(1) });
 export const deleteSchema = z.object({ id: z.string().min(1) });
 

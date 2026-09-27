@@ -71,6 +71,7 @@ export function RehearsalEditor({
 }: RehearsalEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
+  const isTentative = rehearsal.status === "TENTATIVE";
 
   const [title, setTitle] = useState(rehearsal.title);
   const [date, setDate] = useState(() => formatIsoDateInTimeZone(rehearsal.start));
@@ -264,7 +265,7 @@ export function RehearsalEditor({
     isDraft,
   ]);
 
-  const handlePublish = () => {
+  const handlePublish = (target: "TENTATIVE" | "SCHEDULED") => {
     startPublish(() => {
       const trimmedEndTime = endTime.trim();
       publishRehearsalAction({
@@ -275,12 +276,18 @@ export function RehearsalEditor({
         ...(trimmedEndTime ? { endTime: trimmedEndTime } : {}),
         location,
         description,
-        audience,
+        // Vorgemerkte Proben: Zielgruppe nur mitschicken, wenn sie geändert wurde.
+        ...(isDraft || audienceTouched ? { audience } : {}),
         schedule: scheduleToSave,
+        target,
       })
         .then((result) => {
           if (result?.success && result.id) {
-            toast.success("Probe veröffentlicht. Einladungen wurden versendet.");
+            toast.success(
+              target === "TENTATIVE"
+                ? "Probe vorgemerkt. Die Eingeladenen sehen sie und können absagen."
+                : "Probe angesetzt. Einladungen wurden versendet.",
+            );
             router.push(`/mitglieder/proben/${result.id}`);
           } else {
             toast.error(result?.error ?? "Probe konnte nicht veröffentlicht werden.");
@@ -499,17 +506,40 @@ export function RehearsalEditor({
             </Button>
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
               <div className="text-xs text-muted-foreground">
-                Du kannst die Probe veröffentlichen, sobald alle Informationen vollständig sind.
+                Vormerken: Die Eingeladenen sehen die Probe schon und können absagen. Ansetzen:
+                verbindlich mit Einladung und Erinnerungen.
               </div>
               <Button
                 type="button"
-                onClick={handlePublish}
+                variant="outline"
+                onClick={() => handlePublish("TENTATIVE")}
                 disabled={isPublishing || !invitedCount}
               >
-                {isPublishing ? "Veröffentliche…" : "Probe veröffentlichen"}
+                Vormerken
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handlePublish("SCHEDULED")}
+                disabled={isPublishing || !invitedCount}
+              >
+                {isPublishing ? "Speichert…" : "Probe ansetzen"}
               </Button>
             </div>
           </>
+        ) : isTentative ? (
+          <div className="flex flex-col gap-2 md:ml-auto md:flex-row md:items-center md:gap-3">
+            <div className="text-xs text-muted-foreground">
+              Vorgemerkt – Änderungen werden automatisch gespeichert. Absagen bleiben beim Ansetzen
+              erhalten.
+            </div>
+            <Button
+              type="button"
+              onClick={() => handlePublish("SCHEDULED")}
+              disabled={isPublishing || !invitedCount}
+            >
+              {isPublishing ? "Speichert…" : "Jetzt verbindlich ansetzen"}
+            </Button>
+          </div>
         ) : (
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3 md:ml-auto">
             <div className="text-xs text-muted-foreground">

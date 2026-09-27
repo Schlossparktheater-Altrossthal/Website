@@ -102,7 +102,7 @@ export default async function RehearsalPlanningPage() {
     const dateKey = formatIsoDateInTimeZone(startIso, DEFAULT_TIME_ZONE);
     return {
       id: r.id,
-      title: r.title,
+      title: r.status === "TENTATIVE" ? `${r.title} (vorgemerkt)` : r.title,
       start: startIso,
       end: endIso,
       dateKey,
@@ -218,7 +218,7 @@ export default async function RehearsalPlanningPage() {
           initial={
             publishedRehearsals.map((r) => ({
               id: r.id,
-              title: r.title,
+              title: r.status === "TENTATIVE" ? `${r.title} (vorgemerkt)` : r.title,
               start: r.start.toISOString(),
               location: r.location ?? "",
             })) as RehearsalLite[]
