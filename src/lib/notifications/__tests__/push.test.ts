@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => {
     deleteSub: vi.fn(),
     updateSubs: vi.fn(),
     updateRecipients: vi.fn(),
-    count: vi.fn(),
+    openRows: vi.fn(),
   };
 });
 
@@ -32,13 +32,13 @@ vi.mock("@/lib/prisma", () => ({
     },
     notificationPreference: { findMany: mocks.preferences },
     notificationSettings: { findMany: mocks.settings },
-    notificationRecipient: { updateMany: mocks.updateRecipients, count: mocks.count },
+    notificationRecipient: { updateMany: mocks.updateRecipients, findMany: mocks.openRows },
   },
 }));
 
 import type { PreparedNotification } from "../notify";
 import { shouldPush } from "../preferences";
-import { buildPushPayload, pushNotification } from "../push";
+import { buildPushPayload, pushNotification, readBadgeCount } from "../push";
 
 const prepared: PreparedNotification = {
   id: "n1",
@@ -75,13 +75,30 @@ describe("buildPushPayload", () => {
   });
 });
 
+describe("readBadgeCount", () => {
+  it("zählt Bündel wie die Glocke", async () => {
+    const row = (groupKey: string | null, kind = "info") => ({
+      readAt: null,
+      doneAt: null,
+      notification: { kind, category: "proben", priority: "normal", groupKey },
+    });
+    mocks.openRows.mockResolvedValue([
+      row("decline:e1"),
+      row("decline:e1"),
+      row("decline:e1"),
+      row(null, "action"),
+    ]);
+    expect(await readBadgeCount("a")).toBe(2);
+  });
+});
+
 describe("pushNotification", () => {
   beforeEach(() => {
     vi.stubEnv("VAPID_PUBLIC_KEY", "pub");
     vi.stubEnv("VAPID_PRIVATE_KEY", "priv");
     for (const mock of Object.values(mocks))
       if (typeof mock === "function" && "mockReset" in mock) mock.mockReset();
-    mocks.count.mockResolvedValue(2);
+    mocks.openRows.mockResolvedValue([]);
     mocks.preferences.mockResolvedValue([]);
     mocks.settings.mockResolvedValue([]);
     mocks.updateSubs.mockResolvedValue({ count: 1 });

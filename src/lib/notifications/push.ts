@@ -2,6 +2,7 @@ import webpush, { WebPushError } from "web-push";
 
 import { prisma } from "@/lib/prisma";
 
+import { asCategory, countInbox } from "./inbox-shared";
 import type { PreparedNotification } from "./notify";
 import { isInQuietHours, shouldPush } from "./preferences";
 import { NOTIFICATION_TYPES } from "./types";
@@ -91,14 +92,31 @@ async function sendToSubscription(subscription: Subscription, payload: PushPaylo
   }
 }
 
-async function openCount(userId: string) {
-  return prisma.notificationRecipient.count({
+/** Zahl am App-Symbol – gleich gezählt wie das Badge der Glocke (ein Bündel zählt einmal). */
+export async function readBadgeCount(userId: string) {
+  const rows = await prisma.notificationRecipient.findMany({
     where: {
       userId,
       archivedAt: null,
       OR: [{ readAt: null }, { doneAt: null, notification: { kind: "action" } }],
     },
+    select: {
+      readAt: true,
+      doneAt: true,
+      notification: { select: { kind: true, category: true, priority: true, groupKey: true } },
+    },
   });
+  const counts = countInbox(
+    rows.map((row) => ({
+      readAt: row.readAt?.toISOString() ?? null,
+      doneAt: row.doneAt?.toISOString() ?? null,
+      groupKey: row.notification.groupKey,
+      kind: row.notification.kind === "action" ? "action" : "info",
+      category: asCategory(row.notification.category),
+      priority: row.notification.priority === "urgent" ? "urgent" : "normal",
+    })),
+  );
+  return counts.action + counts.new;
 }
 
 /** Stellt eine angelegte Benachrichtigung per Push an alle Geräte der Empfänger zu. */
@@ -145,7 +163,7 @@ export async function pushNotification(prepared: PreparedNotification) {
   const delivered: string[] = [];
   await Promise.all(
     [...byUser].map(async ([userId, devices]) => {
-      const payload = buildPushPayload(prepared, await openCount(userId));
+      const payload = buildPushPayload(prepared, await readBadgeCount(userId));
       const results = await Promise.all(
         devices.map(async (device) => ({
           device,
