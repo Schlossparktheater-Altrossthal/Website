@@ -113,6 +113,28 @@ DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine --remove 
 - Fehler wie „Value 'TENTATIVE' not found in enum“ bedeuten einen veralteten Prisma-Client im
   laufenden `next dev` (nach neuen Migrationen): Dev-Server neu starten.
 
+## Demo-Daten: Termine für „Meine Termine"
+
+Für Phase 0 des Plans `docs/meine-termine-plan.md` gibt es einen wiederholbaren Satz Demo-Termine:
+
+```bash
+pnpm dev:termine           # anlegen bzw. zeitlich neu legen
+pnpm dev:termine --remove  # entfernen
+```
+
+- Legt für `admin@example.com` neun Termine an, damit `/mitglieder/meine-proben` jeden Zustand
+  zeigt: zwei Proben am selben Tag, eine gestaffelte Probe mit persönlicher Zeit (Optional), einen
+  abgesagten Termin mit Grund, zwei „Für alle"-Termine (einer innerhalb der Sperrfrist), einen
+  Gewerk-Termin, eine vorgemerkte Probe und einen vergangenen Termin. Ein Termin trägt
+  „Noch offen" als Ort.
+- `admin@example.com` wird dabei Mitglied des ersten Gewerks der aktuellen Produktion, damit der
+  Gewerk-Termin in der Übersicht erscheint; `--remove` entfernt nur die Termine.
+- Die DB muss die sein, mit der `next dev` läuft; `DATABASE_URL` lädt das Skript selbst aus `.env`.
+  Läuft nur gegen `localhost`-Datenbanken.
+- Sinnvoll für Screenshots (`pnpm e2e:screenshots -- --role admin --viewport all /mitglieder/meine-proben`)
+  und für die Prüfung von Absage-, Gruppierungs- und Kalenderzuständen.
+- Die Termine liegen relativ zu „jetzt", werden also bei jedem Lauf neu gelegt.
+
 ## Viewports & Playwright-Projekte
 
 Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in vier Projekten
