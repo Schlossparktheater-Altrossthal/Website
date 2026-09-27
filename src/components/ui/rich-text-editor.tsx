@@ -13,11 +13,10 @@ type RichTextEditorProps = {
   className?: string;
 };
 
+// Nur, was die Bereinigung beim Speichern (sanitizeDescription) durchlässt.
 const TOOLBAR_OPTIONS = [
-  [{ header: [false, 1, 2, 3] }],
   ["bold", "italic", "underline", "link"],
   [{ list: "ordered" }, { list: "bullet" }],
-  ["blockquote", "code-block"],
   ["clean"],
 ] as const;
 
@@ -56,16 +55,7 @@ const BASE_MODULES = {
   },
 };
 
-const BASE_FORMATS = [
-  "header",
-  "bold",
-  "italic",
-  "underline",
-  "link",
-  "list",
-  "blockquote",
-  "code-block",
-];
+const BASE_FORMATS = ["bold", "italic", "underline", "link", "list", "blockquote"];
 
 interface ReactQuillProps {
   value: string;
@@ -99,9 +89,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   );
 
   return (
-    <div
-      className={cn("rich-text-editor group relative overflow-hidden rounded-[28px]", className)}
-    >
+    <div className={cn("rich-text-editor group relative overflow-hidden", className)}>
       <ReactQuill
         theme="snow"
         value={value || ""}

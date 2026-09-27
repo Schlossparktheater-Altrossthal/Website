@@ -67,7 +67,8 @@ export default async function RehearsalDetailPage({
   }
 
   const rehearsal = await prisma.calendarEvent.findFirst({
-    where: { id: rehearsalId, kind: "REHEARSAL" },
+    // Proben und andere Termine mit Einladung; Gewerk-Termine stehen im Gewerk-Portal.
+    where: { id: rehearsalId, departmentId: null },
     include: {
       blocks: {
         orderBy: [{ startsAt: { sort: "asc", nulls: "last" } }, { order: "asc" }],
@@ -102,7 +103,7 @@ export default async function RehearsalDetailPage({
   });
 
   if (!rehearsal) {
-    return <div className="text-sm text-destructive">Diese Probe existiert nicht.</div>;
+    return <div className="text-sm text-destructive">Dieser Termin existiert nicht.</div>;
   }
   const agenda = rehearsal.blocks.filter((block) => block.type !== "SCENE" || block.scene);
 
@@ -143,13 +144,13 @@ export default async function RehearsalDetailPage({
 
   const breadcrumbs = [
     membersNavigationBreadcrumb("/mitglieder/meine-proben"),
-    { id: rehearsal.id, label: rehearsal.title || "Probe", isCurrent: true },
+    { id: rehearsal.id, label: rehearsal.title || "Termin", isCurrent: true },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={rehearsal.title || "Probe"}
+        title={rehearsal.title || "Termin"}
         description="Alle Details, Teilnehmer und Rückmeldungen zu diesem Termin."
         breadcrumbs={breadcrumbs}
       />
@@ -272,7 +273,7 @@ export default async function RehearsalDetailPage({
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Für diese Probe wurden noch keine Einladungen vergeben.
+              Für diesen Termin wurden noch keine Einladungen vergeben.
             </p>
           )}
         </CardContent>

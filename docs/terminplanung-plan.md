@@ -213,7 +213,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
    - Ein Editor (`/mitglieder/terminplanung/[eventId]`) für alle Arten: Art (mit Szenen immer Probe), ganztägig, mehrere Tage, Ort, Beschreibung auf Klick, „gilt für“ (nur ohne Probe), „Wer ist dabei?“ mit „Alle“ (ohne Einladung) oder Baukasten, Bausteine optional aufklappbar, feste Aktionsleiste unten (Verwerfen/Löschen, Vormerken, Ansetzen). Alle Termine durchlaufen jetzt Entwurf → vorgemerkt → angesetzt.
    - Sperrliste: „Termin“ legt einen Entwurf an und öffnet den Editor; Termine im Tag öffnen den Editor.
    - `GENERAL_EVENT_WHERE` filtert jetzt auch den Status (Entwürfe allgemeiner Termine sind unsichtbar); vorgemerkte allgemeine Termine tragen „(vorgemerkt)“. Die übrigen `kind: "REHEARSAL"`-Stellen bleiben bewusst: Proben haben für Mitglieder eigene Einladung mit Absage.
-   - Offen: Absage für vorgemerkte allgemeine Termine mit Zielgruppe (bisher nur Proben).
+   - Mitgliedersicht nach Einladung statt Art (2026-09-27): Jeder Termin mit persönlicher Einladung (Probe oder nicht) erscheint in Meine Termine mit Absage, im Feed mit eigener Zeit, auf der Detailseite `/mitglieder/proben/[id]`, benachrichtigt die Planung und zählt als Konflikt. `kind` ist nur noch Anzeige und Filter; übrig bleibt „Probe“ als Voraussetzung für Szenen, Nachbereitung und Szenen-Stand.
 6. E2E + Release zusammen mit Phase 5b (Prod hat die Terminplanung noch nicht).
 
 **Stand und Wiedereinstieg (2026-09-27)**

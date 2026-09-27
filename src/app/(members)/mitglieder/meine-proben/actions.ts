@@ -30,7 +30,8 @@ async function loadOwnRehearsal(eventId: string) {
   const rehearsal = await prisma.calendarEvent.findFirst({
     where: {
       id: eventId,
-      kind: "REHEARSAL",
+      // Jede persönliche Einladung (Probe oder anderer Termin); Gewerk-Termine haben eigene Wege.
+      departmentId: null,
       status: visibleEventStatus,
       participants: { some: { userId, invited: true } },
     },

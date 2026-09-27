@@ -197,7 +197,7 @@ export async function notifyPlannersOfNewBlocks(
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
     const rehearsals = await prisma.calendarEvent.findMany({
       where: {
-        kind: "REHEARSAL",
+        departmentId: null,
         status: visibleEventStatus,
         start: { gte: dayStart, lt: dayEnd },
         participants: { some: { userId, invited: true, level: "REQUIRED", response: null } },

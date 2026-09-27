@@ -505,16 +505,16 @@
 @layer components {
   /* Rich Text Editor */
   .rich-text-editor {
-    --rte-toolbar-bg: color-mix(in srgb, hsl(var(--muted)) 70%, hsl(var(--card)));
-    --rte-toolbar-border: color-mix(in srgb, hsl(var(--border)) 85%, transparent);
-    --rte-button-hover: color-mix(in srgb, hsl(var(--muted)) 65%, transparent);
-    --rte-button-active: color-mix(in srgb, hsl(var(--primary)) 20%, hsl(var(--card)));
-    --rte-editor-bg: color-mix(in srgb, hsl(var(--card)) 92%, hsl(var(--background)));
+    --rte-toolbar-bg: color-mix(in srgb, var(--muted) 45%, transparent);
+    --rte-toolbar-border: color-mix(in srgb, var(--border) 85%, transparent);
+    --rte-button-hover: color-mix(in srgb, var(--muted) 65%, transparent);
+    --rte-button-active: color-mix(in srgb, var(--primary) 20%, var(--card));
+    --rte-editor-bg: transparent;
     position: relative;
     overflow: hidden;
-    border-radius: calc(var(--radius) + 6px);
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--card));
+    border-radius: var(--radius);
+    border: 1px solid var(--input);
+    background: transparent;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
     transition:
       border-color 0.2s ease,
@@ -523,9 +523,9 @@
   }
 
   .rich-text-editor:focus-within {
-    border-color: color-mix(in srgb, hsl(var(--primary)) 50%, hsl(var(--border)));
+    border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
     box-shadow:
-      0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 35%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent),
       0 8px 24px rgba(15, 23, 42, 0.12);
   }
 
@@ -537,17 +537,17 @@
     border: 0;
     border-bottom: 1px solid var(--rte-toolbar-border);
     background: var(--rte-toolbar-bg);
-    padding: 0.75rem 1rem;
-    color: hsl(var(--muted-foreground));
+    padding: 0.25rem 0.375rem;
+    color: var(--muted-foreground);
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-formats {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-right: 0.75rem;
-    padding-right: 0.75rem;
-    border-right: 1px solid color-mix(in srgb, hsl(var(--border)) 70%, transparent);
+    gap: 0.125rem;
+    margin-right: 0.25rem;
+    padding-right: 0.25rem;
+    border-right: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-formats:last-child {
@@ -561,9 +561,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 2.25rem;
-    min-width: 2.25rem;
-    padding: 0 0.6rem;
+    height: 2rem;
+    min-width: 2rem;
+    padding: 0 0.4rem;
     border-radius: calc(var(--radius) - 2px);
     border: 1px solid transparent;
     background: transparent;
@@ -589,22 +589,22 @@
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:hover,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:focus-visible {
     background: var(--rte-button-hover);
-    border-color: color-mix(in srgb, hsl(var(--border)) 65%, transparent);
-    color: hsl(var(--foreground));
+    border-color: color-mix(in srgb, var(--border) 65%, transparent);
+    color: var(--foreground);
   }
 
   .rich-text-editor .ql-toolbar.ql-snow button:focus-visible,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label:focus-visible {
-    outline: 2px solid color-mix(in srgb, hsl(var(--ring)) 55%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--ring) 55%, transparent);
     outline-offset: 2px;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow button.ql-active,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-label.ql-active {
     background: var(--rte-button-active);
-    border-color: color-mix(in srgb, hsl(var(--primary)) 45%, hsl(var(--border)));
-    color: color-mix(in srgb, hsl(var(--primary-foreground)) 65%, hsl(var(--foreground)));
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--primary)) 30%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    color: color-mix(in srgb, var(--primary-foreground) 65%, var(--foreground));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 30%, transparent);
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker {
@@ -614,8 +614,8 @@
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options {
     margin-top: 0.5rem;
     border-radius: calc(var(--radius) + 2px);
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--card));
+    border: 1px solid var(--border);
+    background: var(--card);
     padding: 0.5rem;
     min-width: 9rem;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
@@ -625,7 +625,7 @@
     border-radius: calc(var(--radius) - 2px);
     padding: 0.35rem 0.5rem;
     font-size: 0.875rem;
-    color: hsl(var(--muted-foreground)) !important;
+    color: var(--muted-foreground) !important;
     transition:
       background-color 0.15s ease,
       color 0.15s ease;
@@ -634,7 +634,7 @@
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover,
   .rich-text-editor .ql-toolbar.ql-snow .ql-picker-options .ql-picker-item.ql-selected {
     background: var(--rte-button-hover);
-    color: hsl(var(--foreground)) !important;
+    color: var(--foreground) !important;
   }
 
   .rich-text-editor .ql-toolbar.ql-snow .ql-stroke {
@@ -651,12 +651,11 @@
   }
 
   .rich-text-editor .ql-editor {
-    min-height: 12rem;
-    border-radius: calc(var(--radius) + 4px);
-    padding: 1.25rem 1.5rem 1.5rem;
-    color: hsl(var(--foreground));
-    font-size: 1rem;
-    line-height: 1.7;
+    min-height: 7rem;
+    padding: 0.625rem 0.75rem;
+    color: var(--foreground);
+    font-size: 0.875rem;
+    line-height: 1.6;
     font-family:
       var(--font-sans),
       system-ui,
@@ -667,10 +666,11 @@
   }
 
   .rich-text-editor .ql-editor.ql-blank::before {
-    color: color-mix(in srgb, hsl(var(--muted-foreground)) 70%, hsl(var(--foreground)) 30%);
+    color: color-mix(in srgb, var(--muted-foreground) 70%, var(--foreground) 30%);
     font-style: normal;
-    left: 1.5rem;
-    right: 1.5rem;
+    color: var(--muted-foreground);
+    left: 0.75rem;
+    right: 0.75rem;
   }
 
   .rich-text-editor .ql-editor p,
@@ -709,9 +709,9 @@
   .rich-text-editor .ql-editor blockquote {
     margin: 1.25rem 0;
     padding: 0.5rem 0 0.5rem 1rem;
-    border-left: 3px solid color-mix(in srgb, hsl(var(--primary)) 45%, hsl(var(--border)));
-    background: color-mix(in srgb, hsl(var(--primary)) 10%, transparent);
-    color: color-mix(in srgb, hsl(var(--foreground)) 85%, hsl(var(--muted-foreground)));
+    border-left: 3px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    color: color-mix(in srgb, var(--foreground) 85%, var(--muted-foreground));
     border-radius: calc(var(--radius) - 2px);
   }
 
@@ -719,19 +719,19 @@
   .rich-text-editor .ql-editor pre.ql-syntax {
     margin: 1.25rem 0;
     border-radius: calc(var(--radius) - 2px);
-    border: 1px solid hsl(var(--border));
-    background: color-mix(in srgb, hsl(var(--muted)) 80%, hsl(var(--background)));
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--muted) 80%, var(--background));
     padding: 1rem 1.25rem;
     font-family:
       var(--font-mono), SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
       monospace;
     font-size: 0.95rem;
-    color: hsl(var(--foreground));
+    color: var(--foreground);
     overflow-x: auto;
   }
 
   .rich-text-editor .ql-editor ::selection {
-    background-color: color-mix(in srgb, hsl(var(--primary)) 20%, transparent);
+    background-color: color-mix(in srgb, var(--primary) 20%, transparent);
   }
 
   .rich-text-editor .ql-editor ul,
@@ -758,7 +758,7 @@
   }
 
   .rich-text-editor .ql-editor a {
-    color: hsl(var(--primary));
+    color: var(--primary);
     font-weight: 500;
     text-decoration: underline;
     text-underline-offset: 4px;
@@ -766,7 +766,7 @@
   }
 
   .rich-text-editor .ql-editor a:hover {
-    color: color-mix(in srgb, hsl(var(--primary)) 85%, hsl(var(--primary-foreground)));
+    color: color-mix(in srgb, var(--primary) 85%, var(--primary-foreground));
   }
 
   .rich-text-editor .ql-editor img,
@@ -775,7 +775,7 @@
     max-width: 100%;
     border-radius: calc(var(--radius) + 2px);
     margin: 1rem 0;
-    border: 1px solid hsl(var(--border));
+    border: 1px solid var(--border);
   }
 
   .rich-text-editor .ql-editor img {
@@ -784,22 +784,22 @@
 
   .ql-snow .ql-tooltip {
     border-radius: calc(var(--radius) - 2px);
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--card));
+    border: 1px solid var(--border);
+    background: var(--card);
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
-    color: hsl(var(--foreground));
+    color: var(--foreground);
   }
 
   .ql-snow .ql-tooltip input {
     border-radius: calc(var(--radius) - 2px);
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--foreground);
   }
 
   .ql-snow .ql-tooltip a.ql-action,
   .ql-snow .ql-tooltip a.ql-remove {
-    color: hsl(var(--primary));
+    color: var(--primary);
   }
 
   @media (max-width: 768px) {

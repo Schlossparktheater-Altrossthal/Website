@@ -121,14 +121,20 @@ export async function collectFeedEvents(
   const [rehearsals, calendarEvents, departmentEvents, blockedDays] = await Promise.all([
     prisma.calendarEvent.findMany({
       where: {
-        kind: "REHEARSAL",
+        // Proben und Termine mit persönlicher Einladung.
+        departmentId: null,
         start: { gte: from, lte: to },
         status: { not: "DRAFT" },
         OR: [
           { participants: { some: { userId, invited: true } } },
           // „Alles aus meinen Produktionen“: auch Proben ohne eigene Einladung.
           ...(scope === "PRODUCTIONS"
-            ? [{ show: { memberships: { some: { userId, ...currentMembershipWhere(now) } } } }]
+            ? [
+                {
+                  kind: "REHEARSAL" as const,
+                  show: { memberships: { some: { userId, ...currentMembershipWhere(now) } } },
+                },
+              ]
             : []),
         ],
       },
@@ -174,6 +180,8 @@ export async function collectFeedEvents(
             ],
           },
           visibleGeneralEventWhere(userId),
+          // Mit Einladung stehen sie schon oben (mit eigener Zeit und Absage).
+          { participants: { none: { userId, invited: true } } },
         ],
       },
       orderBy: { start: "asc" },

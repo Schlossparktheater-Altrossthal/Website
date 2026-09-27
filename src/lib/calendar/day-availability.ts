@@ -34,7 +34,7 @@ export async function readParallelRehearsals({
       response: { notIn: ["no", "emergency"] },
       event: {
         id: { not: excludeEventId },
-        kind: "REHEARSAL",
+        departmentId: null,
         status: visibleEventStatus,
         start: { lt: end },
         end: { gt: start },
