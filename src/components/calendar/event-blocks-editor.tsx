@@ -67,7 +67,7 @@ export function EventBlocksEditor({
             const label = isDepartment ? departmentName(block.departmentId) : "Baustein";
             return (
               <li key={block.id} className="space-y-2 p-3">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs font-medium">
                     {isDepartment ? `Gewerk ${label}` : "Frei"}
                   </span>
@@ -77,13 +77,13 @@ export function EventBlocksEditor({
                     placeholder={isDepartment ? "z. B. Bühnenbau" : "z. B. Einsingen"}
                     maxLength={120}
                     aria-label={`Titel ${label}`}
-                    className="h-9"
+                    className="order-3 h-9 basis-full sm:order-2 sm:basis-0 sm:flex-1"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-9 w-9 shrink-0 p-0"
+                    className="order-2 ml-auto h-9 w-9 shrink-0 p-0 sm:order-3 sm:ml-0"
                     onClick={() => onChange(blocks.filter((entry) => entry.id !== block.id))}
                     aria-label={`${block.title || label} entfernen`}
                   >

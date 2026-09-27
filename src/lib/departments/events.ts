@@ -1,3 +1,4 @@
+import sanitizeHtml from "sanitize-html";
 import type { BlockedDayKind, Prisma } from "@prisma/client";
 
 import { toEventResponseStatus, type EventResponseStatus } from "@/lib/calendar/responses";
@@ -80,6 +81,20 @@ const toPerson = (user: {
   name: getUserDisplayName(user),
   initials: getNameInitials(user),
 });
+
+/** Beschreibungen aus dem Rich-Text-Editor (Proben) als Klartext; leere Absätze fallen weg. */
+function plainDescription(value: string | null) {
+  if (!value) return null;
+  const text = sanitizeHtml(value.replace(/<\/(p|li|h[1-6])>|<br\s*\/?>/gi, "\n"), {
+    allowedTags: [],
+    allowedAttributes: {},
+  })
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return text || null;
+}
 
 const userSelect = { id: true, firstName: true, lastName: true, name: true, email: true } as const;
 
@@ -215,7 +230,7 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
       startTime: formatIsoTimeInTimeZone(event.start.toISOString()),
       endTime: event.end ? formatIsoTimeInTimeZone(event.end.toISOString()) : null,
       location: event.location,
-      description: event.description,
+      description: plainDescription(event.description),
       past: isPast,
       myResponse: responses.find((entry) => entry.person.id === viewerId)?.status ?? null,
       responses,
