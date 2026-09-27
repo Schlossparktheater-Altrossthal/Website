@@ -10,6 +10,7 @@ import { SectionNav } from "@/components/ui/section-nav";
 import {
   MY_EVENTS_PAGE_SIZE,
   readMyUpcomingEvents,
+  readNextEvent,
   type MyEventGroup,
 } from "@/lib/calendar/my-events";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
@@ -18,6 +19,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import type { SectionNavItem } from "@/lib/ui-standards";
 
+import { formatWhen } from "./my-event-row";
 import { MyEventsCalendar } from "./my-events-calendar";
 import { MyEventsList } from "./my-events-list";
 
@@ -35,6 +37,22 @@ const GROUP_LABELS: Record<MyEventGroup | "all", string> = {
   optional: "Optional",
   club: "Für alle",
 };
+
+/** Kurzer Countdown für das Widget: erst Stunden, dann Tage – gerechnet in Berliner Tagen. */
+function formatCountdown(start: Date, now: Date) {
+  const diffMs = start.getTime() - now.getTime();
+  if (diffMs <= 0) return "läuft gerade";
+
+  const hours = Math.round(diffMs / (60 * 60 * 1000));
+  if (hours < 6) return `in ${Math.max(1, hours)} Stunde${hours <= 1 ? "" : "n"}`;
+
+  const dayOf = (date: Date) =>
+    Date.parse(`${formatIsoDateInTimeZone(date.toISOString())}T12:00:00Z`);
+  const days = Math.round((dayOf(start) - dayOf(now)) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return "heute";
+  if (days === 1) return "morgen";
+  return `in ${days} Tagen`;
+}
 
 type SearchParams = {
   ansicht?: string;
@@ -78,6 +96,7 @@ export default async function MyRehearsalsPage({
 
   const now = new Date();
   const items = await readMyUpcomingEvents(userId, { now, past, search: term, limit });
+  const next = await readNextEvent(userId, now);
 
   /** Link auf dieselbe Seite mit geänderten Parametern – der Zustand steht komplett in der URL. */
   const href = (overrides: Partial<SearchParams>) => {
@@ -190,29 +209,58 @@ export default async function MyRehearsalsPage({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Sperrliste zuerst nutzen</CardTitle>
+              <CardTitle>Dein nächster Termin</CardTitle>
             </CardHeader>
-            <CardContent>
-              <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                <li>
-                  Trage bekannte Abwesenheiten direkt in die Sperrliste ein – dadurch weiß die
-                  Planung, dass du fehlst.
-                </li>
-                <li>
-                  Bei kurzfristigen Änderungen informiere zusätzlich telefonisch oder per Chat,
-                  damit Ersatz organisiert werden kann.
-                </li>
-                <li>
-                  Innerhalb der Sperrfrist geht eine Absage nur noch als Notfall – mit kurzer
-                  Begründung. Die Planung wird sofort informiert.
-                </li>
-                <li>
-                  Nach dem Eintrag in die Sperrliste kannst du den Termin aus deinem Kalender
-                  entfernen.
-                </li>
-              </ul>
+            <CardContent className="space-y-2">
+              {next ? (
+                <>
+                  <p className="text-sm font-semibold">{next.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {formatCountdown(new Date(next.start), now)}
+                    </span>
+                    {" · "}
+                    {formatWhen(next)}
+                    {next.location
+                      ? ` · ${next.location}`
+                      : next.locationOpen
+                        ? " · Ort noch offen"
+                        : ""}
+                  </p>
+                  {next.reasons.length ? (
+                    <p className="text-xs text-muted-foreground">
+                      Dabei als: {next.reasons.join(" · ")}
+                    </p>
+                  ) : null}
+                  {next.withinFreeze && next.decline ? (
+                    <p className="text-xs text-warning">
+                      Innerhalb der Sperrfrist – absagen geht nur als Notfall mit Begründung.
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Gerade ist nichts angesetzt.</p>
+              )}
             </CardContent>
           </Card>
+
+          <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
+            <h2 className="mb-2 text-sm font-semibold text-foreground">Kurz gemerkt</h2>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                Trage bekannte Abwesenheiten früh in die Sperrliste ein – dann weiß die Planung
+                Bescheid.
+              </li>
+              <li>
+                Innerhalb der Sperrfrist geht eine Absage nur noch als Notfall, mit kurzer
+                Begründung. Die Planung wird sofort informiert.
+              </li>
+              <li>
+                Einträge in der Sperrliste lassen sich jederzeit wieder entfernen – auch innerhalb
+                der Frist.
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>

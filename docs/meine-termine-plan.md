@@ -252,10 +252,14 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 
 ### Phase 4 – Rechte Spalte und Konflikt-Hinweis
 
-- Widget „Dein nächster Termin" (Countdown in Tagen/Stunden, Ort, „Dabei als").
-- Tipps als kompakter Callout (`bg-muted border border-border rounded-lg p-4`) mit neuem Text.
-- Konflikt-Hinweis an der Karte, wenn am Termintag „Gesperrt"/„Eingeschränkt" eingetragen ist und
-  der Termin nicht abgesagt ist (`readDayAvailability`).
+- [x] Widget „Dein nächster Termin": Countdown (unter 6 Stunden in Stunden, sonst „heute",
+      „morgen", „in N Tagen"), Zeit und Ort, „Dabei als" und ein Hinweis, wenn der Termin in der
+      Sperrfrist liegt. Quelle ist `readNextEvent` – unabhängig von Ansicht und Filtern.
+- [x] Tipps als kompakter Callout (`bg-muted border border-border rounded-lg p-4`) mit neuem Text:
+      früh eintragen, kurzfristig nur als Notfall mit Grund, Einträge jederzeit entfernbar.
+- [x] Konflikt-Hinweis an der Zeile („Du stehst an diesem Tag in der Sperrliste." bzw. „… nur
+      eingeschränkt verfügbar."), wenn die Sperrliste den Tag als `blocked`/`limited` führt und der
+      Termin nicht abgesagt ist. Die Sperrliste wird je Termintag einmal geladen.
 
 ### Phase 5 – Sperrliste: Zustand „Notfall"
 
@@ -308,6 +312,6 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 - [x] Phase 1 (2026-09-27) – Migrationen, Absage-Logik mit Frist, Sperrlisten-Verknüpfung, „Für alle" absagbar
 - [x] Phase 2 (2026-09-27) – Kalenderblatt-Zeilen, Gruppierung, Zähler, Ort-Hinweis, Zeitformat, Skeleton
 - [x] Phase 3 (2026-09-27) – Werkzeugzeile, URL-Zustand, Suche, Vergangenheit, „Mehr laden", Kalenderansicht
-- [ ] Phase 4 – „Nächster Termin", Konflikt-Hinweis, Tipps-Callout
+- [x] Phase 4 (2026-09-27) – „Nächster Termin", Konflikt-Hinweis, Tipps-Callout
 - [ ] Phase 5 – Zustand „Notfall" in der Sperrliste (Typen, UI, Feed, Export)
 - [ ] Phase 6 – Doku, Tests, Screenshots, Checks, Freigabe

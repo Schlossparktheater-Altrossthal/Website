@@ -2,7 +2,8 @@ import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/en
 import { getCalendarEntryKindLabel } from "@/lib/calendar/event-kinds";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
-import { isWithinFreeze, readFreezeDays } from "@/lib/calendar/block-list-link";
+import { blockDayKey, isWithinFreeze, readFreezeDays } from "@/lib/calendar/block-list-link";
+import { readDayAvailability } from "@/lib/calendar/day-availability";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -32,6 +33,8 @@ export type MyEventItem = {
   bucket: MyEventBucket;
   /** Termin liegt innerhalb der Sperrfrist: eine Absage wäre ein Notfall. */
   withinFreeze: boolean;
+  /** Eigene Sperrliste am Termintag: `blocked` oder `limited`, sonst `null`. */
+  conflict: "blocked" | "limited" | null;
   /** Warum die Person dabei ist. */
   reasons: string[];
   /** Gestaffelte Probe: Zeit der gesamten Probe, während `start`/`end` die eigene Zeit zeigen. */
@@ -212,7 +215,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
     }),
   ]);
 
-  const items: Omit<MyEventItem, "bucket" | "withinFreeze">[] = [
+  const items: Omit<MyEventItem, "bucket" | "withinFreeze" | "conflict">[] = [
     ...rehearsals.map(
       ({ level, reasons, response, responseNote, personalStart, personalEnd, event }) => ({
         id: event.id,
@@ -283,11 +286,27 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
   ];
 
   const freezeDays = await readFreezeDays();
+  // Sperrliste je Termintag einmal laden, statt pro Termin.
+  const dayKeys = [...new Set(items.map((item) => blockDayKey(new Date(item.start))))];
+  const availability = new Map(
+    await Promise.all(dayKeys.map(async (key) => [key, await readDayAvailability(key)] as const)),
+  );
+
   return items
     .map((item) => ({
       ...item,
       bucket: resolveEventBucket(new Date(item.start), now),
       withinFreeze: isWithinFreeze(new Date(item.start), freezeDays, now),
+      conflict: availability.get(blockDayKey(new Date(item.start)))?.[userId] ?? null,
     }))
     .sort((a, b) => (past ? b.start.localeCompare(a.start) : a.start.localeCompare(b.start)));
+}
+
+/**
+ * Der nächste kommende Termin – unabhängig von Ansicht und Filtern, für das Widget in der rechten
+ * Spalte. Nutzt dieselbe Sichtbarkeitslogik wie die Übersicht.
+ */
+export async function readNextEvent(userId: string, now = new Date()) {
+  const items = await readMyUpcomingEvents(userId, { now });
+  return items[0] ?? null;
 }

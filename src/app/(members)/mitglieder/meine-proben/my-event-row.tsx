@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AlertIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { DateBadge } from "@/components/ui/date-badge";
 import type { MyEventItem } from "@/lib/calendar/my-events";
@@ -62,6 +63,15 @@ export function MyEventRow({ item, className }: { item: MyEventItem; className?:
           {formatWhen(item)}
           {item.location ? ` · ${item.location}` : item.locationOpen ? " · Ort noch offen" : ""}
         </p>
+
+        {item.conflict && !item.decline?.declined ? (
+          <p className="flex items-center gap-1.5 text-xs text-warning">
+            <AlertIcon className="h-3.5 w-3.5" aria-hidden />
+            {item.conflict === "blocked"
+              ? "Du stehst an diesem Tag in der Sperrliste."
+              : "Du bist an diesem Tag nur eingeschränkt verfügbar."}
+          </p>
+        ) : null}
 
         {item.fullTime ? (
           <p className="text-xs text-muted-foreground">
