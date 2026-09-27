@@ -4,14 +4,19 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { CalendarEventKind } from "@prisma/client";
 
-import { CalendarCheckIcon, ListIcon, SearchIcon } from "@/components/ui/action-icons";
+import {
+  CalendarCheckIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ListIcon,
+  SearchIcon,
+} from "@/components/ui/action-icons";
 import { AvailabilityBar } from "@/components/ui/availability-bar";
 import { StatusDot, StatusLegend } from "@/components/ui/availability-status";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DateBadge } from "@/components/ui/date-badge";
-import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -22,7 +27,7 @@ import {
   getCalendarEntryKindLabel,
   type CalendarEntry,
 } from "@/lib/calendar/event-kinds";
-import { formatIsoTimeInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, formatIsoTimeInTimeZone } from "@/lib/date-time";
 import type { FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import { toDayKey } from "@/lib/sperrliste/day-tiers";
 import { cn } from "@/lib/utils";
@@ -381,31 +386,80 @@ function DayCellCounts({ counts }: { counts: { blocked: number; limited: number 
   );
 }
 
+const DRAFT_DATE = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: DEFAULT_TIME_ZONE,
+});
+/** Ab so vielen Entwürfen startet die Liste eingeklappt. */
+const DRAFTS_COLLAPSED_FROM = 4;
+
+/** Entwürfe als dichte, einklappbare Liste; lange Listen scrollen innerhalb der Karte. */
 function DraftList({ drafts }: { drafts: PlanningDraft[] }) {
+  const [open, setOpen] = useState(drafts.length < DRAFTS_COLLAPSED_FROM);
   return (
     <Card variant="plain" size="flush" className="border-border">
-      <div className="p-4 pb-1">
-        <SectionHeader
-          title="Entwürfe"
-          size="sm"
-          description="Nur für die Planung sichtbar – vormerken oder ansetzen im Editor."
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-controls="draft-list"
+        className="flex min-h-11 w-full items-center gap-2 rounded-lg px-4 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="text-sm font-semibold">Entwürfe</span>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+          {drafts.length}
+        </span>
+        <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+          nur für die Planung sichtbar
+        </span>
+        <ChevronDownIcon
+          className={cn(
+            "ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+            open && "rotate-180",
+          )}
+          aria-hidden
         />
-      </div>
-      <ListRowGroup className="px-1 pb-2">
-        {drafts.map((draft) => (
-          <ListRow
-            key={draft.id}
-            density="compact"
-            leading={<DateBadge date={new Date(draft.start)} />}
-            title={draft.title || "Unbenannter Entwurf"}
-            description={[
-              getCalendarEntryKindLabel(draft.kind),
-              draft.allDay ? "ganztägig" : formatIsoTimeInTimeZone(draft.start),
-            ].join(" · ")}
-            href={`/mitglieder/terminplanung/${draft.id}`}
-          />
-        ))}
-      </ListRowGroup>
+      </button>
+      {open ? (
+        <ul
+          id="draft-list"
+          className="max-h-64 divide-y divide-border overflow-y-auto border-t border-border"
+        >
+          {drafts.map((draft) => (
+            <li key={draft.id}>
+              <Link
+                href={`/mitglieder/terminplanung/${draft.id}`}
+                className="flex min-h-11 items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "h-6 w-1 shrink-0 rounded-full",
+                    draft.kind === "REHEARSAL" ? "bg-info" : "bg-primary",
+                  )}
+                />
+                <span className="w-24 shrink-0 whitespace-nowrap tabular-nums text-muted-foreground sm:w-36">
+                  {DRAFT_DATE.format(new Date(draft.start)).replace(".,", "")}
+                  {draft.allDay ? null : (
+                    <span className="block text-xs sm:inline sm:pl-1.5">
+                      {formatIsoTimeInTimeZone(draft.start)}
+                    </span>
+                  )}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {draft.title || "Unbenannter Entwurf"}
+                </span>
+                <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                  {getCalendarEntryKindLabel(draft.kind)}
+                </span>
+                <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </Card>
   );
 }
@@ -452,7 +506,7 @@ function DayPanel({
       <section className="space-y-2">
         <h3 className="text-xs font-medium text-muted-foreground">Termine</h3>
         {events.length ? (
-          <div className="-mx-1 space-y-1">
+          <div className="-mx-1 divide-y divide-border">
             {events.map((event) => (
               <EventSummary key={event.id} event={event} attendance={attendanceFor(event)} />
             ))}
