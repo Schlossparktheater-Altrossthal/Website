@@ -63,9 +63,11 @@ export async function saveEventSchedule(
   });
 
   await tx.calendarEvent.update({ where: { id: eventId }, data: { scheduleMode: schedule.mode } });
-  await tx.eventScene.deleteMany({ where: { eventId, sceneId: { notIn: [...sceneIds] } } });
+  await tx.eventBlock.deleteMany({
+    where: { eventId, type: "SCENE", sceneId: { notIn: [...sceneIds] } },
+  });
   for (const [order, scene] of scenes.entries()) {
-    await tx.eventScene.upsert({
+    await tx.eventBlock.upsert({
       where: { eventId_sceneId: { eventId, sceneId: scene.sceneId } },
       update: { order, startsAt: scene.startsAt, endsAt: scene.endsAt },
       create: { eventId, order, ...scene },
@@ -94,12 +96,15 @@ export async function readEventSchedule(eventId: string): Promise<{
     where: { id: eventId },
     select: {
       scheduleMode: true,
-      scenes: { select: { sceneId: true, startsAt: true, endsAt: true } },
+      blocks: {
+        where: { type: "SCENE", sceneId: { not: null } },
+        select: { sceneId: true, startsAt: true, endsAt: true },
+      },
     },
   });
   const times: ScheduleInput["times"] = {};
-  for (const scene of event?.scenes ?? []) {
-    if (scene.startsAt && scene.endsAt) {
+  for (const scene of event?.blocks ?? []) {
+    if (scene.sceneId && scene.startsAt && scene.endsAt) {
       times[scene.sceneId] = {
         start: formatIsoTimeInTimeZone(scene.startsAt.toISOString()),
         end: formatIsoTimeInTimeZone(scene.endsAt.toISOString()),
@@ -117,7 +122,7 @@ export type SceneStats = Record<
 /** Wie oft jede Szene einer Produktion schon geprobt wurde und wie oft sie noch angesetzt ist. */
 export async function loadSceneStats(showId: string | null, now = new Date()): Promise<SceneStats> {
   if (!showId) return {};
-  const entries = await prisma.eventScene.findMany({
+  const entries = await prisma.eventBlock.findMany({
     where: {
       scene: { showId },
       event: { kind: "REHEARSAL", status: "SCHEDULED" },
@@ -126,6 +131,7 @@ export async function loadSceneStats(showId: string | null, now = new Date()): P
   });
   const stats: SceneStats = {};
   for (const entry of entries) {
+    if (!entry.sceneId) continue;
     const current = (stats[entry.sceneId] ??= { rehearsed: 0, lastRehearsedAt: null, planned: 0 });
     if (entry.event.start > now) {
       current.planned += 1;

@@ -481,6 +481,7 @@ model Department {
   boardColumns         DepartmentBoardColumn[]
   permissions          DepartmentPermission[]
   events               CalendarEvent[]
+  eventBlocks          EventBlock[]
   documents            DepartmentDocument[]
 
   @@unique([showId, slug], name: "showId_slug")
@@ -655,7 +656,7 @@ model Scene {
   show            Show                 @relation(fields: [showId], references: [id], onDelete: Cascade)
   characters      SceneCharacter[]
   breakdownItems  SceneBreakdownItem[]
-  rehearsals      EventScene[]
+  rehearsals      EventBlock[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([showId, sequence])
@@ -934,7 +935,7 @@ model CalendarEvent {
   createdBy        User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
   participants     EventParticipant[]
   audienceRules    EventAudienceRule[]
-  scenes           EventScene[]
+  blocks           EventBlock[]
   responseLogs     EventResponseLog[]
   notifications    Notification[]
 
@@ -946,6 +947,8 @@ model CalendarEvent {
 /// Entwurf nur für die Planung sichtbar; angesetzt lädt ein; abgesagt bleibt sichtbar.
 enum EventStatus {
   DRAFT
+  /// Vorgemerkt: Zielgruppe sieht den Termin, Absagen möglich, noch keine Zusage erwartet.
+  TENTATIVE
   SCHEDULED
   CANCELLED
 }
@@ -979,21 +982,38 @@ enum SceneRehearsalOutcome {
   SKIPPED
 }
 
-/// Szene einer Probe in Reihenfolge, optional mit Uhrzeit; nach der Probe mit Ergebnis.
-model EventScene {
-  id       String                 @id @default(cuid())
-  eventId  String
-  sceneId  String
-  order    Int                    @default(0)
-  startsAt DateTime?
-  endsAt   DateTime?
-  outcome  SceneRehearsalOutcome?
-  note     String?
-  event    CalendarEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  scene    Scene                  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+enum EventBlockType {
+  /// Szenenprobe; Teilnehmende aus der Besetzung
+  SCENE
+  /// Teil eines Gewerks (z. B. Bühnenbau); organisiert die Gewerk-Leitung selbst
+  DEPARTMENT
+  /// Freier Baustein (z. B. Einsingen)
+  CUSTOM
+}
+
+/// Baustein eines Termins in Reihenfolge, optional mit Uhrzeit und Raum (auch parallel);
+/// nach dem Termin mit Ergebnis.
+model EventBlock {
+  id           String                 @id @default(cuid())
+  eventId      String
+  type         EventBlockType         @default(SCENE)
+  sceneId      String?
+  departmentId String?
+  title        String?
+  description  String?
+  location     String?
+  order        Int                    @default(0)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  outcome      SceneRehearsalOutcome?
+  note         String?
+  event        CalendarEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scene        Scene?                 @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  department   Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, sceneId])
   @@index([sceneId])
+  @@index([departmentId])
 }
 
 enum ParticipantOverride {

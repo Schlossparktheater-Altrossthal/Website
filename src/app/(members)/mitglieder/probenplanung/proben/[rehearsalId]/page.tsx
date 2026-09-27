@@ -72,7 +72,8 @@ export default async function RehearsalEditorPage({
           .findUnique({
             where: { id: rehearsal.id },
             select: {
-              scenes: {
+              blocks: {
+                where: { type: "SCENE", sceneId: { not: null } },
                 orderBy: { order: "asc" },
                 select: {
                   sceneId: true,
@@ -94,13 +95,19 @@ export default async function RehearsalEditorPage({
             },
           })
           .then((data) => ({
-            scenes: (data?.scenes ?? []).map((entry) => ({
-              sceneId: entry.sceneId,
-              label: `Sz. ${entry.scene.identifier || entry.scene.sequence}${
-                entry.scene.title ? ` ${entry.scene.title}` : ""
-              }`,
-              outcome: entry.outcome,
-            })),
+            scenes: (data?.blocks ?? [])
+              .flatMap((entry) =>
+                entry.sceneId && entry.scene
+                  ? [{ ...entry, sceneId: entry.sceneId, scene: entry.scene }]
+                  : [],
+              )
+              .map((entry) => ({
+                sceneId: entry.sceneId,
+                label: `Sz. ${entry.scene.identifier || entry.scene.sequence}${
+                  entry.scene.title ? ` ${entry.scene.title}` : ""
+                }`,
+                outcome: entry.outcome,
+              })),
             people: (data?.participants ?? [])
               .map((entry) => ({
                 userId: entry.userId,

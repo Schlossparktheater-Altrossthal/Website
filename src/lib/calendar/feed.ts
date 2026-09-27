@@ -80,12 +80,15 @@ function describeScenes(
   scenes: {
     startsAt: Date | null;
     endsAt: Date | null;
-    scene: { identifier: string | null; sequence: number; title: string | null };
+    scene: { identifier: string | null; sequence: number; title: string | null } | null;
   }[],
   staggeredEvent: { start: Date; end: Date | null } | null,
 ) {
-  if (!scenes.length) return null;
-  const lines = scenes.map(({ startsAt, endsAt, scene }) => {
+  const withScene = scenes.flatMap((entry) =>
+    entry.scene ? [{ ...entry, scene: entry.scene }] : [],
+  );
+  if (!withScene.length) return null;
+  const lines = withScene.map(({ startsAt, endsAt, scene }) => {
     const label = `Sz. ${scene.identifier || scene.sequence}${scene.title ? ` ${scene.title}` : ""}`;
     return startsAt && endsAt
       ? `${FEED_TIME.format(startsAt)}–${FEED_TIME.format(endsAt)} ${label}`
@@ -149,7 +152,8 @@ export async function collectFeedEvents(
           where: { userId, invited: true },
           select: { reasons: true, personalStart: true, personalEnd: true },
         },
-        scenes: {
+        blocks: {
+          where: { type: "SCENE", sceneId: { not: null } },
           orderBy: { order: "asc" },
           select: {
             startsAt: true,
@@ -215,7 +219,7 @@ export async function collectFeedEvents(
         [
           rehearsal.show?.title,
           describeParticipation(rehearsal.participants),
-          describeScenes(rehearsal.scenes, own?.personalStart ? rehearsal : null),
+          describeScenes(rehearsal.blocks, own?.personalStart ? rehearsal : null),
           rehearsal.description,
         ]
           .filter(Boolean)

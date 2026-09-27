@@ -41,7 +41,7 @@ export async function saveRehearsalReviewAction(input: z.input<typeof reviewSche
     }
     await prisma.$transaction(async (tx) => {
       for (const scene of scenes) {
-        await tx.eventScene.updateMany({
+        await tx.eventBlock.updateMany({
           where: { eventId, sceneId: scene.sceneId },
           data: { outcome: scene.outcome },
         });

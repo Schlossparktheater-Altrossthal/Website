@@ -200,7 +200,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 **Umsetzungsschritte**
 
 1. [x] Gewerk-Dashboard: angesetzte Termine mit Regel `DEPARTMENT` anzeigen (2026-09-27): Kennzeichen „Gemeinsam“/„Probe“, nicht bearbeitbar, Zu-/Absage für Eingeladene, Proben über „Meine Termine“.
-2. Migration: `EventStatus.TENTATIVE` (Enum-Wert in eigener Migration), `EventScene` → `EventBlock` (Daten als `type = SCENE` übernehmen).
+2. [x] Migration (2026-09-27, 20260928130000 + 20260928130100): `EventStatus.TENTATIVE`, `EventScene` → `EventBlock` per Umbenennung (Daten bleiben, `type = SCENE`), neue Felder `type`, `departmentId`, `title`, `description`, `location`; `CalendarEvent.scenes` heißt jetzt `blocks` (Szenen-Abfragen filtern `type = SCENE`).
 3. Status „vorgemerkt“: Sichtbarkeit, Absage, Konflikte in Terminfinder/Sperrliste, Feed.
 4. Bausteine allgemein + parallel, Teilnehmer-Auflösung aus Bausteinen, Gewerk-Bausteine mit Rechten der Gewerk-Leitung.
 5. Editoren zusammenführen, `GENERAL_EVENT_WHERE` und `kind: "REHEARSAL"`-Filter bereinigen, Navigation vereinen.

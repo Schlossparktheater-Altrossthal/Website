@@ -14,6 +14,7 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 
 const STATUS_LABELS: Record<EventStatus, string> = {
   DRAFT: "Entwurf",
+  TENTATIVE: "Vorgemerkt",
   SCHEDULED: "Geplant",
   CANCELLED: "Abgesagt",
 };
@@ -67,7 +68,8 @@ export default async function RehearsalDetailPage({
   const rehearsal = await prisma.calendarEvent.findFirst({
     where: { id: rehearsalId, kind: "REHEARSAL" },
     include: {
-      scenes: {
+      blocks: {
+        where: { type: "SCENE", sceneId: { not: null } },
         orderBy: { order: "asc" },
         select: {
           startsAt: true,
@@ -96,6 +98,9 @@ export default async function RehearsalDetailPage({
   if (!rehearsal) {
     return <div className="text-sm text-destructive">Diese Probe existiert nicht.</div>;
   }
+  const scenes = rehearsal.blocks.flatMap((block) =>
+    block.scene ? [{ ...block, scene: block.scene }] : [],
+  );
 
   // Produktionsrollen planen nur Proben ihrer eigenen Produktion.
   const canPlan =
@@ -177,7 +182,7 @@ export default async function RehearsalDetailPage({
         </CardContent>
       </Card>
 
-      {rehearsal.scenes.length ? (
+      {scenes.length ? (
         <Card>
           <CardHeader>
             <CardTitle>Szenen</CardTitle>
@@ -190,7 +195,7 @@ export default async function RehearsalDetailPage({
           </CardHeader>
           <CardContent>
             <ol className="space-y-2 text-sm">
-              {rehearsal.scenes.map(({ scene, startsAt, endsAt }) => (
+              {scenes.map(({ scene, startsAt, endsAt }) => (
                 <li key={scene.id} className="flex gap-3">
                   {startsAt && endsAt ? (
                     <span className="w-28 shrink-0 tabular-nums text-muted-foreground">
