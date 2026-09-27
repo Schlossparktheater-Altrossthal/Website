@@ -19,6 +19,8 @@ export function isPushConfigured() {
   return readVapidConfig() !== null;
 }
 
+const TEST_TYPES = new Set<string>([NOTIFICATION_TYPES.TEST, NOTIFICATION_TYPES.TEST_EMERGENCY]);
+
 /** Inhalte, die über Google/Apple/Mozilla laufen, bleiben knapp: keine Gründe, keine Details. */
 const BODY_HIDDEN_TYPES = new Set<string>([
   NOTIFICATION_TYPES.REHEARSAL_ATTENDANCE,
@@ -118,7 +120,9 @@ export async function pushNotification(prepared: PreparedNotification) {
   const preferenceByUser = new Map(preferences.map((entry) => [entry.userId, entry]));
   const byUser = new Map<string, Subscription[]>();
   for (const { userId, ...subscription } of subscriptions) {
-    if (!shouldPush(prepared, preferenceByUser.get(userId))) continue;
+    // Testbenachrichtigungen sollen genau das zeigen: ob Push ankommt.
+    const isTest = TEST_TYPES.has(prepared.type);
+    if (!isTest && !shouldPush(prepared, preferenceByUser.get(userId))) continue;
     byUser.set(userId, [...(byUser.get(userId) ?? []), subscription]);
   }
 

@@ -6,9 +6,26 @@ const REALTIME_SERVER_URL =
 const REALTIME_AUTH_TOKEN =
   process.env.REALTIME_AUTH_TOKEN || process.env.REALTIME_SERVER_TOKEN || "";
 
-function resolveEventUrl() {
-  const base = REALTIME_SERVER_URL?.replace(/\/$/, "") || "http://localhost:4001";
-  const path = DEFAULT_EVENT_PATH.startsWith("/") ? DEFAULT_EVENT_PATH : `/${DEFAULT_EVENT_PATH}`;
+/**
+ * Ziel für Events. Enthält der Event-Pfad schon den Basispfad der Server-URL (Docker:
+ * `REALTIME_SERVER_URL=…/realtime`, `REALTIME_SERVER_EVENT_PATH=/realtime/events`), wird er nicht
+ * doppelt angehängt – sonst landet jedes Event als 404 bei Next statt beim Realtime-Server.
+ */
+export function resolveEventUrl(
+  serverUrl: string | undefined = REALTIME_SERVER_URL,
+  eventPath: string = DEFAULT_EVENT_PATH,
+) {
+  const base = serverUrl?.replace(/\/$/, "") || "http://localhost:4001";
+  const path = eventPath.startsWith("/") ? eventPath : `/${eventPath}`;
+  try {
+    const url = new URL(base);
+    const basePath = url.pathname.replace(/\/$/, "");
+    if (basePath && (path === basePath || path.startsWith(`${basePath}/`))) {
+      return `${url.origin}${path}`;
+    }
+  } catch {
+    // Relative Basis (z. B. „/realtime“): unverändert zusammensetzen.
+  }
   return `${base}${path}`;
 }
 

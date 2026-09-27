@@ -119,6 +119,15 @@ describe("pushNotification", () => {
     expect(mocks.send).not.toHaveBeenCalled();
   });
 
+  it("pusht Testbenachrichtigungen unabhängig von der Einstellung", async () => {
+    mocks.subscriptions.mockResolvedValue([
+      { id: "s1", userId: "a", endpoint: "https://push/1", p256dh: "k", auth: "x" },
+    ]);
+    mocks.send.mockResolvedValue({});
+    await pushNotification({ ...prepared, type: "test", priority: "normal", kind: "info" });
+    expect(mocks.send).toHaveBeenCalledTimes(1);
+  });
+
   it("tut ohne VAPID-Schlüssel nichts", async () => {
     vi.stubEnv("VAPID_PRIVATE_KEY", "");
     await pushNotification(prepared);
