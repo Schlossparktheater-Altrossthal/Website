@@ -21,6 +21,7 @@ import {
 } from "@/lib/probenplanung/actions-helpers";
 import type { ScheduleInput } from "@/lib/calendar/scene-schedule-server";
 import {
+  audienceInputSchema,
   loadAudienceContext,
   readEventAudience,
   saveEventAudience,
@@ -33,6 +34,8 @@ export async function createRehearsalDraftAction(input?: {
   time?: string;
   endTime?: string;
   location?: string;
+  /** Zielgruppe aus dem Terminfinder; ohne Angabe die ganze Produktion. */
+  audience?: AudienceInput;
 }) {
   const auth = await ensurePlanner();
   if (!auth.ok) {
@@ -82,15 +85,23 @@ export async function createRehearsalDraftAction(input?: {
   });
 
   // Vorschlag: ganze Produktion; die Planung grenzt im Editor ein.
+  const parsedAudience = input?.audience ? audienceInputSchema.safeParse(input.audience) : null;
+  const audience: AudienceInput = parsedAudience?.success
+    ? parsedAudience.data
+    : { rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }], overrides: [] };
   const context = await loadAudienceContext(auth.showId);
-  await prisma.$transaction((tx) =>
-    saveEventAudience(
-      tx,
-      rehearsal.id,
-      { rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }], overrides: [] },
-      context,
-    ),
-  );
+  await prisma.$transaction(async (tx) => {
+    await saveEventAudience(tx, rehearsal.id, audience, context);
+    if (audience.rules.some((rule) => rule.type === "SCENE")) {
+      await syncRehearsalSchedule(tx, {
+        eventId: rehearsal.id,
+        start,
+        audience,
+        storedSchedule: { mode: "TOGETHER", times: {} },
+        context,
+      });
+    }
+  });
 
   return { success: true as const, id: rehearsal.id };
 }

@@ -98,8 +98,8 @@ export function AudienceBuilder({
   context: AudienceContext;
   value: AudienceValue;
   onChange: (value: AudienceValue) => void;
-  /** Sperrliste am Termintag. */
-  availability: DayAvailability;
+  /** Sperrliste am Termintag; ohne Angabe (Terminfinder) keine Verfügbarkeitsanzeige. */
+  availability?: DayAvailability;
   /** Parallel zu einer anderen Probe eingeladen (Person → Titel). */
   conflicts?: Partial<Record<string, string>>;
   /** Abgesagt (Person → Begründung). */
@@ -115,10 +115,10 @@ export function AudienceBuilder({
   const invited = resolved.filter((entry) => !entry.excluded);
   const isOpen = (entry: ResolvedParticipant) => !(entry.userId in declined);
   const blockedCount = invited.filter(
-    (entry) => isOpen(entry) && availability[entry.userId] === "blocked",
+    (entry) => isOpen(entry) && availability?.[entry.userId] === "blocked",
   ).length;
   const limitedCount = invited.filter(
-    (entry) => isOpen(entry) && availability[entry.userId] === "limited",
+    (entry) => isOpen(entry) && availability?.[entry.userId] === "limited",
   ).length;
   const conflictCount = invited.filter((entry) => conflicts[entry.userId]).length;
   const declinedCount = invited.filter((entry) => entry.userId in declined).length;
@@ -173,8 +173,9 @@ export function AudienceBuilder({
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground" aria-live="polite">
         <span className="font-medium text-foreground">{invited.length} eingeladen</span>
-        {" · "}
-        {invited.length - blockedCount - limitedCount - declinedCount} können
+        {availability
+          ? ` · ${invited.length - blockedCount - limitedCount - declinedCount} können`
+          : ""}
         {limitedCount ? ` · ${limitedCount} eingeschränkt` : ""}
         {blockedCount ? ` · ${blockedCount} gesperrt` : ""}
         {declinedCount ? ` · ${declinedCount} abgesagt` : ""}
@@ -305,7 +306,9 @@ export function AudienceBuilder({
         {visible.length ? (
           <ul className="divide-y divide-border rounded-lg border border-border">
             {visible.map((entry) => {
-              const status: AvailabilityStatus = availability[entry.userId] ?? "free";
+              const status: AvailabilityStatus | null = availability
+                ? (availability[entry.userId] ?? "free")
+                : null;
               return (
                 <li
                   key={entry.userId}
@@ -346,15 +349,17 @@ export function AudienceBuilder({
                     </span>
                   </label>
                   <div className="flex items-center gap-3 pl-8 sm:pl-0">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 text-xs",
-                        AVAILABILITY_STATUS[status].text,
-                      )}
-                    >
-                      <StatusDot status={status} />
-                      {status === "free" ? "kann" : AVAILABILITY_STATUS[status].short}
-                    </span>
+                    {status ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 text-xs",
+                          AVAILABILITY_STATUS[status].text,
+                        )}
+                      >
+                        <StatusDot status={status} />
+                        {status === "free" ? "kann" : AVAILABILITY_STATUS[status].short}
+                      </span>
+                    ) : null}
                     {!entry.excluded ? (
                       <SegmentedControl
                         value={entry.level}

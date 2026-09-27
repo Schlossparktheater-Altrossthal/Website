@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/members/page-header";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateRehearsalButton } from "./create-rehearsal-button";
 import { DiscardDraftButton } from "./discard-draft-button";
@@ -143,7 +144,10 @@ export default async function RehearsalPlanningPage() {
               Bevorstehend: {upcoming}
             </span>
           </div>
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button asChild variant="outline">
+              <Link href="/mitglieder/probenplanung/terminfinder">Termin finden</Link>
+            </Button>
             <CreateRehearsalButton />
           </div>
         </div>

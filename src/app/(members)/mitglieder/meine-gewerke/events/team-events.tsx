@@ -13,6 +13,8 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@/components/ui/action-icons";
+import { DateFinderResults, formatFinderDay } from "@/components/calendar/date-finder-results";
+import { WeekdayPicker } from "@/components/calendar/weekday-picker";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -24,6 +26,7 @@ import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import type { ActionResult } from "../board/shared";
 import {
   deleteTeamEventAction,
+  findTeamEventDatesAction,
   respondTeamEventAction,
   saveTeamEventAction,
 } from "../event-actions";
@@ -246,6 +249,7 @@ export function TeamEvents({
         open={editing !== null}
         event={editing === "new" ? null : editing}
         today={data.today}
+        departmentId={data.departmentId}
         blocksByDay={data.blocksByDay}
         onOpenChange={(open) => !open && setEditing(null)}
         onSave={(draft) =>
@@ -512,6 +516,7 @@ function EventForm({
   open,
   event,
   today,
+  departmentId,
   blocksByDay,
   onOpenChange,
   onSave,
@@ -519,6 +524,7 @@ function EventForm({
   open: boolean;
   event: TeamEvent | null;
   today: string;
+  departmentId: string;
   blocksByDay: Record<string, EventBlock[]>;
   onOpenChange: (open: boolean) => void;
   onSave: (draft: Draft) => Promise<boolean>;
@@ -627,6 +633,16 @@ function EventForm({
           )
         ) : null}
 
+        {!event ? (
+          <TeamDateFinder
+            departmentId={departmentId}
+            today={today}
+            startTime={draft.startTime}
+            endTime={draft.endTime}
+            onPick={(date) => update("date", date)}
+          />
+        ) : null}
+
         <label className="block space-y-1">
           <span className="text-xs font-medium text-muted-foreground">Ort</span>
           <input
@@ -649,5 +665,123 @@ function EventForm({
         </label>
       </div>
     </ResponsivePanel>
+  );
+}
+
+function addDays(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Zwei Stunden nach Beginn, wenn kein Ende angegeben ist. */
+function fallbackEnd(startTime: string) {
+  const [hours = 0, minutes = 0] = startTime.split(":").map(Number);
+  return `${String((hours + 2) % 24).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+type TeamFinderResult = Extract<Awaited<ReturnType<typeof findTeamEventDatesAction>>, { ok: true }>;
+
+/** Gemeinsamen Tag fürs Gewerk finden; Klick übernimmt das Datum ins Formular. */
+function TeamDateFinder({
+  departmentId,
+  today,
+  startTime,
+  endTime,
+  onPick,
+}: {
+  departmentId: string;
+  today: string;
+  startTime: string;
+  endTime: string;
+  onPick: (date: string) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [from, setFrom] = React.useState(() => addDays(today, 1));
+  const [to, setTo] = React.useState(() => addDays(today, 28));
+  const [weekdays, setWeekdays] = React.useState<number[]>([]);
+  const [result, setResult] = React.useState<TeamFinderResult | null>(null);
+  const [searching, setSearching] = React.useState(false);
+
+  const search = async () => {
+    setSearching(true);
+    const response = await findTeamEventDatesAction({
+      departmentId,
+      from,
+      to,
+      weekdays,
+      startTime,
+      endTime: endTime || fallbackEnd(startTime),
+    });
+    setSearching(false);
+    if (!response.ok) {
+      toast.error(response.error);
+      return;
+    }
+    setResult(response);
+  };
+
+  if (!open) {
+    return (
+      <Button type="button" variant="outline" className="h-11 w-full" onClick={() => setOpen(true)}>
+        Gemeinsamen Termin finden
+      </Button>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-3">
+      <p className="text-sm font-medium">Gemeinsamen Termin finden</p>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block min-w-0 space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Von</span>
+          <input
+            type="date"
+            className={cn(inputClass, "px-2")}
+            value={from}
+            min={today}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </label>
+        <label className="block min-w-0 space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Bis</span>
+          <input
+            type="date"
+            className={cn(inputClass, "px-2")}
+            value={to}
+            min={from}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </label>
+      </div>
+      <WeekdayPicker value={weekdays} onChange={setWeekdays} />
+      <p className="text-xs text-muted-foreground">
+        Ohne Auswahl alle Wochentage. Geprüft wird die Uhrzeit oben ({startTime || "–"}
+        {endTime ? `–${endTime}` : ""}) mit Sperrliste und anderen Terminen.
+      </p>
+      <AsyncButton
+        type="button"
+        variant="secondary"
+        className="h-11 w-full"
+        isLoading={searching}
+        loadingText="Sucht …"
+        disabled={!from || !to || !startTime}
+        onClick={search}
+      >
+        Tage vorschlagen
+      </AsyncButton>
+      {result ? (
+        <DateFinderResults
+          days={result.days}
+          names={result.names}
+          pickLabel="Übernehmen"
+          onPick={(date) => {
+            onPick(date);
+            setOpen(false);
+            toast.success(`Datum ${formatFinderDay(date)} übernommen.`);
+          }}
+        />
+      ) : null}
+    </div>
   );
 }

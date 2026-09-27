@@ -5,9 +5,12 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { z } from "zod";
 
+import { candidateDays, rankDays, type RankedDay } from "@/lib/calendar/date-finder";
+import { loadFinderDays } from "@/lib/calendar/date-finder-server";
 import { resolveCalendarEventTimes } from "@/lib/calendar/event-input";
 import { EVENT_RESPONSE_STATUSES } from "@/lib/calendar/responses";
 import { requireBoardAccess } from "@/lib/departments/board";
+import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
 import {
@@ -201,5 +204,63 @@ export async function respondTeamEventAction(
     return actionSuccess();
   } catch (error) {
     return actionFailure(error, "Antwort konnte nicht gespeichert werden.");
+  }
+}
+
+const finderSchema = z.object({
+  departmentId: z.string(),
+  from: z.string().regex(isoDate),
+  to: z.string().regex(isoDate),
+  weekdays: z.array(z.number().int().min(0).max(6)).max(7),
+  startTime: z.string().regex(time),
+  endTime: z.string().regex(time),
+});
+
+const FINDER_MAX_DAYS = 120;
+
+/** Terminfinder fürs Gewerk: beste Tage für alle aktiven Mitglieder (Sperrliste + Termine). */
+export async function findTeamEventDatesAction(
+  input: z.input<typeof finderSchema>,
+): Promise<
+  | { ok: true; days: RankedDay[]; names: Record<string, string>; memberCount: number }
+  | { ok: false; error: string }
+> {
+  try {
+    const data = finderSchema.parse(input);
+    if (data.from > data.to) return { ok: false, error: "Zeitraum endet vor dem Beginn." };
+    const access = await requireBoardAccess(data.departmentId);
+    if (!access.canManage) throw new Error("Termine planen Leitung, Vertretung und Regie.");
+    const members = await prisma.departmentMembership.findMany({
+      where: { departmentId: data.departmentId, status: "active", user: { deactivatedAt: null } },
+      select: {
+        user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
+      },
+    });
+    if (!members.length) return { ok: false, error: "Das Gewerk hat noch keine Mitglieder." };
+    const participants = members.map((entry) => ({
+      userId: entry.user.id,
+      level: "REQUIRED" as const,
+    }));
+    const days = await loadFinderDays({
+      userIds: participants.map((entry) => entry.userId),
+      dateKeys: candidateDays({ ...data, limit: FINDER_MAX_DAYS }),
+      startTime: data.startTime,
+      endTime: data.endTime,
+    });
+    return {
+      ok: true,
+      days: rankDays(participants, days),
+      names: Object.fromEntries(
+        members.map((entry) => [entry.user.id, getUserDisplayName(entry.user)]),
+      ),
+      memberCount: members.length,
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, error: "Bitte Eingaben prüfen." };
+    if (error instanceof Error && error.message.startsWith("Termine planen")) {
+      return { ok: false, error: error.message };
+    }
+    console.error("Error finding team event dates", error);
+    return { ok: false, error: "Die Termine konnten nicht berechnet werden." };
   }
 }
