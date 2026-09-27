@@ -5,7 +5,13 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { z } from "zod";
 
-import { saveEventAudience } from "@/lib/calendar/audience-server";
+import { resolveAudience } from "@/lib/calendar/audience";
+import {
+  loadAudienceContext,
+  readEventAudience,
+  saveEventAudience,
+} from "@/lib/calendar/audience-server";
+import { readEventSchedule } from "@/lib/calendar/scene-schedule-server";
 import { candidateDays, rankDays, type RankedDay } from "@/lib/calendar/date-finder";
 import { loadFinderDays } from "@/lib/calendar/date-finder-server";
 import { resolveCalendarEventTimes } from "@/lib/calendar/event-input";
@@ -16,6 +22,8 @@ import { isVisibleStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
+import { parseDateTimeInTimeZone, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { syncRehearsalSchedule } from "@/lib/probenplanung/actions-helpers";
 import {
   actionFailure,
   actionSuccess,
@@ -237,6 +245,7 @@ async function respondingUserId(eventId: string) {
       kind: true,
       status: true,
       audienceRules: { where: { type: "DEPARTMENT" }, select: { id: true } },
+      blocks: { where: { type: "DEPARTMENT" }, select: { id: true } },
     },
   });
   if (!event) throw new Error("Termin wurde nicht gefunden.");
@@ -245,7 +254,8 @@ async function respondingUserId(eventId: string) {
     if (!access.role) throw new Error("Nur Mitglieder des Gewerks können zu- oder absagen.");
     return access.userId;
   }
-  if (!event.audienceRules.length || !isVisibleStatus(event.status) || event.kind === "REHEARSAL") {
+  const invitesDepartments = event.audienceRules.length + event.blocks.length > 0;
+  if (!invitesDepartments || !isVisibleStatus(event.status) || event.kind === "REHEARSAL") {
     throw new Error("Auf diesen Termin kannst du hier nicht antworten.");
   }
   const userId = (await requireAuth()).user?.id;
@@ -346,5 +356,137 @@ export async function findTeamEventDatesAction(
     }
     console.error("Error finding team event dates", error);
     return { ok: false, error: "Die Termine konnten nicht berechnet werden." };
+  }
+}
+
+const blockSchema = z
+  .object({
+    blockId: z.string().min(1),
+    startTime: z.string().regex(time).or(z.literal("")),
+    endTime: z.string().regex(time).or(z.literal("")),
+    location: z.string().trim().max(120),
+    description: z.string().trim().max(2000),
+    /** Eingeladene Mitglieder des Gewerks für diesen Baustein. */
+    memberIds: z.array(z.string().min(1)).max(500),
+  })
+  .refine((value) => !value.startTime === !value.endTime, {
+    message: "Bitte Beginn und Ende angeben oder beide leer lassen.",
+    path: ["endTime"],
+  });
+
+/** Uhrzeit am Termintag; Zeiten weit vor Terminbeginn gehören zum Folgetag. */
+function blockTime(dateKey: string, value: string, eventStart: Date) {
+  const date = parseDateTimeInTimeZone(dateKey, value);
+  return date < new Date(eventStart.getTime() - 12 * 3_600_000)
+    ? new Date(date.getTime() + 86_400_000)
+    : date;
+}
+
+/**
+ * Gewerk-Baustein in einem gemeinsamen Termin selbst organisieren: Zeit, Raum, Beschreibung
+ * und welche Mitglieder kommen. Termin und andere Bausteine bleiben der Planung vorbehalten.
+ * Wer auch anderweitig eingeladen ist (z. B. Besetzung), bleibt eingeladen.
+ */
+export async function saveDepartmentBlockAction(
+  input: z.input<typeof blockSchema>,
+): Promise<ProductionActionResult> {
+  try {
+    const data = blockSchema.parse(input);
+    const block = await prisma.eventBlock.findUnique({
+      where: { id: data.blockId },
+      select: {
+        type: true,
+        title: true,
+        departmentId: true,
+        department: { select: { name: true } },
+        event: { select: { id: true, title: true, start: true, status: true, showId: true } },
+      },
+    });
+    if (!block || block.type !== "DEPARTMENT" || !block.departmentId) {
+      throw new Error("Baustein wurde nicht gefunden.");
+    }
+    const access = await requireBoardAccess(block.departmentId);
+    if (!access.canManage) throw new Error("Bausteine planen Leitung, Vertretung und Regie.");
+    const { event } = block;
+    if (event.status === "CANCELLED") throw new Error("Der Termin ist abgesagt.");
+
+    const dateKey = formatIsoDateInTimeZone(event.start.toISOString());
+    let startsAt: Date | null = null;
+    let endsAt: Date | null = null;
+    if (data.startTime && data.endTime) {
+      startsAt = blockTime(dateKey, data.startTime, event.start);
+      endsAt = blockTime(dateKey, data.endTime, event.start);
+      if (endsAt <= startsAt) endsAt = new Date(endsAt.getTime() + 86_400_000);
+    }
+
+    const [context, stored, storedSchedule, members] = await Promise.all([
+      loadAudienceContext(event.showId),
+      readEventAudience(event.id),
+      readEventSchedule(event.id),
+      activeMemberIds(block.departmentId),
+    ]);
+    const selected = new Set(members.filter((id) => data.memberIds.includes(id)));
+
+    // Ausnahmen nur für Mitglieder, die allein über Gewerk-Bausteine eingeladen sind.
+    const otherBlocks = storedSchedule.blocks.flatMap((entry) =>
+      entry.type === "DEPARTMENT" && entry.departmentId && entry.id !== data.blockId
+        ? [{ departmentId: entry.departmentId, title: entry.title || null }]
+        : [],
+    );
+    const viaOthers = new Set(
+      resolveAudience(stored.rules, [], context, otherBlocks).map((entry) => entry.userId),
+    );
+    const overrides = stored.overrides.filter(
+      (entry) => !members.includes(entry.userId) || viaOthers.has(entry.userId),
+    );
+    for (const userId of members) {
+      if (viaOthers.has(userId)) continue;
+      const previous = stored.overrides.find((entry) => entry.userId === userId);
+      if (!selected.has(userId)) {
+        overrides.push({ userId, override: "EXCLUDED", level: previous?.level ?? null });
+      } else if (previous?.level) {
+        overrides.push({ userId, override: null, level: previous.level });
+      }
+    }
+
+    const { addedIds } = await prisma.$transaction(async (tx) => {
+      await tx.eventBlock.update({
+        where: { id: data.blockId },
+        data: {
+          startsAt,
+          endsAt,
+          location: data.location || null,
+          description: data.description || null,
+        },
+      });
+      const saved = await saveEventAudience(
+        tx,
+        event.id,
+        { rules: stored.rules, overrides },
+        context,
+      );
+      // Persönliche Zeitfenster aus dem geänderten Baustein neu berechnen.
+      await syncRehearsalSchedule(tx, {
+        eventId: event.id,
+        start: event.start,
+        storedSchedule,
+        context,
+      });
+      return saved;
+    });
+
+    if (event.status !== "DRAFT") {
+      await notify(
+        addedIds,
+        access.userId,
+        `Eingeplant (${block.department?.name ?? "Gewerk"}): ${block.title || event.title}`,
+        `${formatWhen(startsAt ?? event.start)} – ${event.title}`,
+      );
+    }
+    revalidateTeams();
+    revalidatePath(`/mitglieder/proben/${event.id}`);
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Baustein konnte nicht gespeichert werden.");
   }
 }

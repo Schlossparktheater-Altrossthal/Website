@@ -31,6 +31,8 @@ export const blockInputSchema = z
     end: optionalTime.default(""),
     location: z.string().trim().max(120).default(""),
     description: z.string().trim().max(2000).default(""),
+    /** Zeiten von der Planung geändert; sonst gelten bei Gewerk-Bausteinen die gespeicherten. */
+    timesChanged: z.boolean().default(false),
   })
   .refine((block) => block.type !== "DEPARTMENT" || block.departmentId, {
     message: "Gewerk fehlt",
@@ -90,18 +92,22 @@ export async function saveEventBlocks(
       title: block.title || null,
       departmentId: block.type === "DEPARTMENT" ? block.departmentId : null,
       order: 1000 + index,
-      ...toRange(dateKey, block.start, block.end, eventStart),
     };
+    const range = toRange(dateKey, block.start, block.end, eventStart);
+    // Gewerk-Bausteine: Raum und Beschreibung pflegt die Gewerk-Leitung, die Zeiten auch –
+    // außer die Planung hat sie gerade selbst geändert.
     const own =
       block.type === "CUSTOM"
-        ? { location: block.location || null, description: block.description || null }
-        : {};
+        ? { ...range, location: block.location || null, description: block.description || null }
+        : block.timesChanged
+          ? range
+          : {};
     const updated = await tx.eventBlock.updateMany({
       where: { id: block.id, eventId, type: { not: "SCENE" } },
       data: { ...common, ...own },
     });
     if (!updated.count) {
-      await tx.eventBlock.create({ data: { id: block.id, eventId, ...common, ...own } });
+      await tx.eventBlock.create({ data: { id: block.id, eventId, ...common, ...range, ...own } });
     }
   }
 }
@@ -227,6 +233,7 @@ export async function readEventSchedule(eventId: string): Promise<{
       end: formatTime(block.endsAt),
       location: block.location ?? "",
       description: block.description ?? "",
+      timesChanged: false,
     });
   }
   return { mode: event?.scheduleMode ?? "TOGETHER", times, rooms, blocks };

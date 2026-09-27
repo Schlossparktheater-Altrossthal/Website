@@ -42,6 +42,20 @@ export type TeamEvent = {
   rehearsal: boolean;
   /** Ob die Person hier zu- oder absagen kann (Proben laufen über „Meine Termine“). */
   respondable: boolean;
+  /** Vorgemerkt, noch nicht verbindlich angesetzt. */
+  tentative: boolean;
+  /** Bausteine dieses Gewerks im gemeinsamen Termin; die Gewerk-Leitung pflegt sie selbst. */
+  blocks: TeamEventBlock[];
+};
+
+export type TeamEventBlock = {
+  id: string;
+  title: string | null;
+  /** `HH:mm` in Berliner Zeit, leer = zur Terminzeit. */
+  startTime: string;
+  endTime: string;
+  location: string | null;
+  description: string | null;
 };
 
 export type TeamEventsData = {
@@ -82,6 +96,11 @@ export function departmentEventWhere(departmentIds: string[]) {
         status: visibleEventStatus,
         audienceRules: { some: { type: "DEPARTMENT" as const, targetId: { in: departmentIds } } },
       },
+      {
+        departmentId: null,
+        status: visibleEventStatus,
+        blocks: { some: { type: "DEPARTMENT" as const, departmentId: { in: departmentIds } } },
+      },
     ],
   } satisfies Prisma.CalendarEventWhereInput;
 }
@@ -100,7 +119,20 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
     location: true,
     description: true,
     kind: true,
+    status: true,
     departmentId: true,
+    blocks: {
+      where: { type: "DEPARTMENT" as const, departmentId },
+      orderBy: { order: "asc" as const },
+      select: {
+        id: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        location: true,
+        description: true,
+      },
+    },
     participants: {
       where: { NOT: { response: null, invited: false } },
       select: { response: true, invited: true, user: { select: userSelect } },
@@ -199,6 +231,15 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
       respondable:
         event.kind !== "REHEARSAL" &&
         (!shared || invited.some((entry) => entry.user.id === viewerId)),
+      tentative: event.status === "TENTATIVE",
+      blocks: event.blocks.map((block) => ({
+        id: block.id,
+        title: block.title,
+        startTime: block.startsAt ? formatIsoTimeInTimeZone(block.startsAt.toISOString()) : "",
+        endTime: block.endsAt ? formatIsoTimeInTimeZone(block.endsAt.toISOString()) : "",
+        location: block.location,
+        description: block.description,
+      })),
     };
   };
 

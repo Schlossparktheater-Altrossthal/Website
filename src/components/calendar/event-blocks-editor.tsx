@@ -22,6 +22,8 @@ export type EventBlockValue = {
   end: string;
   location: string;
   description: string;
+  /** Zeiten hier geändert (sonst behält ein Gewerk-Baustein die Zeiten der Gewerk-Leitung). */
+  timesChanged: boolean;
 };
 
 function newBlock(type: EventBlockValue["type"], departmentId: string | null = null) {
@@ -34,6 +36,7 @@ function newBlock(type: EventBlockValue["type"], departmentId: string | null = n
     end: "",
     location: "",
     description: "",
+    timesChanged: true,
   } satisfies EventBlockValue;
 }
 
@@ -91,14 +94,18 @@ export function EventBlocksEditor({
                   <div className="flex items-center gap-2">
                     <TimeInput
                       value={block.start}
-                      onChange={(event) => update(block.id, { start: event.target.value })}
+                      onChange={(event) =>
+                        update(block.id, { start: event.target.value, timesChanged: true })
+                      }
                       aria-label={`Beginn ${block.title || label}`}
                       className="flex-1 sm:w-28 sm:flex-none"
                     />
                     <span className="text-muted-foreground">–</span>
                     <TimeInput
                       value={block.end}
-                      onChange={(event) => update(block.id, { end: event.target.value })}
+                      onChange={(event) =>
+                        update(block.id, { end: event.target.value, timesChanged: true })
+                      }
                       aria-label={`Ende ${block.title || label}`}
                       className="flex-1 sm:w-28 sm:flex-none"
                     />

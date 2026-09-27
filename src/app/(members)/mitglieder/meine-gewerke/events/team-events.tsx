@@ -22,7 +22,12 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DateBadge } from "@/components/ui/date-badge";
-import type { EventBlock, TeamEvent, TeamEventsData } from "@/lib/departments/events";
+import type {
+  EventBlock,
+  TeamEvent,
+  TeamEventBlock,
+  TeamEventsData,
+} from "@/lib/departments/events";
 import { cn } from "@/lib/utils";
 
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
@@ -31,6 +36,7 @@ import {
   deleteTeamEventAction,
   findTeamEventDatesAction,
   respondTeamEventAction,
+  saveDepartmentBlockAction,
   saveTeamEventAction,
 } from "../event-actions";
 
@@ -96,6 +102,10 @@ export function TeamEvents({
   const router = useRouter();
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [editing, setEditing] = React.useState<TeamEvent | "new" | null>(null);
+  const [editingBlock, setEditingBlock] = React.useState<{
+    event: TeamEvent;
+    block: TeamEventBlock;
+  } | null>(null);
   const [showPast, setShowPast] = React.useState(false);
   // Optimistische Antworten, bis der Server neu geladen hat.
   const [pendingResponses, setPendingResponses] = React.useState<
@@ -240,6 +250,11 @@ export function TeamEvents({
           setEditing(opened);
           setOpenId(null);
         }}
+        onEditBlock={(block) => {
+          if (!opened) return;
+          setEditingBlock({ event: opened, block });
+          setOpenId(null);
+        }}
         onDelete={async () => {
           if (!opened) return;
           const ok = await run(
@@ -248,6 +263,13 @@ export function TeamEvents({
           );
           if (ok) setOpenId(null);
         }}
+      />
+
+      <BlockForm
+        target={editingBlock}
+        members={data.members}
+        onOpenChange={(open) => !open && setEditingBlock(null)}
+        onSave={(draft) => run(() => saveDepartmentBlockAction(draft), "Baustein gespeichert")}
       />
 
       <EventForm
@@ -317,6 +339,18 @@ function SharedBadge({ rehearsal }: { rehearsal: boolean }) {
   );
 }
 
+function TentativeBadge() {
+  return (
+    <span className="shrink-0 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+      vorgemerkt
+    </span>
+  );
+}
+
+function blockTimeRange(block: TeamEventBlock) {
+  return block.startTime && block.endTime ? `${block.startTime}–${block.endTime}` : null;
+}
+
 function EventCard({
   event,
   highlight,
@@ -347,6 +381,7 @@ function EventCard({
           <span className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm font-semibold">{event.title}</span>
             {event.shared ? <SharedBadge rehearsal={event.rehearsal} /> : null}
+            {event.tentative ? <TentativeBadge /> : null}
           </span>
           <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
             <span className="shrink-0 tabular-nums">{timeRange(event)}</span>
@@ -357,6 +392,13 @@ function EventCard({
               </>
             ) : null}
           </span>
+          {event.blocks.map((block) => (
+            <span key={block.id} className="block truncate text-xs text-muted-foreground">
+              Euer Teil: {block.title || "Gewerk"}
+              {blockTimeRange(block) ? ` · ${blockTimeRange(block)}` : ""}
+              {block.location ? ` · ${block.location}` : ""}
+            </span>
+          ))}
           <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
             <span className="text-muted-foreground">
               <span className="font-medium text-success">{yes} dabei</span>
@@ -387,6 +429,7 @@ function EventDetail({
   onOpenChange,
   onRespond,
   onEdit,
+  onEditBlock,
   onDelete,
 }: {
   event: TeamEvent | null;
@@ -396,6 +439,7 @@ function EventDetail({
   onOpenChange: (open: boolean) => void;
   onRespond: (status: EventResponseStatus) => void;
   onEdit: () => void;
+  onEditBlock: (block: TeamEventBlock) => void;
   onDelete: () => Promise<void>;
 }) {
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -462,6 +506,34 @@ function EventDetail({
                 ) : null}
               </p>
             ) : null}
+
+            {event.blocks.map((block) => (
+              <div key={block.id} className="space-y-1 rounded-lg border border-border p-3 text-sm">
+                <p className="font-medium">
+                  Euer Baustein: {block.title || "Gewerk"}
+                  {event.tentative ? " (vorgemerkt)" : ""}
+                </p>
+                <p className="text-muted-foreground">
+                  {blockTimeRange(block) ?? "zur Terminzeit"}
+                  {block.location ? ` · ${block.location}` : ""}
+                </p>
+                {block.description ? (
+                  <p className="whitespace-pre-line text-muted-foreground">{block.description}</p>
+                ) : null}
+                {canManage && !event.past ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-1 h-9"
+                    onClick={() => onEditBlock(block)}
+                  >
+                    <PencilIcon className="h-4 w-4" aria-hidden />
+                    Baustein organisieren
+                  </Button>
+                ) : null}
+              </div>
+            ))}
 
             {canRespond ? (
               <div className="space-y-1">
@@ -745,6 +817,163 @@ function EventForm({
             onChange={(e) => update("description", e.target.value)}
           />
         </label>
+      </div>
+    </ResponsivePanel>
+  );
+}
+
+type BlockDraft = {
+  startTime: string;
+  endTime: string;
+  location: string;
+  description: string;
+  memberIds: string[];
+};
+
+/** Gewerk-Baustein in einem gemeinsamen Termin: Zeit, Raum, Ablauf und wer kommt. */
+function BlockForm({
+  target,
+  members,
+  onOpenChange,
+  onSave,
+}: {
+  target: { event: TeamEvent; block: TeamEventBlock } | null;
+  members: TeamEventsData["members"];
+  onOpenChange: (open: boolean) => void;
+  onSave: (draft: BlockDraft & { blockId: string }) => Promise<boolean>;
+}) {
+  const toBlockDraft = (): BlockDraft => ({
+    startTime: target?.block.startTime ?? "",
+    endTime: target?.block.endTime ?? "",
+    location: target?.block.location ?? "",
+    description: target?.block.description ?? "",
+    memberIds: members
+      .filter((member) => target?.event.invitedIds?.includes(member.id) ?? true)
+      .map((member) => member.id),
+  });
+  const [draft, setDraft] = React.useState<BlockDraft>(toBlockDraft);
+  const [key, setKey] = React.useState(target?.block.id ?? null);
+  // Beim Öffnen den Entwurf neu setzen (ohne Effekt).
+  if (key !== (target?.block.id ?? null)) {
+    setKey(target?.block.id ?? null);
+    setDraft(toBlockDraft());
+  }
+  const [saving, setSaving] = React.useState(false);
+  const update = <K extends keyof BlockDraft>(field: K, value: BlockDraft[K]) =>
+    setDraft((current) => ({ ...current, [field]: value }));
+  const valid = !draft.startTime === !draft.endTime;
+
+  const save = async () => {
+    if (!target) return;
+    setSaving(true);
+    const ok = await onSave({ blockId: target.block.id, ...draft });
+    setSaving(false);
+    if (ok) onOpenChange(false);
+  };
+
+  return (
+    <ResponsivePanel
+      open={target !== null}
+      onOpenChange={onOpenChange}
+      title={target?.block.title || "Baustein organisieren"}
+      description={
+        target
+          ? `${LONG_DAY.format(new Date(target.event.start))}, ${timeRange(target.event)} – ${target.event.title}`
+          : ""
+      }
+      footer={
+        <AsyncButton
+          type="button"
+          className="h-11 w-full"
+          isLoading={saving}
+          loadingText="Speichert …"
+          disabled={!valid}
+          onClick={save}
+        >
+          Speichern
+        </AsyncButton>
+      }
+    >
+      <div className="space-y-4">
+        <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+          Den Termin selbst plant die Termin- bzw. Probenplanung. Euren Teil organisiert ihr hier:
+          Zeit, Raum, Ablauf und wer aus dem Gewerk kommt.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block min-w-0 space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Beginn</span>
+            <input
+              type="time"
+              className={cn(inputClass, "px-2")}
+              value={draft.startTime}
+              onChange={(e) => update("startTime", e.target.value)}
+            />
+          </label>
+          <label className="block min-w-0 space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Ende</span>
+            <input
+              type="time"
+              className={cn(inputClass, "px-2")}
+              value={draft.endTime}
+              onChange={(e) => update("endTime", e.target.value)}
+            />
+          </label>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Leer lassen: alle kommen zur Terminzeit. Mit Uhrzeit sehen die Mitglieder ihre eigene
+          Zeit.
+        </p>
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Raum</span>
+          <input
+            className={inputClass}
+            value={draft.location}
+            maxLength={120}
+            placeholder="optional, z. B. Werkstatt"
+            onChange={(e) => update("location", e.target.value)}
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Ablauf</span>
+          <textarea
+            className={cn(inputClass, "h-auto min-h-20 py-2")}
+            value={draft.description}
+            maxLength={2000}
+            placeholder="optional, z. B. was gebaut wird, was mitzubringen ist"
+            onChange={(e) => update("description", e.target.value)}
+          />
+        </label>
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            Wer kommt? ({draft.memberIds.length}/{members.length})
+          </span>
+          <ul className="grid gap-1 sm:grid-cols-2">
+            {members.map((member) => {
+              const checked = draft.memberIds.includes(member.id);
+              return (
+                <li key={member.id}>
+                  <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-muted">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() =>
+                        update(
+                          "memberIds",
+                          checked
+                            ? draft.memberIds.filter((id) => id !== member.id)
+                            : [...draft.memberIds, member.id],
+                        )
+                      }
+                    />
+                    <span className="text-sm">{member.name}</span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            Wer auch als Besetzung oder anderweitig eingeladen ist, bleibt eingeladen.
+          </p>
+        </div>
       </div>
     </ResponsivePanel>
   );
