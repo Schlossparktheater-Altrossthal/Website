@@ -5,6 +5,7 @@ import {
   formatIsoDateInTimeZone,
   parseDateTimeInTimeZone,
 } from "@/lib/date-time";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,7 +53,7 @@ export async function loadFinderDays({
     }),
     prisma.calendarEvent.findMany({
       where: {
-        status: "SCHEDULED",
+        status: visibleEventStatus,
         start: { lt: rangeEnd },
         OR: [{ end: { gt: rangeStart } }, { end: null, start: { gte: rangeStart } }],
       },

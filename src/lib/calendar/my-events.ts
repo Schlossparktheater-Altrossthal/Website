@@ -1,4 +1,5 @@
 import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -36,7 +37,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       where: {
         userId,
         invited: true,
-        event: { kind: "REHEARSAL", status: "SCHEDULED", start: { gte: now } },
+        event: { kind: "REHEARSAL", status: visibleEventStatus, start: { gte: now } },
       },
       orderBy: { event: { start: "asc" } },
       take: TAKE,
@@ -48,14 +49,14 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         personalStart: true,
         personalEnd: true,
         event: {
-          select: { id: true, title: true, start: true, end: true, location: true },
+          select: { id: true, title: true, start: true, end: true, location: true, status: true },
         },
       },
     }),
     prisma.calendarEvent.findMany({
       where: {
         start: { gte: now },
-        status: "SCHEDULED",
+        status: visibleEventStatus,
         department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
         // Mit Auswahl nur für die Eingeladenen.
         ...visibleGeneralEventWhere(userId),
@@ -80,7 +81,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
     prisma.calendarEvent.findMany({
       where: {
         ...GENERAL_EVENT_WHERE,
-        status: "SCHEDULED",
+        status: visibleEventStatus,
         OR: [{ start: { gte: now } }, { end: { gte: now } }],
         AND: [
           {
@@ -115,7 +116,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       ({ level, reasons, response, responseNote, personalStart, personalEnd, event }) => ({
         id: event.id,
         title: event.title,
-        label: "Probe",
+        label: event.status === "TENTATIVE" ? "Probe · vorgemerkt" : "Probe",
         start: (personalStart ?? event.start).toISOString(),
         end: (personalEnd ?? event.end)?.toISOString() ?? null,
         fullTime: personalStart

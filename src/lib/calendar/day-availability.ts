@@ -1,4 +1,5 @@
 import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
 /** Einschränkung laut Sperrliste an einem Tag (nur wer gesperrt oder eingeschränkt ist). */
@@ -34,7 +35,7 @@ export async function readParallelRehearsals({
       event: {
         id: { not: excludeEventId },
         kind: "REHEARSAL",
-        status: "SCHEDULED",
+        status: visibleEventStatus,
         start: { lt: end },
         end: { gt: start },
       },

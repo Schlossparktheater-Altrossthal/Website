@@ -8,6 +8,7 @@ import {
   formatIsoTimeInTimeZone,
   parseDateTimeInTimeZone,
 } from "@/lib/date-time";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -125,7 +126,7 @@ export async function loadSceneStats(showId: string | null, now = new Date()): P
   const entries = await prisma.eventBlock.findMany({
     where: {
       scene: { showId },
-      event: { kind: "REHEARSAL", status: "SCHEDULED" },
+      event: { kind: "REHEARSAL", status: visibleEventStatus },
     },
     select: { sceneId: true, outcome: true, event: { select: { start: true } } },
   });

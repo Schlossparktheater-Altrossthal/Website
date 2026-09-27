@@ -1,9 +1,10 @@
-import type { BlockedDayKind } from "@prisma/client";
+import type { BlockedDayKind, Prisma } from "@prisma/client";
 
 import { toEventResponseStatus, type EventResponseStatus } from "@/lib/calendar/responses";
 
 import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
 /** Wie weit Sperren der Mitglieder für die Terminplanung geladen werden. */
@@ -68,6 +69,23 @@ const toPerson = (user: {
 
 const userSelect = { id: true, firstName: true, lastName: true, name: true, email: true } as const;
 
+/**
+ * Eigene Termine der Gewerke plus sichtbare gemeinsame Termine, zu denen sie per Zielgruppe
+ * eingeladen sind.
+ */
+export function departmentEventWhere(departmentIds: string[]) {
+  return {
+    OR: [
+      { departmentId: { in: departmentIds } },
+      {
+        departmentId: null,
+        status: visibleEventStatus,
+        audienceRules: { some: { type: "DEPARTMENT" as const, targetId: { in: departmentIds } } },
+      },
+    ],
+  } satisfies Prisma.CalendarEventWhereInput;
+}
+
 /** Termine eines Gewerks mit Zusagen, offenen Antworten und Sperren der Mitglieder. */
 export async function loadTeamEvents(departmentId: string, viewerId: string, now = new Date()) {
   const today = formatIsoDateInTimeZone(now.toISOString());
@@ -89,17 +107,7 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
     },
   } as const;
 
-  // Eigene Termine plus angesetzte gemeinsame Termine, zu denen das Gewerk eingeladen ist.
-  const ownOrInvited = {
-    OR: [
-      { departmentId },
-      {
-        departmentId: null,
-        status: "SCHEDULED" as const,
-        audienceRules: { some: { type: "DEPARTMENT" as const, targetId: departmentId } },
-      },
-    ],
-  };
+  const ownOrInvited = departmentEventWhere([departmentId]);
 
   const [members, upcoming, past, blockedDays] = await Promise.all([
     prisma.departmentMembership.findMany({

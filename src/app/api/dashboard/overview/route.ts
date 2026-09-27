@@ -4,6 +4,7 @@ import { endOfWeek, startOfWeek } from "date-fns";
 
 import { requireAuth } from "@/lib/rbac";
 import { CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { hasPermission } from "@/lib/permissions";
@@ -119,7 +120,7 @@ export async function GET() {
         where: {
           kind: "REHEARSAL",
           start: { gt: now },
-          status: "SCHEDULED",
+          status: visibleEventStatus,
           participants: { some: { userId, invited: true } },
         },
         orderBy: { start: "asc" },

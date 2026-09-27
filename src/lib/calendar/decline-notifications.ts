@@ -17,6 +17,7 @@ import { createConfiguredMailSender } from "@/lib/email/send";
 import { getUserDisplayName } from "@/lib/names";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import { hasPermission } from "@/lib/permissions";
+import { isVisibleStatus, visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/realtime/triggers";
 
@@ -105,7 +106,7 @@ export async function notifyPlannersOfDecline({
       },
     },
   });
-  if (!event || event.status !== "SCHEDULED" || event.start <= now) return false;
+  if (!event || !isVisibleStatus(event.status) || event.start <= now) return false;
   const participant = event.participants.find((entry) => entry.userId === userId);
   if (!participant?.invited || participant.level !== "REQUIRED") return false;
 
@@ -197,7 +198,7 @@ export async function notifyPlannersOfNewBlocks(
     const rehearsals = await prisma.calendarEvent.findMany({
       where: {
         kind: "REHEARSAL",
-        status: "SCHEDULED",
+        status: visibleEventStatus,
         start: { gte: dayStart, lt: dayEnd },
         participants: { some: { userId, invited: true, level: "REQUIRED", response: null } },
       },

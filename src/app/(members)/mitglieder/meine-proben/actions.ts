@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
@@ -11,12 +12,11 @@ import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
 
 const DECLINE_SCHEMA = z.object({
   eventId: z.string().min(1),
-  reason: z
-    .string()
-    .trim()
-    .min(3, "Bitte gib kurz an, warum du nicht kannst.")
-    .max(500, "Die Begründung ist zu lang."),
+  reason: z.string().trim().max(500, "Die Begründung ist zu lang."),
 });
+
+/** Bei angesetzten Proben ist die Begründung Pflicht, bei vorgemerkten freiwillig. */
+const MIN_REASON = 3;
 
 /** Fehler, deren Text direkt angezeigt werden darf. */
 class RespondError extends Error {}
@@ -31,10 +31,10 @@ async function loadOwnRehearsal(eventId: string) {
     where: {
       id: eventId,
       kind: "REHEARSAL",
-      status: "SCHEDULED",
+      status: visibleEventStatus,
       participants: { some: { userId, invited: true } },
     },
-    select: { id: true, start: true },
+    select: { id: true, start: true, status: true },
   });
   if (!rehearsal) throw new RespondError("Du bist für diesen Termin nicht eingeladen.");
   if (rehearsal.start <= new Date()) throw new RespondError("Der Termin hat schon begonnen.");
@@ -55,19 +55,23 @@ export async function declineRehearsalAction(input: { eventId: string; reason: s
   }
   try {
     const { userId, rehearsal } = await loadOwnRehearsal(parsed.data.eventId);
+    const reason = parsed.data.reason || null;
+    if (rehearsal.status === "SCHEDULED" && (reason?.length ?? 0) < MIN_REASON) {
+      throw new RespondError("Bitte gib kurz an, warum du nicht kannst.");
+    }
     await updateAttendanceWithLog({
       prisma,
       eventId: rehearsal.id,
       targetUserId: userId,
       actorUserId: userId,
       nextStatus: "no",
-      comment: parsed.data.reason,
-      note: parsed.data.reason,
+      comment: reason ?? undefined,
+      note: reason ?? undefined,
     });
     await notifyPlannersOfDecline({
       eventId: rehearsal.id,
       userId,
-      reason: parsed.data.reason,
+      reason,
     }).catch((error) => console.error("[decline] Planung nicht benachrichtigt", error));
     revalidateOwn(rehearsal.id);
     return { ok: true as const };

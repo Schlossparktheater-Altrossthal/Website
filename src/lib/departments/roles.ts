@@ -1,6 +1,7 @@
 import type { BreakdownStatus, CharacterCastingType } from "@prisma/client";
 
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
 export const CASTING_TYPE_LABELS: Record<CharacterCastingType, string> = {
@@ -144,7 +145,7 @@ export async function loadRolePortal(showId: string, characterId: string, userId
         where: {
           kind: "REHEARSAL",
           start: { gte: now },
-          status: "SCHEDULED",
+          status: visibleEventStatus,
           OR: [{ showId }, { showId: null }],
           participants: { some: { userId: { in: castIds }, invited: true } },
         },

@@ -2,6 +2,7 @@ import type { CalendarEvent, Prisma } from "@prisma/client";
 
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
 /** Allgemeine Termine: ohne Gewerk-Termine (Gewerk-Portal) und ohne Proben (Probenplanung). */
@@ -81,13 +82,13 @@ function toCalendarEntry(event: CalendarEvent): CalendarEntry {
   };
 }
 
-/** Angesetzte Proben im Zeitraum (ohne Entwürfe und Absagen). */
+/** Vorgemerkte und angesetzte Proben im Zeitraum (ohne Entwürfe und Absagen). */
 export async function readRehearsalEntries({ from, to, showId }: Range): Promise<CalendarEntry[]> {
   const rehearsals = await prisma.calendarEvent.findMany({
     where: {
       kind: "REHEARSAL",
       start: { gte: from, lte: to },
-      status: "SCHEDULED",
+      status: visibleEventStatus,
       ...showScope(showId),
     },
     orderBy: { start: "asc" },
@@ -99,13 +100,14 @@ export async function readRehearsalEntries({ from, to, showId }: Range): Promise
       location: true,
       description: true,
       showId: true,
+      status: true,
     },
   });
   return rehearsals.map((rehearsal) => ({
     id: rehearsal.id,
     source: "rehearsal",
     kind: "REHEARSAL",
-    title: rehearsal.title,
+    title: rehearsal.status === "TENTATIVE" ? `${rehearsal.title} (vorgemerkt)` : rehearsal.title,
     start: rehearsal.start.toISOString(),
     end: (rehearsal.end ?? rehearsal.start).toISOString(),
     allDay: false,

@@ -2,6 +2,7 @@ import type { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
 
 import { toEventResponseStatus } from "@/lib/calendar/responses";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
+import { departmentEventWhere } from "@/lib/departments/events";
 import { prisma } from "@/lib/prisma";
 
 const ROLE_ORDER: DepartmentMembershipRole[] = ["lead", "deputy", "member", "guest"];
@@ -48,17 +49,35 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
         where: { status: { not: "done" } },
         select: { assignments: { select: { userId: true } } },
       },
-      events: {
-        where: { start: { gte: now } },
-        orderBy: { start: "asc" },
-        take: 1,
-        select: { title: true, start: true },
-      },
     },
   });
 
+  // Nächster Termin je Gewerk, einschließlich gemeinsamer Termine mit Einladung.
+  const upcoming = await prisma.calendarEvent.findMany({
+    where: {
+      AND: [
+        departmentEventWhere(departments.map((department) => department.id)),
+        { start: { gte: now } },
+      ],
+    },
+    orderBy: { start: "asc" },
+    select: {
+      title: true,
+      start: true,
+      departmentId: true,
+      audienceRules: { where: { type: "DEPARTMENT" }, select: { targetId: true } },
+    },
+  });
+  const nextEvent = (departmentId: string) =>
+    upcoming.find(
+      (event) =>
+        event.departmentId === departmentId ||
+        event.audienceRules.some((rule) => rule.targetId === departmentId),
+    ) ?? null;
+
   return departments.map<TeamCard>((department) => {
     const active = department.memberships.filter((entry) => entry.status === "active");
+    const next = nextEvent(department.id);
     return {
       id: department.id,
       slug: department.slug,
@@ -73,7 +92,7 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
       myOpenTasks: department.tasks.filter((task) =>
         task.assignments.some((entry) => entry.userId === userId),
       ).length,
-      nextEvent: department.events[0] ?? null,
+      nextEvent: next ? { title: next.title, start: next.start } : null,
       requestCount: department.memberships.length - active.length,
     };
   });
@@ -135,22 +154,23 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
           assignments: { select: { userId: true } },
         },
       },
-      events: {
-        where: { start: { gte: now } },
-        orderBy: { start: "asc" },
-        take: 10,
-        select: {
-          id: true,
-          title: true,
-          start: true,
-          end: true,
-          location: true,
-          participants: { where: { userId }, select: { response: true } },
-        },
-      },
     },
   });
   if (!department || department.archivedAt) return null;
+
+  const events = await prisma.calendarEvent.findMany({
+    where: { AND: [departmentEventWhere([department.id]), { start: { gte: now } }] },
+    orderBy: { start: "asc" },
+    take: 10,
+    select: {
+      id: true,
+      title: true,
+      start: true,
+      end: true,
+      location: true,
+      participants: { where: { userId }, select: { response: true } },
+    },
+  });
 
   const toMember = (entry: (typeof department.memberships)[number]): PortalMember => ({
     id: entry.user.id,
@@ -203,7 +223,7 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
     members,
     requests,
     viewerRole: members.find((member) => member.id === userId)?.role ?? null,
-    events: department.events.map(({ participants, ...event }) => ({
+    events: events.map(({ participants, ...event }) => ({
       ...event,
       myResponse: toEventResponseStatus(participants[0]?.response ?? null),
     })),

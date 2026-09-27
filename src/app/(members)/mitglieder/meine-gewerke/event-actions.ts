@@ -12,6 +12,7 @@ import { resolveCalendarEventTimes } from "@/lib/calendar/event-input";
 import { EVENT_RESPONSE_STATUSES } from "@/lib/calendar/responses";
 import { requireBoardAccess } from "@/lib/departments/board";
 import { getUserDisplayName } from "@/lib/names";
+import { isVisibleStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
@@ -244,7 +245,7 @@ async function respondingUserId(eventId: string) {
     if (!access.role) throw new Error("Nur Mitglieder des Gewerks können zu- oder absagen.");
     return access.userId;
   }
-  if (!event.audienceRules.length || event.status !== "SCHEDULED" || event.kind === "REHEARSAL") {
+  if (!event.audienceRules.length || !isVisibleStatus(event.status) || event.kind === "REHEARSAL") {
     throw new Error("Auf diesen Termin kannst du hier nicht antworten.");
   }
   const userId = (await requireAuth()).user?.id;
