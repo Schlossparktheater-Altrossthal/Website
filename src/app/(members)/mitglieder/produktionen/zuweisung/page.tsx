@@ -4,6 +4,7 @@ import { loadAssignmentData } from "@/lib/departments/assignments";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { loadRolesAndScenes } from "@/lib/produktionen/roles-scenes";
 import { requireAuth } from "@/lib/rbac";
 
 import { AssignmentBoard } from "./assignment-board";
@@ -45,6 +46,7 @@ export default async function ZuweisungPage() {
       {activeProduction ? (
         <AssignmentBoard
           data={await loadAssignmentData(activeProduction.id)}
+          rolesData={isManager ? await loadRolesAndScenes(activeProduction.id) : null}
           manageAll={isManager}
           leadDepartmentIds={leadDepartments.map((entry) => entry.departmentId)}
         />

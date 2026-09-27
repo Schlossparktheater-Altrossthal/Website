@@ -1,11 +1,10 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { CheckIcon, ChevronRightIcon, SearchIcon, XIcon } from "@/components/ui/action-icons";
+import { CheckIcon, EditIcon, PlusIcon, SearchIcon, XIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import type {
   AssignmentDepartment,
   AssignmentPerson,
 } from "@/lib/departments/assignments";
+import type { RolesScenesData } from "@/lib/produktionen/roles-scenes";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,8 @@ import {
   removeDepartmentMemberAction,
   setCharacterCastingAction,
 } from "../actions/assignments";
+import { DepartmentSettingsButton } from "../../meine-gewerke/department-settings-panel";
+import { RolePanel as RoleEditPanel } from "../stueck/panels";
 
 type View = "person" | "department" | "roles";
 type Filter = "all" | "open" | "requests";
@@ -52,6 +54,8 @@ const SIZE_RANK: Record<string, number> = {
 
 type Props = {
   data: AssignmentData;
+  /** Rollen/Szenen für den Rollen-Dialog aus „Stück“ – nur für Regie/Board geladen. */
+  rolesData: RolesScenesData | null;
   manageAll: boolean;
   leadDepartmentIds: string[];
 };
@@ -82,7 +86,7 @@ function noWishText(person: AssignmentPerson) {
   return "Keine Wünsche angegeben";
 }
 
-export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
+export function AssignmentBoard({ data, rolesData, manageAll, leadDepartmentIds }: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [pending, startTransition] = React.useTransition();
@@ -92,6 +96,8 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
   const [query, setQuery] = React.useState("");
   const [personId, setPersonId] = React.useState<string | null>(null);
   const [characterId, setCharacterId] = React.useState<string | null>(null);
+  // Rollen-Dialog aus „Stück“: `new` = neue Rolle, sonst ID der bearbeiteten Rolle.
+  const [editingRole, setEditingRole] = React.useState<string | null>(null);
 
   const leadSet = React.useMemo(() => new Set(leadDepartmentIds), [leadDepartmentIds]);
   const canManage = React.useCallback(
@@ -127,6 +133,14 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
   ) =>
     run(`${person.id}:${department.id}`, () =>
       assignDepartmentMemberAction({ departmentId: department.id, userId: person.id, role }),
+    );
+  const setCasting = (
+    person: AssignmentPerson,
+    character: AssignmentCharacter,
+    type: "primary" | "alternate" | null,
+  ) =>
+    run(`${person.id}:${character.id}`, () =>
+      setCharacterCastingAction({ characterId: character.id, userId: person.id, type }),
     );
   const remove = (person: AssignmentPerson, department: AssignmentDepartment) =>
     run(`${person.id}:${department.id}`, () =>
@@ -172,11 +186,13 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
       person={selectedPerson}
       departments={departments}
       canManage={canManage}
+      characters={manageAll ? data.characters : []}
       manageAll={manageAll}
       busyKey={busyKey}
       pending={pending}
       onAssign={assign}
       onRemove={remove}
+      onCast={setCasting}
     />
   ) : null;
   const rolePanel = selectedCharacter ? (
@@ -184,15 +200,8 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
       character={selectedCharacter}
       people={data.people}
       busyKey={busyKey}
-      onSet={(person, type) =>
-        run(`${person.id}:${selectedCharacter.id}`, () =>
-          setCharacterCastingAction({
-            characterId: selectedCharacter.id,
-            userId: person.id,
-            type,
-          }),
-        )
-      }
+      onSet={(person, type) => setCasting(person, selectedCharacter, type)}
+      onEdit={rolesData ? () => setEditingRole(selectedCharacter.id) : undefined}
     />
   ) : null;
 
@@ -255,7 +264,9 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
               <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-border/70 bg-card p-4">
                 {personPanel ?? (
                   <p className="py-10 text-center text-sm text-muted-foreground">
-                    Wähle links eine Person, um Gewerke zuzuweisen.
+                    {manageAll
+                      ? "Wähle links eine Person, um Gewerke und Rollen zuzuweisen."
+                      : "Wähle links eine Person, um Gewerke zuzuweisen."}
                   </p>
                 )}
               </div>
@@ -265,7 +276,7 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
               open={Boolean(selectedPerson)}
               onOpenChange={(open) => !open && setPersonId(null)}
               title={selectedPerson?.name ?? ""}
-              description="Gewerke zuweisen"
+              description={manageAll ? "Gewerke und Rollen zuweisen" : "Gewerke zuweisen"}
             >
               {personPanel}
             </BottomSheet>
@@ -277,6 +288,7 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
         <DepartmentView
           data={data}
           canManage={canManage}
+          manageAll={manageAll}
           busyKey={busyKey}
           onAssign={assign}
           onRemove={remove}
@@ -294,6 +306,7 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
             people={data.people}
             selectedId={characterId}
             onSelect={setCharacterId}
+            onCreate={rolesData ? () => setEditingRole("new") : undefined}
           />
           {isDesktop ? (
             <aside className="hidden lg:block">
@@ -316,6 +329,21 @@ export function AssignmentBoard({ data, manageAll, leadDepartmentIds }: Props) {
             </BottomSheet>
           )}
         </div>
+      ) : null}
+
+      {rolesData && editingRole ? (
+        <RoleEditPanel
+          // Bis die neue Rolle nach dem Anlegen nachgeladen ist, bleibt das Formular stehen.
+          key={rolesData.roles.some((role) => role.id === editingRole) ? editingRole : "new"}
+          open
+          role={rolesData.roles.find((role) => role.id === editingRole) ?? null}
+          data={rolesData}
+          onClose={() => setEditingRole(null)}
+          onCreated={(id) => {
+            setEditingRole(id);
+            setCharacterId(id);
+          }}
+        />
       ) : null}
     </div>
   );
@@ -474,15 +502,19 @@ function PersonRow({
 function PersonPanel({
   person,
   departments,
+  characters,
   canManage,
   manageAll,
   busyKey,
   pending,
   onAssign,
   onRemove,
+  onCast,
 }: {
   person: AssignmentPerson;
   departments: AssignmentDepartment[];
+  /** Rollen zum Besetzen – leer, wenn nur Gewerke verwaltet werden dürfen. */
+  characters: AssignmentCharacter[];
   canManage: (departmentId: string) => boolean;
   manageAll: boolean;
   busyKey: string | null;
@@ -493,6 +525,11 @@ function PersonPanel({
     role?: DepartmentRole,
   ) => void;
   onRemove: (person: AssignmentPerson, department: AssignmentDepartment) => void;
+  onCast: (
+    person: AssignmentPerson,
+    character: AssignmentCharacter,
+    type: "primary" | "alternate" | null,
+  ) => void;
 }) {
   const sorted = [...departments].sort((a, b) => {
     const rank = (department: AssignmentDepartment) => {
@@ -660,13 +697,111 @@ function PersonPanel({
           );
         })}
       </ul>
+
+      {characters.length ? (
+        <PersonRoles person={person} characters={characters} busyKey={busyKey} onCast={onCast} />
+      ) : null}
     </div>
+  );
+}
+
+/** Rollen einer Person besetzen: besetzte und zur Rollengröße passende zuerst. */
+function PersonRoles({
+  person,
+  characters,
+  busyKey,
+  onCast,
+}: {
+  person: AssignmentPerson;
+  characters: AssignmentCharacter[];
+  busyKey: string | null;
+  onCast: (
+    person: AssignmentPerson,
+    character: AssignmentCharacter,
+    type: "primary" | "alternate" | null,
+  ) => void;
+}) {
+  const [showAll, setShowAll] = React.useState(false);
+  const actingCodes = new Set(
+    person.wishes.filter((wish) => wish.domain === "acting").map((wish) => wish.code),
+  );
+  const castOf = (character: AssignmentCharacter) =>
+    person.castings.find((entry) => entry.characterId === character.id);
+  const rank = (character: AssignmentCharacter) =>
+    castOf(character) ? 0 : character.sizeCode && actingCodes.has(character.sizeCode) ? 1 : 2;
+  const sorted = [...characters].sort((a, b) => rank(a) - rank(b));
+  const relevant = sorted.filter((character) => rank(character) < 2);
+  const visible = showAll || relevant.length === 0 ? sorted : relevant;
+
+  return (
+    <section className="space-y-2 border-t border-border/60 pt-4" aria-label="Rollen">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rollen</h3>
+      <ul className="space-y-2">
+        {visible.map((character) => {
+          const current = castOf(character);
+          const busy = busyKey === `${person.id}:${character.id}`;
+          return (
+            <li
+              key={character.id}
+              className={cn(
+                "rounded-lg border px-3 py-2.5",
+                current ? "border-success/40 bg-success/5" : "border-border/70",
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: character.color ?? "var(--muted-foreground)" }}
+                />
+                <p className="min-w-0 flex-1 truncate text-sm font-medium">{character.name}</p>
+                {character.sizeLabel ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {rank(character) === 1 ? "Passt · " : ""}
+                    {character.sizeLabel}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-2 flex gap-2">
+                {(["primary", "alternate"] as const).map((type) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    size="sm"
+                    className="h-10 flex-1"
+                    variant={current?.type === type ? "primary" : "outline"}
+                    aria-pressed={current?.type === type}
+                    aria-label={`${castLabel(type)} ${character.name}`}
+                    disabled={busy}
+                    onClick={() => onCast(person, character, current?.type === type ? null : type)}
+                  >
+                    {castLabel(type)}
+                  </Button>
+                ))}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {visible.length < sorted.length ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-10 w-full"
+          onClick={() => setShowAll(true)}
+        >
+          Alle Rollen anzeigen ({sorted.length})
+        </Button>
+      ) : null}
+    </section>
   );
 }
 
 function DepartmentView({
   data,
   canManage,
+  manageAll,
   busyKey,
   onAssign,
   onRemove,
@@ -674,6 +809,7 @@ function DepartmentView({
 }: {
   data: AssignmentData;
   canManage: (departmentId: string) => boolean;
+  manageAll: boolean;
   busyKey: string | null;
   onAssign: (
     person: AssignmentPerson,
@@ -684,7 +820,7 @@ function DepartmentView({
   onOpenPerson: (id: string) => void;
 }) {
   const visible = data.departments.filter((department) => canManage(department.id));
-  if (visible.length === 0) return <EmptyHint>Keine Gewerke vorhanden.</EmptyHint>;
+  if (visible.length === 0 && !manageAll) return <EmptyHint>Keine Gewerke vorhanden.</EmptyHint>;
 
   return (
     <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
@@ -709,10 +845,19 @@ function DepartmentView({
             aria-label={department.name}
           >
             <header className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold">{department.name}</h2>
-              <Badge variant="muted">
-                {members.length} {members.length === 1 ? "Person" : "Personen"}
-              </Badge>
+              <h2 className="min-w-0 truncate text-base font-semibold">{department.name}</h2>
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge variant="muted">
+                  {members.length} {members.length === 1 ? "Person" : "Personen"}
+                </Badge>
+                {manageAll ? (
+                  <DepartmentSettingsButton
+                    showId={data.showId}
+                    department={department}
+                    stayOnPage
+                  />
+                ) : null}
+              </div>
             </header>
 
             {requests.length ? (
@@ -796,6 +941,9 @@ function DepartmentView({
           </section>
         );
       })}
+      {manageAll ? (
+        <DepartmentSettingsButton showId={data.showId} variant="tile" stayOnPage />
+      ) : null}
     </div>
   );
 }
@@ -847,34 +995,31 @@ function RolesList({
   people,
   selectedId,
   onSelect,
+  onCreate,
 }: {
   characters: AssignmentCharacter[];
   people: AssignmentPerson[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onCreate?: () => void;
 }) {
+  const createButton = onCreate ? (
+    <Button type="button" variant="outline" className="h-11 w-full" onClick={onCreate}>
+      <PlusIcon className="h-4 w-4" aria-hidden />
+      Neue Rolle
+    </Button>
+  ) : null;
   if (characters.length === 0) {
     return (
-      <EmptyHint>
-        Für diese Produktion sind noch keine Rollen angelegt.{" "}
-        <Link
-          href="/mitglieder/produktionen/stueck?ansicht=rollen"
-          className="text-primary underline"
-        >
-          Rolle anlegen
-        </Link>
-      </EmptyHint>
+      <div className="space-y-2">
+        <EmptyHint>Für diese Produktion sind noch keine Rollen angelegt.</EmptyHint>
+        {createButton}
+      </div>
     );
   }
   return (
     <div className="space-y-2">
-      <Link
-        href="/mitglieder/produktionen/stueck?ansicht=rollen"
-        className="flex min-h-11 items-center justify-between rounded-xl border border-border bg-card px-3 text-sm font-medium text-primary hover:bg-muted/40"
-      >
-        Rollen und Szenen verwalten
-        <ChevronRightIcon className="h-4 w-4" aria-hidden />
-      </Link>
+      {createButton}
       <ul
         className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card"
         aria-label="Rollen"
@@ -932,11 +1077,14 @@ function RolePanel({
   people,
   busyKey,
   onSet,
+  onEdit,
 }: {
   character: AssignmentCharacter;
   people: AssignmentPerson[];
   busyKey: string | null;
   onSet: (person: AssignmentPerson, type: "primary" | "alternate" | null) => void;
+  /** Öffnet den Rollen-Dialog aus „Stück“ (Name, Größe, Farbe, Szenen). */
+  onEdit?: () => void;
 }) {
   const [query, setQuery] = React.useState("");
   const [showAll, setShowAll] = React.useState(false);
@@ -965,10 +1113,22 @@ function RolePanel({
 
   return (
     <div className="space-y-3">
-      <div className="hidden lg:block">
-        <h2 className="text-base font-semibold">{character.name}</h2>
-        {character.sizeLabel ? (
-          <p className="text-xs text-muted-foreground">Rollengröße: {character.sizeLabel}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="hidden min-w-0 lg:block">
+          <h2 className="truncate text-base font-semibold">{character.name}</h2>
+          {character.sizeLabel ? (
+            <p className="text-xs text-muted-foreground">Rollengröße: {character.sizeLabel}</p>
+          ) : null}
+        </div>
+        {onEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="ml-auto inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted"
+          >
+            <EditIcon className="h-3.5 w-3.5" aria-hidden />
+            Bearbeiten
+          </button>
         ) : null}
       </div>
       <SearchField value={query} onChange={setQuery} label="Person suchen" />

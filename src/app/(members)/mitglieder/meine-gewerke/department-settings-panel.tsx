@@ -34,11 +34,14 @@ export function DepartmentSettingsButton({
   showId,
   department,
   variant = "button",
+  stayOnPage = false,
 }: {
   showId: string;
   department?: DepartmentSettings;
   /** `tile`: „+ Gewerk“-Kachel im Raster. */
   variant?: "button" | "tile";
+  /** Nach Anlegen/Archivieren nicht ins Portal wechseln, sondern die Seite neu laden (Zuweisung). */
+  stayOnPage?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -68,7 +71,7 @@ export function DepartmentSettingsButton({
     }
     toast.success(department ? "Gespeichert" : "Gewerk angelegt", { duration: 3000 });
     setOpen(false);
-    if (!department && "slug" in result && result.slug) {
+    if (!department && !stayOnPage && "slug" in result && result.slug) {
       router.push(`/mitglieder/meine-gewerke/${encodeURIComponent(result.slug)}`);
     } else {
       router.refresh();
@@ -197,7 +200,8 @@ export function DepartmentSettingsButton({
               return;
             }
             toast.success("Gewerk archiviert", { duration: 3000 });
-            router.push("/mitglieder/meine-gewerke");
+            if (stayOnPage) router.refresh();
+            else router.push("/mitglieder/meine-gewerke");
           }}
         />
       ) : null}

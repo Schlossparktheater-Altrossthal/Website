@@ -12,6 +12,7 @@ import { currentMembershipWhere } from "@/lib/produktionen/status";
 export type AssignmentDepartment = {
   id: string;
   name: string;
+  description: string | null;
   color: string | null;
   requiresJoinApproval: boolean;
   /** Onboarding-Wunsch-Codes, die zu diesem Gewerk führen. */
@@ -75,6 +76,7 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
       select: {
         id: true,
         name: true,
+        description: true,
         color: true,
         requiresJoinApproval: true,
         template: { select: { preferenceCodes: true } },
@@ -253,6 +255,7 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
       id: department.id,
       name: department.name,
       color: department.color,
+      description: department.description,
       requiresJoinApproval: department.requiresJoinApproval,
       preferenceCodes: department.template?.preferenceCodes ?? [],
     })),
