@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { isAdminRole, type Role } from "@/lib/roles";
@@ -33,8 +34,12 @@ type SessionOptions = {
   allowImpersonation?: boolean;
 };
 
+// Layout und Seite lesen die Sitzung im selben Request: nur einmal decodieren
+// (der jwt-Callback fragt dabei jedes Mal die Datenbank ab).
+const getRequestAuth = cache(() => auth());
+
 export async function getSession(options?: SessionOptions) {
-  const session = await auth();
+  const session = await getRequestAuth();
   const allowImpersonation = options?.allowImpersonation !== false;
   return applyImpersonation(session, allowImpersonation);
 }

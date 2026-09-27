@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { currentCastingWhere, currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
@@ -436,9 +437,16 @@ async function resolveRoleContext(
   if (!user?.id) {
     return { systemRoles: [], customRoleIds: [], departmentIds: [], hasCasting: false };
   }
+  return resolveRoleContextCached(user.id, showId ?? null);
+}
 
+// Pro Request einmal je Nutzer/Produktion: Layout und Seiten prüfen oft mehrere Rechte.
+const resolveRoleContextCached = cache(async function resolveRoleContextUncached(
+  userId: string,
+  showId: string | null,
+): Promise<ResolvedRoleContext> {
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { id: userId },
     select: {
       role: true,
       roles: { select: { role: true } },
@@ -462,7 +470,7 @@ async function resolveRoleContext(
 
   if (showId && !isAdminRole(new Set(systemRoles))) {
     const membership = await prisma.productionMembership.findFirst({
-      where: { userId: user.id, showId, leftAt: null, status: { not: "left" } },
+      where: { userId, showId, leftAt: null, status: { not: "left" } },
       select: { roles: true },
     });
     systemRoles = scopeSystemRolesToProduction(
@@ -483,7 +491,7 @@ async function resolveRoleContext(
     departmentIds,
     hasCasting: dbUser.characterCastings.length > 0,
   };
-}
+});
 
 export type PermissionRoleContext = ResolvedRoleContext;
 
@@ -522,6 +530,10 @@ function buildRoleFilter(
   return roleFilters;
 }
 
+const findPermissionByKey = cache((key: string) =>
+  prisma.permission.findUnique({ where: { key } }),
+);
+
 export async function hasPermission(
   user: UserLike,
   permissionKey: string,
@@ -549,7 +561,7 @@ export async function hasPermission(
   if (permissionKey === DEPARTMENT_MEMBER_PERMISSION_KEY && hasCasting) return true;
   if (!systemRoles.length && !customRoleIds.length && !departmentIds.length) return false;
 
-  const perm = await prisma.permission.findUnique({ where: { key: permissionKey } });
+  const perm = await findPermissionByKey(permissionKey);
   if (!perm) return false;
 
   // Wer einem Gewerk angehört, sieht die Gewerkeplanung – ohne gespeicherte Rolle.
