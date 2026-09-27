@@ -16,6 +16,7 @@ import {
   type CalendarBlockedDay,
   type CalendarRehearsal,
 } from "./rehearsal-calendar";
+import { SceneOverview } from "./scene-overview";
 import { RehearsalList, type RehearsalLite } from "./rehearsal-list";
 import { combineNameParts } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
@@ -205,6 +206,8 @@ export default async function RehearsalPlanningPage() {
         rehearsals={calendarRehearsals}
         memberCount={memberCount}
       />
+
+      {showId ? <SceneOverview showId={showId} /> : null}
 
       {publishedRehearsals.length ? (
         <RehearsalList
