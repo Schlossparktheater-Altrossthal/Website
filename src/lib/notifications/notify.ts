@@ -3,6 +3,8 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/realtime/triggers";
 
+import { pushNotification } from "./push";
+
 import {
   NOTIFICATION_TYPE_META,
   eventActionUrl,
@@ -39,6 +41,7 @@ export type NotifyInput = {
 
 export type PreparedNotification = {
   id: string;
+  type: NotificationType;
   recipientIds: string[];
   title: string;
   body: string | null;
@@ -95,6 +98,7 @@ export async function createNotification(
 
   return {
     id: created.id,
+    type: input.type,
     recipientIds,
     title: input.title,
     body,
@@ -109,7 +113,7 @@ export async function createNotification(
   };
 }
 
-/** Stellt eine angelegte Benachrichtigung zu (Realtime; Push folgt in Phase 5). */
+/** Stellt eine angelegte Benachrichtigung zu: Realtime im offenen Tab, Web Push auf Geräte. */
 export async function dispatchNotification(prepared: PreparedNotification | null) {
   if (!prepared) return;
   const metadata = {
@@ -143,6 +147,12 @@ export async function dispatchNotification(prepared: PreparedNotification | null
     if (result.status === "rejected") {
       console.warn("[notify] realtime delivery failed", result.reason);
     }
+  }
+
+  try {
+    await pushNotification(prepared);
+  } catch (error) {
+    console.warn("[notify] push delivery failed", error);
   }
 }
 

@@ -6,9 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   sendNotification: vi.fn(),
   create: vi.fn(),
+  push: vi.fn(),
 }));
 
 vi.mock("@/lib/realtime/triggers", () => ({ sendNotification: mocks.sendNotification }));
+vi.mock("../push", () => ({ pushNotification: mocks.push }));
 vi.mock("@/lib/prisma", () => ({ prisma: { notification: { create: mocks.create } } }));
 
 import { createNotification, dispatchNotification, notify } from "../notify";
@@ -18,6 +20,7 @@ describe("notify", () => {
   beforeEach(() => {
     mocks.create.mockReset().mockResolvedValue({ id: "n1" });
     mocks.sendNotification.mockReset().mockResolvedValue(undefined);
+    mocks.push.mockReset().mockResolvedValue(undefined);
   });
 
   it("legt Empfänger ohne Auslöser und Duplikate an und übernimmt Standardwerte", async () => {
@@ -77,6 +80,7 @@ describe("notify", () => {
     await expect(
       dispatchNotification({
         id: "n1",
+        type: "test",
         recipientIds: ["a", "b"],
         title: "t",
         body: null,

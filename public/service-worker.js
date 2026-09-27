@@ -124,6 +124,55 @@ self.addEventListener("install", (event) => {
   );
 });
 
+// Web Push: Payload siehe src/lib/notifications/push.ts (PushPayload).
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: event.data?.text() };
+  }
+  const title = payload.title || "Sommertheater";
+
+  event.waitUntil(
+    (async () => {
+      if (typeof payload.badge === "number" && "setAppBadge" in self.navigator) {
+        await self.navigator.setAppBadge(payload.badge).catch(() => undefined);
+      }
+      // Ist die App gerade im Vordergrund, zeigt sie selbst einen Hinweis (Realtime).
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      if (windows.some((client) => client.focused && client.visibilityState === "visible")) return;
+
+      await self.registration.showNotification(title, {
+        body: payload.body,
+        tag: payload.tag,
+        renotify: Boolean(payload.tag),
+        requireInteraction: Boolean(payload.urgent),
+        icon: "/pwa-icons/192",
+        badge: "/pwa-icons/192",
+        data: { url: payload.url || "/mitglieder/benachrichtigungen" },
+      });
+    })(),
+  );
+});
+
+// Browser hat das Abo erneuert: neues Abo an den Server melden.
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      const options = event.oldSubscription?.options;
+      if (!options) return;
+      const subscription = await self.registration.pushManager.subscribe(options);
+      await fetch("/api/push/subscription", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription.toJSON()),
+      });
+    })().catch((error) => console.warn("[ServiceWorker] resubscribe failed", error)),
+  );
+});
+
 // Klick auf eine Benachrichtigung: vorhandenes Fenster fokussieren oder das Ziel öffnen.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

@@ -33,7 +33,13 @@ steht, was zu tun ist, darunter Neues, dann Früheres. Plan und Hintergründe:
 
 ## Offen
 
-Web Push und Einstellungen je Kategorie (Plan Phase 5–6).
+Einstellungen je Kategorie (Plan Phase 6).
+
+## Web Push
+
+- `GET/POST/DELETE /api/push/subscription` (öffentlicher Schlüssel, Geräte, Abo), `POST /api/push/test`.
+- Versand in `dispatchNotification` → `src/lib/notifications/push.ts`; ohne `VAPID_*` passiert nichts.
+- Aktivieren über den Hinweis in der Glocke (`usePushSubscription`). iOS nur als installierte App.
 
 ## PWA
 

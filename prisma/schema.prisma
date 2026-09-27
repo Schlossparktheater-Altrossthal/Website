@@ -310,6 +310,8 @@ model User {
   sizes                           MemberSize[]
   roles                           UserRole[]
   notifications                   NotificationRecipient[]
+  pushSubscriptions               PushSubscription[]
+  notificationPreferences         NotificationPreference[]
   blockedDays                     BlockedDay[]
   calendarFeed                    CalendarFeed?
   appRoles                        UserAppRole[]
@@ -1285,6 +1287,35 @@ model NotificationRecipient {
 
   @@unique([notificationId, userId])
   @@index([userId, archivedAt, doneAt])
+}
+
+/// Web-Push-Abo eines Geräts (Browser/installierte App).
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  /// Kurzname für die Geräteliste, z. B. „iPhone“ oder „Chrome (Windows)“
+  label      String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Kanalwahl je Kategorie (proben | termine | gewerke | produktion | system). Ohne Eintrag gelten
+/// die Standardwerte aus `src/lib/notifications/preferences.ts`.
+model NotificationPreference {
+  userId   String
+  category String
+  push     Boolean
+  email    Boolean @default(false)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, category])
 }
 
 model Issue {

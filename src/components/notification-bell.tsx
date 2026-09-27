@@ -18,6 +18,7 @@ import {
 } from "@/components/notifications/notification-sections";
 import { useInbox } from "@/components/notifications/use-inbox";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNotificationRealtime } from "@/hooks/useRealtime";
 import type { NotificationCategory } from "@/lib/notifications/types";
@@ -83,6 +84,7 @@ export function NotificationBell({ className }: { className?: string }) {
     requestPermission,
     showNotification,
   } = useBrowserNotifications();
+  const push = usePushSubscription();
 
   const handleRealtime = useCallback(
     (event: NotificationRealtimeEvent) => {
@@ -101,7 +103,8 @@ export function NotificationBell({ className }: { className?: string }) {
           : {}),
       });
 
-      if (browserSupported && document.visibilityState !== "visible") {
+      // Mit Push-Abo zeigt der Service Worker die Benachrichtigung; sonst hier im offenen Tab.
+      if (browserSupported && !push.subscribed && document.visibilityState !== "visible") {
         let url: string | undefined;
         try {
           url = new URL(actionUrl?.trim() || "/mitglieder", window.location.origin).toString();
@@ -111,24 +114,43 @@ export function NotificationBell({ className }: { className?: string }) {
         void showNotification({ title, body: description, tag: id, ...(url ? { url } : {}) });
       }
     },
-    [browserSupported, showNotification],
+    [browserSupported, push.subscribed, showNotification],
   );
   useNotificationRealtime(handleRealtime);
 
   const enableDeviceNotifications = useCallback(async () => {
-    const result = await requestPermission().catch(() => "default" as const);
-    if (result === "granted") toast.success("Benachrichtigungen auf diesem Gerät aktiviert.");
-    else if (result === "denied")
-      toast.error(
-        "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen erlauben.",
-      );
-  }, [requestPermission]);
+    try {
+      const result =
+        push.supported && push.configured ? await push.enable() : await requestPermission();
+      if (result === "subscribed" || result === "granted")
+        toast.success("Benachrichtigungen auf diesem Gerät aktiviert", { duration: 3000 });
+      else if (result === "denied")
+        toast.error(
+          "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen erlauben.",
+          {
+            duration: 5000,
+          },
+        );
+    } catch (error) {
+      console.error("[NotificationBell] enabling push failed", error);
+      toast.error("Benachrichtigungen konnten nicht aktiviert werden.", { duration: 5000 });
+    }
+  }, [push, requestPermission]);
 
+  const pushMissing =
+    push.supported && push.configured && !push.subscribed && push.permission !== "denied";
   const showDeviceHint =
     inbox.loaded &&
-    browserSupported &&
-    browserPermission === "default" &&
-    !inbox.hints?.deviceNotificationsDismissed;
+    !push.loading &&
+    !inbox.hints?.deviceNotificationsDismissed &&
+    (pushMissing || (browserSupported && !push.configured && browserPermission === "default"));
+
+  // Zähler am App-Symbol (installierte App, sofern der Browser das kann).
+  useEffect(() => {
+    if (!authenticated || !inbox.loaded || !("setAppBadge" in navigator)) return;
+    const badge = openCount > 0 ? navigator.setAppBadge(openCount) : navigator.clearAppBadge();
+    badge.catch(() => undefined);
+  }, [authenticated, inbox.loaded, openCount]);
 
   const markAllRead = useCallback(() => {
     void update("read", { all: true });
