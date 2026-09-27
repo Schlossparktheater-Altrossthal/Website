@@ -1,6 +1,6 @@
 # Plan: Benachrichtigungen neu (Glocke, PWA, Web Push)
 
-Stand: 2026-09-27. Phase 1 umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-27. Phase 1–2 umgesetzt. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -205,7 +205,7 @@ Migration: bestehende Einträge bekommen `category`/`kind` per SQL aus `type` ab
 ## Checkliste
 
 - [x] Phase 1 – Typen-Registry, Migration, `notify()`, Erzeuger umgestellt (zusätzlicher Typ `casting`; Alt-Aktionen, die gelesen sind, gelten als erledigt)
-- [ ] Phase 2 – API (Abschnitte, Gruppen, read/done/archive, Cleanup)
+- [x] Phase 2 – API (Abschnitte, Gruppen, read/done/archive, Cleanup): `GET /api/notifications` (section, category, archived, cursor, limit → items, groups, counts, nextCursor; altes Feld `notifications` bleibt bis Phase 3), ein Endpunkt `POST /api/notifications/state` statt drei, Logik in `lib/notifications/inbox.ts`; Gewerke-Anfragen und Fotoerlaubnisse werden beim Bearbeiten für alle erledigt; Archiv-Löschung nach 90 Tagen beim Laden (kein CronJob)
 - [ ] Phase 3 – Glocken-UI + Seite + E2E/Screenshots
 - [ ] Phase 4 – PWA (Manifest, Icons, ein SW, Offline-Shell, Install-Hinweis)
 - [ ] Phase 5 – Web Push (VAPID/Vault, Subscriptions, Versand, NetworkPolicy)

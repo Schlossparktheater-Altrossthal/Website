@@ -5,6 +5,7 @@ import {
   dispatchNotification,
   type PreparedNotification,
 } from "@/lib/notifications/notify";
+import { resolveActionNotifications } from "@/lib/notifications/inbox";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import type { Role } from "@/lib/roles";
 
@@ -98,6 +99,14 @@ export async function createPhotoConsentBoardNotification(
     },
     select: { id: true },
   });
+
+  // Geprüfte Einreichungen sind für den ganzen Vorstand erledigt.
+  if (details.changeType === "status-changed" && details.status !== "pending") {
+    await resolveActionNotifications(
+      { type: NOTIFICATION_TYPES.PHOTO_CONSENT, groupKey: `photo-consent:${details.consentId}` },
+      client,
+    );
+  }
 
   const recipientIds = uniqueRecipientIds(recipients, [details.actorUserId]);
   if (!recipientIds.length) {

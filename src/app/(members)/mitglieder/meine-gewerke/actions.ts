@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getActiveProduction } from "@/lib/active-production";
 import { getUserDisplayName } from "@/lib/names";
+import { resolveActionNotifications } from "@/lib/notifications/inbox";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
@@ -108,9 +109,16 @@ export async function withdrawJoinRequestAction(input: {
     const session = await requireAuth();
     const userId = session.user?.id;
     if (!userId) throw new Error("Nicht angemeldet.");
-    await prisma.departmentMembership.deleteMany({
-      where: { departmentId: z.string().parse(input.departmentId), userId, status: "requested" },
+    const departmentId = z.string().parse(input.departmentId);
+    const { count } = await prisma.departmentMembership.deleteMany({
+      where: { departmentId, userId, status: "requested" },
     });
+    if (count) {
+      await resolveActionNotifications({
+        type: NOTIFICATION_TYPES.DEPARTMENT_REQUEST,
+        dataMatch: { departmentId, requesterId: userId },
+      });
+    }
     revalidateTeams();
     return actionSuccess("Anfrage zurückgezogen");
   } catch (error) {

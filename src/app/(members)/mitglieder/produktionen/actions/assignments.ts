@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { CharacterCastingType, DepartmentMembershipRole } from "@prisma/client";
 
 import { hasPermission } from "@/lib/permissions";
+import { resolveActionNotifications } from "@/lib/notifications/inbox";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
@@ -48,6 +49,13 @@ async function authorizeDepartment(departmentId: string) {
     if (!lead) throw new Error("Dafür fehlt dir die Berechtigung.");
   }
   return { userId, isManager, department };
+}
+
+function resolveJoinRequest(departmentId: string, requesterId: string) {
+  return resolveActionNotifications({
+    type: NOTIFICATION_TYPES.DEPARTMENT_REQUEST,
+    dataMatch: { departmentId, requesterId },
+  });
 }
 
 function notifyMember(
@@ -120,6 +128,9 @@ export async function assignDepartmentMemberAction(input: {
       },
     });
 
+    if (existing?.status === "requested") {
+      await resolveJoinRequest(department.id, input.userId);
+    }
     if (existing?.status !== "active" && input.userId !== actorId) {
       await notifyMember(input.userId, `Du bist jetzt im Gewerk ${department.name}`, {
         body: "Unter „Meine Gewerke“ findest du das Team.",
@@ -160,6 +171,7 @@ export async function removeDepartmentMemberAction(input: {
 
     if (existing.status === "requested") {
       await prisma.departmentMembership.delete({ where: { id: existing.id } });
+      await resolveJoinRequest(department.id, input.userId);
       if (input.userId !== actorId) {
         await notifyMember(input.userId, `Anfrage für ${department.name} abgelehnt`, {
           actorId,

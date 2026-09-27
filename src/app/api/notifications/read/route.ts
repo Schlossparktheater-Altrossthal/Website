@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+
 import { requireAuth } from "@/lib/rbac";
-import { prisma } from "@/lib/prisma";
+import { updateInboxState } from "@/lib/notifications/inbox";
 
 type Payload = {
   ids?: string[];
 };
 
+/** Kompatibilität für die bisherige Glocke: ohne IDs wird alles als gelesen markiert. */
 export async function POST(request: Request) {
   try {
     const session = await requireAuth();
@@ -21,15 +23,7 @@ export async function POST(request: Request) {
         )
       : [];
 
-    const where: { userId: string; id?: { in: string[] } } = { userId };
-    if (ids.length) {
-      where.id = { in: ids };
-    }
-
-    await prisma.notificationRecipient.updateMany({
-      where,
-      data: { readAt: new Date() },
-    });
+    await updateInboxState(userId, "read", ids.length ? { ids } : { all: true });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
