@@ -5,6 +5,8 @@ import { z } from "zod";
 
 import { getActiveProduction } from "@/lib/active-production";
 import { getUserDisplayName } from "@/lib/names";
+import { notify } from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
 import {
   actionFailure,
@@ -33,7 +35,7 @@ export async function joinDepartmentAction(input: {
     const production = await getActiveProduction(userId);
     const department = await prisma.department.findFirst({
       where: { id: departmentId, showId: production?.id ?? "", archivedAt: null },
-      select: { id: true, name: true, requiresJoinApproval: true },
+      select: { id: true, name: true, slug: true, showId: true, requiresJoinApproval: true },
     });
     if (!department) throw new Error("Das Gewerk gibt es in dieser Produktion nicht.");
 
@@ -77,15 +79,16 @@ export async function joinDepartmentAction(input: {
           select: { firstName: true, lastName: true, name: true, email: true },
         }),
       ]);
-      if (leads.length) {
-        await prisma.notification.create({
-          data: {
-            title: `Anfrage für ${department.name}: ${user ? getUserDisplayName(user) : "Jemand"} möchte mitmachen`,
-            type: "department-request",
-            recipients: { create: leads.map((entry) => ({ userId: entry.userId })) },
-          },
-        });
-      }
+      await notify({
+        type: NOTIFICATION_TYPES.DEPARTMENT_REQUEST,
+        recipients: leads.map((entry) => entry.userId),
+        actorId: userId,
+        title: `Anfrage für ${department.name}: ${user ? getUserDisplayName(user) : "Jemand"} möchte mitmachen`,
+        actionUrl: departmentActionUrl(department.slug),
+        showId: department.showId,
+        groupKey: `department-request:${department.id}`,
+        data: { departmentId: department.id, requesterId: userId },
+      });
     }
 
     revalidateTeams();

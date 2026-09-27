@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { broadcastRehearsalCreated, sendNotification } from "@/lib/realtime/triggers";
+import { broadcastRehearsalCreated } from "@/lib/realtime/triggers";
+import { createNotification, dispatchNotification } from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES, categoryForEventKind } from "@/lib/notifications/types";
 import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 
 import type { CalendarEventKind } from "@prisma/client";
@@ -399,29 +401,23 @@ export async function publishRehearsalAction(input: {
         throw new Error("missing-end");
       }
 
-      if (syncedInvitees.length) {
-        await tx.notification.create({
-          data: {
-            title: notificationTitle,
-            body: notificationBody,
-            type: kind === "REHEARSAL" ? "rehearsal" : "calendar-event",
-            eventId: rehearsal.id,
-            recipients: {
-              create: syncedInvitees.map((userId) => ({ userId })),
-            },
-          },
-        });
-      }
-
-      return {
-        rehearsal,
-        inviteeIds: syncedInvitees,
+      const notification = await createNotification(tx, {
+        type:
+          kind === "REHEARSAL" ? NOTIFICATION_TYPES.REHEARSAL : NOTIFICATION_TYPES.CALENDAR_EVENT,
+        recipients: syncedInvitees,
+        title: notificationTitle,
         body: notificationBody,
-        notificationTitle,
-      };
+        eventId: rehearsal.id,
+        showId: show.showId,
+        category: categoryForEventKind(kind),
+        groupKey: `event:${rehearsal.id}`,
+      });
+
+      return { rehearsal, inviteeIds: syncedInvitees, notification };
     });
 
-    const { rehearsal, inviteeIds, body, notificationTitle } = result;
+    const { rehearsal, inviteeIds, notification } = result;
+    await dispatchNotification(notification);
 
     if (inviteeIds.length && rehearsal.kind === "REHEARSAL") {
       await broadcastRehearsalCreated({
@@ -434,21 +430,6 @@ export async function publishRehearsalAction(input: {
         },
         targetUserIds: inviteeIds,
       });
-
-      await Promise.all(
-        inviteeIds.map((userId) =>
-          sendNotification({
-            targetUserId: userId,
-            title: notificationTitle,
-            body,
-            type: "info",
-            metadata:
-              rehearsal.kind === "REHEARSAL"
-                ? { rehearsalId: rehearsal.id }
-                : { eventId: rehearsal.id },
-          }),
-        ),
-      );
     }
 
     revalidatePath("/mitglieder/terminplanung");

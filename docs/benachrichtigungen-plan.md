@@ -1,6 +1,6 @@
 # Plan: Benachrichtigungen neu (Glocke, PWA, Web Push)
 
-Stand: 2026-09-27. Noch nichts umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-27. Phase 1 umgesetzt. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -204,7 +204,7 @@ Migration: bestehende Einträge bekommen `category`/`kind` per SQL aus `type` ab
 
 ## Checkliste
 
-- [ ] Phase 1 – Typen-Registry, Migration, `notify()`, Erzeuger umgestellt
+- [x] Phase 1 – Typen-Registry, Migration, `notify()`, Erzeuger umgestellt (zusätzlicher Typ `casting`; Alt-Aktionen, die gelesen sind, gelten als erledigt)
 - [ ] Phase 2 – API (Abschnitte, Gruppen, read/done/archive, Cleanup)
 - [ ] Phase 3 – Glocken-UI + Seite + E2E/Screenshots
 - [ ] Phase 4 – PWA (Manifest, Icons, ein SW, Offline-Shell, Install-Hinweis)

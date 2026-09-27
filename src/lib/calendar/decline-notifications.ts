@@ -15,11 +15,11 @@ import {
 } from "@/lib/date-time";
 import { createConfiguredMailSender } from "@/lib/email/send";
 import { getUserDisplayName } from "@/lib/names";
-import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
+import { notify } from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES, categoryForEventKind } from "@/lib/notifications/types";
 import { hasPermission } from "@/lib/permissions";
 import { isVisibleStatus, visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
-import { sendNotification } from "@/lib/realtime/triggers";
 
 const PLANNING_PERMISSION = "PRIVATE.REHEARSAL.PLANNING.MANAGE";
 const ADMIN_ROLES: Role[] = ["admin", "owner"];
@@ -138,28 +138,20 @@ export async function notifyPlannersOfDecline({
     impacts,
   });
 
-  await prisma.notification.create({
-    data: {
-      title,
-      body,
-      type: shortNotice
-        ? NOTIFICATION_TYPES.REHEARSAL_EMERGENCY
-        : NOTIFICATION_TYPES.REHEARSAL_ATTENDANCE,
-      eventId: event.id,
-      recipients: { create: recipients.map((id) => ({ userId: id })) },
-    },
+  await notify({
+    type: shortNotice
+      ? NOTIFICATION_TYPES.REHEARSAL_EMERGENCY
+      : NOTIFICATION_TYPES.REHEARSAL_ATTENDANCE,
+    recipients,
+    title,
+    body,
+    eventId: event.id,
+    showId: event.showId,
+    actorId: userId,
+    category: categoryForEventKind(event.kind),
+    groupKey: `decline:${event.id}`,
+    data: { declinedUserId: userId, shortNotice },
   });
-  await Promise.all(
-    recipients.map((id) =>
-      sendNotification({
-        targetUserId: id,
-        title,
-        body,
-        type: shortNotice ? "error" : "warning",
-        metadata: { rehearsalId: event.id },
-      }),
-    ),
-  );
 
   try {
     const sender = await createConfiguredMailSender();

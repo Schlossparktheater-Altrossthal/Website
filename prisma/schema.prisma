@@ -1255,7 +1255,21 @@ model Notification {
   createdAt  DateTime                @default(now())
   eventId    String?
   event      CalendarEvent?          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// Siehe `src/lib/notifications/types.ts`: proben | termine | gewerke | produktion | system
+  category   String                  @default("system")
+  /// info = Hinweis, action = braucht eine Reaktion (bleibt offen bis erledigt)
+  kind       String                  @default("info")
+  /// normal | urgent
+  priority   String                  @default("normal")
+  actionUrl  String?
+  /// Gleicher Schlüssel = ein Bündel in der Glocke (z. B. `decline:<eventId>`)
+  groupKey   String?
+  showId     String?
+  actorId    String?
+  data       Json?
   recipients NotificationRecipient[]
+
+  @@index([groupKey])
 }
 
 model NotificationRecipient {
@@ -1263,10 +1277,14 @@ model NotificationRecipient {
   notificationId String
   userId         String
   readAt         DateTime?
+  doneAt         DateTime?
+  archivedAt     DateTime?
+  pushedAt       DateTime?
   notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([notificationId, userId])
+  @@index([userId, archivedAt, doneAt])
 }
 
 model Issue {

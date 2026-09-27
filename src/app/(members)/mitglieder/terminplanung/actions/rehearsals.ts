@@ -4,8 +4,13 @@ import { revalidatePath } from "next/cache";
 import type { CalendarEventKind, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { broadcastRehearsalUpdated, sendNotification } from "@/lib/realtime/triggers";
-import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
+import { broadcastRehearsalUpdated } from "@/lib/realtime/triggers";
+import { notify } from "@/lib/notifications/notify";
+import {
+  NOTIFICATION_TYPES,
+  categoryForEventKind,
+  type NotificationType,
+} from "@/lib/notifications/types";
 import {
   loadAudienceContext,
   saveEventAudience,
@@ -209,32 +214,16 @@ export async function updateRehearsalAction(input: {
       updates.push("Beschreibung aktualisiert.");
     }
 
-    const notifyUsers = async (userIds: string[], title: string, body: string, type: string) => {
-      if (!userIds.length) return;
-      await prisma.notification.create({
-        data: {
-          title,
-          body,
-          type,
-          eventId: rehearsal.id,
-          recipients: { create: userIds.map((userId) => ({ userId })) },
-        },
+    const notifyUsers = (userIds: string[], title: string, body: string, type: NotificationType) =>
+      notify({
+        type,
+        recipients: userIds,
+        title,
+        body,
+        eventId: rehearsal.id,
+        category: categoryForEventKind(rehearsal.kind),
+        groupKey: `event:${rehearsal.id}`,
       });
-      await Promise.all(
-        userIds.map((userId) =>
-          sendNotification({
-            targetUserId: userId,
-            title,
-            body,
-            type: "info",
-            metadata:
-              rehearsal.kind === "REHEARSAL"
-                ? { rehearsalId: rehearsal.id }
-                : { eventId: rehearsal.id },
-          }),
-        ),
-      );
-    };
 
     // Bisherige Teilnehmer nur bei echten Änderungen benachrichtigen, nicht bei jeder Auswahl.
     const addedSet = new Set(addedIds);
@@ -251,7 +240,9 @@ export async function updateRehearsalAction(input: {
       addedIds,
       `${rehearsal.kind === "REHEARSAL" ? "Neue Probe" : "Neuer Termin"}: ${rehearsal.title}`,
       `Am ${formatter.format(rehearsal.start)}`,
-      rehearsal.kind === "REHEARSAL" ? "rehearsal" : "calendar-event",
+      rehearsal.kind === "REHEARSAL"
+        ? NOTIFICATION_TYPES.REHEARSAL
+        : NOTIFICATION_TYPES.CALENDAR_EVENT,
     );
     await notifyUsers(
       removedIds,

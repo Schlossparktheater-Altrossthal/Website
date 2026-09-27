@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireBoardAccess } from "@/lib/departments/board";
+import { notify } from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
 import {
   actionFailure,
@@ -43,15 +45,24 @@ async function validAssignees(departmentId: string, ids: string[]) {
   return rows.map((row) => row.userId);
 }
 
-async function notifyAssignees(userIds: string[], actorId: string, title: string) {
-  const recipients = userIds.filter((id) => id !== actorId);
-  if (!recipients.length) return;
-  await prisma.notification.create({
-    data: {
-      title: `Neue Aufgabe für dich: ${title}`,
-      type: "department-task",
-      recipients: { create: recipients.map((userId) => ({ userId })) },
-    },
+async function notifyAssignees(
+  userIds: string[],
+  actorId: string,
+  title: string,
+  departmentId: string,
+) {
+  if (!userIds.some((id) => id !== actorId)) return;
+  const department = await prisma.department.findUnique({
+    where: { id: departmentId },
+    select: { slug: true, showId: true },
+  });
+  await notify({
+    type: NOTIFICATION_TYPES.DEPARTMENT_TASK,
+    recipients: userIds,
+    actorId,
+    title: `Neue Aufgabe für dich: ${title}`,
+    actionUrl: departmentActionUrl(department?.slug),
+    showId: department?.showId,
   });
 }
 
@@ -92,7 +103,7 @@ export async function createBoardTaskAction(
         assignments: { create: assignees.map((userId) => ({ userId })) },
       },
     });
-    await notifyAssignees(assignees, access.userId, data.title);
+    await notifyAssignees(assignees, access.userId, data.title, data.departmentId);
     revalidateBoard();
     return actionSuccess();
   } catch (error) {
@@ -131,7 +142,7 @@ export async function updateBoardTaskAction(
       }),
     ]);
     const added = assignees.filter((id) => !before.some((entry) => entry.userId === id));
-    await notifyAssignees(added, access.userId, data.title);
+    await notifyAssignees(added, access.userId, data.title, task.departmentId);
     revalidateBoard();
     return actionSuccess();
   } catch (error) {

@@ -71,6 +71,7 @@ export class RealtimeTriggers {
    * Send notification to specific user
    */
   static async sendNotification(data: {
+    id?: string;
     targetUserId: string;
     title: string;
     body?: string;
@@ -81,7 +82,7 @@ export class RealtimeTriggers {
     await emitRealtimeEvent("notification_created", {
       targetUserId: data.targetUserId,
       notification: {
-        id: `notif_${Date.now()}`,
+        id: data.id ?? `notif_${Date.now()}`,
         title: data.title,
         body: data.body,
         type: data.type,

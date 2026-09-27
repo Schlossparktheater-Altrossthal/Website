@@ -19,6 +19,8 @@ import { EVENT_RESPONSE_STATUSES } from "@/lib/calendar/responses";
 import { requireBoardAccess } from "@/lib/departments/board";
 import { getUserDisplayName } from "@/lib/names";
 import { isVisibleStatus } from "@/lib/calendar/status";
+import { notify } from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
@@ -57,16 +59,24 @@ function formatWhen(date: Date) {
   return format(date, "EEE d. MMM, HH:mm", { locale: de });
 }
 
-async function notify(userIds: string[], actorId: string, title: string, body?: string) {
-  const recipients = [...new Set(userIds)].filter((id) => id !== actorId);
-  if (!recipients.length) return;
-  await prisma.notification.create({
-    data: {
-      title,
-      body: body ?? null,
-      type: "department-event",
-      recipients: { create: recipients.map((userId) => ({ userId })) },
-    },
+function notifyTeam(
+  userIds: string[],
+  actorId: string,
+  title: string,
+  body: string,
+  target: { eventId?: string; showId?: string | null },
+) {
+  return notify({
+    type: NOTIFICATION_TYPES.DEPARTMENT_EVENT,
+    recipients: userIds,
+    actorId,
+    title,
+    body,
+    // Ohne Termin (z. B. gelöscht) führt der Link ins Gewerk.
+    ...(target.eventId
+      ? { eventId: target.eventId, groupKey: `event:${target.eventId}` }
+      : { actionUrl: departmentActionUrl() }),
+    showId: target.showId,
   });
 }
 
@@ -178,11 +188,12 @@ export async function saveTeamEventAction(
         select: { id: true },
       });
       const invited = await saveTeamSelection(created.id, data.departmentId, data.memberIds);
-      await notify(
+      await notifyTeam(
         invited ?? (await activeMemberIds(data.departmentId)),
         access.userId,
         `Neuer Termin (${department.name}): ${data.title}`,
         `${formatWhen(start)} – bitte zu- oder absagen.`,
+        { eventId: created.id, showId: department.showId },
       );
     } else {
       const event = await loadEvent(data.eventId);
@@ -190,11 +201,12 @@ export async function saveTeamEventAction(
       await prisma.calendarEvent.update({ where: { id: event.id }, data: fields });
       const invited = await saveTeamSelection(event.id, event.departmentId, data.memberIds);
       if (event.start.getTime() !== start.getTime()) {
-        await notify(
+        await notifyTeam(
           invited ?? (await activeMemberIds(event.departmentId)),
           access.userId,
           `Termin verschoben (${event.department?.name ?? "Gewerk"}): ${data.title}`,
           `Neu: ${formatWhen(start)}`,
+          { eventId: event.id },
         );
       }
     }
@@ -218,11 +230,12 @@ export async function deleteTeamEventAction(input: {
     });
     await prisma.calendarEvent.delete({ where: { id: event.id } });
     if (event.start > new Date()) {
-      await notify(
+      await notifyTeam(
         attending.map((entry) => entry.userId),
         access.userId,
         `Termin abgesagt (${event.department?.name ?? "Gewerk"}): ${event.title}`,
         formatWhen(event.start),
+        {},
       );
     }
     revalidateTeams();
@@ -476,11 +489,12 @@ export async function saveDepartmentBlockAction(
     });
 
     if (event.status !== "DRAFT") {
-      await notify(
+      await notifyTeam(
         addedIds,
         access.userId,
         `Eingeplant (${block.department?.name ?? "Gewerk"}): ${block.title || event.title}`,
         `${formatWhen(startsAt ?? event.start)} – ${event.title}`,
+        { eventId: event.id, showId: event.showId },
       );
     }
     revalidateTeams();

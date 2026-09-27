@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import type { CharacterCastingType, DepartmentMembershipRole } from "@prisma/client";
 
 import { hasPermission } from "@/lib/permissions";
+import { notify } from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import {
@@ -33,7 +35,7 @@ async function authorizeDepartment(departmentId: string) {
 
   const department = await prisma.department.findUnique({
     where: { id: departmentId },
-    select: { id: true, name: true, showId: true, archivedAt: true },
+    select: { id: true, name: true, slug: true, showId: true, archivedAt: true },
   });
   if (!department || department.archivedAt) throw new Error("Gewerk wurde nicht gefunden.");
 
@@ -48,14 +50,16 @@ async function authorizeDepartment(departmentId: string) {
   return { userId, isManager, department };
 }
 
-async function notify(userId: string, title: string, body?: string) {
-  await prisma.notification.create({
-    data: {
-      title,
-      body: body ?? null,
-      type: "department-assignment",
-      recipients: { create: { userId } },
-    },
+function notifyMember(
+  userId: string,
+  title: string,
+  options: { body?: string; actorId?: string; actionUrl?: string; showId?: string | null } = {},
+) {
+  return notify({
+    type: NOTIFICATION_TYPES.DEPARTMENT_ASSIGNMENT,
+    recipients: [userId],
+    title,
+    ...options,
   });
 }
 
@@ -117,11 +121,12 @@ export async function assignDepartmentMemberAction(input: {
     });
 
     if (existing?.status !== "active" && input.userId !== actorId) {
-      await notify(
-        input.userId,
-        `Du bist jetzt im Gewerk ${department.name}`,
-        "Unter „Meine Gewerke“ findest du das Team.",
-      );
+      await notifyMember(input.userId, `Du bist jetzt im Gewerk ${department.name}`, {
+        body: "Unter „Meine Gewerke“ findest du das Team.",
+        actorId,
+        actionUrl: departmentActionUrl(department.slug),
+        showId: department.showId,
+      });
     }
 
     revalidateAssignments();
@@ -156,7 +161,11 @@ export async function removeDepartmentMemberAction(input: {
     if (existing.status === "requested") {
       await prisma.departmentMembership.delete({ where: { id: existing.id } });
       if (input.userId !== actorId) {
-        await notify(input.userId, `Anfrage für ${department.name} abgelehnt`);
+        await notifyMember(input.userId, `Anfrage für ${department.name} abgelehnt`, {
+          actorId,
+          actionUrl: departmentActionUrl(),
+          showId: department.showId,
+        });
       }
     } else {
       await prisma.departmentMembership.update({
@@ -214,11 +223,14 @@ export async function setCharacterCastingAction(input: {
     });
 
     if (input.type && input.userId !== session.user?.id) {
-      await notify(
-        input.userId,
-        `Du spielst ${character.name}`,
-        input.type === "alternate" ? "Als Zweitbesetzung." : undefined,
-      );
+      await notify({
+        type: NOTIFICATION_TYPES.CASTING,
+        recipients: [input.userId],
+        title: `Du spielst ${character.name}`,
+        body: input.type === "alternate" ? "Als Zweitbesetzung." : undefined,
+        actorId: session.user?.id,
+        actionUrl: `/mitglieder/meine-gewerke/rolle/${character.id}`,
+      });
     }
 
     revalidateAssignments();

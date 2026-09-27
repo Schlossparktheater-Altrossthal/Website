@@ -1,6 +1,11 @@
 import type { Prisma, PrismaClient, PhotoConsentStatus } from "@prisma/client";
 
-import { sendNotification } from "@/lib/realtime/triggers";
+import {
+  createNotification,
+  dispatchNotification,
+  type PreparedNotification,
+} from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import type { Role } from "@/lib/roles";
 
 const BOARD_NOTIFICATION_ROLES: Role[] = ["board", "admin", "owner"];
@@ -23,13 +28,7 @@ export type PhotoConsentBoardNotificationDetails = {
   rejectionReason?: string | null;
 };
 
-export type PhotoConsentBoardNotificationResult = {
-  consentId: string;
-  recipientIds: string[];
-  title: string;
-  body: string;
-  severity: "info" | "warning" | "success" | "error";
-};
+export type PhotoConsentBoardNotificationResult = PreparedNotification;
 
 type SupportedClient = PrismaClient | Prisma.TransactionClient;
 
@@ -111,43 +110,24 @@ export async function createPhotoConsentBoardNotification(
       : `Fotoerlaubnis aktualisiert: ${details.subjectName}`;
   const body = buildBody(details);
 
-  await client.notification.create({
-    data: {
-      title,
-      body,
-      type: "photo-consent",
-      recipients: {
-        create: recipientIds.map((userId) => ({ userId })),
-      },
-    },
-  });
-
-  return {
-    consentId: details.consentId,
-    recipientIds,
+  return createNotification(client, {
+    type: NOTIFICATION_TYPES.PHOTO_CONSENT,
+    recipients: recipientIds,
     title,
     body,
+    actionUrl: "/mitglieder/fotoerlaubnisse",
+    actorId: details.actorUserId,
+    // Neue Einreichungen muss der Vorstand prüfen.
+    kind: details.changeType === "submitted" ? "action" : "info",
     severity: resolveSeverity(details.status),
-  };
+    groupKey: `photo-consent:${details.consentId}`,
+    data: { consentId: details.consentId, status: details.status },
+    realtimeMetadata: { scope: "photo-consent", consentId: details.consentId },
+  });
 }
 
 export async function dispatchPhotoConsentBoardNotification(
-  notification: PhotoConsentBoardNotificationResult,
+  notification: PhotoConsentBoardNotificationResult | null,
 ): Promise<void> {
-  if (!notification.recipientIds.length) {
-    return;
-  }
-
-  await Promise.all(
-    notification.recipientIds.map((userId) =>
-      sendNotification({
-        targetUserId: userId,
-        title: notification.title,
-        body: notification.body,
-        type: notification.severity,
-        actionUrl: "/mitglieder/fotoerlaubnisse",
-        metadata: { scope: "photo-consent", consentId: notification.consentId },
-      }),
-    ),
-  );
+  await dispatchNotification(notification);
 }

@@ -4,7 +4,8 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { sendNotification } from "@/lib/realtime/triggers";
+import { notify } from "@/lib/notifications/notify";
+import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import { getUserDisplayName } from "@/lib/names";
 
 const requestSchema = z.object({
@@ -61,29 +62,13 @@ export async function POST(request: Request) {
       ? `${actorName} hat eine Notfall-Testbenachrichtigung ausgelöst. Bitte behandle sie wie einen echten Alarm, um Abläufe zu prüfen.`
       : `${actorName} hat eine Testbenachrichtigung gesendet. So sehen Benachrichtigungen im Portal aus.`;
 
-    const notification = await prisma.notification.create({
-      data: {
-        title,
-        body,
-        type: isEmergency ? "test-emergency" : "test",
-        recipients: {
-          create: { userId: targetUser.id },
-        },
-      },
-      select: { id: true },
-    });
-
-    await sendNotification({
-      targetUserId: targetUser.id,
+    await notify({
+      type: isEmergency ? NOTIFICATION_TYPES.TEST_EMERGENCY : NOTIFICATION_TYPES.TEST,
+      recipients: [targetUser.id],
       title,
       body,
-      type: isEmergency ? "error" : "info",
-      metadata: {
-        scope: "test-notification",
-        mode,
-        notificationId: notification.id,
-        targetName: targetDisplayName,
-      },
+      actionUrl: "/mitglieder",
+      realtimeMetadata: { scope: "test-notification", mode, targetName: targetDisplayName },
     });
 
     return NextResponse.json({ ok: true });
