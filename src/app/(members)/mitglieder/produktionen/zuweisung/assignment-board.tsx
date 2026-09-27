@@ -915,6 +915,14 @@ function DepartmentView({
               </ul>
             </details>
 
+            <AddPersonPicker
+              people={data.people.filter(
+                (person) => membershipOf(person, department.id)?.status !== "active",
+              )}
+              label={`Person zu ${department.name} hinzufügen`}
+              onPick={(person) => onAssign(person, department)}
+            />
+
             {wishing.length ? (
               <Group title={`Möchten mitmachen (${wishing.length})`}>
                 {wishing.map((person) => (
@@ -944,6 +952,62 @@ function DepartmentView({
       {manageAll ? (
         <DepartmentSettingsButton showId={data.showId} variant="tile" stayOnPage />
       ) : null}
+    </div>
+  );
+}
+
+/** Aufklappbare Personensuche zum direkten Hinzufügen. */
+function AddPersonPicker({
+  people,
+  label,
+  buttonLabel = "Person hinzufügen",
+  onPick,
+}: {
+  people: AssignmentPerson[];
+  label: string;
+  buttonLabel?: string;
+  onPick: (person: AssignmentPerson) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const needle = query.trim().toLowerCase();
+  const matches = people.filter((person) => !needle || person.name.toLowerCase().includes(needle));
+
+  if (!open) {
+    return (
+      <Button type="button" variant="outline" className="h-10 w-full" onClick={() => setOpen(true)}>
+        <PlusIcon className="h-4 w-4" aria-hidden />
+        {buttonLabel}
+      </Button>
+    );
+  }
+  return (
+    <div className="space-y-2 rounded-lg bg-muted p-2">
+      <SearchField value={query} onChange={setQuery} label={label} />
+      <ul className="max-h-56 overflow-y-auto">
+        {matches.slice(0, 30).map((person) => (
+          <li key={person.id}>
+            <button
+              type="button"
+              className="flex min-h-11 w-full items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-background"
+              onClick={() => {
+                onPick(person);
+                setOpen(false);
+                setQuery("");
+              }}
+            >
+              <Avatar initials={person.initials} className="h-7 w-7" />
+              {person.name}
+            </button>
+          </li>
+        ))}
+        {matches.length === 0 ? (
+          <li className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer.</li>
+        ) : null}
+      </ul>
+      <Button type="button" variant="ghost" className="h-10 w-full" onClick={() => setOpen(false)}>
+        Abbrechen
+      </Button>
     </div>
   );
 }
@@ -987,7 +1051,7 @@ function PersonLine({
 }
 
 function castLabel(type: string) {
-  return type === "alternate" ? "Zweitbesetzung" : "Hauptrolle";
+  return type === "alternate" ? "Zweitbesetzung" : "Hauptbesetzung";
 }
 
 function RolesList({
@@ -1131,6 +1195,56 @@ function RolePanel({
           </button>
         ) : null}
       </div>
+      {(["primary", "alternate"] as const).map((type) => {
+        const cast = people.filter((person) =>
+          person.castings.some(
+            (entry) => entry.characterId === character.id && entry.type === type,
+          ),
+        );
+        return (
+          <section key={type} className="space-y-1.5" aria-label={castLabel(type)}>
+            <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {castLabel(type)} ({cast.length})
+            </h3>
+            {cast.length ? (
+              <ul className="space-y-1">
+                {cast.map((person) => (
+                  <li
+                    key={person.id}
+                    className="flex min-h-11 items-center gap-2 rounded-lg border border-success/40 bg-success/5 px-2"
+                  >
+                    <Avatar initials={person.initials} className="h-7 w-7" />
+                    <span className="min-w-0 flex-1 truncate text-sm">{person.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10"
+                      disabled={busyKey === `${person.id}:${character.id}`}
+                      aria-label={`${person.name} entfernen`}
+                      onClick={() => onSet(person, null)}
+                    >
+                      <XIcon />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <AddPersonPicker
+              people={people.filter(
+                (person) => !person.castings.some((entry) => entry.characterId === character.id),
+              )}
+              label="Person suchen"
+              buttonLabel={`${castLabel(type)} hinzufügen`}
+              onPick={(person) => onSet(person, type)}
+            />
+          </section>
+        );
+      })}
+
+      <h3 className="border-t border-border/60 pt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Vorschläge aus den Wünschen
+      </h3>
       <SearchField value={query} onChange={setQuery} label="Person suchen" />
       <ul className="space-y-2" aria-label="Personen für diese Rolle">
         {visible.map(({ person, acting, exact }) => {
