@@ -206,17 +206,30 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 
 ### Phase 2 – Liste und Optik
 
-- `my-events-list.tsx` zerlegen: `MyEventsList` (Container), `MyEventGroup` (Abschnitt),
-  `MyEventCard` (Kalenderblatt), `MyEventFilter` (Chips als Links).
-- Gruppierung „Heute & Morgen / Diese Woche / Später" + „Vergangen".
-- Zähler je Abschnitt, Empty-State mit Icon (`py-12 text-center`), Hinweiszeile bei fehlendem Ort.
-- `formatWhen` auf `DEFAULT_TIME_ZONE` aus `@/lib/date-time` umstellen.
-- `loading.tsx` mit `Skeleton`.
+- [x] `my-events-list.tsx` neu aufgebaut: `MyEventsList` (Container), `MyEventRow` (Zeile) und
+      `EmptyState`. Kein eigenes Kalenderblatt — der vorhandene `DateBadge` wird wiederverwendet (wie in
+      der Terminplanung); die Zeilen trennt ein dünner Rahmen.
+- [x] Gruppierung „Heute & Morgen" · „Diese Woche" · „Später" mit Anzahl je Abschnitt. Die
+      Zuordnung macht `resolveEventBucket` in `lib/calendar/my-events.ts` auf Tagesebene in
+      `Europe/Berlin`, damit Server und Browser denselben Abschnitt sehen; am Sonntag reicht
+      „Diese Woche" bis zum kommenden Sonntag, sonst landete alles unter „Später". Tests in
+      `lib/calendar/__tests__/my-events.test.ts`.
+- [x] Hinweiszeile „Ort noch offen" statt des rohen Platzhalters — jetzt auch für Gewerk- und
+      allgemeine Termine (die zeigten „Noch offen" vorher wörtlich an).
+- [x] Zähler je Abschnitt, `DateBadge` gedämpft bei optionalen Terminen, abgesagte Zeilen gedämpft,
+      Empty-State mit Icon nach dem Muster aus `docs/design-system.md`.
+- [x] `formatWhen` nutzt `DEFAULT_TIME_ZONE` aus `@/lib/date-time`; die persönliche Zeit steht als
+      „Deine Zeit … · gesamte Probe …".
+- [x] Eigene `loading.tsx` mit `Skeleton` in Listenform (die allgemeine Ladegrenze zeigt ein
+      Kartenraster, das nicht passt).
+- Offen für Phase 3: „Vergangen"-Abschnitt, Suche, „Mehr laden" und der Filter als URL-Chip
+  (bleibt bis dahin Client-State).
 
 ### Phase 3 – Werkzeugzeile, URL-Zustand, Kalenderansicht
 
 - `my-events/page.tsx` liest `searchParams` (`ansicht`, `gruppe`, `q`, `vergangen`, `mehr`).
-- Suche (Titel/Ort/„Dabei als"), Filter-Chips als `SectionNav`, „Mehr laden".
+- Filter aus Phase 2 von Client-State auf `SectionNav`-Links umstellen (`?gruppe=`).
+- Suche (Titel/Ort/„Dabei als"), „Vergangen"-Umschalter (`?vergangen=1`), „Mehr laden".
 - Kalender-Umschalter (`SectionNav`-Optik), Kalenderansicht mit `MonthGrid` + `MonthSwitcher`,
   Tagesdetails mobil als Bottom-`Sheet`, Desktop daneben.
 - Server-Limitierung: `readMyUpcomingEvents` bekommt Suche/Zeitraum/Limit als Parameter statt
@@ -278,7 +291,7 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 
 - [x] Phase 0 – Lokales Termin-Fixture für die Sichtprüfung (`pnpm dev:termine`)
 - [ ] Phase 1 – Migrationen, Absage-Logik mit Frist, Sperrlisten-Verknüpfung, „Für alle" absagbar
-- [ ] Phase 2 – Kalenderblatt-Karten, Gruppierung, Zähler, Suche, Vergangenheit, Zeitformat, Skeleton
+- [x] Phase 2 (2026-09-27) – Kalenderblatt-Zeilen, Gruppierung, Zähler, Ort-Hinweis, Zeitformat, Skeleton
 - [ ] Phase 3 – Werkzeugzeile, URL-Zustand, Kalenderansicht, „Mehr laden"
 - [ ] Phase 4 – „Nächster Termin", Konflikt-Hinweis, Tipps-Callout
 - [ ] Phase 5 – Zustand „Notfall" in der Sperrliste (Typen, UI, Feed, Export)
