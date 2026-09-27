@@ -33,6 +33,19 @@ const context: AudienceContext = {
 };
 
 describe("resolveAudience", () => {
+  it("invites department blocks as required and respects exclusions", () => {
+    const result = resolveAudience(
+      [{ type: "CHARACTER", targetId: "bastian", level: "OPTIONAL" }],
+      [{ userId: "tom", override: "EXCLUDED", level: null }],
+      context,
+      [{ departmentId: "tech", title: "Lichtaufbau" }],
+    );
+    const max = result.find((entry) => entry.userId === "max");
+    expect(max?.level).toBe("REQUIRED");
+    expect(max?.reasons).toContain("Baustein Lichtaufbau");
+    expect(result.find((entry) => entry.userId === "tom")?.excluded).toBe(true);
+  });
+
   it("groups scenes per role and adds second casts as optional", () => {
     const result = resolveAudience(
       [

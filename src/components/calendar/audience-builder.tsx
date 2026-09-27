@@ -25,6 +25,7 @@ import {
   describeAudienceRule,
   PARTICIPATION_LEVEL_LABELS,
   resolveAudience,
+  type AudienceBlock,
   type AudienceContext,
   type AudienceOverride,
   type AudienceRule,
@@ -86,6 +87,8 @@ function AddSelect({
   );
 }
 
+const NO_BLOCKS: readonly AudienceBlock[] = [];
+
 export function AudienceBuilder({
   context,
   value,
@@ -94,6 +97,7 @@ export function AudienceBuilder({
   conflicts = {},
   declined = {},
   hideSceneRules = false,
+  blocks = NO_BLOCKS,
 }: {
   context: AudienceContext;
   value: AudienceValue;
@@ -106,11 +110,13 @@ export function AudienceBuilder({
   declined?: Record<string, string | null>;
   /** Szenen werden in einer eigenen Karte gepflegt (Proben). */
   hideSceneRules?: boolean;
+  /** Gewerk-Bausteine des Termins, die ihr Gewerk einladen. */
+  blocks?: readonly AudienceBlock[];
 }) {
   const [query, setQuery] = useState("");
   const resolved = useMemo(
-    () => resolveAudience(value.rules, value.overrides, context),
-    [value, context],
+    () => resolveAudience(value.rules, value.overrides, context, blocks),
+    [value, context, blocks],
   );
   const invited = resolved.filter((entry) => !entry.excluded);
   const isOpen = (entry: ResolvedParticipant) => !(entry.userId in declined);

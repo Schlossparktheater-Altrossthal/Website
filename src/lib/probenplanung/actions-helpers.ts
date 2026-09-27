@@ -10,6 +10,7 @@ import { audienceInputSchema, type AudienceInput } from "@/lib/calendar/audience
 import type { AudienceContext } from "@/lib/calendar/audience";
 import {
   readEventSchedule,
+  saveEventBlocks,
   saveEventSchedule,
   scheduleInputSchema,
   type ScheduleInput,
@@ -176,6 +177,20 @@ export async function syncRehearsalSchedule(
     dateKey: formatIsoDateInTimeZone(start.toISOString(), REHEARSAL_TIME_ZONE),
     eventStart: start,
     context,
+  });
+}
+
+/** Weitere Bausteine speichern – vor der Zielgruppe, weil Gewerk-Bausteine einladen. */
+export async function syncEventBlocks(
+  tx: Prisma.TransactionClient,
+  { eventId, start, schedule }: { eventId: string; start: Date; schedule?: ScheduleInput },
+) {
+  if (!schedule) return;
+  await saveEventBlocks(tx, {
+    eventId,
+    blocks: schedule.blocks,
+    dateKey: formatIsoDateInTimeZone(start.toISOString(), REHEARSAL_TIME_ZONE),
+    eventStart: start,
   });
 }
 

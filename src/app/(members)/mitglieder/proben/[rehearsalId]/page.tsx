@@ -1,3 +1,4 @@
+import { blockLabel } from "@/lib/calendar/scene-schedule";
 import type { EventStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -69,12 +70,17 @@ export default async function RehearsalDetailPage({
     where: { id: rehearsalId, kind: "REHEARSAL" },
     include: {
       blocks: {
-        where: { type: "SCENE", sceneId: { not: null } },
-        orderBy: { order: "asc" },
+        orderBy: [{ startsAt: { sort: "asc", nulls: "last" } }, { order: "asc" }],
         select: {
+          id: true,
           startsAt: true,
           endsAt: true,
-          scene: { select: { id: true, identifier: true, sequence: true, title: true } },
+          type: true,
+          title: true,
+          location: true,
+          description: true,
+          scene: { select: { identifier: true, sequence: true, title: true } },
+          department: { select: { name: true } },
         },
       },
       participants: {
@@ -98,9 +104,7 @@ export default async function RehearsalDetailPage({
   if (!rehearsal) {
     return <div className="text-sm text-destructive">Diese Probe existiert nicht.</div>;
   }
-  const scenes = rehearsal.blocks.flatMap((block) =>
-    block.scene ? [{ ...block, scene: block.scene }] : [],
-  );
+  const agenda = rehearsal.blocks.filter((block) => block.type !== "SCENE" || block.scene);
 
   // Produktionsrollen planen nur Proben ihrer eigenen Produktion.
   const canPlan =
@@ -182,29 +186,33 @@ export default async function RehearsalDetailPage({
         </CardContent>
       </Card>
 
-      {scenes.length ? (
+      {agenda.length ? (
         <Card>
           <CardHeader>
-            <CardTitle>Szenen</CardTitle>
+            <CardTitle>Ablauf</CardTitle>
             {ownWindow ? (
               <p className="text-sm text-muted-foreground">
-                Deine Zeit laut Szenenplan: {timeFormatter.format(ownWindow.start)}–
+                Deine Zeit laut Ablauf: {timeFormatter.format(ownWindow.start)}–
                 {timeFormatter.format(ownWindow.end)} Uhr
               </p>
             ) : null}
           </CardHeader>
           <CardContent>
             <ol className="space-y-2 text-sm">
-              {scenes.map(({ scene, startsAt, endsAt }) => (
-                <li key={scene.id} className="flex gap-3">
-                  {startsAt && endsAt ? (
+              {agenda.map((block) => (
+                <li key={block.id} className="flex gap-3">
+                  {block.startsAt && block.endsAt ? (
                     <span className="w-28 shrink-0 tabular-nums text-muted-foreground">
-                      {timeFormatter.format(startsAt)}–{timeFormatter.format(endsAt)}
+                      {timeFormatter.format(block.startsAt)}–{timeFormatter.format(block.endsAt)}
                     </span>
                   ) : null}
                   <span>
-                    Sz. {scene.identifier || scene.sequence}
-                    {scene.title ? ` ${scene.title}` : ""}
+                    {blockLabel(block)}
+                    {block.description ? (
+                      <span className="block text-xs text-muted-foreground">
+                        {block.description}
+                      </span>
+                    ) : null}
                   </span>
                 </li>
               ))}

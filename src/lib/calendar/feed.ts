@@ -1,3 +1,4 @@
+import { blockLabel, type BlockLabelSource } from "@/lib/calendar/scene-schedule";
 import { randomBytes } from "node:crypto";
 
 import type { BlockedDayKind, FeedScope } from "@prisma/client";
@@ -77,19 +78,13 @@ const FEED_TIME = new Intl.DateTimeFormat("de-DE", {
 });
 
 function describeScenes(
-  scenes: {
-    startsAt: Date | null;
-    endsAt: Date | null;
-    scene: { identifier: string | null; sequence: number; title: string | null } | null;
-  }[],
+  blocks: (BlockLabelSource & { startsAt: Date | null; endsAt: Date | null })[],
   staggeredEvent: { start: Date; end: Date | null } | null,
 ) {
-  const withScene = scenes.flatMap((entry) =>
-    entry.scene ? [{ ...entry, scene: entry.scene }] : [],
-  );
-  if (!withScene.length) return null;
-  const lines = withScene.map(({ startsAt, endsAt, scene }) => {
-    const label = `Sz. ${scene.identifier || scene.sequence}${scene.title ? ` ${scene.title}` : ""}`;
+  if (!blocks.length) return null;
+  const lines = blocks.map((block) => {
+    const { startsAt, endsAt } = block;
+    const label = blockLabel(block);
     return startsAt && endsAt
       ? `${FEED_TIME.format(startsAt)}–${FEED_TIME.format(endsAt)} ${label}`
       : label;
@@ -99,7 +94,7 @@ function describeScenes(
         staggeredEvent.end ? `–${FEED_TIME.format(staggeredEvent.end)}` : ""
       } Uhr\n`
     : "";
-  return `${whole}Szenen:\n${lines.join("\n")}`;
+  return `${whole}Ablauf:\n${lines.join("\n")}`;
 }
 
 function uidHost() {
@@ -153,12 +148,15 @@ export async function collectFeedEvents(
           select: { reasons: true, personalStart: true, personalEnd: true },
         },
         blocks: {
-          where: { type: "SCENE", sceneId: { not: null } },
-          orderBy: { order: "asc" },
+          orderBy: [{ startsAt: { sort: "asc", nulls: "last" } }, { order: "asc" }],
           select: {
             startsAt: true,
             endsAt: true,
+            type: true,
+            title: true,
+            location: true,
             scene: { select: { identifier: true, sequence: true, title: true } },
+            department: { select: { name: true } },
           },
         },
       },

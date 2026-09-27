@@ -17,6 +17,7 @@ import {
   REHEARSAL_TIME_ZONE,
   readEventSchedule,
   sanitizeDescription,
+  syncEventBlocks,
   syncRehearsalSchedule,
 } from "@/lib/probenplanung/actions-helpers";
 import type { ScheduleInput } from "@/lib/calendar/scene-schedule-server";
@@ -97,7 +98,7 @@ export async function createRehearsalDraftAction(input?: {
         eventId: rehearsal.id,
         start,
         audience,
-        storedSchedule: { mode: "TOGETHER", times: {} },
+        storedSchedule: { mode: "TOGETHER", times: {}, rooms: {}, blocks: [] },
         context,
       });
     }
@@ -184,8 +185,13 @@ export async function updateRehearsalDraftAction(input: {
         updateData.end = nextEnd;
       }
 
+      await syncEventBlocks(tx, { eventId: id, start: nextStart, schedule });
       if (audience) {
         await saveEventAudience(tx, id, audience, context);
+      } else if (schedule) {
+        // Gewerk-Bausteine können Einladungen ändern.
+        const stored = await readEventAudience(id);
+        await saveEventAudience(tx, id, stored, context);
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -284,6 +290,7 @@ export async function publishRehearsalAction(input: {
       const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
       const safeDescription = sanitizeDescription(description);
 
+      await syncEventBlocks(tx, { eventId: id, start, schedule });
       const { invitedIds: syncedInvitees } = await saveEventAudience(
         tx,
         id,

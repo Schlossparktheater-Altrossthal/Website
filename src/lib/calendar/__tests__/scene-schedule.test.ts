@@ -23,7 +23,7 @@ const context: AudienceContext = {
     { id: "s3", label: "Sz. 3", characterIds: ["bastian", "atreju"] },
     { id: "s5", label: "Sz. 5", characterIds: ["bastian"] },
   ],
-  departments: [],
+  departments: [{ id: "buehne", name: "Bühnenbau", memberIds: ["ben", "anna"] }],
 };
 
 const at = (time: string) => new Date(`2026-10-03T${time}:00Z`);
@@ -60,5 +60,19 @@ describe("computePersonalWindows", () => {
     );
     expect(windows.has("ben")).toBe(false);
     expect(windows.get("max")).toEqual({ start: at("17:00"), end: at("17:30") });
+  });
+
+  it("adds timed department blocks, also in parallel to scenes", () => {
+    const windows = computePersonalWindows(
+      [{ sceneId: "s3", startsAt: at("16:00"), endsAt: at("16:45") }],
+      context,
+      [
+        { departmentId: "buehne", startsAt: at("16:30"), endsAt: at("18:00") },
+        { departmentId: "buehne", startsAt: null, endsAt: null },
+      ],
+    );
+    expect(windows.get("ben")).toEqual({ start: at("16:00"), end: at("18:00") });
+    expect(windows.get("anna")).toEqual({ start: at("16:30"), end: at("18:00") });
+    expect(windows.get("max")).toEqual({ start: at("16:00"), end: at("16:45") });
   });
 });

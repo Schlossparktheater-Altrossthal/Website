@@ -183,7 +183,19 @@ export async function saveEventAudience(
   audience: AudienceInput,
   context: AudienceContext,
 ) {
-  const resolved = resolveAudience(audience.rules, audience.overrides, context);
+  // Gewerk-Bausteine laden ihr Gewerk ein; sie sind vorher gespeichert (saveEventBlocks).
+  const blocks = await tx.eventBlock.findMany({
+    where: { eventId, type: "DEPARTMENT", departmentId: { not: null } },
+    select: { departmentId: true, title: true },
+  });
+  const resolved = resolveAudience(
+    audience.rules,
+    audience.overrides,
+    context,
+    blocks.flatMap((block) =>
+      block.departmentId ? [{ departmentId: block.departmentId, title: block.title }] : [],
+    ),
+  );
   const invited = resolved.filter((entry) => !entry.excluded);
   const invitedIds = invited.map((entry) => entry.userId);
 

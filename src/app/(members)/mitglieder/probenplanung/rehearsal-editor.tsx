@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { AudienceBuilder, type AudienceValue } from "@/components/calendar/audience-builder";
+import { EventBlocksEditor, type EventBlockValue } from "@/components/calendar/event-blocks-editor";
 import {
   SceneScheduleEditor,
   type SceneScheduleValue,
@@ -53,9 +54,20 @@ type RehearsalEditorProps = {
   invited: { userId: string; name: string; level: "REQUIRED" | "OPTIONAL" }[];
   initialAvailability: DayAvailability;
   declined: Record<string, string | null>;
-  schedule: SceneScheduleValue;
+  schedule: SceneScheduleValue & { blocks: EventBlockValue[] };
   sceneStats: SceneStatsView;
 };
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Gewerk-Bausteine als Einladungsquelle (für Vorschau und Abweichungen). */
+function audienceBlocks(blocks: readonly EventBlockValue[]) {
+  return blocks.flatMap((block) =>
+    block.type === "DEPARTMENT" && block.departmentId
+      ? [{ departmentId: block.departmentId, title: block.title || null }]
+      : [],
+  );
+}
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -87,17 +99,33 @@ export function RehearsalEditor({
   const [audienceTouched, setAudienceTouched] = useState(isDraft);
   const [availability, setAvailability] = useState<DayAvailability>(initialAvailability);
   const [schedule, setSchedule] = useState<SceneScheduleValue>(initialSchedule);
+  const [blocks, setBlocks] = useState<EventBlockValue[]>(initialSchedule.blocks);
+  const initialBlocks = useMemo(() => audienceBlocks(initialSchedule.blocks), [initialSchedule]);
+  const currentBlocks = useMemo(() => audienceBlocks(blocks), [blocks]);
   // Nur vollständige Uhrzeiten speichern; halb ausgefüllte Felder blockieren sonst das Speichern.
-  const scheduleToSave = useMemo<SceneScheduleValue>(
+  const scheduleToSave = useMemo(
     () => ({
       mode: schedule.mode,
       times: Object.fromEntries(
         Object.entries(schedule.times).filter(([, time]) =>
-          [time.start, time.end].every((value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value)),
+          [time.start, time.end].every((value) => TIME_PATTERN.test(value)),
         ),
       ),
+      rooms: Object.fromEntries(
+        Object.entries(schedule.rooms)
+          .map(([sceneId, room]) => [sceneId, room.trim()] as const)
+          .filter(([, room]) => room),
+      ),
+      blocks: blocks.map((block) => {
+        const timed = TIME_PATTERN.test(block.start) && TIME_PATTERN.test(block.end);
+        return {
+          ...block,
+          start: timed ? block.start : "",
+          end: timed ? block.end : "",
+        };
+      }),
     }),
-    [schedule],
+    [schedule, blocks],
   );
   const [conflicts, setConflicts] = useState<Partial<Record<string, string>>>({});
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
@@ -109,11 +137,11 @@ export function RehearsalEditor({
   const invitedIds = useMemo(
     () =>
       new Set(
-        resolveAudience(audience.rules, audience.overrides, context)
+        resolveAudience(audience.rules, audience.overrides, context, currentBlocks)
           .filter((entry) => !entry.excluded)
           .map((entry) => entry.userId),
       ),
-    [audience, context],
+    [audience, context, currentBlocks],
   );
   const invitedCount = invitedIds.size;
   const drift = useMemo(
@@ -122,15 +150,34 @@ export function RehearsalEditor({
         ? null
         : computeAudienceDrift(
             invited,
-            resolveAudience(initialAudience.rules, initialAudience.overrides, context),
+            resolveAudience(
+              initialAudience.rules,
+              initialAudience.overrides,
+              context,
+              initialBlocks,
+            ),
           ),
-    [isDraft, audienceTouched, invited, initialAudience, context],
+    [isDraft, audienceTouched, invited, initialAudience, context, initialBlocks],
   );
 
   const changeAudience = useCallback((next: AudienceValue) => {
     setAudience(next);
     setAudienceTouched(true);
   }, []);
+
+  const changeBlocks = useCallback(
+    (next: EventBlockValue[]) => {
+      const departments = (list: EventBlockValue[]) =>
+        audienceBlocks(list)
+          .map((block) => block.departmentId)
+          .sort()
+          .join();
+      // Andere Gewerke → andere Eingeladene; wie eine Änderung der Zielgruppe behandeln.
+      if (departments(next) !== departments(blocks)) setAudienceTouched(true);
+      setBlocks(next);
+    },
+    [blocks],
+  );
 
   const sceneIds = useMemo(
     () =>
@@ -431,15 +478,16 @@ export function RehearsalEditor({
         </CardContent>
       </Card>
 
-      {context.scenes.length ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Szenen & Ablauf</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Welche Szenen geprobt werden – mit Blick darauf, was schon wie oft dran war.
-            </p>
-          </CardHeader>
-          <CardContent>
+      <Card>
+        <CardHeader>
+          <CardTitle>Ablauf & Bausteine</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Welche Szenen geprobt werden – mit Blick darauf, was schon wie oft dran war. Gewerke und
+            freie Bausteine können parallel in eigenen Räumen laufen.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {context.scenes.length ? (
             <SceneScheduleEditor
               context={context}
               sceneIds={sceneIds}
@@ -450,9 +498,10 @@ export function RehearsalEditor({
               eventStartTime={time}
               invitedIds={invitedIds}
             />
-          </CardContent>
-        </Card>
-      ) : null}
+          ) : null}
+          <EventBlocksEditor context={context} blocks={blocks} onChange={changeBlocks} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -493,6 +542,7 @@ export function RehearsalEditor({
             availability={availability}
             conflicts={conflicts}
             declined={declined}
+            blocks={currentBlocks}
             hideSceneRules={context.scenes.length > 0}
           />
         </CardContent>

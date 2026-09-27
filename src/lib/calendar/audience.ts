@@ -79,6 +79,9 @@ export type ResolvedParticipant = {
 
 export const MANUAL_REASON = "Von Hand hinzugefügt";
 
+/** Gewerk-Baustein eines Termins: lädt die Mitglieder des Gewerks ein. */
+export type AudienceBlock = { departmentId: string; title: string | null };
+
 type Candidate = {
   level: ParticipationLevel;
   /** Grund → Szenen, in denen er gilt (leer = ohne Szenenbezug). */
@@ -192,9 +195,18 @@ export function resolveAudience(
   rules: readonly AudienceRule[],
   overrides: readonly AudienceOverride[],
   context: AudienceContext,
+  blocks: readonly AudienceBlock[] = [],
 ): ResolvedParticipant[] {
   const candidates = new Map<string, Candidate>();
   for (const rule of rules) applyRule(candidates, rule, context);
+  for (const block of blocks) {
+    const department = context.departments.find((entry) => entry.id === block.departmentId);
+    if (!department) continue;
+    const reason = `Baustein ${block.title?.trim() || department.name}`;
+    for (const userId of department.memberIds) {
+      addCandidate(candidates, userId, "REQUIRED", reason);
+    }
+  }
 
   const overrideByUser = new Map(overrides.map((entry) => [entry.userId, entry]));
   const names = new Map(context.members.map((member) => [member.id, member.name]));

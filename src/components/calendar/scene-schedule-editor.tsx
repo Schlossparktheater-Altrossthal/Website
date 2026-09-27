@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { ChevronDownIcon, ChevronUpIcon, CloseIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Select,
@@ -19,6 +20,8 @@ import { scenesByPerson } from "@/lib/calendar/scene-schedule";
 export type SceneScheduleValue = {
   mode: "TOGETHER" | "STAGGERED";
   times: Record<string, { start: string; end: string }>;
+  /** Raum pro Szene (bei parallelen Bausteinen). */
+  rooms: Record<string, string>;
 };
 
 export type SceneStatsView = Record<
@@ -191,6 +194,19 @@ export function SceneScheduleEditor({
                     onChange={(event) => setTime(scene.id, "end", event.target.value)}
                     aria-label={`Ende ${scene.label}`}
                     className="flex-1 sm:w-28 sm:flex-none"
+                  />
+                  <Input
+                    value={schedule.rooms[scene.id] ?? ""}
+                    onChange={(event) =>
+                      onScheduleChange({
+                        ...schedule,
+                        rooms: { ...schedule.rooms, [scene.id]: event.target.value },
+                      })
+                    }
+                    placeholder="Raum"
+                    maxLength={120}
+                    aria-label={`Raum ${scene.label}`}
+                    className="h-9 flex-1 sm:w-32 sm:flex-none"
                   />
                 </div>
               ) : null}

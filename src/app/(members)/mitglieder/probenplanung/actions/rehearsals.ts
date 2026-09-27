@@ -22,6 +22,7 @@ import {
   REHEARSAL_TIME_ZONE,
   readEventSchedule,
   sanitizeDescription,
+  syncEventBlocks,
   syncRehearsalSchedule,
   updateSchema,
 } from "@/lib/probenplanung/actions-helpers";
@@ -92,6 +93,7 @@ export async function updateRehearsalAction(input: {
         updateData.description = sanitizedDescription;
       }
 
+      await syncEventBlocks(tx, { eventId: id, start, schedule });
       let targetInvitees: string[];
       let addedIds: string[] = [];
       let removedIds: string[] = [];
