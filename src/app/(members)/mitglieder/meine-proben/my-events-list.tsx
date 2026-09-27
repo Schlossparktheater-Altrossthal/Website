@@ -1,123 +1,17 @@
-"use client";
-
-import Link from "next/link";
-import { useState } from "react";
-
 import { CalendarIcon } from "@/components/ui/action-icons";
-import { Badge } from "@/components/ui/badge";
-import { DateBadge } from "@/components/ui/date-badge";
-import { SegmentedControl } from "@/components/ui/segmented-control";
-import type { MyEventBucket, MyEventGroup, MyEventItem } from "@/lib/calendar/my-events";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
-import { cn } from "@/lib/utils";
+import type { MyEventBucket, MyEventItem } from "@/lib/calendar/my-events";
 
-import { DeclineControl } from "./decline-control";
+import { MyEventRow } from "./my-event-row";
 
-type Filter = "all" | MyEventGroup;
-
-const FILTER_LABELS: Record<Filter, string> = {
-  all: "Alle",
-  required: "Muss ich hin",
-  optional: "Optional",
-  club: "Für alle",
-};
-
-const BUCKET_LABELS: Record<Exclude<MyEventBucket, "past">, string> = {
+const BUCKET_LABELS: Record<MyEventBucket, string> = {
   today: "Heute & Morgen",
   week: "Diese Woche",
   later: "Später",
+  past: "Vergangen",
 };
 
-/** Reihenfolge der Abschnitte; „Vergangen" folgt später (Phase 3) ganz unten. */
-const BUCKET_ORDER = ["today", "week", "later"] as const;
-
-const DAY = new Intl.DateTimeFormat("de-DE", {
-  weekday: "short",
-  day: "2-digit",
-  month: "2-digit",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-const TIME = new Intl.DateTimeFormat("de-DE", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-
-function formatTimeRange(start: Date, end: Date | null) {
-  return `${TIME.format(start)}${end ? `–${TIME.format(end)}` : ""} Uhr`;
-}
-
-function formatWhen(item: MyEventItem) {
-  const start = new Date(item.start);
-  if (item.allDay) return `${DAY.format(start)} · ganztägig`;
-  return `${DAY.format(start)} · ${formatTimeRange(start, item.end ? new Date(item.end) : null)}`;
-}
-
-/** Eine Zeile als Kalenderblatt: Datumsblock links, alles Weitere rechts daneben. */
-function MyEventRow({ item }: { item: MyEventItem }) {
-  const start = new Date(item.start);
-  const optional = item.group === "optional";
-
-  return (
-    <li
-      className={cn(
-        "flex items-start gap-3 border-t border-border py-3 first:border-t-0",
-        item.decline?.declined && "opacity-70",
-      )}
-    >
-      <DateBadge date={start} tone={optional ? "muted" : "primary"} />
-
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          {item.href ? (
-            <Link href={item.href} className="text-sm font-semibold hover:underline">
-              {item.title}
-            </Link>
-          ) : (
-            <span className="text-sm font-semibold">{item.title}</span>
-          )}
-          <Badge variant="outline">{item.label}</Badge>
-          {optional ? <Badge variant="warning">optional</Badge> : null}
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          {formatWhen(item)}
-          {item.location ? ` · ${item.location}` : item.locationOpen ? " · Ort noch offen" : ""}
-        </p>
-
-        {item.fullTime ? (
-          <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Deine Zeit:</span>{" "}
-            {formatTimeRange(start, item.end ? new Date(item.end) : null)} · gesamte Probe{" "}
-            {formatTimeRange(
-              new Date(item.fullTime.start),
-              item.fullTime.end ? new Date(item.fullTime.end) : null,
-            )}
-          </p>
-        ) : null}
-
-        {item.reasons.length ? (
-          <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Dabei als:</span>{" "}
-            {item.reasons.join(" · ")}
-          </p>
-        ) : null}
-
-        {item.decline ? (
-          <DeclineControl
-            eventId={item.id}
-            title={item.title}
-            declined={item.decline.declined}
-            note={item.decline.note}
-            tentative={item.decline.tentative}
-            emergency={item.decline.emergency}
-            withinFreeze={item.withinFreeze}
-          />
-        ) : null}
-      </div>
-    </li>
-  );
-}
+/** Reihenfolge der Abschnitte; „Vergangen" steht nur in der Vergangenheitsansicht ganz unten. */
+const BUCKET_ORDER: MyEventBucket[] = ["today", "week", "later", "past"];
 
 /** Leerzustand nach dem Muster aus `docs/design-system.md`: zentriert, gedämpft, Icon optional. */
 function EmptyState({ filtered }: { filtered: boolean }) {
@@ -137,29 +31,22 @@ function EmptyState({ filtered }: { filtered: boolean }) {
   );
 }
 
-export function MyEventsList({ items }: { items: MyEventItem[] }) {
-  const [filter, setFilter] = useState<Filter>("all");
-  const counts = items.reduce<Record<MyEventGroup, number>>(
-    (acc, item) => ({ ...acc, [item.group]: acc[item.group] + 1 }),
-    { required: 0, optional: 0, club: 0 },
-  );
-  const options = (["all", "required", "optional", "club"] as const)
-    .filter((value) => value === "all" || counts[value] > 0)
-    .map((value) => ({ value, label: FILTER_LABELS[value] }));
-  const visible = filter === "all" ? items : items.filter((item) => item.group === filter);
+/**
+ * Liste der eigenen Termine, nach Zeitabschnitten gruppiert. Die Filterleiste steht in der
+ * Werkzeugzeile der Seite; hier wird nur nach dem dort gewählten Bereich gefiltert.
+ */
+export function MyEventsList({
+  items,
+  activeGroup,
+}: {
+  items: MyEventItem[];
+  activeGroup: string;
+}) {
+  const visible =
+    activeGroup === "all" ? items : items.filter((item) => item.group === activeGroup);
 
   return (
     <div className="space-y-4">
-      {options.length > 2 ? (
-        <SegmentedControl
-          value={filter}
-          onValueChange={setFilter}
-          options={options}
-          fullWidth
-          className="sm:w-auto"
-          aria-label="Termine filtern"
-        />
-      ) : null}
       {visible.length ? (
         <div className="space-y-6">
           {BUCKET_ORDER.map((bucket) => {

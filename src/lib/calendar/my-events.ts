@@ -46,10 +46,25 @@ export type MyEventItem = {
   } | null;
 };
 
-const TAKE = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Proben ohne eingetragenen Ort tragen beim Anlegen diesen Platzhalter. */
 const OPEN_LOCATION = "Noch offen";
+
+/** Standard-Obergrenze je Quelle und Schrittweite für „Mehr laden". */
+export const MY_EVENTS_PAGE_SIZE = 30;
+/** So weit reicht der Abschnitt „Vergangen". */
+const PAST_DAYS = 90;
+const MAX_LIMIT = 300;
+
+export type MyEventsOptions = {
+  now?: Date;
+  /** Vergangene statt kommender Termine – neueste zuerst. */
+  past?: boolean;
+  /** Suchbegriff über Titel und Ort. */
+  search?: string;
+  /** Obergrenze je Quelle; wird auf mindestens eine Seite angehoben. */
+  limit?: number;
+};
 
 /**
  * Ordnet einen Termin einem Abschnitt zu. Gerechnet wird auf Tagesebene in `Europe/Berlin`,
@@ -78,18 +93,39 @@ function readLocation(value: string | null) {
   return { location: text, locationOpen: false };
 }
 
-/** Kommende Termine einer Person: eigene Proben, Gewerk-Termine und allgemeine Termine. */
-export async function readMyUpcomingEvents(userId: string, now = new Date()) {
+/** Termine einer Person: eigene Proben, Gewerk-Termine und allgemeine Termine. */
+export async function readMyUpcomingEvents(userId: string, options: MyEventsOptions = {}) {
+  const { now = new Date(), past = false, search = "", limit = MY_EVENTS_PAGE_SIZE } = options;
+  const take = Math.min(Math.max(limit, MY_EVENTS_PAGE_SIZE), MAX_LIMIT);
+  const order: "asc" | "desc" = past ? "desc" : "asc";
+  const startWindow = past
+    ? { lt: now, gte: new Date(now.getTime() - PAST_DAYS * DAY_MS) }
+    : { gte: now };
+  const term = search.trim();
+  const searchWhere = term
+    ? {
+        OR: [
+          { title: { contains: term, mode: "insensitive" as const } },
+          { location: { contains: term, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
   const [rehearsals, departmentEvents, generalEvents] = await Promise.all([
     prisma.eventParticipant.findMany({
       where: {
         userId,
         invited: true,
         // Jede persönliche Einladung – Probe oder anderer Termin.
-        event: { departmentId: null, status: visibleEventStatus, start: { gte: now } },
+        event: {
+          departmentId: null,
+          status: visibleEventStatus,
+          start: startWindow,
+          ...searchWhere,
+        },
       },
-      orderBy: { event: { start: "asc" } },
-      take: TAKE,
+      orderBy: { event: { start: order } },
+      take,
       select: {
         level: true,
         reasons: true,
@@ -113,14 +149,15 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
     }),
     prisma.calendarEvent.findMany({
       where: {
-        start: { gte: now },
+        start: startWindow,
         status: visibleEventStatus,
         department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
         // Mit Auswahl nur für die Eingeladenen.
         ...visibleGeneralEventWhere(userId),
+        ...searchWhere,
       },
-      orderBy: { start: "asc" },
-      take: TAKE,
+      orderBy: { start: order },
+      take,
       select: {
         id: true,
         title: true,
@@ -140,7 +177,10 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       where: {
         ...GENERAL_EVENT_WHERE,
         status: visibleEventStatus,
-        OR: [{ start: { gte: now } }, { end: { gte: now } }],
+        ...(past
+          ? { start: startWindow }
+          : { OR: [{ start: { gte: now } }, { end: { gte: now } }] }),
+        ...searchWhere,
         AND: [
           {
             OR: [
@@ -152,8 +192,8 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
           { participants: { none: { userId, invited: true } } },
         ],
       },
-      orderBy: { start: "asc" },
-      take: TAKE,
+      orderBy: { start: order },
+      take,
       select: {
         id: true,
         title: true,
@@ -249,5 +289,5 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       bucket: resolveEventBucket(new Date(item.start), now),
       withinFreeze: isWithinFreeze(new Date(item.start), freezeDays, now),
     }))
-    .sort((a, b) => a.start.localeCompare(b.start));
+    .sort((a, b) => (past ? b.start.localeCompare(a.start) : a.start.localeCompare(b.start)));
 }

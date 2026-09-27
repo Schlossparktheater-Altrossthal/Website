@@ -236,13 +236,19 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 
 ### Phase 3 – Werkzeugzeile, URL-Zustand, Kalenderansicht
 
-- `my-events/page.tsx` liest `searchParams` (`ansicht`, `gruppe`, `q`, `vergangen`, `mehr`).
-- Filter aus Phase 2 von Client-State auf `SectionNav`-Links umstellen (`?gruppe=`).
-- Suche (Titel/Ort/„Dabei als"), „Vergangen"-Umschalter (`?vergangen=1`), „Mehr laden".
-- Kalender-Umschalter (`SectionNav`-Optik), Kalenderansicht mit `MonthGrid` + `MonthSwitcher`,
-  Tagesdetails mobil als Bottom-`Sheet`, Desktop daneben.
-- Server-Limitierung: `readMyUpcomingEvents` bekommt Suche/Zeitraum/Limit als Parameter statt
-  festem `TAKE`.
+- [x] `meine-proben/page.tsx` liest `searchParams` (`ansicht`, `gruppe`, `q`, `vergangen`, `mehr`)
+      und baut alle Links daraus — der Zustand steht komplett in der URL.
+- [x] Werkzeugzeile wie in der Terminplanung: `[Liste | Kalender]` plus Filter-Pills links, Suche
+      rechts (GET-Formular, funktioniert damit auch ohne JavaScript).
+- [x] `MyEventsList` ist jetzt eine Server-Komponente ohne eigenen State; die Zeile liegt in
+      `my-event-row.tsx` und wird von Liste und Kalender geteilt.
+- [x] Suche über Titel und Ort in der Datenbank (nicht über „Dabei als" — `reasons` ist JSON),
+      „Vergangen"-Umschalter (eigene Abfrage der letzten 90 Tage, neueste zuerst) und „Mehr laden"
+      (`?mehr=`, Schrittweite 30, Obergrenze 300). `readMyUpcomingEvents` nimmt `{ past, search, limit }`.
+- [x] Kalenderansicht `my-events-calendar.tsx`: `MonthSwitcher` + `MonthGrid` mit Markern je Tag,
+      Tagesdetails am Desktop unter dem Raster, mobil im `BottomSheet`.
+- Abweichung: Vergangenes lässt sich nicht mehr absagen (der Server lehnt es ab) — der Knopf
+  entfällt dort.
 
 ### Phase 4 – Rechte Spalte und Konflikt-Hinweis
 
@@ -301,7 +307,7 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 - [x] Phase 0 – Lokales Termin-Fixture für die Sichtprüfung (`pnpm dev:termine`)
 - [x] Phase 1 (2026-09-27) – Migrationen, Absage-Logik mit Frist, Sperrlisten-Verknüpfung, „Für alle" absagbar
 - [x] Phase 2 (2026-09-27) – Kalenderblatt-Zeilen, Gruppierung, Zähler, Ort-Hinweis, Zeitformat, Skeleton
-- [ ] Phase 3 – Werkzeugzeile, URL-Zustand, Kalenderansicht, „Mehr laden"
+- [x] Phase 3 (2026-09-27) – Werkzeugzeile, URL-Zustand, Suche, Vergangenheit, „Mehr laden", Kalenderansicht
 - [ ] Phase 4 – „Nächster Termin", Konflikt-Hinweis, Tipps-Callout
 - [ ] Phase 5 – Zustand „Notfall" in der Sperrliste (Typen, UI, Feed, Export)
 - [ ] Phase 6 – Doku, Tests, Screenshots, Checks, Freigabe
