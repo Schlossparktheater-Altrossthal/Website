@@ -7,10 +7,6 @@ type BrowserNotificationPayload = NotificationOptions & {
   url?: string;
 };
 
-type UseBrowserNotificationsOptions = {
-  serviceWorkerPath?: string;
-};
-
 type UseBrowserNotificationsResult = {
   isSupported: boolean;
   permission: NotificationPermission;
@@ -25,11 +21,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-export function useBrowserNotifications(
-  options: UseBrowserNotificationsOptions = {},
-): UseBrowserNotificationsResult {
-  const { serviceWorkerPath = "/notification-sw.js" } = options;
-
+export function useBrowserNotifications(): UseBrowserNotificationsResult {
   const isBrowser = typeof window !== "undefined";
   const [permission, setPermission] = useState<NotificationPermission>(() => {
     if (!isBrowser || !("Notification" in window)) {
@@ -86,62 +78,29 @@ export function useBrowserNotifications(
     };
   }, [isSupported]);
 
+  // Der Service Worker wird zentral im PwaProvider registriert; hier nur auf ihn warten.
   useEffect(() => {
     if (!isBrowser || !("serviceWorker" in navigator)) {
       return;
     }
 
     let cancelled = false;
-
-    const ensureRegistration = async () => {
-      try {
-        const existing = await navigator.serviceWorker.getRegistration(serviceWorkerPath);
-        if (cancelled) {
-          return;
-        }
-
-        if (existing) {
-          registrationRef.current = existing;
-          setRegistration(existing);
-        } else if (serviceWorkerPath) {
-          try {
-            const newRegistration = await navigator.serviceWorker.register(serviceWorkerPath, {
-              scope: "/",
-            });
-            if (cancelled) {
-              await newRegistration.unregister();
-              return;
-            }
-            registrationRef.current = newRegistration;
-            setRegistration(newRegistration);
-          } catch (error) {
-            if (process.env.NODE_ENV !== "production") {
-              console.warn("[BrowserNotifications] service worker registration failed", error);
-            }
-          }
-        }
-
-        const readyRegistration = await navigator.serviceWorker.ready;
-        if (!cancelled) {
-          registrationRef.current = readyRegistration;
-          setRegistration(readyRegistration);
-        }
-      } catch (error) {
+    navigator.serviceWorker.ready
+      .then((readyRegistration) => {
+        if (cancelled) return;
+        registrationRef.current = readyRegistration;
+        setRegistration(readyRegistration);
+      })
+      .catch((error) => {
         if (process.env.NODE_ENV !== "production") {
-          console.warn(
-            "[BrowserNotifications] failed to resolve service worker registration",
-            error,
-          );
+          console.warn("[BrowserNotifications] service worker not ready", error);
         }
-      }
-    };
-
-    void ensureRegistration();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [isBrowser, serviceWorkerPath]);
+  }, [isBrowser]);
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) {

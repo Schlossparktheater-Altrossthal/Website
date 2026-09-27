@@ -20,17 +20,23 @@ import { CookieBanner } from "@/components/CookieBanner";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
-  applicationName: "Sommertheater Scan",
+  applicationName: "Sommertheater",
   title: {
     default: DEFAULT_SITE_TITLE,
     template: "%s | Sommertheater",
   },
   description: "Mystische Bühne unter freiem Himmel",
-  manifest: "/manifest.json",
   icons: {
     icon: "/Logo-Sommertheater.png",
     shortcut: "/Logo-Sommertheater.png",
-    apple: "/Logo-Sommertheater.png",
+    // Aus src/app/apple-icon.tsx (180 px, mit Hintergrund); explizite `icons` ersetzen die Dateikonvention.
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+  },
+  // Als App vom Home-Bildschirm (iOS): eigenes Fenster ohne Safari-Leisten.
+  appleWebApp: {
+    capable: true,
+    title: "Sommertheater",
+    statusBarStyle: "default",
   },
   alternates: {
     canonical: "/",
@@ -62,6 +68,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Inhalt bis in die Ränder (Notch); Abstände über env(safe-area-inset-*).
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "oklch(0.75 0.14 63.3)" },
     { color: "oklch(0.78 0.146 63.3)" },

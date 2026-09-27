@@ -32,8 +32,15 @@ type DismissibleNoticeProps = {
   action?: React.ReactNode;
   tone?: NoticeTone;
   onDismissed?: () => void;
+  /** `account` (Standard): auf allen Geräten ausblenden; `device`: nur auf diesem Gerät. */
+  scope?: "account" | "device";
   className?: string;
 };
+
+/** localStorage-Schlüssel für Hinweise mit `scope="device"`. */
+export function deviceNoticeStorageKey(noticeKey: string) {
+  return `notice-dismissed:${noticeKey}`;
+}
 
 /** Kompakter Hinweis mit Schließen-Knopf; bleibt nach dem Ausblenden auf allen Geräten weg. */
 export function DismissibleNotice({
@@ -44,12 +51,22 @@ export function DismissibleNotice({
   action,
   tone = "info",
   onDismissed,
+  scope = "account",
   className,
 }: DismissibleNoticeProps) {
   const [hidden, setHidden] = React.useState(false);
 
   const handleDismiss = React.useCallback(async () => {
     setHidden(true);
+    if (scope === "device") {
+      try {
+        window.localStorage.setItem(deviceNoticeStorageKey(noticeKey), new Date().toISOString());
+      } catch (error) {
+        console.warn("[dismissible-notice] localStorage unavailable", error);
+      }
+      onDismissed?.();
+      return;
+    }
     try {
       const response = await fetch("/api/notices/dismiss", {
         method: "POST",
@@ -65,7 +82,7 @@ export function DismissibleNotice({
       setHidden(false);
       toast.error("Hinweis konnte nicht ausgeblendet werden.");
     }
-  }, [noticeKey, onDismissed]);
+  }, [noticeKey, onDismissed, scope]);
 
   if (hidden) return null;
 

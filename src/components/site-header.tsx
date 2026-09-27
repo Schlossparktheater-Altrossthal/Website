@@ -164,7 +164,7 @@ export function SiteHeader({
     <Sheet open={open} onOpenChange={setOpen}>
       <header
         ref={headerRef}
-        className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur-md shadow-lg transition-all duration-300"
+        className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-md shadow-lg transition-all duration-300"
       >
         <nav
           aria-label="Hauptnavigation"

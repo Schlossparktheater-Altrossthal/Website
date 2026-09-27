@@ -25,6 +25,7 @@ import { useOnlineStats } from "@/hooks/useOnlineStats";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DismissibleNotice } from "@/components/ui/dismissible-notice";
+import { InstallAppNotice } from "@/components/pwa/install-app-notice";
 import { DateBadge } from "@/components/ui/date-badge";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -528,6 +529,8 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
             </p>
           </div>
         ) : null}
+
+        <InstallAppNotice />
 
         {showWhatsappNotice && whatsapp ? (
           <DismissibleNotice

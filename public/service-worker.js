@@ -1,5 +1,9 @@
 /* global workbox */
+// Einziger Service Worker der App (Scope „/“): Offline-Sync, statische Assets,
+// Offline-Seite und Klicks auf Benachrichtigungen. `notification-sw.js` lädt nur diese Datei.
 const WORKBOX_VERSION = "7.4.1";
+const OFFLINE_URL = "/offline.html";
+const OFFLINE_CACHE = "offline-page-v1";
 
 try {
   importScripts(`./workbox/workbox-v${WORKBOX_VERSION}/workbox-sw.js`);
@@ -7,7 +11,7 @@ try {
   console.warn("[ServiceWorker] Workbox library could not be loaded.", error);
 }
 
-if (workbox) {
+if (typeof workbox !== "undefined") {
   workbox.setConfig({ modulePathPrefix: `./workbox/workbox-v${WORKBOX_VERSION}` });
   const { precaching, routing, strategies, backgroundSync, core } = workbox;
 
@@ -81,6 +85,16 @@ if (workbox) {
     }),
   );
 
+  // Seitenaufrufe immer übers Netz; ohne Verbindung die Offline-Seite statt Browserfehler.
+  routing.registerRoute(new routing.NavigationRoute(new strategies.NetworkOnly()));
+  routing.setCatchHandler(async ({ request }) => {
+    if (request.destination === "document") {
+      const cached = await caches.match(OFFLINE_URL, { cacheName: OFFLINE_CACHE });
+      if (cached) return cached;
+    }
+    return Response.error();
+  });
+
   self.addEventListener("message", (event) => {
     const { data } = event;
 
@@ -100,3 +114,47 @@ if (workbox) {
 } else {
   self.registration?.unregister?.();
 }
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(OFFLINE_CACHE)
+      .then((cache) => cache.add(new Request(OFFLINE_URL, { cache: "reload" })))
+      .catch((error) => console.warn("[ServiceWorker] offline page not cached", error)),
+  );
+});
+
+// Klick auf eine Benachrichtigung: vorhandenes Fenster fokussieren oder das Ziel öffnen.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const rawUrl = event.notification?.data?.url ?? "/mitglieder";
+
+  let target;
+  try {
+    target = new URL(rawUrl, self.location.origin);
+  } catch {
+    target = new URL("/mitglieder", self.location.origin);
+  }
+  if (target.origin !== self.location.origin) return;
+
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const client =
+        windows.find((entry) => new URL(entry.url).pathname === target.pathname) ??
+        windows.find((entry) => new URL(entry.url).origin === target.origin);
+      if (client) {
+        await client.focus();
+        if ("navigate" in client && client.url !== target.href) {
+          try {
+            await client.navigate(target.href);
+          } catch (error) {
+            console.warn("[ServiceWorker] navigate failed", error);
+          }
+        }
+        return;
+      }
+      await self.clients.openWindow(target.href);
+    })(),
+  );
+});

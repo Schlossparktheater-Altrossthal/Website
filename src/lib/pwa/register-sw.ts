@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Workbox } from "workbox-window";
 import { toast } from "sonner";
-import { usePathname } from "next/navigation";
 
 import { useOfflineSyncClient } from "@/lib/offline/hooks";
 import type { OfflineScope } from "@/lib/offline/types";
@@ -11,13 +10,50 @@ import type { OfflineScope } from "@/lib/offline/types";
 const SERVICE_WORKER_URL = "/service-worker.js";
 const OFFLINE_SYNC_TAG = "workbox-background-sync:offline-events";
 const OFFLINE_SCOPES: OfflineScope[] = ["inventory", "tickets"];
-const SCANNER_PATH_PREFIX = "/mitglieder/scan";
 
 type BeforeInstallPromptEvent = Event & {
   readonly platforms?: string[];
   readonly userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
   prompt: () => Promise<void>;
 };
+
+export type PwaInstallState = {
+  /** Läuft bereits als installierte App (Home-Bildschirm / eigenes Fenster). */
+  standalone: boolean;
+  /** Der Browser bietet eine Installation an (Chrome, Edge, Android). */
+  canPrompt: boolean;
+  /** iOS/iPadOS Safari: Installation nur über „Teilen → Zum Home-Bildschirm“. */
+  iosManual: boolean;
+  promptInstall: () => Promise<"accepted" | "dismissed" | "unavailable">;
+};
+
+const PwaInstallContext = React.createContext<PwaInstallState>({
+  standalone: false,
+  canPrompt: false,
+  iosManual: false,
+  promptInstall: async () => "unavailable",
+});
+
+/** Installationsstatus der App, z. B. für den Hinweis im Dashboard. */
+export function usePwaInstall() {
+  return React.useContext(PwaInstallContext);
+}
+
+function detectStandalone() {
+  if (typeof window === "undefined") return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia("(display-mode: standalone)").matches || nav.standalone === true;
+}
+
+function detectIosSafari() {
+  if (typeof window === "undefined") return false;
+  const ua = window.navigator.userAgent;
+  const ios =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes("Macintosh") && window.navigator.maxTouchPoints > 1);
+  // Andere Browser auf iOS (Chrome, Firefox) können nicht zum Home-Bildschirm hinzufügen.
+  return ios && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+}
 
 async function flushAllScopes(
   flush: (scope: OfflineScope) => Promise<unknown>,
@@ -34,79 +70,50 @@ async function flushAllScopes(
 
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   const { flush } = useOfflineSyncClient();
-  const pathname = usePathname();
   const deferredPrompt = React.useRef<BeforeInstallPromptEvent | null>(null);
-  const installToastId = React.useRef<string | number | null>(null);
+  const [canPrompt, setCanPrompt] = React.useState(false);
+  const [standalone, setStandalone] = React.useState(false);
+  const [iosManual, setIosManual] = React.useState(false);
   const updateToastId = React.useRef<string | number | null>(null);
   const hadControllerRef = React.useRef(false);
   const shouldReloadOnControllingRef = React.useRef(false);
-  const isScannerPath = pathname?.startsWith(SCANNER_PATH_PREFIX) ?? false;
-  const shouldOfferInstallRef = React.useRef(isScannerPath);
 
   const requestFlush = React.useCallback(() => {
     void flushAllScopes(flush, OFFLINE_SCOPES);
   }, [flush]);
 
-  const openInstallPromptToast = React.useCallback(() => {
-    const promptEvent = deferredPrompt.current;
-
-    if (!promptEvent) {
-      return;
-    }
-
-    if (installToastId.current) {
-      toast.dismiss(installToastId.current);
-      installToastId.current = null;
-    }
-
-    const toastId = toast("App installieren?", {
-      description: "Lege den Scanner auf deinem Gerät ab.",
-      duration: 10000,
-      action: {
-        label: "Installieren",
-        onClick: async () => {
-          try {
-            await promptEvent.prompt();
-            const choice = await promptEvent.userChoice;
-            if (choice.outcome !== "accepted") {
-              toast.info("Installation abgebrochen.");
-            }
-          } catch (installError) {
-            console.error("Installation prompt failed", installError);
-          } finally {
-            deferredPrompt.current = null;
-            if (installToastId.current) {
-              toast.dismiss(installToastId.current);
-              installToastId.current = null;
-            }
-          }
-        },
-      },
-      onDismiss: (toastInstance) => {
-        if (installToastId.current === toastInstance.id) {
-          installToastId.current = null;
-        }
-      },
-    });
-
-    installToastId.current = toastId;
+  React.useEffect(() => {
+    const media = window.matchMedia("(display-mode: standalone)");
+    const update = () => {
+      const isStandalone = detectStandalone();
+      setStandalone(isStandalone);
+      setIosManual(!isStandalone && detectIosSafari());
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
   }, []);
 
-  const shouldOfferInstall = isScannerPath;
-
-  React.useEffect(() => {
-    shouldOfferInstallRef.current = shouldOfferInstall;
-
-    if (!shouldOfferInstall && installToastId.current) {
-      toast.dismiss(installToastId.current);
-      installToastId.current = null;
-      return;
+  const promptInstall = React.useCallback(async () => {
+    const promptEvent = deferredPrompt.current;
+    if (!promptEvent) return "unavailable" as const;
+    try {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      return choice.outcome;
+    } catch (error) {
+      console.error("Installation prompt failed", error);
+      return "unavailable" as const;
+    } finally {
+      deferredPrompt.current = null;
+      setCanPrompt(false);
     }
+  }, []);
 
-    if (shouldOfferInstall && deferredPrompt.current && !installToastId.current) {
-      openInstallPromptToast();
-    }
-  }, [shouldOfferInstall, openInstallPromptToast]);
+  const installState = React.useMemo<PwaInstallState>(
+    () => ({ standalone, canPrompt, iosManual, promptInstall }),
+    [standalone, canPrompt, iosManual, promptInstall],
+  );
 
   React.useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
@@ -198,23 +205,17 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
     void registerWorker();
 
+    // Kein automatischer Dialog: der Hinweis im Dashboard bietet die Installation an.
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
-      const promptEvent = event as BeforeInstallPromptEvent;
-      deferredPrompt.current = promptEvent;
-
-      if (shouldOfferInstallRef.current) {
-        openInstallPromptToast();
-      }
+      deferredPrompt.current = event as BeforeInstallPromptEvent;
+      setCanPrompt(true);
     };
 
     const handleAppInstalled = () => {
       deferredPrompt.current = null;
-      if (installToastId.current) {
-        toast.dismiss(installToastId.current);
-        installToastId.current = null;
-      }
-      toast.success("App erfolgreich installiert.");
+      setCanPrompt(false);
+      toast.success("App installiert", { duration: 3000 });
     };
 
     const handleOnline = () => {
@@ -237,12 +238,8 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
         toast.dismiss(updateToastId.current);
         updateToastId.current = null;
       }
-      if (installToastId.current) {
-        toast.dismiss(installToastId.current);
-        installToastId.current = null;
-      }
     };
-  }, [openInstallPromptToast, requestFlush]);
+  }, [requestFlush]);
 
-  return React.createElement(React.Fragment, null, children);
+  return React.createElement(PwaInstallContext.Provider, { value: installState }, children);
 }

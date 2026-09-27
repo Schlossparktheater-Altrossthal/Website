@@ -104,7 +104,9 @@ import {
   Search,
   Settings,
   Settings2,
+  Share as LucideShare,
   Share2,
+  Smartphone,
   ShieldCheck,
   Shirt,
   Sparkles,
@@ -1029,4 +1031,16 @@ export function CheckCheckIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <CheckCheck className={className} aria-hidden {...props} />;
+}
+
+/** iOS-Symbol „Teilen“ (Quadrat mit Pfeil nach oben). */
+export function ShareIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
+  return <LucideShare className={className} aria-hidden {...props} />;
+}
+
+export function SmartphoneIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Smartphone className={className} aria-hidden {...props} />;
 }

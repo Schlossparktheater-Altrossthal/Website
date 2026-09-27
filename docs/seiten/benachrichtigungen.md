@@ -33,4 +33,12 @@ steht, was zu tun ist, darunter Neues, dann Früheres. Plan und Hintergründe:
 
 ## Offen
 
-Web Push, PWA und Einstellungen je Kategorie (Plan Phase 4–6).
+Web Push und Einstellungen je Kategorie (Plan Phase 5–6).
+
+## PWA
+
+- Manifest `src/app/manifest.ts` (`/manifest.webmanifest`), Start `/mitglieder`, Icons aus
+  `src/lib/pwa/app-icons.tsx` (`/pwa-icons/192|512|maskable-512`, `/apple-icon`).
+- Ein Service Worker `public/service-worker.js` (Registrierung in `src/lib/pwa/register-sw.ts`):
+  Offline-Sync, Assets, `offline.html` bei fehlender Verbindung, Klick auf Benachrichtigungen.
+- `usePwaInstall()` liefert Installationsstatus; `InstallAppNotice` im Dashboard.
