@@ -53,8 +53,8 @@ export async function saveRehearsalReviewAction(input: z.input<typeof reviewSche
         });
       }
     });
-    revalidatePath(`/mitglieder/probenplanung/proben/${eventId}`);
-    revalidatePath("/mitglieder/probenplanung");
+    revalidatePath(`/mitglieder/terminplanung/${eventId}`);
+    revalidatePath("/mitglieder/terminplanung");
     return { ok: true as const };
   } catch (error) {
     console.error("Error saving rehearsal review", error);

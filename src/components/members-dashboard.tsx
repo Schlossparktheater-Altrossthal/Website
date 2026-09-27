@@ -117,8 +117,8 @@ const QUICK_ACTION_LINKS = [
     permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
   },
   {
-    href: "/mitglieder/probenplanung",
-    label: "Probenplanung",
+    href: "/mitglieder/terminplanung",
+    label: "Terminplanung",
     icon: CalendarCogIcon,
     permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
   },

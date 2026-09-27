@@ -1,0 +1,834 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { CalendarEventKind } from "@prisma/client";
+import { toast } from "sonner";
+
+import { AudienceBuilder, type AudienceValue } from "@/components/calendar/audience-builder";
+import { EventBlocksEditor, type EventBlockValue } from "@/components/calendar/event-blocks-editor";
+import {
+  SceneScheduleEditor,
+  type SceneScheduleValue,
+  type SceneStatsView,
+} from "@/components/calendar/scene-schedule-editor";
+import { PlusIcon, TrashIcon } from "@/components/ui/action-icons";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DateInput } from "@/components/ui/date-input";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { SectionHeader } from "@/components/ui/section-header";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { TimeInput } from "@/components/ui/time-input";
+import { CALENDAR_EVENT_KINDS, CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
+import { cn } from "@/lib/utils";
+import {
+  computeAudienceDrift,
+  hasAudienceDrift,
+  resolveAudience,
+  type AudienceContext,
+} from "@/lib/calendar/audience";
+import type { DayAvailability } from "@/lib/calendar/day-availability";
+import {
+  DEFAULT_TIME_ZONE,
+  formatIsoDateInTimeZone,
+  formatIsoTimeInTimeZone,
+  parseDateTimeInTimeZone,
+} from "@/lib/date-time";
+
+import {
+  discardRehearsalDraftAction,
+  publishRehearsalAction,
+  updateRehearsalDraftAction,
+} from "./actions/drafts";
+import { deleteRehearsalAction, updateRehearsalAction } from "./actions/rehearsals";
+
+type EventEditorProps = {
+  rehearsal: {
+    id: string;
+    status: string;
+    kind: CalendarEventKind;
+    allDay: boolean;
+    showId: string | null;
+    title: string;
+    start: string;
+    end: string | null;
+    location: string;
+    description: string | null;
+  };
+  /** Produktion für „gilt für“ (die des Termins bzw. die gewählte). */
+  production: { id: string; title: string } | null;
+  context: AudienceContext;
+  /** Zielgruppe nach einem Wechsel „gilt für“ (alle Mitglieder bzw. die Produktion). */
+  otherContext: AudienceContext | null;
+  audience: AudienceValue;
+  /** Aktuell Eingeladene (für den Hinweis auf geänderte Besetzung). */
+  invited: { userId: string; name: string; level: "REQUIRED" | "OPTIONAL" }[];
+  initialAvailability: DayAvailability;
+  declined: Record<string, string | null>;
+  schedule: SceneScheduleValue & { blocks: EventBlockValue[] };
+  sceneStats: SceneStatsView;
+};
+
+const KIND_OPTIONS: CalendarEventKind[] = ["REHEARSAL", ...CALENDAR_EVENT_KINDS];
+const DEFAULT_AUDIENCE: AudienceValue = {
+  rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }],
+  overrides: [],
+};
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Gewerk-Bausteine als Einladungsquelle (für Vorschau und Abweichungen). */
+function audienceBlocks(blocks: readonly EventBlockValue[]) {
+  return blocks.flatMap((block) =>
+    block.type === "DEPARTMENT" && block.departmentId
+      ? [{ departmentId: block.departmentId, title: block.title || null }]
+      : [],
+  );
+}
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+export function EventEditor({
+  rehearsal,
+  production,
+  context: initialContext,
+  otherContext,
+  audience: initialAudience,
+  invited,
+  initialAvailability,
+  declined,
+  schedule: initialSchedule,
+  sceneStats,
+}: EventEditorProps) {
+  const router = useRouter();
+  const isDraft = rehearsal.status === "DRAFT";
+  const isTentative = rehearsal.status === "TENTATIVE";
+
+  const [title, setTitle] = useState(rehearsal.title);
+  const [kind, setKind] = useState<CalendarEventKind>(rehearsal.kind);
+  const [date, setDate] = useState(() => formatIsoDateInTimeZone(rehearsal.start));
+  const [allDay, setAllDay] = useState(rehearsal.allDay);
+  const [endDate, setEndDate] = useState(() => {
+    const last = rehearsal.end ? formatIsoDateInTimeZone(rehearsal.end) : "";
+    return last > formatIsoDateInTimeZone(rehearsal.start) ? last : "";
+  });
+  const [multiDay, setMultiDay] = useState(Boolean(endDate));
+  const [time, setTime] = useState(() =>
+    rehearsal.allDay ? "18:00" : formatIsoTimeInTimeZone(rehearsal.start),
+  );
+  const [endTime, setEndTime] = useState(() =>
+    rehearsal.end && !rehearsal.allDay ? formatIsoTimeInTimeZone(rehearsal.end) : "",
+  );
+  const [location, setLocation] = useState(
+    rehearsal.location === "Noch offen" ? "" : rehearsal.location,
+  );
+  const [description, setDescription] = useState(rehearsal.description ?? "");
+  const [showDescription, setShowDescription] = useState(Boolean(rehearsal.description));
+  /** Wechsel „gilt für“ – nur gesendet, wenn geändert. */
+  const [scope, setScope] = useState<"production" | "all">(rehearsal.showId ? "production" : "all");
+  const scopeChanged = scope !== (rehearsal.showId ? "production" : "all");
+  const context = scopeChanged && otherContext ? otherContext : initialContext;
+  const [audience, setAudience] = useState<AudienceValue>(initialAudience);
+  /** Termin für alle, ohne Einladung (nicht bei Proben). */
+  const [open, setOpen] = useState(
+    rehearsal.kind !== "REHEARSAL" &&
+      !initialAudience.rules.length &&
+      !initialAudience.overrides.length,
+  );
+  // Veröffentlichte Termine: Zielgruppe nur senden, wenn die Planung sie geändert oder
+  // Abweichungen übernommen hat – sonst keine stillen Einladungen.
+  const [audienceTouched, setAudienceTouched] = useState(isDraft);
+  const [availability, setAvailability] = useState<DayAvailability>(initialAvailability);
+  const [schedule, setSchedule] = useState<SceneScheduleValue>(initialSchedule);
+  const [blocks, setBlocks] = useState<EventBlockValue[]>(initialSchedule.blocks);
+  const [showBlocks, setShowBlocks] = useState(
+    rehearsal.kind === "REHEARSAL" || initialSchedule.blocks.length > 0,
+  );
+  const initialBlocks = useMemo(() => audienceBlocks(initialSchedule.blocks), [initialSchedule]);
+  const currentBlocks = useMemo(() => audienceBlocks(blocks), [blocks]);
+  // Nur vollständige Uhrzeiten speichern; halb ausgefüllte Felder blockieren sonst das Speichern.
+  const scheduleToSave = useMemo(
+    () => ({
+      mode: schedule.mode,
+      times: Object.fromEntries(
+        Object.entries(schedule.times).filter(([, time]) =>
+          [time.start, time.end].every((value) => TIME_PATTERN.test(value)),
+        ),
+      ),
+      rooms: Object.fromEntries(
+        Object.entries(schedule.rooms)
+          .map(([sceneId, room]) => [sceneId, room.trim()] as const)
+          .filter(([, room]) => room),
+      ),
+      blocks: blocks.map((block) => {
+        const timed = TIME_PATTERN.test(block.start) && TIME_PATTERN.test(block.end);
+        return {
+          ...block,
+          start: timed ? block.start : "",
+          end: timed ? block.end : "",
+        };
+      }),
+    }),
+    [schedule, blocks],
+  );
+  const [conflicts, setConflicts] = useState<Partial<Record<string, string>>>({});
+  const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [isPublishing, startPublish] = useTransition();
+  const [isDiscarding, startDiscard] = useTransition();
+
+  const sceneIds = useMemo(
+    () =>
+      audience.rules.flatMap((rule) =>
+        rule.type === "SCENE" && rule.targetId ? [rule.targetId] : [],
+      ),
+    [audience.rules],
+  );
+  // Mit Szenen ist es immer eine Probe.
+  const effectiveKind: CalendarEventKind = sceneIds.length ? "REHEARSAL" : kind;
+  const isRehearsal = effectiveKind === "REHEARSAL";
+  const openAudience = open && !isRehearsal;
+  const noun = isRehearsal ? "Probe" : "Termin";
+
+  const invitedIds = useMemo(
+    () =>
+      new Set(
+        openAudience
+          ? []
+          : resolveAudience(audience.rules, audience.overrides, context, currentBlocks)
+              .filter((entry) => !entry.excluded)
+              .map((entry) => entry.userId),
+      ),
+    [audience, context, currentBlocks, openAudience],
+  );
+  const invitedCount = invitedIds.size;
+  const canPublish = openAudience || invitedCount > 0;
+  const drift = useMemo(
+    () =>
+      isDraft || audienceTouched || openAudience
+        ? null
+        : computeAudienceDrift(
+            invited,
+            resolveAudience(
+              initialAudience.rules,
+              initialAudience.overrides,
+              context,
+              initialBlocks,
+            ),
+          ),
+    [isDraft, audienceTouched, openAudience, invited, initialAudience, context, initialBlocks],
+  );
+
+  const changeAudience = useCallback((next: AudienceValue) => {
+    setAudience(next);
+    setAudienceTouched(true);
+  }, []);
+
+  const changeBlocks = useCallback(
+    (next: EventBlockValue[]) => {
+      const departments = (list: EventBlockValue[]) =>
+        audienceBlocks(list)
+          .map((block) => block.departmentId)
+          .sort()
+          .join();
+      // Andere Gewerke → andere Eingeladene; wie eine Änderung der Zielgruppe behandeln.
+      if (departments(next) !== departments(blocks)) setAudienceTouched(true);
+      setBlocks(next);
+    },
+    [blocks],
+  );
+
+  const changeScenes = useCallback(
+    (nextSceneIds: string[]) => {
+      const levels = new Map(
+        audience.rules
+          .filter((rule) => rule.type === "SCENE")
+          .map((rule) => [rule.targetId, rule.level]),
+      );
+      if (nextSceneIds.length) setOpen(false);
+      changeAudience({
+        ...audience,
+        rules: [
+          ...audience.rules.filter((rule) => rule.type !== "SCENE"),
+          ...nextSceneIds.map((targetId) => ({
+            type: "SCENE" as const,
+            targetId,
+            level: levels.get(targetId) ?? ("REQUIRED" as const),
+          })),
+        ],
+      });
+    },
+    [audience, changeAudience],
+  );
+
+  const changeKind = (next: CalendarEventKind) => {
+    setKind(next);
+    if (next === "REHEARSAL" && open) {
+      // Proben brauchen Eingeladene.
+      setOpen(false);
+      if (!audience.rules.length) changeAudience(DEFAULT_AUDIENCE);
+      setShowBlocks(true);
+    }
+  };
+
+  const changeScope = (next: "production" | "all") => {
+    setScope(next);
+    // Gewerke, Rollen und Szenen gehören zur Produktion: Zielgruppe neu beginnen.
+    changeAudience(next === "all" ? { rules: [], overrides: [] } : DEFAULT_AUDIENCE);
+    if (next === "all") setOpen(true);
+  };
+
+  const fetchDayChecks = useCallback(
+    async (dateValue: string, timeValue: string, endValue: string) => {
+      setIsCheckingBlocks(true);
+      try {
+        const params = new URLSearchParams({ date: dateValue, eventId: rehearsal.id });
+        try {
+          const start = parseDateTimeInTimeZone(dateValue, timeValue, DEFAULT_TIME_ZONE);
+          let end = endValue
+            ? parseDateTimeInTimeZone(dateValue, endValue, DEFAULT_TIME_ZONE)
+            : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+          if (end < start) end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+          params.set("start", start.toISOString());
+          params.set("end", end.toISOString());
+        } catch {
+          // Unvollständige Uhrzeit: nur die Sperrliste prüfen.
+        }
+        const response = await fetch(`/api/rehearsals/blocked?${params}`);
+        if (!response.ok) {
+          throw new Error("Request failed");
+        }
+        const data = (await response.json()) as {
+          availability?: DayAvailability;
+          conflicts?: Partial<Record<string, string>>;
+        };
+        setAvailability(data.availability ?? {});
+        setConflicts(data.conflicts ?? {});
+      } catch (error) {
+        console.error("Failed to load blocked members", error);
+        toast.error("Sperrtermine konnten nicht geladen werden.");
+      } finally {
+        setIsCheckingBlocks(false);
+      }
+    },
+    [rehearsal.id],
+  );
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      fetchDayChecks(date, allDay ? "00:00" : time, allDay ? "23:59" : endTime.trim()).catch(
+        () => null,
+      );
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [date, time, endTime, allDay, fetchDayChecks]);
+
+  /** Gemeinsame Felder für Speichern und Ansetzen. */
+  const payload = useMemo(() => {
+    const trimmedEndTime = endTime.trim();
+    return {
+      id: rehearsal.id,
+      kind: effectiveKind,
+      title,
+      date,
+      time: TIME_PATTERN.test(time) ? time : "18:00",
+      ...(trimmedEndTime && !allDay ? { endTime: trimmedEndTime } : {}),
+      endDate: multiDay && endDate > date ? endDate : null,
+      allDay,
+      ...(scopeChanged ? { scope } : {}),
+      ...(openAudience ? { openAudience: true } : {}),
+      location,
+      description,
+      schedule: scheduleToSave,
+    };
+  }, [
+    endTime,
+    rehearsal.id,
+    effectiveKind,
+    title,
+    date,
+    time,
+    allDay,
+    multiDay,
+    endDate,
+    scopeChanged,
+    scope,
+    openAudience,
+    location,
+    description,
+    scheduleToSave,
+  ]);
+
+  const skipInitialSave = useRef(true);
+
+  useEffect(() => {
+    if (skipInitialSave.current) {
+      skipInitialSave.current = false;
+      return;
+    }
+
+    setSaveStatus("saving");
+    const handle = setTimeout(() => {
+      const updateAction = isDraft ? updateRehearsalDraftAction : updateRehearsalAction;
+      updateAction({ ...payload, ...(audienceTouched && !openAudience ? { audience } : {}) })
+        .then((result) => {
+          if (result?.success) {
+            setSaveStatus("saved");
+            setLastSavedAt(new Date());
+          } else {
+            setSaveStatus("error");
+            toast.error(result?.error ?? "Änderungen konnten nicht gespeichert werden.");
+          }
+        })
+        .catch(() => {
+          setSaveStatus("error");
+          toast.error("Änderungen konnten nicht gespeichert werden.");
+        });
+    }, 800);
+
+    return () => clearTimeout(handle);
+  }, [payload, audience, audienceTouched, openAudience, isDraft]);
+
+  const handlePublish = (target: "TENTATIVE" | "SCHEDULED") => {
+    startPublish(() => {
+      publishRehearsalAction({
+        ...payload,
+        // Vorgemerkte Termine: Zielgruppe nur mitschicken, wenn sie geändert wurde.
+        ...((isDraft || audienceTouched) && !openAudience ? { audience } : {}),
+        target,
+      })
+        .then((result) => {
+          if (result?.success && result.id) {
+            toast.success(
+              target === "TENTATIVE"
+                ? `${noun} vorgemerkt. Die Eingeladenen sehen ${isRehearsal ? "sie" : "ihn"} und können absagen.`
+                : openAudience
+                  ? `${noun} angesetzt.`
+                  : `${noun} angesetzt. Einladungen wurden versendet.`,
+            );
+            router.push(
+              isRehearsal ? `/mitglieder/proben/${result.id}` : "/mitglieder/terminplanung",
+            );
+          } else {
+            toast.error(result?.error ?? `${noun} konnte nicht veröffentlicht werden.`);
+          }
+        })
+        .catch(() => {
+          toast.error(`${noun} konnte nicht veröffentlicht werden.`);
+        });
+    });
+  };
+
+  const [confirm, setConfirm] = useState<"discard" | "delete" | null>(null);
+
+  const confirmRemove = () => {
+    const mode = confirm;
+    setConfirm(null);
+    startDiscard(() => {
+      const action =
+        mode === "discard"
+          ? discardRehearsalDraftAction({ id: rehearsal.id })
+          : deleteRehearsalAction({ id: rehearsal.id });
+      action
+        .then((result) => {
+          if (result?.success) {
+            toast.success(mode === "discard" ? "Entwurf verworfen." : `${noun} gelöscht.`);
+            router.push("/mitglieder/terminplanung");
+          } else {
+            toast.error(result?.error ?? "Das hat nicht geklappt.");
+          }
+        })
+        .catch(() => {
+          toast.error("Das hat nicht geklappt.");
+        });
+    });
+  };
+
+  const saveLabel = useMemo(() => {
+    switch (saveStatus) {
+      case "saving":
+        return "Speichert …";
+      case "saved":
+        return lastSavedAt
+          ? `Gespeichert ${lastSavedAt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`
+          : "Gespeichert";
+      case "error":
+        return "Speichern fehlgeschlagen";
+      default:
+        return "Speichert automatisch";
+    }
+  }, [saveStatus, lastSavedAt]);
+
+  const statusLabel = isDraft ? "Entwurf" : isTentative ? "Vorgemerkt" : "Angesetzt";
+  const kindLocked = sceneIds.length > 0;
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-4 pb-4">
+      <Card variant="plain" size="flush" className="space-y-4 border-border p-4">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 font-medium",
+              isDraft
+                ? "bg-muted text-foreground/80"
+                : isTentative
+                  ? "bg-warning/20 text-warning"
+                  : "bg-success/15 text-success",
+            )}
+          >
+            {statusLabel}
+          </span>
+          <span className="text-muted-foreground" aria-live="polite">
+            {saveLabel}
+          </span>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="event-title">Titel</Label>
+          <Input
+            id="event-title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            minLength={3}
+            maxLength={120}
+            required
+            className="h-11"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="event-kind">Art</Label>
+          <Select
+            value={effectiveKind}
+            disabled={kindLocked}
+            onValueChange={(value) => {
+              const next = KIND_OPTIONS.find((entry) => entry === value);
+              if (next) changeKind(next);
+            }}
+          >
+            <SelectTrigger id="event-kind" className="h-11">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {KIND_OPTIONS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {CALENDAR_EVENT_KIND_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {kindLocked ? (
+            <p className="text-xs text-muted-foreground">Mit Szenen ist es immer eine Probe.</p>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="col-span-2 space-y-1.5 sm:col-span-1">
+            <Label htmlFor="event-date">{multiDay ? "Von" : "Datum"}</Label>
+            <DateInput
+              id="event-date"
+              value={date}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDate(value);
+                if (endDate && endDate < value) setEndDate(value);
+              }}
+              required
+            />
+          </div>
+          {!allDay ? (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="event-time">Beginn</Label>
+                <TimeInput
+                  id="event-time"
+                  value={time}
+                  onChange={(event) => setTime(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="event-end">Ende</Label>
+                <TimeInput
+                  id="event-end"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
+                />
+              </div>
+            </>
+          ) : null}
+          {multiDay ? (
+            <div className="col-span-2 space-y-1.5 sm:col-span-1">
+              <Label htmlFor="event-end-date">Bis</Label>
+              <DateInput
+                id="event-end-date"
+                value={endDate}
+                min={date}
+                onChange={(event) => setEndDate(event.target.value)}
+              />
+            </div>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <label className="flex items-center gap-2">
+            <Switch checked={allDay} onCheckedChange={setAllDay} />
+            Ganztägig
+          </label>
+          <label className="flex items-center gap-2">
+            <Switch
+              checked={multiDay}
+              onCheckedChange={(value) => {
+                setMultiDay(value);
+                if (value && !endDate) setEndDate(date);
+              }}
+            />
+            Mehrere Tage
+          </label>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="event-location">Ort</Label>
+          <Input
+            id="event-location"
+            value={location}
+            onChange={(event) => setLocation(event.target.value)}
+            placeholder={isRehearsal ? "z. B. Probenraum – leer = noch offen" : "optional"}
+            className="h-11"
+          />
+        </div>
+
+        {showDescription ? (
+          <div className="space-y-1.5">
+            <Label>Beschreibung</Label>
+            <RichTextEditor
+              value={description}
+              onChange={setDescription}
+              placeholder="Ablauf, Ziele oder Materialien"
+            />
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="-ml-2"
+            onClick={() => setShowDescription(true)}
+          >
+            <PlusIcon className="h-4 w-4" aria-hidden />
+            Beschreibung
+          </Button>
+        )}
+
+        {production && !isRehearsal ? (
+          <div className="space-y-1.5 border-t border-border pt-4">
+            <Label>Gilt für</Label>
+            <SegmentedControl
+              aria-label="Gilt für"
+              fullWidth
+              size="md"
+              value={scope}
+              onValueChange={changeScope}
+              options={[
+                { value: "production", label: production.title },
+                { value: "all", label: "Alle Produktionen" },
+              ]}
+            />
+          </div>
+        ) : null}
+      </Card>
+
+      <Card variant="plain" size="flush" className="space-y-4 border-border p-4">
+        <SectionHeader
+          title="Ablauf & Bausteine"
+          description={
+            showBlocks
+              ? "Szenen, Gewerke und freie Bausteine – auch parallel in eigenen Räumen."
+              : "Optional: Szenen, Gewerke oder eigene Programmpunkte."
+          }
+          action={
+            showBlocks ? null : (
+              <Button type="button" size="sm" variant="outline" onClick={() => setShowBlocks(true)}>
+                <PlusIcon className="h-4 w-4" aria-hidden />
+                Hinzufügen
+              </Button>
+            )
+          }
+        />
+        {showBlocks ? (
+          <div className="space-y-6">
+            {context.scenes.length ? (
+              <SceneScheduleEditor
+                context={context}
+                sceneIds={sceneIds}
+                onScenesChange={changeScenes}
+                schedule={schedule}
+                onScheduleChange={setSchedule}
+                stats={sceneStats}
+                eventStartTime={time}
+                invitedIds={invitedIds}
+              />
+            ) : null}
+            <EventBlocksEditor context={context} blocks={blocks} onChange={changeBlocks} />
+          </div>
+        ) : null}
+      </Card>
+
+      <Card variant="plain" size="flush" className="space-y-4 border-border p-4">
+        <SectionHeader
+          title="Wer ist dabei?"
+          description={
+            openAudience
+              ? "Der Termin erscheint bei allen – ohne Einladung und Zusage."
+              : `${invitedCount} eingeladen${isCheckingBlocks ? " · Sperrliste wird geprüft …" : ""}`
+          }
+        />
+        {!isRehearsal ? (
+          <SegmentedControl
+            aria-label="Wer ist eingeladen?"
+            fullWidth
+            size="md"
+            value={openAudience ? "all" : "targeted"}
+            onValueChange={(value) => {
+              setOpen(value === "all");
+              setAudienceTouched(true);
+              if (value === "targeted" && !audience.rules.length && !audience.overrides.length) {
+                setAudience(DEFAULT_AUDIENCE);
+              }
+            }}
+            options={[
+              { value: "all", label: "Alle" },
+              { value: "targeted", label: "Bestimmte Personen" },
+            ]}
+          />
+        ) : null}
+        {drift && hasAudienceDrift(drift) ? (
+          <div className="space-y-3 rounded-lg border border-warning bg-warning/10 p-3 text-sm">
+            <p className="font-medium">Die Besetzung hat sich seit dem Ansetzen geändert.</p>
+            <ul className="space-y-1 text-muted-foreground">
+              {drift.added.length ? (
+                <li>Neu dabei: {drift.added.map((entry) => entry.name).join(", ")}</li>
+              ) : null}
+              {drift.removed.length ? (
+                <li>Nicht mehr dabei: {drift.removed.map((entry) => entry.name).join(", ")}</li>
+              ) : null}
+              {drift.levelChanged.length ? (
+                <li>
+                  Verbindlichkeit geändert:{" "}
+                  {drift.levelChanged.map((entry) => entry.name).join(", ")}
+                </li>
+              ) : null}
+            </ul>
+            <Button type="button" size="sm" onClick={() => setAudienceTouched(true)}>
+              Änderungen übernehmen
+            </Button>
+          </div>
+        ) : null}
+        {!openAudience ? (
+          <AudienceBuilder
+            context={context}
+            value={audience}
+            onChange={changeAudience}
+            availability={availability}
+            conflicts={conflicts}
+            declined={declined}
+            blocks={currentBlocks}
+            hideSceneRules={showBlocks && context.scenes.length > 0}
+          />
+        ) : null}
+      </Card>
+
+      {/* Aktionsleiste: bleibt beim Scrollen unten sichtbar. */}
+      <div
+        role="region"
+        aria-label="Aktionen"
+        className="sticky bottom-3 z-30 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/95 p-2.5 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80"
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive"
+          disabled={isDiscarding}
+          onClick={() => setConfirm(isDraft ? "discard" : "delete")}
+        >
+          <TrashIcon className="h-4 w-4" aria-hidden />
+          <span className="hidden sm:inline">{isDraft ? "Verwerfen" : "Löschen"}</span>
+        </Button>
+        <div className="ml-auto flex flex-1 items-center justify-end gap-2 sm:flex-none">
+          {isDraft ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 sm:flex-none"
+                onClick={() => handlePublish("TENTATIVE")}
+                disabled={isPublishing || !canPublish}
+                title="Eingeladene sehen den Termin schon und können absagen"
+              >
+                Vormerken
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 sm:flex-none"
+                onClick={() => handlePublish("SCHEDULED")}
+                disabled={isPublishing || !canPublish}
+              >
+                {isPublishing ? "Speichert …" : "Ansetzen"}
+              </Button>
+            </>
+          ) : isTentative ? (
+            <Button
+              type="button"
+              className="flex-1 sm:flex-none"
+              onClick={() => handlePublish("SCHEDULED")}
+              disabled={isPublishing || !canPublish}
+            >
+              {isPublishing ? "Speichert …" : "Verbindlich ansetzen"}
+            </Button>
+          ) : (
+            <Button asChild variant="outline" className="flex-1 sm:flex-none">
+              <Link href="/mitglieder/terminplanung">Fertig</Link>
+            </Button>
+          )}
+        </div>
+        {isDraft && !canPublish ? (
+          <p className="w-full px-1 text-xs text-muted-foreground">
+            Zum Ansetzen mindestens eine Person einladen.
+          </p>
+        ) : null}
+      </div>
+
+      <ConfirmDialog
+        open={confirm !== null}
+        onOpenChange={(value) => {
+          if (!value) setConfirm(null);
+        }}
+        onCancel={() => setConfirm(null)}
+        onConfirm={confirmRemove}
+        title={confirm === "discard" ? "Entwurf verwerfen?" : `${noun} löschen?`}
+        description={
+          confirm === "discard"
+            ? "Der Entwurf wird endgültig gelöscht."
+            : `${noun} verschwindet für alle aus dem Kalender. Eingeladene werden informiert.`
+        }
+        confirmLabel={confirm === "discard" ? "Verwerfen" : "Löschen"}
+        cancelLabel="Abbrechen"
+        variant="destructive"
+      />
+    </div>
+  );
+}

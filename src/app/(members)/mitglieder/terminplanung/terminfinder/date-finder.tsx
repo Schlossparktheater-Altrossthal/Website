@@ -73,7 +73,7 @@ export function DateFinder({ context, today }: { context: AudienceContext; today
       });
       if (response?.success && response.id) {
         toast.success("Entwurf mit dieser Zielgruppe angelegt.");
-        router.push(`/mitglieder/probenplanung/proben/${response.id}`);
+        router.push(`/mitglieder/terminplanung/${response.id}`);
         return;
       }
       toast.error(response?.error ?? "Der Entwurf konnte nicht erstellt werden.");

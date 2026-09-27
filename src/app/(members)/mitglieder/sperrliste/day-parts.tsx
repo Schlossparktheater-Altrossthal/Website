@@ -77,7 +77,7 @@ export function CalendarEntryList({
   onSelect,
 }: {
   entries: CalendarEntry[];
-  /** Nur für bearbeitbare Termine (Planer). */
+  /** Planung: Termin im Editor öffnen. */
   onSelect?: (entry: CalendarEntry) => void;
 }) {
   if (!entries.length) return null;
@@ -100,7 +100,7 @@ export function CalendarEntryList({
             )}
           />
         );
-        if (entry.source === "event" && onSelect) {
+        if (onSelect) {
           return (
             <ListRow
               key={`${entry.source}-${entry.id}`}

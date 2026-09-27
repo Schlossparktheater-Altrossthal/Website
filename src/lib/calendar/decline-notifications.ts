@@ -168,7 +168,7 @@ export async function notifyPlannersOfDecline({
         where: { id: { in: recipients }, email: { not: null } },
         select: { email: true },
       });
-      const link = `${getAppBaseUrl()}/mitglieder/probenplanung/proben/${event.id}`;
+      const link = `${getAppBaseUrl()}/mitglieder/terminplanung/${event.id}`;
       await Promise.all(
         people.flatMap((person) =>
           person.email

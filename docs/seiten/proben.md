@@ -7,9 +7,9 @@ Probenplaner verwalten den Gesamtplan.
 
 ## Routen
 
-- `/mitglieder/probenplanung` – Gesamtplanung
+- `/mitglieder/terminplanung` – Gesamtplanung für Proben und Termine (Kalender mit Tagesblatt, Liste, Entwürfe, Szenen-Stand); `/mitglieder/probenplanung` leitet auf `?art=proben` um
 - `/mitglieder/terminplanung` – organisationsweite Termine (für Planer; Liste nach Monaten)
-- `/mitglieder/probenplanung/proben/[rehearsalId]` – Probe bearbeiten
+- `/mitglieder/terminplanung/[eventId]` – gemeinsamer Editor für Proben und Termine (alte Adresse `/mitglieder/probenplanung/proben/[id]` leitet um)
 - `/mitglieder/proben/[rehearsalId]` – Detailansicht einer Probe
 - `/mitglieder/meine-proben` – eigene Probentermine
 
@@ -21,14 +21,13 @@ Probenplaner verwalten den Gesamtplan.
 
 ## Wichtige Komponenten
 
-- `src/app/(members)/mitglieder/probenplanung/` – Planungsseiten
-- `src/app/(members)/mitglieder/probenplanung/rehearsal-editor.tsx` – Probeneditor
-- `src/app/(members)/mitglieder/probenplanung/actions.ts` – Server Actions
+- `src/app/(members)/mitglieder/terminplanung/` – Planungsseite (`page-client.tsx`), Editor (`event-editor.tsx`), Anlegen (`new-event.tsx`)
+- `src/app/(members)/mitglieder/terminplanung/actions/` – Server Actions
 
 ## Datenfluss
 
 - Prisma-Modelle: `CalendarEvent` (`kind = REHEARSAL`), `EventParticipant`, `EventResponseLog`
-- Server Actions in `probenplanung/actions.ts` bündeln die Mutationslogik.
+- Server Actions in `terminplanung/actions/` bündeln die Mutationslogik.
 
 ## Realtime
 
@@ -42,6 +41,6 @@ Probenplaner verwalten den Gesamtplan.
   `SegmentedControl` (`src/components/ui/segmented-control.tsx`).
 - Zeitlogik läuft über `DEFAULT_TIME_ZONE` aus `src/lib/date-time.ts`.
 
-## Terminfinder (`/mitglieder/probenplanung/terminfinder`)
+## Terminfinder (`/mitglieder/terminplanung/terminfinder`)
 
 Recht: `PRIVATE.REHEARSAL.PLANNING.MANAGE` (Produktion). Zielgruppe mit dem Baukasten wählen, Zeitraum, Wochentage und Uhrzeit angeben; „Termine finden“ bewertet jeden Tag nach Sperrliste und anderen angesetzten Terminen im Zeitfenster (benötigte Personen zählen mehr als optionale). Ergebnis als Heatmap aller Tage und Liste der besten Tage; „Probe anlegen“ erstellt einen Entwurf mit Datum, Uhrzeit und Zielgruppe. Erreichbar über „Termin finden“ in der Probenplanung.

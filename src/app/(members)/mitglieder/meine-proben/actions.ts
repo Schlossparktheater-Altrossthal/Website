@@ -44,7 +44,7 @@ async function loadOwnRehearsal(eventId: string) {
 function revalidateOwn(eventId: string) {
   revalidatePath("/mitglieder/meine-proben");
   revalidatePath(`/mitglieder/proben/${eventId}`);
-  revalidatePath(`/mitglieder/probenplanung/proben/${eventId}`);
+  revalidatePath(`/mitglieder/terminplanung/${eventId}`);
 }
 
 /** Absage mit Begründung; die Planung wird bei benötigten Personen benachrichtigt. */

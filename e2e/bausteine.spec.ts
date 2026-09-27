@@ -16,14 +16,16 @@ async function collectErrors(page: Page) {
   return errors;
 }
 
+/** Editor-Adresse der angelegten Probe, zum Aufräumen. */
+let editorUrl: string | null = null;
+
 async function deleteRehearsal(page: Page) {
-  await page.goto("/mitglieder/probenplanung");
-  const card = page.locator("details").filter({ has: page.getByRole("link", { name: title }) });
-  if (!(await card.count())) return;
-  await card.getByRole("button", { name: "Aktionen öffnen" }).click();
-  await page.getByRole("menuitem", { name: "Löschen" }).click();
-  await page.getByRole("button", { name: "Löschen", exact: true }).click();
-  await expect(page.getByRole("link", { name: title })).toHaveCount(0);
+  if (!editorUrl) return;
+  await page.goto(editorUrl);
+  editorUrl = null;
+  await page.getByRole("button", { name: "Löschen" }).click();
+  await page.getByRole("button", { name: "Löschen", exact: true }).last().click();
+  await expect(page).toHaveURL(/\/mitglieder\/terminplanung$/);
 }
 
 test.describe("als admin", () => {
@@ -36,11 +38,13 @@ test.describe("als admin", () => {
   test("Gewerk-Baustein anlegen, vormerken und im Gewerk organisieren", async ({ page }) => {
     const errors = await collectErrors(page);
 
-    await page.goto("/mitglieder/probenplanung");
-    const create = page.getByRole("button", { name: "Neue Probe anlegen" });
-    test.skip(!(await create.isVisible().catch(() => false)), "Keine Probenplanung verfügbar");
+    await page.goto("/mitglieder/terminplanung");
+    const create = page.getByRole("button", { name: "Neu", exact: true });
+    test.skip(!(await create.isVisible().catch(() => false)), "Keine Terminplanung verfügbar");
     await create.click();
-    await expect(page).toHaveURL(/\/mitglieder\/probenplanung\/proben\/[^/]+$/);
+    await page.getByRole("menuitem", { name: "Probe" }).click();
+    await expect(page).toHaveURL(/\/mitglieder\/terminplanung\/[^/]+$/);
+    editorUrl = new URL(page.url()).pathname;
 
     await page.getByLabel("Titel", { exact: true }).fill(title);
 
@@ -53,7 +57,7 @@ test.describe("als admin", () => {
     await option.click();
     await page.getByPlaceholder("z. B. Bühnenbau").fill("E2E Baustein");
     await expect(page.getByText("Baustein E2E Baustein").first()).toBeVisible();
-    await expect(page.getByText(/Entwurf gespeichert/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/^Gespeichert/)).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: "Vormerken" }).click();
     await expect(page).toHaveURL(/\/mitglieder\/proben\/[^/]+$/);

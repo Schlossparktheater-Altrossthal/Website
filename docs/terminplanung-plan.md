@@ -208,7 +208,12 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
    - Persönliche Zeitfenster aus eigenen Szenen (nur gestaffelt) und Gewerk-Bausteinen mit Uhrzeit (`computePersonalWindows`). Probenseite und Feed zeigen den ganzen Ablauf (`blockLabel`).
    - Gewerk-Leitung: im Gewerk-Dashboard „Baustein organisieren“ (Zeit, Raum, Ablauf, wer kommt; `saveDepartmentBlockAction`). Ausnahmen nur für Mitglieder, die allein über Gewerk-Bausteine eingeladen sind; neu Eingeplante werden benachrichtigt. Raum/Beschreibung von Gewerk-Bausteinen schreibt nur die Gewerk-Leitung; Zeiten überschreibt der Probeneditor nur, wenn die Planung sie selbst geändert hat (`timesChanged`).
    - Gewerk-Dashboard zeigt Termine auch bei Beteiligung per Baustein, mit Kennzeichen „vorgemerkt“ und „Euer Teil“.
-5. Editoren zusammenführen, `GENERAL_EVENT_WHERE` und `kind: "REHEARSAL"`-Filter bereinigen, Navigation vereinen.
+5. [x] Editoren zusammenführen (2026-09-27, keine Migration):
+   - Eine Seite **Terminplanung** (`/mitglieder/terminplanung`), Probenplanung leitet dorthin um (`?art=proben`), ein Navigationseintrag. Aufbau nach Vorbild der Sperrliste: Monatsraster, am Desktop Tagesspalte, mobil Tagesblatt (BottomSheet) mit Terminen samt „wer kann“, Sperrliste des Tages und großen Knöpfen „Probe“/„Termin“; daneben Listenansicht, Filter Alle/Proben/Termine, Entwürfe, zuklappbarer Szenen-Stand. Alter Probenkalender, Probenliste und Termin-Dialog sind entfernt (auch `/api/calendar-events`).
+   - Ein Editor (`/mitglieder/terminplanung/[eventId]`) für alle Arten: Art (mit Szenen immer Probe), ganztägig, mehrere Tage, Ort, Beschreibung auf Klick, „gilt für“ (nur ohne Probe), „Wer ist dabei?“ mit „Alle“ (ohne Einladung) oder Baukasten, Bausteine optional aufklappbar, feste Aktionsleiste unten (Verwerfen/Löschen, Vormerken, Ansetzen). Alle Termine durchlaufen jetzt Entwurf → vorgemerkt → angesetzt.
+   - Sperrliste: „Termin“ legt einen Entwurf an und öffnet den Editor; Termine im Tag öffnen den Editor.
+   - `GENERAL_EVENT_WHERE` filtert jetzt auch den Status (Entwürfe allgemeiner Termine sind unsichtbar); vorgemerkte allgemeine Termine tragen „(vorgemerkt)“. Die übrigen `kind: "REHEARSAL"`-Stellen bleiben bewusst: Proben haben für Mitglieder eigene Einladung mit Absage.
+   - Offen: Absage für vorgemerkte allgemeine Termine mit Zielgruppe (bisher nur Proben).
 6. E2E + Release zusammen mit Phase 5b (Prod hat die Terminplanung noch nicht).
 
 **Stand und Wiedereinstieg (2026-09-27)**

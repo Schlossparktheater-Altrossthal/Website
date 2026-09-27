@@ -5,10 +5,14 @@ import { formatIsoDateInTimeZone } from "@/lib/date-time";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
-/** Allgemeine Termine: ohne Gewerk-Termine (Gewerk-Portal) und ohne Proben (Probenplanung). */
+/**
+ * Allgemeine Termine für Mitglieder: vorgemerkt oder angesetzt, ohne Gewerk-Termine
+ * (Gewerk-Portal) und ohne Proben (eigene Einladung mit Zu-/Absage, siehe `readRehearsalEntries`).
+ */
 export const GENERAL_EVENT_WHERE = {
   departmentId: null,
   kind: { not: "REHEARSAL" },
+  status: visibleEventStatus,
 } satisfies Prisma.CalendarEventWhereInput;
 
 /**
@@ -60,17 +64,12 @@ export async function readCalendarEvents({
   return events.map(toCalendarEntry);
 }
 
-export async function readCalendarEventById(id: string) {
-  const event = await prisma.calendarEvent.findFirst({ where: { id, ...GENERAL_EVENT_WHERE } });
-  return event ? toCalendarEntry(event) : null;
-}
-
 function toCalendarEntry(event: CalendarEvent): CalendarEntry {
   return {
     id: event.id,
     source: "event",
     kind: event.kind,
-    title: event.title,
+    title: event.status === "TENTATIVE" ? `${event.title} (vorgemerkt)` : event.title,
     start: event.start.toISOString(),
     end: event.end?.toISOString() ?? null,
     allDay: event.allDay,

@@ -7,15 +7,22 @@ import { prisma } from "@/lib/prisma";
 import { broadcastRehearsalCreated, sendNotification } from "@/lib/realtime/triggers";
 import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 
+import type { CalendarEventKind } from "@prisma/client";
+
 import {
   computeEnd,
   draftUpdateSchema,
   ensurePlanner,
+  eventNoun,
+  OPEN_AUDIENCE,
   parseEnd,
   parseStart,
   publishSchema,
   REHEARSAL_TIME_ZONE,
   readEventSchedule,
+  resolveKind,
+  resolveTargetShow,
+  resolveTimes,
   sanitizeDescription,
   syncEventBlocks,
   syncRehearsalSchedule,
@@ -30,6 +37,8 @@ import {
 } from "@/lib/calendar/audience-server";
 
 export async function createRehearsalDraftAction(input?: {
+  /** Ohne Angabe eine Probe. */
+  kind?: CalendarEventKind;
   title?: string;
   date?: string;
   time?: string;
@@ -67,12 +76,14 @@ export async function createRehearsalDraftAction(input?: {
       console.warn("Invalid draft end provided", error);
     }
   }
-  const normalizedTitle = input?.title?.trim() || "Neue Probe";
-  const normalizedLocation = input?.location?.trim() || "Noch offen";
+  const kind = input?.kind ?? "REHEARSAL";
+  const isRehearsal = kind === "REHEARSAL";
+  const normalizedTitle = input?.title?.trim() || (isRehearsal ? "Neue Probe" : "Neuer Termin");
+  const normalizedLocation = input?.location?.trim() || (isRehearsal ? "Noch offen" : null);
 
   const rehearsal = await prisma.calendarEvent.create({
     data: {
-      kind: "REHEARSAL",
+      kind,
       title: normalizedTitle,
       location: normalizedLocation,
       start,
@@ -85,11 +96,14 @@ export async function createRehearsalDraftAction(input?: {
     select: { id: true },
   });
 
-  // Vorschlag: ganze Produktion; die Planung grenzt im Editor ein.
+  // Proben: Vorschlag ganze Produktion, die Planung grenzt im Editor ein. Andere Termine
+  // gelten zunächst für alle, ohne Einladung.
   const parsedAudience = input?.audience ? audienceInputSchema.safeParse(input.audience) : null;
   const audience: AudienceInput = parsedAudience?.success
     ? parsedAudience.data
-    : { rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }], overrides: [] };
+    : isRehearsal
+      ? { rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }], overrides: [] }
+      : OPEN_AUDIENCE;
   const context = await loadAudienceContext(auth.showId);
   await prisma.$transaction(async (tx) => {
     await saveEventAudience(tx, rehearsal.id, audience, context);
@@ -109,9 +123,15 @@ export async function createRehearsalDraftAction(input?: {
 
 export async function updateRehearsalDraftAction(input: {
   id: string;
+  kind?: CalendarEventKind;
   title?: string;
   date?: string;
   time?: string;
+  endTime?: string;
+  endDate?: string | null;
+  allDay?: boolean;
+  scope?: "production" | "all";
+  openAudience?: boolean;
   location?: string;
   description?: string;
   audience?: AudienceInput;
@@ -127,9 +147,16 @@ export async function updateRehearsalDraftAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, audience, schedule } = parsed.data;
+  const { id, title, date, time, endTime, endDate, allDay, location, description, schedule } =
+    parsed.data;
+  const target = await resolveTargetShow(auth, parsed.data.scope);
+  if (!target.ok) {
+    return { error: target.error } as const;
+  }
+  const audience = parsed.data.openAudience ? OPEN_AUDIENCE : parsed.data.audience;
+  const kind = resolveKind(parsed.data.kind, audience);
   const [context, storedSchedule] = await Promise.all([
-    loadAudienceContext(auth.showId),
+    loadAudienceContext(target.showId),
     readEventSchedule(id),
   ]);
 
@@ -137,7 +164,7 @@ export async function updateRehearsalDraftAction(input: {
     await prisma.$transaction(async (tx) => {
       const existing = await tx.calendarEvent.findUnique({
         where: { id },
-        select: { status: true, start: true, end: true },
+        select: { status: true, start: true, end: true, kind: true },
       });
       if (!existing) {
         throw new Error("not-found");
@@ -151,8 +178,18 @@ export async function updateRehearsalDraftAction(input: {
       if (typeof title === "string") {
         updateData.title = title;
       }
+      const nextKind = kind ?? existing.kind;
+      if (kind) updateData.kind = kind;
+      if (allDay !== undefined) updateData.allDay = allDay;
+      if (parsed.data.scope) {
+        updateData.show = target.showId ? { connect: { id: target.showId } } : { disconnect: true };
+      }
       if (typeof location === "string") {
-        updateData.location = location.trim() ? location.trim() : "Noch offen";
+        updateData.location = location.trim()
+          ? location.trim()
+          : nextKind === "REHEARSAL"
+            ? "Noch offen"
+            : null;
       }
       if (description !== undefined) {
         updateData.description = sanitizeDescription(description);
@@ -169,20 +206,14 @@ export async function updateRehearsalDraftAction(input: {
         REHEARSAL_TIME_ZONE,
       );
 
-      if (date || time) {
-        const targetDate = date ?? currentDate;
-        const targetTime = time ?? currentTime;
-        nextStart = parseStart(targetDate, targetTime);
-        updateData.start = nextStart;
-      }
-
-      if (endTime !== undefined) {
-        const targetDateForEnd = date ?? currentDate;
-        const parsedEnd = parseEnd(targetDateForEnd, endTime, nextStart);
-        updateData.end = parsedEnd;
-      } else if (date || time) {
-        const nextEnd = computeEnd(nextStart, existing.start, existing.end);
-        updateData.end = nextEnd;
+      if (date || time || endTime !== undefined || endDate !== undefined || allDay !== undefined) {
+        const times = resolveTimes(
+          { date: date ?? currentDate, time: time ?? currentTime, endTime, endDate, allDay },
+          existing,
+        );
+        nextStart = times.start;
+        updateData.start = times.start;
+        updateData.end = times.end;
       }
 
       await syncEventBlocks(tx, { eventId: id, start: nextStart, schedule });
@@ -210,7 +241,7 @@ export async function updateRehearsalDraftAction(input: {
     return { success: true as const };
   } catch (error) {
     if (error instanceof Error && error.message === "not-found") {
-      return { error: "Probe wurde nicht gefunden." } as const;
+      return { error: "Termin wurde nicht gefunden." } as const;
     }
     if (error instanceof Error && error.message === "not-draft") {
       return { error: "Der Entwurf wurde bereits veröffentlicht." } as const;
@@ -234,10 +265,15 @@ export async function updateRehearsalDraftAction(input: {
 
 export async function publishRehearsalAction(input: {
   id: string;
+  kind?: CalendarEventKind;
   title: string;
   date: string;
   time: string;
   endTime?: string;
+  endDate?: string | null;
+  allDay?: boolean;
+  scope?: "production" | "all";
+  openAudience?: boolean;
   location?: string;
   description?: string;
   audience?: AudienceInput;
@@ -254,10 +290,27 @@ export async function publishRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, audience, schedule, target } =
-    parsed.data;
+  const {
+    id,
+    title,
+    date,
+    time,
+    endTime,
+    endDate,
+    allDay,
+    location,
+    description,
+    schedule,
+    target,
+  } = parsed.data;
+  const show = await resolveTargetShow(auth, parsed.data.scope);
+  if (!show.ok) {
+    return { error: show.error } as const;
+  }
+  const openAudience = parsed.data.openAudience === true;
+  const audience = openAudience ? OPEN_AUDIENCE : parsed.data.audience;
   const [context, stored, storedSchedule] = await Promise.all([
-    loadAudienceContext(auth.showId),
+    loadAudienceContext(show.showId),
     audience ? null : readEventAudience(id),
     readEventSchedule(id),
   ]);
@@ -270,11 +323,13 @@ export async function publishRehearsalAction(input: {
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.calendarEvent.findUnique({
         where: { id },
-        select: { status: true, start: true, end: true, createdById: true },
+        select: { status: true, start: true, end: true, createdById: true, kind: true },
       });
       if (!existing) {
         throw new Error("not-found");
       }
+      const kind = resolveKind(parsed.data.kind, audience) ?? existing.kind;
+      const noun = eventNoun(kind);
       // Entwurf → vorgemerkt/angesetzt, vorgemerkt → angesetzt.
       const allowed =
         existing.status === "DRAFT" || (existing.status === "TENTATIVE" && target === "SCHEDULED");
@@ -283,11 +338,12 @@ export async function publishRehearsalAction(input: {
       }
       const wasTentative = existing.status === "TENTATIVE";
 
-      const start = parseStart(date, time);
-      const end = endTime
-        ? parseEnd(date, endTime, start)
-        : computeEnd(start, existing.start, existing.end);
-      const normalizedLocation = location?.trim() ? location.trim() : "Noch offen";
+      const { start, end } = resolveTimes({ date, time, endTime, endDate, allDay }, existing);
+      const normalizedLocation = location?.trim()
+        ? location.trim()
+        : kind === "REHEARSAL"
+          ? "Noch offen"
+          : null;
       const safeDescription = sanitizeDescription(description);
 
       await syncEventBlocks(tx, { eventId: id, start, schedule });
@@ -297,7 +353,9 @@ export async function publishRehearsalAction(input: {
         currentAudience,
         context,
       );
-      if (!syncedInvitees.length) {
+      // Ohne Zielgruppe gilt ein Termin für alle; Proben brauchen Eingeladene.
+      const open = !currentAudience.rules.length && !currentAudience.overrides.length;
+      if (!syncedInvitees.length && (kind === "REHEARSAL" || !open)) {
         throw new Error("no-invitees");
       }
       await syncRehearsalSchedule(tx, {
@@ -319,26 +377,29 @@ export async function publishRehearsalAction(input: {
           : `Am ${formatter.format(start)}`;
       const notificationTitle =
         target === "TENTATIVE"
-          ? `Probe vorgemerkt: ${title}`
+          ? `${noun} vorgemerkt: ${title}`
           : wasTentative
-            ? `Probe angesetzt: ${title}`
-            : `Neue Probe: ${title}`;
+            ? `${noun} angesetzt: ${title}`
+            : `${kind === "REHEARSAL" ? "Neue Probe" : "Neuer Termin"}: ${title}`;
 
       const rehearsal = await tx.calendarEvent.update({
         where: { id },
         data: {
           title,
+          kind,
           start,
           end,
+          ...(allDay !== undefined ? { allDay } : {}),
+          ...(parsed.data.scope ? { showId: show.showId } : {}),
           location: normalizedLocation,
           description: safeDescription,
           status: target,
           createdById: existing.createdById ?? auth.userId,
         },
-        select: { id: true, title: true, start: true, end: true, location: true },
+        select: { id: true, title: true, start: true, end: true, location: true, kind: true },
       });
 
-      if (!rehearsal.end) {
+      if (!rehearsal.end && kind === "REHEARSAL") {
         throw new Error("missing-end");
       }
 
@@ -347,7 +408,7 @@ export async function publishRehearsalAction(input: {
           data: {
             title: notificationTitle,
             body: notificationBody,
-            type: "rehearsal",
+            type: kind === "REHEARSAL" ? "rehearsal" : "calendar-event",
             eventId: rehearsal.id,
             recipients: {
               create: syncedInvitees.map((userId) => ({ userId })),
@@ -366,7 +427,7 @@ export async function publishRehearsalAction(input: {
 
     const { rehearsal, inviteeIds, body, notificationTitle } = result;
 
-    if (inviteeIds.length) {
+    if (inviteeIds.length && rehearsal.kind === "REHEARSAL") {
       await broadcastRehearsalCreated({
         rehearsal: {
           id: rehearsal.id,
@@ -385,22 +446,26 @@ export async function publishRehearsalAction(input: {
             title: notificationTitle,
             body,
             type: "info",
-            metadata: { rehearsalId: rehearsal.id },
+            metadata:
+              rehearsal.kind === "REHEARSAL"
+                ? { rehearsalId: rehearsal.id }
+                : { eventId: rehearsal.id },
           }),
         ),
       );
     }
 
-    revalidatePath("/mitglieder/probenplanung");
+    revalidatePath("/mitglieder/terminplanung");
+    revalidatePath("/mitglieder/sperrliste");
     revalidatePath("/mitglieder/meine-proben");
     revalidatePath(`/mitglieder/proben/${rehearsal.id}`);
     return { success: true as const, id: rehearsal.id };
   } catch (error) {
     if (error instanceof Error && error.message === "not-found") {
-      return { error: "Probe wurde nicht gefunden." } as const;
+      return { error: "Termin wurde nicht gefunden." } as const;
     }
     if (error instanceof Error && error.message === "not-draft") {
-      return { error: "Die Probe wurde bereits angesetzt." } as const;
+      return { error: "Der Termin wurde bereits angesetzt." } as const;
     }
     if (error instanceof Error && error.message === "no-invitees") {
       return { error: "Bitte wähle mindestens eine Person aus." } as const;
@@ -415,7 +480,7 @@ export async function publishRehearsalAction(input: {
       return { error: error.message } as const;
     }
     console.error("Error publishing rehearsal", error);
-    return { error: "Die Probe konnte nicht veröffentlicht werden." } as const;
+    return { error: "Der Termin konnte nicht veröffentlicht werden." } as const;
   }
 }
 
@@ -433,7 +498,7 @@ export async function discardRehearsalDraftAction(input: { id: string }) {
     await prisma.calendarEvent.delete({
       where: { id: input.id, status: "DRAFT" },
     });
-    revalidatePath("/mitglieder/probenplanung");
+    revalidatePath("/mitglieder/terminplanung");
     return { success: true as const };
   } catch (error) {
     console.error("Error discarding rehearsal draft", error);

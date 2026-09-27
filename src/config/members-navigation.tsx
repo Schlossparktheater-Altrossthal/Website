@@ -134,15 +134,6 @@ const EventPlanningIcon = createMembersNavIcon(
   </>,
 );
 
-const RehearsalPlanningIcon = createMembersNavIcon(
-  <>
-    <rect x="3" y="4" width="18" height="18" rx="2" />
-    <path d="M16 2v4" />
-    <path d="M8 2v4" />
-    <path d="M3 10h18" />
-  </>,
-);
-
 const ProductionIcon = createMembersNavIcon(
   <>
     <path d="M3 4h18v4H3z" />
@@ -263,12 +254,6 @@ export const membersNavigation = [
         label: "Überblick",
         permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
         icon: ProductionIcon,
-      },
-      {
-        href: "/mitglieder/probenplanung",
-        label: "Probenplanung",
-        permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
-        icon: RehearsalPlanningIcon,
       },
       {
         href: "/mitglieder/terminplanung",

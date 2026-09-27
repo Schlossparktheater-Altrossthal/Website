@@ -8,7 +8,7 @@ import { authFile } from "./env";
 const ROUTES = [
   "/mitglieder",
   "/mitglieder/meine-proben",
-  "/mitglieder/probenplanung",
+  "/mitglieder/terminplanung",
   "/mitglieder/produktionen",
   "/mitglieder/produktionen/stueck",
   "/mitglieder/produktionen/stueck?ansicht=rollen",

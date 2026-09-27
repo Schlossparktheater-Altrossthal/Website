@@ -12,7 +12,7 @@ import { toDayKey } from "@/lib/sperrliste/day-tiers";
 import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 import type { HolidayRange } from "@/types/holidays";
 
-import { EventDialog, type EventDialogState } from "@/components/calendar/event-dialog";
+import { useCreateDraft } from "../terminplanung/new-event";
 import { CalendarFeedDialog } from "./calendar-feed-dialog";
 import { ExportButton } from "./export-button";
 import { MyCalendar } from "./my-calendar";
@@ -65,8 +65,7 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
     publicHoliday: data.defaultPublicHolidaySourceUrl,
   });
   const [teamEntries, setTeamEntries] = useState(data.teamEntries);
-  const [calendarEntries, setCalendarEntries] = useState(data.calendarEntries);
-  const [eventDialog, setEventDialog] = useState<EventDialogState>(null);
+  const { create: createDraft } = useCreateDraft();
 
   const { entries, setDay, addRange, pendingKey } = useMyEntries({
     initialEntries: data.myEntries,
@@ -78,7 +77,7 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
   const model = useCalendarModel({
     month,
     holidays,
-    calendarEntries,
+    calendarEntries: data.calendarEntries,
     teamEntries,
     finalWeek: data.finalWeek,
     preferredWeekdays: settings.preferredWeekdays,
@@ -86,10 +85,11 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
     freezeDays: settings.freezeDays,
   });
 
-  const openCreate = useCallback((date: string) => setEventDialog({ mode: "create", date }), []);
+  // Neue Termine entstehen als Entwurf im Editor der Terminplanung (Art dort wählbar).
+  const openCreate = useCallback((date: string) => createDraft("MEETING", date), [createDraft]);
   const openEdit = useCallback(
-    (entry: CalendarEntry) => setEventDialog({ mode: "edit", entry }),
-    [],
+    (entry: CalendarEntry) => router.push(`/mitglieder/terminplanung/${entry.id}`),
+    [router],
   );
 
   const actions = (
@@ -203,24 +203,6 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
           onEditEvent={openEdit}
         />
       )}
-
-      <EventDialog
-        state={eventDialog}
-        onClose={() => setEventDialog(null)}
-        production={data.production ?? null}
-        onSaved={(entry, previousId) =>
-          setCalendarEntries((current) =>
-            [...current.filter((item) => item.id !== (previousId ?? entry.id)), entry].sort(
-              (a, b) => a.start.localeCompare(b.start),
-            ),
-          )
-        }
-        onDeleted={(id) =>
-          setCalendarEntries((current) =>
-            current.filter((item) => !(item.source === "event" && item.id === id)),
-          )
-        }
-      />
     </div>
   );
 }

@@ -168,7 +168,7 @@ export default async function RehearsalDetailPage({
             ) : null}
             {canPlan ? (
               <Link
-                href={`/mitglieder/probenplanung/proben/${rehearsal.id}`}
+                href={`/mitglieder/terminplanung/${rehearsal.id}`}
                 className="text-xs font-medium text-primary hover:underline"
               >
                 In der Planung bearbeiten

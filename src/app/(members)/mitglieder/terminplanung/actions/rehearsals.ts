@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import type { CalendarEventKind, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { broadcastRehearsalUpdated, sendNotification } from "@/lib/realtime/triggers";
@@ -13,13 +13,15 @@ import {
 } from "@/lib/calendar/audience-server";
 
 import {
-  computeEnd,
   deleteSchema,
   ensurePlanner,
+  eventNoun,
   fetchInviteeIds,
-  parseEnd,
-  parseStart,
+  OPEN_AUDIENCE,
   REHEARSAL_TIME_ZONE,
+  resolveKind,
+  resolveTargetShow,
+  resolveTimes,
   readEventSchedule,
   sanitizeDescription,
   syncEventBlocks,
@@ -30,10 +32,15 @@ import type { ScheduleInput } from "@/lib/calendar/scene-schedule-server";
 
 export async function updateRehearsalAction(input: {
   id: string;
+  kind?: CalendarEventKind;
   title: string;
   date: string;
   time: string;
   endTime?: string;
+  endDate?: string | null;
+  allDay?: boolean;
+  scope?: "production" | "all";
+  openAudience?: boolean;
   location?: string;
   description?: string;
   audience?: AudienceInput;
@@ -49,9 +56,15 @@ export async function updateRehearsalAction(input: {
     return { error: "Bitte Eingaben prüfen." } as const;
   }
 
-  const { id, title, date, time, endTime, location, description, audience, schedule } = parsed.data;
+  const { id, title, date, time, endTime, endDate, allDay, location, description, schedule } =
+    parsed.data;
+  const show = await resolveTargetShow(auth, parsed.data.scope);
+  if (!show.ok) {
+    return { error: show.error } as const;
+  }
+  const audience = parsed.data.openAudience ? OPEN_AUDIENCE : parsed.data.audience;
   const [context, storedSchedule] = await Promise.all([
-    loadAudienceContext(auth.showId),
+    loadAudienceContext(show.showId),
     readEventSchedule(id),
   ]);
 
@@ -66,26 +79,34 @@ export async function updateRehearsalAction(input: {
           location: true,
           description: true,
           status: true,
+          kind: true,
         },
       });
       if (!existing) {
         throw new Error("not-found");
       }
 
-      const start = parseStart(date, time);
-      const end = endTime
-        ? parseEnd(date, endTime, start)
-        : computeEnd(start, existing.start, existing.end);
+      const kind = resolveKind(parsed.data.kind, audience) ?? existing.kind;
+      const { start, end } = resolveTimes({ date, time, endTime, endDate, allDay }, existing);
       const normalizedLocation = location?.trim()
         ? location.trim()
-        : (existing.location ?? "Noch offen");
+        : kind === "REHEARSAL"
+          ? (existing.location ?? "Noch offen")
+          : null;
 
       let sanitizedDescription: string | null | undefined;
       const updateData: Prisma.CalendarEventUpdateInput = {
         title,
+        kind,
         start,
         end,
         location: normalizedLocation,
+        ...(allDay !== undefined ? { allDay } : {}),
+        ...(parsed.data.scope
+          ? {
+              show: show.showId ? { connect: { id: show.showId } } : { disconnect: true },
+            }
+          : {}),
       };
 
       if (description !== undefined) {
@@ -115,6 +136,7 @@ export async function updateRehearsalAction(input: {
           start: true,
           end: true,
           location: true,
+          kind: true,
         },
       });
       await syncRehearsalSchedule(tx, {
@@ -148,7 +170,8 @@ export async function updateRehearsalAction(input: {
       timeStyle: "short",
       timeZone: REHEARSAL_TIME_ZONE,
     });
-    const updatedTitle = `Probe aktualisiert: ${rehearsal.title}`;
+    const noun = eventNoun(rehearsal.kind);
+    const updatedTitle = `${noun} aktualisiert: ${rehearsal.title}`;
 
     const updates: string[] = [];
 
@@ -204,7 +227,10 @@ export async function updateRehearsalAction(input: {
             title,
             body,
             type: "info",
-            metadata: { rehearsalId: rehearsal.id },
+            metadata:
+              rehearsal.kind === "REHEARSAL"
+                ? { rehearsalId: rehearsal.id }
+                : { eventId: rehearsal.id },
           }),
         ),
       );
@@ -223,9 +249,9 @@ export async function updateRehearsalAction(input: {
     }
     await notifyUsers(
       addedIds,
-      `Neue Probe: ${rehearsal.title}`,
+      `${rehearsal.kind === "REHEARSAL" ? "Neue Probe" : "Neuer Termin"}: ${rehearsal.title}`,
       `Am ${formatter.format(rehearsal.start)}`,
-      "rehearsal",
+      rehearsal.kind === "REHEARSAL" ? "rehearsal" : "calendar-event",
     );
     await notifyUsers(
       removedIds,
@@ -235,7 +261,7 @@ export async function updateRehearsalAction(input: {
     );
 
     const touched = [...new Set([...targetInvitees, ...removedIds])];
-    if (touched.length) {
+    if (touched.length && rehearsal.kind === "REHEARSAL") {
       await broadcastRehearsalUpdated({
         rehearsalId: rehearsal.id,
         changes: {
@@ -248,14 +274,15 @@ export async function updateRehearsalAction(input: {
       });
     }
 
-    revalidatePath("/mitglieder/probenplanung");
+    revalidatePath("/mitglieder/terminplanung");
+    revalidatePath("/mitglieder/sperrliste");
     revalidatePath("/mitglieder/meine-proben");
     revalidatePath(`/mitglieder/proben/${rehearsal.id}`);
 
     return { success: true as const };
   } catch (error) {
     if (error instanceof Error && error.message === "not-found") {
-      return { error: "Die Probe konnte nicht aktualisiert werden." } as const;
+      return { error: "Der Termin konnte nicht aktualisiert werden." } as const;
     }
     if (error instanceof Error && error.message === "Endzeit muss nach der Startzeit liegen.") {
       return { error: error.message } as const;
@@ -264,7 +291,7 @@ export async function updateRehearsalAction(input: {
       return { error: error.message } as const;
     }
     console.error("Error updating rehearsal", error);
-    return { error: "Die Probe konnte nicht aktualisiert werden." } as const;
+    return { error: "Der Termin konnte nicht aktualisiert werden." } as const;
   }
 }
 
@@ -310,16 +337,16 @@ export async function deleteRehearsalAction(input: { id: string }) {
       targetUserIds: Array.from(targetUserIds),
     });
 
-    revalidatePath("/mitglieder/probenplanung");
+    revalidatePath("/mitglieder/terminplanung");
     revalidatePath("/mitglieder/meine-proben");
     revalidatePath(`/mitglieder/proben/${parsed.data.id}`);
 
     return { success: true as const };
   } catch (error) {
     if (error instanceof Error && error.message === "not-found") {
-      return { error: "Die Probe wurde nicht gefunden." } as const;
+      return { error: "Der Termin wurde nicht gefunden." } as const;
     }
     console.error("Error deleting rehearsal", error);
-    return { error: "Die Probe konnte nicht entfernt werden." } as const;
+    return { error: "Der Termin konnte nicht entfernt werden." } as const;
   }
 }
