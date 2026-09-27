@@ -1,0 +1,81 @@
+# Meine Termine
+
+## Zweck
+
+Persönliche Übersicht über alles, was für die Person angesetzt ist: eigene Proben, Termine der
+eigenen Gewerke und „Für alle"-Termine. Jede Zeile sagt, warum die Person dabei ist, und erlaubt
+Absage bzw. Rücknahme. Absagen sind mit der Sperrliste verzahnt (siehe unten).
+
+## Routen
+
+- `/mitglieder/meine-proben` – Liste (Standard) oder Kalender; der Zustand steht komplett in der URL:
+  - `?ansicht=kalender` – Monatsübersicht statt Liste
+  - `?gruppe=required|optional|club` – Filter: Muss ich hin / Optional / Für alle
+  - `?q=<text>` – Suche über Titel und Ort
+  - `?vergangen=1` – vergangene Termine (letzte 90 Tage, neueste zuerst)
+  - `?mehr=<n>` – Obergrenze je Datenquelle (Schrittweite 30, Maximum 300)
+
+## Permissions
+
+- `PRIVATE.REHEARSAL.OWN.VIEW` – Zugang zur Seite; fehlt sie, zeigt die Seite nur einen Hinweistext.
+- `PRIVATE.REHEARSAL.BLOCKLIST.VIEW` – die Sperrliste ist Pflichtbereich für alle Mitglieder; die
+  Absage schreibt dort hinein.
+- Schreibzugriffe prüfen serverseitig zusätzlich, ob der Termin für die Person sichtbar ist
+  (persönliche Einladung oder „Für alle" der eigenen Produktion).
+
+## Wichtige Komponenten
+
+- `src/app/(members)/mitglieder/meine-proben/page.tsx` – Server-Komponente: liest `searchParams`,
+  baut alle Links daraus, rechte Spalte mit „Dein nächster Termin" und Tipps.
+- `.../my-events-list.tsx` – Abschnitte „Heute & Morgen · Diese Woche · Später · Vergangen" mit
+  Zählern, Leerzustand.
+- `.../my-event-row.tsx` – die Zeile (Kalenderblatt) mit Badges, Zeit, Ort, „Dabei als",
+  Konflikt-Hinweis und Absage-Steuerung; von Liste und Kalender gemeinsam genutzt.
+- `.../my-events-calendar.tsx` – Monatsansicht (`MonthGrid` + `MonthSwitcher`); Tagesdetails am
+  Desktop unter dem Raster, mobil im Bottom-Sheet.
+- `.../decline-control.tsx` – Absage-Dialog (Notfall- und Normal-Variante) und „Doch dabei".
+- `.../actions.ts` – Server Actions mit Sichtbarkeitsprüfung.
+- `loading.tsx` – eigene Ladegrenze in Listenform.
+
+## Datenfluss
+
+- `src/lib/calendar/my-events.ts` – `readMyUpcomingEvents(userId, { past, search, limit })` bündelt
+  drei Queries (persönliche Einladungen, Gewerk-Termine, „Für alle") und ergänzt pro Termin
+  Abschnitt (`resolveEventBucket`), `withinFreeze`, `conflict` (eigene Sperre am Termintag) sowie
+  den Ort-Hinweis. `readNextEvent(userId)` liefert den nächsten Termin für das Widget.
+- `src/lib/calendar/block-list-link.ts` – Sperrfrist (`readFreezeDays`, `isWithinFreeze`) und die
+  Verzahnung mit der Sperrliste (`createBlockForDecline`, `removeBlockForDecline`).
+- Prisma: `CalendarEvent`, `EventParticipant`, `BlockedDay` (mit `eventId`), `Department`,
+  `DepartmentMembership`.
+
+## Absage und Notfall
+
+| Lage des Termins                      | Absage                | Grund                    | Eintrag in der Sperrliste |
+| ------------------------------------- | --------------------- | ------------------------ | ------------------------- |
+| außerhalb der Sperrfrist (Standard 7) | normale Absage (`no`) | freiwillig               | `BLOCKED` am Starttag     |
+| innerhalb der Sperrfrist              | Notfall (`emergency`) | Pflicht (min. 3 Zeichen) | `EMERGENCY` am Starttag   |
+
+- Der Eintrag entsteht am **Starttag** des Termins (`Europe/Berlin`) und ist mit dem Termin
+  verknüpft. Existiert an dem Tag schon ein eigener Eintrag, bleibt er unangetastet und wird nicht
+  verknüpft.
+- „Doch dabei" nimmt die Absage zurück und entfernt den verknüpften Eintrag – außer am selben Tag
+  ist noch ein anderer Termin abgesagt.
+- „Für alle"-Termine sind genauso absagbar; der Server prüft die Sichtbarkeit.
+- Die Planung wird **genau einmal** benachrichtigt: Meldet die Absage selbst, schweigt der
+  Sperrlisten-Eintrag. Bei Terminen ohne zuständige Person (reine „Für alle") bleibt nur der
+  Eintrag in der Sperrliste.
+- Vergangenes lässt sich nicht mehr absagen.
+- Der Zustand „Notfall" ist in der Sperrliste sichtbar, aber dort nicht setzbar – siehe
+  [sperrliste.md](sperrliste.md).
+
+## Realtime
+
+Keine eigene Live-Aktualisierung; die Seite liest bei jedem Aufruf neu. Nach Mutationen
+revalidiert `actions.ts` zusätzlich `/mitglieder/sperrliste` und die Probendetailseite.
+
+## Besonderheiten / Altlasten
+
+- Die Suche greift auf Titel und Ort, nicht auf „Dabei als" (`reasons` ist JSON).
+- Der Kalender zeigt Monate unabhängig von der Liste; ein Monatswechsel lädt keine neuen Daten.
+- `readNextEvent` ruft dieselbe Abfrage noch einmal ohne Filter auf (drei zusätzliche Queries) –
+  bewusst, damit die Sichtbarkeitslogik an einer Stelle bleibt.

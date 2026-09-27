@@ -33,7 +33,7 @@ Legende: ✅ ok · ⚠️ funktioniert, aber mit Einschränkung · ❓ unklar ·
 | `/mitglieder/mitgliederverwaltung`                       | ✅    | ✅     | ✅      | gemessen              | Karten↔Tabelle, `SectionNav`                                  |
 | `/mitglieder/mitgliederverwaltung/[userId]`              | ✅    | ✅     | ✅      | visuell (dynamisch)   | `xl:grid-cols-[320px_1fr]`                                    |
 | `/mitglieder/mitgliederverwaltung/aufbewahrung`          | ✅    | ✅     | ✅      | gemessen              | Listen                                                        |
-| `/mitglieder/meine-proben`                               | ✅    | ✅     | ✅      | automatisch           | Grid + `sm:flex-row`                                          |
+| `/mitglieder/meine-proben`                               | ✅    | ✅     | ✅      | gemessen              | Werkzeugzeile + Liste/Kalender-Umschalter                     |
 | `/mitglieder/koerpermasse`                               | ✅    | ✅     | ✅      | automatisch           | Karten↔Tabelle                                                |
 | `/mitglieder/fotoerlaubnisse`                            | ✅    | ✅     | ✅      | automatisch           | `lg:flex-row`                                                 |
 | `/mitglieder/rechte`                                     | ✅    | ✅     | ✅      | automatisch           | Karten↔Tabelle, Umschaltung ab `md`                           |

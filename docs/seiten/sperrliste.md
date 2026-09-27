@@ -56,7 +56,15 @@ Hintergrund und Entscheidungen: `docs/sperrliste-redesign-plan.md`.
 
 - Prisma-Modell: `BlockedDay` – ein Eintrag pro Mitglied und Datum (`@@unique([userId, date])`).
   Die Art des Tages wird über den Enum `BlockedDayKind` abgebildet:
-  `BLOCKED`, `LIMITED`, `PREFERRED`.
+  `BLOCKED`, `LIMITED`, `PREFERRED` und `EMERGENCY`.
+- **`EMERGENCY` („Notfall")** entsteht ausschließlich über eine Absage innerhalb der Sperrfrist in
+  [Meine Termine](meine-termine.md); `BlockedDay.eventId` verweist auf den Termin. Der Zustand
+  steht in Legende, Kalender und Tagesdetail, ist aber **nicht setzbar**: weder in der
+  Statusauswahl noch über die API (`POST`, `PATCH` und `Bulk` antworten mit 403). Im Tagesdetail
+  steht stattdessen ein Hinweis mit „Eintrag entfernen"; ansonsten zählt er wie gesperrt (Feed,
+  Export, Team-Ansicht).
+- Das **Löschen** eines Eintrags schränkt die Sperrfrist nicht ein – nur das Setzen und Erhöhen.
+  Eigene Einträge lassen sich also jederzeit wieder entfernen.
 - Schreiben/Löschen der Sperrtage läuft über die API-Routen `src/app/api/block-days/*`
   (`GET`/`POST` in `route.ts`, `PATCH`/`DELETE` in `[id]/route.ts`, Massenoperationen in
   `bulk/route.ts`).

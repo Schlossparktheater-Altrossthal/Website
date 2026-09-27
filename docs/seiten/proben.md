@@ -11,7 +11,7 @@ Probenplaner verwalten den Gesamtplan.
 - `/mitglieder/terminplanung` – organisationsweite Termine (für Planer; Liste nach Monaten)
 - `/mitglieder/terminplanung/[eventId]` – gemeinsamer Editor für Proben und Termine (alte Adresse `/mitglieder/probenplanung/proben/[id]` leitet um)
 - `/mitglieder/proben/[rehearsalId]` – Detailansicht einer Probe
-- `/mitglieder/meine-proben` – eigene Probentermine
+- `/mitglieder/meine-proben` – eigene Termine: Liste oder Kalender, Suche, Absagen (siehe [meine-termine.md](meine-termine.md))
 
 ## Permissions
 

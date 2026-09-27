@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-26, 89 Modelle, 42 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-27, 91 Modelle, 48 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -708,6 +708,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `show`            | → `Show`                 | @relation(fields: [showId], references: [id], onDelete: Cascade)                                              |
 | `characters`      | → `SceneCharacter[]`     |                                                                                                               |
 | `breakdownItems`  | → `SceneBreakdownItem[]` |                                                                                                               |
+| `rehearsals`      | → `EventBlock[]`         |                                                                                                               |
 
 - `@@unique([showId, slug], name: "showId_slug")`
 - `@@index([showId, sequence])`
@@ -778,6 +779,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `boardColumns`         | → `DepartmentBoardColumn[]` |                                                                      |
 | `permissions`          | → `DepartmentPermission[]`  |                                                                      |
 | `events`               | → `CalendarEvent[]`         |                                                                      |
+| `eventBlocks`          | → `EventBlock[]`            |                                                                      |
 | `documents`            | → `DepartmentDocument[]`    |                                                                      |
 
 - `@@unique([showId, slug], name: "showId_slug")`
@@ -881,29 +883,33 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Termine der Organisation (Proben, Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
 
-| Feld               | Typ                        | Attribute / Beschreibung                                                    |
-| ------------------ | -------------------------- | --------------------------------------------------------------------------- |
-| `id`               | `String`                   | @id @default(cuid())                                                        |
-| `title`            | `String`                   |                                                                             |
-| `kind`             | `CalendarEventKind` (enum) | @default(OTHER)                                                             |
-| `status`           | `EventStatus` (enum)       | @default(SCHEDULED)                                                         |
-| `start`            | `DateTime`                 |                                                                             |
-| `end`              | `DateTime?`                |                                                                             |
-| `allDay`           | `Boolean`                  | @default(false)                                                             |
-| `location`         | `String?`                  |                                                                             |
-| `description`      | `String?`                  |                                                                             |
-| `responseDeadline` | `DateTime?`                | Frist für Zu-/Absagen.                                                      |
-| `showId`           | `String?`                  |                                                                             |
-| `departmentId`     | `String?`                  | Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab. |
-| `createdById`      | `String?`                  |                                                                             |
-| `createdAt`        | `DateTime`                 | @default(now())                                                             |
-| `updatedAt`        | `DateTime`                 | @updatedAt                                                                  |
-| `show`             | → `Show?`                  | @relation(fields: [showId], references: [id], onDelete: SetNull)            |
-| `department`       | → `Department?`            | @relation(fields: [departmentId], references: [id], onDelete: Cascade)      |
-| `createdBy`        | → `User?`                  | @relation(fields: [createdById], references: [id], onDelete: SetNull)       |
-| `participants`     | → `EventParticipant[]`     |                                                                             |
-| `responseLogs`     | → `EventResponseLog[]`     |                                                                             |
-| `notifications`    | → `Notification[]`         |                                                                             |
+| Feld               | Typ                        | Attribute / Beschreibung                                                              |
+| ------------------ | -------------------------- | ------------------------------------------------------------------------------------- |
+| `id`               | `String`                   | @id @default(cuid())                                                                  |
+| `title`            | `String`                   |                                                                                       |
+| `kind`             | `CalendarEventKind` (enum) | @default(OTHER)                                                                       |
+| `status`           | `EventStatus` (enum)       | @default(SCHEDULED)                                                                   |
+| `start`            | `DateTime`                 |                                                                                       |
+| `end`              | `DateTime?`                |                                                                                       |
+| `allDay`           | `Boolean`                  | @default(false)                                                                       |
+| `location`         | `String?`                  |                                                                                       |
+| `description`      | `String?`                  |                                                                                       |
+| `responseDeadline` | `DateTime?`                | Frist für Zu-/Absagen.                                                                |
+| `scheduleMode`     | `EventScheduleMode` (enum) | @default(TOGETHER) Proben: alle zur Terminzeit oder gestaffelt mit Uhrzeit pro Szene. |
+| `showId`           | `String?`                  |                                                                                       |
+| `departmentId`     | `String?`                  | Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab.           |
+| `createdById`      | `String?`                  |                                                                                       |
+| `createdAt`        | `DateTime`                 | @default(now())                                                                       |
+| `updatedAt`        | `DateTime`                 | @updatedAt                                                                            |
+| `show`             | → `Show?`                  | @relation(fields: [showId], references: [id], onDelete: SetNull)                      |
+| `department`       | → `Department?`            | @relation(fields: [departmentId], references: [id], onDelete: Cascade)                |
+| `createdBy`        | → `User?`                  | @relation(fields: [createdById], references: [id], onDelete: SetNull)                 |
+| `participants`     | → `EventParticipant[]`     |                                                                                       |
+| `audienceRules`    | → `EventAudienceRule[]`    |                                                                                       |
+| `blocks`           | → `EventBlock[]`           |                                                                                       |
+| `responseLogs`     | → `EventResponseLog[]`     |                                                                                       |
+| `notifications`    | → `Notification[]`         |                                                                                       |
+| `blockedDays`      | → `BlockedDay[]`           |                                                                                       |
 
 - `@@index([start])`
 - `@@index([departmentId, start])`
@@ -913,20 +919,26 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Person an einem Termin: eingeladen (Proben) und/oder mit Zu-/Absage.
 
-| Feld           | Typ                         | Attribute / Beschreibung                                                                    |
-| -------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
-| `id`           | `String`                    | @id @default(cuid())                                                                        |
-| `eventId`      | `String`                    |                                                                                             |
-| `userId`       | `String`                    |                                                                                             |
-| `level`        | `ParticipationLevel` (enum) | @default(REQUIRED)                                                                          |
-| `invited`      | `Boolean`                   | @default(true) Eingeladen; `false` = nur Rückmeldung zu einem Termin für eine ganze Gruppe. |
-| `response`     | `AttendanceStatus?` (enum)  |                                                                                             |
-| `responseNote` | `String?`                   |                                                                                             |
-| `respondedAt`  | `DateTime?`                 |                                                                                             |
-| `createdAt`    | `DateTime`                  | @default(now())                                                                             |
-| `updatedAt`    | `DateTime`                  | @updatedAt                                                                                  |
-| `event`        | → `CalendarEvent`           | @relation(fields: [eventId], references: [id], onDelete: Cascade)                           |
-| `user`         | → `User`                    | @relation(fields: [userId], references: [id], onDelete: Cascade)                            |
+| Feld            | Typ                           | Attribute / Beschreibung                                                                    |
+| --------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `id`            | `String`                      | @id @default(cuid())                                                                        |
+| `eventId`       | `String`                      |                                                                                             |
+| `userId`        | `String`                      |                                                                                             |
+| `level`         | `ParticipationLevel` (enum)   | @default(REQUIRED)                                                                          |
+| `invited`       | `Boolean`                     | @default(true) Eingeladen; `false` = nur Rückmeldung zu einem Termin für eine ganze Gruppe. |
+| `reasons`       | `Json`                        | @default("[]") Warum die Person dabei ist, z. B. ["Bastian (Sz. 3, 5)", "Gewerk Technik"].  |
+| `override`      | `ParticipantOverride?` (enum) | Handentscheidung der Planung; übersteht jede Neuberechnung aus den Regeln.                  |
+| `levelOverride` | `ParticipationLevel?` (enum)  | Von Hand gesetzte Verbindlichkeit (sonst aus den Regeln).                                   |
+| `personalStart` | `DateTime?`                   | Gestaffelte Probe: persönliches Zeitfenster aus den eigenen Szenen.                         |
+| `personalEnd`   | `DateTime?`                   |                                                                                             |
+| `attended`      | `Boolean?`                    | Anwesenheit laut Nachbereitung (null = nicht erfasst).                                      |
+| `response`      | `AttendanceStatus?` (enum)    |                                                                                             |
+| `responseNote`  | `String?`                     |                                                                                             |
+| `respondedAt`   | `DateTime?`                   |                                                                                             |
+| `createdAt`     | `DateTime`                    | @default(now())                                                                             |
+| `updatedAt`     | `DateTime`                    | @updatedAt                                                                                  |
+| `event`         | → `CalendarEvent`             | @relation(fields: [eventId], references: [id], onDelete: Cascade)                           |
+| `user`          | → `User`                      | @relation(fields: [userId], references: [id], onDelete: Cascade)                            |
 
 - `@@unique([eventId, userId], name: "eventId_userId")`
 - `@@index([userId])`
@@ -955,16 +967,17 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Persönlicher Kalender-Abo-Link (ICS). Der Token steht im Link; wer ihn kennt, sieht die Termine.
 
-| Feld                 | Typ         | Attribute / Beschreibung                                         |
-| -------------------- | ----------- | ---------------------------------------------------------------- |
-| `id`                 | `String`    | @id @default(cuid())                                             |
-| `userId`             | `String`    | @unique                                                          |
-| `token`              | `String`    | @unique                                                          |
-| `includeBlockedDays` | `Boolean`   | @default(false)                                                  |
-| `lastAccessedAt`     | `DateTime?` |                                                                  |
-| `createdAt`          | `DateTime`  | @default(now())                                                  |
-| `updatedAt`          | `DateTime`  | @updatedAt                                                       |
-| `user`               | → `User`    | @relation(fields: [userId], references: [id], onDelete: Cascade) |
+| Feld                 | Typ                | Attribute / Beschreibung                                                                               |
+| -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
+| `id`                 | `String`           | @id @default(cuid())                                                                                   |
+| `userId`             | `String`           | @unique                                                                                                |
+| `token`              | `String`           | @unique                                                                                                |
+| `scope`              | `FeedScope` (enum) | @default(MINE) MINE: nur eigene Termine; PRODUCTIONS: zusätzlich alle Proben der eigenen Produktionen. |
+| `includeBlockedDays` | `Boolean`          | @default(false)                                                                                        |
+| `lastAccessedAt`     | `DateTime?`        |                                                                                                        |
+| `createdAt`          | `DateTime`         | @default(now())                                                                                        |
+| `updatedAt`          | `DateTime`         | @updatedAt                                                                                             |
+| `user`               | → `User`           | @relation(fields: [userId], references: [id], onDelete: Cascade)                                       |
 
 ### `FinalRehearsalDuty`
 
@@ -991,16 +1004,26 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `Notification`
 
-| Feld         | Typ                         | Attribute / Beschreibung                                          |
-| ------------ | --------------------------- | ----------------------------------------------------------------- |
-| `id`         | `String`                    | @id @default(cuid())                                              |
-| `title`      | `String`                    |                                                                   |
-| `body`       | `String?`                   |                                                                   |
-| `type`       | `String?`                   |                                                                   |
-| `createdAt`  | `DateTime`                  | @default(now())                                                   |
-| `eventId`    | `String?`                   |                                                                   |
-| `event`      | → `CalendarEvent?`          | @relation(fields: [eventId], references: [id], onDelete: Cascade) |
-| `recipients` | → `NotificationRecipient[]` |                                                                   |
+| Feld         | Typ                         | Attribute / Beschreibung                                                                                        |
+| ------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `id`         | `String`                    | @id @default(cuid())                                                                                            |
+| `title`      | `String`                    |                                                                                                                 |
+| `body`       | `String?`                   |                                                                                                                 |
+| `type`       | `String?`                   |                                                                                                                 |
+| `createdAt`  | `DateTime`                  | @default(now())                                                                                                 |
+| `eventId`    | `String?`                   |                                                                                                                 |
+| `event`      | → `CalendarEvent?`          | @relation(fields: [eventId], references: [id], onDelete: Cascade)                                               |
+| `category`   | `String`                    | @default("system") Siehe `src/lib/notifications/types.ts`: proben \| termine \| gewerke \| produktion \| system |
+| `kind`       | `String`                    | @default("info") info = Hinweis, action = braucht eine Reaktion (bleibt offen bis erledigt)                     |
+| `priority`   | `String`                    | @default("normal") normal \| urgent                                                                             |
+| `actionUrl`  | `String?`                   |                                                                                                                 |
+| `groupKey`   | `String?`                   | Gleicher Schlüssel = ein Bündel in der Glocke (z. B. `decline:<eventId>`)                                       |
+| `showId`     | `String?`                   |                                                                                                                 |
+| `actorId`    | `String?`                   |                                                                                                                 |
+| `data`       | `Json?`                     |                                                                                                                 |
+| `recipients` | → `NotificationRecipient[]` |                                                                                                                 |
+
+- `@@index([groupKey])`
 
 ### `NotificationRecipient`
 
@@ -1010,10 +1033,14 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `notificationId` | `String`         |                                                                          |
 | `userId`         | `String`         |                                                                          |
 | `readAt`         | `DateTime?`      |                                                                          |
+| `doneAt`         | `DateTime?`      |                                                                          |
+| `archivedAt`     | `DateTime?`      |                                                                          |
+| `pushedAt`       | `DateTime?`      |                                                                          |
 | `notification`   | → `Notification` | @relation(fields: [notificationId], references: [id], onDelete: Cascade) |
 | `user`           | → `User`         | @relation(fields: [userId], references: [id], onDelete: Cascade)         |
 
 - `@@unique([notificationId, userId])`
+- `@@index([userId, archivedAt, doneAt])`
 
 ## Verfügbarkeit & Sperrliste
 
@@ -1050,18 +1077,21 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Zu- oder Absage einer Person zu einem Termin.
 
-| Feld        | Typ                     | Attribute / Beschreibung                                         |
-| ----------- | ----------------------- | ---------------------------------------------------------------- |
-| `id`        | `String`                | @id @default(cuid())                                             |
-| `userId`    | `String`                |                                                                  |
-| `date`      | `DateTime`              |                                                                  |
-| `reason`    | `String?`               |                                                                  |
-| `kind`      | `BlockedDayKind` (enum) | @default(BLOCKED)                                                |
-| `createdAt` | `DateTime`              | @default(now())                                                  |
-| `updatedAt` | `DateTime`              | @updatedAt                                                       |
-| `user`      | → `User`                | @relation(fields: [userId], references: [id], onDelete: Cascade) |
+| Feld        | Typ                     | Attribute / Beschreibung                                              |
+| ----------- | ----------------------- | --------------------------------------------------------------------- |
+| `id`        | `String`                | @id @default(cuid())                                                  |
+| `userId`    | `String`                |                                                                       |
+| `date`      | `DateTime`              |                                                                       |
+| `reason`    | `String?`               |                                                                       |
+| `kind`      | `BlockedDayKind` (enum) | @default(BLOCKED)                                                     |
+| `eventId`   | `String?`               | Termin, der diesen Eintrag ausgelöst hat (Absage in „Meine Termine"). |
+| `createdAt` | `DateTime`              | @default(now())                                                       |
+| `updatedAt` | `DateTime`              | @updatedAt                                                            |
+| `user`      | → `User`                | @relation(fields: [userId], references: [id], onDelete: Cascade)      |
+| `event`     | → `CalendarEvent?`      | @relation(fields: [eventId], references: [id], onDelete: SetNull)     |
 
 - `@@unique([userId, date])`
+- `@@index([eventId])`
 
 ### `Availability`
 
@@ -1639,6 +1669,47 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `createdAt`      | `DateTime` | @default(now())          |
 | `updatedAt`      | `DateTime` | @updatedAt               |
 
+### `EventBlock`
+
+> Baustein eines Termins in Reihenfolge, optional mit Uhrzeit und Raum (auch parallel); nach dem Termin mit Ergebnis.
+
+| Feld           | Typ                             | Attribute / Beschreibung                                               |
+| -------------- | ------------------------------- | ---------------------------------------------------------------------- |
+| `id`           | `String`                        | @id @default(cuid())                                                   |
+| `eventId`      | `String`                        |                                                                        |
+| `type`         | `EventBlockType` (enum)         | @default(SCENE)                                                        |
+| `sceneId`      | `String?`                       |                                                                        |
+| `departmentId` | `String?`                       |                                                                        |
+| `title`        | `String?`                       |                                                                        |
+| `description`  | `String?`                       |                                                                        |
+| `location`     | `String?`                       |                                                                        |
+| `order`        | `Int`                           | @default(0)                                                            |
+| `startsAt`     | `DateTime?`                     |                                                                        |
+| `endsAt`       | `DateTime?`                     |                                                                        |
+| `outcome`      | `SceneRehearsalOutcome?` (enum) |                                                                        |
+| `note`         | `String?`                       |                                                                        |
+| `event`        | → `CalendarEvent`               | @relation(fields: [eventId], references: [id], onDelete: Cascade)      |
+| `scene`        | → `Scene?`                      | @relation(fields: [sceneId], references: [id], onDelete: Cascade)      |
+| `department`   | → `Department?`                 | @relation(fields: [departmentId], references: [id], onDelete: Cascade) |
+
+- `@@unique([eventId, sceneId])`
+- `@@index([sceneId])`
+- `@@index([departmentId])`
+
+### `EventAudienceRule`
+
+| Feld        | Typ                         | Attribute / Beschreibung                                          |
+| ----------- | --------------------------- | ----------------------------------------------------------------- |
+| `id`        | `String`                    | @id @default(cuid())                                              |
+| `eventId`   | `String`                    |                                                                   |
+| `type`      | `AudienceRuleType` (enum)   |                                                                   |
+| `targetId`  | `String?`                   | departmentId / characterId / sceneId / userId, je nach Typ        |
+| `level`     | `ParticipationLevel` (enum) | @default(REQUIRED)                                                |
+| `sortOrder` | `Int`                       | @default(0)                                                       |
+| `event`     | → `CalendarEvent`           | @relation(fields: [eventId], references: [id], onDelete: Cascade) |
+
+- `@@index([eventId])`
+
 ### `UserNoticeDismissal`
 
 > Vom Mitglied ausgeblendete Hinweise (z. B. `whatsapp:<showId>`), geräteübergreifend.
@@ -2024,7 +2095,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `OnboardingFocus`             | `acting`, `tech`, `both`                                                                                                                                                                                                                                                                                      |
 | `RolePreferenceDomain`        | `acting`, `crew`                                                                                                                                                                                                                                                                                              |
 | `AvailabilityKind`            | `FULL_AVAILABLE`, `FULL_UNAVAILABLE`, `PARTIAL`                                                                                                                                                                                                                                                               |
-| `BlockedDayKind`              | `BLOCKED`, `LIMITED`, `PREFERRED`                                                                                                                                                                                                                                                                             |
+| `BlockedDayKind`              | `BLOCKED`, `LIMITED`, `PREFERRED`, `EMERGENCY`                                                                                                                                                                                                                                                                |
 | `MeasurementUnit`             | `M` (Meter), `CM` (Zentimeter), `MM` (Millimeter), `EU` (EU-Größe)                                                                                                                                                                                                                                            |
 | `MeasurementType`             | `HEIGHT` (Körperlänge), `CHEST` (Brustumfang), `WAIST` (Taillenumfang), `HIPS` (Gesäßumfang), `INSEAM` (Innenbeinlänge), `OUTSEAM` (Außenbeinlänge), `CHEST_DEPTH` (Brusttiefe), `WAIST_LENGTH` (Taillenlänge), `SHOULDER` (Rückenbreite), `SLEEVE` (Armlänge), `SHOE_SIZE` (Schuhgröße), `HEAD` (Kopfumfang) |
 | `AllergyLevel`                | `MILD` (Leicht (Unbehagen)), `MODERATE` (Mittel (Allergische Reaktion)), `SEVERE` (Schwer (Notfall möglich)), `LETHAL` (Lebensbedrohlich)                                                                                                                                                                     |
@@ -2040,8 +2111,14 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `IssueVisibility`             | `public`, `private`                                                                                                                                                                                                                                                                                           |
 | `TaskPriority`                | `low`, `normal`, `high`                                                                                                                                                                                                                                                                                       |
 | `CalendarEventKind`           | `REHEARSAL`, `PERFORMANCE`, `MEETING`, `WORK_DAY`, `SOCIAL`, `OTHER`                                                                                                                                                                                                                                          |
-| `EventStatus`                 | `DRAFT`, `SCHEDULED`, `CANCELLED`                                                                                                                                                                                                                                                                             |
+| `FeedScope`                   | `MINE`, `PRODUCTIONS`                                                                                                                                                                                                                                                                                         |
+| `EventStatus`                 | `DRAFT`, `TENTATIVE`, `SCHEDULED`, `CANCELLED`                                                                                                                                                                                                                                                                |
 | `ParticipationLevel`          | `REQUIRED`, `OPTIONAL`                                                                                                                                                                                                                                                                                        |
+| `AudienceRuleType`            | `PRODUCTION_ALL`, `ALL_CAST`, `ALL_CREW`, `DEPARTMENT`, `CHARACTER`, `SCENE`, `USER`                                                                                                                                                                                                                          |
+| `EventScheduleMode`           | `TOGETHER`, `STAGGERED`                                                                                                                                                                                                                                                                                       |
+| `SceneRehearsalOutcome`       | `DONE`, `PARTIAL`, `SKIPPED`                                                                                                                                                                                                                                                                                  |
+| `EventBlockType`              | `SCENE`, `DEPARTMENT`, `CUSTOM`                                                                                                                                                                                                                                                                               |
+| `ParticipantOverride`         | `INCLUDED`, `EXCLUDED`                                                                                                                                                                                                                                                                                        |
 | `PhotoConsentStatus`          | `pending`, `approved`, `rejected`                                                                                                                                                                                                                                                                             |
 | `AnalyticsRequestArea`        | `public`, `members`, `api`, `unknown`                                                                                                                                                                                                                                                                         |
 | `AnalyticsServerLogSeverity`  | `info`, `warning`, `error`                                                                                                                                                                                                                                                                                    |

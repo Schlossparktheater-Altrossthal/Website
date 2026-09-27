@@ -9,7 +9,8 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 | Bereich            | Datei                                          | Kurzbeschreibung                                              |
 | ------------------ | ---------------------------------------------- | ------------------------------------------------------------- |
 | Dashboard          | [dashboard.md](dashboard.md)                   | Übersichtsseite nach Login                                    |
-| Proben             | [proben.md](proben.md)                         | Probenplanung, Terminplanung, einzelne Proben, Meine Proben   |
+| Proben             | [proben.md](proben.md)                         | Probenplanung, Terminplanung, einzelne Proben                 |
+| Meine Termine      | [meine-termine.md](meine-termine.md)           | Persönliche Termine, Absagen, Sperrlisten-Verknüpfung         |
 | Gewerke            | [gewerke.md](gewerke.md)                       | Meine Teams, Teams & Zuweisung, Rollenportal                  |
 | Profil             | [profil.md](profil.md)                         | Eigenes Profil, Körpermaße, Fotoerlaubnisse                   |
 | Sperrliste         | [sperrliste.md](sperrliste.md)                 | Nicht-Verfügbarkeiten der Ensemblemitglieder                  |
