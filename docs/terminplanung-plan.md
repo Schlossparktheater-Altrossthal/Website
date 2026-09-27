@@ -177,3 +177,31 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 - [x] Phase 4 (2026-09-27): `EventScene` (Reihenfolge, Uhrzeit, Ergebnis), `scheduleMode` gemeinsam/gestaffelt, persönliche Zeitfenster (`personalStart/End`) in Meine Termine, Kalender-Abo und Probenseite; Karte „Szenen & Ablauf“ mit Probenzähler und Zeitvorschlag aus der Szenendauer; Nachbereitung (Szenen-Ergebnis, Anwesenheit `attended`); „Szenen-Stand“ in der Probenplanung. Vergangene Szenen ohne Nachbereitung zählen als geprobt.
 - [x] Phase 5a (2026-09-27): Terminfinder (`src/lib/calendar/date-finder.ts`, Seite `/mitglieder/probenplanung/terminfinder`): Zielgruppe + Zeitraum + Wochentage + Zeitfenster → Heatmap und Liste nach Eignung (Sperre/anderer Termin/Einschränkung, benötigt schwerer als optional), Klick legt Probenentwurf mit der Zielgruppe an. Gewerk-Portal: „Gemeinsamen Termin finden“ im Termin-Formular. Zielgruppen-Baukasten jetzt auch in der Terminplanung („Alle“ oder „Bestimmte Personen“; mit Zielgruppe sehen nur Eingeladene den Termin) und Auswahl einzelner Mitglieder bei Gewerk-Terminen.
 - [ ] Phase 5b: E2E-Tests und Release (vorher Backup, Migrationen gegen Kopie der Staging-DB testen).
+- [ ] Phase 6: Ein Termin mit Bausteinen (siehe unten).
+
+## Phase 6: Ein Termin mit Bausteinen (Entscheidung 2026-09-27)
+
+**Problem:** Datenmodell ist schon vereint (`CalendarEvent`), die UI aber nicht: Termin- und Probenplanung haben getrennte Editoren mit doppelter Zeit- und Personenangabe, `GENERAL_EVENT_WHERE` blendet Proben aus, der Termin-Dialog macht aus `REHEARSAL` „Sonstiges“. Termine mit Zielgruppe `DEPARTMENT` erscheinen nicht im Gewerk-Dashboard (`src/lib/departments/events.ts` fragt nur `departmentId`). Eine „Vorwarnung“ gibt es nicht (`DRAFT` ist unsichtbar).
+
+**Zielbild:** Es gibt nur noch _Termine_. Eine Probe ist ein Termin mit Probenbausteinen.
+
+- **Status** `DRAFT → TENTATIVE (vorgemerkt) → SCHEDULED (angesetzt)`, dazu `CANCELLED`.
+  - _Vorgemerkt:_ für die grobe Zielgruppe sichtbar als „Probe/Termin möglich“, Absagen erlaubt (frühe Info an die Planung, Grund optional), noch keine Zusage erwartet, keine Erinnerungen. Terminfinder und Sperrliste zählen vorgemerkte Termine als weiche Konflikte.
+  - _Angesetzt:_ wie heute (Einladung, Zu-/Absage, Erinnerungen). Absagen aus der Vormerkung bleiben erhalten.
+- **Bausteine** `EventScene` → `EventBlock`:
+  - `type` SCENE | DEPARTMENT | CUSTOM, `title`, `sceneId?`, `departmentId?`, `order`, `startsAt?/endsAt?`, `location?` (Raum), `outcome?/note?`.
+  - Bausteine dürfen parallel laufen (eigener Raum/Zeitfenster), z. B. Szenenprobe Raum A, Bühnenbau Raum B.
+  - Teilnehmende ergeben sich aus Termin-Zielgruppe **plus** Bausteinen (Szene → Besetzung, Gewerk-Baustein → Gewerkmitglieder). Personen werden nur an einer Stelle gewählt; `personalStart/End` aus den eigenen Bausteinen (erweitert die gestaffelte Logik).
+- **Gewerk-Bausteine organisieren sich selbst:** Ein `DEPARTMENT`-Baustein in einem globalen Termin wird von der Planung nur angelegt (Gewerk + grobes Zeitfenster). Gewerk-Leitung darf darin selbst Zeit, Raum, Beschreibung und die eigenen Mitglieder (Baukasten, beschränkt auf das Gewerk) bearbeiten – nicht aber den Termin selbst oder andere Bausteine. Der Baustein erscheint im Gewerk-Dashboard als Termin des Gewerks.
+- **Gewerk-Dashboard** zeigt eigene Termine (`departmentId`) **und** globale Termine, bei denen das Gewerk per Regel `DEPARTMENT` oder per Baustein beteiligt ist.
+- **`kind`** bleibt als Anzeige-/Filterfeld; „Probe“ wird automatisch gesetzt, sobald ein Szenen-Baustein existiert, sonst frei wählbar.
+- **UI:** ein Editor (Grunddaten → Zielgruppe → Bausteine → Ansetzen). Terminplanung und Probenplanung werden eine Kalender-/Planungsansicht; „Probenplanung“ bleibt als Filter plus Szenen-Stand und Terminfinder.
+
+**Umsetzungsschritte**
+
+1. Gewerk-Dashboard: Termine mit Regel `DEPARTMENT` anzeigen (unabhängig, sofort machbar).
+2. Migration: `EventStatus.TENTATIVE` (Enum-Wert in eigener Migration), `EventScene` → `EventBlock` (Daten als `type = SCENE` übernehmen).
+3. Status „vorgemerkt“: Sichtbarkeit, Absage, Konflikte in Terminfinder/Sperrliste, Feed.
+4. Bausteine allgemein + parallel, Teilnehmer-Auflösung aus Bausteinen, Gewerk-Bausteine mit Rechten der Gewerk-Leitung.
+5. Editoren zusammenführen, `GENERAL_EVENT_WHERE` und `kind: "REHEARSAL"`-Filter bereinigen, Navigation vereinen.
+6. E2E + Release zusammen mit Phase 5b (Prod hat die Terminplanung noch nicht).
