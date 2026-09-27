@@ -73,6 +73,14 @@ Absage bzw. Rücknahme. Absagen sind mit der Sperrliste verzahnt (siehe unten).
 Keine eigene Live-Aktualisierung; die Seite liest bei jedem Aufruf neu. Nach Mutationen
 revalidiert `actions.ts` zusätzlich `/mitglieder/sperrliste` und die Probendetailseite.
 
+## Tests
+
+- `e2e/termine.spec.ts` (`pnpm e2e:desktop termine`) prüft den URL-Zustand von Ansicht, Suche und
+  Vergangenheit sowie beide Absagewege samt Sperrlisten-Eintrag und „Doch dabei".
+- `src/lib/calendar/__tests__/my-events.test.ts` deckt die Abschnitte (heute/morgen, Woche,
+  Vergangenes, Sonntagsgrenze) ab, `block-list-link.test.ts` die Sperrfrist-Grenze. Welcher Zustand
+  beim Absagen gesetzt wird, prüft der E2E-Test über die Oberfläche.
+
 ## Besonderheiten / Altlasten
 
 - Die Suche greift auf Titel und Ort, nicht auf „Dabei als" (`reasons` ist JSON).

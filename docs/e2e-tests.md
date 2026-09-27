@@ -135,6 +135,28 @@ pnpm dev:termine --remove  # entfernen
   und für die Prüfung von Absage-, Gruppierungs- und Kalenderzuständen.
 - Die Termine liegen relativ zu „jetzt", werden also bei jedem Lauf neu gelegt.
 
+## Test: „Meine Termine" (`e2e/termine.spec.ts`)
+
+`pnpm e2e:desktop termine` prüft die Seite durchgängig über die Oberfläche (Chromium, Desktop):
+
+- Ansicht, Suche und Vergangenheit stehen in der URL (`ansicht=kalender`, `q=…`, `vergangen=1`),
+  Deep-Links laden dieselbe Ansicht.
+- Eine Absage **innerhalb** der Sperrfrist (Zieltag: morgen) wird zur Notfall-Absage: Grund Pflicht,
+  der Tag trägt in der Sperrliste „Notfall".
+- Eine Absage **außerhalb** der Frist (Zieltag: heute + 20) sperrt den Tag als „Gesperrt".
+- „Doch dabei" entfernt den Eintrag in der Sperrliste wieder.
+
+Die Tests legen ihren „Termin für alle" selbst über die Terminplanung an (Titel `E2E Absage …`) und
+löschen ihn am Ende; das Aufräumen läuft in `finally` und wird mitgeschrieben, wenn es scheitert.
+Zwei Eigenheiten des Themas sind dabei eingebaut:
+
+- Eintrag und Absage hängen am **Tag**, nicht am Termin: Nach einem liegen gebliebenen Lauf löst sich
+  die Verknüpfung mit dem Termin, und ein neuer Lauf wird den Eintrag nicht mehr über „Doch dabei"
+  los. Deshalb räumt der Test vorher einen eigenen Eintrag am Zieltag weg.
+- Solange an dem Tag noch ein anderer abgesagter Termin steht, bleibt der Eintrag absichtlich
+  stehen. Zwei **parallele** Läufe desselben Tests würden sich also den Zieltag wegnehmen: für
+  Wiederholungen `--repeat-each` zusammen mit `--workers=1` verwenden.
+
 ## Viewports & Playwright-Projekte
 
 Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in vier Projekten

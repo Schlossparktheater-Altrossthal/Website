@@ -282,8 +282,10 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 - [x] `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`. `pnpm build` bewusst
       ausgelassen: Der Dev-Server läuft auf demselben `.next`, und die Änderungen liegen außerhalb des
       Build-Graphen.
-- [ ] E2E-Tests für Gruppierung, Filter in der URL, Kalender-Umschalter, Absage mit/ohne Frist,
-      „Doch dabei" und den Sperrlisten-Eintrag – bisher nur über `pnpm ui:check` belegt.
+- [x] E2E-Tests für Filter in der URL, Kalender-Umschalter, Absage mit/ohne Frist, „Doch dabei" und
+      den Sperrlisten-Eintrag: `e2e/termine.spec.ts`, stabil über
+      `pnpm e2e:desktop termine --repeat-each=3 --workers=1`. Die Abschnitte der Liste selbst
+      bleiben über `src/lib/calendar/__tests__/my-events.test.ts` abgedeckt.
 
 ## Weitere Festlegungen
 
@@ -319,4 +321,4 @@ in der Sperrliste der Tageszustand „Notfall" (destructive-Ton) bzw. „Gesperr
 - [x] Phase 3 (2026-09-27) – Werkzeugzeile, URL-Zustand, Suche, Vergangenheit, „Mehr laden", Kalenderansicht
 - [x] Phase 4 (2026-09-27) – „Nächster Termin", Konflikt-Hinweis, Tipps-Callout
 - [x] Phase 5 (2026-09-27) – Zustand „Notfall" in der Sperrliste (Typen, UI, Feed, Export, Doku)
-- [x] Phase 6 (2026-09-27) – Doku, Screenshots, Checks (offen: E2E-Tests)
+- [x] Phase 6 (2026-09-27) – Doku, Screenshots, Checks, E2E-Tests
