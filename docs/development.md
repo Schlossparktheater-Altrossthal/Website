@@ -115,6 +115,13 @@ Symptom: Der Dev-Server startet normal, aber jeder Datenbankzugriff, der ein Fel
 kürzlich ins Schema kam, scheitert mit `PrismaClientValidationError: Unknown argument 'status'` —
 die Seite antwortet mit 500.
 
+Zweites Symptom derselben Ursache: Ein Modell, das erst kürzlich ins Schema kam, fehlt dem Client
+komplett. `prisma.<modell>` ist dann `undefined` und der Zugriff endet mit
+`TypeError: Cannot read properties of undefined (reading 'count')` — im Dev-Log z. B.
+`prisma.eventParticipant.count` in `src/app/(members)/layout.tsx`. Der generierte Client auf der
+Platte ist dabei aktuell; nur der laufende Prozess hält die alte Fassung. Ein `GET /<route>` mit
+Status 500 auf einer Seite, die zuvor lief, ist der schnellste Hinweis.
+
 `pnpm dev` und `pnpm build` rufen über ihre `pre`-Skripte `prisma generate` und `prisma migrate
 deploy` auf, ein frischer Start ist deshalb unkritisch. Der Fehler tritt nur auf, wenn der Client
 **während** eines laufenden Prozesses veraltet: nach einem `git pull` mit Schemaänderung bei
