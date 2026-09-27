@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { CalendarEventKind } from "@prisma/client";
 import { toast } from "sonner";
 
+import { AudienceBuilder, type AudienceValue } from "@/components/calendar/audience-builder";
 import { TrashIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ import {
   CALENDAR_EVENT_KIND_LABELS,
   type CalendarEntry,
 } from "@/lib/calendar/event-kinds";
+import type { AudienceContext } from "@/lib/calendar/audience";
+import type { DayAvailability } from "@/lib/calendar/day-availability";
 import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
 
 export type EventDialogState =
@@ -49,6 +52,22 @@ type FormState = {
 
 /** Gewählte Produktion, der neue Termine standardmäßig zugeordnet werden. */
 export type EventDialogProduction = { id: string; title: string } | null;
+
+/**
+ * Zielgruppen-Daten für die Planung: `production` für Termine der gewählten Produktion,
+ * `general` (alle aktiven Mitglieder) für Termine aller Produktionen.
+ */
+export type EventDialogAudience = {
+  production: AudienceContext | null;
+  general: AudienceContext;
+  /** Sperrliste eines Tages (yyyy-MM-dd) für die Teilnehmerliste. */
+  availability: Record<string, DayAvailability>;
+};
+
+const DEFAULT_AUDIENCE: AudienceValue = {
+  rules: [{ type: "PRODUCTION_ALL", targetId: null, level: "REQUIRED" }],
+  overrides: [],
+};
 
 function toFormState(
   state: NonNullable<EventDialogState>,
@@ -89,6 +108,8 @@ type EventDialogProps = {
   onSaved: (entry: CalendarEntry, previousId?: string) => void;
   onDeleted: (id: string) => void;
   production?: EventDialogProduction;
+  /** Ohne Angabe (Sperrliste) bleibt die Zielgruppe unverändert. */
+  audience?: EventDialogAudience;
 };
 
 export function EventDialog({
@@ -97,14 +118,41 @@ export function EventDialog({
   onSaved,
   onDeleted,
   production = null,
+  audience: audienceData,
 }: EventDialogProps) {
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  /** null = Termin für alle; sonst Zielgruppe (nur Eingeladene sehen den Termin). */
+  const [audience, setAudience] = useState<AudienceValue | null>(null);
+  const [audienceLoading, setAudienceLoading] = useState(false);
 
   useEffect(() => {
     setForm(state ? toFormState(state, production) : null);
-  }, [state, production]);
+    setAudience(null);
+    if (!audienceData || state?.mode !== "edit") return;
+    // Gespeicherte Zielgruppe nachladen; bis dahin nicht speichern, sonst ginge sie verloren.
+    const controller = new AbortController();
+    setAudienceLoading(true);
+    fetch(`/api/calendar-events/${state.entry.id}`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { audience?: AudienceValue | null } | null) => {
+        setAudience(payload?.audience ?? null);
+        setAudienceLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        console.error("[terminplanung:event-audience]", error);
+        setAudienceLoading(false);
+      });
+    return () => controller.abort();
+  }, [state, production, audienceData]);
+
+  const audienceContext = audienceData
+    ? form?.showId && form.showId === production?.id && audienceData.production
+      ? audienceData.production
+      : audienceData.general
+    : null;
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => (current ? { ...current, [key]: value } : current));
@@ -136,6 +184,7 @@ export function EventDialog({
             location: form.location,
             description: form.description,
             showId: form.showId,
+            ...(audienceData ? { audience } : {}),
           }),
         },
       );
@@ -202,6 +251,7 @@ export function EventDialog({
               type="button"
               isLoading={saving}
               loadingText="Speichert …"
+              disabled={audienceLoading}
               onClick={handleSave}
             >
               Speichern
@@ -303,12 +353,14 @@ export function EventDialog({
                   aria-label="Gilt für"
                   fullWidth
                   value={form.showId ? "production" : "all"}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
                     update(
                       "showId",
                       value === "production" ? (form.showId ?? production?.id ?? null) : null,
-                    )
-                  }
+                    );
+                    // Gewerke und Rollen gehören zur Produktion: Zielgruppe neu beginnen.
+                    setAudience((current) => (current ? DEFAULT_AUDIENCE : current));
+                  }}
                   options={[
                     {
                       value: "production",
@@ -325,6 +377,40 @@ export function EventDialog({
                     ? "Erscheint nur in dieser Produktion."
                     : "Erscheint in jeder Produktion, z. B. Vereinstermine."}
                 </p>
+              </div>
+            ) : null}
+            {audienceContext ? (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Wer ist eingeladen?</Label>
+                  <SegmentedControl
+                    aria-label="Wer ist eingeladen?"
+                    fullWidth
+                    value={audience ? "targeted" : "all"}
+                    onValueChange={(value) =>
+                      setAudience(value === "targeted" ? DEFAULT_AUDIENCE : null)
+                    }
+                    options={[
+                      { value: "all", label: "Alle" },
+                      { value: "targeted", label: "Bestimmte Personen" },
+                    ]}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {audienceLoading
+                      ? "Lädt Zielgruppe …"
+                      : audience
+                        ? "Nur Eingeladene sehen den Termin und werden benachrichtigt."
+                        : "Der Termin erscheint bei allen, ohne Einladung."}
+                  </p>
+                </div>
+                {audience ? (
+                  <AudienceBuilder
+                    context={audienceContext}
+                    value={audience}
+                    onChange={setAudience}
+                    availability={audienceData?.availability[form.date] ?? {}}
+                  />
+                ) : null}
               </div>
             ) : null}
             <div className="space-y-1.5">

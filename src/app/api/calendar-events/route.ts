@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { readCalendarEventById } from "@/lib/calendar/entries";
 import { calendarEventInputSchema, resolveCalendarEventTimes } from "@/lib/calendar/event-input";
+import {
+  generalEventAudienceSchema,
+  syncGeneralEventAudience,
+} from "@/lib/calendar/general-event-audience";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -13,7 +17,12 @@ export async function POST(request: Request) {
   if (!userId) {
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-  const parsed = calendarEventInputSchema.safeParse(await request.json().catch(() => null));
+  const body: unknown = await request.json().catch(() => null);
+  const parsed = calendarEventInputSchema.safeParse(body);
+  const audience = generalEventAudienceSchema.safeParse(body);
+  if (!audience.success) {
+    return NextResponse.json({ error: "Zielgruppe ist ungültig" }, { status: 400 });
+  }
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe" },
@@ -45,6 +54,7 @@ export async function POST(request: Request) {
         createdById: userId,
       },
     });
+    await syncGeneralEventAudience({ event, audience: audience.data.audience, actorId: userId });
     return NextResponse.json(await readCalendarEventById(event.id), { status: 201 });
   } catch (error) {
     console.error("[calendar-events:create]", error);

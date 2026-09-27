@@ -10,8 +10,24 @@ export const GENERAL_EVENT_WHERE = {
   kind: { not: "REHEARSAL" },
 } satisfies Prisma.CalendarEventWhereInput;
 
-/** `showId`: nur Einträge dieser Produktion und allgemeine ohne Produktion. */
-type Range = { from: Date; to: Date; showId?: string | null };
+/**
+ * Allgemeine Termine, die eine Person sieht: ohne Zielgruppe gelten sie für alle, mit
+ * Zielgruppe nur für die Eingeladenen.
+ */
+export function visibleGeneralEventWhere(userId: string) {
+  return {
+    OR: [
+      { audienceRules: { none: {} }, participants: { none: { invited: true } } },
+      { participants: { some: { userId, invited: true } } },
+    ],
+  } satisfies Prisma.CalendarEventWhereInput;
+}
+
+/**
+ * `showId`: nur Einträge dieser Produktion und allgemeine ohne Produktion.
+ * `viewerId`: nur Termine, die diese Person sieht (ohne Angabe alle, für die Planung).
+ */
+type Range = { from: Date; to: Date; showId?: string | null; viewerId?: string };
 
 function showScope(showId: string | null | undefined) {
   return showId ? { OR: [{ showId }, { showId: null }] } : {};
@@ -22,12 +38,21 @@ function toDayKey(date: Date) {
 }
 
 /** Termine der Organisation im Zeitraum (Beginn innerhalb oder mehrtägig überlappend). */
-export async function readCalendarEvents({ from, to, showId }: Range): Promise<CalendarEntry[]> {
+export async function readCalendarEvents({
+  from,
+  to,
+  showId,
+  viewerId,
+}: Range): Promise<CalendarEntry[]> {
   const events = await prisma.calendarEvent.findMany({
     where: {
       start: { lte: to },
       ...GENERAL_EVENT_WHERE,
-      AND: [{ OR: [{ start: { gte: from } }, { end: { gte: from } }] }, showScope(showId)],
+      AND: [
+        { OR: [{ start: { gte: from } }, { end: { gte: from } }] },
+        showScope(showId),
+        viewerId ? visibleGeneralEventWhere(viewerId) : {},
+      ],
     },
     orderBy: { start: "asc" },
   });

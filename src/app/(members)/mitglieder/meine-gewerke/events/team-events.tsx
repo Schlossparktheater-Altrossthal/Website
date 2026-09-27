@@ -16,6 +16,8 @@ import {
 import { DateFinderResults, formatFinderDay } from "@/components/calendar/date-finder-results";
 import { WeekdayPicker } from "@/components/calendar/weekday-picker";
 import { AsyncButton } from "@/components/ui/async-button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DateBadge } from "@/components/ui/date-badge";
@@ -69,6 +71,8 @@ type Draft = {
   endTime: string;
   location: string;
   description: string;
+  /** Nur diese Mitglieder einladen; null = ganzes Team. */
+  memberIds: string[] | null;
 };
 
 function timeRange(event: TeamEvent) {
@@ -250,6 +254,7 @@ export function TeamEvents({
         event={editing === "new" ? null : editing}
         today={data.today}
         departmentId={data.departmentId}
+        members={data.members}
         blocksByDay={data.blocksByDay}
         onOpenChange={(open) => !open && setEditing(null)}
         onSave={(draft) =>
@@ -509,6 +514,7 @@ function toDraft(event: TeamEvent | null, today: string): Draft {
     endTime: event?.endTime ?? "",
     location: event?.location ?? "",
     description: event?.description ?? "",
+    memberIds: event?.invitedIds ?? null,
   };
 }
 
@@ -517,10 +523,12 @@ function EventForm({
   event,
   today,
   departmentId,
+  members,
   blocksByDay,
   onOpenChange,
   onSave,
 }: {
+  members: TeamEventsData["members"];
   open: boolean;
   event: TeamEvent | null;
   today: string;
@@ -541,11 +549,14 @@ function EventForm({
   const update = <K extends keyof Draft>(field: K, value: Draft[K]) =>
     setDraft((current) => ({ ...current, [field]: value }));
 
-  const blocks = draft.date ? (blocksByDay[draft.date] ?? []) : [];
+  const blocks = (draft.date ? (blocksByDay[draft.date] ?? []) : []).filter(
+    (block) => !draft.memberIds || draft.memberIds.includes(block.userId),
+  );
   const valid =
     draft.title.trim() &&
     draft.date &&
     draft.startTime &&
+    (!draft.memberIds || draft.memberIds.length > 0) &&
     (!draft.endTime || draft.endTime > draft.startTime);
 
   const save = async () => {
@@ -633,12 +644,54 @@ function EventForm({
           )
         ) : null}
 
+        <div className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">Wer ist eingeladen?</span>
+          <SegmentedControl
+            aria-label="Wer ist eingeladen?"
+            fullWidth
+            value={draft.memberIds ? "selected" : "team"}
+            onValueChange={(value) =>
+              update("memberIds", value === "selected" ? members.map((member) => member.id) : null)
+            }
+            options={[
+              { value: "team", label: `Ganzes Team (${members.length})` },
+              { value: "selected", label: "Auswahl" },
+            ]}
+          />
+          {draft.memberIds ? (
+            <ul className="grid gap-1 sm:grid-cols-2">
+              {members.map((member) => {
+                const checked = draft.memberIds?.includes(member.id) ?? false;
+                return (
+                  <li key={member.id}>
+                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-muted">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() =>
+                          update(
+                            "memberIds",
+                            checked
+                              ? (draft.memberIds ?? []).filter((id) => id !== member.id)
+                              : [...(draft.memberIds ?? []), member.id],
+                          )
+                        }
+                      />
+                      <span className="text-sm">{member.name}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+
         {!event ? (
           <TeamDateFinder
             departmentId={departmentId}
             today={today}
             startTime={draft.startTime}
             endTime={draft.endTime}
+            memberIds={draft.memberIds}
             onPick={(date) => update("date", date)}
           />
         ) : null}
@@ -688,8 +741,10 @@ function TeamDateFinder({
   today,
   startTime,
   endTime,
+  memberIds,
   onPick,
 }: {
+  memberIds: string[] | null;
   departmentId: string;
   today: string;
   startTime: string;
@@ -712,6 +767,7 @@ function TeamDateFinder({
       weekdays,
       startTime,
       endTime: endTime || fallbackEnd(startTime),
+      memberIds,
     });
     setSearching(false);
     if (!response.ok) {

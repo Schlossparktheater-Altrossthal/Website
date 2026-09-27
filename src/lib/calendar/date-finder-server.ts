@@ -93,10 +93,11 @@ export async function loadFinderDays({
         .filter((entry) => entry.response === "no" || entry.response === "emergency")
         .map((entry) => entry.userId),
     );
-    const people = new Set([
-      ...event.participants.filter((entry) => entry.invited).map((entry) => entry.userId),
-      ...(event.department?.memberships.map((entry) => entry.userId) ?? []),
-    ]);
+    // Mit Einladungen zählen nur die Eingeladenen, sonst das ganze Gewerk.
+    const invited = event.participants.filter((entry) => entry.invited).map((e) => e.userId);
+    const people = new Set(
+      invited.length ? invited : (event.department?.memberships.map((entry) => entry.userId) ?? []),
+    );
     return {
       title: event.title,
       start: event.start,

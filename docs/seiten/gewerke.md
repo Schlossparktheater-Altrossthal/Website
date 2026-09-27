@@ -60,3 +60,7 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 - Regie/Board: „Gewerk anlegen“-Kachel in „Meine Teams“, „Bearbeiten“ im Portal-Kopf (Name, Beschreibung, Farbe, Beitritt mit Prüfung, Archivieren). Actions `produktionen/actions/department-settings.ts`. Die alten Seiten `produktionen/gewerke/*` und `meine-gewerke/todos` sind entfernt.
 - Mitglieder: „Weitere Gewerke – mitmachen?“ in „Meine Teams“: Beitreten (ohne Prüfung) oder Anfrage (Leitung/Vertretung werden benachrichtigt), Anfrage zurückziehen (`meine-gewerke/actions.ts`).
 - Dateien im Team-Tab: `DepartmentDocument` (statt FileLibrary, die keine Gewerk-Rechte kennt). Upload per `POST /api/departments/[id]/documents` (je bis 15 MB, Mitglieder ohne Gäste), Download über `GET …/documents/[documentId]`, Löschen durch Hochladende oder Leitung/Vertretung/Regie.
+
+## Gewerk-Termine: Auswahl und Terminfinder
+
+Leitung, Vertretung und Regie laden beim Anlegen das ganze Team oder eine Auswahl von Mitgliedern ein (gespeichert als Personen-Regeln). Termine mit Auswahl erscheinen in „Meine Termine“ und im Kalender-Abo nur bei den Eingeladenen. „Gemeinsamen Termin finden“ schlägt Tage für die Eingeladenen vor (Sperrliste und andere Termine zur gewählten Uhrzeit) und übernimmt das Datum ins Formular.

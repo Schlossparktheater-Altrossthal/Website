@@ -175,7 +175,13 @@ export default async function BlocklistPage() {
         },
       },
     }),
-    readCalendarEntries({ from, to, showId: activeProductionId }),
+    // Termine mit Zielgruppe sehen nur Eingeladene; die Planung sieht alle.
+    readCalendarEntries({
+      from,
+      to,
+      showId: activeProductionId,
+      viewerId: canPlan ? undefined : userId,
+    }),
     activeProductionId
       ? prisma.show.findUnique({
           where: { id: activeProductionId },

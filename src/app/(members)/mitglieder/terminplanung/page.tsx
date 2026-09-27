@@ -1,7 +1,10 @@
 import { addMonths, format, startOfMonth } from "date-fns";
 
 import { PageHeader } from "@/components/members/page-header";
+import { loadAudienceContext } from "@/lib/calendar/audience-server";
+import type { DayAvailability } from "@/lib/calendar/day-availability";
 import { readCalendarEvents } from "@/lib/calendar/entries";
+import { formatIsoDateInTimeZone } from "@/lib/date-time";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { compareMembersByLastName, getUserDisplayName } from "@/lib/names";
@@ -32,7 +35,7 @@ export default async function EventPlanningPage() {
   const from = addMonths(startOfMonth(new Date()), -1);
   const to = addMonths(from, 14);
 
-  const [events, users] = await Promise.all([
+  const [events, users, productionContext, generalContext, audienceBlocks] = await Promise.all([
     // Termine der gewählten Produktion plus allgemeine; Verfügbarkeit ihrer Mitglieder.
     readCalendarEvents({ from, to, showId }),
     prisma.user.findMany({
@@ -55,7 +58,22 @@ export default async function EventPlanningPage() {
         },
       },
     }),
+    // Zielgruppen-Baukasten im Termin-Dialog.
+    showId ? loadAudienceContext(showId) : null,
+    loadAudienceContext(null),
+    prisma.blockedDay.findMany({
+      where: { date: { gte: from, lt: to }, kind: { in: ["BLOCKED", "LIMITED"] } },
+      select: { userId: true, date: true, kind: true },
+    }),
   ]);
+
+  const audienceAvailability: Record<string, DayAvailability> = {};
+  for (const entry of audienceBlocks) {
+    const day = (audienceAvailability[formatIsoDateInTimeZone(entry.date.toISOString())] ??= {});
+    if (day[entry.userId] !== "blocked") {
+      day[entry.userId] = entry.kind === "BLOCKED" ? "blocked" : "limited";
+    }
+  }
 
   const members: PlanningMember[] = [...users].sort(compareMembersByLastName).map((user) => ({
     id: user.id,
@@ -86,6 +104,11 @@ export default async function EventPlanningPage() {
         events={events}
         members={members}
         availability={availability}
+        audience={{
+          production: productionContext,
+          general: generalContext,
+          availability: audienceAvailability,
+        }}
         production={
           production && productionTitle ? { id: production.id, title: productionTitle } : null
         }

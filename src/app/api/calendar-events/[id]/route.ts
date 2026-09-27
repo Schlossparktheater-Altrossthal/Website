@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 
 import { GENERAL_EVENT_WHERE, readCalendarEventById } from "@/lib/calendar/entries";
 import { calendarEventInputSchema, resolveCalendarEventTimes } from "@/lib/calendar/event-input";
+import {
+  generalEventAudienceSchema,
+  readGeneralEventAudience,
+  syncGeneralEventAudience,
+} from "@/lib/calendar/general-event-audience";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -32,10 +37,27 @@ async function readShowId(id: string) {
   return event ? event.showId : undefined;
 }
 
+/** Zielgruppe des Termins für den Dialog der Planung. */
+export async function GET(_: Request, { params }: RouteParams) {
+  const { id } = await params;
+  const showId = await readShowId(id);
+  if (showId === undefined) {
+    return NextResponse.json({ error: "Termin wurde nicht gefunden." }, { status: 404 });
+  }
+  const denied = await authorise([showId]);
+  if (denied) return denied;
+  return NextResponse.json({ audience: await readGeneralEventAudience(id) });
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
   const { id } = await params;
 
-  const parsed = calendarEventInputSchema.safeParse(await request.json().catch(() => null));
+  const body: unknown = await request.json().catch(() => null);
+  const parsed = calendarEventInputSchema.safeParse(body);
+  const audience = generalEventAudienceSchema.safeParse(body);
+  if (!audience.success) {
+    return NextResponse.json({ error: "Zielgruppe ist ungültig" }, { status: 400 });
+  }
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Ungültige Eingabe" },
@@ -65,6 +87,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         description: input.description,
         showId: input.showId ?? null,
       },
+    });
+    const session = await requireAuth();
+    await syncGeneralEventAudience({
+      event,
+      audience: audience.data.audience,
+      actorId: session.user?.id ?? "",
     });
     return NextResponse.json(await readCalendarEventById(event.id));
   } catch (error) {

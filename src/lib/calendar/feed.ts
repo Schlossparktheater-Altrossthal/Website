@@ -5,7 +5,7 @@ import type { BlockedDayKind, FeedScope } from "@prisma/client";
 import { getAppBaseUrl } from "@/lib/app-url";
 import { buildIcsCalendar, type IcsEvent } from "@/lib/calendar/ics";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
-import { GENERAL_EVENT_WHERE } from "@/lib/calendar/entries";
+import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -171,6 +171,7 @@ export async function collectFeedEvents(
               { show: { memberships: { some: { userId, ...currentMembershipWhere(now) } } } },
             ],
           },
+          visibleGeneralEventWhere(userId),
         ],
       },
       orderBy: { start: "asc" },
@@ -179,6 +180,7 @@ export async function collectFeedEvents(
       where: {
         start: { gte: from, lte: to },
         department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
+        ...visibleGeneralEventWhere(userId),
         // Abgesagte Termine tauchen im eigenen Kalender nicht mehr auf.
         participants: { none: { userId, response: { in: ["no", "emergency"] } } },
       },

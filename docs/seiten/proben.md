@@ -41,3 +41,7 @@ Probenplaner verwalten den Gesamtplan.
 - Die Gesamtplanung bietet zwei Ansichten (Kalenderansicht / Wochenend-Fokus) über ein
   `SegmentedControl` (`src/components/ui/segmented-control.tsx`).
 - Zeitlogik läuft über `DEFAULT_TIME_ZONE` aus `src/lib/date-time.ts`.
+
+## Terminfinder (`/mitglieder/probenplanung/terminfinder`)
+
+Recht: `PRIVATE.REHEARSAL.PLANNING.MANAGE` (Produktion). Zielgruppe mit dem Baukasten wählen, Zeitraum, Wochentage und Uhrzeit angeben; „Termine finden“ bewertet jeden Tag nach Sperrliste und anderen angesetzten Terminen im Zeitfenster (benötigte Personen zählen mehr als optionale). Ergebnis als Heatmap aller Tage und Liste der besten Tage; „Probe anlegen“ erstellt einen Entwurf mit Datum, Uhrzeit und Zielgruppe. Erreichbar über „Termin finden“ in der Probenplanung.

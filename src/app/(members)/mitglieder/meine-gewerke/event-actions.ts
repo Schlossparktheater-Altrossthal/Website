@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 import { z } from "zod";
 
+import { saveEventAudience } from "@/lib/calendar/audience-server";
 import { candidateDays, rankDays, type RankedDay } from "@/lib/calendar/date-finder";
 import { loadFinderDays } from "@/lib/calendar/date-finder-server";
 import { resolveCalendarEventTimes } from "@/lib/calendar/event-input";
@@ -67,6 +68,43 @@ async function activeMemberIds(departmentId: string) {
   return rows.map((row) => row.userId);
 }
 
+/**
+ * Auswahl einzelner Mitglieder als Zielgruppe speichern (Personen-Regeln). Nur aktive
+ * Mitglieder des Gewerks zählen. Gibt die Eingeladenen zurück, null = ganzes Team.
+ */
+async function saveTeamSelection(
+  eventId: string,
+  departmentId: string,
+  memberIds: readonly string[] | null | undefined,
+) {
+  const active = await activeMemberIds(departmentId);
+  const selected = memberIds ? active.filter((id) => memberIds.includes(id)) : [];
+  const context = {
+    hasProduction: false,
+    members: active.map((id) => ({ id, name: "" })),
+    castings: [],
+    characters: [],
+    scenes: [],
+    departments: [],
+  };
+  await prisma.$transaction((tx) =>
+    saveEventAudience(
+      tx,
+      eventId,
+      {
+        rules: selected.map((id) => ({
+          type: "USER" as const,
+          targetId: id,
+          level: "REQUIRED" as const,
+        })),
+        overrides: [],
+      },
+      context,
+    ),
+  );
+  return selected.length ? selected : null;
+}
+
 const eventSchema = z
   .object({
     departmentId: z.string(),
@@ -81,6 +119,8 @@ const eventSchema = z
       .or(z.literal("").transform(() => null)),
     location: z.string().trim().max(160).nullish(),
     description: z.string().trim().max(2000).nullish(),
+    /** Nur diese Mitglieder einladen; null/fehlend = ganzes Team. */
+    memberIds: z.array(z.string().min(1)).max(500).nullish(),
   })
   .refine((value) => !value.endTime || value.endTime > value.startTime, {
     message: "Ende liegt vor dem Beginn.",
@@ -117,7 +157,7 @@ export async function saveTeamEventAction(
         where: { id: data.departmentId },
         select: { name: true, showId: true },
       });
-      await prisma.calendarEvent.create({
+      const created = await prisma.calendarEvent.create({
         data: {
           ...fields,
           kind: "MEETING",
@@ -125,9 +165,11 @@ export async function saveTeamEventAction(
           departmentId: data.departmentId,
           createdById: access.userId,
         },
+        select: { id: true },
       });
+      const invited = await saveTeamSelection(created.id, data.departmentId, data.memberIds);
       await notify(
-        await activeMemberIds(data.departmentId),
+        invited ?? (await activeMemberIds(data.departmentId)),
         access.userId,
         `Neuer Termin (${department.name}): ${data.title}`,
         `${formatWhen(start)} – bitte zu- oder absagen.`,
@@ -136,9 +178,10 @@ export async function saveTeamEventAction(
       const event = await loadEvent(data.eventId);
       if (event.departmentId !== data.departmentId) throw new Error("Termin gehört nicht hierher.");
       await prisma.calendarEvent.update({ where: { id: event.id }, data: fields });
+      const invited = await saveTeamSelection(event.id, event.departmentId, data.memberIds);
       if (event.start.getTime() !== start.getTime()) {
         await notify(
-          await activeMemberIds(event.departmentId),
+          invited ?? (await activeMemberIds(event.departmentId)),
           access.userId,
           `Termin verschoben (${event.department?.name ?? "Gewerk"}): ${data.title}`,
           `Neu: ${formatWhen(start)}`,
@@ -214,6 +257,8 @@ const finderSchema = z.object({
   weekdays: z.array(z.number().int().min(0).max(6)).max(7),
   startTime: z.string().regex(time),
   endTime: z.string().regex(time),
+  /** Nur diese Mitglieder berücksichtigen; fehlend = ganzes Team. */
+  memberIds: z.array(z.string().min(1)).max(500).nullish(),
 });
 
 const FINDER_MAX_DAYS = 120;
@@ -231,7 +276,12 @@ export async function findTeamEventDatesAction(
     const access = await requireBoardAccess(data.departmentId);
     if (!access.canManage) throw new Error("Termine planen Leitung, Vertretung und Regie.");
     const members = await prisma.departmentMembership.findMany({
-      where: { departmentId: data.departmentId, status: "active", user: { deactivatedAt: null } },
+      where: {
+        departmentId: data.departmentId,
+        status: "active",
+        user: { deactivatedAt: null },
+        ...(data.memberIds ? { userId: { in: data.memberIds } } : {}),
+      },
       select: {
         user: { select: { id: true, firstName: true, lastName: true, name: true, email: true } },
       },

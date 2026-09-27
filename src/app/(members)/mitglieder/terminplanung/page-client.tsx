@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import {
   EventDialog,
+  type EventDialogAudience,
   type EventDialogState,
   type EventDialogProduction,
 } from "@/components/calendar/event-dialog";
@@ -92,11 +93,13 @@ export function EventPlanningClient({
   events: initialEvents,
   members,
   availability,
+  audience,
   production = null,
 }: {
   events: CalendarEntry[];
   members: PlanningMember[];
   availability: PlanningAvailability[];
+  audience: EventDialogAudience;
   production?: EventDialogProduction;
 }) {
   const [events, setEvents] = useState(initialEvents);
@@ -225,6 +228,7 @@ export function EventPlanningClient({
         state={dialog}
         onClose={() => setDialog(null)}
         production={production}
+        audience={audience}
         onSaved={(entry, previousId) =>
           setEvents((current) =>
             [...current.filter((item) => item.id !== (previousId ?? entry.id)), entry].sort(

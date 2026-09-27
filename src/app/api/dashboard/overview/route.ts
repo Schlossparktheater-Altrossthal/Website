@@ -12,7 +12,7 @@ import { loadProfileChecklist } from "@/lib/profile-completion-server";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { getWhatsappNoticeKey, readDismissedNoticeKeys } from "@/lib/notice-dismissals";
 import { databaseEnabled } from "@/lib/dev-database";
-import { GENERAL_EVENT_WHERE } from "@/lib/calendar/entries";
+import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { DEV_DASHBOARD_OVERVIEW_FIXTURE } from "@/lib/dev-dashboard-fixture";
 
 type MembershipSummary = {
@@ -183,7 +183,7 @@ export async function GET() {
         },
       }),
       prisma.calendarEvent.findMany({
-        where: { start: { gt: now }, ...GENERAL_EVENT_WHERE },
+        where: { start: { gt: now }, ...GENERAL_EVENT_WHERE, ...visibleGeneralEventWhere(userId) },
         orderBy: { start: "asc" },
         take: 5,
         select: { id: true, title: true, kind: true, start: true, end: true, location: true },

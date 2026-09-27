@@ -33,6 +33,8 @@ export type TeamEvent = {
   pending: EventPerson[];
   /** Mitglieder, die an dem Tag in der Sperrliste gesperrt oder eingeschränkt sind. */
   blocked: EventBlock[];
+  /** Nur diese Mitglieder sind eingeladen; null = ganzes Team. */
+  invitedIds: string[] | null;
 };
 
 export type TeamEventsData = {
@@ -42,6 +44,8 @@ export type TeamEventsData = {
   past: TeamEvent[];
   /** Sperren der Mitglieder je Tag (`YYYY-MM-DD`), für die Warnung beim Anlegen. */
   blocksByDay: Record<string, EventBlock[]>;
+  /** Aktive Mitglieder, für die Auswahl beim Anlegen. */
+  members: EventPerson[];
 };
 
 const toPerson = (user: {
@@ -72,8 +76,8 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
     location: true,
     description: true,
     participants: {
-      where: { response: { not: null } },
-      select: { response: true, user: { select: userSelect } },
+      where: { NOT: { response: null, invited: false } },
+      select: { response: true, invited: true, user: { select: userSelect } },
     },
   } as const;
 
@@ -130,6 +134,11 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
           : [],
       )
       .sort((a, b) => a.person.name.localeCompare(b.person.name, "de"));
+    const invited = event.participants.filter((entry) => entry.invited);
+    const invitedIds = invited.length ? invited.map((entry) => entry.user.id) : null;
+    const expected = invitedIds
+      ? people.filter((person) => invitedIds.includes(person.id))
+      : people;
     return {
       id: event.id,
       title: event.title,
@@ -143,8 +152,13 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
       past: isPast,
       myResponse: responses.find((entry) => entry.person.id === viewerId)?.status ?? null,
       responses,
-      pending: people.filter((person) => !responses.some((entry) => entry.person.id === person.id)),
-      blocked: blocksByDay[dayKey] ?? [],
+      pending: expected.filter(
+        (person) => !responses.some((entry) => entry.person.id === person.id),
+      ),
+      blocked: (blocksByDay[dayKey] ?? []).filter(
+        (block) => !invitedIds || invitedIds.includes(block.userId),
+      ),
+      invitedIds,
     };
   };
 
@@ -154,5 +168,6 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
     upcoming: upcoming.map((event) => toEvent(event, false)),
     past: past.map((event) => toEvent(event, true)),
     blocksByDay,
+    members: [...people].sort((a, b) => a.name.localeCompare(b.name, "de")),
   } satisfies TeamEventsData;
 }

@@ -1,4 +1,4 @@
-import { GENERAL_EVENT_WHERE } from "@/lib/calendar/entries";
+import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -57,6 +57,8 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         start: { gte: now },
         status: "SCHEDULED",
         department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
+        // Mit Auswahl nur für die Eingeladenen.
+        ...visibleGeneralEventWhere(userId),
       },
       orderBy: { start: "asc" },
       take: TAKE,
@@ -87,6 +89,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
               { show: { memberships: { some: { userId, ...currentMembershipWhere(now) } } } },
             ],
           },
+          visibleGeneralEventWhere(userId),
         ],
       },
       orderBy: { start: "asc" },
@@ -99,6 +102,10 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         allDay: true,
         location: true,
         show: { select: { title: true, year: true } },
+        participants: {
+          where: { userId, invited: true },
+          select: { level: true, reasons: true },
+        },
       },
     }),
   ]);
@@ -145,20 +152,32 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         decline: null,
       };
     }),
-    ...generalEvents.map((event) => ({
-      id: event.id,
-      title: event.title,
-      label: event.show ? (event.show.title ?? String(event.show.year)) : "Verein",
-      start: event.start.toISOString(),
-      end: event.end?.toISOString() ?? null,
-      allDay: event.allDay,
-      location: event.location,
-      href: null,
-      group: "club" as const,
-      reasons: [event.show ? "Termin deiner Produktion" : "Termin für alle"],
-      fullTime: null,
-      decline: null,
-    })),
+    ...generalEvents.map((event) => {
+      // Mit Zielgruppe: eingeladen wie zu einer Probe, sonst Termin für alle.
+      const own = event.participants[0];
+      const reasons =
+        own && Array.isArray(own.reasons)
+          ? own.reasons.filter((entry) => typeof entry === "string")
+          : [];
+      return {
+        id: event.id,
+        title: event.title,
+        label: event.show ? (event.show.title ?? String(event.show.year)) : "Verein",
+        start: event.start.toISOString(),
+        end: event.end?.toISOString() ?? null,
+        allDay: event.allDay,
+        location: event.location,
+        href: null,
+        group: own
+          ? own.level === "OPTIONAL"
+            ? ("optional" as const)
+            : ("required" as const)
+          : ("club" as const),
+        reasons: own ? reasons : [event.show ? "Termin deiner Produktion" : "Termin für alle"],
+        fullTime: null,
+        decline: null,
+      };
+    }),
   ];
 
   return items.sort((a, b) => a.start.localeCompare(b.start));
