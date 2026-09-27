@@ -252,3 +252,30 @@ export async function setCharacterCastingAction(input: {
     return actionFailure(error, "Besetzung konnte nicht gespeichert werden.");
   }
 }
+
+/**
+ * Gewerke-Anfrage direkt aus der Glocke annehmen oder ablehnen. Nur offene Anfragen, damit
+ * ein veralteter Eintrag niemanden aus dem Gewerk entfernt.
+ */
+export async function decideJoinRequestAction(input: {
+  departmentId: string;
+  userId: string;
+  accept: boolean;
+}): Promise<ProductionActionResult> {
+  try {
+    await authorizeDepartment(input.departmentId);
+  } catch (error) {
+    return actionFailure(error, "Dafür fehlt dir die Berechtigung.");
+  }
+  const existing = await prisma.departmentMembership.findUnique({
+    where: { departmentId_userId: { departmentId: input.departmentId, userId: input.userId } },
+    select: { status: true },
+  });
+  if (existing?.status !== "requested") {
+    await resolveJoinRequest(input.departmentId, input.userId);
+    return { ok: false, error: "Die Anfrage wurde bereits bearbeitet." };
+  }
+  return input.accept
+    ? assignDepartmentMemberAction({ departmentId: input.departmentId, userId: input.userId })
+    : removeDepartmentMemberAction({ departmentId: input.departmentId, userId: input.userId });
+}

@@ -85,4 +85,14 @@ describe("countInbox", () => {
     expect(counts).toMatchObject({ action: 1, new: 1, urgent: 1 });
     expect(counts.byCategory).toMatchObject({ gewerke: 1, proben: 1, system: 0 });
   });
+
+  it("zählt ein Bündel einmal, im dringendsten Abschnitt", () => {
+    const counts = countInbox([
+      item({ groupKey: "decline:e1", category: "proben" }),
+      item({ groupKey: "decline:e1", category: "proben", kind: "action", priority: "urgent" }),
+      item({ groupKey: "decline:e1", category: "proben" }),
+    ]);
+    expect(counts).toMatchObject({ action: 1, new: 0, urgent: 1 });
+    expect(counts.byCategory.proben).toBe(1);
+  });
 });

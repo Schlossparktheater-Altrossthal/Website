@@ -14,7 +14,6 @@ type InboxBody = {
   items: { id: string; groupKey: string | null }[];
   counts: { action: number; new: number; urgent: number; byCategory: Record<string, number> };
   nextCursor: string | null;
-  notifications: { id: string }[];
 };
 
 async function inbox(query = ""): Promise<InboxBody> {
@@ -54,11 +53,11 @@ describe("Benachrichtigungen: Posteingang", () => {
     await signIn(planner.id);
 
     let body = await inbox();
-    expect(body.counts).toMatchObject({ action: 1, new: 3 });
-    expect(body.counts.byCategory).toMatchObject({ proben: 3, gewerke: 1 });
+    expect(body.counts).toMatchObject({ action: 1, new: 1 });
+    expect(body.counts.byCategory).toMatchObject({ proben: 1, gewerke: 1 });
     expect(body.groups).toHaveLength(2);
     expect(body.groups.find((g) => g.key === `group:${key}`)?.count).toBe(3);
-    expect(body.notifications).toHaveLength(4);
+    expect((await inbox("?q=cleo")).items).toHaveLength(1);
 
     const firstPage = await inbox("?limit=2");
     expect(firstPage.items).toHaveLength(2);

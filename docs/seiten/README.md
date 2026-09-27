@@ -6,19 +6,20 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 
 ## Mitgliederbereich (`/mitglieder`)
 
-| Bereich      | Datei                              | Kurzbeschreibung                                              |
-| ------------ | ---------------------------------- | ------------------------------------------------------------- |
-| Dashboard    | [dashboard.md](dashboard.md)       | Übersichtsseite nach Login                                    |
-| Proben       | [proben.md](proben.md)             | Probenplanung, Terminplanung, einzelne Proben, Meine Proben   |
-| Gewerke      | [gewerke.md](gewerke.md)           | Meine Teams, Teams & Zuweisung, Rollenportal                  |
-| Profil       | [profil.md](profil.md)             | Eigenes Profil, Körpermaße, Fotoerlaubnisse                   |
-| Sperrliste   | [sperrliste.md](sperrliste.md)     | Nicht-Verfügbarkeiten der Ensemblemitglieder                  |
-| Produktionen | [produktionen.md](produktionen.md) | Stücke, Stück (Ablauf/Rollen/Auftritte), Zuweisung            |
-| Verwaltung   | [verwaltung.md](verwaltung.md)     | Mitglieder-, Rollen- und Rechteverwaltung                     |
-| Onboarding   | [onboarding.md](onboarding.md)     | Aufnahme neuer Mitglieder, Talentprofile                      |
-| Login        | [login.md](login.md)               | Anmeldung über das Theater-Konto (Authentik)                  |
-| Website      | [website.md](website.md)           | Theme-/Branding-Einstellungen, Sichtbarkeit Mitglieder-Seiten |
-| Server       | [server.md](server.md)             | Server-Einstellungen und Server-Analytics                     |
+| Bereich            | Datei                                          | Kurzbeschreibung                                              |
+| ------------------ | ---------------------------------------------- | ------------------------------------------------------------- |
+| Dashboard          | [dashboard.md](dashboard.md)                   | Übersichtsseite nach Login                                    |
+| Proben             | [proben.md](proben.md)                         | Probenplanung, Terminplanung, einzelne Proben, Meine Proben   |
+| Gewerke            | [gewerke.md](gewerke.md)                       | Meine Teams, Teams & Zuweisung, Rollenportal                  |
+| Profil             | [profil.md](profil.md)                         | Eigenes Profil, Körpermaße, Fotoerlaubnisse                   |
+| Sperrliste         | [sperrliste.md](sperrliste.md)                 | Nicht-Verfügbarkeiten der Ensemblemitglieder                  |
+| Benachrichtigungen | [benachrichtigungen.md](benachrichtigungen.md) | Glocke und Seite: Zu erledigen, Neu, Archiv                   |
+| Produktionen       | [produktionen.md](produktionen.md)             | Stücke, Stück (Ablauf/Rollen/Auftritte), Zuweisung            |
+| Verwaltung         | [verwaltung.md](verwaltung.md)                 | Mitglieder-, Rollen- und Rechteverwaltung                     |
+| Onboarding         | [onboarding.md](onboarding.md)                 | Aufnahme neuer Mitglieder, Talentprofile                      |
+| Login              | [login.md](login.md)                           | Anmeldung über das Theater-Konto (Authentik)                  |
+| Website            | [website.md](website.md)                       | Theme-/Branding-Einstellungen, Sichtbarkeit Mitglieder-Seiten |
+| Server             | [server.md](server.md)                         | Server-Einstellungen und Server-Analytics                     |
 
 ## Konventionen
 

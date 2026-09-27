@@ -4,6 +4,8 @@ import {
   Activity,
   AlertCircle,
   AlertTriangle,
+  Archive,
+  ArchiveRestore,
   ArrowDownAZ,
   ArrowLeft,
   ArrowLeftRight,
@@ -31,6 +33,7 @@ import {
   Camera,
   Cat,
   Check,
+  CheckCheck,
   CheckCircle,
   CheckCircle2,
   CheckSquare,
@@ -1005,4 +1008,25 @@ export function XCircleIcon({
 
 export function ZapIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
   return <Zap className={className} aria-hidden {...props} />;
+}
+
+export function ArchiveIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Archive className={className} aria-hidden {...props} />;
+}
+
+export function ArchiveRestoreIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <ArchiveRestore className={className} aria-hidden {...props} />;
+}
+
+export function CheckCheckIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <CheckCheck className={className} aria-hidden {...props} />;
 }
