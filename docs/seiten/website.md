@@ -28,7 +28,12 @@ Der öffentliche Auftritt läuft auf Drupal. Die frühere Steuerung öffentliche
 - Theme-Tokens über `src/lib/website-settings.ts` (`ThemeTokens`, Branded Types wie
   `ThemeModeKey`/`ThemeTokenKey`).
 - Sichtbarkeit der Mitglieder-Seiten über `PageVisibilitySettings` (`members`) und
-  `saveWebsiteSettings`; gelesen wird sie in `src/components/members-nav.tsx`.
+  `saveWebsiteSettings`; gelesen wird sie in `src/components/members-nav.tsx` (Menü).
+- Ausgeblendete Seiten sind gesperrt, nicht nur aus dem Menü entfernt: `src/proxy.ts`
+  reicht den Pfad als `x-members-pathname` an das Mitglieder-Layout, das ohne
+  `PRIVATE.ADMIN.PAGES.MANAGE` auf `/mitglieder` umleitet. Bei Client-Navigation greift
+  `HiddenPageGuard`. Unterseiten gehören zum spezifischsten Menüeintrag
+  (`src/lib/members-page-visibility.ts`); Dashboard und Seitensteuerung sind nie ausblendbar.
 - API: `src/app/api/website/settings/route.ts` (`GET`/`PUT`). Die Schreibrechte sind
   feldbezogen: Seiten-Sichtbarkeit erfordert `PRIVATE.ADMIN.PAGES.MANAGE`, Theme/Branding
   `PRIVATE.SETTINGS.THEME.MANAGE`.

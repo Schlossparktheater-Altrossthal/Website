@@ -1,5 +1,6 @@
 import React from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { execSync } from "node:child_process";
 
 import { MysticBackground } from "@/components/mystic-background";
@@ -8,6 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 import type { AssignmentFocus } from "@/components/members-nav";
 import { MembersPermissionsProvider } from "@/components/members/permissions-context";
 import { MembersAppShell } from "@/components/members/members-app-shell";
+import { HiddenPageGuard } from "@/components/members/hidden-page-guard";
 import { SidebarProvider, SIDEBAR_COOKIE_NAME } from "@/components/ui/sidebar";
 import { getActiveProduction } from "@/lib/active-production";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +17,11 @@ import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { getUserPermissionKeys } from "@/lib/permissions";
 import { hasRole, requireAuth } from "@/lib/rbac";
 import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
+import {
+  isMemberPageHidden,
+  PAGE_VISIBILITY_BYPASS_PERMISSION,
+} from "@/lib/members-page-visibility";
+import { MEMBERS_PATHNAME_HEADER } from "@/proxy";
 
 type CommitInfo = {
   short: string;
@@ -105,6 +112,17 @@ export default async function MembersLayout({ children }: { children: React.Reac
 
   const siteTitle = resolvedSettings.siteTitle;
 
+  // In der Seitensteuerung ausgeblendete Seiten sind nur mit dem Pages-Recht erreichbar.
+  const canBypassPageVisibility = permissions.includes(PAGE_VISIBILITY_BYPASS_PERMISSION);
+  const pathname = (await headers()).get(MEMBERS_PATHNAME_HEADER);
+  if (
+    pathname &&
+    !canBypassPageVisibility &&
+    isMemberPageHidden(pathname, resolvedSettings.pageVisibility.members)
+  ) {
+    redirect("/mitglieder");
+  }
+
   let assignmentFocus: AssignmentFocus = "none";
   const userId = session.user?.id;
   let departmentAssignmentCount = 0;
@@ -155,6 +173,9 @@ export default async function MembersLayout({ children }: { children: React.Reac
           style={layoutStyle}
         >
           <MembersPermissionsProvider permissions={permissions}>
+            {canBypassPageVisibility ? null : (
+              <HiddenPageGuard visibility={resolvedSettings.pageVisibility.members} />
+            )}
             <MembersAppShell
               permissions={permissions}
               activeProduction={activeProduction ?? undefined}
