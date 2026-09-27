@@ -199,9 +199,20 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 
 **Umsetzungsschritte**
 
-1. [x] Gewerk-Dashboard: angesetzte Termine mit Regel `DEPARTMENT` anzeigen (2026-09-27): Kennzeichen „Gemeinsam“/„Probe“, nicht bearbeitbar, Zu-/Absage für Eingeladene, Proben über „Meine Termine“.
+1. [x] Gewerk-Dashboard: angesetzte Termine mit Regel `DEPARTMENT` anzeigen (2026-09-27): Kennzeichen „Gemeinsam“/„Probe“, nicht bearbeitbar, Zu-/Absage für Eingeladene, Proben über „Meine Termine“. Termin-Zähler im Tab und „nächster Termin“ auf den Gewerk-Karten zählen gemeinsame Termine mit (`departmentEventWhere` in `src/lib/departments/events.ts`, genutzt von `portal.ts`).
 2. [x] Migration (2026-09-27, 20260928130000 + 20260928130100): `EventStatus.TENTATIVE`, `EventScene` → `EventBlock` per Umbenennung (Daten bleiben, `type = SCENE`), neue Felder `type`, `departmentId`, `title`, `description`, `location`; `CalendarEvent.scenes` heißt jetzt `blocks` (Szenen-Abfragen filtern `type = SCENE`).
 3. [x] Status „vorgemerkt“ (2026-09-27, vorerst nur im Probeneditor): Entwurf → „Vormerken“ oder „Probe ansetzen“, vorgemerkt → „Jetzt verbindlich ansetzen“ (Absagen bleiben). Sichtbar in Meine Termine/Kalender/Feed/Gewerk-Dashboard mit Kennzeichen „vorgemerkt“, Absage mit freiwilligem Grund, Planung wird bei Absagen benachrichtigt, Terminfinder und Konfliktprüfung zählen vorgemerkte Proben mit (`src/lib/calendar/status.ts`). Für allgemeine Termine kommt es mit dem gemeinsamen Editor (Schritt 5).
 4. Bausteine allgemein + parallel, Teilnehmer-Auflösung aus Bausteinen, Gewerk-Bausteine mit Rechten der Gewerk-Leitung.
 5. Editoren zusammenführen, `GENERAL_EVENT_WHERE` und `kind: "REHEARSAL"`-Filter bereinigen, Navigation vereinen.
 6. E2E + Release zusammen mit Phase 5b (Prod hat die Terminplanung noch nicht).
+
+**Stand und Wiedereinstieg (2026-09-27)**
+
+- Schritte 1–3 sind auf `main`/Staging (Commits 7f6b5016, 96d0bee3, f36f00c3, d01962b0). Getestet: Typprüfung, alle Unit-Tests, Migration gegen Wegwerf-DB mit vorhandener Szene. **Noch nicht im Browser getestet:** gemeinsamer Termin im Gewerk-Dashboard, Vormerken → Absage ohne Grund → Ansetzen (Absage bleibt).
+- Bekannte Lücken aus Schritt 3:
+  - Das Gewerk-Dashboard zeigt vorgemerkte gemeinsame Termine ohne Kennzeichen „vorgemerkt“ (`TeamEvent` hat kein Status-Feld).
+  - Die Probenseite `/mitglieder/proben/[id]` zeigt den Status, hat aber keinen eigenen Absage-Knopf (Absage nur in „Meine Termine“).
+  - Kalender/Planungsliste markieren „vorgemerkt“ nur über den Titelzusatz „(vorgemerkt)“.
+- Einstieg Schritt 4: Szenen-Zeitplan in `src/lib/calendar/scene-schedule-server.ts` (`syncRehearsalSchedule`, filtert `type = SCENE`) und `src/components/calendar/scene-schedule-editor.tsx`; Teilnehmer-Auflösung in `src/lib/calendar/audience.ts`/`audience-server.ts`; Gewerk-Rechte über `requireBoardAccess` (`src/lib/departments/board.ts`), Gewerk-Termine in `src/app/(members)/mitglieder/meine-gewerke/event-actions.ts`.
+- Einstieg Schritt 5: Probeneditor `src/app/(members)/mitglieder/probenplanung/rehearsal-editor.tsx` + `actions/drafts.ts`/`actions/rehearsals.ts`, Termin-Dialog `src/components/calendar/event-dialog.tsx` + `src/app/api/calendar-events`, Seiten `terminplanung/` und `probenplanung/`, Filter `GENERAL_EVENT_WHERE` in `src/lib/calendar/entries.ts` und die übrigen `kind: "REHEARSAL"`-Stellen (`grep -rn '"REHEARSAL"' src`).
+- Prod-Release: Migrationen 20260928130000/130100 kommen zusätzlich zu denen aus Phase 1–5; vorher Backup und Migrationstest gegen Kopie der Staging-DB.
