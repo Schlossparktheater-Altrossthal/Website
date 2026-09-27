@@ -38,9 +38,9 @@ pnpm dev:clean            # Tiefe Bereinigung (Container, Images, Volumes, node_
 
 ## URLs nach dem Start
 
-- **Hauptanwendung**: http://localhost:3000
-- **E-Mail Interface**: http://localhost:8025 (Docker-Modus)
-- **Datenbank**: localhost:5432
+- **Hauptanwendung**: <http://localhost:3000>
+- **E-Mail Interface**: <http://localhost:8025> (Docker-Modus)
+- **Datenbank**: `localhost:5432`
 
 ## Nützliche Befehle
 
