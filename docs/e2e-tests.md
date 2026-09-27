@@ -62,6 +62,34 @@ pnpm e2e:screenshots -- --role member --viewport tablet-portrait
   oder `--out <dir>` (dort ebenfalls in `<viewport>`-Unterordnern). Nicht committen (keine Binärdateien im Repo).
 - Das Skript wartet auf `.animate-pulse`/`aria-busy`, damit die Client-Session geladen ist.
 
+## Klicks und Hydration (`clickUntil`)
+
+`next dev` liefert das HTML aus, bevor React hydratisiert hat. Die Seite sieht in diesem Fenster
+fertig aus, reagiert aber noch nicht: Ein Klick verpufft wirkungslos – kein Request, keine
+Fehlermeldung, die Zusicherung läuft in ihren Timeout. Auf schnellen Rechnern ist das Fenster kaum
+messbar, im CI reproduzierbar (dort lief der Klick auf „Neue Probe anlegen“ ins Leere, obwohl der
+Button sichtbar war).
+
+- Die Bereiche einer Seite hydratisieren **unabhängig** voneinander. Ein bedienbarer Kalender sagt
+  nichts über den Seitenkopf – ein „bin ich interaktiv?“-Testklick auf ein Nachbarelement und
+  `waitUntil: "networkidle"` sind deshalb keine verlässlichen Signale.
+- Klicks auf Client-Aktionen nach einem vollen Seitenaufruf laufen über `clickUntil()`
+  (`e2e/helpers.ts`): Der Klick wird wiederholt, bis die erwartete Wirkung eintritt. Ein doppelter
+  Klick ist ausgeschlossen, weil der Button während der Aktion seinen Namen ändert (`AsyncButton`
+  zeigt den Ladetext und ist `disabled`) und der Selektor ihn dann nicht mehr findet.
+
+```ts
+// e2e/bausteine.spec.ts: „Neu“ öffnet ein Menü – erst danach ist geklickt.
+await clickUntil(page.getByRole("button", { name: "Neu", exact: true }), () =>
+  expect(page.getByRole("menuitem", { name: "Probe" })).toBeVisible({ timeout: 2_000 }),
+);
+```
+
+- Nach einer Client-Navigation (`router.push`, `<Link>` mit aktiver Hydration) ist das nicht nötig:
+  React rendert die neue Seite im Browser und hängt die Handler sofort an.
+- Links (`<a href>`) funktionieren auch ohne Hydration. Kritisch ist der jeweils **erste
+  Client-Button** einer frisch geladenen Seite.
+
 ## Demo-Daten: Termin mit Bausteinen
 
 Für Terminplanung Phase 6 (`docs/terminplanung-plan.md`) gibt es einen wiederholbaren Demo-Termin:

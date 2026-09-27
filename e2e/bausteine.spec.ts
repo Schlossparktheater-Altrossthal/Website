@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { clickUntil } from "./helpers";
 import { authFile } from "./env";
 
 // Termine mit Bausteinen (docs/terminplanung-plan.md, Phase 6): Planung legt einen
@@ -23,7 +24,10 @@ async function deleteRehearsal(page: Page) {
   if (!editorUrl) return;
   await page.goto(editorUrl);
   editorUrl = null;
-  await page.getByRole("button", { name: "Löschen" }).click();
+  // Der Editor lädt voll neu – der erste Klick verpufft vor der Hydration.
+  await clickUntil(page.getByRole("button", { name: "Löschen" }), () =>
+    expect(page.getByRole("dialog")).toContainText("löschen?", { timeout: 2_000 }),
+  );
   await page.getByRole("button", { name: "Löschen", exact: true }).last().click();
   await expect(page).toHaveURL(/\/mitglieder\/terminplanung$/);
 }
@@ -41,7 +45,10 @@ test.describe("als admin", () => {
     await page.goto("/mitglieder/terminplanung");
     const create = page.getByRole("button", { name: "Neu", exact: true });
     test.skip(!(await create.isVisible().catch(() => false)), "Keine Terminplanung verfügbar");
-    await create.click();
+    // Menü erst öffnen, wenn die Seite reagiert – vor der Hydration verpufft der Klick.
+    await clickUntil(create, () =>
+      expect(page.getByRole("menuitem", { name: "Probe" })).toBeVisible({ timeout: 2_000 }),
+    );
     await page.getByRole("menuitem", { name: "Probe" }).click();
     await expect(page).toHaveURL(/\/mitglieder\/terminplanung\/[^/]+$/);
     editorUrl = new URL(page.url()).pathname;
@@ -73,7 +80,11 @@ test.describe("als admin", () => {
     await expect(card).toBeVisible();
     await expect(page.getByText(/Euer Teil: E2E Baustein/)).toBeVisible();
 
-    await card.click();
+    await clickUntil(card, () =>
+      expect(page.getByRole("button", { name: "Baustein organisieren" })).toBeVisible({
+        timeout: 1_000,
+      }),
+    );
     await page.getByRole("button", { name: "Baustein organisieren" }).click();
     await page.getByPlaceholder("optional, z. B. Werkstatt").fill("E2E Raum");
     await page.getByRole("button", { name: "Speichern" }).click();
