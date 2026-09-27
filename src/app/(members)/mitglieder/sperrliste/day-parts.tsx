@@ -162,6 +162,9 @@ export function CalendarLegend({ className }: { className?: string }) {
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1 w-4 rounded-full bg-info/60" aria-hidden /> Ferien
       </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rotate-45 bg-warning" aria-hidden /> Feiertag
+      </span>
     </div>
   );
 }

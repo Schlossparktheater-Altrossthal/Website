@@ -58,9 +58,9 @@ vi.mock("@/lib/sperrliste-settings", () => ({
   getDefaultPublicHolidaySourceUrl: vi.fn(() => defaultPublicHolidayUrl),
 }));
 
-import { SAXONY_PUBLIC_HOLIDAYS } from "@/data/saxony-public-holidays";
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
 import { getSaxonySchoolHolidayRanges, isHolidaySourceUrlAllowed } from "@/lib/holidays";
+import { getSaxonyPublicHolidaysBetween } from "@/lib/saxony-public-holidays";
 
 describe("getSaxonySchoolHolidayRanges", () => {
   let previousOutboundToggle: string | undefined;
@@ -98,7 +98,7 @@ describe("getSaxonySchoolHolidayRanges", () => {
 
     const thresholdStart = format(addDays(new Date(), -365), "yyyy-MM-dd");
     const thresholdEnd = format(addDays(new Date(), 365 * 3), "yyyy-MM-dd");
-    const expected = [...SAXONY_SCHOOL_HOLIDAYS, ...SAXONY_PUBLIC_HOLIDAYS]
+    const expected = [...SAXONY_SCHOOL_HOLIDAYS, ...getSaxonyPublicHolidaysBetween(2024, 2028)]
       .filter((range) => range.endDate >= thresholdStart && range.startDate <= thresholdEnd)
       .sort((a, b) => {
         const byStart = a.startDate.localeCompare(b.startDate);

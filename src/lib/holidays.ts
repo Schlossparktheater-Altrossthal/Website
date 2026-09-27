@@ -2,7 +2,6 @@ import { unstable_cache } from "next/cache";
 import ical, { type VEvent } from "node-ical";
 import { addDays, format, isValid, parseISO } from "date-fns";
 
-import { SAXONY_PUBLIC_HOLIDAYS } from "@/data/saxony-public-holidays";
 import { SAXONY_SCHOOL_HOLIDAYS } from "@/data/saxony-school-holidays";
 import {
   applyHolidaySourceStatuses,
@@ -14,6 +13,10 @@ import {
   type ResolvedSperrlisteSettings,
 } from "@/lib/sperrliste-settings";
 
+import {
+  getSaxonyPublicHolidayName,
+  getSaxonyPublicHolidaysBetween,
+} from "@/lib/saxony-public-holidays";
 import type { HolidayCategory, HolidayRange } from "@/types/holidays";
 
 export type { HolidayRange } from "@/types/holidays";
@@ -223,10 +226,16 @@ function getStaticSchoolHolidayRanges() {
 }
 
 function getStaticPublicHolidayRanges() {
-  return cloneRanges(SAXONY_PUBLIC_HOLIDAYS);
+  // Berechnet statt fest hinterlegt: die Liste läuft so nie aus.
+  const year = new Date().getFullYear();
+  return getSaxonyPublicHolidaysBetween(year - 1, year + 3);
 }
 
-function normaliseSummary(value: unknown) {
+function normaliseSummary(value: unknown): string {
+  // node-ical liefert Eigenschaften mit Parametern (z. B. `SUMMARY;LANGUAGE=en-us:…`) als Objekt.
+  if (value && typeof value === "object" && "val" in value) {
+    return normaliseSummary(value.val);
+  }
   if (typeof value !== "string") {
     return "";
   }
@@ -295,9 +304,13 @@ function toRange(event: VEvent, category: HolidayCategory): HolidayRange | null 
   }
 
   const end = resolveInclusiveEnd(start, ensureDate(event.end), event.datetype === "date");
-  const summary = normaliseSummary(event.summary);
-
   const startDate = format(start, "yyyy-MM-dd");
+  // Feiertage mit deutschem Namen: Feeds liefern oft englische oder gar keine Titel.
+  const summary =
+    (category === "publicHoliday" && start.getTime() === end.getTime()
+      ? getSaxonyPublicHolidayName(startDate)
+      : null) ?? normaliseSummary(event.summary);
+
   const endDate = format(end, "yyyy-MM-dd");
 
   const uid = normaliseSummary(event.uid);

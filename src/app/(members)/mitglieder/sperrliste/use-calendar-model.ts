@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { addMonths, endOfMonth, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
 
-import type { MonthGridDayState } from "@/components/ui/month-grid";
+import type { MonthGridDayState, MonthGridMarker } from "@/components/ui/month-grid";
 import { expandEntryDayKeys, type CalendarEntry } from "@/lib/calendar/event-kinds";
 import { buildDayInfos, type DayInfo, type FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import type { HolidayRange } from "@/types/holidays";
@@ -108,9 +108,14 @@ export function getBaseDayState(
   entries: CalendarEntry[] | undefined,
 ): MonthGridDayState {
   if (!day) return {};
-  const markers = (entries ?? []).map((entry) =>
-    entry.source === "rehearsal" ? ("rehearsal" as const) : ("event" as const),
-  );
+  const markers: MonthGridMarker[] = [
+    ...(day.holidays.some((holiday) => holiday.category === "publicHoliday")
+      ? (["holiday"] as const)
+      : []),
+    ...(entries ?? []).map((entry) =>
+      entry.source === "rehearsal" ? ("rehearsal" as const) : ("event" as const),
+    ),
+  ];
   const descriptionParts = [
     day.isFinalWeek ? "Endprobenwoche" : null,
     ...day.holidays.map((holiday) => holiday.title),

@@ -32,7 +32,7 @@ const ARIA_DATE = new Intl.DateTimeFormat("de-DE", {
   month: "long",
 });
 
-export type MonthGridMarker = "event" | "rehearsal";
+export type MonthGridMarker = "event" | "rehearsal" | "holiday";
 
 export type MonthGridDayState = {
   status?: AvailabilityStatus;
@@ -69,6 +69,8 @@ type MonthGridProps = {
 const MARKER_CLASS: Record<MonthGridMarker, string> = {
   event: "bg-primary",
   rehearsal: "bg-info",
+  // Raute statt Punkt, damit sich der Feiertag von Terminen abhebt.
+  holiday: "rotate-45 rounded-none bg-warning",
 };
 
 /**
