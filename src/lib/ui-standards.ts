@@ -29,6 +29,11 @@ export interface ModalFormDialogProps {
   saveLabel?: string;
 }
 
+export interface InlineScriptProps {
+  /** Quelltext eines Inline-Skripts, das vor dem ersten Paint laufen soll. */
+  html: string;
+}
+
 export interface SectionNavItem {
   /** Kennung der Ansicht; entspricht dem Wert in der URL (z. B. `?ansicht=`). */
   id: string;
@@ -48,4 +53,5 @@ export const UI_PATTERNS = {
   asyncButton: "async-button",
   modalFormDialog: "modal-form-dialog",
   sectionNav: "section-nav",
+  inlineScript: "inline-script",
 } as const;

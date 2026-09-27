@@ -159,6 +159,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Für alle destruktiven Bestätigungen ConfirmDialog aus `src/components/ui/confirm-dialog.tsx` verwenden. `window.confirm` ist verboten.
 - Für alle Create/Edit-Dialoge ModalFormDialog aus `src/components/ui/modal-form-dialog.tsx` verwenden.
 - `src/lib/ui-standards.ts` ist die Single Source of Truth für Props-Interfaces aller geteilten UI-Patterns.
+- Inline-Skripte (Anti-Flash, müssen vor dem ersten Paint laufen) rendern über `InlineScript` aus `src/components/ui/inline-script.tsx`: Der Server liefert `text/javascript`, der Client `text/plain` (inert). Ein direkt gerendertes `<script>` erzeugt in React 19 die Konsolenfehlermeldung „Encountered a script tag while rendering React component" — sichtbar auf jeder Fehler- oder 404-Seite, weil React dort clientseitig neu rendert.
 
 ## Design-Tokens
 

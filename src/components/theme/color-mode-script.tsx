@@ -1,3 +1,4 @@
+import { InlineScript } from "@/components/ui/inline-script";
 import { DEFAULT_COLOR_MODE, type ThemeColorMode } from "@/lib/website-settings";
 
 export type ColorModeScriptProps = {
@@ -107,5 +108,5 @@ export function ColorModeScript({ mode }: ColorModeScriptProps) {
     window.addEventListener("beforeunload", cleanup);
   })();`;
 
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+  return <InlineScript html={script} />;
 }
