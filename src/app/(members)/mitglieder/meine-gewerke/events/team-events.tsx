@@ -212,7 +212,7 @@ export function TeamEvents({
             Vergangene Termine ({data.past.length})
           </button>
           {showPast ? (
-            <ul className="mt-1 divide-y divide-border/60 rounded-xl border border-border bg-card">
+            <ul className="mt-1 divide-y divide-border rounded-xl border border-border bg-card">
               {data.past.map((event) => (
                 <li key={event.id}>
                   <button

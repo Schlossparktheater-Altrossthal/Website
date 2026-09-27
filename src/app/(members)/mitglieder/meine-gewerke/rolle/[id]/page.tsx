@@ -98,7 +98,7 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
         <div className="grid gap-4 lg:grid-cols-2">
           <Section title="Besetzung">
             {role.cast.length ? (
-              <ul className="divide-y divide-border/60">
+              <ul className="divide-y divide-border">
                 {role.cast.map((person) => (
                   <li
                     key={`${person.id}-${person.type}`}
@@ -125,7 +125,7 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
 
           <Section title="Nächste Proben der Besetzung">
             {role.rehearsals.length ? (
-              <ul className="divide-y divide-border/60">
+              <ul className="divide-y divide-border">
                 {role.rehearsals.map((rehearsal) => (
                   <li key={rehearsal.id}>
                     <Link
@@ -214,7 +214,7 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
 
       {view === "ausstattung" ? (
         role.breakdown.length ? (
-          <ul className="divide-y divide-border/60 rounded-xl border border-border bg-card">
+          <ul className="divide-y divide-border rounded-xl border border-border bg-card">
             {role.breakdown.map((item) => (
               <li key={item.id} className="flex min-h-12 items-center gap-3 px-3 py-2">
                 <ColorDot color={item.department.color} />

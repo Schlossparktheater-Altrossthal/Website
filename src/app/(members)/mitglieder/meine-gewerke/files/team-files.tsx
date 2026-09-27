@@ -86,7 +86,7 @@ export function TeamFiles({
   return (
     <div className="space-y-2">
       {files.length ? (
-        <ul className="divide-y divide-border/60">
+        <ul className="divide-y divide-border">
           {files.map((file) => {
             const Icon = file.mimeType.startsWith("image/") ? ImageIcon : FileIcon;
             const canDelete = canManage || file.uploaderId === viewerId;

@@ -245,7 +245,7 @@ export function AssignmentBoard({ data, rolesData, manageAll, leadDepartmentIds 
                   : "Keine Person passt zu Suche und Filter."}
               </EmptyHint>
             ) : (
-              <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card">
+              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border/70 bg-card">
                 {people.map((person) => (
                   <li key={person.id}>
                     <PersonRow
@@ -1098,7 +1098,7 @@ function RolesList({
     <div className="space-y-2">
       {createButton}
       <ul
-        className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card"
+        className="divide-y divide-border overflow-hidden rounded-xl border border-border/70 bg-card"
         aria-label="Rollen"
       >
         {characters.map((character) => {

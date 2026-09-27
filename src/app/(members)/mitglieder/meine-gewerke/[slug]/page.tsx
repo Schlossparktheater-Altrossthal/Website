@@ -253,7 +253,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
               title={`Anfragen (${portal.requests.length})`}
               action={{ href: "/mitglieder/produktionen/zuweisung", label: "Entscheiden" }}
             >
-              <ul className="divide-y divide-border/60">
+              <ul className="divide-y divide-border">
                 {portal.requests.map((member) => (
                   <MemberRow key={member.id} member={member} hint="möchte mitmachen" />
                 ))}
@@ -269,7 +269,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
             }
           >
             {portal.members.length ? (
-              <ul className="divide-y divide-border/60 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:divide-y-0">
+              <ul className="divide-y divide-border sm:grid sm:grid-cols-2 sm:gap-x-6 sm:divide-y-0">
                 {portal.members.map((member) => (
                   <MemberRow key={member.id} member={member} showMail={canManage} />
                 ))}

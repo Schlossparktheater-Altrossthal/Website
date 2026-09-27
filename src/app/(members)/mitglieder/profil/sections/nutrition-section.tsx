@@ -349,7 +349,7 @@ export function NutritionSection({
         {allergies.length === 0 ? (
           <p className="text-sm text-muted-foreground">Keine Allergien hinterlegt.</p>
         ) : (
-          <ul className="divide-y divide-border/50">
+          <ul className="divide-y divide-border">
             {allergies.map((entry) => {
               const style =
                 ALLERGY_LEVEL_STYLES[entry.level as AllergyLevel] ?? ALLERGY_LEVEL_STYLES.MILD;

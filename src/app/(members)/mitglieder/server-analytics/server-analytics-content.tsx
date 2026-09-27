@@ -1163,7 +1163,7 @@ export function ServerAnalyticsContent({
                       <th className="px-3 py-2 text-left">Zielerfüllung</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/70">
+                  <tbody className="divide-y divide-border">
                     {displayAnalytics.publicPages.map((entry) => (
                       <tr key={entry.path} className="bg-background/60">
                         <td className="px-3 py-2">
@@ -1235,7 +1235,7 @@ export function ServerAnalyticsContent({
                       <th className="px-3 py-2 text-left">Zielerfüllung</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/70">
+                  <tbody className="divide-y divide-border">
                     {displayAnalytics.memberPages.map((entry) => (
                       <tr key={entry.path} className="bg-background/60">
                         <td className="px-3 py-2">
@@ -1303,7 +1303,7 @@ export function ServerAnalyticsContent({
                         <th className="px-3 py-2 text-left">Trend</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/70">
+                    <tbody className="divide-y divide-border">
                       {displayAnalytics.trafficSources.map((source) => (
                         <tr key={source.channel} className="bg-background/60">
                           <td className="px-3 py-2 font-medium text-foreground">
@@ -1355,7 +1355,7 @@ export function ServerAnalyticsContent({
                         <th className="px-3 py-2 text-left">Ø Ladezeit</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/70">
+                    <tbody className="divide-y divide-border">
                       {displayAnalytics.deviceBreakdown.map((device) => (
                         <tr key={device.device} className="bg-background/60">
                           <td className="px-3 py-2 font-medium text-foreground">{device.device}</td>
@@ -1401,7 +1401,7 @@ export function ServerAnalyticsContent({
                         <th className="px-3 py-2 text-left">Anteil</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/70">
+                    <tbody className="divide-y divide-border">
                       {displayAnalytics.sessionInsights.map((segment) => (
                         <tr key={segment.segment} className="bg-background/60">
                           <td className="px-3 py-2 font-medium text-foreground">

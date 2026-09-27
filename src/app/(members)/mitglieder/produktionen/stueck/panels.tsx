@@ -631,7 +631,7 @@ function BreakdownEditor({
   return (
     <div className="space-y-2">
       {scene.breakdown.length ? (
-        <ul className="divide-y divide-border/60 rounded-lg bg-muted">
+        <ul className="divide-y divide-border rounded-lg bg-muted">
           {scene.breakdown.map((item) => (
             <li key={item.id} className="flex min-h-12 items-center gap-2 px-2 py-1.5">
               <span

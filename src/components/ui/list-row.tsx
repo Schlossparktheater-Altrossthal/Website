@@ -92,14 +92,26 @@ export function ListRow({
   return <div className={classes}>{content}</div>;
 }
 
-/** Container für ListRows mit feinen Trennlinien. */
+/**
+ * Container für ListRows mit Trennlinien. `inset` rahmt die Gruppe zusätzlich ein – für
+ * Listen, die frei auf einer Fläche stehen.
+ */
 export function ListRowGroup({
   className,
   children,
+  variant = "plain",
   ...props
-}: React.HTMLAttributes<HTMLUListElement>) {
+}: React.HTMLAttributes<HTMLUListElement> & { variant?: "plain" | "inset" }) {
   return (
-    <ul className={cn("divide-y divide-border/50", className)} {...props}>
+    <ul
+      className={cn(
+        "divide-y divide-border",
+        variant === "inset" &&
+          "overflow-hidden rounded-lg border border-border [&_a]:rounded-none [&_button]:rounded-none",
+        className,
+      )}
+      {...props}
+    >
       {React.Children.map(children, (child) =>
         child === null || child === undefined || child === false ? null : <li>{child}</li>,
       )}

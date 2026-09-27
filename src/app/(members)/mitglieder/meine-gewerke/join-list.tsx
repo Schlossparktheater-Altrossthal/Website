@@ -30,7 +30,7 @@ export function JoinList({ teams }: { teams: JoinableTeam[] }) {
   };
 
   return (
-    <ul className="divide-y divide-border/60 rounded-xl border border-border bg-card">
+    <ul className="divide-y divide-border rounded-xl border border-border bg-card">
       {teams.map((team) => (
         <li key={team.id} className="flex min-h-14 items-center gap-3 px-3 py-2">
           <ColorDot color={team.color} />

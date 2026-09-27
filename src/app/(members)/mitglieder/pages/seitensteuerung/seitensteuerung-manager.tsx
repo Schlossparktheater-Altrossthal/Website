@@ -222,7 +222,7 @@ export function SeitensteuerungManager({
               ) : null}
             </CardHeader>
             <CardContent className="pt-0">
-              <ul className="divide-y divide-border/50">
+              <ul className="divide-y divide-border">
                 {group.pages.map((page) => {
                   const visible = isVisible(page.key);
                   const Icon = page.icon;

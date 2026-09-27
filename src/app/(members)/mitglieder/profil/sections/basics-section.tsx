@@ -279,7 +279,7 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
   return (
     <>
       <Card variant="plain" size="md">
-        <form className="divide-y divide-border/60" onSubmit={handleSubmit} noValidate>
+        <form className="divide-y divide-border" onSubmit={handleSubmit} noValidate>
           <ProfileFieldset title="Persönliches">
             <div className="grid gap-4 sm:grid-cols-2">
               <ProfileField label="Vorname" htmlFor="firstName" error={fieldErrors.firstName}>
