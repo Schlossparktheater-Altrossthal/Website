@@ -7,7 +7,7 @@ import {
   currentMembershipWhere,
 } from "@/lib/produktionen/status";
 
-/** Muss ich hin · Optional · Verein (allgemeine Termine ohne persönliche Einladung). */
+/** Muss ich hin · Optional · Für alle (allgemeine Termine ohne persönliche Einladung). */
 export type MyEventGroup = "required" | "optional" | "club";
 
 export type MyEventItem = {
@@ -31,7 +31,7 @@ export type MyEventItem = {
 
 const TAKE = 30;
 
-/** Kommende Termine einer Person: eigene Proben, Gewerk-Termine und Vereinstermine. */
+/** Kommende Termine einer Person: eigene Proben, Gewerk-Termine und allgemeine Termine. */
 export async function readMyUpcomingEvents(userId: string, now = new Date()) {
   const [rehearsals, departmentEvents, generalEvents] = await Promise.all([
     prisma.eventParticipant.findMany({
@@ -166,7 +166,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
     ...generalEvents.map((event) => ({
       id: event.id,
       title: event.title,
-      label: event.show ? (event.show.title ?? String(event.show.year)) : "Verein",
+      label: event.show ? (event.show.title ?? String(event.show.year)) : "Allgemein",
       start: event.start.toISOString(),
       end: event.end?.toISOString() ?? null,
       allDay: event.allDay,

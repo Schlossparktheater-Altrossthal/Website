@@ -152,7 +152,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 
 - Gestaffelt: Szenenliste mit Uhrzeiten, Vorschau „Max: 18:00–19:30 (Sz. 3, 5)“.
 - Angesetzter Termin mit Abweichungen: Hinweisbox „Besetzung geändert – 2 Änderungen übernehmen?“ mit Vorschau.
-- **Meine Termine**: Filter-Chips _Muss ich hin · Optional · Verein_; auf jeder Karte der Grund und bei gestaffelten Proben die persönliche Zeit; offene Zusagen oben; Zusage direkt auf der Karte, bei Absage eines Pflichttermins Begründung.
+- **Meine Termine**: Filter-Chips _Muss ich hin · Optional · Für alle_; auf jeder Karte der Grund und bei gestaffelten Proben die persönliche Zeit; offene Zusagen oben; Zusage direkt auf der Karte, bei Absage eines Pflichttermins Begründung.
 - **Nach der Probe**: Szenen abhaken (geschafft/teilweise/nicht), Anwesenheit.
 - **Kalender-Abo**: Auswahl „Nur meine Termine“ / „Alles aus meinen Produktionen“ + Schalter „eigene Sperren“; persönliche Zeit bei gestaffelten Proben; Szenen in der Beschreibung.
 
@@ -214,6 +214,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
    - Sperrliste: „Termin“ legt einen Entwurf an und öffnet den Editor; Termine im Tag öffnen den Editor.
    - `GENERAL_EVENT_WHERE` filtert jetzt auch den Status (Entwürfe allgemeiner Termine sind unsichtbar); vorgemerkte allgemeine Termine tragen „(vorgemerkt)“. Die übrigen `kind: "REHEARSAL"`-Stellen bleiben bewusst: Proben haben für Mitglieder eigene Einladung mit Absage.
    - Mitgliedersicht nach Einladung statt Art (2026-09-27): Jeder Termin mit persönlicher Einladung (Probe oder nicht) erscheint in Meine Termine mit Absage, im Feed mit eigener Zeit, auf der Detailseite `/mitglieder/proben/[id]`, benachrichtigt die Planung und zählt als Konflikt. `kind` ist nur noch Anzeige und Filter; übrig bleibt „Probe“ als Voraussetzung für Szenen, Nachbereitung und Szenen-Stand.
+   - Nachtrag (2026-09-27): Neue Proben starten ohne Vorauswahl (vorher „ganze Produktion“); Ansetzen bleibt gesperrt, bis jemand eingeladen ist. Filter „Verein“ in Meine Termine heißt „Für alle“, Kennzeichen „Allgemein“.
 6. E2E + Release zusammen mit Phase 5b (Prod hat die Terminplanung noch nicht).
 
 **Stand und Wiedereinstieg (2026-09-27)**

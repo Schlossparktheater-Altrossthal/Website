@@ -15,7 +15,7 @@ const FILTER_LABELS: Record<Filter, string> = {
   all: "Alle",
   required: "Muss ich hin",
   optional: "Optional",
-  club: "Verein",
+  club: "Für alle",
 };
 
 const DATE = new Intl.DateTimeFormat("de-DE", {

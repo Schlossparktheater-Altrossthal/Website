@@ -236,7 +236,7 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
           <p className="text-xs text-muted-foreground">
             {feed.scope === "PRODUCTIONS"
               ? "Auch Proben deiner Produktionen, zu denen du nicht eingeladen bist – als freie Zeit."
-              : "Nur Proben, zu denen du eingeladen bist. Gewerk- und Vereinstermine sind immer dabei."}
+              : "Nur Proben, zu denen du eingeladen bist. Gewerk- und allgemeine Termine sind immer dabei."}
           </p>
         </div>
         <SegmentedControl
