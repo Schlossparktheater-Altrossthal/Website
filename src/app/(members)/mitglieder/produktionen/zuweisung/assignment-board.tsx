@@ -769,11 +769,19 @@ function PersonRoles({
                     type="button"
                     size="sm"
                     className="h-10 flex-1"
-                    variant={current?.type === type ? "primary" : "outline"}
-                    aria-pressed={current?.type === type}
+                    variant={
+                      (current ? castKind(current.type) : null) === type ? "primary" : "outline"
+                    }
+                    aria-pressed={(current ? castKind(current.type) : null) === type}
                     aria-label={`${castLabel(type)} ${character.name}`}
                     disabled={busy}
-                    onClick={() => onCast(person, character, current?.type === type ? null : type)}
+                    onClick={() =>
+                      onCast(
+                        person,
+                        character,
+                        (current ? castKind(current.type) : null) === type ? null : type,
+                      )
+                    }
                   >
                     {castLabel(type)}
                   </Button>
@@ -1050,6 +1058,11 @@ function PersonLine({
   );
 }
 
+/** Cover/Cameo werden wie im Stück-Dialog als Zweitbesetzung behandelt. */
+function castKind(type: string): "primary" | "alternate" {
+  return type === "primary" ? "primary" : "alternate";
+}
+
 function castLabel(type: string) {
   return type === "alternate" ? "Zweitbesetzung" : "Hauptbesetzung";
 }
@@ -1198,7 +1211,10 @@ function RolePanel({
       {(["primary", "alternate"] as const).map((type) => {
         const cast = people.filter((person) =>
           person.castings.some(
-            (entry) => entry.characterId === character.id && entry.type === type,
+            // Cover/Cameo zählen wie im Stück-Dialog zur Zweitbesetzung.
+            (entry) =>
+              entry.characterId === character.id &&
+              (entry.type === "primary") === (type === "primary"),
           ),
         );
         return (
@@ -1270,10 +1286,17 @@ function RolePanel({
                     type="button"
                     size="sm"
                     className="h-10 flex-1"
-                    variant={current?.type === type ? "primary" : "outline"}
-                    aria-pressed={current?.type === type}
+                    variant={
+                      (current ? castKind(current.type) : null) === type ? "primary" : "outline"
+                    }
+                    aria-pressed={(current ? castKind(current.type) : null) === type}
                     disabled={busy}
-                    onClick={() => onSet(person, current?.type === type ? null : type)}
+                    onClick={() =>
+                      onSet(
+                        person,
+                        (current ? castKind(current.type) : null) === type ? null : type,
+                      )
+                    }
                   >
                     {castLabel(type)}
                   </Button>
