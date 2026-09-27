@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { EventResponseStatus } from "@/lib/calendar/responses";
 import { toast } from "sonner";
@@ -162,7 +163,7 @@ export function TeamEvents({
                   event={event}
                   highlight={month === months[0] && index === 0}
                   response={myResponse(event)}
-                  canRespond={canRespond}
+                  canRespond={canRespond && event.respondable}
                   onOpen={() => setOpenId(event.id)}
                   onRespond={(status) => respond(event, status)}
                 />
@@ -231,7 +232,7 @@ export function TeamEvents({
       <EventDetail
         event={opened}
         response={opened ? myResponse(opened) : null}
-        canRespond={canRespond && !opened?.past}
+        canRespond={canRespond && !opened?.past && !!opened?.respondable}
         canManage={canManage}
         onOpenChange={(open) => !open && setOpenId(null)}
         onRespond={(status) => opened && respond(opened, status)}
@@ -308,6 +309,14 @@ function ResponseButtons({
   );
 }
 
+function SharedBadge({ rehearsal }: { rehearsal: boolean }) {
+  return (
+    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+      {rehearsal ? "Probe" : "Gemeinsam"}
+    </span>
+  );
+}
+
 function EventCard({
   event,
   highlight,
@@ -335,7 +344,10 @@ function EventCard({
       >
         <DateBadge date={new Date(event.start)} tone={highlight ? "primary" : "muted"} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{event.title}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-semibold">{event.title}</span>
+            {event.shared ? <SharedBadge rehearsal={event.rehearsal} /> : null}
+          </span>
           <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
             <span className="shrink-0 tabular-nums">{timeRange(event)}</span>
             {event.location ? (
@@ -395,7 +407,7 @@ function EventDetail({
         title={event?.title ?? "Termin"}
         description="Termin mit Zu- und Absagen"
         footer={
-          event && canManage ? (
+          event && canManage && !event.shared ? (
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -433,6 +445,23 @@ function EventDetail({
                 </p>
               ) : null}
             </div>
+
+            {event.shared ? (
+              <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+                Gemeinsamer Termin, zu dem das Gewerk eingeladen ist. Geplant wird er in der Termin-
+                bzw. Probenplanung.
+                {event.rehearsal && !event.past ? (
+                  <>
+                    {" "}
+                    Absagen mit Begründung in{" "}
+                    <Link href="/mitglieder/meine-proben" className="font-medium underline">
+                      Meine Termine
+                    </Link>
+                    .
+                  </>
+                ) : null}
+              </p>
+            ) : null}
 
             {canRespond ? (
               <div className="space-y-1">

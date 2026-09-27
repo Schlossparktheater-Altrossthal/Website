@@ -199,7 +199,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 
 **Umsetzungsschritte**
 
-1. Gewerk-Dashboard: Termine mit Regel `DEPARTMENT` anzeigen (unabhängig, sofort machbar).
+1. [x] Gewerk-Dashboard: angesetzte Termine mit Regel `DEPARTMENT` anzeigen (2026-09-27): Kennzeichen „Gemeinsam“/„Probe“, nicht bearbeitbar, Zu-/Absage für Eingeladene, Proben über „Meine Termine“.
 2. Migration: `EventStatus.TENTATIVE` (Enum-Wert in eigener Migration), `EventScene` → `EventBlock` (Daten als `type = SCENE` übernehmen).
 3. Status „vorgemerkt“: Sichtbarkeit, Absage, Konflikte in Terminfinder/Sperrliste, Feed.
 4. Bausteine allgemein + parallel, Teilnehmer-Auflösung aus Bausteinen, Gewerk-Bausteine mit Rechten der Gewerk-Leitung.

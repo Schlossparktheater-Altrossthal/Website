@@ -35,6 +35,12 @@ export type TeamEvent = {
   blocked: EventBlock[];
   /** Nur diese Mitglieder sind eingeladen; null = ganzes Team. */
   invitedIds: string[] | null;
+  /** Gemeinsamer Termin, zu dem das Gewerk eingeladen ist; wird woanders geplant. */
+  shared: boolean;
+  /** Probe: Absage nur mit Begründung in „Meine Termine“. */
+  rehearsal: boolean;
+  /** Ob die Person hier zu- oder absagen kann (Proben laufen über „Meine Termine“). */
+  respondable: boolean;
 };
 
 export type TeamEventsData = {
@@ -75,11 +81,25 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
     end: true,
     location: true,
     description: true,
+    kind: true,
+    departmentId: true,
     participants: {
       where: { NOT: { response: null, invited: false } },
       select: { response: true, invited: true, user: { select: userSelect } },
     },
   } as const;
+
+  // Eigene Termine plus angesetzte gemeinsame Termine, zu denen das Gewerk eingeladen ist.
+  const ownOrInvited = {
+    OR: [
+      { departmentId },
+      {
+        departmentId: null,
+        status: "SCHEDULED" as const,
+        audienceRules: { some: { type: "DEPARTMENT" as const, targetId: departmentId } },
+      },
+    ],
+  };
 
   const [members, upcoming, past, blockedDays] = await Promise.all([
     prisma.departmentMembership.findMany({
@@ -87,15 +107,15 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
       select: { user: { select: userSelect } },
     }),
     prisma.calendarEvent.findMany({
-      where: { departmentId, OR: [{ start: { gte: now } }, { end: { gte: now } }] },
+      where: {
+        AND: [ownOrInvited, { OR: [{ start: { gte: now } }, { end: { gte: now } }] }],
+      },
       orderBy: { start: "asc" },
       select: eventSelect,
     }),
     prisma.calendarEvent.findMany({
       where: {
-        departmentId,
-        start: { lt: now },
-        OR: [{ end: null }, { end: { lt: now } }],
+        AND: [ownOrInvited, { start: { lt: now } }, { OR: [{ end: null }, { end: { lt: now } }] }],
       },
       orderBy: { start: "desc" },
       take: PAST_EVENTS,
@@ -125,17 +145,24 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
     });
   }
 
+  const memberIds = new Set(people.map((person) => person.id));
+
   const toEvent = (event: (typeof upcoming)[number], isPast: boolean): TeamEvent => {
     const dayKey = formatIsoDateInTimeZone(event.start.toISOString());
-    const responses = event.participants
+    const shared = event.departmentId !== departmentId;
+    // Bei gemeinsamen Terminen zählen nur die Mitglieder dieses Gewerks.
+    const participants = shared
+      ? event.participants.filter((entry) => memberIds.has(entry.user.id))
+      : event.participants;
+    const responses = participants
       .flatMap((entry) =>
         entry.response
           ? [{ person: toPerson(entry.user), status: toEventResponseStatus(entry.response) }]
           : [],
       )
       .sort((a, b) => a.person.name.localeCompare(b.person.name, "de"));
-    const invited = event.participants.filter((entry) => entry.invited);
-    const invitedIds = invited.length ? invited.map((entry) => entry.user.id) : null;
+    const invited = participants.filter((entry) => entry.invited);
+    const invitedIds = invited.length || shared ? invited.map((entry) => entry.user.id) : null;
     const expected = invitedIds
       ? people.filter((person) => invitedIds.includes(person.id))
       : people;
@@ -159,6 +186,11 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
         (block) => !invitedIds || invitedIds.includes(block.userId),
       ),
       invitedIds,
+      shared,
+      rehearsal: event.kind === "REHEARSAL",
+      respondable:
+        event.kind !== "REHEARSAL" &&
+        (!shared || invited.some((entry) => entry.user.id === viewerId)),
     };
   };
 
