@@ -21,6 +21,8 @@ export type MyEventItem = {
   group: MyEventGroup;
   /** Warum die Person dabei ist. */
   reasons: string[];
+  /** Gestaffelte Probe: Zeit der gesamten Probe, während `start`/`end` die eigene Zeit zeigen. */
+  fullTime: { start: string; end: string | null } | null;
   /** Nur bei eigenen Proben: Absage möglich und ggf. schon abgesagt (mit Grund). */
   decline: { declined: boolean; note: string | null } | null;
 };
@@ -43,6 +45,8 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         reasons: true,
         response: true,
         responseNote: true,
+        personalStart: true,
+        personalEnd: true,
         event: {
           select: { id: true, title: true, start: true, end: true, location: true },
         },
@@ -100,22 +104,27 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
   ]);
 
   const items: MyEventItem[] = [
-    ...rehearsals.map(({ level, reasons, response, responseNote, event }) => ({
-      id: event.id,
-      title: event.title,
-      label: "Probe",
-      start: event.start.toISOString(),
-      end: event.end?.toISOString() ?? null,
-      allDay: false,
-      location: event.location && event.location !== "Noch offen" ? event.location : null,
-      href: `/mitglieder/proben/${event.id}`,
-      group: level === "OPTIONAL" ? ("optional" as const) : ("required" as const),
-      reasons: Array.isArray(reasons) ? reasons.filter((entry) => typeof entry === "string") : [],
-      decline: {
-        declined: response === "no" || response === "emergency",
-        note: responseNote,
-      },
-    })),
+    ...rehearsals.map(
+      ({ level, reasons, response, responseNote, personalStart, personalEnd, event }) => ({
+        id: event.id,
+        title: event.title,
+        label: "Probe",
+        start: (personalStart ?? event.start).toISOString(),
+        end: (personalEnd ?? event.end)?.toISOString() ?? null,
+        fullTime: personalStart
+          ? { start: event.start.toISOString(), end: event.end?.toISOString() ?? null }
+          : null,
+        allDay: false,
+        location: event.location && event.location !== "Noch offen" ? event.location : null,
+        href: `/mitglieder/proben/${event.id}`,
+        group: level === "OPTIONAL" ? ("optional" as const) : ("required" as const),
+        reasons: Array.isArray(reasons) ? reasons.filter((entry) => typeof entry === "string") : [],
+        decline: {
+          declined: response === "no" || response === "emergency",
+          note: responseNote,
+        },
+      }),
+    ),
     ...departmentEvents.flatMap((event) => {
       if (!event.department) return [];
       const guest = event.department.memberships[0]?.role === "guest";
@@ -132,6 +141,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
         reasons: [
           guest ? `Gast im Gewerk ${event.department.name}` : `Gewerk ${event.department.name}`,
         ],
+        fullTime: null,
         decline: null,
       };
     }),
@@ -146,6 +156,7 @@ export async function readMyUpcomingEvents(userId: string, now = new Date()) {
       href: null,
       group: "club" as const,
       reasons: [event.show ? "Termin deiner Produktion" : "Termin für alle"],
+      fullTime: null,
       decline: null,
     })),
   ];

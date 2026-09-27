@@ -70,6 +70,35 @@ function describeParticipation(participants: { reasons: unknown }[]) {
   return reasons.length ? `Dabei als: ${reasons.join(" · ")}` : null;
 }
 
+const FEED_TIME = new Intl.DateTimeFormat("de-DE", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Berlin",
+});
+
+function describeScenes(
+  scenes: {
+    startsAt: Date | null;
+    endsAt: Date | null;
+    scene: { identifier: string | null; sequence: number; title: string | null };
+  }[],
+  staggeredEvent: { start: Date; end: Date | null } | null,
+) {
+  if (!scenes.length) return null;
+  const lines = scenes.map(({ startsAt, endsAt, scene }) => {
+    const label = `Sz. ${scene.identifier || scene.sequence}${scene.title ? ` ${scene.title}` : ""}`;
+    return startsAt && endsAt
+      ? `${FEED_TIME.format(startsAt)}–${FEED_TIME.format(endsAt)} ${label}`
+      : label;
+  });
+  const whole = staggeredEvent
+    ? `Gesamte Probe: ${FEED_TIME.format(staggeredEvent.start)}${
+        staggeredEvent.end ? `–${FEED_TIME.format(staggeredEvent.end)}` : ""
+      } Uhr\n`
+    : "";
+  return `${whole}Szenen:\n${lines.join("\n")}`;
+}
+
 function uidHost() {
   try {
     return new URL(getAppBaseUrl()).host;
@@ -116,7 +145,18 @@ export async function collectFeedEvents(
         status: true,
         updatedAt: true,
         show: { select: { title: true } },
-        participants: { where: { userId, invited: true }, select: { reasons: true } },
+        participants: {
+          where: { userId, invited: true },
+          select: { reasons: true, personalStart: true, personalEnd: true },
+        },
+        scenes: {
+          orderBy: { order: "asc" },
+          select: {
+            startsAt: true,
+            endsAt: true,
+            scene: { select: { identifier: true, sequence: true, title: true } },
+          },
+        },
       },
     }),
     prisma.calendarEvent.findMany({
@@ -156,18 +196,24 @@ export async function collectFeedEvents(
   const events: IcsEvent[] = [];
 
   for (const rehearsal of rehearsals) {
+    const own = rehearsal.participants[0];
     const location =
       rehearsal.location && rehearsal.location !== "Noch offen" ? rehearsal.location : null;
     events.push({
       uid: `rehearsal-${rehearsal.id}@${host}`,
       summary: `${PREFIX}${rehearsal.title}`,
-      start: { kind: "dateTime", value: rehearsal.start },
-      end: { kind: "dateTime", value: timedEnd(rehearsal.start, rehearsal.end) },
+      // Gestaffelte Probe: im Kalender steht die eigene Zeit laut Szenenplan.
+      start: { kind: "dateTime", value: own?.personalStart ?? rehearsal.start },
+      end: {
+        kind: "dateTime",
+        value: own?.personalEnd ?? timedEnd(rehearsal.start, rehearsal.end),
+      },
       location,
       description: withLink(
         [
           rehearsal.show?.title,
           describeParticipation(rehearsal.participants),
+          describeScenes(rehearsal.scenes, own?.personalStart ? rehearsal : null),
           rehearsal.description,
         ]
           .filter(Boolean)

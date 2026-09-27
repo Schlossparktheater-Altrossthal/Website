@@ -20,13 +20,15 @@ const STATUS_LABELS: Record<EventStatus, string> = {
 
 function sanitizeDescription(html: string | null | undefined) {
   if (!html) return null;
-  return sanitizeHtml(html, {
+  const clean = sanitizeHtml(html, {
     allowedTags: ["p", "br", "strong", "em", "u", "ol", "ul", "li", "blockquote", "a", "h2", "h3"],
     allowedAttributes: { a: ["href", "target", "rel"] },
     transformTags: {
       a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer", target: "_blank" }),
     },
   });
+  // Ein leerer Editor speichert „<p></p>“ – dann gibt es keine Beschreibung.
+  return sanitizeHtml(clean, { allowedTags: [], allowedAttributes: {} }).trim() ? clean : null;
 }
 
 type DisplayUser = {
@@ -65,6 +67,14 @@ export default async function RehearsalDetailPage({
   const rehearsal = await prisma.calendarEvent.findFirst({
     where: { id: rehearsalId, kind: "REHEARSAL" },
     include: {
+      scenes: {
+        orderBy: { order: "asc" },
+        select: {
+          startsAt: true,
+          endsAt: true,
+          scene: { select: { id: true, identifier: true, sequence: true, title: true } },
+        },
+      },
       participants: {
         where: { invited: true },
         include: {
@@ -105,9 +115,21 @@ export default async function RehearsalDetailPage({
 
   const formatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "full", timeStyle: "short" });
   const sanitizedDescription = sanitizeDescription(rehearsal.description);
+  const timeFormatter = new Intl.DateTimeFormat("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Berlin",
+  });
+  const own = rehearsal.participants.find((entry) => entry.userId === session.user?.id);
+  const ownWindow =
+    own?.personalStart && own.personalEnd
+      ? { start: own.personalStart, end: own.personalEnd }
+      : null;
   const invitees = rehearsal.participants.map((invitee) => ({
     id: invitee.userId,
     user: invitee.user,
+    optional: invitee.level === "OPTIONAL",
+    declined: invitee.response === "no" || invitee.response === "emergency",
   }));
 
   const breadcrumbs = [
@@ -155,6 +177,37 @@ export default async function RehearsalDetailPage({
         </CardContent>
       </Card>
 
+      {rehearsal.scenes.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Szenen</CardTitle>
+            {ownWindow ? (
+              <p className="text-sm text-muted-foreground">
+                Deine Zeit laut Szenenplan: {timeFormatter.format(ownWindow.start)}–
+                {timeFormatter.format(ownWindow.end)} Uhr
+              </p>
+            ) : null}
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-2 text-sm">
+              {rehearsal.scenes.map(({ scene, startsAt, endsAt }) => (
+                <li key={scene.id} className="flex gap-3">
+                  {startsAt && endsAt ? (
+                    <span className="w-28 shrink-0 tabular-nums text-muted-foreground">
+                      {timeFormatter.format(startsAt)}–{timeFormatter.format(endsAt)}
+                    </span>
+                  ) : null}
+                  <span>
+                    Sz. {scene.identifier || scene.sequence}
+                    {scene.title ? ` ${scene.title}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {sanitizedDescription ? (
         <Card>
           <CardHeader>
@@ -188,9 +241,18 @@ export default async function RehearsalDetailPage({
                         <p className="text-xs text-muted-foreground">{entry.user.email}</p>
                       ) : null}
                     </div>
-                    <Badge variant="outline" className="bg-muted text-muted-foreground">
-                      Erwartet
-                    </Badge>
+                    {entry.declined ? (
+                      <Badge
+                        variant="outline"
+                        className="border-destructive bg-destructive/10 text-destructive"
+                      >
+                        Abgesagt
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-muted text-muted-foreground">
+                        {entry.optional ? "Optional" : "Erwartet"}
+                      </Badge>
+                    )}
                   </li>
                 );
               })}

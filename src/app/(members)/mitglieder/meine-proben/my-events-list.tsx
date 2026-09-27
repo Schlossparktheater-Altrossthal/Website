@@ -86,6 +86,14 @@ export function MyEventsList({ items }: { items: MyEventItem[] }) {
                 {formatWhen(item)}
                 {item.location ? ` · ${item.location}` : ""}
               </p>
+              {item.fullTime ? (
+                <p className="text-xs text-muted-foreground">
+                  Deine Zeit laut Szenenplan · gesamte Probe{" "}
+                  {formatWhen({ ...item, start: item.fullTime.start, end: item.fullTime.end })
+                    .split(" · ")
+                    .at(-1)}
+                </p>
+              ) : null}
               {item.reasons.length ? (
                 <p className="text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">Dabei als:</span>{" "}
