@@ -44,6 +44,12 @@ Legende: ✅ ok · ⚠️ funktioniert, aber mit Einschränkung · ❓ unklar ·
 | `/mitglieder/onboarding`                                 | ✅    | ✅     | ✅      | automatisch           | `lg:flex-row`                                                 |
 | `/mitglieder/onboarding/[onboardingId]/talente/[userId]` | ✅    | ✅     | ✅      | visuell (dynamisch)   | `sm:grid-cols-2`                                              |
 
+## Globale Elemente
+
+| Element                         | Handy | Tablet | Desktop | Prüfung  | Anmerkung                                                                                        |
+| ------------------------------- | ----- | ------ | ------- | -------- | ------------------------------------------------------------------------------------------------ |
+| Kopf `SiteHeader` (alle Seiten) | ✅    | ✅     | ✅      | gemessen | Produktions-Zusatz mittig: Handy nur Jahrgang (z. B. „27“), ab `md` Jahr + Titel, ab `lg` größer |
+
 ## Redirects und Platzhalter
 
 | Route                                                | Zustand                                                          |

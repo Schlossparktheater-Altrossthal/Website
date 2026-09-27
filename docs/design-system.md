@@ -182,6 +182,7 @@ Drei Nutzerklassen bestimmen die Breakpoint-Entscheidungen im Mitgliederbereich.
 - **Karten ↔ Tabelle:** getrennte Markup-Zweige `space-y-4 sm:hidden` (Karten) und `hidden sm:block` (Tabelle) – z. B. `members-table.tsx`, `member-measurements-control-center.tsx`, Sperrliste.
 - **Drill-down per URL:** Bereiche über `?bereich=` statt Tabs – mobil Liste, ab `lg` linke Navigation (Beispiel `profil`).
 - **Sidebar/Header:** JS-Breakpoint `SIDEBAR_MOBILE_BREAKPOINT = "(max-width: 1023px)"` in `src/components/ui/sidebar.tsx`; Header unter `md` im `Sheet`.
+- **Globaler Kopf (`SiteHeader`):** Website-Titel links, Aktionen rechts, dazwischen seit 2026-09-27 die aktive Produktion (`2027 · In 80 Tagen um die Welt`) als reiner Text in `text-foreground` – ab `lg` in `text-lg`, unter `lg` in `text-sm`, auf dem Handy nur der zweistellige Jahrgang. Kein eigener Rahmen, keine Fläche. Das `justify-between` der Navigationszeile verteilt den Freiraum gleich groß, dadurch sitzt der Zusatz optisch mittig zwischen Titel und Aktionen (kein `absolute`, keine Überlagerung). Fehlt eine aktive Produktion, entfällt der Zusatz vollständig.
 
 ### Verifikation
 

@@ -169,10 +169,10 @@ export function SiteHeader({
         <nav
           aria-label="Hauptnavigation"
           style={navSpacingStyles}
-          className="layout-container relative flex flex-nowrap items-center gap-[var(--nav-gap)] py-[var(--nav-padding-y)] sm:[--nav-gap:var(--space-sm)] md:[--nav-gap:var(--space-md)] md:[--nav-padding-y:var(--space-sm)]"
+          className="layout-container flex flex-nowrap items-center justify-between gap-[var(--nav-gap)] py-[var(--nav-padding-y)] sm:[--nav-gap:var(--space-sm)] md:[--nav-gap:var(--space-md)] md:[--nav-padding-y:var(--space-sm)]"
         >
           <Link
-            className="flex-1 min-w-0 truncate font-serif text-lg text-primary transition-all duration-300 hover:opacity-90 sm:text-xl"
+            className="min-w-0 truncate font-serif text-lg text-primary transition-all duration-300 hover:opacity-90 sm:text-xl"
             href={PUBLIC_SITE_URL}
             title={siteTitle}
           >
@@ -191,15 +191,19 @@ export function SiteHeader({
           </Link>
 
           {productionLabel ? (
-            <div
-              className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center select-none"
-              aria-label="Aktive Produktion"
-            >
+            <>
+              {/* Mobil trägt der Header nur den kurzen Jahrgang. */}
+              <span className="inline-flex items-center text-sm font-semibold text-foreground select-none md:hidden">
+                <span aria-hidden="true">{productionYearShort}</span>
+                <span className="sr-only">{productionLabel}</span>
+              </span>
+              {/* Ab md: Jahr und Produktionstitel. `justify-between` verteilt den Freiraum gleich
+                  groß, dadurch sitzt der Zusatz optisch mittig zwischen Titel und Aktionen. */}
               <span
                 title={productionLabel}
-                className="hidden max-w-[min(24rem,calc(100vw-35rem))] items-center gap-[var(--space-3xs)] rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-xs leading-5 text-foreground/75 md:inline-flex lg:px-3 lg:py-1 lg:text-sm"
+                className="hidden max-w-[24rem] items-center gap-[var(--space-3xs)] text-sm text-foreground select-none md:inline-flex lg:text-lg"
               >
-                <span className="font-semibold text-foreground/85">{productionYear}</span>
+                <span className="font-semibold">{productionYear}</span>
                 {productionTitle ? (
                   <>
                     <span aria-hidden="true" className="text-muted-foreground">
@@ -209,16 +213,12 @@ export function SiteHeader({
                   </>
                 ) : null}
               </span>
-              <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 px-2 py-0.5 text-xs font-semibold text-foreground/80 md:hidden">
-                <span aria-hidden="true">{productionYearShort}</span>
-                <span className="sr-only">{productionLabel}</span>
-              </span>
-            </div>
+            </>
           ) : null}
 
           <div
             style={actionsSpacingStyles}
-            className="ml-auto flex flex-shrink-0 items-center gap-[var(--header-actions-gap)] sm:[--header-actions-gap:var(--space-xs)]"
+            className="flex flex-shrink-0 items-center gap-[var(--header-actions-gap)] sm:[--header-actions-gap:var(--space-xs)]"
           >
             <NotificationBell className="flex-shrink-0" />
             <UserNav className="flex-shrink-0" />
