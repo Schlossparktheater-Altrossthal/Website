@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import type { ClientServerSettings } from "@/lib/server-settings";
 
 import {
@@ -50,9 +51,12 @@ const STEPS = [
 
 type StepId = (typeof STEPS)[number]["id"];
 
+// Feste Zeitzone: Server (UTC im Container) und Browser müssen dieselbe Zeit zeigen,
+// sonst bricht die Hydration dieses Client-Bausteins.
 const dateFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: DEFAULT_TIME_ZONE,
 });
 
 function isValidationError<

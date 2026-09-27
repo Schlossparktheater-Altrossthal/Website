@@ -62,6 +62,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Tailwind CSS und shadcn/ui sind die Basis. Komponenten aus `src/components/ui` verwenden und konsistent erweitern.
 - Barrierefreiheit hat Priorität: semantische HTML-Strukturen, `aria`-Attribute, sichtbare Fokuszustände.
 - Feedback-Komponenten laufen über `sonner`.
+- **Zeitangaben für die Anzeige:** `Intl.DateTimeFormat` immer mit `timeZone: DEFAULT_TIME_ZONE` aus `src/lib/date-time.ts` erzeugen. Ohne feste Zeitzone rendert der Server (Container läuft in UTC) eine andere Uhrzeit als der Browser – das erzeugt Hydration-Fehler und verschobene Zeitangaben.
 
 ## RESPONSIVE DESIGN PATTERNS
 

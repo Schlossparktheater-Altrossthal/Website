@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cssColorToHex, hexToOklchValue } from "@/lib/theme/color-value";
 import {
   CHART_VARIABLES,
@@ -61,9 +62,12 @@ const SCHEME_LABELS: Record<ThemeColorScheme, string> = {
   dark: "Dunkel",
 };
 
+// Feste Zeitzone: sonst rendert der Server (UTC im Container) eine andere Uhrzeit
+// als der Browser – Hydration-Fehler und falsche Zeitangaben.
 const UPDATED_AT_FORMATTER = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: DEFAULT_TIME_ZONE,
 });
 
 const LOCKED_THEME_MESSAGE =
