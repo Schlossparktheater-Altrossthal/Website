@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { isMandatoryRole } from "@/lib/roles";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
@@ -19,9 +20,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const role = await prisma.appRole.findUnique({ where: { id } });
   if (!role) return NextResponse.json({ error: "Rolle nicht gefunden" }, { status: 404 });
-  if (role.isSystem)
+  if (role.isSystem || role.systemRole)
     return NextResponse.json(
-      { error: "Systemrollen können nicht bearbeitet werden" },
+      { error: "Eingebaute Rollen können nicht umbenannt werden" },
       { status: 400 },
     );
 
@@ -32,6 +33,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
       return NextResponse.json({ error: "Der Rollenname ist bereits vergeben" }, { status: 409 });
     }
+    console.error("Rolle konnte nicht umbenannt werden", err);
     return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
 }
@@ -48,16 +50,19 @@ export async function DELETE(
   const { id } = await params;
   const role = await prisma.appRole.findUnique({ where: { id } });
   if (!role) return NextResponse.json({ error: "Rolle nicht gefunden" }, { status: 404 });
-  if (role.isSystem)
+  // Mitglied, Admin und Owner sind Pflichtrollen; alle anderen – auch die eingebauten
+  // Vorstand, Ensemble, Technik und Finanzen – dürfen gelöscht werden.
+  if (role.isSystem || isMandatoryRole(role.systemRole))
     return NextResponse.json(
-      { error: "Systemrollen können nicht gelöscht werden" },
+      { error: "Mitglied, Admin und Owner können nicht gelöscht werden" },
       { status: 400 },
     );
 
   try {
     await prisma.appRole.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("Rolle konnte nicht gelöscht werden", error);
     return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
   }
 }

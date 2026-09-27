@@ -153,6 +153,11 @@ Befunde sind: fehlgeschlagene Schritte, `pageerror`/Konsolenfehler, Weiterleitun
 horizontaler Überlauf. 404s fremder Ressourcen (etwa Gravatar-Avatare mit `d=404`) werden als
 Warnung geführt und lassen den Lauf nicht scheitern; die Ressourcen-URL steht in der Meldung.
 
+Popups und Screenshots vertragen sich nicht immer: ein `fullPage`-Screenshot schießt ein offenes
+Radix-`Select` zu (gemessen 2026-09-27 auf der Rechte-Matrix – Viewport-Screenshot und
+`DropdownMenu` waren unauffällig). Schritte, nach denen ein Select offen bleiben muss, deshalb mit
+`"fullPage": false` versehen; das gilt auch für den automatischen Screenshot nach dem Klick.
+
 Die Überlaufmessung meldet nur Elemente, die nicht in einem inneren Scroll-Container liegen –
 breite Tabellen und Kalender dürfen laut `AGENTS.md` innerhalb ihrer Karte scrollen.
 

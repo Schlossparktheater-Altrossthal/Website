@@ -32,6 +32,18 @@ export const ROLE_BADGE_VARIANTS: Record<Role, string> = {
   admin: "border border-destructive/45 bg-destructive/15 text-destructive",
 };
 
+/**
+ * Rollen, die immer Bestand haben: Mitglied, Admin und Owner. Sie werden von
+ * `ensureSystemRoles` garantiert und lassen sich in der Rechteverwaltung weder umbenennen
+ * noch löschen. Alle übrigen Rollen – auch die eingebauten Vorstand, Ensemble, Technik und
+ * Finanzen – dürfen gelöscht werden.
+ */
+export const MANDATORY_ROLES = ["member", "admin", "owner"] as const satisfies readonly Role[];
+
+export function isMandatoryRole(role: unknown): role is (typeof MANDATORY_ROLES)[number] {
+  return typeof role === "string" && (MANDATORY_ROLES as readonly string[]).includes(role);
+}
+
 export function sortRoles(roles: Role[]) {
   const order = new Map<Role, number>(ROLES.map((role, index) => [role, index]));
   return [...new Set(roles)].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));

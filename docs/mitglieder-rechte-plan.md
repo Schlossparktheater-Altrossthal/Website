@@ -154,3 +154,4 @@ Alles tweakcn-Theme-Tokens, hell/dunkel, keine festen Farben.
 - [ ] 2.5 Zurückgestellt: „regie“ hat keine Rechte und ist einer Person zugewiesen – als `function` („Regie“) in der Produktionsmitgliedschaft pflegen und die eigene Rolle dann löschen (manuell, kein Code nötig).
 - [x] 2.6 Matrix-Umschalter Global/Produktion, Scope-Badges
 - [ ] 2.7 (keine Schemaänderung nötig; Hinweis: alle 13 Bestandsproben haben `showId = null` und erscheinen als allgemeine Proben) Migrationstest auf Prod-Kopie, Staging, Release
+- [x] 2.8 Rollen löschen: Pflichtrollen sind nur noch Mitglied, Admin und Owner (`MANDATORY_ROLES`). Vorstand, Ensemble, Technik und Finanzen sind jetzt löschbar (Menü im Matrixkopf und mobil neben dem Rollen-Select); `ensureSystemRoles` legt nur noch die Pflichtrollen nach, Umbenennen bleibt Rollen ohne feste Systemrolle vorbehalten. Damit erledigt sich 2.5 ohne manuellen DB-Eingriff.

@@ -56,6 +56,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - Änderungen an `src/lib/realtime/shared/core.js` mit `node --check` und den Realtime-Tests (`src/lib/realtime/__tests__`) absichern, bevor sie committet werden.
 - Neue Permission-Keys müssen in `DEFAULT_PERMISSION_DEFINITIONS` in `src/lib/permissions.ts` registriert werden, bevor sie verwendet werden.
 - Bei Umbenennung von Permission-Keys eine neue Prisma-Migration erstellen, die alte Keys in der DB umbenennt.
+- Pflichtrollen sind `member`, `admin` und `owner` (`MANDATORY_ROLES` und `isMandatoryRole` in `src/lib/roles.ts`). Nur sie sind vor Löschen und Umbenennen geschützt. Alle übrigen Rollen – auch die eingebauten Vorstand, Ensemble, Technik und Finanzen – sind in der Rechteverwaltung löschbar; `ensureSystemRoles` legt deshalb nur noch die Pflichtrollen nach, sonst käme eine gelöschte Rolle beim nächsten Aufruf zurück. Umbenennen ist Rollen ohne feste Systemrolle vorbehalten (Reorder und Rechte bleiben unberührt).
 
 ## UI, UX & Content
 

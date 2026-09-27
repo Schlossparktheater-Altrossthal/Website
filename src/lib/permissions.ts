@@ -239,6 +239,8 @@ const PROFILE_ADMIN_PERMISSION_KEYS = [
   PROFILE_DATA_PERMISSION_KEYS.dietary,
 ] as const satisfies PermissionDefinition["key"][];
 
+// Standardzuweisungen greifen nur, solange die jeweilige Rolle existiert. Wurde eine Rolle in
+// der Rechteverwaltung gelöscht, wird sie hier stillschweigend übersprungen.
 const MEASUREMENT_DEFAULT_ROLE_NAMES = [
   "member",
   "cast",
@@ -296,18 +298,18 @@ export function isKnownPermissionKey(key: string) {
 }
 
 async function runEnsureSystemRoles() {
-  const coreRoles: { role: Role; isSystem: boolean }[] = [
+  // Nur Mitglied, Admin und Owner sind Pflichtrollen (`MANDATORY_ROLES`). Vorstand, Ensemble,
+  // Technik und Finanzen sind eingebaute Rollen, dürfen aber in der Rechteverwaltung gelöscht
+  // werden – sie werden hier deshalb bewusst nicht mehr nachgelegt, sonst käme eine gelöschte
+  // Rolle beim nächsten Seitenaufruf zurück. Neu entstehen sie über „Neue Rolle“.
+  const mandatoryRoles: { role: Role; isSystem: boolean }[] = [
     { role: "member", isSystem: false },
-    { role: "cast", isSystem: false },
-    { role: "tech", isSystem: false },
-    { role: "board", isSystem: false },
-    { role: "finance", isSystem: false },
     { role: "owner", isSystem: true },
     { role: "admin", isSystem: true },
   ];
 
   await prisma.$transaction(
-    coreRoles.map(({ role, isSystem }) =>
+    mandatoryRoles.map(({ role, isSystem }) =>
       prisma.appRole.upsert({
         where: { name: role },
         update: { systemRole: role, isSystem },

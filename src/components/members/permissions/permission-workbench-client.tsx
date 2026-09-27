@@ -3,7 +3,13 @@
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { ChevronDownIcon, LockIcon, PlusIcon, SearchIcon } from "@/components/ui/action-icons";
+import {
+  ChevronDownIcon,
+  LockIcon,
+  MoreVerticalIcon,
+  PlusIcon,
+  SearchIcon,
+} from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -26,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ROLE_LABELS, type Role } from "@/lib/roles";
+import { ROLE_LABELS, isMandatoryRole, type Role } from "@/lib/roles";
 
 import type {
   PermissionWorkbenchPermission,
@@ -234,13 +240,62 @@ export function PermissionWorkbenchClient({
     return count === 1 ? "1 Person" : `${count} Personen`;
   };
 
+  /** Hinweis im Löschdialog: wie viele Personen betroffen sind und was ihnen passiert. */
+  const deleteRoleHint = (role: PermissionWorkbenchRole) => {
+    const affected = memberCounts[role.id];
+    const affectedLine = affected
+      ? `${countLabel(role)} ${affected === 1 ? "verliert" : "verlieren"} damit die Rechte dieser Rolle.`
+      : "Die Rolle ist keinem aktiven Mitglied zugewiesen.";
+    const systemLine = role.systemRole
+      ? "Als Rollen-Eintrag bleibt sie bei den Personen stehen, hat danach aber keine Rechte mehr."
+      : null;
+    return [affectedLine, systemLine].filter((part): part is string => part !== null).join(" ");
+  };
+
+  /** Menü einer Rolle – im Matrixkopf und in der Mobil-Ansicht identisch. */
+  const renderRoleMenuItems = (role: PermissionWorkbenchRole, index: number) => (
+    <>
+      <DropdownMenuLabel>{roleLabel(role)}</DropdownMenuLabel>
+      {!role.systemRole ? (
+        <DropdownMenuItem
+          onSelect={() => {
+            setRoleName(role.name);
+            setEditRole(role);
+          }}
+        >
+          Umbenennen
+        </DropdownMenuItem>
+      ) : null}
+      <DropdownMenuItem disabled={index === 0} onSelect={() => void moveRole(role.id, -1)}>
+        Nach links schieben
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        disabled={index === roles.length - 1}
+        onSelect={() => void moveRole(role.id, 1)}
+      >
+        Nach rechts schieben
+      </DropdownMenuItem>
+      {!isMandatoryRole(role.systemRole) ? (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={() => setDeleteRole(role)}
+          >
+            Rolle löschen …
+          </DropdownMenuItem>
+        </>
+      ) : null}
+    </>
+  );
+
   const renderRoleHeader = (role: PermissionWorkbenchRole, index: number) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           className="flex w-full flex-col items-center rounded-md px-1 py-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          title="Rolle bearbeiten"
+          title="Rolle verwalten"
         >
           <span className="flex max-w-full items-center gap-0.5 truncate text-sm font-medium text-foreground">
             <span className="truncate">{roleLabel(role)}</span>
@@ -249,39 +304,7 @@ export function PermissionWorkbenchClient({
           <span className="text-[11px] font-normal text-muted-foreground">{countLabel(role)}</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="center">
-        <DropdownMenuLabel>{roleLabel(role)}</DropdownMenuLabel>
-        {!role.systemRole ? (
-          <DropdownMenuItem
-            onSelect={() => {
-              setRoleName(role.name);
-              setEditRole(role);
-            }}
-          >
-            Umbenennen
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem disabled={index === 0} onSelect={() => void moveRole(role.id, -1)}>
-          Nach links schieben
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={index === roles.length - 1}
-          onSelect={() => void moveRole(role.id, 1)}
-        >
-          Nach rechts schieben
-        </DropdownMenuItem>
-        {!role.systemRole ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onSelect={() => setDeleteRole(role)}
-            >
-              Rolle löschen …
-            </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
+      <DropdownMenuContent align="center">{renderRoleMenuItems(role, index)}</DropdownMenuContent>
     </DropdownMenu>
   );
 
@@ -326,19 +349,42 @@ export function PermissionWorkbenchClient({
       {/* Mobil: eine Rolle wählen, Rechte als Schalterliste */}
       <div className="space-y-3 md:hidden">
         <div className="sticky top-0 z-10 -mx-1 bg-background/95 px-1 py-2 backdrop-blur">
-          <Select value={mobileRole?.id ?? ""} onValueChange={setMobileRoleId}>
-            <SelectTrigger className="w-full" aria-label="Rolle wählen">
-              <SelectValue placeholder="Rolle wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((role) => (
-                <SelectItem key={role.id} value={role.id}>
-                  {roleLabel(role)}
-                  {countLabel(role) ? ` · ${countLabel(role)}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={mobileRole?.id ?? ""} onValueChange={setMobileRoleId}>
+              <SelectTrigger className="w-full" aria-label="Rolle wählen">
+                <SelectValue placeholder="Rolle wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((role) => (
+                  <SelectItem key={role.id} value={role.id}>
+                    {roleLabel(role)}
+                    {countLabel(role) ? ` · ${countLabel(role)}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {mobileRole ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-11 w-11 shrink-0"
+                    aria-label={`${roleLabel(mobileRole)} verwalten`}
+                  >
+                    <MoreVerticalIcon className="size-4" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {renderRoleMenuItems(
+                    mobileRole,
+                    roles.findIndex((role) => role.id === mobileRole.id),
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
           <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
             <LockIcon className="size-3" aria-hidden />
             {lockedHint}
@@ -581,11 +627,7 @@ export function PermissionWorkbenchClient({
           if (!open) setDeleteRole(null);
         }}
         title={`Rolle „${deleteRole ? roleLabel(deleteRole) : ""}“ löschen?`}
-        description={
-          deleteRole && memberCounts[deleteRole.id]
-            ? `${countLabel(deleteRole)} verlieren damit die Rechte dieser Rolle.`
-            : "Die Rolle ist keinem aktiven Mitglied zugewiesen."
-        }
+        description={deleteRole ? deleteRoleHint(deleteRole) : ""}
         confirmLabel="Löschen"
         cancelLabel="Abbrechen"
         variant="destructive"

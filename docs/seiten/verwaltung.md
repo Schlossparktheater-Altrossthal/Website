@@ -45,6 +45,19 @@ Berechtigungen konfigurieren.
   konfigurieren (`SeasonResetSettingsPanel`).
 - `owner` ist immer geschützt; `admin` ist standardmäßig geschützt.
 
+## Rollen löschen
+
+- Pflichtrollen sind Mitglied, Admin und Owner (`MANDATORY_ROLES` in `src/lib/roles.ts`). Sie
+  lassen sich weder umbenennen noch löschen.
+- Alle anderen Rollen sind in der Rechte-Matrix löschbar – auch die eingebauten Vorstand,
+  Ensemble, Technik und Finanzen (Menü im Spaltenkopf, mobil über das „⋯“ neben dem Rollen-Select).
+  Das Löschen entfernt Rolle, Rechte und Rollenzuweisungen; die Personen behalten den
+  Rollen-Eintrag in der Mitgliederverwaltung, haben danach aber keine Rechte mehr daraus.
+- `ensureSystemRoles()` legt nur noch die Pflichtrollen nach. Gelöschte Rollen bleiben gelöscht
+  und entstehen bei Bedarf über „Neue Rolle“ neu (dann als eigene Rolle ohne feste Systemrolle).
+- Standardzuweisungen (Körpermaße für Mitglied/Ensemble/Technik/Vorstand/Finanzen, Profildaten
+  für Vorstand) greifen nur, solange die jeweilige Rolle existiert.
+
 ## Besonderheiten
 
 - Das Badge „Authentik“ neben dem Namen zeigt, dass das Mitglied mit seinem Theater-Konto in
