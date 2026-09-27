@@ -151,7 +151,7 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
       {view === "auftritte" ? <AuftritteView data={data} /> : null}
 
       <RolePanel
-        key={openRole?.id ?? (creating?.kind === "role" ? "new" : "closed")}
+        key={`role-${openRole?.id ?? (creating?.kind === "role" ? "new" : "closed")}`}
         open={creating?.kind === "role" || openRole !== null}
         role={openRole}
         data={data}
@@ -165,7 +165,7 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
         }}
       />
       <ScenePanel
-        key={openScene?.id ?? (creating?.kind === "scene" ? `new-${creating.act}` : "closed")}
+        key={`scene-${openScene?.id ?? (creating?.kind === "scene" ? `new-${creating.act}` : "closed")}`}
         open={creating?.kind === "scene" || openScene !== null}
         scene={openScene}
         defaultAct={creating?.kind === "scene" ? creating.act : 1}

@@ -165,7 +165,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
   return (
     <div className="app-shell bg-background">
       <MysticBackground />
-      <SiteHeader siteTitle={siteTitle} />
+      <SiteHeader siteTitle={siteTitle} activeProduction={activeProduction} />
       <main className="relative z-10 flex min-h-0 min-w-0 flex-col pt-[var(--header-height)]">
         <SidebarProvider
           defaultOpen={defaultSidebarOpen}

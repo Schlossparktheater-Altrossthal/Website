@@ -13,6 +13,7 @@ import {
 } from "@/components/calendar/scene-schedule-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/ui/time-input";
@@ -346,10 +347,14 @@ export function RehearsalEditor({
     });
   };
 
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+
   const handleDiscard = () => {
-    if (!confirm("Möchtest du diesen Entwurf wirklich verwerfen?")) {
-      return;
-    }
+    setDiscardConfirmOpen(true);
+  };
+
+  const confirmDiscard = () => {
+    setDiscardConfirmOpen(false);
     startDiscard(() => {
       discardRehearsalDraftAction({ id: rehearsal.id })
         .then((result) => {
@@ -554,6 +559,17 @@ export function RehearsalEditor({
             <Button type="button" variant="outline" onClick={handleDiscard} disabled={isDiscarding}>
               {isDiscarding ? "Verwerfe Entwurf…" : "Entwurf verwerfen"}
             </Button>
+            <ConfirmDialog
+              open={discardConfirmOpen}
+              onOpenChange={setDiscardConfirmOpen}
+              onCancel={() => setDiscardConfirmOpen(false)}
+              onConfirm={confirmDiscard}
+              title="Entwurf verwerfen?"
+              description="Möchtest du diesen Entwurf wirklich verwerfen? Diese Aktion kann nicht rückgängig gemacht werden."
+              confirmLabel="Verwerfen"
+              cancelLabel="Abbrechen"
+              variant="destructive"
+            />
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
               <div className="text-xs text-muted-foreground">
                 Vormerken: Die Eingeladenen sehen die Probe schon und können absagen. Ansetzen:

@@ -200,8 +200,8 @@ describe("MembersDashboard final rehearsal tile", () => {
     await waitForOverview();
 
     const tile = screen.getByText("Mitglieder").closest<HTMLElement>("a, div");
-    expect(tile?.textContent).toContain("45");
-    expect(tile?.textContent).toContain("in dieser Produktion");
+    // Mit aktiver Produktion steht unter dem Wert keine Hinweiszeile.
+    expect(tile?.textContent).toMatch(/^Mitglieder\s*45$/);
   });
 
   it("hides the tile once the final rehearsal week is over", async () => {

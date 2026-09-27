@@ -572,7 +572,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
                 ? numberFormatter.format(stats.productionMembers)
                 : "–"
             }
-            hint={activeProduction ? "in dieser Produktion" : "Keine aktive Produktion"}
+            hint={activeProduction ? undefined : "Keine aktive Produktion"}
             icon={<UsersIcon />}
             tone="info"
           />

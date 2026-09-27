@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 import {
   anonymizeExpiredAccountAction,
@@ -26,12 +27,6 @@ function useResultToast(state: RetentionActionResult) {
   }, [state]);
 }
 
-function confirmOrCancel(message: string) {
-  return (event: React.FormEvent<HTMLFormElement>) => {
-    if (!window.confirm(message)) event.preventDefault();
-  };
-}
-
 export function PurgeButton({ kind, count }: { kind: "dietary" | "photoConsents"; count: number }) {
   const action = useCallback(
     async () =>
@@ -40,18 +35,42 @@ export function PurgeButton({ kind, count }: { kind: "dietary" | "photoConsents"
   );
   const [state, formAction, isPending] = useActionState(action, INITIAL_STATE);
   useResultToast(state);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const label =
     kind === "dietary" ? "Ernährungs-/Allergiedaten löschen" : "Fotoerlaubnisse löschen";
 
+  // Die Bestätigung stößt dieselbe Action an, damit `useActionState` Zustand und
+  // Ladeanzeige weiterhin steuert.
+  const submitConfirmed = () => {
+    setConfirmOpen(false);
+    formAction();
+  };
+
   return (
-    <form
-      action={formAction}
-      onSubmit={confirmOrCancel(`${label} (${count})? Das lässt sich nicht rückgängig machen.`)}
-    >
-      <Button type="submit" size="sm" variant="destructive" disabled={isPending || count === 0}>
-        {label} ({count})
-      </Button>
-    </form>
+    <>
+      <form action={formAction}>
+        <Button
+          type="button"
+          size="sm"
+          variant="destructive"
+          disabled={isPending || count === 0}
+          onClick={() => setConfirmOpen(true)}
+        >
+          {label} ({count})
+        </Button>
+      </form>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={submitConfirmed}
+        title={label}
+        description={`${label} (${count})? Das lässt sich nicht rückgängig machen.`}
+        confirmLabel="Löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+      />
+    </>
   );
 }
 
@@ -64,17 +83,40 @@ export function AnonymizeButton({ userId, name }: { userId: string; name: string
   const [state, formAction, isPending] = useActionState(action, INITIAL_STATE);
   useResultToast(state);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const submitConfirmed = () => {
+    setConfirmOpen(false);
+    const form = formRef.current;
+    if (form) formAction(new FormData(form));
+  };
+
   return (
-    <form
-      action={formAction}
-      onSubmit={confirmOrCancel(
-        `Konto von ${name} anonymisieren? Name, Kontakt-, Gesundheits- und Zahlungsdaten werden gelöscht. Das lässt sich nicht rückgängig machen.`,
-      )}
-    >
-      <input type="hidden" name="userId" value={userId} />
-      <Button type="submit" size="sm" variant="destructive" disabled={isPending}>
-        Anonymisieren
-      </Button>
-    </form>
+    <>
+      <form ref={formRef} action={formAction}>
+        <input type="hidden" name="userId" value={userId} />
+        <Button
+          type="button"
+          size="sm"
+          variant="destructive"
+          disabled={isPending}
+          onClick={() => setConfirmOpen(true)}
+        >
+          Anonymisieren
+        </Button>
+      </form>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={submitConfirmed}
+        title="Konto anonymisieren"
+        description={`Konto von ${name} anonymisieren? Name, Kontakt-, Gesundheits- und Zahlungsdaten werden gelöscht. Das lässt sich nicht rückgängig machen.`}
+        confirmLabel="Anonymisieren"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+      />
+    </>
   );
 }

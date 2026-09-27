@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
 import { getUserDisplayName } from "@/lib/names";
@@ -234,14 +235,17 @@ export function RehearsalCalendar({
     router.push(`/mitglieder/probenplanung/proben/${rehearsalId}`);
   };
 
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+
   const handleDeleteRehearsal = (rehearsalId: string, title: string) => {
-    if (
-      !confirm(
-        `Probe "${title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
-      )
-    ) {
-      return;
-    }
+    setPendingDelete({ id: rehearsalId, title });
+  };
+
+  const confirmDeleteRehearsal = () => {
+    const target = pendingDelete;
+    setPendingDelete(null);
+    if (!target) return;
+    const rehearsalId = target.id;
 
     setDeletingId(rehearsalId);
     startDeleting(() => {
@@ -498,6 +502,20 @@ export function RehearsalCalendar({
             { value: "calendar", label: "Kalenderansicht" },
             { value: "weekend", label: "Wochenend-Fokus" },
           ]}
+        />
+
+        <ConfirmDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={confirmDeleteRehearsal}
+          title="Probe löschen"
+          description={`Probe "${pendingDelete?.title ?? ""}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
+          confirmLabel="Löschen"
+          cancelLabel="Abbrechen"
+          variant="destructive"
         />
 
         {viewMode === "calendar" ? (
