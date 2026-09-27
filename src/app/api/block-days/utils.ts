@@ -10,6 +10,10 @@ import {
 
 export const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
+/** „Notfall" entsteht ausschließlich über eine Absage in „Meine Termine". */
+export const EMERGENCY_KIND_MESSAGE =
+  "Der Zustand \u201eNotfall\u201c entsteht nur über eine Absage in \u201eMeine Termine\u201c.";
+
 export const reasonSchema = z
   .string()
   .max(200, "Der Grund darf höchstens 200 Zeichen lang sein.")

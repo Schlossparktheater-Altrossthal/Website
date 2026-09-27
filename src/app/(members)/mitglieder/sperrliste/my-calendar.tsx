@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { CalendarPlusIcon, CalendarRangeIcon } from "@/components/ui/action-icons";
 import {
+  AVAILABILITY_LEGEND_ORDER,
   AVAILABILITY_STATUS,
   StatusBadge,
   StatusLegend,
   StatusPicker,
   type AvailabilityStatus,
+  type SettableStatus,
 } from "@/components/ui/availability-status";
 import { AsyncButton } from "@/components/ui/async-button";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -46,11 +48,7 @@ type MyCalendarProps = {
   freezeDays: number;
   canPlan: boolean;
   onSetDay: (date: string, status: AvailabilityStatus, reason: string | null) => Promise<boolean>;
-  onAddRange: (
-    dates: string[],
-    status: Exclude<AvailabilityStatus, "free">,
-    reason: string | null,
-  ) => Promise<boolean>;
+  onAddRange: (dates: string[], status: SettableStatus, reason: string | null) => Promise<boolean>;
   onCreateEvent: (date: string) => void;
   onEditEvent: (entry: CalendarEntry) => void;
 };
@@ -190,7 +188,7 @@ export function MyCalendar(props: MyCalendarProps) {
           </p>
         )}
         <div className="flex flex-col gap-1.5 border-t border-border pt-3 sm:flex-row sm:flex-wrap sm:gap-x-4">
-          <StatusLegend statuses={["preferred", "limited", "blocked"]} />
+          <StatusLegend statuses={AVAILABILITY_LEGEND_ORDER} />
           <CalendarLegend />
         </div>
       </Card>
@@ -314,6 +312,8 @@ function DayDetails({
 }: DayDetailsProps) {
   const day = model.dayMap.get(dayKey);
   const status: AvailabilityStatus = entry ? KIND_TO_STATUS[entry.kind] : "free";
+  /** Gesperrt und Notfall zählen beide als „kann nicht“; die Sperrfrist betrifft beide. */
+  const unavailable = status === "blocked" || status === "emergency";
   const [reason, setReason] = useState(entry?.reason ?? "");
   const calendarEntries = model.entriesByDay.get(dayKey) ?? [];
 
@@ -357,33 +357,57 @@ function DayDetails({
 
       <section className="space-y-2 border-t border-border pt-4">
         <h3 className="text-xs font-medium text-muted-foreground">Meine Verfügbarkeit</h3>
-        <StatusPicker
-          value={status}
-          disabled={locked || pending}
-          isDisabled={(value) => value === "blocked" && day.isFrozen && status !== "blocked"}
-          onValueChange={(next) => {
-            if (next === status) return;
-            void onSetDay(dayKey, next, next === "free" ? null : reason);
-          }}
-          className="lg:grid-cols-2"
-        />
-        {status !== "free" && !locked ? (
-          <Input
-            value={reason}
-            maxLength={200}
-            placeholder="Grund (optional, sehen nur Planer)"
-            aria-label="Grund"
-            className="h-11"
-            onChange={(event) => setReason(event.target.value)}
-            onBlur={saveReason}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                saveReason();
-              }
-            }}
-          />
-        ) : null}
+        {status === "emergency" ? (
+          <div className="space-y-2">
+            <StatusBadge status="emergency" />
+            <p className="text-xs text-muted-foreground">
+              Absage zu einem Termin aus „Meine Termine“. Sie zählt wie gesperrt und lässt sich hier
+              jederzeit entfernen.
+            </p>
+            {!locked ? (
+              <AsyncButton
+                type="button"
+                variant="outline"
+                size="sm"
+                isLoading={pending}
+                loadingText="Entfernt…"
+                onClick={() => void onSetDay(dayKey, "free", null)}
+              >
+                Eintrag entfernen
+              </AsyncButton>
+            ) : null}
+          </div>
+        ) : (
+          <>
+            <StatusPicker
+              value={status}
+              disabled={locked || pending}
+              isDisabled={(value) => value === "blocked" && day.isFrozen && status !== "blocked"}
+              onValueChange={(next) => {
+                if (next === status) return;
+                void onSetDay(dayKey, next, next === "free" ? null : reason);
+              }}
+              className="lg:grid-cols-2"
+            />
+            {status !== "free" && !locked ? (
+              <Input
+                value={reason}
+                maxLength={200}
+                placeholder="Grund (optional, sehen nur Planer)"
+                aria-label="Grund"
+                className="h-11"
+                onChange={(event) => setReason(event.target.value)}
+                onBlur={saveReason}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    saveReason();
+                  }
+                }}
+              />
+            ) : null}
+          </>
+        )}
         {!locked ? (
           <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={onStartMulti}>
             <CalendarRangeIcon className="h-4 w-4" aria-hidden />
@@ -394,12 +418,12 @@ function DayDetails({
           <p className="text-xs text-muted-foreground">
             Vergangene Tage lassen sich nicht mehr ändern.
           </p>
-        ) : day.isFrozen && status !== "blocked" ? (
+        ) : day.isFrozen && !unavailable ? (
           <p className="text-xs text-muted-foreground">
             Sperren ist erst ab {freezeDays} Tagen Vorlauf möglich – „Eingeschränkt“ geht noch.
           </p>
         ) : null}
-        {day.isFinalWeek && status === "blocked" ? (
+        {day.isFinalWeek && unavailable ? (
           <p className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-xs text-warning">
             Dieser Tag liegt in der Endprobenwoche. Bitte sprich die Abwesenheit mit der Regie ab.
           </p>

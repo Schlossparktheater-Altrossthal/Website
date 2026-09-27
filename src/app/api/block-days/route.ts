@@ -17,6 +17,7 @@ import {
   toResponse,
   reasonSchema,
   resolveFreezeDays,
+  EMERGENCY_KIND_MESSAGE,
 } from "./utils";
 
 type SessionUser = { id?: string } | null | undefined;
@@ -119,6 +120,10 @@ export async function POST(request: Request) {
   }
 
   const kind = payload.kind ?? BlockedDayKind.BLOCKED;
+
+  if (kind === BlockedDayKind.EMERGENCY) {
+    return NextResponse.json({ error: EMERGENCY_KIND_MESSAGE }, { status: 403 });
+  }
 
   if (kind === BlockedDayKind.BLOCKED) {
     try {

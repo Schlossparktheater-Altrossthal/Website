@@ -20,7 +20,12 @@ const PDF_ZONE: Record<MemberGroup, "acting" | "crew" | "both" | "unknown"> = {
   other: "unknown",
 };
 
-const FALLBACK_LABEL = { blocked: "gesperrt", limited: "eingeschränkt", preferred: "bevorzugt" };
+const FALLBACK_LABEL = {
+  blocked: "gesperrt",
+  limited: "eingeschränkt",
+  preferred: "bevorzugt",
+  emergency: "Notfall",
+};
 
 type ExportButtonProps = {
   members: TeamMember[];

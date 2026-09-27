@@ -21,7 +21,7 @@ type CalendarModelInput = {
   freezeDays: number;
 };
 
-export type DayCounts = { blocked: number; limited: number; preferred: number };
+export type DayCounts = { blocked: number; limited: number; preferred: number; emergency: number };
 
 export type CalendarModel = {
   /** Alle Tage des sichtbaren Rasters (inkl. Rand-Wochen). */
@@ -64,7 +64,12 @@ export function useCalendarModel({
       const list = byDay.get(entry.date) ?? [];
       list.push(entry);
       byDay.set(entry.date, list);
-      const count = counts.get(entry.date) ?? { blocked: 0, limited: 0, preferred: 0 };
+      const count = counts.get(entry.date) ?? {
+        blocked: 0,
+        limited: 0,
+        preferred: 0,
+        emergency: 0,
+      };
       count[entry.status] += 1;
       counts.set(entry.date, count);
     }

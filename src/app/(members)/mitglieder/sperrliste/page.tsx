@@ -1,3 +1,4 @@
+import type { BlockedDayKind } from "@prisma/client";
 import { addMonths, format, startOfMonth } from "date-fns";
 
 import { PageHeader } from "@/components/members/page-header";
@@ -42,7 +43,7 @@ type MemberRecord = {
   blockedDays: {
     id: string;
     date: string;
-    kind: "BLOCKED" | "LIMITED" | "PREFERRED";
+    kind: BlockedDayKind;
     reason: string | null;
   }[];
 };

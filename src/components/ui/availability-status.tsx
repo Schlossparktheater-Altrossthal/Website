@@ -3,7 +3,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /** Verfügbarkeit eines Mitglieds an einem Tag (Sperrliste, Probenplanung). */
-export type AvailabilityStatus = "free" | "preferred" | "limited" | "blocked";
+export type AvailabilityStatus = "free" | "preferred" | "limited" | "blocked" | "emergency";
 
 type StatusStyle = {
   label: string;
@@ -45,6 +45,13 @@ export const AVAILABILITY_STATUS: Record<AvailabilityStatus, StatusStyle> = {
     surface: "bg-destructive/15",
     text: "text-destructive",
   },
+  emergency: {
+    label: "Notfall",
+    short: "Notfall",
+    dot: "bg-destructive",
+    surface: "bg-destructive/30",
+    text: "text-destructive",
+  },
 };
 
 export const AVAILABILITY_STATUS_ORDER: AvailabilityStatus[] = [
@@ -52,6 +59,23 @@ export const AVAILABILITY_STATUS_ORDER: AvailabilityStatus[] = [
   "preferred",
   "limited",
   "blocked",
+];
+
+/**
+ * Zustände, die in der Sperrliste selbst gesetzt werden dürfen. „Notfall" steht nicht in der
+ * Auswahl: Er entsteht ausschließlich über eine Notfall-Absage in „Meine Termine".
+ */
+export const SETTABLE_STATUSES = ["blocked", "limited", "preferred"] as const;
+export type SettableStatus = (typeof SETTABLE_STATUSES)[number];
+
+export function isSettableStatus(value: AvailabilityStatus): value is SettableStatus {
+  return (SETTABLE_STATUSES as readonly AvailabilityStatus[]).includes(value);
+}
+
+/** Legende: die setzbaren Zustände plus der Notfall, der von außen hereinkommt. */
+export const AVAILABILITY_LEGEND_ORDER: AvailabilityStatus[] = [
+  ...AVAILABILITY_STATUS_ORDER.slice(1),
+  "emergency",
 ];
 
 export function StatusDot({
@@ -130,6 +154,7 @@ const STATUS_HINTS: Record<AvailabilityStatus, string> = {
   preferred: "Gern an diesem Tag",
   limited: "Nur zeitweise",
   blocked: "Ich kann nicht",
+  emergency: "Absage zum Termin",
 };
 
 /** Große, gut tippbare Statusauswahl (2×2 mobil, 4 nebeneinander ab `sm`). */

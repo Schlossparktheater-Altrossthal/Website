@@ -185,7 +185,7 @@ export function TeamView({
       )}
 
       <div className="flex flex-col gap-1.5 border-t border-border/60 pt-3">
-        <StatusLegend statuses={["preferred", "limited", "blocked"]} />
+        <StatusLegend statuses={["preferred", "limited", "blocked", "emergency"]} />
         <CalendarLegend />
       </div>
 

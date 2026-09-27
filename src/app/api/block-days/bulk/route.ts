@@ -4,7 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { z } from "zod";
 import { hasPermission } from "@/lib/permissions";
-import { isoDate, normaliseReason, resolveFreezeDays, toDateOnly, toResponse } from "../utils";
+import {
+  isoDate,
+  normaliseReason,
+  resolveFreezeDays,
+  toDateOnly,
+  toResponse,
+  EMERGENCY_KIND_MESSAGE,
+} from "../utils";
 import { BlockedDayKind } from "@prisma/client";
 
 type SessionUser = { id?: string } | null | undefined;
@@ -33,6 +40,10 @@ export async function POST(request: Request) {
   const uniqueDates = Array.from(new Set(parsed.data.dates));
   const reason = normaliseReason(parsed.data.reason);
   const kind = parsed.data.kind ?? BlockedDayKind.BLOCKED;
+
+  if (kind === BlockedDayKind.EMERGENCY) {
+    return NextResponse.json({ error: EMERGENCY_KIND_MESSAGE }, { status: 403 });
+  }
 
   try {
     const parsedDates = uniqueDates.map((d) => ({ key: d, date: toDateOnly(d) }));

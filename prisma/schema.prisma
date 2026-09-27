@@ -145,6 +145,8 @@ enum BlockedDayKind {
   BLOCKED
   LIMITED
   PREFERRED
+  /// Nur über eine Notfall-Absage in „Meine Termine"; in der Sperrliste nicht wählbar.
+  EMERGENCY
 }
 
 // Einheiten für Maße
@@ -941,6 +943,7 @@ model CalendarEvent {
   blocks           EventBlock[]
   responseLogs     EventResponseLog[]
   notifications    Notification[]
+  blockedDays      BlockedDay[]
 
   @@index([start])
   @@index([departmentId, start])
@@ -1092,11 +1095,15 @@ model BlockedDay {
   date      DateTime
   reason    String?
   kind      BlockedDayKind @default(BLOCKED)
+  /// Termin, der diesen Eintrag ausgelöst hat (Absage in „Meine Termine").
+  eventId   String?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     CalendarEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   @@unique([userId, date])
+  @@index([eventId])
 }
 
 model Task {

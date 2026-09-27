@@ -4,7 +4,11 @@ import { useCallback, useState } from "react";
 import type { BlockedDayKind } from "@prisma/client";
 import { toast } from "sonner";
 
-import type { AvailabilityStatus } from "@/components/ui/availability-status";
+import {
+  isSettableStatus,
+  type AvailabilityStatus,
+  type SettableStatus,
+} from "@/components/ui/availability-status";
 
 import { KIND_TO_STATUS, STATUS_TO_KIND, type MyBlockedDay, type TeamEntry } from "./types";
 
@@ -81,6 +85,11 @@ export function useMyEntries({
           applyLocal([], [date]);
           return true;
         }
+        if (!isSettableStatus(status)) {
+          // „Notfall“ entsteht nur über eine Notfall-Absage in „Meine Termine“.
+          console.warn("[sperrliste:set-day] Zustand ist hier nicht setzbar", status);
+          return false;
+        }
         const kind = STATUS_TO_KIND[status];
         const response = existing
           ? await fetch(`/api/block-days/${existing.id}`, {
@@ -113,7 +122,7 @@ export function useMyEntries({
 
   /** Mehrere Tage auf einmal eintragen (z. B. Urlaub). Bestehende Tage bleiben unverändert. */
   const addRange = useCallback(
-    async (dates: string[], status: Exclude<AvailabilityStatus, "free">, reason: string | null) => {
+    async (dates: string[], status: SettableStatus, reason: string | null) => {
       try {
         const response = await fetch("/api/block-days/bulk", {
           method: "POST",

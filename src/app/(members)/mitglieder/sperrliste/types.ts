@@ -1,6 +1,6 @@
 import type { BlockedDayKind } from "@prisma/client";
 
-import type { AvailabilityStatus } from "@/components/ui/availability-status";
+import type { AvailabilityStatus, SettableStatus } from "@/components/ui/availability-status";
 
 export type MemberGroup = "actors" | "crew" | "both" | "other";
 
@@ -31,9 +31,11 @@ export const KIND_TO_STATUS: Record<BlockedDayKind, Exclude<AvailabilityStatus, 
   BLOCKED: "blocked",
   LIMITED: "limited",
   PREFERRED: "preferred",
+  EMERGENCY: "emergency",
 };
 
-export const STATUS_TO_KIND: Record<Exclude<AvailabilityStatus, "free">, BlockedDayKind> = {
+/** Nur die in der Sperrliste setzbaren Zustände; „Notfall" kommt aus „Meine Termine". */
+export const STATUS_TO_KIND: Record<SettableStatus, BlockedDayKind> = {
   blocked: "BLOCKED",
   limited: "LIMITED",
   preferred: "PREFERRED",

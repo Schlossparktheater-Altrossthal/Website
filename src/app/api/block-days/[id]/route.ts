@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
-import { normaliseReason, reasonSchema, toResponse } from "../utils";
+import { normaliseReason, reasonSchema, toResponse, EMERGENCY_KIND_MESSAGE } from "../utils";
 import { BlockedDayKind } from "@prisma/client";
 
 type SessionUser = { id?: string } | null | undefined;
@@ -51,6 +51,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   if (!existing || existing.userId !== userId) {
     return NextResponse.json({ error: "Sperrtermin wurde nicht gefunden." }, { status: 404 });
+  }
+
+  if (payload.kind === BlockedDayKind.EMERGENCY) {
+    return NextResponse.json({ error: EMERGENCY_KIND_MESSAGE }, { status: 403 });
   }
 
   const updateData: {

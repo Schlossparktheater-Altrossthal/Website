@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { eachDayOfInterval } from "date-fns";
 
 import { AsyncButton } from "@/components/ui/async-button";
-import { AVAILABILITY_STATUS, type AvailabilityStatus } from "@/components/ui/availability-status";
+import { AVAILABILITY_STATUS, type SettableStatus } from "@/components/ui/availability-status";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { parseDayKey, toDayKey } from "@/lib/sperrliste/day-tiers";
 import { cn } from "@/lib/utils";
 
-type RangeStatus = Exclude<AvailabilityStatus, "free">;
+type RangeStatus = SettableStatus;
 
 const MAX_DAYS = 62;
 

@@ -26,6 +26,7 @@ const BLOCKED_DAY_LABELS: Record<BlockedDayKind, string> = {
   BLOCKED: "Gesperrt",
   LIMITED: "Eingeschränkt",
   PREFERRED: "Bevorzugt",
+  EMERGENCY: "Notfall",
 };
 
 export function generateFeedToken() {
