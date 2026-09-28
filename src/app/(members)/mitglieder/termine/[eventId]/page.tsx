@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
 import { loadAudienceContext } from "@/lib/calendar/audience-server";
+import { isWithinFreeze, readFreezeDays } from "@/lib/calendar/block-list-link";
 import { sanitizeEventDescription } from "@/lib/calendar/description";
 import { visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { getCalendarEntryKindLabel } from "@/lib/calendar/event-kinds";
@@ -60,6 +61,13 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
     ),
   ]);
   const own = event.participants.find((entry) => entry.userId === userId) ?? null;
+  // „Für alle“-Termine: Rückmeldung ohne Einladung.
+  const response = own
+    ? own
+    : await prisma.eventParticipant.findUnique({
+        where: { eventId_userId: { eventId: event.id, userId } },
+        select: { response: true, responseNote: true },
+      });
 
   if (event.status === "DRAFT" && !canPlan) {
     return <Denied>Dieser Termin ist noch nicht veröffentlicht.</Denied>;
@@ -174,7 +182,13 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 
   const now = new Date();
-  const declined = own ? own.response === "no" || own.response === "emergency" : false;
+  const declined = response?.response === "no" || response?.response === "emergency";
+  const canRespond =
+    !event.departmentId &&
+    event.start > now &&
+    (event.status === "SCHEDULED" || event.status === "TENTATIVE") &&
+    (!!own || event.kind !== "REHEARSAL");
+  const freezeDays = canRespond ? await readFreezeDays() : 0;
   const editHref = event.departmentId
     ? event.department
       ? `/mitglieder/meine-gewerke/${event.department.slug}?ansicht=termine`
@@ -210,19 +224,19 @@ export default async function EventPage({ params }: { params: Promise<{ eventId:
           past: (event.end ?? event.start) < now,
         }}
         me={
-          own
+          own || canRespond
             ? {
                 window:
-                  own.personalStart && own.personalEnd
+                  own?.personalStart && own.personalEnd
                     ? { start: own.personalStart.toISOString(), end: own.personalEnd.toISOString() }
                     : null,
-                optional: own.level === "OPTIONAL",
+                invited: !!own,
+                optional: own?.level === "OPTIONAL",
                 declined,
-                note: own.responseNote,
-                canRespond:
-                  !event.departmentId &&
-                  event.start > now &&
-                  (event.status === "SCHEDULED" || event.status === "TENTATIVE"),
+                emergency: response?.response === "emergency",
+                note: response?.responseNote ?? null,
+                canRespond,
+                withinFreeze: canRespond && isWithinFreeze(event.start, freezeDays, now),
                 mySceneCount: blocks.filter((block) => block.mine).length,
               }
             : null

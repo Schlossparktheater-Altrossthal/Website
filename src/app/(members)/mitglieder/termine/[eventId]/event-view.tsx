@@ -41,10 +41,13 @@ type EventInfo = {
 
 type Me = {
   window: { start: string; end: string } | null;
+  invited: boolean;
   optional: boolean;
   declined: boolean;
+  emergency: boolean;
   note: string | null;
   canRespond: boolean;
+  withinFreeze: boolean;
   mySceneCount: number;
 };
 
@@ -320,9 +323,11 @@ export function EventView({
                 ? "Du hast abgesagt"
                 : me.window
                   ? `Deine Zeit: ${span(me.window.start, me.window.end)} Uhr`
-                  : me.optional
-                    ? "Du bist optional eingeladen"
-                    : "Du bist eingeladen"}
+                  : !me.invited
+                    ? "Termin für alle"
+                    : me.optional
+                      ? "Du bist optional eingeladen"
+                      : "Du bist eingeladen"}
             </span>
             {!me.declined && me.mySceneCount ? (
               <span className="text-muted-foreground">
@@ -337,6 +342,8 @@ export function EventView({
                   declined={me.declined}
                   note={me.note}
                   tentative={event.status === "TENTATIVE"}
+                  emergency={me.emergency}
+                  withinFreeze={me.withinFreeze}
                 />
               </div>
             ) : null}
