@@ -123,6 +123,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "rehearsal",
   },
   {
+    key: "PRIVATE.REHEARSAL.PROTOCOL.EDIT",
+    label: "Probenprotokoll führen",
+    description:
+      "Während der Probe Anwesenheit, tatsächliche Zeiten, geprobte Szenen und Notizen im Probenmodus erfassen.",
+    category: "rehearsal",
+  },
+  {
     key: "PRIVATE.PRODUCTION.SHOW.MANAGE",
     label: "Produktionsplanung öffnen",
     description:
@@ -400,6 +407,7 @@ async function ensureProfileAdminDefaultAssignments() {
  */
 export const PRODUCTION_SCOPED_PERMISSION_KEYS: ReadonlySet<string> = new Set([
   "PRIVATE.REHEARSAL.PLANNING.MANAGE",
+  "PRIVATE.REHEARSAL.PROTOCOL.EDIT",
   "PRIVATE.REHEARSAL.BLOCKLIST.VIEW",
   "PRIVATE.REHEARSAL.BLOCKLIST.SETTINGS",
   "PRIVATE.REHEARSAL.BLOCKLIST.EXPORT",

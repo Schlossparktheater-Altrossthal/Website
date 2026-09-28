@@ -943,6 +943,10 @@ model CalendarEvent {
   blocks           EventBlock[]
   responseLogs     EventResponseLog[]
   notifications    Notification[]
+  guests           EventGuest[]
+  /// Probenmodus: tatsächlicher Beginn und tatsächliches Ende.
+  actualStart      DateTime?
+  actualEnd        DateTime?
   blockedDays      BlockedDay[]
 
   @@index([start])
@@ -982,6 +986,26 @@ enum EventScheduleMode {
   STAGGERED
 }
 
+/// Anwesenheit bei einer Probe.
+enum AttendanceMark {
+  PRESENT
+  LATE
+  LEFT_EARLY
+  ABSENT
+  EXCUSED
+}
+
+/// Gast ohne Konto, der bei einer Probe dabei war.
+model EventGuest {
+  id        String        @id @default(cuid())
+  eventId   String
+  name      String
+  createdAt DateTime      @default(now())
+  event     CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
 enum SceneRehearsalOutcome {
   DONE
   PARTIAL
@@ -1013,6 +1037,11 @@ model EventBlock {
   endsAt       DateTime?
   outcome      SceneRehearsalOutcome?
   note         String?
+  /// Probenmodus: tatsächliche Zeiten und Reihenfolge; spontan hinzugefügte Punkte sind `unplanned`.
+  actualStart  DateTime?
+  actualEnd    DateTime?
+  actualOrder  Int?
+  unplanned    Boolean                @default(false)
   event        CalendarEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   scene        Scene?                 @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   department   Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
@@ -1057,8 +1086,11 @@ model EventParticipant {
   /// Gestaffelte Probe: persönliches Zeitfenster aus den eigenen Szenen.
   personalStart DateTime?
   personalEnd   DateTime?
-  /// Anwesenheit laut Nachbereitung (null = nicht erfasst).
-  attended      Boolean?
+  /// Anwesenheit laut Probenmodus (null = nicht erfasst).
+  attendance    AttendanceMark?
+  /// Verspätet gekommen bzw. früher gegangen um.
+  arrivedAt     DateTime?
+  leftAt        DateTime?
   response      AttendanceStatus?
   responseNote  String?
   respondedAt   DateTime?

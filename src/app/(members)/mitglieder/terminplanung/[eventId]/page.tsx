@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
 
 import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
@@ -7,8 +10,6 @@ import { requireAuth } from "@/lib/rbac";
 import { getActiveProduction } from "@/lib/active-production";
 
 import { EventEditor } from "../event-editor";
-import { RehearsalReview } from "../rehearsal-review";
-import { getUserDisplayName } from "@/lib/names";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
 import { loadAudienceContext, readEventAudience } from "@/lib/calendar/audience-server";
@@ -69,61 +70,11 @@ export default async function EventEditorPage({
     rehearsal.showId || otherShowId ? await loadAudienceContext(otherShowId) : null;
   const productionTitle = production ? (production.title ?? String(production.year)) : null;
 
-  // Nach Probenbeginn: Szenen abhaken und Anwesenheit erfassen.
-  const review =
-    rehearsal.kind === "REHEARSAL" &&
-    rehearsal.status === "SCHEDULED" &&
-    rehearsal.start <= new Date()
-      ? await prisma.calendarEvent
-          .findUnique({
-            where: { id: rehearsal.id },
-            select: {
-              blocks: {
-                where: { type: "SCENE", sceneId: { not: null } },
-                orderBy: { order: "asc" },
-                select: {
-                  sceneId: true,
-                  outcome: true,
-                  scene: { select: { identifier: true, sequence: true, title: true } },
-                },
-              },
-              participants: {
-                where: { invited: true },
-                select: {
-                  userId: true,
-                  response: true,
-                  attended: true,
-                  user: {
-                    select: { firstName: true, lastName: true, name: true, email: true },
-                  },
-                },
-              },
-            },
-          })
-          .then((data) => ({
-            scenes: (data?.blocks ?? [])
-              .flatMap((entry) =>
-                entry.sceneId && entry.scene
-                  ? [{ ...entry, sceneId: entry.sceneId, scene: entry.scene }]
-                  : [],
-              )
-              .map((entry) => ({
-                sceneId: entry.sceneId,
-                label: `Sz. ${entry.scene.identifier || entry.scene.sequence}${
-                  entry.scene.title ? ` ${entry.scene.title}` : ""
-                }`,
-                outcome: entry.outcome,
-              })),
-            people: (data?.participants ?? [])
-              .map((entry) => ({
-                userId: entry.userId,
-                name: getUserDisplayName(entry.user),
-                declined: entry.response === "no" || entry.response === "emergency",
-                attended: entry.attended,
-              }))
-              .sort((a, b) => a.name.localeCompare(b.name, "de")),
-          }))
-      : null;
+  // Ab einer Stunde vor Beginn: Probenmodus für Anwesenheit, Zeiten und Szenen.
+  const protocolOpen =
+    rehearsal.status === "SCHEDULED" || rehearsal.status === "TENTATIVE"
+      ? rehearsal.start.getTime() - new Date().getTime() <= 60 * 60 * 1000
+      : false;
 
   const breadcrumbs = [
     membersNavigationBreadcrumb("/mitglieder/terminplanung"),
@@ -179,8 +130,16 @@ export default async function EventEditorPage({
         sceneStats={sceneStats}
       />
 
-      {review ? (
-        <RehearsalReview eventId={rehearsal.id} scenes={review.scenes} people={review.people} />
+      {protocolOpen ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted p-4">
+          <p className="text-sm text-muted-foreground">
+            Anwesenheit, tatsächliche Zeiten und geprobte Szenen erfasst der Probenmodus – auch live
+            auf mehreren Geräten.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/mitglieder/termine/${rehearsal.id}/probe`}>Probenmodus öffnen</Link>
+          </Button>
+        </div>
       ) : null}
     </div>
   );
