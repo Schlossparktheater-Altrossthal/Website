@@ -3,8 +3,12 @@
 ## Zweck
 
 Persönliche Übersicht über alles, was für die Person angesetzt ist: eigene Proben, Termine der
-eigenen Gewerke und „Für alle"-Termine. Jede Zeile sagt, warum die Person dabei ist, und erlaubt
-Absage bzw. Rücknahme. Absagen sind mit der Sperrliste verzahnt (siehe unten).
+eigenen Gewerke und „Für alle"-Termine. Kompakt: eine Zeile pro Termin (Zeit, Farbpunkt je Art,
+Titel, eine Zusatzzeile, Status rechts), nach Tagen gruppiert. Absage und Details stehen auf der
+Terminseite `/mitglieder/termine/[id]`; Absagen sind mit der Sperrliste verzahnt (siehe unten).
+Ab `xl` (1280 px) zeigt die Seite rechts neben der Liste die Terminseite als Vorschau
+(`?termin=<id>`, sonst der nächste Termin); ↑/↓ blättert. Darunter steht mobil oben die Karte
+„Nächster Termin“.
 
 ## Routen
 
@@ -14,6 +18,7 @@ Absage bzw. Rücknahme. Absagen sind mit der Sperrliste verzahnt (siehe unten).
   - `?q=<text>` – Suche über Titel und Ort
   - `?vergangen=1` – vergangene Termine (letzte 90 Tage, neueste zuerst)
   - `?mehr=<n>` – Obergrenze je Datenquelle (Schrittweite 30, Maximum 300)
+  - `?termin=<id>` – Termin in der Desktop-Vorschau
 
 ## Permissions
 
@@ -26,11 +31,14 @@ Absage bzw. Rücknahme. Absagen sind mit der Sperrliste verzahnt (siehe unten).
 ## Wichtige Komponenten
 
 - `src/app/(members)/mitglieder/meine-proben/page.tsx` – Server-Komponente: liest `searchParams`,
-  baut alle Links daraus, rechte Spalte mit „Dein nächster Termin" und Tipps.
-- `.../my-events-list.tsx` – Abschnitte „Heute & Morgen · Diese Woche · Später · Vergangen" mit
-  Zählern, Leerzustand.
-- `.../my-event-row.tsx` – die Zeile (Kalenderblatt) mit Badges, Zeit, Ort, „Dabei als",
-  Konflikt-Hinweis und Absage-Steuerung; von Liste und Kalender gemeinsam genutzt.
+  baut alle Links daraus; Werkzeugzeile (Liste/Kalender als Symbole, Filter-Chips mit Anzahl –
+  mobil eigene Zeile, Tipps hinter „i“, Suche hinter der Lupe), Karte „Nächster Termin“ (unter
+  `xl`), Desktop-Vorschau über `readEventView` und `EventView layout="panel"`.
+- `.../my-events-list.tsx` – Tagesgruppen („Heute“, „Morgen“, Datum), Legende der Farbpunkte,
+  Leerzustand; `row-keyboard-nav.tsx` für ↑/↓.
+- `.../my-event-row.tsx` – kompakte Zeile; Farbpunkt `TONE_DOT` (Probe `bg-info`, Gewerk
+  `bg-success`, Termin `bg-primary` wie in der Terminplanung), Status rechts (abgesagt/Notfall,
+  gesperrt/eingeschränkt, optional); von Liste und Kalender gemeinsam genutzt.
 - `.../my-events-calendar.tsx` – Monatsansicht (`MonthGrid` + `MonthSwitcher`); Tagesdetails am
   Desktop unter dem Raster, mobil im Bottom-Sheet.
 - `.../decline-control.tsx` – Absage-Dialog (Notfall- und Normal-Variante) und „Doch dabei".

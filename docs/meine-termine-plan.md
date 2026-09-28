@@ -3,6 +3,11 @@
 Stand: 2026-09-27. Phase 0 (lokales Fixture) ist umgesetzt, der Umbau selbst steht noch aus.
 Checkliste am Ende wird gepflegt.
 
+> **Nachtrag 2026-09-28:** Auf Wunsch des Users kompakte Zeilen statt Kalenderblatt-Karten,
+> Tagesgruppen statt „Heute & Morgen / Diese Woche / Später“, Absage auf der Terminseite statt an
+> jeder Zeile, „Nächster Termin“ mobil oben, Desktop-Vorschau statt rechter Spalte, Tipps hinter
+> „i“. Details in `docs/termin-ansicht-probenprotokoll-plan.md`. Die Absage-/Sperrlisten-Logik bleibt.
+
 ## Ziel
 
 1. Die Seite wird auf Handy, Tablet und Desktop angenehm lesbar und bedienbar:

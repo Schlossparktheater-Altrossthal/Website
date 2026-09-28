@@ -187,7 +187,14 @@ doneAt?, authorId, createdAt }`.
   `/mitglieder/proben/[id]` und Editor ohne Planungsrecht leiten dorthin; alle Links
   (Benachrichtigungen, Feed, Sperrliste, Meine Termine) zeigen auf die neue Seite.
 
-- **Phase 2 separat umgesetzt:** „Meine Termine“ wurde parallel nach `docs/meine-termine-plan.md`
+- **Phase 2 angeglichen (2026-09-28):** kompakte Zeilen mit Tagesgruppen und Farbpunkten
+  (Legende einmal unten), Status rechts, Absage nur auf der Terminseite, „Nächster Termin“ mobil
+  oben, ab `xl` Liste + Vorschau (`?termin=`, ↑/↓), Filter-Chips mit Anzahl (mobil eigene Zeile,
+  umbrechend statt wischbar – AGENTS.md verbietet horizontales Scrollen auf Umschaltern), Suche
+  hinter der Lupe, Tipps hinter „i“. Vergangene Termine bekommen Anwesenheits-Symbole
+  (✓ da, ◷ verspätet/früher weg, ✗ gefehlt) und ein Protokoll-Symbol erst mit Phase 3/4; keine
+  Anwesenheitsquote.
+- **Phase 2 zuerst separat umgesetzt:** „Meine Termine“ wurde parallel nach `docs/meine-termine-plan.md`
   neu gebaut (Tagesgruppen, nächster Termin, Kalenderansicht, Sperrlisten-Verknüpfung). Die
   Einträge verlinken jetzt auf die Terminseite. Offen: Absage allgemeiner Termine (Rückmeldung mit
   `invited=false`) auch auf der Terminseite anbieten.

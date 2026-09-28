@@ -10,7 +10,7 @@ Probenplaner verwalten den Gesamtplan.
 - `/mitglieder/terminplanung` – Gesamtplanung für Proben und Termine (Kalender mit Tagesblatt, Liste, Entwürfe, Szenen-Stand); `/mitglieder/probenplanung` leitet auf `?art=proben` um
 - `/mitglieder/terminplanung` – organisationsweite Termine (für Planer; Liste nach Monaten)
 - `/mitglieder/terminplanung/[eventId]` – gemeinsamer Editor für Proben und Termine (alte Adresse `/mitglieder/probenplanung/proben/[id]` leitet um)
-- `/mitglieder/proben/[rehearsalId]` – Detailansicht einer Probe
+- `/mitglieder/termine/[eventId]` – Terminseite für alle Beteiligten (Proben, Termine, Gewerk-Termine): Kopf mit eigener Zeit und Absage, Ablauf als Zeitleiste (parallele Punkte, „nur meine“, Jetzt-Linie), Leute gruppiert. Sehen dürfen Planung, Eingeladene, alle der Produktion bzw. des Gewerks, bei Terminen ohne Produktion und Zielgruppe alle. Daten aus `src/lib/calendar/event-view-server.ts` (`readEventView`), Zeitleiste aus `event-timeline.ts`. Alte Adresse `/mitglieder/proben/[id]` leitet um, ebenso der Editor für Personen ohne Planungsrecht.
 - `/mitglieder/meine-proben` – eigene Termine: Liste oder Kalender, Suche, Absagen (siehe [meine-termine.md](meine-termine.md))
 
 ## Permissions
