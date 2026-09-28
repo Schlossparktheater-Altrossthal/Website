@@ -1,6 +1,7 @@
 # Plan: Terminplanung mit Zielgruppen, Szenen und Terminfinder
 
-Stand: 2026-09-27. Phase 1–4 umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-27. Phase 1–5a umgesetzt, Phase 6 bis auf E2E und Release fertig. Checkliste am
+Ende wird gepflegt.
 
 ## Ziel
 

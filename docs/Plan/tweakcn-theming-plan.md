@@ -1,8 +1,14 @@
-# Theming auf tweakcn umstellen
+# Plan: Theming auf tweakcn umstellen
 
-Ziel: Website/Mitgliederbereich und das Drupal-Theme `Theme-Drupal-Sommertheater` nutzen **dasselbe**
-Theme im tweakcn-/shadcn-Format. Themes lassen sich aus tweakcn.com übernehmen (CSS einfügen oder
-Registry-URL `https://tweakcn.com/r/themes/<name>.json`) und wieder exportieren.
+Stand: 2026-09-24. Umgesetzt; Phase 4 (gemeinsames Theme für das Drupal-Theme) ist zurückgestellt.
+Checkliste am Ende wird gepflegt.
+
+## Ziel
+
+1. Website/Mitgliederbereich und das Drupal-Theme `Theme-Drupal-Sommertheater` nutzen **dasselbe**
+   Theme im tweakcn-/shadcn-Format.
+2. Themes lassen sich aus tweakcn.com übernehmen (CSS einfügen oder Registry-URL
+   `https://tweakcn.com/r/themes/<name>.json`) und wieder exportieren.
 
 ## Entscheidungen
 
@@ -25,7 +31,14 @@ Registry-URL `https://tweakcn.com/r/themes/<name>.json`) und wieder exportieren.
   (`/api/website/theme.css`). Das Drupal-Theme lädt es nach seiner eingebauten `theme.css`, sodass
   bei Ausfall die eingebauten Werte greifen.
 
-## Schritte
+## Phasen
+
+1. Parser, Speicherung und API auf das neue Format (Schritte 1–2)
+2. Editor, Layout, Drupal-Preset und öffentlicher CSS-Endpunkt (Schritte 3–5b)
+3. Aufräumen nach dem Staging-Test (Schritt C)
+4. Gemeinsames Theme für das Drupal-Theme (Schritt 6, zurückgestellt)
+
+## Checkliste
 
 - [x] 1. `src/lib/theme/tweakcn.ts`: Parser (CSS + Registry-JSON), Sanitizing, Ergänzen fehlender
       Variablen, CSS-Ausgabe, Umrechnung alter Themes. Tests.

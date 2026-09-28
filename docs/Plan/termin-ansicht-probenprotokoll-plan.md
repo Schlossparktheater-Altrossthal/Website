@@ -1,6 +1,7 @@
 # Plan: Terminansicht, „Meine Termine“ und Probenprotokoll
 
-Stand: 2026-09-28 – Konzept, noch nicht umgesetzt. Baut auf `docs/Plan/terminplanung-plan.md` (Phase 6) auf.
+Stand: 2026-09-28. Phase 1–3 umgesetzt, offen sind Phase 4 und 5. Baut auf
+`docs/Plan/terminplanung-plan.md` (Phase 6) auf. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -280,3 +281,11 @@ Inventar/Tickets. Der Probenmodus lädt beim Öffnen einen Schnappschuss des Ter
 wird als Ereignis (Anwesenheit gesetzt, Punkt gestartet, Notiz angelegt …) lokal gespeichert und
 bei Netz nachgereicht; Anzeige „3 Änderungen noch nicht übertragen“. Konflikte: letzte Änderung
 pro Feld gewinnt, Notizen werden nur ergänzt, nie überschrieben.
+
+## Checkliste
+
+- [x] Phase 1 (2026-09-28) – Terminseite `/mitglieder/termine/[id]` für alle Terminarten, Zeitzonen-Fix, alte URL leitet um
+- [x] Phase 2 (2026-09-28) – „Meine Termine“ kompakt mit Tagesgruppen und Desktop-Vorschau
+- [x] Phase 3 (2026-09-28) – Probenmodus mit Anwesenheit, Ist-Zeiten und Gästen (Migration `20260928170000_rehearsal_protocol`)
+- [ ] Phase 4 – Notizen, Entscheidungen und Aufgaben, Protokoll-Reiter, Anwesenheits-Symbole in „Meine Termine“
+- [ ] Phase 5 – E2E (Playwright, Staging-Login), Screenshots mobil/desktop, Release mit Terminplanung Phase 6

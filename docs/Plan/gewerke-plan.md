@@ -1,6 +1,7 @@
 # Plan: Gewerke- & Rollenplanung
 
-Stand: 2026-09-26. Entwurf, noch nichts umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-26. Phase 1–6 umgesetzt, offen ist Phase 7 (E2E und Release). Checkliste am Ende
+wird gepflegt.
 
 ## Ziel
 

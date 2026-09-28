@@ -1,7 +1,13 @@
-# Testplan Staging: Produktionen, Onboarding & Fotoerlaubnis
+# Plan: Testplan Staging – Produktionen, Onboarding und Fotoerlaubnis
 
-Vor dem Prod-Release (Migrationen `20260923120000` … `20260924140000`).
-Plan und Hintergründe: `docs/Plan/produktionen-mitglieder-plan.md`.
+Stand: 2026-09-24. Abschnitte 1–7 sind als Integrationstests abgedeckt; die manuelle Prüfung und
+der Smoke-Test auf Staging stehen aus. Checkliste am Ende wird gepflegt.
+
+## Ziel
+
+Vor dem Prod-Release (Migrationen `20260923120000` … `20260924140000`) prüfen, dass
+Produktionswechsel, Onboarding, Rückkehrer, Fotoerlaubnis und Saisonabschluss mit Prod-Daten
+funktionieren. Plan und Hintergründe: `docs/Plan/produktionen-mitglieder-plan.md`.
 
 ## Automatisiert: Integrationstests
 
@@ -9,7 +15,7 @@ Die Abschnitte 1–7 unten sind als Integrationstests abgedeckt (`tests/integrat
 Abschnitt). Sie laufen gegen einen echten Postgres mit dem Prod-Dump:
 
 ```bash
-npm run test:integration
+pnpm test:integration
 ```
 
 - `global-setup.ts` legt die Datenbank `mb_it` neu an, lädt den Dump, ergänzt die zweite Produktion
@@ -34,17 +40,17 @@ Nicht automatisiert, daher als **Smoke-Test auf Staging** (ca. 10 Minuten):
 
 Mails (✉️) einmalig nach dem Prod-Release mit einem eigenen Testkonto prüfen.
 
----
+## Phasen
 
-Die folgende ausführliche Checkliste dient als Referenz für die Tests bzw. für manuelle Nachtests.
+Die Phasen entsprechen den Abschnitten 1–7; die Häkchen darunter sind die manuellen Stichproben.
 
-Vorbereitung (manuell):
+### Phase 0: Vorbereitung (manuell)
 
 - Staging frisch aus Prod synchronisieren (db-sync-Job), damit die Migrationen wie in Prod am Stück laufen.
 - Zwei Testkonten: **A** (normales Mitglied) und **B** (Mitglied, das später deaktiviert wird).
 - Staging verschickt keine Mails (`MAIL_DISABLED=true`): Punkte mit ✉️ über die angezeigten Links testen.
 
-## 1. Migration (direkt nach dem Deploy)
+### Phase 1: Migration (direkt nach dem Deploy)
 
 - [ ] Produktionsübersicht: „Die unendliche Geschichte“ steht auf **Aktiv**, „???“ auf **In Planung**.
 - [ ] Fotoerlaubnis-Verwaltung, Filter „Die unendliche Geschichte“: alle bisherigen Erlaubnisse (Prod-Stand ~34),
@@ -54,12 +60,12 @@ Vorbereitung (manuell):
 - [ ] Mitgliederverwaltung → Datenpflege: keine Löschkandidaten.
 - [ ] Rollen stichprobenartig: Vorstand/Finanzen/Owner haben **nicht** zusätzlich „Ensemble“ bekommen.
 
-## 2. Aktive Produktion & Saisonabschluss
+### Phase 2: Aktive Produktion & Saisonabschluss
 
 - [ ] Im Admin-Menü die aktive Produktion wechseln → **niemand** wird deaktiviert (Mitgliederliste unverändert).
 - [ ] „Saison abschließen“ → Vorschau zeigt nur Personen **ohne** laufende Produktion; mit Abbrechen verlassen.
 
-## 3. Ensemble & Rollen
+### Phase 3: Ensemble & Rollen
 
 - [ ] Konto A im Ensemble auf „Technik“ setzen → in der Mitgliederverwaltung hat A die Rolle Technik.
 - [ ] Rolle wieder entfernen → Technik ist weg. Funktion (z. B. „Licht“) speichern.
@@ -67,7 +73,7 @@ Vorbereitung (manuell):
       Produktion.
 - [ ] Mitglied aufnehmen (ohne Onboarding) → Status **Eingeladen**.
 
-## 4. Neue Produktion & Einladungslink
+### Phase 4: Neue Produktion & Einladungslink
 
 - [ ] Testproduktion anlegen (Status „In Planung“), WhatsApp-Link setzen.
 - [ ] Mitgliederverwaltung → Einladungslinks → „Link erstellen“ für die Testproduktion.
@@ -77,7 +83,7 @@ Vorbereitung (manuell):
 - [ ] Mit neuer Adresse komplett durchlaufen → neues Konto ist im Ensemble der Testproduktion **Aktiv**, Onboarding
       abgeschlossen, Fotoerlaubnis **ausstehend**.
 
-## 5. Rückkehrer
+### Phase 5: Rückkehrer
 
 - [ ] Konto B deaktivieren.
 - [ ] Ensemble der Testproduktion → „Ehemalige einladen“ → B auswählen → ✉️ Mail kommt an (sonst Link kopieren).
@@ -91,7 +97,7 @@ Vorbereitung (manuell):
 - [ ] Denselben Link erneut öffnen → „Einladung nicht mehr aktiv“ (einmal nutzbar).
 - [ ] Passwort vergessen mit deaktiviertem Konto **und** Einladungslink → ✉️ Mail kommt; ohne Einladungslink → keine Mail.
 
-## 6. Fotoerlaubnis pro Produktion
+### Phase 6: Fotoerlaubnis pro Produktion
 
 - [ ] Als A (in Test- und aktueller Produktion): Profil zeigt die Erlaubnis der **ausgewählten** Produktion; nach
       Wechsel der Produktion eine neue, leere Erlaubnis.
@@ -100,13 +106,27 @@ Vorbereitung (manuell):
 - [ ] Ensemble → „Fotoliste (CSV)“ öffnet sich korrekt in Excel/LibreOffice (Umlaute, Spalten).
 - [ ] ✉️ „Fotoerlaubnis-Erinnerung“ → Mail an Mitglieder ohne Erlaubnis.
 
-## 7. Produktion beenden
+### Phase 7: Produktion beenden
 
 - [ ] Testproduktion auf „Beendet“ → Bestätigungsdialog → Mitgliedschaften **Ausgeschieden**, Rollen der
       Testproduktion entfallen.
 - [ ] „Saison abschließen“ zeigt jetzt Personen, die nur in der Testproduktion waren.
 - [ ] Mitglieder-Detailseite zeigt die Produktionshistorie.
 
-## Aufräumen
+### Phase 8: Aufräumen
 
 - [ ] Testproduktion archivieren, Testkonten deaktivieren.
+
+## Checkliste
+
+Der Fortschritt der manuellen Stichproben steht in den Phasen; hier nur der Überblick.
+
+- [ ] Phase 0 – Vorbereitung (Staging-Sync, Testkonten A und B)
+- [ ] Phase 1 – Migration
+- [ ] Phase 2 – Aktive Produktion & Saisonabschluss
+- [ ] Phase 3 – Ensemble & Rollen
+- [ ] Phase 4 – Neue Produktion & Einladungslink
+- [ ] Phase 5 – Rückkehrer
+- [ ] Phase 6 – Fotoerlaubnis pro Produktion
+- [ ] Phase 7 – Produktion beenden
+- [ ] Phase 8 – Aufräumen (Testproduktion archivieren, Testkonto deaktivieren)

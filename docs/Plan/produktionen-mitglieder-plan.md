@@ -1,9 +1,9 @@
 # Plan: Produktionsbezogene Mitglieder, Onboarding & Fotoerlaubnis
 
-Stand: 2026-09-23. Arbeitsdokument, um die Umsetzung auch in späteren Sessions fortsetzen zu können.
-Fortschritt wird in der Checkliste am Ende gepflegt.
+Stand: 2026-09-23. Schritte 1–5 umgesetzt, offen ist Phase C (Aufräum-Migration). Checkliste am
+Ende wird gepflegt.
 
-## Ausgangslage
+## Ist-Stand (Befunde)
 
 Pro Jahr meist eine Produktion, starker Mitgliederwechsel zwischen Produktionen. Fotoerlaubnis und
 Onboarding müssen pro Produktion erteilt bzw. durchlaufen werden, Produktionen sollen inaktiv werden können.
@@ -138,7 +138,7 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 
 - Spalten `NOT NULL` setzen, alte `@unique([userId])` entfernen, `MemberOnboardingProfile` auf reine Profildaten reduzieren oder entfernen, `SeasonResetSettings` entfernen.
 
-## Umsetzungsschritte
+## Phasen
 
 ### Schritt 1 – Deaktivierung vom Cookie entkoppeln (Sofortfix)
 
@@ -188,7 +188,7 @@ Nach der Regel „Schema und inkompatibler Code nie in einem Deploy“ in Phasen
 - Neue Permission-Keys in `DEFAULT_PERMISSION_DEFINITIONS` registrieren.
 - Authentik-Gruppensync (`requestServiceGroupSync`) bei Statusänderungen weiter auslösen.
 
-## Fortschritt
+## Checkliste
 
 - [x] Schritt 1 – Deaktivierung entkoppeln, „Saison abschließen“ mit Vorschau (Mitgliederverwaltung, `api/season-reset/deactivation`)
 - [x] Schritt 2 – Produktionsstatus + Migration Phase A (`20260923120000_add_production_status`: `Show.status/statusChangedAt/archivedAt`, `ProductionMembership.status/roles/function`; „Die unendliche Geschichte“ → `active`, alle aktiven Nutzer als Mitglieder, `cast`/`tech` in `roles` kopiert. Status-Auswahl in der Produktionsübersicht; Beenden/Archivieren schließt Mitgliedschaften; „Saison abschließen“ lässt Mitglieder laufender Produktionen aus.)

@@ -1,17 +1,18 @@
-# Sperrlistenübersicht - Vollständige Migrations-Plan
+# Plan: Sperrlistenübersicht – Migration vom Spielplatz
 
-## Übersicht
+Stand: 2025-10-11. Umgesetzt; die Übersicht wurde später durch den Umbau in
+`docs/Plan/sperrliste-redesign-plan.md` abgelöst. Abschlussbericht:
+`docs/Analysen/sperrliste-migration-complete.md`. Checkliste am Ende wird gepflegt.
 
-Migration der kompletten Sperrlistenübersicht vom Spielplatz in die Theater-Website mit vollem Design und allen Features.
+## Ziel
 
-**Status:** ~20% übernommen (nur Basis-Struktur)  
-**Ziel:** 100% Feature-Parität mit verbessertem Design System
+Migration der kompletten Sperrlistenübersicht vom Spielplatz in die Theater-Website mit vollem Design und allen Features – 100 % Feature-Parität mit verbessertem Design System.
 
----
+## Phasen
 
-## Phase 1: Design System & Grundlagen
+### Phase 1: Design System & Grundlagen
 
-### 1.1 Design System Mapping
+#### 1.1 Design System Mapping
 
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/sperrliste-styles.css`
 
@@ -50,7 +51,7 @@ Migration der kompletten Sperrlistenübersicht vom Spielplatz in die Theater-Web
 }
 ```
 
-### 1.2 Icon-Komponenten
+#### 1.2 Icon-Komponenten
 
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/icons.tsx`
 
@@ -89,7 +90,7 @@ export function CalendarStarIcon({ className = "h-4 w-4" }: IconProps) {
 }
 ```
 
-### 1.3 Basis UI-Komponenten
+#### 1.3 Basis UI-Komponenten
 
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/ui-components.tsx`
 
@@ -198,11 +199,9 @@ export function Note({ title, children }: { title: string; children: React.React
 }
 ```
 
----
+### Phase 2: Daten-Helfer & Logik
 
-## Phase 2: Daten-Helfer & Logik
-
-### 2.1 Data Helpers
+#### 2.1 Data Helpers
 
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/data-helpers.ts`
 
@@ -317,11 +316,9 @@ export function calculateAvailability(bucket: DayBucket): number {
 }
 ```
 
----
+### Phase 3: Komponenten-Erstellung
 
-## Phase 3: Komponenten-Erstellung
-
-### 3.1 Cell-Komponente (Tabelle)
+#### 3.1 Cell-Komponente (Tabelle)
 
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/table-cell.tsx`
 
@@ -404,7 +401,7 @@ export function Cell({ cell, compact }: CellProps) {
 }
 ```
 
-### 3.2 PersonCard (DesktopCalendar)
+#### 3.2 PersonCard (DesktopCalendar)
 
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/person-card.tsx`
 
@@ -482,7 +479,7 @@ export function PersonCard({ person, cell, tone, compact }: PersonCardProps) {
 }
 ```
 
-### 3.3 TimelineCell
+#### 3.3 TimelineCell
 
 **Datei:** `src/app/(members)/mitglieder/sperrliste/overview/timeline-cell.tsx`
 
@@ -589,11 +586,9 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 }
 ```
 
----
+### Phase 4: View-Komponenten erweitern
 
-## Phase 4: View-Komponenten erweitern
-
-### 4.1 WeekStrip erweitern
+#### 4.1 WeekStrip erweitern
 
 **Schlüssel-Features:**
 
@@ -604,7 +599,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 - 'Heute'-Highlighting mit `bg-blue-50` & `ring`
 - `scrollIntoView` für Jump-Navigation
 
-### 4.2 DesktopCalendar neu
+#### 4.2 DesktopCalendar neu
 
 **Struktur:**
 
@@ -632,7 +627,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 - Availability progress bar
 - PersonCard integration
 
-### 4.3 TimelineView neu
+#### 4.3 TimelineView neu
 
 **Struktur:**
 
@@ -663,7 +658,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 - Day-Highlighting mit `ring-2 ring-inset ring-blue-200`
 - TimelineCell integration
 
-### 4.4 MobileByDay erweitern
+#### 4.4 MobileByDay erweitern
 
 **Features:**
 
@@ -673,7 +668,7 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 - Holiday/Ferien badges
 - `scrollIntoView` integration
 
-### 4.5 Desktop-Tabelle
+#### 4.5 Desktop-Tabelle
 
 **Neue Datei:** `src/app/(members)/mitglieder/sperrliste/overview/desktop-table.tsx`
 
@@ -686,11 +681,9 @@ export function TimelineCell({ cell }: TimelineCellProps) {
 - Scrolling container mit hint
 - Monatswechsel-Controls
 
----
+### Phase 5: Hauptkomponente erweitern
 
-## Phase 5: Hauptkomponente erweitern
-
-### 5.1 SperrlistenV2.tsx
+#### 5.1 SperrlistenV2.tsx
 
 **Neue Features:**
 
@@ -731,11 +724,9 @@ useEffect(() => {
 }, [view, highlightedDay, dayCols]);
 ```
 
----
+### Phase 6: Testing & Optimierung
 
-## Phase 6: Testing & Optimierung
-
-### 6.1 Responsive Testing
+#### 6.1 Responsive Testing
 
 - [ ] xs (320px) - Mobile Legende, WeekStrip
 - [ ] sm (640px) - View-Toggle sichtbar
@@ -743,7 +734,7 @@ useEffect(() => {
 - [ ] lg (1024px) - DesktopCalendar 3-col
 - [ ] xl (1440px) - Full features
 
-### 6.2 Performance
+#### 6.2 Performance
 
 - [ ] `useMemo` für buckets/spans
 - [ ] `useCallback` für event handler
@@ -751,15 +742,13 @@ useEffect(() => {
 - [ ] Virtual scrolling prüfen (>50 Personen)
 - [ ] Debounce hover states
 
-### 6.3 Accessibility
+#### 6.3 Accessibility
 
 - [ ] ARIA-labels für alle interaktiven Elemente
 - [ ] Keyboard-Navigation (Tab, Arrow keys)
 - [ ] Screen-reader text mit `sr-only`
 - [ ] Contrast-Check (WCAG AA)
 - [ ] Focus indicators mit `focus-visible:ring-2`
-
----
 
 ## Migrations-Reihenfolge (Empfohlen)
 
@@ -776,8 +765,6 @@ useEffect(() => {
 
 **Geschätzte Arbeitszeit:** 8-12 Stunden für vollständige Migration
 
----
-
 ## Notizen
 
 - **Design System Consistency:** Alle Farben nutzen CSS-Variablen basierend auf bestehendem Design System
@@ -787,11 +774,20 @@ useEffect(() => {
 - **Accessibility:** Von Anfang an eingebaut, nicht nachträglich
 - **Testing:** Manuell testen mit verschiedenen Datenmengen (1, 10, 50 Personen)
 
----
-
 ## Offene Fragen
 
 1. Soll die Tabellen-Ansicht auch mobile verfügbar sein? (Spielplatz: nur Desktop)
 2. PDF-Export: Soll das Design auch dort übernommen werden?
 3. Monatswechsel: Echte API-Integration oder nur UI?
 4. Animations/Transitions: Framer Motion nutzen oder nur CSS?
+
+## Checkliste
+
+Der Fortschritt der Detailpunkte steht in den Phasen; hier der Phasenüberblick.
+
+- [x] Phase 1 – Design System & Grundlagen (Mapping, Icons, Basis-Komponenten)
+- [x] Phase 2 – Daten-Helfer & Logik
+- [x] Phase 3 – Komponenten-Erstellung
+- [x] Phase 4 – View-Komponenten erweitert
+- [x] Phase 5 – Hauptkomponente
+- [x] Phase 6 – Testing & Optimierung (einzelne Häkchen in der Phase sind offen)

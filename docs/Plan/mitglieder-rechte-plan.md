@@ -1,10 +1,12 @@
 # Plan: Mitglieder- & Rechteverwaltung – Redesign und produktionsbezogene Rechte
 
-Stand: 2026-09-26. Arbeitsdokument, um die Umsetzung auch in späteren Sessions fortsetzen zu können.
-Fortschritt wird in der Checkliste am Ende gepflegt. Oberstes Ziel: **intuitive Bedienung** – wer die Seite
+Stand: 2026-09-26. Phase 1 und 2 weitgehend umgesetzt; offen sind E2E-Tests, Screenshots und der
+Release (1.11, 2.7). Checkliste am Ende wird gepflegt. Oberstes Ziel: **intuitive Bedienung** – wer die Seite
 zum ersten Mal öffnet, soll ohne Erklärung finden, was er sucht, und verstehen, warum jemand ein Recht hat.
 
-## Ausgangslage (Review 2026-09-26, Staging-Screenshots Desktop 1440 / Mobil 390)
+## Ist-Stand (Befunde)
+
+Erhoben im Review am 2026-09-26 anhand von Staging-Screenshots (Desktop 1440, Mobil 390).
 
 ### Optik / Bedienung
 
@@ -128,6 +130,11 @@ Alles tweakcn-Theme-Tokens, hell/dunkel, keine festen Farben.
 - E2: Produktionsrollen werden nur auf Produktions-/Besetzungsseite vergeben, Mitgliederverwaltung zeigt sie an. → angenommen
 - E3: Phase 2 erst nach Prod-Release von Phase 1 und nur mit Migrationstest auf Prod-Kopie (`website-staging-db-sync`). → angenommen
 - E4: Admin/Owner haben in allen Produktionen alles; globale Rollen (Vorstand, Finanzen, eigene Rollen, Gewerke) wirken überall mit dem, was ihnen in der Matrix gegeben ist – „Vorstand nur lesen“ steuert man also über die Haken der Rolle Vorstand. Nur Ensemble/Technik sind pro Produktion. → angenommen (2026-09-26)
+
+## Phasen
+
+1. **Phase 1 – UI ohne Schemaänderung:** Tabs, Filterleiste, kompakte Tabelle, mobile Liste, Bulk-Aktionen, Rechte-Matrix, Saison-Assistent, gegliederte Detailseite.
+2. **Phase 2 – Produktionsbezogene Rechte:** Scope je Permission, `showId` in der Rechteprüfung, Seiten im Produktionskontext, Matrix-Umschalter, Rollen löschen.
 
 ## Checkliste
 

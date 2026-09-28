@@ -1,6 +1,6 @@
 # Plan: „Meine Termine" neu — Optik, Bedienbarkeit und der Notfall-Weg
 
-Stand: 2026-09-27. Phase 0 (lokales Fixture) ist umgesetzt, der Umbau selbst steht noch aus.
+Stand: 2026-09-28. Phase 0–6 umgesetzt, zuletzt der Nachtrag vom 2026-09-28 (kompakte Tageszeilen).
 Checkliste am Ende wird gepflegt.
 
 > **Nachtrag 2026-09-28:** Auf Wunsch des Users kompakte Zeilen statt Kalenderblatt-Karten,

@@ -1,6 +1,8 @@
-# Sperrliste & Termine – Umbauplan (2026-09)
+# Plan: Sperrliste & Termine – Umbau (2026-09)
 
-## Ausgangslage
+Stand: 2026-09-25. Umgesetzt. Checkliste am Ende wird gepflegt.
+
+## Ist-Stand (Befunde)
 
 Die Sperrliste hatte zwei Reiter mit insgesamt sechs Darstellungen (persönlicher Kalender mit
 Mehrfachauswahl, Tabelle, Kalender-Karten, Timeline, mobile Wochenleiste und Tagesliste). Alle
@@ -9,7 +11,7 @@ Kalender war mobil breiter als der Bildschirm, die Timeline brach um, ein Export
 und das Detailfenster zu Einträgen öffnete nie. Außerdem lieferte der Server die Gründe aller
 Mitglieder an jeden Browser.
 
-## Leitidee
+## Ziel
 
 **Nur Ausnahmen zeigen.** Wer nichts eingetragen hat, ist verfügbar und erzeugt keine Zeile.
 Orientierung an modernen Kalendern: kompakter Monat mit Punkten, darunter die Agenda des
@@ -55,7 +57,7 @@ Sperrliste und „Nächste Termine“ im Dashboard. API: `src/app/api/calendar-e
 `availability-status` (StatusDot/StatusBadge, zentrale Farben), `month-grid`, `month-switcher`,
 `availability-bar`, `segmented-control`, `date-badge` (aus dem Dashboard herausgelöst).
 
-## Schritte
+## Phasen
 
 1. Tag-Stufen-Logik mit Tests
 2. UI-Bausteine
@@ -63,3 +65,11 @@ Sperrliste und „Nächste Termine“ im Dashboard. API: `src/app/api/calendar-e
 4. Sperrliste: Seite, „Mein Kalender“, „Team“, Termin-Dialog; alte Ansichten und
    `sperrliste-styles.css` entfernen
 5. Einstellungen straffen (mobil als Sheet, ohne doppelten Kurzüberblick)
+
+## Checkliste
+
+- [x] Phase 1 – Tag-Stufen (`src/lib/sperrliste/day-tiers.ts`) mit Tests
+- [x] Phase 2 – UI-Bausteine (`availability-status`, `month-grid`, `month-switcher`, `availability-bar`, `segmented-control`, `date-badge`)
+- [x] Phase 3 – `CalendarEvent`, Migration, API, Dashboard-Anbindung
+- [x] Phase 4 – Sperrliste mit „Mein Kalender“, „Team“ und Termin-Dialog; alte Ansichten entfernt
+- [x] Phase 5 – Einstellungen gestrafft

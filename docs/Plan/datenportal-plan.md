@@ -1,12 +1,7 @@
-# Datenportal (Report-Builder) – Plan
+# Plan: Datenportal (Report-Builder)
 
-Stand: 2026-09-26. Status: Phase 1 und 2 implementiert (Gruppierung, Balken-/Kreisdiagramm, XLSX/PDF), lokal committet, noch nicht auf Staging getestet. Offen: Phase 3 (gespeicherte Ansichten).
-
-Entscheidungen 2026-09-26: Rechte nur für leitende Personen über die Rechteverwaltung, produktionsbezogen
-(`PRODUCTION_SCOPED_PERMISSION_KEYS`); Audit-Log 12 Monate (`DATA_PORTAL_AUDIT_RETENTION_MONTHS`, Löschung bei jedem Schreiben).
-Abweichung vom Entwurf: Filter/Sortierung laufen im Speicher über die je Produktion geladenen Zeilen (wenige hundert),
-statt einen Prisma-Compiler zu bauen. Rechteprüfung und Feld-Whitelist bleiben serverseitig (`src/lib/datenportal/`).
-Recht `MANAGE_REPORTS` entfällt bis Phase 3.
+Stand: 2026-09-26. Phase 1 und 2 umgesetzt (Gruppierung, Balken- und Kreisdiagramm, XLSX/PDF),
+offen ist Phase 3 (gespeicherte Ansichten). Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -21,6 +16,9 @@ Chart** ansehen sowie als **CSV/XLSX** exportieren.
 - Kein freier SQL-Zugriff. Feld-Registry als Whitelist, Abfragen über Prisma.
 - Ausgabe: Web-Tabelle (mobil als Karten), Web-Chart (recharts, Phase 2), CSV, XLSX und PDF (pdfkit-Vorlage `data-portal-table`, Querformat). CSV/XLSX/PDF sind seit Phase 1 fertig (Wunsch 2026-09-26).
 - Neue Abhängigkeit: `exceljs` (nur für XLSX).
+- **Entscheidungen 2026-09-26:** Rechte nur für leitende Personen über die Rechteverwaltung, produktionsbezogen (`PRODUCTION_SCOPED_PERMISSION_KEYS`); Audit-Log 12 Monate (`DATA_PORTAL_AUDIT_RETENTION_MONTHS`, Löschung bei jedem Schreiben).
+- **Abweichung vom Entwurf:** Filter und Sortierung laufen im Speicher über die je Produktion geladenen Zeilen (wenige hundert) statt über einen Prisma-Compiler. Rechteprüfung und Feld-Whitelist bleiben serverseitig (`src/lib/datenportal/`).
+- Recht `MANAGE_REPORTS` entfällt bis Phase 3.
 
 ## Rechte
 
@@ -88,3 +86,10 @@ Jede Phase zuerst auf Staging, Prod-Release erst nach Test (Vorgehen wie bei den
 
 - Sollen leitende Personen nur Produktionen sehen, in denen sie selbst Mitglied/Leitung sind? (Vorschlag: ja, Produktionsscope über `ProductionMembership`, Admins alle.)
 - Aufbewahrungsdauer des Audit-Logs.
+
+## Checkliste
+
+- [x] Phase 1 – MVP: Rechte, Feld-Registry, Query-API, Filter-UI, Tabelle, CSV, Presets 1–4
+- [x] Phase 2 – Gruppierung und Aggregation, Charts, XLSX, Preset 5
+- [ ] Phase 3 – Gespeicherte Ansichten (`SavedReport`), Teilen, Audit-Log-Einsicht
+- [ ] Phase 4 – Optional: PDF-Druckansicht (PDF gibt es bereits), normalisierte Schulliste
