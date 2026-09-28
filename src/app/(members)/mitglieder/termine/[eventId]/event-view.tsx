@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 import { Check, ChevronDown, CircleSlash, MapPin, Clock, CircleDashed } from "lucide-react";
-import type { EventStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,45 +10,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import type { TimelineRow } from "@/lib/calendar/event-timeline";
+import type { EventPerson, EventViewProps } from "@/lib/calendar/event-view-server";
 import { cn } from "@/lib/utils";
 
 import { DeclineControl } from "../../meine-proben/decline-control";
 
-export type EventPerson = {
-  userId: string;
-  name: string;
-  me: boolean;
-  group: "required" | "optional" | "declined";
-  reasons: string[];
-  window: { start: string; end: string } | null;
-  note: string | null;
-};
-
-type EventInfo = {
-  id: string;
-  title: string;
-  kindLabel: string;
-  production: string | null;
-  status: EventStatus;
-  start: string;
-  end: string | null;
-  allDay: boolean;
-  location: string | null;
-  description: string | null;
-  past: boolean;
-};
-
-type Me = {
-  window: { start: string; end: string } | null;
-  invited: boolean;
-  optional: boolean;
-  declined: boolean;
-  emergency: boolean;
-  note: string | null;
-  canRespond: boolean;
-  withinFreeze: boolean;
-  mySceneCount: number;
-};
+type EventInfo = EventViewProps["event"];
 
 const TZ = "Europe/Berlin";
 const DATE = new Intl.DateTimeFormat("de-DE", {
@@ -65,7 +31,7 @@ const time = (iso: string) => TIME.format(new Date(iso));
 const span = (start: string, end: string | null) =>
   end ? `${time(start)}–${time(end)}` : time(start);
 
-const STATUS_BADGE: Partial<Record<EventStatus, string>> = {
+const STATUS_BADGE: Partial<Record<EventInfo["status"], string>> = {
   DRAFT: "Entwurf",
   TENTATIVE: "vorgemerkt",
   CANCELLED: "abgesagt",
@@ -265,14 +231,12 @@ export function EventView({
   editLabel,
   rows,
   people,
-}: {
-  event: EventInfo;
-  me: Me | null;
-  editHref: string | null;
-  editLabel: string;
-  rows: TimelineRow[];
-  people: EventPerson[];
+  layout = "page",
+}: EventViewProps & {
+  /** `panel`: Vorschau neben einer Liste – Titel im Kopf, Ablauf und Leute immer umschaltbar. */
+  layout?: "page" | "panel";
 }) {
+  const panel = layout === "panel";
   const [tab, setTab] = useState<"ablauf" | "leute">("ablauf");
   const attending = people.filter((person) => person.group !== "declined").length;
   const statusBadge = STATUS_BADGE[event.status];
@@ -283,6 +247,7 @@ export function EventView({
       <div className="space-y-3 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
+            {panel ? <h2 className="text-lg font-semibold leading-tight">{event.title}</h2> : null}
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{event.kindLabel}</span>
               {event.production ? <span>· {event.production}</span> : null}
@@ -378,16 +343,18 @@ export function EventView({
           { value: "leute" as const, label: `Leute · ${attending}` },
         ]}
         fullWidth
-        className="lg:hidden"
+        className={cn(!panel && "lg:hidden")}
         aria-label="Ansicht wählen"
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <section className={cn(tab === "ablauf" ? "block" : "hidden", "lg:block")}>
-          <h2 className="mb-2 hidden text-sm font-semibold lg:block">Ablauf</h2>
+      <div className={cn("grid gap-6", !panel && "lg:grid-cols-[minmax(0,1fr)_22rem]")}>
+        <section className={cn(tab === "ablauf" ? "block" : "hidden", !panel && "lg:block")}>
+          <h2 className={cn("mb-2 hidden text-sm font-semibold", !panel && "lg:block")}>Ablauf</h2>
           <Timeline rows={rows} past={event.past} />
         </section>
-        <section className={cn(tab === "leute" ? "block" : "hidden", "lg:block")}>
-          <h2 className="mb-2 hidden text-sm font-semibold lg:block">Leute · {attending}</h2>
+        <section className={cn(tab === "leute" ? "block" : "hidden", !panel && "lg:block")}>
+          <h2 className={cn("mb-2 hidden text-sm font-semibold", !panel && "lg:block")}>
+            Leute · {attending}
+          </h2>
           <People people={people} />
         </section>
       </div>
