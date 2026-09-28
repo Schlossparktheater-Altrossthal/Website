@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { currentCastingWhere, currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
-import { ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
+import { ROLES, ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { isProductionRole } from "@/lib/produktionen/production-role-keys";
 
@@ -167,7 +167,8 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   {
     key: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
     label: "Fotoerlaubnisse verwalten",
-    description: "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen.",
+    description:
+      "Bereich zum Prüfen und Freigeben von Fotoeinverständniserklärungen; bekommt auch die Benachrichtigungen dazu.",
     category: "admin",
   },
   {
@@ -594,6 +595,64 @@ export async function hasPermission(
   });
 
   return rolePermissions > 0;
+}
+
+/**
+ * Alle Nutzer, die ein (nicht produktionsbezogenes) Recht besitzen – z. B. als Empfänger von
+ * Benachrichtigungen, damit die Rechteverwaltung auch darüber entscheidet. Owner/Admin zählen
+ * immer dazu, Rechte der Grundausstattung werden nicht aufgelöst.
+ */
+export async function findUserIdsWithPermission(
+  permissionKey: string,
+  client: Pick<typeof prisma, "user" | "appRole" | "departmentPermission"> = prisma,
+): Promise<string[]> {
+  if (!isKnownPermissionKey(permissionKey)) return [];
+
+  const [roles, departments] = await Promise.all([
+    client.appRole.findMany({
+      where: { grants: { some: { permission: { key: permissionKey } } } },
+      select: { id: true, name: true, systemRole: true },
+    }),
+    client.departmentPermission.findMany({
+      where: { permission: { key: permissionKey } },
+      select: { departmentId: true },
+    }),
+  ]);
+
+  const systemRoles = new Set<Role>(["admin", "owner"]);
+  for (const role of roles) {
+    if (role.systemRole) systemRoles.add(role.systemRole as Role);
+    if ((ROLES as readonly string[]).includes(role.name)) systemRoles.add(role.name as Role);
+  }
+  // Ensemble/Technik gelten nur pro Produktion und reichen für globale Empfänger nicht.
+  const globalRoles = [...systemRoles].filter((role) => !isProductionRole(role));
+
+  const users = await client.user.findMany({
+    where: {
+      OR: [
+        { role: { in: globalRoles } },
+        { roles: { some: { role: { in: globalRoles } } } },
+        ...(roles.length
+          ? [{ appRoles: { some: { roleId: { in: roles.map((r) => r.id) } } } }]
+          : []),
+        ...(departments.length
+          ? [
+              {
+                departmentMemberships: {
+                  some: {
+                    ...currentDepartmentMembershipWhere(),
+                    departmentId: { in: departments.map((d) => d.departmentId) },
+                  },
+                },
+              },
+            ]
+          : []),
+      ],
+    },
+    select: { id: true },
+  });
+
+  return users.map((user) => user.id);
 }
 
 export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {

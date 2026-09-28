@@ -7,9 +7,10 @@ import {
 } from "@/lib/notifications/notify";
 import { resolveActionNotifications } from "@/lib/notifications/inbox";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
-import type { Role } from "@/lib/roles";
+import { findUserIdsWithPermission } from "@/lib/permissions";
 
-const BOARD_NOTIFICATION_ROLES: Role[] = ["board", "admin", "owner"];
+/** Wer Fotoerlaubnisse verwalten darf, wird benachrichtigt – einstellbar in der Rechteverwaltung. */
+const PHOTO_CONSENT_MANAGE_PERMISSION = "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE";
 
 const STATUS_LABELS: Record<PhotoConsentStatus, string> = {
   pending: "Offen",
@@ -90,15 +91,9 @@ export async function createPhotoConsentBoardNotification(
   client: SupportedClient,
   details: PhotoConsentBoardNotificationDetails,
 ): Promise<PhotoConsentBoardNotificationResult | null> {
-  const recipients = await client.user.findMany({
-    where: {
-      OR: [
-        { role: { in: BOARD_NOTIFICATION_ROLES } },
-        { roles: { some: { role: { in: BOARD_NOTIFICATION_ROLES } } } },
-      ],
-    },
-    select: { id: true },
-  });
+  const recipients = (await findUserIdsWithPermission(PHOTO_CONSENT_MANAGE_PERMISSION, client)).map(
+    (id) => ({ id }),
+  );
 
   // Geprüfte Einreichungen sind für den ganzen Vorstand erledigt.
   if (details.changeType === "status-changed" && details.status !== "pending") {
