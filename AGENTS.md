@@ -119,6 +119,19 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 - In Texten und Kommentaren generische Maskulina verwenden, keine Genderschreibweisen.
 - Diese `AGENTS.md` bei neuen Standards fortschreiben und Änderungen begründen.
 
+## Pläne, Studien & Analysen
+
+- **Jeder Plan liegt in `docs/Plan/`** – Entwürfe, Umbau-, Migrations- und Testpläne. Nichts Plan-artiges liegt direkt in `docs/` oder in anderen Ordnern. `docs/redesign-plan/` ist der einzige Ausnahmefall (Sprint-Notizen, kein Plan im Sinne dieser Regel).
+- **Pläne werden nie gelöscht**, auch nicht nach der Umsetzung. Ein umgesetzter Plan bleibt als Entscheidungs- und Ergebnisarchiv liegen: `Stand:`-Zeile auf den neuen Status setzen (z. B. „umgesetzt am 2026-09-28"), Checkliste abhaken. Statt ein neues Dokument anzulegen wird der bestehende Plan fortgeschrieben – kein `…-plan-v2.md`.
+- **Studien, Analysen sowie Prüf- und Abschlussberichte** gehören nach `docs/Analysen/`. Technische Leitfäden (`docs/design-system.md`, `docs/development.md`, `docs/datenmodell.md`, `docs/e2e-tests.md` …) bleiben in `docs/`, ebenso die Seiten-Doku in `docs/seiten/`.
+- **Aufbau** (lebendes Beispiel: `docs/Plan/gewerke-plan.md`, Index und Vorlage: `docs/Plan/README.md`):
+  - Titelzeile `# Plan: <Titel>`, direkt darunter `Stand: <YYYY-MM-DD>. <Status in einem Satz>. Checkliste am Ende wird gepflegt.`
+  - `## Ziel`; bei Plänen, die auf einem Bestand aufsetzen, danach `## Ist-Stand (Befunde)` (möglichst als Tabelle `| # | Befund | Stelle |`)
+  - plangebundene Abschnitte nach Bedarf (`## Zielbild`, `## Entscheidungen (<Datum>)` mit `E1:` …, `## Datenmodell`, `## UI-Konzept`, `## Rechte` …), danach `## Phasen`
+  - am Ende `## Checkliste` mit `- [x] Phase 1 …` / `- [ ] …`. Bei langen Phasen darf sie nur den Phasenstatus zusammenfassen; die Detail-Häkchen stehen dann in der Phase.
+- **Die Anzahl der Phasen gibt der Umfang vor.** Das Beispiel `gewerke-plan.md` ist keine Schablone: Pläne dürfen deutlich mehr als sechs Phasen haben, Zwischenphasen (`Phase 3b`) und Nachträge eingeschlossen. Jede Phase muss für sich abschließbar sein – eigener Commit, einzeln auf Staging prüfbar.
+- Neue Pläne werden sofort in `docs/Plan/README.md` eingetragen; Verweise auf Pläne und Analysen immer mit vollem Pfad (`docs/Plan/<datei>.md`, `docs/Analysen/<datei>.md`) – auch in Code-Kommentaren und in `docs/seiten/`.
+
 ## Ausnahmen & Sonderfälle
 
 - Reine Dokumentationsänderungen dürfen ohne `pnpm lint/test/build` abgeschlossen werden.
