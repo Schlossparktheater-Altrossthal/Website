@@ -91,7 +91,7 @@ async function createOpenEvent(page: Page, title: string, day: string) {
   await clickUntil(everyone, () => expect(everyone).toHaveAttribute("aria-checked", "true"));
 
   await clickUntil(page.getByRole("button", { name: "Ansetzen", exact: true }), () =>
-    expect(page).toHaveURL(/\/mitglieder\/terminplanung$/),
+    expect(page).toHaveURL(/\/mitglieder\/termine\//),
   );
   return eventId;
 }
@@ -153,14 +153,21 @@ async function clearOwnEntry(page: Page, day: string) {
  */
 async function declineAndCheck(
   page: Page,
-  { title, day, status }: { title: string; day: string; status: "Notfall" | "Gesperrt" },
+  {
+    title,
+    day,
+    status,
+    eventId,
+  }: { title: string; day: string; status: "Notfall" | "Gesperrt"; eventId: string },
 ) {
   const emergency = status === "Notfall";
   const marked = new RegExp(`^${LONG_DAY.format(atNoon(day))}, ${status}`);
-  const row = rowOf(page, title);
-  await expect(row).toContainText(SHORT_DAY.format(atNoon(day)));
+  // Die Liste zeigt den Termin als Zeile; abgesagt wird auf der Terminseite.
+  await expect(rowOf(page, title)).toBeVisible();
+  await goto(page, `/mitglieder/termine/${eventId}`);
+  await expect(page.getByText(SHORT_DAY.format(atNoon(day))).first()).toBeVisible();
 
-  const open = row.getByRole("button", { name: "Absagen" });
+  const open = page.getByRole("button", { name: "Absagen" });
   await clickUntil(open, () => expect(page.getByRole("dialog")).toBeVisible({ timeout: 2_000 }));
 
   const dialog = page.getByRole("dialog");
@@ -178,17 +185,19 @@ async function declineAndCheck(
   await expect(send).toBeEnabled();
   await send.click();
   await expect(dialog).toBeHidden();
-  await expect(row).toContainText(emergency ? "abgesagt (Notfall)" : "abgesagt");
+  await expect(
+    page.getByText(emergency ? "abgesagt (Notfall)" : "abgesagt", { exact: true }),
+  ).toBeVisible();
+  await goto(page, "/mitglieder/meine-proben");
+  await expect(rowOf(page, title).first()).toContainText(emergency ? "Notfall" : "abgesagt");
 
   await goto(page, "/mitglieder/sperrliste");
   await expect(await blocklistDay(page, day)).toHaveAttribute("aria-label", marked);
 
   // „Doch dabei" räumt den Eintrag wieder weg – Löschen ist von der Sperrfrist nicht betroffen.
-  await goto(page, "/mitglieder/meine-proben");
-  await clickUntil(rowOf(page, title).getByRole("button", { name: "Doch dabei" }), () =>
-    expect(rowOf(page, title).getByRole("button", { name: "Absagen" })).toBeVisible({
-      timeout: 2_000,
-    }),
+  await goto(page, `/mitglieder/termine/${eventId}`);
+  await clickUntil(page.getByRole("button", { name: "Doch dabei" }), () =>
+    expect(page.getByRole("button", { name: "Absagen" })).toBeVisible({ timeout: 2_000 }),
   );
   await goto(page, "/mitglieder/sperrliste");
   await expect(await blocklistDay(page, day)).not.toHaveAttribute("aria-label", marked);
@@ -201,8 +210,8 @@ async function declineAndCheck(
  */
 async function cleanup(page: Page, title: string, eventId: string) {
   try {
-    await goto(page, "/mitglieder/meine-proben");
-    const back = rowOf(page, title).getByRole("button", { name: "Doch dabei" });
+    await goto(page, `/mitglieder/termine/${eventId}`);
+    const back = page.getByRole("button", { name: "Doch dabei" });
     if (await back.count()) {
       await clickUntil(back, () => expect(back).toHaveCount(0, { timeout: 2_000 }));
     }
@@ -233,7 +242,8 @@ test.describe("Meine Termine", () => {
     await expect(page.getByLabel("Termin suchen")).toBeVisible();
 
     // Suche als GET-Formular: der Begriff steht in der URL und wird serverseitig gefiltert.
-    await page.getByLabel("Termin suchen").fill("zzz-kein-treffer");
+    await page.getByLabel("Termin suchen").click();
+    await page.getByLabel("Titel oder Ort").fill("zzz-kein-treffer");
     await page.getByRole("button", { name: "Suchen" }).click();
     await expect(page).toHaveURL(/q=zzz-kein-treffer/);
     await expect(
@@ -242,8 +252,10 @@ test.describe("Meine Termine", () => {
       ),
     ).toBeVisible();
 
-    await page.getByRole("link", { name: "Vergangene Termine zeigen" }).click();
-    await expect(page).toHaveURL(/vergangen=1/);
+    // Die Suche lädt die Seite neu – der erste Klick danach kann vor der Hydrierung verpuffen.
+    await clickUntil(page.getByRole("link", { name: "Vergangene Termine zeigen" }), () =>
+      expect(page).toHaveURL(/vergangen=1/, { timeout: 2_000 }),
+    );
     await expect(page.getByRole("heading", { name: "Vergangene Termine" })).toBeVisible();
 
     // Deep-Link mit mehreren Parametern lädt dieselbe Ansicht wieder.
@@ -265,7 +277,7 @@ test.describe("Meine Termine", () => {
 
     try {
       await goto(page, "/mitglieder/meine-proben");
-      await declineAndCheck(page, { title, day, status: "Notfall" });
+      await declineAndCheck(page, { title, day, status: "Notfall", eventId });
     } finally {
       await cleanup(page, title, eventId);
     }
@@ -280,7 +292,7 @@ test.describe("Meine Termine", () => {
 
     try {
       await goto(page, "/mitglieder/meine-proben");
-      await declineAndCheck(page, { title, day, status: "Gesperrt" });
+      await declineAndCheck(page, { title, day, status: "Gesperrt", eventId });
     } finally {
       await cleanup(page, title, eventId);
     }

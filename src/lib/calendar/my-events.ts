@@ -13,6 +13,9 @@ import {
 /** Muss ich hin · Optional · Für alle (allgemeine Termine ohne persönliche Einladung). */
 export type MyEventGroup = "required" | "optional" | "club";
 
+/** Farbpunkt: Probe, Gewerk-Termin oder sonstiger Termin. */
+export type MyEventTone = "rehearsal" | "department" | "event";
+
 /** Abschnitt in der Übersicht. */
 export type MyEventBucket = "today" | "week" | "later" | "past";
 
@@ -21,6 +24,8 @@ export type MyEventItem = {
   title: string;
   /** Kurzbezeichnung der Art, z. B. „Probe“ oder der Gewerkname. */
   label: string;
+  /** Art für den Farbpunkt in der Liste. */
+  tone: MyEventTone;
   start: string;
   end: string | null;
   allDay: boolean;
@@ -221,6 +226,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         id: event.id,
         title: event.title,
         label: `${getCalendarEntryKindLabel(event.kind)}${event.status === "TENTATIVE" ? " · vorgemerkt" : ""}`,
+        tone: event.kind === "REHEARSAL" ? ("rehearsal" as const) : ("event" as const),
         start: (personalStart ?? event.start).toISOString(),
         end: (personalEnd ?? event.end)?.toISOString() ?? null,
         fullTime: personalStart
@@ -246,6 +252,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         id: event.id,
         title: event.title,
         label: event.department.name,
+        tone: "department" as const,
         start: event.start.toISOString(),
         end: event.end?.toISOString() ?? null,
         allDay: false,
@@ -267,6 +274,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         id: event.id,
         title: event.title,
         label: event.show ? (event.show.title ?? String(event.show.year)) : "Allgemein",
+        tone: "event" as const,
         start: event.start.toISOString(),
         end: event.end?.toISOString() ?? null,
         allDay: event.allDay,

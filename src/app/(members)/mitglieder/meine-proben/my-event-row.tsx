@@ -1,13 +1,9 @@
 import Link from "next/link";
 
 import { AlertIcon } from "@/components/ui/action-icons";
-import { Badge } from "@/components/ui/badge";
-import { DateBadge } from "@/components/ui/date-badge";
-import type { MyEventItem } from "@/lib/calendar/my-events";
+import type { MyEventItem, MyEventTone } from "@/lib/calendar/my-events";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
-
-import { DeclineControl } from "./decline-control";
 
 const DAY = new Intl.DateTimeFormat("de-DE", {
   weekday: "short",
@@ -25,85 +21,113 @@ export function formatTimeRange(start: Date, end: Date | null) {
   return `${TIME.format(start)}${end ? `–${TIME.format(end)}` : ""} Uhr`;
 }
 
-export function formatWhen(item: MyEventItem) {
+export function formatWhen(item: Pick<MyEventItem, "start" | "end" | "allDay">) {
   const start = new Date(item.start);
   if (item.allDay) return `${DAY.format(start)} · ganztägig`;
   return `${DAY.format(start)} · ${formatTimeRange(start, item.end ? new Date(item.end) : null)}`;
 }
 
-/** Eine Zeile als Kalenderblatt: Datumsblock links, alles Weitere rechts daneben. */
-export function MyEventRow({ item, className }: { item: MyEventItem; className?: string }) {
+/** Farbpunkt je Art – dieselben Farben wie im Kalender der Terminplanung. */
+export const TONE_DOT: Record<MyEventTone, string> = {
+  rehearsal: "bg-info",
+  department: "bg-success",
+  event: "bg-primary",
+};
+
+export const TONE_LABELS: Record<MyEventTone, string> = {
+  rehearsal: "Probe",
+  department: "Gewerk",
+  event: "Termin",
+};
+
+function RowContent({ item }: { item: MyEventItem }) {
   const start = new Date(item.start);
-  const optional = item.group === "optional";
+  const declined = item.decline?.declined ?? false;
+  const details = [
+    item.location ?? (item.locationOpen ? "Ort noch offen" : null),
+    item.tone === "department" ? item.label : null,
+    item.decline?.tentative ? "vorgemerkt" : null,
+    item.fullTime ? "deine Zeit" : null,
+  ].filter(Boolean);
 
   return (
-    <li
-      className={cn(
-        "flex items-start gap-3 border-t border-border py-3 first:border-t-0",
-        item.decline?.declined && "opacity-70",
-        className,
-      )}
-    >
-      <DateBadge date={start} tone={optional ? "muted" : "primary"} />
-
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          {item.href ? (
-            <Link href={item.href} className="text-sm font-semibold hover:underline">
-              {item.title}
-            </Link>
-          ) : (
-            <span className="text-sm font-semibold">{item.title}</span>
-          )}
-          <Badge variant="outline">{item.label}</Badge>
-          {optional ? <Badge variant="warning">optional</Badge> : null}
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          {formatWhen(item)}
-          {item.location ? ` · ${item.location}` : item.locationOpen ? " · Ort noch offen" : ""}
-        </p>
-
-        {item.conflict && !item.decline?.declined ? (
-          <p className="flex items-center gap-1.5 text-xs text-warning">
-            <AlertIcon className="h-3.5 w-3.5" aria-hidden />
-            {item.conflict === "blocked"
-              ? "Du stehst an diesem Tag in der Sperrliste."
-              : "Du bist an diesem Tag nur eingeschränkt verfügbar."}
-          </p>
+    <>
+      <span className="w-11 shrink-0 pt-0.5 text-right text-sm tabular-nums text-muted-foreground">
+        {item.allDay ? "ganzt." : TIME.format(start)}
+      </span>
+      <span
+        className={cn("mt-2 size-2 shrink-0 rounded-full", TONE_DOT[item.tone])}
+        aria-label={TONE_LABELS[item.tone]}
+      />
+      <span className="min-w-0 flex-1">
+        <span className={cn("block truncate text-sm font-medium", declined && "line-through")}>
+          {item.title}
+        </span>
+        {details.length ? (
+          <span className="block truncate text-xs text-muted-foreground">
+            {details.join(" · ")}
+          </span>
         ) : null}
-
-        {item.fullTime ? (
-          <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Deine Zeit:</span>{" "}
-            {formatTimeRange(start, item.end ? new Date(item.end) : null)} · gesamte Probe{" "}
-            {formatTimeRange(
-              new Date(item.fullTime.start),
-              item.fullTime.end ? new Date(item.fullTime.end) : null,
-            )}
-          </p>
+      </span>
+      <span className="shrink-0 pt-0.5 text-xs">
+        {declined ? (
+          <span className="text-destructive">
+            {item.decline?.emergency ? "Notfall" : "abgesagt"}
+          </span>
+        ) : item.conflict ? (
+          <span
+            className="flex items-center gap-1 text-warning"
+            title={
+              item.conflict === "blocked"
+                ? "Du stehst an diesem Tag in der Sperrliste."
+                : "Du bist an diesem Tag nur eingeschränkt verfügbar."
+            }
+          >
+            <AlertIcon className="size-3.5" aria-hidden />
+            {item.conflict === "blocked" ? "gesperrt" : "eingeschränkt"}
+          </span>
+        ) : item.group === "optional" ? (
+          <span className="text-muted-foreground">optional</span>
         ) : null}
+      </span>
+    </>
+  );
+}
 
-        {item.reasons.length ? (
-          <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Dabei als:</span>{" "}
-            {item.reasons.join(" · ")}
-          </p>
-        ) : null}
+const ROW =
+  "flex min-h-11 items-start gap-2.5 rounded-md px-2 py-2 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-        {/* Vergangenes lässt sich nicht mehr absagen – der Server lehnt es ohnehin ab. */}
-        {item.decline && item.bucket !== "past" ? (
-          <DeclineControl
-            eventId={item.id}
-            title={item.title}
-            declined={item.decline.declined}
-            note={item.decline.note}
-            tentative={item.decline.tentative}
-            emergency={item.decline.emergency}
-            withinFreeze={item.withinFreeze}
-          />
-        ) : null}
-      </div>
+/**
+ * Eine Zeile pro Termin: Zeit, Farbpunkt, Titel mit einer Zusatzzeile, Status rechts.
+ * Mit `previewHref` öffnet die Zeile auf breiten Bildschirmen die Vorschau daneben,
+ * sonst die Terminseite.
+ */
+export function MyEventRow({
+  item,
+  previewHref,
+  selected = false,
+}: {
+  item: MyEventItem;
+  previewHref?: string;
+  selected?: boolean;
+}) {
+  const href = item.href ?? "#";
+  return (
+    <li className={cn(item.bucket === "past" && "opacity-80")}>
+      <Link href={href} className={cn(ROW, previewHref && "xl:hidden")}>
+        <RowContent item={item} />
+      </Link>
+      {previewHref ? (
+        <Link
+          href={previewHref}
+          scroll={false}
+          data-preview-row
+          aria-current={selected ? "true" : undefined}
+          className={cn(ROW, "hidden xl:flex", selected && "bg-muted ring-1 ring-primary/50")}
+        >
+          <RowContent item={item} />
+        </Link>
+      ) : null}
     </li>
   );
 }
