@@ -268,7 +268,7 @@ export async function updateRehearsalAction(input: {
     revalidatePath("/mitglieder/terminplanung");
     revalidatePath("/mitglieder/sperrliste");
     revalidatePath("/mitglieder/meine-proben");
-    revalidatePath(`/mitglieder/proben/${rehearsal.id}`);
+    revalidatePath(`/mitglieder/termine/${rehearsal.id}`);
 
     return { success: true as const };
   } catch (error) {
@@ -330,7 +330,7 @@ export async function deleteRehearsalAction(input: { id: string }) {
 
     revalidatePath("/mitglieder/terminplanung");
     revalidatePath("/mitglieder/meine-proben");
-    revalidatePath(`/mitglieder/proben/${parsed.data.id}`);
+    revalidatePath(`/mitglieder/termine/${parsed.data.id}`);
 
     return { success: true as const };
   } catch (error) {

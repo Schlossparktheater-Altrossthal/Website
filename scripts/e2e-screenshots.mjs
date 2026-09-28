@@ -26,7 +26,7 @@ const root = SCRIPT_ROOT;
 const DEFAULT_ROUTES = [
   "/mitglieder",
   "/mitglieder/meine-proben",
-  "/mitglieder/proben",
+  "/mitglieder/termine",
   "/mitglieder/produktionen",
   "/mitglieder/profil",
   "/mitglieder/mitgliederverwaltung",

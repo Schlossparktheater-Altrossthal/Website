@@ -76,7 +76,7 @@ function toCalendarEntry(event: CalendarEvent): CalendarEntry {
     dayKey: toDayKey(event.start),
     location: event.location,
     description: event.description,
-    href: null,
+    href: `/mitglieder/termine/${event.id}`,
     showId: event.showId,
   };
 }
@@ -113,7 +113,7 @@ export async function readRehearsalEntries({ from, to, showId }: Range): Promise
     dayKey: toDayKey(rehearsal.start),
     location: rehearsal.location || null,
     description: rehearsal.description,
-    href: "/mitglieder/meine-proben",
+    href: `/mitglieder/termine/${rehearsal.id}`,
     showId: rehearsal.showId,
   }));
 }

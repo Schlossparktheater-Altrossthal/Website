@@ -129,7 +129,7 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
                 {role.rehearsals.map((rehearsal) => (
                   <li key={rehearsal.id}>
                     <Link
-                      href={`/mitglieder/proben/${rehearsal.id}`}
+                      href={`/mitglieder/termine/${rehearsal.id}`}
                       className="flex min-h-12 items-center gap-3 py-2 hover:text-primary"
                     >
                       <CalendarIcon className="h-4 w-4 shrink-0 text-info" aria-hidden />

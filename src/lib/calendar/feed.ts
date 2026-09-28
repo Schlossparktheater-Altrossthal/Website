@@ -231,7 +231,7 @@ export async function collectFeedEvents(
         ]
           .filter(Boolean)
           .join("\n\n") || null,
-        `/mitglieder/proben/${rehearsal.id}`,
+        `/mitglieder/termine/${rehearsal.id}`,
       ),
       // Nicht eingeladen: nur zur Info, belegt keine Zeit.
       transparent: rehearsal.participants.length === 0,

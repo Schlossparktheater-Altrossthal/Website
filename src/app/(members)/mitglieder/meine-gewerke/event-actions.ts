@@ -498,7 +498,7 @@ export async function saveDepartmentBlockAction(
       );
     }
     revalidateTeams();
-    revalidatePath(`/mitglieder/proben/${event.id}`);
+    revalidatePath(`/mitglieder/termine/${event.id}`);
     return actionSuccess();
   } catch (error) {
     return actionFailure(error, "Baustein konnte nicht gespeichert werden.");

@@ -228,7 +228,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
           : null,
         allDay: event.allDay,
         ...readLocation(event.location),
-        href: `/mitglieder/proben/${event.id}`,
+        href: `/mitglieder/termine/${event.id}`,
         group: level === "OPTIONAL" ? ("optional" as const) : ("required" as const),
         reasons: Array.isArray(reasons) ? reasons.filter((entry) => typeof entry === "string") : [],
         decline: {
@@ -250,7 +250,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         end: event.end?.toISOString() ?? null,
         allDay: false,
         ...readLocation(event.location),
-        href: `/mitglieder/meine-gewerke/${event.department.slug}?ansicht=termine`,
+        href: `/mitglieder/termine/${event.id}`,
         group: guest ? ("optional" as const) : ("required" as const),
         reasons: [
           guest ? `Gast im Gewerk ${event.department.name}` : `Gewerk ${event.department.name}`,
@@ -271,7 +271,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         end: event.end?.toISOString() ?? null,
         allDay: event.allDay,
         ...readLocation(event.location),
-        href: null,
+        href: `/mitglieder/termine/${event.id}`,
         group: "club" as const,
         reasons: [event.show ? "Termin deiner Produktion" : "Termin für alle"],
         fullTime: null,

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
 import { prisma } from "@/lib/prisma";
@@ -21,15 +21,15 @@ export default async function EventEditorPage({
   params: Promise<{ eventId: string }>;
 }) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
-  if (!allowed) {
-    return <div className="text-sm text-destructive">Kein Zugriff auf die Terminplanung</div>;
-  }
-
   const resolvedParams = await params;
   const rehearsalId = resolvedParams?.eventId;
   if (!rehearsalId) {
     notFound();
+  }
+  // Wer nicht planen darf, bekommt die Terminseite zum Ansehen.
+  const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE");
+  if (!allowed) {
+    redirect(`/mitglieder/termine/${rehearsalId}`);
   }
 
   const rehearsal = await prisma.calendarEvent.findFirst({
@@ -48,11 +48,7 @@ export default async function EventEditorPage({
       showId: rehearsal.showId,
     }))
   ) {
-    return (
-      <div className="text-sm text-destructive">
-        Kein Zugriff: Dieser Termin gehört zu einer anderen Produktion.
-      </div>
-    );
+    redirect(`/mitglieder/termine/${rehearsal.id}`);
   }
 
   // Allow editing both DRAFT and published rehearsals

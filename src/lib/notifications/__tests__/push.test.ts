@@ -46,7 +46,7 @@ const prepared: PreparedNotification = {
   recipientIds: ["a", "b"],
   title: "Kurzfristige Absage: Ben – Probe Sa",
   body: "Grund: krank",
-  actionUrl: "/mitglieder/proben/e1",
+  actionUrl: "/mitglieder/termine/e1",
   eventId: "e1",
   category: "proben",
   kind: "action",
@@ -68,7 +68,7 @@ describe("buildPushPayload", () => {
     expect(payload).toMatchObject({
       body: "Details in der App",
       tag: "decline:e1",
-      url: "/mitglieder/proben/e1",
+      url: "/mitglieder/termine/e1",
       urgent: true,
       badge: 3,
     });

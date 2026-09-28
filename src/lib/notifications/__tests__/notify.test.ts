@@ -60,7 +60,7 @@ describe("notify", () => {
     });
 
     expect(mocks.create.mock.calls[0][0].data).toMatchObject({
-      actionUrl: "/mitglieder/proben/e1",
+      actionUrl: "/mitglieder/termine/e1",
       priority: "urgent",
       groupKey: "decline:e1",
     });
@@ -69,7 +69,7 @@ describe("notify", () => {
       id: "n1",
       targetUserId: "a",
       type: "error",
-      actionUrl: "/mitglieder/proben/e1",
+      actionUrl: "/mitglieder/termine/e1",
       metadata: { rehearsalId: "e1", category: "proben", priority: "urgent" },
     });
   });

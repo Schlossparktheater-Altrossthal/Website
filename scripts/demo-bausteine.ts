@@ -150,7 +150,7 @@ async function main() {
 
   const routes = [
     `/mitglieder/probenplanung/proben/${event.id}`,
-    `/mitglieder/proben/${event.id}`,
+    `/mitglieder/termine/${event.id}`,
     `/mitglieder/meine-gewerke/${department.slug}?ansicht=termine`,
   ];
   console.log(`Demo-Termin angelegt (${show.title}, Gewerk ${department.name}, ${dateKey}).`);

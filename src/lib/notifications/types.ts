@@ -96,7 +96,7 @@ export function categoryForEventKind(kind: string | null | undefined): Notificat
 }
 
 export function eventActionUrl(eventId: string) {
-  return `/mitglieder/proben/${eventId}`;
+  return `/mitglieder/termine/${eventId}`;
 }
 
 export function departmentActionUrl(slug?: string | null) {

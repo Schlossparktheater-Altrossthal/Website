@@ -417,9 +417,7 @@ export function EventEditor({
                   ? `${noun} angesetzt.`
                   : `${noun} angesetzt. Einladungen wurden versendet.`,
             );
-            router.push(
-              isRehearsal ? `/mitglieder/proben/${result.id}` : "/mitglieder/terminplanung",
-            );
+            router.push(`/mitglieder/termine/${result.id}`);
           } else {
             toast.error(result?.error ?? `${noun} konnte nicht veröffentlicht werden.`);
           }

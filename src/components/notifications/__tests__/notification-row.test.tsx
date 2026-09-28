@@ -30,7 +30,7 @@ function item(overrides: Partial<InboxItem>): InboxItem {
     priority: "normal",
     title: "Absage: Anna – Probe Sa",
     body: "Grund: krank",
-    actionUrl: "/mitglieder/proben/e1",
+    actionUrl: "/mitglieder/termine/e1",
     groupKey: "decline:e1",
     eventId: "e1",
     showId: null,

@@ -435,7 +435,7 @@ export async function publishRehearsalAction(input: {
     revalidatePath("/mitglieder/terminplanung");
     revalidatePath("/mitglieder/sperrliste");
     revalidatePath("/mitglieder/meine-proben");
-    revalidatePath(`/mitglieder/proben/${rehearsal.id}`);
+    revalidatePath(`/mitglieder/termine/${rehearsal.id}`);
     return { success: true as const, id: rehearsal.id };
   } catch (error) {
     if (error instanceof Error && error.message === "not-found") {

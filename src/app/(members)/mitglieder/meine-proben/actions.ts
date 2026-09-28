@@ -75,7 +75,7 @@ async function loadOwnEvent(eventId: string) {
 function revalidateOwn(eventId: string) {
   revalidatePath("/mitglieder/meine-proben");
   revalidatePath("/mitglieder/sperrliste");
-  revalidatePath(`/mitglieder/proben/${eventId}`);
+  revalidatePath(`/mitglieder/termine/${eventId}`);
   revalidatePath(`/mitglieder/terminplanung/${eventId}`);
 }
 
