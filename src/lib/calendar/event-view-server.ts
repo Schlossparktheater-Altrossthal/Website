@@ -14,6 +14,7 @@ import {
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { blockLabel } from "@/lib/calendar/scene-schedule";
 import { getUserDisplayName } from "@/lib/names";
+import { canEditProtocol } from "@/lib/calendar/protocol-server";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
@@ -58,6 +59,8 @@ export type EventViewProps = {
   } | null;
   editHref: string | null;
   editLabel: string;
+  /** Probenmodus, wenn die Person Protokoll führen darf und die Probe bald beginnt oder lief. */
+  protocolHref: string | null;
   rows: TimelineRow[];
   people: EventPerson[];
 };
@@ -277,6 +280,13 @@ export async function readEventView(
           : null,
       editHref,
       editLabel: event.departmentId ? "Im Gewerk öffnen" : "Bearbeiten",
+      protocolHref:
+        !event.departmentId &&
+        (event.status === "SCHEDULED" || event.status === "TENTATIVE") &&
+        event.start.getTime() - now.getTime() <= 60 * 60 * 1000 &&
+        (await canEditProtocol(user, event.showId))
+          ? `/mitglieder/termine/${event.id}/probe`
+          : null,
       rows: buildTimeline(blocks),
       people,
     },

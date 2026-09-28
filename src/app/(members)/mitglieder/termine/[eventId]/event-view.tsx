@@ -11,6 +11,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import type { TimelineRow } from "@/lib/calendar/event-timeline";
 import type { EventPerson, EventViewProps } from "@/lib/calendar/event-view-server";
+import { useEventLiveRefresh } from "@/hooks/useEventLiveRefresh";
 import { cn } from "@/lib/utils";
 
 import { DeclineControl } from "../../meine-proben/decline-control";
@@ -229,6 +230,7 @@ export function EventView({
   me,
   editHref,
   editLabel,
+  protocolHref,
   rows,
   people,
   layout = "page",
@@ -236,6 +238,7 @@ export function EventView({
   /** `panel`: Vorschau neben einer Liste – Titel im Kopf, Ablauf und Leute immer umschaltbar. */
   layout?: "page" | "panel";
 }) {
+  useEventLiveRefresh(event.id);
   const panel = layout === "panel";
   const [tab, setTab] = useState<"ablauf" | "leute">("ablauf");
   const attending = people.filter((person) => person.group !== "declined").length;
@@ -274,10 +277,19 @@ export function EventView({
               </p>
             ) : null}
           </div>
-          {editHref ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={editHref}>{editLabel}</Link>
-            </Button>
+          {editHref || protocolHref ? (
+            <div className="flex flex-wrap gap-2">
+              {protocolHref ? (
+                <Button asChild size="sm">
+                  <Link href={protocolHref}>{event.past ? "Protokoll" : "Probenmodus"}</Link>
+                </Button>
+              ) : null}
+              {editHref ? (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={editHref}>{editLabel}</Link>
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
 

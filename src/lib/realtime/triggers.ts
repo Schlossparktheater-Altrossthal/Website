@@ -57,6 +57,8 @@ export class RealtimeTriggers {
       end?: string;
       location?: string;
       status?: string;
+      /** Probenmodus: Anwesenheit, Zeiten oder Notizen geändert. */
+      protocol?: boolean;
     };
     targetUserIds: string[];
   }) {

@@ -85,6 +85,14 @@ if (typeof workbox !== "undefined") {
     }),
   );
 
+  // Probenmodus: zuletzt geladene Seite bleibt offline verfügbar (Probebühne ohne Netz);
+  // Änderungen sammelt die Seite selbst und sendet sie nach.
+  routing.registerRoute(
+    ({ request, url }) =>
+      request.mode === "navigate" && /^\/mitglieder\/termine\/[^/]+\/probe$/.test(url.pathname),
+    new strategies.NetworkFirst({ cacheName: "probe-pages", networkTimeoutSeconds: 4 }),
+  );
+
   // Seitenaufrufe immer übers Netz; ohne Verbindung die Offline-Seite statt Browserfehler.
   routing.registerRoute(new routing.NavigationRoute(new strategies.NetworkOnly()));
   routing.setCatchHandler(async ({ request }) => {
