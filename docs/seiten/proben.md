@@ -11,6 +11,7 @@ Probenplaner verwalten den Gesamtplan.
 - `/mitglieder/terminplanung` – organisationsweite Termine (für Planer; Liste nach Monaten)
 - `/mitglieder/terminplanung/[eventId]` – gemeinsamer Editor für Proben und Termine (alte Adresse `/mitglieder/probenplanung/proben/[id]` leitet um)
 - `/mitglieder/termine/[eventId]` – Terminseite für alle Beteiligten (Proben, Termine, Gewerk-Termine): Kopf mit eigener Zeit und Absage, Ablauf als Zeitleiste (parallele Punkte, „nur meine“, Jetzt-Linie), Leute gruppiert. Sehen dürfen Planung, Eingeladene, alle der Produktion bzw. des Gewerks, bei Terminen ohne Produktion und Zielgruppe alle. Daten aus `src/lib/calendar/event-view-server.ts` (`readEventView`), Zeitleiste aus `event-timeline.ts`. Alte Adresse `/mitglieder/proben/[id]` leitet um, ebenso der Editor für Personen ohne Planungsrecht.
+- `/mitglieder/termine/[eventId]/probe` – Probenmodus (ab 1 h vor Beginn auf der Terminseite verlinkt, Recht `PRIVATE.REHEARSAL.PROTOCOL.EDIT` oder Planung, beides produktionsbezogen): Probe beginnen/beenden, Ablauf mit „Starten“ und Ergebnis (geschafft/teilweise/nicht), tatsächliche Zeiten, Notiz je Punkt, Reihenfolge ändern, spontane Punkte; Anwesenheit (da, verspätet, früher weg, fehlt, entschuldigt), Dazugekommene und Gäste. Jede Eingabe ist eine Operation (`src/lib/calendar/protocol.ts`), liegt sofort in `localStorage` (`mb-probe-queue:<id>`) und wird per Server Action nachgesendet (`use-protocol-sync.ts`); der Service Worker hält die Seite offline vor (`probe-pages`). Nach dem Speichern meldet `rehearsal_updated` mit `changes.protocol` allen offenen Geräten und Terminseiten, neu zu laden (`useEventLiveRefresh`). Die frühere Nachbereitung im Editor ist entfallen.
 - `/mitglieder/meine-proben` – eigene Termine: Liste oder Kalender, Suche, Absagen (siehe [meine-termine.md](meine-termine.md))
 
 ## Permissions
@@ -26,7 +27,7 @@ Probenplaner verwalten den Gesamtplan.
 
 ## Datenfluss
 
-- Prisma-Modelle: `CalendarEvent` (`kind = REHEARSAL`), `EventParticipant`, `EventResponseLog`
+- Prisma-Modelle: `CalendarEvent` (`kind = REHEARSAL`, `actualStart/actualEnd`), `EventBlock` (`actualStart/actualEnd/actualOrder/unplanned`), `EventParticipant` (`attendance`, `arrivedAt`, `leftAt` – ersetzt `attended`), `EventGuest`, `EventResponseLog`
 - Server Actions in `terminplanung/actions/` bündeln die Mutationslogik.
 
 ## Realtime

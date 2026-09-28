@@ -187,6 +187,15 @@ doneAt?, authorId, createdAt }`.
   `/mitglieder/proben/[id]` und Editor ohne Planungsrecht leiten dorthin; alle Links
   (Benachrichtigungen, Feed, Sperrliste, Meine Termine) zeigen auf die neue Seite.
 
+- **Phase 3 erledigt (2026-09-28):** Migration `20260928170000_rehearsal_protocol` (Enum
+  `AttendanceMark`, Ist-Zeiten, `unplanned`, `actualOrder`, `EventGuest`; `attended` übernommen
+  und entfernt), Recht `PRIVATE.REHEARSAL.PROTOCOL.EDIT`, Probenmodus `/mitglieder/termine/[id]/probe`
+  mit Ablauf und Anwesenheit, Offline-Warteschlange in `localStorage` statt `src/lib/offline`
+  (dessen Dexie-Modell ist auf Inventar/Tickets zugeschnitten), Live-Kopplung über das bestehende
+  `rehearsal_updated`-Ereignis (Realtime-Server unverändert). Lokal mit zwei Geräten, Offline-
+  Wechsel und lokalem Realtime-Server geprüft. Nachbereitung im Editor ersetzt durch Link.
+  Offen für Phase 4: Notizen/Entscheidungen/Aufgaben, Protokoll-Reiter, Anwesenheits-Symbole in
+  „Meine Termine“ (vergangen). Konflikte: letzte Änderung gewinnt.
 - **Phase 2 angeglichen (2026-09-28):** kompakte Zeilen mit Tagesgruppen und Farbpunkten
   (Legende einmal unten), Status rechts, Absage nur auf der Terminseite, „Nächster Termin“ mobil
   oben, ab `xl` Liste + Vorschau (`?termin=`, ↑/↓), Filter-Chips mit Anzahl (mobil eigene Zeile,
