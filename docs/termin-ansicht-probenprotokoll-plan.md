@@ -187,6 +187,11 @@ doneAt?, authorId, createdAt }`.
   `/mitglieder/proben/[id]` und Editor ohne Planungsrecht leiten dorthin; alle Links
   (Benachrichtigungen, Feed, Sperrliste, Meine Termine) zeigen auf die neue Seite.
 
+- **Phase 2 separat umgesetzt:** „Meine Termine“ wurde parallel nach `docs/meine-termine-plan.md`
+  neu gebaut (Tagesgruppen, nächster Termin, Kalenderansicht, Sperrlisten-Verknüpfung). Die
+  Einträge verlinken jetzt auf die Terminseite. Offen: Absage allgemeiner Termine (Rückmeldung mit
+  `invited=false`) auch auf der Terminseite anbieten.
+
 ## Phasen
 
 1. **Terminseite** `/mitglieder/termine/[id]`: Lesezugriff aus Terminplanung für Nicht-Planer,
