@@ -14,7 +14,7 @@ public/workbox
 docs/swatches/generated.adoc
 
 # Prettier-Markdown-Sonderfall (HTML/AsciiDoc-Mischung, nicht idempotent formatierbar)
-docs/entwurf-und-analyse.md
+docs/Analysen/entwurf-und-analyse.md
 
 # Lockfiles (not formatted by Prettier)
 pnpm-lock.yaml
