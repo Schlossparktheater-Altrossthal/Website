@@ -1,6 +1,6 @@
 # Plan: Terminansicht, „Meine Termine“ und Probenprotokoll
 
-Stand: 2026-09-28 – Konzept, noch nicht umgesetzt. Baut auf `docs/terminplanung-plan.md` (Phase 6) auf.
+Stand: 2026-09-28 – Konzept, noch nicht umgesetzt. Baut auf `docs/Plan/terminplanung-plan.md` (Phase 6) auf.
 
 ## Ziel
 
@@ -203,7 +203,7 @@ doneAt?, authorId, createdAt }`.
   hinter der Lupe, Tipps hinter „i“. Vergangene Termine bekommen Anwesenheits-Symbole
   (✓ da, ◷ verspätet/früher weg, ✗ gefehlt) und ein Protokoll-Symbol erst mit Phase 3/4; keine
   Anwesenheitsquote.
-- **Phase 2 zuerst separat umgesetzt:** „Meine Termine“ wurde parallel nach `docs/meine-termine-plan.md`
+- **Phase 2 zuerst separat umgesetzt:** „Meine Termine“ wurde parallel nach `docs/Plan/meine-termine-plan.md`
   neu gebaut (Tagesgruppen, nächster Termin, Kalenderansicht, Sperrlisten-Verknüpfung). Die
   Einträge verlinken jetzt auf die Terminseite. Offen: Absage allgemeiner Termine (Rückmeldung mit
   `invited=false`) auch auf der Terminseite anbieten.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 
-// Usage: node scripts/cleanup-md.mjs docs/entwurf-und-analyse.md
+// Usage: node scripts/cleanup-md.mjs docs/Analysen/entwurf-und-analyse.md
 
 const file = process.argv[2];
 if (!file) {

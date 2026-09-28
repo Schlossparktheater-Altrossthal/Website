@@ -4,7 +4,7 @@
 
 Glocke im Kopf und eigene Seite für alles, was Mitglieder und Planung erfahren müssen. Oben
 steht, was zu tun ist, darunter Neues, dann Früheres. Plan und Hintergründe:
-`docs/benachrichtigungen-plan.md`.
+`docs/Plan/benachrichtigungen-plan.md`.
 
 ## Routen
 

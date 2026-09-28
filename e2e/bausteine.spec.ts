@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { clickUntil } from "./helpers";
 import { authFile } from "./env";
 
-// Termine mit Bausteinen (docs/terminplanung-plan.md, Phase 6): Planung legt einen
+// Termine mit Bausteinen (docs/Plan/terminplanung-plan.md, Phase 6): Planung legt einen
 // Gewerk-Baustein an und merkt die Probe vor, die Gewerk-Leitung organisiert ihn im
 // Gewerk-Dashboard. Läuft nur über die Oberfläche (auch auf Staging) und räumt am Ende auf.
 // Lokale Demo-Daten ohne Klickerei: `pnpm demo:bausteine` (docs/e2e-tests.md).

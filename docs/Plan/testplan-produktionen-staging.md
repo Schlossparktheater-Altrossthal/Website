@@ -1,7 +1,7 @@
 # Testplan Staging: Produktionen, Onboarding & Fotoerlaubnis
 
 Vor dem Prod-Release (Migrationen `20260923120000` … `20260924140000`).
-Plan und Hintergründe: `docs/produktionen-mitglieder-plan.md`.
+Plan und Hintergründe: `docs/Plan/produktionen-mitglieder-plan.md`.
 
 ## Automatisiert: Integrationstests
 

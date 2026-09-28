@@ -201,7 +201,7 @@ pnpm dev
 
 Bewusst `DROP DATABASE` statt `pg_dump --clean`: `--clean` entfernt nur Objekte, die in der
 Quelldatenbank existieren – lokal verbliebene Objekte überleben. Das ist die
-`--clean`-Falle, die in `docs/produktionen-mitglieder-plan.md` erwähnt wird.
+`--clean`-Falle, die in `docs/Plan/produktionen-mitglieder-plan.md` erwähnt wird.
 
 `kubectl exec … > datei` darf **nicht** über SSH gestreamt werden: bei rund 80 MB bricht der
 Stream ab und die Datei ist stillschweigend unvollständig – ohne Fehler und mit Exit-Code 0.

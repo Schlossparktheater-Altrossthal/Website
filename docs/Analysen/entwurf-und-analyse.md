@@ -1,5 +1,3 @@
-
-
 Inhaltsverzeichnis
 
 - [1. Projektkontext & Ausgangslage](#_projektkontext_ausgangslage)
@@ -111,25 +109,25 @@ Inhaltsverzeichnis
 
 ### 3.1. Interne Stakeholder
 
-| Stakeholder                       | Interessen                                                                     | Spezifische Anforderungen                                                                            |
-|-----------------------------------|--------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
-| Schauspielensemble               | Lückenlose Planungssicherheit trotz wechselnder Verfügbarkeiten                | Persönlicher Kalender für Blocker & Zusagen, Rollen- und Szenentracking, transparente Probenhistorie |
-| Technik (Licht, Ton, Multimedia)  | Frühzeitige Abstimmung, wer wann anwesend ist und welches Setup gebraucht wird | Dienst- & Einsatzpläne, technische Checklisten pro Probe, Notizen zu Szenenanforderungen             |
-| Bühnenbau & Requisiten            | Aufgaben und Materialien priorisieren, Engpässe vermeiden                      | Aufgabenmanagement mit Materiallisten, Inventarstatus, Freigaben für Aus- und Rückgaben              |
-| Kostümteam                        | Kostüme, Änderungen, Budget im Blick behalten                                  | Maße, Änderungen, Wasch-/Reparaturpläne, Ausleih-Tracking, Budgetzuordnung                           |
-| Organisation & Produktionsleitung | Gesamtkoordination, Finanzen, Sponsorbetreuung, Kommunikation              | Übergreifende Dashboards, Rechteverwaltung, Budget- & Sponsorenreporting, Schnittstellen zu PR       |
-| ↳ Catering (Sub)                  | Allergien, Essenspläne, Planung für Helferinnen und Helfer                                   | Einsehbare Präferenzen & Allergielisten, Wochenpläne, Einkaufslisten                                 |
-| ↳ Presse & PR (Sub)               | Öffentlichkeitsarbeit, Storytelling                                            | Redaktionskalender, Content-Freigaben, Zugriff auf Medienassets                                      |
-| ↳ Sponsoring & Förderverein (Sub) | Sichtbarkeit, Vertragspflege                                                   | Module für Sponsorinnen und Sponsoren mit Logoplatzierungen, Reporting, Vertrags- und Rechnungsablage                |
+| Stakeholder                       | Interessen                                                                     | Spezifische Anforderungen                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Schauspielensemble                | Lückenlose Planungssicherheit trotz wechselnder Verfügbarkeiten                | Persönlicher Kalender für Blocker & Zusagen, Rollen- und Szenentracking, transparente Probenhistorie  |
+| Technik (Licht, Ton, Multimedia)  | Frühzeitige Abstimmung, wer wann anwesend ist und welches Setup gebraucht wird | Dienst- & Einsatzpläne, technische Checklisten pro Probe, Notizen zu Szenenanforderungen              |
+| Bühnenbau & Requisiten            | Aufgaben und Materialien priorisieren, Engpässe vermeiden                      | Aufgabenmanagement mit Materiallisten, Inventarstatus, Freigaben für Aus- und Rückgaben               |
+| Kostümteam                        | Kostüme, Änderungen, Budget im Blick behalten                                  | Maße, Änderungen, Wasch-/Reparaturpläne, Ausleih-Tracking, Budgetzuordnung                            |
+| Organisation & Produktionsleitung | Gesamtkoordination, Finanzen, Sponsorbetreuung, Kommunikation                  | Übergreifende Dashboards, Rechteverwaltung, Budget- & Sponsorenreporting, Schnittstellen zu PR        |
+| ↳ Catering (Sub)                  | Allergien, Essenspläne, Planung für Helferinnen und Helfer                     | Einsehbare Präferenzen & Allergielisten, Wochenpläne, Einkaufslisten                                  |
+| ↳ Presse & PR (Sub)               | Öffentlichkeitsarbeit, Storytelling                                            | Redaktionskalender, Content-Freigaben, Zugriff auf Medienassets                                       |
+| ↳ Sponsoring & Förderverein (Sub) | Sichtbarkeit, Vertragspflege                                                   | Module für Sponsorinnen und Sponsoren mit Logoplatzierungen, Reporting, Vertrags- und Rechnungsablage |
 
 ### 3.2. Externe Stakeholder
 
-| Stakeholder                                            | Interessen                                                            | Spezifische Anforderungen                                           |
-|--------------------------------------------------------|-----------------------------------------------------------------------|---------------------------------------------------------------------|
-| Publikum                                               | Informationen zu Aufführungen, Ticketzugang, das „Mysterium“-Erlebnis | Termine, Countdown, Reservierung & Follow-up-Kommunikation          |
-| Sponsoren & Förderverein                               | Sichtbarkeit und Ergebnisberichte                                     | Eigener Info-Bereich, Reporting-Dashboards, Branding-Optionen       |
-| Schule/Institution                                     | Reibungslose Organisation, Reputation                                 | Veranstaltungsübersichten, Sicherheits- und Dokumentationsnachweise |
-| Lieferanten & Partner (Technikverleih, Druckerei etc.) | Klare Anforderungen, rechtzeitige Abstimmung                          | Auftrags- & Lieferkalender, Ansprechpartnerinnen und Ansprechpartner, Dateiuploads    |
+| Stakeholder                                            | Interessen                                                            | Spezifische Anforderungen                                                          |
+| ------------------------------------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Publikum                                               | Informationen zu Aufführungen, Ticketzugang, das „Mysterium“-Erlebnis | Termine, Countdown, Reservierung & Follow-up-Kommunikation                         |
+| Sponsoren & Förderverein                               | Sichtbarkeit und Ergebnisberichte                                     | Eigener Info-Bereich, Reporting-Dashboards, Branding-Optionen                      |
+| Schule/Institution                                     | Reibungslose Organisation, Reputation                                 | Veranstaltungsübersichten, Sicherheits- und Dokumentationsnachweise                |
+| Lieferanten & Partner (Technikverleih, Druckerei etc.) | Klare Anforderungen, rechtzeitige Abstimmung                          | Auftrags- & Lieferkalender, Ansprechpartnerinnen und Ansprechpartner, Dateiuploads |
 
 ## 4. Funktionale Anforderungen
 
@@ -138,7 +136,6 @@ Inhaltsverzeichnis
 1.  **Profil & Stammdaten**
 
     <div class="ulist">
-
     - Erfassung von Körpermaßen (Körpergröße, Konfektionsgrößen,
       Schuhgröße) mit Änderungsverlauf.
 
@@ -153,7 +150,6 @@ Inhaltsverzeichnis
 2.  **Probenorganisation**
 
     <div class="ulist">
-
     - Sichtbarkeitslogik: Ensemblemitglieder sehen maximal 4 Wochen im
       Voraus, andere Rollen alle Termine.
 
@@ -201,7 +197,6 @@ Inhaltsverzeichnis
 3.  **Bühnenbau & Material**
 
     <div class="ulist">
-
     - Verwaltung von Bühnenbau-Plänen inkl. Versionierung, Dateiuploads
       und Zuständigkeiten.
 
@@ -213,7 +208,6 @@ Inhaltsverzeichnis
 4.  **Kommunikation & Benachrichtigungen**
 
     <div class="ulist">
-
     - E-Mail- und ggf. Slack/Matrix-Benachrichtigungen für neue Termine,
       Planänderungen, Notfallmeldungen.
 
@@ -225,7 +219,6 @@ Inhaltsverzeichnis
 5.  **Verfügbarkeiten & Essensplanung**
 
     <div class="ulist">
-
     - Bestehende Verfügbarkeits-Templates (`AvailabilityTemplate`) im UI
       editierbar machen.
 
@@ -416,7 +409,7 @@ keine Datenbank angebunden ist, und müssen nach Go-Live entfernt werden.
 
 ### 7.2. Erweiterungen (Vorschlag)
 
-``` highlight
+```highlight
 model MemberProfile {
   id                String   @id @default(cuid())
   userId            String   @unique
@@ -487,7 +480,7 @@ Dadurch lassen sich zusätzliche Maße (z. B. Hals, Oberarm, Schulter,
 Rückenlänge, Kopf), Systeme (EU/US/UK) und Kategorien
 (Schuhe/Hüte/Handschuhe) ohne Migrationsdruck abbilden.
 
-``` highlight
+```highlight
 enum MeasurementUnit { mm cm inch }
 enum SizeSystem { EU DE US UK FR IT INT }
 enum SizeCategory { top bottom dress suit shirt pants jeans bra shoe hat glove belt ring other }
@@ -525,7 +518,7 @@ optional Limits per UI (z. B. 30–250 cm) statt im Schema.
 
 ### 7.4. Probenkalender & Szenenplanung
 
-``` highlight
+```highlight
 enum RehearsalLifecycleState {
   draft
   proposed
@@ -734,7 +727,7 @@ Requisite, Technik, Maske), ohne unnötige Komplexität.
 
 ### 8.1. Datenmodell-Ergänzungen (Breakdown, Set/Ort, Call Sheet)
 
-``` highlight
+```highlight
 enum BreakdownType { // Abteilungsbedarfe pro Szene
   prop
   costume
@@ -844,7 +837,7 @@ verbessern Planung und Filtern.
 ### 8.3. API-Erweiterungen
 
 | Endpoint                  | Methode | Beschreibung                                       | Auth                           |
-|---------------------------|---------|----------------------------------------------------|--------------------------------|
+| ------------------------- | ------- | -------------------------------------------------- | ------------------------------ |
 | /api/characters           | CRUD    | Figuren/Rollen je Show                             | Regie/Produktion               |
 | /api/scenes/:id/breakdown | GET/PUT | Breakdown-Items je Szene lesen/aktualisieren       | Kostüm/Requisite/Technik/Regie |
 | /api/callsheets           | CRUD    | Call Sheets erstellen, Szenen zuordnen, PDF-Export | Produktion/Regie               |
@@ -880,7 +873,7 @@ verbessern Planung und Filtern.
 ## 9. API- & Integrationsdesign
 
 | Endpoint                       | Methode         | Beschreibung                                                     | Auth                                    |
-|--------------------------------|-----------------|------------------------------------------------------------------|-----------------------------------------|
+| ------------------------------ | --------------- | ---------------------------------------------------------------- | --------------------------------------- |
 | /api/profile                   | GET/PUT         | Profilinformationen lesen/aktualisieren (inkl. Maße, Allergien)  | Mitglieder                              |
 | /api/profile/allergies         | POST/DELETE     | Allergie-Einträge anlegen/löschen                                | Mitglieder (Eigene Daten)               |
 | /api/availability-exceptions   | GET/POST/DELETE | Blocker-Fenster im persönlichen Kalender pflegen                 | Mitglieder (Eigene Daten)               |
@@ -1014,42 +1007,42 @@ dunklere Tints/Foregrounds (Tailwind `dark:` Variants).
 
 Rehearsal Lifecycle
 
-| Status          | Farbe                   | Swatch                                                                                             |
-|-----------------|-------------------------|----------------------------------------------------------------------------------------------------|
-| draft           | slate-300/slate-400     | ![](swatches/slate-300.svg)                                                                           |
-| proposed        | sky-200/sky-400         | ![](swatches/sky-200.svg) |
-| confirmed/final | emerald-200/emerald-500 | ![](swatches/emerald-200.svg)                                                                         |
-| completed       | teal-200/teal-500       | ![](swatches/teal-200.svg)                                                                            |
-| cancelled       | rose-200/rose-500       | ![](swatches/rose-200.svg)                                                                            |
+| Status          | Farbe                   | Swatch                        |
+| --------------- | ----------------------- | ----------------------------- |
+| draft           | slate-300/slate-400     | ![](swatches/slate-300.svg)   |
+| proposed        | sky-200/sky-400         | ![](swatches/sky-200.svg)     |
+| confirmed/final | emerald-200/emerald-500 | ![](swatches/emerald-200.svg) |
+| completed       | teal-200/teal-500       | ![](swatches/teal-200.svg)    |
+| cancelled       | rose-200/rose-500       | ![](swatches/rose-200.svg)    |
 
 Attendance
 
-| Status  | Farbe       | Swatch                                                                         |
-|---------|-------------|--------------------------------------------------------------------------------|
-| planned | zinc-200    | ![](swatches/zinc-200.svg)                                                        |
-| yes     | emerald-500 | ![](swatches/emerald-500.svg)                                                     |
-| maybe   | amber-500   | ![](swatches/amber-500.svg)                                                       |
-| no      | rose-500    | ![](swatches/rose-500.svg)                                                        |
+| Status  | Farbe       | Swatch                        |
+| ------- | ----------- | ----------------------------- |
+| planned | zinc-200    | ![](swatches/zinc-200.svg)    |
+| yes     | emerald-500 | ![](swatches/emerald-500.svg) |
+| maybe   | amber-500   | ![](swatches/amber-500.svg)   |
+| no      | rose-500    | ![](swatches/rose-500.svg)    |
 
 Abteilungen
 
-| Bereich | Farbe       | Swatch                                                                         |
-|---------|-------------|--------------------------------------------------------------------------------|
-| costume | fuchsia-500 | ![](swatches/fuchsia-500.svg)                                                     |
-| prop    | amber-600   | ![](swatches/amber-600.svg)                                                       |
-| tech    | cyan-600    | ![](swatches/cyan-600.svg)                                                        |
-| light   | yellow-500  | ![](swatches/yellow-500.svg)                                                      |
-| sound   | indigo-500  | ![](swatches/indigo-500.svg)                                                      |
-| fx      | purple-600  | ![](swatches/purple-600.svg)                                                      |
+| Bereich | Farbe       | Swatch                        |
+| ------- | ----------- | ----------------------------- |
+| costume | fuchsia-500 | ![](swatches/fuchsia-500.svg) |
+| prop    | amber-600   | ![](swatches/amber-600.svg)   |
+| tech    | cyan-600    | ![](swatches/cyan-600.svg)    |
+| light   | yellow-500  | ![](swatches/yellow-500.svg)  |
+| sound   | indigo-500  | ![](swatches/indigo-500.svg)  |
+| fx      | purple-600  | ![](swatches/purple-600.svg)  |
 
 Exhaustion Heatmap (Beispiel‑Skala)
 
-|                |                                                                                                        |
-|----------------|--------------------------------------------------------------------------------------------------------|
-| Einsätze Fr–So | Swatch                                                                                                 |
-| 0–1            | ![](swatches/green-200.svg) ![](swatches/green-400.svg)                                                                               |
-| 2              | ![](swatches/amber-300.svg) ![](swatches/amber-500.svg)                                                                               |
-| ≥3             | ![](swatches/rose-400.svg) ![](swatches/rose-600.svg)                                                                                |
+|                |                                                         |
+| -------------- | ------------------------------------------------------- |
+| Einsätze Fr–So | Swatch                                                  |
+| 0–1            | ![](swatches/green-200.svg) ![](swatches/green-400.svg) |
+| 2              | ![](swatches/amber-300.svg) ![](swatches/amber-500.svg) |
+| ≥3             | ![](swatches/rose-400.svg) ![](swatches/rose-600.svg)   |
 
 ### 10.3. Brandfarben & Theme
 
@@ -1115,7 +1108,7 @@ Dark Theme
 
 CSS‑Variablen (Beispiel)
 
-``` highlight
+```highlight
 :root {
   --color-primary: #7C3AED;
   --color-secondary: #F59E0B;
@@ -1148,7 +1141,7 @@ CSS‑Variablen (Beispiel)
 
 Tailwind‑Anbindung (Optional, shadcn‑Style mit CSS‑Variablen)
 
-``` highlight
+```highlight
 // tailwind.config.ts (Ausschnitt)
 export default {
   theme: {
@@ -1212,18 +1205,18 @@ export default {
 ### 11.1. Sprint 1 – Attendance-Flow Grundlagen
 
 - [ ] Prisma: `RehearsalAttendanceLog` (rehearsalId, userId, previous,
-  next, comment, changedAt, changedBy)
+      next, comment, changedAt, changedBy)
 
 - [ ] API: `PUT /api/rehearsals/[id]/attendance` schreibt Log +
-  aktuellen Status
+      aktuellen Status
 
 - [ ] UI: Zusage/Absage/Maybe mit optionalem Kommentar
 
 - [ ] Kalender: Standard „geplant“ visualisieren (ohne Reaktion =
-  eingeplant)
+      eingeplant)
 
 - [ ] Seed/Service: robuste Default-Logik (implizit oder
-  Initial-Records)
+      Initial-Records)
 
 - [ ] Tests: Attendance-Update, Log-Erzeugung, Rechte
 
@@ -1234,13 +1227,13 @@ berücksichtigt - \[ \] Jede Statusänderung erzeugt einen Logeintrag - \[
 ### 11.2. Sprint 2 – Calltimes & Finalisierung
 
 - [ ] Prisma:
-  `RehearsalCalltime(rehearsalId, userId?, roleId?, callAt, note)`
+      `RehearsalCalltime(rehearsalId, userId?, roleId?, callAt, note)`
 
 - [ ] API: `PUT /api/rehearsals/[id]/calltimes` (Upsert Liste) +
-  Rückgabe in Rehearsal-GET
+      Rückgabe in Rehearsal-GET
 
 - [ ] UI: Calltimes anzeigen und für Planerinnen und Planer editieren
-  (Table/Drawer)
+      (Table/Drawer)
 
 - [ ] Finalisierung: Statuswechsel „Final“ löst Benachrichtigungen aus
 
@@ -1257,10 +1250,10 @@ nachvollziehbar und rollen-gesichert
 - [ ] API: `CRUD /api/characters`, `CRUD /api/scenes`
 
 - [ ] API: `GET /api/rehearsals/[id]/scenes/probierbar` (basierend auf
-  Anwesenheiten)
+      Anwesenheiten)
 
 - [ ] UI: Szenenliste mit Chips (Figuren, Dauer), Filter „heute
-  probierbar“
+      probierbar“
 
 - [ ] Seed: Beispiel-Szenen/Figuren für aktuelle Show
 
@@ -1270,13 +1263,13 @@ korrekt - \[ \] Mehrfachbesetzungen/Understudy werden berücksichtigt
 ### 11.4. Sprint 4 – Nachbereitung & Statistik
 
 - [ ] Prisma: `RehearsalScenePlan`, `RehearsalSceneStatistic`,
-  `RehearsalStatisticAttendee`
+      `RehearsalStatisticAttendee`
 
 - [ ] API: `PUT /api/rehearsals/[id]/scenes` (Plan) \|
-  `POST /api/rehearsals/[id]/statistics` (Ist)
+      `POST /api/rehearsals/[id]/statistics` (Ist)
 
 - [ ] UI: Nachbereitungs-Form (Dauer, Anwesende, Notizen) +
-  Statistik-Panel
+      Statistik-Panel
 
 - [ ] Reports: Minuten je Szene/Person, letzte Probe
 
@@ -1289,7 +1282,7 @@ sobald reale Statistiken verfügbar sind
 ### 11.5. Sprint 5 – Exhaustion & Planungswarnungen
 
 - [ ] Endpoint: `GET /api/rehearsals/load?window=weekend` (Fr–So) je
-  Person
+      Person
 
 - [ ] Heuristik: Grenzwerte und einfache Fatigue-Scores
 
@@ -1303,7 +1296,7 @@ verlässlich erkannt und angezeigt
 ### 11.6. Sprint 6 – Abteilungen, Breakdown & Callsheet (optional)
 
 - [ ] Prisma: `SceneBreakdownItem`, `SetLocation`, `Callsheet`,
-  `CallsheetScene`
+      `CallsheetScene`
 
 - [ ] API: Breakdown je Szene, Callsheet-CRUD + Publish
 

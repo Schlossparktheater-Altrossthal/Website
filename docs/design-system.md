@@ -1,6 +1,6 @@
 # Designsystem & Token-Leitfaden
 
-Dieser Leitfaden bündelt die aktualisierten Design Tokens, Typografie- und Spacing-Regeln sowie die wichtigsten Komponentenrichtlinien des Redesigns. Ergänzende Analysen bleiben in `docs/entwurf-und-analyse.md` dokumentiert.
+Dieser Leitfaden bündelt die aktualisierten Design Tokens, Typografie- und Spacing-Regeln sowie die wichtigsten Komponentenrichtlinien des Redesigns. Ergänzende Analysen bleiben in `docs/Analysen/entwurf-und-analyse.md` dokumentiert.
 
 ## Technischer Überblick
 
@@ -8,7 +8,7 @@ Dieser Leitfaden bündelt die aktualisierten Design Tokens, Typografie- und Spac
 - **Formulare:** react-hook-form + zod
 - **Icons:** lucide-react
 - **Realtime:** Socket.io Hooks (`@/hooks/useRealtime`)
-- **Themes:** Farben, Schriften, Radius und Schatten kommen aus dem aktiven Website-Theme im tweakcn-/shadcn-Format (Mitglieder → Website & Theme). Themes lassen sich von [tweakcn.com](https://tweakcn.com) importieren und als `theme.css` exportieren. Details: `docs/tweakcn-theming-plan.md`, Code in `src/lib/theme/`.
+- **Themes:** Farben, Schriften, Radius und Schatten kommen aus dem aktiven Website-Theme im tweakcn-/shadcn-Format (Mitglieder → Website & Theme). Themes lassen sich von [tweakcn.com](https://tweakcn.com) importieren und als `theme.css` exportieren. Details: `docs/Plan/tweakcn-theming-plan.md`, Code in `src/lib/theme/`.
 
 ## Farbpalette
 

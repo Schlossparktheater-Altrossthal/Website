@@ -279,9 +279,10 @@ src/app/(members)/mitglieder/sperrliste/overview/
   └── SperrlistenV2.tsx
 
 docs/
-  ├── sperrliste-migration-plan.md (existierend, aktualisiert)
-  ├── sperrliste-accessibility.md (neu)
-  └── sperrliste-migration-complete.md (neu)
+  ├── Plan/sperrliste-migration-plan.md (existierend, aktualisiert)
+  └── Analysen/
+      ├── sperrliste-accessibility.md (neu)
+      └── sperrliste-migration-complete.md (neu)
 ```
 
 ## Abnahmekriterien

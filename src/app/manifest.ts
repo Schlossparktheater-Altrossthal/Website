@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { PWA_BACKGROUND_COLOR } from "@/lib/pwa/app-icons";
 
-/** Installierbare App für den Mitgliederbereich (Plan docs/benachrichtigungen-plan.md, Phase 4). */
+/** Installierbare App für den Mitgliederbereich (Plan docs/Plan/benachrichtigungen-plan.md, Phase 4). */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/mitglieder",

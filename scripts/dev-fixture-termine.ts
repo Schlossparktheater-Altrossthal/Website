@@ -1,4 +1,4 @@
-// Demo-Termine für „Meine Termine" — Phase 0 aus docs/meine-termine-plan.md.
+// Demo-Termine für „Meine Termine" — Phase 0 aus docs/Plan/meine-termine-plan.md.
 //
 //   pnpm dev:termine            # anlegen bzw. zeitlich neu legen
 //   pnpm dev:termine --remove   # wieder entfernen

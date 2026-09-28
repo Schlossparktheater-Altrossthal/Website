@@ -22,7 +22,7 @@ async function inbox(query = ""): Promise<InboxBody> {
   return response.json();
 }
 
-// Plan docs/benachrichtigungen-plan.md, Phase 2.
+// Plan docs/Plan/benachrichtigungen-plan.md, Phase 2.
 describe("Benachrichtigungen: Posteingang", () => {
   beforeEach(resetItState);
 

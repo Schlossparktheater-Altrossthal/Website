@@ -6,7 +6,7 @@ Checkliste am Ende wird gepflegt.
 > **Nachtrag 2026-09-28:** Auf Wunsch des Users kompakte Zeilen statt Kalenderblatt-Karten,
 > Tagesgruppen statt „Heute & Morgen / Diese Woche / Später“, Absage auf der Terminseite statt an
 > jeder Zeile, „Nächster Termin“ mobil oben, Desktop-Vorschau statt rechter Spalte, Tipps hinter
-> „i“. Details in `docs/termin-ansicht-probenprotokoll-plan.md`. Die Absage-/Sperrlisten-Logik bleibt.
+> „i“. Details in `docs/Plan/termin-ansicht-probenprotokoll-plan.md`. Die Absage-/Sperrlisten-Logik bleibt.
 
 ## Ziel
 
@@ -21,7 +21,7 @@ Checkliste am Ende wird gepflegt.
 
 ## Nicht in diesem Plan
 
-- Benachrichtigungen, Push und Erinnerungen (laufen im `docs/benachrichtigungen-plan.md`).
+- Benachrichtigungen, Push und Erinnerungen (laufen im `docs/Plan/benachrichtigungen-plan.md`).
 - Änderungen am Verhalten der Sperrliste: Einträge lassen sich wie bisher jederzeit entfernen,
   auch innerhalb der Frist. Neu ist nur der Zustand „Notfall".
 - Kalender-Abo auf dieser Seite (der Abo-Dialog bleibt in der Sperrliste).

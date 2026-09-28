@@ -31,7 +31,7 @@ nach Monaten, Filter nach Art, je Termin Verfügbarkeit und wer fehlt (mit Grund
 Tag-Stufen (`src/lib/sperrliste/day-tiers.ts`): `core` = Kerntage (Einstellungen)
 und Endprobenwoche der aktiven Produktion, `possible` = Ausnahme-Wochentage, Ferien, Feiertage,
 Tage mit Termin/Probe, `off` = übrige Tage (in der Team-Ansicht standardmäßig ausgeblendet).
-Hintergrund und Entscheidungen: `docs/sperrliste-redesign-plan.md`.
+Hintergrund und Entscheidungen: `docs/Plan/sperrliste-redesign-plan.md`.
 
 ## Permissions
 

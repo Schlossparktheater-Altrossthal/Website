@@ -92,7 +92,7 @@ await clickUntil(page.getByRole("button", { name: "Neu", exact: true }), () =>
 
 ## Demo-Daten: Termin mit Bausteinen
 
-Für Terminplanung Phase 6 (`docs/terminplanung-plan.md`) gibt es einen wiederholbaren Demo-Termin:
+Für Terminplanung Phase 6 (`docs/Plan/terminplanung-plan.md`) gibt es einen wiederholbaren Demo-Termin:
 
 ```bash
 DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine           # (neu) anlegen
@@ -115,7 +115,7 @@ DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine --remove 
 
 ## Demo-Daten: Termine für „Meine Termine"
 
-Für Phase 0 des Plans `docs/meine-termine-plan.md` gibt es einen wiederholbaren Satz Demo-Termine:
+Für Phase 0 des Plans `docs/Plan/meine-termine-plan.md` gibt es einen wiederholbaren Satz Demo-Termine:
 
 ```bash
 pnpm dev:termine           # anlegen bzw. zeitlich neu legen
