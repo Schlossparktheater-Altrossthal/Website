@@ -1,6 +1,6 @@
 # Plan: Ernährung & Allergien – Datenmodell, Eingabe und Darstellung
 
-Stand: 2026-09-29. Phase 0 und 1 umgesetzt, offen Phase 2–7. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Phase 0–3 umgesetzt, offen Phase 4–7. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -107,12 +107,12 @@ Bereich `?bereich=ernaehrung` mit drei Karten statt zwei:
 2. **Zentrale Listen & Validierung**: `src/data/dietary-preferences.ts`, neu
    `src/data/allergens.ts`, neu `src/lib/profil/dietary-validation.ts`, Unit-Tests.
 3. **API & Backend**: Validierung und case-insensitiver Upsert in `POST /api/allergies`, neue
-   Route `/api/aversions`, `PUT /api/profile/dietary` mit Unterform, Onboarding-Routen und
-   Snapshot, Routen-Tests.
+   Route `/api/aversions`, `PUT /api/profile/dietary` mit Unterform, Routen-Tests.
 4. **Profil-Oberfläche**: drei Karten, Allergen-Vorschlagsliste, Spuren und „ärztlich
    abgeklärt", Select-Fix, Komponententests.
 5. **Übrige Oberflächen**: Onboarding- und Rückkehrer-Wizard, Dashboard-Onboarding,
-   Bereichs-Untertitel.
+   Bereichs-Untertitel, dazu die Onboarding-Routen und der Profil-Snapshot – Payload und Client
+   ändern sich gemeinsam, sonst bricht der Wizard.
 6. **Auswertung & Datenschutz**: Datenportal-Felder und Quelle „Abneigungen", Aufbewahrung.
 7. **Doku, Sichtprüfung, Release**: `docs/seiten/profil.md` (inklusive des toten Verweises auf
    `allergy-form.tsx`), `docs/profile/README.md`, Screenshots in Handy/Tablet/Desktop in hell und
@@ -148,8 +148,8 @@ Referenzseite, eine Pflichtauswahl aus dem Katalog.
 
 - [x] Phase 0 Plan abgelegt und im Index eingetragen
 - [x] Phase 1 Datenmodell und Migration
-- [ ] Phase 2 Zentrale Listen und Validierung
-- [ ] Phase 3 API und Backend
+- [x] Phase 2 Zentrale Listen und Validierung
+- [x] Phase 3 API und Backend
 - [ ] Phase 4 Profil-Oberfläche
 - [ ] Phase 5 Übrige Oberflächen
 - [ ] Phase 6 Auswertung und Datenschutz
