@@ -10,7 +10,7 @@ import { z } from "zod";
 /** Leere Zeichenketten und reine Leerzeichen gelten als „nicht angegeben". */
 function optionalText(max: number, message: string) {
   return z
-    .string()
+    .string("Bitte nur Text eingeben.")
     .trim()
     .max(max, message)
     .optional()
@@ -20,18 +20,18 @@ function optionalText(max: number, message: string) {
 
 export const allergyInputSchema = z.object({
   allergen: z
-    .string()
+    .string("Bitte gib ein Allergen an.")
     .trim()
     .min(2, "Bitte gib ein Allergen an.")
     .max(160, "Das Allergen darf höchstens 160 Zeichen haben."),
-  kind: z.nativeEnum(RestrictionKind).default(RestrictionKind.ALLERGY),
-  level: z.nativeEnum(AllergyLevel),
+  kind: z.nativeEnum(RestrictionKind, "Unbekannte Art.").default(RestrictionKind.ALLERGY),
+  level: z.nativeEnum(AllergyLevel, "Unbekannter Schweregrad."),
   /** `null` heißt „nicht angegeben" – die Küche behandelt das als ungeklärt. */
   tracesOk: z
-    .boolean()
+    .boolean("Die Angabe zu Spuren muss wahr oder falsch sein.")
     .nullish()
     .transform((value) => value ?? null),
-  diagnosed: z.boolean().default(false),
+  diagnosed: z.boolean("Die Angabe zur Abklärung muss wahr oder falsch sein.").default(false),
   symptoms: optionalText(500, "Die Symptome dürfen höchstens 500 Zeichen haben."),
   treatment: optionalText(500, "Die Notfallhilfe darf höchstens 500 Zeichen haben."),
   note: optionalText(500, "Die Notiz darf höchstens 500 Zeichen haben."),
@@ -41,7 +41,7 @@ export type AllergyInput = z.infer<typeof allergyInputSchema>;
 
 export const aversionInputSchema = z.object({
   label: z
-    .string()
+    .string("Bitte gib eine Besonderheit an.")
     .trim()
     .min(2, "Bitte gib eine Besonderheit an.")
     .max(120, "Die Besonderheit darf höchstens 120 Zeichen haben."),

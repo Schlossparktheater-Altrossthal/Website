@@ -1,6 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+
+import { normalizeDietaryLabel } from "@/data/allergens";
+import { allergyInputSchema, firstIssueMessage } from "@/lib/profil/dietary-validation";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+
+/**
+ * Findet den Eintrag, der sich nur in der Schreibweise unterscheidet: „Erdnüsse", „erdnüsse" und
+ * „erdnuss" sind dasselbe Allergen. Die Unique-Regel der Datenbank vergleicht exakt und würde
+ * sonst mehrere Zeilen dafür zulassen.
+ */
+async function findExistingAllergy(userId: string, allergen: string) {
+  const entries = await prisma.dietaryRestriction.findMany({
+    where: { userId },
+    select: { id: true, allergen: true },
+  });
+  const key = normalizeDietaryLabel(allergen);
+  return entries.find((entry) => normalizeDietaryLabel(entry.allergen) === key) ?? null;
+}
 
 // GET: Hole alle Allergien eines Benutzers
 export async function GET() {
@@ -28,38 +45,39 @@ export async function GET() {
 }
 
 // POST: Füge eine neue Allergie hinzu oder aktualisiere eine bestehende
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const session = await requireAuth();
     const userId = session.user?.id;
     if (!userId) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
-    const data = await request.json();
 
-    const allergy = await prisma.dietaryRestriction.upsert({
-      where: {
-        userId_allergen: {
-          userId,
-          allergen: data.allergen,
-        },
-      },
-      update: {
-        level: data.level,
-        symptoms: data.symptoms,
-        treatment: data.treatment,
-        note: data.note,
-        isActive: true,
-      },
-      create: {
-        userId,
-        allergen: data.allergen,
-        level: data.level,
-        symptoms: data.symptoms,
-        treatment: data.treatment,
-        note: data.note,
-      },
-    });
+    const payload = await request.json().catch(() => null);
+    const parsed = allergyInputSchema.safeParse(payload);
+    if (!parsed.success) {
+      return NextResponse.json({ error: firstIssueMessage(parsed.error) }, { status: 400 });
+    }
+
+    const input = parsed.data;
+    // Die Anfrage beschreibt den Eintrag vollständig: nicht mitgeschickte Angaben bekommen ihre
+    // Standardwerte, statt den alten Wert zu behalten. Das Profilformular sendet immer alles.
+    const values = {
+      allergen: input.allergen,
+      kind: input.kind,
+      level: input.level,
+      tracesOk: input.tracesOk,
+      diagnosed: input.diagnosed,
+      symptoms: input.symptoms,
+      treatment: input.treatment,
+      note: input.note,
+      isActive: true,
+    };
+
+    const existing = await findExistingAllergy(userId, input.allergen);
+    const allergy = existing
+      ? await prisma.dietaryRestriction.update({ where: { id: existing.id }, data: values })
+      : await prisma.dietaryRestriction.create({ data: { userId, ...values } });
 
     return NextResponse.json(allergy);
   } catch (error) {
@@ -69,7 +87,7 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE: Deaktiviere eine Allergie (soft delete)
-export async function DELETE(request: NextRequest) {
+export async function DELETE(request: Request) {
   try {
     const session = await requireAuth();
     const userId = session.user?.id;
@@ -83,16 +101,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Allergen muss angegeben werden" }, { status: 400 });
     }
 
+    const existing = await findExistingAllergy(userId, allergen);
+    if (!existing) {
+      return NextResponse.json({ error: "Allergie nicht gefunden" }, { status: 404 });
+    }
+
     await prisma.dietaryRestriction.update({
-      where: {
-        userId_allergen: {
-          userId,
-          allergen,
-        },
-      },
-      data: {
-        isActive: false,
-      },
+      where: { id: existing.id },
+      data: { isActive: false },
     });
 
     return NextResponse.json({ success: true });

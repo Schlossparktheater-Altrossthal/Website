@@ -5,6 +5,7 @@ import { authorizedFetch, type ActionResult } from "@/lib/profil/actions-helpers
 export type SaveDietaryPreferenceInput = {
   style: string;
   strictness: string;
+  variant?: string | null;
   customLabel?: string | null;
 };
 
@@ -12,6 +13,8 @@ export type SaveDietaryPreferenceResult = {
   preference: {
     style: string;
     strictness: string;
+    variant: string | null;
+    variantLabel: string | null;
     customLabel: string | null;
     label: string | null;
     strictnessLabel: string | null;
@@ -45,6 +48,11 @@ export async function saveDietaryPreferenceAction(
             typeof data?.preference?.strictness === "string"
               ? data.preference.strictness
               : input.strictness,
+          variant: typeof data?.preference?.variant === "string" ? data.preference.variant : null,
+          variantLabel:
+            typeof data?.preference?.variantLabel === "string"
+              ? data.preference.variantLabel
+              : null,
           customLabel:
             typeof data?.preference?.customLabel === "string"
               ? data.preference.customLabel

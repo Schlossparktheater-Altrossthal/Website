@@ -6,6 +6,7 @@ import {
   isStrictnessRelevant,
   resolveDietaryStrictnessLabel,
   resolveDietaryStyleLabel,
+  resolveDietaryVariantLabel,
   type DietaryStrictnessOption,
 } from "@/data/dietary-preferences";
 import { prisma } from "@/lib/prisma";
@@ -54,22 +55,26 @@ export async function PUT(request: NextRequest) {
 
   const { label: styleLabel, custom } = resolveDietaryStyleLabel(style, customLabel);
   const strictnessLabel = resolveDietaryStrictnessLabel(style, strictness);
+  const variantLabel = resolveDietaryVariantLabel(style, parsed.variant ?? null);
 
   try {
     const profile = await prisma.memberOnboardingProfile.upsert({
       where: { userId },
       update: {
         dietaryPreference: styleLabel,
+        dietaryPreferenceVariant: variantLabel,
         dietaryPreferenceStrictness: strictnessLabel,
       },
       create: {
         userId,
         focus: "acting",
         dietaryPreference: styleLabel,
+        dietaryPreferenceVariant: variantLabel,
         dietaryPreferenceStrictness: strictnessLabel,
       },
       select: {
         dietaryPreference: true,
+        dietaryPreferenceVariant: true,
         dietaryPreferenceStrictness: true,
         showId: true,
       },
@@ -90,6 +95,8 @@ export async function PUT(request: NextRequest) {
         style,
         strictness,
         customLabel: custom,
+        variant: parsed.variant ?? null,
+        variantLabel: profile.dietaryPreferenceVariant,
         label: profile.dietaryPreference,
         strictnessLabel: profile.dietaryPreferenceStrictness,
       },
