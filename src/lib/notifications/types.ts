@@ -28,6 +28,7 @@ export const NOTIFICATION_TYPES = {
   REHEARSAL_UPDATE: "rehearsal-update",
   REHEARSAL_EMERGENCY: "rehearsal-emergency",
   REHEARSAL_ATTENDANCE: "rehearsal-attendance",
+  EVENT_REMINDER: "event-reminder",
   DEPARTMENT_ASSIGNMENT: "department-assignment",
   DEPARTMENT_REQUEST: "department-request",
   DEPARTMENT_EVENT: "department-event",
@@ -66,6 +67,7 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
     priority: "normal",
     severity: "warning",
   },
+  "event-reminder": { category: "termine", kind: "info", priority: "normal", severity: "info" },
   "department-assignment": {
     category: "gewerke",
     kind: "info",

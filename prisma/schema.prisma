@@ -315,6 +315,7 @@ model User {
   pushSubscriptions               PushSubscription[]
   notificationPreferences         NotificationPreference[]
   notificationSettings            NotificationSettings?
+  eventReminderDispatches         EventReminderDispatch[]
   blockedDays                     BlockedDay[]
   calendarFeed                    CalendarFeed?
   appRoles                        UserAppRole[]
@@ -916,38 +917,39 @@ model CalendarFeed {
 
 /// Termine der Organisation (Proben, Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
 model CalendarEvent {
-  id               String              @id @default(cuid())
-  title            String
-  kind             CalendarEventKind   @default(OTHER)
-  status           EventStatus         @default(SCHEDULED)
-  start            DateTime
-  end              DateTime?
-  allDay           Boolean             @default(false)
-  location         String?
-  description      String?
+  id                 String                  @id @default(cuid())
+  title              String
+  kind               CalendarEventKind       @default(OTHER)
+  status             EventStatus             @default(SCHEDULED)
+  start              DateTime
+  end                DateTime?
+  allDay             Boolean                 @default(false)
+  location           String?
+  description        String?
   /// Frist für Zu-/Absagen.
-  responseDeadline DateTime?
+  responseDeadline   DateTime?
   /// Proben: alle zur Terminzeit oder gestaffelt mit Uhrzeit pro Szene.
-  scheduleMode     EventScheduleMode   @default(TOGETHER)
-  showId           String?
+  scheduleMode       EventScheduleMode       @default(TOGETHER)
+  showId             String?
   /// Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab.
-  departmentId     String?
-  createdById      String?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  show             Show?               @relation(fields: [showId], references: [id], onDelete: SetNull)
-  department       Department?         @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy        User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  participants     EventParticipant[]
-  audienceRules    EventAudienceRule[]
-  blocks           EventBlock[]
-  responseLogs     EventResponseLog[]
-  notifications    Notification[]
-  guests           EventGuest[]
+  departmentId       String?
+  createdById        String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  show               Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
+  department         Department?             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy          User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  participants       EventParticipant[]
+  audienceRules      EventAudienceRule[]
+  blocks             EventBlock[]
+  responseLogs       EventResponseLog[]
+  notifications      Notification[]
+  guests             EventGuest[]
   /// Probenmodus: tatsächlicher Beginn und tatsächliches Ende.
-  actualStart      DateTime?
-  actualEnd        DateTime?
-  blockedDays      BlockedDay[]
+  actualStart        DateTime?
+  actualEnd          DateTime?
+  blockedDays        BlockedDay[]
+  reminderDispatches EventReminderDispatch[]
 
   @@index([start])
   @@index([departmentId, start])
@@ -1361,10 +1363,28 @@ model NotificationPreference {
 /// Allgemeine Benachrichtigungs-Einstellungen, z. B. Ruhezeit für Push (Minuten ab Mitternacht,
 /// Europe/Berlin; Ende kleiner als Beginn = über Mitternacht). Dringendes kommt trotzdem.
 model NotificationSettings {
-  userId     String @id
-  quietStart Int?
-  quietEnd   Int?
-  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String  @id
+  quietStart   Int?
+  quietEnd     Int?
+  /// Vorlaufzeit für Termin-Erinnerungen: `never` | `1h` | `2h` | `12h` | `1d` | `2d` | `3d` | `7d`.
+  /// Ohne Eintrag gilt `DEFAULT_REMINDER_LEAD` aus `src/lib/notifications/preferences.ts`.
+  reminderLead String?
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Protokoll der versendeten Termin-Erinnerungen (Idempotenz): höchstens eine Zeile je Termin und Person.
+model EventReminderDispatch {
+  id      String        @id @default(cuid())
+  eventId String
+  userId  String
+  /// Vorlaufzeit-Code laut `src/lib/notifications/preferences.ts`, z. B. `1d`.
+  lead    String
+  sentAt  DateTime      @default(now())
+  event   CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
 }
 
 model Issue {
