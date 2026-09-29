@@ -57,4 +57,4 @@ Fotoerlaubnis-Signaturen.
 
 ## Benachrichtigungen (`?bereich=benachrichtigungen`)
 
-Push auf diesem Gerät ein-/ausschalten und testen, Push je Bereich (Aufgaben und Dringendes kommen immer), Ruhezeit, angemeldete Geräte entfernen. Details: [benachrichtigungen.md](benachrichtigungen.md).
+Push auf diesem Gerät ein-/ausschalten und testen, Push je Bereich (Aufgaben und Dringendes kommen immer), Vorlaufzeit für Termin-Erinnerungen, Ruhezeit, angemeldete Geräte entfernen. Details: [benachrichtigungen.md](benachrichtigungen.md).

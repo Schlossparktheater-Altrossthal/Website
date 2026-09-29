@@ -3,10 +3,11 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { isPushConfigured } from "@/lib/notifications/push";
+import { EVENT_REMINDER_LEAD_CODES, resolveReminderLead } from "@/lib/notifications/preferences";
 import { NOTIFICATION_CATEGORIES } from "@/lib/notifications/types";
 import { requireAuth } from "@/lib/rbac";
 
-/** Eigene Benachrichtigungs-Einstellungen: Push je Bereich und Ruhezeit. */
+/** Eigene Benachrichtigungs-Einstellungen: Push je Bereich, Ruhezeit und Erinnerungs-Vorlauf. */
 export async function GET() {
   const session = await requireAuth();
   const userId = session.user?.id;
@@ -30,6 +31,7 @@ export async function GET() {
       settings?.quietStart != null && settings.quietEnd != null
         ? { start: settings.quietStart, end: settings.quietEnd }
         : null,
+    reminderLead: resolveReminderLead(settings?.reminderLead),
   });
 }
 
@@ -41,6 +43,7 @@ const minutes = z
 const updateSchema = z.union([
   z.object({ category: z.enum(NOTIFICATION_CATEGORIES), push: z.boolean() }),
   z.object({ quietHours: z.object({ start: minutes, end: minutes }).nullable() }),
+  z.object({ reminderLead: z.enum(EVENT_REMINDER_LEAD_CODES) }),
 ]);
 
 export async function PUT(request: Request) {
@@ -57,6 +60,13 @@ export async function PUT(request: Request) {
       where: { userId_category: { userId, category } },
       create: { userId, category, push },
       update: { push },
+    });
+  } else if ("reminderLead" in parsed.data) {
+    const { reminderLead } = parsed.data;
+    await prisma.notificationSettings.upsert({
+      where: { userId },
+      create: { userId, reminderLead },
+      update: { reminderLead },
     });
   } else {
     const quiet = parsed.data.quietHours;

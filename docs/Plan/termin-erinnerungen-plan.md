@@ -1,6 +1,6 @@
 # Plan: Vorzeitige Termin-Erinnerungen (individuell einstellbar)
 
-Stand: 2026-09-29. Phase 1 umgesetzt, Phase 2–6 offen. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Phase 1–2 umgesetzt, Phase 3–6 offen. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -142,7 +142,7 @@ Zusammenfassung `{ sent, skipped, failed }` zurückgibt.
 ## Checkliste
 
 - [x] Phase 1 Datenmodell und Konstanten
-- [ ] Phase 2 Einstellung (API und Profil-UI)
+- [x] Phase 2 Einstellung (API und Profil-UI)
 - [ ] Phase 3 Empfänger- und Fälligkeitslogik
 - [ ] Phase 4 Versand und Idempotenz
 - [ ] Phase 5 Cron-Route aktivieren

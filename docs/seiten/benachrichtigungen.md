@@ -33,7 +33,10 @@ steht, was zu tun ist, darunter Neues, dann Früheres. Plan und Hintergründe:
 
 ## Offen
 
-Einstellungen je Kategorie (Plan Phase 6).
+- Einstellungen je Kategorie (Plan Phase 6).
+- Versand der Termin-Erinnerungen (Phasen 3–5 in `docs/Plan/termin-erinnerungen-plan.md`).
+  Die Vorlaufzeit ist im Profil bereits einstellbar (`NotificationSettings.reminderLead`,
+  Standard 1 Tag, Option „Nie“), wirkt aber erst mit dem Cron in Phase 5.
 
 ## Web Push
 

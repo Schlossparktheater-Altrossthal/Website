@@ -8,6 +8,13 @@ import { BellRingIcon, ShareIcon, SmartphoneIcon, TrashIcon } from "@/components
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TimeInput } from "@/components/ui/time-input";
@@ -15,8 +22,11 @@ import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { CATEGORY_LABELS, formatNotificationTime } from "@/lib/notifications/format";
 import {
   CATEGORY_DESCRIPTIONS,
+  EVENT_REMINDER_LEAD_OPTIONS,
   minutesToTime,
+  resolveReminderLead,
   timeToMinutes,
+  type EventReminderLead,
   type QuietHours,
 } from "@/lib/notifications/preferences";
 import type { NotificationCategory } from "@/lib/notifications/types";
@@ -26,6 +36,7 @@ type Preferences = {
   pushConfigured: boolean;
   categories: { category: NotificationCategory; push: boolean }[];
   quietHours: QuietHours | null;
+  reminderLead: EventReminderLead;
 };
 
 type Device = {
@@ -119,6 +130,16 @@ export function NotificationsSection() {
     void savePreference({ quietHours }).catch((error) => {
       console.error("[NotificationsSection] save quiet hours failed", error);
       toast.error("Ruhezeit konnte nicht gespeichert werden.", { duration: 5000 });
+      void load();
+    });
+  };
+
+  const setReminderLead = (value: string) => {
+    const lead = resolveReminderLead(value);
+    setPreferences((prev) => (prev ? { ...prev, reminderLead: lead } : prev));
+    void savePreference({ reminderLead: lead }).catch((error) => {
+      console.error("[NotificationsSection] save reminder lead failed", error);
+      toast.error("Erinnerung konnte nicht gespeichert werden.", { duration: 5000 });
       void load();
     });
   };
@@ -255,6 +276,35 @@ export function NotificationsSection() {
             );
           })}
         </ul>
+      </Card>
+
+      <Card className="space-y-3 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <label htmlFor="reminder-lead" className="text-sm font-semibold text-foreground">
+              Erinnerung vor Terminen
+            </label>
+            <p className="text-sm text-muted-foreground">
+              Vor Proben und Terminen, für die du eingeteilt bist, erinnern wir dich rechtzeitig.
+            </p>
+          </div>
+          <Select value={preferences.reminderLead} onValueChange={setReminderLead}>
+            <SelectTrigger
+              id="reminder-lead"
+              className="h-11 w-full sm:w-56"
+              aria-label="Erinnerung vorher"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {EVENT_REMINDER_LEAD_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </Card>
 
       <Card className="space-y-3 p-4">
