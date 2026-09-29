@@ -183,11 +183,13 @@ Drei Nutzerklassen bestimmen die Breakpoint-Entscheidungen im Mitgliederbereich.
 - **Drill-down per URL:** Bereiche über `?bereich=` statt Tabs – mobil Liste, ab `lg` linke Navigation (Beispiel `profil`).
 - **Sidebar/Header:** JS-Breakpoint `SIDEBAR_MOBILE_BREAKPOINT = "(max-width: 1023px)"` in `src/components/ui/sidebar.tsx`; Header unter `md` im `Sheet`.
 - **Globaler Kopf (`SiteHeader`):** Website-Titel links, Aktionen rechts, dazwischen seit 2026-09-27 die aktive Produktion (`2027 · In 80 Tagen um die Welt`) als reiner Text in `text-foreground` – ab `lg` in `text-lg`, unter `lg` in `text-sm`, auf dem Handy nur der zweistellige Jahrgang. Kein eigener Rahmen, keine Fläche. Das `justify-between` der Navigationszeile verteilt den Freiraum gleich groß, dadurch sitzt der Zusatz optisch mittig zwischen Titel und Aktionen (kein `absolute`, keine Überlagerung). Fehlt eine aktive Produktion, entfällt der Zusatz vollständig.
+- **Werkzeugzeilen und Umschalter dürfen nie breiter als ihr Container werden.** Eine Zeile bricht um (`flex-wrap`), statt den Viewport aufzureißen; ein zu langer Eintrag wird gekürzt (`truncate`) statt zu schieben. Grund: Ein einziger zu breiter Bereich lässt iOS-Safari den Layout-Viewport verdoppeln und rendert danach die ganze Seite winzig – am Gerät gemessen in `docs/Analysen/handy-ueberlauf-webkit-befunde.md`. `SegmentedControl` und `SectionNav` setzen das seit 2026-09-29 selbst um; selbstgebaute Umschalter müssen es ebenfalls tun.
 
 ### Verifikation
 
-- Automatisierter Overflow-Test: `e2e/responsive-overflow.spec.ts` läuft in den Playwright-Projekten `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768).
+- Automatisierter Overflow-Test: `e2e/responsive-overflow.spec.ts` läuft in den Playwright-Projekten `chromium` (1280×720), `mobile` (390×844), `mobile-webkit` (402×874, Safari-Engine des betroffenen Geräts), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768). Gemessen wird erst bei stabiler Dokumentbreite; ein Fehlschlag nennt die äußerste überstehende Box und den Inhalt, der sie aufreißt.
 - Screenshots: `pnpm e2e:screenshots --viewport all` erzeugt Handy/Tablet/Desktop in hell + dunkel.
+- `pnpm ui:check` prüft dieselben Regeln bei Bedarf in WebKit (`--browser webkit`); die Viewports `mobile-iphone` (402×874) und `tablet-mini` (744×1133) bilden das gemeldete Handy und das iPad mini hochkant ab.
 - Vollständige Status-Übersicht: `docs/responsiveness-matrix.md`.
 
 ## Komponentenrichtlinien

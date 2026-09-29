@@ -34,10 +34,13 @@ export function SectionNav({
       <nav
         aria-label={ariaLabel}
         className={cn(
-          "gap-0.5 rounded-lg bg-muted/70 p-0.5",
+          "min-w-0 gap-0.5 rounded-lg bg-muted/70 p-0.5",
           // inline-flex statt flex: sonst zieht sich die Leiste über die volle Breite
           // und die Pills wirken gestreckt (Stück-Muster ist kompakt).
-          withSelect ? "hidden sm:inline-flex sm:w-auto" : "flex w-full sm:inline-flex sm:w-auto",
+          // `flex-wrap`: Ein langer Eintrag darf die Leiste umbrechen, nicht die Seite aufreißen.
+          withSelect
+            ? "hidden sm:inline-flex sm:w-auto"
+            : "flex w-full flex-wrap sm:inline-flex sm:w-auto",
         )}
       >
         {items.map((item) => {
@@ -49,13 +52,15 @@ export function SectionNav({
               aria-current={isActive ? "page" : undefined}
               scroll={false}
               className={cn(
-                "inline-flex h-10 flex-1 items-center justify-center rounded-md px-4 text-sm font-medium sm:flex-none",
+                "inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-md px-4 text-sm font-medium sm:flex-none",
                 isActive
                   ? "bg-background text-foreground shadow-sm ring-1 ring-border"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {item.label}
+              {/* `truncate` statt Umbruch: Ein gekürzter Eintrag bleibt lesbar, ein
+                  umgebrochener sprengt die 40 px hohe Pill. */}
+              <span className="min-w-0 truncate">{item.label}</span>
             </Link>
           );
         })}

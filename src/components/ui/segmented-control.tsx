@@ -41,7 +41,10 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg bg-muted/70 p-0.5",
+        // `flex-wrap` ist das Sicherheitsnetz: Die Segmente sind `whitespace-nowrap` und können
+        // deshalb nicht schrumpfen. Ohne Umbruch schiebt ein zu breiter Umschalter die Seite
+        // über den Viewport und das Gerät zoomt heraus (docs/Plan/handy-responsiveness-plan.md).
+        "inline-flex min-w-0 flex-wrap items-center gap-0.5 rounded-lg bg-muted/70 p-0.5",
         fullWidth && "flex w-full",
         className,
       )}
