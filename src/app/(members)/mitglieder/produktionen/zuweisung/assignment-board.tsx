@@ -852,7 +852,9 @@ function DepartmentView({
             style={{ borderTopColor: department.color ?? undefined, borderTopWidth: 3 }}
             aria-label={department.name}
           >
-            <header className="flex items-center justify-between gap-2">
+            {/* `flex-wrap` ist das Sicherheitsnetz: Gewerkname links, Zähler und Bearbeiten rechts
+                dürfen bei einem langen Namen in die nächste Zeile rutschen. */}
+            <header className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="min-w-0 truncate text-base font-semibold">{department.name}</h2>
               <div className="flex shrink-0 items-center gap-2">
                 <Badge variant="muted">
@@ -898,8 +900,10 @@ function DepartmentView({
 
             <details className="group rounded-lg" open={members.length <= 3}>
               <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <span>Team ({members.length})</span>
-                <span className="normal-case tracking-normal group-open:hidden">anzeigen</span>
+                <span className="min-w-0">Team ({members.length})</span>
+                <span className="shrink-0 normal-case tracking-normal group-open:hidden">
+                  anzeigen
+                </span>
               </summary>
               <ul className="mt-1.5 space-y-1">
                 {members.length === 0 ? (

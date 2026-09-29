@@ -145,13 +145,15 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
           Offline-Demo: Änderungen werden nicht gespeichert.
         </div>
       ) : null}
-      <div className="flex items-center gap-2">
+      {/* `flex-wrap`: Auf schmalen Geräten darf die Aktionsgruppe in die nächste Zeile rutschen,
+          statt die Seite über den Viewport zu schieben. */}
+      <div className="flex flex-wrap items-center gap-2">
         <SegmentedControl
           aria-label="Ansicht"
           size="md"
           value={tab}
           onValueChange={setTab}
-          className="min-w-0 flex-1 sm:flex-none [&>button]:h-11 [&>button]:flex-1 [&>button]:px-4 sm:[&>button]:flex-none"
+          className="min-w-0 flex-1 sm:flex-none [&>button]:h-11 [&>button]:min-w-0 [&>button]:flex-1 [&>button]:px-3 sm:[&>button]:flex-none sm:[&>button]:px-4"
           options={[
             {
               value: "mine",
