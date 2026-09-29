@@ -181,6 +181,13 @@ enum AllergyLevel {
   LETHAL // Lebensbedrohlich
 }
 
+// Art des Eintrags: Allergie, Intoleranz oder sonstiger Hinweis
+enum RestrictionKind {
+  ALLERGY // Allergie
+  INTOLERANCE // Unverträglichkeit / Intoleranz
+  OTHER // Sonstiges
+}
+
 model AvailabilityDay {
   id               String           @id @default(cuid())
   userId           String
@@ -308,6 +315,7 @@ model User {
   attendanceLogsAuthored          EventResponseLog[]         @relation("AttendanceLogAuthor")
   attendanceLogsTarget            EventResponseLog[]         @relation("AttendanceLogTarget")
   dietaryRestrictions             DietaryRestriction[]
+  dietaryAversions                DietaryAversion[]
   measurements                    MemberMeasurement[]
   sizes                           MemberSize[]
   roles                           UserRole[]
@@ -864,18 +872,36 @@ model MemberSize {
 
 // Allergien und Unverträglichkeiten
 model DietaryRestriction {
-  id        String       @id @default(cuid())
+  id        String          @id @default(cuid())
   userId    String
   allergen  String // Was die Allergie/Unverträglichkeit auslöst
+  kind      RestrictionKind @default(ALLERGY)
   level     AllergyLevel
+  /// Ist der Kontakt mit Spuren unproblematisch? `null` = nicht angegeben (strikt behandeln).
+  tracesOk  Boolean?
+  /// Ärztlich abgeklärt?
+  diagnosed Boolean         @default(false)
   symptoms  String? // Beschreibung der Symptome
   treatment String? // Notfallbehandlung
   note      String?
-  isActive  Boolean      @default(true)
-  updatedAt DateTime     @updatedAt
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive  Boolean         @default(true)
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, allergen])
+}
+
+// Abneigungen und Besonderheiten (nicht medizinisch), z. B. „keine Pilze"
+model DietaryAversion {
+  id        String   @id @default(cuid())
+  userId    String
+  label     String
+  note      String?
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, label])
 }
 
 model Availability {
@@ -1632,6 +1658,7 @@ model MemberOnboardingProfile {
   gender                      String?
   memberSinceYear             Int?
   dietaryPreference           String?
+  dietaryPreferenceVariant    String?
   dietaryPreferenceStrictness String?
   whatsappLinkVisitedAt       DateTime?
   createdAt                   DateTime        @default(now())

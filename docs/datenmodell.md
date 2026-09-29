@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-29, 96 Modelle, 49 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-29, 97 Modelle, 50 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -20,7 +20,7 @@ Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema gener
 flowchart LR
     User((User)) --- PM[ProductionMembership] --- Show((Show))
     User --- Auth[Account / Session / Rollen]
-    User --- Pers[Maße, Größen, Allergien, Interessen]
+    User --- Pers[Maße, Größen, Allergien, Abneigungen, Interessen]
     User --- Avail[Verfügbarkeit / Sperrliste]
     Show --- Stueck[Character, Scene, Casting]
     Show --- Proben[CalendarEvent, EventParticipant, Duty]
@@ -183,6 +183,7 @@ erDiagram
     User ||--o{ MemberMeasurement : "Maße"
     User ||--o{ MemberSize : "Größen"
     User ||--o{ DietaryRestriction : "Allergien"
+    User ||--o{ DietaryAversion : "Abneigungen"
     User ||--o{ UserInterest : ""
     Interest ||--o{ UserInterest : ""
     User |o--o{ Interest : "angelegt"
@@ -242,7 +243,7 @@ Mögliche Werte von `Role`: `member`, `cast`, `tech`, `board`, `finance`, `owner
   - PhotoConsent: user, approvedBy
   - MemberInvite: createdBy, personalFor
 - **Löschverhalten** (`onDelete`) steht in der Referenz unten bei jedem Relationsfeld. Grundsatz seit 2026-09-24:
-  - `Cascade` nur für Daten, die der Person selbst gehören (Account, Session, Maße, Allergien, Verfügbarkeit, Interessen, Mitgliedschaften).
+  - `Cascade` nur für Daten, die der Person selbst gehören (Account, Session, Maße, Allergien, Abneigungen, Verfügbarkeit, Interessen, Mitgliedschaften).
   - `Restrict` für Fachdaten des Vereins mit Pflicht-Ersteller: `FinanceEntry.createdBy`, `MemberInvite.createdBy`, `EventResponseLog.changedBy`, `DepartmentTask.creator`, `FinalRehearsalDuty.createdBy`, `IssueComment.author`.
   - `Restrict` von `Show` auf `FinanceEntry`, `FinanceBudget` und `PhotoConsent`: Produktionen werden archiviert, nicht gelöscht.
   - `DELETE /api/members/[id]` versucht erst ein echtes Löschen. Scheitert es an einem Restrict-FK (P2003), wird das Konto per `anonymizeAccount` (`src/lib/retention.ts`) anonymisiert.
@@ -302,6 +303,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `attendanceLogsAuthored`          | → `EventResponseLog[]`         | @relation("AttendanceLogAuthor")                                                         |
 | `attendanceLogsTarget`            | → `EventResponseLog[]`         | @relation("AttendanceLogTarget")                                                         |
 | `dietaryRestrictions`             | → `DietaryRestriction[]`       |                                                                                          |
+| `dietaryAversions`                | → `DietaryAversion[]`          |                                                                                          |
 | `measurements`                    | → `MemberMeasurement[]`        |                                                                                          |
 | `sizes`                           | → `MemberSize[]`               |                                                                                          |
 | `roles`                           | → `UserRole[]`                 |                                                                                          |
@@ -580,6 +582,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `gender`                      | `String?`                   |                                                                                                       |
 | `memberSinceYear`             | `Int?`                      |                                                                                                       |
 | `dietaryPreference`           | `String?`                   |                                                                                                       |
+| `dietaryPreferenceVariant`    | `String?`                   |                                                                                                       |
 | `dietaryPreferenceStrictness` | `String?`                   |                                                                                                       |
 | `whatsappLinkVisitedAt`       | `DateTime?`                 |                                                                                                       |
 | `createdAt`                   | `DateTime`                  | @default(now())                                                                                       |
@@ -1217,20 +1220,39 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Allergien und Unverträglichkeiten
 
-| Feld        | Typ                   | Attribute / Beschreibung                                         |
-| ----------- | --------------------- | ---------------------------------------------------------------- |
-| `id`        | `String`              | @id @default(cuid())                                             |
-| `userId`    | `String`              |                                                                  |
-| `allergen`  | `String`              | Was die Allergie/Unverträglichkeit auslöst                       |
-| `level`     | `AllergyLevel` (enum) |                                                                  |
-| `symptoms`  | `String?`             | Beschreibung der Symptome                                        |
-| `treatment` | `String?`             | Notfallbehandlung                                                |
-| `note`      | `String?`             |                                                                  |
-| `isActive`  | `Boolean`             | @default(true)                                                   |
-| `updatedAt` | `DateTime`            | @updatedAt                                                       |
-| `user`      | → `User`              | @relation(fields: [userId], references: [id], onDelete: Cascade) |
+| Feld        | Typ                      | Attribute / Beschreibung                                                                 |
+| ----------- | ------------------------ | ---------------------------------------------------------------------------------------- |
+| `id`        | `String`                 | @id @default(cuid())                                                                     |
+| `userId`    | `String`                 |                                                                                          |
+| `allergen`  | `String`                 | Was die Allergie/Unverträglichkeit auslöst                                               |
+| `kind`      | `RestrictionKind` (enum) | @default(ALLERGY)                                                                        |
+| `level`     | `AllergyLevel` (enum)    |                                                                                          |
+| `tracesOk`  | `Boolean?`               | Ist der Kontakt mit Spuren unproblematisch? `null` = nicht angegeben (strikt behandeln). |
+| `diagnosed` | `Boolean`                | @default(false) Ärztlich abgeklärt?                                                      |
+| `symptoms`  | `String?`                | Beschreibung der Symptome                                                                |
+| `treatment` | `String?`                | Notfallbehandlung                                                                        |
+| `note`      | `String?`                |                                                                                          |
+| `isActive`  | `Boolean`                | @default(true)                                                                           |
+| `updatedAt` | `DateTime`               | @updatedAt                                                                               |
+| `user`      | → `User`                 | @relation(fields: [userId], references: [id], onDelete: Cascade)                         |
 
 - `@@unique([userId, allergen])`
+
+### `DietaryAversion`
+
+> Abneigungen und Besonderheiten (nicht medizinisch), z. B. „keine Pilze"
+
+| Feld        | Typ        | Attribute / Beschreibung                                         |
+| ----------- | ---------- | ---------------------------------------------------------------- |
+| `id`        | `String`   | @id @default(cuid())                                             |
+| `userId`    | `String`   |                                                                  |
+| `label`     | `String`   |                                                                  |
+| `note`      | `String?`  |                                                                  |
+| `isActive`  | `Boolean`  | @default(true)                                                   |
+| `updatedAt` | `DateTime` | @updatedAt                                                       |
+| `user`      | → `User`   | @relation(fields: [userId], references: [id], onDelete: Cascade) |
+
+- `@@unique([userId, label])`
 
 ### `Interest`
 
@@ -2191,6 +2213,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `MeasurementUnit`             | `M` (Meter), `CM` (Zentimeter), `MM` (Millimeter), `EU` (EU-Größe)                                                                                                                                                                                                                                            |
 | `MeasurementType`             | `HEIGHT` (Körperlänge), `CHEST` (Brustumfang), `WAIST` (Taillenumfang), `HIPS` (Gesäßumfang), `INSEAM` (Innenbeinlänge), `OUTSEAM` (Außenbeinlänge), `CHEST_DEPTH` (Brusttiefe), `WAIST_LENGTH` (Taillenlänge), `SHOULDER` (Rückenbreite), `SLEEVE` (Armlänge), `SHOE_SIZE` (Schuhgröße), `HEAD` (Kopfumfang) |
 | `AllergyLevel`                | `MILD` (Leicht (Unbehagen)), `MODERATE` (Mittel (Allergische Reaktion)), `SEVERE` (Schwer (Notfall möglich)), `LETHAL` (Lebensbedrohlich)                                                                                                                                                                     |
+| `RestrictionKind`             | `ALLERGY` (Allergie), `INTOLERANCE` (Unverträglichkeit / Intoleranz), `OTHER` (Sonstiges)                                                                                                                                                                                                                     |
 | `TaskStatus`                  | `todo`, `doing`, `done`                                                                                                                                                                                                                                                                                       |
 | `FinanceType`                 | `income`, `expense`                                                                                                                                                                                                                                                                                           |
 | `FinanceEntryKind`            | `general`, `invoice`, `donation`                                                                                                                                                                                                                                                                              |

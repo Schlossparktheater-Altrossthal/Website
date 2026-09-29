@@ -25,7 +25,7 @@ groups=[
 ('Termine, Proben & Anwesenheit',['CalendarEvent','EventParticipant','EventResponseLog','CalendarFeed','FinalRehearsalDuty']),
 ('Benachrichtigungen & Erinnerungen',['Notification','NotificationRecipient','NotificationPreference','NotificationSettings','PushSubscription','EventReminderDispatch']),
 ('Verfügbarkeit & Sperrliste',['AvailabilityDay','AvailabilityTemplate','BlockedDay','Availability']),
-('Persönliche Mitgliedsdaten',['MemberMeasurement','MemberSize','DietaryRestriction','Interest','UserInterest','MemberRolePreference']),
+('Persönliche Mitgliedsdaten',['MemberMeasurement','MemberSize','DietaryRestriction','DietaryAversion','Interest','UserInterest','MemberRolePreference']),
 ('Finanzen',['FinanceBudget','FinanceEntry','FinanceAttachment','FinanceLog']),
 ('Dateien, Issues, Aufgaben',['FileLibraryFolder','FileLibraryItem','FileLibraryFolderAccess','Issue','IssueComment','Task','Announcement']),
 ('Inventar, Tickets & Offline-Sync',['InventoryItem','Ticket','TicketScanEvent','SyncEvent','SyncMutation']),
