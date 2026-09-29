@@ -181,6 +181,14 @@ describe("Rückkehrer", () => {
       { allergen: "Erdnüsse", isActive: false },
       { allergen: "Laktose", isActive: true },
     ]);
+    // Der Wizardsatz trägt Stil, Unterform und die neuen Angaben je Allergie.
+    expect(
+      await prisma.memberOnboardingProfile.findUniqueOrThrow({ where: { userId: b.id } }),
+    ).toMatchObject({
+      dietaryPreference: "Vegetarisch",
+      dietaryPreferenceVariant: "Nur Milch, kein Ei",
+      dietaryPreferenceStrictness: "Strikt – keine Ausnahmen",
+    });
 
     // Einmal nutzbar: zweiter Aufruf findet keine aktive Einladung mehr.
     expect(await resolveActiveInvite(token)).toBeNull();

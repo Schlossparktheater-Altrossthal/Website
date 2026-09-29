@@ -41,6 +41,29 @@ import {
   RolePreferenceLevelPicker,
 } from "@/components/onboarding/role-preference-level-picker";
 import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
+import { AllergenField } from "@/components/forms/allergen-field";
+import { ALLERGEN_KIND_OPTIONS } from "@/data/allergens";
+import {
+  ALLERGY_LEVEL_OPTIONS,
+  ALLERGY_TRACES_OPTIONS,
+  fromAllergyTracesChoice,
+  toAllergyTracesChoice,
+  type AllergyTracesChoice,
+} from "@/data/allergy-styles";
+import {
+  DEFAULT_STRICTNESS,
+  DIETARY_STRICTNESS_OPTIONS,
+  DIETARY_STYLE_OPTIONS,
+  DIETARY_VARIANT_OPTIONS,
+  isStrictnessRelevant,
+  parseDietaryStrictnessFromLabel,
+  parseDietaryStyleFromLabel,
+  parseDietaryVariantFromLabel,
+  supportsDietaryVariant,
+  type DietaryStrictnessOption,
+  type DietaryStyleOption,
+  type DietaryVariantOption,
+} from "@/data/dietary-preferences";
 
 type ExistingProfile = {
   educationCategory?: string | null;
@@ -52,12 +75,16 @@ type ExistingProfile = {
   focus?: string | null;
   notes?: string | null;
   dietaryPreference?: string | null;
+  dietaryPreferenceVariant?: string | null;
   dietaryPreferenceStrictness?: string | null;
 };
 
 type ExistingDietary = {
   allergen: string;
   level: string;
+  kind: string;
+  tracesOk: boolean | null;
+  diagnosed: boolean;
   symptoms: string | null;
   treatment: string | null;
   note: string | null;
@@ -91,6 +118,9 @@ type DietaryEntry = {
   id: string;
   allergen: string;
   level: string;
+  kind: string;
+  traces: AllergyTracesChoice;
+  diagnosed: boolean;
   symptoms: string;
   treatment: string;
   note: string;
@@ -101,8 +131,10 @@ type FormState = {
   preferences: PreferenceEntry[];
   interests: string[];
   photoConsent: boolean;
-  dietaryPreference: string;
-  dietaryPreferenceStrictness: string;
+  dietaryStyle: DietaryStyleOption;
+  dietaryVariant: DietaryVariantOption | null;
+  dietaryCustomLabel: string;
+  dietaryStrictness: DietaryStrictnessOption;
   dietary: DietaryEntry[];
   notes: string;
 };
@@ -113,13 +145,6 @@ const steps = [
   { title: "Interessen" },
   { title: "Fotos" },
   { title: "Essen & Hinweise" },
-];
-
-const DIETARY_LEVEL_OPTIONS = [
-  { value: "MILD", label: "Leicht" },
-  { value: "MODERATE", label: "Mittel" },
-  { value: "SEVERE", label: "Stark" },
-  { value: "LETHAL", label: "Kritisch" },
 ];
 
 function createId() {
@@ -179,17 +204,36 @@ function createInitialState(
     preferences: [...actingPreferences, ...crewPreferences],
     interests: existingInterests,
     photoConsent: existingPhotoConsent ?? true,
-    dietaryPreference: existingProfile.dietaryPreference ?? "",
-    dietaryPreferenceStrictness: existingProfile.dietaryPreferenceStrictness ?? "",
+    // Die gespeicherten Labels werden tolerant zurückgelesen, damit auch Altbestände passen.
+    ...readStoredDietaryPreference(existingProfile),
     dietary: existingDietary.map((entry) => ({
       id: createId(),
       allergen: entry.allergen,
       level: entry.level,
+      kind: entry.kind,
+      traces: toAllergyTracesChoice(entry.tracesOk),
+      diagnosed: entry.diagnosed,
       symptoms: entry.symptoms ?? "",
       treatment: entry.treatment ?? "",
       note: entry.note ?? "",
     })),
     notes: existingProfile.notes ?? "",
+  };
+}
+
+/** Liest Stil, Unterform und Strenge aus den gespeicherten Labels zurück. */
+function readStoredDietaryPreference(
+  profile: ExistingProfile,
+): Pick<FormState, "dietaryStyle" | "dietaryVariant" | "dietaryCustomLabel" | "dietaryStrictness"> {
+  const { style, customLabel } = parseDietaryStyleFromLabel(profile.dietaryPreference);
+  const storedVariant = parseDietaryVariantFromLabel(profile.dietaryPreferenceVariant);
+  return {
+    dietaryStyle: style,
+    dietaryVariant: storedVariant && supportsDietaryVariant(style) ? storedVariant : null,
+    dietaryCustomLabel: customLabel ?? "",
+    dietaryStrictness: profile.dietaryPreferenceStrictness
+      ? parseDietaryStrictnessFromLabel(profile.dietaryPreferenceStrictness)
+      : DEFAULT_STRICTNESS,
   };
 }
 
@@ -342,6 +386,9 @@ export function ReturneeUpdateWizard({
           id: createId(),
           allergen: "",
           level: "MILD",
+          kind: "ALLERGY",
+          traces: "unset",
+          diagnosed: false,
           symptoms: "",
           treatment: "",
           note: "",
@@ -420,13 +467,20 @@ export function ReturneeUpdateWizard({
         })),
         interests: form.interests,
         photoConsent: form.photoConsent,
-        dietaryPreference: form.dietaryPreference.trim() || null,
-        dietaryPreferenceStrictness: form.dietaryPreferenceStrictness.trim() || null,
+        dietaryPreference: {
+          style: form.dietaryStyle,
+          variant: supportsDietaryVariant(form.dietaryStyle) ? form.dietaryVariant : null,
+          customLabel: form.dietaryStyle === "custom" ? form.dietaryCustomLabel.trim() : null,
+          strictness: form.dietaryStrictness,
+        },
         dietary: form.dietary
           .filter((entry) => entry.allergen.trim().length > 0)
           .map((entry) => ({
             allergen: entry.allergen.trim(),
-            level: entry.level.trim(),
+            level: entry.level,
+            kind: entry.kind,
+            tracesOk: fromAllergyTracesChoice(entry.traces),
+            diagnosed: entry.diagnosed,
             symptoms: entry.symptoms.trim() || null,
             treatment: entry.treatment.trim() || null,
             note: entry.note.trim() || null,
@@ -698,60 +752,121 @@ export function ReturneeUpdateWizard({
                 <label className="space-y-2 text-sm">
                   <span className="font-medium">Ernährungsstil</span>
                   <Select
-                    value={form.dietaryPreference}
+                    value={form.dietaryStyle}
                     onValueChange={(value) =>
-                      setForm((prev) => ({ ...prev, dietaryPreference: value }))
+                      setForm((prev) => ({
+                        ...prev,
+                        dietaryStyle: value as DietaryStyleOption,
+                        dietaryCustomLabel: value === "custom" ? prev.dietaryCustomLabel : "",
+                        dietaryVariant: supportsDietaryVariant(value as DietaryStyleOption)
+                          ? prev.dietaryVariant
+                          : null,
+                      }))
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="returnee-dietary-style">
                       <SelectValue placeholder="Bitte wählen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="omnivore">Allesesser</SelectItem>
-                      <SelectItem value="vegetarian">Vegetarisch</SelectItem>
-                      <SelectItem value="vegan">Vegan</SelectItem>
-                      <SelectItem value="custom">Anders</SelectItem>
+                      {DIETARY_STYLE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </label>
 
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium">Wie konsequent hältst du dich daran?</span>
-                  <Select
-                    value={form.dietaryPreferenceStrictness}
-                    onValueChange={(value) =>
-                      setForm((prev) => ({ ...prev, dietaryPreferenceStrictness: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Bitte wählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="flexible">Flexibel</SelectItem>
-                      <SelectItem value="mostly">Meistens</SelectItem>
-                      <SelectItem value="strict">Streng</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </label>
+                {supportsDietaryVariant(form.dietaryStyle) ? (
+                  <label className="space-y-2 text-sm">
+                    <span className="font-medium">Unterform</span>
+                    <Select
+                      value={form.dietaryVariant ?? "unset"}
+                      onValueChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          dietaryVariant:
+                            value === "unset" ? null : (value as DietaryVariantOption),
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="returnee-dietary-variant">
+                        <SelectValue placeholder="Nicht angegeben" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unset">Nicht angegeben</SelectItem>
+                        {DIETARY_VARIANT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="block text-xs text-muted-foreground">
+                      Gilt nur für Vegetarisch – Ei und Milch sind der Unterschied.
+                    </span>
+                  </label>
+                ) : null}
+
+                {form.dietaryStyle === "custom" ? (
+                  <label className="space-y-2 text-sm">
+                    <span className="font-medium">Bezeichnung</span>
+                    <Input
+                      id="returnee-dietary-custom"
+                      value={form.dietaryCustomLabel}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, dietaryCustomLabel: event.target.value }))
+                      }
+                      placeholder="Beschreibe deinen Ernährungsstil"
+                    />
+                  </label>
+                ) : null}
+
+                {isStrictnessRelevant(form.dietaryStyle) ? (
+                  <label className="space-y-2 text-sm">
+                    <span className="font-medium">Wie streng?</span>
+                    <Select
+                      value={form.dietaryStrictness}
+                      onValueChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          dietaryStrictness: value as DietaryStrictnessOption,
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="returnee-dietary-strictness">
+                        <SelectValue placeholder="Bitte wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DIETARY_STRICTNESS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                ) : null}
               </div>
 
               <div className="space-y-4">
                 {form.dietary.map((entry) => (
                   <div key={entry.id} className="space-y-4 rounded-xl border border-border/70 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-2">
+                      <div className="min-w-0 flex-1 space-y-2">
                         <label className="space-y-2 text-sm">
-                          <span className="font-medium">Unverträglichkeit</span>
-                          <Input
+                          <span className="font-medium">Allergie oder Unverträglichkeit</span>
+                          <AllergenField
                             value={entry.allergen}
-                            onChange={(event) =>
-                              updateDietaryEntry(entry.id, { allergen: event.target.value })
+                            onChange={(value) => updateDietaryEntry(entry.id, { allergen: value })}
+                            onSelectEntry={(catalogEntry) =>
+                              updateDietaryEntry(entry.id, { kind: catalogEntry.kind })
                             }
                             placeholder="z.B. Erdnüsse"
                           />
                         </label>
                         <div className="flex flex-wrap gap-2">
-                          {DIETARY_LEVEL_OPTIONS.map((option) => {
+                          {ALLERGY_LEVEL_OPTIONS.map((option) => {
                             const active = entry.level === option.value;
                             return (
                               <button
@@ -783,6 +898,65 @@ export function ReturneeUpdateWizard({
                         Entfernen
                       </Button>
                     </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-2 text-sm">
+                        <span className="font-medium">Art</span>
+                        <Select
+                          value={entry.kind}
+                          onValueChange={(value) => updateDietaryEntry(entry.id, { kind: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALLERGEN_KIND_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </label>
+                      <label className="space-y-2 text-sm">
+                        <span className="font-medium">Spuren</span>
+                        <Select
+                          value={entry.traces}
+                          onValueChange={(value) =>
+                            updateDietaryEntry(entry.id, {
+                              traces: value as AllergyTracesChoice,
+                            })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ALLERGY_TRACES_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {entry.traces === "unset" ? (
+                          <span className="block text-xs text-muted-foreground">
+                            Ohne Angabe behandelt die Küche den Eintrag als ungeklärt.
+                          </span>
+                        ) : null}
+                      </label>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm">
+                      <Checkbox
+                        id={`returnee-dietary-diagnosed-${entry.id}`}
+                        checked={entry.diagnosed}
+                        onCheckedChange={(checked) =>
+                          updateDietaryEntry(entry.id, { diagnosed: checked === true })
+                        }
+                      />
+                      <label htmlFor={`returnee-dietary-diagnosed-${entry.id}`}>
+                        Ärztlich abgeklärt
+                      </label>
+                    </div>
                     <div className="grid gap-3 md:grid-cols-3">
                       <Textarea
                         value={entry.symptoms}
@@ -811,7 +985,7 @@ export function ReturneeUpdateWizard({
 
                 <Button type="button" variant="outline" onClick={addDietaryEntry}>
                   <PlusIcon className="h-4 w-4" />
-                  Unverträglichkeit hinzufügen
+                  Allergie oder Unverträglichkeit hinzufügen
                 </Button>
               </div>
 

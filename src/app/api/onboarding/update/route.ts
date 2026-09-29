@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AllergyLevel } from "@prisma/client";
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { ALLERGEN_KIND_VALUES } from "@/data/allergens";
+import { ALLERGY_LEVEL_VALUES } from "@/data/allergy-styles";
+import {
+  dietaryPreferenceSchema,
+  parseDietaryStrictnessFromLabel,
+  parseDietaryStyleFromLabel,
+  resolveDietaryStrictnessLabel,
+  resolveDietaryStyleLabel,
+  resolveDietaryVariantLabel,
+} from "@/data/dietary-preferences";
 import { replaceProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { legacyBackgroundFromPayload } from "@/lib/education/schools";
 import { normalizeInterestList, replaceUserInterests } from "@/lib/profil/interests";
@@ -44,11 +53,27 @@ const preferenceSchema = z.object({
 
 const dietarySchema = z.object({
   allergen: z.string().min(1),
-  level: z.string(),
+  level: z.enum(ALLERGY_LEVEL_VALUES),
+  kind: z.enum(ALLERGEN_KIND_VALUES).optional().default("ALLERGY"),
+  tracesOk: z.boolean().nullable().optional().default(null),
+  diagnosed: z.boolean().optional().default(false),
   symptoms: z.string().nullable(),
   treatment: z.string().nullable(),
   note: z.string().nullable(),
 });
+
+/** Altform vor der strukturierten Angabe: `none` war „Allesesser", der Freitext hieß `custom`. */
+const nutritionPreferenceSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const record: Record<string, unknown> = { ...value };
+  if (record.style === "none") {
+    record.style = "omnivore";
+  }
+  if (record.customLabel == null && typeof record.custom === "string") {
+    record.customLabel = record.custom;
+  }
+  return record;
+}, dietaryPreferenceSchema);
 
 const payloadSchema = z.object({
   educationCategory: educationCategorySchema,
@@ -58,8 +83,9 @@ const payloadSchema = z.object({
   educationUniversityName: z.string().nullable(),
   educationOtherDescription: z.string().nullable(),
   preferences: z.array(preferenceSchema),
-  dietaryPreference: z.string().nullable(),
-  dietaryPreferenceStrictness: z.string().nullable(),
+  /** Strukturierte Angabe des Wizards. Ältere Clients senden hier noch das Label als String. */
+  dietaryPreference: z.union([nutritionPreferenceSchema, z.string()]).nullable().optional(),
+  dietaryPreferenceStrictness: z.string().nullable().optional(),
   dietary: z.array(dietarySchema),
   notes: z.string().nullable(),
   photoConsent: z.boolean(),
@@ -121,8 +147,29 @@ export async function POST(request: NextRequest) {
   const educationUniversityName = normalizeNullableString(data.educationUniversityName);
   const educationOtherDescription = normalizeNullableString(data.educationOtherDescription);
   const notes = normalizeNullableString(data.notes);
-  const dietaryPreference = normalizeNullableString(data.dietaryPreference);
-  const dietaryPreferenceStrictness = normalizeString(data.dietaryPreferenceStrictness ?? "");
+  // Das Profil speichert Labels (Entscheidung E1 im Plan). Beide Payload-Formen werden hier auf
+  // dieselben drei Labels gebracht, damit der Bestand einheitlich bleibt.
+  const dietary = (() => {
+    const structured = data.dietaryPreference;
+    if (structured && typeof structured === "object") {
+      return {
+        preference: resolveDietaryStyleLabel(structured.style, structured.customLabel).label,
+        variant: resolveDietaryVariantLabel(structured.style, structured.variant),
+        strictness: resolveDietaryStrictnessLabel(structured.style, structured.strictness),
+      };
+    }
+    const { style, customLabel } = parseDietaryStyleFromLabel(
+      typeof structured === "string" ? structured : null,
+    );
+    return {
+      preference: resolveDietaryStyleLabel(style, customLabel).label,
+      variant: null,
+      strictness: resolveDietaryStrictnessLabel(
+        style,
+        parseDietaryStrictnessFromLabel(data.dietaryPreferenceStrictness),
+      ),
+    };
+  })();
 
   const preferences = data.preferences.map((preference) => ({
     code: normalizeString(preference.code),
@@ -132,7 +179,10 @@ export async function POST(request: NextRequest) {
 
   const dietaryEntries = data.dietary.map((entry) => ({
     allergen: normalizeString(entry.allergen),
-    level: normalizeString(entry.level),
+    level: entry.level,
+    kind: entry.kind,
+    tracesOk: entry.tracesOk,
+    diagnosed: entry.diagnosed,
     symptoms: normalizeNullableString(entry.symptoms),
     treatment: normalizeNullableString(entry.treatment),
     note: normalizeNullableString(entry.note),
@@ -244,8 +294,9 @@ export async function POST(request: NextRequest) {
           educationOtherDescription,
           ...legacyBackground,
           notes,
-          dietaryPreference,
-          dietaryPreferenceStrictness: dietaryPreferenceStrictness,
+          dietaryPreference: dietary.preference,
+          dietaryPreferenceVariant: dietary.variant,
+          dietaryPreferenceStrictness: dietary.strictness,
         },
         create: {
           userId,
@@ -258,8 +309,9 @@ export async function POST(request: NextRequest) {
           educationOtherDescription,
           ...legacyBackground,
           notes,
-          dietaryPreference,
-          dietaryPreferenceStrictness: dietaryPreferenceStrictness,
+          dietaryPreference: dietary.preference,
+          dietaryPreferenceVariant: dietary.variant,
+          dietaryPreferenceStrictness: dietary.strictness,
         },
         select: { id: true, focus: true },
       });
@@ -268,8 +320,9 @@ export async function POST(request: NextRequest) {
         const now = new Date();
         const profileSnapshot = buildProfileSnapshot(
           {
-            dietaryPreference,
-            dietaryPreferenceStrictness,
+            dietaryPreference: dietary.preference,
+            dietaryPreferenceVariant: dietary.variant,
+            dietaryPreferenceStrictness: dietary.strictness,
             dietary: uniqueDietaryEntries,
             preferences,
             photoConsent: data.photoConsent,
@@ -322,7 +375,10 @@ export async function POST(request: NextRequest) {
               },
             },
             update: {
-              level: entry.level as AllergyLevel,
+              level: entry.level,
+              kind: entry.kind,
+              tracesOk: entry.tracesOk,
+              diagnosed: entry.diagnosed,
               symptoms: entry.symptoms,
               treatment: entry.treatment,
               note: entry.note,
@@ -331,7 +387,10 @@ export async function POST(request: NextRequest) {
             create: {
               userId,
               allergen: entry.allergen,
-              level: entry.level as AllergyLevel,
+              level: entry.level,
+              kind: entry.kind,
+              tracesOk: entry.tracesOk,
+              diagnosed: entry.diagnosed,
               symptoms: entry.symptoms,
               treatment: entry.treatment,
               note: entry.note,

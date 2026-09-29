@@ -43,6 +43,25 @@ Fotoerlaubnis) sowie Rückkehrer-Aktualisierung und Talentprofile.
   Rückkehrer-Wizard auch die Interessen ab (optionales Feld `interests`, gespeichert über
   `src/lib/profil/interests.ts`).
 
+## Ernährung & Allergien
+
+- Beide Wizards nutzen dieselben Listen wie das Profil: `src/data/dietary-preferences.ts`
+  (Stil, Unterform nur bei vegetarisch, Strengegrad) und `src/data/allergens.ts`
+  (Vorschlagsliste, Art des Eintrags). Der Erstanmeldungs-Wizard bietet die Unterform und die
+  Art/Spuren/Angabe „ärztlich abgeklärt" je Eintrag an, der Rückkehrer-Wizard ebenso.
+- Der Schweregrad kommt aus `src/data/allergy-styles.ts` (`ALLERGY_LEVEL_OPTIONS`: Leicht, Mittel,
+  Schwer, Lebensbedrohlich). Die früheren eigenen Wörter des Rückkehrer-Wizards („Stark",
+  „Kritisch") sind entfallen.
+- `POST /api/onboarding/update` erhält den Stil strukturiert:
+  `dietaryPreference: { style, variant, customLabel, strictness }`. Die alten Felder
+  (`dietaryPreference` als Label-String, `dietaryPreferenceStrictness`) werden weiterhin
+  angenommen und auf dieselben Labels abgebildet – das Profil speichert Labels, nicht Codes.
+  Jeder Allergie-Eintrag trägt zusätzlich `kind`, `tracesOk` und `diagnosed`.
+- `POST /api/onboarding/complete` prüft den Stil mit demselben Schema; `none` und `custom` aus
+  älteren Clients werden vor der Prüfung übersetzt.
+- Der Profil-Snapshot (`buildProfileSnapshot`) steht auf Version 2 und enthält neben Stil und
+  Strengegrad auch die Unterform sowie je Allergie Art, Spuren und Abklärung.
+
 ## Rollen- und Gewerkewünsche
 
 - Onboarding, Rückkehrer-Wizard und Profil nutzen dieselbe kompakte Zeile

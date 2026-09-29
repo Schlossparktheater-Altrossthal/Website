@@ -459,6 +459,7 @@ async function computeOnboardingDashboardData(
                   backgroundClass: true,
                   notes: true,
                   dietaryPreference: true,
+                  dietaryPreferenceVariant: true,
                   dietaryPreferenceStrictness: true,
                   memberSinceYear: true,
                 },
@@ -489,6 +490,7 @@ async function computeOnboardingDashboardData(
       backgroundClass: profile?.backgroundClass ?? null,
       notes: profile?.notes ?? null,
       dietaryPreference: profile?.dietaryPreference ?? null,
+      dietaryPreferenceVariant: profile?.dietaryPreferenceVariant ?? null,
       dietaryPreferenceStrictness: profile?.dietaryPreferenceStrictness ?? null,
       memberSinceYear: profile?.memberSinceYear ?? null,
     };
@@ -916,7 +918,12 @@ async function computeOnboardingDashboardData(
         backgroundClass: profile.backgroundClass ?? null,
         rolesActing: actingRoles,
         rolesCrew: crewRoles,
-        diet: profile.dietaryPreference ?? null,
+        // Für die Küche zählt die Unterform: „Vegetarisch" allein sagt nicht, ob Ei und Milch
+        // auf den Teller dürfen.
+        diet:
+          [profile.dietaryPreference, profile.dietaryPreferenceVariant]
+            .filter((value): value is string => Boolean(value))
+            .join(" · ") || null,
         allergies: allergiesList,
         photoConsent: {
           status: consentState,

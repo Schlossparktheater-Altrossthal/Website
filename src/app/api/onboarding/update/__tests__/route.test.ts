@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   consentUpsert: vi.fn(),
   membershipUpsert: vi.fn(),
   onboardingUpsert: vi.fn(),
+  profileUpsert: vi.fn(),
+  restrictionUpsert: vi.fn(),
+  restrictionUpdateMany: vi.fn(),
   userUpdate: vi.fn(),
   sync: vi.fn(),
   syncRoles: vi.fn(),
@@ -33,11 +36,14 @@ vi.mock("@/lib/member-invites", () => ({
 vi.mock("@/lib/prisma", () => {
   const tx = {
     memberOnboardingProfile: {
-      upsert: vi.fn().mockResolvedValue({ id: "profile-1", focus: "tech" }),
+      upsert: mocks.profileUpsert.mockResolvedValue({ id: "profile-1", focus: "tech" }),
     },
     productionOnboarding: { upsert: mocks.onboardingUpsert },
     memberRolePreference: { deleteMany: vi.fn(), createMany: vi.fn() },
-    dietaryRestriction: { upsert: vi.fn(), updateMany: vi.fn() },
+    dietaryRestriction: {
+      upsert: mocks.restrictionUpsert,
+      updateMany: mocks.restrictionUpdateMany,
+    },
     photoConsent: { upsert: mocks.consentUpsert },
     productionMembership: { upsert: mocks.membershipUpsert },
     user: { update: mocks.userUpdate },
@@ -66,9 +72,9 @@ const payload = {
   photoConsent: true,
 };
 
-function request(onboardingToken?: string) {
+function request(onboardingToken?: string, overrides: Record<string, unknown> = {}) {
   const formData = new FormData();
-  formData.set("payload", JSON.stringify(payload));
+  formData.set("payload", JSON.stringify({ ...payload, ...overrides }));
   if (onboardingToken) formData.set("onboardingToken", onboardingToken);
   return { formData: async () => formData } as NextRequest;
 }
@@ -234,6 +240,100 @@ describe("Rückkehrer-Onboarding: Einladung verbrauchen", () => {
     await POST(request());
 
     expect(mocks.inviteUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("Rückkehrer-Onboarding: Ernährung und Allergien", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.inviteFindUnique.mockResolvedValue({ id: "invite-1", showId: "show-2027" });
+    mocks.getActiveProductionId.mockResolvedValue("show-2026");
+  });
+
+  it("übersetzt den strukturierten Stil in die gespeicherten Labels", async () => {
+    await POST(
+      request("token-abc", {
+        dietaryPreference: {
+          style: "vegetarian",
+          variant: "lacto",
+          customLabel: null,
+          strictness: "strict",
+        },
+      }),
+    );
+
+    expect(mocks.profileUpsert.mock.calls[0][0].update).toMatchObject({
+      dietaryPreference: "Vegetarisch",
+      dietaryPreferenceVariant: "Nur Milch, kein Ei",
+      dietaryPreferenceStrictness: "Strikt – keine Ausnahmen",
+    });
+    expect(mocks.onboardingUpsert.mock.calls[0][0].create.profileSnapshot).toMatchObject({
+      dietaryPreference: "Vegetarisch",
+      dietaryPreferenceVariant: "Nur Milch, kein Ei",
+    });
+  });
+
+  it("nimmt weiterhin die alten Label-Felder an", async () => {
+    await POST(
+      request("token-abc", {
+        dietaryPreference: "Vegan",
+        dietaryPreferenceStrictness: "Situationsabhängig / nach Rücksprache",
+      }),
+    );
+
+    expect(mocks.profileUpsert.mock.calls[0][0].update).toMatchObject({
+      dietaryPreference: "Vegan",
+      dietaryPreferenceVariant: null,
+      dietaryPreferenceStrictness: "Situationsabhängig / nach Rücksprache",
+    });
+  });
+
+  it("speichert Art, Spuren und Abklärung je Eintrag", async () => {
+    await POST(
+      request("token-abc", {
+        dietary: [
+          {
+            allergen: "Erdnüsse",
+            level: "SEVERE",
+            kind: "ALLERGY",
+            tracesOk: false,
+            diagnosed: true,
+            symptoms: null,
+            treatment: null,
+            note: null,
+          },
+        ],
+      }),
+    );
+
+    expect(mocks.restrictionUpsert.mock.calls[0][0].create).toMatchObject({
+      allergen: "Erdnüsse",
+      level: "SEVERE",
+      kind: "ALLERGY",
+      tracesOk: false,
+      diagnosed: true,
+      isActive: true,
+    });
+  });
+
+  it("weist einen unbekannten Schweregrad ab", async () => {
+    const response = await POST(
+      request("token-abc", {
+        dietary: [
+          {
+            allergen: "Erdnüsse",
+            level: "Stark",
+            symptoms: null,
+            treatment: null,
+            note: null,
+          },
+        ],
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(mocks.restrictionUpsert).not.toHaveBeenCalled();
   });
 });
 

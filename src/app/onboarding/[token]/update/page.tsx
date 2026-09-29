@@ -27,12 +27,16 @@ type ExistingProfile = {
   focus: string | null;
   notes: string | null;
   dietaryPreference: string | null;
+  dietaryPreferenceVariant: string | null;
   dietaryPreferenceStrictness: string | null;
 };
 
 type ExistingDietary = {
   allergen: string;
   level: string;
+  kind: string;
+  tracesOk: boolean | null;
+  diagnosed: boolean;
   symptoms: string | null;
   treatment: string | null;
   note: string | null;
@@ -167,6 +171,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         focus: true,
         notes: true,
         dietaryPreference: true,
+        dietaryPreferenceVariant: true,
         dietaryPreferenceStrictness: true,
       },
     }),
@@ -175,6 +180,9 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
       select: {
         allergen: true,
         level: true,
+        kind: true,
+        tracesOk: true,
+        diagnosed: true,
         symptoms: true,
         treatment: true,
         note: true,
@@ -208,12 +216,16 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     focus: existingProfile?.focus ?? null,
     notes: existingProfile?.notes ?? null,
     dietaryPreference: existingProfile?.dietaryPreference ?? null,
+    dietaryPreferenceVariant: existingProfile?.dietaryPreferenceVariant ?? null,
     dietaryPreferenceStrictness: existingProfile?.dietaryPreferenceStrictness ?? null,
   };
 
   const dietary: ExistingDietary[] = existingDietary.map((entry) => ({
     allergen: entry.allergen,
     level: entry.level,
+    kind: entry.kind,
+    tracesOk: entry.tracesOk,
+    diagnosed: entry.diagnosed,
     symptoms: entry.symptoms,
     treatment: entry.treatment,
     note: entry.note,

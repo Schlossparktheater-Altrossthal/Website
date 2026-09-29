@@ -1,4 +1,9 @@
-import type { AllergyLevel, OnboardingFocus, RolePreferenceDomain } from "@prisma/client";
+import type {
+  AllergyLevel,
+  OnboardingFocus,
+  RestrictionKind,
+  RolePreferenceDomain,
+} from "@prisma/client";
 
 import type {
   OnboardingAnalytics,
@@ -195,6 +200,7 @@ const TALENT_PROFILES: OnboardingTalentProfile[] = [
     createdAt: "2024-03-12T18:24:00.000Z",
     completedAt: "2024-03-18T11:02:00.000Z",
     dietaryPreference: "Vegetarisch",
+    dietaryPreferenceVariant: "Nur Milch, kein Ei",
     dietaryPreferenceStrictness: "Flexibel",
     preferences: [
       { code: "acting_lead", domain: "acting", weight: 9 },
@@ -203,8 +209,20 @@ const TALENT_PROFILES: OnboardingTalentProfile[] = [
     ],
     interests: ["Impro", "Tanz", "Bühnenbild"],
     dietaryRestrictions: [
-      { allergen: "Nüsse", level: "SEVERE" satisfies AllergyLevel },
-      { allergen: "Soja", level: "MILD" satisfies AllergyLevel },
+      {
+        allergen: "Nüsse",
+        level: "SEVERE" satisfies AllergyLevel,
+        kind: "ALLERGY" satisfies RestrictionKind,
+        tracesOk: false,
+        diagnosed: true,
+      },
+      {
+        allergen: "Soja",
+        level: "MILD" satisfies AllergyLevel,
+        kind: "INTOLERANCE" satisfies RestrictionKind,
+        tracesOk: null,
+        diagnosed: false,
+      },
     ],
     age: 24,
     hasPendingPhotoConsent: false,
@@ -227,13 +245,22 @@ const TALENT_PROFILES: OnboardingTalentProfile[] = [
     createdAt: "2024-03-10T09:14:00.000Z",
     completedAt: "2024-03-21T14:32:00.000Z",
     dietaryPreference: "Vegan",
+    dietaryPreferenceVariant: null,
     dietaryPreferenceStrictness: "Streng",
     preferences: [
       { code: "crew_stage", domain: "crew", weight: 8 },
       { code: "crew_costume", domain: "crew", weight: 6 },
     ],
     interests: ["Organisation", "Maske", "Bühnenbild"],
-    dietaryRestrictions: [{ allergen: "Gluten", level: "MODERATE" satisfies AllergyLevel }],
+    dietaryRestrictions: [
+      {
+        allergen: "Gluten",
+        level: "MODERATE" satisfies AllergyLevel,
+        kind: "INTOLERANCE" satisfies RestrictionKind,
+        tracesOk: false,
+        diagnosed: true,
+      },
+    ],
     age: 22,
     hasPendingPhotoConsent: true,
     requiresGuardianDocument: false,
@@ -255,6 +282,7 @@ const TALENT_PROFILES: OnboardingTalentProfile[] = [
     createdAt: "2023-08-22T16:45:00.000Z",
     completedAt: "2023-09-05T10:28:00.000Z",
     dietaryPreference: "Omnivor",
+    dietaryPreferenceVariant: null,
     dietaryPreferenceStrictness: null,
     preferences: [
       { code: "acting_support", domain: "acting", weight: 7 },
@@ -283,10 +311,19 @@ const TALENT_PROFILES: OnboardingTalentProfile[] = [
     createdAt: "2023-08-30T12:10:00.000Z",
     completedAt: null,
     dietaryPreference: "Vegetarisch",
+    dietaryPreferenceVariant: null,
     dietaryPreferenceStrictness: "Locker",
     preferences: [{ code: "acting_support", domain: "acting", weight: 6 }],
     interests: ["Gesang", "Requisite"],
-    dietaryRestrictions: [{ allergen: "Milch", level: "MILD" satisfies AllergyLevel }],
+    dietaryRestrictions: [
+      {
+        allergen: "Milch",
+        level: "MILD" satisfies AllergyLevel,
+        kind: "INTOLERANCE" satisfies RestrictionKind,
+        tracesOk: null,
+        diagnosed: false,
+      },
+    ],
     age: 17,
     hasPendingPhotoConsent: true,
     requiresGuardianDocument: true,

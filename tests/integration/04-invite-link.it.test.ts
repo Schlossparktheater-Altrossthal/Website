@@ -36,7 +36,15 @@ function signupPayload(sessionToken: string, email: string) {
     interests: [],
     dietaryPreference: { style: "vegan", strictness: "strict" },
     photoConsent: { consent: true, skipDocument: true },
-    dietary: [{ allergen: "Gluten", level: "MODERATE" }],
+    dietary: [
+      {
+        allergen: "Gluten",
+        level: "MODERATE",
+        kind: "INTOLERANCE",
+        tracesOk: false,
+        diagnosed: true,
+      },
+    ],
   };
 }
 
@@ -126,6 +134,22 @@ describe("Einladungslink einer neuen Produktion", () => {
       }),
     ).toMatchObject({ status: "pending", consentGiven: true });
     expect(await prisma.dietaryRestriction.count({ where: { userId: user.id } })).toBe(1);
+    expect(
+      await prisma.memberOnboardingProfile.findUniqueOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({
+      dietaryPreference: "Vegan",
+      dietaryPreferenceVariant: null,
+      dietaryPreferenceStrictness: "Strikt – keine Ausnahmen",
+    });
+    expect(
+      await prisma.dietaryRestriction.findFirstOrThrow({ where: { userId: user.id } }),
+    ).toMatchObject({
+      allergen: "Gluten",
+      level: "MODERATE",
+      kind: "INTOLERANCE",
+      tracesOk: false,
+      diagnosed: true,
+    });
 
     // Dieselbe Sitzung kann kein zweites Konto anlegen.
     const again = await completeOnboarding(

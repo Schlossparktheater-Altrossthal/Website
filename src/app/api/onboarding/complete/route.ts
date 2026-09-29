@@ -12,6 +12,13 @@ import { hashPassword } from "@/lib/password";
 import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { combineNameParts } from "@/lib/names";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
+import {
+  dietaryPreferenceSchema,
+  resolveDietaryStrictnessLabel,
+  resolveDietaryStyleLabel,
+  resolveDietaryVariantLabel,
+} from "@/data/dietary-preferences";
+import { ALLERGEN_KIND_VALUES } from "@/data/allergens";
 import { broadcastOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard-events";
 import { signatureSubmissionSchema, type SignaturePayload } from "@/types/signature";
 
@@ -30,28 +37,6 @@ const genderOptionLabels = {
 
 type GenderOption = keyof typeof genderOptionLabels;
 
-const dietaryStyleLabels = {
-  none: "Allesesser",
-  omnivore: "Allesesser",
-  vegetarian: "Vegetarisch",
-  vegan: "Vegan",
-  pescetarian: "Pescetarisch",
-  flexitarian: "Flexitarisch",
-  halal: "Halal",
-  kosher: "Koscher",
-  custom: "Individueller Stil",
-} as const;
-
-type DietaryStyleOption = keyof typeof dietaryStyleLabels;
-
-const dietaryStrictnessLabels = {
-  strict: "Strikt – keine Ausnahmen",
-  flexible: "Flexibel – kleine Ausnahmen sind möglich",
-  situational: "Situationsabhängig / nach Rücksprache",
-} as const;
-
-type DietaryStrictnessOption = keyof typeof dietaryStrictnessLabels;
-
 const educationCategorySchema = z.enum([
   "school_bsz",
   "school_other",
@@ -69,6 +54,9 @@ const preferenceSchema = z.object({
 const dietarySchema = z.object({
   allergen: z.string().min(2),
   level: z.enum(["MILD", "MODERATE", "SEVERE", "LETHAL"]),
+  kind: z.enum(ALLERGEN_KIND_VALUES).optional().default("ALLERGY"),
+  tracesOk: z.boolean().nullable().optional().default(null),
+  diagnosed: z.boolean().optional().default(false),
   symptoms: z.string().optional().nullable(),
   treatment: z.string().optional().nullable(),
   note: z.string().optional().nullable(),
@@ -92,34 +80,22 @@ const genderSchema = z
     }
   });
 
-const dietaryPreferenceSchema = z
-  .object({
-    style: z.enum([
-      "none",
-      "omnivore",
-      "vegetarian",
-      "vegan",
-      "pescetarian",
-      "flexitarian",
-      "halal",
-      "kosher",
-      "custom",
-    ]),
-    custom: z.string().max(120).optional().nullable(),
-    strictness: z.enum(["strict", "flexible", "situational"]),
-  })
-  .superRefine((value, ctx) => {
-    if (value.style === "custom") {
-      const custom = value.custom?.trim() ?? "";
-      if (!custom) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["custom"],
-          message: "Bitte beschreibe deinen Ernährungsstil.",
-        });
-      }
-    }
-  });
+/**
+ * Die Stil-Liste kommt aus `@/data/dietary-preferences`, damit Wizard und Profil dieselbe Quelle
+ * nutzen. Zwei Altwerte werden vor der Prüfung übersetzt: `none` war gleichbedeutend mit
+ * „Allesesser", und der Freitext hieß früher `custom` statt `customLabel`.
+ */
+const nutritionPreferenceSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const record: Record<string, unknown> = { ...value };
+  if (record.style === "none") {
+    record.style = "omnivore";
+  }
+  if (record.customLabel == null && typeof record.custom === "string") {
+    record.customLabel = record.custom;
+  }
+  return record;
+}, dietaryPreferenceSchema);
 
 const payloadSchema = z.object({
   sessionToken: z.string().min(16),
@@ -140,7 +116,7 @@ const payloadSchema = z.object({
   focus: z.enum(["acting", "tech", "both"]),
   preferences: z.array(preferenceSchema),
   interests: z.array(z.string().min(1)).max(MAX_INTERESTS_PER_USER),
-  dietaryPreference: dietaryPreferenceSchema,
+  dietaryPreference: nutritionPreferenceSchema,
   photoConsent: z
     .object({
       consent: z.boolean(),
@@ -225,6 +201,9 @@ export async function POST(request: NextRequest) {
   const dietaryRaw = payload.dietary.map((entry) => ({
     allergen: entry.allergen.trim(),
     level: entry.level,
+    kind: entry.kind,
+    tracesOk: entry.tracesOk,
+    diagnosed: entry.diagnosed,
     symptoms: normalizeString(entry.symptoms),
     treatment: normalizeString(entry.treatment),
     note: normalizeString(entry.note),
@@ -251,20 +230,18 @@ export async function POST(request: NextRequest) {
   const memberSinceYear = payload.memberSinceYear ?? null;
 
   const dietaryPreference = payload.dietaryPreference;
-  const dietaryStyleOption = dietaryPreference.style as DietaryStyleOption;
-  const dietaryCustom = normalizeString(dietaryPreference.custom);
-  const dietaryStyleLabel =
-    dietaryStyleOption === "custom"
-      ? dietaryCustom
-      : (dietaryStyleLabels[dietaryStyleOption] ?? null);
-  const dietaryStyleDisplay = dietaryStyleLabel ?? dietaryStyleLabels.none;
-
-  const dietaryStrictnessOption = dietaryPreference.strictness as DietaryStrictnessOption;
-  const dietaryStrictnessLabel = dietaryStrictnessLabels[dietaryStrictnessOption];
-  const isBaselineDietaryStyle = dietaryStyleOption === "none" || dietaryStyleOption === "omnivore";
-  const dietaryStrictnessDisplay = isBaselineDietaryStyle
-    ? "Nicht relevant"
-    : dietaryStrictnessLabel;
+  const { label: dietaryStyleDisplay } = resolveDietaryStyleLabel(
+    dietaryPreference.style,
+    dietaryPreference.customLabel,
+  );
+  const dietaryVariantDisplay = resolveDietaryVariantLabel(
+    dietaryPreference.style,
+    dietaryPreference.variant,
+  );
+  const dietaryStrictnessDisplay = resolveDietaryStrictnessLabel(
+    dietaryPreference.style,
+    dietaryPreference.strictness,
+  );
 
   let dateOfBirth: Date | null = null;
   if (payload.dateOfBirth) {
@@ -396,10 +373,12 @@ export async function POST(request: NextRequest) {
     preferences,
     interests,
     dietaryPreference: {
-      style: dietaryStyleOption,
+      style: dietaryPreference.style,
       label: dietaryStyleDisplay,
-      custom: dietaryCustom,
-      strictness: dietaryStrictnessOption,
+      customLabel: dietaryPreference.customLabel,
+      variant: dietaryPreference.variant ?? null,
+      variantLabel: dietaryVariantDisplay,
+      strictness: dietaryPreference.strictness,
       strictnessLabel: dietaryStrictnessDisplay,
     },
     dietary,
@@ -486,6 +465,7 @@ export async function POST(request: NextRequest) {
           gender: genderDisplay,
           memberSinceYear: memberSinceYear ?? undefined,
           dietaryPreference: dietaryStyleDisplay,
+          dietaryPreferenceVariant: dietaryVariantDisplay,
           dietaryPreferenceStrictness: dietaryStrictnessDisplay,
           whatsappLinkVisitedAt: whatsappLinkVisitedAt ?? undefined,
         },
@@ -503,6 +483,7 @@ export async function POST(request: NextRequest) {
           whatsappLinkVisitedAt: whatsappLinkVisitedAt ?? undefined,
           profileSnapshot: buildProfileSnapshot({
             dietaryPreference: dietaryStyleDisplay,
+            dietaryPreferenceVariant: dietaryVariantDisplay,
             dietaryPreferenceStrictness: dietaryStrictnessDisplay,
             dietary,
             preferences,
@@ -585,6 +566,9 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             allergen: entry.allergen,
             level: entry.level,
+            kind: entry.kind,
+            tracesOk: entry.tracesOk,
+            diagnosed: entry.diagnosed,
             symptoms: entry.symptoms,
             treatment: entry.treatment,
             note: entry.note,

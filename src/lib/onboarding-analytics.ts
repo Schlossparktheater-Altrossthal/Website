@@ -1,4 +1,9 @@
-import type { AllergyLevel, OnboardingFocus, RolePreferenceDomain } from "@prisma/client";
+import type {
+  AllergyLevel,
+  OnboardingFocus,
+  RestrictionKind,
+  RolePreferenceDomain,
+} from "@prisma/client";
 import { CURRENT_PRODUCTION_STATUSES, currentMembershipWhere } from "@/lib/produktionen/status";
 
 import { prisma } from "@/lib/prisma";
@@ -75,10 +80,17 @@ export type OnboardingTalentProfile = {
   createdAt: string;
   completedAt: string | null;
   dietaryPreference: string | null;
+  dietaryPreferenceVariant: string | null;
   dietaryPreferenceStrictness: string | null;
   preferences: { code: string; domain: RolePreferenceDomain; weight: number }[];
   interests: string[];
-  dietaryRestrictions: { allergen: string; level: AllergyLevel }[];
+  dietaryRestrictions: {
+    allergen: string;
+    level: AllergyLevel;
+    kind: RestrictionKind;
+    tracesOk: boolean | null;
+    diagnosed: boolean;
+  }[];
   age: number | null;
   hasPendingPhotoConsent: boolean;
   requiresGuardianDocument: boolean;
@@ -202,6 +214,7 @@ export async function collectOnboardingAnalytics(
                 gender: true,
                 memberSinceYear: true,
                 dietaryPreference: true,
+                dietaryPreferenceVariant: true,
                 dietaryPreferenceStrictness: true,
               },
             },
@@ -238,7 +251,14 @@ export async function collectOnboardingAnalytics(
     }),
     prisma.dietaryRestriction.findMany({
       where: { isActive: true },
-      select: { userId: true, allergen: true, level: true },
+      select: {
+        userId: true,
+        allergen: true,
+        level: true,
+        kind: true,
+        tracesOk: true,
+        diagnosed: true,
+      },
     }),
     prisma.photoConsent.count({ where: { status: "pending", revokedAt: null } }),
   ]);
@@ -361,10 +381,25 @@ export async function collectOnboardingAnalytics(
     .map((group) => ({ level: group.level, count: group._count.level }))
     .sort((a, b) => b.count - a.count);
 
-  const dietaryByUser = new Map<string, { allergen: string; level: AllergyLevel }[]>();
+  const dietaryByUser = new Map<
+    string,
+    {
+      allergen: string;
+      level: AllergyLevel;
+      kind: RestrictionKind;
+      tracesOk: boolean | null;
+      diagnosed: boolean;
+    }[]
+  >();
   for (const entry of dietaryDetails) {
     const list = dietaryByUser.get(entry.userId) ?? [];
-    list.push({ allergen: entry.allergen, level: entry.level });
+    list.push({
+      allergen: entry.allergen,
+      level: entry.level,
+      kind: entry.kind,
+      tracesOk: entry.tracesOk,
+      diagnosed: entry.diagnosed,
+    });
     dietaryByUser.set(entry.userId, list);
   }
   for (const [userId, list] of dietaryByUser) {
@@ -405,6 +440,7 @@ export async function collectOnboardingAnalytics(
       gender: current?.gender ?? null,
       memberSinceYear: current?.memberSinceYear ?? null,
       dietaryPreference: current?.dietaryPreference ?? null,
+      dietaryPreferenceVariant: current?.dietaryPreferenceVariant ?? null,
       dietaryPreferenceStrictness: current?.dietaryPreferenceStrictness ?? null,
     };
   });
@@ -493,6 +529,7 @@ export async function collectOnboardingAnalytics(
         createdAt: profile.createdAt.toISOString(),
         completedAt: completedAt ? completedAt.toISOString() : null,
         dietaryPreference: profile.dietaryPreference?.trim() || null,
+        dietaryPreferenceVariant: profile.dietaryPreferenceVariant?.trim() || null,
         dietaryPreferenceStrictness: profile.dietaryPreferenceStrictness?.trim() || null,
         preferences,
         interests: interestsForUser,

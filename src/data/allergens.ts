@@ -9,8 +9,18 @@ export const ALLERGEN_KIND_LABELS: Record<RestrictionKind, string> = {
   OTHER: "Sonstiges",
 };
 
+/**
+ * Die Werte des Prisma-Enums als Tupel – Schemas (zod) brauchen eine feste Aufzählung, die sie
+ * aus einem Typparameter allein nicht bekommen. `satisfies` hält die Liste am Enum.
+ */
+export const ALLERGEN_KIND_VALUES = [
+  "ALLERGY",
+  "INTOLERANCE",
+  "OTHER",
+] as const satisfies readonly RestrictionKind[];
+
 export const ALLERGEN_KIND_OPTIONS: readonly { value: RestrictionKind; label: string }[] =
-  Object.values(RestrictionKind).map((value) => ({ value, label: ALLERGEN_KIND_LABELS[value] }));
+  ALLERGEN_KIND_VALUES.map((value) => ({ value, label: ALLERGEN_KIND_LABELS[value] }));
 
 export type AllergenCatalogEntry = {
   value: string;

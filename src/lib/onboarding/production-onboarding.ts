@@ -1,13 +1,20 @@
 import type { Prisma } from "@prisma/client";
 
-export const PROFILE_SNAPSHOT_VERSION = 1;
+export const PROFILE_SNAPSHOT_VERSION = 2;
 
 export type ProfileSnapshotInput = {
   dietaryPreference: string | null;
+  /** Unterform des Stils (nur vegetarisch), sonst null. */
+  dietaryPreferenceVariant: string | null;
   dietaryPreferenceStrictness: string | null;
   dietary: ReadonlyArray<{
     allergen: string;
     level: string;
+    /** Allergie, Unverträglichkeit oder Sonstiges (`RestrictionKind`). */
+    kind: string;
+    /** `false` heißt nachweislich spurenfrei, `null` noch nicht abgeklärt. */
+    tracesOk: boolean | null;
+    diagnosed: boolean;
     symptoms?: string | null;
     treatment?: string | null;
     note?: string | null;
@@ -37,10 +44,14 @@ export function buildProfileSnapshot(
     version: PROFILE_SNAPSHOT_VERSION,
     confirmedAt: now.toISOString(),
     dietaryPreference: input.dietaryPreference,
+    dietaryPreferenceVariant: input.dietaryPreferenceVariant,
     dietaryPreferenceStrictness: input.dietaryPreferenceStrictness,
     dietary: input.dietary.map((entry) => ({
       allergen: entry.allergen,
       level: entry.level,
+      kind: entry.kind,
+      tracesOk: entry.tracesOk,
+      diagnosed: entry.diagnosed,
       symptoms: entry.symptoms ?? null,
       treatment: entry.treatment ?? null,
       note: entry.note ?? null,

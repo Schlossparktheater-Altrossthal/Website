@@ -5,6 +5,9 @@ import { needsDietaryConfirmation } from "../returnee-update-wizard";
 const allergy = {
   allergen: "Erdnüsse",
   level: "SEVERE",
+  kind: "ALLERGY",
+  tracesOk: null,
+  diagnosed: false,
   symptoms: null,
   treatment: null,
   note: null,

@@ -9,8 +9,18 @@ describe("buildProfileSnapshot", () => {
     const snapshot = buildProfileSnapshot(
       {
         dietaryPreference: "Vegetarisch",
+        dietaryPreferenceVariant: "Nur Milch, kein Ei",
         dietaryPreferenceStrictness: "streng",
-        dietary: [{ allergen: "Erdnüsse", level: "SEVERE" }],
+        dietary: [
+          {
+            allergen: "Erdnüsse",
+            level: "SEVERE",
+            kind: "ALLERGY",
+            tracesOk: false,
+            diagnosed: true,
+            note: "Nur Spuren",
+          },
+        ],
         preferences: [
           { code: "licht", domain: "crew", weight: 3 },
           { code: "ton", domain: "crew", weight: 0 },
@@ -24,9 +34,19 @@ describe("buildProfileSnapshot", () => {
       version: PROFILE_SNAPSHOT_VERSION,
       confirmedAt: "2026-09-23T12:00:00.000Z",
       dietaryPreference: "Vegetarisch",
+      dietaryPreferenceVariant: "Nur Milch, kein Ei",
       dietaryPreferenceStrictness: "streng",
       dietary: [
-        { allergen: "Erdnüsse", level: "SEVERE", symptoms: null, treatment: null, note: null },
+        {
+          allergen: "Erdnüsse",
+          level: "SEVERE",
+          kind: "ALLERGY",
+          tracesOk: false,
+          diagnosed: true,
+          symptoms: null,
+          treatment: null,
+          note: "Nur Spuren",
+        },
       ],
       preferences: [{ code: "licht", domain: "crew", weight: 3 }],
       photoConsent: true,
@@ -35,10 +55,46 @@ describe("buildProfileSnapshot", () => {
     });
   });
 
+  it("nimmt eine Sammelangabe ohne neue Felder weiter an", () => {
+    const snapshot = buildProfileSnapshot(
+      {
+        dietaryPreference: null,
+        dietaryPreferenceVariant: null,
+        dietaryPreferenceStrictness: null,
+        dietary: [
+          {
+            allergen: "Laktose",
+            level: "MILD",
+            kind: "INTOLERANCE",
+            tracesOk: null,
+            diagnosed: false,
+          },
+        ],
+        preferences: [],
+        photoConsent: null,
+      },
+      now,
+    );
+
+    expect(snapshot.dietary).toEqual([
+      {
+        allergen: "Laktose",
+        level: "MILD",
+        kind: "INTOLERANCE",
+        tracesOk: null,
+        diagnosed: false,
+        symptoms: null,
+        treatment: null,
+        note: null,
+      },
+    ]);
+  });
+
   it("übernimmt Ausbildungsangaben", () => {
     const snapshot = buildProfileSnapshot(
       {
         dietaryPreference: null,
+        dietaryPreferenceVariant: null,
         dietaryPreferenceStrictness: null,
         dietary: [],
         preferences: [],

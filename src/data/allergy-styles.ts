@@ -39,8 +39,16 @@ export const ALLERGY_LEVEL_LABELS: Record<AllergyLevel, string> = {
   LETHAL: "Lebensbedrohlich",
 };
 
+/** Die Werte des Prisma-Enums als Tupel, damit Schemas und Auswahllisten dieselbe Quelle nutzen. */
+export const ALLERGY_LEVEL_VALUES = [
+  "MILD",
+  "MODERATE",
+  "SEVERE",
+  "LETHAL",
+] as const satisfies readonly AllergyLevel[];
+
 export const ALLERGY_LEVEL_OPTIONS: readonly { value: AllergyLevel; label: string }[] =
-  Object.values(AllergyLevel).map((value) => ({ value, label: ALLERGY_LEVEL_LABELS[value] }));
+  ALLERGY_LEVEL_VALUES.map((value) => ({ value, label: ALLERGY_LEVEL_LABELS[value] }));
 
 /** Ein Allergeneintrag mit einer Angabe zu Spuren: „nicht angegeben" ist ein eigener Zustand. */
 export const ALLERGY_TRACES_OPTIONS = [

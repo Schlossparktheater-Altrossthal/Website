@@ -12,7 +12,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { AllergyLevel, type Role } from "@prisma/client";
+import { AllergyLevel, type RestrictionKind, type Role } from "@prisma/client";
 import { toast } from "sonner";
 
 import {
@@ -53,20 +53,28 @@ import {
 import {
   DIETARY_STYLE_OPTIONS,
   DIETARY_STRICTNESS_OPTIONS,
+  DIETARY_VARIANT_OPTIONS,
   DEFAULT_STRICTNESS,
   isStrictnessRelevant,
   resolveDietaryStyleLabel,
   resolveDietaryStrictnessLabel,
+  resolveDietaryVariantLabel,
+  supportsDietaryVariant,
   type DietaryStrictnessOption,
   type DietaryStyleOption,
+  type DietaryVariantOption,
 } from "@/data/dietary-preferences";
-import { ALLERGY_LEVEL_STYLES } from "@/data/allergy-styles";
-const allergyLevelLabels: Record<AllergyLevel, string> = {
-  MILD: "Leicht (Unbehagen)",
-  MODERATE: "Mittel (Reaktion möglich)",
-  SEVERE: "Stark (ärztliche Hilfe)",
-  LETHAL: "Kritisch (Notfall)",
-};
+import { ALLERGEN_KIND_LABELS, ALLERGEN_KIND_OPTIONS } from "@/data/allergens";
+import {
+  ALLERGY_LEVEL_LABELS,
+  ALLERGY_LEVEL_OPTIONS,
+  ALLERGY_LEVEL_STYLES,
+  ALLERGY_TRACES_OPTIONS,
+  fromAllergyTracesChoice,
+  type AllergyTracesChoice,
+} from "@/data/allergy-styles";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AllergenField } from "@/components/forms/allergen-field";
 
 const actingOptions = listRolePreferenceDefinitions("acting");
 const crewOptions = listRolePreferenceDefinitions("crew");
@@ -82,8 +90,6 @@ const genderOptions = [
 type GenderOption = (typeof genderOptions)[number]["value"];
 
 const CURRENT_YEAR = new Date().getFullYear();
-
-const allergyLevelStyles = ALLERGY_LEVEL_STYLES;
 
 const focusLabels: Record<"acting" | "tech" | "both", string> = {
   acting: "Schauspiel",
@@ -134,6 +140,9 @@ type DietaryEntry = {
   id: string;
   allergen: string;
   level: AllergyLevel;
+  kind: RestrictionKind;
+  tracesOk: boolean | null;
+  diagnosed: boolean;
   symptoms: string;
   treatment: string;
   note: string;
@@ -247,8 +256,9 @@ function createInitialFormState(variant: OnboardingWizardVariant) {
     crewPreferences: createInitialCrewPreferences(variant),
     interests: [] as string[],
     nutritionStyle: "omnivore" as DietaryStyleOption,
+    nutritionVariant: null as DietaryVariantOption | null,
     nutritionCustomStyle: "",
-    nutritionStrictness: "flexible" as DietaryStrictnessOption,
+    nutritionStrictness: DEFAULT_STRICTNESS as DietaryStrictnessOption,
     photoConsent: { consent: true, skipDocument: false },
     dietary: [] as DietaryEntry[],
   };
@@ -356,6 +366,9 @@ export function OnboardingWizard({
   const [dietaryDraft, setDietaryDraft] = useState({
     allergen: "",
     level: "MILD" as AllergyLevel,
+    kind: "ALLERGY" as RestrictionKind,
+    traces: "unset" as AllergyTracesChoice,
+    diagnosed: false,
     symptoms: "",
     treatment: "",
     note: "",
@@ -400,6 +413,11 @@ export function OnboardingWizard({
   const nutritionStrictnessLabel = useMemo(
     () => resolveDietaryStrictnessLabel(form.nutritionStyle, form.nutritionStrictness),
     [form.nutritionStrictness, form.nutritionStyle],
+  );
+
+  const nutritionVariantLabel = useMemo(
+    () => resolveDietaryVariantLabel(form.nutritionStyle, form.nutritionVariant),
+    [form.nutritionStyle, form.nutritionVariant],
   );
 
   const isAllesesser = !isStrictnessRelevant(form.nutritionStyle);
@@ -575,13 +593,25 @@ export function OnboardingWizard({
           id: createDietaryId(),
           allergen: trimmed,
           level: dietaryDraft.level,
+          kind: dietaryDraft.kind,
+          tracesOk: fromAllergyTracesChoice(dietaryDraft.traces),
+          diagnosed: dietaryDraft.diagnosed,
           symptoms: dietaryDraft.symptoms.trim(),
           treatment: dietaryDraft.treatment.trim(),
           note: dietaryDraft.note.trim(),
         },
       ],
     }));
-    setDietaryDraft({ allergen: "", level: "MILD", symptoms: "", treatment: "", note: "" });
+    setDietaryDraft({
+      allergen: "",
+      level: "MILD",
+      kind: "ALLERGY",
+      traces: "unset",
+      diagnosed: false,
+      symptoms: "",
+      treatment: "",
+      note: "",
+    });
   };
 
   const removeDietary = (id: string) => {
@@ -893,7 +923,8 @@ export function OnboardingWizard({
         interests: form.interests,
         dietaryPreference: {
           style: form.nutritionStyle,
-          custom: nutritionCustom || null,
+          variant: supportsDietaryVariant(form.nutritionStyle) ? form.nutritionVariant : null,
+          customLabel: nutritionCustom || null,
           strictness: form.nutritionStrictness,
         },
         photoConsent: {
@@ -904,6 +935,9 @@ export function OnboardingWizard({
         dietary: form.dietary.map((entry) => ({
           allergen: entry.allergen,
           level: entry.level,
+          kind: entry.kind,
+          tracesOk: entry.tracesOk,
+          diagnosed: entry.diagnosed,
           symptoms: entry.symptoms,
           treatment: entry.treatment,
           note: entry.note,
@@ -1068,7 +1102,7 @@ export function OnboardingWizard({
 
       <nav
         aria-label="Onboarding-Fortschritt"
-        className="max-w-full overflow-x-auto rounded-xl border border-border/60 bg-background/80 px-3 py-2 shadow-sm sm:overflow-visible sm:border-none sm:bg-transparent sm:px-0 sm:py-0 sm:shadow-none"
+        className="max-w-full overflow-x-auto rounded-xl border border-border/60 bg-background/80 px-3 py-2 shadow-sm xl:overflow-visible xl:border-none xl:bg-transparent xl:px-0 xl:py-0 xl:shadow-none"
       >
         <ol className="mx-auto flex list-none flex-wrap items-center gap-3 md:flex-nowrap lg:justify-center">
           {steps.map((item, index) => {
@@ -1663,6 +1697,9 @@ export function OnboardingWizard({
                         ...prev,
                         nutritionStyle: value as DietaryStyleOption,
                         nutritionCustomStyle: value === "custom" ? prev.nutritionCustomStyle : "",
+                        nutritionVariant: supportsDietaryVariant(value as DietaryStyleOption)
+                          ? prev.nutritionVariant
+                          : null,
                       }))
                     }
                   >
@@ -1691,6 +1728,36 @@ export function OnboardingWizard({
                     Ernährungsweisen hast.
                   </p>
                 </div>
+                {supportsDietaryVariant(form.nutritionStyle) && (
+                  <div className="space-y-2 text-sm">
+                    <span className="font-medium">Unterform</span>
+                    <Select
+                      value={form.nutritionVariant ?? "unset"}
+                      onValueChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          nutritionVariant:
+                            value === "unset" ? null : (value as DietaryVariantOption),
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="onboarding-dietary-variant">
+                        <SelectValue placeholder="Nicht angegeben" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unset">Nicht angegeben</SelectItem>
+                        {DIETARY_VARIANT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Gilt nur für Vegetarisch – Ei und Milch sind der Unterschied.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-2 text-sm">
                   <span className="font-medium">Wie konsequent hältst du dich daran?</span>
                   {isAllesesser ? (
@@ -1734,7 +1801,7 @@ export function OnboardingWizard({
             </div>
             <div className="grid gap-4">
               {form.dietary.map((entry) => {
-                const style = allergyLevelStyles[entry.level];
+                const style = ALLERGY_LEVEL_STYLES[entry.level];
                 const progress = style.intensity;
                 return (
                   <div
@@ -1748,14 +1815,27 @@ export function OnboardingWizard({
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-foreground">{entry.allergen}</p>
-                        <Badge className={cn("text-[11px]", style.badge)}>
-                          {allergyLevelLabels[entry.level]}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="text-[11px]">
+                            {ALLERGEN_KIND_LABELS[entry.kind]}
+                          </Badge>
+                          <Badge className={cn("text-[11px]", style.badge)}>
+                            {ALLERGY_LEVEL_LABELS[entry.level]}
+                          </Badge>
+                        </div>
                       </div>
                       <Button size="sm" variant="outline" onClick={() => removeDietary(entry.id)}>
                         Entfernen
                       </Button>
                     </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {entry.tracesOk === true
+                        ? "Spuren sind unproblematisch."
+                        : entry.tracesOk === false
+                          ? "Keine Spuren – strikt trennen."
+                          : "Spuren ungeklärt, wird strikt behandelt."}
+                      {entry.diagnosed ? " Ärztlich abgeklärt." : " Noch nicht abgeklärt."}
+                    </p>
                     {(entry.symptoms || entry.treatment || entry.note) && (
                       <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                         {entry.symptoms && (
@@ -1806,13 +1886,35 @@ export function OnboardingWizard({
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="space-y-1 text-sm">
                   <span>Auslöser / Gericht</span>
-                  <Input
+                  <AllergenField
                     value={dietaryDraft.allergen}
-                    onChange={(event) =>
-                      setDietaryDraft((prev) => ({ ...prev, allergen: event.target.value }))
+                    onChange={(value) => setDietaryDraft((prev) => ({ ...prev, allergen: value }))}
+                    onSelectEntry={(catalogEntry) =>
+                      setDietaryDraft((prev) => ({ ...prev, kind: catalogEntry.kind }))
                     }
+                    inputId="onboarding-dietary-allergen"
                     placeholder="z.B. Erdnüsse, Gluten, Laktose"
                   />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span>Art</span>
+                  <Select
+                    value={dietaryDraft.kind}
+                    onValueChange={(value: RestrictionKind) =>
+                      setDietaryDraft((prev) => ({ ...prev, kind: value }))
+                    }
+                  >
+                    <SelectTrigger id="onboarding-dietary-kind">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ALLERGEN_KIND_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 <label className="space-y-1 text-sm">
                   <span>Schweregrad</span>
@@ -1826,13 +1928,46 @@ export function OnboardingWizard({
                       <SelectValue placeholder="Wähle den Schweregrad" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(AllergyLevel).map((level) => (
-                        <SelectItem key={level} value={level}>
-                          {allergyLevelLabels[level]}
+                      {ALLERGY_LEVEL_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span>Spuren</span>
+                  <Select
+                    value={dietaryDraft.traces}
+                    onValueChange={(value: AllergyTracesChoice) =>
+                      setDietaryDraft((prev) => ({ ...prev, traces: value }))
+                    }
+                  >
+                    <SelectTrigger id="onboarding-dietary-traces">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ALLERGY_TRACES_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </label>
+              </div>
+              <div className="flex items-start gap-3 text-sm">
+                <Checkbox
+                  id="onboarding-dietary-diagnosed"
+                  checked={dietaryDraft.diagnosed}
+                  onCheckedChange={(checked) =>
+                    setDietaryDraft((prev) => ({ ...prev, diagnosed: checked === true }))
+                  }
+                />
+                <label htmlFor="onboarding-dietary-diagnosed">
+                  Ärztlich abgeklärt – die Angabe stammt aus einer Untersuchung, nicht aus einer
+                  Vermutung.
                 </label>
               </div>
               <div className="grid gap-3 md:grid-cols-3">
@@ -2131,6 +2266,12 @@ export function OnboardingWizard({
                       <dd className="font-medium text-foreground">{nutritionStrictnessLabel}</dd>
                     </div>
                   )}
+                  {nutritionVariantLabel && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">Unterform</dt>
+                      <dd className="font-medium text-foreground">{nutritionVariantLabel}</dd>
+                    </div>
+                  )}
                 </dl>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {isAllesesser
@@ -2140,7 +2281,7 @@ export function OnboardingWizard({
                 {form.dietary.length ? (
                   <div className="mt-3 space-y-3 text-sm">
                     {form.dietary.map((entry) => {
-                      const style = allergyLevelStyles[entry.level];
+                      const style = ALLERGY_LEVEL_STYLES[entry.level];
                       return (
                         <div
                           key={entry.id}
@@ -2148,8 +2289,11 @@ export function OnboardingWizard({
                         >
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground">{entry.allergen}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {ALLERGEN_KIND_LABELS[entry.kind]}
+                            </Badge>
                             <Badge className={cn("text-[10px]", style.badge)}>
-                              {allergyLevelLabels[entry.level]}
+                              {ALLERGY_LEVEL_LABELS[entry.level]}
                             </Badge>
                           </div>
                           {(entry.symptoms || entry.treatment || entry.note) && (
