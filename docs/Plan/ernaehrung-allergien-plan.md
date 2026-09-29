@@ -1,6 +1,6 @@
 # Plan: Ernährung & Allergien – Datenmodell, Eingabe und Darstellung
 
-Stand: 2026-09-29. Entwurf, noch keine Phase umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Phase 0 und 1 umgesetzt, offen Phase 2–7. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -146,8 +146,8 @@ Referenzseite, eine Pflichtauswahl aus dem Katalog.
 
 ## Checkliste
 
-- [ ] Phase 0 Plan abgelegt und im Index eingetragen
-- [ ] Phase 1 Datenmodell und Migration
+- [x] Phase 0 Plan abgelegt und im Index eingetragen
+- [x] Phase 1 Datenmodell und Migration
 - [ ] Phase 2 Zentrale Listen und Validierung
 - [ ] Phase 3 API und Backend
 - [ ] Phase 4 Profil-Oberfläche
