@@ -122,6 +122,7 @@ Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Ta
 ## Pläne, Studien & Analysen
 
 - **Jeder Plan liegt in `docs/Plan/`** – Entwürfe, Umbau-, Migrations- und Testpläne. Nichts Plan-artiges liegt direkt in `docs/` oder in anderen Ordnern. `docs/redesign-plan/` ist der einzige Ausnahmefall (Sprint-Notizen, kein Plan im Sinne dieser Regel).
+- **Ein Plan entsteht immer sofort als Datei in `docs/Plan/`** – auch ein Entwurf oder eine Zwischenfassung. Ein Plan wird nie nur im Chat oder in einer Sitzungs-/Arbeitsnotiz gehalten, sondern beim ersten Aufschreiben angelegt, im selben Schritt in `docs/Plan/README.md` eingetragen und committet. Gilt ausnahmslos für jeden Plan.
 - **Pläne werden nie gelöscht**, auch nicht nach der Umsetzung. Ein umgesetzter Plan bleibt als Entscheidungs- und Ergebnisarchiv liegen: `Stand:`-Zeile auf den neuen Status setzen (z. B. „umgesetzt am 2026-09-28"), Checkliste abhaken. Statt ein neues Dokument anzulegen wird der bestehende Plan fortgeschrieben – kein `…-plan-v2.md`.
 - **Studien, Analysen sowie Prüf- und Abschlussberichte** gehören nach `docs/Analysen/`. Technische Leitfäden (`docs/design-system.md`, `docs/development.md`, `docs/datenmodell.md`, `docs/e2e-tests.md` …) bleiben in `docs/`, ebenso die Seiten-Doku in `docs/seiten/`.
 - **Aufbau** (lebendes Beispiel: `docs/Plan/gewerke-plan.md`, Index und Vorlage: `docs/Plan/README.md`):
