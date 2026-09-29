@@ -24,6 +24,7 @@ import {
   ProfileClientProps,
   ProfileUser,
   Allergy,
+  Aversion,
   OnboardingProfile,
   isProfilePaymentComplete,
 } from "./profile-shared";
@@ -37,6 +38,7 @@ const EMPTY_ONBOARDING: OnboardingProfile = {
   notes: null,
   memberSinceYear: null,
   dietaryPreference: null,
+  dietaryPreferenceVariant: null,
   dietaryPreferenceStrictness: null,
   whatsappLinkVisitedAt: null,
   updatedAt: null,
@@ -51,6 +53,7 @@ export function ProfileClient({
   onboarding: initialOnboarding,
   interests: initialInterests,
   allergies: initialAllergies,
+  aversions: initialAversions,
   checklist: initialChecklist,
   rolePreferencesInheritedFrom,
   history,
@@ -74,6 +77,7 @@ export function ProfileClient({
   }, []);
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
+  const [aversions, setAversions] = useState<Aversion[]>(initialAversions);
   const [photoConsentGiven, setPhotoConsentGiven] = useState<boolean | undefined>(
     () => initialChecklist.items.find((item) => item.id === "photo-consent")?.complete,
   );
@@ -128,10 +132,15 @@ export function ProfileClient({
   );
 
   const handleDietaryUpdated = useCallback(
-    (preference: { label: string | null; strictnessLabel: string | null }) => {
+    (preference: {
+      label: string | null;
+      variantLabel: string | null;
+      strictnessLabel: string | null;
+    }) => {
       setOnboarding((prev) => ({
         ...(prev ?? EMPTY_ONBOARDING),
         dietaryPreference: preference.label,
+        dietaryPreferenceVariant: preference.variantLabel,
         dietaryPreferenceStrictness: preference.strictnessLabel,
       }));
     },
@@ -199,8 +208,12 @@ export function ProfileClient({
         missing: missing.has("ernaehrung"),
         summary: [
           onboarding?.dietaryPreference ?? "Ernährungsstil",
+          onboarding?.dietaryPreferenceVariant ?? null,
           allergies.length
             ? `${allergies.length} ${allergies.length === 1 ? "Allergie" : "Allergien"}`
+            : null,
+          aversions.length
+            ? `${aversions.length} ${aversions.length === 1 ? "Besonderheit" : "Besonderheiten"}`
             : null,
         ]
           .filter(Boolean)
@@ -228,6 +241,7 @@ export function ProfileClient({
     };
   }, [
     allergies.length,
+    aversions.length,
     interests,
     onboarding,
     rolePreferences,
@@ -248,6 +262,8 @@ export function ProfileClient({
             onboarding={onboarding}
             allergies={allergies}
             onAllergiesChange={setAllergies}
+            aversions={aversions}
+            onAversionsChange={setAversions}
             onDietaryUpdated={handleDietaryUpdated}
           />
         );

@@ -1,7 +1,11 @@
 import type { EducationPayload, EducationValue } from "@/lib/education/schools";
 import type { MemberHistory } from "@/lib/member-history";
 import { z } from "zod";
-import { type DietaryStrictnessOption, type DietaryStyleOption } from "@/data/dietary-preferences";
+import {
+  type DietaryStrictnessOption,
+  type DietaryStyleOption,
+  type DietaryVariantOption,
+} from "@/data/dietary-preferences";
 import {
   getRolePreferenceDescription,
   getRolePreferenceTitle,
@@ -11,7 +15,13 @@ import { normalizeRolePreferenceWeight } from "@/lib/onboarding/role-preference-
 import { isPaymentDetailsComplete, type ProfileCompletionSummary } from "@/lib/profile-completion";
 import { getUserDisplayName } from "@/lib/names";
 import type { OnboardingSummary } from "@/lib/onboarding/dashboard-schemas";
-import { AllergyLevel, type OnboardingFocus, type PayoutMethod, type Role } from "@prisma/client";
+import {
+  AllergyLevel,
+  RestrictionKind,
+  type OnboardingFocus,
+  type PayoutMethod,
+  type Role,
+} from "@prisma/client";
 import { type UpdateProfileBasicsResult } from "./actions/basics";
 
 export const CURRENT_YEAR = new Date().getFullYear();
@@ -169,6 +179,7 @@ export type ProfileClientProps = {
     notes: string | null;
     memberSinceYear: number | null;
     dietaryPreference: string | null;
+    dietaryPreferenceVariant: string | null;
     dietaryPreferenceStrictness: string | null;
     whatsappLinkVisitedAt: string | null;
     updatedAt: string | null;
@@ -190,9 +201,18 @@ export type ProfileClientProps = {
   allergies: Array<{
     id: string;
     allergen: string;
+    kind: string;
     level: string;
+    tracesOk: boolean | null;
+    diagnosed: boolean;
     symptoms: string | null;
     treatment: string | null;
+    note: string | null;
+    updatedAt: string | null;
+  }>;
+  aversions: Array<{
+    id: string;
+    label: string;
     note: string | null;
     updatedAt: string | null;
   }>;
@@ -203,6 +223,7 @@ export type ProfileClientProps = {
 
 export type ProfileUser = ProfileClientProps["user"];
 export type Allergy = ProfileClientProps["allergies"][number];
+export type Aversion = ProfileClientProps["aversions"][number];
 export type OnboardingProfile = NonNullable<ProfileClientProps["onboarding"]>;
 
 export function isProfilePaymentComplete(user: ProfileUser): boolean {
@@ -274,15 +295,25 @@ export type PaymentFormState = {
 
 export type DietaryFormState = {
   style: DietaryStyleOption;
+  variant: DietaryVariantOption | null;
   customLabel: string;
   strictness: DietaryStrictnessOption;
 };
 
 export type AllergyFormState = {
   allergen: string;
+  kind: RestrictionKind;
   level: AllergyLevel;
+  /** `null` = nicht angegeben. */
+  tracesOk: boolean | null;
+  diagnosed: boolean;
   symptoms: string;
   treatment: string;
+  note: string;
+};
+
+export type AversionFormState = {
+  label: string;
   note: string;
 };
 
@@ -420,9 +451,6 @@ export const basicsSchema = z
       });
     }
   });
-
-// Das Schema prüft Client und API gemeinsam; es liegt deshalb außerhalb des app-Verzeichnisses.
-export { allergyInputSchema as allergySchema } from "@/lib/profil/dietary-validation";
 
 export const onboardingSchema = z.object({
   notes: z.string().trim().max(2000).optional(),

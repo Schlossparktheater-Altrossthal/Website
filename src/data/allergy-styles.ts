@@ -30,3 +30,35 @@ export const ALLERGY_LEVEL_STYLES: Record<AllergyLevel, AllergyLevelStyle> = {
 };
 
 export type AllergyLevelStyleKey = keyof typeof ALLERGY_LEVEL_STYLES;
+
+/** Anzeigetext des Schweregrads. */
+export const ALLERGY_LEVEL_LABELS: Record<AllergyLevel, string> = {
+  MILD: "Leicht",
+  MODERATE: "Mittel",
+  SEVERE: "Schwer",
+  LETHAL: "Lebensbedrohlich",
+};
+
+export const ALLERGY_LEVEL_OPTIONS: readonly { value: AllergyLevel; label: string }[] =
+  Object.values(AllergyLevel).map((value) => ({ value, label: ALLERGY_LEVEL_LABELS[value] }));
+
+/** Ein Allergeneintrag mit einer Angabe zu Spuren: „nicht angegeben" ist ein eigener Zustand. */
+export const ALLERGY_TRACES_OPTIONS = [
+  { value: "unset", label: "Nicht angegeben" },
+  { value: "ok", label: "Spuren sind unproblematisch" },
+  { value: "risk", label: "Spuren sind gefährlich" },
+] as const;
+
+export type AllergyTracesChoice = (typeof ALLERGY_TRACES_OPTIONS)[number]["value"];
+
+export function toAllergyTracesChoice(tracesOk: boolean | null): AllergyTracesChoice {
+  if (tracesOk === true) return "ok";
+  if (tracesOk === false) return "risk";
+  return "unset";
+}
+
+export function fromAllergyTracesChoice(choice: AllergyTracesChoice): boolean | null {
+  if (choice === "ok") return true;
+  if (choice === "risk") return false;
+  return null;
+}

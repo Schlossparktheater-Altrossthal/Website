@@ -7,6 +7,11 @@ import { cn } from "@/lib/utils";
 
 const Popover = PopoverPrimitive.Root;
 const PopoverTrigger = PopoverPrimitive.Trigger;
+/**
+ * Anker für ein Popup, das an einem bestehenden Bedienelement hängt. Anders als `PopoverTrigger`
+ * verändert er das Element nicht – ein Eingabefeld bleibt damit beschreibbar.
+ */
+const PopoverAnchor = PopoverPrimitive.Anchor;
 
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
@@ -30,4 +35,4 @@ const PopoverContent = React.forwardRef<
 ));
 PopoverContent.displayName = PopoverPrimitive.Content.displayName;
 
-export { Popover, PopoverTrigger, PopoverContent };
+export { Popover, PopoverAnchor, PopoverTrigger, PopoverContent };

@@ -18,7 +18,11 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60 md:text-sm",
+      // `h-10` bleibt fix: lange Optionslabels wie "Flexibel – kleine Ausnahmen sind möglich"
+      // dürfen den Auslöser nicht zweizeilig aufblähen. Der Wert wird deshalb auf eine Zeile
+      // gekürzt (`[&>span]:truncate` trifft den Wert-Span von Radix); die volle Beschriftung
+      // steht in der geöffneten Liste.
+      "flex h-10 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60 md:text-sm [&>span]:truncate",
       className,
     )}
     {...props}
@@ -40,7 +44,10 @@ const SelectContent = React.forwardRef<
       ref={ref}
       className={cn(
         "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
-        position === "popper" && "translate-y-1",
+        // Das Popup sitzt auf der Breite des Auslösers und bleibt im sichtbaren Bereich: sonst
+        // erscheint eine lange Liste als schmaler Streifen, der die Karte darunter überdeckt.
+        position === "popper" &&
+          "w-[var(--radix-select-trigger-width)] max-h-[min(20rem,var(--radix-select-content-available-height))] translate-y-1",
         className,
       )}
       position={position}

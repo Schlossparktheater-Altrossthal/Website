@@ -148,6 +148,7 @@ export function OnboardingSection({
         memberSinceYear: payload.memberSinceYear,
         updatedAt: payload.updatedAt,
         dietaryPreference: onboarding?.dietaryPreference ?? null,
+        dietaryPreferenceVariant: onboarding?.dietaryPreferenceVariant ?? null,
         dietaryPreferenceStrictness: onboarding?.dietaryPreferenceStrictness ?? null,
         whatsappLinkVisitedAt: onboarding?.whatsappLinkVisitedAt ?? null,
         preferences: onboarding?.preferences ?? rolePreferences,

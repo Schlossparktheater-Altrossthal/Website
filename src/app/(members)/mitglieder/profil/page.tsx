@@ -87,6 +87,7 @@ export default async function ProfilePage() {
           notes: true,
           memberSinceYear: true,
           dietaryPreference: true,
+          dietaryPreferenceVariant: true,
           dietaryPreferenceStrictness: true,
           whatsappLinkVisitedAt: true,
           updatedAt: true,
@@ -112,40 +113,54 @@ export default async function ProfilePage() {
     notFound();
   }
 
-  const [allergiesRaw, availableOnboardings, history, productionPreferences, activeShow] =
-    await Promise.all([
-      prisma.dietaryRestriction.findMany({
-        where: { userId, isActive: true },
-        orderBy: { allergen: "asc" },
-        select: {
-          id: true,
-          allergen: true,
-          level: true,
-          symptoms: true,
-          treatment: true,
-          note: true,
-          updatedAt: true,
-        },
-      }),
-      getAvailableOnboardings(),
-      loadMemberHistory(userId, user.onboardingProfile?.memberSinceYear ?? null),
-      readProductionPreferences(userId, photoConsentShowId),
-      photoConsentShowId
-        ? prisma.show.findUnique({
-            where: { id: photoConsentShowId },
-            select: {
-              id: true,
-              meta: true,
-              title: true,
-              year: true,
-              productionOnboardings: {
-                where: { userId },
-                select: { notes: true, whatsappLinkVisitedAt: true, focus: true },
-              },
+  const [
+    allergiesRaw,
+    aversionsRaw,
+    availableOnboardings,
+    history,
+    productionPreferences,
+    activeShow,
+  ] = await Promise.all([
+    prisma.dietaryRestriction.findMany({
+      where: { userId, isActive: true },
+      orderBy: { allergen: "asc" },
+      select: {
+        id: true,
+        allergen: true,
+        kind: true,
+        level: true,
+        tracesOk: true,
+        diagnosed: true,
+        symptoms: true,
+        treatment: true,
+        note: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.dietaryAversion.findMany({
+      where: { userId, isActive: true },
+      orderBy: { label: "asc" },
+      select: { id: true, label: true, note: true, updatedAt: true },
+    }),
+    getAvailableOnboardings(),
+    loadMemberHistory(userId, user.onboardingProfile?.memberSinceYear ?? null),
+    readProductionPreferences(userId, photoConsentShowId),
+    photoConsentShowId
+      ? prisma.show.findUnique({
+          where: { id: photoConsentShowId },
+          select: {
+            id: true,
+            meta: true,
+            title: true,
+            year: true,
+            productionOnboardings: {
+              where: { userId },
+              select: { notes: true, whatsappLinkVisitedAt: true, focus: true },
             },
-          })
-        : null,
-    ]);
+          },
+        })
+      : null,
+  ]);
 
   const displayName = getUserDisplayName(
     {
@@ -207,11 +222,21 @@ export default async function ProfilePage() {
   const allergies = allergiesRaw.map((allergy) => ({
     id: allergy.id,
     allergen: allergy.allergen,
+    kind: allergy.kind,
     level: allergy.level,
+    tracesOk: allergy.tracesOk,
+    diagnosed: allergy.diagnosed,
     symptoms: allergy.symptoms ?? null,
     treatment: allergy.treatment ?? null,
     note: allergy.note ?? null,
     updatedAt: allergy.updatedAt?.toISOString() ?? null,
+  }));
+
+  const aversions = aversionsRaw.map((aversion) => ({
+    id: aversion.id,
+    label: aversion.label,
+    note: aversion.note ?? null,
+    updatedAt: aversion.updatedAt?.toISOString() ?? null,
   }));
 
   const hasBasicData = Boolean(user.firstName?.trim() && user.email?.trim());
@@ -259,6 +284,7 @@ export default async function ProfilePage() {
           notes: productionNotes,
           memberSinceYear: onboardingProfile?.memberSinceYear ?? null,
           dietaryPreference: onboardingProfile?.dietaryPreference ?? null,
+          dietaryPreferenceVariant: onboardingProfile?.dietaryPreferenceVariant ?? null,
           dietaryPreferenceStrictness: onboardingProfile?.dietaryPreferenceStrictness ?? null,
           whatsappLinkVisitedAt: whatsappVisitedAt?.toISOString() ?? null,
           updatedAt: onboardingProfile?.updatedAt?.toISOString() ?? null,
@@ -304,6 +330,7 @@ export default async function ProfilePage() {
         rolePreferences={preferenceSummaries}
         interests={interestNames}
         allergies={allergies}
+        aversions={aversions}
         checklist={checklist}
         rolePreferencesInheritedFrom={rolePreferencesInheritedFrom}
       />

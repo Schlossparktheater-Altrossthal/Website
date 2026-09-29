@@ -41,6 +41,7 @@ function createProps(overrides: Partial<OnboardingSectionProps> = {}): Onboardin
     notes: null,
     memberSinceYear: null,
     dietaryPreference: null,
+    dietaryPreferenceVariant: null,
     dietaryPreferenceStrictness: null,
     whatsappLinkVisitedAt: overrides.whatsappVisitedAt ?? null,
     updatedAt: null,
