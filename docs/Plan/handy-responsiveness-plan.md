@@ -1,6 +1,6 @@
 # Plan: Handy-Darstellung – horizontales Überlaufen und Miniatur-Zoom
 
-Stand: 2026-09-29. Phase 0–3 umgesetzt; Umsetzung geht mit Phase 4 weiter. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Alle Phasen umgesetzt; die Prüfläufe sind in `docs/Analysen/handy-ueberlauf-webkit-befunde.md` festgehalten. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -82,19 +82,19 @@ minmax(0, 1fr)` für `.grid`), nicht mit 117 Einzeländerungen. Der Nutzer hat d
    Absicherung: `grid-flow-col` und `auto-cols-*` kommen im Projekt nicht vor, explizite
    `grid-cols-*` bleiben unberührt. An der belegten Fundstelle zusätzlich `min-w-0` und
    `break-words`, damit der lange Wert auch wirklich in die Karte passt.
-4. **Die drei gemeldeten Werkzeugzeilen.** Kartenkopf der Zuweisung (`assignment-board.tsx`),
+4. **Die drei gemeldeten Werkzeugzeilen. (umgesetzt)** Kartenkopf der Zuweisung (`assignment-board.tsx`),
    Werkzeugzeile der Sperrliste (`sperrliste/page-client.tsx`) und Werkzeugzeile der
-   Terminplanung (`terminplanung/page-client.tsx`) überlauffrei machen. Je Seite ein eigener
-   Commit. Abschluss: Die drei Seiten sind in WebKit überlauffrei und in Handy, Tablet und
-   Desktop, hell und dunkel abgesegnet.
-5. **Prüfnetz ausbauen.** `--browser webkit` in `scripts/e2e-screenshots.mjs`, WebKit-Installation
-   in der CI, WebKit-Projekt in den Standardlauf. Abschluss: Beide Skripte und die CI prüfen
-   WebKit mit, ohne dass eine Route stillschweigend entfällt.
-6. **Doku und Abschluss.** `docs/responsiveness-matrix.md` in WebKit neu messen und die Prüfwege
-   korrigieren, betroffene Dateien in `docs/seiten/` nachziehen und in `AGENTS.md` den neuen
-   Standard aufnehmen: Der Überlauf-Test läuft zusätzlich in WebKit, gemessen wird erst bei
-   stabiler Breite, und Werkzeugzeilen und Umschalter dürfen nie breiter als ihr Container werden.
-   Abschluss: Die Doku deckt den gemessenen Stand.
+   Terminplanung (`terminplanung/page-client.tsx`) brechen jetzt um, statt zu schieben. Dabei
+   fiel ein echter Safari-Fehler auf: Die Entwurfsliste der Terminplanung leitete ihr Datum aus
+   `.replace(".,", "")` ab; Node und WebKit formatieren das Wochentagskürzel unterschiedlich,
+   wodurch React die Hydration der ganzen Seite abbrach.
+5. **Prüfnetz ausbauen. (umgesetzt)** `--browser webkit` auch in `scripts/e2e-screenshots.mjs`,
+   CI installiert explizit `chromium` und `webkit`, `waitForStableWidth` nennt die Route im
+   Loghinweis. Das WebKit-Projekt läuft im Standardlauf mit.
+6. **Doku und Abschluss. (umgesetzt)** `docs/responsiveness-matrix.md` beschreibt die WebKit-Prüfung
+   und die neue Regel, `docs/e2e-tests.md` die Viewports und `--browser`, `docs/design-system.md`
+   das Werkzeugzeilen-Muster, `AGENTS.md` den Standard. Der WebKit-Lauf über alle 40 Routen ist
+   grün.
 
 ## Checkliste
 
@@ -102,6 +102,6 @@ minmax(0, 1fr)` für `.grid`), nicht mit 117 Einzeländerungen. Der Nutzer hat d
 - [x] Phase 1 – Reproduktion und Diagnose in WebKit
 - [x] Phase 2 – gemeinsame Bausteine (`SegmentedControl`, `SectionNav`, Muster)
 - [x] Phase 3 – systemische Rasterfalle (Grundregel statt 117 Einzelstellen)
-- [ ] Phase 4 – Terminplanung, Sperrliste, Teams & Zuweisung
-- [ ] Phase 5 – Prüfnetz (Screenshots-Skript, CI, Matrix)
-- [ ] Phase 6 – Doku und Abschluss
+- [x] Phase 4 – Terminplanung, Sperrliste, Teams & Zuweisung
+- [x] Phase 5 – Prüfnetz (Screenshots-Skript, CI)
+- [x] Phase 6 – Doku und Abschluss

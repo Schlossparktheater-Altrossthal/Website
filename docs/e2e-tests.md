@@ -159,13 +159,25 @@ Zwei Eigenheiten des Themas sind dabei eingebaut:
 
 ## Viewports & Playwright-Projekte
 
-Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in vier Projekten
-(`playwright.config.ts`): `chromium` (1280×720), `mobile` (390×844), `tablet-portrait`
-(834×1112) und `tablet-landscape` (1024×768). Smoke/Sync laufen nur in `chromium`.
+Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in fünf Projekten
+(`playwright.config.ts`): `chromium` (1280×720), `mobile` (390×844), `mobile-webkit` (402×874,
+`browserName: webkit` – die Engine des iPhones), `tablet-portrait` (834×1112) und
+`tablet-landscape` (1024×768). Smoke/Sync laufen nur in `chromium`.
 
-Für Screenshots akzeptiert `--viewport` die Presets `mobile`, `tablet-portrait`,
-`tablet-small` (768×1024), `tablet-landscape`, `desktop` sowie Komma-Listen und `all`.
-`--mobile` bleibt als Alias für `mobile` erhalten.
+Der Test deckt alle Routen des Mitgliederbereichs ab. Detailrouten bekommen ihre ID aus dem ersten
+passenden Link der jeweiligen Übersicht; fehlt der Link, entfällt die Route für den Lauf. Vor der
+Messung wartet `waitForStableWidth` (`scripts/lib/e2e-session.mjs`) auf das Ende des Ladezustands
+und auf zwei gleiche Messungen der Dokumentbreite hintereinander. Ohne diese Wartezeit meldet die
+Prüfung gegen einen kalten Dev-Server Seiten als überlaufend, die im warmen Lauf grün sind (am
+2026-09-29 fünf Fehlbefunde). Ein Fehlschlag nennt die äußerste überstehende Box und den Inhalt,
+der sie aufreißt. Lokal einmalig `pnpm exec playwright install chromium webkit`.
+
+Für Screenshots akzeptiert `--viewport` die Presets `mobile`, `mobile-iphone` (402×874),
+`tablet-mini` (744×1133, iPad mini hochkant), `tablet-portrait`, `tablet-small` (768×1024),
+`tablet-landscape`, `desktop` sowie Komma-Listen und `all`. `--mobile` bleibt als Alias für
+`mobile` erhalten. `--browser webkit` schaltet beide Skripte auf die Safari-Engine um – nötig für
+Layoutfragen, bei denen Chromium und WebKit auseinandergehen
+(`docs/Analysen/handy-ueberlauf-webkit-befunde.md`).
 
 ## Interaktiver UI-Check (`pnpm ui:check`)
 

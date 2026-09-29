@@ -8,11 +8,15 @@ Legende: ✅ ok · ⚠️ funktioniert, aber mit Einschränkung · ❓ unklar ·
 **Prüfwege**
 
 - **automatisch** — horizontaler Überlauf über `e2e/responsive-overflow.spec.ts` in den Projekten
-  `chromium` (1280×720), `mobile` (390×844), `tablet-portrait` (834×1112) und
-  `tablet-landscape` (1024×768).
+  `chromium` (1280×720), `mobile` (390×844), `mobile-webkit` (402×874, Engine des iPhones; seit
+  2026-09-29), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768). Gemessen wird erst,
+  wenn die Dokumentbreite steht; ein Fehlschlag nennt die äußerste überstehende Box und den
+  Inhalt, der sie aufreißt.
 - **gemessen** — zusätzlich über `pnpm ui:check <route> --viewport all --scheme all` verifiziert
-  (fünf Viewports, hell und dunkel, 2026-09-26). Gemessen wird die Dokumentbreite gegen die
-  Viewportbreite; Inhalte in einem inneren `overflow-x-auto`-Container gelten nicht als Überlauf.
+  (fünf Viewports, hell und dunkel, 2026-09-26; seit 2026-09-29 auch `--browser webkit` sowie die
+  Viewports `mobile-iphone` (402×874) und `tablet-mini` (744×1133)). Gemessen wird die
+  Dokumentbreite gegen die Viewportbreite; Inhalte in einem inneren `overflow-x-auto`-Container
+  gelten nicht als Überlauf.
 - **visuell (dynamisch)** — Routen mit Segmenten (IDs) werden per Screenshot geprüft.
 
 ## Status der acht Hauptbereiche
@@ -70,7 +74,8 @@ Legende: ✅ ok · ⚠️ funktioniert, aber mit Einschränkung · ❓ unklar ·
    hell/dunkel) nachziehen; der Kalender der Probenplanung scrollt bewusst innerhalb seiner Karte
    (`min-w-[540px] sm:min-w-[640px] lg:min-w-[720px]`, `month-calendar.tsx`).
 
-> Hinweis: `e2e/responsive-overflow.spec.ts` überspringt `/mitglieder/sperrliste` auf den
-> Tablet-Projekten weiterhin (`TABLET_OVERFLOW_KNOWN`), obwohl die Seite seit dem Redesign
-> (2026-09, „Runde 3“) nicht mehr horizontal scrollt. Der Skip kann entfernt werden, sobald die
-> Testdatei angefasst wird – das ist eine Code-Änderung außerhalb der Doku.
+> Hinweis: Der frühere Tablet-Skip für `/mitglieder/sperrliste` (`TABLET_OVERFLOW_KNOWN`) ist am
+> 2026-09-29 entfallen – die Seite scrollt seit dem Redesign nicht mehr horizontal. Der WebKit-Lauf
+> über alle 40 Routen war danach grün; `/mitglieder/server-analytics` überlief bis zum selben Tag
+> (Grundregel gegen implizite Rasterspalten, siehe
+> `docs/Analysen/handy-ueberlauf-webkit-befunde.md`).
