@@ -1077,9 +1077,11 @@ export function ServerAnalyticsContent({
                       key={resource.id}
                       className="space-y-2 rounded-md border border-border/60 p-3"
                     >
-                      <div className="flex items-center justify-between text-sm font-medium">
-                        <span>{resource.label}</span>
-                        <span>{decimalFormat.format(resource.usagePercent)} %</span>
+                      <div className="flex items-center justify-between gap-2 text-sm font-medium">
+                        <span className="min-w-0 truncate">{resource.label}</span>
+                        <span className="shrink-0 tabular-nums">
+                          {decimalFormat.format(resource.usagePercent)} %
+                        </span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-muted">
                         <div
@@ -1087,11 +1089,13 @@ export function ServerAnalyticsContent({
                           style={{ width: `${Math.min(resource.usagePercent, 100)}%` }}
                         />
                       </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Kapazität: {resource.capacity}</span>
+                      {/* `break-words` ist nötig: Ein Einhängepunkt wie `/Users/name/…` hat keine
+                          Leerstelle und kann deshalb nicht von selbst umbrechen. */}
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                        <span className="min-w-0 break-words">Kapazität: {resource.capacity}</span>
                         <span
                           className={cn(
-                            "font-medium",
+                            "shrink-0 text-right font-medium",
                             changeTextClass(resource.changePercent, false),
                           )}
                         >

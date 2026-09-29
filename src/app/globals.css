@@ -148,6 +148,24 @@
       min-height: 100dvh;
     }
   }
+
+  /*
+   * Implizite Rasterspalten dürfen den Container nicht überschreiten.
+   *
+   * `grid gap-4 lg:grid-cols-2` ohne Basis-Spalte erzeugt auf dem Handy eine einzige implizite
+   * `auto`-Spalte. Ihr Basismaß ist der min-content-Beitrag der Inhalte, und eine `auto`-Spur
+   * wird nicht auf die Containerbreite zurückgestutzt: Ein langer unumbrechbarer Wert (Pfad,
+   * E-Mail-Adresse, Titel ohne Leerzeichen) reißt sie über den Rand. iOS-Safari verdoppelt
+   * daraufhin den Layout-Viewport und rendert die ganze Seite winzig
+   * (docs/Analysen/handy-ueberlauf-webkit-befunde.md).
+   *
+   * Die Regel greift ausschließlich bei impliziten Spalten. `grid-flow-col` und `auto-cols-*`
+   * gibt es im Projekt nicht, explizite `grid-cols-*` bleiben unberührt. Lange Werte brauchen
+   * an ihrer Fundstelle zusätzlich `min-w-0` und eine Umbrechmöglichkeit.
+   */
+  .grid {
+    grid-auto-columns: minmax(0, 1fr);
+  }
 }
 
 @layer components {
