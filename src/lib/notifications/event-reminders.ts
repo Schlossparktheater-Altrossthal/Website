@@ -1,17 +1,20 @@
 import { blockDayKey } from "@/lib/calendar/block-list-link";
 import { readDayAvailability, type DayAvailability } from "@/lib/calendar/day-availability";
+import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
   currentMembershipWhere,
 } from "@/lib/produktionen/status";
 
+import { notify } from "./notify";
 import {
   DEFAULT_REMINDER_LEAD,
   isEventReminderLead,
   reminderLeadMinutes,
   type EventReminderLead,
 } from "./preferences";
+import { NOTIFICATION_TYPES, categoryForEventKind } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -34,6 +37,8 @@ export type ReminderEvent = {
   title: string;
   kind: string;
   start: Date;
+  /** Ganztägig: die Erinnerung nennt dann keine Uhrzeit. */
+  allDay: boolean;
   /** Persönliche Einladungen (`EventParticipant.invited`). */
   invites: ReminderInvite[];
   /** Alle, für die der Termin ohne Einladung gilt (Gewerk-Mitglieder, „Für alle"). */
@@ -138,6 +143,7 @@ export async function readReminderSnapshot({
       title: true,
       kind: true,
       start: true,
+      allDay: true,
       showId: true,
       departmentId: true,
       audienceRules: { select: { id: true }, take: 1 },
@@ -203,6 +209,7 @@ export async function readReminderSnapshot({
       title: event.title,
       kind: event.kind,
       start: event.start,
+      allDay: event.allDay,
       invites: event.participants.map((participant) => ({
         userId: participant.userId,
         response: participant.response,
@@ -240,4 +247,121 @@ export async function readReminderSnapshot({
   }
 
   return { events: reminderEvents, availabilityByDay, leadByUser };
+}
+
+/** Schlüssel eines Versand-Eintrags. */
+export function dispatchKey(eventId: string, userId: string) {
+  return `${eventId}|${userId}`;
+}
+
+export type ReminderDispatchSummary = {
+  /** Neu zugestellte Erinnerungen (je Termin und Person). */
+  sent: number;
+  /** Bereits früher zugestellt. */
+  skipped: number;
+  /** Nicht zugestellt; der nächste Lauf versucht es erneut. */
+  failed: number;
+};
+
+const reminderDayFormat = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: DEFAULT_TIME_ZONE,
+});
+
+const reminderClockFormat = new Intl.DateTimeFormat("de-DE", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: DEFAULT_TIME_ZONE,
+});
+
+/** Text der Erinnerung: Bezugszeit des Termins, ohne Uhrzeit bei ganztägigen Terminen. */
+export function buildReminderBody(referenceAt: Date, allDay: boolean) {
+  const day = reminderDayFormat.format(referenceAt);
+  if (allDay) return `Beginnt am ${day}.`;
+  return `Beginnt am ${day}, ${reminderClockFormat.format(referenceAt)} Uhr.`;
+}
+
+/**
+ * Sendet alle fälligen Erinnerungen und protokolliert sie in `EventReminderDispatch`. Der Lauf ist
+ * idempotent: Wer schon protokolliert ist, wird nicht erneut angeschrieben. Das setzt voraus, dass
+ * sich zwei Läufe nicht überlappen – ein CronJob läuft nacheinander.
+ */
+export async function dispatchEventReminders({
+  now = new Date(),
+}: { now?: Date } = {}): Promise<ReminderDispatchSummary> {
+  const snapshot = await readReminderSnapshot({ now });
+  const due = buildReminderCandidates(snapshot).filter((candidate) =>
+    isReminderDue(candidate, now),
+  );
+  if (!due.length) return { sent: 0, skipped: 0, failed: 0 };
+
+  const existing = await prisma.eventReminderDispatch.findMany({
+    where: {
+      eventId: { in: [...new Set(due.map((candidate) => candidate.eventId))] },
+      userId: { in: [...new Set(due.map((candidate) => candidate.userId))] },
+    },
+    select: { eventId: true, userId: true },
+  });
+  const dispatched = new Set(existing.map((row) => dispatchKey(row.eventId, row.userId)));
+  const pending = due.filter(
+    (candidate) => !dispatched.has(dispatchKey(candidate.eventId, candidate.userId)),
+  );
+  const skipped = due.length - pending.length;
+
+  if (pending.length) {
+    await prisma.eventReminderDispatch.createMany({
+      data: pending.map((candidate) => ({
+        eventId: candidate.eventId,
+        userId: candidate.userId,
+        lead: candidate.lead,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  // Je Termin und Bezugszeit eine Nachricht: bei gestaffelten Proben hat jede Person ihre eigene.
+  const eventById = new Map(snapshot.events.map((event) => [event.id, event]));
+  const groups = new Map<string, { eventId: string; referenceAt: Date; userIds: string[] }>();
+  for (const candidate of pending) {
+    const key = `${candidate.eventId}|${candidate.referenceAt.getTime()}`;
+    const group = groups.get(key);
+    if (group) group.userIds.push(candidate.userId);
+    else {
+      groups.set(key, {
+        eventId: candidate.eventId,
+        referenceAt: candidate.referenceAt,
+        userIds: [candidate.userId],
+      });
+    }
+  }
+
+  let sent = 0;
+  let failed = 0;
+  for (const group of groups.values()) {
+    const event = eventById.get(group.eventId);
+    if (!event) continue;
+    try {
+      await notify({
+        type: NOTIFICATION_TYPES.EVENT_REMINDER,
+        recipients: group.userIds,
+        title: `Erinnerung: ${event.title}`,
+        body: buildReminderBody(group.referenceAt, event.allDay),
+        eventId: event.id,
+        category: categoryForEventKind(event.kind),
+        groupKey: `reminder:${event.id}`,
+      });
+      sent += group.userIds.length;
+    } catch (error) {
+      console.error("[event-reminders] Versand fehlgeschlagen", { eventId: group.eventId }, error);
+      failed += group.userIds.length;
+      // Protokoll zurücknehmen, damit der nächste Lauf es erneut versucht.
+      await prisma.eventReminderDispatch.deleteMany({
+        where: { eventId: group.eventId, userId: { in: group.userIds } },
+      });
+    }
+  }
+
+  return { sent, skipped, failed };
 }

@@ -29,6 +29,17 @@ describe("shouldPush", () => {
     expect(shouldPush(info, undefined)).toBe(false);
     expect(shouldPush(info, { category: "proben", push: true })).toBe(true);
   });
+
+  it("Erinnerungen kommen unabhängig vom Bereichs-Schalter durch", () => {
+    const reminder = {
+      category: "termine",
+      kind: "info",
+      priority: "normal",
+      type: "event-reminder",
+    } as const;
+    expect(shouldPush(reminder, { category: "termine", push: false })).toBe(true);
+    expect(shouldPush(reminder, undefined)).toBe(true);
+  });
 });
 
 describe("Zeitumrechnung", () => {

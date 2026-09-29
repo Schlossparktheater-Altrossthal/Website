@@ -1,16 +1,34 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Die reinen Funktionen brauchen keine Datenbank; der Import zieht aber `prisma` mit.
-vi.mock("@/lib/prisma", () => ({ prisma: {} }));
+/** Minimales Datenbank-Double für Leser und Versand-Protokoll. */
+const db = vi.hoisted(() => ({
+  dispatches: [] as { eventId: string; userId: string; lead: string }[],
+  calendarEvent: { findMany: vi.fn() },
+  departmentMembership: { findMany: vi.fn() },
+  productionMembership: { findMany: vi.fn() },
+  user: { findMany: vi.fn() },
+  notificationSettings: { findMany: vi.fn() },
+  eventReminderDispatch: { findMany: vi.fn(), createMany: vi.fn(), deleteMany: vi.fn() },
+}));
+
+const notifyMock = vi.hoisted(() => vi.fn<(input: NotifyInput) => Promise<void>>());
+
+vi.mock("@/lib/prisma", () => ({ prisma: db }));
+vi.mock("@/lib/calendar/day-availability", () => ({
+  readDayAvailability: vi.fn(async () => ({})),
+}));
+vi.mock("../notify", () => ({ notify: notifyMock }));
 
 import {
   buildReminderCandidates,
+  dispatchEventReminders,
   isReminderDue,
   resolveReferenceAt,
   type ReminderCandidate,
   type ReminderEvent,
   type ReminderSnapshot,
 } from "../event-reminders";
+import type { NotifyInput } from "../notify";
 import type { EventReminderLead } from "../preferences";
 
 const START = new Date("2026-10-05T17:00:00+02:00");
@@ -23,6 +41,7 @@ function reminderEvent(overrides: Partial<ReminderEvent> = {}): ReminderEvent {
     title: "Probe",
     kind: "REHEARSAL",
     start: START,
+    allDay: false,
     invites: [],
     audienceUserIds: [],
     ...overrides,
@@ -153,5 +172,92 @@ describe("isReminderDue", () => {
     expect(isReminderDue(candidate, candidate.remindAt)).toBe(true);
     expect(isReminderDue(candidate, new Date(START.getTime() - 1000))).toBe(true);
     expect(isReminderDue(candidate, START)).toBe(false);
+  });
+});
+
+describe("dispatchEventReminders", () => {
+  const NOW = new Date(START.getTime() - 20 * 60 * 60 * 1000);
+
+  beforeEach(() => {
+    db.dispatches.length = 0;
+    notifyMock.mockReset().mockResolvedValue(undefined);
+    db.calendarEvent.findMany.mockReset().mockResolvedValue([
+      {
+        id: "e1",
+        title: "Probe",
+        kind: "REHEARSAL",
+        start: START,
+        allDay: false,
+        showId: null,
+        departmentId: null,
+        audienceRules: [],
+        participants: [
+          { userId: "u1", response: "yes", personalStart: null },
+          { userId: "u2", response: null, personalStart: null },
+        ],
+      },
+    ]);
+    db.departmentMembership.findMany.mockReset().mockResolvedValue([]);
+    db.productionMembership.findMany.mockReset().mockResolvedValue([]);
+    db.user.findMany.mockReset().mockResolvedValue([]);
+    db.notificationSettings.findMany
+      .mockReset()
+      .mockResolvedValue([{ userId: "u1", reminderLead: "1d" }]);
+    db.eventReminderDispatch.findMany
+      .mockReset()
+      .mockImplementation(async () => [...db.dispatches]);
+    db.eventReminderDispatch.createMany
+      .mockReset()
+      .mockImplementation(
+        async ({ data }: { data: { eventId: string; userId: string; lead: string }[] }) => {
+          for (const row of data) {
+            const known = db.dispatches.some(
+              (entry) => entry.eventId === row.eventId && entry.userId === row.userId,
+            );
+            if (!known) db.dispatches.push({ ...row });
+          }
+          return { count: data.length };
+        },
+      );
+    db.eventReminderDispatch.deleteMany
+      .mockReset()
+      .mockImplementation(
+        async ({ where }: { where: { eventId: string; userId: { in: string[] } } }) => {
+          const keep = db.dispatches.filter(
+            (entry) => entry.eventId !== where.eventId || !where.userId.in.includes(entry.userId),
+          );
+          db.dispatches.length = 0;
+          db.dispatches.push(...keep);
+          return { count: 0 };
+        },
+      );
+  });
+
+  it("sendet fällige Erinnerungen und schickt sie beim zweiten Lauf nicht erneut", async () => {
+    const first = await dispatchEventReminders({ now: NOW });
+    expect(first).toEqual({ sent: 2, skipped: 0, failed: 0 });
+    expect(db.dispatches).toHaveLength(2);
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock.mock.calls[0][0]).toMatchObject({
+      type: "event-reminder",
+      recipients: ["u1", "u2"],
+      title: "Erinnerung: Probe",
+      eventId: "e1",
+      category: "proben",
+      groupKey: "reminder:e1",
+    });
+
+    const second = await dispatchEventReminders({ now: NOW });
+    expect(second).toEqual({ sent: 0, skipped: 2, failed: 0 });
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("nimmt das Protokoll zurück, wenn der Versand scheitert", async () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    notifyMock.mockRejectedValue(new Error("kaputt"));
+    const result = await dispatchEventReminders({ now: NOW });
+    expect(result).toEqual({ sent: 0, skipped: 0, failed: 2 });
+    expect(db.dispatches).toHaveLength(0);
+    quiet.mockRestore();
   });
 });

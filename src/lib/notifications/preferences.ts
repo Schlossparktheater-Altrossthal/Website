@@ -1,6 +1,11 @@
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 
-import type { NotificationCategory, NotificationKind, NotificationPriority } from "./types";
+import {
+  NOTIFICATION_TYPES,
+  type NotificationCategory,
+  type NotificationKind,
+  type NotificationPriority,
+} from "./types";
 
 export type PushPreference = { category: string; push: boolean };
 
@@ -13,7 +18,8 @@ export const CATEGORY_DESCRIPTIONS: Record<NotificationCategory, string> = {
 };
 
 /**
- * Soll ein Eintrag per Push kommen? Dringendes und Aufgaben immer; übrige Hinweise nur, wenn
+ * Soll ein Eintrag per Push kommen? Dringendes und Aufgaben immer; Erinnerungen an Termine
+ * ebenfalls, weil deren Vorlaufzeit im Profil schon die Zustimmung ist; übrige Hinweise nur, wenn
  * der Bereich eingeschaltet ist (Standard: aus).
  */
 export function shouldPush(
@@ -21,10 +27,12 @@ export function shouldPush(
     category: NotificationCategory;
     kind: NotificationKind;
     priority: NotificationPriority;
+    type?: string;
   },
   preference: PushPreference | undefined,
 ) {
   if (notification.priority === "urgent" || notification.kind === "action") return true;
+  if (notification.type === NOTIFICATION_TYPES.EVENT_REMINDER) return true;
   return preference?.push ?? false;
 }
 
