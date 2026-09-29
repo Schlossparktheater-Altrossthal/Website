@@ -1,6 +1,6 @@
 # Plan: Ernährung & Allergien – Datenmodell, Eingabe und Darstellung
 
-Stand: 2026-09-29. Phase 0–3 umgesetzt, offen Phase 4–7. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Phase 0–4 umgesetzt, offen Phase 5–7. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -108,8 +108,12 @@ Bereich `?bereich=ernaehrung` mit drei Karten statt zwei:
    `src/data/allergens.ts`, neu `src/lib/profil/dietary-validation.ts`, Unit-Tests.
 3. **API & Backend**: Validierung und case-insensitiver Upsert in `POST /api/allergies`, neue
    Route `/api/aversions`, `PUT /api/profile/dietary` mit Unterform, Routen-Tests.
-4. **Profil-Oberfläche**: drei Karten, Allergen-Vorschlagsliste, Spuren und „ärztlich
-   abgeklärt", Select-Fix, Komponententests.
+4. **Profil-Oberfläche** _(umgesetzt am 2026-09-29, Commit `af8ecc80`)_: drei Karten,
+   Allergen-Vorschlagsliste, Spuren und „ärztlich abgeklärt", Select-Fix, Komponententests.
+   Die Sichtprüfung fand zwei weitere Fehler: `ui-check` ignorierte `fullPage: false` bei
+   expliziten `screenshot`-Schritten (ein Vollseiten-Screenshot schießt ein offenes Radix-Select
+   zu, dadurch war das Popup nie im Bild), und der Select-Auslöser blähte sich mit langen
+   Optionslabels auf dem Handy zweizeilig auf.
 5. **Übrige Oberflächen**: Onboarding- und Rückkehrer-Wizard, Dashboard-Onboarding,
    Bereichs-Untertitel, dazu die Onboarding-Routen und der Profil-Snapshot – Payload und Client
    ändern sich gemeinsam, sonst bricht der Wizard.
@@ -150,7 +154,7 @@ Referenzseite, eine Pflichtauswahl aus dem Katalog.
 - [x] Phase 1 Datenmodell und Migration
 - [x] Phase 2 Zentrale Listen und Validierung
 - [x] Phase 3 API und Backend
-- [ ] Phase 4 Profil-Oberfläche
+- [x] Phase 4 Profil-Oberfläche
 - [ ] Phase 5 Übrige Oberflächen
 - [ ] Phase 6 Auswertung und Datenschutz
 - [ ] Phase 7 Doku, Screenshots, E2E, Release
