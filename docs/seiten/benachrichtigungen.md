@@ -31,13 +31,23 @@ steht, was zu tun ist, darunter Neues, dann Früheres. Plan und Hintergründe:
 - Daten: `src/components/notifications/use-inbox.ts` (Laden, optimistische Änderungen,
   Realtime/Fokus lädt neu), Logik in `src/lib/notifications/`.
 
+## Erinnerungen an Termine
+
+- Vorlaufzeit je Nutzer im Profil (`NotificationSettings.reminderLead`): nie, 1 h, 2 h, 12 h,
+  1 Tag (Standard), 2, 3 oder 7 Tage. Plan: `docs/Plan/termin-erinnerungen-plan.md`.
+- Erinnert wird, wer beteiligt ist (nicht abgesagt, kein Notfall) und am Termintag nicht gesperrt
+  ist – auch wer noch nicht geantwortet hat. „Eingeschränkt“ schließt nicht aus.
+- Bezugszeit ist die persönliche Zeit einer gestaffelten Probe, sonst der Terminbeginn; ganztägige
+  Termine nennen keine Uhrzeit. Vorgemerkte Termine (TENTATIVE) erinnern nicht.
+- `GET/POST /api/cron/rehearsal-reminders` mit Header `x-cron-secret` (`CRON_SECRET`); der CronJob
+  ruft alle 15 Minuten auf. Läufe sind idempotent: `EventReminderDispatch` protokolliert je Termin
+  und Person, deshalb kommt keine Erinnerung doppelt.
+- Der Push folgt der Ruhezeit, die Glocke bekommt den Eintrag trotzdem. Erinnerungen pushen
+  unabhängig vom Push-Schalter des Bereichs – die Vorlaufzeit ist das Opt-in.
+
 ## Offen
 
 - Einstellungen je Kategorie (Plan Phase 6).
-- Cron für die Termin-Erinnerungen (Phase 5 in `docs/Plan/termin-erinnerungen-plan.md`).
-  Die Vorlaufzeit (`NotificationSettings.reminderLead`, Standard 1 Tag, Option „Nie“), die
-  Empfängerauswahl und der Versand samt Protokoll (`EventReminderDispatch`) stehen bereits; es
-  fehlt nur der regelmäßige Aufruf.
 
 ## Web Push
 
