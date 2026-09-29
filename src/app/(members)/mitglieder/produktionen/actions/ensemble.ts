@@ -13,6 +13,7 @@ import {
   type ProductionActionResult,
 } from "@/lib/produktionen/actions-helpers";
 import { sanitizeProductionRoles, syncProductionRoles } from "@/lib/produktionen/production-roles";
+import { leaveProductionMembership } from "@/lib/produktionen/memberships";
 import { createConfiguredMailSender } from "@/lib/email/send";
 import {
   inviteFormerMembers,
@@ -109,13 +110,10 @@ export async function removeProductionMemberAction(
     await ensureManager();
     const membershipId = readString(formData, "membershipId", { label: "Mitgliedschaft" });
 
-    const membership = await prisma.productionMembership.update({
-      where: { id: membershipId },
-      data: { status: "left", leftAt: new Date() },
-      select: { showId: true, userId: true },
-    });
-    await syncProductionRoles([membership.userId]);
-    requestServiceGroupSync();
+    const membership = await leaveProductionMembership({ membershipId });
+    if (!membership) {
+      return actionFailure(null, "Diese Mitgliedschaft ist bereits beendet.");
+    }
 
     revalidateShow(membership.showId, ensemblePath(membership.showId));
     return actionSuccess("Mitgliedschaft wurde beendet.");

@@ -27,6 +27,9 @@ Auswertung der Rückmeldungen.
 ## Datenfluss
 
 - Prisma-Modelle: `Production`, `Department`, `DepartmentMembership`, Casting-Einträge.
+- Mitgliedschaften enden über `leaveProductionMembership` in `src/lib/produktionen/memberships.ts`
+  (`status: "left"` + `leftAt`, Historie bleibt; zieht Rollen und Authentik-Gruppen nach). Genutzt
+  von der Ensemble-Seite („Beenden“) und der Mitgliederverwaltung („Aus Produktion entfernen“).
 - Jahreswechsel: `SeasonResetSettings` (geschützte Rollen) + `deactivateMembersForSeasonChange`
   in `src/lib/season-reset/`.
 

@@ -24,6 +24,14 @@ Berechtigungen konfigurieren.
   (`?tab=`): Mitglieder, Einladungen, Saisonwechsel, Datenpflege. Ab vier Einträgen zeigt die
   Leiste auf Mobil ein Auswahlfeld statt der Pills.
 - `/mitglieder/mitgliederverwaltung/[userId]`: Bereiche Profil, Rechte, Aktivität.
+- Aktionen je Mitglied über das „⋯“ in der Mitgliederliste: Profil öffnen, Rollen & Daten
+  bearbeiten, Aus Produktion entfernen, Deaktivieren/Reaktivieren, Löschen. „Aus Produktion
+  entfernen“ ist nur mit Mitgliedschaft in der aktiven Produktion aktiv und fragt vorher nach:
+  Die Mitgliedschaft wird **beendet**, nicht gelöscht (`status: "left"` + `leftAt`, siehe
+  `leaveProductionMembership` in `src/lib/produktionen/memberships.ts`). Die abgeleiteten
+  Ensemble-/Technik-Rollen und die Authentik-Service-Groups werden nachgezogen, Gewerke und
+  Kalender-Einladungen bleiben unberührt. Danach zeigt die Produktionsspalte „—“ und die
+  Person lässt sich über die Ensemble-Seite erneut aufnehmen („Ehemalige“).
 
 ## Wichtige Komponenten
 
@@ -38,6 +46,9 @@ Berechtigungen konfigurieren.
 - Prisma-Modelle: `User`, `UserRole`, `AppRole`, `SeasonResetSettings`.
 - API: `src/app/api/members/*` (Anlegen, Bearbeiten, Rollen, Status) und
   `src/app/api/season-reset/settings` (geschützte Rollen).
+- `DELETE /api/members/[id]/production` beendet die Mitgliedschaft in der aktiven Produktion
+  (verlangt `PRIVATE.ADMIN.MEMBERS.MANAGE`, antwortet `{ ok: true, production: null }` bzw.
+  `{ error }` mit 400/403/404/500).
 
 ## Jahreswechsel-Rollen
 

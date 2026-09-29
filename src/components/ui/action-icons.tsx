@@ -123,6 +123,7 @@ import {
   Upload,
   User,
   UserCheck,
+  UserMinus,
   UserRound,
   UserRoundCheck,
   UserX,
@@ -981,6 +982,13 @@ export function UserRoundCheckIcon({
 
 export function UserXIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
   return <UserX className={className} aria-hidden {...props} />;
+}
+
+export function UserMinusIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <UserMinus className={className} aria-hidden {...props} />;
 }
 
 export function WandSparklesIcon({

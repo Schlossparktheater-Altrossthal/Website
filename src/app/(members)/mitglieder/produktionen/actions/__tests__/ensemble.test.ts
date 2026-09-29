@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   onboardingFindUnique: vi.fn(),
   membershipUpsert: vi.fn(),
   membershipUpdate: vi.fn(),
+  membershipFindFirst: vi.fn(),
   syncRoles: vi.fn(),
   groupSync: vi.fn(),
   inviteFormerMembers: vi.fn(),
@@ -38,7 +39,11 @@ vi.mock("@/lib/prisma", () => ({
     show: { findUnique: mocks.showFindUnique },
     user: { findUnique: mocks.userFindUnique },
     productionOnboarding: { findUnique: mocks.onboardingFindUnique },
-    productionMembership: { upsert: mocks.membershipUpsert, update: mocks.membershipUpdate },
+    productionMembership: {
+      upsert: mocks.membershipUpsert,
+      update: mocks.membershipUpdate,
+      findFirst: mocks.membershipFindFirst,
+    },
   },
 }));
 
@@ -56,6 +61,7 @@ describe("Ensemble-Verwaltung", () => {
     mocks.showFindUnique.mockResolvedValue({ id: "show-1" });
     mocks.userFindUnique.mockResolvedValue({ id: "user-1" });
     mocks.membershipUpdate.mockResolvedValue({ showId: "show-1", userId: "user-1" });
+    mocks.membershipFindFirst.mockResolvedValue({ id: "m-1", showId: "show-1", userId: "user-1" });
     mocks.syncRoles.mockResolvedValue(["user-1"]);
   });
 
@@ -127,14 +133,27 @@ describe("Ensemble-Verwaltung", () => {
   });
 
   it("beendet Mitgliedschaften statt sie zu löschen", async () => {
-    await removeProductionMemberAction(formData([["membershipId", "m-1"]]));
+    const result = await removeProductionMemberAction(formData([["membershipId", "m-1"]]));
 
+    expect(mocks.membershipFindFirst).toHaveBeenCalledWith({
+      where: { id: "m-1", status: { not: "left" } },
+      select: { id: true, showId: true, userId: true },
+    });
     expect(mocks.membershipUpdate).toHaveBeenCalledWith({
       where: { id: "m-1" },
       data: { status: "left", leftAt: expect.any(Date) },
-      select: { showId: true, userId: true },
     });
     expect(mocks.syncRoles).toHaveBeenCalledWith(["user-1"]);
+    expect(result).toEqual({ ok: true, message: "Mitgliedschaft wurde beendet." });
+  });
+
+  it("meldet bereits beendete Mitgliedschaften, ohne erneut zu schreiben", async () => {
+    mocks.membershipFindFirst.mockResolvedValue(null);
+
+    const result = await removeProductionMemberAction(formData([["membershipId", "m-1"]]));
+
+    expect(mocks.membershipUpdate).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: "Diese Mitgliedschaft ist bereits beendet." });
   });
 });
 

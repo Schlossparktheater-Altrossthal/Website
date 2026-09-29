@@ -13,6 +13,7 @@ import {
   ShieldCheckIcon,
   TrashIcon,
   UserCheckIcon,
+  UserMinusIcon,
   UserXIcon,
 } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
@@ -127,6 +128,9 @@ export function MembersTable({
   const [productionFilter, setProductionFilter] = useState<ProductionFilter>("all");
   const [statusTarget, setStatusTarget] = useState<MembersTableUser | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MembersTableUser | null>(null);
+  const [productionTarget, setProductionTarget] = useState<MembersTableUser | null>(null);
+  const [productionDialogOpen, setProductionDialogOpen] = useState(false);
+  const [productionBusy, setProductionBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkDeactivateOpen, setBulkDeactivateOpen] = useState(false);
@@ -284,6 +288,31 @@ export function MembersTable({
 
   const editUser = rows.find((row) => row.id === openFor) ?? null;
 
+  /**
+   * Entfernt eine Person aus der aktiven Produktion: Die Mitgliedschaft wird beendet
+   * (`status: left`), nicht gelöscht – sie bleibt als Historie erhalten.
+   */
+  const removeFromProduction = async (user: MembersTableUser) => {
+    const name = getDisplayName(user) || user.email || "Mitglied";
+    setProductionBusy(true);
+    try {
+      const response = await fetch(`/api/members/${user.id}/production`, { method: "DELETE" });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(data.error ?? "Entfernen fehlgeschlagen");
+      }
+      setRows((prev) =>
+        prev.map((row) => (row.id === user.id ? { ...row, production: null } : row)),
+      );
+      toast.success(`${name} wurde aus der Produktion entfernt`);
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Entfernen fehlgeschlagen");
+    } finally {
+      setProductionBusy(false);
+    }
+  };
+
   const actionsFor = (u: MembersTableUser) => {
     const profileHref = `/mitglieder/mitgliederverwaltung/${u.id}`;
     return (
@@ -300,6 +329,15 @@ export function MembersTable({
             label: "Rollen & Daten bearbeiten",
             icon: <EditIcon className="h-4 w-4" aria-hidden />,
             onSelect: () => setOpenFor(u.id),
+          },
+          {
+            label: "Aus Produktion entfernen",
+            icon: <UserMinusIcon className="h-4 w-4" aria-hidden />,
+            disabled: !u.production,
+            onSelect: () => {
+              setProductionTarget(u);
+              setProductionDialogOpen(true);
+            },
           },
           {
             label: u.isDeactivated ? "Reaktivieren" : "Deaktivieren",
@@ -631,6 +669,30 @@ export function MembersTable({
         onConfirm={() => {
           setBulkDeactivateOpen(false);
           void bulkStatus(true);
+        }}
+      />
+      <ConfirmDialog
+        open={productionDialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setProductionDialogOpen(false);
+        }}
+        title="Aus der Produktion entfernen?"
+        description={
+          productionTarget
+            ? `${getDisplayName(productionTarget) || productionTarget.email || "Das Mitglied"} wird aus ${
+                productionTitle ? `„${productionTitle}“` : "der aktiven Produktion"
+              } entfernt und verliert die daran hängenden Rollen. Die Mitgliedschaft bleibt als Historie erhalten, die Person kann später erneut aufgenommen werden.`
+            : ""
+        }
+        confirmLabel="Entfernen"
+        cancelLabel="Abbrechen"
+        variant="default"
+        onCancel={() => setProductionDialogOpen(false)}
+        onConfirm={() => {
+          if (!productionTarget || productionBusy) return;
+          const target = productionTarget;
+          setProductionDialogOpen(false);
+          void removeFromProduction(target);
         }}
       />
       <Dialog
