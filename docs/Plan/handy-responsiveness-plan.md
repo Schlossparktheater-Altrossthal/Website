@@ -1,6 +1,6 @@
 # Plan: Handy-Darstellung – horizontales Überlaufen und Miniatur-Zoom
 
-Stand: 2026-09-29. Phase 0 und Phase 1 umgesetzt; Umsetzung geht mit Phase 2 weiter. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Phase 0–3 umgesetzt; Umsetzung geht mit Phase 4 weiter. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -56,6 +56,11 @@ Auswertung steht in `docs/Analysen/handy-ueberlauf-webkit-befunde.md`.
 - E8: Überlauf wird erst gemessen, wenn die Dokumentbreite steht (`waitForStableWidth`). Ein
   Befund gegen einen halbfertigen Aufbau ist wertlos, und ein grüner Lauf nach einem roten bei
   unverändertem Code ist kein Zufall, sondern ein Messfehler.
+- E9: Die systemische Rasterfalle wird mit **einer Grundregel** behoben (`grid-auto-columns:
+minmax(0, 1fr)` für `.grid`), nicht mit 117 Einzeländerungen. Der Nutzer hat das am 2026-09-29
+  so entschieden. Abgrenzung zu E1: Es wird nichts abgeschnitten oder verdeckt – eine implizite
+  Spalte darf nur nicht breiter als ihr Container werden. Damit der Inhalt dann auch passt,
+  kommen `min-w-0` und Umbrechmöglichkeit an den Fundstellen dazu.
 
 ## Phasen
 
@@ -67,19 +72,16 @@ Auswertung steht in `docs/Analysen/handy-ueberlauf-webkit-befunde.md`.
    `docs/Analysen/handy-ueberlauf-webkit-befunde.md`.
    Abschluss: Der Überlauf reproduziert sich in WebKit, zwei unabhängige Werkzeuge melden
    dieselbe Zahl.
-2. **Gemeinsame Bausteine härten.** `SegmentedControl` (umbrechen können, `min-w-0`, Kurzlabel
-   unter `sm`) und `SectionNav` (umbrechen oder unter `sm` konsequent der Select) so umbauen,
-   dass sie nie breiter als ihr Container werden. Das Werkzeugzeilen-Muster (Suche links,
-   primäre Aktion rechts) als verbindliche Regel in `docs/design-system.md` festschreiben.
-   Abschluss: Beide Bausteine halten in WebKit bei 402 px und 744 px dicht, die Bestandsseiten
-   bleiben optisch unverändert.
-3. **Systemische Rasterfalle.** Jedes `grid gap-N <breakpoint>:grid-cols-M` ohne Basis-Spalte
-   bekommt `grid-cols-1` (also `minmax(0,1fr)`), damit eine `auto`-Spur die Seite nicht mehr
-   aufreißen kann. An den gemeldeten Stellen zusätzlich `min-w-0` und Umbrechmöglichkeit
-   (`break-words`, `break-all`) für lange Werte. Die 117 Fundstellen werden nach Bereich
-   abgearbeitet, je Bereich ein Commit. Abschluss: Der WebKit-Lauf ist auch auf
-   `/mitglieder/server-analytics` grün, und ein eingesetzter Prüfwert aus 60 Zeichen ohne
-   Leerzeichen reißt keine Seite mehr auf.
+2. **Gemeinsame Bausteine härten. (umgesetzt)** `SegmentedControl` bricht als Ganzes um
+   (`flex-wrap`), `SectionNav` bricht um und kürzt einen zu langen Eintrag (`min-w-0`, `truncate`)
+   statt die 40 px hohe Pill zu sprengen. Das Werkzeugzeilen-Muster ist in
+   `docs/design-system.md` als verbindliche Regel festgeschrieben.
+3. **Systemische Rasterfalle. (umgesetzt)** Entgegen der ursprünglichen Fassung nicht 117
+   Einzelstellen, sondern eine Grundregel: `.grid { grid-auto-columns: minmax(0, 1fr) }` in
+   `globals.css` lässt eine implizite Rasterspalte den Container nicht mehr überschreiten.
+   Absicherung: `grid-flow-col` und `auto-cols-*` kommen im Projekt nicht vor, explizite
+   `grid-cols-*` bleiben unberührt. An der belegten Fundstelle zusätzlich `min-w-0` und
+   `break-words`, damit der lange Wert auch wirklich in die Karte passt.
 4. **Die drei gemeldeten Werkzeugzeilen.** Kartenkopf der Zuweisung (`assignment-board.tsx`),
    Werkzeugzeile der Sperrliste (`sperrliste/page-client.tsx`) und Werkzeugzeile der
    Terminplanung (`terminplanung/page-client.tsx`) überlauffrei machen. Je Seite ein eigener
@@ -98,8 +100,8 @@ Auswertung steht in `docs/Analysen/handy-ueberlauf-webkit-befunde.md`.
 
 - [x] Phase 0 – diesen Plan anlegen und im Index eintragen
 - [x] Phase 1 – Reproduktion und Diagnose in WebKit
-- [ ] Phase 2 – gemeinsame Bausteine (`SegmentedControl`, `SectionNav`, Muster)
-- [ ] Phase 3 – systemische Rasterfalle (117 Stellen)
+- [x] Phase 2 – gemeinsame Bausteine (`SegmentedControl`, `SectionNav`, Muster)
+- [x] Phase 3 – systemische Rasterfalle (Grundregel statt 117 Einzelstellen)
 - [ ] Phase 4 – Terminplanung, Sperrliste, Teams & Zuweisung
 - [ ] Phase 5 – Prüfnetz (Screenshots-Skript, CI, Matrix)
 - [ ] Phase 6 – Doku und Abschluss

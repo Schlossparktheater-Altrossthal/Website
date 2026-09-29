@@ -39,6 +39,11 @@ Lauf: 42 Tests, 39 grün, 1 rot, 2 übersprungen, 5,5 min. Derselbe Befund kommt
 Die vier Seiten aus den Bildern des Nutzers – Dashboard, Meine Termine, Terminplanung,
 Teams & Zuweisung – überlaufen mit dem lokalen Datenstand bei 402 px in WebKit **nicht**.
 
+**Behoben am 2026-09-29** (Phase 3 des Plans, Commit `374421f4`): Die Grundregel
+`.grid { grid-auto-columns: minmax(0, 1fr) }` verhindert, dass eine implizite Rasterspalte den
+Container überschreitet; die Kapazitätszeile bekam zusätzlich `min-w-0` und `break-words`.
+Der Wiederholungslauf über dieselben 42 Tests ergibt **40 grün, 2 übersprungen, 0 rot**.
+
 ## Der belegte Mechanismus
 
 Werkzeugliste der Karten in `/mitglieder/server-analytics`
