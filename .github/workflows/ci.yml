@@ -79,7 +79,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
+        # Nur die Engines, die die Projekte nutzen: Chromium und WebKit (Safari-Engine, siehe
+        # playwright.config.ts Projekt `mobile-webkit`).
+        run: pnpm exec playwright install --with-deps chromium webkit
       - name: Apply database migrations
         run: pnpm exec prisma migrate deploy
       - name: Seed database

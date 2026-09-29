@@ -166,9 +166,9 @@ export async function waitForPageReady(page, { timeout = 10_000, route = "" } = 
  */
 export async function waitForStableWidth(
   page,
-  { timeout = 15_000, readyTimeout = 3_000, pollMs = 250 } = {},
+  { timeout = 15_000, readyTimeout = 3_000, pollMs = 250, route = "" } = {},
 ) {
-  await waitForPageReady(page, { timeout: readyTimeout });
+  await waitForPageReady(page, { timeout: readyTimeout, route });
 
   const deadline = Date.now() + timeout;
   let previous = null;

@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 // Screenshots angemeldeter Seiten, hell und dunkel (docs/e2e-tests.md).
-//   pnpm e2e:screenshots [--role admin] [--viewport mobile,tablet-portrait,desktop] [--out dir] [/mitglieder/proben ...]
-// Viewports: mobile (390x844), tablet-portrait (834x1112), tablet-small (768x1024),
-// tablet-landscape (1024x768), desktop (1440x900) oder "all". --mobile ist ein Alias für mobile.
+//   pnpm e2e:screenshots [--role admin] [--viewport mobile,tablet-portrait,desktop] [--browser webkit] [--out dir] [/mitglieder/proben ...]
+// Viewports: mobile (390x844), mobile-iphone (402x874), tablet-mini (744x1133),
+// tablet-portrait (834x1112), tablet-small (768x1024), tablet-landscape (1024x768),
+// desktop (1440x900) oder "all". --mobile ist ein Alias für mobile.
+// Engine: chromium (Standard) oder webkit – das iPhone des Nutzers ist WebKit, und Layouts
+// weichen dort ab (docs/Analysen/handy-ueberlauf-webkit-befunde.md).
 // Ziel: E2E_BASE_URL (Standard http://localhost:3000), auf Staging mit E2E_LOGIN_SECRET.
 // Bilder landen außerhalb des Repos bzw. in ignorierten Ordnern (keine Binärdateien committen).
 import { mkdirSync } from "node:fs";
@@ -47,6 +50,7 @@ const { values, positionals } = parseArgs({
     "base-url": { type: "string" },
     mobile: { type: "boolean", default: false },
     viewport: { type: "string" },
+    browser: { type: "string", default: "chromium" },
   },
 });
 
@@ -58,7 +62,7 @@ const outDir = path.resolve(values.out ?? path.join(root, "test-results", "scree
 mkdirSync(outDir, { recursive: true });
 
 const viewports = resolveViewports({ viewport: values.viewport, mobile: values.mobile });
-const browser = await launchBrowser();
+const browser = await launchBrowser({ browser: values.browser });
 let failed = false;
 try {
   for (const { viewport, colorScheme } of viewports.flatMap((viewport) =>

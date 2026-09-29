@@ -306,7 +306,7 @@ try {
           await page.goto(route, { waitUntil: "networkidle" });
           // Nicht auf den Ladezustand allein verlassen: Skeletons haben andere Breiten als der
           // fertige Inhalt, und ein kalter Dev-Server braucht für den ersten Aufruf länger.
-          await waitForStableWidth(page, { timeout });
+          await waitForStableWidth(page, { timeout, route });
           const isLoginRoute = route.startsWith("/login");
           if (!isLoginRoute && page.url().includes("/login")) {
             addFinding(run, "Weiterleitung zum Login – Test-Login fehlt oder ist abgelaufen");

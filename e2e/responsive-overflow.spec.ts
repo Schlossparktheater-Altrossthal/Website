@@ -175,7 +175,7 @@ async function expectNoHorizontalOverflow(page: Page, route: string) {
   const width = page.viewportSize()?.width ?? 1280;
   // Erst messen, wenn der Ladezustand weg ist und die Breite steht (`waitForStableWidth`):
   // gegen einen kalten Dev-Server liefert der halbfertige Aufbau falsche Befunde.
-  const documentWidth = await waitForStableWidth(page);
+  const documentWidth = await waitForStableWidth(page, { route });
   if (documentWidth <= width + 1) return;
 
   const offenders = await overflowingElements(page);
