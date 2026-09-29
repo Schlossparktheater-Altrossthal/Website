@@ -1,6 +1,6 @@
 # Plan: Ernährung & Allergien – Datenmodell, Eingabe und Darstellung
 
-Stand: 2026-09-29. Phase 0–5 umgesetzt, offen Phase 6–7. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Phase 0–6 umgesetzt, offen Phase 7. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -121,7 +121,14 @@ Bereich `?bereich=ernaehrung` mit drei Karten statt zwei:
    Tabletbreite (1024 px) 1106 px breit war und die Seite aufriss; sie scrollt jetzt bis `xl`
    in ihrem eigenen Container. Der Rückkehrer-Wizard bot vorher eigene Werte an („Anders",
    „Meistens"), die kein Leser auf die gespeicherten Labels abbilden konnte.
-6. **Auswertung & Datenschutz**: Datenportal-Felder und Quelle „Abneigungen", Aufbewahrung.
+6. **Auswertung & Datenschutz** _(umgesetzt am 2026-09-29, Commit `9c446b08`)_: Datenportal-Felder
+   und Quelle „Abneigungen", Aufbewahrung. Neu ist die Quelle `aversions` (Feldkatalog
+   `src/lib/datenportal/fields.ts`, Zeilen in `run.ts`, Presets „Abneigungen" und „Anzahl je
+   Besonderheit" im Client); die Allergie-Quelle führt zusätzlich Art, Spuren und „ärztlich
+   abgeklärt", die Teilnehmenden-Quelle die Unterform. Die Aufbewahrung zählt und löscht
+   Abneigungen mit den Allergien (gleiche Frist), Nutzungsbericht und Texte nennen sie.
+   Sichtprüfung des Datenportals in Handy/Tablet/Desktop in hell und dunkel: 0 Befunde, kein
+   Überlauf, die Allergie-Tabelle zeigt „Allergie" und „nicht angegeben" in den neuen Spalten.
 7. **Doku, Sichtprüfung, Release**: `docs/seiten/profil.md` (inklusive des toten Verweises auf
    `allergy-form.tsx`), `docs/profile/README.md`, Screenshots in Handy/Tablet/Desktop in hell und
    dunkel, E2E-Abdeckung, atomare Commits je Phase.
@@ -160,5 +167,5 @@ Referenzseite, eine Pflichtauswahl aus dem Katalog.
 - [x] Phase 3 API und Backend
 - [x] Phase 4 Profil-Oberfläche
 - [x] Phase 5 Übrige Oberflächen
-- [ ] Phase 6 Auswertung und Datenschutz
+- [x] Phase 6 Auswertung und Datenschutz
 - [ ] Phase 7 Doku, Screenshots, E2E, Release
