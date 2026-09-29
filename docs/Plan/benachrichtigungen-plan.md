@@ -2,6 +2,12 @@
 
 Stand: 2026-09-27. Phase 1–6 umgesetzt, offen Phase 7 (Release). Checkliste am Ende wird gepflegt.
 
+> **Nachtrag 2026-09-29:** Vorzeitige Termin-Erinnerungen mit eigener Vorlaufzeit sind ergänzt –
+> eigener Plan: `docs/Plan/termin-erinnerungen-plan.md`. Betroffen sind
+> `NotificationSettings.reminderLead`, der Typ `event-reminder`, das Protokoll
+> `EventReminderDispatch` und `shouldPush()` (Erinnerungen kommen unabhängig vom Bereichs-Schalter
+> durch, weil die Vorlaufzeit das Opt-in ist).
+
 ## Ziel
 
 1. Mitglieder können den Mitgliederbereich als **App installieren** (PWA, Android/Desktop/iOS).

@@ -1,6 +1,7 @@
 # Plan: Vorzeitige Termin-Erinnerungen (individuell einstellbar)
 
-Stand: 2026-09-29. Phase 1–5 umgesetzt, Phase 6 offen. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Umgesetzt (Phase 1–6). Offen bleibt nur die Taktung des CronJobs im
+`k8s-infrastructure`-Repo. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -117,9 +118,10 @@ Zusammenfassung `{ sent, skipped, failed }` zurückgibt.
 5. **Cron-Route aktivieren** — Stub ersetzen, Auth und Logging. Ergebnis: Aufruf mit und ohne
    `x-cron-secret` verhält sich korrekt; Testabdeckung vorhanden.
 6. **Doku und Betrieb** — neuer Plan und Index; `docs/seiten/benachrichtigungen.md`,
-   `docs/seiten/profil.md`, `docs/Plan/benachrichtigungen-plan.md` (Phase 6 und Entscheidungen),
-   `docs/datenmodell.md` (generiert), `docs/email-reminders.md` korrigieren; k8s-Taktung
-   dokumentieren. Ergebnis: `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` grün.
+   `docs/seiten/profil.md`, `docs/Plan/benachrichtigungen-plan.md`, `docs/datenmodell.md` (neu
+   erzeugt); `docs/email-reminders.md` **gelöscht** (beschrieb ein nie gebautes SendGrid-Feature);
+   k8s-Taktung in `docs/development.md` dokumentiert. Ergebnis: `pnpm lint`, `pnpm format:check`,
+   `pnpm test` und `pnpm build` grün.
 
 ## Entscheidungen (2026-09-29)
 
@@ -146,4 +148,4 @@ Zusammenfassung `{ sent, skipped, failed }` zurückgibt.
 - [x] Phase 3 Empfänger- und Fälligkeitslogik
 - [x] Phase 4 Versand und Idempotenz
 - [x] Phase 5 Cron-Route aktivieren
-- [ ] Phase 6 Doku und Betrieb
+- [x] Phase 6 Doku und Betrieb

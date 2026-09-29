@@ -243,6 +243,18 @@ eine deterministische Demo-Antwort zurück (`offline: true`).
 
 Für echte Daten einfach wieder eine gültige `DATABASE_URL` setzen oder den Dev-Stack über `pnpm dev:start` starten.
 
+## CronJobs auf Staging/Prod
+
+Die CronJobs liegen im `k8s-infrastructure`-Repo (`applications/website-staging/`), nicht in
+diesem Repo. Beide rufen ihre Route mit dem Header `x-cron-secret` auf; der Wert steht in
+`CRON_SECRET`.
+
+- `/api/cron/server-analytics` – tägliche Analytics-Aggregation.
+- `/api/cron/rehearsal-reminders` – vorzeitige Termin-Erinnerungen, **alle 15 Minuten**. Der Takt
+  ergibt sich aus den kürzesten Vorlaufzeiten (1 h und 2 h): ein täglicher Lauf könnte sie nicht
+  bedienen. Der Lauf ist idempotent – `EventReminderDispatch` protokolliert je Termin und Person –
+  deshalb sind Wiederholungen unschädlich. `GET` und `POST` verhalten sich gleich.
+
 ## Migrationen auf Staging/Prod
 
 Der Staging-Pod führt beim Start einen Init-Container (`migrate`) aus, der
