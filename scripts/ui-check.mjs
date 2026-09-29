@@ -29,6 +29,7 @@ import {
   resolveBaseURL,
   resolveViewports,
   waitForPageReady,
+  waitForStableWidth,
 } from "./lib/e2e-session.mjs";
 
 loadE2EEnv();
@@ -37,7 +38,8 @@ const USAGE = `pnpm ui:check [/route ...] [Optionen]
 
   --steps '<json>'        Schritte direkt als JSON
   --steps-file <datei>    Schritte aus Datei (Array oder { "steps": [...] })
-  --viewport <liste>      mobile,tablet-portrait,tablet-small,tablet-landscape,desktop oder all
+  --viewport <liste>      mobile,mobile-iphone,tablet-mini,tablet-portrait,tablet-small,tablet-landscape,desktop oder all
+  --browser <engine>      chromium (Standard) oder webkit (Engine von iOS)
   --scheme <light|dark|all>   Farbschema (Standard: all)
   --role <rolle>          Testrolle (Standard: admin)
   --base-url <url>        Ziel (Standard: E2E_BASE_URL oder http://localhost:3000)
@@ -63,6 +65,7 @@ try {
       out: { type: "string" },
       "base-url": { type: "string" },
       viewport: { type: "string" },
+      browser: { type: "string", default: "chromium" },
       scheme: { type: "string", default: "all" },
       steps: { type: "string" },
       "steps-file": { type: "string" },
@@ -239,7 +242,14 @@ const addFinding = (run, message, kind = "error") => {
 };
 
 const viewports = resolveViewports({ viewport: values.viewport });
-const browser = await launchBrowser({ headed: values.headed, slowMo: Number(values["slow-mo"]) });
+console.warn(
+  `▶ Engine ${values.browser} · ${viewports.map((viewport) => viewport.name).join(", ")} · ${schemes.join(", ")}`,
+);
+const browser = await launchBrowser({
+  headed: values.headed,
+  slowMo: Number(values["slow-mo"]),
+  browser: values.browser,
+});
 
 try {
   for (const viewport of viewports) {
@@ -294,7 +304,9 @@ try {
 
         try {
           await page.goto(route, { waitUntil: "networkidle" });
-          await waitForPageReady(page, { route, timeout });
+          // Nicht auf den Ladezustand allein verlassen: Skeletons haben andere Breiten als der
+          // fertige Inhalt, und ein kalter Dev-Server braucht für den ersten Aufruf länger.
+          await waitForStableWidth(page, { timeout });
           const isLoginRoute = route.startsWith("/login");
           if (!isLoginRoute && page.url().includes("/login")) {
             addFinding(run, "Weiterleitung zum Login – Test-Login fehlt oder ist abgelaufen");
@@ -368,7 +380,9 @@ try {
                   run.reads[step.name ?? `schritt-${index + 1}`] = await matches.count();
                   break;
                 case "screenshot":
-                  await shot(label);
+                  // `fullPage` gilt auch hier: ein Vollseiten-Screenshot schießt ein offenes
+                  // Radix-Select zu, deshalb muss der Schalter wirken (docs/e2e-tests.md).
+                  await shot(label, step.fullPage !== false);
                   break;
               }
               result.ok = true;

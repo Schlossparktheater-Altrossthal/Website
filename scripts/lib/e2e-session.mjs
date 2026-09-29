@@ -3,13 +3,18 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { chromium } from "@playwright/test";
+import { chromium, webkit } from "@playwright/test";
 
 export const SCRIPT_ROOT = path.resolve(import.meta.dirname, "..", "..");
 
-// Presets für `--viewport`: Handy, zwei Tablet-Lagen und Desktop.
+// Presets für `--viewport`: Handy, drei Tablet-Breiten und Desktop.
+// `mobile-iphone` ist die Referenz des gemeldeten Geräts (iPhone 17, 402 px); `mobile` bleibt die
+// schmalere Referenz. `tablet-mini` ist das iPad mini hochkant (744 px) – es liegt unter dem
+// `md`-Breakpoint (768 px) und damit in einer Lücke zwischen `tablet-portrait` (834 px) und Handy.
 export const VIEWPORTS = {
   mobile: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true },
+  "mobile-iphone": { width: 402, height: 874, deviceScaleFactor: 3, isMobile: true },
+  "tablet-mini": { width: 744, height: 1133, deviceScaleFactor: 2, hasTouch: true },
   "tablet-portrait": { width: 834, height: 1112, deviceScaleFactor: 2, hasTouch: true },
   "tablet-small": { width: 768, height: 1024, deviceScaleFactor: 2, hasTouch: true },
   "tablet-landscape": { width: 1024, height: 768, deviceScaleFactor: 2, hasTouch: true },
@@ -57,7 +62,21 @@ export function resolveViewports({ viewport, mobile } = {}) {
   return [{ name: "desktop", ...VIEWPORTS.desktop }];
 }
 
-export function launchBrowser({ headed = false, slowMo = 0 } = {}) {
+export function launchBrowser({ headed = false, slowMo = 0, browser = "chromium" } = {}) {
+  // WebKit ist die Engine von iOS – Überlaufverhalten und Layout weichen dort von Chromium ab.
+  // Der `mobile`-Prüflauf in Chromium hat den Überlauf auf dem iPhone nicht gefunden.
+  const engines = { chromium, webkit };
+  const engine = engines[browser];
+  if (!engine) {
+    throw new Error(
+      `Unbekannte Browser-Engine "${browser}" – erlaubt: ${Object.keys(engines).join(", ")}`,
+    );
+  }
+
+  if (browser !== "chromium") {
+    return engine.launch({ headless: !headed, slowMo });
+  }
+
   // `--lang=de-DE`: Datumsfelder richten sich nach der Browsersprache, nicht nach dem Locale im Kontext.
   // Die Throttle-Flags sind ein Sicherheitsnetz: Playwright prüft Klickziele über laufende
   // Animation-Frames und bricht sonst mit "element is not stable" ab. Ein echtes Browserfenster
@@ -128,4 +147,45 @@ export async function waitForPageReady(page, { timeout = 10_000, route = "" } = 
       timeout,
     })
     .catch(() => console.warn(`[${route}] Ladezustand nach ${timeout / 1000} s noch sichtbar`));
+}
+
+/**
+ * Dokumentbreite erst messen, wenn sie sich eingependelt hat.
+ *
+ * `next dev` liefert das HTML aus, bevor React hydratisiert hat, und Skeletons haben andere
+ * Breiten als der fertige Inhalt. Auf einem kalten Dev-Server kommen die ersten Aufrufe eines
+ * Laufs hinzu. Ohne diese Wartezeit misst ein Überlauf-Test gegen einen halbfertigen Aufbau:
+ * Am 2026-09-29 meldete `e2e/responsive-overflow.spec.ts` fünf Seiten als überlaufend, die im
+ * warmen Lauf alle grün waren – bei unverändertem Code und Datenstand.
+ *
+ * Deshalb: erst den Ladezustand abwarten, dann die Breite zweimal hintereinander gleich messen.
+ *
+ * `readyTimeout` ist bewusst kurz: Einzelne Seiten tragen ein dauerhaftes `animate-pulse`
+ * (Statusanzeigen, die kein Skeleton sind). Ein langer Ladezustands-Timeout würde auf jeder
+ * solchen Seite voll auslaufen; die eigentliche Zusicherung ist die stabile Breite darunter.
+ */
+export async function waitForStableWidth(
+  page,
+  { timeout = 15_000, readyTimeout = 3_000, pollMs = 250 } = {},
+) {
+  await waitForPageReady(page, { timeout: readyTimeout });
+
+  const deadline = Date.now() + timeout;
+  let previous = null;
+  let stableSamples = 0;
+
+  while (Date.now() < deadline) {
+    const width = await page.evaluate(() => document.documentElement.scrollWidth);
+    if (width === previous) {
+      stableSamples += 1;
+      if (stableSamples >= 2) return width;
+    } else {
+      stableSamples = 0;
+      previous = width;
+    }
+    await page.waitForTimeout(pollMs);
+  }
+
+  console.warn(`[overflow] Dokumentbreite blieb nach ${timeout / 1000} s nicht stabil`);
+  return previous ?? 0;
 }

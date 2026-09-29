@@ -54,6 +54,21 @@ export default defineConfig({
       dependencies: ["setup"],
     },
     {
+      name: "mobile-webkit",
+      testMatch: /responsive-overflow\.spec\.ts/,
+      use: {
+        // WebKit ist die Engine von iOS. Der Chromium-Lauf hat den Überlauf auf dem Gerät des
+        // Nutzers nicht gefunden, deshalb prüft dieses Projekt dieselben Regeln in Safari-Technik.
+        // 402 px ist die Breite eines iPhone 17 (docs/Plan/handy-responsiveness-plan.md).
+        browserName: "webkit",
+        viewport: { width: 402, height: 874 },
+        deviceScaleFactor: 3,
+        isMobile: true,
+        hasTouch: true,
+      },
+      dependencies: ["setup"],
+    },
+    {
       name: "tablet-portrait",
       testMatch: /responsive-overflow\.spec\.ts/,
       use: {
