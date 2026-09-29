@@ -61,8 +61,21 @@ const PRESETS: Preset[] = [
   {
     label: "Allergien",
     source: "allergies",
-    columns: ["name", "allergen", "level", "symptoms", "treatment"],
+    columns: ["name", "allergen", "kind", "level", "traces", "symptoms", "treatment"],
     filters: [],
+  },
+  {
+    label: "Abneigungen",
+    source: "aversions",
+    columns: ["name", "speciality", "note"],
+    filters: [],
+  },
+  {
+    label: "Anzahl je Besonderheit",
+    source: "aversions",
+    columns: [],
+    filters: [],
+    groupBy: "speciality",
   },
   {
     label: "Schüler:innen nach Schule",

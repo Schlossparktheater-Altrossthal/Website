@@ -46,7 +46,7 @@ describe("Aufbewahrungs-Actions", () => {
     expect(mocks.purgeDietary).toHaveBeenCalledWith(["a", "b"]);
     expect(result).toEqual({
       ok: true,
-      message: "Ernährungs- und Allergiedaten von 2 Personen gelöscht.",
+      message: "Ernährungs-, Allergie- und Abneigungsdaten von 2 Personen gelöscht.",
     });
   });
 

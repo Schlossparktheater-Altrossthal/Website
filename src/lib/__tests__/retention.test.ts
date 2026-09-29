@@ -92,7 +92,7 @@ function user(overrides: Record<string, unknown>) {
     role: "member",
     roles: [],
     productionMemberships: [],
-    _count: { dietaryRestrictions: 1 },
+    _count: { dietaryRestrictions: 1, dietaryAversions: 0 },
     onboardingProfile: null,
     ...overrides,
   };
@@ -138,7 +138,7 @@ describe("collectRetentionCandidates", () => {
       }),
       user({
         id: "ohne-allergien",
-        _count: { dietaryRestrictions: 0 },
+        _count: { dietaryRestrictions: 0, dietaryAversions: 0 },
         productionMemberships: [membershipEndingIn("2029-05-01")],
       }),
     ]);
@@ -148,6 +148,20 @@ describe("collectRetentionCandidates", () => {
     expect(result.accounts).toEqual([]);
     expect(result.dietary.map((entry) => entry.id)).toEqual(["vorstand", "aktiv"]);
     expect(mocks.userFindMany.mock.calls[0][0].where).toEqual({ anonymizedAt: null });
+  });
+
+  it("zählt Abneigungen wie Allergien", async () => {
+    mocks.userFindMany.mockResolvedValue([
+      user({
+        id: "nur-abneigungen",
+        _count: { dietaryRestrictions: 0, dietaryAversions: 2 },
+        productionMemberships: [membershipEndingIn("2025-05-01")],
+      }),
+    ]);
+
+    const result = await collectRetentionCandidates(now);
+
+    expect(result.dietary.map((entry) => entry.id)).toEqual(["nur-abneigungen"]);
   });
 
   it("schlägt Fotoerlaubnisse 5 Jahre nach Ende der Produktion vor", async () => {

@@ -32,12 +32,14 @@ export type FieldDefinition = {
   type: FieldType;
 };
 
-export const DATA_SOURCES = ["participants", "allergies"] as const;
+export const DATA_SOURCES = ["participants", "allergies", "aversions"] as const;
 export type DataSource = (typeof DATA_SOURCES)[number];
 
 export const DATA_SOURCE_LABELS: Record<DataSource, string> = {
   participants: "Teilnehmende einer Produktion",
   allergies: "Allergien (eine Zeile je Eintrag)",
+  // Eigene Quelle, damit ein Bericht „wer isst was nicht" ohne Allergiedaten möglich ist.
+  aversions: "Abneigungen & Besonderheiten (eine Zeile je Eintrag)",
 };
 
 /** Feldkatalog je Datenquelle. Nur hier gelistete Felder sind abfragbar. */
@@ -59,14 +61,24 @@ export const SOURCE_FIELDS: Record<DataSource, readonly FieldDefinition[]> = {
     { key: "hasAllergy", label: "Hat Allergie", group: "health", type: "boolean" },
     { key: "allergies", label: "Allergien", group: "health", type: "text" },
     { key: "dietaryPreference", label: "Ernährungsweise", group: "health", type: "text" },
+    { key: "dietaryPreferenceVariant", label: "Unterform", group: "health", type: "text" },
   ],
   allergies: [
     { key: "name", label: "Name", group: "health", type: "text" },
     { key: "roles", label: "Rollen in der Produktion", group: "health", type: "text" },
     { key: "allergen", label: "Allergen", group: "health", type: "text" },
+    { key: "kind", label: "Art", group: "health", type: "text" },
     { key: "level", label: "Schweregrad", group: "health", type: "text" },
+    { key: "traces", label: "Spuren", group: "health", type: "text" },
+    { key: "diagnosed", label: "Ärztlich abgeklärt", group: "health", type: "boolean" },
     { key: "symptoms", label: "Symptome", group: "health", type: "text" },
     { key: "treatment", label: "Notfallbehandlung", group: "health", type: "text" },
+    { key: "note", label: "Notiz", group: "health", type: "text" },
+  ],
+  aversions: [
+    { key: "name", label: "Name", group: "health", type: "text" },
+    { key: "roles", label: "Rollen in der Produktion", group: "health", type: "text" },
+    { key: "speciality", label: "Besonderheit", group: "health", type: "text" },
     { key: "note", label: "Notiz", group: "health", type: "text" },
   ],
 };

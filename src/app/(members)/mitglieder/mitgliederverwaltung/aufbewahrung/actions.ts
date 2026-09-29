@@ -36,11 +36,14 @@ export async function purgeExpiredDietaryAction(): Promise<RetentionActionResult
     const session = await ensureAdmin();
     const { dietary } = await collectRetentionCandidates();
     const count = await purgeDietaryData(dietary.map((entry) => entry.id));
-    await logger.info("Allergie-/Ernährungsdaten nach Frist gelöscht", {
+    await logger.info("Ernährungs-, Allergie- und Abneigungsdaten nach Frist gelöscht", {
       description: `${count} Personen, ausgelöst von ${session.user?.id ?? "unbekannt"}`,
     });
     revalidatePath(PAGE_PATH);
-    return { ok: true, message: `Ernährungs- und Allergiedaten von ${count} Personen gelöscht.` };
+    return {
+      ok: true,
+      message: `Ernährungs-, Allergie- und Abneigungsdaten von ${count} Personen gelöscht.`,
+    };
   } catch (error) {
     return failure(error, "Löschen fehlgeschlagen.");
   }

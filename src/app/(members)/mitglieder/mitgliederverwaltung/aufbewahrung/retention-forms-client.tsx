@@ -37,7 +37,9 @@ export function PurgeButton({ kind, count }: { kind: "dietary" | "photoConsents"
   useResultToast(state);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const label =
-    kind === "dietary" ? "Ernährungs-/Allergiedaten löschen" : "Fotoerlaubnisse löschen";
+    kind === "dietary"
+      ? "Ernährungs-, Allergie- und Abneigungsdaten löschen"
+      : "Fotoerlaubnisse löschen";
 
   // Die Bestätigung stößt dieselbe Action an, damit `useActionState` Zustand und
   // Ladeanzeige weiterhin steuert.

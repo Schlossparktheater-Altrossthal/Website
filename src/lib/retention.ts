@@ -111,7 +111,7 @@ export async function collectRetentionCandidates(
             show: { select: { status: true, statusChangedAt: true, year: true } },
           },
         },
-        _count: { select: { dietaryRestrictions: true } },
+        _count: { select: { dietaryRestrictions: true, dietaryAversions: true } },
         onboardingProfile: { select: { dietaryPreference: true } },
       },
     }),
@@ -134,8 +134,11 @@ export async function collectRetentionCandidates(
     const lastEnd = lastProductionEnd(user.productionMemberships, user.createdAt);
     if (!lastEnd) continue;
     const entry = { id: user.id, name: displayName(user), lastEnd };
+    // Abneigungen sind Ernährungsangaben und laufen in dieselbe Frist wie Allergien.
     const hasDietary =
-      user._count.dietaryRestrictions > 0 || Boolean(user.onboardingProfile?.dietaryPreference);
+      user._count.dietaryRestrictions > 0 ||
+      user._count.dietaryAversions > 0 ||
+      Boolean(user.onboardingProfile?.dietaryPreference);
     if (hasDietary && lastEnd < dietaryCutoff) {
       candidates.dietary.push(entry);
     }
@@ -163,15 +166,23 @@ export async function collectRetentionCandidates(
   return candidates;
 }
 
-/** Entfernt Allergien/Ernährungsangaben inkl. Kopien in Onboarding-Snapshots und Einreichungen. */
+/**
+ * Entfernt Allergien, Abneigungen und Ernährungsangaben inkl. Kopien in Onboarding-Snapshots und
+ * Einreichungen.
+ */
 export async function purgeDietaryData(userIds: readonly string[]): Promise<number> {
   if (userIds.length === 0) return 0;
   const ids = [...userIds];
   await prisma.$transaction([
     prisma.dietaryRestriction.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.dietaryAversion.deleteMany({ where: { userId: { in: ids } } }),
     prisma.memberOnboardingProfile.updateMany({
       where: { userId: { in: ids } },
-      data: { dietaryPreference: null, dietaryPreferenceStrictness: null },
+      data: {
+        dietaryPreference: null,
+        dietaryPreferenceVariant: null,
+        dietaryPreferenceStrictness: null,
+      },
     }),
     prisma.productionOnboarding.updateMany({
       where: { userId: { in: ids } },

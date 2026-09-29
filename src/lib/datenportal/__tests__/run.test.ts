@@ -1,8 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({ membershipFindMany: vi.fn() }));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: { productionMembership: { findMany: mocks.membershipFindMany } },
+}));
 
 import { portalRowsToCsv } from "../csv";
 import { SOURCE_FIELDS, allowedFields } from "../fields";
-import { PortalFieldError, ageOn, applyQuery, projectRows, type PortalRow } from "../run";
+import {
+  PortalFieldError,
+  ageOn,
+  allergyTracesLabel,
+  applyQuery,
+  loadSourceRows,
+  projectRows,
+  type PortalRow,
+} from "../run";
 
 const fields = SOURCE_FIELDS.participants;
 const rows: PortalRow[] = [
@@ -77,6 +91,98 @@ describe("allowedFields", () => {
     expect(allowedFields("allergies", { base: true, education: true, health: false })).toHaveLength(
       0,
     );
+    expect(allowedFields("aversions", { base: true, education: true, health: false })).toHaveLength(
+      0,
+    );
+  });
+});
+
+describe("allergyTracesLabel", () => {
+  it("liest den dreiwertigen Zustand als Text", () => {
+    expect(allergyTracesLabel(true)).toBe("unproblematisch");
+    expect(allergyTracesLabel(false)).toBe("gefährlich");
+    expect(allergyTracesLabel(null)).toBe("nicht angegeben");
+  });
+});
+
+describe("loadSourceRows", () => {
+  const membership = {
+    status: "active",
+    joinedAt: new Date("2026-01-01"),
+    roles: ["member"],
+    function: null,
+    user: {
+      id: "u1",
+      firstName: "Anna",
+      lastName: "A",
+      name: null,
+      email: "anna@example.org",
+      dateOfBirth: new Date("2000-01-01"),
+      onboardingProfile: {
+        gender: "weiblich",
+        educationCategory: "work",
+        educationSchoolName: null,
+        educationClassName: null,
+        dietaryPreference: "Vegetarisch",
+        dietaryPreferenceVariant: "Nur Milch, kein Ei",
+      },
+      dietaryRestrictions: [
+        {
+          allergen: "Erdnüsse",
+          kind: "ALLERGY" as const,
+          level: "SEVERE" as const,
+          tracesOk: false,
+          diagnosed: true,
+          symptoms: "Schwellung",
+          treatment: "Notfallset",
+          note: null,
+        },
+      ],
+      dietaryAversions: [{ label: "keine Pilze", note: "nur gebraten" }],
+      photoConsents: [],
+    },
+  };
+
+  it("liefert Art, Spuren und Abklärung je Allergie", async () => {
+    mocks.membershipFindMany.mockResolvedValue([membership]);
+
+    const rows = await loadSourceRows("allergies", "show-1", { includeInactive: false });
+
+    expect(rows).toEqual([
+      {
+        name: "Anna A",
+        roles: "Mitglied",
+        allergen: "Erdnüsse",
+        kind: "Allergie",
+        level: "schwer",
+        traces: "gefährlich",
+        diagnosed: true,
+        symptoms: "Schwellung",
+        treatment: "Notfallset",
+        note: null,
+      },
+    ]);
+  });
+
+  it("führt Abneigungen als eigene Quelle", async () => {
+    mocks.membershipFindMany.mockResolvedValue([membership]);
+
+    const rows = await loadSourceRows("aversions", "show-1", { includeInactive: false });
+
+    expect(rows).toEqual([
+      { name: "Anna A", roles: "Mitglied", speciality: "keine Pilze", note: "nur gebraten" },
+    ]);
+  });
+
+  it("nimmt die Unterform in die Teilnehmerzeile auf", async () => {
+    mocks.membershipFindMany.mockResolvedValue([membership]);
+
+    const rows = await loadSourceRows("participants", "show-1", { includeInactive: false });
+
+    expect(rows[0]).toMatchObject({
+      dietaryPreference: "Vegetarisch",
+      dietaryPreferenceVariant: "Nur Milch, kein Ei",
+    });
   });
 });
 

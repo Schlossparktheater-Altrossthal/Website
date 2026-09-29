@@ -1,5 +1,6 @@
 import type { AllergyLevel } from "@prisma/client";
 
+import { ALLERGEN_KIND_LABELS } from "@/data/allergens";
 import { ROLE_LABELS, type Role } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import {
@@ -17,6 +18,19 @@ const ALLERGY_LEVEL_LABELS: Record<AllergyLevel, string> = {
   SEVERE: "schwer",
   LETHAL: "lebensbedrohlich",
 };
+
+/** Spuren-Angabe als Text. `null` heißt „ungeklärt" und wird strikt behandelt. */
+const ALLERGY_TRACES_LABELS: Record<"yes" | "no" | "unknown", string> = {
+  yes: "unproblematisch",
+  no: "gefährlich",
+  unknown: "nicht angegeben",
+};
+
+export function allergyTracesLabel(tracesOk: boolean | null): string {
+  if (tracesOk === true) return ALLERGY_TRACES_LABELS.yes;
+  if (tracesOk === false) return ALLERGY_TRACES_LABELS.no;
+  return ALLERGY_TRACES_LABELS.unknown;
+}
 
 const EDUCATION_CATEGORY_LABELS: Record<string, string> = {
   school: "Schule",
@@ -94,6 +108,7 @@ export async function loadSourceRows(
               educationSchoolName: true,
               educationClassName: true,
               dietaryPreference: true,
+              dietaryPreferenceVariant: true,
             },
           },
           dietaryRestrictions: {
@@ -101,11 +116,19 @@ export async function loadSourceRows(
             orderBy: { allergen: "asc" },
             select: {
               allergen: true,
+              kind: true,
               level: true,
+              tracesOk: true,
+              diagnosed: true,
               symptoms: true,
               treatment: true,
               note: true,
             },
+          },
+          dietaryAversions: {
+            where: { isActive: true },
+            orderBy: { label: "asc" },
+            select: { label: true, note: true },
           },
           photoConsents: { where: { showId }, select: { status: true, revokedAt: true } },
         },
@@ -124,9 +147,23 @@ export async function loadSourceRows(
           name,
           roles,
           allergen: item.allergen,
+          kind: ALLERGEN_KIND_LABELS[item.kind],
           level: ALLERGY_LEVEL_LABELS[item.level],
+          traces: allergyTracesLabel(item.tracesOk),
+          diagnosed: item.diagnosed,
           symptoms: item.symptoms,
           treatment: item.treatment,
+          note: item.note,
+        });
+      }
+      continue;
+    }
+    if (source === "aversions") {
+      for (const item of user.dietaryAversions) {
+        rows.push({
+          name,
+          roles,
+          speciality: item.label,
           note: item.note,
         });
       }
@@ -159,6 +196,7 @@ export async function loadSourceRows(
         .map((item) => `${item.allergen} (${ALLERGY_LEVEL_LABELS[item.level]})`)
         .join(", "),
       dietaryPreference: profile?.dietaryPreference ?? null,
+      dietaryPreferenceVariant: profile?.dietaryPreferenceVariant ?? null,
     });
   }
   return rows;

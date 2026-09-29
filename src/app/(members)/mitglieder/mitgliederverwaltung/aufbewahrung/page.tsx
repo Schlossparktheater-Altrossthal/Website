@@ -48,7 +48,7 @@ export default async function AufbewahrungPage() {
     <div className="space-y-6">
       <PageHeader
         title="Aufbewahrung & Löschfristen"
-        description={`Fristen ab dem Ende der letzten Produktion einer Person: Ernährung und Allergien ${RETENTION_YEARS.dietary} Jahre, Fotoerlaubnisse ${RETENTION_YEARS.photoConsent} Jahre nach Ende der jeweiligen Produktion, Konten ${RETENTION_YEARS.account} Jahre. Wer in einer geplanten oder aktiven Produktion ist, wird nie aufgeführt. Nichts wird automatisch gelöscht.`}
+        description={`Fristen ab dem Ende der letzten Produktion einer Person: Ernährung, Allergien und Abneigungen ${RETENTION_YEARS.dietary} Jahre, Fotoerlaubnisse ${RETENTION_YEARS.photoConsent} Jahre nach Ende der jeweiligen Produktion, Konten ${RETENTION_YEARS.account} Jahre. Wer in einer geplanten oder aktiven Produktion ist, wird nie aufgeführt. Nichts wird automatisch gelöscht.`}
         breadcrumbs={[
           membersNavigationBreadcrumb("/mitglieder/mitgliederverwaltung"),
           { id: "aufbewahrung", label: "Aufbewahrung", isCurrent: true },
@@ -106,7 +106,7 @@ export default async function AufbewahrungPage() {
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle>
-            Ernährung &amp; Allergien älter als {RETENTION_YEARS.dietary} Jahre (
+            Ernährung, Allergien &amp; Abneigungen älter als {RETENTION_YEARS.dietary} Jahre (
             {candidates.dietary.length})
           </CardTitle>
           <PurgeButton kind="dietary" count={candidates.dietary.length} />
