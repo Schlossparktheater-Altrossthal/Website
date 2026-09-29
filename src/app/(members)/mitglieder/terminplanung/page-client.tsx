@@ -386,12 +386,29 @@ function DayCellCounts({ counts }: { counts: { blocked: number; limited: number 
   );
 }
 
-const DRAFT_DATE = new Intl.DateTimeFormat("de-DE", {
+// Wochentagskürzel und Datum getrennt formatieren.
+//
+// Die Kurzform des Wochentags trägt ihren Punkt je nach ICU-Build: Node liefert „So., 27.09.“,
+// WebKit/Safari „So. 27.09.“. Das frühere gemeinsame Format mit `.replace(".,", "")` erzeugte
+// auf dem Server „So 27.09.“ und im Browser „So. 27.09.“ – React brach die Hydration ab
+// (gemessen 2026-09-29 mit `pnpm ui:check /mitglieder/terminplanung --browser webkit`).
+const DRAFT_WEEKDAY = new Intl.DateTimeFormat("de-DE", {
   weekday: "short",
+  timeZone: DEFAULT_TIME_ZONE,
+});
+const DRAFT_DAY_MONTH = new Intl.DateTimeFormat("de-DE", {
   day: "2-digit",
   month: "2-digit",
   timeZone: DEFAULT_TIME_ZONE,
 });
+
+/** „So. 27.09.“ – der Punkt wird selbst gesetzt, damit beide Seiten dasselbe ausgeben. */
+function formatDraftDate(value: string | Date) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const weekday = DRAFT_WEEKDAY.format(date).replace(/\.$/, "");
+  return `${weekday}. ${DRAFT_DAY_MONTH.format(date)}`;
+}
+
 /** Ab so vielen Entwürfen startet die Liste eingeklappt. */
 const DRAFTS_COLLAPSED_FROM = 4;
 
@@ -441,7 +458,7 @@ function DraftList({ drafts }: { drafts: PlanningDraft[] }) {
                   )}
                 />
                 <span className="w-24 shrink-0 whitespace-nowrap tabular-nums text-muted-foreground sm:w-36">
-                  {DRAFT_DATE.format(new Date(draft.start)).replace(".,", "")}
+                  {formatDraftDate(draft.start)}
                   {draft.allDay ? null : (
                     <span className="block text-xs sm:inline sm:pl-1.5">
                       {formatIsoTimeInTimeZone(draft.start)}
