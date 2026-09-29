@@ -1,6 +1,6 @@
 # Plan: Ernährung & Allergien – Datenmodell, Eingabe und Darstellung
 
-Stand: 2026-09-29. Phase 0–4 umgesetzt, offen Phase 5–7. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-29. Phase 0–5 umgesetzt, offen Phase 6–7. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -114,9 +114,13 @@ Bereich `?bereich=ernaehrung` mit drei Karten statt zwei:
    expliziten `screenshot`-Schritten (ein Vollseiten-Screenshot schießt ein offenes Radix-Select
    zu, dadurch war das Popup nie im Bild), und der Select-Auslöser blähte sich mit langen
    Optionslabels auf dem Handy zweizeilig auf.
-5. **Übrige Oberflächen**: Onboarding- und Rückkehrer-Wizard, Dashboard-Onboarding,
-   Bereichs-Untertitel, dazu die Onboarding-Routen und der Profil-Snapshot – Payload und Client
-   ändern sich gemeinsam, sonst bricht der Wizard.
+5. **Übrige Oberflächen** _(umgesetzt am 2026-09-29, Commit `ddf57431`)_: Onboarding- und
+   Rückkehrer-Wizard, Dashboard-Onboarding, Bereichs-Untertitel, dazu die Onboarding-Routen und
+   der Profil-Snapshot – Payload und Client ändern sich gemeinsam, sonst bricht der Wizard.
+   Die Sichtprüfung fand zusätzlich, dass die Fortschrittsleiste des Erstanmeldungs-Wizards auf
+   Tabletbreite (1024 px) 1106 px breit war und die Seite aufriss; sie scrollt jetzt bis `xl`
+   in ihrem eigenen Container. Der Rückkehrer-Wizard bot vorher eigene Werte an („Anders",
+   „Meistens"), die kein Leser auf die gespeicherten Labels abbilden konnte.
 6. **Auswertung & Datenschutz**: Datenportal-Felder und Quelle „Abneigungen", Aufbewahrung.
 7. **Doku, Sichtprüfung, Release**: `docs/seiten/profil.md` (inklusive des toten Verweises auf
    `allergy-form.tsx`), `docs/profile/README.md`, Screenshots in Handy/Tablet/Desktop in hell und
@@ -155,6 +159,6 @@ Referenzseite, eine Pflichtauswahl aus dem Katalog.
 - [x] Phase 2 Zentrale Listen und Validierung
 - [x] Phase 3 API und Backend
 - [x] Phase 4 Profil-Oberfläche
-- [ ] Phase 5 Übrige Oberflächen
+- [x] Phase 5 Übrige Oberflächen
 - [ ] Phase 6 Auswertung und Datenschutz
 - [ ] Phase 7 Doku, Screenshots, E2E, Release
