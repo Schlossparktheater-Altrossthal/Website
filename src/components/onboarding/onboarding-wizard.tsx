@@ -53,7 +53,8 @@ import {
 import {
   DIETARY_STYLE_OPTIONS,
   DIETARY_STRICTNESS_OPTIONS,
-  DEFAULT_STRICTNESS_FOR_NONE,
+  DEFAULT_STRICTNESS,
+  isStrictnessRelevant,
   resolveDietaryStyleLabel,
   resolveDietaryStrictnessLabel,
   type DietaryStrictnessOption,
@@ -401,19 +402,14 @@ export function OnboardingWizard({
     [form.nutritionStrictness, form.nutritionStyle],
   );
 
-  const isAllesesser = form.nutritionStyle === "omnivore" || form.nutritionStyle === "none";
-
-  useEffect(() => {
-    if (form.nutritionStyle !== "none") return;
-    setForm((prev) => ({ ...prev, nutritionStyle: "omnivore" }));
-  }, [form.nutritionStyle, setForm]);
+  const isAllesesser = !isStrictnessRelevant(form.nutritionStyle);
 
   useEffect(() => {
     if (!isAllesesser) return;
-    if (form.nutritionStrictness === DEFAULT_STRICTNESS_FOR_NONE) return;
+    if (form.nutritionStrictness === DEFAULT_STRICTNESS) return;
     setForm((prev) => ({
       ...prev,
-      nutritionStrictness: DEFAULT_STRICTNESS_FOR_NONE,
+      nutritionStrictness: DEFAULT_STRICTNESS,
     }));
   }, [form.nutritionStrictness, form.nutritionStyle, isAllesesser, setForm]);
 
@@ -1674,13 +1670,11 @@ export function OnboardingWizard({
                       <SelectValue placeholder="Wähle deinen Stil" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DIETARY_STYLE_OPTIONS.filter((option) => option.value !== "none").map(
-                        (option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ),
-                      )}
+                      {DIETARY_STYLE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {form.nutritionStyle === "custom" && (

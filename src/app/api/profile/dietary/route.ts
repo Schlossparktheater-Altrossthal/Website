@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  DEFAULT_STRICTNESS_FOR_NONE,
+  DEFAULT_STRICTNESS,
   dietaryPreferenceSchema,
+  isStrictnessRelevant,
   resolveDietaryStrictnessLabel,
   resolveDietaryStyleLabel,
   type DietaryStrictnessOption,
@@ -45,9 +46,9 @@ export async function PUT(request: NextRequest) {
   }
 
   const style = parsed.style;
-  const strictnessBaseline = style === "none" || style === "omnivore";
+  const strictnessBaseline = !isStrictnessRelevant(style);
   const strictness: DietaryStrictnessOption = strictnessBaseline
-    ? DEFAULT_STRICTNESS_FOR_NONE
+    ? DEFAULT_STRICTNESS
     : parsed.strictness;
   const customLabel = parsed.customLabel ?? null;
 

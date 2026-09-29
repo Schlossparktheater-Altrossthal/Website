@@ -27,9 +27,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  DEFAULT_STRICTNESS_FOR_NONE,
+  DEFAULT_STRICTNESS,
   DIETARY_STRICTNESS_OPTIONS,
   DIETARY_STYLE_OPTIONS,
+  isStrictnessRelevant,
   parseDietaryStrictnessFromLabel,
   parseDietaryStyleFromLabel,
   type DietaryStrictnessOption,
@@ -98,10 +99,7 @@ export function NutritionSection({
     setDietaryError(null);
 
     const style = dietaryState.style;
-    const strictness =
-      style === "omnivore" || style === "none"
-        ? DEFAULT_STRICTNESS_FOR_NONE
-        : dietaryState.strictness;
+    const strictness = style === "omnivore" ? DEFAULT_STRICTNESS : dietaryState.strictness;
     const customLabel = dietaryState.customLabel.trim();
     if (style === "custom" && !customLabel) {
       setDietaryError("Bitte gib eine Bezeichnung für deinen individuellen Ernährungsstil an.");
@@ -253,7 +251,7 @@ export function NutritionSection({
   const dietaryDirty =
     !onboarding?.dietaryPreference ||
     JSON.stringify(dietaryState) !== JSON.stringify(initialDietary);
-  const strictnessRelevant = dietaryState.style !== "omnivore" && dietaryState.style !== "none";
+  const strictnessRelevant = isStrictnessRelevant(dietaryState.style);
 
   return (
     <div className="space-y-4">
@@ -268,10 +266,7 @@ export function NutritionSection({
                   setDietaryState((prev) => ({
                     ...prev,
                     style: value as DietaryStyleOption,
-                    strictness:
-                      value === "omnivore" || value === "none"
-                        ? DEFAULT_STRICTNESS_FOR_NONE
-                        : prev.strictness,
+                    strictness: value === "omnivore" ? DEFAULT_STRICTNESS : prev.strictness,
                   }))
                 }
               >

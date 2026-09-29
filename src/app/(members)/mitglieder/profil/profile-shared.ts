@@ -421,13 +421,8 @@ export const basicsSchema = z
     }
   });
 
-export const allergySchema = z.object({
-  allergen: z.string().trim().min(2, "Bitte gib ein Allergen an").max(160),
-  level: z.nativeEnum(AllergyLevel),
-  symptoms: z.string().trim().max(500).optional(),
-  treatment: z.string().trim().max(500).optional(),
-  note: z.string().trim().max(500).optional(),
-});
+// Das Schema prüft Client und API gemeinsam; es liegt deshalb außerhalb des app-Verzeichnisses.
+export { allergyInputSchema as allergySchema } from "@/lib/profil/dietary-validation";
 
 export const onboardingSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
