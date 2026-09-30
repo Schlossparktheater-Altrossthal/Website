@@ -962,3 +962,22 @@
     transform: translateX(-50%);
   }
 }
+
+/* Druckansicht: nur der markierte Bereich (.print-area) wird gedruckt. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+
+  .print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0;
+  }
+}
