@@ -1,6 +1,7 @@
 # Plan: Fotoerlaubnis – strukturierte Einwilligungen, Nachweise & Versionierung
 
-Stand: 2026-09-30. Entwurf zur Freigabe, Umsetzung noch nicht begonnen. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-30. Alle Phasen umgesetzt (Phase 0–6). Offen ist nur die manuelle Staging-Abnahme.
+Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -134,13 +135,14 @@ PhotoConsentVersion            Versionshistorie (eine Zeile je Einreichung/Ände
 - E5: U18-Nachweis als Kamera-Foto **und** Datei-Upload; vor der Abgabe strukturierte Angabe der angekreuzten Punkte.
 - E6: Reset entfernt das eingereichte Dokument (mit Bestätigung); Ablehnungsgrund über Dialog statt `window.prompt`.
 - E7: Druck als Browser-Druckansicht aus den konfigurierten Punkten; `exclusionNote` bleibt als optionaler Zusatz-Freitext erhalten.
+- E8: Im Onboarding legt das Zustimmen die Standard-Zwecke als Vorauswahl an (`seedDefaultPhotoConsentChoices`); die Detail-Auswahl, der Ausdruck und der Nachweis liegen im Profil. Das Blanko-„Elternformular" (`parental-template`) bleibt für den öffentlichen Wizard erhalten, der dynamische Druck kommt im Profil dazu.
 
 ## Checkliste
 
-- [ ] Phase 0 – Datenmodell & Migration
-- [ ] Phase 1 – Zentrale Logik
-- [ ] Phase 2 – Server-Routen
-- [ ] Phase 3 – Mitglieds-UI
-- [ ] Phase 4 – Onboarding
-- [ ] Phase 5 – Verwaltungs-UI
-- [ ] Phase 6 – Qualität & Doku
+- [x] Phase 0 – Datenmodell & Migration
+- [x] Phase 1 – Zentrale Logik
+- [x] Phase 2 – Server-Routen
+- [x] Phase 3 – Mitglieds-UI
+- [x] Phase 4 – Onboarding
+- [x] Phase 5 – Verwaltungs-UI
+- [x] Phase 6 – Qualität & Doku

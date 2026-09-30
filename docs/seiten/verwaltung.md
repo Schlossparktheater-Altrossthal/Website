@@ -12,6 +12,7 @@ Berechtigungen konfigurieren.
 - `/mitglieder/mitgliederverwaltung/aufbewahrung` – Aufbewahrung & Löschfristen
 - `/mitglieder/rollenverwaltung` – Rollen
 - `/mitglieder/rechte` – Berechtigungen (Permission-Workbench)
+- `/mitglieder/fotoerlaubnisse` – Fotoerlaubnisse prüfen und Zwecke pflegen
 
 ## Permissions
 
@@ -98,3 +99,18 @@ zeigt der Nutzungsbericht in der Mitglieder-Detailseite (`/api/members/[id]/usag
   `EMAIL_REGEX`).
 - Berechtigungs-Keys werden in `DEFAULT_PERMISSION_DEFINITIONS` (`src/lib/permissions.ts`)
   registriert.
+
+## Fotoerlaubnisse (`/mitglieder/fotoerlaubnisse`)
+
+Zwei Bereiche über `SectionNav` (`?bereich=`), Plan: `docs/Plan/fotoerlaubnis-plan.md`:
+
+- **Einwilligungen**: Liste je Produktion mit Suche, Status-Filter und CSV-Export. Offene
+  Einreichungen lassen sich freigeben, ablehnen (Begründung im Dialog) oder zurücksetzen. Ein
+  Zurücksetzen entfernt den eingereichten Nachweis, damit neu eingereicht werden kann; der
+  Verlauf bleibt erhalten. Der Status `noPhotos` steht für „gar nicht".
+- **Zwecke**: der Katalog der abgefragten Verwendungszwecke je Produktion
+  (`PhotoConsentPurpose`) – anlegen, bearbeiten, deaktivieren. Deaktivieren erhält bestehende
+  Auswahlen.
+
+Daten: `PhotoConsent`, `PhotoConsentChoice`, `PhotoConsentVersion`, `PhotoConsentPurpose`.
+API: `src/app/api/photo-consents/*` (`admin`, `purposes`, `export`, `parental-template`).

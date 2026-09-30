@@ -59,6 +59,21 @@ Drei Karten statt eines Formulars (Plan: `docs/Plan/ernaehrung-allergien-plan.md
    Schweregrad, Spuren, „ärztlich abgeklärt", Symptome, Notfallhilfe und Notiz. Das Allergen-Feld
    schlägt aus dem Katalog vor, Freitext bleibt zulässig; eine Auswahl belegt die Art vor.
 
+## Fotoerlaubnis (`?bereich=freigaben`)
+
+`PhotoConsentCard` (`src/components/members/photo-consent-card.tsx`) zeigt die Fotoerlaubnis der
+aktiven Produktion (Plan: `docs/Plan/fotoerlaubnis-plan.md`):
+
+- **Verwendungszwecke** als Mehrfachauswahl aus dem Katalog der Produktion
+  (`PhotoConsentPurpose`); „gar nicht" ist exklusiv und schließt alle anderen aus.
+- **Ablehnung** („gar nicht") ist ein eigener Zustand (`noPhotos`), sofort wirksam, ohne Nachweis.
+- **Nachweis**: Minderjährige laden die elterliche Einwilligung als Kamera-Foto oder Datei hoch;
+  Volljährige laden hoch oder unterschreiben direkt.
+- **Drucken** erzeugt aus denselben Zwecken ein unterschreibbares Formular (Browser-Druck).
+- **Verlauf**: jede Einreichung wird als `PhotoConsentVersion` archiviert und bleibt einsehbar.
+- Nach einer Freigabe lässt sich mit neuer Unterschrift bzw. neuem Dokument ändern; dabei entsteht
+  eine neue Version und der Eintrag geht erneut in Prüfung.
+
 - Spuren hat drei Zustände: „Nicht angegeben", „Spuren sind unproblematisch", „Spuren sind
   gefährlich". „Nicht angegeben" heißt für die Küche **ungeklärt, strikt behandeln** – nicht
   „unbedenklich".
