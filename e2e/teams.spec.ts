@@ -11,6 +11,13 @@ import { authFile } from "./env";
 
 const stamp = Date.now().toString(36);
 
+// Termine im Gewerk werden mit „heute, 18:00“ vorbefüllt, und die Liste zeigt nur kommende
+// Termine. Läuft die Suite abends (CI nach 18 Uhr Ortszeit), rutscht der frisch angelegte
+// Termin in die zugeklappten vergangenen Termine und die Kachel ist nicht auffindbar – der Test
+// hing damit von der Tageszeit ab (CI, 2026-09-29 um 21:55 Ortszeit). Deshalb auf morgen datieren.
+const BERLIN_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" });
+const tomorrowInBerlin = () => BERLIN_DAY.format(new Date(Date.now() + 86_400_000));
+
 async function collectErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -51,6 +58,7 @@ test.describe("als admin", () => {
     await page.getByRole("link", { name: /^Termine/ }).click();
     await page.getByRole("button", { name: "Termin", exact: true }).click();
     await page.getByPlaceholder("z. B. Anprobe, Bautag, Besprechung").fill("E2E Termin");
+    await page.getByRole("dialog").locator('input[type="date"]').fill(tomorrowInBerlin());
     await page.getByRole("button", { name: "Anlegen und Team benachrichtigen" }).click();
     await expect(page.getByRole("button", { name: "E2E Termin öffnen" })).toBeVisible();
 

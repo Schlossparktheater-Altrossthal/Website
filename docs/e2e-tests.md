@@ -157,6 +157,23 @@ Zwei Eigenheiten des Themas sind dabei eingebaut:
   stehen. Zwei **parallele** Läufe desselben Tests würden sich also den Zieltag wegnehmen: für
   Wiederholungen `--repeat-each` zusammen mit `--workers=1` verwenden.
 
+## Testdaten und Tageszeit
+
+Die Suite läuft zu jeder Uhrzeit. Testdaten dürfen deshalb nicht davon abhängen, wann sie laufen:
+Ein Termin, der „heute“ angelegt wird, ist abends ein vergangener Termin.
+
+Aufgetreten am 2026-09-29: `e2e/teams.spec.ts` legte den Gewerk-Termin mit der Vorgabe des Formulars
+an („heute, 18:00“). `loadTeamEvents` (`src/lib/departments/events.ts`) trennt kommende von
+vergangenen Terminen an `start >= now`; der Lauf um 21:55 Ortszeit landete damit in den
+zugeklappten vergangenen Terminen, und `getByRole("button", { name: "E2E Termin öffnen" })` lief in
+den Timeout. Der Test datiert den Termin jetzt explizit auf morgen
+(`tomorrowInBerlin()` im Spec).
+
+- Termine für „kommende“ Listen immer in die Zukunft datieren (morgen oder später), nicht auf
+  heute verlassen.
+- Gleiches gilt für Zeiten und Tagesgrenzen: `Europe/Berlin` ist die Anzeige-Zeitzone, der Runner
+  läuft in UTC.
+
 ## Viewports & Playwright-Projekte
 
 Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in fünf Projekten
