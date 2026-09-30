@@ -179,6 +179,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "admin",
   },
   {
+    key: "PRIVATE.PHOTOCONSENT.VIEW",
+    label: "Fotoliste einsehen",
+    description:
+      "Lesezugriff auf die Fotoerlaubnis-Liste einer Produktion – wer darf fotografiert werden, wer nicht – ohne Verwaltungsfunktionen.",
+    category: "admin",
+  },
+  {
     key: "PRIVATE.DATA.PORTAL.VIEW",
     label: "Datenportal öffnen",
     description:

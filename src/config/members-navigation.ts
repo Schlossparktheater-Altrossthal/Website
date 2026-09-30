@@ -185,7 +185,7 @@ export const membersNavigation = [
       {
         href: "/mitglieder/fotoerlaubnisse",
         label: "Fotoerlaubnisse",
-        permissionKey: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
+        permissionKey: "PRIVATE.PHOTOCONSENT.VIEW",
         icon: CameraIcon,
       },
       {

@@ -24,11 +24,12 @@ function slugify(value: string) {
 /** Liste für Fotograf:innen als CSV oder PDF: wer darf fotografiert werden, wer nicht. */
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
-  const [canManageConsents, canManageShow] = await Promise.all([
+  const [canManageConsents, canManageShow, canView] = await Promise.all([
     hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"),
     hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE"),
+    hasPermission(session.user, "PRIVATE.PHOTOCONSENT.VIEW"),
   ]);
-  if (!canManageConsents && !canManageShow) {
+  if (!canManageConsents && !canManageShow && !canView) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
 
