@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-29, 97 Modelle, 50 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-30, 100 Modelle, 51 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -260,8 +260,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 Übersicht, Diagramme und Erläuterungen oben werden von Hand gepflegt. Neue Relationen müssen dort ergänzt werden.
 
-# Modelle im Detail
-
 ## Identität, Auth & Rollen
 
 ### `User`
@@ -318,6 +316,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `photoConsents`                   | → `PhotoConsent[]`             |                                                                                          |
 | `productionOnboardings`           | → `ProductionOnboarding[]`     |                                                                                          |
 | `approvedPhotoConsents`           | → `PhotoConsent[]`             | @relation("PhotoConsentApprover")                                                        |
+| `photoConsentVersions`            | → `PhotoConsentVersion[]`      | @relation("PhotoConsentVersionSubmitter")                                                |
 | `departmentMemberships`           | → `DepartmentMembership[]`     |                                                                                          |
 | `departmentTaskAssignments`       | → `DepartmentTaskAssignment[]` |                                                                                          |
 | `departmentTasksCreated`          | → `DepartmentTask[]`           | @relation("DepartmentTaskCreator")                                                       |
@@ -487,6 +486,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `finalRehearsalDuties`    | → `FinalRehearsalDuty[]`      |                          |
 | `memberships`             | → `ProductionMembership[]`    |                          |
 | `photoConsents`           | → `PhotoConsent[]`            |                          |
+| `photoConsentPurposes`    | → `PhotoConsentPurpose[]`     |                          |
 | `productionOnboardings`   | → `ProductionOnboarding[]`    |                          |
 | `calendarEvents`          | → `CalendarEvent[]`           |                          |
 | `memberRolePreferences`   | → `MemberRolePreference[]`    |                          |
@@ -633,7 +633,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `showId`              | `String`                    |                                                                             |
 | `revokedAt`           | `DateTime?`                 |                                                                             |
 | `status`              | `PhotoConsentStatus` (enum) | @default(pending)                                                           |
-| `consentGiven`        | `Boolean`                   | @default(true)                                                              |
 | `createdAt`           | `DateTime`                  | @default(now())                                                             |
 | `updatedAt`           | `DateTime`                  | @updatedAt                                                                  |
 | `approvedAt`          | `DateTime?`                 |                                                                             |
@@ -651,9 +650,79 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `user`                | → `User`                    | @relation(fields: [userId], references: [id], onDelete: Cascade)            |
 | `show`                | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Restrict)           |
 | `approvedBy`          | → `User?`                   | @relation("PhotoConsentApprover", fields: [approvedById], references: [id]) |
+| `choices`             | → `PhotoConsentChoice[]`    |                                                                             |
+| `versions`            | → `PhotoConsentVersion[]`   |                                                                             |
 
 - `@@unique([userId, showId])`
 - `@@index([showId, status])`
+
+### `PhotoConsentPurpose`
+
+> Ankreuzbarer Verwendungszweck der Fotoerlaubnis, pro Produktion pflegbar.
+
+| Feld          | Typ                                  | Attribute / Beschreibung                                         |
+| ------------- | ------------------------------------ | ---------------------------------------------------------------- |
+| `id`          | `String`                             | @id @default(cuid())                                             |
+| `showId`      | `String`                             |                                                                  |
+| `code`        | `String`                             |                                                                  |
+| `label`       | `String`                             |                                                                  |
+| `description` | `String?`                            |                                                                  |
+| `sortOrder`   | `Int`                                | @default(0)                                                      |
+| `appliesTo`   | `PhotoConsentPurposeAudience` (enum) | @default(both)                                                   |
+| `isRefusal`   | `Boolean`                            | @default(false)                                                  |
+| `isActive`    | `Boolean`                            | @default(true)                                                   |
+| `createdAt`   | `DateTime`                           | @default(now())                                                  |
+| `updatedAt`   | `DateTime`                           | @updatedAt                                                       |
+| `show`        | → `Show`                             | @relation(fields: [showId], references: [id], onDelete: Cascade) |
+| `choices`     | → `PhotoConsentChoice[]`             |                                                                  |
+
+- `@@unique([showId, code])`
+- `@@index([showId, sortOrder])`
+
+### `PhotoConsentChoice`
+
+> Angekreuzte bzw. nicht angekreuzte Zwecke des aktuellen Stands einer Fotoerlaubnis.
+
+| Feld        | Typ                     | Attribute / Beschreibung                                            |
+| ----------- | ----------------------- | ------------------------------------------------------------------- |
+| `id`        | `String`                | @id @default(cuid())                                                |
+| `consentId` | `String`                |                                                                     |
+| `purposeId` | `String`                |                                                                     |
+| `chosen`    | `Boolean`               | @default(false)                                                     |
+| `consent`   | → `PhotoConsent`        | @relation(fields: [consentId], references: [id], onDelete: Cascade) |
+| `purpose`   | → `PhotoConsentPurpose` | @relation(fields: [purposeId], references: [id], onDelete: Cascade) |
+
+- `@@unique([consentId, purposeId])`
+- `@@index([consentId])`
+
+### `PhotoConsentVersion`
+
+> Unveränderliche Version einer Fotoerlaubnis (Nachweis und Auswahl je Einreichung).
+
+| Feld                  | Typ                         | Attribute / Beschreibung                                                             |
+| --------------------- | --------------------------- | ------------------------------------------------------------------------------------ |
+| `id`                  | `String`                    | @id @default(cuid())                                                                 |
+| `consentId`           | `String`                    |                                                                                      |
+| `version`             | `Int`                       |                                                                                      |
+| `status`              | `PhotoConsentStatus` (enum) |                                                                                      |
+| `purposesSnapshot`    | `Json?`                     |                                                                                      |
+| `exclusionNote`       | `String?`                   | @db.Text                                                                             |
+| `documentName`        | `String?`                   |                                                                                      |
+| `documentMime`        | `String?`                   |                                                                                      |
+| `documentSize`        | `Int?`                      |                                                                                      |
+| `documentUploadedAt`  | `DateTime?`                 |                                                                                      |
+| `documentData`        | `Bytes?`                    |                                                                                      |
+| `signatureVersion`    | `String?`                   |                                                                                      |
+| `signatureCapturedAt` | `DateTime?`                 |                                                                                      |
+| `signaturePayload`    | `Json?`                     |                                                                                      |
+| `submittedById`       | `String?`                   |                                                                                      |
+| `submittedAt`         | `DateTime`                  | @default(now())                                                                      |
+| `source`              | `String`                    | @default("member")                                                                   |
+| `consent`             | → `PhotoConsent`            | @relation(fields: [consentId], references: [id], onDelete: Cascade)                  |
+| `submittedBy`         | → `User?`                   | @relation("PhotoConsentVersionSubmitter", fields: [submittedById], references: [id]) |
+
+- `@@unique([consentId, version])`
+- `@@index([consentId])`
 
 ## Stück: Figuren, Szenen, Besetzung
 
@@ -2235,7 +2304,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `SceneRehearsalOutcome`       | `DONE`, `PARTIAL`, `SKIPPED`                                                                                                                                                                                                                                                                                  |
 | `EventBlockType`              | `SCENE`, `DEPARTMENT`, `CUSTOM`                                                                                                                                                                                                                                                                               |
 | `ParticipantOverride`         | `INCLUDED`, `EXCLUDED`                                                                                                                                                                                                                                                                                        |
-| `PhotoConsentStatus`          | `pending`, `approved`, `rejected`                                                                                                                                                                                                                                                                             |
+| `PhotoConsentStatus`          | `pending`, `approved`, `rejected`, `noPhotos`                                                                                                                                                                                                                                                                 |
+| `PhotoConsentPurposeAudience` | `adult`, `minor`, `both`                                                                                                                                                                                                                                                                                      |
 | `AnalyticsRequestArea`        | `public`, `members`, `api`, `unknown`                                                                                                                                                                                                                                                                         |
 | `AnalyticsServerLogSeverity`  | `info`, `warning`, `error`                                                                                                                                                                                                                                                                                    |
 | `AnalyticsServerLogStatus`    | `open`, `monitoring`, `resolved`                                                                                                                                                                                                                                                                              |

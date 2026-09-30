@@ -330,6 +330,7 @@ model User {
   photoConsents                   PhotoConsent[]
   productionOnboardings           ProductionOnboarding[]
   approvedPhotoConsents           PhotoConsent[]             @relation("PhotoConsentApprover")
+  photoConsentVersions            PhotoConsentVersion[]      @relation("PhotoConsentVersionSubmitter")
   departmentMemberships           DepartmentMembership[]
   departmentTaskAssignments       DepartmentTaskAssignment[]
   departmentTasksCreated          DepartmentTask[]           @relation("DepartmentTaskCreator")
@@ -427,6 +428,7 @@ model Show {
   finalRehearsalDuties    FinalRehearsalDuty[]
   memberships             ProductionMembership[]
   photoConsents           PhotoConsent[]
+  photoConsentPurposes    PhotoConsentPurpose[]
   productionOnboardings   ProductionOnboarding[]
   calendarEvents          CalendarEvent[]
   memberRolePreferences   MemberRolePreference[]
@@ -1454,6 +1456,15 @@ enum PhotoConsentStatus {
   pending
   approved
   rejected
+  /// „gar nicht“: das Mitglied lehnt Aufnahmen ab. Sofort wirksam, ohne Verwaltungs-Freigabe.
+  noPhotos
+}
+
+/// Zielgruppe eines Fotoerlaubnis-Zwecks: nur Volljährige, nur Minderjährige oder beide.
+enum PhotoConsentPurposeAudience {
+  adult
+  minor
+  both
 }
 
 /// Fotoerlaubnis gilt pro Produktion und muss für jede Produktion neu erteilt werden.
@@ -1463,7 +1474,6 @@ model PhotoConsent {
   showId              String
   revokedAt           DateTime?
   status              PhotoConsentStatus @default(pending)
-  consentGiven        Boolean            @default(true)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   approvedAt          DateTime?
@@ -1481,9 +1491,70 @@ model PhotoConsent {
   user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   show                Show               @relation(fields: [showId], references: [id], onDelete: Restrict)
   approvedBy          User?              @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
+  choices             PhotoConsentChoice[]
+  versions            PhotoConsentVersion[]
 
   @@unique([userId, showId])
   @@index([showId, status])
+}
+
+/// Ankreuzbarer Verwendungszweck der Fotoerlaubnis, pro Produktion pflegbar.
+model PhotoConsentPurpose {
+  id          String                      @id @default(cuid())
+  showId      String
+  code        String
+  label       String
+  description String?
+  sortOrder   Int                         @default(0)
+  appliesTo   PhotoConsentPurposeAudience @default(both)
+  isRefusal   Boolean                     @default(false)
+  isActive    Boolean                     @default(true)
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  show        Show                        @relation(fields: [showId], references: [id], onDelete: Cascade)
+  choices     PhotoConsentChoice[]
+
+  @@unique([showId, code])
+  @@index([showId, sortOrder])
+}
+
+/// Angekreuzte bzw. nicht angekreuzte Zwecke des aktuellen Stands einer Fotoerlaubnis.
+model PhotoConsentChoice {
+  id        String  @id @default(cuid())
+  consentId String
+  purposeId String
+  chosen    Boolean @default(false)
+  consent   PhotoConsent        @relation(fields: [consentId], references: [id], onDelete: Cascade)
+  purpose   PhotoConsentPurpose @relation(fields: [purposeId], references: [id], onDelete: Cascade)
+
+  @@unique([consentId, purposeId])
+  @@index([consentId])
+}
+
+/// Unveränderliche Version einer Fotoerlaubnis (Nachweis und Auswahl je Einreichung).
+model PhotoConsentVersion {
+  id                  String             @id @default(cuid())
+  consentId           String
+  version             Int
+  status              PhotoConsentStatus
+  purposesSnapshot    Json?
+  exclusionNote       String?            @db.Text
+  documentName        String?
+  documentMime        String?
+  documentSize        Int?
+  documentUploadedAt  DateTime?
+  documentData        Bytes?
+  signatureVersion    String?
+  signatureCapturedAt DateTime?
+  signaturePayload    Json?
+  submittedById       String?
+  submittedAt         DateTime           @default(now())
+  source              String             @default("member")
+  consent             PhotoConsent      @relation(fields: [consentId], references: [id], onDelete: Cascade)
+  submittedBy         User?              @relation("PhotoConsentVersionSubmitter", fields: [submittedById], references: [id])
+
+  @@unique([consentId, version])
+  @@index([consentId])
 }
 
 model FileLibraryFolder {

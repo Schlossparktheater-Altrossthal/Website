@@ -19,7 +19,7 @@ models={b['name']:b for b in blocks if b['kind']=='model'}
 enums={b['name']:b for b in blocks if b['kind']=='enum'}
 groups=[
 ('Identität, Auth & Rollen',['User','Account','Session','VerificationToken','OwnerSetupToken','UserRole','AppRole','Permission','AppRolePermission','UserAppRole']),
-('Produktionen & Mitgliedschaft',['Show','ProductionMembership','MemberInvite','MemberInviteRedemption','MemberOnboardingProfile','ProductionOnboarding','PhotoConsent']),
+('Produktionen & Mitgliedschaft',['Show','ProductionMembership','MemberInvite','MemberInviteRedemption','MemberOnboardingProfile','ProductionOnboarding','PhotoConsent','PhotoConsentPurpose','PhotoConsentChoice','PhotoConsentVersion']),
 ('Stück: Figuren, Szenen, Besetzung',['Character','CharacterCasting','Scene','SceneCharacter','SceneBreakdownItem']),
 ('Gewerke (Departments)',['Department','DepartmentMembership','DepartmentTask','DepartmentTaskAssignment','DepartmentPermission','DepartmentDocument']),
 ('Termine, Proben & Anwesenheit',['CalendarEvent','EventParticipant','EventResponseLog','CalendarFeed','FinalRehearsalDuty']),
