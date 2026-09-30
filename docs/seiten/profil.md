@@ -71,6 +71,7 @@ aktiven Produktion (Plan: `docs/Plan/fotoerlaubnis-plan.md`):
   Volljährige laden hoch oder unterschreiben direkt.
 - **Drucken** erzeugt aus denselben Zwecken ein unterschreibbares Formular (Browser-Druck).
 - **Verlauf**: jede Einreichung wird als `PhotoConsentVersion` archiviert und bleibt einsehbar.
+- **Einklappen**: die Karte lässt sich über „Einklappen" auf die Kopfzeile reduzieren.
 - Nach einer Freigabe lässt sich mit neuer Unterschrift bzw. neuem Dokument ändern; dabei entsteht
   eine neue Version und der Eintrag geht erneut in Prüfung.
 

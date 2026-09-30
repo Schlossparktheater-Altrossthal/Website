@@ -107,7 +107,9 @@ Zwei Bereiche über `SectionNav` (`?bereich=`), Plan: `docs/Plan/fotoerlaubnis-p
 - **Einwilligungen**: Liste je Produktion mit Suche, Status-Filter und CSV-Export. Offene
   Einreichungen lassen sich freigeben, ablehnen (Begründung im Dialog) oder zurücksetzen. Ein
   Zurücksetzen entfernt den eingereichten Nachweis, damit neu eingereicht werden kann; der
-  Verlauf bleibt erhalten. Der Status `noPhotos` steht für „gar nicht".
+  Verlauf bleibt erhalten. Der Status `noPhotos` steht für „gar nicht". Die Karten sind kompakt
+  und klappen die Details (Zeiten, Dokument, Ausschlüsse) auf Wunsch aus. Die Fotoliste (CSV)
+  enthält die angekreuzten Verwendungszwecke in der Spalte „Angekreuzt".
 - **Zwecke**: der Katalog der abgefragten Verwendungszwecke je Produktion
   (`PhotoConsentPurpose`) – anlegen, bearbeiten, deaktivieren. Deaktivieren erhält bestehende
   Auswahlen.
