@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ComponentProps } from "react";
-import Image from "next/image";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import type { PhotoConsentAdminEntry, PhotoConsentShowOption } from "@/types/photo-consent";
+import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -18,223 +19,84 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import type { PhotoConsentAdminEntry, PhotoConsentShowOption } from "@/types/photo-consent";
 import {
-  SearchIcon,
-  RefreshIcon,
-  LoadingIcon,
-  UploadIcon,
+  CheckIcon,
   FileIcon,
+  RefreshIcon,
+  SearchIcon,
+  UploadIcon,
 } from "@/components/ui/action-icons";
 
-const statusLabels: Record<PhotoConsentAdminEntry["status"], string> = {
+type StatusFilter = "all" | "pending" | "approved" | "rejected" | "noPhotos";
+type ConsentAction = "approve" | "reject" | "reset";
+
+const STATUS_LABELS: Record<PhotoConsentAdminEntry["status"], string> = {
   pending: "In Prüfung",
   approved: "Freigegeben",
   rejected: "Abgelehnt",
   noPhotos: "Keine Aufnahmen",
 };
 
-const statusVariants: Record<
-  PhotoConsentAdminEntry["status"],
-  ComponentProps<typeof Badge>["variant"]
-> = {
-  pending: "secondary",
-  approved: "default",
-  rejected: "destructive",
-  noPhotos: "muted",
+const STATUS_BADGE_CLASSES: Record<PhotoConsentAdminEntry["status"], string> = {
+  pending: "border-warning/45 bg-warning/15 text-warning",
+  approved: "border-success/45 bg-success/15 text-success",
+  rejected: "border-destructive/45 bg-destructive/15 text-destructive",
+  noPhotos: "border-muted bg-muted/40 text-muted-foreground",
 };
-
-type PhotoConsentAction = "approve" | "reject" | "reset";
-
-type PendingEntry = PhotoConsentAdminEntry & { status: "pending" };
-type ProcessedEntry = PhotoConsentAdminEntry & { status: "approved" | "rejected" };
-
-type ActionHandler = (id: string, action: PhotoConsentAction) => void | Promise<void>;
-
-type StatusFilter = "all" | PhotoConsentAdminEntry["status"];
-
-const pendingHighlightClasses: Record<PendingEntry["status"], string> = {
-  pending: "border-l-4 border-warning/80 bg-warning/10",
-};
-
-const processedCardAccent: Record<ProcessedEntry["status"], string> = {
-  approved: "border-success/40 bg-success/5",
-  rejected: "border-destructive/40 bg-destructive/5",
-};
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
-
-const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 const STATUS_FILTERS: Array<{ value: StatusFilter; label: string }> = [
   { value: "all", label: "Alle" },
   { value: "pending", label: "Offen" },
   { value: "approved", label: "Freigegeben" },
   { value: "rejected", label: "Abgelehnt" },
+  { value: "noPhotos", label: "Keine Aufnahmen" },
 ];
 
-function formatWithFormatter(value: string | null | undefined, formatter: Intl.DateTimeFormat) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return null;
-  return formatter.format(date);
-}
-
-function formatDate(value: string | null | undefined) {
-  return formatWithFormatter(value, dateFormatter);
-}
+const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: DEFAULT_TIME_ZONE,
+});
 
 function formatDateTime(value: string | null | undefined) {
-  return formatWithFormatter(value, dateTimeFormatter);
+  if (!value) return "unbekannt";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "unbekannt";
+  return dateTimeFormatter.format(date);
 }
 
-type DocumentPreviewProps = {
-  previewUrl: string | null;
-  documentName: string | null;
-  signatureVersion: string | null;
-  signaturePayload: PhotoConsentAdminEntry["signaturePayload"];
-};
-
-type PreviewMode = "preview" | "outline" | "velocity" | "replay";
-
-function DocumentPreview({
-  previewUrl,
-  documentName,
-  signatureVersion,
-  signaturePayload,
-}: DocumentPreviewProps) {
-  const hasSignature = signatureVersion === "velocity.v1" && Boolean(signaturePayload);
-  const hasPreview = Boolean(previewUrl);
-  const [mode, setMode] = useState<PreviewMode>(() => {
-    if (!hasSignature) {
-      return "preview";
-    }
-    return hasPreview ? "preview" : "outline";
-  });
-
-  if (!hasPreview && !hasSignature) {
-    return null;
+function ChosenPurposes({ entry }: { entry: PhotoConsentAdminEntry }) {
+  const chosen = entry.purposes.filter((purpose) => purpose.chosen);
+  if (chosen.length === 0) {
+    return <p className="text-xs text-muted-foreground">Keine Verwendungszwecke angekreuzt.</p>;
   }
-
-  const renderContent = () => {
-    if (hasSignature && signaturePayload) {
-      if (mode === "preview" && hasPreview) {
-        return (
-          <Image
-            src={previewUrl!}
-            alt={documentName ? `Dokumentvorschau: ${documentName}` : "Digitale Unterschrift"}
-            fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
-            className="object-contain bg-card"
-            unoptimized
-          />
-        );
-      }
-
-      if (mode === "outline") {
-        return (
-          <SignatureVisualizer payload={signaturePayload} mode="outline" className="rounded-lg" />
-        );
-      }
-
-      if (mode === "velocity") {
-        return (
-          <SignatureVisualizer payload={signaturePayload} mode="velocity" className="rounded-lg" />
-        );
-      }
-
-      if (mode === "replay") {
-        return (
-          <SignatureVisualizer payload={signaturePayload} mode="replay" className="rounded-lg" />
-        );
-      }
-    }
-
-    if (hasPreview) {
-      return (
-        <Image
-          src={previewUrl!}
-          alt={documentName ? `Dokumentvorschau: ${documentName}` : "Digitale Unterschrift"}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 60vw, 420px"
-          className="object-contain bg-card"
-          unoptimized
-        />
-      );
-    }
-
-    return (
-      <div className="flex h-full items-center justify-center rounded-lg bg-muted/40 text-sm text-muted-foreground">
-        Keine Vorschau verfügbar
-      </div>
-    );
-  };
-
-  const controls: Array<{ key: PreviewMode; label: string }> = [];
-  if (hasSignature) {
-    if (hasPreview) {
-      controls.push({ key: "preview", label: "Normal" });
-    }
-    controls.push({ key: "outline", label: hasPreview ? "Kontur" : "Normal" });
-    controls.push({ key: "velocity", label: "Geschwindigkeit" });
-    controls.push({ key: "replay", label: "Replay" });
-  }
-
   return (
-    <div className="mt-3 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Dokumentvorschau
-        </p>
-        {controls.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-background/80 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.16em]">
-            {controls.map((control) => (
-              <Button
-                key={control.key}
-                type="button"
-                onClick={() => setMode(control.key)}
-                variant="toggle"
-                data-state={mode === control.key ? "active" : "inactive"}
-                className="rounded-full px-2 py-0.5"
-                aria-pressed={mode === control.key}
-              >
-                {control.label}
-              </Button>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="relative h-60 w-full overflow-hidden rounded-lg border border-border/60 bg-background shadow-sm">
-        {renderContent()}
-      </div>
+    <div className="flex flex-wrap gap-1.5">
+      {chosen.map((purpose) => (
+        <Badge key={purpose.purposeId} variant="secondary" className="font-normal">
+          {purpose.label}
+        </Badge>
+      ))}
     </div>
   );
 }
 
-function isPendingEntry(entry: PhotoConsentAdminEntry): entry is PendingEntry {
-  return entry.status === "pending";
-}
-
-function isProcessedEntry(entry: PhotoConsentAdminEntry): entry is ProcessedEntry {
-  return entry.status === "approved" || entry.status === "rejected";
-}
-
 export function PhotoConsentAdminPanel() {
   const [entries, setEntries] = useState<PhotoConsentAdminEntry[]>([]);
+  const [shows, setShows] = useState<PhotoConsentShowOption[]>([]);
+  const [showId, setShowId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [rejectTarget, setRejectTarget] = useState<PhotoConsentAdminEntry | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [resetTarget, setResetTarget] = useState<PhotoConsentAdminEntry | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [templatePreviewFile, setTemplatePreviewFile] = useState<File | null>(null);
-  const [templatePreviewOpen, setTemplatePreviewOpen] = useState(false);
-  const [shows, setShows] = useState<PhotoConsentShowOption[]>([]);
-  const [showId, setShowId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (nextShowId?: string) => {
@@ -247,8 +109,8 @@ export function PhotoConsentAdminPanel() {
         setError(data?.error ?? "Einträge konnten nicht geladen werden");
         return;
       }
-      setEntries(Array.isArray(data?.entries) ? (data.entries as PhotoConsentAdminEntry[]) : []);
-      setShows(Array.isArray(data?.shows) ? (data.shows as PhotoConsentShowOption[]) : []);
+      setEntries(Array.isArray(data?.entries) ? data.entries : []);
+      setShows(Array.isArray(data?.shows) ? data.shows : []);
       setShowId(typeof data?.showId === "string" ? data.showId : null);
     } catch {
       setError("Netzwerkfehler beim Laden der Einträge");
@@ -257,142 +119,11 @@ export function PhotoConsentAdminPanel() {
     }
   }, []);
 
-  const didLoadRef = useRef(false);
   useEffect(() => {
-    if (didLoadRef.current) return;
-    didLoadRef.current = true;
     void load();
   }, [load]);
 
-  const handleParentalTemplateUpload = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      setIsUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append("template", file);
-
-        const response = await fetch("/api/photo-consents/parental-template", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await response.json().catch(() => null);
-        if (!response.ok) {
-          toast.error(data?.error ?? "Fehler beim Hochladen des Elternformulars");
-          return;
-        }
-        toast.success("Elternformular erfolgreich hochgeladen");
-        setTemplatePreviewFile(file);
-        setTemplatePreviewOpen(true);
-      } catch {
-        toast.error("Netzwerkfehler beim Hochladen");
-      } finally {
-        setIsUploading(false);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      }
-    },
-    [],
-  );
-
-  const handleRemoveTemplate = useCallback(async () => {
-    setTemplatePreviewOpen(false);
-    setTemplatePreviewFile(null);
-    try {
-      const response = await fetch("/api/photo-consents/parental-template", { method: "DELETE" });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        toast.error(data?.error ?? "Fehler beim Entfernen des Elternformulars");
-        return;
-      }
-      toast.success("Elternformular entfernt");
-    } catch {
-      toast.error("Netzwerkfehler beim Entfernen");
-    }
-  }, []);
-
-  const handleReplaceTemplate = useCallback(() => {
-    setTemplatePreviewOpen(false);
-    setTemplatePreviewFile(null);
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleTemplateDialogOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setTemplatePreviewOpen(false);
-      setTemplatePreviewFile(null);
-    }
-  }, []);
-
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-
-  const allPendingEntries = useMemo(() => entries.filter(isPendingEntry), [entries]);
-  const allProcessedEntries = useMemo(() => entries.filter(isProcessedEntry), [entries]);
-
-  const filteredEntries = useMemo(() => {
-    return entries.filter((entry) => {
-      if (statusFilter !== "all" && entry.status !== statusFilter) {
-        return false;
-      }
-
-      if (!normalizedSearch) {
-        return true;
-      }
-
-      const parts: string[] = [
-        entry.name ?? "",
-        entry.email ?? "",
-        entry.approvedByName ?? "",
-        entry.documentName ?? "",
-        entry.rejectionReason ?? "",
-        entry.exclusionNote ?? "",
-        entry.userId,
-        entry.submittedAt,
-        entry.updatedAt,
-        entry.approvedAt ?? "",
-        entry.dateOfBirth ?? "",
-      ];
-
-      if (entry.age !== null && entry.age !== undefined) {
-        parts.push(String(entry.age));
-      }
-
-      const formattedBirthDate = formatDate(entry.dateOfBirth);
-      if (formattedBirthDate) {
-        parts.push(formattedBirthDate);
-      }
-
-      const haystack = parts.join(" ").toLowerCase();
-      return haystack.includes(normalizedSearch);
-    });
-  }, [entries, normalizedSearch, statusFilter]);
-
-  const pendingEntries = useMemo(() => filteredEntries.filter(isPendingEntry), [filteredEntries]);
-  const processedEntries = useMemo(
-    () => filteredEntries.filter(isProcessedEntry),
-    [filteredEntries],
-  );
-
-  const hasEntries = entries.length > 0;
-  const hasFilteredEntries = filteredEntries.length > 0;
-
-  const handleAction = useCallback(async (id: string, action: PhotoConsentAction) => {
-    let reason: string | undefined;
-    if (action === "reject") {
-      const entered = window.prompt("Bitte Ablehnungsgrund eingeben:");
-      if (!entered) {
-        return;
-      }
-      reason = entered.trim();
-      if (!reason) {
-        toast.error("Ablehnungsgrund darf nicht leer sein");
-        return;
-      }
-    }
-
+  const handleAction = useCallback(async (id: string, action: ConsentAction, reason?: string) => {
     setProcessing(id);
     try {
       const response = await fetch("/api/photo-consents/admin", {
@@ -411,10 +142,10 @@ export function PhotoConsentAdminPanel() {
       }
       const message =
         action === "approve"
-          ? "Fotoeinverständnis freigegeben"
+          ? "Fotoerlaubnis freigegeben"
           : action === "reject"
-            ? "Fotoeinverständnis abgelehnt"
-            : "Status zurückgesetzt";
+            ? "Fotoerlaubnis abgelehnt"
+            : "Status und Nachweis zurückgesetzt";
       toast.success(message);
     } catch {
       toast.error("Netzwerkfehler bei der Aktion");
@@ -423,593 +154,402 @@ export function PhotoConsentAdminPanel() {
     }
   }, []);
 
-  const templatePreviewUrl = useMemo(() => {
-    if (!templatePreviewFile) return null;
-    return URL.createObjectURL(templatePreviewFile);
-  }, [templatePreviewFile]);
+  const handleParentalTemplateUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("template", file);
+        const response = await fetch("/api/photo-consents/parental-template", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          toast.error(data?.error ?? "Fehler beim Hochladen des Elternformulars");
+          return;
+        }
+        toast.success("Elternformular erfolgreich hochgeladen");
+      } catch {
+        toast.error("Netzwerkfehler beim Hochladen");
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    },
+    [],
+  );
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter((entry) => {
+      if (statusFilter !== "all" && entry.status !== statusFilter) {
+        return false;
+      }
+      if (!normalizedSearch) {
+        return true;
+      }
+      const parts = [
+        entry.name ?? "",
+        entry.email ?? "",
+        entry.showTitle,
+        entry.approvedByName ?? "",
+        entry.documentName ?? "",
+        entry.rejectionReason ?? "",
+        entry.exclusionNote ?? "",
+        ...entry.purposes.filter((purpose) => purpose.chosen).map((purpose) => purpose.label),
+      ];
+      return parts.join(" ").toLowerCase().includes(normalizedSearch);
+    });
+  }, [entries, normalizedSearch, statusFilter]);
+
+  const openEntries = useMemo(
+    () => filteredEntries.filter((entry) => entry.status === "pending"),
+    [filteredEntries],
+  );
+  const processedEntries = useMemo(
+    () => filteredEntries.filter((entry) => entry.status !== "pending"),
+    [filteredEntries],
+  );
 
   const summary = useMemo(() => {
-    const rejected = allProcessedEntries.filter((entry) => entry.status === "rejected").length;
-    const missingBirthdays = entries.filter((entry) => entry.requiresDateOfBirth).length;
-    return { pending: allPendingEntries.length, rejected, missingBirthdays };
-  }, [allPendingEntries, allProcessedEntries, entries]);
+    return {
+      pending: entries.filter((entry) => entry.status === "pending").length,
+      missingBirthdays: entries.filter((entry) => entry.requiresDateOfBirth).length,
+      rejected: entries.filter((entry) => entry.status === "rejected").length,
+    };
+  }, [entries]);
 
-  return (
-    <Card className="border border-border/70 bg-background">
-      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle>Fotoeinverständnisse verwalten</CardTitle>
-          <p className="text-sm text-foreground/70">
-            Fotoerlaubnisse gelten pro Produktion. Prüfe eingereichte Zustimmungen, bestätige sie
-            oder fordere zusätzliche Unterlagen an.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/60">
-          <Badge variant="secondary">Wartend: {summary.pending}</Badge>
-          <Badge variant="outline">Fehlende Geburtsdaten: {summary.missingBirthdays}</Badge>
-          <Badge variant="destructive">Abgelehnt: {summary.rejected}</Badge>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(event) => {
-              void handleParentalTemplateUpload(event);
-            }}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={isUploading}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {isUploading ? (
-              <LoadingIcon className="mr-1.5 h-3.5 w-3.5" />
-            ) : (
-              <UploadIcon className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Elternformular hochladen
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full lg:max-w-md">
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Nach Namen, E-Mail oder Details suchen"
-                aria-label="Fotoeinverständnisse durchsuchen"
-                className="pl-9"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={showId ?? "all"}
-                onValueChange={(value) => {
-                  setShowId(value);
-                  setLoading(true);
-                  void load(value);
-                }}
-              >
-                <SelectTrigger className="h-9 w-56" aria-label="Produktion auswählen">
-                  <SelectValue placeholder="Produktion" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle Produktionen</SelectItem>
-                  {shows.map((show) => (
-                    <SelectItem key={show.id} value={show.id}>
-                      {show.title} ({show.year})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {showId && showId !== "all" ? (
-                <Button asChild size="sm" variant="outline">
-                  <a href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}`}>
-                    Fotoliste (CSV)
-                  </a>
-                </Button>
-              ) : null}
-              {STATUS_FILTERS.map((filter) => (
-                <Button
-                  key={filter.value}
-                  type="button"
-                  size="sm"
-                  variant={statusFilter === filter.value ? "default" : "outline"}
-                  onClick={() => setStatusFilter(filter.value)}
-                  className={cn(
-                    "transition-shadow",
-                    statusFilter === filter.value ? "shadow-sm" : undefined,
-                  )}
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-          {error && <span className="text-sm text-destructive">{error}</span>}
-        </div>
-
-        <div>
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Lade Einträge …</p>
-          ) : !hasEntries ? (
-            <p className="text-sm text-muted-foreground">
-              Bisher liegen keine Fotoeinverständnisse vor.
-            </p>
-          ) : !hasFilteredEntries ? (
-            <p className="text-sm text-muted-foreground">
-              Keine Fotoeinverständnisse entsprechen deiner Suche oder Filterung.
-            </p>
-          ) : (
-            <div className="space-y-8">
-              {pendingEntries.length > 0 && (
-                <section className="space-y-3">
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-                      Offene Fotoeinverständnisse
-                    </h3>
-                    <p className="text-xs text-foreground/60">
-                      Diese Personen warten auf eine Entscheidung oder benötigen zusätzliche
-                      Unterlagen.
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    {pendingEntries.map((entry) => (
-                      <PendingEntryCard
-                        key={entry.id}
-                        entry={entry}
-                        onAction={handleAction}
-                        processing={processing}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              <section className="space-y-3">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-                    Abgeschlossene Einträge
-                  </h3>
-                  <p className="text-xs text-foreground/60">
-                    Kompakte Übersicht über freigegebene oder gesperrte Fotoeinverständnisse.
-                  </p>
-                </div>
-
-                {processedEntries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Noch keine freigegebenen oder abgelehnten Einverständnisse vorhanden.
-                  </p>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {processedEntries.map((entry) => (
-                      <ProcessedEntryCard
-                        key={entry.id}
-                        entry={entry}
-                        onAction={handleAction}
-                        processing={processing}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 p-4 text-center shadow-sm">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void load(showId ?? undefined)}
-            disabled={loading}
-            className="min-w-[10rem]"
-          >
-            {loading ? (
-              <LoadingIcon className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshIcon className="mr-2 h-4 w-4" />
-            )}
-            {loading ? "Aktualisiere …" : "Aktualisieren"}
-          </Button>
-          <p className="mt-2 text-xs text-primary/80">
-            Synchronisiere neue Einreichungen oder aktualisierte Entscheidungen.
-          </p>
-        </div>
-      </CardContent>
-
-      <Dialog open={templatePreviewOpen} onOpenChange={handleTemplateDialogOpenChange}>
-        <DialogContent className="max-w-2xl" onClick={(e) => e.stopPropagation()}>
-          <DialogTitle className="sr-only">Elternformular Vorschau</DialogTitle>
-          <DialogDescription className="sr-only">
-            Vorschau des hochgeladenen Elternformulars mit Optionen zum Entfernen oder Austauschen.
-          </DialogDescription>
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border border-border">
-              {templatePreviewUrl && templatePreviewFile ? (
-                <div className="flex min-h-40 flex-col items-center justify-center gap-3 p-6 text-center">
-                  <FileIcon className="h-12 w-12 text-muted-foreground" />
-                  <p className="min-w-0 w-full truncate text-sm font-medium text-foreground">
-                    {templatePreviewFile.name}
-                  </p>
-                  <Button variant="ghost" asChild className="gap-2">
-                    <a href={templatePreviewUrl} download={templatePreviewFile.name}>
-                      Herunterladen
-                    </a>
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                  {templatePreviewFile?.name ?? "Keine Vorschau verfügbar"}
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handleRemoveTemplate();
-                }}
-              >
-                Entfernen
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleReplaceTemplate();
-                }}
-              >
-                Austauschen
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
-
-type PendingEntryCardProps = {
-  entry: PendingEntry;
-  onAction: ActionHandler;
-  processing: string | null;
-};
-
-function PendingEntryCard({ entry, onAction, processing }: PendingEntryCardProps) {
-  const statusLabel = statusLabels[entry.status];
-  const formattedBirthDate = formatDate(entry.dateOfBirth);
-  const submittedAt = formatDateTime(entry.submittedAt) ?? "unbekannt";
-  const updatedAt = formatDateTime(entry.updatedAt) ?? "unbekannt";
-  const documentUploadedAt = formatDateTime(entry.documentUploadedAt);
-
-  const hints: Array<{ key: string; tone: "warning" | "error"; message: string }> = [];
-  if (entry.rejectionReason) {
-    hints.push({
-      key: "rejection",
-      tone: "error",
-      message: `Letzte Ablehnung: ${entry.rejectionReason}`,
-    });
-  }
-  if (entry.requiresDateOfBirth) {
-    hints.push({
-      key: "dob",
-      tone: "warning",
-      message: "Geburtsdatum fehlt. Bitte nachreichen lassen.",
-    });
-  }
-  if (!entry.hasDocument && entry.requiresDocument) {
-    hints.push({
-      key: "document",
-      tone: "warning",
-      message: "Dokument wird benötigt, bevor freigegeben werden kann.",
-    });
-  }
-
-  const allRequirementsMet = hints.length === 0;
-
-  return (
-    <div
+  const renderEntry = (entry: PhotoConsentAdminEntry) => (
+    <li
+      key={entry.id}
       className={cn(
-        "rounded-lg border border-border/70 p-4 shadow-sm transition-shadow supports-[backdrop-filter]:backdrop-blur-sm hover:shadow-md",
-        pendingHighlightClasses[entry.status],
+        "rounded-lg border p-4",
+        entry.status === "pending"
+          ? "border-l-4 border-l-warning/80 border-y-border border-r-border bg-warning/5"
+          : entry.status === "approved"
+            ? "border-success/40 bg-success/5"
+            : entry.status === "rejected"
+              ? "border-destructive/40 bg-destructive/5"
+              : "border-border/70",
       )}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="text-sm font-semibold text-foreground">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="font-semibold text-foreground">
             {entry.name ?? entry.email ?? "Unbekannt"}
           </div>
-          {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
-          <div className="text-xs text-foreground/60">{entry.showTitle}</div>
-        </div>
-        <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <Badge
-          variant="secondary"
-          className="bg-background/70 text-foreground/80 dark:bg-background/40"
-        >
-          {entry.requiresDocument ? "Minderjährig" : "Volljährig"}
-        </Badge>
-        <Badge
-          variant="outline"
-          className={cn(
-            "border-border/60 text-foreground/70",
-            entry.hasDocument ? "border-success/50 text-success" : "border-warning/70 text-warning",
-          )}
-        >
-          {entry.hasDocument ? "Dokument vorhanden" : "Dokument fehlt"}
-        </Badge>
-        <Badge
-          variant="outline"
-          className={cn(
-            "border-border/60 text-foreground/70",
-            entry.requiresDateOfBirth
-              ? "border-warning/70 text-warning"
-              : "border-success/50 text-success",
-          )}
-        >
-          {entry.requiresDateOfBirth
-            ? "Geburtsdatum benötigt"
-            : `Geburtsdatum: ${formattedBirthDate ?? "vorhanden"}`}
-        </Badge>
-        {entry.age !== null && (
-          <Badge variant="outline" className="border-border/60 text-foreground/70">
-            {entry.age} Jahre
-          </Badge>
-        )}
-      </div>
-
-      <div className="mt-4 grid gap-3 text-xs text-foreground/70 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <div className="space-y-1">
-          <div>Eingegangen: {submittedAt}</div>
-          <div>Aktualisiert: {updatedAt}</div>
-          {entry.exclusionNote && (
-            <div className="rounded-md border border-border/60 bg-background/60 p-2 text-foreground/80">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Ausschlüsse
-              </div>
-              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">
-                {entry.exclusionNote}
-              </p>
-            </div>
-          )}
-          {entry.documentName && (
-            <div>
-              Dokument: {entry.documentName}
-              {documentUploadedAt && ` · hochgeladen ${documentUploadedAt}`}
-              {entry.documentUrl && (
-                <>
-                  {" "}
-                  <a
-                    className="underline"
-                    href={entry.documentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    öffnen
-                  </a>
-                </>
-              )}
-            </div>
-          )}
-          <DocumentPreview
-            key={`${entry.signatureVersion ?? "none"}-${entry.documentPreviewUrl ?? "nopreview"}`}
-            previewUrl={entry.documentPreviewUrl}
-            documentName={entry.documentName}
-            signatureVersion={entry.signatureVersion}
-            signaturePayload={entry.signaturePayload}
-          />
-        </div>
-        <div className="space-y-2">
-          {allRequirementsMet ? (
-            <div className="rounded-md border border-success/40 bg-success/10 p-2 text-xs text-success">
-              Alle Anforderungen erfüllt. Du kannst freigeben.
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {hints.map((hint) => (
-                <li
-                  key={hint.key}
-                  className={cn(
-                    "rounded-md border px-3 py-2",
-                    hint.tone === "error"
-                      ? "border-destructive/40 bg-destructive/10 text-destructive"
-                      : "border-warning/50 bg-warning/10 text-warning",
-                  )}
-                >
-                  {hint.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          onClick={() => void onAction(entry.id, "approve")}
-          disabled={processing === entry.id}
-        >
-          Freigeben
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void onAction(entry.id, "reset")}
-          disabled={processing === entry.id}
-        >
-          Zurücksetzen
-        </Button>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => void onAction(entry.id, "reject")}
-          disabled={processing === entry.id}
-        >
-          Ablehnen
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-type ProcessedEntryCardProps = {
-  entry: ProcessedEntry;
-  onAction: ActionHandler;
-  processing: string | null;
-};
-
-function ProcessedEntryCard({ entry, onAction, processing }: ProcessedEntryCardProps) {
-  const statusLabel = statusLabels[entry.status];
-  const formattedBirthDate = formatDate(entry.dateOfBirth);
-  const updatedAt = formatDateTime(entry.updatedAt) ?? "unbekannt";
-  const approvedAt = formatDateTime(entry.approvedAt);
-
-  const permissionBadge =
-    entry.status === "approved"
-      ? {
-          label: "Fotos & Veröffentlichung erlaubt",
-          className: "border-success/40 bg-success/10 text-success",
-        }
-      : {
-          label: "Keine Fotoveröffentlichung erlaubt",
-          className: "border-destructive/40 bg-destructive/10 text-destructive",
-        };
-
-  return (
-    <div
-      className={cn(
-        "flex h-full flex-col justify-between rounded-lg border border-border/60 p-4 shadow-sm transition-shadow supports-[backdrop-filter]:backdrop-blur-sm hover:shadow-md",
-        processedCardAccent[entry.status],
-      )}
-    >
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-foreground">
-              {entry.name ?? entry.email ?? "Unbekannt"}
-            </div>
-            {entry.email && <div className="text-xs text-foreground/60">{entry.email}</div>}
-            <div className="text-xs text-foreground/60">{entry.showTitle}</div>
+          <div className="text-xs text-muted-foreground">
+            {entry.email ? `${entry.email} · ` : ""}
+            {entry.showTitle}
           </div>
-          <Badge variant={statusVariants[entry.status]}>{statusLabel}</Badge>
         </div>
-
-        <Badge variant="outline" className={cn("text-xs", permissionBadge.className)}>
-          {permissionBadge.label}
+        <Badge className={cn("whitespace-nowrap", STATUS_BADGE_CLASSES[entry.status])}>
+          {STATUS_LABELS[entry.status]}
         </Badge>
-
-        <div className="flex flex-wrap gap-2 text-xs">
-          <Badge variant="outline" className="border-border/60 text-foreground/70">
-            {entry.requiresDocument ? "Minderjährig" : "Volljährig"}
-          </Badge>
-          <Badge
-            variant="outline"
-            className={cn(
-              "border-border/60 text-foreground/70",
-              entry.hasDocument
-                ? "border-success/50 text-success"
-                : "border-warning/70 text-warning",
-            )}
-          >
-            {entry.hasDocument ? "Dokument vorhanden" : "Dokument fehlt"}
-          </Badge>
-          {formattedBirthDate ? (
-            <Badge variant="outline" className="border-border/60 text-foreground/70">
-              Geburtsdatum: {formattedBirthDate}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="border-warning/70 text-warning">
-              Geburtsdatum fehlt
-            </Badge>
-          )}
-        </div>
-
-        <div className="space-y-2 text-xs text-foreground/70">
-          <div>Aktualisiert: {updatedAt}</div>
-          {approvedAt && <div>Freigegeben am {approvedAt}</div>}
-          {entry.approvedByName && <div>Bearbeitet durch {entry.approvedByName}</div>}
-          {entry.rejectionReason && (
-            <div className="text-destructive">Grund: {entry.rejectionReason}</div>
-          )}
-          {entry.exclusionNote && (
-            <div className="rounded-md border border-border/60 bg-background/60 p-2 text-foreground/80">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Ausschlüsse
-              </div>
-              <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed">
-                {entry.exclusionNote}
-              </p>
-            </div>
-          )}
-          {entry.documentName && (
-            <div>
-              Dokument: {entry.documentName}
-              {entry.documentUrl && (
-                <>
-                  {" "}
-                  <a
-                    className="underline"
-                    href={entry.documentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    öffnen
-                  </a>
-                </>
-              )}
-            </div>
-          )}
-          <DocumentPreview
-            key={`${entry.signatureVersion ?? "none"}-${entry.documentPreviewUrl ?? "nopreview"}`}
-            previewUrl={entry.documentPreviewUrl}
-            documentName={entry.documentName}
-            signatureVersion={entry.signatureVersion}
-            signaturePayload={entry.signaturePayload}
-          />
-        </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => void onAction(entry.id, "reset")}
-          disabled={processing === entry.id}
+      <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
+        <Badge variant="outline">{entry.requiresDocument ? "Minderjährig" : "Volljährig"}</Badge>
+        {entry.hasDocument ? (
+          <Badge variant="outline" className="border-success/50 text-success">
+            Dokument vorhanden
+          </Badge>
+        ) : entry.requiresDocument ? (
+          <Badge variant="outline" className="border-warning/70 text-warning">
+            Dokument fehlt
+          </Badge>
+        ) : null}
+        {entry.requiresDateOfBirth ? (
+          <Badge variant="outline" className="border-warning/70 text-warning">
+            Geburtsdatum fehlt
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className="mt-3 space-y-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Angekreuzt
+        </p>
+        <ChosenPurposes entry={entry} />
+      </div>
+
+      {entry.exclusionNote ? (
+        <p className="mt-2 text-xs text-muted-foreground">Ausschlüsse: {entry.exclusionNote}</p>
+      ) : null}
+      {entry.rejectionReason ? (
+        <p className="mt-2 text-xs text-destructive">Ablehnungsgrund: {entry.rejectionReason}</p>
+      ) : null}
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <span>Eingegangen: {formatDateTime(entry.submittedAt)}</span>
+        {entry.approvedAt ? (
+          <span>
+            Freigegeben: {formatDateTime(entry.approvedAt)}
+            {entry.approvedByName ? ` durch ${entry.approvedByName}` : ""}
+          </span>
+        ) : null}
+        {entry.versions.length > 0 ? <span>{entry.versions.length} Version(en)</span> : null}
+      </div>
+
+      {entry.documentUrl ? (
+        <a
+          href={entry.documentUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-xs text-foreground underline underline-offset-2"
         >
-          Zurücksetzen
-        </Button>
-        {entry.status === "approved" ? (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={() => void onAction(entry.id, "reject")}
-            disabled={processing === entry.id}
-          >
-            Ablehnen
-          </Button>
+          <FileIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          {entry.documentName ?? "Nachweis ansehen"}
+        </a>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {entry.status === "pending" ? (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void handleAction(entry.id, "approve")}
+              disabled={processing === entry.id}
+            >
+              <CheckIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+              Freigeben
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={() => {
+                setRejectReason("");
+                setRejectTarget(entry);
+              }}
+              disabled={processing === entry.id}
+            >
+              Ablehnen
+            </Button>
+          </>
         ) : (
           <Button
+            type="button"
             size="sm"
-            onClick={() => void onAction(entry.id, "approve")}
+            variant="outline"
+            onClick={() => void handleAction(entry.id, "approve")}
             disabled={processing === entry.id}
           >
             Freigeben
           </Button>
         )}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setResetTarget(entry)}
+          disabled={processing === entry.id}
+        >
+          Zurücksetzen
+        </Button>
       </div>
-    </div>
+    </li>
+  );
+
+  return (
+    <Card className="border border-border/70 bg-card">
+      <CardContent className="space-y-6 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-foreground">Geladene Fotoerlaubnisse</h2>
+            <p className="text-xs text-muted-foreground">
+              Fotoerlaubnisse gelten pro Produktion. Prüfe eingereichte Zustimmungen und entscheide
+              darüber.
+            </p>
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="secondary">Wartend: {summary.pending}</Badge>
+            <Badge variant="outline">Fehlende Geburtsdaten: {summary.missingBirthdays}</Badge>
+            <Badge variant="destructive">Abgelehnt: {summary.rejected}</Badge>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-md">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Nach Namen, E-Mail oder Punkt suchen"
+              aria-label="Fotoerlaubnisse durchsuchen"
+              className="pl-9"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={showId ?? "all"}
+              onValueChange={(value) => {
+                setShowId(value);
+                setLoading(true);
+                void load(value);
+              }}
+            >
+              <SelectTrigger className="h-9 w-56" aria-label="Produktion auswählen">
+                <SelectValue placeholder="Produktion" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Produktionen</SelectItem>
+                {shows.map((show) => (
+                  <SelectItem key={show.id} value={show.id}>
+                    {show.title} ({show.year})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {showId && showId !== "all" ? (
+              <Button asChild size="sm" variant="outline">
+                <a href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}`}>
+                  Fotoliste (CSV)
+                </a>
+              </Button>
+            ) : null}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(event) => {
+                void handleParentalTemplateUpload(event);
+              }}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+              Elternformular
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load(showId ?? undefined)}
+              disabled={loading}
+            >
+              <RefreshIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+              Aktualisieren
+            </Button>
+          </div>
+        </div>
+
+        <SegmentedControl
+          value={statusFilter}
+          onValueChange={(value) => setStatusFilter(value)}
+          options={STATUS_FILTERS.map((filter) => ({ value: filter.value, label: filter.label }))}
+          aria-label="Status filtern"
+        />
+
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+        {loading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : entries.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            Bisher liegen keine Fotoerlaubnisse vor.
+          </p>
+        ) : filteredEntries.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            Keine Fotoerlaubnis entspricht deiner Suche oder Filterung.
+          </p>
+        ) : (
+          <div className="space-y-8">
+            {openEntries.length > 0 ? (
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Offene Fotoerlaubnisse
+                </h3>
+                <ul className="space-y-3">{openEntries.map(renderEntry)}</ul>
+              </section>
+            ) : null}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Abgeschlossene Einträge
+              </h3>
+              {processedEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Noch keine freigegebenen oder abgelehnten Einwilligungen vorhanden.
+                </p>
+              ) : (
+                <ul className="space-y-3">{processedEntries.map(renderEntry)}</ul>
+              )}
+            </section>
+          </div>
+        )}
+      </CardContent>
+
+      <ModalFormDialog
+        title="Fotoerlaubnis ablehnen"
+        open={rejectTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRejectTarget(null);
+        }}
+        onSave={() => {
+          if (!rejectTarget) return;
+          const reason = rejectReason.trim();
+          if (!reason) {
+            toast.error("Bitte gib einen Ablehnungsgrund an");
+            return;
+          }
+          const target = rejectTarget;
+          setRejectTarget(null);
+          void handleAction(target.id, "reject", reason);
+        }}
+        saveLabel="Ablehnen"
+      >
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="reject-reason">
+            Grund der Ablehnung
+          </label>
+          <Textarea
+            id="reject-reason"
+            value={rejectReason}
+            onChange={(event) => setRejectReason(event.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Was fehlt oder ist nicht in Ordnung?"
+          />
+          <p className="text-xs text-muted-foreground">
+            Das Mitglied sieht den Grund und kann erneut einreichen.
+          </p>
+        </div>
+      </ModalFormDialog>
+
+      <ConfirmDialog
+        open={resetTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setResetTarget(null);
+        }}
+        title="Fotoerlaubnis zurücksetzen?"
+        description="Der eingereichte Nachweis und die Auswahl werden entfernt, damit das Mitglied neu einreichen kann. Der Verlauf bleibt erhalten."
+        confirmLabel="Zurücksetzen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={() => {
+          if (!resetTarget) return;
+          const target = resetTarget;
+          setResetTarget(null);
+          void handleAction(target.id, "reset");
+        }}
+        onCancel={() => setResetTarget(null)}
+      />
+    </Card>
   );
 }
