@@ -5,11 +5,13 @@ const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   showFindUnique: vi.fn(),
   load: vi.fn(),
+  renderPdfTemplate: vi.fn(),
 }));
 
 vi.mock("@/lib/rbac", () => ({ requireAuth: async () => ({ user: { id: "u" } }) }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: mocks.hasPermission }));
 vi.mock("@/lib/prisma", () => ({ prisma: { show: { findUnique: mocks.showFindUnique } } }));
+vi.mock("@/lib/pdf/engine", () => ({ renderPdfTemplate: mocks.renderPdfTemplate }));
 vi.mock("@/lib/produktionen/photo-consent-overview", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/produktionen/photo-consent-overview")>()),
   loadPhotoConsentOverview: mocks.load,
@@ -25,7 +27,11 @@ describe("Fotoerlaubnis-Export", () => {
     vi.clearAllMocks();
     mocks.hasPermission.mockResolvedValue(false);
     mocks.showFindUnique.mockResolvedValue({ title: "Die unendliche Geschichte", year: 2026 });
-    mocks.load.mockResolvedValue([]);
+    mocks.load.mockResolvedValue({ purposes: [], rows: [] });
+    mocks.renderPdfTemplate.mockResolvedValue({
+      buffer: Buffer.from("pdf"),
+      filename: "fotoerlaubnis-die-unendliche-geschichte.pdf",
+    });
   });
 
   it("verweigert ohne Berechtigung", async () => {
@@ -45,6 +51,19 @@ describe("Fotoerlaubnis-Export", () => {
       'attachment; filename="fotoerlaubnis-die-unendliche-geschichte-2026.csv"',
     );
     expect(mocks.load).toHaveBeenCalledWith("s");
+  });
+
+  it("liefert auf Wunsch eine PDF-Datei", async () => {
+    mocks.hasPermission.mockResolvedValue(true);
+
+    const response = await GET(request("?showId=s&format=pdf"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(mocks.renderPdfTemplate).toHaveBeenCalledWith(
+      "photo-consent-list",
+      expect.objectContaining({ showTitle: "Die unendliche Geschichte", purposes: [] }),
+    );
   });
 
   it("verlangt eine Produktion", async () => {

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { hasPermission } from "@/lib/permissions";
+import { renderPdfTemplate } from "@/lib/pdf/engine";
 import { prisma } from "@/lib/prisma";
 import {
+  PHOTO_CONSENT_STATUS_LABELS,
   loadPhotoConsentOverview,
   photoConsentOverviewToCsv,
 } from "@/lib/produktionen/photo-consent-overview";
@@ -19,7 +21,7 @@ function slugify(value: string) {
   );
 }
 
-/** CSV-Liste für Fotograf:innen: wer darf fotografiert werden, wer nicht. */
+/** Liste für Fotograf:innen als CSV oder PDF: wer darf fotografiert werden, wer nicht. */
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
   const [canManageConsents, canManageShow] = await Promise.all([
@@ -42,12 +44,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Produktion nicht gefunden" }, { status: 404 });
   }
 
-  const rows = await loadPhotoConsentOverview(showId);
-  const fileName = `fotoerlaubnis-${slugify(show.title ?? String(show.year))}-${show.year}.csv`;
-  return new NextResponse(photoConsentOverviewToCsv(rows), {
+  const overview = await loadPhotoConsentOverview(showId);
+  const baseName = `fotoerlaubnis-${slugify(show.title ?? String(show.year))}-${show.year}`;
+  const format = request.nextUrl.searchParams.get("format")?.trim().toLowerCase();
+
+  if (format === "pdf") {
+    const result = await renderPdfTemplate("photo-consent-list", {
+      showTitle: show.title ?? `Produktion ${show.year}`,
+      generatedAt: new Date(),
+      purposes: overview.purposes,
+      rows: overview.rows.map((row) => ({
+        name: row.name,
+        permission: row.permission,
+        status: PHOTO_CONSENT_STATUS_LABELS[row.status],
+        exclusionNote: row.exclusionNote,
+        isMinor: row.isMinor,
+        purposes: row.purposes,
+      })),
+    });
+    return new NextResponse(new Uint8Array(result.buffer), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${result.filename}"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
+  return new NextResponse(photoConsentOverviewToCsv(overview), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Content-Disposition": `attachment; filename="${baseName}.csv"`,
       "Cache-Control": "no-store",
     },
   });

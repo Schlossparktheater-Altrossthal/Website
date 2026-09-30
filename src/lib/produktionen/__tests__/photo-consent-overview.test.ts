@@ -1,7 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findMany } = vi.hoisted(() => ({ findMany: vi.fn() }));
-vi.mock("@/lib/prisma", () => ({ prisma: { productionMembership: { findMany } } }));
+const mocks = vi.hoisted(() => ({
+  membershipFindMany: vi.fn(),
+  purposeFindMany: vi.fn(),
+  purposeCount: vi.fn(),
+  purposeCreateMany: vi.fn(),
+}));
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    productionMembership: { findMany: mocks.membershipFindMany },
+    photoConsentPurpose: {
+      findMany: mocks.purposeFindMany,
+      count: mocks.purposeCount,
+      createMany: mocks.purposeCreateMany,
+    },
+  },
+}));
 
 import {
   classifyPhotoPermission,
@@ -30,10 +45,14 @@ describe("classifyPhotoPermission", () => {
 });
 
 describe("loadPhotoConsentOverview", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.purposeCount.mockResolvedValue(1);
+    mocks.purposeFindMany.mockResolvedValue([]);
+  });
 
   it("sortiert „nicht fotografieren“ nach oben und erkennt Minderjährige", async () => {
-    findMany.mockResolvedValue([
+    mocks.membershipFindMany.mockResolvedValue([
       {
         user: {
           id: "a",
@@ -42,7 +61,13 @@ describe("loadPhotoConsentOverview", () => {
           name: null,
           email: null,
           dateOfBirth: new Date("1990-01-01"),
-          photoConsents: [{ status: "approved", exclusionNote: null }],
+          photoConsents: [
+            {
+              status: "approved",
+              exclusionNote: null,
+              choices: [{ purposeId: "p1", chosen: true }],
+            },
+          ],
         },
       },
       {
@@ -58,37 +83,85 @@ describe("loadPhotoConsentOverview", () => {
       },
     ]);
 
-    const rows = await loadPhotoConsentOverview("show-1");
+    const overview = await loadPhotoConsentOverview("show-1");
 
-    expect(findMany.mock.calls[0][0].where).toEqual({ showId: "show-1", status: "active" });
-    expect(rows.map((row) => [row.userId, row.permission, row.status, row.isMinor])).toEqual([
+    expect(mocks.membershipFindMany.mock.calls[0][0].where).toEqual({
+      showId: "show-1",
+      status: "active",
+    });
+    expect(
+      overview.rows.map((row) => [row.userId, row.permission, row.status, row.isMinor]),
+    ).toEqual([
       ["b", "forbidden", "none", true],
       ["a", "allowed", "approved", false],
+    ]);
+  });
+
+  it("liefert jeden Zweck in Katalogreihenfolge mit gewähltem Zustand", async () => {
+    mocks.purposeFindMany.mockResolvedValue([
+      { id: "p1", label: "Private Foto- und Filmaufnahmen" },
+      { id: "p2", label: "Programmheft und Werbung" },
+    ]);
+    mocks.membershipFindMany.mockResolvedValue([
+      {
+        user: {
+          id: "a",
+          firstName: "Anna",
+          lastName: "A",
+          name: null,
+          email: null,
+          dateOfBirth: new Date("1990-01-01"),
+          photoConsents: [
+            {
+              status: "approved",
+              exclusionNote: null,
+              choices: [{ purposeId: "p1", chosen: true }],
+            },
+          ],
+        },
+      },
+    ]);
+
+    const overview = await loadPhotoConsentOverview("show-1");
+
+    expect(overview.purposes).toEqual([
+      "Private Foto- und Filmaufnahmen",
+      "Programmheft und Werbung",
+    ]);
+    expect(overview.rows[0].purposes).toEqual([
+      { label: "Private Foto- und Filmaufnahmen", chosen: true },
+      { label: "Programmheft und Werbung", chosen: false },
     ]);
   });
 });
 
 describe("photoConsentOverviewToCsv", () => {
-  it("erzeugt Excel-taugliches CSV und entschärft Formeln", () => {
-    const csv = photoConsentOverviewToCsv([
-      {
-        userId: "a",
-        name: '=HYPERLINK("x")',
-        status: "approved",
-        permission: "restricted",
-        exclusionNote: 'Keine "Nahaufnahmen"',
-        isMinor: false,
-        chosenPurposes: ["Private Foto- und Filmaufnahmen"],
-      },
-    ]);
+  it("erzeugt Excel-taugliches CSV mit einer Spalte je Zweck und entschärft Formeln", () => {
+    const csv = photoConsentOverviewToCsv({
+      purposes: ["Private Foto- und Filmaufnahmen", "Programmheft und Werbung"],
+      rows: [
+        {
+          userId: "a",
+          name: '=HYPERLINK("x")',
+          status: "approved",
+          permission: "restricted",
+          exclusionNote: 'Keine "Nahaufnahmen"',
+          isMinor: false,
+          purposes: [
+            { label: "Private Foto- und Filmaufnahmen", chosen: true },
+            { label: "Programmheft und Werbung", chosen: false },
+          ],
+        },
+      ],
+    });
 
-    expect(csv.startsWith("﻿")).toBe(true);
+    expect(csv.startsWith("\uFEFF")).toBe(true);
     const lines = csv.slice(1).trimEnd().split("\r\n");
     expect(lines[0]).toBe(
-      '"Name";"Fotografieren";"Fotoerlaubnis";"Angekreuzt";"Ausschlüsse";"Minderjährig"',
+      '"Name";"Fotografieren";"Fotoerlaubnis";"Private Foto- und Filmaufnahmen";"Programmheft und Werbung";"Ausschlüsse";"Minderjährig"',
     );
     expect(lines[1]).toBe(
-      '"\'=HYPERLINK(""x"")";"Eingeschränkt";"Erteilt";"Private Foto- und Filmaufnahmen";"Keine ""Nahaufnahmen""";"nein"',
+      '"\'=HYPERLINK(""x"")";"Eingeschränkt";"Erteilt";"ja";"";"Keine ""Nahaufnahmen""";"nein"',
     );
   });
 });

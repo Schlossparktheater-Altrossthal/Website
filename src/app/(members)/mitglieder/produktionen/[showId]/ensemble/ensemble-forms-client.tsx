@@ -408,6 +408,11 @@ export function ReminderActions({
             Fotoliste für Fotograf:innen (CSV)
           </a>
         </Button>
+        <Button asChild size="sm" variant="outline">
+          <a href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}&format=pdf`}>
+            Fotoliste für Fotograf:innen (PDF)
+          </a>
+        </Button>
       </div>
       <InviteLinkList result={onboardingState} />
     </div>
