@@ -1,6 +1,6 @@
 # Plan: Seiten-Icons – eine Symbolsprache für alle Bereiche
 
-Stand: 2026-09-30. Rahmen entschieden (E1–E4), Symbolplan steht, Umsetzung offen. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-30. Umgesetzt (Phase 1–6). Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -83,11 +83,28 @@ Kategorien und Einzeltreffer in `notification-row.tsx` zeigen das Symbol der Sei
 5. **Phase 5 – Doku & Regeln.** Neuer Abschnitt „Seiten-Icons" in `docs/design-system.md` mit der Tabelle; `AGENTS.md` ergänzt die Regel, dass Seiten-Icons nur aus `members-navigation.ts` kommen; Hinweis in `docs/seiten/README.md`.
 6. **Phase 6 – Verifikation.** Screenshots (Handy, Tablet, Desktop; hell und dunkel) von Sidebar, mobilem Sheet, Dashboard und Seitensteuerung, dem Review beigelegt; `pnpm lint`, `pnpm test`, `pnpm build`; ein Commit je Phase.
 
+## Umsetzungsnotizen (2026-09-30)
+
+- **Phase 1 und 2 in einem Schritt:** Die Umstellung auf lucide und die neue Zuordnung liegen in
+  einem Commit. Eine Zwischenstufe mit bedeutungsgleichen Ersatzsymbolen hätte nur erfundene
+  Zwischenzustände erzeugt, die niemand prüfen wollte.
+- **Neue Symbole** in `src/components/ui/action-icons.tsx`: `CalendarXIcon` (`CalendarX`),
+  `UserCogIcon` (`UserCog`), `PaletteIcon` (`Palette`).
+- **`defaultMembersNavIcon`** bleibt `CircleIcon` aus `action-icons`: Er greift nur, wenn ein Eintrag
+  kein Symbol trägt – im Bestand kommt das nicht vor (B8 bleibt damit reine Absicherung).
+- **Weiterer Fund bei Phase 3 (B9):** Die Kennzahl-Kachel „Proben diese Woche“ im Dashboard führt auf
+  „Meine Termine“, trug aber ein generisches Kalender-Symbol; sie zeigt jetzt `CalendarCheckIcon`
+  über `membersNavIcon`. Kacheln ohne Seitenziel (Endprobenwoche, Online-Zahl, Mitgliederzahl) und
+  In-Page-Umschalter (Sperrliste, Terminplanung) behalten ihre eigenen Symbole.
+- **Phase 4:** Gewerk-Benachrichtigungen (Kategorie `gewerke` und `DEPARTMENT_REQUEST`) zeigen
+  `UsersRoundIcon` – das Symbol der Seite „Meine Teams“, die sie öffnen. Proben (`DramaIcon`),
+  Termine (`CalendarIcon`), System (`BellIcon`) und Warnungen bleiben Ereignis-Symbole.
+
 ## Checkliste
 
-- [ ] Phase 1 – Icon-System vereinheitlicht
-- [ ] Phase 2 – Symbolplan umgesetzt
-- [ ] Phase 3 – Alle Stellen mit Seiten-Link abgeglichen
-- [ ] Phase 4 – Benachrichtigungen angeglichen
-- [ ] Phase 5 – Doku und `AGENTS.md` fortgeschrieben
-- [ ] Phase 6 – Verifikation und Commit
+- [x] Phase 1 – Icon-System vereinheitlicht
+- [x] Phase 2 – Symbolplan umgesetzt
+- [x] Phase 3 – Alle Stellen mit Seiten-Link abgeglichen
+- [x] Phase 4 – Benachrichtigungen angeglichen
+- [x] Phase 5 – Doku und `AGENTS.md` fortgeschrieben
+- [x] Phase 6 – Verifikation und Commit

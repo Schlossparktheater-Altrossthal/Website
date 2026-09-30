@@ -245,6 +245,42 @@ import { CalendarCog } from "lucide-react";
 </Button>;
 ```
 
+### Seiten-Icons
+
+Jede Seite des Mitgliederbereichs hat genau ein Symbol. Es steht in der Navigations-Registry
+`src/config/members-navigation.ts` und wird über `membersNavIcon(href)` aus
+`src/lib/members-navigation.ts` bezogen – Sidebar, mobiles Sheet, Seitensteuerung,
+Dashboard-Schnellzugriff und Benachrichtigungen zeigen dieselbe Seite dadurch immer gleich. Eigene
+SVG-Pfade für Navigations-Icons sind unzulässig (`AGENTS.md`, Abschnitt „Icons"); Hintergrund und
+Entscheidungen stehen in `docs/Plan/seiten-icons-plan.md`.
+
+| Seite                       | Route                                                | Symbol              |
+| --------------------------- | ---------------------------------------------------- | ------------------- |
+| Dashboard                   | `/mitglieder`                                        | `LayoutGridIcon`    |
+| Profil                      | `/mitglieder/profil`                                 | `UserRoundIcon`     |
+| Sperrliste                  | `/mitglieder/sperrliste`                             | `CalendarXIcon`     |
+| Meine Termine               | `/mitglieder/meine-proben`                           | `CalendarCheckIcon` |
+| Überblick (Produktionen)    | `/mitglieder/produktionen`                           | `ClapperboardIcon`  |
+| Terminplanung               | `/mitglieder/terminplanung`                          | `CalendarCogIcon`   |
+| Stück                       | `/mitglieder/produktionen/stueck`                    | `BookOpenTextIcon`  |
+| Rückmeldungen & Auswertung  | `/mitglieder/produktionen/rueckmeldungen-auswertung` | `ListChecksIcon`    |
+| Teams & Zuweisung           | `/mitglieder/produktionen/zuweisung`                 | `ClipboardListIcon` |
+| Meine Teams                 | `/mitglieder/meine-gewerke`                          | `UsersRoundIcon`    |
+| Körpermaße                  | `/mitglieder/koerpermasse`                           | `RulerIcon`         |
+| Website & Theme             | `/mitglieder/website`                                | `PaletteIcon`       |
+| Seitensteuerung             | `/mitglieder/pages/seitensteuerung`                  | `LayersIcon`        |
+| Mitglieder                  | `/mitglieder/mitgliederverwaltung`                   | `UserCogIcon`       |
+| Rollen & Rechte             | `/mitglieder/rechte`                                 | `ShieldCheckIcon`   |
+| Fotoerlaubnisse             | `/mitglieder/fotoerlaubnisse`                        | `CameraIcon`        |
+| Datenportal                 | `/mitglieder/datenportal`                            | `BarChart3Icon`     |
+| E-Mail Server Einstellungen | `/mitglieder/server-einstellungen`                   | `MailIcon`          |
+| Server-Statistiken          | `/mitglieder/server-analytics`                       | `ActivityIcon`      |
+| Onboarding-Statistik        | `/mitglieder/onboarding`                             | `SparklesIcon`      |
+
+Benachrichtigungen tragen das Symbol der Seite, die sie öffnen (Gewerke → „Meine Teams");
+Kategorien und Einzeltreffer ohne Seitenbezug behalten ein Ereignis-Symbol (Proben, System,
+Warnungen, Foto-Einwilligung).
+
 ### TextLink (`@/components/ui/text-link`)
 
 - Variants: `default` (primär), `subtle`, `muted`, `ghost`, `accent`, `button`.

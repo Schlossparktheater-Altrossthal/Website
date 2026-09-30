@@ -16,8 +16,7 @@ import {
   ChevronDownIcon,
   ClapperboardIcon,
   DramaIcon,
-  HammerIcon,
-  UsersIcon,
+  UsersRoundIcon,
 } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
@@ -53,16 +52,18 @@ function GroupIcon({ group }: { group: InboxGroup }) {
       icon = <AlertTriangleIcon />;
       break;
     case NOTIFICATION_TYPES.DEPARTMENT_REQUEST:
-      icon = <UsersIcon />;
+      icon = <UsersRoundIcon />;
       break;
     case NOTIFICATION_TYPES.PHOTO_CONSENT:
       icon = <CameraIcon />;
       break;
     default:
+      // Gewerk-Benachrichtigungen öffnen „Meine Teams“ und tragen deshalb dessen Symbol
+      // (docs/Plan/seiten-icons-plan.md); die übrigen Kategorien beschreiben das Ereignis selbst.
       icon = {
         proben: <DramaIcon />,
         termine: <CalendarIcon />,
-        gewerke: <HammerIcon />,
+        gewerke: <UsersRoundIcon />,
         produktion: <ClapperboardIcon />,
         system: <BellIcon />,
       }[group.category];

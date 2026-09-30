@@ -6,7 +6,9 @@ import type {
 import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   MEMBERS_NAV_PRODUCTION_GROUP_ID,
+  defaultMembersNavIcon,
   membersNavigation,
+  type MembersNavIcon,
 } from "@/config/members-navigation";
 
 export type AssignmentFocus = "none" | "rehearsals" | "departments" | "both";
@@ -175,4 +177,12 @@ export function findMembersNavigationItem(
   }
 
   return null;
+}
+
+/**
+ * Symbol der Seite zu einer Route – dieselbe Quelle wie die Navigation
+ * (docs/Plan/seiten-icons-plan.md). Listen, die auf eine Seite verlinken, holen ihr Icon hier.
+ */
+export function membersNavIcon(href: string): MembersNavIcon {
+  return findMembersNavigationItem(href)?.item.icon ?? defaultMembersNavIcon;
 }

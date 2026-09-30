@@ -162,6 +162,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Neue projektweit gebrauchte Icons zuerst in `src/components/ui/action-icons.tsx` ergänzen.
 - Seitenspezifische dekorative Icons dürfen direkt aus `lucide-react` importiert werden.
 - Diese Regel hat Vorrang vor `docs/design-system.md`, auch wenn dort direkte `lucide-react`-Imports referenziert werden.
+- **Seiten-Icons:** Jede Seite hat genau ein Symbol, und zwar in der Navigations-Registry `src/config/members-navigation.ts`. Sidebar, mobiles Sheet, Seitensteuerung, Dashboard-Schnellzugriff und Benachrichtigungen beziehen es über `membersNavIcon(href)` aus `src/lib/members-navigation.ts` – keine zweite Icon-Liste, keine eigenen SVG-Pfade, kein zweites Symbol für dieselbe Seite. Die Zuordnung steht in `docs/design-system.md` (Abschnitt „Seiten-Icons"), Hintergrund in `docs/Plan/seiten-icons-plan.md`.
 
 ## UI-Komponenten
 

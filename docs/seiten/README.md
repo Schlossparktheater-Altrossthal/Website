@@ -26,5 +26,6 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 ## Konventionen
 
 - **Permissions** folgen dem Schema `VISIBILITY.PAGE.CONTEXT.ACTION` (siehe `AGENTS.md`).
+- **Seiten-Icons** stehen zentral in `src/config/members-navigation.ts` und werden über `membersNavIcon(href)` bezogen; die Zuordnung je Seite listet `docs/design-system.md` (Abschnitt „Seiten-Icons"). Hintergrund: `docs/Plan/seiten-icons-plan.md`.
 - **Design-Tokens** statt harter Farben; Details in `docs/design-system.md`.
 - **Responsive Muster** (SectionNav, Header, Sidebar) sind in `AGENTS.md` unter „RESPONSIVE DESIGN PATTERNS“ festgehalten; Breakpoints/Nutzerklassen in `docs/design-system.md`, Status je Seite in `docs/responsiveness-matrix.md`.

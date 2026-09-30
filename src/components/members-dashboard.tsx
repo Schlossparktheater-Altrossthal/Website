@@ -1,18 +1,10 @@
 "use client";
 
 import {
-  CalendarCheckIcon,
-  CalendarCogIcon,
-  CalendarIcon,
   CheckCircle2Icon,
-  HammerIcon,
-  IconComponent,
   MessageCircleIcon,
-  ShieldCheckIcon,
   SparklesIcon,
-  UserRoundIcon,
   UsersIcon,
-  UsersRoundIcon,
   WifiIcon,
   WifiOffIcon,
 } from "@/components/ui/action-icons";
@@ -37,6 +29,7 @@ import { MembersContentLayout } from "@/components/members/members-app-shell";
 import { useMembersPermissions } from "@/components/members/permissions-context";
 import { ConnectionStatusBadge } from "@/components/members/connection-status-badge";
 import { PageHeader } from "@/components/members/page-header";
+import { membersNavIcon } from "@/lib/members-navigation";
 
 interface DashboardStats {
   /** Mitglieder der aktiven Produktion (nicht alle Konten des Vereins). */
@@ -87,7 +80,6 @@ const INITIAL_STATS: DashboardStats = {
 type QuickActionLink = {
   href: string;
   label: string;
-  icon: IconComponent;
   permissionKey?: string;
 };
 
@@ -98,44 +90,43 @@ interface MembersDashboardProps {
   permissions?: readonly string[];
 }
 
+// Die Symbole kommen aus der Navigations-Registry (docs/Plan/seiten-icons-plan.md),
+// damit Schnellzugriff und Sidebar dieselbe Seite nie unterschiedlich zeigen.
 const QUICK_ACTION_LINKS = [
   {
     href: "/mitglieder/meine-proben",
     label: "Meine Termine",
-    icon: CalendarCheckIcon,
     permissionKey: "PRIVATE.REHEARSAL.OWN.VIEW",
   },
   {
     href: "/mitglieder/profil",
-    label: "Mein Profil",
-    icon: UserRoundIcon,
+    label: "Profil",
     permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
   },
   {
     href: "/mitglieder/meine-gewerke",
     label: "Meine Teams",
-    icon: HammerIcon,
     permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
   },
   {
     href: "/mitglieder/terminplanung",
     label: "Terminplanung",
-    icon: CalendarCogIcon,
     permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
   },
   {
     href: "/mitglieder/mitgliederverwaltung",
     label: "Mitglieder",
-    icon: UsersRoundIcon,
     permissionKey: "PRIVATE.ADMIN.MEMBERS.MANAGE",
   },
   {
     href: "/mitglieder/rechte",
     label: "Rollen & Rechte",
-    icon: ShieldCheckIcon,
     permissionKey: "PRIVATE.ADMIN.PERMISSIONS.MANAGE",
   },
 ] satisfies QuickActionLink[];
+
+/** Symbol der Seite „Meine Termine“ – die Kennzahl-Kachel führt dorthin. */
+const RehearsalsPageIcon = membersNavIcon("/mitglieder/meine-proben");
 
 type OverviewResponse = {
   offline?: boolean;
@@ -563,7 +554,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           <StatTile
             label="Proben diese Woche"
             value={overviewLoaded ? numberFormatter.format(stats.rehearsalsThisWeek) : "–"}
-            icon={<CalendarIcon />}
+            icon={<RehearsalsPageIcon />}
             tone="primary"
             href="/mitglieder/meine-proben"
           />
@@ -668,7 +659,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
               <div className="px-1 pb-2">
                 <ListRowGroup>
                   {quickActions.map((link) => {
-                    const Icon = link.icon;
+                    const Icon = membersNavIcon(link.href);
                     return (
                       <ListRow
                         key={link.href}

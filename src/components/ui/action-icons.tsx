@@ -30,6 +30,7 @@ import {
   CalendarHeart,
   CalendarPlus,
   CalendarRange,
+  CalendarX,
   Camera,
   Cat,
   Check,
@@ -90,6 +91,7 @@ import {
   MoreVertical,
   Music3,
   Package,
+  Palette,
   PanelLeft,
   PawPrint,
   Pencil,
@@ -123,6 +125,7 @@ import {
   Upload,
   User,
   UserCheck,
+  UserCog,
   UserMinus,
   UserRound,
   UserRoundCheck,
@@ -471,6 +474,13 @@ export function CalendarRangeIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <CalendarRange className={className} aria-hidden {...props} />;
+}
+
+export function CalendarXIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <CalendarX className={className} aria-hidden {...props} />;
 }
 
 export function UtensilsCrossedIcon({
@@ -853,6 +863,13 @@ export function PackageIcon({
   return <Package className={className} aria-hidden {...props} />;
 }
 
+export function PaletteIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Palette className={className} aria-hidden {...props} />;
+}
+
 export function PanelLeftIcon({
   className = "w-4 h-4",
   ...props
@@ -971,6 +988,13 @@ export function UserCheckIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <UserCheck className={className} aria-hidden {...props} />;
+}
+
+export function UserCogIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <UserCog className={className} aria-hidden {...props} />;
 }
 
 export function UserRoundCheckIcon({
