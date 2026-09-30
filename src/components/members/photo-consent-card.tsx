@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary, PhotoConsentVersionView } from "@/types/photo-consent";
@@ -95,15 +102,103 @@ function ConsentPrintArea({ purposes }: { purposes: PhotoConsentSummary["purpose
 }
 
 function VersionHistory({ versions }: { versions: PhotoConsentVersionView[] }) {
+  const [leftId, setLeftId] = useState<string | null>(versions[versions.length - 1]?.id ?? null);
+  const [rightId, setRightId] = useState<string | null>(versions[0]?.id ?? null);
+
   if (versions.length === 0) {
     return null;
   }
+
+  const left = versions.find((version) => version.id === leftId) ?? versions[versions.length - 1];
+  const right = versions.find((version) => version.id === rightId) ?? versions[0];
+  const purposeCodes = Array.from(
+    new Set([...left.purposes, ...right.purposes].map((purpose) => purpose.code)),
+  );
+
+  const versionLabel = (version: PhotoConsentVersionView) =>
+    `Version ${version.version} · ${formatDate(version.submittedAt) ?? "unbekannt"}`;
+
   return (
-    <div className="space-y-2 rounded-lg border border-border/60 p-3">
+    <div className="space-y-3 rounded-lg border border-border/60 p-3">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
         <HistoryIcon className="h-4 w-4" aria-hidden="true" />
         Verlauf
       </div>
+
+      {versions.length >= 2 ? (
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Select value={left.id} onValueChange={setLeftId}>
+              <SelectTrigger aria-label="Ältere Version wählen">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((version) => (
+                  <SelectItem key={version.id} value={version.id}>
+                    {versionLabel(version)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={right.id} onValueChange={setRightId}>
+              <SelectTrigger aria-label="Neuere Version wählen">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((version) => (
+                  <SelectItem key={version.id} value={version.id}>
+                    {versionLabel(version)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1 text-xs">
+            <div className="grid grid-cols-[1fr_2.5rem_2.5rem] gap-2 rounded-md bg-muted p-2 font-medium text-foreground">
+              <span>Zweck</span>
+              <span className="text-center">V{left.version}</span>
+              <span className="text-center">V{right.version}</span>
+            </div>
+            {purposeCodes.map((code) => {
+              const leftChosen =
+                left.purposes.find((purpose) => purpose.code === code)?.chosen ?? false;
+              const rightChosen =
+                right.purposes.find((purpose) => purpose.code === code)?.chosen ?? false;
+              const label =
+                left.purposes.find((purpose) => purpose.code === code)?.label ??
+                right.purposes.find((purpose) => purpose.code === code)?.label ??
+                code;
+              const changed = leftChosen !== rightChosen;
+              return (
+                <div
+                  key={code}
+                  className={cn(
+                    "grid grid-cols-[1fr_2.5rem_2.5rem] gap-2 rounded-md border p-2",
+                    changed ? "border-warning/40 bg-warning/10" : "border-border/50",
+                  )}
+                >
+                  <span className="font-medium text-foreground">{label}</span>
+                  <span className="text-center">{leftChosen ? "✓" : "–"}</span>
+                  <span className="text-center">{rightChosen ? "✓" : "–"}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2 text-xs">
+            <div className="rounded-md border border-border/50 p-2">
+              <span className="font-medium text-foreground">Ausschlüsse V{left.version}</span>
+              <p className="mt-1 text-muted-foreground">{left.exclusionNote || "–"}</p>
+            </div>
+            <div className="rounded-md border border-border/50 p-2">
+              <span className="font-medium text-foreground">Ausschlüsse V{right.version}</span>
+              <p className="mt-1 text-muted-foreground">{right.exclusionNote || "–"}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <ul className="space-y-2 text-xs text-muted-foreground">
         {versions.map((version) => {
           const chosen = version.purposes.filter((purpose) => purpose.chosen);

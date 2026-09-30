@@ -57,6 +57,7 @@ export type PhotoConsentVersionRecord = {
   documentName: string | null;
   documentUploadedAt: Date | null;
   signatureVersion: string | null;
+  exclusionNote?: string | null;
   purposesSnapshot: unknown;
 };
 
@@ -142,6 +143,7 @@ export function buildPhotoConsentVersionViews(
         ? `/api/photo-consents/versions/${version.id}/document`
         : null,
       signatureVersion: version.signatureVersion,
+      exclusionNote: version.exclusionNote ?? null,
       purposes: parsePurposeSnapshot(version.purposesSnapshot),
     }));
 }

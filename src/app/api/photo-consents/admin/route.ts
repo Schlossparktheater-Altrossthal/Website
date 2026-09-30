@@ -162,6 +162,7 @@ const CONSENT_INCLUDE = {
       documentName: true,
       documentUploadedAt: true,
       signatureVersion: true,
+      exclusionNote: true,
       purposesSnapshot: true,
     },
   },

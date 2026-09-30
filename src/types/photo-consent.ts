@@ -34,6 +34,7 @@ export type PhotoConsentVersionView = {
   documentName: string | null;
   documentUrl: string | null;
   signatureVersion: string | null;
+  exclusionNote: string | null;
   purposes: PhotoConsentPurposeSnapshot[];
 };
 

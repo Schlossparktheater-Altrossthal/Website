@@ -154,6 +154,7 @@ export async function GET() {
               documentName: true,
               documentUploadedAt: true,
               signatureVersion: true,
+              exclusionNote: true,
               purposesSnapshot: true,
             },
           },
