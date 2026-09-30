@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
+
+import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,6 +90,7 @@ function ConsentEntryCard({
   const [open, setOpen] = useState(false);
   const chosen = entry.purposes.filter((purpose) => purpose.chosen);
   const displayName = entry.name ?? entry.email ?? "Unbekannt";
+  const hasProof = entry.hasDocument || Boolean(entry.signatureVersion);
 
   return (
     <li
@@ -108,7 +112,16 @@ function ConsentEntryCard({
         </Badge>
         {entry.requiresDocument ? (
           <Badge variant="outline" className="text-[11px]">
-            {entry.hasDocument ? "Dokument" : "Dokument fehlt"}
+            Minderjährig
+          </Badge>
+        ) : null}
+        {entry.status === "pending" && !hasProof ? (
+          <Badge variant="outline" className="border-warning/70 text-[11px] text-warning">
+            Nachweis fehlt
+          </Badge>
+        ) : hasProof ? (
+          <Badge variant="outline" className="border-success/50 text-[11px] text-success">
+            {entry.signatureVersion && !entry.hasDocument ? "Unterschrift" : "Dokument"}
           </Badge>
         ) : null}
         {entry.requiresDateOfBirth ? (
@@ -173,13 +186,33 @@ function ConsentEntryCard({
               {entry.documentName ?? "Nachweis ansehen"}
             </a>
           ) : null}
+          {entry.documentPreviewUrl ? (
+            <div className="relative mt-2 h-44 w-full overflow-hidden rounded-md border border-border/60 bg-background">
+              <Image
+                src={entry.documentPreviewUrl}
+                alt={entry.documentName ?? "Nachweis"}
+                fill
+                sizes="(max-width: 640px) 100vw, 50vw"
+                className="object-contain"
+                unoptimized
+              />
+            </div>
+          ) : entry.signaturePayload ? (
+            <div className="mt-2 h-40 w-full overflow-hidden rounded-md border border-border/60 bg-background">
+              <SignatureVisualizer
+                payload={entry.signaturePayload}
+                mode="outline"
+                className="h-full w-full"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       <div className="mt-2 flex flex-wrap gap-1.5">
         {entry.status === "pending" ? (
           <>
-            <Button type="button" size="xs" onClick={onApprove} disabled={processing}>
+            <Button type="button" size="xs" onClick={onApprove} disabled={processing || !hasProof}>
               <CheckIcon className="mr-1 h-4 w-4" aria-hidden="true" />
               Freigeben
             </Button>
@@ -193,17 +226,17 @@ function ConsentEntryCard({
               Ablehnen
             </Button>
           </>
-        ) : (
+        ) : entry.status === "rejected" ? (
           <Button
             type="button"
             size="xs"
             variant="outline"
             onClick={onApprove}
-            disabled={processing}
+            disabled={processing || !hasProof}
           >
             Freigeben
           </Button>
-        )}
+        ) : null}
         <Button type="button" size="xs" variant="ghost" onClick={onReset} disabled={processing}>
           Zurücksetzen
         </Button>
@@ -416,11 +449,20 @@ export function PhotoConsentAdminPanel() {
               </SelectContent>
             </Select>
             {showId && showId !== "all" ? (
-              <Button asChild size="sm" variant="outline">
-                <a href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}`}>
-                  Fotoliste (CSV)
-                </a>
-              </Button>
+              <>
+                <Button asChild size="sm" variant="outline">
+                  <a href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}`}>
+                    Fotoliste (CSV)
+                  </a>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <a
+                    href={`/api/photo-consents/export?showId=${encodeURIComponent(showId)}&format=pdf`}
+                  >
+                    Fotoliste (PDF)
+                  </a>
+                </Button>
+              </>
             ) : null}
             <input
               ref={fileInputRef}
@@ -483,7 +525,9 @@ export function PhotoConsentAdminPanel() {
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Offen
                 </h3>
-                <ul className="space-y-2">{renderCards(openEntries)}</ul>
+                <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {renderCards(openEntries)}
+                </ul>
               </section>
             ) : null}
             <section className="space-y-2">
@@ -495,7 +539,9 @@ export function PhotoConsentAdminPanel() {
                   Noch keine freigegebenen oder abgelehnten Einwilligungen vorhanden.
                 </p>
               ) : (
-                <ul className="space-y-2">{renderCards(processedEntries)}</ul>
+                <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {renderCards(processedEntries)}
+                </ul>
               )}
             </section>
           </div>

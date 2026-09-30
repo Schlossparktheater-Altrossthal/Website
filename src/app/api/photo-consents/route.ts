@@ -353,13 +353,6 @@ export async function POST(request: NextRequest) {
     documentSize = upload.size;
   }
 
-  if (signaturePayload && !documentBuffer) {
-    return NextResponse.json(
-      { error: "Digitale Unterschrift konnte nicht gespeichert werden" },
-      { status: 400 },
-    );
-  }
-
   const now = new Date();
   const docData = documentBuffer
     ? {

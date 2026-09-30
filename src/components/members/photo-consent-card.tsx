@@ -14,7 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { PhotoConsentSummary, PhotoConsentVersionView } from "@/types/photo-consent";
 import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
-import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
 import {
   CameraIcon,
   CheckCircle2Icon,
@@ -410,7 +409,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
               Verlauf ({summary.versions.length})
             </Button>
           ) : null}
-          {!collapsed ? (
+          {!collapsed && requiresDocument ? (
             <Button type="button" variant="outline" size="xs" onClick={() => window.print()}>
               <PrinterIcon className="mr-1 h-4 w-4" aria-hidden="true" />
               Drucken
@@ -525,9 +524,6 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                 <legend className="px-1 text-sm font-semibold text-foreground">
                   Was darf gemacht werden?
                 </legend>
-                <p className="text-xs text-muted-foreground">
-                  Mehrfachauswahl. „Gar nicht“ schließt alle anderen Punkte aus.
-                </p>
                 <div className="space-y-2">
                   {purposes.map((purpose) => (
                     <label
@@ -557,23 +553,24 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                   ))}
                 </div>
               </fieldset>
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-3">
-                <PrinterIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <span className="text-xs text-muted-foreground">
-                  {requiresDocument
-                    ? "Jünger als 18? Drucke das Formular aus, lass es von deinen Erziehungsberechtigten unterschreiben und lade es als Foto oder Datei hoch."
-                    : "Du kannst das Formular auch ausdrucken und unterschreiben lassen."}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  className="ml-auto"
-                  onClick={() => window.print()}
-                >
-                  Drucken
-                </Button>
-              </div>
+              {requiresDocument ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-3">
+                  <PrinterIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  <span className="text-xs text-muted-foreground">
+                    Jünger als 18? Drucke das Formular aus, lass es von deinen
+                    Erziehungsberechtigten unterschreiben und lade es als Foto oder Datei hoch.
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    className="ml-auto"
+                    onClick={() => window.print()}
+                  >
+                    Drucken
+                  </Button>
+                </div>
+              ) : null}
               {isRefusalSelected ? (
                 <div className="rounded-lg border border-muted bg-muted/40 p-3 text-muted-foreground">
                   Du hast „gar nicht“ gewählt. Es ist kein Nachweis nötig – deine Ablehnung wird
@@ -671,15 +668,6 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
                     <p className="text-xs text-muted-foreground">
                       Bereits hinterlegt: {summary.documentName}
                     </p>
-                  ) : null}
-                  {signatureResult ? (
-                    <div className="h-32 w-full overflow-hidden rounded-lg border border-border/60">
-                      <SignatureVisualizer
-                        payload={signatureResult.payload}
-                        mode="outline"
-                        className="h-full w-full"
-                      />
-                    </div>
                   ) : null}
                 </div>
               )}

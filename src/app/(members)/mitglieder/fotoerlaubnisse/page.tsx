@@ -33,7 +33,7 @@ export default async function FotoErlaubnissePage({
     <div className="space-y-6">
       <PageHeader
         title="Fotoerlaubnisse"
-        description="Prüfe Einwilligungen je Produktion und pflege die abgefragten Verwendungszwecke."
+        description="Einwilligungen je Produktion prüfen und die abgefragten Verwendungszwecke pflegen."
       />
       <SectionNav
         items={SECTIONS}

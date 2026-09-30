@@ -32,7 +32,7 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
   {
     id: "freigaben",
     label: "Fotoerlaubnis",
-    description: "Ob wir Fotos von Proben und Aufführungen mit dir zeigen dürfen.",
+    description: "Foto- und Filmfreigabe für die Produktion.",
     group: "person",
   },
   {
