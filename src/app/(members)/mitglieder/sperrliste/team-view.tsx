@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
+import { UserAvatar } from "@/components/user-avatar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { DAY_TIER_LABELS, type DayInfo } from "@/lib/sperrliste/day-tiers";
@@ -458,12 +459,15 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
                           MEMBER_GROUP_ACCENTS[group],
                         )}
                       />
-                      <span
-                        aria-hidden
-                        className="hidden h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[0.625rem] font-semibold text-muted-foreground sm:flex"
-                      >
-                        {member.initials}
-                      </span>
+                      <UserAvatar
+                        userId={member.id}
+                        name={member.name}
+                        email={member.email}
+                        avatarSource={member.avatarSource}
+                        avatarUpdatedAt={member.avatarUpdatedAt}
+                        size={24}
+                        className="hidden shrink-0 sm:inline-block"
+                      />
                       <span className="truncate text-xs sm:text-sm" title={member.name}>
                         <span className="sm:hidden">{shortName(member.name)}</span>
                         <span className="hidden sm:inline">{member.name}</span>

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { UserAvatar } from "@/components/user-avatar";
 import { getRolePreferenceWeightLabel } from "@/lib/onboarding/role-preference-utils";
 import type {
   AssignmentCharacter,
@@ -384,20 +385,6 @@ function EmptyHint({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Avatar({ initials, className }: { initials: string; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground/80",
-        className,
-      )}
-    >
-      {initials}
-    </span>
-  );
-}
-
 function DepartmentDot({ color }: { color: string | null }) {
   return (
     <span
@@ -438,7 +425,14 @@ function PersonRow({
         selected && "bg-primary/5",
       )}
     >
-      <Avatar initials={person.initials} />
+      <UserAvatar
+        userId={person.id}
+        name={person.name}
+        email={person.email}
+        avatarSource={person.avatarSource}
+        avatarUpdatedAt={person.avatarUpdatedAt}
+        size={36}
+      />
       <span className="min-w-0 flex-1">
         <span className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-medium">{person.name}</span>
@@ -545,7 +539,14 @@ function PersonPanel({
   return (
     <div className="space-y-4">
       <div className="hidden items-center gap-3 lg:flex">
-        <Avatar initials={person.initials} className="h-11 w-11 text-sm" />
+        <UserAvatar
+          userId={person.id}
+          name={person.name}
+          email={person.email}
+          avatarSource={person.avatarSource}
+          avatarUpdatedAt={person.avatarUpdatedAt}
+          size={44}
+        />
         <div className="min-w-0">
           <h2 className="truncate text-base font-semibold">{person.name}</h2>
           <p className="text-xs text-muted-foreground" aria-live="polite">
@@ -1008,7 +1009,14 @@ function AddPersonPicker({
                 setQuery("");
               }}
             >
-              <Avatar initials={person.initials} className="h-7 w-7" />
+              <UserAvatar
+                userId={person.id}
+                name={person.name}
+                email={person.email}
+                avatarSource={person.avatarSource}
+                avatarUpdatedAt={person.avatarUpdatedAt}
+                size={28}
+              />
               {person.name}
             </button>
           </li>
@@ -1051,7 +1059,14 @@ function PersonLine({
         onClick={() => onOpen(person.id)}
         className="flex min-h-10 min-w-[10rem] flex-1 items-center gap-2 rounded-md text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <Avatar initials={person.initials} className="h-8 w-8" />
+        <UserAvatar
+          userId={person.id}
+          name={person.name}
+          email={person.email}
+          avatarSource={person.avatarSource}
+          avatarUpdatedAt={person.avatarUpdatedAt}
+          size={32}
+        />
         <span className="min-w-0">
           <span className="block truncate text-sm">{person.name}</span>
           {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
@@ -1233,7 +1248,14 @@ function RolePanel({
                     key={person.id}
                     className="flex min-h-11 items-center gap-2 rounded-lg border border-success/40 bg-success/5 px-2"
                   >
-                    <Avatar initials={person.initials} className="h-7 w-7" />
+                    <UserAvatar
+                      userId={person.id}
+                      name={person.name}
+                      email={person.email}
+                      avatarSource={person.avatarSource}
+                      avatarUpdatedAt={person.avatarUpdatedAt}
+                      size={28}
+                    />
                     <span className="min-w-0 flex-1 truncate text-sm">{person.name}</span>
                     <Button
                       type="button"
@@ -1273,7 +1295,14 @@ function RolePanel({
           return (
             <li key={person.id} className="rounded-lg border border-border/70 px-3 py-2.5">
               <div className="flex items-center gap-3">
-                <Avatar initials={person.initials} className="h-8 w-8" />
+                <UserAvatar
+                  userId={person.id}
+                  name={person.name}
+                  email={person.email}
+                  avatarSource={person.avatarSource}
+                  avatarUpdatedAt={person.avatarUpdatedAt}
+                  size={32}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{person.name}</p>
                   <p className="text-xs text-muted-foreground">

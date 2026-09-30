@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
+import { UserAvatar } from "@/components/user-avatar";
 import { CalendarIcon, EditIcon, MapPinIcon } from "@/components/ui/action-icons";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@/lib/departments/roles";
 import { cn } from "@/lib/utils";
 
-import { ColorDot, formatEventDate, Initials, tint, ViewSwitcher } from "../../team-ui";
+import { ColorDot, formatEventDate, tint, ViewSwitcher } from "../../team-ui";
 import { RoleNotes } from "./role-notes";
 
 type View = "uebersicht" | "szenen" | "ausstattung";
@@ -104,7 +105,14 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
                     key={`${person.id}-${person.type}`}
                     className="flex min-h-11 items-center gap-3 py-1.5"
                   >
-                    <Initials initials={person.initials} className="h-8 w-8" />
+                    <UserAvatar
+                      userId={person.id}
+                      name={person.name}
+                      email={person.email}
+                      avatarSource={person.avatarSource}
+                      avatarUpdatedAt={person.avatarUpdatedAt}
+                      size={32}
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">
                         {person.name}

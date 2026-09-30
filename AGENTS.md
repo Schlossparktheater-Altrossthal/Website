@@ -175,6 +175,7 @@ Diese Datei definiert die Projektstandards für die Website des Sommertheaters A
 - Bearbeitungsaktionen verwenden immer das `EditIcon`.
 - Dialoge für destruktive Aktionen müssen vor der Ausführung eine Bestätigung abfragen.
 - Für alle Buttons mit Ladezustand AsyncButton aus `src/components/ui/async-button.tsx` verwenden. Nie Button manuell mit Loader2 kombinieren.
+- Personenbilder laufen immer über `UserAvatar` aus `src/components/user-avatar.tsx`; die Komponente löst `avatarSource` (Upload, Gravatar, Initialen) selbst auf. Eigene Initialen-Kreise sind verboten, weil sie das festgelegte Bild der Person verschweigen. Die nötigen Felder liefern die Server-Libs über `AvatarFields`/`toAvatarFields` aus `src/lib/avatar-fields.ts`.
 - Für alle destruktiven Bestätigungen ConfirmDialog aus `src/components/ui/confirm-dialog.tsx` verwenden. `window.confirm` ist verboten.
 - Für alle Create/Edit-Dialoge ModalFormDialog aus `src/components/ui/modal-form-dialog.tsx` verwenden.
 - `src/lib/ui-standards.ts` ist die Single Source of Truth für Props-Interfaces aller geteilten UI-Patterns.

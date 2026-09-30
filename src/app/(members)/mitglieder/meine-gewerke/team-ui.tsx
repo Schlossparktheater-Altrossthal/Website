@@ -22,20 +22,6 @@ export function ColorDot({ color, className }: { color: string | null; className
   );
 }
 
-export function Initials({ initials, className }: { initials: string; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground/80",
-        className,
-      )}
-    >
-      {initials}
-    </span>
-  );
-}
-
 export function formatEventDate(date: Date) {
   return format(date, "EEE d. MMM, HH:mm", { locale: de });
 }

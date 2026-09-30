@@ -1,7 +1,8 @@
 import type { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
 
 import { toEventResponseStatus } from "@/lib/calendar/responses";
-import { getNameInitials, getUserDisplayName } from "@/lib/names";
+import { AVATAR_USER_SELECT, toAvatarFields, type AvatarFields } from "@/lib/avatar-fields";
+import { getUserDisplayName } from "@/lib/names";
 import { departmentEventWhere } from "@/lib/departments/events";
 import { prisma } from "@/lib/prisma";
 
@@ -98,11 +99,9 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
   });
 }
 
-export type PortalMember = {
+export type PortalMember = AvatarFields & {
   id: string;
   name: string;
-  initials: string;
-  email: string | null;
   role: DepartmentMembershipRole;
   title: string | null;
 };
@@ -140,7 +139,13 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
           status: true,
           title: true,
           user: {
-            select: { id: true, firstName: true, lastName: true, name: true, email: true },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              name: true,
+              ...AVATAR_USER_SELECT,
+            },
           },
         },
       },
@@ -175,8 +180,7 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
   const toMember = (entry: (typeof department.memberships)[number]): PortalMember => ({
     id: entry.user.id,
     name: getUserDisplayName(entry.user),
-    initials: getNameInitials(entry.user),
-    email: entry.user.email,
+    ...toAvatarFields(entry.user),
     role: entry.role,
     title: entry.title,
   });

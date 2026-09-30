@@ -16,7 +16,8 @@ import {
 } from "@/lib/dev-sperrliste-fixture";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import { compareMembersByLastName, getNameInitials, getUserDisplayName } from "@/lib/names";
+import { compareMembersByLastName, getUserDisplayName } from "@/lib/names";
+import type { AvatarFields } from "@/lib/avatar-fields";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -33,12 +34,11 @@ import { KIND_TO_STATUS, focusToGroup, type TeamEntry, type TeamMember } from ".
 
 const DESCRIPTION = "Trage ein, wann du nicht kannst – das Team sieht auf einen Blick, wer fehlt.";
 
-type MemberRecord = {
+type MemberRecord = AvatarFields & {
   id: string;
   firstName: string | null;
   lastName: string | null;
   name: string | null;
-  email: string | null;
   focus: string | null;
   blockedDays: {
     id: string;
@@ -55,7 +55,9 @@ function buildTeam(records: MemberRecord[], includeReasons: boolean) {
     members.push({
       id: record.id,
       name: getUserDisplayName(record),
-      initials: getNameInitials(record),
+      email: record.email,
+      avatarSource: record.avatarSource,
+      avatarUpdatedAt: record.avatarUpdatedAt,
       group: focusToGroup(record.focus),
     });
     for (const day of record.blockedDays) {
@@ -168,6 +170,8 @@ export default async function BlocklistPage() {
         lastName: true,
         name: true,
         email: true,
+        avatarSource: true,
+        avatarImageUpdatedAt: true,
         onboardingProfile: { select: { focus: true } },
         blockedDays: {
           where: { date: { gte: from, lt: to } },
@@ -203,6 +207,8 @@ export default async function BlocklistPage() {
     lastName: user.lastName,
     name: user.name,
     email: user.email,
+    avatarSource: user.avatarSource,
+    avatarUpdatedAt: user.avatarImageUpdatedAt,
     focus: user.onboardingProfile?.focus ?? null,
     blockedDays: user.blockedDays.map((day) => ({
       id: day.id,

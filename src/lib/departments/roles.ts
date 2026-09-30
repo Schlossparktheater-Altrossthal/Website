@@ -1,8 +1,9 @@
 import type { BreakdownStatus, CharacterCastingType } from "@prisma/client";
 
-import { getNameInitials, getUserDisplayName } from "@/lib/names";
+import { getUserDisplayName } from "@/lib/names";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
+import { AVATAR_USER_SELECT, toAvatarFields } from "@/lib/avatar-fields";
 
 export const CASTING_TYPE_LABELS: Record<CharacterCastingType, string> = {
   primary: "Hauptbesetzung",
@@ -21,7 +22,13 @@ export const BREAKDOWN_STATUS_LABELS: Record<BreakdownStatus, string> = {
 
 const CASTING_ORDER: CharacterCastingType[] = ["primary", "alternate", "cover", "cameo"];
 
-const userSelect = { id: true, firstName: true, lastName: true, name: true, email: true } as const;
+const userSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  name: true,
+  ...AVATAR_USER_SELECT,
+} as const;
 
 export type RoleCard = {
   id: string;
@@ -129,7 +136,7 @@ export async function loadRolePortal(showId: string, characterId: string, userId
     .map((entry) => ({
       id: entry.user.id,
       name: getUserDisplayName(entry.user),
-      initials: getNameInitials(entry.user),
+      ...toAvatarFields(entry.user),
       type: entry.type,
       notes: entry.notes,
     }))

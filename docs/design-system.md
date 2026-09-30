@@ -293,6 +293,19 @@ Warnungen, Foto-Einwilligung).
 - Standardmäßig pill-förmig (`rounded-full`) mit getönten Hintergründen; Outline-Variante erzeugt Hover-Hervorhebung.
 - SVG-Icons skalieren automatisch (`[&>svg]:size-3`).
 
+### Personen-Avatare (`@/components/user-avatar`)
+
+- Bilder von Personen laufen ausnahmslos über `UserAvatar`. Die Komponente entscheidet selbst:
+  `UPLOAD` → `/api/users/<id>/avatar`, `GRAVATAR` → Gravatar-URL (fällt bei 404 auf Initialen
+  zurück), `INITIALS` → Initialen.
+- Eigene Initialen-Kreise sind verboten – sie zeigen das festgelegte Bild der Person nicht
+  (Zuweisungsboard, Gewerk-Portal „Team“, Rollen-Portal, Sperrliste „Personen“).
+- `UserAvatar` braucht `userId`, `email`, `avatarSource` und `avatarUpdatedAt`. Server-Libs
+  liefern diese Felder über `AvatarFields`/`toAvatarFields`/`AVATAR_USER_SELECT` aus
+  `src/lib/avatar-fields.ts` (`avatarImageUpdatedAt` → `avatarUpdatedAt`).
+- `size` (px) setzt Breite/Höhe inline und überschreibt Tailwind-Klassen wie `h-8 w-8` –
+  deshalb die passende Zahl mitgeben und die Klasse nur für Abweichendes (z. B. `hidden sm:inline-block`) nutzen.
+
 ### Kompakte Übersichts-Bausteine (`@/components/ui/*`)
 
 - `Card`: `variant` (`default`, `plain`, `muted`, `accent`, `ghost`) und `size` (`flush`, `sm`,

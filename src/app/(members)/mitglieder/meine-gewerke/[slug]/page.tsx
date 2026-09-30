@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
+import { UserAvatar } from "@/components/user-avatar";
 import {
   AlertTriangleIcon,
   CalendarIcon,
@@ -11,21 +12,14 @@ import {
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { loadBoard } from "@/lib/departments/board";
 import { loadTeamEvents } from "@/lib/departments/events";
-import { loadDepartmentPortal } from "@/lib/departments/portal";
+import { loadDepartmentPortal, type PortalMember } from "@/lib/departments/portal";
 import { cn } from "@/lib/utils";
 
 import { DepartmentBoard } from "../board/board";
 import { DepartmentSettingsButton } from "../department-settings-panel";
 import { TeamEvents } from "../events/team-events";
 import { TeamFiles } from "../files/team-files";
-import {
-  formatDue,
-  formatEventDate,
-  Initials,
-  TEAM_ROLE_LABELS,
-  tint,
-  ViewSwitcher,
-} from "../team-ui";
+import { formatDue, formatEventDate, TEAM_ROLE_LABELS, tint, ViewSwitcher } from "../team-ui";
 
 type View = "uebersicht" | "aufgaben" | "termine" | "team";
 
@@ -332,20 +326,20 @@ function MemberRow({
   hint,
   showMail,
 }: {
-  member: {
-    id: string;
-    name: string;
-    initials: string;
-    email: string | null;
-    role: keyof typeof TEAM_ROLE_LABELS;
-    title: string | null;
-  };
+  member: PortalMember;
   hint?: string;
   showMail?: boolean;
 }) {
   return (
     <li className="flex min-h-11 items-center gap-3 py-1.5">
-      <Initials initials={member.initials} className="h-8 w-8" />
+      <UserAvatar
+        userId={member.id}
+        name={member.name}
+        email={member.email}
+        avatarSource={member.avatarSource}
+        avatarUpdatedAt={member.avatarUpdatedAt}
+        size={32}
+      />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{member.name}</span>
         <span className="block truncate text-xs text-muted-foreground">

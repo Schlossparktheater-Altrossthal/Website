@@ -4,8 +4,14 @@ import type {
   DepartmentMembershipRole,
 } from "@prisma/client";
 
+import {
+  AVATAR_USER_SELECT,
+  toAvatarFields,
+  type AvatarFields,
+  type AvatarUserSource,
+} from "@/lib/avatar-fields";
 import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
-import { getUserDisplayName, getNameInitials } from "@/lib/names";
+import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
 
@@ -34,10 +40,9 @@ export type AssignmentWish = {
   domain: "acting" | "crew";
 };
 
-export type AssignmentPerson = {
+export type AssignmentPerson = AvatarFields & {
   id: string;
   name: string;
-  initials: string;
   wishes: AssignmentWish[];
   memberships: AssignmentMembership[];
   castings: { characterId: string; type: CharacterCastingType }[];
@@ -91,7 +96,7 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
             firstName: true,
             lastName: true,
             name: true,
-            email: true,
+            ...AVATAR_USER_SELECT,
           },
         },
       },
@@ -132,25 +137,26 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
       status: true,
       source: true,
       user: {
-        select: { id: true, firstName: true, lastName: true, name: true, email: true },
+        select: { id: true, firstName: true, lastName: true, name: true, ...AVATAR_USER_SELECT },
       },
     },
   });
 
   const people = new Map<string, AssignmentPerson>();
-  const ensurePerson = (user: {
-    id: string;
-    firstName: string | null;
-    lastName: string | null;
-    name: string | null;
-    email: string | null;
-  }) => {
+  const ensurePerson = (
+    user: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+      name: string | null;
+    } & AvatarUserSource,
+  ) => {
     let person = people.get(user.id);
     if (!person) {
       person = {
         id: user.id,
         name: getUserDisplayName(user),
-        initials: getNameInitials(user),
+        ...toAvatarFields(user),
         wishes: [],
         memberships: [],
         castings: [],

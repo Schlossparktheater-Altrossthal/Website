@@ -1,6 +1,7 @@
 import type { BlockedDayKind } from "@prisma/client";
 
 import type { AvailabilityStatus, SettableStatus } from "@/components/ui/availability-status";
+import type { AvatarFields } from "@/lib/avatar-fields";
 
 export type MemberGroup = "actors" | "crew" | "both" | "other";
 
@@ -12,10 +13,9 @@ export type MyBlockedDay = {
   reason: string | null;
 };
 
-export type TeamMember = {
+export type TeamMember = AvatarFields & {
   id: string;
   name: string;
-  initials: string;
   group: MemberGroup;
 };
 
