@@ -1,7 +1,8 @@
 # Plan: Fotoerlaubnis – strukturierte Einwilligungen, Nachweise & Versionierung
 
-Stand: 2026-09-30. Alle Phasen umgesetzt (Phase 0–6). Offen ist nur die manuelle Staging-Abnahme.
-Checkliste am Ende wird gepflegt.
+Stand: 2026-09-30. Alle Phasen umgesetzt (Phase 0–6) plus die Nachträge (Widerruf, Versionsvergleich,
+Zweck-Vorlagen, automatische Erinnerungen, Fotografen-Ansicht, PDF-Export). Offen ist nur die
+manuelle Staging-Abnahme. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -146,3 +147,10 @@ PhotoConsentVersion            Versionshistorie (eine Zeile je Einreichung/Ände
 - [x] Phase 4 – Onboarding
 - [x] Phase 5 – Verwaltungs-UI
 - [x] Phase 6 – Qualität & Doku
+- [x] Nachtrag – Widerruf mit Datum (Mitglied, Verlaufseintrag)
+- [x] Nachtrag – Zwecke-Reihenfolge per Drag & Drop
+- [x] Nachtrag – Versionen vergleichen
+- [x] Nachtrag – Fotoliste: eine Spalte je Zweck + PDF-Export
+- [x] Nachtrag – Zweck-Vorlagen je Produktion (Standard, Nur intern, Ohne Social Media)
+- [x] Nachtrag – Automatische Fotoerlaubnis-Erinnerungen (Cron + In-App + Push)
+- [x] Nachtrag – Fotografen-Ansicht (eigenes Recht `PRIVATE.PHOTOCONSENT.VIEW`)

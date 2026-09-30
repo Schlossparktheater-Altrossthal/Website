@@ -256,6 +256,10 @@ diesem Repo. Beide rufen ihre Route mit dem Header `x-cron-secret` auf; der Wert
   ergibt sich aus den kürzesten Vorlaufzeiten (1 h und 2 h): ein täglicher Lauf könnte sie nicht
   bedienen. Der Lauf ist idempotent – `EventReminderDispatch` protokolliert je Termin und Person –
   deshalb sind Wiederholungen unschädlich. `GET` und `POST` verhalten sich gleich.
+- `/api/cron/photo-consent-reminders` – Fotoerlaubnis-Erinnerungen an Mitglieder ohne (gültige)
+  Erlaubnis, **täglich** genügt. Idempotent über den `groupKey` der Benachrichtigung (Intervall
+  sieben Tage, `src/lib/notifications/photo-consent-reminders.ts`). `GET` und `POST` verhalten
+  sich gleich.
 
 ## Migrationen auf Staging/Prod
 

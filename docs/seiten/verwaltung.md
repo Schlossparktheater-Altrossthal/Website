@@ -102,17 +102,29 @@ zeigt der Nutzungsbericht in der Mitglieder-Detailseite (`/api/members/[id]/usag
 
 ## Fotoerlaubnisse (`/mitglieder/fotoerlaubnisse`)
 
-Zwei Bereiche über `SectionNav` (`?bereich=`), Plan: `docs/Plan/fotoerlaubnis-plan.md`:
+Drei Bereiche über `SectionNav` (`?bereich=`), Plan: `docs/Plan/fotoerlaubnis-plan.md`:
 
-- **Einwilligungen**: Liste je Produktion mit Suche, Status-Filter und CSV-Export. Offene
+- **Einwilligungen**: Liste je Produktion mit Suche, Status-Filter und Export (CSV und PDF). Offene
   Einreichungen lassen sich freigeben, ablehnen (Begründung im Dialog) oder zurücksetzen. Ein
   Zurücksetzen entfernt den eingereichten Nachweis, damit neu eingereicht werden kann; der
   Verlauf bleibt erhalten. Der Status `noPhotos` steht für „gar nicht". Die Karten sind kompakt
-  und klappen die Details (Zeiten, Dokument, Ausschlüsse) auf Wunsch aus. Die Fotoliste (CSV)
-  enthält die angekreuzten Verwendungszwecke in der Spalte „Angekreuzt".
+  und klappen die Details (Zeiten, Dokument, Ausschlüsse, Unterschrift) auf Wunsch aus. Die
+  Fotoliste enthält je Verwendungszweck eine eigene Spalte („Angekreuzt") und ist auch als PDF
+  exportierbar.
 - **Zwecke**: der Katalog der abgefragten Verwendungszwecke je Produktion
-  (`PhotoConsentPurpose`) – anlegen, bearbeiten, deaktivieren. Deaktivieren erhält bestehende
-  Auswahlen.
+  (`PhotoConsentPurpose`) – anlegen, bearbeiten, per Drag & Drop sortieren, deaktivieren.
+  Deaktivieren erhält bestehende Auswahlen. Benannte Vorlagen (Standard, Nur intern, Ohne Social
+  Media) setzen den Katalog einer Produktion in einem Schritt.
+- **Fotografen** (`PRIVATE.PHOTOCONSENT.VIEW`): reine Leseansicht der Fotoliste für
+  Fotograf:innen – wer darf fotografiert werden, wer nicht – ohne Verwaltungsfunktionen. Die
+  Verwaltungsbereiche Einwilligungen und Zwecke brauchen `PRIVATE.ADMIN.PHOTOCONSENT.MANAGE`.
+
+Rechte: `PRIVATE.ADMIN.PHOTOCONSENT.MANAGE` (verwalten) und `PRIVATE.PHOTOCONSENT.VIEW`
+(Fotoliste lesen). Mitglieder können ihre eigene Einwilligung im Profil widerrufen
+(`revokedAt`, erscheint als eigener Verlaufseintrag) und Versionen vergleichen. Automatische
+Erinnerungen an Mitglieder ohne (gültige) Erlaubnis laufen über die Cron-Route
+`/api/cron/photo-consent-reminders` (`x-cron-secret`).
 
 Daten: `PhotoConsent`, `PhotoConsentChoice`, `PhotoConsentVersion`, `PhotoConsentPurpose`.
-API: `src/app/api/photo-consents/*` (`admin`, `purposes`, `export`, `parental-template`).
+API: `src/app/api/photo-consents/*` (`admin`, `purposes`, `purposes/template`, `export`,
+`overview`, `parental-template`).

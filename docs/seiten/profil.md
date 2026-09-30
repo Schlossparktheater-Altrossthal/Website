@@ -71,6 +71,11 @@ aktiven Produktion (Plan: `docs/Plan/fotoerlaubnis-plan.md`):
   Volljährige laden hoch oder unterschreiben direkt.
 - **Drucken** erzeugt aus denselben Zwecken ein unterschreibbares Formular (Browser-Druck).
 - **Verlauf**: jede Einreichung wird als `PhotoConsentVersion` archiviert und bleibt einsehbar.
+  Zwei Versionen lassen sich nebeneinander vergleichen (angekreuzte Zwecke und Ausschlüsse,
+  geänderte Punkte hervorgehoben).
+- **Widerruf**: eine erteilte oder „gar nicht"-Erlaubnis lässt sich widerrufen; `revokedAt` wird
+  gesetzt und erscheint als „Widerrufen am …" in Kopf und Verlauf. „Erneut einreichen" legt eine
+  neue Einreichung an.
 - **Einklappen**: die Karte lässt sich über „Einklappen" auf die Kopfzeile reduzieren.
 - Nach einer Freigabe lässt sich mit neuer Unterschrift bzw. neuem Dokument ändern; dabei entsteht
   eine neue Version und der Eintrag geht erneut in Prüfung.
