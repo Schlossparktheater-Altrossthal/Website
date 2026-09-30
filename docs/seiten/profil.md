@@ -40,12 +40,47 @@ Fotoerlaubnis-Signaturen.
   (`production-section.tsx` bündelt Onboarding-Angaben und Rollenwünsche)
 - `src/app/(members)/mitglieder/profil/avatar-crop-dialog.tsx` – Profilbild-Zuschnitt
 - `src/components/members/photo-consent-card.tsx` – Fotoerlaubnis
-- `src/components/forms/measurement-form.tsx`, `allergy-form.tsx` – Formulare
+- `src/components/forms/measurement-form.tsx` – Körpermaße
+- `src/components/forms/allergen-field.tsx` – Allergen-Feld mit Vorschlägen aus dem Katalog
+- `src/app/(members)/mitglieder/profil/sections/nutrition-section.tsx` – Ernährung, Abneigungen
+  und Allergien
+
+## Ernährung & Allergien (`?bereich=ernaehrung`)
+
+Drei Karten statt eines Formulars (Plan: `docs/Plan/ernaehrung-allergien-plan.md`, umgesetzt
+2026-09-29):
+
+1. **Ernährungsstil** – Stil, Unterform (nur bei vegetarisch: mit Ei und Milch / nur Milch / nur
+   Ei), Bezeichnung (nur bei „Individueller Stil"), „Wie streng?". Speichern über `FormSaveBar`.
+2. **Abneigungen & Besonderheiten** – eigenständige Liste (`DietaryAversion`) mit Besonderheit und
+   optionaler Notiz, Dialog zum Anlegen/Bearbeiten, `ConfirmDialog` zum Löschen, Leerzustand
+   „Keine Besonderheiten hinterlegt."
+3. **Allergien & Unverträglichkeiten** – je Eintrag Art (Allergie/Unverträglichkeit/Sonstiges),
+   Schweregrad, Spuren, „ärztlich abgeklärt", Symptome, Notfallhilfe und Notiz. Das Allergen-Feld
+   schlägt aus dem Katalog vor, Freitext bleibt zulässig; eine Auswahl belegt die Art vor.
+
+- Spuren hat drei Zustände: „Nicht angegeben", „Spuren sind unproblematisch", „Spuren sind
+  gefährlich". „Nicht angegeben" heißt für die Küche **ungeklärt, strikt behandeln** – nicht
+  „unbedenklich".
+- Die Auswahllisten liegen zentral in `src/data/dietary-preferences.ts` (Stil, Unterform,
+  Strengegrad samt toleranter Parser für die gespeicherten Labels), `src/data/allergens.ts`
+  (Katalog, Art) und `src/data/allergy-styles.ts` (Schweregrad, Spuren). Profil, beide
+  Onboarding-Wizards und das Dashboard nutzen dieselben Quellen.
+- Gespeichert werden deutsche Labels, keine Codes (`MemberOnboardingProfile.dietaryPreference`,
+  `…Variant`, `…Strictness`, Entscheidung E1 im Plan). Achtung bei Anzeige und Auswertung:
+  `resolveDietaryStyleLabel` und `parseDietaryStyleFromLabel` sind das Paar zum Schreiben/Lesen.
+- Eigene Ernährungsdaten hängen an `requireAuth()`, nicht an einem Permission-Key; die
+  Auswertung bleibt `PRIVATE.DATA.PORTAL.HEALTH` (Entscheidung E11).
+- Änderungen an der Oberfläche bitte in Handy/Tablet/Desktop, hell und dunkel, per Screenshot
+  prüfen: `pnpm e2e:screenshots -- --role admin --viewport all --scheme all "/mitglieder/profil?bereich=ernaehrung"`.
 
 ## Datenfluss
 
 - Profilbild-Upload läuft über `src/app/api/profile/route.ts` (Validierung + `sharp`-Verarbeitung).
 - Signaturen über die Signatur-Komponenten (`src/components/signature`).
+- Ernährung: `PUT /api/profile/dietary` (Stil, Unterform, Strengegrad), `POST/DELETE
+/api/allergies` (Art, Schweregrad, Spuren, Abklärung) und `POST/DELETE /api/aversions` für die
+  Besonderheiten; alle drei validieren mit `src/lib/profil/dietary-validation.ts`.
 
 ## Besonderheiten / Altlasten
 

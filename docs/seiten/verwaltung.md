@@ -9,6 +9,7 @@ Berechtigungen konfigurieren.
 
 - `/mitglieder/mitgliederverwaltung` – Mitgliederliste
 - `/mitglieder/mitgliederverwaltung/[userId]` – einzelnes Mitglied
+- `/mitglieder/mitgliederverwaltung/aufbewahrung` – Aufbewahrung & Löschfristen
 - `/mitglieder/rollenverwaltung` – Rollen
 - `/mitglieder/rechte` – Berechtigungen (Permission-Workbench)
 
@@ -49,6 +50,25 @@ Berechtigungen konfigurieren.
 - `DELETE /api/members/[id]/production` beendet die Mitgliedschaft in der aktiven Produktion
   (verlangt `PRIVATE.ADMIN.MEMBERS.MANAGE`, antwortet `{ ok: true, production: null }` bzw.
   `{ error }` mit 400/403/404/500).
+
+## Aufbewahrung & Löschfristen (`/mitglieder/mitgliederverwaltung/aufbewahrung`)
+
+Manuelle Vorschau und Löschung nach Fristen ab dem Ende der letzten Produktion einer Person
+(`src/lib/retention.ts`, Entscheidung vom 2026-09-24):
+
+- **Ernährung, Allergien und Abneigungen** – 2 Jahre. Das Löschen entfernt die
+  `DietaryRestriction`- und `DietaryAversion`-Zeilen der Person, setzt Stil, Unterform und
+  Strengegrad im Onboarding-Profil auf `null` und leert die Kopien in
+  `ProductionOnboarding.profileSnapshot` und `MemberInviteRedemption.payload`.
+- **Fotoerlaubnisse** – 5 Jahre nach Ende der jeweiligen Produktion, samt hochgeladenen Dokumenten.
+- **Konten** – 6 Jahre; deaktivierte Konten ohne Vorstands-, Finanz-, Admin- oder Owner-Rolle
+  werden anonymisiert (`User.anonymizedAt`).
+
+Nichts wird automatisch gelöscht: Die Seite listet die Kandidaten, die Löschung löst eine
+berechtigte Person je Gruppe aus (Protokoll über `createLogger`). Wer in einer geplanten oder
+aktiven Produktion ist, wird nie vorgeschlagen. Wie viele Daten zu einer Person gespeichert sind,
+zeigt der Nutzungsbericht in der Mitglieder-Detailseite (`/api/members/[id]/usage`); die Posten
+„Ernährungshinweise" und „Abneigungen & Besonderheiten" stehen dort getrennt.
 
 ## Jahreswechsel-Rollen
 

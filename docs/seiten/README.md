@@ -16,6 +16,7 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 | Sperrliste         | [sperrliste.md](sperrliste.md)                 | Nicht-Verfügbarkeiten der Ensemblemitglieder                  |
 | Benachrichtigungen | [benachrichtigungen.md](benachrichtigungen.md) | Glocke und Seite: Zu erledigen, Neu, Archiv                   |
 | Produktionen       | [produktionen.md](produktionen.md)             | Stücke, Stück (Ablauf/Rollen/Auftritte), Zuweisung            |
+| Datenportal        | [datenportal.md](datenportal.md)               | Report-Builder über Teilnehmende, Allergien und Abneigungen   |
 | Verwaltung         | [verwaltung.md](verwaltung.md)                 | Mitglieder-, Rollen- und Rechteverwaltung                     |
 | Onboarding         | [onboarding.md](onboarding.md)                 | Aufnahme neuer Mitglieder, Talentprofile                      |
 | Login              | [login.md](login.md)                           | Anmeldung über das Theater-Konto (Authentik)                  |

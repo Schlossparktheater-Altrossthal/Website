@@ -1,9 +1,16 @@
 # Mitgliederprofil – Funktionsanforderungen
 
+> **Historische Anforderungsnotiz.** Sie entstand, als das Profil vorübergehend abgeschaltet war,
+> und beschreibt den Wiederaufbau. Umgesetzt ist das Profil längst – **maßgeblich für den
+> Ist-Stand ist [../seiten/profil.md](../seiten/profil.md)**. Ergänzungen hier nur, wenn sie die
+> ursprünglichen Anforderungen dokumentieren.
+
 ## Ausgangslage
 
-- Die aktuelle Mitglieder-Profilroute (`src/app/(members)/mitglieder/profil/page.tsx`) zeigt nur einen Hinweis, dass der Bereich vorübergehend deaktiviert ist.
-- Diese Notiz soll als Grundlage dienen, um die zuvor vorhandenen Funktionen bei einer künftigen Neuimplementierung vollständig wiederherzustellen.
+- Zur Zeit dieser Notiz zeigte die Profilroute (`src/app/(members)/mitglieder/profil/page.tsx`) nur
+  einen Hinweis, dass der Bereich vorübergehend deaktiviert ist. Das ist überholt.
+- Diese Notiz soll als Grundlage dienen, um die zuvor vorhandenen Funktionen bei einer künftigen
+  Neuimplementierung vollständig wiederherzustellen.
 
 ## Kernmodule & erwartete Funktionen
 
@@ -32,9 +39,10 @@
 
 ### 4. Ernährung & Allergien
 
-- Anzeige des aktuellen Ernährungsstils inkl. Strengegrad oder individueller Bezeichnung.
-- Verwaltung von Allergien/Unverträglichkeiten (Anlegen, Bearbeiten, Löschen) mit Schweregrad-Badges, Notizen, Symptomen und Behandlungsangaben.
-- Sofortiges Feedback via Toaster und Abgleich mit `/api/allergies`.
+- Drei Karten statt eines Formulars: Ernährungsstil (inkl. Unterform bei vegetarisch und individueller Bezeichnung), Abneigungen & Besonderheiten als eigene Liste, Allergien & Unverträglichkeiten.
+- Je Allergie Art (Allergie/Unverträglichkeit/Sonstiges), Schweregrad, Spuren („nicht angegeben" heißt ungeklärt und wird strikt behandelt) und „ärztlich abgeklärt" sowie Symptome, Notfallhilfe und Notiz.
+- Das Allergen-Feld schlägt aus dem Katalog vor, Freitext bleibt möglich; eine Auswahl belegt die Art vor.
+- Sofortiges Feedback via Toaster und Abgleich mit `/api/allergies` bzw. `/api/aversions`.
 
 ### 5. Körpermaße
 
@@ -76,7 +84,9 @@
 ## Technische Abhängigkeiten & APIs
 
 - `/api/profile` (PUT) – Stammdaten & Avatar.
-- `/api/allergies` (POST/DELETE) – Allergienverwaltung.
+- `/api/allergies` (POST/DELETE) – Allergienverwaltung (inkl. Art, Spuren, Abklärung).
+- `/api/aversions` (GET/POST/DELETE) – Abneigungen & Besonderheiten.
+- `/api/profile/dietary` (PUT) – Ernährungsstil, Unterform und Strengegrad.
 - `/api/measurements` (POST) – Körpermaße.
 - `/api/profile/interests` (GET/PUT) – Interessenliste.
 - `/api/profile/onboarding` (PUT) – Hintergrund, Notizen & Mitglied seit Jahr (Fokus wird automatisch berechnet).
