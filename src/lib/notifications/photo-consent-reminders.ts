@@ -33,7 +33,7 @@ type MissingConsent = {
  * abgelehnt bzw. widerrufen wurde. Ausstehende Erlaubnisse liegen bei der Verwaltung und werden
  * nicht angemahnt; eine bewusste Ablehnung („gar nicht“) ebenfalls nicht.
  */
-async function findMissingPhotoConsents(now: Date): Promise<MissingConsent[]> {
+async function findMissingPhotoConsents(): Promise<MissingConsent[]> {
   const shows = await prisma.show.findMany({
     where: { status: { in: ["active", "planning"] } },
     select: { id: true, title: true, year: true },
@@ -84,7 +84,7 @@ async function findMissingPhotoConsents(now: Date): Promise<MissingConsent[]> {
 export async function dispatchPhotoConsentReminders({
   now = new Date(),
 }: { now?: Date } = {}): Promise<PhotoConsentReminderSummary> {
-  const missing = await findMissingPhotoConsents(now);
+  const missing = await findMissingPhotoConsents();
   if (missing.length === 0) {
     return { sent: 0, skipped: 0, failed: 0 };
   }

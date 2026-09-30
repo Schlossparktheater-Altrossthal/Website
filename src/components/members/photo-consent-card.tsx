@@ -296,7 +296,6 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
 
   const isRevoked = Boolean(summary?.revokedAt);
   const isCollapsible = !isRevoked && (status === "approved" || status === "noPhotos");
-  const showForm = !isCollapsible || editing;
 
   useEffect(() => {
     if (status === "approved" || status === "noPhotos") {
@@ -553,6 +552,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
               type="button"
               variant="destructive"
               size="xs"
+              disabled={revoking}
               onClick={() => setRevokeConfirmOpen(true)}
             >
               Widerrufen
