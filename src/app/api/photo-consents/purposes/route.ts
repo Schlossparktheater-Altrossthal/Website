@@ -205,3 +205,30 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Deaktivieren fehlgeschlagen" }, { status: 500 });
   }
 }
+
+const reorderSchema = z.object({
+  showId: z.string().min(1),
+  orderedIds: z.array(z.string().min(1)).min(1),
+});
+
+/** Setzt die Reihenfolge der Zwecke einer Produktion (Index = neue sortOrder). */
+export async function PUT(request: NextRequest) {
+  if (!(await requireManager())) {
+    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+  }
+  const parsed = reorderSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+  }
+  const { showId, orderedIds } = parsed.data;
+
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.photoConsentPurpose.updateMany({
+        where: { id, showId },
+        data: { sortOrder: index },
+      }),
+    ),
+  );
+  return NextResponse.json({ ok: true });
+}

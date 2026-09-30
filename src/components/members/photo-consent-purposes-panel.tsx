@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  DndSortableProvider,
+  SortableContext,
+  SortableItem,
+  verticalListSortingStrategy,
+} from "@/components/ui/sortable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,8 +23,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { EditIcon, PlusIcon, RefreshIcon, TrashIcon } from "@/components/ui/action-icons";
+import {
+  EditIcon,
+  GripVerticalIcon,
+  PlusIcon,
+  RefreshIcon,
+  TrashIcon,
+} from "@/components/ui/action-icons";
 import type { PhotoConsentPurposeAdminEntry, PhotoConsentShowOption } from "@/types/photo-consent";
+import type { DragEndEvent } from "@dnd-kit/core";
 
 const AUDIENCE_LABELS: Record<PhotoConsentPurposeAdminEntry["appliesTo"], string> = {
   both: "Alle",
@@ -184,6 +197,45 @@ export function PhotoConsentPurposesPanel() {
     }
   };
 
+  const persistOrder = useCallback(
+    async (orderedIds: string[], previous: PhotoConsentPurposeAdminEntry[]) => {
+      if (!showId) return;
+      try {
+        const response = await fetch("/api/photo-consents/purposes", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ showId, orderedIds }),
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          toast.error(data?.error ?? "Reihenfolge konnte nicht gespeichert werden");
+          setEntries(previous);
+        }
+      } catch {
+        toast.error("Netzwerkfehler beim Speichern der Reihenfolge");
+        setEntries(previous);
+      }
+    },
+    [showId],
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const previous = entries;
+    const oldIndex = previous.findIndex((entry) => entry.id === active.id);
+    const newIndex = previous.findIndex((entry) => entry.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const next = previous.slice();
+    const [moved] = next.splice(oldIndex, 1);
+    next.splice(newIndex, 0, moved);
+    setEntries(next);
+    void persistOrder(
+      next.map((entry) => entry.id),
+      previous,
+    );
+  };
+
   return (
     <Card className="border border-border/70 bg-card">
       <CardContent className="space-y-4 p-4">
@@ -233,46 +285,78 @@ export function PhotoConsentPurposesPanel() {
             Für diese Produktion sind noch keine Zwecke angelegt.
           </p>
         ) : (
-          <ul className="space-y-2">
-            {entries.map((entry) => (
-              <li
-                key={entry.id}
-                className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-foreground">{entry.label}</span>
-                    <Badge variant="outline">{AUDIENCE_LABELS[entry.appliesTo]}</Badge>
-                    {entry.isRefusal ? <Badge variant="muted">Ablehnung</Badge> : null}
-                    {!entry.isActive ? <Badge variant="muted">Inaktiv</Badge> : null}
-                  </div>
-                  {entry.description ? (
-                    <p className="text-xs text-muted-foreground">{entry.description}</p>
-                  ) : null}
-                  <p className="text-[11px] text-muted-foreground/80">
-                    Code: {entry.code} · {entry.choiceCount} Auswahlen
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-1">
-                  <Button type="button" size="xs" variant="ghost" onClick={() => openEdit(entry)}>
-                    <EditIcon className="h-4 w-4" aria-hidden="true" />
-                    <span className="sr-only">Bearbeiten</span>
-                  </Button>
-                  {entry.isActive ? (
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="ghost"
-                      onClick={() => setDeactivateTarget(entry)}
-                    >
-                      <TrashIcon className="h-4 w-4" aria-hidden="true" />
-                      <span className="sr-only">Deaktivieren</span>
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <DndSortableProvider onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={entries.map((entry) => entry.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="space-y-2">
+                {entries.map((entry) => (
+                  <SortableItem key={entry.id} id={entry.id}>
+                    {(sortable) => (
+                      <li
+                        ref={sortable.setNodeRef}
+                        style={
+                          sortable.transform
+                            ? {
+                                transform: `translate3d(${sortable.transform.x}px, ${sortable.transform.y}px, 0)`,
+                              }
+                            : undefined
+                        }
+                        className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card p-3"
+                      >
+                        <button
+                          type="button"
+                          {...sortable.attributes}
+                          {...sortable.listeners}
+                          className="cursor-grab touch-none rounded-md p-1 text-muted-foreground hover:bg-muted"
+                          aria-label={`${entry.label} verschieben`}
+                        >
+                          <GripVerticalIcon className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-foreground">{entry.label}</span>
+                            <Badge variant="outline">{AUDIENCE_LABELS[entry.appliesTo]}</Badge>
+                            {entry.isRefusal ? <Badge variant="muted">Ablehnung</Badge> : null}
+                            {!entry.isActive ? <Badge variant="muted">Inaktiv</Badge> : null}
+                          </div>
+                          {entry.description ? (
+                            <p className="text-xs text-muted-foreground">{entry.description}</p>
+                          ) : null}
+                          <p className="text-[11px] text-muted-foreground/80">
+                            Code: {entry.code} · {entry.choiceCount} Auswahlen
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => openEdit(entry)}
+                          >
+                            <EditIcon className="h-4 w-4" aria-hidden="true" />
+                            <span className="sr-only">Bearbeiten</span>
+                          </Button>
+                          {entry.isActive ? (
+                            <Button
+                              type="button"
+                              size="xs"
+                              variant="ghost"
+                              onClick={() => setDeactivateTarget(entry)}
+                            >
+                              <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                              <span className="sr-only">Deaktivieren</span>
+                            </Button>
+                          ) : null}
+                        </div>
+                      </li>
+                    )}
+                  </SortableItem>
+                ))}
+              </ul>
+            </SortableContext>
+          </DndSortableProvider>
         )}
       </CardContent>
 
