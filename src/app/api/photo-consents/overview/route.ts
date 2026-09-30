@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   const shows = await prisma.show.findMany({
-    orderBy: [{ year: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ year: "desc" }],
     select: { id: true, title: true, year: true, status: true },
   });
 
