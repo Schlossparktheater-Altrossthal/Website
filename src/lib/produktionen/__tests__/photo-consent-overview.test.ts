@@ -11,18 +11,10 @@ import {
 
 describe("classifyPhotoPermission", () => {
   it("erlaubt nur freigegebene Einverständnisse", () => {
-    expect(
-      classifyPhotoPermission({ status: "approved", consentGiven: true, exclusionNote: null }),
-    ).toBe("allowed");
-    expect(
-      classifyPhotoPermission({ status: "pending", consentGiven: true, exclusionNote: null }),
-    ).toBe("forbidden");
-    expect(
-      classifyPhotoPermission({ status: "rejected", consentGiven: true, exclusionNote: null }),
-    ).toBe("forbidden");
-    expect(
-      classifyPhotoPermission({ status: "approved", consentGiven: false, exclusionNote: null }),
-    ).toBe("forbidden");
+    expect(classifyPhotoPermission({ status: "approved", exclusionNote: null })).toBe("allowed");
+    expect(classifyPhotoPermission({ status: "pending", exclusionNote: null })).toBe("forbidden");
+    expect(classifyPhotoPermission({ status: "rejected", exclusionNote: null })).toBe("forbidden");
+    expect(classifyPhotoPermission({ status: "noPhotos", exclusionNote: null })).toBe("forbidden");
     expect(classifyPhotoPermission(null)).toBe("forbidden");
   });
 
@@ -30,13 +22,10 @@ describe("classifyPhotoPermission", () => {
     expect(
       classifyPhotoPermission({
         status: "approved",
-        consentGiven: true,
         exclusionNote: "Keine Nahaufnahmen",
       }),
     ).toBe("restricted");
-    expect(
-      classifyPhotoPermission({ status: "approved", consentGiven: true, exclusionNote: "  " }),
-    ).toBe("allowed");
+    expect(classifyPhotoPermission({ status: "approved", exclusionNote: "  " })).toBe("allowed");
   });
 });
 
@@ -53,7 +42,7 @@ describe("loadPhotoConsentOverview", () => {
           name: null,
           email: null,
           dateOfBirth: new Date("1990-01-01"),
-          photoConsents: [{ status: "approved", consentGiven: true, exclusionNote: null }],
+          photoConsents: [{ status: "approved", exclusionNote: null }],
         },
       },
       {

@@ -37,6 +37,6 @@ export async function loadProfileChecklist(
     hasBirthdate: Boolean(user.dateOfBirth),
     hasPaymentDetails: isPaymentDetailsComplete(user),
     hasDietaryPreference: Boolean(user.onboardingProfile?.dietaryPreference?.trim()),
-    photoConsent: { consentGiven: firstConsent(user.photoConsents)?.status === "approved" },
+    photoConsent: { confirmed: firstConsent(user.photoConsents)?.status === "approved" },
   });
 }

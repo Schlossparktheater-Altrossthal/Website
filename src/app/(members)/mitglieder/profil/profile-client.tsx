@@ -90,7 +90,7 @@ export function ProfileClient({
         hasPaymentDetails: isProfilePaymentComplete(user),
         hasDietaryPreference: Boolean(onboarding?.dietaryPreference?.trim()),
         photoConsent:
-          photoConsentGiven === undefined ? undefined : { consentGiven: photoConsentGiven },
+          photoConsentGiven === undefined ? undefined : { confirmed: photoConsentGiven },
       }),
     [onboarding?.dietaryPreference, photoConsentGiven, user],
   );

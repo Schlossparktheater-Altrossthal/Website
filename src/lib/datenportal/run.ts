@@ -50,6 +50,7 @@ const CONSENT_LABELS = {
   pending: "in Prüfung",
   approved: "erteilt",
   rejected: "abgelehnt",
+  noPhotos: "keine Aufnahmen",
 } as const;
 
 function displayName(user: {

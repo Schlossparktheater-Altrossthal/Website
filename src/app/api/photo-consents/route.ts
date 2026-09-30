@@ -13,39 +13,39 @@ import {
   createPhotoConsentBoardNotification,
   dispatchPhotoConsentBoardNotification,
 } from "@/lib/photo-consent-notifications";
-import type { PhotoConsentSummary } from "@/types/photo-consent";
+import {
+  buildPhotoConsentSummary,
+  calculatePhotoConsentAge,
+  type PhotoConsentPurposeRecord,
+} from "@/lib/photo-consent-summary";
+import { listPhotoConsentPurposes } from "@/lib/photo-consent-purposes";
+import {
+  appendPhotoConsentVersion,
+  buildPhotoConsentPurposeSnapshot,
+  derivePhotoConsentStatus,
+  normalizePhotoConsentSelection,
+} from "@/lib/photo-consent-submission";
 import { signaturePayloadSchema, type SignaturePayload } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_EXCLUSION_NOTE = 1000;
 const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
-
-type ConsentRecord = {
-  id: string;
-  status: "pending" | "approved" | "rejected";
-  createdAt: Date;
-  updatedAt: Date;
-  approvedAt: Date | null;
-  rejectionReason: string | null;
-  exclusionNote: string | null;
-  documentUploadedAt: Date | null;
-  documentName: string | null;
-  documentMime: string | null;
-  signatureVersion: string | null;
-  signatureCapturedAt: Date | null;
-  signaturePayload: unknown;
-  approvedBy: { name: string | null } | null;
-};
-
-type UserRecord = {
-  dateOfBirth: Date | null;
-  photoConsent: ConsentRecord | null;
-};
 
 type UploadedFile = {
   name?: string | null;
   type?: string | null;
   size: number;
   arrayBuffer(): Promise<ArrayBuffer>;
+};
+
+type PurposeRow = {
+  id: string;
+  code: string;
+  label: string;
+  description: string | null;
+  appliesTo: PhotoConsentPurposeRecord["appliesTo"];
+  isRefusal: boolean;
+  sortOrder: number;
 };
 
 function isFileLike(value: unknown): value is UploadedFile {
@@ -56,70 +56,15 @@ function isFileLike(value: unknown): value is UploadedFile {
   return typeof maybeFile.size === "number" && typeof maybeFile.arrayBuffer === "function";
 }
 
-function calculateAge(date: Date | null | undefined): number | null {
-  if (!date) return null;
-  const now = new Date();
-  let age = now.getFullYear() - date.getFullYear();
-  const monthDiff = now.getMonth() - date.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
-    age -= 1;
-  }
-  return age;
-}
-
-function parseSignaturePayload(value: unknown) {
-  if (!value) return null;
-  const parsed = signaturePayloadSchema.safeParse(value);
-  if (!parsed.success) {
-    return null;
-  }
-  return parsed.data;
-}
-
-function buildSummary(user: UserRecord): PhotoConsentSummary {
-  const consent = user.photoConsent;
-  const dateOfBirth = user.dateOfBirth;
-  const age = calculateAge(dateOfBirth);
-  const requiresDocument = age !== null && age < 18;
-  const requiresDateOfBirth = !dateOfBirth;
-
-  const status: PhotoConsentSummary["status"] = consent?.status ?? "none";
-
-  const documentMime = consent?.documentMime ?? null;
-  const documentPreviewUrl =
-    consent?.documentUploadedAt && documentMime?.toLowerCase().startsWith("image/")
-      ? `/api/photo-consents/${consent.id}/document?mode=inline`
-      : null;
-
-  const signaturePayload = parseSignaturePayload(consent?.signaturePayload ?? null);
-  const signatureVersion = consent?.signatureVersion ?? null;
-  const signatureCapturedAt =
-    consent?.signatureCapturedAt && !Number.isNaN(consent.signatureCapturedAt.valueOf())
-      ? consent.signatureCapturedAt.toISOString()
-      : null;
-
+function toPurposeRecord(purpose: PurposeRow): PhotoConsentPurposeRecord {
   return {
-    status,
-    requiresDocument,
-    hasDocument: Boolean(consent?.documentUploadedAt),
-    submittedAt: consent ? consent.createdAt.toISOString() : null,
-    updatedAt: consent ? consent.updatedAt.toISOString() : null,
-    approvedAt: consent?.approvedAt ? consent.approvedAt.toISOString() : null,
-    approvedByName: consent?.approvedBy?.name ?? null,
-    rejectionReason: consent?.rejectionReason ?? null,
-    exclusionNote: consent?.exclusionNote ?? null,
-    requiresDateOfBirth,
-    age,
-    dateOfBirth: dateOfBirth ? dateOfBirth.toISOString() : null,
-    documentName: consent?.documentName ?? null,
-    documentUploadedAt: consent?.documentUploadedAt
-      ? consent.documentUploadedAt.toISOString()
-      : null,
-    documentMime,
-    documentPreviewUrl,
-    signatureVersion,
-    signatureCapturedAt,
-    signaturePayload,
+    id: purpose.id,
+    code: purpose.code,
+    label: purpose.label,
+    description: purpose.description,
+    appliesTo: purpose.appliesTo,
+    isRefusal: purpose.isRefusal,
+    sortOrder: purpose.sortOrder,
   };
 }
 
@@ -129,6 +74,31 @@ function parseBoolean(value: unknown): boolean {
     return ["1", "true", "yes", "on"].includes(normalized);
   }
   return value === true;
+}
+
+function parseSelection(value: unknown): Array<{ purposeId: string; chosen: boolean }> {
+  if (typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  return parsed.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null) {
+      return [];
+    }
+    const record = entry as { purposeId?: unknown; chosen?: unknown };
+    if (typeof record.purposeId !== "string") {
+      return [];
+    }
+    return [{ purposeId: record.purposeId, chosen: record.chosen === true }];
+  });
 }
 
 function sanitizeFilename(name: string): string {
@@ -148,13 +118,11 @@ export async function GET() {
   }
 
   const showId = await resolvePhotoConsentShowId(userId);
+  const purposes = showId ? await listPhotoConsentPurposes(showId) : [];
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      firstName: true,
-      lastName: true,
-      name: true,
-      email: true,
       dateOfBirth: true,
       photoConsents: photoConsentsForShow(showId, {
         id: true,
@@ -171,6 +139,21 @@ export async function GET() {
         signatureCapturedAt: true,
         signaturePayload: true,
         approvedBy: { select: { name: true } },
+        choices: { select: { purposeId: true, chosen: true } },
+        versions: {
+          orderBy: { version: "desc" },
+          select: {
+            id: true,
+            version: true,
+            status: true,
+            submittedAt: true,
+            source: true,
+            documentName: true,
+            documentUploadedAt: true,
+            signatureVersion: true,
+            purposesSnapshot: true,
+          },
+        },
       }),
     },
   });
@@ -179,12 +162,27 @@ export async function GET() {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    consent: buildSummary({
+  const consent = firstConsent(user.photoConsents);
+
+  const summary = buildPhotoConsentSummary(
+    {
       dateOfBirth: user.dateOfBirth,
-      photoConsent: firstConsent(user.photoConsents),
-    }),
-  });
+      photoConsent: consent
+        ? {
+            ...consent,
+            approvedByName: consent.approvedBy?.name ?? null,
+            signaturePayload: consent.signaturePayload ?? null,
+          }
+        : null,
+    },
+    {
+      purposes: purposes.map(toPurposeRecord),
+      choices: consent?.choices ?? [],
+      versions: consent?.versions ?? [],
+    },
+  );
+
+  return NextResponse.json({ consent: summary });
 }
 
 export async function POST(request: NextRequest) {
@@ -197,7 +195,7 @@ export async function POST(request: NextRequest) {
 
   const contentType = request.headers.get("content-type") ?? "";
   let body: Record<string, unknown> | null = null;
-  let documentFile: UploadedFile | null = null;
+  const documentFiles: UploadedFile[] = [];
 
   if (contentType.includes("multipart/form-data")) {
     const formData = await request.formData();
@@ -205,7 +203,7 @@ export async function POST(request: NextRequest) {
     formData.forEach((value, key) => {
       if (isFileLike(value)) {
         if (key === "document" && value.size > 0) {
-          documentFile = value;
+          documentFiles.push(value);
         }
       } else if (typeof value === "string") {
         parsed[key] = value;
@@ -228,7 +226,13 @@ export async function POST(request: NextRequest) {
   }
 
   const rawExclusionNote = typeof body.exclusionNote === "string" ? body.exclusionNote.trim() : "";
-  const exclusionNote = rawExclusionNote ? rawExclusionNote.slice(0, 1000) : null;
+  if (rawExclusionNote.length > MAX_EXCLUSION_NOTE) {
+    return NextResponse.json(
+      { error: `Bitte kürze deine Hinweise auf maximal ${MAX_EXCLUSION_NOTE} Zeichen` },
+      { status: 400 },
+    );
+  }
+  const exclusionNote = rawExclusionNote ? rawExclusionNote : null;
 
   const showId = await resolvePhotoConsentShowId(userId);
   if (!showId) {
@@ -237,6 +241,13 @@ export async function POST(request: NextRequest) {
       { status: 409 },
     );
   }
+
+  const purposeRows = await listPhotoConsentPurposes(showId);
+  const purposes = purposeRows.map(toPurposeRecord);
+
+  const selection = parseSelection(body.purposes);
+  const { choices, isRefusal } = normalizePhotoConsentSelection(purposes, selection);
+  const status = derivePhotoConsentStatus(isRefusal);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -257,20 +268,27 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
+
   const existingConsent = firstConsent(user.photoConsents);
+  const documentFile = documentFiles[0] ?? null;
 
   const requiresDateOfBirth = !user.dateOfBirth;
-  if (requiresDateOfBirth) {
+  if (requiresDateOfBirth && status !== "noPhotos") {
     return NextResponse.json(
       { error: "Bitte hinterlege zuerst dein Geburtsdatum im Profil", requiresDateOfBirth: true },
       { status: 400 },
     );
   }
 
-  const age = calculateAge(user.dateOfBirth);
+  const age = calculatePhotoConsentAge(user.dateOfBirth);
   const requiresDocument = age !== null && age < 18;
 
-  if (requiresDocument && !documentFile && !existingConsent?.documentUploadedAt) {
+  if (
+    status === "pending" &&
+    requiresDocument &&
+    !documentFile &&
+    !existingConsent?.documentUploadedAt
+  ) {
     return NextResponse.json(
       { error: "Bitte lade die unterschriebene Einverständniserklärung hoch" },
       { status: 400 },
@@ -312,15 +330,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let documentBuffer: Uint8Array<ArrayBuffer> | undefined;
-  let documentMime: string | undefined;
-  let documentName: string | undefined;
-  let documentSize: number | undefined;
+  let documentBuffer: Uint8Array<ArrayBuffer> | null = null;
+  let documentMime: string | null = null;
+  let documentName: string | null = null;
+  let documentSize: number | null = null;
 
-  const file: UploadedFile | null = documentFile;
-
-  if (file) {
-    const upload = file as UploadedFile;
+  if (documentFile) {
+    const upload = documentFile;
     if (upload.size > MAX_DOCUMENT_BYTES) {
       return NextResponse.json({ error: "Dokument darf maximal 8 MB groß sein" }, { status: 400 });
     }
@@ -331,8 +347,7 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const buffer = new Uint8Array(await upload.arrayBuffer());
-    documentBuffer = buffer;
+    documentBuffer = new Uint8Array(await upload.arrayBuffer());
     documentMime = mime || "application/octet-stream";
     documentName = sanitizeFilename(upload.name || "einverstaendnis.pdf");
     documentSize = upload.size;
@@ -357,17 +372,9 @@ export async function POST(request: NextRequest) {
     : {};
 
   const signatureData = signaturePayload
-    ? {
-        signatureVersion,
-        signaturePayload,
-        signatureCapturedAt: signatureCapturedAt ?? now,
-      }
+    ? { signatureVersion, signaturePayload, signatureCapturedAt: signatureCapturedAt ?? now }
     : documentBuffer
-      ? {
-          signatureVersion: null,
-          signaturePayload: Prisma.JsonNull,
-          signatureCapturedAt: null,
-        }
+      ? { signatureVersion: null, signaturePayload: Prisma.JsonNull, signatureCapturedAt: null }
       : {};
 
   const actorDisplayName = getUserDisplayName(
@@ -381,23 +388,19 @@ export async function POST(request: NextRequest) {
   );
 
   const subjectDisplayName = getUserDisplayName(
-    {
-      firstName: user.firstName,
-      lastName: user.lastName,
-      name: user.name,
-      email: user.email,
-    },
+    { firstName: user.firstName, lastName: user.lastName, name: user.name, email: user.email },
     "Unbekanntes Mitglied",
   );
 
-  const { consent, notification } = await prisma.$transaction(async (tx) => {
+  const purposesSnapshot = buildPhotoConsentPurposeSnapshot(purposes, choices);
+
+  const { notification } = await prisma.$transaction(async (tx) => {
     const consent = await tx.photoConsent.upsert({
       where: { userId_showId: { userId, showId } },
       create: {
         userId,
         showId,
-        status: "pending",
-        consentGiven: true,
+        status,
         approvedAt: null,
         approvedById: null,
         rejectionReason: null,
@@ -406,8 +409,7 @@ export async function POST(request: NextRequest) {
         ...signatureData,
       },
       update: {
-        status: "pending",
-        consentGiven: true,
+        status,
         approvedAt: null,
         approvedById: null,
         rejectionReason: null,
@@ -419,19 +421,43 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         status: true,
-        createdAt: true,
-        updatedAt: true,
-        approvedAt: true,
-        rejectionReason: true,
-        exclusionNote: true,
         documentUploadedAt: true,
-        documentName: true,
-        documentMime: true,
-        signatureVersion: true,
-        signatureCapturedAt: true,
-        signaturePayload: true,
-        approvedBy: { select: { name: true } },
       },
+    });
+
+    await tx.photoConsentChoice.deleteMany({ where: { consentId: consent.id } });
+    if (choices.length > 0) {
+      await tx.photoConsentChoice.createMany({
+        data: choices.map((choice) => ({
+          consentId: consent.id,
+          purposeId: choice.purposeId,
+          chosen: choice.chosen,
+        })),
+      });
+    }
+
+    await appendPhotoConsentVersion(tx, {
+      consentId: consent.id,
+      status,
+      purposesSnapshot,
+      exclusionNote,
+      document: documentBuffer
+        ? {
+            name: documentName ?? "einverstaendnis.pdf",
+            mime: documentMime ?? "",
+            size: documentSize ?? 0,
+            data: documentBuffer,
+          }
+        : null,
+      signature: signaturePayload
+        ? {
+            version: signatureVersion ?? "velocity.v1",
+            capturedAt: signatureCapturedAt ?? now,
+            payload: signaturePayload,
+          }
+        : null,
+      submittedById: userId,
+      source: "member",
     });
 
     const notification = await createPhotoConsentBoardNotification(tx, {
@@ -443,20 +469,15 @@ export async function POST(request: NextRequest) {
       changeType: "submitted",
       actorUserId: session.user?.id ?? null,
       actorName: actorDisplayName,
-      rejectionReason: consent.rejectionReason ?? null,
+      rejectionReason: null,
     });
 
-    return { consent, notification };
+    return { notification };
   });
 
   if (notification) {
     await dispatchPhotoConsentBoardNotification(notification);
   }
 
-  const summary = buildSummary({
-    dateOfBirth: user.dateOfBirth,
-    photoConsent: consent,
-  });
-
-  return NextResponse.json({ ok: true, consent: summary });
+  return NextResponse.json({ ok: true });
 }

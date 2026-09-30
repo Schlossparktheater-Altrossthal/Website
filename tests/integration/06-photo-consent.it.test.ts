@@ -77,12 +77,12 @@ describe("Fotoerlaubnis pro Produktion", () => {
     ).toMatchObject({ status: "approved" });
   });
 
-  it("Rückkehrer-Update setzt eine freigegebene Erlaubnis wieder auf „ausstehend“", async () => {
+  it("Rückkehrer-Update ohne Einverständnis setzt die Erlaubnis auf „keine Aufnahmen“", async () => {
     const admin = await signInAsAdmin();
     const show = await createTestShow("planning");
     const user = await adultIn();
     await prisma.photoConsent.create({
-      data: { userId: user.id, showId: show.id, consentGiven: true, status: "approved" },
+      data: { userId: user.id, showId: show.id, status: "approved" },
     });
     const [outcome] = await inviteFormerMembers({
       showId: show.id,
@@ -104,7 +104,7 @@ describe("Fotoerlaubnis pro Produktion", () => {
       await prisma.photoConsent.findUniqueOrThrow({
         where: { userId_showId: { userId: user.id, showId: show.id } },
       }),
-    ).toMatchObject({ status: "pending", consentGiven: false, approvedAt: null });
+    ).toMatchObject({ status: "noPhotos", approvedAt: null });
   });
 
   it("Fotoliste (CSV): UTF-8, Umlaute, eine Zeile je Ensemblemitglied", async () => {

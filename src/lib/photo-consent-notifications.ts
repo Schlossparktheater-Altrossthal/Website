@@ -16,6 +16,7 @@ const STATUS_LABELS: Record<PhotoConsentStatus, string> = {
   pending: "Offen",
   approved: "Freigegeben",
   rejected: "Abgelehnt",
+  noPhotos: "Keine Aufnahmen",
 };
 
 export type PhotoConsentBoardNotificationDetails = {
@@ -62,6 +63,13 @@ function resolveSeverity(status: PhotoConsentStatus): "info" | "warning" | "succ
   }
 }
 
+function describeBodyStatus(status: PhotoConsentStatus): string {
+  if (status === "noPhotos") {
+    return "Das Mitglied hat der Nutzung von Aufnahmen widersprochen („gar nicht“).";
+  }
+  return `Status: ${STATUS_LABELS[status] ?? status}.`;
+}
+
 function buildBody(details: PhotoConsentBoardNotificationDetails): string {
   const parts: string[] = [];
 
@@ -73,8 +81,7 @@ function buildBody(details: PhotoConsentBoardNotificationDetails): string {
     parts.push("Aktualisiert.");
   }
 
-  const statusLabel = STATUS_LABELS[details.status] ?? details.status;
-  parts.push(`Status: ${statusLabel}.`);
+  parts.push(describeBodyStatus(details.status));
   parts.push(details.hasDocument ? "Dokument liegt vor." : "Kein Dokument hinterlegt.");
 
   if (details.status === "rejected") {

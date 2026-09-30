@@ -32,6 +32,7 @@ const statusLabels: Record<PhotoConsentAdminEntry["status"], string> = {
   pending: "In Prüfung",
   approved: "Freigegeben",
   rejected: "Abgelehnt",
+  noPhotos: "Keine Aufnahmen",
 };
 
 const statusVariants: Record<
@@ -41,6 +42,7 @@ const statusVariants: Record<
   pending: "secondary",
   approved: "default",
   rejected: "destructive",
+  noPhotos: "muted",
 };
 
 type PhotoConsentAction = "approve" | "reject" | "reset";

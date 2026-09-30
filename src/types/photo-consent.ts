@@ -1,6 +1,41 @@
-export type PhotoConsentStatus = "none" | "pending" | "approved" | "rejected";
+import type { PhotoConsentPurposeAudience } from "@prisma/client";
 
 import type { SignaturePayload } from "./signature";
+
+export type PhotoConsentStatus = "none" | "pending" | "approved" | "rejected" | "noPhotos";
+
+export type PhotoConsentAudienceValue = PhotoConsentPurposeAudience;
+
+/** Ein ankreuzbarer Zweck mit dem Zustand für die anzeigende Person. */
+export type PhotoConsentPurposeView = {
+  purposeId: string;
+  code: string;
+  label: string;
+  description: string | null;
+  appliesTo: PhotoConsentAudienceValue;
+  isRefusal: boolean;
+  chosen: boolean;
+};
+
+/** Snapshot eines Zwecks in einer archivierten Version. */
+export type PhotoConsentPurposeSnapshot = {
+  code: string;
+  label: string;
+  chosen: boolean;
+};
+
+export type PhotoConsentVersionView = {
+  id: string;
+  version: number;
+  status: Exclude<PhotoConsentStatus, "none">;
+  submittedAt: string;
+  source: string;
+  hasDocument: boolean;
+  documentName: string | null;
+  documentUrl: string | null;
+  signatureVersion: string | null;
+  purposes: PhotoConsentPurposeSnapshot[];
+};
 
 export type PhotoConsentSummary = {
   status: PhotoConsentStatus;
@@ -22,6 +57,8 @@ export type PhotoConsentSummary = {
   signatureVersion: string | null;
   signatureCapturedAt: string | null;
   signaturePayload: SignaturePayload | null;
+  purposes: PhotoConsentPurposeView[];
+  versions: PhotoConsentVersionView[];
 };
 
 export type PhotoConsentAdminEntry = {
@@ -51,6 +88,8 @@ export type PhotoConsentAdminEntry = {
   signatureVersion: string | null;
   signatureCapturedAt: string | null;
   signaturePayload: SignaturePayload | null;
+  purposes: PhotoConsentPurposeView[];
+  versions: PhotoConsentVersionView[];
 };
 
 export type PhotoConsentShowOption = {
@@ -58,4 +97,17 @@ export type PhotoConsentShowOption = {
   title: string;
   year: number;
   status: "planning" | "active" | "finished" | "archived";
+};
+
+export type PhotoConsentPurposeAdminEntry = {
+  id: string;
+  showId: string;
+  code: string;
+  label: string;
+  description: string | null;
+  sortOrder: number;
+  appliesTo: PhotoConsentAudienceValue;
+  isRefusal: boolean;
+  isActive: boolean;
+  choiceCount: number;
 };

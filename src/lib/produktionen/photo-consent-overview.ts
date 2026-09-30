@@ -17,6 +17,7 @@ export const PHOTO_CONSENT_STATUS_LABELS: Record<PhotoConsentStatus | "none", st
   pending: "Ausstehend",
   approved: "Erteilt",
   rejected: "Abgelehnt",
+  noPhotos: "Keine Aufnahmen",
 };
 
 export type PhotoConsentOverviewRow = {
@@ -35,11 +36,10 @@ export type PhotoConsentOverviewRow = {
 export function classifyPhotoPermission(
   consent: {
     status: PhotoConsentStatus;
-    consentGiven: boolean;
     exclusionNote: string | null;
   } | null,
 ): PhotoPermission {
-  if (!consent || consent.status !== "approved" || !consent.consentGiven) {
+  if (!consent || consent.status !== "approved") {
     return "forbidden";
   }
   return consent.exclusionNote?.trim() ? "restricted" : "allowed";
@@ -63,7 +63,7 @@ export async function loadPhotoConsentOverview(showId: string): Promise<PhotoCon
           photoConsents: {
             where: { showId, revokedAt: null },
             take: 1,
-            select: { status: true, consentGiven: true, exclusionNote: true },
+            select: { status: true, exclusionNote: true },
           },
         },
       },

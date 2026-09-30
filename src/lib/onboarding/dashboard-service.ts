@@ -441,7 +441,6 @@ async function computeOnboardingDashboardData(
                 take: 1,
                 select: {
                   status: true,
-                  consentGiven: true,
                   documentUploadedAt: true,
                 },
               },
@@ -596,9 +595,7 @@ async function computeOnboardingDashboardData(
   }, new Map<OnboardingFocus, number>());
 
   const consentCount = onboardingProfiles.filter(
-    (profile) =>
-      profile.user.photoConsents[0]?.consentGiven &&
-      profile.user.photoConsents[0].status === "approved",
+    (profile) => profile.user.photoConsents[0]?.status === "approved",
   ).length;
 
   const actingTotals = new Map<string, { shareSum: number; userCount: number }>();
@@ -927,7 +924,6 @@ async function computeOnboardingDashboardData(
         allergies: allergiesList,
         photoConsent: {
           status: consentState,
-          consentGiven: consent?.consentGiven ?? null,
           documentUploadedAt: consent?.documentUploadedAt ?? null,
         },
       },

@@ -424,8 +424,7 @@ export async function POST(request: NextRequest) {
         await tx.photoConsent.upsert({
           where: { userId_showId: { userId, showId: consentShowId } },
           update: {
-            consentGiven: data.photoConsent,
-            status: "pending",
+            status: data.photoConsent ? "pending" : "noPhotos",
             approvedAt: null,
             approvedById: null,
             rejectionReason: null,
@@ -435,7 +434,7 @@ export async function POST(request: NextRequest) {
           create: {
             userId,
             showId: consentShowId,
-            consentGiven: data.photoConsent,
+            status: data.photoConsent ? "pending" : "noPhotos",
             ...documentFields,
           },
         });

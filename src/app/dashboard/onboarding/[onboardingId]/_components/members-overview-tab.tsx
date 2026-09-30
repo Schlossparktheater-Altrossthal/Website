@@ -158,12 +158,11 @@ function parseMemberRow(row: OnboardingMembersOverview["rows"][number]): MemberR
   const backgroundClass =
     typeof values.backgroundClass === "string" ? values.backgroundClass : null;
   const diet = typeof values.diet === "string" ? values.diet : null;
-  const photoConsent = values.photoConsent as
-    { status?: string; consentGiven?: boolean | null } | undefined;
+  const photoConsent = values.photoConsent as { status?: string } | undefined;
   const photoConsentStatus: MemberRow["photoConsentStatus"] =
-    photoConsent?.status === "approved" || photoConsent?.consentGiven === true
+    photoConsent?.status === "approved"
       ? "approved"
-      : photoConsent?.status === "pending" || photoConsent?.consentGiven == null
+      : photoConsent?.status === "pending"
         ? "pending"
         : "declined";
 

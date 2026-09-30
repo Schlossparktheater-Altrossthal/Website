@@ -132,7 +132,7 @@ describe("Einladungslink einer neuen Produktion", () => {
       await prisma.photoConsent.findUniqueOrThrow({
         where: { userId_showId: { userId: user.id, showId: show.id } },
       }),
-    ).toMatchObject({ status: "pending", consentGiven: true });
+    ).toMatchObject({ status: "pending" });
     expect(await prisma.dietaryRestriction.count({ where: { userId: user.id } })).toBe(1);
     expect(
       await prisma.memberOnboardingProfile.findUniqueOrThrow({ where: { userId: user.id } }),

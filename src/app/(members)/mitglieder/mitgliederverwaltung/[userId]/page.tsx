@@ -131,12 +131,12 @@ const HISTORY_PHOTO_LABELS: Record<PhotoConsentStatus | "none", string> = {
   pending: "ausstehend",
   approved: "erteilt",
   rejected: "abgelehnt",
+  noPhotos: "keine Aufnahmen",
 };
 
 // Photo consent types and labels
 type PhotoConsentSelection = {
   status: PhotoConsentStatus;
-  consentGiven: boolean;
   updatedAt: Date | null;
   approvedAt: Date | null;
 };
@@ -152,18 +152,21 @@ const PHOTO_STATUS_LABELS: Record<PhotoConsentStatus, string> = {
   pending: "In Prüfung",
   approved: "Freigegeben",
   rejected: "Abgelehnt",
+  noPhotos: "Keine Aufnahmen",
 };
 
 const PHOTO_STATUS_DESCRIPTIONS: Record<PhotoConsentStatus, string> = {
   pending: "Die Einverständniserklärung wird aktuell geprüft.",
   approved: "Foto-/Videofreigabe ist erteilt.",
   rejected: "Die Einverständniserklärung wurde abgelehnt.",
+  noPhotos: "Das Mitglied hat der Nutzung von Aufnahmen widersprochen.",
 };
 
 const PHOTO_STATUS_CLASSES: Record<PhotoConsentStatus, string> = {
   pending: "border-warning/45 bg-warning/10 text-warning",
   approved: "border-success/45 bg-success/10 text-success",
   rejected: "border-destructive/45 bg-destructive/10 text-destructive",
+  noPhotos: "border-muted border bg-muted/40 text-muted-foreground",
 };
 
 const ROLE_PREFERENCE_WEIGHT_LABELS: { threshold: number; label: string }[] = [
@@ -212,15 +215,6 @@ function resolvePhotoConsent(consent: PhotoConsentSelection | null): PhotoConsen
       description: "Für dieses Mitglied liegt keine Fotoeinverständnis vor.",
       className: "border-border/70 bg-muted/40 text-muted-foreground",
       updatedAt: null,
-    };
-  }
-
-  if (!consent.consentGiven) {
-    return {
-      label: "Keine Freigabe erteilt",
-      description: "Die Veröffentlichung von Foto- und Videoaufnahmen ist untersagt.",
-      className: "border-destructive/45 bg-destructive/10 text-destructive",
-      updatedAt: consent.updatedAt ?? null,
     };
   }
 
@@ -446,7 +440,6 @@ const memberSelect = {
       showId: true,
       revokedAt: true,
       status: true,
-      consentGiven: true,
       updatedAt: true,
       approvedAt: true,
       show: { select: { title: true, year: true } },

@@ -26,7 +26,7 @@ type ChecklistInput = {
   hasBirthdate: boolean;
   hasPaymentDetails?: boolean;
   hasDietaryPreference: boolean;
-  photoConsent?: { consentGiven: boolean };
+  photoConsent?: { confirmed: boolean };
 };
 
 export type PaymentDetailsInput = {
@@ -105,7 +105,7 @@ export function buildProfileChecklist(input: ChecklistInput): ProfileCompletionS
       label: "Fotoeinverständnis bestätigt",
       actionLabel: "Fotoeinverständnis geben",
       description: "Notwendig für Medienarbeit und Außendarstellung.",
-      complete: Boolean(input.photoConsent.consentGiven),
+      complete: Boolean(input.photoConsent.confirmed),
       targetSection: "freigaben",
     });
   }

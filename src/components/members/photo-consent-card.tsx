@@ -26,6 +26,7 @@ const statusLabels: Record<PhotoConsentSummary["status"], string> = {
   pending: "Wartet auf Prüfung",
   approved: "Freigabe erteilt",
   rejected: "Abgelehnt",
+  noPhotos: "Keine Aufnahmen",
 };
 
 const statusVariants: Record<
@@ -36,6 +37,7 @@ const statusVariants: Record<
   pending: "outline",
   approved: "outline",
   rejected: "outline",
+  noPhotos: "outline",
 };
 
 const statusBadgeClasses: Record<PhotoConsentSummary["status"], string> = {
@@ -43,6 +45,7 @@ const statusBadgeClasses: Record<PhotoConsentSummary["status"], string> = {
   pending: "border-warning/45 bg-warning/15 text-warning",
   approved: "border-success/45 bg-success/15 text-success",
   rejected: "border-destructive/45 bg-destructive/15 text-destructive",
+  noPhotos: "border-muted bg-muted/40 text-muted-foreground",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -67,6 +70,8 @@ const EMPTY_SUMMARY: PhotoConsentSummary = {
   signatureVersion: null,
   signatureCapturedAt: null,
   signaturePayload: null,
+  purposes: [],
+  versions: [],
 };
 
 function formatDate(value: string | null | undefined) {

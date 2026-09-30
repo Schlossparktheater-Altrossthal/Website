@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { Prisma } from "@prisma/client";
+import type { PhotoConsentPurpose } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -10,11 +12,17 @@ import {
   createPhotoConsentBoardNotification,
   dispatchPhotoConsentBoardNotification,
 } from "@/lib/photo-consent-notifications";
+import { ensurePhotoConsentPurposes } from "@/lib/photo-consent-purposes";
+import {
+  buildPhotoConsentPurposeViews,
+  buildPhotoConsentVersionViews,
+  calculatePhotoConsentAge,
+} from "@/lib/photo-consent-summary";
 import { signaturePayloadSchema } from "@/types/signature";
 
 type ConsentWithUser = {
   id: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "noPhotos";
   createdAt: Date;
   updatedAt: Date;
   approvedAt: Date | null;
@@ -43,18 +51,19 @@ type ConsentWithUser = {
     lastName: string | null;
     name: string | null;
   } | null;
+  choices: Array<{ purposeId: string; chosen: boolean }>;
+  versions: Array<{
+    id: string;
+    version: number;
+    status: "pending" | "approved" | "rejected" | "noPhotos";
+    submittedAt: Date;
+    source: string;
+    documentName: string | null;
+    documentUploadedAt: Date | null;
+    signatureVersion: string | null;
+    purposesSnapshot: unknown;
+  }>;
 };
-
-function calculateAge(date: Date | null | undefined): number | null {
-  if (!date) return null;
-  const now = new Date();
-  let age = now.getFullYear() - date.getFullYear();
-  const monthDiff = now.getMonth() - date.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < date.getDate())) {
-    age -= 1;
-  }
-  return age;
-}
 
 function parseSignaturePayload(value: unknown) {
   if (!value) return null;
@@ -65,9 +74,12 @@ function parseSignaturePayload(value: unknown) {
   return parsed.data;
 }
 
-function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
+function mapConsent(
+  consent: ConsentWithUser,
+  purposes: readonly PhotoConsentPurpose[],
+): PhotoConsentAdminEntry {
   const dateOfBirth = consent.user.dateOfBirth;
-  const age = calculateAge(dateOfBirth);
+  const age = calculatePhotoConsentAge(dateOfBirth);
   const requiresDocument = age !== null && age < 18;
   const requiresDateOfBirth = !dateOfBirth;
   const combinedName =
@@ -116,10 +128,44 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
     signatureVersion,
     signatureCapturedAt,
     signaturePayload,
+    purposes: buildPhotoConsentPurposeViews(purposes, consent.choices, age),
+    versions: buildPhotoConsentVersionViews(consent.versions),
   };
 }
 
 const ALL_PRODUCTIONS = "all";
+
+const CONSENT_INCLUDE = {
+  show: { select: { title: true, year: true } },
+  user: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      name: true,
+      email: true,
+      dateOfBirth: true,
+    },
+  },
+  approvedBy: {
+    select: { id: true, firstName: true, lastName: true, name: true },
+  },
+  choices: { select: { purposeId: true, chosen: true } },
+  versions: {
+    orderBy: { version: "desc" },
+    select: {
+      id: true,
+      version: true,
+      status: true,
+      submittedAt: true,
+      source: true,
+      documentName: true,
+      documentUploadedAt: true,
+      signatureVersion: true,
+      purposesSnapshot: true,
+    },
+  },
+} satisfies Prisma.PhotoConsentInclude;
 
 export async function GET(request: NextRequest) {
   const session = await requireAuth();
@@ -136,27 +182,7 @@ export async function GET(request: NextRequest) {
     prisma.photoConsent.findMany({
       where: showId && showId !== ALL_PRODUCTIONS ? { showId } : {},
       orderBy: { createdAt: "desc" },
-      include: {
-        show: { select: { title: true, year: true } },
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            name: true,
-            email: true,
-            dateOfBirth: true,
-          },
-        },
-        approvedBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            name: true,
-          },
-        },
-      },
+      include: CONSENT_INCLUDE,
     }),
     prisma.show.findMany({
       orderBy: [{ year: "desc" }],
@@ -164,7 +190,27 @@ export async function GET(request: NextRequest) {
     }),
   ]);
 
-  const entries = consents.map((consent) => mapConsent(consent));
+  const showIds = Array.from(new Set(consents.map((consent) => consent.showId)));
+  await Promise.all(showIds.map((id) => ensurePhotoConsentPurposes(id)));
+
+  const purposeRows = showIds.length
+    ? await prisma.photoConsentPurpose.findMany({
+        where: { showId: { in: showIds }, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      })
+    : [];
+
+  const purposesByShow = new Map<string, PhotoConsentPurpose[]>();
+  for (const purpose of purposeRows) {
+    const list = purposesByShow.get(purpose.showId) ?? [];
+    list.push(purpose);
+    purposesByShow.set(purpose.showId, list);
+  }
+
+  const entries = consents.map((consent) =>
+    mapConsent(consent, purposesByShow.get(consent.showId) ?? []),
+  );
+
   return NextResponse.json({
     entries,
     showId: showId ?? ALL_PRODUCTIONS,
@@ -209,24 +255,35 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const updateData: Record<string, unknown> = {};
+    const updateData: Prisma.PhotoConsentUpdateInput = {};
     const now = new Date();
 
     if (action === "approve") {
       updateData.status = "approved";
       updateData.approvedAt = now;
-      updateData.approvedById = session.user?.id ?? null;
+      updateData.approvedBy = session.user?.id
+        ? { connect: { id: session.user.id } }
+        : { disconnect: true };
       updateData.rejectionReason = null;
     } else if (action === "reject") {
       updateData.status = "rejected";
       updateData.approvedAt = null;
-      updateData.approvedById = null;
+      updateData.approvedBy = { disconnect: true };
       updateData.rejectionReason = rejectionReason;
     } else {
+      // Zurücksetzen leert den eingereichten Nachweis, damit neu eingereicht werden kann.
       updateData.status = "pending";
       updateData.approvedAt = null;
-      updateData.approvedById = null;
+      updateData.approvedBy = { disconnect: true };
       updateData.rejectionReason = null;
+      updateData.documentName = null;
+      updateData.documentMime = null;
+      updateData.documentSize = null;
+      updateData.documentUploadedAt = null;
+      updateData.documentData = null;
+      updateData.signatureVersion = null;
+      updateData.signaturePayload = Prisma.JsonNull;
+      updateData.signatureCapturedAt = null;
     }
 
     const actorDisplayName = getUserDisplayName(
@@ -243,30 +300,13 @@ export async function PATCH(request: NextRequest) {
       const updated = await tx.photoConsent.update({
         where: { id },
         data: updateData,
-        include: {
-          show: { select: { title: true, year: true } },
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              name: true,
-              email: true,
-              dateOfBirth: true,
-            },
-          },
-          approvedBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              name: true,
-            },
-          },
-        },
+        include: CONSENT_INCLUDE,
       });
 
-      const entry = mapConsent(updated);
+      if (action === "reset") {
+        await tx.photoConsentChoice.deleteMany({ where: { consentId: id } });
+      }
+
       const subjectDisplayName = getUserDisplayName(
         {
           firstName: updated.user.firstName,
@@ -289,14 +329,19 @@ export async function PATCH(request: NextRequest) {
         rejectionReason: updated.rejectionReason ?? null,
       });
 
-      return { entry, notification };
+      return { entry: updated, notification };
     });
 
     if (notification) {
       await dispatchPhotoConsentBoardNotification(notification);
     }
 
-    return NextResponse.json({ ok: true, entry });
+    const purposes = await prisma.photoConsentPurpose.findMany({
+      where: { showId: entry.showId, isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+
+    return NextResponse.json({ ok: true, entry: mapConsent(entry, purposes) });
   } catch (error: unknown) {
     if (
       typeof error === "object" &&

@@ -193,7 +193,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     // Fotoerlaubnis gilt pro Produktion: nur eine bereits für diese Produktion erteilte vorausfüllen.
     prisma.photoConsent.findFirst({
       where: { userId, showId: invite.show.id, revokedAt: null },
-      select: { consentGiven: true },
+      select: { status: true },
     }),
     prisma.user.findUnique({
       where: { id: userId },
@@ -254,7 +254,9 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         existingProfile={profile}
         existingDietary={dietary}
         existingPreferences={preferences}
-        existingPhotoConsent={existingPhotoConsent?.consentGiven ?? null}
+        existingPhotoConsent={
+          existingPhotoConsent ? existingPhotoConsent.status === "approved" : null
+        }
         existingInterests={existingInterests.map((entry) => entry.interest.name)}
         dateOfBirth={existingUser?.dateOfBirth ? existingUser.dateOfBirth.toISOString() : null}
         isLoggedIn={true}

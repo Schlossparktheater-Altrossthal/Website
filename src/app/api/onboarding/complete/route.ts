@@ -583,8 +583,7 @@ export async function POST(request: NextRequest) {
           data: {
             userId: user.id,
             showId: invite.showId,
-            consentGiven: photoConsent.consent,
-            status: "pending",
+            status: photoConsent.consent ? "pending" : "noPhotos",
             documentName: documentName,
             documentMime: documentMime,
             documentSize: documentSize ?? undefined,

@@ -34,6 +34,7 @@ const PHOTO_CONSENT_LABELS: Record<PhotoConsentStatus | "none", string> = {
   pending: "Fotoerlaubnis ausstehend",
   approved: "Fotoerlaubnis erteilt",
   rejected: "Fotoerlaubnis abgelehnt",
+  noPhotos: "Keine Aufnahmen",
 };
 
 function consentStatusOf(

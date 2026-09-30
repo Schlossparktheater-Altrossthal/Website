@@ -271,7 +271,7 @@ export default async function ProfilePage() {
     hasBirthdate,
     hasPaymentDetails,
     hasDietaryPreference,
-    photoConsent: { consentGiven: photoConsentSummary.status === "approved" },
+    photoConsent: { confirmed: photoConsentSummary.status === "approved" },
   });
 
   const onboarding =

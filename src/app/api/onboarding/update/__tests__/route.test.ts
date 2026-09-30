@@ -106,7 +106,7 @@ describe("Rückkehrer-Onboarding: Fotoerlaubnis", () => {
     expect(response.status).toBe(200);
     const args = mocks.consentUpsert.mock.calls[0][0];
     expect(args.where).toEqual({ userId_showId: { userId: "user-1", showId: "show-2027" } });
-    expect(args.create).toMatchObject({ showId: "show-2027", consentGiven: true });
+    expect(args.create).toMatchObject({ showId: "show-2027", status: "pending" });
     expect(args.update).toMatchObject({
       status: "pending",
       approvedAt: null,
