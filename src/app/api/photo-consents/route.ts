@@ -124,37 +124,42 @@ export async function GET() {
     where: { id: userId },
     select: {
       dateOfBirth: true,
-      photoConsents: photoConsentsForShow(showId, {
-        id: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-        approvedAt: true,
-        rejectionReason: true,
-        exclusionNote: true,
-        documentUploadedAt: true,
-        documentName: true,
-        documentMime: true,
-        signatureVersion: true,
-        signatureCapturedAt: true,
-        signaturePayload: true,
-        approvedBy: { select: { name: true } },
-        choices: { select: { purposeId: true, chosen: true } },
-        versions: {
-          orderBy: { version: "desc" },
-          select: {
-            id: true,
-            version: true,
-            status: true,
-            submittedAt: true,
-            source: true,
-            documentName: true,
-            documentUploadedAt: true,
-            signatureVersion: true,
-            purposesSnapshot: true,
+      photoConsents: photoConsentsForShow(
+        showId,
+        {
+          id: true,
+          status: true,
+          revokedAt: true,
+          createdAt: true,
+          updatedAt: true,
+          approvedAt: true,
+          rejectionReason: true,
+          exclusionNote: true,
+          documentUploadedAt: true,
+          documentName: true,
+          documentMime: true,
+          signatureVersion: true,
+          signatureCapturedAt: true,
+          signaturePayload: true,
+          approvedBy: { select: { name: true } },
+          choices: { select: { purposeId: true, chosen: true } },
+          versions: {
+            orderBy: { version: "desc" },
+            select: {
+              id: true,
+              version: true,
+              status: true,
+              submittedAt: true,
+              source: true,
+              documentName: true,
+              documentUploadedAt: true,
+              signatureVersion: true,
+              purposesSnapshot: true,
+            },
           },
         },
-      }),
+        { includeRevoked: true },
+      ),
     },
   });
 
@@ -219,6 +224,76 @@ export async function POST(request: NextRequest) {
 
   if (!body) {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+  }
+
+  if (parseBoolean(body.revoke)) {
+    const revokeShowId = await resolvePhotoConsentShowId(userId);
+    if (!revokeShowId) {
+      return NextResponse.json(
+        { error: "Du bist aktuell keiner Produktion zugeordnet" },
+        { status: 409 },
+      );
+    }
+
+    const existing = await prisma.photoConsent.findUnique({
+      where: { userId_showId: { userId, showId: revokeShowId } },
+      select: { id: true, revokedAt: true, exclusionNote: true },
+    });
+    if (!existing || existing.revokedAt) {
+      return NextResponse.json(
+        { error: "Es gibt keine aktive Einwilligung, die widerrufen werden kann" },
+        { status: 409 },
+      );
+    }
+
+    const subject = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, name: true, email: true },
+    });
+    const actorName = getUserDisplayName(
+      {
+        firstName: subject?.firstName ?? null,
+        lastName: subject?.lastName ?? null,
+        name: subject?.name ?? null,
+        email: subject?.email ?? null,
+      },
+      "Unbekanntes Mitglied",
+    );
+    const now = new Date();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.photoConsent.update({
+        where: { id: existing.id },
+        data: {
+          revokedAt: now,
+          approvedAt: null,
+          approvedById: null,
+          rejectionReason: null,
+        },
+      });
+      await appendPhotoConsentVersion(tx, {
+        consentId: existing.id,
+        status: "noPhotos",
+        purposesSnapshot: [],
+        exclusionNote: existing.exclusionNote,
+        document: null,
+        signature: null,
+        submittedById: userId,
+        source: "revocation",
+      });
+      await createPhotoConsentBoardNotification(tx, {
+        consentId: existing.id,
+        status: "noPhotos",
+        hasDocument: false,
+        subjectUserId: userId,
+        subjectName: actorName,
+        changeType: "status-changed",
+        actorUserId: userId,
+        actorName,
+      });
+    });
+
+    return NextResponse.json({ revoked: true, revokedAt: now.toISOString() });
   }
 
   if (!parseBoolean(body.confirm)) {

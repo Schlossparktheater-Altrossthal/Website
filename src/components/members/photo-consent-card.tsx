@@ -111,7 +111,8 @@ function VersionHistory({ versions }: { versions: PhotoConsentVersionView[] }) {
             <li key={version.id} className="rounded-md border border-border/50 p-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium text-foreground">
-                  Version {version.version} · {statusLabels[version.status]}
+                  Version {version.version} ·{" "}
+                  {version.source === "revocation" ? "Widerrufen" : statusLabels[version.status]}
                 </span>
                 <span>{formatDate(version.submittedAt) ?? "unbekannt"}</span>
               </div>
@@ -154,6 +155,8 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
   const [editing, setEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [refusalConfirmOpen, setRefusalConfirmOpen] = useState(false);
+  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
+  const [revoking, setRevoking] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -196,7 +199,8 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
   const isRefusalSelected = refusalPurpose ? Boolean(selection[refusalPurpose.purposeId]) : false;
   const hasSelectedPurpose = purposes.some((purpose) => Boolean(selection[purpose.purposeId]));
 
-  const isCollapsible = status === "approved" || status === "noPhotos";
+  const isRevoked = Boolean(summary?.revokedAt);
+  const isCollapsible = !isRevoked && (status === "approved" || status === "noPhotos");
   const showForm = !isCollapsible || editing;
 
   useEffect(() => {
@@ -321,6 +325,31 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
     }
   };
 
+  const revokeConsent = async () => {
+    setRevoking(true);
+    try {
+      const formData = new FormData();
+      formData.append("revoke", "1");
+      const response = await fetch("/api/photo-consents", { method: "POST", body: formData });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        toast.error("Widerruf fehlgeschlagen", {
+          description: data?.error ?? "Bitte versuche es erneut.",
+        });
+        return;
+      }
+      toast.success("Fotoerlaubnis widerrufen", {
+        description: `Widerrufen am ${formatDate(data?.revokedAt) ?? "heute"}.`,
+      });
+      setRevokeConfirmOpen(false);
+      await load();
+    } catch {
+      toast.error("Widerruf fehlgeschlagen", { description: "Netzwerkfehler." });
+    } finally {
+      setRevoking(false);
+    }
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setDocumentError(null);
@@ -359,14 +388,23 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
     void submitConsent();
   };
 
-  const statusBadge = useMemo(
-    () => (
+  const statusBadge = useMemo(() => {
+    if (isRevoked) {
+      return (
+        <Badge
+          size="sm"
+          className="whitespace-nowrap border-destructive/45 bg-destructive/15 text-destructive"
+        >
+          Widerrufen am {formatDate(summary?.revokedAt) ?? "unbekannt"}
+        </Badge>
+      );
+    }
+    return (
       <Badge size="sm" className={cn("whitespace-nowrap", statusBadgeClasses[status])}>
         {statusLabels[status]}
       </Badge>
-    ),
-    [status],
-  );
+    );
+  }, [isRevoked, status, summary?.revokedAt]);
 
   const chosenPurposes = purposes.filter((purpose) => Boolean(selection[purpose.purposeId]));
 
@@ -415,6 +453,16 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
               Drucken
             </Button>
           ) : null}
+          {!collapsed && !isRevoked && (status === "approved" || status === "noPhotos") ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="xs"
+              onClick={() => setRevokeConfirmOpen(true)}
+            >
+              Widerrufen
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -447,6 +495,20 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
             </div>
           ) : showHistory ? (
             <VersionHistory versions={summary?.versions ?? []} />
+          ) : isRevoked ? (
+            <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+              <p className="font-medium text-foreground">
+                Widerrufen am {formatDate(summary?.revokedAt) ?? "unbekannt"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Deine Fotoerlaubnis ist widerrufen. Es dürfen keine neuen Aufnahmen mehr verwendet
+                werden – du kannst sie jederzeit neu einreichen.
+              </p>
+              <Button type="button" size="sm" onClick={handleStartEditing}>
+                <EditIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+                Erneut einreichen
+              </Button>
+            </div>
           ) : isCollapsible && !editing ? (
             <div
               className={cn(
@@ -740,6 +802,21 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
           void submitConsent();
         }}
         onCancel={() => setRefusalConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={revokeConfirmOpen}
+        onOpenChange={setRevokeConfirmOpen}
+        title="Fotoerlaubnis widerrufen?"
+        description="Deine Einwilligung wird mit heutigem Datum widerrufen. Es dürfen keine Aufnahmen mehr verwendet werden."
+        confirmLabel="Widerrufen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onConfirm={() => {
+          setRevokeConfirmOpen(false);
+          void revokeConsent();
+        }}
+        onCancel={() => setRevokeConfirmOpen(false)}
       />
     </Card>
   );

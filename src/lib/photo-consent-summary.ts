@@ -18,6 +18,7 @@ export type PersistedPhotoConsentStatus = "pending" | "approved" | "rejected" | 
 type ConsentRecord = {
   id?: string;
   status: PersistedPhotoConsentStatus | "none";
+  revokedAt?: Date | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
   approvedAt?: Date | null;
@@ -178,6 +179,7 @@ export function buildPhotoConsentSummary(
 
   return {
     status,
+    revokedAt: consent?.revokedAt?.toISOString() ?? null,
     requiresDocument,
     requiresDateOfBirth,
     hasDocument: Boolean(consent?.documentUploadedAt),

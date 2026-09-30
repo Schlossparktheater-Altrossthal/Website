@@ -14,9 +14,10 @@ export async function resolvePhotoConsentShowId(userId: string): Promise<string 
 export function photoConsentsForShow<S extends Prisma.PhotoConsentSelect>(
   showId: string | null,
   select: S,
+  options?: { includeRevoked?: boolean },
 ) {
   const where: Prisma.PhotoConsentWhereInput = showId
-    ? { showId, revokedAt: null }
+    ? { showId, ...(options?.includeRevoked ? {} : { revokedAt: null }) }
     : { id: { in: [] } };
   return { where, take: 1, select };
 }

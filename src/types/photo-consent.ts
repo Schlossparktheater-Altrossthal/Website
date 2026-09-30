@@ -39,6 +39,7 @@ export type PhotoConsentVersionView = {
 
 export type PhotoConsentSummary = {
   status: PhotoConsentStatus;
+  revokedAt: string | null;
   requiresDocument: boolean;
   hasDocument: boolean;
   submittedAt: string | null;

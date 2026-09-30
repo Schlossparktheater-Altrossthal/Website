@@ -11,6 +11,15 @@ const mocks = vi.hoisted(() => ({
   userFindUnique: vi.fn(),
   consentUpsert: vi.fn(),
   consentFindMany: vi.fn(),
+  consentFindUnique: vi.fn(),
+  consentUpdate: vi.fn(),
+  versionFindFirst: vi.fn(),
+  versionCreate: vi.fn(),
+  purposeCount: vi.fn(),
+  purposeFindMany: vi.fn(),
+  purposeCreateMany: vi.fn(),
+  choiceDeleteMany: vi.fn(),
+  choiceCreateMany: vi.fn(),
   showFindMany: vi.fn(),
   createNotification: vi.fn(),
 }));
@@ -25,11 +34,26 @@ vi.mock("@/lib/photo-consent-notifications", () => ({
   dispatchPhotoConsentBoardNotification: vi.fn(),
 }));
 vi.mock("@/lib/prisma", () => {
-  const tx = { photoConsent: { upsert: mocks.consentUpsert } };
+  const tx = {
+    photoConsent: { upsert: mocks.consentUpsert, update: mocks.consentUpdate },
+    photoConsentVersion: { findFirst: mocks.versionFindFirst, create: mocks.versionCreate },
+    photoConsentChoice: {
+      deleteMany: mocks.choiceDeleteMany,
+      createMany: mocks.choiceCreateMany,
+    },
+  };
   return {
     prisma: {
       user: { findUnique: mocks.userFindUnique },
-      photoConsent: { findMany: mocks.consentFindMany },
+      photoConsent: {
+        findMany: mocks.consentFindMany,
+        findUnique: mocks.consentFindUnique,
+      },
+      photoConsentPurpose: {
+        count: mocks.purposeCount,
+        findMany: mocks.purposeFindMany,
+        createMany: mocks.purposeCreateMany,
+      },
       show: { findMany: mocks.showFindMany },
       $transaction: async <T>(fn: (client: typeof tx) => Promise<T>) => fn(tx),
     },
@@ -70,6 +94,8 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
     mocks.requireAuth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.getActiveProductionId.mockResolvedValue("show-2027");
     mocks.createNotification.mockResolvedValue(null);
+    mocks.purposeCount.mockResolvedValue(1);
+    mocks.purposeFindMany.mockResolvedValue([]);
   });
 
   it("liest nur die Erlaubnis der aktuellen Produktion", async () => {
@@ -83,7 +109,7 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
 
     expect(data.consent.status).toBe("none");
     const select = mocks.userFindUnique.mock.calls[0][0].select;
-    expect(select.photoConsents.where).toEqual({ showId: "show-2027", revokedAt: null });
+    expect(select.photoConsents.where).toEqual({ showId: "show-2027" });
   });
 
   it("lehnt eine Erlaubnis ohne Produktionszuordnung ab", async () => {
@@ -115,6 +141,36 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
     expect(args.update).toMatchObject({ status: "pending", approvedAt: null, revokedAt: null });
   });
 
+  it("widerruft die aktive Einwilligung mit Datum und Versionshistorie", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      firstName: "Anna",
+      lastName: "A",
+      name: null,
+      email: "anna@example.org",
+    });
+    mocks.consentFindUnique.mockResolvedValue({
+      id: "consent-1",
+      revokedAt: null,
+      exclusionNote: null,
+    });
+    mocks.versionFindFirst.mockResolvedValue(null);
+    mocks.versionCreate.mockResolvedValue({ version: 1 });
+
+    const response = await POST(jsonRequest({ revoke: true }));
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.revoked).toBe(true);
+    expect(typeof data.revokedAt).toBe("string");
+    expect(mocks.consentUpdate).toHaveBeenCalledWith({
+      where: { id: "consent-1" },
+      data: expect.objectContaining({ revokedAt: expect.any(Date) }),
+    });
+    expect(mocks.versionCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ source: "revocation", status: "noPhotos" }),
+    });
+  });
+
   it("verlangt bei Minderjährigen ein Dokument für die neue Produktion", async () => {
     mocks.userFindUnique.mockResolvedValue({
       firstName: "Ben",
@@ -141,6 +197,8 @@ describe("Fotoerlaubnis-Verwaltung", () => {
     mocks.showFindMany.mockResolvedValue([
       { id: "show-2027", title: null, year: 2027, status: "planning" },
     ]);
+    mocks.purposeCount.mockResolvedValue(1);
+    mocks.purposeFindMany.mockResolvedValue([]);
   });
 
   it("zeigt standardmäßig die aktuell ausgewählte Produktion", async () => {
