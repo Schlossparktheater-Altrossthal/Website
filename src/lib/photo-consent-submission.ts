@@ -69,6 +69,33 @@ export function derivePhotoConsentStatus(isRefusal: boolean): "noPhotos" | "pend
   return isRefusal ? "noPhotos" : "pending";
 }
 
+/**
+ * Legt beim Onboarding die Standard-Zwecke als Vorauswahl an (alle erlaubten außer „gar nicht“).
+ * Die Detail-Auswahl pflegt das Mitglied später im Profil.
+ */
+export async function seedDefaultPhotoConsentChoices(
+  tx: Prisma.TransactionClient,
+  consentId: string,
+  showId: string,
+  isMinor: boolean,
+): Promise<void> {
+  const purposes = await tx.photoConsentPurpose.findMany({
+    where: { showId, isActive: true, isRefusal: false },
+    orderBy: [{ sortOrder: "asc" }],
+  });
+  const audience = isMinor ? "minor" : "adult";
+  const selected = purposes.filter(
+    (purpose) => purpose.appliesTo === "both" || purpose.appliesTo === audience,
+  );
+  if (selected.length === 0) {
+    return;
+  }
+  await tx.photoConsentChoice.createMany({
+    data: selected.map((purpose) => ({ consentId, purposeId: purpose.id, chosen: true })),
+    skipDuplicates: true,
+  });
+}
+
 export type PhotoConsentVersionPayload = {
   consentId: string;
   status: PersistedPhotoConsentStatus;

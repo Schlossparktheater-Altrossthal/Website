@@ -20,6 +20,8 @@ import {
 } from "@/data/dietary-preferences";
 import { ALLERGEN_KIND_VALUES } from "@/data/allergens";
 import { broadcastOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard-events";
+import { ensurePhotoConsentPurposes } from "@/lib/photo-consent-purposes";
+import { seedDefaultPhotoConsentChoices } from "@/lib/photo-consent-submission";
 import { signatureSubmissionSchema, type SignaturePayload } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
@@ -391,6 +393,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const passwordHash = await hashPassword(password);
+    // Zwecke der Produktion sicherstellen, damit die Vorauswahl angelegt werden kann.
+    await ensurePhotoConsentPurposes(invite.showId);
     const result = await prisma.$transaction(async (tx) => {
       const latestInvite = await tx.memberInvite.findUnique({ where: { id: invite.id } });
       if (!latestInvite || !isInviteUsable(latestInvite)) {
@@ -579,7 +583,7 @@ export async function POST(request: NextRequest) {
       const shouldCreateConsent =
         photoConsent.consent || documentBuffer || (age !== null && age < 18);
       if (shouldCreateConsent) {
-        await tx.photoConsent.create({
+        const consent = await tx.photoConsent.create({
           data: {
             userId: user.id,
             showId: invite.showId,
@@ -593,7 +597,16 @@ export async function POST(request: NextRequest) {
             signatureCapturedAt: signaturePayload ? (signatureCapturedAt ?? new Date()) : null,
             signaturePayload: signaturePayload ?? undefined,
           },
+          select: { id: true },
         });
+        if (photoConsent.consent) {
+          await seedDefaultPhotoConsentChoices(
+            tx,
+            consent.id,
+            invite.showId,
+            age !== null && age < 18,
+          );
+        }
       }
 
       return { userId: user.id, email: user.email };

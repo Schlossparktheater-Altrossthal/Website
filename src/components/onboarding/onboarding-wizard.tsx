@@ -1553,7 +1553,8 @@ export function OnboardingWizard({
                   werden.
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Die Zustimmung kann jederzeit im Profil angepasst werden.
+                  Die genauen Verwendungszwecke (privat, Programmheft, Social Media oder „gar
+                  nicht“) legst du später im Profil fest und kannst sie jederzeit ändern.
                 </p>
               </div>
             </label>
