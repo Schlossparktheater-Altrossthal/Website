@@ -1,6 +1,7 @@
 # Plan: Ernährung & Allergien – Datenmodell, Eingabe und Darstellung
 
-Stand: 2026-09-29. Phase 0–6 umgesetzt, offen Phase 7. Checkliste am Ende wird gepflegt.
+Stand: 2026-09-30. Phase 0–7 umgesetzt; offen bleibt nur der E2E-Lauf auf einer ruhigen Maschine
+oder in der CI (Begründung in Phase 7). Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -129,9 +130,25 @@ Bereich `?bereich=ernaehrung` mit drei Karten statt zwei:
    Abneigungen mit den Allergien (gleiche Frist), Nutzungsbericht und Texte nennen sie.
    Sichtprüfung des Datenportals in Handy/Tablet/Desktop in hell und dunkel: 0 Befunde, kein
    Überlauf, die Allergie-Tabelle zeigt „Allergie" und „nicht angegeben" in den neuen Spalten.
-7. **Doku, Sichtprüfung, Release**: `docs/seiten/profil.md` (inklusive des toten Verweises auf
-   `allergy-form.tsx`), `docs/profile/README.md`, Screenshots in Handy/Tablet/Desktop in hell und
-   dunkel, E2E-Abdeckung, atomare Commits je Phase.
+7. **Doku, Sichtprüfung, Release** _(umgesetzt am 2026-09-30)_: `docs/seiten/profil.md` (der tote
+   Verweis auf `allergy-form.tsx` ist ersetzt, der Bereich „Ernährung & Allergien" beschrieben),
+   `docs/profile/README.md` (als historische Anforderungsnotiz gekennzeichnet, Abschnitt Ernährung
+   aktualisiert), neu `docs/seiten/datenportal.md` (Quellen, Rechtegruppen, Protokoll) samt
+   Index-Zeile, `docs/seiten/verwaltung.md` (Route und Fristen der Aufbewahrung), neuer
+   E2E-Test `e2e/ernaehrung.spec.ts` (Stil inkl. Unterform hin und zurück, Besonderheit anlegen
+   und löschen, Allergie über den Katalogvorschlag anlegen und löschen) und die Release-Notiz als
+   Entwurf weiter unten.
+   **Offen bzw. blockiert:** Der E2E-Test ist geschrieben, konnte aber auf diesem Rechner nicht
+   grün abgeschlossen werden – die Maschine lief mit Last 111–164 und der Dev-Server antwortete in
+   Minuten (`GET /mitglieder/profil 200 in 2.7min`, `POST /api/aversions 200 in 61s`), sodass die
+   Playwright-Timeouts (120 s) zuschlugen. Belegt ist der Ablauf trotzdem aus einem früheren Lauf:
+   Der Stil-Rundlauf und der Besonderheiten-Rundlauf waren grün, und beim Allergie-Fall zeigt der
+   Fehlerbericht des ersten Laufs die gespeicherte Zeile im DOM –
+   `E2E-Testallergen … Unverträglichkeit Schwer Keine Spuren`, also Art aus dem Katalogvorschlag,
+   Schweregrad und Spuren-Angabe. Zusätzlich deckt `pnpm ui:check` dieselben Felder ab
+   (`test-results/ui-check-ernaehrung7`, `…-returnee`, `…-onboarding-final`, `…-datenportal` in
+   Handy/Tablet/Desktop, hell und dunkel). Der E2E-Lauf gehört auf einer ruhigen Maschine oder in
+   der CI nachgeholt.
 
 ## Entscheidungen (2026-09-29)
 
@@ -159,6 +176,47 @@ Nicht enthalten: Verschlüsselung der Allergiedaten, Änderung der Aufbewahrungs
 produktionsbezogene Ernährungsangaben (die Snapshot-Logik bleibt), die exotischen Formen der
 Referenzseite, eine Pflichtauswahl aus dem Katalog.
 
+## Release-Notiz (Entwurf)
+
+Für den nächsten Release als GitHub-Release-Text zu übernehmen (Format wie die bisherigen:
+Abschnitte mit fettem Lead-in, danach `## Migrationen` und `## Betrieb`).
+
+- **Ernährungsangaben im Profil neu aufgebaut:** Der Bereich `?bereich=ernaehrung` besteht aus drei
+  Karten – Stil (mit Unterform bei vegetarisch), Abneigungen & Besonderheiten als eigene Liste und
+  Allergien mit Art, Schweregrad, Spuren und „ärztlich abgeklärt". „Allesesser" stand vorher
+  doppelt in der Liste, und Allergene waren reiner Freitext ohne Vorschläge.
+- **Spuren-Angabe dreiwertig:** „Nicht angegeben" heißt für die Küche ungeklärt und wird strikt
+  behandelt – nicht „unbedenklich".
+- **Onboarding:** Beide Wizards verwenden dieselben Listen wie das Profil; der Rückkehrer-Wizard
+  zeigt die hinterlegten Angaben wieder an (vorher bot er eigene Werte an, die beim Speichern
+  verloren gingen) und fragt Art, Spuren und Abklärung je Eintrag mit ab.
+- **Datenportal:** Neue Datenquelle „Abneigungen & Besonderheiten" plus zwei Presets, damit ein
+  Bericht „wer isst was nicht" ohne Allergiedaten möglich ist; die Allergie-Quelle führt Art,
+  Spuren und Abklärung, die Teilnehmenden-Quelle die Unterform.
+- **Aufbewahrung:** Abneigungen laufen in dieselbe 2-Jahres-Frist wie Allergien und werden mit
+  ihnen gelöscht; Nutzungsbericht und Aufbewahrungsseite nennen sie.
+- **Barrierefreiheit/Tablet:** Die Fortschrittsleiste des Onboardings scrollt auf Tabletbreite in
+  ihrem eigenen Container statt die Seite aufzureißen; lange Optionslabels blähen einen
+  Select-Auslöser nicht mehr zweizeilig auf.
+
+## Migrationen
+
+- `20260929130000_dietary_details` – Enum `RestrictionKind`, Spalten `kind`, `tracesOk`,
+  `diagnosed` an `DietaryRestriction`, `dietaryPreferenceVariant` an `MemberOnboardingProfile`,
+  neue Tabelle `DietaryAversion`. Die Migration ist idempotent geschrieben (`ADD COLUMN IF NOT
+EXISTS`, `DO $$ … duplicate_object`), weil Prisma auf Postgres nicht transaktional migriert.
+  Bestandsdaten bleiben unverändert: Allergien ohne Angabe gelten als `ALLERGY`, Spuren als
+  „nicht angegeben" (strikt), Abklärungsstatus als nicht abgeklärt.
+
+## Betrieb
+
+- Keine neuen ENV-Variablen, keine neuen Permission-Keys, keine neuen Pakete.
+- `ProductionOnboarding.profileSnapshot` steht auf Version 2 (Unterform und Art/Spuren/Abklärung
+  zusätzlich je Eintrag). Alte Snapshots bleiben lesbar; Version 1 ist nicht mehr zu erwarten.
+- Doppelte Ernährungsangaben aus der Zeit vor dieser Änderung (z. B. zweimal „Allesesser") werden
+  beim Lesen tolerant auf einen Stil abgebildet (`parseDietaryStyleFromLabel`); es gibt kein
+  Bereinigungsskript und keines ist nötig.
+
 ## Checkliste
 
 - [x] Phase 0 Plan abgelegt und im Index eingetragen
@@ -168,4 +226,4 @@ Referenzseite, eine Pflichtauswahl aus dem Katalog.
 - [x] Phase 4 Profil-Oberfläche
 - [x] Phase 5 Übrige Oberflächen
 - [x] Phase 6 Auswertung und Datenschutz
-- [ ] Phase 7 Doku, Screenshots, E2E, Release
+- [x] Phase 7 Doku, Screenshots, E2E, Release (E2E-Lauf blockiert, s. Phase 7)
