@@ -18,6 +18,7 @@ import { SignatureVisualizer } from "@/components/signature/signature-visualizer
 import {
   CameraIcon,
   CheckCircle2Icon,
+  ChevronDownIcon,
   EditIcon,
   HistoryIcon,
   PrinterIcon,
@@ -154,6 +155,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
   const [editing, setEditing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [refusalConfirmOpen, setRefusalConfirmOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -396,7 +398,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
           {statusBadge}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {summary?.versions && summary.versions.length > 0 ? (
+          {!collapsed && summary?.versions && summary.versions.length > 0 ? (
             <Button
               type="button"
               variant="ghost"
@@ -408,317 +410,332 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
               Verlauf ({summary.versions.length})
             </Button>
           ) : null}
-          <Button type="button" variant="outline" size="xs" onClick={() => window.print()}>
-            <PrinterIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-            Drucken
+          {!collapsed ? (
+            <Button type="button" variant="outline" size="xs" onClick={() => window.print()}>
+              <PrinterIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+              Drucken
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => setCollapsed((prev) => !prev)}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? "Öffnen" : "Einklappen"}
+            <ChevronDownIcon
+              className={cn(
+                "ml-1 h-4 w-4 transition-transform",
+                collapsed ? "rotate-0" : "rotate-180",
+              )}
+              aria-hidden="true"
+            />
           </Button>
         </div>
       </div>
 
-      <CardContent className="space-y-4 p-4 text-sm">
-        {loading ? (
-          <p className="text-muted-foreground">Lade Status …</p>
-        ) : error ? (
-          <div className="space-y-3">
-            <p className="text-destructive">{error}</p>
-            <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
-              Erneut versuchen
-            </Button>
-          </div>
-        ) : requiresDateOfBirth ? (
-          <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-foreground">
-            <p>
-              Bitte trage zuerst dein Geburtsdatum ein. Daran sehen wir, ob zusätzlich eine
-              Einwilligung der Eltern nötig ist.
-            </p>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/mitglieder/profil?bereich=stammdaten">Geburtsdatum eintragen</Link>
-            </Button>
-          </div>
-        ) : showHistory ? (
-          <VersionHistory versions={summary?.versions ?? []} />
-        ) : isCollapsible && !editing ? (
-          <div
-            className={cn(
-              "space-y-2 rounded-lg border p-3",
-              status === "approved"
-                ? "border-success/40 bg-success/10 text-foreground"
-                : "border-muted bg-muted/40 text-foreground",
-            )}
-          >
-            {status === "approved" ? (
-              <>
-                <p className="flex items-center gap-2">
-                  <CheckCircle2Icon className="h-4 w-4 text-success" aria-hidden="true" />
-                  Vielen Dank – deine Fotoerlaubnis ist freigegeben.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
-                  {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
-                </p>
-                {chosenPurposes.length > 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    Erlaubt: {chosenPurposes.map((purpose) => purpose.label).join(", ")}
-                  </p>
-                ) : null}
-                {summary?.exclusionNote ? (
-                  <p className="text-xs text-muted-foreground">
-                    Deine Ausschlüsse: {summary.exclusionNote}
-                  </p>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <p className="font-medium text-foreground">Keine Aufnahmen erlaubt</p>
-                <p className="text-xs text-muted-foreground">
-                  Du hast „gar nicht“ gewählt. Du kannst das jederzeit ändern.
-                </p>
-              </>
-            )}
-            <div className="mt-1 flex flex-wrap gap-2">
-              <Button type="button" size="sm" onClick={handleStartEditing}>
-                <EditIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                Ändern
-              </Button>
+      {collapsed ? null : (
+        <CardContent className="space-y-4 p-4 text-sm">
+          {loading ? (
+            <p className="text-muted-foreground">Lade Status …</p>
+          ) : error ? (
+            <div className="space-y-3">
+              <p className="text-destructive">{error}</p>
               <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
-                <RefreshIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                Aktualisieren
+                Erneut versuchen
               </Button>
             </div>
-          </div>
-        ) : (
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {status === "rejected" && summary?.rejectionReason ? (
-              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
-                Ablehnungsgrund: {summary.rejectionReason}
+          ) : showHistory ? (
+            <VersionHistory versions={summary?.versions ?? []} />
+          ) : isCollapsible && !editing ? (
+            <div
+              className={cn(
+                "space-y-2 rounded-lg border p-3",
+                status === "approved"
+                  ? "border-success/40 bg-success/10 text-foreground"
+                  : "border-muted bg-muted/40 text-foreground",
+              )}
+            >
+              {status === "approved" ? (
+                <>
+                  <p className="flex items-center gap-2">
+                    <CheckCircle2Icon className="h-4 w-4 text-success" aria-hidden="true" />
+                    Vielen Dank – deine Fotoerlaubnis ist freigegeben.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
+                    {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
+                  </p>
+                  {chosenPurposes.length > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      Erlaubt: {chosenPurposes.map((purpose) => purpose.label).join(", ")}
+                    </p>
+                  ) : null}
+                  {summary?.exclusionNote ? (
+                    <p className="text-xs text-muted-foreground">
+                      Deine Ausschlüsse: {summary.exclusionNote}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="font-medium text-foreground">Keine Aufnahmen erlaubt</p>
+                  <p className="text-xs text-muted-foreground">
+                    Du hast „gar nicht“ gewählt. Du kannst das jederzeit ändern.
+                  </p>
+                </>
+              )}
+              <div className="mt-1 flex flex-wrap gap-2">
+                <Button type="button" size="sm" onClick={handleStartEditing}>
+                  <EditIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+                  Ändern
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
+                  <RefreshIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+                  Aktualisieren
+                </Button>
               </div>
-            ) : null}
-            {status === "approved" ? (
-              <div className="rounded-md border border-info/40 bg-info/10 p-3 text-xs text-info">
-                Deine Freigabe wird nach dem Speichern erneut geprüft.
-              </div>
-            ) : null}
-
-            <fieldset className="space-y-2 rounded-lg border border-border/60 p-3">
-              <legend className="px-1 text-sm font-semibold text-foreground">
-                Was darf gemacht werden?
-              </legend>
-              <p className="text-xs text-muted-foreground">
-                Mehrfachauswahl. „Gar nicht“ schließt alle anderen Punkte aus.
-              </p>
-              <div className="space-y-2">
-                {purposes.map((purpose) => (
-                  <label
-                    key={purpose.purposeId}
-                    className="flex items-start gap-3 rounded-md border border-border/50 p-2 hover:bg-muted/40"
-                  >
-                    <Checkbox
-                      checked={Boolean(selection[purpose.purposeId])}
-                      disabled={
-                        submitting ||
-                        (!purpose.isRefusal && isRefusalSelected && !selection[purpose.purposeId])
-                      }
-                      onCheckedChange={(checked) =>
-                        handleTogglePurpose(purpose.purposeId, checked === true)
-                      }
-                      className="mt-0.5"
-                    />
-                    <span>
-                      <span className="font-medium text-foreground">{purpose.label}</span>
-                      {purpose.description ? (
-                        <span className="block text-xs text-muted-foreground">
-                          {purpose.description}
-                        </span>
-                      ) : null}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-3">
-              <PrinterIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              <span className="text-xs text-muted-foreground">
-                {requiresDocument
-                  ? "Jünger als 18? Drucke das Formular aus, lass es von deinen Erziehungsberechtigten unterschreiben und lade es als Foto oder Datei hoch."
-                  : "Du kannst das Formular auch ausdrucken und unterschreiben lassen."}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                className="ml-auto"
-                onClick={() => window.print()}
-              >
-                Drucken
-              </Button>
             </div>
-
-            {isRefusalSelected ? (
-              <div className="rounded-lg border border-muted bg-muted/40 p-3 text-muted-foreground">
-                Du hast „gar nicht“ gewählt. Es ist kein Nachweis nötig – deine Ablehnung wird
-                sofort gespeichert.
-              </div>
-            ) : (
-              <div className="space-y-3 rounded-lg border border-border/60 p-3">
-                <div className="text-sm font-semibold text-foreground">
-                  {requiresDocument
-                    ? "Einverständnis der Erziehungsberechtigten"
-                    : "Unterschrift oder Nachweis"}
+          ) : (
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              {" "}
+              {requiresDateOfBirth ? (
+                <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-foreground">
+                  <p>
+                    Bitte trage zuerst dein Geburtsdatum ein. Daran sehen wir, ob zusätzlich eine
+                    Einwilligung der Eltern nötig ist.
+                  </p>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/mitglieder/profil?bereich=stammdaten">Geburtsdatum eintragen</Link>
+                  </Button>
                 </div>
-                {requiresDocument ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => cameraInputRef.current?.click()}
-                      disabled={submitting}
+              ) : null}{" "}
+              {status === "rejected" && summary?.rejectionReason ? (
+                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
+                  Ablehnungsgrund: {summary.rejectionReason}
+                </div>
+              ) : null}
+              {status === "approved" ? (
+                <div className="rounded-md border border-info/40 bg-info/10 p-3 text-xs text-info">
+                  Deine Freigabe wird nach dem Speichern erneut geprüft.
+                </div>
+              ) : null}
+              <fieldset className="space-y-2 rounded-lg border border-border/60 p-3">
+                <legend className="px-1 text-sm font-semibold text-foreground">
+                  Was darf gemacht werden?
+                </legend>
+                <p className="text-xs text-muted-foreground">
+                  Mehrfachauswahl. „Gar nicht“ schließt alle anderen Punkte aus.
+                </p>
+                <div className="space-y-2">
+                  {purposes.map((purpose) => (
+                    <label
+                      key={purpose.purposeId}
+                      className="flex items-start gap-3 rounded-md border border-border/50 p-2 hover:bg-muted/40"
                     >
-                      <CameraIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                      Foto aufnehmen
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={submitting}
-                    >
-                      <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                      Datei wählen
-                    </Button>
+                      <Checkbox
+                        checked={Boolean(selection[purpose.purposeId])}
+                        disabled={
+                          submitting ||
+                          (!purpose.isRefusal && isRefusalSelected && !selection[purpose.purposeId])
+                        }
+                        onCheckedChange={(checked) =>
+                          handleTogglePurpose(purpose.purposeId, checked === true)
+                        }
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="font-medium text-foreground">{purpose.label}</span>
+                        {purpose.description ? (
+                          <span className="block text-xs text-muted-foreground">
+                            {purpose.description}
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-3">
+                <PrinterIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <span className="text-xs text-muted-foreground">
+                  {requiresDocument
+                    ? "Jünger als 18? Drucke das Formular aus, lass es von deinen Erziehungsberechtigten unterschreiben und lade es als Foto oder Datei hoch."
+                    : "Du kannst das Formular auch ausdrucken und unterschreiben lassen."}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  className="ml-auto"
+                  onClick={() => window.print()}
+                >
+                  Drucken
+                </Button>
+              </div>
+              {isRefusalSelected ? (
+                <div className="rounded-lg border border-muted bg-muted/40 p-3 text-muted-foreground">
+                  Du hast „gar nicht“ gewählt. Es ist kein Nachweis nötig – deine Ablehnung wird
+                  sofort gespeichert.
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-lg border border-border/60 p-3">
+                  <div className="text-sm font-semibold text-foreground">
+                    {requiresDocument
+                      ? "Einverständnis der Erziehungsberechtigten"
+                      : "Unterschrift oder Nachweis"}
                   </div>
-                ) : (
-                  <>
+                  {requiresDocument ? (
                     <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
-                        variant={signatureMode === "upload" ? "default" : "outline"}
+                        variant="outline"
                         size="sm"
-                        onClick={handleSelectUploadMode}
+                        onClick={() => cameraInputRef.current?.click()}
                         disabled={submitting}
                       >
-                        <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                        Hochladen
+                        <CameraIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+                        Foto aufnehmen
                       </Button>
                       <Button
                         type="button"
-                        variant={signatureMode === "signature" ? "default" : "outline"}
+                        variant="outline"
                         size="sm"
-                        onClick={handleSelectSignatureMode}
+                        onClick={() => fileInputRef.current?.click()}
                         disabled={submitting}
                       >
-                        Digital unterschreiben
+                        <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+                        Datei wählen
                       </Button>
                     </div>
-                    {signatureMode === "signature" ? (
-                      <SignaturePad value={signatureResult} onChange={setSignatureResult} />
-                    ) : (
+                  ) : (
+                    <>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           type="button"
-                          variant="outline"
+                          variant={signatureMode === "upload" ? "default" : "outline"}
                           size="sm"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={handleSelectUploadMode}
                           disabled={submitting}
                         >
                           <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                          Datei wählen
+                          Hochladen
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={signatureMode === "signature" ? "default" : "outline"}
+                          size="sm"
+                          onClick={handleSelectSignatureMode}
+                          disabled={submitting}
+                        >
+                          Digital unterschreiben
                         </Button>
                       </div>
-                    )}
-                  </>
-                )}
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={handleFileChange}
+                      {signatureMode === "signature" ? (
+                        <SignaturePad value={signatureResult} onChange={setSignatureResult} />
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={submitting}
+                          >
+                            <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+                            Datei wählen
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  {documentFile ? (
+                    <p className="text-xs text-muted-foreground">Ausgewählt: {documentFile.name}</p>
+                  ) : summary?.hasDocument && summary.documentName ? (
+                    <p className="text-xs text-muted-foreground">
+                      Bereits hinterlegt: {summary.documentName}
+                    </p>
+                  ) : null}
+                  {signatureResult ? (
+                    <div className="h-32 w-full overflow-hidden rounded-lg border border-border/60">
+                      <SignatureVisualizer
+                        payload={signatureResult.payload}
+                        mode="outline"
+                        className="h-full w-full"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                <div className="text-sm font-semibold text-foreground">
+                  Optional: Bereiche ausschließen
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Notiere, auf welchen Kanälen oder Motiven du nicht erscheinen möchtest.
+                </p>
+                <Textarea
+                  value={note}
+                  onChange={(event) => {
+                    setNote(event.target.value);
+                    if (noteError) setNoteError(null);
+                  }}
+                  maxLength={MAX_NOTE_LENGTH}
+                  rows={3}
+                  disabled={submitting}
+                  placeholder="Zum Beispiel: keine Nahaufnahmen"
                 />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png"
-                  className="hidden"
-                  onChange={handleFileChange}
+                <div className="flex justify-between text-[11px] text-foreground/50">
+                  <span>Max. {MAX_NOTE_LENGTH} Zeichen</span>
+                  <span>
+                    {note.length}/{MAX_NOTE_LENGTH}
+                  </span>
+                </div>
+                {noteError ? <p className="text-sm text-destructive">{noteError}</p> : null}
+              </div>
+              <label className="flex items-start gap-3 rounded-lg border border-border/60 p-3">
+                <Checkbox
+                  checked={confirm}
+                  onCheckedChange={(checked) => setConfirm(checked === true)}
+                  disabled={submitting}
+                  className="mt-0.5"
                 />
-                {documentFile ? (
-                  <p className="text-xs text-muted-foreground">Ausgewählt: {documentFile.name}</p>
-                ) : summary?.hasDocument && summary.documentName ? (
-                  <p className="text-xs text-muted-foreground">
-                    Bereits hinterlegt: {summary.documentName}
-                  </p>
-                ) : null}
-                {signatureResult ? (
-                  <div className="h-32 w-full overflow-hidden rounded-lg border border-border/60">
-                    <SignatureVisualizer
-                      payload={signatureResult.payload}
-                      mode="outline"
-                      className="h-full w-full"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            <div className="space-y-2 rounded-lg border border-border/60 p-3">
-              <div className="text-sm font-semibold text-foreground">
-                Optional: Bereiche ausschließen
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Notiere, auf welchen Kanälen oder Motiven du nicht erscheinen möchtest.
-              </p>
-              <Textarea
-                value={note}
-                onChange={(event) => {
-                  setNote(event.target.value);
-                  if (noteError) setNoteError(null);
-                }}
-                maxLength={MAX_NOTE_LENGTH}
-                rows={3}
-                disabled={submitting}
-                placeholder="Zum Beispiel: keine Nahaufnahmen"
-              />
-              <div className="flex justify-between text-[11px] text-foreground/50">
-                <span>Max. {MAX_NOTE_LENGTH} Zeichen</span>
-                <span>
-                  {note.length}/{MAX_NOTE_LENGTH}
+                <span className="text-foreground/80">
+                  <span className="font-semibold text-foreground">Ich bestätige,</span> dass die
+                  Angaben stimmen und ich die Fotoerlaubnis so abgeben möchte.
                 </span>
-              </div>
-              {noteError ? <p className="text-sm text-destructive">{noteError}</p> : null}
-            </div>
-
-            <label className="flex items-start gap-3 rounded-lg border border-border/60 p-3">
-              <Checkbox
-                checked={confirm}
-                onCheckedChange={(checked) => setConfirm(checked === true)}
-                disabled={submitting}
-                className="mt-0.5"
-              />
-              <span className="text-foreground/80">
-                <span className="font-semibold text-foreground">Ich bestätige,</span> dass die
-                Angaben stimmen und ich die Fotoerlaubnis so abgeben möchte.
-              </span>
-            </label>
-
-            {documentError ? <p className="text-sm text-destructive">{documentError}</p> : null}
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={submitting} className="min-h-11">
-                {submitting ? "Wird gesendet …" : "Fotoerlaubnis abgeben"}
-              </Button>
-              {editing && isCollapsible ? (
-                <Button type="button" variant="ghost" onClick={handleCancelEditing}>
-                  Abbrechen
+              </label>
+              {documentError ? <p className="text-sm text-destructive">{documentError}</p> : null}
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" disabled={submitting} className="min-h-11">
+                  {submitting ? "Wird gesendet …" : "Fotoerlaubnis abgeben"}
                 </Button>
-              ) : null}
-            </div>
-          </form>
-        )}
-      </CardContent>
+                {editing && isCollapsible ? (
+                  <Button type="button" variant="ghost" onClick={handleCancelEditing}>
+                    Abbrechen
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          )}
+        </CardContent>
+      )}
 
       <ConsentPrintArea purposes={purposes} />
 
