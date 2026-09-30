@@ -78,14 +78,17 @@ describe("photoConsentOverviewToCsv", () => {
         permission: "restricted",
         exclusionNote: 'Keine "Nahaufnahmen"',
         isMinor: false,
+        chosenPurposes: ["Private Foto- und Filmaufnahmen"],
       },
     ]);
 
     expect(csv.startsWith("﻿")).toBe(true);
     const lines = csv.slice(1).trimEnd().split("\r\n");
-    expect(lines[0]).toBe('"Name";"Fotografieren";"Fotoerlaubnis";"Ausschlüsse";"Minderjährig"');
+    expect(lines[0]).toBe(
+      '"Name";"Fotografieren";"Fotoerlaubnis";"Angekreuzt";"Ausschlüsse";"Minderjährig"',
+    );
     expect(lines[1]).toBe(
-      '"\'=HYPERLINK(""x"")";"Eingeschränkt";"Erteilt";"Keine ""Nahaufnahmen""";"nein"',
+      '"\'=HYPERLINK(""x"")";"Eingeschränkt";"Erteilt";"Private Foto- und Filmaufnahmen";"Keine ""Nahaufnahmen""";"nein"',
     );
   });
 });

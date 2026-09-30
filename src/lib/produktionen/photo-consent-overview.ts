@@ -27,6 +27,8 @@ export type PhotoConsentOverviewRow = {
   permission: PhotoPermission;
   exclusionNote: string | null;
   isMinor: boolean;
+  /** Labels der angekreuzten Verwendungszwecke, in Katalogreihenfolge. */
+  chosenPurposes: string[];
 };
 
 /**
@@ -63,7 +65,14 @@ export async function loadPhotoConsentOverview(showId: string): Promise<PhotoCon
           photoConsents: {
             where: { showId, revokedAt: null },
             take: 1,
-            select: { status: true, exclusionNote: true },
+            select: {
+              status: true,
+              exclusionNote: true,
+              choices: {
+                where: { chosen: true },
+                select: { purpose: { select: { label: true, sortOrder: true } } },
+              },
+            },
           },
         },
       },
@@ -74,6 +83,10 @@ export async function loadPhotoConsentOverview(showId: string): Promise<PhotoCon
     .map(({ user }) => {
       const consent = user.photoConsents[0] ?? null;
       const age = calculatePhotoConsentAge(user.dateOfBirth);
+      const chosenPurposes = (consent?.choices ?? [])
+        .slice()
+        .sort((a, b) => a.purpose.sortOrder - b.purpose.sortOrder)
+        .map((choice) => choice.purpose.label);
       return {
         userId: user.id,
         name: getUserDisplayName(user, "Unbekanntes Mitglied"),
@@ -81,6 +94,7 @@ export async function loadPhotoConsentOverview(showId: string): Promise<PhotoCon
         permission: classifyPhotoPermission(consent),
         exclusionNote: consent?.exclusionNote?.trim() || null,
         isMinor: age !== null && age < 18,
+        chosenPurposes,
       } satisfies PhotoConsentOverviewRow;
     })
     .sort(
@@ -98,12 +112,20 @@ function csvCell(value: string): string {
 
 /** CSV für Excel/LibreOffice (Semikolon, UTF-8 mit BOM). */
 export function photoConsentOverviewToCsv(rows: readonly PhotoConsentOverviewRow[]): string {
-  const header = ["Name", "Fotografieren", "Fotoerlaubnis", "Ausschlüsse", "Minderjährig"];
+  const header = [
+    "Name",
+    "Fotografieren",
+    "Fotoerlaubnis",
+    "Angekreuzt",
+    "Ausschlüsse",
+    "Minderjährig",
+  ];
   const lines = rows.map((row) =>
     [
       row.name,
       PHOTO_PERMISSION_LABELS[row.permission],
       PHOTO_CONSENT_STATUS_LABELS[row.status],
+      row.chosenPurposes.join(", "),
       row.exclusionNote ?? "",
       row.isMinor ? "ja" : "nein",
     ]
