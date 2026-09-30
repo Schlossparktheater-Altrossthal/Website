@@ -149,6 +149,27 @@ export async function waitForPageReady(page, { timeout = 10_000, route = "" } = 
     .catch(() => console.warn(`[${route}] Ladezustand nach ${timeout / 1000} s noch sichtbar`));
 }
 
+/** `page.evaluate` scheitert, wenn mitten in der Messung eine Navigation den Kontext abreißt. */
+function isDestroyedContextError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("Execution context was destroyed") ||
+    message.includes("Cannot find context with specified id")
+  );
+}
+
+/**
+ * Breite des Dokuments, `null` solange der Dokumentwechsel läuft.
+ *
+ * Beim Wechsel ist `document.documentElement` kurz `null` – gemessen als
+ * `Cannot read properties of null (reading 'scrollWidth')`. Das ist kein Fehler, sondern ein
+ * Zwischenstand: lieber keinen Wert melden als einen falschen (`0` würde als „kein Überlauf“
+ * durchgehen).
+ */
+function readDocumentWidth(page) {
+  return page.evaluate(() => document.documentElement?.scrollWidth ?? null);
+}
+
 /**
  * Dokumentbreite erst messen, wenn sie sich eingependelt hat.
  *
@@ -159,6 +180,15 @@ export async function waitForPageReady(page, { timeout = 10_000, route = "" } = 
  * warmen Lauf alle grün waren – bei unverändertem Code und Datenstand.
  *
  * Deshalb: erst den Ladezustand abwarten, dann die Breite zweimal hintereinander gleich messen.
+ * Zusätzlich muss die Adresse gleich bleiben – eine neue Adresse heißt neue Seite, und deren
+ * halbfertige Breite ist keine Aussage.
+ *
+ * **Client-Redirects sind erlaubt.** Next liefert `redirect()` einer Seite als Anweisung im
+ * RSC-Payload aus (HTTP 200), wenn ein Elter-Layout davor schon gestreamt hat; die Umleitung
+ * läuft dann erst nach der Hydration im Browser. Genau das passiert auf den eingedampften
+ * Alt-Routen `/mitglieder/probenplanung` und `/mitglieder/probenplanung/terminfinder`. Reißt
+ * dieser Wechsel die laufende Messung ab, wird sie auf der Zielseite neu begonnen, statt den
+ * Lauf mit „Execution context was destroyed“ zu beenden (CI, 2026-09-30).
  *
  * `readyTimeout` ist bewusst kurz: Einzelne Seiten tragen ein dauerhaftes `animate-pulse`
  * (Statusanzeigen, die kein Skeleton sind). Ein langer Ladezustands-Timeout würde auf jeder
@@ -171,21 +201,34 @@ export async function waitForStableWidth(
   await waitForPageReady(page, { timeout: readyTimeout, route });
 
   const deadline = Date.now() + timeout;
-  let previous = null;
+  let previousWidth = null;
+  let previousUrl = null;
   let stableSamples = 0;
 
   while (Date.now() < deadline) {
-    const width = await page.evaluate(() => document.documentElement.scrollWidth);
-    if (width === previous) {
+    const url = page.url();
+    let width = null;
+    try {
+      width = await readDocumentWidth(page);
+    } catch (error) {
+      // Client-Redirect unterwegs: neuer Dokumentkontext, Messung beginnt von vorn. Bewusst ohne
+      // erneuten Ladezustands-Check – der kostet auf Seiten mit Dauer-Puls seine volle Laufzeit
+      // und wäre hier nur Wiederholung; stabile Breite und gleiche Adresse sind die Zusicherung.
+      if (!isDestroyedContextError(error)) throw error;
+      await page.waitForLoadState("domcontentloaded").catch(() => {});
+    }
+
+    if (width === null || width !== previousWidth || url !== previousUrl) {
+      stableSamples = 0;
+      previousWidth = width;
+      previousUrl = url;
+    } else {
       stableSamples += 1;
       if (stableSamples >= 2) return width;
-    } else {
-      stableSamples = 0;
-      previous = width;
     }
     await page.waitForTimeout(pollMs);
   }
 
   console.warn(`[overflow] Dokumentbreite blieb nach ${timeout / 1000} s nicht stabil`);
-  return previous ?? 0;
+  return previousWidth ?? 0;
 }

@@ -16,6 +16,9 @@ import { authFile } from "./env";
 //
 // Statische Routen des Mitgliederbereichs. Breite Tabellen, Kalender und Heatmaps dürfen
 // innerhalb ihrer Karte scrollen – solche Vorfahren werden unten nicht als Verursacher gemeldet.
+// Zwei Einträge sind Alt-Routen und leiten per `redirect()` weiter (`/mitglieder/probenplanung`
+// → `/mitglieder/terminplanung?art=proben`); die Messung folgt dem Client-Redirect (siehe
+// `waitForStableWidth` in `scripts/lib/e2e-session.mjs`).
 const STATIC_ROUTES = [
   "/mitglieder",
   "/mitglieder/profil",

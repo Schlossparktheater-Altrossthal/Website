@@ -172,6 +172,16 @@ Prüfung gegen einen kalten Dev-Server Seiten als überlaufend, die im warmen La
 2026-09-29 fünf Fehlbefunde). Ein Fehlschlag nennt die äußerste überstehende Box und den Inhalt,
 der sie aufreißt. Lokal einmalig `pnpm exec playwright install chromium webkit`.
 
+Zur stabilen Breite gehört die **gleiche Adresse**. Zusätzlich überlebt die Messung einen
+Client-Redirect: Next liefert das `redirect()` einer Seite als Anweisung im RSC-Payload aus (HTTP
+200, kein 3xx), wenn ein Elter-Layout davor schon gestreamt hat – die Umleitung läuft dann erst
+nach der Hydration im Browser. Betroffen sind die eingedampften Alt-Routen
+`/mitglieder/probenplanung` und `/mitglieder/probenplanung/terminfinder`. Reißt dieser Wechsel die
+laufende `page.evaluate`-Messung ab, beginnt sie auf der Zielseite neu, statt den Lauf mit
+„Execution context was destroyed“ zu beenden (CI am 2026-09-30, sechs Fehlschläge). Während des
+Dokumentwechsels ist `document.documentElement` kurz `null`; dieser Zwischenstand liefert bewusst
+keinen Wert (eine `0` würde als „kein Überlauf“ durchgehen).
+
 Für Screenshots akzeptiert `--viewport` die Presets `mobile`, `mobile-iphone` (402×874),
 `tablet-mini` (744×1133, iPad mini hochkant), `tablet-portrait`, `tablet-small` (768×1024),
 `tablet-landscape`, `desktop` sowie Komma-Listen und `all`. `--mobile` bleibt als Alias für
