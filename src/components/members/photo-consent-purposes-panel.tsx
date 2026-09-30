@@ -30,6 +30,7 @@ import {
   RefreshIcon,
   TrashIcon,
 } from "@/components/ui/action-icons";
+import { PHOTO_CONSENT_PURPOSE_TEMPLATES } from "@/data/photo-consent-purposes";
 import type { PhotoConsentPurposeAdminEntry, PhotoConsentShowOption } from "@/types/photo-consent";
 import type { DragEndEvent } from "@dnd-kit/core";
 
@@ -68,6 +69,9 @@ export function PhotoConsentPurposesPanel() {
   const [deactivateTarget, setDeactivateTarget] = useState<PhotoConsentPurposeAdminEntry | null>(
     null,
   );
+  const [templateTarget, setTemplateTarget] = useState<string | null>(null);
+  const [templateValue, setTemplateValue] = useState("");
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   const loadShows = useCallback(async () => {
     try {
@@ -197,6 +201,32 @@ export function PhotoConsentPurposesPanel() {
     }
   };
 
+  const applyTemplate = async () => {
+    if (!showId || !templateTarget) return;
+    const templateCode = templateTarget;
+    setTemplateTarget(null);
+    setApplyingTemplate(true);
+    try {
+      const response = await fetch("/api/photo-consents/purposes/template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showId, template: templateCode }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        toast.error(data?.error ?? "Vorlage konnte nicht angewendet werden");
+        return;
+      }
+      toast.success("Vorlage angewendet");
+      setTemplateValue("");
+      if (showId) void loadPurposes(showId);
+    } catch {
+      toast.error("Netzwerkfehler beim Anwenden der Vorlage");
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
   const persistOrder = useCallback(
     async (orderedIds: string[], previous: PhotoConsentPurposeAdminEntry[]) => {
       if (!showId) return;
@@ -255,6 +285,25 @@ export function PhotoConsentPurposesPanel() {
                 {shows.map((show) => (
                   <SelectItem key={show.id} value={show.id}>
                     {show.title} ({show.year})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={templateValue}
+              onValueChange={(value) => {
+                setTemplateValue(value);
+                setTemplateTarget(value);
+              }}
+              disabled={!showId || applyingTemplate}
+            >
+              <SelectTrigger className="h-9 w-44" aria-label="Vorlage anwenden">
+                <SelectValue placeholder="Vorlage anwenden" />
+              </SelectTrigger>
+              <SelectContent>
+                {PHOTO_CONSENT_PURPOSE_TEMPLATES.map((template) => (
+                  <SelectItem key={template.code} value={template.code}>
+                    {template.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -461,6 +510,31 @@ export function PhotoConsentPurposesPanel() {
         variant="destructive"
         onConfirm={() => void deactivate()}
         onCancel={() => setDeactivateTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={templateTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTemplateTarget(null);
+            setTemplateValue("");
+          }
+        }}
+        title="Vorlage anwenden?"
+        description={`Die Vorlage „${
+          PHOTO_CONSENT_PURPOSE_TEMPLATES.find((template) => template.code === templateTarget)
+            ?.label ??
+          templateTarget ??
+          ""
+        }“ ersetzt die Liste der Verwendungszwecke dieser Produktion. Nicht enthaltene Punkte werden deaktiviert, bestehende Auswahlen bleiben erhalten.`}
+        confirmLabel="Anwenden"
+        cancelLabel="Abbrechen"
+        variant="default"
+        onConfirm={() => void applyTemplate()}
+        onCancel={() => {
+          setTemplateTarget(null);
+          setTemplateValue("");
+        }}
       />
     </Card>
   );

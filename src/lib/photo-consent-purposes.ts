@@ -1,6 +1,9 @@
 import type { PhotoConsentPurpose, PhotoConsentPurposeAudience } from "@prisma/client";
 
-import { DEFAULT_PHOTO_CONSENT_PURPOSES } from "@/data/photo-consent-purposes";
+import {
+  DEFAULT_PHOTO_CONSENT_PURPOSES,
+  PHOTO_CONSENT_PURPOSE_TEMPLATES,
+} from "@/data/photo-consent-purposes";
 import { prisma } from "@/lib/prisma";
 
 export type PhotoConsentAudience = "adult" | "minor";
@@ -63,4 +66,50 @@ export async function listPhotoConsentPurposes(
   }
 
   return purposes.filter((purpose) => purposeAppliesToAudience(purpose.appliesTo, audience));
+}
+
+/**
+ * Setzt den Zweck-Katalog einer Produktion auf eine benannte Vorlage. Vorhandene Zwecke mit
+ * gleichem Code werden aktualisiert, fehlende angelegt und nicht enthaltene deaktiviert –
+ * bestehende Auswahlen und Versionen bleiben dadurch erhalten.
+ */
+export async function applyPhotoConsentTemplate(
+  showId: string,
+  templateCode: string,
+): Promise<void> {
+  const template = PHOTO_CONSENT_PURPOSE_TEMPLATES.find((entry) => entry.code === templateCode);
+  if (!template) {
+    throw new Error(`Unbekannte Vorlage: ${templateCode}`);
+  }
+
+  const codes = template.purposes.map((purpose) => purpose.code);
+  await prisma.$transaction([
+    ...template.purposes.map((purpose, index) =>
+      prisma.photoConsentPurpose.upsert({
+        where: { showId_code: { showId, code: purpose.code } },
+        create: {
+          showId,
+          code: purpose.code,
+          label: purpose.label,
+          description: purpose.description,
+          sortOrder: index,
+          appliesTo: purpose.appliesTo,
+          isRefusal: purpose.isRefusal,
+          isActive: true,
+        },
+        update: {
+          label: purpose.label,
+          description: purpose.description,
+          sortOrder: index,
+          appliesTo: purpose.appliesTo,
+          isRefusal: purpose.isRefusal,
+          isActive: true,
+        },
+      }),
+    ),
+    prisma.photoConsentPurpose.updateMany({
+      where: { showId, code: { notIn: codes } },
+      data: { isActive: false },
+    }),
+  ]);
 }

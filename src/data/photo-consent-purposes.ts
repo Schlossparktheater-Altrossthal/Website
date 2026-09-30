@@ -50,3 +50,56 @@ export const DEFAULT_PHOTO_CONSENT_PURPOSES: readonly PhotoConsentPurposeDefinit
 
 /** Schlüssel des Ablehnungs-Zwecks („gar nicht“). */
 export const REFUSAL_PURPOSE_CODE = "none";
+
+/** Benannte Vorlage für den Zweck-Katalog einer Produktion. */
+export type PhotoConsentPurposeTemplate = {
+  code: string;
+  label: string;
+  description: string;
+  purposes: readonly PhotoConsentPurposeDefinition[];
+};
+
+/**
+ * Vorlagen für den Zweck-Katalog. „Standard“ entspricht den bisherigen Standard-Zwecken.
+ * Vorlagen ersetzen den Katalog einer Produktion: nicht enthaltene Zwecke werden deaktiviert,
+ * bestehende Auswahlen bleiben nachvollziehbar erhalten.
+ */
+export const PHOTO_CONSENT_PURPOSE_TEMPLATES: readonly PhotoConsentPurposeTemplate[] = [
+  {
+    code: "standard",
+    label: "Standard",
+    description: "Private Aufnahmen, Programmheft und Werbung, Werbung auf Nachfrage, Ablehnung.",
+    purposes: DEFAULT_PHOTO_CONSENT_PURPOSES,
+  },
+  {
+    code: "nur-intern",
+    label: "Nur intern",
+    description: "Nur private Aufnahmen innerhalb der Gruppe plus Ablehnung – keine Werbung.",
+    purposes: [
+      DEFAULT_PHOTO_CONSENT_PURPOSES[0],
+      {
+        code: "none",
+        label: "Gar nicht",
+        description: "Keine Aufnahmen erlaubt.",
+        appliesTo: "both",
+        isRefusal: true,
+      },
+    ],
+  },
+  {
+    code: "ohne-social",
+    label: "Ohne Social Media",
+    description: "Private Aufnahmen und Programmheft/Werbung, aber ohne die Werbung auf Nachfrage.",
+    purposes: [
+      DEFAULT_PHOTO_CONSENT_PURPOSES[0],
+      DEFAULT_PHOTO_CONSENT_PURPOSES[1],
+      {
+        code: "none",
+        label: "Gar nicht",
+        description: "Keine Aufnahmen erlaubt.",
+        appliesTo: "both",
+        isRefusal: true,
+      },
+    ],
+  },
+];
