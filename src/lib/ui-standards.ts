@@ -27,6 +27,8 @@ export interface ModalFormDialogProps {
   footer?: React.ReactNode;
   onSave?: () => void;
   saveLabel?: string;
+  /** Zusätzliche Klassen für die Dialogfläche (ab 640 px), z. B. eine breitere Variante. */
+  contentClassName?: string;
 }
 
 export interface InlineScriptProps {

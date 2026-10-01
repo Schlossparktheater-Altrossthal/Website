@@ -13,6 +13,7 @@ export function ModalFormDialog({
   footer,
   onSave,
   saveLabel = "Speichern",
+  contentClassName,
 }: ModalFormDialogProps) {
   const effectiveFooter =
     footer ??
@@ -29,6 +30,7 @@ export function ModalFormDialog({
       title={title}
       description={description ?? title}
       showDescription={Boolean(description)}
+      className={contentClassName}
       footer={
         effectiveFooter ? (
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

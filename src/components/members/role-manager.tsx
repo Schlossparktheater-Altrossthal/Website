@@ -2,14 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RolePicker } from "@/components/members/role-picker";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { RolePicker } from "@/components/members/role-picker";
 import { UserAvatar } from "@/components/user-avatar";
 import { combineNameParts } from "@/lib/names";
-import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
+import { sortRoles, type Role } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function RoleManager({
@@ -300,247 +302,207 @@ export function RoleManager({
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden">
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <UserAvatar
-                email={profileEmail}
-                firstName={profileFirstName}
-                lastName={profileLastName}
-                name={displayName}
-                size={48}
-                className="h-12 w-12 text-lg"
+      <div className="flex items-start gap-3">
+        <UserAvatar
+          userId={userId}
+          email={profileEmail}
+          firstName={profileFirstName}
+          lastName={profileLastName}
+          name={displayName}
+          size={48}
+          className="h-12 w-12 shrink-0 text-lg"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium">{displayName}</p>
+          <p className="truncate text-sm text-muted-foreground">
+            {profileEmail || "Keine E-Mail hinterlegt"}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">ID: {userId}</p>
+        </div>
+        {dirty ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2 py-1 text-xs font-medium text-warning">
+            <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden />
+            Nicht gespeichert
+          </span>
+        ) : null}
+      </div>
+
+      <section className="space-y-3 border-t border-border/60 pt-5">
+        <div>
+          <h3 className="text-sm font-medium">Profil &amp; Zugang</h3>
+          <p className="text-xs text-muted-foreground">
+            Kontaktdaten aktualisieren oder ein neues Passwort hinterlegen.
+          </p>
+        </div>
+        <form className="space-y-4" onSubmit={handleProfileSave}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm sm:col-span-2">
+              <span>E-Mail</span>
+              <Input
+                type="email"
+                value={profileEmail}
+                onChange={(event) => setProfileEmail(event.target.value)}
+                autoComplete="email"
+                required
               />
+            </label>
+            <label className="block text-sm">
+              <span>Vorname</span>
+              <Input
+                value={profileFirstName}
+                onChange={(event) => setProfileFirstName(event.target.value)}
+                placeholder="Vorname"
+                required
+                autoComplete="given-name"
+              />
+            </label>
+            <label className="block text-sm">
+              <span>Nachname (optional)</span>
+              <Input
+                value={profileLastName}
+                onChange={(event) => setProfileLastName(event.target.value)}
+                placeholder="Nachname"
+                autoComplete="family-name"
+              />
+            </label>
+          </div>
 
-              <div className="min-w-0 flex-1">
-                <CardTitle className="mb-1 text-xl">{displayName}</CardTitle>
-                <p className="mb-3 text-sm text-muted-foreground">
-                  {profileEmail || "Keine E-Mail hinterlegt"}
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {selected.map((role) => (
-                    <span
-                      key={role}
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${ROLE_BADGE_VARIANTS[role]}`}
-                    >
-                      {ROLE_LABELS[role] ?? role}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="ml-4 flex flex-col items-end gap-2">
-              {dirty && (
-                <div className="flex items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-1 text-xs font-medium text-warning">
-                  <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-warning" />
-                  Nicht gespeichert
-                </div>
-              )}
+          <div className="space-y-3">
+            <span className="text-sm font-medium">Neues Passwort (optional)</span>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span>Passwort</span>
+                <PasswordInput
+                  value={profilePassword}
+                  onChange={(event) => setProfilePassword(event.target.value)}
+                  placeholder="Leer lassen, um das Passwort zu behalten"
+                  autoComplete="new-password"
+                />
+              </label>
+              <label className="block text-sm">
+                <span>Passwort bestätigen</span>
+                <PasswordInput
+                  value={profileConfirmPassword}
+                  onChange={(event) => setProfileConfirmPassword(event.target.value)}
+                  placeholder="Nur bei Änderung erforderlich"
+                  autoComplete="new-password"
+                />
+              </label>
             </div>
           </div>
-        </CardHeader>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Profil &amp; Zugang</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Aktualisiere Kontaktdaten oder hinterlege ein neues Passwort.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-6" onSubmit={handleProfileSave}>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-[auto,1fr]">
-              <div className="flex items-center gap-4">
-                <UserAvatar
-                  userId={userId}
-                  email={profileEmail}
-                  firstName={profileFirstName}
-                  lastName={profileLastName}
-                  name={displayName}
-                  size={64}
-                  className="h-16 w-16 text-lg"
-                />
-                <div>
-                  <div className="text-sm font-medium">{displayName}</div>
-                  <div className="text-xs text-muted-foreground">ID: {userId}</div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="block text-sm">
-                  <span>E-Mail</span>
-                  <Input
-                    type="email"
-                    value={profileEmail}
-                    onChange={(event) => setProfileEmail(event.target.value)}
-                    autoComplete="email"
-                    required
-                  />
-                </label>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block text-sm">
-                    <span>Vorname</span>
-                    <Input
-                      value={profileFirstName}
-                      onChange={(event) => setProfileFirstName(event.target.value)}
-                      placeholder="Vorname"
-                      required
-                      autoComplete="given-name"
-                    />
-                  </label>
-                  <label className="block text-sm">
-                    <span>Nachname (optional)</span>
-                    <Input
-                      value={profileLastName}
-                      onChange={(event) => setProfileLastName(event.target.value)}
-                      placeholder="Nachname"
-                      autoComplete="family-name"
-                    />
-                  </label>
-                </div>
-              </div>
+          {profileError ? (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+              {profileError}
             </div>
+          ) : null}
 
-            <div className="space-y-3">
-              <span className="text-sm font-medium">Neues Passwort (optional)</span>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="block text-sm">
-                  <span>Passwort</span>
-                  <PasswordInput
-                    value={profilePassword}
-                    onChange={(event) => setProfilePassword(event.target.value)}
-                    placeholder="Leer lassen, um das Passwort zu behalten"
-                    autoComplete="new-password"
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span>Passwort bestätigen</span>
-                  <PasswordInput
-                    value={profileConfirmPassword}
-                    onChange={(event) => setProfileConfirmPassword(event.target.value)}
-                    placeholder="Nur bei Änderung erforderlich"
-                    autoComplete="new-password"
-                  />
-                </label>
-              </div>
-            </div>
-
-            {profileError && (
-              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
-                {profileError}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between gap-3 border-t pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleProfileReset}
-                disabled={!profileDirty || profileSaving}
-              >
-                Zurücksetzen
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!profileDirty || profileSaving}
-                className="min-w-24"
-              >
-                {profileSaving ? "Speichern…" : "Speichern"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Rollen verwalten</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Wählen Sie die Rollen für diesen Benutzer aus
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <RolePicker
-            value={selected}
-            canEditOwner={canEditOwner}
-            onChange={(next) => {
-              const nextSet = new Set<Role>(next);
-              if (!canEditOwner) nextSet.delete("owner");
-              if (nextSet.size === 0) return;
-              const arr = sortRoles(Array.from(nextSet));
-              setSelected(arr);
-              setError(null);
-            }}
-          />
-
-          {availableCustomRoles.length > 0 && (
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-foreground">Zusätzliche Rollen</div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {availableCustomRoles.map((role) => {
-                  const active = selectedCustomIds.includes(role.id);
-                  return (
-                    <label
-                      key={role.id}
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-all ${
-                        active
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border hover:bg-accent hover:text-accent-foreground"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        checked={active}
-                        onChange={() =>
-                          setSelectedCustomIds((prev) =>
-                            prev.includes(role.id)
-                              ? prev.filter((id) => id !== role.id)
-                              : [...prev, role.id],
-                          )
-                        }
-                      />
-                      <span className="font-medium">{role.name}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">
-              <p className="text-sm font-medium text-destructive">{error}</p>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between border-t pt-4">
+          <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-3">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={handleRolesReset}
-              disabled={!rolesDirty || saving}
+              onClick={handleProfileReset}
+              disabled={!profileDirty || profileSaving}
             >
-              Zurücksetzen
+              Verwerfen
             </Button>
-            <Button
-              type="button"
+            <AsyncButton
+              type="submit"
               size="sm"
-              onClick={handleRolesSave}
-              disabled={!rolesDirty || saving || selected.length === 0}
-              className="min-w-24"
+              isLoading={profileSaving}
+              loadingText="Speichern…"
+              disabled={!profileDirty}
             >
-              {saving ? "Speichern…" : "Speichern"}
-            </Button>
+              Speichern
+            </AsyncButton>
           </div>
-        </CardContent>
-      </Card>
+        </form>
+      </section>
+
+      <section className="space-y-3 border-t border-border/60 pt-5">
+        <div>
+          <h3 className="text-sm font-medium">Rollen</h3>
+          <p className="text-xs text-muted-foreground">
+            Bestimmt, welche Bereiche diese Person sieht und bearbeiten darf.
+          </p>
+        </div>
+        <RolePicker
+          value={selected}
+          canEditOwner={canEditOwner}
+          onChange={(next) => {
+            const nextSet = new Set<Role>(next);
+            if (!canEditOwner) nextSet.delete("owner");
+            if (nextSet.size === 0) return;
+            const arr = sortRoles(Array.from(nextSet));
+            setSelected(arr);
+            setError(null);
+          }}
+        />
+
+        {availableCustomRoles.length > 0 ? (
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">Zusätzliche Rollen</div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {availableCustomRoles.map((role) => {
+                const active = selectedCustomIds.includes(role.id);
+                return (
+                  <label
+                    key={role.id}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors",
+                      active
+                        ? "border-primary/60 bg-primary/10 text-primary"
+                        : "border-border hover:bg-accent/40",
+                    )}
+                  >
+                    <Checkbox
+                      checked={active}
+                      onCheckedChange={() =>
+                        setSelectedCustomIds((prev) =>
+                          prev.includes(role.id)
+                            ? prev.filter((id) => id !== role.id)
+                            : [...prev, role.id],
+                        )
+                      }
+                      aria-label={`${role.name} ${active ? "abwählen" : "auswählen"}`}
+                    />
+                    <span className="min-w-0 truncate font-medium">{role.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+            <p className="text-sm font-medium text-destructive">{error}</p>
+          </div>
+        ) : null}
+
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleRolesReset}
+            disabled={!rolesDirty || saving}
+          >
+            Verwerfen
+          </Button>
+          <AsyncButton
+            type="button"
+            size="sm"
+            onClick={handleRolesSave}
+            isLoading={saving}
+            loadingText="Speichern…"
+            disabled={!rolesDirty || selected.length === 0}
+          >
+            Speichern
+          </AsyncButton>
+        </div>
+      </section>
     </div>
   );
 }

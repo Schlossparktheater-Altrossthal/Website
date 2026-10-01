@@ -320,6 +320,13 @@ lg:grid-cols-4`.
 - `FormSaveBar`: Speichern/Verwerfen; haftet bei ungespeicherten Änderungen am unteren Rand.
   Muss direktes Kind des `<form>` sein, sonst greift `sticky` nicht.
 - `DateBadge`: Kalenderblatt (Wochentag + Tag) als `leading` für `ListRow`.
+- `ModalFormDialog`/`ResponsivePanel`: Überlagerungen für Formulare und Editoren – auf dem Handy
+  ein Bottom-Sheet, ab 640 px ein zentrierter Dialog. Beide begrenzen die Höhe (`max-h-[85dvh]`
+  bzw. `90dvh`) und lassen nur den Inhalt scrollen, damit Kopf und Aktionsfuß stehen bleiben.
+  Kein eigener `DialogContent` für Formulare.
+- `RolePicker`: Rollenauswahl als Popover. Der Inhalt liegt in einem Portal, damit er in einem
+  scrollenden Dialog nicht am Rand des Scrollcontainers abgeschnitten wird – eigene
+  `absolute`-Panels haben dieses Problem.
 
 ### Kalender & Verfügbarkeit (`@/components/ui/*`)
 

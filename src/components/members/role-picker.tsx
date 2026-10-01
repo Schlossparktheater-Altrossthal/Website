@@ -1,14 +1,25 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ROLE_BADGE_VARIANTS, ROLE_LABELS, ROLES, type Role } from "@/lib/roles";
 
+import { useMemo, useState } from "react";
+
+import { RoleChips } from "@/components/members/role-chips";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLES, type Role } from "@/lib/roles";
+import { cn } from "@/lib/utils";
+
+/**
+ * Rollen-Auswahl als Popover. Das Popup wird in ein Portal gerendert, damit es auch in
+ * scrollenden Dialogen vollständig sichtbar bleibt (ein absolut positioniertes Panel würde
+ * am Rand des Scrollcontainers abgeschnitten).
+ */
 export function RolePicker({
   value,
   onChange,
   canEditOwner = false,
-  className = "",
+  className,
 }: {
   value: Role[];
   onChange: (next: Role[]) => void;
@@ -17,109 +28,79 @@ export function RolePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      const t = e.target as Node;
-      if (panelRef.current?.contains(t)) return;
-      if (triggerRef.current?.contains(t)) return;
-      setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
 
   const selected = useMemo(() => new Set(value), [value]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return ROLES;
-    return ROLES.filter((r) => (ROLE_LABELS[r] ?? r).toLowerCase().includes(q));
+    return ROLES.filter((role) => (ROLE_LABELS[role] ?? role).toLowerCase().includes(q));
   }, [query]);
 
   const toggle = (role: Role) => {
     if (role === "owner" && !canEditOwner) return;
-    const isActive = selected.has(role);
-    const next = isActive ? value.filter((r) => r !== role) : [...value, role];
-    onChange(next);
+    onChange(selected.has(role) ? value.filter((r) => r !== role) : [...value, role]);
   };
 
   return (
-    <div className={`relative ${className}`}>
-      <Button
-        ref={triggerRef}
-        type="button"
-        variant="outline"
-        className="flex items-center gap-2"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span>Rollen wählen</span>
-        <span className="flex flex-wrap gap-1 max-w-[18rem]">
-          {value.slice(0, 3).map((role) => (
-            <span
-              key={role}
-              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[role]}`}
-            >
-              {ROLE_LABELS[role] ?? role}
-            </span>
-          ))}
-          {value.length > 3 && (
-            <span className="text-xs text-muted-foreground">+{value.length - 3}</span>
-          )}
-        </span>
-      </Button>
-
-      {open && (
-        <div
-          ref={panelRef}
-          className="absolute z-50 mt-2 w-80 rounded-md border border-border bg-popover p-2 shadow-lg"
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn("flex h-auto min-h-11 max-w-full items-center gap-2", className)}
         >
+          <span className="shrink-0">Rollen wählen</span>
+          <RoleChips roles={value} max={3} className="min-w-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={6} className="w-80 max-w-[calc(100vw-2rem)] p-0">
+        <div className="border-b border-border/60 p-2">
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Rollen suchen…"
+            aria-label="Rollen suchen"
           />
-          <div className="mt-2 max-h-64 overflow-auto pr-1">
-            {filtered.map((role) => {
-              const active = selected.has(role);
-              const disabled = role === "owner" && !canEditOwner;
-              return (
+        </div>
+        <ul className="max-h-64 overflow-y-auto p-1">
+          {filtered.map((role) => {
+            const active = selected.has(role);
+            const disabled = role === "owner" && !canEditOwner;
+            return (
+              <li key={role}>
                 <label
-                  key={role}
-                  className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-sm hover:bg-accent/40 ${
-                    disabled ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-accent/40",
+                    disabled && "cursor-not-allowed opacity-50",
+                  )}
                 >
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={active}
-                      onChange={() => toggle(role)}
-                      disabled={disabled}
-                    />
-                    <span>{ROLE_LABELS[role] ?? role}</span>
-                  </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${ROLE_BADGE_VARIANTS[role]}`}
-                  >
-                    {role}
+                  <Checkbox
+                    checked={active}
+                    onCheckedChange={() => toggle(role)}
+                    disabled={disabled}
+                    aria-label={`${ROLE_LABELS[role] ?? role} ${active ? "abwählen" : "auswählen"}`}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{ROLE_LABELS[role] ?? role}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {ROLE_DESCRIPTIONS[role]}
+                    </span>
                   </span>
                 </label>
-              );
-            })}
-            {filtered.length === 0 && (
-              <div className="px-2 py-4 text-sm text-muted-foreground">Keine Treffer</div>
-            )}
-          </div>
-          <div className="mt-2 flex justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              Schließen
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+              </li>
+            );
+          })}
+          {filtered.length === 0 ? (
+            <li className="px-2 py-4 text-center text-sm text-muted-foreground">Keine Treffer</li>
+          ) : null}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }

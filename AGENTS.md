@@ -80,6 +80,13 @@ stehen in den Leitfäden unter `docs/` (`design-system.md`, `development.md`, `d
   - Ladezustand: `AsyncButton`, nie `Button` + `Loader2`.
   - Destruktive Bestätigung: `ConfirmDialog`; `window.confirm`/`prompt` verboten.
   - Create/Edit-Dialoge: `ModalFormDialog`. Props geteilter Patterns: `src/lib/ui-standards.ts`.
+  - **Überlagerungen begrenzen ihre Höhe:** Formular-Dialoge und -Panels lassen nur den Inhalt
+    scrollen (Kopf und Aktionsfuß bleiben stehen); die Höhe deckelt `BottomSheet`/`DialogContent`
+    (`max-h-[90dvh]`). Kein roher `DialogContent` mit `overflow-visible` für längere Formulare
+    (Mitglieder-Panel, 2026-10-01).
+  - **Popups in Dialogen gehören in ein Portal:** Ein selbst gebautes `absolute`-Panel schneidet
+    der Scrollcontainer des Dialogs ab. Popover, Dropdowns und Selects aus `src/components/ui`
+    (Radix) rendern in ein Portal und bleiben vollständig sichtbar (Beispiel: `RolePicker`).
   - Personenbilder nur über `UserAvatar` (Felder via `toAvatarFields`), keine eigenen
     Initialen-Kreise.
   - Badges über `Badge` mit Status-Tokens: success aktiv, warning ausstehend, destructive

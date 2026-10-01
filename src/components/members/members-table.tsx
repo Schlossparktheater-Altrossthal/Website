@@ -41,6 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
 import {
   Select,
   SelectContent,
@@ -333,15 +334,19 @@ export function MembersTable({
             icon: <EditIcon className="h-4 w-4" aria-hidden />,
             onSelect: () => setOpenFor(u.id),
           },
-          {
-            label: "Aus Produktion entfernen",
-            icon: <UserMinusIcon className="h-4 w-4" aria-hidden />,
-            disabled: !u.production,
-            onSelect: () => {
-              setProductionTarget(u);
-              setProductionDialogOpen(true);
-            },
-          },
+          // Nur wer in der gewählten Produktion dabei ist, kann wieder aus ihr entfernt werden.
+          ...(u.production
+            ? [
+                {
+                  label: "Aus Produktion entfernen",
+                  icon: <UserMinusIcon className="h-4 w-4" aria-hidden />,
+                  onSelect: () => {
+                    setProductionTarget(u);
+                    setProductionDialogOpen(true);
+                  },
+                },
+              ]
+            : []),
           {
             label: u.isDeactivated ? "Reaktivieren" : "Deaktivieren",
             icon: u.isDeactivated ? (
@@ -744,68 +749,66 @@ export function MembersTable({
           void removeFromProduction(target);
         }}
       />
-      <Dialog
+      <ModalFormDialog
         open={Boolean(editUser)}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setOpenFor(null);
         }}
+        title={editUser ? `${getDisplayName(editUser) || "Mitglied"} bearbeiten` : "Mitglied"}
+        description="Rollen und Kontaktdaten"
+        contentClassName="sm:max-w-3xl"
       >
         {editUser ? (
-          <DialogContent className="sm:max-w-3xl overflow-visible">
-            <DialogHeader>
-              <DialogTitle>{getDisplayName(editUser) || "Mitglied"} bearbeiten</DialogTitle>
-              <DialogDescription>Rollen und Kontaktdaten</DialogDescription>
-            </DialogHeader>
-            <RoleManager
-              userId={editUser.id}
-              email={editUser.email}
-              firstName={editUser.firstName}
-              lastName={editUser.lastName}
-              name={getDisplayName(editUser)}
-              initialRoles={editUser.roles}
-              canEditOwner={canEditOwner}
-              availableCustomRoles={availableCustomRoles}
-              initialCustomRoleIds={editUser.customRoles.map((r) => r.id)}
-              onSaved={({ roles, customRoleIds }) => {
-                setRows((prev) =>
-                  prev.map((row) =>
-                    row.id === editUser.id
-                      ? {
-                          ...row,
-                          roles,
-                          customRoles: availableCustomRoles.filter((cr) =>
-                            customRoleIds.includes(cr.id),
-                          ),
-                        }
-                      : row,
-                  ),
-                );
-              }}
-              onUserUpdated={({ email, firstName, lastName, name }) => {
-                setRows((prev) =>
-                  prev.map((row) =>
-                    row.id === editUser.id
-                      ? {
-                          ...row,
-                          email: email ?? row.email,
-                          firstName: firstName !== undefined ? firstName : row.firstName,
-                          lastName: lastName !== undefined ? lastName : row.lastName,
-                          name:
-                            name ??
-                            combineNameParts(
-                              firstName !== undefined ? firstName : row.firstName,
-                              lastName !== undefined ? lastName : row.lastName,
-                            ) ??
-                            row.name,
-                        }
-                      : row,
-                  ),
-                );
-              }}
-            />
-          </DialogContent>
+          <RoleManager
+            key={editUser.id}
+            userId={editUser.id}
+            email={editUser.email}
+            firstName={editUser.firstName}
+            lastName={editUser.lastName}
+            name={getDisplayName(editUser)}
+            initialRoles={editUser.roles}
+            canEditOwner={canEditOwner}
+            availableCustomRoles={availableCustomRoles}
+            initialCustomRoleIds={editUser.customRoles.map((r) => r.id)}
+            onSaved={({ roles, customRoleIds }) => {
+              setRows((prev) =>
+                prev.map((row) =>
+                  row.id === editUser.id
+                    ? {
+                        ...row,
+                        roles,
+                        customRoles: availableCustomRoles.filter((cr) =>
+                          customRoleIds.includes(cr.id),
+                        ),
+                      }
+                    : row,
+                ),
+              );
+            }}
+            onUserUpdated={({ email, firstName, lastName, name }) => {
+              setRows((prev) =>
+                prev.map((row) =>
+                  row.id === editUser.id
+                    ? {
+                        ...row,
+                        email: email ?? row.email,
+                        firstName: firstName !== undefined ? firstName : row.firstName,
+                        lastName: lastName !== undefined ? lastName : row.lastName,
+                        name:
+                          name ??
+                          combineNameParts(
+                            firstName !== undefined ? firstName : row.firstName,
+                            lastName !== undefined ? lastName : row.lastName,
+                          ) ??
+                          row.name,
+                      }
+                    : row,
+                ),
+              );
+            }}
+          />
         ) : null}
-      </Dialog>
+      </ModalFormDialog>
       <MemberStatusModal
         user={statusTarget}
         onClose={() => setStatusTarget(null)}

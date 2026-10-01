@@ -28,19 +28,26 @@ Berechtigungen konfigurieren.
 - `/mitglieder/mitgliederverwaltung/[userId]`: Bereiche Profil, Rechte, Aktivität.
 - Aktionen je Mitglied über das „⋯“ in der Mitgliederliste: Profil öffnen, Rollen & Daten
   bearbeiten, Aus Produktion entfernen, Deaktivieren/Reaktivieren, Löschen. „Aus Produktion
-  entfernen“ ist nur mit Mitgliedschaft in der aktiven Produktion aktiv und fragt vorher nach:
+  entfernen“ erscheint nur bei Mitgliedschaft in der aktiven Produktion (fehlt sie, ist der
+  Eintrag ausgeblendet statt deaktiviert) und fragt vorher nach:
   Die Mitgliedschaft wird **beendet**, nicht gelöscht (`status: "left"` + `leftAt`, siehe
   `leaveProductionMembership` in `src/lib/produktionen/memberships.ts`). Die abgeleiteten
   Ensemble-/Technik-Rollen und die Authentik-Service-Groups werden nachgezogen, Gewerke und
   Kalender-Einladungen bleiben unberührt. Danach zeigt die Produktionsspalte „—“ und die
   Person lässt sich über die Ensemble-Seite erneut aufnehmen („Ehemalige“).
+- „Rollen & Daten bearbeiten“ öffnet das Mitglieder-Panel (`ModalFormDialog`): auf dem Handy ein
+  Bottom-Sheet, ab 640 px ein zentrierter Dialog mit begrenzter Höhe (`max-h-[85dvh]`), in dem
+  nur der Inhalt scrollt. Das Panel enthält zwei unabhängig speicherbare Abschnitte („Profil &
+  Zugang“ und „Rollen“); die Rollenauswahl ist ein Popover und wird in ein Portal gerendert,
+  damit sie im scrollenden Panel nicht abgeschnitten wird.
 
 ## Wichtige Komponenten
 
 - `src/app/(members)/mitglieder/mitgliederverwaltung/` – Mitgliederseiten
 - `src/components/members/member-invite-manager.tsx` – Einladungen
 - `src/components/members/season-reset-settings-panel.tsx` – geschützte Rollen beim Jahreswechsel
-- `src/components/members/role-manager.tsx` – Rollen
+- `src/components/members/role-manager.tsx` – Profil- und Rolleneditor im Mitglieder-Panel
+- `src/components/members/role-picker.tsx` – Rollenauswahl als Popover
 - `src/components/members/permissions/` – Berechtigungs-Workbench
 
 ## Datenfluss
