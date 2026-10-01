@@ -82,6 +82,7 @@ erDiagram
     Show {
         string id PK
         ProductionStatus status "planning|active|finished|archived"
+        datetime premiereAt "T-0 der Produktionsplanung"
     }
     ProductionMembership {
         string showId FK
@@ -149,6 +150,11 @@ erDiagram
     User ||--o| CalendarFeed : "Kalender-Abo"
     Show ||--o{ FinalRehearsalDuty : ""
     User |o--o{ FinalRehearsalDuty : "Dienst / erstellt"
+    Show ||--o{ ShowMilestone : "Produktionsplan"
+    Department |o--o{ ShowMilestone : "verantwortlich"
+    ShowMilestone |o--o{ ShowMilestone : "Anker"
+    ShowMilestone ||--o{ MilestoneDependency : "von / nach"
+    ShowMilestone |o--o| CalendarEvent : "gespiegelter Termin"
     User ||--o{ AvailabilityDay : ""
     User ||--o{ AvailabilityTemplate : ""
     User ||--o{ BlockedDay : "Sperrliste"
@@ -167,7 +173,18 @@ erDiagram
     BlockedDay {
         BlockedDayKind kind "UK userId+date"
     }
+    ShowMilestone {
+        MilestoneKind kind "milestone|deadline|handover|review"
+        MilestoneAnchor anchorType "premiere|finalRehearsalStart|milestone|fixed"
+        int offsetDays
+        datetime dueAt "berechnet"
+    }
+    MilestoneDependency {
+        int lagDays "UK fromId+toId"
+    }
 ```
+
+Fristen im Produktionsplan rechnet `src/lib/planning/schedule.ts` (Anker + Offset, Puffer, Verzug, Zyklenprüfung); Konzept in `docs/Plan/projektplanung-plan.md`.
 
 ### Finanzen und persönliche Daten
 

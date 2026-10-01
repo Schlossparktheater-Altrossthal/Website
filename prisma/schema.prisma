@@ -336,6 +336,7 @@ model User {
   departmentMemberships           DepartmentMembership[]
   departmentTaskAssignments       DepartmentTaskAssignment[]
   departmentTasksCreated          DepartmentTask[]           @relation("DepartmentTaskCreator")
+  milestonesDone                  ShowMilestone[]            @relation("ShowMilestoneDoneBy")
   departmentMembershipsAssigned   DepartmentMembership[]     @relation("DepartmentMembershipAssignedBy")
   departmentTaskComments          DepartmentTaskComment[]    @relation("DepartmentTaskCommentAuthor")
   calendarEventsCreated           CalendarEvent[]
@@ -418,6 +419,8 @@ model Show {
   revealedAt              DateTime?
   finalRehearsalWeekStart DateTime?
   finalRehearsalWeekEnd   DateTime?
+  /// T−0-Anker der Produktionsplanung (docs/Plan/projektplanung-plan.md).
+  premiereAt              DateTime?
   meta                    Json?
   status                  ProductionStatus          @default(planning)
   statusChangedAt         DateTime?
@@ -437,6 +440,68 @@ model Show {
   departments             Department[]
   onboardingProfiles      MemberOnboardingProfile[]
   invites                 MemberInvite[]
+  milestones              ShowMilestone[]
+}
+
+enum MilestoneKind {
+  milestone
+  deadline
+  handover
+  review
+}
+
+enum MilestoneAnchor {
+  premiere
+  finalRehearsalStart
+  milestone
+  fixed
+}
+
+/// Frist im Produktionsplan, relativ zu Premiere, Endprobenwoche oder einem anderen Meilenstein.
+model ShowMilestone {
+  id                String                @id @default(cuid())
+  showId            String
+  /// Verantwortliches Gewerk.
+  departmentId      String?
+  title             String
+  description       String?
+  kind              MilestoneKind         @default(milestone)
+  anchorType        MilestoneAnchor       @default(premiere)
+  anchorMilestoneId String?
+  offsetDays        Int                   @default(0)
+  fixedDate         DateTime?
+  /// Aus Anker + Offset berechnet und gespeichert.
+  dueAt             DateTime?
+  doneAt            DateTime?
+  doneById          String?
+  calendarEventId   String?               @unique
+  position          Int                   @default(0)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  show              Show                  @relation(fields: [showId], references: [id], onDelete: Cascade)
+  department        Department?           @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  anchorMilestone   ShowMilestone?        @relation("MilestoneAnchorRef", fields: [anchorMilestoneId], references: [id], onDelete: SetNull)
+  anchoredBy        ShowMilestone[]       @relation("MilestoneAnchorRef")
+  doneBy            User?                 @relation("ShowMilestoneDoneBy", fields: [doneById], references: [id], onDelete: SetNull)
+  calendarEvent     CalendarEvent?        @relation(fields: [calendarEventId], references: [id], onDelete: SetNull)
+  successors        MilestoneDependency[] @relation("MilestoneDependencyFrom")
+  predecessors      MilestoneDependency[] @relation("MilestoneDependencyTo")
+
+  @@index([showId, dueAt])
+  @@index([departmentId])
+}
+
+/// „from“ fertig + lagDays ≤ „to“ fällig.
+model MilestoneDependency {
+  id      String        @id @default(cuid())
+  fromId  String
+  toId    String
+  lagDays Int           @default(0)
+  from    ShowMilestone @relation("MilestoneDependencyFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to      ShowMilestone @relation("MilestoneDependencyTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+  @@index([toId])
 }
 
 model FinalRehearsalDuty {
@@ -502,6 +567,7 @@ model Department {
   eventBlocks          EventBlock[]
   eventTasks           EventNote[]
   documents            DepartmentDocument[]
+  milestones           ShowMilestone[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([templateId])
@@ -987,6 +1053,7 @@ model CalendarEvent {
   protocolSentAt     DateTime?
   blockedDays        BlockedDay[]
   reminderDispatches EventReminderDispatch[]
+  milestone          ShowMilestone?
 
   @@index([start])
   @@index([departmentId, start])

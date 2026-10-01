@@ -1,6 +1,6 @@
 # Plan: Produktionsplanung – Meilensteine, Zeitleiste und neue Produktionsseite
 
-Stand: 2026-10-01. Entwurf, nichts umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-01. Phase 1 (Datenmodell + Rechnung) umgesetzt, Phase 2–7 offen. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -150,6 +150,8 @@ Orga     ● GEMA ────────────────────�
 
 Jede Phase einzeln auf Staging prüfbar; Schema-Änderungen additiv.
 
+**Umsetzungsnotizen Phase 1:** Premiere wird aus dem ersten Datum in `Show.dates` (`YYYY-MM-DD` bzw. `YYYY-MM-DD/YYYY-MM-DD`) vorbelegt; andere Formate bleiben leer. Fehlt ein Anker, bleibt `dueAt` leer (Ampel „unscheduled“), damit ist auch eine Produktion ohne Premiere planbar (Anker „festes Datum“). Puffer: Endpunkte vor der Premiere sind durch die Premiere begrenzt, Meilensteine danach ohne Nachfolger haben keinen Puffer-Wert; „kritisch“ heißt Puffer ≤ 0 vor einem offenen Nachfolger oder Verzug durch einen überfälligen Vorgänger.
+
 ## Entscheidungen (2026-10-01)
 
 - E1: Nur Fristen, keine Dauern; „kritischer Pfad“ = Kette ohne Puffer.
@@ -166,7 +168,7 @@ Jede Phase einzeln auf Staging prüfbar; Schema-Änderungen additiv.
 
 ## Checkliste
 
-- [ ] Phase 1 Datenmodell + Rechnung
+- [x] Phase 1 Datenmodell + Rechnung (Migration `20261001140000_production_plan_milestones`, `src/lib/planning/schedule.ts`; `DepartmentTask.milestoneId` folgt in Phase 5)
 - [ ] Phase 2 Neue Produktionsseite (Gerüst)
 - [ ] Phase 3 Plan mobil (Agenda, Sheet)
 - [ ] Phase 4 Zeitleiste Desktop

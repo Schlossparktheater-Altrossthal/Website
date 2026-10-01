@@ -136,6 +136,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
       "Bereich zur Verwaltung von Gewerken, Besetzungen, Szenen und Breakdown-Aufgaben im Produktionsmanagement.",
     category: "pages",
   },
+  {
+    key: "PRIVATE.PRODUCTION.PLAN.MANAGE",
+    label: "Produktionsplan pflegen",
+    description:
+      "Meilensteine, Fristen und Abhängigkeiten der Produktion anlegen, verschieben und Vorlagen übernehmen.",
+    category: "pages",
+  },
   { key: "PRIVATE.ADMIN.MEMBERS.MANAGE", label: "Mitgliederverwaltung öffnen", category: "admin" },
   {
     key: "PRIVATE.ADMIN.INVITES.MANAGE",
