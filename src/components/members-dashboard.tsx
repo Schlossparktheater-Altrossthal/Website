@@ -9,7 +9,7 @@ import {
   WifiOffIcon,
 } from "@/components/ui/action-icons";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRealtime, useNotificationRealtime } from "@/hooks/useRealtime";
@@ -88,6 +88,8 @@ const TIME_ZONE = "Europe/Berlin";
 
 interface MembersDashboardProps {
   permissions?: readonly string[];
+  /** Serverseitig gerenderte Karte „Meine Aufgaben“ (nur wenn es Aufgaben gibt). */
+  tasksSlot?: ReactNode;
 }
 
 // Die Symbole kommen aus der Navigations-Registry (docs/Plan/seiten-icons-plan.md),
@@ -288,7 +290,10 @@ function DashboardSkeleton() {
   );
 }
 
-export function MembersDashboard({ permissions: permissionsProp }: MembersDashboardProps = {}) {
+export function MembersDashboard({
+  permissions: permissionsProp,
+  tasksSlot,
+}: MembersDashboardProps = {}) {
   const { data: session, status: sessionStatus } = useSession();
   const { connectionStatus } = useRealtime();
   const { totalOnline: liveOnline, onlineUsers, isLoading: onlineLoading } = useOnlineStats();
@@ -613,6 +618,7 @@ export function MembersDashboard({ permissions: permissionsProp }: MembersDashbo
           </Card>
 
           <div className="flex flex-col gap-4 lg:gap-6">
+            {tasksSlot}
             {profileCompletion && !profileCompletion.complete ? (
               <Card
                 variant="plain"

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileText } from "lucide-react";
 
 import { AlertIcon } from "@/components/ui/action-icons";
 import type { MyEventItem, MyEventTone } from "@/lib/calendar/my-events";
@@ -40,6 +41,30 @@ export const TONE_LABELS: Record<MyEventTone, string> = {
   event: "Termin",
 };
 
+const ATTENDANCE_SHORT: Record<
+  NonNullable<MyEventItem["attendance"]>,
+  { sign: string; tone: string; label: string }
+> = {
+  PRESENT: { sign: "✓", tone: "text-success", label: "du warst da" },
+  LATE: { sign: "◷", tone: "text-warning", label: "verspätet" },
+  LEFT_EARLY: { sign: "◷", tone: "text-warning", label: "früher gegangen" },
+  ABSENT: { sign: "✗", tone: "text-destructive", label: "gefehlt" },
+  EXCUSED: { sign: "–", tone: "text-muted-foreground", label: "entschuldigt" },
+};
+
+function AttendanceMark({ mark }: { mark: NonNullable<MyEventItem["attendance"]> }) {
+  const entry = ATTENDANCE_SHORT[mark];
+  return (
+    <span
+      className={cn("text-sm font-semibold", entry.tone)}
+      title={entry.label}
+      aria-label={entry.label}
+    >
+      {entry.sign}
+    </span>
+  );
+}
+
 function RowContent({ item }: { item: MyEventItem }) {
   const start = new Date(item.start);
   const declined = item.decline?.declined ?? false;
@@ -70,7 +95,14 @@ function RowContent({ item }: { item: MyEventItem }) {
         ) : null}
       </span>
       <span className="shrink-0 pt-0.5 text-xs">
-        {declined ? (
+        {item.bucket === "past" && (item.attendance || item.hasProtocol) ? (
+          <span className="flex items-center gap-1.5">
+            {item.attendance ? <AttendanceMark mark={item.attendance} /> : null}
+            {item.hasProtocol ? (
+              <FileText className="size-3.5 text-muted-foreground" aria-label="Protokoll" />
+            ) : null}
+          </span>
+        ) : declined ? (
           <span className="text-destructive">
             {item.decline?.emergency ? "Notfall" : "abgesagt"}
           </span>

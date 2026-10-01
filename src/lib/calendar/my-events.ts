@@ -1,3 +1,4 @@
+import type { AttendanceMark } from "@prisma/client";
 import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { getCalendarEntryKindLabel } from "@/lib/calendar/event-kinds";
 import { visibleEventStatus } from "@/lib/calendar/status";
@@ -40,6 +41,10 @@ export type MyEventItem = {
   withinFreeze: boolean;
   /** Eigene Sperrliste am Termintag: `blocked` oder `limited`, sonst `null`. */
   conflict: "blocked" | "limited" | null;
+  /** Vergangene Proben: eigene Anwesenheit laut Probenmodus. */
+  attendance: AttendanceMark | null;
+  /** Es gibt ein Probenprotokoll. */
+  hasProtocol: boolean;
   /** Warum die Person dabei ist. */
   reasons: string[];
   /** Gestaffelte Probe: Zeit der gesamten Probe, während `start`/`end` die eigene Zeit zeigen. */
@@ -141,6 +146,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         responseNote: true,
         personalStart: true,
         personalEnd: true,
+        attendance: true,
         event: {
           select: {
             id: true,
@@ -151,6 +157,9 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
             allDay: true,
             location: true,
             status: true,
+            actualStart: true,
+            protocolSentAt: true,
+            _count: { select: { notes: true } },
           },
         },
       },
@@ -222,7 +231,18 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
 
   const items: Omit<MyEventItem, "bucket" | "withinFreeze" | "conflict">[] = [
     ...rehearsals.map(
-      ({ level, reasons, response, responseNote, personalStart, personalEnd, event }) => ({
+      ({
+        level,
+        reasons,
+        response,
+        responseNote,
+        personalStart,
+        personalEnd,
+        attendance,
+        event,
+      }) => ({
+        attendance,
+        hasProtocol: !!(event.actualStart || event.protocolSentAt || event._count.notes),
         id: event.id,
         title: event.title,
         label: `${getCalendarEntryKindLabel(event.kind)}${event.status === "TENTATIVE" ? " · vorgemerkt" : ""}`,
@@ -263,6 +283,8 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
           guest ? `Gast im Gewerk ${event.department.name}` : `Gewerk ${event.department.name}`,
         ],
         fullTime: null,
+        attendance: null,
+        hasProtocol: false,
         decline: null,
       };
     }),
@@ -283,6 +305,8 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         group: "club" as const,
         reasons: [event.show ? "Termin deiner Produktion" : "Termin für alle"],
         fullTime: null,
+        attendance: null,
+        hasProtocol: false,
         decline: {
           declined: response === "no" || response === "emergency",
           note: own?.responseNote ?? null,

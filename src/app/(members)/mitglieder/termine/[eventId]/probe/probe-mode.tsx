@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
 import { CircleDashed, CircleSlash, MoreHorizontal, Play, WifiOff } from "lucide-react";
 
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon } from "@/components/ui/action-icons";
@@ -18,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Textarea } from "@/components/ui/textarea";
+import { AsyncButton } from "@/components/ui/async-button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useEventLiveRefresh } from "@/hooks/useEventLiveRefresh";
 import {
   ATTENDANCE_LABELS,
@@ -30,10 +33,13 @@ import {
   type ProtocolOp,
   type ProtocolPerson,
   type ProtocolState,
+  type AssigneeOption,
 } from "@/lib/calendar/protocol";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
 
+import { sendProtocolAction } from "./actions";
+import { NotesPanel } from "./notes-panel";
 import { useProtocolSync, type SyncStatus } from "./use-protocol-sync";
 
 const TIME = new Intl.DateTimeFormat("de-DE", {
@@ -587,6 +593,60 @@ function AttendancePanel({
   );
 }
 
+/** Abschluss: Zusammenfassung schreiben und das Protokoll verschicken. */
+function EndDialog({
+  open,
+  onOpenChange,
+  state,
+  ended,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  state: ProtocolState;
+  ended: boolean;
+  onConfirm: (result: { summary: string; send: boolean }) => void;
+}) {
+  const [summary, setSummary] = useState(state.summary);
+  const [send, setSend] = useState(!ended);
+  const done = state.blocks.filter((block) => block.outcome === "DONE").length;
+  const partial = state.blocks.filter((block) => block.outcome === "PARTIAL").length;
+  const attendance = countAttendance(state);
+  const tasks = state.notes.filter((note) => note.type === "TASK" && !note.doneAt).length;
+  const decisions = state.notes.filter((note) => note.type === "DECISION").length;
+  return (
+    <ModalFormDialog
+      title={ended ? "Zusammenfassung" : "Probe beenden"}
+      description={`${done} geschafft${partial ? `, ${partial} teilweise` : ""} · ${attendance.here} von ${attendance.expected} da · ${decisions} Entscheidungen · ${tasks} offene Aufgaben`}
+      open={open}
+      onOpenChange={onOpenChange}
+      footer={
+        <Button type="button" onClick={() => onConfirm({ summary, send })}>
+          {ended ? "Speichern" : "Probe beenden"}
+        </Button>
+      }
+    >
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <Label htmlFor="probe-summary">Was wurde geschafft? (freiwillig)</Label>
+          <Textarea
+            id="probe-summary"
+            value={summary}
+            onChange={(event) => setSummary(event.target.value)}
+            rows={4}
+            maxLength={8000}
+            placeholder="Kurz für alle: Stand, Stimmung, was nächstes Mal dran ist"
+          />
+        </div>
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <Checkbox checked={send} onCheckedChange={(value) => setSend(value === true)} />
+          Protokoll an alle Eingeladenen und Anwesenden schicken
+        </label>
+      </div>
+    </ModalFormDialog>
+  );
+}
+
 export function ProbeMode({
   eventId,
   title,
@@ -595,6 +655,8 @@ export function ProbeMode({
   serverState,
   candidates,
   scenes,
+  assignees,
+  sentAt,
 }: {
   eventId: string;
   title: string;
@@ -603,11 +665,32 @@ export function ProbeMode({
   serverState: ProtocolState;
   candidates: ProtocolCandidate[];
   scenes: { id: string; label: string }[];
+  assignees: AssigneeOption[];
+  /** Wann das Protokoll zuletzt verschickt wurde. */
+  sentAt: string | null;
 }) {
   useEventLiveRefresh(eventId);
   const { state, dispatch, status, pending } = useProtocolSync(eventId, serverState, candidates);
   const now = useNow();
-  const [tab, setTab] = useState<"ablauf" | "leute">("ablauf");
+  const [tab, setTab] = useState<"ablauf" | "leute" | "notizen">("ablauf");
+  const [ending, setEnding] = useState(false);
+  // Versand erst, wenn alle Änderungen beim Server sind (auch nach einer Offline-Phase).
+  const [sendWhenSynced, setSendWhenSynced] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!sendWhenSynced || status !== "synced" || sending) return;
+    setSending(true);
+    void sendProtocolAction({ eventId })
+      .then((result) => {
+        if (result.ok) toast.success("Protokoll verschickt", { duration: 3000 });
+        else toast.error("Nicht verschickt", { description: result.error, duration: 5000 });
+      })
+      .finally(() => {
+        setSending(false);
+        setSendWhenSynced(false);
+      });
+  }, [sendWhenSynced, status, sending, eventId]);
   const [adding, setAdding] = useState(false);
   const current = resolveCurrentBlock(state.blocks);
   const attendance = countAttendance(state);
@@ -662,20 +745,34 @@ export function ProbeMode({
             variant="outline"
             size="sm"
             className="w-full"
-            onClick={() => dispatch({ type: "event-time", field: "end", at: nowIso() })}
+            onClick={() => setEnding(true)}
           >
             Probe beenden
           </Button>
         ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="w-full"
-            onClick={() => dispatch({ type: "event-time", field: "end", at: null })}
-          >
-            Doch weiterproben
-          </Button>
+          <div className="flex gap-2">
+            <AsyncButton
+              type="button"
+              size="sm"
+              className="flex-1"
+              isLoading={sending || sendWhenSynced}
+              loadingText={status === "offline" ? "Sendet bei Netz…" : "Sendet…"}
+              onClick={() => setSendWhenSynced(true)}
+            >
+              {sentAt ? "Protokoll erneut senden" : "Protokoll senden"}
+            </AsyncButton>
+            <Button type="button" variant="outline" size="sm" onClick={() => setEnding(true)}>
+              Zusammenfassung
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => dispatch({ type: "event-time", field: "end", at: null })}
+            >
+              Weiterproben
+            </Button>
+          </div>
         )}
       </div>
 
@@ -686,8 +783,9 @@ export function ProbeMode({
           { value: "ablauf" as const, label: "Ablauf" },
           {
             value: "leute" as const,
-            label: `Anwesend ${attendance.here}/${attendance.expected}`,
+            label: `Da ${attendance.here}/${attendance.expected}`,
           },
+          { value: "notizen" as const, label: `Notizen ${state.notes.length}` },
         ]}
         fullWidth
         aria-label="Bereich wählen"
@@ -738,9 +836,24 @@ export function ProbeMode({
             dispatch={dispatch}
           />
         </div>
-      ) : (
+      ) : tab === "leute" ? (
         <AttendancePanel state={state} candidates={candidates} dispatch={dispatch} />
+      ) : (
+        <NotesPanel state={state} assignees={assignees} dispatch={dispatch} />
       )}
+
+      <EndDialog
+        open={ending}
+        onOpenChange={setEnding}
+        state={state}
+        ended={ended}
+        onConfirm={({ summary, send }) => {
+          if (summary !== state.summary) dispatch({ type: "summary", text: summary });
+          if (!ended) dispatch({ type: "event-time", field: "end", at: nowIso() });
+          if (send) setSendWhenSynced(true);
+          setEnding(false);
+        }}
+      />
 
       {status === "offline" ? (
         <Badge variant="outline" className="w-full justify-center border-warning text-warning">

@@ -15,6 +15,7 @@ import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { blockLabel } from "@/lib/calendar/scene-schedule";
 import { getUserDisplayName } from "@/lib/names";
 import { canEditProtocol } from "@/lib/calendar/protocol-server";
+import { readProtocolView, type ProtocolView } from "@/lib/calendar/protocol-view";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
@@ -63,6 +64,8 @@ export type EventViewProps = {
   protocolHref: string | null;
   rows: TimelineRow[];
   people: EventPerson[];
+  /** Probenprotokoll, sobald etwas erfasst ist. */
+  protocol: ProtocolView | null;
 };
 
 type ViewUser = Parameters<typeof hasPermission>[0];
@@ -289,6 +292,7 @@ export async function readEventView(
           : null,
       rows: buildTimeline(blocks),
       people,
+      protocol: event.departmentId ? null : await readProtocolView(event.id, userId, context),
     },
   };
 }

@@ -11,6 +11,8 @@ import {
 const base: ProtocolState = {
   actualStart: null,
   actualEnd: null,
+  summary: "",
+  notes: [],
   blocks: [
     {
       id: "b1",
@@ -92,6 +94,33 @@ describe("applyProtocolOp", () => {
   it("sortiert nach der neuen Reihenfolge", () => {
     const next = applyProtocolOp(base, { type: "block-order", blockIds: ["b2", "b1"] });
     expect(next.blocks.map((block) => block.id)).toEqual(["b2", "b1"]);
+  });
+});
+
+describe("Notizen", () => {
+  it("legt Aufgaben mit Zuständigen an und entfernt sie wieder", () => {
+    const added = applyProtocolOp(base, {
+      type: "note-add",
+      noteId: "n1",
+      noteType: "TASK",
+      text: "Koffer besorgen",
+      blockId: null,
+      assignee: { kind: "department", id: "d1" },
+      dueAt: "2026-10-11",
+    });
+    expect(added.notes[0]).toMatchObject({ assignee: { kind: "department" }, dueAt: "2026-10-11" });
+    const note = applyProtocolOp(base, {
+      type: "note-add",
+      noteId: "n2",
+      noteType: "NOTE",
+      text: "Licht zu dunkel",
+      blockId: "b1",
+      assignee: { kind: "user", id: "u1" },
+      dueAt: "2026-10-11",
+    });
+    // Nur Aufgaben haben Zuständige und Fristen.
+    expect(note.notes[0]).toMatchObject({ assignee: null, dueAt: null });
+    expect(applyProtocolOp(added, { type: "note-remove", noteId: "n1" }).notes).toHaveLength(0);
   });
 });
 

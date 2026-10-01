@@ -14,7 +14,7 @@ export default async function ProbePage({ params }: { params: Promise<{ eventId:
 
   const data = await readProtocol(eventId);
   if (!data) notFound();
-  const { event, state, candidates, scenes } = data;
+  const { event, state, candidates, scenes, assignees } = data;
   if (event.status === "DRAFT" || event.status === "CANCELLED") {
     redirect(`/mitglieder/termine/${eventId}`);
   }
@@ -38,6 +38,8 @@ export default async function ProbePage({ params }: { params: Promise<{ eventId:
         serverState={state}
         candidates={candidates}
         scenes={scenes}
+        assignees={assignees}
+        sentAt={event.protocolSentAt?.toISOString() ?? null}
       />
     </div>
   );

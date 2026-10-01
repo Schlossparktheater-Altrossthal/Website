@@ -18,6 +18,18 @@ export const ATTENDANCE_LABELS: Record<AttendanceMarkValue, string> = {
   EXCUSED: "entschuldigt",
 };
 
+export const NOTE_TYPES = ["NOTE", "DECISION", "TASK"] as const;
+export type NoteTypeValue = (typeof NOTE_TYPES)[number];
+
+export const NOTE_TYPE_LABELS: Record<NoteTypeValue, string> = {
+  NOTE: "Notiz",
+  DECISION: "Entscheidung",
+  TASK: "Aufgabe",
+};
+
+/** Zuständig für eine Aufgabe: eine Person, eine Figur (deren Besetzung) oder ein Gewerk. */
+export type TaskAssignee = { kind: "user" | "character" | "department"; id: string };
+
 export const OUTCOMES = ["DONE", "PARTIAL", "SKIPPED"] as const;
 export type OutcomeValue = (typeof OUTCOMES)[number];
 
@@ -49,6 +61,18 @@ export const protocolOpSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("guest-add"), guestId: id, name: z.string().trim().min(1).max(120) }),
   z.object({ type: z.literal("guest-remove"), guestId: id }),
+  z.object({
+    type: z.literal("note-add"),
+    noteId: id,
+    noteType: z.enum(NOTE_TYPES),
+    text: z.string().trim().min(1).max(4000),
+    blockId: id.nullable(),
+    assignee: z.object({ kind: z.enum(["user", "character", "department"]), id }).nullable(),
+    dueAt: z.string().date().nullable(),
+  }),
+  z.object({ type: z.literal("note-edit"), noteId: id, text: z.string().trim().min(1).max(4000) }),
+  z.object({ type: z.literal("note-remove"), noteId: id }),
+  z.object({ type: z.literal("summary"), text: z.string().max(8000) }),
 ]);
 
 export type ProtocolOp = z.infer<typeof protocolOpSchema>;
@@ -80,9 +104,25 @@ export type ProtocolPerson = {
   at: string | null;
 };
 
+export type ProtocolNote = {
+  id: string;
+  type: NoteTypeValue;
+  text: string;
+  blockId: string | null;
+  assignee: TaskAssignee | null;
+  dueAt: string | null;
+  doneAt: string | null;
+  createdAt: string;
+};
+
+/** Auswahl für Zuständige einer Aufgabe. */
+export type AssigneeOption = TaskAssignee & { label: string };
+
 export type ProtocolState = {
   actualStart: string | null;
   actualEnd: string | null;
+  summary: string;
+  notes: ProtocolNote[];
   blocks: ProtocolBlock[];
   people: ProtocolPerson[];
   guests: { id: string; name: string }[];
@@ -174,6 +214,35 @@ export function applyProtocolOp(
       return { ...state, guests: [...state.guests, { id: op.guestId, name: op.name }] };
     case "guest-remove":
       return { ...state, guests: state.guests.filter((guest) => guest.id !== op.guestId) };
+    case "note-add":
+      if (state.notes.some((note) => note.id === op.noteId)) return state;
+      return {
+        ...state,
+        notes: [
+          ...state.notes,
+          {
+            id: op.noteId,
+            type: op.noteType,
+            text: op.text,
+            blockId: op.blockId,
+            assignee: op.noteType === "TASK" ? op.assignee : null,
+            dueAt: op.noteType === "TASK" ? op.dueAt : null,
+            doneAt: null,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      };
+    case "note-edit":
+      return {
+        ...state,
+        notes: state.notes.map((note) =>
+          note.id === op.noteId ? { ...note, text: op.text } : note,
+        ),
+      };
+    case "note-remove":
+      return { ...state, notes: state.notes.filter((note) => note.id !== op.noteId) };
+    case "summary":
+      return { ...state, summary: op.text };
   }
 }
 

@@ -11,9 +11,12 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import type { TimelineRow } from "@/lib/calendar/event-timeline";
 import type { EventPerson, EventViewProps } from "@/lib/calendar/event-view-server";
+import { useSearchParams } from "next/navigation";
+
 import { useEventLiveRefresh } from "@/hooks/useEventLiveRefresh";
 import { cn } from "@/lib/utils";
 
+import { ProtocolSection } from "./protocol-section";
 import { DeclineControl } from "../../meine-proben/decline-control";
 
 type EventInfo = EventViewProps["event"];
@@ -233,14 +236,19 @@ export function EventView({
   protocolHref,
   rows,
   people,
+  protocol,
   layout = "page",
 }: EventViewProps & {
   /** `panel`: Vorschau neben einer Liste – Titel im Kopf, Ablauf und Leute immer umschaltbar. */
   layout?: "page" | "panel";
 }) {
   useEventLiveRefresh(event.id);
-  const panel = layout === "panel";
-  const [tab, setTab] = useState<"ablauf" | "leute">("ablauf");
+  // Mit Protokoll immer Reiter (Protokoll zuerst), sonst am Desktop Ablauf und Leute nebeneinander.
+  const panel = layout === "panel" || !!protocol;
+  const requested = useSearchParams().get("ansicht");
+  const [tab, setTab] = useState<"protokoll" | "ablauf" | "leute">(
+    protocol && requested !== "ablauf" ? "protokoll" : "ablauf",
+  );
   const attending = people.filter((person) => person.group !== "declined").length;
   const statusBadge = STATUS_BADGE[event.status];
 
@@ -351,6 +359,7 @@ export function EventView({
         value={tab}
         onValueChange={setTab}
         options={[
+          ...(protocol ? [{ value: "protokoll" as const, label: "Protokoll" }] : []),
           { value: "ablauf" as const, label: "Ablauf" },
           { value: "leute" as const, label: `Leute · ${attending}` },
         ]}
@@ -369,6 +378,7 @@ export function EventView({
           </h2>
           <People people={people} />
         </section>
+        {protocol && tab === "protokoll" ? <ProtocolSection protocol={protocol} /> : null}
       </div>
     </div>
   );
