@@ -38,8 +38,8 @@ Berechtigungen konfigurieren.
 - „Rollen & Daten bearbeiten“ öffnet das Mitglieder-Panel (`ModalFormDialog`): auf dem Handy ein
   Bottom-Sheet, ab 640 px ein zentrierter Dialog mit begrenzter Höhe (`max-h-[85dvh]`), in dem
   nur der Inhalt scrollt. Das Panel enthält zwei unabhängig speicherbare Abschnitte („Profil &
-  Zugang“ und „Rollen“); die Rollenauswahl ist ein Popover und wird in ein Portal gerendert,
-  damit sie im scrollenden Panel nicht abgeschnitten wird.
+  Zugang“ und „Rollen“); die Rollenauswahl (`RolePicker`) fasst Systemrollen und eigene Rollen
+  (z. B. „Regie“) in einem Popover zusammen.
 
 ## Wichtige Komponenten
 

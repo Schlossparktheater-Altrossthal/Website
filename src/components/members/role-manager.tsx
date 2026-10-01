@@ -5,13 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { RolePicker } from "@/components/members/role-picker";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { UserAvatar } from "@/components/user-avatar";
 import { combineNameParts } from "@/lib/names";
 import { sortRoles, type Role } from "@/lib/roles";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function RoleManager({
@@ -430,6 +428,12 @@ export function RoleManager({
         <RolePicker
           value={selected}
           canEditOwner={canEditOwner}
+          customRoles={availableCustomRoles}
+          customRoleIds={selectedCustomIds}
+          onCustomRolesChange={(ids) => {
+            setSelectedCustomIds(ids);
+            setError(null);
+          }}
           onChange={(next) => {
             const nextSet = new Set<Role>(next);
             if (!canEditOwner) nextSet.delete("owner");
@@ -439,41 +443,6 @@ export function RoleManager({
             setError(null);
           }}
         />
-
-        {availableCustomRoles.length > 0 ? (
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">Zusätzliche Rollen</div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {availableCustomRoles.map((role) => {
-                const active = selectedCustomIds.includes(role.id);
-                return (
-                  <label
-                    key={role.id}
-                    className={cn(
-                      "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors",
-                      active
-                        ? "border-primary/60 bg-primary/10 text-primary"
-                        : "border-border hover:bg-accent/40",
-                    )}
-                  >
-                    <Checkbox
-                      checked={active}
-                      onCheckedChange={() =>
-                        setSelectedCustomIds((prev) =>
-                          prev.includes(role.id)
-                            ? prev.filter((id) => id !== role.id)
-                            : [...prev, role.id],
-                        )
-                      }
-                      aria-label={`${role.name} ${active ? "abwählen" : "auswählen"}`}
-                    />
-                    <span className="min-w-0 truncate font-medium">{role.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
 
         {error ? (
           <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">

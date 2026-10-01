@@ -87,6 +87,14 @@ stehen in den Leitfäden unter `docs/` (`design-system.md`, `development.md`, `d
   - **Popups in Dialogen gehören in ein Portal:** Ein selbst gebautes `absolute`-Panel schneidet
     der Scrollcontainer des Dialogs ab. Popover, Dropdowns und Selects aus `src/components/ui`
     (Radix) rendern in ein Portal und bleiben vollständig sichtbar (Beispiel: `RolePicker`).
+  - **Portalisierte Popups in modalen Dialogen brauchen `modal` am Root:** Ein modaler Dialog
+    sperrt das Scrollen über `react-remove-scroll`; dessen Rad-Handler verwirft Ereignisse über
+    Inhalten, die außerhalb des Dialogs liegen (Portal) und keinen eigenen Scroll-Lock mitbringen.
+    Ohne `modal` am `Popover`-Root lässt sich eine Liste im Popup nicht scrollen (Mitglieder-Panel,
+    2026-10-01).
+  - **Eigene Rollen gehören in dieselbe Auswahl wie die Systemrollen**, nicht in einen zweiten
+    Block daneben – zwei Bedienelemente für denselben Zustand verwirren (`RolePicker`, Bereich
+    „Eigene Rollen“).
   - Personenbilder nur über `UserAvatar` (Felder via `toAvatarFields`), keine eigenen
     Initialen-Kreise.
   - Badges über `Badge` mit Status-Tokens: success aktiv, warning ausstehend, destructive

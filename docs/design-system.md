@@ -324,9 +324,12 @@ lg:grid-cols-4`.
   ein Bottom-Sheet, ab 640 px ein zentrierter Dialog. Beide begrenzen die Höhe (`max-h-[85dvh]`
   bzw. `90dvh`) und lassen nur den Inhalt scrollen, damit Kopf und Aktionsfuß stehen bleiben.
   Kein eigener `DialogContent` für Formulare.
-- `RolePicker`: Rollenauswahl als Popover. Der Inhalt liegt in einem Portal, damit er in einem
-  scrollenden Dialog nicht am Rand des Scrollcontainers abgeschnitten wird – eigene
-  `absolute`-Panels haben dieses Problem.
+- `RolePicker`: Rollenauswahl als Popover – Systemrollen (mit Beschreibung) und die eigenen Rollen
+  (z. B. „Regie“) in einer Liste, Suche filtert beide. Der Inhalt liegt in einem Portal, damit er
+  in einem scrollenden Dialog nicht am Rand des Scrollcontainers abgeschnitten wird (eigene
+  `absolute`-Panels haben genau dieses Problem). `modal` am `Popover`-Root ist Pflicht: Ein
+  modaler Dialog verwirft Rad-Ereignisse über portalierten Inhalten, solange diese keinen eigenen
+  Scroll-Lock mitbringen – die Liste ließe sich sonst nicht scrollen.
 
 ### Kalender & Verfügbarkeit (`@/components/ui/*`)
 
