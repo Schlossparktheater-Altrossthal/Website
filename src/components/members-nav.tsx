@@ -109,34 +109,22 @@ function MembersNavProductionSwitcher({
   const primaryLabel = activeProductionTitle ?? "Produktion wählen";
   const secondaryLabel = activeProduction
     ? `Jahrgang ${activeProduction.year}`
-    : "In der Übersicht auswählen";
+    : "Produktion wählen";
 
   const actions = useMemo<ProductionAction[]>(() => {
-    const items: ProductionAction[] = [
-      {
-        href: "/mitglieder/produktionen",
-        label: "Überblick",
-        description: activeProduction
-          ? "Wechsle die aktive Produktion oder verschaffe dir einen schnellen Überblick."
-          : "Wähle eine Produktion aus und verschaffe dir einen Überblick über die Planung.",
-      },
-    ];
-
+    const items: ProductionAction[] = [];
     if (activeProduction) {
       items.push({
-        href: `/mitglieder/produktionen/${activeProduction.id}`,
-        label: "Aktive Produktion",
-        description:
-          "Direkter Zugriff auf Besetzung, Szenen und Aufgaben deiner aktuellen Produktion.",
+        href: "/mitglieder/produktionen",
+        label: "Zur Produktion",
+        description: "Plan, Gewerke, Stück und Zuweisung der aktiven Produktion.",
       });
     }
-
     items.push({
-      href: "/mitglieder/produktionen#produktion-anlegen",
-      label: "Neue Produktion anlegen",
-      description: "Starte eine neue Saison und strukturiere Teams, Szenen und Zuständigkeiten.",
+      href: "/mitglieder/produktionen?verwalten=1",
+      label: "Produktionen verwalten",
+      description: "Wechseln, neu anlegen oder archivieren.",
     });
-
     return items;
   }, [activeProduction]);
 
@@ -192,7 +180,7 @@ function MembersNavProductionSwitcher({
                   <p className="text-xs text-muted-foreground">
                     {activeProduction
                       ? `Jahrgang ${activeProduction.year}`
-                      : "Wähle in der Übersicht eine aktive Produktion aus."}
+                      : "Noch keine aktive Produktion ausgewählt."}
                   </p>
                 </div>
                 <Separator className="bg-sidebar-border/60" />

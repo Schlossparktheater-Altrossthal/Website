@@ -486,6 +486,7 @@ model ShowMilestone {
   calendarEvent     CalendarEvent?        @relation(fields: [calendarEventId], references: [id], onDelete: SetNull)
   successors        MilestoneDependency[] @relation("MilestoneDependencyFrom")
   predecessors      MilestoneDependency[] @relation("MilestoneDependencyTo")
+  tasks             DepartmentTask[]
 
   @@index([showId, dueAt])
   @@index([departmentId])
@@ -626,10 +627,13 @@ model DepartmentTask {
   description  String?
   status       TaskStatus                 @default(todo)
   dueAt        DateTime?
+  /// Zugehöriger Meilenstein im Produktionsplan; ohne eigene Frist gilt dessen Fälligkeit.
+  milestoneId  String?
   createdById  String
   createdAt    DateTime                   @default(now())
   updatedAt    DateTime                   @updatedAt
   department   Department                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  milestone    ShowMilestone?             @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   column       DepartmentBoardColumn?     @relation(fields: [columnId], references: [id], onDelete: SetNull)
   creator      User                       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
   assignments  DepartmentTaskAssignment[]
@@ -637,6 +641,7 @@ model DepartmentTask {
   eventNote    EventNote?
 
   @@index([departmentId, status])
+  @@index([milestoneId])
   @@index([columnId, position])
   @@index([createdAt])
 }

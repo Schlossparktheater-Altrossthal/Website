@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { PageHeader } from "@/components/members/page-header";
+import { ProductionHeader } from "@/components/production/production-header";
 import { ProductionWorkspaceEmptyState } from "@/components/production/workspace-empty-state";
 import { getActiveProduction } from "@/lib/active-production";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
@@ -49,7 +50,7 @@ export default async function StueckPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={production.title ?? "Stück"} breadcrumbs={breadcrumbs} />
+      <ProductionHeader production={production} active="stueck" canManage />
       <Suspense>
         <StueckClient data={data} view={view} />
       </Suspense>

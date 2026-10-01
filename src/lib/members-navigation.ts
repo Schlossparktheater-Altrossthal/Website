@@ -57,7 +57,7 @@ export function selectMembersNavigation({
           items.splice(overviewIndex, 1);
         }
 
-        const activeHref = `/mitglieder/produktionen/${activeProduction.id}`;
+        const activeHref = "/mitglieder/produktionen";
         const activeIndex = items.findIndex((item) => item.href === activeHref);
         if (activeIndex !== -1) {
           items.splice(activeIndex, 1);

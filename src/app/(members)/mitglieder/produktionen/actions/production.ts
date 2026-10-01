@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { recalculateShowPlan } from "@/lib/planning/plan-service";
 import { ensureProductionDepartments } from "@/lib/departments/templates";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
@@ -153,6 +154,7 @@ export async function createProductionAction(formData: FormData): Promise<Produc
               ? formatDateOnly(startDate)
               : Prisma.JsonNull,
         revealedAt: revealDate ?? null,
+        premiereAt: startDate ?? null,
         finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
         finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
       },
@@ -279,6 +281,7 @@ export async function updateProductionTimelineAction(formData: FormData): Promis
     }
 
     const showId = readString(formData, "showId", { label: "Produktion" });
+    const premiereAt = parseOptionalDate(formData, "premiereAt", "Premiere");
     const finalRehearsalWeekStart = parseOptionalDate(
       formData,
       "finalRehearsalWeekStart",
@@ -303,12 +306,17 @@ export async function updateProductionTimelineAction(formData: FormData): Promis
       throw new Error("Das Ende der Endprobenwoche darf nicht vor dem Start liegen.");
     }
 
-    await prisma.show.update({
-      where: { id: showId },
-      data: {
-        finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
-        finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
-      },
+    // Fristen im Produktionsplan hängen an Premiere und Endprobenwoche – mitverschieben.
+    await prisma.$transaction(async (tx) => {
+      await tx.show.update({
+        where: { id: showId },
+        data: {
+          premiereAt: premiereAt ?? null,
+          finalRehearsalWeekStart: finalRehearsalWeekStart ?? null,
+          finalRehearsalWeekEnd: finalRehearsalWeekEnd ?? null,
+        },
+      });
+      await recalculateShowPlan(showId, tx);
     });
 
     revalidateShow(showId, redirectPath, true);

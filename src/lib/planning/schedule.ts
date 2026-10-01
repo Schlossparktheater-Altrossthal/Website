@@ -73,6 +73,19 @@ export function todayInTimeZone(
   return new Date(`${iso}T00:00:00.000Z`);
 }
 
+/** Tage von heute (Berlin) bis `target`; positiv = in der Zukunft, für „T−290“. */
+export function daysUntil(target: Date | null, now: Date = new Date()): number | null {
+  if (!target) return null;
+  return toDay(target) - toDay(todayInTimeZone(now));
+}
+
+/** „T−290“ vor, „T+3“ nach dem Stichtag. */
+export function formatCountdown(days: number | null): string | null {
+  if (days === null) return null;
+  if (days === 0) return "T−0";
+  return days > 0 ? `T−${days}` : `T+${-days}`;
+}
+
 export class PlanCycleError extends Error {
   constructor(readonly cycle: string[]) {
     super(`Zyklus im Plan: ${cycle.join(" → ")}`);

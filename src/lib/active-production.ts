@@ -169,6 +169,8 @@ export const getActiveProduction = cache(async (userId?: string | null) => {
       title: true,
       year: true,
       synopsis: true,
+      status: true,
+      premiereAt: true,
     },
   });
 

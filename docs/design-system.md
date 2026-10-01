@@ -654,8 +654,9 @@ tracking-wide text-muted-foreground`. `Heading` und `Text` stehen bereit, sind i
 8. **Abstände** — Seite `space-y-6`; dichtere Arbeitsseiten (`Stück`, `Teams & Zuweisung`)
    `space-y-4`.
 
-Neben diesen acht Seiten gibt es Bestand außerhalb des Musters: `/mitglieder/produktionen`
-setzt einen eigenen Workspace-Header (`components/production/workspace-header.tsx`), die
+Die Produktionsseiten (`/mitglieder/produktionen`, Gewerke, Stück, Zuweisung, Rückmeldungen)
+teilen sich `ProductionHeader` (`components/production/production-header.tsx`): Titel, Status,
+Premiere mit Countdown und `SectionNav` als Tabs. Bestand außerhalb des Musters: die
 Detailseiten von Produktionen und einige Einstellungsseiten ein eigenes `<h1>`; Mitglieder-Detail,
 Server-Analytics und Website & Theme nutzen noch orange gefüllte `TabsList`-Pills.
 

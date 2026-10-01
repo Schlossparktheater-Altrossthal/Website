@@ -23,9 +23,7 @@ describe("selectMembersNavigation", () => {
     const production = groups.find((group) => group.id === MEMBERS_NAV_PRODUCTION_GROUP_ID);
 
     expect(production).toBeDefined();
-    const item = production!.items.find(
-      (entry) => entry.href === `/mitglieder/produktionen/${activeProduction.id}`,
-    );
+    const item = production!.items.find((entry) => entry.href === "/mitglieder/produktionen");
 
     expect(item).toBeDefined();
     expect(item!.badge).toBe(String(activeProduction.year));

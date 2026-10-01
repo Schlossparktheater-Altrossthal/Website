@@ -62,6 +62,7 @@ export default async function ProduktionDetailPage({
   const activeProductionId = await getActiveProductionId(session.user?.id);
   const isActive = activeProductionId === show.id;
   const title = formatShowTitle(show);
+  const premiereValue = show.premiereAt ? show.premiereAt.toISOString().slice(0, 10) : "";
   const finalRehearsalWeekStartValue = show.finalRehearsalWeekStart
     ? show.finalRehearsalWeekStart.toISOString().slice(0, 10)
     : "";
@@ -173,7 +174,7 @@ export default async function ProduktionDetailPage({
 
       <Card id="endprobenwoche" className="scroll-mt-20">
         <CardHeader className="space-y-2">
-          <CardTitle className="text-lg font-semibold">Endprobenwoche</CardTitle>
+          <CardTitle className="text-lg font-semibold">Premiere &amp; Endprobenwoche</CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -186,6 +187,12 @@ export default async function ProduktionDetailPage({
               name="redirectPath"
               value={`/mitglieder/produktionen/${show.id}`}
             />
+            <div className="space-y-1 sm:max-w-xs">
+              <label className="text-sm font-medium" htmlFor="premiereAt">
+                Premiere
+              </label>
+              <DateInput id="premiereAt" name="premiereAt" defaultValue={premiereValue} />
+            </div>
             <div className="space-y-2 sm:max-w-xs">
               <div className="space-y-1">
                 <label className="text-sm font-medium" htmlFor="finalRehearsalWeekStart">
@@ -214,7 +221,7 @@ export default async function ProduktionDetailPage({
               </div>
             </div>
             <Button type="submit" className="sm:w-auto">
-              Zeitplan aktualisieren
+              Speichern
             </Button>
           </form>
         </CardContent>

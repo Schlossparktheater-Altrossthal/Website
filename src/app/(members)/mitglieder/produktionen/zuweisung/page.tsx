@@ -1,15 +1,12 @@
-import { PageHeader } from "@/components/members/page-header";
+import { ProductionHeader } from "@/components/production/production-header";
 import { getActiveProduction } from "@/lib/active-production";
 import { loadAssignmentData } from "@/lib/departments/assignments";
-import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { loadRolesAndScenes } from "@/lib/produktionen/roles-scenes";
 import { requireAuth } from "@/lib/rbac";
 
 import { AssignmentBoard } from "./assignment-board";
-
-const currentPath = "/mitglieder/produktionen/zuweisung";
 
 export default async function ZuweisungPage() {
   const session = await requireAuth();
@@ -34,14 +31,11 @@ export default async function ZuweisungPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Teams & Zuweisung"
-        description={
-          isManager
-            ? "Wünsche aus dem Onboarding ansehen und Personen Gewerken oder Rollen zuweisen."
-            : "Anfragen und Wünsche für die Gewerke, die du leitest."
-        }
-        breadcrumbs={[membersNavigationBreadcrumb(currentPath)]}
+      <ProductionHeader
+        production={activeProduction}
+        active="zuweisung"
+        canManage={isManager}
+        extraTabs={["zuweisung"]}
       />
       {activeProduction ? (
         <AssignmentBoard
