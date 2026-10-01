@@ -309,6 +309,8 @@ model User {
   eventParticipations             EventParticipant[]
   availability                    Availability[]
   tasks                           Task[]                     @relation("TaskAssignee")
+  eventNotesWritten               EventNote[]                @relation("EventNoteAuthor")
+  eventTasksAssigned              EventNote[]                @relation("EventNoteAssignee")
   // New availability relations
   availabilityDays                AvailabilityDay[]
   availabilityTemplates           AvailabilityTemplate[]
@@ -498,6 +500,7 @@ model Department {
   permissions          DepartmentPermission[]
   events               CalendarEvent[]
   eventBlocks          EventBlock[]
+  eventTasks           EventNote[]
   documents            DepartmentDocument[]
 
   @@unique([showId, slug], name: "showId_slug")
@@ -565,6 +568,7 @@ model DepartmentTask {
   creator      User                       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
   assignments  DepartmentTaskAssignment[]
   comments     DepartmentTaskComment[]
+  eventNote    EventNote?
 
   @@index([departmentId, status])
   @@index([columnId, position])
@@ -635,6 +639,7 @@ model Character {
   show               Show               @relation(fields: [showId], references: [id], onDelete: Cascade)
   castings           CharacterCasting[]
   sceneAppearances   SceneCharacter[]
+  eventTasks         EventNote[]
 
   @@index([showId, order])
 }
@@ -973,9 +978,13 @@ model CalendarEvent {
   responseLogs       EventResponseLog[]
   notifications      Notification[]
   guests             EventGuest[]
+  notes              EventNote[]
   /// Probenmodus: tatsächlicher Beginn und tatsächliches Ende.
   actualStart        DateTime?
   actualEnd          DateTime?
+  /// Protokoll: freie Zusammenfassung und wann es an die Teilnehmenden ging.
+  protocolSummary    String?
+  protocolSentAt     DateTime?
   blockedDays        BlockedDay[]
   reminderDispatches EventReminderDispatch[]
 
@@ -1023,6 +1032,43 @@ enum AttendanceMark {
   LEFT_EARLY
   ABSENT
   EXCUSED
+}
+
+enum EventNoteType {
+  NOTE
+  DECISION
+  TASK
+}
+
+/// Eintrag im Probenprotokoll: Notiz, Entscheidung oder Aufgabe (für Person, Figur oder Gewerk).
+model EventNote {
+  id               String          @id @default(cuid())
+  eventId          String
+  blockId          String?
+  type             EventNoteType   @default(NOTE)
+  text             String
+  authorId         String?
+  /// Aufgabe: zuständig ist genau eins von Person, Figur (deren Besetzung) oder Gewerk.
+  assigneeUserId   String?
+  characterId      String?
+  departmentId     String?
+  /// Gewerk-Aufgaben liegen zusätzlich als Karte im Gewerk-Board.
+  departmentTaskId String?         @unique
+  dueAt            DateTime?
+  doneAt           DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  event            CalendarEvent   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  block            EventBlock?     @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  author           User?           @relation("EventNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  assigneeUser     User?           @relation("EventNoteAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  character        Character?      @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  department       Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentTask   DepartmentTask? @relation(fields: [departmentTaskId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, createdAt])
+  @@index([assigneeUserId, doneAt])
+  @@index([characterId, doneAt])
 }
 
 /// Gast ohne Konto, der bei einer Probe dabei war.
@@ -1075,6 +1121,7 @@ model EventBlock {
   event        CalendarEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   scene        Scene?                 @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   department   Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  notes        EventNote[]
 
   @@unique([eventId, sceneId])
   @@index([sceneId])
@@ -1469,17 +1516,17 @@ enum PhotoConsentPurposeAudience {
 
 /// Fotoerlaubnis gilt pro Produktion und muss für jede Produktion neu erteilt werden.
 model PhotoConsent {
-  id                  String             @id @default(cuid())
+  id                  String                @id @default(cuid())
   userId              String
   showId              String
   revokedAt           DateTime?
-  status              PhotoConsentStatus @default(pending)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  status              PhotoConsentStatus    @default(pending)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
   approvedAt          DateTime?
   approvedById        String?
   rejectionReason     String?
-  exclusionNote       String?            @db.Text
+  exclusionNote       String?               @db.Text
   documentName        String?
   documentMime        String?
   documentSize        Int?
@@ -1488,9 +1535,9 @@ model PhotoConsent {
   signatureVersion    String?
   signatureCapturedAt DateTime?
   signaturePayload    Json?
-  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  show                Show               @relation(fields: [showId], references: [id], onDelete: Restrict)
-  approvedBy          User?              @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show                Show                  @relation(fields: [showId], references: [id], onDelete: Restrict)
+  approvedBy          User?                 @relation("PhotoConsentApprover", fields: [approvedById], references: [id])
   choices             PhotoConsentChoice[]
   versions            PhotoConsentVersion[]
 
@@ -1520,10 +1567,10 @@ model PhotoConsentPurpose {
 
 /// Angekreuzte bzw. nicht angekreuzte Zwecke des aktuellen Stands einer Fotoerlaubnis.
 model PhotoConsentChoice {
-  id        String  @id @default(cuid())
+  id        String              @id @default(cuid())
   consentId String
   purposeId String
-  chosen    Boolean @default(false)
+  chosen    Boolean             @default(false)
   consent   PhotoConsent        @relation(fields: [consentId], references: [id], onDelete: Cascade)
   purpose   PhotoConsentPurpose @relation(fields: [purposeId], references: [id], onDelete: Cascade)
 
@@ -1550,7 +1597,7 @@ model PhotoConsentVersion {
   submittedById       String?
   submittedAt         DateTime           @default(now())
   source              String             @default("member")
-  consent             PhotoConsent      @relation(fields: [consentId], references: [id], onDelete: Cascade)
+  consent             PhotoConsent       @relation(fields: [consentId], references: [id], onDelete: Cascade)
   submittedBy         User?              @relation("PhotoConsentVersionSubmitter", fields: [submittedById], references: [id])
 
   @@unique([consentId, version])
