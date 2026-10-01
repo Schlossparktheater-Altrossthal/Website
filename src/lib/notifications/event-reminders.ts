@@ -159,14 +159,10 @@ export async function readReminderSnapshot({
   ];
   const showIds = [
     ...new Set(
-      events.flatMap((event) =>
-        !event.departmentId && event.kind !== "REHEARSAL" && event.showId ? [event.showId] : [],
-      ),
+      events.flatMap((event) => (!event.departmentId && event.showId ? [event.showId] : [])),
     ),
   ];
-  const needsEveryone = events.some(
-    (event) => !event.departmentId && event.kind !== "REHEARSAL" && !event.showId,
-  );
+  const needsEveryone = events.some((event) => !event.departmentId && !event.showId);
 
   const departmentMembers = departmentIds.length
     ? await prisma.departmentMembership.findMany({
@@ -198,7 +194,7 @@ export async function readReminderSnapshot({
     if (!restricted) {
       if (event.departmentId) {
         audienceUserIds = membersByDepartment.get(event.departmentId) ?? [];
-      } else if (event.kind !== "REHEARSAL") {
+      } else {
         audienceUserIds = event.showId
           ? (membersByShow.get(event.showId) ?? [])
           : everyone.map((user) => user.id);

@@ -1,7 +1,7 @@
 # Plan: Terminplanung mit Zielgruppen, Szenen und Terminfinder
 
-Stand: 2026-09-27. Phase 1–5a umgesetzt, Phase 6 bis auf E2E und Release fertig. Checkliste am
-Ende wird gepflegt.
+Stand: 2026-10-01. Phase 1–5a umgesetzt, Phase 6 bis auf E2E und Release fertig, Phase 7
+(Konsistenz Art/Produktion/Zielgruppe) umgesetzt. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -211,7 +211,7 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
    - Gewerk-Dashboard zeigt Termine auch bei Beteiligung per Baustein, mit Kennzeichen „vorgemerkt“ und „Euer Teil“.
 5. [x] Editoren zusammenführen (2026-09-27, keine Migration):
    - Eine Seite **Terminplanung** (`/mitglieder/terminplanung`), Probenplanung leitet dorthin um (`?art=proben`), ein Navigationseintrag. Aufbau nach Vorbild der Sperrliste: Monatsraster, am Desktop Tagesspalte, mobil Tagesblatt (BottomSheet) mit Terminen samt „wer kann“, Sperrliste des Tages und großen Knöpfen „Probe“/„Termin“; daneben Listenansicht, Filter Alle/Proben/Termine, Entwürfe, zuklappbarer Szenen-Stand. Alter Probenkalender, Probenliste und Termin-Dialog sind entfernt (auch `/api/calendar-events`).
-   - Ein Editor (`/mitglieder/terminplanung/[eventId]`) für alle Arten: Art (mit Szenen immer Probe), ganztägig, mehrere Tage, Ort, Beschreibung auf Klick, „gilt für“ (nur ohne Probe), „Wer ist dabei?“ mit „Alle“ (ohne Einladung) oder Baukasten, Bausteine optional aufklappbar, feste Aktionsleiste unten (Verwerfen/Löschen, Vormerken, Ansetzen). Alle Termine durchlaufen jetzt Entwurf → vorgemerkt → angesetzt.
+   - Ein Editor (`/mitglieder/terminplanung/[eventId]`) für alle Arten: Art (mit Szenen immer Probe), ganztägig, mehrere Tage, Ort, Beschreibung auf Klick, „gilt für“ (nur ohne Probe; seit Phase 7 „Gehört zu“ bei jeder Art), „Wer ist dabei?“ mit „Alle“ (ohne Einladung) oder Baukasten, Bausteine optional aufklappbar, feste Aktionsleiste unten (Verwerfen/Löschen, Vormerken, Ansetzen). Alle Termine durchlaufen jetzt Entwurf → vorgemerkt → angesetzt.
    - Sperrliste: „Termin“ legt einen Entwurf an und öffnet den Editor; Termine im Tag öffnen den Editor.
    - `GENERAL_EVENT_WHERE` filtert jetzt auch den Status (Entwürfe allgemeiner Termine sind unsichtbar); vorgemerkte allgemeine Termine tragen „(vorgemerkt)“. Die übrigen `kind: "REHEARSAL"`-Stellen bleiben bewusst: Proben haben für Mitglieder eigene Einladung mit Absage.
    - Mitgliedersicht nach Einladung statt Art (2026-09-27): Jeder Termin mit persönlicher Einladung (Probe oder nicht) erscheint in Meine Termine mit Absage, im Feed mit eigener Zeit, auf der Detailseite `/mitglieder/proben/[id]`, benachrichtigt die Planung und zählt als Konflikt. `kind` ist nur noch Anzeige und Filter; übrig bleibt „Probe“ als Voraussetzung für Szenen, Nachbereitung und Szenen-Stand.
@@ -233,3 +233,38 @@ Wer ist dabei?                       23 Personen · 19 können · 3 eingeschrän
 - Einstieg Schritt 4 (erledigt): Szenen-Zeitplan in `src/lib/calendar/scene-schedule-server.ts` (`syncRehearsalSchedule`, filtert `type = SCENE`) und `src/components/calendar/scene-schedule-editor.tsx`; Teilnehmer-Auflösung in `src/lib/calendar/audience.ts`/`audience-server.ts`; Gewerk-Rechte über `requireBoardAccess` (`src/lib/departments/board.ts`), Gewerk-Termine in `src/app/(members)/mitglieder/meine-gewerke/event-actions.ts`.
 - Einstieg Schritt 5: Probeneditor `src/app/(members)/mitglieder/probenplanung/rehearsal-editor.tsx` + `actions/drafts.ts`/`actions/rehearsals.ts`, Termin-Dialog `src/components/calendar/event-dialog.tsx` + `src/app/api/calendar-events`, Seiten `terminplanung/` und `probenplanung/`, Filter `GENERAL_EVENT_WHERE` in `src/lib/calendar/entries.ts` und die übrigen `kind: "REHEARSAL"`-Stellen (`grep -rn '"REHEARSAL"' src`).
 - Prod-Release: Migrationen 20260928130000/130100 kommen zusätzlich zu denen aus Phase 1–5; vorher Backup und Migrationstest gegen Kopie der Staging-DB.
+
+## Phase 7: Art, Produktion und Zielgruppe entkoppeln (2026-10-01)
+
+Anlass: Bei migrierten Proben ließ sich im Ablauf nur „Sonstiges“ hinzufügen, die Produktion war
+mal wählbar, mal nicht.
+
+### Ist-Stand (Befunde)
+
+| #   | Befund                                                                                                                                                                                         | Stelle                                                                                         |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| B1  | Alle 13 migrierten Proben (2025) haben keine Produktion. Szenen und Gewerke kommen nur aus der Produktion, also blieb nur „Sonstiges“.                                                         | `loadAudienceContext(showId)` in `src/lib/calendar/audience-server.ts`                         |
+| B2  | „Gilt für“ war bei Proben ausgeblendet – eine Probe ohne Produktion ließ sich nicht zuordnen. Umweg: Art auf „Treffen“, Produktion wählen, zurück auf „Probe“.                                 | `event-editor.tsx` (`production && !isRehearsal`)                                              |
+| B3  | Die Art „Probe“ steuerte Verhalten: kein „Alle“, keine Erinnerungen ohne Einladung, Feed „alle Produktionen“ nur Proben, Absage nur mit Einladung, Gewerk-Portal-Antwort nur für Nicht-Proben. | `entries.ts`, `event-reminders.ts`, `feed.ts`, `event-view-server.ts`, `departments/events.ts` |
+| B4  | Zweimal „Alle“: „Gilt für: Alle Produktionen“ (Zuordnung) und „Wer ist dabei: Alle“ (Einladung).                                                                                               | Editor                                                                                         |
+| B5  | Wechsel „Gilt für“ löschte die ganze Zielgruppe, auch einzeln gewählte Personen.                                                                                                               | `changeScope`                                                                                  |
+| B6  | Kalender (Sperrliste) zeigte Proben allen, andere Termine mit Zielgruppe nur Eingeladenen; die Terminseite zeigt dagegen jedem Mitglied der Produktion alle Termine der Produktion.            | `readRehearsalEntries`/`readCalendarEvents` vs. `readEventView`                                |
+
+### Entscheidungen (2026-10-01)
+
+- E1: Drei getrennte Fragen. **Gehört zu** (Produktion oder keiner) liefert Szenen/Gewerke und ist bei jeder Art wählbar. **Wer ist dabei** (Alle bzw. Alle der Produktion, oder bestimmte Personen) steuert Sichtbarkeit, Antworten, Erinnerungen und Feed. **Art** ist nur Etikett (Farbe, Wort, Filter, Benachrichtigungskategorie).
+- E2: Alle künftigen Termine ohne Produktion (ab 01.10.2026, ohne Gewerk-Termine) gehören zur Produktion 2027 (Migration `20261001130000_future_events_production_2027`, Wunsch des Users).
+- E3: Auch eine Probe darf „Alle (der Produktion)“ sein. Mit Szenen gibt es kein „Alle“, weil die Besetzung eingeladen wird. Neue Proben starten weiter mit „Bestimmte Personen“.
+- E4: Wechsel „Gehört zu“ behält einzeln gewählte Personen; Produktionsregeln, Szenen und Gewerk-Programmpunkte fallen weg.
+- E5: Kalender-Sichtbarkeit wie die Terminseite: eingeladen, offen ohne Produktion, oder Mitglied der Produktion (`viewableEventWhere`).
+- E6: Gemeinsame Termine (nicht Gewerk-eigene) werden immer in „Meine Termine“ beantwortet (Absage mit Begründung), unabhängig von der Art. Das Gewerk-Portal antwortet nur auf Gewerk-Termine.
+- E7: Feed „alle Produktionen“: alle Termine meiner Produktionen, nicht nur Proben.
+
+Bewusst offen: ob Gewerk-eigene Termine (`departmentId`) in „Termin mit Gewerk-Programmpunkt“ aufgehen sollen; „Noch offen“ als Ort-Vorgabe und Endzeit-Pflicht bleiben bei Proben.
+
+### Checkliste Phase 7
+
+- [x] Migration Produktion 2027 für künftige Termine (gegen tp_test geprüft: 7 Termine zugeordnet)
+- [x] Editor: „Gehört zu“ immer sichtbar, Hinweis mit „Zu … zuordnen“ im Ablauf, „Alle“ auch für Proben, Wechsel behält Personen
+- [x] Kind-Sonderregeln entfernt (Erinnerungen, Feed, Antworten, Kalender, Ansetzen, Realtime)
+- [ ] Staging prüfen, dann Prod-Release zusammen mit Phase 5b/6

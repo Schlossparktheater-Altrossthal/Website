@@ -84,8 +84,6 @@ type EventEditorProps = {
 
 const KIND_OPTIONS: CalendarEventKind[] = ["REHEARSAL", ...CALENDAR_EVENT_KINDS];
 /** Keine Vorauswahl: Wer eingeladen ist, wählt die Planung bewusst aus. */
-const EMPTY_AUDIENCE: AudienceValue = { rules: [], overrides: [] };
-
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Gewerk-Bausteine als Einladungsquelle (für Vorschau und Abweichungen). */
@@ -140,11 +138,14 @@ export function EventEditor({
   const scopeChanged = scope !== (rehearsal.showId ? "production" : "all");
   const context = scopeChanged && otherContext ? otherContext : initialContext;
   const [audience, setAudience] = useState<AudienceValue>(initialAudience);
-  /** Termin für alle, ohne Einladung (nicht bei Proben). */
+  /**
+   * Termin für alle (der Produktion bzw. alle Mitglieder), ohne Einladung – bei jeder Art.
+   * Neue Proben beginnen mit „Bestimmte Personen“, weil sie meist gezielt einladen.
+   */
   const [open, setOpen] = useState(
-    rehearsal.kind !== "REHEARSAL" &&
-      !initialAudience.rules.length &&
-      !initialAudience.overrides.length,
+    !initialAudience.rules.length &&
+      !initialAudience.overrides.length &&
+      !(isDraft && rehearsal.kind === "REHEARSAL"),
   );
   // Veröffentlichte Termine: Zielgruppe nur senden, wenn die Planung sie geändert oder
   // Abweichungen übernommen hat – sonst keine stillen Einladungen.
@@ -199,7 +200,8 @@ export function EventEditor({
   // Mit Szenen ist es immer eine Probe.
   const effectiveKind: CalendarEventKind = sceneIds.length ? "REHEARSAL" : kind;
   const isRehearsal = effectiveKind === "REHEARSAL";
-  const openAudience = open && !isRehearsal;
+  // Szenen laden ihre Besetzung ein – dann gibt es kein „Alle“.
+  const openAudience = open && !sceneIds.length;
   const noun = isRehearsal ? "Probe" : "Termin";
 
   const invitedIds = useMemo(
@@ -275,18 +277,18 @@ export function EventEditor({
 
   const changeKind = (next: CalendarEventKind) => {
     setKind(next);
-    if (next === "REHEARSAL" && open) {
-      // Proben brauchen Eingeladene.
-      setOpen(false);
-      setShowBlocks(true);
-    }
+    if (next === "REHEARSAL") setShowBlocks(true);
   };
 
   const changeScope = (next: "production" | "all") => {
     setScope(next);
-    // Gewerke, Rollen und Szenen gehören zur Produktion: Zielgruppe neu beginnen.
-    changeAudience(EMPTY_AUDIENCE);
-    if (next === "all") setOpen(true);
+    // Gewerke, Rollen und Szenen gehören zur Produktion und fallen weg; einzeln ausgewählte
+    // Personen bleiben.
+    changeAudience({
+      rules: audience.rules.filter((rule) => rule.type === "USER"),
+      overrides: audience.overrides.filter((entry) => entry.override === "INCLUDED"),
+    });
+    changeBlocks(blocks.filter((block) => block.type !== "DEPARTMENT"));
   };
 
   const fetchDayChecks = useCallback(
@@ -643,18 +645,18 @@ export function EventEditor({
               </Button>
             )}
 
-            {production && !isRehearsal ? (
+            {production ? (
               <div className="flex flex-col gap-1.5 border-t border-border pt-3 sm:flex-row sm:items-center sm:gap-3">
-                <span className="shrink-0 text-xs text-muted-foreground">Gilt für</span>
+                <span className="shrink-0 text-xs text-muted-foreground">Gehört zu</span>
                 <SegmentedControl
-                  aria-label="Gilt für"
+                  aria-label="Gehört zu"
                   fullWidth
                   size="md"
                   value={scope}
                   onValueChange={changeScope}
                   options={[
                     { value: "production", label: production.title },
-                    { value: "all", label: "Alle Produktionen" },
+                    { value: "all", label: "Keiner Produktion" },
                   ]}
                 />
               </div>
@@ -698,6 +700,23 @@ export function EventEditor({
                 invitedIds={invitedIds}
               />
             ) : null}
+            {showBlocks && scope === "all" ? (
+              <p className="text-xs text-muted-foreground">
+                Szenen und Gewerke gibt es nur bei Terminen einer Produktion.
+                {production ? (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      className="font-medium text-foreground underline"
+                      onClick={() => changeScope("production")}
+                    >
+                      Zu {production.title} zuordnen
+                    </button>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
           </Card>
         </div>
 
@@ -711,13 +730,15 @@ export function EventEditor({
             size="sm"
             description={
               openAudience
-                ? "Der Termin erscheint bei allen – ohne Einladung und Zusage."
+                ? scope === "production"
+                  ? "Der Termin erscheint bei allen der Produktion – ohne Einladung."
+                  : "Der Termin erscheint bei allen – ohne Einladung."
                 : isCheckingBlocks
                   ? "Sperrliste wird geprüft …"
                   : undefined
             }
           />
-          {!isRehearsal ? (
+          {!sceneIds.length ? (
             <SegmentedControl
               aria-label="Wer ist eingeladen?"
               fullWidth
@@ -728,7 +749,7 @@ export function EventEditor({
                 setAudienceTouched(true);
               }}
               options={[
-                { value: "all", label: "Alle" },
+                { value: "all", label: scope === "production" ? "Alle der Produktion" : "Alle" },
                 { value: "targeted", label: "Bestimmte Personen" },
               ]}
             />

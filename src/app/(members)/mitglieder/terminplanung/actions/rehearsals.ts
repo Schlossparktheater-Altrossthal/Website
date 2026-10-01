@@ -252,7 +252,7 @@ export async function updateRehearsalAction(input: {
     );
 
     const touched = [...new Set([...targetInvitees, ...removedIds])];
-    if (touched.length && rehearsal.kind === "REHEARSAL") {
+    if (touched.length) {
       await broadcastRehearsalUpdated({
         rehearsalId: rehearsal.id,
         changes: {

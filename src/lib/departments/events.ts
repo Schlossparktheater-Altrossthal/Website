@@ -41,7 +41,7 @@ export type TeamEvent = {
   shared: boolean;
   /** Probe: Absage nur mit Begründung in „Meine Termine“. */
   rehearsal: boolean;
-  /** Ob die Person hier zu- oder absagen kann (Proben laufen über „Meine Termine“). */
+  /** Ob die Person hier zu- oder absagen kann (gemeinsame Termine laufen über „Meine Termine“). */
   respondable: boolean;
   /** Vorgemerkt, noch nicht verbindlich angesetzt. */
   tentative: boolean;
@@ -243,9 +243,8 @@ export async function loadTeamEvents(departmentId: string, viewerId: string, now
       invitedIds,
       shared,
       rehearsal: event.kind === "REHEARSAL",
-      respondable:
-        event.kind !== "REHEARSAL" &&
-        (!shared || invited.some((entry) => entry.user.id === viewerId)),
+      // Gemeinsame Termine beantworten Eingeladene in „Meine Termine“ (Absage mit Begründung).
+      respondable: !shared,
       tentative: event.status === "TENTATIVE",
       blocks: event.blocks.map((block) => ({
         id: block.id,

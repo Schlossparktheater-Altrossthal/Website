@@ -282,16 +282,19 @@ export async function GET() {
         context: event.department?.name ?? null,
         href: `/mitglieder/meine-gewerke/${event.department?.slug ?? ""}?ansicht=termine`,
       })),
-      ...calendarEvents.map((event) => ({
-        id: event.id,
-        kind: "event" as const,
-        title: event.title,
-        start: event.start.toISOString(),
-        end: event.end?.toISOString() ?? null,
-        location: event.location ?? null,
-        context: CALENDAR_EVENT_KIND_LABELS[event.kind],
-        href: "/mitglieder/sperrliste",
-      })),
+      // Eigene Proben stehen schon oben.
+      ...calendarEvents
+        .filter((event) => !upcomingRehearsals.some((rehearsal) => rehearsal.id === event.id))
+        .map((event) => ({
+          id: event.id,
+          kind: "event" as const,
+          title: event.title,
+          start: event.start.toISOString(),
+          end: event.end?.toISOString() ?? null,
+          location: event.location ?? null,
+          context: CALENDAR_EVENT_KIND_LABELS[event.kind],
+          href: "/mitglieder/sperrliste",
+        })),
     ]
       .sort((a, b) => a.start.localeCompare(b.start))
       .slice(0, 5);

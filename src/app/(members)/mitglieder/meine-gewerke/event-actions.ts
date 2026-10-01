@@ -18,11 +18,9 @@ import { resolveCalendarEventTimes } from "@/lib/calendar/event-input";
 import { EVENT_RESPONSE_STATUSES } from "@/lib/calendar/responses";
 import { requireBoardAccess } from "@/lib/departments/board";
 import { getUserDisplayName } from "@/lib/names";
-import { isVisibleStatus } from "@/lib/calendar/status";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
 import { parseDateTimeInTimeZone, formatIsoDateInTimeZone } from "@/lib/date-time";
 import { syncRehearsalSchedule } from "@/lib/probenplanung/actions-helpers";
@@ -246,39 +244,21 @@ export async function deleteTeamEventAction(input: {
 }
 
 /**
- * Wer antworten darf: bei Gewerk-Terminen Mitglieder des Gewerks, bei gemeinsamen Terminen,
- * zu denen ein Gewerk eingeladen ist, die Eingeladenen. Proben laufen über „Meine Termine“,
- * weil eine Absage dort eine Begründung braucht und die Planung benachrichtigt.
+ * Hier antworten nur Mitglieder auf Gewerk-Termine. Gemeinsame Termine laufen über „Meine
+ * Termine“, weil eine Absage dort eine Begründung braucht und die Planung benachrichtigt.
  */
 async function respondingUserId(eventId: string) {
   const event = await prisma.calendarEvent.findUnique({
     where: { id: eventId },
-    select: {
-      departmentId: true,
-      kind: true,
-      status: true,
-      audienceRules: { where: { type: "DEPARTMENT" }, select: { id: true } },
-      blocks: { where: { type: "DEPARTMENT" }, select: { id: true } },
-    },
+    select: { departmentId: true },
   });
   if (!event) throw new Error("Termin wurde nicht gefunden.");
-  if (event.departmentId) {
-    const access = await requireBoardAccess(event.departmentId);
-    if (!access.role) throw new Error("Nur Mitglieder des Gewerks können zu- oder absagen.");
-    return access.userId;
+  if (!event.departmentId) {
+    throw new Error("Auf gemeinsame Termine antwortest du in „Meine Termine“.");
   }
-  const invitesDepartments = event.audienceRules.length + event.blocks.length > 0;
-  if (!invitesDepartments || !isVisibleStatus(event.status) || event.kind === "REHEARSAL") {
-    throw new Error("Auf diesen Termin kannst du hier nicht antworten.");
-  }
-  const userId = (await requireAuth()).user?.id;
-  if (!userId) throw new Error("Nicht angemeldet.");
-  const invited = await prisma.eventParticipant.findFirst({
-    where: { eventId, userId, invited: true },
-    select: { id: true },
-  });
-  if (!invited) throw new Error("Du bist zu diesem Termin nicht eingeladen.");
-  return userId;
+  const access = await requireBoardAccess(event.departmentId);
+  if (!access.role) throw new Error("Nur Mitglieder des Gewerks können zu- oder absagen.");
+  return access.userId;
 }
 
 const responseSchema = z.object({

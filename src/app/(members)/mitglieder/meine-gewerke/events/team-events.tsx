@@ -494,7 +494,7 @@ function EventDetail({
               <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
                 Gemeinsamer Termin, zu dem das Gewerk eingeladen ist. Geplant wird er in der Termin-
                 bzw. Probenplanung.
-                {event.rehearsal && !event.past ? (
+                {!event.past ? (
                   <>
                     {" "}
                     Absagen mit Begründung in{" "}

@@ -95,6 +95,7 @@ export async function readEventView(
         where: { invited: true },
         include: { user: { select: { firstName: true, lastName: true, name: true, email: true } } },
       },
+      _count: { select: { audienceRules: true } },
     },
   });
   if (!event) return { ok: false, message: "Diesen Termin gibt es nicht." };
@@ -234,7 +235,8 @@ export async function readEventView(
     !event.departmentId &&
     event.start > now &&
     (event.status === "SCHEDULED" || event.status === "TENTATIVE") &&
-    (!!own || event.kind !== "REHEARSAL");
+    // Mit Zielgruppe antworten nur Eingeladene, offene Termine alle, die sie sehen.
+    (!!own || (!event.participants.length && !event._count.audienceRules));
   const freezeDays = canRespond ? await readFreezeDays() : 0;
   const editHref = event.departmentId
     ? event.department

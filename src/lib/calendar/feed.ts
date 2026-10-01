@@ -6,7 +6,11 @@ import type { BlockedDayKind, FeedScope } from "@prisma/client";
 import { getAppBaseUrl } from "@/lib/app-url";
 import { buildIcsCalendar, type IcsEvent } from "@/lib/calendar/ics";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
-import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
+import {
+  GENERAL_EVENT_WHERE,
+  OPEN_EVENT_WHERE,
+  visibleGeneralEventWhere,
+} from "@/lib/calendar/entries";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -128,11 +132,12 @@ export async function collectFeedEvents(
         status: { not: "DRAFT" },
         OR: [
           { participants: { some: { userId, invited: true } } },
-          // „Alles aus meinen Produktionen“: auch Proben ohne eigene Einladung.
+          // „Alles aus meinen Produktionen“: auch Termine mit Zielgruppe ohne eigene Einladung
+          // (offene Termine kommen unten mit den allgemeinen).
           ...(scope === "PRODUCTIONS"
             ? [
                 {
-                  kind: "REHEARSAL" as const,
+                  NOT: OPEN_EVENT_WHERE,
                   show: { memberships: { some: { userId, ...currentMembershipWhere(now) } } },
                 },
               ]

@@ -351,9 +351,10 @@ export async function publishRehearsalAction(input: {
         currentAudience,
         context,
       );
-      // Ohne Zielgruppe gilt ein Termin für alle; Proben brauchen Eingeladene.
+      // Ohne Zielgruppe gilt ein Termin für alle (auch eine Probe); mit Zielgruppe braucht er
+      // Eingeladene.
       const open = !currentAudience.rules.length && !currentAudience.overrides.length;
-      if (!syncedInvitees.length && (kind === "REHEARSAL" || !open)) {
+      if (!syncedInvitees.length && !open) {
         throw new Error("no-invitees");
       }
       await syncRehearsalSchedule(tx, {
@@ -419,7 +420,7 @@ export async function publishRehearsalAction(input: {
     const { rehearsal, inviteeIds, notification } = result;
     await dispatchNotification(notification);
 
-    if (inviteeIds.length && rehearsal.kind === "REHEARSAL") {
+    if (inviteeIds.length) {
       await broadcastRehearsalCreated({
         rehearsal: {
           id: rehearsal.id,
