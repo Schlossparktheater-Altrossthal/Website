@@ -70,9 +70,21 @@ const taskFields = z.object({
   title: z.string().trim().min(1, "Titel fehlt.").max(160),
   description: z.string().trim().max(4000).nullish(),
   dueAt: z.string().date().nullish(),
+  milestoneId: z.string().min(1).nullish(),
   priority: z.enum(["low", "normal", "high"]).optional(),
   assigneeIds: z.array(z.string()).max(30).optional(),
 });
+
+/** Nur Meilensteine derselben Produktion dürfen an einer Karte hängen. */
+async function validMilestone(departmentId: string, milestoneId: string | null | undefined) {
+  if (!milestoneId) return null;
+  const found = await prisma.showMilestone.findFirst({
+    where: { id: milestoneId, show: { departments: { some: { id: departmentId } } } },
+    select: { id: true },
+  });
+  if (!found) throw new Error("Unbekannter Meilenstein.");
+  return found.id;
+}
 
 const createSchema = taskFields.extend({ departmentId: z.string(), columnId: z.string() });
 
@@ -85,6 +97,7 @@ export async function createBoardTaskAction(
     if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
     const column = await assertColumn(data.departmentId, data.columnId);
     const assignees = await validAssignees(data.departmentId, data.assigneeIds ?? []);
+    const milestoneId = await validMilestone(data.departmentId, data.milestoneId);
     const last = await prisma.departmentTask.aggregate({
       where: { columnId: column.id },
       _max: { position: true },
@@ -98,6 +111,7 @@ export async function createBoardTaskAction(
         title: data.title,
         description: data.description || null,
         dueAt: data.dueAt ? new Date(`${data.dueAt}T12:00:00`) : null,
+        milestoneId,
         priority: data.priority ?? "normal",
         createdById: access.userId,
         assignments: { create: assignees.map((userId) => ({ userId })) },
@@ -122,6 +136,7 @@ export async function updateBoardTaskAction(
     const access = await requireBoardAccess(task.departmentId);
     if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
     const assignees = await validAssignees(task.departmentId, data.assigneeIds ?? []);
+    const milestoneId = await validMilestone(task.departmentId, data.milestoneId);
     const before = await prisma.departmentTaskAssignment.findMany({
       where: { taskId: task.id },
       select: { userId: true },
@@ -133,6 +148,7 @@ export async function updateBoardTaskAction(
           title: data.title,
           description: data.description || null,
           dueAt: data.dueAt ? new Date(`${data.dueAt}T12:00:00`) : null,
+          milestoneId,
           priority: data.priority ?? "normal",
         },
       }),

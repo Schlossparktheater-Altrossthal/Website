@@ -273,3 +273,52 @@ export async function loadProductionPlan(
     cycleError,
   };
 }
+
+export type UpcomingDeadline = {
+  id: string;
+  title: string;
+  dueAt: Date;
+  departmentName: string | null;
+};
+
+/**
+ * Dashboard-Karte „Nächste Fristen“: mit Planrecht alle offenen Meilensteine der Produktion,
+ * sonst die der eigenen Gewerke. Leer, wenn man in keinem Gewerk mit Meilensteinen ist.
+ */
+export async function loadUpcomingDeadlines(
+  user: UserLike,
+  showId: string,
+  limit = 5,
+): Promise<UpcomingDeadline[]> {
+  if (!user?.id) return [];
+  const manage = await canManagePlan(user);
+  const rows = await prisma.showMilestone.findMany({
+    where: {
+      showId,
+      doneAt: null,
+      dueAt: { not: null },
+      ...(manage
+        ? {}
+        : {
+            department: {
+              memberships: { some: { userId: user.id, status: "active" } },
+            },
+          }),
+    },
+    orderBy: { dueAt: "asc" },
+    take: limit,
+    select: { id: true, title: true, dueAt: true, department: { select: { name: true } } },
+  });
+  return rows.flatMap((row) =>
+    row.dueAt
+      ? [
+          {
+            id: row.id,
+            title: row.title,
+            dueAt: row.dueAt,
+            departmentName: row.department?.name ?? null,
+          },
+        ]
+      : [],
+  );
+}

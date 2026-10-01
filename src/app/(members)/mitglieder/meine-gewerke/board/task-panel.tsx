@@ -10,7 +10,7 @@ import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import type { BoardColumn, BoardPerson, BoardTask } from "@/lib/departments/board";
+import type { BoardColumn, BoardMilestone, BoardPerson, BoardTask } from "@/lib/departments/board";
 import { cn } from "@/lib/utils";
 
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
@@ -20,6 +20,7 @@ export type TaskDraft = {
   title: string;
   description: string;
   dueAt: string;
+  milestoneId: string;
   priority: TaskPriority;
   assigneeIds: string[];
   columnId: string;
@@ -34,6 +35,7 @@ export function TaskPanel({
   task,
   columns,
   members,
+  milestones,
   initialColumnId,
   canEdit,
   canDelete,
@@ -47,6 +49,7 @@ export function TaskPanel({
   task: BoardTask | null;
   columns: BoardColumn[];
   members: BoardPerson[];
+  milestones: BoardMilestone[];
   initialColumnId: string;
   canEdit: boolean;
   canDelete: boolean;
@@ -182,6 +185,34 @@ export function TaskPanel({
             </div>
           </div>
 
+          {milestones.length ? (
+            <label className="block space-y-1">
+              <span className="text-xs font-medium text-muted-foreground">
+                Gehört zu Meilenstein
+              </span>
+              <select
+                className={cn(inputClass, "h-11")}
+                value={draft.milestoneId}
+                onChange={(event) => update("milestoneId", event.target.value)}
+              >
+                <option value="">Keiner</option>
+                {milestones.map((milestone) => (
+                  <option key={milestone.id} value={milestone.id}>
+                    {milestone.title}
+                    {milestone.dueAt
+                      ? ` · ${format(new Date(milestone.dueAt.slice(0, 10) + "T12:00:00"), "d. MMM", { locale: de })}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+              {draft.milestoneId && !draft.dueAt ? (
+                <span className="block text-xs text-muted-foreground">
+                  Ohne eigenes Datum gilt die Frist des Meilensteins.
+                </span>
+              ) : null}
+            </label>
+          ) : null}
+
           <div className="space-y-1">
             <span className="text-xs font-medium text-muted-foreground">Zuständig</span>
             <div className="flex flex-wrap gap-1.5">
@@ -283,6 +314,7 @@ function fromTask(task: BoardTask | null, columnId: string): TaskDraft {
     title: task?.title ?? "",
     description: task?.description ?? "",
     dueAt: toDateInput(task?.dueAt ?? null),
+    milestoneId: task?.milestone?.id ?? "",
     priority: task?.priority ?? "normal",
     assigneeIds: task?.assignees.map((person) => person.id) ?? [],
     columnId: task?.columnId ?? columnId,

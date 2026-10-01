@@ -9,8 +9,8 @@ import type { PlanMilestone, PlanRehearsal } from "@/lib/planning/plan-service";
 import { toDay } from "@/lib/planning/schedule";
 import { cn } from "@/lib/utils";
 
-import { DeadlineBadge } from "./deadline-badge";
-import { HEALTH_DOT } from "./health";
+import { DeadlineBadge } from "@/components/production/deadline-badge";
+import { HEALTH_DOT } from "@/components/production/deadline-health";
 
 type AgendaGroup = "overdue" | "thisWeek" | "nextWeek" | "later" | "unscheduled";
 

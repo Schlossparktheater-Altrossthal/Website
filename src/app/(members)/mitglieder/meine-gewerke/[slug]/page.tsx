@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/members/page-header";
+import { DeadlineBadge } from "@/components/production/deadline-badge";
 import { UserAvatar } from "@/components/user-avatar";
 import {
   AlertTriangleIcon,
@@ -170,6 +171,25 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
               erledigt
             </span>
           </div>
+          {portal.nextMilestone?.dueAt ? (
+            <Link
+              href="/mitglieder/produktionen"
+              className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 transition-colors hover:bg-primary/10"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs text-muted-foreground">Nächste Frist im Plan</span>
+                <span className="block truncate text-sm font-medium">
+                  {portal.nextMilestone.title}
+                </span>
+                {portal.nextMilestone.tasksTotal ? (
+                  <span className="block text-xs text-muted-foreground">
+                    {portal.nextMilestone.tasksDone}/{portal.nextMilestone.tasksTotal} Karten
+                  </span>
+                ) : null}
+              </span>
+              <DeadlineBadge dueAt={portal.nextMilestone.dueAt} />
+            </Link>
+          ) : null}
           {timeline.length ? (
             <ol className="relative space-y-2 before:absolute before:bottom-3 before:left-[1.1rem] before:top-3 before:w-px before:bg-border">
               {timeline.map((item) => (

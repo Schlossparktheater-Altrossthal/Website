@@ -7,7 +7,7 @@ import type { PlanMilestone, ProductionPlan } from "@/lib/planning/plan-service"
 import { computeDueDates, fromDay, toDay } from "@/lib/planning/schedule";
 import { cn } from "@/lib/utils";
 
-import { HEALTH_FILL } from "./health";
+import { HEALTH_FILL } from "@/components/production/deadline-health";
 import { MONTH_FORMAT, SHORT_DAY_FORMAT } from "./format";
 
 type Zoom = "month" | "week";

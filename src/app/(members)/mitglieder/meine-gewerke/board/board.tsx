@@ -129,6 +129,7 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
       title: draft.title,
       description: draft.description || null,
       dueAt: draft.dueAt || null,
+      milestoneId: draft.milestoneId || null,
       priority: draft.priority,
       assigneeIds: draft.assigneeIds,
     };
@@ -313,6 +314,7 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
         task={liveTask}
         columns={columns}
         members={data.members}
+        milestones={data.milestones}
         initialColumnId={openTask?.columnId ?? columns[0]?.id ?? ""}
         canEdit={canEdit}
         canDelete={canManage || (canEdit && liveTask?.createdById === viewerId)}
@@ -420,7 +422,10 @@ function DraggableCard({
 }
 
 function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lifted?: boolean }) {
-  const due = toDateInput(task.dueAt);
+  // Ohne eigene Frist erbt die Karte die Frist ihres Meilensteins (Kettensymbol).
+  const inherited = !task.dueAt && Boolean(task.milestone?.dueAt);
+  const dueIso = task.dueAt ?? task.milestone?.dueAt ?? null;
+  const due = inherited ? (dueIso?.slice(0, 10) ?? "") : toDateInput(dueIso);
   const overdue = Boolean(due && due < today);
   return (
     <span
@@ -432,10 +437,22 @@ function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lif
     >
       <span className="block text-sm font-medium leading-snug">{task.title}</span>
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        {task.dueAt ? (
-          <span className={cn(overdue && "font-medium text-destructive")}>
+        {dueIso ? (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1",
+              overdue && "font-medium text-destructive",
+            )}
+            title={inherited ? `Frist vom Meilenstein „${task.milestone?.title}“` : undefined}
+          >
+            {inherited ? <ChainIcon /> : null}
             {overdue ? "überfällig · " : ""}
-            {format(new Date(task.dueAt), "d. MMM", { locale: de })}
+            {format(new Date(`${due}T12:00:00`), "d. MMM", { locale: de })}
+          </span>
+        ) : null}
+        {task.milestone ? (
+          <span className="max-w-full truncate rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+            {task.milestone.title}
           </span>
         ) : null}
         {task.priority === "high" ? <span className="text-destructive">Hoch</span> : null}
@@ -451,5 +468,21 @@ function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lif
         ) : null}
       </span>
     </span>
+  );
+}
+
+function ChainIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+      <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+    </svg>
   );
 }

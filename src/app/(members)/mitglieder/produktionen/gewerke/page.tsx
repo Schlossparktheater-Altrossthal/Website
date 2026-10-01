@@ -8,7 +8,7 @@ import { canViewPlan } from "@/lib/planning/plan-service";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
-import { DeadlineBadge } from "../_plan/deadline-badge";
+import { DeadlineBadge } from "@/components/production/deadline-badge";
 
 /** Übersicht aller Gewerke der aktiven Produktion mit Fortschritt und nächster Frist. */
 export default async function ProduktionGewerkePage() {

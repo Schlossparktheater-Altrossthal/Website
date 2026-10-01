@@ -8,6 +8,10 @@ import { CASTING_TYPE_LABELS, loadMyRoles, type RoleCard } from "@/lib/departmen
 
 import { CalendarIcon, ListTodoIcon } from "@/components/ui/action-icons";
 
+import { HEALTH_DOT, healthFromDays } from "@/components/production/deadline-health";
+import { daysUntil } from "@/lib/planning/schedule";
+import { cn } from "@/lib/utils";
+
 import { DepartmentSettingsButton } from "./department-settings-panel";
 import { JoinList } from "./join-list";
 import { formatShortDate, TEAM_ROLE_LABELS, tint } from "./team-ui";
@@ -170,6 +174,20 @@ function TeamGrid({ teams, extra }: { teams: TeamCard[]; extra?: React.ReactNode
                     : `${team.openTasks} offen`}
                 </span>
               </span>
+              {team.nextDeadline ? (
+                <span className="flex items-center gap-1.5 text-foreground/90">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      HEALTH_DOT[healthFromDays(daysUntil(team.nextDeadline.dueAt))],
+                    )}
+                  />
+                  <span className="truncate">
+                    Frist {formatShortDate(team.nextDeadline.dueAt)} {team.nextDeadline.title}
+                  </span>
+                </span>
+              ) : null}
               <span className="block truncate text-muted-foreground">
                 {team.leads.length ? `Leitung: ${team.leads.join(", ")}` : "Leitung offen"}
               </span>

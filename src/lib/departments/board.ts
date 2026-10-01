@@ -62,10 +62,14 @@ export type BoardTask = {
   description: string | null;
   priority: TaskPriority;
   dueAt: string | null;
+  /** Meilenstein im Produktionsplan; ohne eigene Frist gilt dessen Fälligkeit. */
+  milestone: BoardMilestone | null;
   assignees: BoardPerson[];
   createdById: string;
   comments: { id: string; body: string; author: string; createdAt: string }[];
 };
+
+export type BoardMilestone = { id: string; title: string; dueAt: string | null };
 
 export type BoardColumn = { id: string; name: string; status: TaskStatus; tasks: BoardTask[] };
 
@@ -75,6 +79,8 @@ export type BoardData = {
   today: string;
   columns: BoardColumn[];
   members: BoardPerson[];
+  /** Wählbare Meilensteine: zuerst die des Gewerks, dann die der ganzen Produktion. */
+  milestones: BoardMilestone[];
 };
 
 const toPerson = (user: {
@@ -99,7 +105,11 @@ const USER_SELECT = {
 
 export async function loadBoard(departmentId: string): Promise<BoardData> {
   await ensureBoardColumns(departmentId);
-  const [columns, tasks, memberships] = await Promise.all([
+  const department = await prisma.department.findUnique({
+    where: { id: departmentId },
+    select: { showId: true },
+  });
+  const [columns, tasks, memberships, milestones] = await Promise.all([
     prisma.departmentBoardColumn.findMany({
       where: { departmentId },
       orderBy: { position: "asc" },
@@ -116,6 +126,7 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
         description: true,
         priority: true,
         dueAt: true,
+        milestone: { select: { id: true, title: true, dueAt: true } },
         createdById: true,
         assignments: { select: { user: { select: USER_SELECT } } },
         comments: {
@@ -128,6 +139,16 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
       where: { departmentId, status: "active", user: { deactivatedAt: null } },
       select: { user: { select: USER_SELECT } },
     }),
+    department
+      ? prisma.showMilestone.findMany({
+          where: {
+            showId: department.showId,
+            OR: [{ departmentId }, { departmentId: null }],
+          },
+          orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { position: "asc" }],
+          select: { id: true, title: true, dueAt: true, departmentId: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   const columnIds = new Set(columns.map((column) => column.id));
@@ -147,6 +168,13 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
       description: task.description,
       priority: task.priority,
       dueAt: task.dueAt?.toISOString() ?? null,
+      milestone: task.milestone
+        ? {
+            id: task.milestone.id,
+            title: task.milestone.title,
+            dueAt: task.milestone.dueAt?.toISOString() ?? null,
+          }
+        : null,
       createdById: task.createdById,
       assignees: task.assignments.map((entry) => toPerson(entry.user)),
       comments: task.comments.map((comment) => ({
@@ -165,5 +193,14 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
     members: memberships
       .map((entry) => toPerson(entry.user))
       .sort((a, b) => a.name.localeCompare(b.name, "de")),
+    milestones: [...milestones]
+      .sort(
+        (a, b) => Number(a.departmentId !== departmentId) - Number(b.departmentId !== departmentId),
+      )
+      .map((milestone) => ({
+        id: milestone.id,
+        title: milestone.title,
+        dueAt: milestone.dueAt?.toISOString() ?? null,
+      })),
   };
 }

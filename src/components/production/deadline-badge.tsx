@@ -2,7 +2,7 @@ import { daysUntil } from "@/lib/planning/schedule";
 import type { MilestoneHealth } from "@/lib/planning/schedule";
 import { cn } from "@/lib/utils";
 
-import { HEALTH_BADGE, healthFromDays } from "./health";
+import { HEALTH_BADGE, healthFromDays } from "@/components/production/deadline-health";
 
 export function formatRelativeDays(days: number): string {
   if (days === 0) return "heute";

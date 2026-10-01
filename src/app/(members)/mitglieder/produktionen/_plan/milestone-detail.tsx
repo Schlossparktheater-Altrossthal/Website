@@ -7,9 +7,9 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import type { PlanMilestone } from "@/lib/planning/plan-service";
 import { cn } from "@/lib/utils";
 
-import { DeadlineBadge } from "./deadline-badge";
+import { DeadlineBadge } from "@/components/production/deadline-badge";
 import { DAY_FORMAT, describeAnchor } from "./format";
-import { HEALTH_BADGE, HEALTH_LABELS } from "./health";
+import { HEALTH_BADGE, HEALTH_LABELS } from "@/components/production/deadline-health";
 
 const KIND_LABELS: Record<PlanMilestone["kind"], string> = {
   milestone: "Meilenstein",

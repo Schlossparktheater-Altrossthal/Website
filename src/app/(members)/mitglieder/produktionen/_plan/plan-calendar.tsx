@@ -7,7 +7,7 @@ import { MonthSwitcher } from "@/components/ui/month-switcher";
 import type { ProductionPlan } from "@/lib/planning/plan-service";
 import { cn } from "@/lib/utils";
 
-import { HEALTH_DOT } from "./health";
+import { HEALTH_DOT } from "@/components/production/deadline-health";
 
 const berlinKey = (iso: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(new Date(iso));

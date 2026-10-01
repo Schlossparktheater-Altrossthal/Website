@@ -19,6 +19,8 @@ export type TeamCard = {
   openTasks: number;
   myOpenTasks: number;
   nextEvent: { title: string; start: Date } | null;
+  /** Nächste offene Frist des Gewerks im Produktionsplan. */
+  nextDeadline: { title: string; dueAt: Date } | null;
   requestCount: number;
 };
 
@@ -49,6 +51,12 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
       tasks: {
         where: { status: { not: "done" } },
         select: { assignments: { select: { userId: true } } },
+      },
+      milestones: {
+        where: { doneAt: null, dueAt: { not: null } },
+        orderBy: { dueAt: "asc" },
+        take: 1,
+        select: { title: true, dueAt: true },
       },
     },
   });
@@ -94,6 +102,9 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
         task.assignments.some((entry) => entry.userId === userId),
       ).length,
       nextEvent: next ? { title: next.title, start: next.start } : null,
+      nextDeadline: department.milestones[0]?.dueAt
+        ? { title: department.milestones[0].title, dueAt: department.milestones[0].dueAt }
+        : null,
       requestCount: department.memberships.length - active.length,
     };
   });
@@ -147,6 +158,17 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
               ...AVATAR_USER_SELECT,
             },
           },
+        },
+      },
+      milestones: {
+        where: { doneAt: null, dueAt: { not: null } },
+        orderBy: { dueAt: "asc" },
+        take: 1,
+        select: {
+          id: true,
+          title: true,
+          dueAt: true,
+          tasks: { select: { status: true } },
         },
       },
       tasks: {
@@ -234,6 +256,15 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
     taskCounts: countTasks(department.tasks.map((task) => task.status)),
     myTasks: myTasks.map(toTaskItem),
     openTasks: openTasks.map(toTaskItem),
+    nextMilestone: department.milestones[0]
+      ? {
+          id: department.milestones[0].id,
+          title: department.milestones[0].title,
+          dueAt: department.milestones[0].dueAt,
+          tasksTotal: department.milestones[0].tasks.length,
+          tasksDone: department.milestones[0].tasks.filter((task) => task.status === "done").length,
+        }
+      : null,
   };
 }
 
