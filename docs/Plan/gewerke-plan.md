@@ -1,6 +1,6 @@
 # Plan: Gewerke- & Rollenplanung
 
-Stand: 2026-09-26. Phase 1–6 umgesetzt, offen ist Phase 7 (E2E und Release). Checkliste am Ende
+Stand: 2026-10-01. Phase 1–6 umgesetzt, offen Phase 7 (E2E und Release); Fortsetzung Phase 8–13 (Blaupausen, Bausteine, Szenenbedarf, Budget) geplant. Checkliste am Ende
 wird gepflegt.
 
 ## Ziel
@@ -127,3 +127,109 @@ Jede Phase einzeln auf Staging testbar; Schema-Änderungen additiv vor Alt-Entfe
 - [x] Phase 5 Termine (CalendarEvent mit departmentId, Zu-/Absagen, Sperrlisten-Hinweis, ICS/Dashboard)
 - [x] Phase 6 Dateien/Aufräumen (Dateien über `DepartmentDocument` statt FileLibrary, Gewerke-Einstellungen, Beitritt/Anfrage, Altseiten entfernt)
 - [ ] Phase 7 E2E/Release
+
+---
+
+## Fortsetzung (2026-10-01): Blaupausen, Bausteine, Szenenbedarf, Budget
+
+Phase 8–13 setzen auf Phase 1–7 auf. Zusammenhang mit der Produktionsplanung:
+`docs/Plan/projektplanung-plan.md` (Meilensteine, neue Produktionsseite, gemeinsames UI-Konzept).
+
+### Ziel (Fortsetzung)
+
+1. **Globale Gewerks-Blaupausen** (`DepartmentTemplate`) bekommen eine eigene Verwaltung.
+2. **Rechte pro Blaupause**; ein Gewerk **erbt** sie und speichert nur Abweichungen.
+3. **Bausteine pro Blaupause**: Board, Termine, Dateien, Szenenbedarf, Budget, Körpermaße. Das Portal zeigt genau diese Tabs.
+4. **Jedes Gewerk hat eine Blaupause.** Gibt es keine passende, wird sie beim Anlegen miterstellt.
+5. **Weitere Gewerke** einer Produktion werden aus Blaupausen hinzugefügt; im Onboarding sind Blaupausen auswählbar.
+6. **Szenenbedarf**: Alle mit Recht fordern pro Szene an; das Gewerk macht daraus **Objekte**, die als Karten auf dem Board laufen.
+7. **Budget pro Gewerk**, an die vorhandenen Finanzen angebunden.
+
+### Befunde (2026-10-01)
+
+| #   | Befund                                                                                                                                               | Stelle                            |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| 12  | `Department.templateId` ist optional; Gewerke ohne Vorlage sind möglich („Gewerk anlegen“ in „Meine Teams“)                                          | `schema.prisma`, `meine-gewerke`  |
+| 13  | `DepartmentPermission` hängt am einzelnen Gewerk, nicht an der Vorlage; keine Vererbung                                                              | `schema.prisma`                   |
+| 14  | Keine Verwaltungsseite für Vorlagen; Pflege nur über Seed/DB                                                                                         | –                                 |
+| 15  | Körpermaße und Breakdown sind fest eingebaut, nicht pro Gewerk zu- oder abschaltbar                                                                  | `koerpermasse`, `roles-scenes.ts` |
+| 16  | `SceneBreakdownItem` hängt an genau einer Szene; ein Objekt in mehreren Szenen (Schwert in Szene 3 und 7) wird doppelt geführt. Kein Bezug zum Board | `schema.prisma`                   |
+| 17  | `FinanceBudget` kennt nur `showId` + freie `category`, keinen Gewerksbezug                                                                           | `schema.prisma`                   |
+| 18  | „Meine Teams“-Kacheln zeigen „Kein Termin · 0 offen“: Platz ohne Aussage; besser Fortschritt + nächste Frist                                         | Screenshot Staging 2026-10-01     |
+
+### Datenmodell (Fortsetzung)
+
+```
+DepartmentTemplate      + modules String[]            // board|events|files|requirements|budget|measurements
+                        + icon, archivedAt
+TemplatePermission      templateId, permissionId, role (lead|deputy|member|guest)   // Standardrechte
+DepartmentPermission    + mode (grant|revoke)         // nur Abweichung vom Template
+Department              templateId Pflicht (nach Migration), + modulesOverride String[]? (selten)
+
+ProductionObject        showId, departmentId (zuständig), title, description, imageId?, cost?, archivedAt
+ObjectScene             objectId, sceneId, note?      // n:m – ein Objekt, mehrere Szenen
+SceneRequirement        showId, sceneId, departmentId, text, imageId?, requestedById,
+                        status (open|assigned|declined), declineReason?, objectId?, decidedById?, decidedAt?
+DepartmentTask          + objectId? (Karte zu einem Objekt), + milestoneId? (projektplanung-plan)
+TaskChecklistItem       taskId, text, doneAt?, position
+FinanceBudget           + departmentId?               // Gewerksbudget
+FinanceEntry            (vorhanden) + objectId?       // Kosten eines Objekts
+```
+
+- Wirksame Rechte eines Gewerks = Template-Rechte + `grant` − `revoke`. Änderung an der Blaupause wirkt sofort auf alle Gewerke.
+- `SceneBreakdownItem` wird nach `ProductionObject` + `ObjectScene` migriert und danach entfernt (additiv zuerst, Entfernen in eigenem Schritt).
+
+### Szenenbedarf – Ablauf
+
+1. **Anfordern**: In der Szene „+ Bedarf“ → Gewerk wählen (nur Gewerke mit Baustein `requirements`), Text, optional Foto. Recht `PRIVATE.PRODUCTION.REQUIREMENT.CREATE`, standardmäßig alle Produktionsmitglieder.
+2. **Eingang**: Die Anforderung erscheint im Board des Gewerks in der festen ersten Spalte **„Eingang“**. Im Sheet: **Neues Objekt · Zu vorhandenem Objekt · Ablehnen (Grund)**.
+3. **Objekt = Karte**: Jedes Objekt hat genau eine Karte im zuständigen Gewerk. Fertigungsschritte als Checkliste. Arbeiten mehrere Gewerke daran (Kaschur baut, Requisite verwaltet), bekommt das Objekt eine verknüpfte Zweitkarte im anderen Board.
+4. **Status zurück**: Szene zeigt pro Bedarf offen / in Arbeit / fertig / abgelehnt; die anfordernde Person bekommt eine Benachrichtigung.
+5. **Frist abgeleitet**: früheste Probe mit einer der Szenen oder Meilenstein (z. B. „Requisiten komplett“) – kein Datum tippen.
+
+Das gilt gleich für Kostüm (pro Rolle/Szene), Ton (Einspieler), Licht (Stimmungen).
+
+### Rechte (Fortsetzung)
+
+- `PRIVATE.DEPARTMENT.TEMPLATE.MANAGE`: Blaupausen verwalten (Board/Regie).
+- `PRIVATE.PRODUCTION.REQUIREMENT.CREATE`: Bedarf anfordern.
+- Gewerk-Leitung/Vertretung: Eingang entscheiden, Objekte pflegen, Budget sehen. Budget bearbeiten nur mit Finanzrecht.
+- Rechte-Seite zeigt pro Gewerk geerbte Rechte grau („von Blaupause“), Abweichungen markiert.
+
+### Oberflächen (Fortsetzung)
+
+Gemeinsame UI-Regeln: `docs/Plan/projektplanung-plan.md`, Abschnitt „UI-Konzept“.
+
+- **Blaupausen-Verwaltung** (Einstellungen): Desktop Liste links / Editor rechts, mobil Liste → Sheet. Editor-Abschnitte: Allgemein (Name, Farbe, Icon) · Bausteine (Schalter) · Rechte (Checkliste je Rolle) · Onboarding-Wünsche.
+- **Gewerk anlegen** (in der Produktion): Sheet „Aus Blaupause“ (Liste) oder „Neue Blaupause“ (Name + Bausteine, dann gleich ins Gewerk).
+- **Portal-Tabs aus Bausteinen**: `Nächstes · Board · Bedarf · Termine · Budget · Maße · Dateien · Team`; mobil höchstens 4 sichtbar, Rest unter „Mehr“.
+- **Board**: Spalte „Eingang“ vorne, nur sichtbar mit Baustein `requirements`. Objektkarte: Titel, Fristabzeichen, Chips `Sz. 3 · 7`, `☑ 2/5`, Meilenstein.
+- **Szene** (Stück): Abschnitt „Bedarf“ mit Zeilen je Gewerk und Status-Punkt; „+ Bedarf“ öffnet Sheet.
+- **Budget-Tab**: ein Balken Ausgaben/Budget, darunter Liste der Ausgaben und Objekte mit Kosten.
+- **„Meine Teams“-Kacheln**: Fortschritt (erledigte Karten), nächste Frist mit Ampel, offene Anforderungen statt „0 offen / Kein Termin“.
+
+### Phasen (Fortsetzung)
+
+8. **Blaupausen-Grundlage**: `modules`, `TemplatePermission`, `DepartmentPermission.mode`, Rechte-Auflösung mit Vererbung (Tests!). **Manuelle Migration**: bestehende Gewerke ohne Vorlage einer Blaupause zuordnen bzw. Blaupause erzeugen; Rechte je Gewerk in Template + Abweichungen zerlegen. Test auf Staging-Dump.
+9. **Blaupausen-Verwaltung + Gewerk anlegen**: Seite in den Einstellungen, Anlegen nur noch aus Blaupause, Onboarding-Auswahl über Blaupausen. Danach `templateId` Pflicht (eigener Schritt).
+10. **Portal aus Bausteinen**: Tabs dynamisch, Körpermaße als Baustein, „Mehr“-Menü mobil, „Meine Teams“-Kacheln neu.
+11. **Szenenbedarf**: Modelle, Anfordern in der Szene, Eingang-Spalte, Objekt-Karten, Checklisten, Benachrichtigungen; Migration `SceneBreakdownItem` → Objekte.
+12. **Budget**: `FinanceBudget.departmentId`, Budget-Tab, Objektkosten.
+13. **E2E, Screenshots mobil/Desktop, Staging, Release**; danach `SceneBreakdownItem` entfernen.
+
+### Entscheidungen (2026-10-01)
+
+- E6: Rechte hängen an der Blaupause, Gewerke erben und speichern nur Abweichungen.
+- E7: Kein Gewerk ohne Blaupause; fehlt eine, wird sie beim Anlegen erstellt.
+- E8: Anfordern dürfen alle mit Recht (Standard: alle in der Produktion); das Gewerk entscheidet im Eingang.
+- E9: Objekt statt Breakdown-Eintrag: ein Objekt, mehrere Szenen, genau eine Karte im zuständigen Gewerk.
+- E10: Budget ist ein Baustein und nutzt die vorhandenen Finanzmodelle.
+
+### Checkliste (Fortsetzung)
+
+- [ ] Phase 8 Blaupausen-Grundlage + Migration
+- [ ] Phase 9 Blaupausen-Verwaltung, Gewerk anlegen, Onboarding
+- [ ] Phase 10 Portal aus Bausteinen
+- [ ] Phase 11 Szenenbedarf
+- [ ] Phase 12 Budget
+- [ ] Phase 13 E2E/Release
