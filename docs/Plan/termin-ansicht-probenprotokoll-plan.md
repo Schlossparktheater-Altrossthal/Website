@@ -188,6 +188,13 @@ doneAt?, authorId, createdAt }`.
   `/mitglieder/proben/[id]` und Editor ohne Planungsrecht leiten dorthin; alle Links
   (Benachrichtigungen, Feed, Sperrliste, Meine Termine) zeigen auf die neue Seite.
 
+- **Phase 4 erledigt (2026-10-01):** Migration `20261001120000_rehearsal_protocol_notes`
+  (`EventNote`, Zusammenfassung, Versandzeit), Reiter „Notizen“ im Probenmodus, Abschluss-Dialog
+  mit Zusammenfassung und Versand, Protokoll-Reiter auf der Terminseite, Aufgaben für Person,
+  Figur (Besetzung) oder Gewerk (Karte im Gewerk-Board, Benachrichtigung an Leitung/Stellvertretung),
+  „Meine Aufgaben“ im Dashboard, Anwesenheits- und Protokoll-Symbole in „Meine Termine“.
+  Lokal im Browser durchgespielt (Admin führt Protokoll, Mitglied sieht Protokoll und Aufgabe).
+  Offen: Phase 5 (E2E auf Staging, Release).
 - **Phase 3 erledigt (2026-09-28):** Migration `20260928170000_rehearsal_protocol` (Enum
   `AttendanceMark`, Ist-Zeiten, `unplanned`, `actualOrder`, `EventGuest`; `attended` übernommen
   und entfernt), Recht `PRIVATE.REHEARSAL.PROTOCOL.EDIT`, Probenmodus `/mitglieder/termine/[id]/probe`
