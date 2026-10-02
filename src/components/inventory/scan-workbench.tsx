@@ -148,7 +148,9 @@ export function ScanWorkbench({
   const [signal, setSignal] = React.useState<ScanSignal | null>(null);
   const [scanToast, setScanToast] = React.useState<ScanToast | null>(null);
   const [snap, setSnap] = React.useState<SheetSnap>("peek");
-  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [pickerOpen, setPickerOpen] = React.useState(
+    initialMode === "checkout" && !initialCheckoutId,
+  );
   const hydrated = useHydrated();
   const desktop = useMediaQuery("(min-width: 1024px)");
   const queue = React.useRef(Promise.resolve());
@@ -406,8 +408,13 @@ export function ScanWorkbench({
   const scannerPaused =
     pending !== null ||
     dialog !== null ||
-    pickerOpen ||
-    (mobile && mode === "lookup" && current !== null);
+    (mobile && (pickerOpen || (mode === "lookup" && current !== null)));
+  const hint =
+    mode === "store" && target
+      ? `Objekte scannen – sie kommen nach ${target.label}`
+      : mode === "checkout" && selectedCheckout
+        ? `Alles scannen, was nach „${selectedCheckout.title}“ mitgeht`
+        : modeMeta.hint;
 
   const modeButtons = (compact: boolean) => (
     <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Scan-Modus">
@@ -656,7 +663,7 @@ export function ScanWorkbench({
           context={context}
           onScan={onScan}
           paused={scannerPaused}
-          hint={modeMeta.hint}
+          hint={hint}
           signal={signal}
           toast={mode === "lookup" ? null : scanToast}
           summary={summary}
@@ -727,7 +734,7 @@ export function ScanWorkbench({
             </div>
           ) : null}
 
-          <QrScanner onScan={onScan} paused={scannerPaused} hint={modeMeta.hint} signal={signal} />
+          <QrScanner onScan={onScan} paused={scannerPaused} hint={hint} signal={signal} />
           <p className="text-xs text-muted-foreground">{modeMeta.hint}</p>
         </div>
 
