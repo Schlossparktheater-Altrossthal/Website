@@ -1,117 +1,29 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import {
   failure,
-  optionalId,
-  optionalText,
   readJsonField,
   readPhotoFile,
   revalidateInventory,
   type InventoryActionResult,
 } from "@/lib/inventory/actions-helpers";
 import {
+  assertCategory,
+  assetSchema,
+  cleanAttributes,
+  costData,
+  createAssetInTx,
+} from "@/lib/inventory/asset-write";
+import {
   addMonths,
-  ASSET_KINDS,
-  CONDITIONS,
   DEFAULT_INSPECTION_INTERVAL_MONTHS,
   inventoryAssetPath,
+  MAX_BULK_ROWS,
 } from "@/lib/inventory/constants";
-import {
-  allocateAssetCode,
-  placeAsset,
-  recordEvent,
-  refreshAssetStatus,
-  requireInventoryAccess,
-  setBulkStock,
-  type PlacementTarget,
-} from "@/lib/inventory/service";
+import { recordEvent, refreshAssetStatus, requireInventoryAccess } from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
-
-const placementSchema = z
-  .object({
-    type: z.enum(["location", "container", "none"]),
-    id: z.string().optional().nullable(),
-  })
-  .transform((value): PlacementTarget =>
-    value.type !== "none" && value.id ? { type: value.type, id: value.id } : { type: "none" },
-  );
-
-const dateString = z
-  .string()
-  .trim()
-  .optional()
-  .nullable()
-  .transform((value, ctx) => {
-    if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      ctx.addIssue({ code: "custom", message: "Ungültiges Datum." });
-      return z.NEVER;
-    }
-    return date;
-  });
-
-const assetSchema = z.object({
-  areaId: z.string().min(1, "Bitte einen Bereich wählen."),
-  categoryId: optionalId,
-  kind: z.enum(ASSET_KINDS),
-  name: z.string().trim().min(1, "Bitte einen Namen angeben.").max(160),
-  manufacturer: optionalText(120),
-  model: optionalText(120),
-  serialNumber: optionalText(120),
-  description: optionalText(4000),
-  publicNote: optionalText(500),
-  internalNote: optionalText(4000),
-  attributes: z.record(z.string(), z.string().trim().max(200)).default({}),
-  condition: z.enum(CONDITIONS).default("good"),
-  unit: optionalText(30),
-  minQuantity: z.coerce.number().int().min(0).optional().nullable(),
-  quantity: z.coerce.number().int().min(0).max(100_000).optional().nullable(),
-  placement: placementSchema.default({ type: "none" }),
-  inspectionRequired: z.boolean().default(false),
-  inspectionIntervalMonths: z.coerce.number().int().min(1).max(120).optional().nullable(),
-  nextInspectionAt: dateString,
-  acquisitionCost: z.coerce.number().min(0).max(10_000_000).optional().nullable(),
-  purchaseDate: dateString,
-  supplier: optionalText(160),
-  ownership: optionalText(160),
-});
-
-type AssetInput = z.infer<typeof assetSchema>;
-
-function cleanAttributes(attributes: Record<string, string>) {
-  return Object.fromEntries(Object.entries(attributes).filter(([, value]) => value.trim()));
-}
-
-async function assertCategory(areaId: string, categoryId: string | null) {
-  if (!categoryId) return;
-  const category = await prisma.inventoryCategory.findUnique({
-    where: { id: categoryId },
-    select: { areaId: true },
-  });
-  if (!category || category.areaId !== areaId) {
-    throw new Error("Die Kategorie gehört nicht zu diesem Bereich.");
-  }
-}
-
-function costData(
-  input: Pick<AssetInput, "acquisitionCost" | "purchaseDate" | "supplier" | "ownership">,
-  canManage: boolean,
-) {
-  if (!canManage) return {};
-  return {
-    acquisitionCost:
-      input.acquisitionCost === null || input.acquisitionCost === undefined
-        ? null
-        : new Prisma.Decimal(input.acquisitionCost),
-    purchaseDate: input.purchaseDate,
-    supplier: input.supplier,
-    ownership: input.ownership,
-  };
-}
 
 export async function createAssetAction(
   formData: FormData,
@@ -122,64 +34,91 @@ export async function createAssetAction(
     const photo = await readPhotoFile(formData);
     await assertCategory(input.areaId, input.categoryId);
 
-    const code = await prisma.$transaction(async (tx) => {
-      const code = await allocateAssetCode(tx, input.areaId);
-      const interval = input.inspectionRequired
-        ? (input.inspectionIntervalMonths ?? DEFAULT_INSPECTION_INTERVAL_MONTHS)
-        : null;
-      const asset = await tx.inventoryAsset.create({
-        data: {
-          code,
-          areaId: input.areaId,
-          categoryId: input.categoryId,
-          kind: input.kind,
-          name: input.name,
-          manufacturer: input.manufacturer,
-          model: input.model,
-          serialNumber: input.serialNumber,
-          description: input.description,
-          publicNote: input.publicNote,
-          internalNote: input.internalNote,
-          attributes: cleanAttributes(input.attributes),
-          condition: input.condition,
-          unit: input.kind === "bulk" ? input.unit : null,
-          minQuantity: input.kind === "bulk" ? (input.minQuantity ?? null) : null,
-          quantity: input.kind === "bulk" ? 0 : 1,
-          inspectionRequired: input.inspectionRequired,
-          inspectionIntervalMonths: interval,
-          // Ohne bekannte letzte Prüfung gilt das Objekt als sofort zu prüfen.
-          nextInspectionAt: input.inspectionRequired ? input.nextInspectionAt : null,
-          lastSeenAt: new Date(),
-          ...costData(input, access.canManage),
-        },
-      });
-      await recordEvent(tx, { assetId: asset.id, type: "created", message: "Erfasst", userId });
-      if (photo) {
-        await tx.inventoryPhoto.create({
-          data: { assetId: asset.id, data: photo.data, mimeType: photo.mimeType },
-        });
-      }
-      if (input.kind === "bulk") {
-        if (input.placement.type !== "none" && input.quantity) {
-          await setBulkStock(tx, {
-            assetId: asset.id,
-            target: input.placement,
-            quantity: input.quantity,
-            userId,
-            mode: "set",
-          });
-        }
-      } else if (input.placement.type !== "none") {
-        await placeAsset(tx, { assetId: asset.id, target: input.placement, userId });
-      }
-      return code;
-    });
+    const { code } = await prisma.$transaction((tx) =>
+      createAssetInTx(tx, input, { userId, canManage: access.canManage, photo }),
+    );
 
     revalidateInventory();
     return { ok: true, message: `${code} angelegt.`, data: { code } };
   } catch (error) {
     console.error("createAssetAction", error);
     return failure(error, "Objekt konnte nicht angelegt werden.");
+  }
+}
+
+export type BulkCreateRowResult =
+  { index: number; ok: true; code: string } | { index: number; ok: false; error: string };
+
+/**
+ * Sammelerfassung: legt Zeile für Zeile an, jede in eigener Transaktion – eine fehlerhafte
+ * Zeile hält die übrigen nicht auf. `index` verweist auf die Position in `rows`.
+ */
+export async function bulkCreateAssetsAction(
+  rows: unknown[],
+): Promise<InventoryActionResult<{ results: BulkCreateRowResult[] }>> {
+  try {
+    const { access, userId } = await requireInventoryAccess("use");
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error("Keine Zeilen zum Anlegen.");
+    if (rows.length > MAX_BULK_ROWS) {
+      throw new Error(`Höchstens ${MAX_BULK_ROWS} Zeilen auf einmal.`);
+    }
+
+    const validCategories = new Map<string, string>();
+    const categoryIds = [
+      ...new Set(
+        rows
+          .map((row) => (row as { categoryId?: unknown })?.categoryId)
+          .filter((id): id is string => typeof id === "string" && id !== ""),
+      ),
+    ];
+    if (categoryIds.length) {
+      const categories = await prisma.inventoryCategory.findMany({
+        where: { id: { in: categoryIds } },
+        select: { id: true, areaId: true },
+      });
+      for (const category of categories) validCategories.set(category.id, category.areaId);
+    }
+
+    const results: BulkCreateRowResult[] = [];
+    for (const [index, row] of rows.entries()) {
+      const parsed = assetSchema.safeParse(row);
+      if (!parsed.success) {
+        results.push({ index, ok: false, error: failure(parsed.error, "Ungültige Zeile.").error });
+        continue;
+      }
+      const input = parsed.data;
+      if (input.categoryId && validCategories.get(input.categoryId) !== input.areaId) {
+        results.push({ index, ok: false, error: "Die Kategorie gehört nicht zu diesem Bereich." });
+        continue;
+      }
+      try {
+        const { code } = await prisma.$transaction((tx) =>
+          createAssetInTx(tx, input, {
+            userId,
+            canManage: access.canManage,
+            eventMessage: "Erfasst (Sammelerfassung)",
+          }),
+        );
+        results.push({ index, ok: true, code });
+      } catch (error) {
+        console.error("bulkCreateAssetsAction row", index, error);
+        results.push({ index, ...failure(error, "Zeile konnte nicht angelegt werden.") });
+      }
+    }
+
+    revalidateInventory();
+    const created = results.filter((result) => result.ok).length;
+    return {
+      ok: true,
+      message:
+        created === results.length
+          ? `${created} ${created === 1 ? "Objekt" : "Objekte"} angelegt.`
+          : `${created} von ${results.length} angelegt.`,
+      data: { results },
+    };
+  } catch (error) {
+    console.error("bulkCreateAssetsAction", error);
+    return failure(error, "Objekte konnten nicht angelegt werden.");
   }
 }
 

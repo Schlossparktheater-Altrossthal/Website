@@ -188,6 +188,9 @@ export function inventoryLocationPath(code: string): string {
   return `${INVENTORY_BASE_PATH}/orte/${encodeURIComponent(code)}`;
 }
 
+/** Höchstzahl Zeilen je Sammelerfassung-Aufruf. */
+export const MAX_BULK_ROWS = 200;
+
 /** Bereichsspezifische Zusatzfelder (gespeichert in `attributes`). */
 export type AttributeField = { key: string; label: string; placeholder?: string };
 
