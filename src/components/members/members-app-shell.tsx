@@ -180,6 +180,7 @@ interface MembersAppShellProps {
   contentLayout?: MembersContentLayoutConfig;
   globalFooter?: React.ReactNode;
   impersonation?: ImpersonationDetails | null;
+  pageVisibility?: Record<string, boolean>;
 }
 
 interface MembersTopbarSlots {
@@ -277,12 +278,7 @@ function MembersTopbarContent({
       className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
       style={MEMBERS_TOPBAR_STICKY_STYLE}
     >
-      <div
-        className={cn(
-          "flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12",
-          containerClassName,
-        )}
-      >
+      <div className={cn("flex h-16 shrink-0 items-center gap-2", containerClassName)}>
         <SidebarTrigger className="-ml-1" aria-label="Navigationsmenü umschalten" />
         <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -332,6 +328,7 @@ export function MembersAppShell({
   contentLayout,
   globalFooter,
   impersonation,
+  pageVisibility,
 }: MembersAppShellProps) {
   const [topbarContent, setTopbarContentState] = React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
   const [contentHeader, setContentHeaderState] = React.useState<React.ReactNode>(null);
@@ -413,6 +410,7 @@ export function MembersAppShell({
           hasDepartmentMemberships={hasDepartmentMemberships}
           isBoard={isBoard}
           isDepartmentLead={isDepartmentLead}
+          pageVisibility={pageVisibility}
         />
         <SidebarRail />
       </Sidebar>

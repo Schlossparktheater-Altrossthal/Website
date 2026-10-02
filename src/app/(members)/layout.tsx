@@ -184,6 +184,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               isBoard={isBoard}
               isDepartmentLead={isDepartmentLead}
               impersonation={session.impersonation ?? null}
+              pageVisibility={resolvedSettings.pageVisibility.members}
               globalFooter={
                 <SiteFooter buildInfo={buildInfo} isAuthenticated={true} isDevBuild={isDevBuild} />
               }
