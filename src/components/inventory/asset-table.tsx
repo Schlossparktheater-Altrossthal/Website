@@ -163,7 +163,7 @@ export function AssetTable({
   return (
     <>
       <div className="overflow-x-auto rounded-lg border border-border bg-card">
-        <table className="w-full min-w-[70rem] table-fixed border-separate border-spacing-0 text-sm">
+        <table className="w-full min-w-[64rem] table-fixed border-separate border-spacing-0 text-sm">
           <thead>
             <tr className="text-left text-xs text-muted-foreground">
               <th className="sticky top-0 z-10 w-10 border-b border-border bg-muted px-3 py-2">

@@ -1,6 +1,6 @@
 # Plan: Tabellen-Workflow im Lager (Desktop)
 
-Stand: 2026-10-02. Phase 1–6 umgesetzt, offen Staging-Abnahme. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-02. Phase 1–7 umgesetzt, auf main und Staging (E2E gegen Staging grün), offen Abnahme durch Nutzer und Prod-Release. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -127,4 +127,4 @@ dort ist eine Tabelle mit Tastatur deutlich schneller als ein Formular. Wichtig 
 - [x] Phase 4 Komfort
 - [x] Phase 5 Bestand-Tabelle
 - [x] Phase 6 Inline + Sammelaktionen
-- [ ] Phase 7 – `e2e/lager-tabelle.spec.ts` lokal grün, Staging-Abnahme offen
+- [x] Phase 7 – `e2e/lager-tabelle.spec.ts` gegen Staging grün
