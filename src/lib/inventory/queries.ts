@@ -24,7 +24,8 @@ export type InventoryListFilter = {
   categoryId?: string;
   locationId?: string;
   /** Besondere Sichten der Übersicht. */
-  view?: "all" | "defects" | "inspection" | "checked_out" | "missing" | "unlabeled" | "retired";
+  view?:
+    "all" | "defects" | "inspection" | "checked_out" | "missing" | "unlabeled" | "low" | "retired";
   page?: number;
 };
 
@@ -46,9 +47,21 @@ export type InventoryListItem = {
   labelPrinted: boolean;
 };
 
+/** Mengenartikel unter Mindestbestand (Spaltenvergleich, daher in JS). */
+export async function lowStockAssetIds(): Promise<string[]> {
+  const candidates = await prisma.inventoryAsset.findMany({
+    where: { kind: "bulk", minQuantity: { not: null }, status: { not: "retired" } },
+    select: { id: true, quantity: true, minQuantity: true },
+  });
+  return candidates
+    .filter((asset) => asset.minQuantity !== null && asset.quantity < asset.minQuantity)
+    .map((asset) => asset.id);
+}
+
 function buildWhere(
   filter: InventoryListFilter,
   locationIds: string[] | null,
+  lowIds: string[] | null = null,
 ): Prisma.InventoryAssetWhereInput {
   const and: Prisma.InventoryAssetWhereInput[] = [];
   const view = filter.view ?? "all";
@@ -105,6 +118,9 @@ function buildWhere(
     case "unlabeled":
       and.push({ labelPrintedAt: null });
       break;
+    case "low":
+      and.push({ id: { in: lowIds ?? [] } });
+      break;
     default:
       break;
   }
@@ -114,7 +130,8 @@ function buildWhere(
 export async function listInventoryAssets(filter: InventoryListFilter) {
   const { locations, label } = await loadLocationLabeler();
   const locationIds = filter.locationId ? locationSubtreeIds(locations, filter.locationId) : null;
-  const where = buildWhere(filter, locationIds);
+  const lowIds = filter.view === "low" ? await lowStockAssetIds() : null;
+  const where = buildWhere(filter, locationIds, lowIds);
   const page = Math.max(1, filter.page ?? 1);
   const [total, assets] = await Promise.all([
     prisma.inventoryAsset.count({ where }),
@@ -217,7 +234,16 @@ export async function getInventoryOverviewStats() {
     prisma.inventoryAsset.count({ where: { ...active, labelPrintedAt: null } }),
     prisma.inventoryStocktake.count({ where: { status: "open" } }),
   ]);
-  return { total, defects, inspections, checkedOut, unlabeled, openStocktakes: stocktakes };
+  const lowStock = (await lowStockAssetIds()).length;
+  return {
+    total,
+    defects,
+    inspections,
+    checkedOut,
+    unlabeled,
+    lowStock,
+    openStocktakes: stocktakes,
+  };
 }
 
 export async function listInventoryAreas() {

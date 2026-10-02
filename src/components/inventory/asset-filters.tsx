@@ -22,6 +22,7 @@ export const ASSET_VIEWS = [
   { value: "checked_out", label: "Ausgegeben" },
   { value: "missing", label: "Vermisst" },
   { value: "unlabeled", label: "Ohne Etikett" },
+  { value: "low", label: "Unter Mindestbestand" },
   { value: "retired", label: "Ausgemustert" },
 ] as const;
 

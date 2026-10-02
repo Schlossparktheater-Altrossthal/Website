@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/members/page-header";
 import {
   AlertTriangleIcon,
   ArrowRightLeftIcon,
+  DownloadIcon,
   PlusIcon,
   PrinterIcon,
   QrCodeIcon,
@@ -39,6 +40,7 @@ const VIEWS: readonly View[] = [
   "checked_out",
   "missing",
   "unlabeled",
+  "low",
   "retired",
 ];
 
@@ -154,6 +156,29 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
         />
       </div>
 
+      {stats.lowStock || stats.openStocktakes ? (
+        <div className="flex flex-wrap gap-2 text-sm">
+          {stats.openStocktakes ? (
+            <Link
+              href={`${INVENTORY_BASE_PATH}/inventur`}
+              className="rounded-full border border-info/40 bg-info/10 px-3 py-1 font-medium text-foreground hover:border-info"
+            >
+              {stats.openStocktakes === 1
+                ? "Inventur läuft – mitzählen"
+                : `${stats.openStocktakes} Inventuren laufen`}
+            </Link>
+          ) : null}
+          {stats.lowStock ? (
+            <Link
+              href={`${INVENTORY_BASE_PATH}?ansicht=low`}
+              className="rounded-full border border-warning/40 bg-warning/10 px-3 py-1 font-medium text-foreground hover:border-warning"
+            >
+              {stats.lowStock} unter Mindestbestand
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
       <section className="space-y-3" aria-labelledby="lager-bestand">
         <div className="flex flex-wrap items-center gap-2">
           <h2 id="lager-bestand" className="text-lg font-semibold text-foreground">
@@ -169,6 +194,14 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
                 Etiketten
               </Link>
             </Button>
+            {access.canManage ? (
+              <Button asChild variant="outline" size="sm">
+                <a href="/api/lager/export" download>
+                  <DownloadIcon className="mr-2 h-4 w-4" />
+                  CSV
+                </a>
+              </Button>
+            ) : null}
             {access.canManage ? (
               <Button asChild variant="outline" size="sm">
                 <Link href={`${INVENTORY_BASE_PATH}/einstellungen`}>
