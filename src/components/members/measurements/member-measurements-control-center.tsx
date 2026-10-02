@@ -656,7 +656,7 @@ export function MemberMeasurementsControlCenter({
                       <SettingsIcon className="h-4 w-4" aria-hidden />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg">
+                  <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                       <DialogTitle>Benötigte Maße auswählen</DialogTitle>
                       <DialogDescription>
@@ -815,7 +815,7 @@ export function MemberMeasurementsControlCenter({
         open={memberDialogId !== null}
         onOpenChange={(open) => (!open ? handleMemberDialogClose() : null)}
       >
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader className="sr-only">
             <DialogTitle>
               {memberModalMember
@@ -995,7 +995,7 @@ export function MemberMeasurementsControlCenter({
         open={dialogState !== null}
         onOpenChange={(open) => (!open ? handleDialogClose() : null)}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {dialogState?.mode === "edit"

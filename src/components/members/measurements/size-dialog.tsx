@@ -44,7 +44,7 @@ export function SizeDialog({
 }: SizeDialogProps) {
   return (
     <Dialog open={category !== null} onOpenChange={(open) => (!open ? onClose() : null)}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="sm:max-w-sm">
         {category ? (
           <SizeForm
             key={`${userId ?? "self"}-${category}`}

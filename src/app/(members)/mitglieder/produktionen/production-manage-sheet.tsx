@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ProductionStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +47,6 @@ export function ProductionManageSheet({
   activeShowId: string | null;
   suggestedYear: number;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const open = params.get(MANAGE_PARAM) === "1";
@@ -57,7 +56,8 @@ export function ProductionManageSheet({
     const next = new URLSearchParams(params.toString());
     next.delete(MANAGE_PARAM);
     const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // Nur die Adresse ändern: kein Server-Neuladen, man bleibt an derselben Stelle der Seite.
+    window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
   };
 
   return (

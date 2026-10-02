@@ -947,7 +947,7 @@ export function ServerAnalyticsContent({
                   Statistiken zurücksetzen
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg space-y-4">
+              <DialogContent className="sm:max-w-lg space-y-4">
                 <DialogHeader>
                   <DialogTitle>Serverstatistiken zurücksetzen</DialogTitle>
                   <DialogDescription>

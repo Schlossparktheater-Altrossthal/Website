@@ -171,7 +171,7 @@ export function CastingExportDialog({ showTitle, characters }: CastingExportDial
           Export
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Besetzung exportieren</DialogTitle>
           <DialogDescription>Wähle Rollen und Inhalte für das PDF aus.</DialogDescription>

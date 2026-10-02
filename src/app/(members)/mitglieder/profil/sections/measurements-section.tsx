@@ -155,7 +155,7 @@ export function MeasurementsSection({
       />
 
       <Dialog open={editing !== null} onOpenChange={(open) => (!open ? setEditing(null) : null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           {editing ? (
             <>
               <DialogHeader>

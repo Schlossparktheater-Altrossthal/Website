@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { AlertTriangleIcon, PlusIcon, SearchIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,6 @@ const VIEW_LABELS: Record<StueckView, string> = {
 };
 
 export function StueckClient({ data, view }: { data: RolesScenesData; view: StueckView }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = React.useState("");
   const [creating, setCreating] = React.useState<
@@ -44,7 +43,8 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
     if (view !== "ablauf") next.set("ansicht", view);
     for (const [key, value] of Object.entries(params)) if (value) next.set(key, value);
     const search = next.toString();
-    router.replace(search ? `${BASE_PATH}?${search}` : BASE_PATH, { scroll: false });
+    // Nur die Adresse ändern: kein Server-Neuladen, Scrollposition bleibt beim Schließen erhalten.
+    window.history.replaceState(null, "", search ? `${BASE_PATH}?${search}` : BASE_PATH);
   };
 
   const needle = query.trim().toLowerCase();

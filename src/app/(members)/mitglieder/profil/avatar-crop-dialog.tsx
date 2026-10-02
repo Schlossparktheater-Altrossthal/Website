@@ -113,7 +113,7 @@ export function AvatarCropDialog({
         if (!nextOpen) onClose();
       }}
     >
-      <DialogContent className="max-w-[520px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Bild zuschneiden</DialogTitle>
           <DialogDescription>
