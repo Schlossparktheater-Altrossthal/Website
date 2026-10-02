@@ -17,20 +17,24 @@ import {
 import { AssetThumb } from "@/components/inventory/asset-thumb";
 import { DefectDialog } from "@/components/inventory/defect-dialog";
 import { InspectionDialog } from "@/components/inventory/inspection-dialog";
-import { QrScanner, scanFeedback } from "@/components/inventory/qr-scanner";
+import { QrScanner, scanFeedback, type ScanSignal } from "@/components/inventory/qr-scanner";
+import {
+  ScannerShell,
+  ScanToneIcon,
+  type ScanToast,
+  type SheetSnap,
+} from "@/components/inventory/scanner-shell";
 import { ToneBadge } from "@/components/inventory/tone-badge";
 import {
   AlertTriangleIcon,
   ArrowLeftRightIcon,
   ArrowRightIcon,
-  CheckCircleIcon,
   CloseIcon,
   InfoIcon,
   MapPinIcon,
   PackageIcon,
   SearchIcon,
   ShieldCheckIcon,
-  XCircleIcon,
 } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +58,19 @@ import {
   parseInventoryCode,
 } from "@/lib/inventory/constants";
 import type { ScanResult } from "@/lib/inventory/scan";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
+
+const subscribeNoop = () => () => undefined;
+
+/** Erst nach dem Hydrieren wissen wir, ob Handy oder Desktop – vorher keine Kamera starten. */
+function useHydrated() {
+  return React.useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
+}
 
 export type ScanMode = "lookup" | "store" | "checkout" | "return" | "inspect";
 
@@ -129,6 +145,12 @@ export function ScanWorkbench({
   const [dialog, setDialog] = React.useState<"defect" | "inspection" | "batch-inspection" | null>(
     null,
   );
+  const [signal, setSignal] = React.useState<ScanSignal | null>(null);
+  const [scanToast, setScanToast] = React.useState<ScanToast | null>(null);
+  const [snap, setSnap] = React.useState<SheetSnap>("peek");
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const hydrated = useHydrated();
+  const desktop = useMediaQuery("(min-width: 1024px)");
   const queue = React.useRef(Promise.resolve());
   // Scans laufen in einer Warteschlange; sie lesen den Zustand über diese Ref, damit ein gerade
   // gescanntes Ziel schon für den nächsten Scan gilt.
@@ -142,10 +164,21 @@ export function ScanWorkbench({
     setTarget(next);
   }, []);
 
-  const push = React.useCallback((entry: Omit<LogEntry, "key">) => {
-    scanFeedback(entry.tone);
-    setLog((items) => [{ ...entry, key: `${Date.now()}-${Math.random()}` }, ...items].slice(0, 60));
+  const signalTone = React.useCallback((tone: ScanSignal["tone"]) => {
+    scanFeedback(tone);
+    setSignal({ tone, key: Date.now() });
   }, []);
+
+  const push = React.useCallback(
+    (entry: Omit<LogEntry, "key">) => {
+      signalTone(entry.tone);
+      setScanToast({ key: Date.now(), tone: entry.tone, title: entry.title, detail: entry.detail });
+      setLog((items) =>
+        [{ ...entry, key: `${Date.now()}-${Math.random()}` }, ...items].slice(0, 60),
+      );
+    },
+    [signalTone],
+  );
 
   const selectedCheckout = checkouts.find((entry) => entry.id === checkoutId) ?? null;
 
@@ -211,12 +244,13 @@ export function ScanWorkbench({
 
       if (mode === "lookup") {
         if (hit.type === "location") {
-          scanFeedback("ok");
+          signalTone("ok");
           router.push(inventoryLocationPath(hit.code));
           return;
         }
-        scanFeedback(hit.locked ? "warn" : "ok");
+        signalTone(hit.locked ? "warn" : "ok");
         setCurrent(hit);
+        setSnap("half");
         return;
       }
 
@@ -307,7 +341,7 @@ export function ScanWorkbench({
         });
       }
     },
-    [push, router, placeOne, checkoutOne, chooseTarget],
+    [push, signalTone, router, placeOne, checkoutOne, chooseTarget],
   );
 
   const onScan = React.useCallback(
@@ -348,197 +382,100 @@ export function ScanWorkbench({
     setCheckouts((items) => [{ id: result.data.id, title }, ...items]);
     setCheckoutId(result.data.id);
     setNewCheckout("");
+    setPickerOpen(false);
   };
 
   const changeMode = (next: ScanMode) => {
     setMode(next);
     setCurrent(null);
     setLog([]);
+    setSnap("peek");
+    // Ohne gewählte Ausgabe gleich die Auswahl öffnen – sonst landet jeder Scan als Warnung.
+    if (next === "checkout" && !live.current.checkoutId && !desktop) setPickerOpen(true);
+  };
+
+  const closeCurrent = () => {
+    setCurrent(null);
+    setSnap("peek");
   };
 
   const modeMeta = MODES.find((entry) => entry.value === mode)!;
-  const scannerPaused = pending !== null || dialog !== null;
   const okCount = log.filter((entry) => entry.tone === "ok").length;
+  const problemCount = log.length - okCount;
+  const mobile = hydrated && !desktop;
+  const scannerPaused =
+    pending !== null ||
+    dialog !== null ||
+    pickerOpen ||
+    (mobile && mode === "lookup" && current !== null);
 
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Scan-Modus">
-        {MODES.map((entry) => (
-          <button
-            key={entry.value}
-            type="button"
-            role="radio"
-            aria-checked={mode === entry.value}
-            onClick={() => changeMode(entry.value)}
-            className={cn(
-              "flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-1.5 text-[11px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:text-xs",
-              mode === entry.value
-                ? "border-primary bg-primary/15 text-foreground"
-                : "border-border bg-card text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {entry.icon}
-            <span className="max-w-full truncate">{entry.label}</span>
-          </button>
-        ))}
+  const modeButtons = (compact: boolean) => (
+    <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="Scan-Modus">
+      {MODES.map((entry) => (
+        <button
+          key={entry.value}
+          type="button"
+          role="radio"
+          aria-checked={mode === entry.value}
+          onClick={() => changeMode(entry.value)}
+          className={cn(
+            "flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-[11px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:text-xs",
+            compact ? "min-h-12" : "min-h-14 border",
+            mode === entry.value
+              ? "border-primary bg-primary/15 text-foreground"
+              : "border-border bg-card text-muted-foreground hover:text-foreground",
+            compact && mode !== entry.value && "bg-transparent",
+          )}
+        >
+          {entry.icon}
+          <span className="max-w-full truncate">{entry.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const checkoutPicker = (
+    <CheckoutPicker
+      checkouts={checkouts}
+      checkoutId={checkoutId}
+      onSelect={(id) => {
+        setCheckoutId(id);
+        setPickerOpen(false);
+      }}
+      newCheckout={newCheckout}
+      onNewCheckoutChange={setNewCheckout}
+      onCreate={() => void createCheckout()}
+      selected={selectedCheckout}
+    />
+  );
+
+  const protocol = <ProtocolList log={log} empty="Noch nichts gescannt." className="max-h-none" />;
+
+  const inspectPanel = (
+    <div className="space-y-2 rounded-xl border border-border bg-card p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-medium text-foreground">
+          {inspectList.length} {inspectList.length === 1 ? "Gerät" : "Geräte"} gesammelt
+        </p>
+        {inspectList.length ? (
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setInspectList([])}>
+            Leeren
+          </Button>
+        ) : null}
       </div>
+      <Button
+        className="w-full"
+        disabled={!inspectList.length}
+        onClick={() => setDialog("batch-inspection")}
+      >
+        <ShieldCheckIcon className="mr-2 h-4 w-4" />
+        Prüfung für {inspectList.length || "…"} eintragen
+      </Button>
+    </div>
+  );
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="space-y-3">
-          {mode === "store" ? (
-            <ContextBar
-              icon={
-                target?.type === "container" ? (
-                  <PackageIcon className="h-5 w-5" />
-                ) : (
-                  <MapPinIcon className="h-5 w-5" />
-                )
-              }
-              label={target ? "Ziel" : "Noch kein Ziel"}
-              value={target ? target.label : "Lagerplatz- oder Kisten-Etikett scannen"}
-              active={Boolean(target)}
-              onClear={target ? () => chooseTarget(null) : undefined}
-            />
-          ) : null}
-          {mode === "checkout" ? (
-            <div className="space-y-2 rounded-xl border border-border bg-card p-3">
-              <Label>Ausgabe</Label>
-              <Select value={checkoutId ?? ""} onValueChange={setCheckoutId}>
-                <SelectTrigger aria-label="Ausgabe wählen">
-                  <SelectValue placeholder="Offene Ausgabe wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {checkouts.map((entry) => (
-                    <SelectItem key={entry.id} value={entry.id}>
-                      {entry.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <form
-                className="flex gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void createCheckout();
-                }}
-              >
-                <Input
-                  value={newCheckout}
-                  onChange={(event) => setNewCheckout(event.target.value)}
-                  placeholder="oder neu: z. B. Probe Schlosspark"
-                  aria-label="Neue Ausgabe"
-                  className="min-w-0 flex-1"
-                />
-                <Button type="submit" variant="outline" disabled={!newCheckout.trim()}>
-                  Anlegen
-                </Button>
-              </form>
-              {selectedCheckout ? (
-                <Link
-                  href={`${INVENTORY_BASE_PATH}/ausgaben/${selectedCheckout.id}`}
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  Packliste „{selectedCheckout.title}“ öffnen
-                </Link>
-              ) : null}
-            </div>
-          ) : null}
-
-          <QrScanner onScan={onScan} paused={scannerPaused} hint={modeMeta.hint} />
-          <p className="text-xs text-muted-foreground">{modeMeta.hint}</p>
-        </div>
-
-        <div className="space-y-3">
-          {mode === "lookup" ? (
-            current ? (
-              <LookupCard
-                asset={current}
-                onDefect={() => setDialog("defect")}
-                onInspection={() => setDialog("inspection")}
-                onClose={() => setCurrent(null)}
-              />
-            ) : (
-              <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                Etikett scannen – hier erscheint das Objekt mit Ort, Zustand und Prüfstatus.
-              </div>
-            )
-          ) : null}
-
-          {mode === "inspect" ? (
-            <div className="space-y-2 rounded-xl border border-border bg-card p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-medium text-foreground">
-                  {inspectList.length} {inspectList.length === 1 ? "Gerät" : "Geräte"} gesammelt
-                </p>
-                {inspectList.length ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ml-auto"
-                    onClick={() => setInspectList([])}
-                  >
-                    Leeren
-                  </Button>
-                ) : null}
-              </div>
-              <Button
-                className="w-full"
-                disabled={!inspectList.length}
-                onClick={() => setDialog("batch-inspection")}
-              >
-                <ShieldCheckIcon className="mr-2 h-4 w-4" />
-                Prüfung für {inspectList.length || "…"} eintragen
-              </Button>
-            </div>
-          ) : null}
-
-          {mode !== "lookup" ? (
-            <section className="rounded-xl border border-border bg-card" aria-live="polite">
-              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-                <p className="text-sm font-medium text-foreground">Protokoll</p>
-                <p className="text-xs text-muted-foreground">{okCount} erfolgreich</p>
-              </div>
-              {log.length ? (
-                <ul className="max-h-[50dvh] divide-y divide-border overflow-y-auto">
-                  {log.map((entry) => (
-                    <li key={entry.key} className="flex items-start gap-3 px-3 py-2">
-                      {entry.tone === "ok" ? (
-                        <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                      ) : entry.tone === "warn" ? (
-                        <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                      ) : (
-                        <XCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        {entry.href ? (
-                          <Link
-                            href={entry.href}
-                            className="block truncate text-sm font-medium text-foreground hover:underline"
-                          >
-                            {entry.title}
-                          </Link>
-                        ) : (
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {entry.title}
-                          </p>
-                        )}
-                        {entry.detail ? (
-                          <p className="text-xs break-words text-muted-foreground">
-                            {entry.detail}
-                          </p>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="px-3 py-4 text-sm text-muted-foreground">Noch nichts gescannt.</p>
-              )}
-            </section>
-          ) : null}
-        </div>
-      </div>
-
+  const dialogs = (
+    <>
       <ResponsivePanel
         open={pending !== null}
         onOpenChange={(open) => (!open ? setPending(null) : undefined)}
@@ -621,6 +558,310 @@ export function ScanWorkbench({
         label={inspectList.map((item) => item.code).join(", ")}
         onDone={() => setInspectList([])}
       />
+    </>
+  );
+
+  if (!hydrated) return null;
+
+  if (mobile) {
+    const chip = (
+      icon: React.ReactNode,
+      text: string,
+      active: boolean,
+      onClick?: () => void,
+      onClear?: () => void,
+    ) => (
+      <div
+        className={cn(
+          "flex max-w-full items-center gap-2 rounded-full py-1 pr-1 pl-3 text-sm font-medium shadow-md",
+          active ? "bg-primary text-primary-foreground" : "bg-background/90 text-foreground",
+          !onClear && "pr-3",
+        )}
+      >
+        <span className="shrink-0">{icon}</span>
+        {onClick ? (
+          <button type="button" onClick={onClick} className="min-w-0 truncate py-1 text-left">
+            {text}
+          </button>
+        ) : (
+          <span className="min-w-0 truncate py-1">{text}</span>
+        )}
+        {onClear ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="shrink-0 rounded-full p-1.5 hover:bg-black/10"
+            aria-label="Ziel zurücksetzen"
+          >
+            <CloseIcon className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+    );
+
+    const context =
+      mode === "store"
+        ? chip(
+            target?.type === "container" ? (
+              <PackageIcon className="h-4 w-4" />
+            ) : (
+              <MapPinIcon className="h-4 w-4" />
+            ),
+            target ? target.label : "Erst Lagerplatz oder Kiste scannen",
+            Boolean(target),
+            undefined,
+            target ? () => chooseTarget(null) : undefined,
+          )
+        : mode === "checkout"
+          ? chip(
+              <ArrowRightIcon className="h-4 w-4" />,
+              selectedCheckout ? selectedCheckout.title : "Ausgabe wählen",
+              Boolean(selectedCheckout),
+              () => setPickerOpen(true),
+            )
+          : mode === "inspect" && inspectList.length
+            ? chip(
+                <ShieldCheckIcon className="h-4 w-4" />,
+                `${inspectList.length} ${inspectList.length === 1 ? "Gerät" : "Geräte"} gesammelt`,
+                true,
+                () => setSnap("half"),
+              )
+            : null;
+
+    const summary =
+      mode === "lookup" ? (
+        <span className="block truncate text-sm font-medium">
+          {current
+            ? `${current.code} · ${current.name}`
+            : "Etikett scannen – Details erscheinen hier"}
+        </span>
+      ) : (
+        <span className="flex items-center justify-between gap-2 text-sm">
+          <span className="font-medium">
+            {log.length ? `${okCount} erfolgreich` : "Noch nichts gescannt"}
+          </span>
+          {problemCount ? (
+            <span className="text-xs text-warning">
+              {problemCount} {problemCount === 1 ? "Hinweis" : "Hinweise"}
+            </span>
+          ) : null}
+        </span>
+      );
+
+    return (
+      <>
+        <ScannerShell
+          closeHref={INVENTORY_BASE_PATH}
+          title={modeMeta.label === "Info" ? "Scannen" : modeMeta.label}
+          context={context}
+          onScan={onScan}
+          paused={scannerPaused}
+          hint={modeMeta.hint}
+          signal={signal}
+          toast={mode === "lookup" ? null : scanToast}
+          summary={summary}
+          snap={snap}
+          onSnapChange={setSnap}
+          footer={modeButtons(true)}
+        >
+          <div className="space-y-3 px-3 pb-3">
+            {mode === "lookup" ? (
+              current ? (
+                <LookupCard
+                  asset={current}
+                  onDefect={() => setDialog("defect")}
+                  onInspection={() => setDialog("inspection")}
+                  onClose={closeCurrent}
+                />
+              ) : (
+                <p className="py-2 text-sm text-muted-foreground">
+                  Etikett scannen – hier erscheint das Objekt mit Ort, Zustand und Prüfstatus.
+                </p>
+              )
+            ) : (
+              <>
+                {mode === "inspect" ? inspectPanel : null}
+                {protocol}
+              </>
+            )}
+          </div>
+        </ScannerShell>
+        <ResponsivePanel
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          title="Ausgabe wählen"
+          description="Offene Ausgabe wählen oder neu anlegen"
+        >
+          {checkoutPicker}
+        </ResponsivePanel>
+        {dialogs}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {modeButtons(false)}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="space-y-3">
+          {mode === "store" ? (
+            <ContextBar
+              icon={
+                target?.type === "container" ? (
+                  <PackageIcon className="h-5 w-5" />
+                ) : (
+                  <MapPinIcon className="h-5 w-5" />
+                )
+              }
+              label={target ? "Ziel" : "Noch kein Ziel"}
+              value={target ? target.label : "Lagerplatz- oder Kisten-Etikett scannen"}
+              active={Boolean(target)}
+              onClear={target ? () => chooseTarget(null) : undefined}
+            />
+          ) : null}
+          {mode === "checkout" ? (
+            <div className="space-y-2 rounded-xl border border-border bg-card p-3">
+              <Label>Ausgabe</Label>
+              {checkoutPicker}
+            </div>
+          ) : null}
+
+          <QrScanner onScan={onScan} paused={scannerPaused} hint={modeMeta.hint} signal={signal} />
+          <p className="text-xs text-muted-foreground">{modeMeta.hint}</p>
+        </div>
+
+        <div className="space-y-3">
+          {mode === "lookup" ? (
+            current ? (
+              <LookupCard
+                asset={current}
+                onDefect={() => setDialog("defect")}
+                onInspection={() => setDialog("inspection")}
+                onClose={() => setCurrent(null)}
+              />
+            ) : (
+              <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                Etikett scannen – hier erscheint das Objekt mit Ort, Zustand und Prüfstatus.
+              </div>
+            )
+          ) : null}
+
+          {mode === "inspect" ? inspectPanel : null}
+
+          {mode !== "lookup" ? (
+            <section className="rounded-xl border border-border bg-card" aria-live="polite">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+                <p className="text-sm font-medium text-foreground">Protokoll</p>
+                <p className="text-xs text-muted-foreground">{okCount} erfolgreich</p>
+              </div>
+              <ProtocolList log={log} empty="Noch nichts gescannt." />
+            </section>
+          ) : null}
+        </div>
+      </div>
+
+      {dialogs}
+    </div>
+  );
+}
+
+function ProtocolList({
+  log,
+  empty,
+  className,
+}: {
+  log: LogEntry[];
+  empty: string;
+  className?: string;
+}) {
+  if (!log.length) return <p className="px-3 py-4 text-sm text-muted-foreground">{empty}</p>;
+  return (
+    <ul
+      className={cn("max-h-[50dvh] divide-y divide-border overflow-y-auto", className)}
+      aria-live="polite"
+    >
+      {log.map((entry) => (
+        <li key={entry.key} className="flex items-start gap-3 px-3 py-2">
+          <ScanToneIcon tone={entry.tone} className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0 flex-1">
+            {entry.href ? (
+              <Link
+                href={entry.href}
+                className="block truncate text-sm font-medium text-foreground hover:underline"
+              >
+                {entry.title}
+              </Link>
+            ) : (
+              <p className="truncate text-sm font-medium text-foreground">{entry.title}</p>
+            )}
+            {entry.detail ? (
+              <p className="text-xs break-words text-muted-foreground">{entry.detail}</p>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CheckoutPicker({
+  checkouts,
+  checkoutId,
+  onSelect,
+  newCheckout,
+  onNewCheckoutChange,
+  onCreate,
+  selected,
+}: {
+  checkouts: { id: string; title: string }[];
+  checkoutId: string | null;
+  onSelect: (id: string) => void;
+  newCheckout: string;
+  onNewCheckoutChange: (value: string) => void;
+  onCreate: () => void;
+  selected: { id: string; title: string } | null;
+}) {
+  return (
+    <div className="space-y-2">
+      <Select value={checkoutId ?? ""} onValueChange={onSelect}>
+        <SelectTrigger aria-label="Ausgabe wählen">
+          <SelectValue placeholder="Offene Ausgabe wählen" />
+        </SelectTrigger>
+        <SelectContent>
+          {checkouts.map((entry) => (
+            <SelectItem key={entry.id} value={entry.id}>
+              {entry.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <form
+        className="flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onCreate();
+        }}
+      >
+        <Input
+          value={newCheckout}
+          onChange={(event) => onNewCheckoutChange(event.target.value)}
+          placeholder="oder neu: z. B. Probe Schlosspark"
+          aria-label="Neue Ausgabe"
+          className="min-w-0 flex-1"
+        />
+        <Button type="submit" variant="outline" disabled={!newCheckout.trim()}>
+          Anlegen
+        </Button>
+      </form>
+      {selected ? (
+        <Link
+          href={`${INVENTORY_BASE_PATH}/ausgaben/${selected.id}`}
+          className="text-xs font-medium text-primary hover:underline"
+        >
+          Packliste „{selected.title}“ öffnen
+        </Link>
+      ) : null}
     </div>
   );
 }

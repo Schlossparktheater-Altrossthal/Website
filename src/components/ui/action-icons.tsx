@@ -142,6 +142,7 @@ import {
   X,
   XCircle,
   Zap,
+  ZoomIn,
   ScanLine,
   Warehouse,
   QrCode,
@@ -1117,4 +1118,11 @@ export function KeyboardIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <Keyboard className={className} aria-hidden {...props} />;
+}
+
+export function ZoomInIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <ZoomIn className={className} aria-hidden {...props} />;
 }

@@ -9,7 +9,8 @@ import {
   type StocktakeScanInput,
 } from "@/app/(members)/mitglieder/lager/actions/stocktakes";
 import { lookupCodeAction } from "@/app/(members)/mitglieder/lager/actions/placement";
-import { QrScanner, scanFeedback } from "@/components/inventory/qr-scanner";
+import { QrScanner, scanFeedback, type ScanSignal } from "@/components/inventory/qr-scanner";
+import { ScannerShell, type ScanToast, type SheetSnap } from "@/components/inventory/scanner-shell";
 import {
   AlertTriangleIcon,
   CheckCircleIcon,
@@ -21,7 +22,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
+  INVENTORY_BASE_PATH,
   formatInventoryDateTime,
   isLocationCode,
   parseInventoryCode,
@@ -39,6 +42,8 @@ type LogEntry = {
 };
 
 const POLL_MS = 5000;
+
+const subscribeNoop = () => () => undefined;
 
 function queueKey(stocktakeId: string) {
   return `lager.inventur.${stocktakeId}.queue`;
@@ -93,9 +98,21 @@ export function StocktakeCounter({
   } | null>(null);
   const [quantity, setQuantity] = React.useState("");
   const flushing = React.useRef(false);
+  const [signal, setSignal] = React.useState<ScanSignal | null>(null);
+  const [scanToast, setScanToast] = React.useState<ScanToast | null>(null);
+  const [snap, setSnap] = React.useState<SheetSnap>("peek");
+  const hydrated = React.useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
+  const desktop = useMediaQuery("(min-width: 1024px)");
 
   const push = React.useCallback((entry: Omit<LogEntry, "key">) => {
+    const tone = entry.tone === "pending" ? "warn" : entry.tone;
     if (entry.tone !== "pending") scanFeedback(entry.tone);
+    setSignal({ tone, key: Date.now() });
+    setScanToast({ key: Date.now(), tone, title: entry.title, detail: entry.detail });
     setLog((items) => [{ ...entry, key: newScanId() }, ...items].slice(0, 50));
   }, []);
 
@@ -256,6 +273,230 @@ export function StocktakeCounter({
 
   const percent = progress.expected ? Math.round((progress.found / progress.expected) * 100) : 0;
 
+  const zoneHint = zone ? `Zählen in ${zone.name}` : "Erst den Lagerplatz scannen";
+  const bulkPanel = (
+    <ResponsivePanel
+      open={bulk !== null}
+      onOpenChange={(open) => (!open ? setBulk(null) : undefined)}
+      title="Gezählte Menge"
+      description="Menge des Mengenartikels in dieser Zone"
+      footer={
+        <Button className="w-full" size="lg" onClick={confirmBulk} disabled={quantity === ""}>
+          Speichern
+        </Button>
+      }
+    >
+      {bulk ? (
+        <form
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            confirmBulk();
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            {bulk.code} · {bulk.name} in {zone?.name}
+          </p>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={quantity}
+            onChange={(event) => setQuantity(event.target.value)}
+            placeholder={`Anzahl (${bulk.unit ?? "Stk."})`}
+            className="h-12 text-center text-lg"
+            aria-label="Gezählte Menge"
+            autoFocus
+          />
+        </form>
+      ) : null}
+    </ResponsivePanel>
+  );
+
+  if (!hydrated) return null;
+
+  if (!desktop) {
+    return (
+      <>
+        <ScannerShell
+          closeHref={`${INVENTORY_BASE_PATH}/inventur/${stocktakeId}?ansicht=abgleich`}
+          title="Inventur"
+          context={
+            <button
+              type="button"
+              onClick={
+                zone
+                  ? () => {
+                      zoneRef.current = null;
+                      setZone(null);
+                    }
+                  : undefined
+              }
+              className={cn(
+                "flex max-w-full items-center gap-2 rounded-full px-3 py-2 text-sm font-medium shadow-md",
+                zone ? "bg-primary text-primary-foreground" : "bg-background/90 text-foreground",
+              )}
+              aria-label={zone ? `Zone ${zone.name} zurücksetzen` : undefined}
+            >
+              <MapPinIcon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">
+                {zone ? zone.name : "Lagerplatz-Etikett scannen"}
+              </span>
+              {zone ? <CloseIcon className="h-4 w-4 shrink-0" /> : null}
+            </button>
+          }
+          onScan={(raw) => void onScan(raw)}
+          paused={bulk !== null}
+          hint={zoneHint}
+          signal={signal}
+          toast={scanToast}
+          snap={snap}
+          onSnapChange={setSnap}
+          summary={
+            <span className="flex items-center justify-between gap-2 text-sm">
+              <span className="font-medium">
+                Gefunden {progress.found} / {progress.expected}
+              </span>
+              {!online || pendingCount ? (
+                <span className="flex items-center gap-1 text-xs text-warning">
+                  <WifiOffIcon className="h-3.5 w-3.5" />
+                  {pendingCount} wartend
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">{percent} %</span>
+              )}
+            </span>
+          }
+          footer={
+            <div
+              className="mx-2 my-1 h-2 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-label="Fortschritt"
+              aria-valuenow={percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          }
+        >
+          <div className="space-y-3 px-3 pb-3">
+            {!online || pendingCount ? (
+              <p className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
+                <WifiOffIcon className="h-4 w-4 shrink-0 text-warning" />
+                {online
+                  ? `${pendingCount} Scans werden gesendet …`
+                  : `Offline – ${pendingCount} Scans sicher auf dem Gerät gespeichert.`}
+              </p>
+            ) : null}
+            <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Gefunden</p>
+                  <p className="text-2xl font-semibold text-foreground">
+                    {progress.found}
+                    <span className="text-base font-normal text-muted-foreground">
+                      {" "}
+                      / {progress.expected}
+                    </span>
+                  </p>
+                </div>
+                <p className="text-right text-xs text-muted-foreground">
+                  {progress.people} {progress.people === 1 ? "Person" : "Personen"} ·{" "}
+                  {progress.scans} Scans
+                </p>
+              </div>
+              <div
+                className="h-2 overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuenow={percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+              {progress.zones.length ? (
+                <ul className="space-y-1.5">
+                  {progress.zones.map((entry) => (
+                    <li key={entry.id} className="flex items-center gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate text-foreground">{entry.name}</span>
+                      <span
+                        className={cn(
+                          "shrink-0 text-xs tabular-nums",
+                          entry.found >= entry.expected ? "text-success" : "text-muted-foreground",
+                        )}
+                      >
+                        {entry.found}/{entry.expected}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+
+            <section className="rounded-xl border border-border bg-card" aria-live="polite">
+              <p className="border-b border-border px-3 py-2 text-sm font-medium text-foreground">
+                Meine Scans
+              </p>
+              {log.length ? (
+                <ul className="max-h-[40dvh] divide-y divide-border overflow-y-auto">
+                  {log.map((entry) => (
+                    <li key={entry.key} className="flex items-start gap-3 px-3 py-2">
+                      {entry.tone === "ok" ? (
+                        <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                      ) : entry.tone === "error" ? (
+                        <XCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                      ) : (
+                        <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {entry.title}
+                        </p>
+                        {entry.detail ? (
+                          <p className="text-xs text-muted-foreground">{entry.detail}</p>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-3 py-4 text-sm text-muted-foreground">Noch nichts gescannt.</p>
+              )}
+            </section>
+
+            {progress.recent.length ? (
+              <section className="rounded-xl border border-border bg-card">
+                <p className="border-b border-border px-3 py-2 text-sm font-medium text-foreground">
+                  Zuletzt im Team
+                </p>
+                <ul className="divide-y divide-border">
+                  {progress.recent.slice(0, 6).map((scan, index) => (
+                    <li
+                      key={`${scan.code}-${index}`}
+                      className="px-3 py-2 text-xs text-muted-foreground"
+                    >
+                      <span className="font-medium text-foreground">{scan.name ?? scan.code}</span>
+                      {scan.place ? ` · ${scan.place}` : ""} · {scan.by ?? "?"} ·{" "}
+                      {formatInventoryDateTime(scan.at)}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+        </ScannerShell>
+        {bulkPanel}
+      </>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <div className="space-y-3">
@@ -291,7 +532,8 @@ export function StocktakeCounter({
         <QrScanner
           onScan={(raw) => void onScan(raw)}
           paused={bulk !== null}
-          hint={zone ? `Zählen in ${zone.name}` : "Erst den Lagerplatz scannen"}
+          hint={zoneHint}
+          signal={signal}
         />
         {!online || pendingCount ? (
           <p className="flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-foreground">
@@ -402,42 +644,7 @@ export function StocktakeCounter({
         ) : null}
       </div>
 
-      <ResponsivePanel
-        open={bulk !== null}
-        onOpenChange={(open) => (!open ? setBulk(null) : undefined)}
-        title="Gezählte Menge"
-        description="Menge des Mengenartikels in dieser Zone"
-        footer={
-          <Button className="w-full" size="lg" onClick={confirmBulk} disabled={quantity === ""}>
-            Speichern
-          </Button>
-        }
-      >
-        {bulk ? (
-          <form
-            className="space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              confirmBulk();
-            }}
-          >
-            <p className="text-sm text-muted-foreground">
-              {bulk.code} · {bulk.name} in {zone?.name}
-            </p>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              placeholder={`Anzahl (${bulk.unit ?? "Stk."})`}
-              className="h-12 text-center text-lg"
-              aria-label="Gezählte Menge"
-              autoFocus
-            />
-          </form>
-        ) : null}
-      </ResponsivePanel>
+      {bulkPanel}
     </div>
   );
 }
