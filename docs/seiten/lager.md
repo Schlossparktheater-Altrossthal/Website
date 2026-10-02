@@ -5,21 +5,21 @@ Inventar für Technik, Kostüm, Requisite, Bühnenbau und Werkzeug. Plan und Ent
 
 ## Routen
 
-| Route                                        | Inhalt                                                                                      |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `/mitglieder/lager`                          | Bestand: Scannen/Erfassen, Kennzahlen, Suche, Filter (`?q`, `?bereich`, `?ort`, `?ansicht`) |
-| `/mitglieder/lager/neu`                      | Erfassen (`?bereich`, `?ort`, `?kiste` belegen vor)                                         |
-| `/mitglieder/lager/neu/tabelle`              | Sammelerfassung als Tabelle (ab `lg`, Entwürfe im Browserspeicher)                          |
-| `/mitglieder/lager/objekt/[code]`            | Detail mit Schnellaktionen, Mängeln, Prüfungen, Verlauf                                     |
-| `/mitglieder/lager/objekt/[code]/bearbeiten` | Bearbeiten                                                                                  |
-| `/mitglieder/lager/scannen`                  | Scanner (`?modus=info                                                                       | einlagern | ausgeben | zurueck | pruefen`, `?ziel`, `?ausgabe`) |
-| `/mitglieder/lager/ausgaben[/id]`            | Ausgaben und Packliste                                                                      |
-| `/mitglieder/lager/inventur[/id]`            | Inventur zählen (`?ansicht=abgleich` für den Abgleich)                                      |
-| `/mitglieder/lager/pruefungen`               | Elektroprüfungen (DGUV V3)                                                                  |
-| `/mitglieder/lager/orte[/code]`              | Lagerorte als Baum                                                                          |
-| `/mitglieder/lager/etiketten`                | Etiketten für A4-Bögen (`?codes=`, `?quelle=orte`)                                          |
-| `/mitglieder/lager/einstellungen`            | Bereiche und Kategorien (nur Verwaltung)                                                    |
-| `/i/[code]`                                  | Öffentliche Scan-Seite, Ziel der QR-Codes                                                   |
+| Route                                        | Inhalt                                                                                                                                                                                                   |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/mitglieder/lager`                          | Bestand: Scannen/Erfassen, Kennzahlen, Suche, Filter (`?q`, `?bereich`, `?ort`, `?ansicht`); Desktop auch als Tabelle (`?darstellung=tabelle`, `?sortierung=`) mit Inline-Bearbeitung und Sammelaktionen |
+| `/mitglieder/lager/neu`                      | Erfassen (`?bereich`, `?ort`, `?kiste` belegen vor)                                                                                                                                                      |
+| `/mitglieder/lager/neu/tabelle`              | Sammelerfassung als Tabelle (ab `lg`, Entwürfe im Browserspeicher)                                                                                                                                       |
+| `/mitglieder/lager/objekt/[code]`            | Detail mit Schnellaktionen, Mängeln, Prüfungen, Verlauf                                                                                                                                                  |
+| `/mitglieder/lager/objekt/[code]/bearbeiten` | Bearbeiten                                                                                                                                                                                               |
+| `/mitglieder/lager/scannen`                  | Scanner (`?modus=info                                                                                                                                                                                    | einlagern | ausgeben | zurueck | pruefen`, `?ziel`, `?ausgabe`) |
+| `/mitglieder/lager/ausgaben[/id]`            | Ausgaben und Packliste                                                                                                                                                                                   |
+| `/mitglieder/lager/inventur[/id]`            | Inventur zählen (`?ansicht=abgleich` für den Abgleich)                                                                                                                                                   |
+| `/mitglieder/lager/pruefungen`               | Elektroprüfungen (DGUV V3)                                                                                                                                                                               |
+| `/mitglieder/lager/orte[/code]`              | Lagerorte als Baum                                                                                                                                                                                       |
+| `/mitglieder/lager/etiketten`                | Etiketten für A4-Bögen (`?codes=`, `?quelle=orte`)                                                                                                                                                       |
+| `/mitglieder/lager/einstellungen`            | Bereiche und Kategorien (nur Verwaltung)                                                                                                                                                                 |
+| `/i/[code]`                                  | Öffentliche Scan-Seite, Ziel der QR-Codes                                                                                                                                                                |
 
 APIs: `/api/lager/photos/[id]`, `/api/lager/labels` (PDF), `/api/lager/inspections/[id]/document`,
 `/api/lager/export` (CSV, nur Verwaltung).

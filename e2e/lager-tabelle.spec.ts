@@ -121,16 +121,31 @@ test.describe("als admin", () => {
     await expect(page.getByRole("heading", { name: `E2E Kabel ${stamp}` })).toBeVisible();
     await expect(page.getByText("12 Stk.").first()).toBeVisible();
 
-    // Aufräumen.
-    for (const code of codes) {
-      await page.goto(`/mitglieder/lager/objekt/${code}`);
-      await clickUntil(page.getByRole("button", { name: "Weitere Aktionen" }), () =>
-        expect(page.getByRole("menuitem", { name: "Ausmustern" })).toBeVisible(),
-      );
-      await page.getByRole("menuitem", { name: "Ausmustern" }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "Ausmustern" }).click();
-      await expect(page.getByText("Ausgemustert – nur noch Ansicht")).toBeVisible();
-    }
+    // Bestand als Tabelle: nach Name sortiert, nur die Objekte dieses Laufs.
+    await page.goto(
+      `/mitglieder/lager?darstellung=tabelle&sortierung=name&q=${encodeURIComponent(stamp)}`,
+    );
+    const table = page.getByRole("table");
+    await expect(table.getByRole("link", { name: /^T-\d{4,}$/ })).toHaveCount(5);
+
+    // Name direkt in der Zelle ändern.
+    await clickUntil(table.getByRole("button", { name: `E2E Kabel ${stamp}` }), () =>
+      expect(page.getByLabel(`Name von ${codes[0]}`)).toBeVisible(),
+    );
+    await page.getByLabel(`Name von ${codes[0]}`).fill(`E2E Kabel lang ${stamp}`);
+    await page.keyboard.press("Enter");
+    await expect(table.getByRole("button", { name: `E2E Kabel lang ${stamp}` })).toBeVisible();
+
+    // Alle wählen, Zustand setzen, gemeinsam ausmustern (Aufräumen).
+    await page.getByRole("checkbox", { name: "Alle auf dieser Seite wählen" }).click();
+    await expect(page.getByText("5 Objekte ausgewählt")).toBeVisible();
+    await page.getByRole("combobox", { name: "Zustand setzen" }).click();
+    await page.getByRole("option", { name: "Gebraucht" }).click();
+    await expect(page.getByText("5 geändert.")).toBeVisible();
+    await expect(table.getByText("Gebraucht")).toHaveCount(5);
+    await page.getByRole("button", { name: "Ausmustern" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Ausmustern" }).click();
+    await expect(page.getByText("5 ausgemustert.")).toBeVisible();
     await deleteLocation(page, locationName);
 
     expect(errors).toEqual([]);

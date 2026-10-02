@@ -1,6 +1,6 @@
 # Plan: Tabellen-Workflow im Lager (Desktop)
 
-Stand: 2026-10-02. Phase 1–4 umgesetzt, Rest in Arbeit. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-02. Phase 1–6 umgesetzt, offen Staging-Abnahme. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -34,6 +34,11 @@ dort ist eine Tabelle mit Tastatur deutlich schneller als ein Formular. Wichtig 
   stehen zur Wahl. Die Ort-Spalte nimmt auch Kisten (Code oder Name).
 - T8: Mengenartikel mit Menge brauchen einen Ort oder eine Kiste, sonst ginge der Bestand verloren
   (das Einzelformular speichert die Menge ohne Ort stillschweigend nicht).
+- T10: Darstellung steht in der URL (`?darstellung=tabelle`, `?sortierung=name|-name`), die Wahl
+  merkt sich ein Cookie (`lager_darstellung`) – so rendert der Server ohne Flackern die richtige
+  Ansicht. Prüfung eintragen und CSV bleiben bei den bestehenden Seiten (Prüfungen hat schon
+  einen Sammel-Eintrag), die Aktionsleiste bietet Umlagern, Kategorie, Zustand, Etiketten und
+  Ausmustern.
 - T9: Eigene Tabellen-Komponente statt TanStack-Zellen-Editoren – Auswahl, Tastatur, Einfügen und
   Rückgängig sind bei einem Raster ohne Bibliothek einfacher und leichter.
 - T4: Zeilen sind **Entwürfe im Browser** (localStorage, überlebt Reload), Speichern legt alle
@@ -120,6 +125,6 @@ dort ist eine Tabelle mit Tastatur deutlich schneller als ein Formular. Wichtig 
 - [x] Phase 2 Grid
 - [x] Phase 3 Sammelerfassung
 - [x] Phase 4 Komfort
-- [ ] Phase 5 Bestand-Tabelle
-- [ ] Phase 6 Inline + Sammelaktionen
-- [ ] Phase 7 E2E/Abnahme
+- [x] Phase 5 Bestand-Tabelle
+- [x] Phase 6 Inline + Sammelaktionen
+- [ ] Phase 7 – `e2e/lager-tabelle.spec.ts` lokal grün, Staging-Abnahme offen

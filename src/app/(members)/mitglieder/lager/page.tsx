@@ -1,7 +1,10 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { AssetFilters } from "@/components/inventory/asset-filters";
 import { AssetList } from "@/components/inventory/asset-list";
+import { AssetTable } from "@/components/inventory/asset-table";
+import { AssetViewToggle } from "@/components/inventory/asset-view-toggle";
 import { LagerNav } from "@/components/inventory/lager-nav";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PageHeader } from "@/components/members/page-header";
@@ -19,12 +22,19 @@ import {
 } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/stat-tile";
-import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
+import {
+  INVENTORY_BASE_PATH,
+  INVENTORY_TABLE_PAGE_SIZE,
+  INVENTORY_VIEW_COOKIE,
+  type InventoryDisplay,
+} from "@/lib/inventory/constants";
 import {
   getInventoryOverviewStats,
   listInventoryAreas,
+  listContainerOptions,
   listInventoryAssets,
   listLocationOptions,
+  parseInventorySort,
   type InventoryListFilter,
 } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
@@ -60,19 +70,32 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
 
   const params = await searchParams;
   const view = first(params.ansicht);
+  // Tabelle nur am Desktop; mobil zeigt dieselbe Seite die Liste.
+  const displayParam = first(params.darstellung);
+  const display: InventoryDisplay =
+    displayParam === "tabelle" || displayParam === "liste"
+      ? displayParam
+      : (await cookies()).get(INVENTORY_VIEW_COOKIE)?.value === "tabelle"
+        ? "tabelle"
+        : "liste";
+  const table = display === "tabelle";
   const filter: InventoryListFilter = {
     query: first(params.q),
     areaId: first(params.bereich),
     locationId: first(params.ort),
     view: isView(view) ? view : "all",
     page: Number(first(params.seite)) || 1,
+    ...(table
+      ? { sort: parseInventorySort(first(params.sortierung)), pageSize: INVENTORY_TABLE_PAGE_SIZE }
+      : {}),
   };
 
-  const [stats, areas, locations, list] = await Promise.all([
+  const [stats, areas, locations, list, containers] = await Promise.all([
     getInventoryOverviewStats(),
     listInventoryAreas(),
     listLocationOptions(),
     listInventoryAssets(filter),
+    table ? listContainerOptions() : Promise.resolve([]),
   ]);
 
   const pageHref = (page: number) => {
@@ -198,6 +221,7 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
             </span>
           </h2>
           <div className="ml-auto flex flex-wrap gap-2">
+            <AssetViewToggle value={display} />
             <Button asChild variant="outline" size="sm">
               <Link href={`${INVENTORY_BASE_PATH}/etiketten`}>
                 <PrinterIcon className="mr-2 h-4 w-4" />
@@ -226,7 +250,26 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
           areas={areas.map((area) => ({ id: area.id, name: area.name }))}
           locations={locations.map((location) => ({ id: location.id, path: location.path }))}
         />
-        {list.items.length ? (
+        {list.items.length && table ? (
+          <>
+            <div className="lg:hidden">
+              <AssetList items={list.items} />
+            </div>
+            <div className="hidden lg:block">
+              <AssetTable
+                items={list.items}
+                areas={areas.map((area) => ({
+                  id: area.id,
+                  prefix: area.prefix,
+                  categories: area.categories,
+                }))}
+                placementOptions={{ locations, containers }}
+                sort={filter.sort}
+                canManage={access.canManage}
+              />
+            </div>
+          </>
+        ) : list.items.length ? (
           <AssetList items={list.items} />
         ) : (
           <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">

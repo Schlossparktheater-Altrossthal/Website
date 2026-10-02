@@ -188,6 +188,11 @@ export function inventoryLocationPath(code: string): string {
   return `${INVENTORY_BASE_PATH}/orte/${encodeURIComponent(code)}`;
 }
 
+/** Bestand als Liste oder Tabelle (Desktop); Cookie merkt die Wahl. */
+export const INVENTORY_VIEW_COOKIE = "lager_darstellung";
+export type InventoryDisplay = "liste" | "tabelle";
+export const INVENTORY_TABLE_PAGE_SIZE = 100;
+
 /** Höchstzahl Zeilen je Sammelerfassung-Aufruf. */
 export const MAX_BULK_ROWS = 200;
 

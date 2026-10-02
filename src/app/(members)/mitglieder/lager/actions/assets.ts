@@ -15,6 +15,7 @@ import {
   cleanAttributes,
   costData,
   createAssetInTx,
+  setAssetRetiredInTx,
 } from "@/lib/inventory/asset-write";
 import {
   addMonths,
@@ -22,7 +23,7 @@ import {
   inventoryAssetPath,
   MAX_BULK_ROWS,
 } from "@/lib/inventory/constants";
-import { recordEvent, refreshAssetStatus, requireInventoryAccess } from "@/lib/inventory/service";
+import { recordEvent, requireInventoryAccess } from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
 
 export async function createAssetAction(
@@ -242,35 +243,9 @@ export async function setAssetRetiredAction(
   try {
     const { userId } = await requireInventoryAccess("manage");
     const note = z.string().trim().max(300).optional().parse(reason);
-    const asset = await prisma.$transaction(async (tx) => {
-      const asset = await tx.inventoryAsset.update({
-        where: { id: assetId },
-        data: retired
-          ? { status: "retired", locationId: null, containerId: null }
-          : { status: "available" },
-        select: { code: true },
-      });
-      if (retired) {
-        await tx.inventoryStock.deleteMany({ where: { assetId } });
-        await tx.inventoryAsset.update({
-          where: { id: assetId },
-          data: { quantity: 0 },
-        });
-        // Inhalt einer ausgemusterten Kiste bleibt am Ort der Kiste liegen.
-        await tx.inventoryAsset.updateMany({
-          where: { containerId: assetId },
-          data: { containerId: null },
-        });
-      }
-      await recordEvent(tx, {
-        assetId,
-        type: "status",
-        message: retired ? `Ausgemustert${note ? `: ${note}` : ""}` : "Wieder aufgenommen",
-        userId,
-      });
-      if (!retired) await refreshAssetStatus(tx, assetId, { seen: true });
-      return asset;
-    });
+    const asset = await prisma.$transaction((tx) =>
+      setAssetRetiredInTx(tx, assetId, retired, { note, userId }),
+    );
     revalidateInventory(inventoryAssetPath(asset.code));
     return { ok: true, message: retired ? "Ausgemustert." : "Wieder aufgenommen." };
   } catch (error) {

@@ -27,7 +27,56 @@ export type InventoryListFilter = {
   view?:
     "all" | "defects" | "inspection" | "checked_out" | "missing" | "unlabeled" | "low" | "retired";
   page?: number;
+  /** Tabellenansicht: Sortierung und größere Seiten. */
+  sort?: InventorySort;
+  pageSize?: number;
 };
+
+export const INVENTORY_SORT_KEYS = [
+  "code",
+  "name",
+  "area",
+  "category",
+  "condition",
+  "status",
+  "inspection",
+  "updated",
+] as const;
+export type InventorySortKey = (typeof INVENTORY_SORT_KEYS)[number];
+export type InventorySort = { key: InventorySortKey; dir: "asc" | "desc" };
+
+/** Liest `?sortierung=name` bzw. `-name` (absteigend). */
+export function parseInventorySort(value: string | undefined): InventorySort | undefined {
+  if (!value) return undefined;
+  const dir = value.startsWith("-") ? "desc" : "asc";
+  const key = value.replace(/^-/, "");
+  return INVENTORY_SORT_KEYS.some((entry) => entry === key)
+    ? { key: key as InventorySortKey, dir }
+    : undefined;
+}
+
+function sortOrder(sort: InventorySort): Prisma.InventoryAssetOrderByWithRelationInput[] {
+  const { dir } = sort;
+  const nulls = dir === "asc" ? "last" : "first";
+  switch (sort.key) {
+    case "code":
+      return [{ code: dir }];
+    case "name":
+      return [{ name: dir }, { code: "asc" }];
+    case "area":
+      return [{ area: { sortOrder: dir } }, { code: "asc" }];
+    case "category":
+      return [{ category: { name: dir } }, { name: "asc" }];
+    case "condition":
+      return [{ condition: dir }, { name: "asc" }];
+    case "status":
+      return [{ status: dir }, { name: "asc" }];
+    case "inspection":
+      return [{ nextInspectionAt: { sort: dir, nulls } }, { code: "asc" }];
+    case "updated":
+      return [{ updatedAt: dir }];
+  }
+}
 
 export type InventoryListItem = {
   id: string;
@@ -45,6 +94,10 @@ export type InventoryListItem = {
   openDefects: number;
   inspection: InspectionState;
   labelPrinted: boolean;
+  areaId: string;
+  categoryId: string | null;
+  condition: Condition;
+  nextInspectionAt: Date | null;
 };
 
 /** Mengenartikel unter Mindestbestand (Spaltenvergleich, daher in JS). */
@@ -133,22 +186,27 @@ export async function listInventoryAssets(filter: InventoryListFilter) {
   const lowIds = filter.view === "low" ? await lowStockAssetIds() : null;
   const where = buildWhere(filter, locationIds, lowIds);
   const page = Math.max(1, filter.page ?? 1);
+  const pageSize = filter.pageSize ?? INVENTORY_PAGE_SIZE;
   const [total, assets] = await Promise.all([
     prisma.inventoryAsset.count({ where }),
     prisma.inventoryAsset.findMany({
       where,
-      orderBy:
-        filter.view === "inspection"
+      orderBy: filter.sort
+        ? sortOrder(filter.sort)
+        : filter.view === "inspection"
           ? [{ nextInspectionAt: { sort: "asc", nulls: "first" } }, { code: "asc" }]
           : [{ updatedAt: "desc" }],
-      skip: (page - 1) * INVENTORY_PAGE_SIZE,
-      take: INVENTORY_PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       select: {
         id: true,
         code: true,
         name: true,
         kind: true,
         status: true,
+        condition: true,
+        areaId: true,
+        categoryId: true,
         quantity: true,
         unit: true,
         locationId: true,
@@ -186,9 +244,13 @@ export async function listInventoryAssets(filter: InventoryListFilter) {
       lastInspectionFailed: asset.inspections[0]?.result === "failed",
     }),
     labelPrinted: Boolean(asset.labelPrintedAt),
+    areaId: asset.areaId,
+    categoryId: asset.categoryId,
+    condition: asset.condition,
+    nextInspectionAt: asset.nextInspectionAt,
   }));
 
-  return { items, total, page, pageCount: Math.max(1, Math.ceil(total / INVENTORY_PAGE_SIZE)) };
+  return { items, total, page, pageCount: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 function describePlace(

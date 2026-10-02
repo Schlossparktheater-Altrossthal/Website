@@ -11,6 +11,7 @@ import {
   allocateAssetCode,
   placeAsset,
   recordEvent,
+  refreshAssetStatus,
   setBulkStock,
   type PlacementTarget,
 } from "@/lib/inventory/service";
@@ -168,4 +169,39 @@ export async function createAssetInTx(
     await placeAsset(tx, { assetId: asset.id, target: input.placement, userId });
   }
   return { id: asset.id, code };
+}
+
+/** Mustert aus (Ort, Kiste und Bestand werden frei) oder nimmt wieder auf. */
+export async function setAssetRetiredInTx(
+  tx: Prisma.TransactionClient,
+  assetId: string,
+  retired: boolean,
+  options: { note?: string; userId: string | null },
+): Promise<{ code: string }> {
+  const asset = await tx.inventoryAsset.update({
+    where: { id: assetId },
+    data: retired
+      ? { status: "retired", locationId: null, containerId: null }
+      : { status: "available" },
+    select: { code: true },
+  });
+  if (retired) {
+    await tx.inventoryStock.deleteMany({ where: { assetId } });
+    await tx.inventoryAsset.update({ where: { id: assetId }, data: { quantity: 0 } });
+    // Inhalt einer ausgemusterten Kiste bleibt am Ort der Kiste liegen.
+    await tx.inventoryAsset.updateMany({
+      where: { containerId: assetId },
+      data: { containerId: null },
+    });
+  }
+  await recordEvent(tx, {
+    assetId,
+    type: "status",
+    message: retired
+      ? `Ausgemustert${options.note ? `: ${options.note}` : ""}`
+      : "Wieder aufgenommen",
+    userId: options.userId,
+  });
+  if (!retired) await refreshAssetStatus(tx, assetId, { seen: true });
+  return asset;
 }
