@@ -14,7 +14,8 @@ type PermissionCategoryKey =
   | "admin"
   | "analytics"
   | "communication"
-  | "services";
+  | "services"
+  | "inventory";
 
 export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> = {
   base: "Allgemeines",
@@ -25,6 +26,7 @@ export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> =
   analytics: "Analysen",
   communication: "Kommunikation",
   services: "Dienste",
+  inventory: "Lager",
 };
 
 // Permission definition shape
@@ -55,7 +57,26 @@ export const PROFILE_DATA_PERMISSION_KEYS = {
 } as const satisfies Record<"measurements" | "sizes" | "dietary", PermissionDefinition["key"]>;
 
 // Registry of all permissions used by the app
+export const INVENTORY_PERMISSION_KEYS = {
+  use: "PRIVATE.INVENTORY.USE",
+  manage: "PRIVATE.INVENTORY.MANAGE",
+} as const;
+
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
+  {
+    key: INVENTORY_PERMISSION_KEYS.use,
+    label: "Lager nutzen",
+    description:
+      "Inventar suchen und scannen, Objekte erfassen und bearbeiten, ein- und umlagern, ausgeben, Mängel melden, Prüfungen eintragen und bei Inventuren mitzählen.",
+    category: "inventory",
+  },
+  {
+    key: INVENTORY_PERMISSION_KEYS.manage,
+    label: "Lager verwalten",
+    description:
+      "Bereiche, Kategorien und Lagerorte pflegen, Preise und Werte sehen, Objekte ausmustern sowie Inventuren starten und abschließen.",
+    category: "inventory",
+  },
   {
     key: "PRIVATE.DASHBOARD.OVERVIEW.VIEW",
     label: "Mitglieder-Dashboard öffnen",

@@ -141,6 +141,10 @@ import {
   X,
   XCircle,
   Zap,
+  ScanLine,
+  Warehouse,
+  QrCode,
+  Boxes,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -1075,4 +1079,29 @@ export function SmartphoneIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <Smartphone className={className} aria-hidden {...props} />;
+}
+
+export function ScanLineIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <ScanLine className={className} aria-hidden {...props} />;
+}
+
+export function WarehouseIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Warehouse className={className} aria-hidden {...props} />;
+}
+
+export function QrCodeIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <QrCode className={className} aria-hidden {...props} />;
+}
+
+export function BoxesIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
+  return <Boxes className={className} aria-hidden {...props} />;
 }

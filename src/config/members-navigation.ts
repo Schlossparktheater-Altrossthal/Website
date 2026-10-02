@@ -22,6 +22,7 @@ import {
   UserCogIcon,
   UserRoundIcon,
   UsersRoundIcon,
+  WarehouseIcon,
 } from "@/components/ui/action-icons";
 
 export type MembersNavIconProps = { className?: string };
@@ -145,6 +146,12 @@ export const membersNavigation = [
         label: "Körpermaße",
         permissionKey: "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
         icon: RulerIcon,
+      },
+      {
+        href: "/mitglieder/lager",
+        label: "Lager",
+        permissionKey: "PRIVATE.INVENTORY.USE",
+        icon: WarehouseIcon,
       },
     ],
   },

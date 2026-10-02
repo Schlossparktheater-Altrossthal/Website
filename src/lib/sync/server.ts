@@ -237,7 +237,7 @@ export async function selectBaseline(
   const serverSeq = await getLatestServerSeq(normalizedScope);
 
   if (scope === "inventory") {
-    const items = await prisma.inventoryItem.findMany({
+    const items = await prisma.legacyInventoryItem.findMany({
       orderBy: [{ category: "asc" }, { sku: "asc" }, { id: "asc" }],
       take: limit + 1,
       ...(options.cursor

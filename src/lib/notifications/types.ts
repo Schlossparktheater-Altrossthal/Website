@@ -38,6 +38,8 @@ export const NOTIFICATION_TYPES = {
   PLAN_DEADLINE: "plan-deadline",
   CASTING: "casting",
   PHOTO_CONSENT: "photo-consent",
+  INVENTORY_DEFECT: "inventory-defect",
+  INVENTORY_INSPECTION: "inventory-inspection",
   TEST: "test",
   TEST_EMERGENCY: "test-emergency",
 } as const;
@@ -95,6 +97,18 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   },
   casting: { category: "produktion", kind: "info", priority: "normal", severity: "info" },
   "photo-consent": { category: "produktion", kind: "info", priority: "normal", severity: "info" },
+  "inventory-defect": {
+    category: "gewerke",
+    kind: "info",
+    priority: "normal",
+    severity: "warning",
+  },
+  "inventory-inspection": {
+    category: "gewerke",
+    kind: "info",
+    priority: "normal",
+    severity: "warning",
+  },
   test: { category: "system", kind: "info", priority: "normal", severity: "info" },
   "test-emergency": { category: "system", kind: "info", priority: "urgent", severity: "error" },
 };
