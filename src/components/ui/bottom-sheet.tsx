@@ -46,7 +46,7 @@ export function BottomSheet({
       <DialogContent
         className={cn("flex flex-col gap-0 overflow-hidden p-0 pb-0 pt-0 sm:p-0", className)}
       >
-        <DialogHeader className="shrink-0 space-y-0.5 px-4 pb-3 pr-12 pt-7 sm:px-6 sm:pr-12 sm:pt-6">
+        <DialogHeader className="shrink-0 space-y-0.5 px-4 pb-3 pr-12 pt-6 sm:px-6 sm:pr-12 sm:pt-6">
           <div className="flex items-center justify-between gap-2">
             <DialogTitle className="text-lg">{title}</DialogTitle>
             {headerAction}
