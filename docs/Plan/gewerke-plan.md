@@ -189,6 +189,26 @@ FinanceEntry            (vorhanden) + objectId?       // Kosten eines Objekts
 
 Das gilt gleich für Kostüm (pro Rolle/Szene), Ton (Einspieler), Licht (Stimmungen).
 
+### Onboarding über Blaupausen (2026-10-02)
+
+Heute stehen die Gewerke-Wünsche fest in `src/lib/onboarding/role-preferences.ts` (9 `crew_*`-Codes), genutzt von Onboarding-Wizard, Rückkehrer-Wizard, Ranking, Analytics, Profil und Zuweisung. Die Verknüpfung zum Gewerk läuft nur indirekt über `DepartmentTemplate.preferenceCodes`.
+
+- **Schauspiel bleibt fest**: `acting_*` sind Rollengrößen, kein Gewerk, und bleiben in `role-preferences.ts`.
+- **Gewerke-Optionen kommen aus der Produktion**: Angeboten werden die Gewerke der Produktion, für die das Onboarding läuft, mit Name/Icon/Farbe/Beschreibung ihrer Blaupause. Nur Blaupausen mit `onboardingVisible` erscheinen.
+- **Wunsch speichert die Blaupause**: `MemberRolePreference` + `templateId?`. Neue Wünsche nur noch mit `templateId`; `code` bleibt für `acting_*` und Altbestand.
+- **Migration additiv**: alte `crew_*`-Codes über `preferenceCodes` auf `templateId` übertragen (Skript, Test auf Staging-Dump). Codes ohne Treffer und `custom-…` bleiben „sonstiger Wunsch“. Erst danach `crew_*` aus `role-preferences.ts` entfernen (eigener Schritt).
+- **Eine Quelle für alle**: Onboarding-Wizard, Rückkehrer-Wizard, Profil, Ranking, Analytics und Zuweisung lesen die Optionen über eine gemeinsame Funktion (z. B. `getOnboardingDepartmentOptions(showId)` in `src/lib/departments/templates.ts`).
+- **Wunsch → Gewerk**: In der Zuweisung führt „Wunsch annehmen“ direkt zur Mitgliedschaft im Gewerk der Produktion mit dieser Blaupause (`source = onboarding-wunsch`). Hat die Produktion das Gewerk nicht, Hinweis „Gewerk fehlt – aus Blaupause anlegen“.
+- **Blaupausen-Editor**, Abschnitt „Onboarding“: Schalter „im Onboarding anbieten“, kurzer Beschreibungstext (was macht man hier, Zeitaufwand), Liste der zugeordneten Alt-Codes (nur lesend, für die Migration).
+- **UI**: vor der Umsetzung Staging-Screenshots des Wizards (mobil + Desktop) ansehen; Darstellung der Optionen folgt dem bestehenden Wizard (Chips/Karten mit Stärke).
+
+Datenmodell-Ergänzung:
+
+```
+DepartmentTemplate      + onboardingVisible Boolean @default(true), + onboardingDescription String?
+MemberRolePreference    + templateId String?        // Gewerks-Wunsch; code bleibt für acting_* / Altbestand
+```
+
 ### Rechte (Fortsetzung)
 
 - `PRIVATE.DEPARTMENT.TEMPLATE.MANAGE`: Blaupausen verwalten (Board/Regie).
@@ -211,7 +231,8 @@ Gemeinsame UI-Regeln: `docs/Plan/projektplanung-plan.md`, Abschnitt „UI-Konzep
 ### Phasen (Fortsetzung)
 
 8. **Blaupausen-Grundlage**: `modules`, `TemplatePermission`, `DepartmentPermission.mode`, Rechte-Auflösung mit Vererbung (Tests!). **Manuelle Migration**: bestehende Gewerke ohne Vorlage einer Blaupause zuordnen bzw. Blaupause erzeugen; Rechte je Gewerk in Template + Abweichungen zerlegen. Test auf Staging-Dump.
-9. **Blaupausen-Verwaltung + Gewerk anlegen**: Seite in den Einstellungen, Anlegen nur noch aus Blaupause, Onboarding-Auswahl über Blaupausen. Danach `templateId` Pflicht (eigener Schritt).
+9. **Blaupausen-Verwaltung + Gewerk anlegen**: Seite in den Einstellungen, Anlegen nur noch aus Blaupause. Danach `templateId` Pflicht (eigener Schritt).
+   9b. **Onboarding über Blaupausen** (siehe Abschnitt oben): `templateId` am Wunsch, gemeinsame Optionsquelle für alle Wizards/Profil/Zuweisung, Migration der `crew_*`-Codes (Staging-Dump), „Wunsch annehmen“ → Gewerk. Danach `crew_*` aus `role-preferences.ts` entfernen (eigener Schritt).
 10. **Portal aus Bausteinen**: Tabs dynamisch, Körpermaße als Baustein, „Mehr“-Menü mobil, „Meine Teams“-Kacheln neu.
 11. **Szenenbedarf**: Modelle, Anfordern in der Szene, Eingang-Spalte, Objekt-Karten, Checklisten, Benachrichtigungen; Migration `SceneBreakdownItem` → Objekte.
 12. **Budget**: `FinanceBudget.departmentId`, Budget-Tab, Objektkosten.
@@ -224,11 +245,15 @@ Gemeinsame UI-Regeln: `docs/Plan/projektplanung-plan.md`, Abschnitt „UI-Konzep
 - E8: Anfordern dürfen alle mit Recht (Standard: alle in der Produktion); das Gewerk entscheidet im Eingang.
 - E9: Objekt statt Breakdown-Eintrag: ein Objekt, mehrere Szenen, genau eine Karte im zuständigen Gewerk.
 - E10: Budget ist ein Baustein und nutzt die vorhandenen Finanzmodelle.
+- E11 (2026-10-02): Schauspiel-Wünsche (`acting_*`) bleiben feste Codes; Gewerks-Wünsche zeigen auf Blaupausen.
+- E12 (2026-10-02): Das Onboarding bietet die Gewerke der jeweiligen Produktion an (über ihre Blaupause), nicht alle globalen Blaupausen; Schalter „im Onboarding anbieten“ pro Blaupause.
+- E13 (2026-10-02): Alte `crew_*`-Wünsche werden additiv über `preferenceCodes` migriert; Entfernen der Codes in eigenem Schritt.
 
 ### Checkliste (Fortsetzung)
 
 - [ ] Phase 8 Blaupausen-Grundlage + Migration
-- [ ] Phase 9 Blaupausen-Verwaltung, Gewerk anlegen, Onboarding
+- [ ] Phase 9 Blaupausen-Verwaltung, Gewerk anlegen
+- [ ] Phase 9b Onboarding über Blaupausen
 - [ ] Phase 10 Portal aus Bausteinen
 - [ ] Phase 11 Szenenbedarf
 - [ ] Phase 12 Budget
