@@ -46,6 +46,12 @@ enum TicketStatus {
   invalid
 }
 
+/// Gewerk-Recht als Abweichung von der Blaupause.
+enum DepartmentPermissionMode {
+  grant
+  revoke
+}
+
 enum DepartmentMembershipRole {
   lead
   member
@@ -546,22 +552,40 @@ model FinalRehearsalDuty {
 
 /// Globale Vorlage für Gewerke. Pro Produktion werden daraus `Department`-Einträge erzeugt.
 model DepartmentTemplate {
-  id                    String       @id @default(cuid())
-  slug                  String       @unique
+  id                    String               @id @default(cuid())
+  slug                  String               @unique
   name                  String
   description           String?
   color                 String?
   /// Onboarding-Wunsch-Codes (z. B. `crew_costume`), die zu diesem Gewerk führen.
-  preferenceCodes       String[]     @default([])
+  preferenceCodes       String[]             @default([])
   /// Im Onboarding, Rückkehrer-Wizard und Profil als Gewerks-Wunsch anbieten.
-  onboardingVisible     Boolean      @default(true)
+  onboardingVisible     Boolean              @default(true)
   /// Kurztext für das Onboarding (was macht man hier); sonst `description`.
   onboardingDescription String?
-  requiresJoinApproval  Boolean      @default(false)
-  sortOrder             Int          @default(0)
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  requiresJoinApproval  Boolean              @default(false)
+  /// Bausteine des Portals: board | events | files | requirements | budget | measurements
+  modules               String[]             @default(["board", "events", "files"])
+  icon                  String?
+  sortOrder             Int                  @default(0)
+  archivedAt            DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   departments           Department[]
+  permissions           TemplatePermission[]
+}
+
+/// Standardrecht einer Blaupause für eine Rolle im Gewerk; Gewerke erben es.
+model TemplatePermission {
+  id           String                   @id @default(cuid())
+  templateId   String
+  permissionId String
+  role         DepartmentMembershipRole
+  template     DepartmentTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  permission   Permission               @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, permissionId, role])
+  @@index([permissionId])
 }
 
 /// Gewerk einer Produktion.
@@ -692,12 +716,14 @@ model DepartmentTaskAssignment {
   @@index([userId])
 }
 
+/// Abweichung eines Gewerks von seiner Blaupause; gilt für alle Mitglieder des Gewerks.
 model DepartmentPermission {
-  id           String     @id @default(cuid())
+  id           String                   @id @default(cuid())
   departmentId String
   permissionId String
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  mode         DepartmentPermissionMode @default(grant)
+  department   Department               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  permission   Permission               @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([departmentId, permissionId])
 }
@@ -910,6 +936,7 @@ model Permission {
   description      String?
   grants           AppRolePermission[]
   departmentGrants DepartmentPermission[]
+  templateGrants   TemplatePermission[]
 }
 
 model AppRole {

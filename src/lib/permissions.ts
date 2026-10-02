@@ -4,6 +4,13 @@ import { currentCastingWhere, currentDepartmentMembershipWhere } from "@/lib/pro
 import { ROLES, ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { isProductionRole } from "@/lib/produktionen/production-role-keys";
+import {
+  departmentMembershipWhereForPermission,
+  loadDepartmentGrantSources,
+  loadDepartmentPermissionKeys,
+  resolveMembershipKeys,
+  type DepartmentMembershipContext,
+} from "@/lib/departments/permission-inheritance";
 
 // Categories for permissions
 type PermissionCategoryKey =
@@ -45,6 +52,8 @@ type ResolvedRoleContext = {
   systemRoles: Role[];
   customRoleIds: string[];
   departmentIds: string[];
+  /** Aktuelle Gewerk-Mitgliedschaften mit Rolle und Blaupause (Rechte-Vererbung). */
+  departmentMemberships: DepartmentMembershipContext[];
   /** Besetzt in einer Rolle – öffnet „Meine Teams“ wie eine Gewerk-Zugehörigkeit. */
   hasCasting: boolean;
 };
@@ -481,7 +490,13 @@ async function resolveRoleContext(
   showId?: string | null,
 ): Promise<ResolvedRoleContext> {
   if (!user?.id) {
-    return { systemRoles: [], customRoleIds: [], departmentIds: [], hasCasting: false };
+    return {
+      systemRoles: [],
+      customRoleIds: [],
+      departmentIds: [],
+      departmentMemberships: [],
+      hasCasting: false,
+    };
   }
   return resolveRoleContextCached(user.id, showId ?? null);
 }
@@ -499,14 +514,20 @@ const resolveRoleContextCached = cache(async function resolveRoleContextUncached
       appRoles: { select: { roleId: true } },
       departmentMemberships: {
         where: currentDepartmentMembershipWhere(),
-        select: { departmentId: true },
+        select: { departmentId: true, role: true, department: { select: { templateId: true } } },
       },
       characterCastings: { where: currentCastingWhere(), select: { id: true }, take: 1 },
     },
   });
 
   if (!dbUser) {
-    return { systemRoles: [], customRoleIds: [], departmentIds: [], hasCasting: false };
+    return {
+      systemRoles: [],
+      customRoleIds: [],
+      departmentIds: [],
+      departmentMemberships: [],
+      hasCasting: false,
+    };
   }
 
   let systemRoles = sortRoles([
@@ -535,8 +556,21 @@ const resolveRoleContextCached = cache(async function resolveRoleContextUncached
     systemRoles,
     customRoleIds,
     departmentIds,
+    departmentMemberships: dbUser.departmentMemberships.map((membership) => ({
+      departmentId: membership.departmentId,
+      role: membership.role,
+      templateId: membership.department.templateId,
+    })),
     hasCasting: dbUser.characterCastings.length > 0,
   };
+});
+
+// Gewerk-Rechte (Blaupause + Abweichungen) einmal pro Request und Nutzer.
+const resolveDepartmentKeysCached = cache(async function resolveDepartmentKeysUncached(
+  userId: string,
+): Promise<Set<string>> {
+  const { departmentMemberships } = await resolveRoleContextCached(userId, null);
+  return loadDepartmentPermissionKeys(departmentMemberships);
 });
 
 export type PermissionRoleContext = ResolvedRoleContext;
@@ -615,13 +649,8 @@ export async function hasPermission(
     return true;
   }
 
-  if (departmentIds.length) {
-    const departmentGrant = await prisma.departmentPermission.count({
-      where: { permissionId: perm.id, departmentId: { in: departmentIds } },
-    });
-    if (departmentGrant > 0) {
-      return true;
-    }
+  if (departmentIds.length && (await resolveDepartmentKeysCached(user.id)).has(permissionKey)) {
+    return true;
   }
 
   const roleFilters = buildRoleFilter(systemRoles, customRoleIds);
@@ -647,19 +676,19 @@ export async function hasPermission(
  */
 export async function findUserIdsWithPermission(
   permissionKey: string,
-  client: Pick<typeof prisma, "user" | "appRole" | "departmentPermission"> = prisma,
+  client: Pick<
+    typeof prisma,
+    "user" | "appRole" | "departmentPermission" | "templatePermission"
+  > = prisma,
 ): Promise<string[]> {
   if (!isKnownPermissionKey(permissionKey)) return [];
 
-  const [roles, departments] = await Promise.all([
+  const [roles, departmentWhere] = await Promise.all([
     client.appRole.findMany({
       where: { grants: { some: { permission: { key: permissionKey } } } },
       select: { id: true, name: true, systemRole: true },
     }),
-    client.departmentPermission.findMany({
-      where: { permission: { key: permissionKey } },
-      select: { departmentId: true },
-    }),
+    departmentMembershipWhereForPermission(permissionKey, client as typeof prisma),
   ]);
 
   const systemRoles = new Set<Role>(["admin", "owner"]);
@@ -678,14 +707,11 @@ export async function findUserIdsWithPermission(
         ...(roles.length
           ? [{ appRoles: { some: { roleId: { in: roles.map((r) => r.id) } } } }]
           : []),
-        ...(departments.length
+        ...(departmentWhere
           ? [
               {
                 departmentMemberships: {
-                  some: {
-                    ...currentDepartmentMembershipWhere(),
-                    departmentId: { in: departments.map((d) => d.departmentId) },
-                  },
+                  some: { AND: [currentDepartmentMembershipWhere(), departmentWhere] },
                 },
               },
             ]
@@ -732,16 +758,8 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
 
   if (departmentIds.length) {
     granted.add(DEPARTMENT_MEMBER_PERMISSION_KEY);
-    const departmentPermissions = await prisma.departmentPermission.findMany({
-      where: { departmentId: { in: departmentIds } },
-      select: { permission: { select: { key: true } } },
-    });
-
-    for (const entry of departmentPermissions) {
-      const key = entry.permission?.key;
-      if (key && isKnownPermissionKey(key)) {
-        granted.add(key);
-      }
+    for (const key of await resolveDepartmentKeysCached(user.id)) {
+      if (isKnownPermissionKey(key)) granted.add(key);
     }
   }
 
@@ -775,7 +793,10 @@ export async function explainUserPermissions(userId: string): Promise<ExplainedP
       appRoles: { select: { role: { select: { id: true, name: true } } } },
       departmentMemberships: {
         where: currentDepartmentMembershipWhere(),
-        select: { department: { select: { id: true, name: true } } },
+        select: {
+          role: true,
+          department: { select: { id: true, name: true, templateId: true } },
+        },
       },
       productionMemberships: {
         where: {
@@ -837,18 +858,19 @@ export async function explainUserPermissions(userId: string): Promise<ExplainedP
       }
     }
 
-    const departments = user.departmentMemberships.map((entry) => entry.department);
-    if (departments.length) {
-      const departmentGrants = await prisma.departmentPermission.findMany({
-        where: { departmentId: { in: departments.map((d) => d.id) } },
-        select: { departmentId: true, permission: { select: { key: true } } },
-      });
-      for (const grant of departmentGrants) {
-        const department = departments.find((d) => d.id === grant.departmentId);
-        if (department) add(grant.permission.key, { kind: "department", label: department.name });
-      }
-      for (const department of departments) {
-        add(DEPARTMENT_MEMBER_PERMISSION_KEY, { kind: "department", label: department.name });
+    const memberships = user.departmentMemberships.map((entry) => ({
+      departmentId: entry.department.id,
+      templateId: entry.department.templateId,
+      role: entry.role,
+      name: entry.department.name,
+    }));
+    if (memberships.length) {
+      const { templateGrants, overrides } = await loadDepartmentGrantSources(memberships);
+      for (const membership of memberships) {
+        for (const key of resolveMembershipKeys(membership, templateGrants, overrides)) {
+          add(key, { kind: "department", label: membership.name });
+        }
+        add(DEPARTMENT_MEMBER_PERMISSION_KEY, { kind: "department", label: membership.name });
       }
     }
   }

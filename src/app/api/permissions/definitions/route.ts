@@ -36,7 +36,7 @@ export async function GET() {
       select: { id: true, name: true, slug: true, requiresJoinApproval: true },
     }),
     prisma.departmentPermission.findMany({
-      select: { departmentId: true, permission: { select: { key: true } } },
+      select: { departmentId: true, mode: true, permission: { select: { key: true } } },
     }),
   ]);
 
@@ -46,10 +46,12 @@ export async function GET() {
     grantsMap[g.roleId].push(g.permission.key);
   }
 
+  // Abweichungen der Gewerke von ihrer Blaupause (Phase 8): Zusatzrechte und Entzüge getrennt.
   const departmentGrantsMap: Record<string, string[]> = {};
+  const departmentRevokesMap: Record<string, string[]> = {};
   for (const g of departmentGrants) {
-    if (!departmentGrantsMap[g.departmentId]) departmentGrantsMap[g.departmentId] = [];
-    departmentGrantsMap[g.departmentId].push(g.permission.key);
+    const map = g.mode === "revoke" ? departmentRevokesMap : departmentGrantsMap;
+    (map[g.departmentId] ??= []).push(g.permission.key);
   }
 
   const permissionMap = new Map(permissions.map((perm) => [perm.key, perm]));
@@ -72,6 +74,7 @@ export async function GET() {
     permissions: orderedPermissions,
     grants: grantsMap,
     departmentGrants: departmentGrantsMap,
+    departmentRevokes: departmentRevokesMap,
   });
 }
 
@@ -88,6 +91,8 @@ export async function PUT(request: NextRequest) {
     targetId?: string;
     permissionKey: string;
     grant: boolean;
+    /** Nur Gewerke: `revoke` entzieht ein Recht der Blaupause. Standard `grant`. */
+    mode?: "grant" | "revoke";
   } | null;
   if (!body || typeof body.permissionKey !== "string") {
     return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
@@ -123,13 +128,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Gewerk nicht gefunden" }, { status: 404 });
     }
 
+    const mode = body.mode === "revoke" ? "revoke" : "grant";
     if (body.grant) {
       await prisma.departmentPermission.upsert({
         where: {
           departmentId_permissionId: { departmentId: department.id, permissionId: perm.id },
         },
-        update: {},
-        create: { departmentId: department.id, permissionId: perm.id },
+        update: { mode },
+        create: { departmentId: department.id, permissionId: perm.id, mode },
       });
     } else {
       await prisma.departmentPermission.deleteMany({

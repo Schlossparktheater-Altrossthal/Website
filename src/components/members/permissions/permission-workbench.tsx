@@ -29,6 +29,7 @@ export async function PermissionWorkbench() {
       select: { id: true, name: true, slug: true, requiresJoinApproval: true },
     }),
     prisma.departmentPermission.findMany({
+      where: { mode: "grant" },
       select: { departmentId: true, permission: { select: { key: true } } },
     }),
   ]);
