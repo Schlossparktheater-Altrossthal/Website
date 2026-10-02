@@ -1,6 +1,6 @@
 # Plan: Tabellen-Workflow im Lager (Desktop)
 
-Stand: 2026-10-02. Konzept, nichts umgesetzt.
+Stand: 2026-10-02. Phase 1–4 umgesetzt, Rest in Arbeit. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -23,14 +23,19 @@ Ja, sinnvoll. Bei der Ersterfassung (E1: alles wird neu erfasst) sind es hundert
 dort ist eine Tabelle mit Tastatur deutlich schneller als ein Formular. Wichtig ist, sie als
 **zusätzlichen Desktop-Modus** zu bauen, nicht als Ersatz: Foto und Etikett bleiben Handy-Arbeit.
 
-## Entscheidungen (Vorschlag, offen)
+## Entscheidungen (2026-10-02, bestätigt)
 
 - T1: Zwei Ansichten im Bestand am Desktop: **Liste** (wie heute) und **Tabelle**; Umschalter
   merkt sich die Wahl (localStorage). Mobil nur Liste.
 - T2: Neue Seite **„Sammelerfassung“** (`/mitglieder/lager/neu/tabelle`), erreichbar über
   „Erfassen“ ▸ „Viele auf einmal“ (nur ab `lg`).
-- T3: Erfassen pro Runde **in einem Bereich** (Bereich oben fest gewählt). Dadurch sind die
-  Spalten eindeutig (Kostüm: Größe/Epoche/Farbe, Technik: Hersteller/Modell/Seriennr.).
+- T3: Erfassen pro Runde **in einem Bereich** (Bereich oben fest gewählt), umschaltbar auf
+  **„Gemischt“** – dann ist der Bereich eine eigene Spalte und die Zusatzfelder aller Bereiche
+  stehen zur Wahl. Die Ort-Spalte nimmt auch Kisten (Code oder Name).
+- T8: Mengenartikel mit Menge brauchen einen Ort oder eine Kiste, sonst ginge der Bestand verloren
+  (das Einzelformular speichert die Menge ohne Ort stillschweigend nicht).
+- T9: Eigene Tabellen-Komponente statt TanStack-Zellen-Editoren – Auswahl, Tastatur, Einfügen und
+  Rückgängig sind bei einem Raster ohne Bibliothek einfacher und leichter.
 - T4: Zeilen sind **Entwürfe im Browser** (localStorage, überlebt Reload), Speichern legt alle
   gültigen Zeilen in einem Rutsch an; Codes erst dann. Fehlerhafte Zeilen bleiben rot stehen.
 - T5: Fotos nicht in der Tabelle; danach per Handy („ohne Foto“-Filter + Scannen ▸ Foto).
@@ -107,16 +112,14 @@ dort ist eine Tabelle mit Tastatur deutlich schneller als ein Formular. Wichtig 
 
 ## Offen
 
-- Sollen Kisten-Inhalte in der Sammelerfassung direkt „in Kiste X“ angelegt werden (Ort-Spalte
-  akzeptiert dann auch Kisten-Codes)? Vorschlag: ja.
-- Gemischte Bereiche in einer Runde? Vorschlag: nein (T3), Bereichswechsel = neue Runde.
+- Nichts – Kisten in der Ort-Spalte und gemischte Bereiche sind entschieden (T3).
 
 ## Checkliste
 
-- [ ] Phase 1 Server
-- [ ] Phase 2 Grid
-- [ ] Phase 3 Sammelerfassung
-- [ ] Phase 4 Komfort
+- [x] Phase 1 Server
+- [x] Phase 2 Grid
+- [x] Phase 3 Sammelerfassung
+- [x] Phase 4 Komfort
 - [ ] Phase 5 Bestand-Tabelle
 - [ ] Phase 6 Inline + Sammelaktionen
 - [ ] Phase 7 E2E/Abnahme

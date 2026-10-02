@@ -1,7 +1,11 @@
+import Link from "next/link";
+
 import { AssetForm } from "@/components/inventory/asset-form";
 import { emptyAssetValues } from "@/lib/inventory/asset-form-values";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PageHeader } from "@/components/members/page-header";
+import { LayoutGridIcon } from "@/components/ui/action-icons";
+import { Button } from "@/components/ui/button";
 import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
 import {
   listContainerOptions,
@@ -48,6 +52,14 @@ export default async function NewAssetPage({ searchParams }: { searchParams: Sea
         title="Erfassen"
         description="Foto, Bereich, Name, Ort – der Rest geht später."
         breadcrumbs={[membersNavigationBreadcrumb(INVENTORY_BASE_PATH)]}
+        actions={
+          <Button asChild variant="outline" size="sm" className="hidden lg:inline-flex">
+            <Link href={`${INVENTORY_BASE_PATH}/neu/tabelle`}>
+              <LayoutGridIcon className="mr-2 h-4 w-4" />
+              Viele auf einmal
+            </Link>
+          </Button>
+        }
       />
       {areas.length ? (
         <AssetForm

@@ -1,7 +1,7 @@
 # Lager (`/mitglieder/lager`)
 
 Inventar für Technik, Kostüm, Requisite, Bühnenbau und Werkzeug. Plan und Entscheidungen:
-`docs/Plan/inventar-plan.md`.
+`docs/Plan/inventar-plan.md`, Desktop-Tabellen: `docs/Plan/lager-tabelle-plan.md`.
 
 ## Routen
 
@@ -9,6 +9,7 @@ Inventar für Technik, Kostüm, Requisite, Bühnenbau und Werkzeug. Plan und Ent
 | -------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `/mitglieder/lager`                          | Bestand: Scannen/Erfassen, Kennzahlen, Suche, Filter (`?q`, `?bereich`, `?ort`, `?ansicht`) |
 | `/mitglieder/lager/neu`                      | Erfassen (`?bereich`, `?ort`, `?kiste` belegen vor)                                         |
+| `/mitglieder/lager/neu/tabelle`              | Sammelerfassung als Tabelle (ab `lg`, Entwürfe im Browserspeicher)                          |
 | `/mitglieder/lager/objekt/[code]`            | Detail mit Schnellaktionen, Mängeln, Prüfungen, Verlauf                                     |
 | `/mitglieder/lager/objekt/[code]/bearbeiten` | Bearbeiten                                                                                  |
 | `/mitglieder/lager/scannen`                  | Scanner (`?modus=info                                                                       | einlagern | ausgeben | zurueck | pruefen`, `?ziel`, `?ausgabe`) |
@@ -34,9 +35,10 @@ APIs: `/api/lager/photos/[id]`, `/api/lager/labels` (PDF), `/api/lager/inspectio
 
 `src/components/inventory/` – u. a. `qr-scanner.tsx` (BarcodeDetector, sonst jsQR),
 `scan-workbench.tsx`, `stocktake-counter.tsx` (Offline-Puffer), `label-designer.tsx`,
-`asset-form.tsx`. Logik in `src/lib/inventory/`, Server-Aktionen in
+`asset-form.tsx`, `spreadsheet-grid.tsx` (Tabelle mit Tastatur, Einfügen aus Excel) und
+`bulk-capture.tsx` (Sammelerfassung). Logik in `src/lib/inventory/`, Server-Aktionen in
 `src/app/(members)/mitglieder/lager/actions/`.
 
 ## Testen
 
-`e2e/lager.spec.ts`; Demo-Daten mit `pnpm demo:lager` (siehe `docs/e2e-tests.md`).
+`e2e/lager.spec.ts`, `e2e/lager-tabelle.spec.ts`; Demo-Daten mit `pnpm demo:lager` (siehe `docs/e2e-tests.md`).

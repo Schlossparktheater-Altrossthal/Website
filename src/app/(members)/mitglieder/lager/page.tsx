@@ -9,6 +9,7 @@ import {
   AlertTriangleIcon,
   ArrowRightLeftIcon,
   DownloadIcon,
+  LayoutGridIcon,
   PlusIcon,
   PrinterIcon,
   QrCodeIcon,
@@ -124,6 +125,15 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
           </span>
         </Link>
       </div>
+      <p className="-mt-3 hidden text-right text-sm lg:block">
+        <Link
+          href={`${INVENTORY_BASE_PATH}/neu/tabelle`}
+          className="inline-flex items-center gap-1.5 font-medium text-muted-foreground hover:text-foreground"
+        >
+          <LayoutGridIcon className="h-4 w-4" />
+          Viele auf einmal erfassen (Tabelle)
+        </Link>
+      </p>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
