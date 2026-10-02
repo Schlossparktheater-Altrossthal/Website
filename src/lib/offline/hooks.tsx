@@ -18,12 +18,6 @@ import {
 
 function createInitialScopeState(): Record<OfflineScope, SyncScopeState> {
   return {
-    inventory: {
-      status: "idle",
-      lastSyncedAt: null,
-      lastError: null,
-      lastServerSeq: 0,
-    },
     tickets: {
       status: "idle",
       lastSyncedAt: null,
@@ -118,7 +112,7 @@ export function OfflineSyncStatusProvider({
     let cancelled = false;
 
     const loadInitialState = async () => {
-      const scopesToLoad: OfflineScope[] = ["inventory", "tickets"];
+      const scopesToLoad: OfflineScope[] = ["tickets"];
 
       for (const scope of scopesToLoad) {
         const record = await refreshScopeFromDb(scope);
@@ -261,7 +255,7 @@ export function OfflineSyncStatusProvider({
     }
 
     const handleOnline = () => {
-      void Promise.all([flush("inventory"), flush("tickets")]).catch((error) => {
+      void Promise.all([flush("tickets")]).catch((error) => {
         console.warn("Failed to flush offline events after going online", error);
       });
     };

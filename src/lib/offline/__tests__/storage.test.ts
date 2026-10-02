@@ -32,26 +32,17 @@ describe("offline storage", () => {
   });
 
   beforeEach(async () => {
-    await db.transaction(
-      "rw",
-      db.items,
-      db.tickets,
-      db.eventQueue,
-      db.syncState,
-      db.audits,
-      async () => {
-        await db.items.clear();
-        await db.tickets.clear();
-        await db.eventQueue.clear();
-        await db.syncState.clear();
-        await db.audits.clear();
-      },
-    );
+    await db.transaction("rw", db.tickets, db.eventQueue, db.syncState, db.audits, async () => {
+      await db.tickets.clear();
+      await db.eventQueue.clear();
+      await db.syncState.clear();
+      await db.audits.clear();
+    });
   });
 
   it("initialises the offline database with expected stores", () => {
     const tableNames = db.tables.map((table) => table.name).sort();
-    expect(tableNames).toEqual(["audits", "eventQueue", "items", "syncState", "tickets"]);
+    expect(tableNames).toEqual(["audits", "eventQueue", "syncState", "tickets"]);
 
     const eventQueue = db.tables.find((table) => table.name === "eventQueue");
     expect(eventQueue?.schema.primKey.keyPath).toBe("id");
@@ -99,10 +90,10 @@ describe("offline storage", () => {
     const { enqueueEvent, consumeEvents } = storageModule;
 
     await enqueueEvent({
-      id: "inventory-1",
-      type: "inventory.adjustment",
-      payload: { itemId: "item-1", delta: 1 },
-      dedupeKey: "inventory:item-1",
+      id: "ticket-0",
+      type: "ticket.checkin",
+      payload: { ticketId: "ticket-0" },
+      dedupeKey: "ticket:ticket-0",
       createdAt: new Date("2025-01-10T09:00:00.000Z").toISOString(),
     });
 
@@ -116,7 +107,7 @@ describe("offline storage", () => {
 
     const events = await consumeEvents(10);
 
-    expect(events.map((event) => event.id)).toEqual(["inventory-1", "ticket-1"]);
+    expect(events.map((event) => event.id)).toEqual(["ticket-0", "ticket-1"]);
     expect(await db.eventQueue.count()).toBe(0);
 
     const auditSummaries = await db.audits
@@ -124,56 +115,9 @@ describe("offline storage", () => {
       .toArray()
       .then((records) => records.map((record) => record.summary).sort());
     expect(auditSummaries).toEqual([
-      "Dequeued offline event inventory-1",
+      "Dequeued offline event ticket-0",
       "Dequeued offline event ticket-1",
     ]);
-  });
-
-  it("applies inventory snapshots by replacing local state", async () => {
-    const { applySnapshot } = storageModule;
-
-    const snapshot: OfflineSnapshot = {
-      scope: "inventory",
-      serverSeq: 42,
-      capturedAt: "2025-01-10T11:30:00.000Z",
-      records: [
-        {
-          id: "item-1",
-          sku: "SKU-1",
-          name: "Scheinwerfer",
-          quantity: 5,
-          category: "light",
-          updatedAt: "2025-01-10T11:30:00.000Z",
-        },
-        {
-          id: "item-2",
-          sku: "SKU-2",
-          name: "Funkmikrofon",
-          quantity: 3,
-          category: "sound",
-          updatedAt: "2025-01-10T11:30:00.000Z",
-        },
-      ],
-    };
-
-    await applySnapshot(snapshot);
-
-    const items = await db.items.orderBy("id").toArray();
-    expect(items).toHaveLength(2);
-    expect(items[0]).toMatchObject({ id: "item-1", quantity: 5 });
-
-    const state = await db.syncState.get("inventory");
-    expect(state).toMatchObject({
-      scope: "inventory",
-      lastServerSeq: 42,
-      lastSnapshotAt: "2025-01-10T11:30:00.000Z",
-    });
-
-    const audit = await db.audits.where("action").equals("snapshot").first();
-    expect(audit).toMatchObject({
-      scope: "inventory",
-      summary: "Applied snapshot for inventory",
-    });
   });
 
   it("applies ticket deltas with upserts and deletes", async () => {

@@ -6,11 +6,6 @@ import type { OfflineScope } from "@/lib/offline/types";
 import { verifySyncToken } from "@/lib/sync/tokens";
 import { getSession } from "@/lib/rbac";
 
-const INVENTORY_PERMISSIONS = [
-  "PRIVATE.PRODUCTION.SHOW.MANAGE",
-  "PRIVATE.PRODUCTION.SHOW.MANAGE",
-] as const satisfies readonly string[];
-
 const tokenIssue = z.object({
   code: z.literal("invalid_token"),
   message: z.string(),
@@ -101,32 +96,13 @@ export async function authenticateSyncRequest(
     } satisfies UnauthorizedResult;
   }
 
-  const permissionChecks: Array<Promise<boolean>> = [
-    hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE"),
-  ];
-
-  if (scope === "inventory") {
-    for (const permission of INVENTORY_PERMISSIONS) {
-      permissionChecks.push(hasPermission(session.user, permission));
-    }
-  }
-
-  const results = await Promise.all(permissionChecks);
-  const [canScan, ...inventoryPermissions] = results;
+  const canScan = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
 
   if (!canScan) {
     logDeniedAccess(scope, "missing permission PRIVATE.PRODUCTION.SHOW.MANAGE", userId);
     return {
       kind: "error",
       response: NextResponse.json({ error: "Berechtigung fehlt" }, { status: 403 }),
-    } satisfies UnauthorizedResult;
-  }
-
-  if (scope === "inventory" && !inventoryPermissions.some(Boolean)) {
-    logDeniedAccess(scope, "missing inventory permission", userId);
-    return {
-      kind: "error",
-      response: NextResponse.json({ error: "Inventar-Berechtigung fehlt" }, { status: 403 }),
     } satisfies UnauthorizedResult;
   }
 

@@ -1,6 +1,6 @@
 import { AttendanceStatus } from "@prisma/client";
 
-import type { InventoryItemRecord, TicketRecord } from "@/lib/offline/types";
+import type { TicketRecord } from "@/lib/offline/types";
 import type { ServerSyncEvent } from "@/lib/offline/sync-client";
 import type { ServerAnalytics } from "@/lib/server-analytics";
 import type { OnboardingDashboardData } from "@/lib/onboarding/dashboard-schemas";
@@ -63,19 +63,6 @@ export interface NotificationCreatedEvent extends BaseRealtimeEvent {
   targetUserId: string;
 }
 
-export interface InventoryRealtimePayload {
-  scope: "inventory";
-  serverSeq?: number;
-  events?: ServerSyncEvent[];
-  mutationId?: string | null;
-  clientId?: string | null;
-  source?: string | null;
-  delta?: {
-    upserts?: InventoryItemRecord[];
-    deletes?: string[];
-  };
-}
-
 export interface TicketRealtimePayload {
   scope: "tickets";
   serverSeq?: number;
@@ -88,11 +75,6 @@ export interface TicketRealtimePayload {
     upserts?: TicketRecord[];
     deletes?: string[];
   };
-}
-
-export interface InventoryRealtimeEvent extends BaseRealtimeEvent {
-  type: "inventory_event";
-  payload: InventoryRealtimePayload;
 }
 
 export interface TicketScanRealtimeEvent extends BaseRealtimeEvent {
@@ -167,7 +149,6 @@ export type RealtimeEvent =
   | RehearsalCreatedEvent
   | RehearsalUpdatedEvent
   | NotificationCreatedEvent
-  | InventoryRealtimeEvent
   | TicketScanRealtimeEvent
   | OnboardingDashboardUpdateEvent
   | UserPresenceEvent
@@ -202,7 +183,6 @@ export interface ServerToClientEvents {
   rehearsal_created: (event: RehearsalCreatedEvent) => void;
   rehearsal_updated: (event: RehearsalUpdatedEvent) => void;
   notification_created: (event: NotificationCreatedEvent) => void;
-  inventory_event: (event: InventoryRealtimeEvent) => void;
   ticket_scan_event: (event: TicketScanRealtimeEvent) => void;
   onboarding_dashboard_update: (event: OnboardingDashboardUpdateEvent) => void;
   user_presence: (event: UserPresenceEvent) => void;

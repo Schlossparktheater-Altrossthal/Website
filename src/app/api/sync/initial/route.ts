@@ -5,7 +5,7 @@ import { authenticateSyncRequest } from "../auth";
 import { buildSyncEtag, selectBaseline } from "@/lib/sync/server";
 
 const querySchema = z.object({
-  scope: z.enum(["inventory", "tickets"]),
+  scope: z.enum(["tickets"]),
   cursor: z.string().optional(),
   limit: z.coerce
     .number()

@@ -361,15 +361,6 @@ export function createRealtimeCore(options = {}) {
     (event) => `user_${event.targetUserId}`,
   );
 
-  const broadcastInventoryEvent = createBroadcaster(
-    "inventory_event",
-    (payload) => {
-      if (!payload || typeof payload !== "object") return null;
-      return { payload };
-    },
-    (event, payload, options) => options.rooms ?? ["global"],
-  );
-
   const broadcastTicketScanEvent = createBroadcaster(
     "ticket_scan_event",
     (payload) => {
@@ -411,8 +402,6 @@ export function createRealtimeCore(options = {}) {
         return broadcastRehearsalUpdated(data);
       case "notification_created":
         return sendNotification(data);
-      case "inventory_event":
-        return broadcastInventoryEvent(data);
       case "ticket_scan_event":
         return broadcastTicketScanEvent(data);
       case "onboarding_dashboard_update":
@@ -460,7 +449,6 @@ export function createRealtimeCore(options = {}) {
     broadcastRehearsalCreated,
     broadcastRehearsalUpdated,
     sendNotification,
-    broadcastInventoryEvent,
     broadcastTicketScanEvent,
     broadcastOnboardingDashboardUpdate,
     handleServerEvent,

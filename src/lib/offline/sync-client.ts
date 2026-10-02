@@ -7,8 +7,6 @@ import { generateId } from "./id";
 import { inferScopeFromEventType } from "./scope";
 import { applyDeltas, applySnapshot, enqueueEvent as persistEvent } from "./storage";
 import type {
-  InventoryDelta,
-  InventoryItemRecord,
   OfflineScope,
   OfflineSnapshot,
   PendingEvent,
@@ -17,25 +15,6 @@ import type {
   TicketRecord,
 } from "./types";
 
-const INVENTORY_CATEGORY_VALUES: InventoryItemRecord["category"][] = [
-  "light",
-  "sound",
-  "network",
-  "video",
-  "instruments",
-  "cables",
-  "cases",
-  "accessories",
-];
-
-function isInventoryCategoryValue(value: string | null): value is InventoryItemRecord["category"] {
-  if (!value) {
-    return false;
-  }
-
-  return (INVENTORY_CATEGORY_VALUES as readonly string[]).includes(value);
-}
-
 const DEFAULT_RETRY_ATTEMPTS = 3;
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_FLUSH_LIMIT = 50;
@@ -43,7 +22,7 @@ const BASE_BACKOFF_MS = 400;
 const MAX_BACKOFF_MS = 10_000;
 const BACKGROUND_SYNC_TAG = "workbox-background-sync:offline-events";
 const CLIENT_ID_STORAGE_KEY = "offline.sync.clientId";
-const AUTO_SYNC_SCOPES: OfflineScope[] = ["inventory", "tickets"];
+const AUTO_SYNC_SCOPES: OfflineScope[] = ["tickets"];
 
 export type SyncActivity = "idle" | "bootstrapping" | "flushing" | "pulling" | "error";
 
@@ -97,7 +76,7 @@ interface RequestOptions {
   acceptStatuses?: number[];
 }
 
-interface BaselineResponse<TRecord extends InventoryItemRecord | TicketRecord> {
+interface BaselineResponse<TRecord extends TicketRecord> {
   scope: OfflineScope;
   records: TRecord[];
   serverSeq: number;
@@ -165,16 +144,6 @@ type RealtimeDeltaPayload<TRecord> = {
   deletes?: string[];
 };
 
-export type InventoryRealtimeSyncPayload = {
-  scope: "inventory";
-  serverSeq?: number;
-  events?: ServerSyncEvent[];
-  delta?: RealtimeDeltaPayload<InventoryItemRecord>;
-  mutationId?: string | null;
-  clientId?: string | null;
-  source?: string | null;
-};
-
 export type TicketRealtimeSyncPayload = {
   scope: "tickets";
   serverSeq?: number;
@@ -185,7 +154,7 @@ export type TicketRealtimeSyncPayload = {
   source?: string | null;
 };
 
-export type RealtimeSyncPayload = InventoryRealtimeSyncPayload | TicketRealtimeSyncPayload;
+export type RealtimeSyncPayload = TicketRealtimeSyncPayload;
 
 export class SyncError extends Error {
   constructor(
@@ -277,25 +246,6 @@ export class SyncClient {
   }
 
   async bootstrap(scope: OfflineScope): Promise<BootstrapResult> {
-    if (scope === "inventory") {
-      const baseline = await this.loadBaseline<InventoryItemRecord>(scope);
-      const snapshot: OfflineSnapshot = {
-        scope: "inventory",
-        records: baseline.records,
-        serverSeq: baseline.serverSeq,
-        capturedAt: baseline.capturedAt,
-      };
-
-      await applySnapshot(snapshot);
-
-      return {
-        scope,
-        serverSeq: baseline.serverSeq,
-        recordCount: baseline.records.length,
-        capturedAt: baseline.capturedAt,
-      } satisfies BootstrapResult;
-    }
-
     const baseline = await this.loadBaseline<TicketRecord>(scope);
     const snapshot: OfflineSnapshot = {
       scope: "tickets",
@@ -314,7 +264,7 @@ export class SyncClient {
     } satisfies BootstrapResult;
   }
 
-  private async loadBaseline<TRecord extends InventoryItemRecord | TicketRecord>(
+  private async loadBaseline<TRecord extends TicketRecord>(
     scope: OfflineScope,
   ): Promise<{ records: TRecord[]; serverSeq: number; capturedAt: string }> {
     const records: TRecord[] = [];
@@ -499,28 +449,6 @@ export class SyncClient {
     if (!containsNewEvents && !hasOverrideDelta && serverSeq <= currentSeq) {
       await this.touchSyncState(db, scope, currentSeq);
       return { scope, applied: 0, serverSeq: currentSeq };
-    }
-
-    if (scope === "inventory") {
-      const computed = scopedEvents.length
-        ? this.buildInventoryDelta(scopedEvents)
-        : { upserts: undefined, deletes: undefined };
-
-      const upserts =
-        typeof payload.delta?.upserts !== "undefined" ? payload.delta.upserts : computed.upserts;
-      const deletes =
-        typeof payload.delta?.deletes !== "undefined" ? payload.delta.deletes : computed.deletes;
-
-      const delta: InventoryDelta = {
-        scope: "inventory",
-        serverSeq,
-        upserts,
-        deletes,
-      };
-
-      await applyDeltas(delta);
-      const appliedCount = (delta.upserts?.length ?? 0) + (delta.deletes?.length ?? 0);
-      return { scope: "inventory", applied: appliedCount, serverSeq };
     }
 
     const computed = scopedEvents.length
@@ -819,21 +747,15 @@ export class SyncClient {
     }
   }
 
-  private buildInventoryDelta(events: ServerSyncEvent[]) {
-    return this.buildDelta(events, "item", (value, occurredAt) =>
-      this.extractInventoryRecord(value, occurredAt),
-    );
-  }
-
   private buildTicketDelta(events: ServerSyncEvent[]) {
     return this.buildDelta(events, "ticket", (value, occurredAt) =>
       this.extractTicketRecord(value, occurredAt),
     );
   }
 
-  private buildDelta<TRecord extends InventoryItemRecord | TicketRecord>(
+  private buildDelta<TRecord extends TicketRecord>(
     events: ServerSyncEvent[],
-    secondaryField: "item" | "ticket",
+    secondaryField: "ticket",
     extractRecord: (value: unknown, occurredAt: string) => TRecord | null,
   ) {
     const upserts: TRecord[] = [];
@@ -872,60 +794,6 @@ export class SyncClient {
       upserts: upserts.length ? upserts : undefined,
       deletes: deletes.length ? deletes : undefined,
     } satisfies { upserts?: TRecord[]; deletes?: string[] };
-  }
-
-  private extractInventoryRecord(value: unknown, occurredAt: string): InventoryItemRecord | null {
-    if (!value || typeof value !== "object") {
-      return null;
-    }
-
-    const record = value as Record<string, unknown>;
-    const id = this.pickString(record, ["id", "itemId", "inventoryItemId"]);
-
-    if (!id) {
-      return null;
-    }
-
-    const quantity = this.pickNumber(record, ["quantity", "qty", "count"]);
-
-    if (typeof quantity !== "number") {
-      return null;
-    }
-
-    const name = this.pickString(record, ["name", "label", "title"]) ?? "Unbekannt";
-    const sku = this.pickString(record, ["sku", "code"]) ?? id;
-
-    const updatedAt = this.pickString(record, ["updatedAt", "occurredAt"]) ?? occurredAt;
-
-    const categoryValue = this.pickString(record, ["category", "type"]);
-    const category = isInventoryCategoryValue(categoryValue)
-      ? categoryValue
-      : ("accessories" as InventoryItemRecord["category"]);
-    const details = this.pickString(record, ["details", "description"]);
-    const lastUsedAt = this.pickString(record, ["lastUsedAt", "usedAt"]);
-    const lastInventoryAt = this.pickString(record, [
-      "lastInventoryAt",
-      "inventoryCheckedAt",
-      "countedAt",
-    ]);
-    const location = this.pickString(record, ["location", "place", "room"]);
-    const owner = this.pickString(record, ["owner", "responsible", "contact"]);
-    const condition = this.pickString(record, ["condition", "state", "status"]);
-
-    return {
-      id,
-      sku,
-      name,
-      quantity,
-      updatedAt,
-      category,
-      details: details ?? null,
-      lastUsedAt: lastUsedAt ?? null,
-      lastInventoryAt: lastInventoryAt ?? null,
-      location: location ?? null,
-      owner: owner ?? null,
-      condition: condition ?? null,
-    } satisfies InventoryItemRecord;
   }
 
   private extractTicketRecord(value: unknown, occurredAt: string): TicketRecord | null {

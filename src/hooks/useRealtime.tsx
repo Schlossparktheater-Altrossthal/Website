@@ -50,7 +50,6 @@ export type AttendanceUpdateMessage = Parameters<ServerToClientEvents["attendanc
 type NotificationMessage = Parameters<ServerToClientEvents["notification_created"]>[0];
 type RehearsalCreatedMessage = Parameters<ServerToClientEvents["rehearsal_created"]>[0];
 type RehearsalUpdatedMessage = Parameters<ServerToClientEvents["rehearsal_updated"]>[0];
-type InventoryRealtimeMessage = Parameters<ServerToClientEvents["inventory_event"]>[0];
 type TicketRealtimeMessage = Parameters<ServerToClientEvents["ticket_scan_event"]>[0];
 type HandshakeAuthPayload = {
   userId: string;
@@ -330,26 +329,6 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const handleInventoryEvent = (event: InventoryRealtimeMessage) => {
-      const payload = event?.payload;
-      if (!payload) {
-        return;
-      }
-
-      const scope = payload.scope ?? "inventory";
-
-      void syncClient
-        .applyRealtimePayload({
-          scope,
-          serverSeq: payload.serverSeq,
-          events: payload.events,
-          delta: payload.delta,
-        })
-        .catch((error) => {
-          console.warn("[Realtime] Failed to apply inventory realtime delta", error);
-        });
-    };
-
     const handleTicketEvent = (event: TicketRealtimeMessage) => {
       const payload = event?.payload;
       if (!payload) {
@@ -370,11 +349,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         });
     };
 
-    socket.on("inventory_event", handleInventoryEvent);
     socket.on("ticket_scan_event", handleTicketEvent);
 
     return () => {
-      socket.off("inventory_event", handleInventoryEvent);
       socket.off("ticket_scan_event", handleTicketEvent);
     };
   }, [socket, syncClient]);

@@ -185,11 +185,6 @@ async function applySnapshotToTable<TRecord>(
 export async function applySnapshot(snapshot: OfflineSnapshot) {
   const db = ensureDb();
 
-  if (snapshot.scope === "inventory") {
-    await applySnapshotToTable(db, db.items, snapshot);
-    return;
-  }
-
   await applySnapshotToTable(db, db.tickets, snapshot);
 }
 
@@ -236,11 +231,6 @@ async function applyDeltaToTable<TRecord>(
 
 export async function applyDeltas(delta: OfflineDelta) {
   const db = ensureDb();
-
-  if (delta.scope === "inventory") {
-    await applyDeltaToTable(db, db.items, delta);
-    return;
-  }
 
   await applyDeltaToTable(db, db.tickets, delta);
 }

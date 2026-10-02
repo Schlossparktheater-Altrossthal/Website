@@ -1,5 +1,5 @@
 import type { OfflineScope } from "./types";
 
-export function inferScopeFromEventType(type: string): OfflineScope {
-  return type.startsWith("inventory") ? "inventory" : "tickets";
+export function inferScopeFromEventType(_type: string): OfflineScope {
+  return "tickets";
 }

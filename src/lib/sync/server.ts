@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { z, type ZodIssue } from "zod";
 
-import type { InventoryItemRecord, OfflineScope, TicketRecord } from "@/lib/offline/types";
+import type { OfflineScope, TicketRecord } from "@/lib/offline/types";
 import { prisma } from "@/lib/prisma";
 import {
   Prisma,
@@ -31,9 +31,8 @@ interface BaseBaselineResult<TRecord> {
   nextCursor?: string;
 }
 
-export type InventoryBaselineResult = BaseBaselineResult<InventoryItemRecord>;
 export type TicketBaselineResult = BaseBaselineResult<TicketRecord>;
-export type BaselineResult = InventoryBaselineResult | TicketBaselineResult;
+export type BaselineResult = TicketBaselineResult;
 
 export interface ServerSyncEvent {
   id: string;
@@ -75,27 +74,6 @@ export interface ApplyIncomingEventsInput {
 }
 
 type NormalizedIncomingEvent = Required<IncomingEventInput>;
-
-const finiteNumber = z
-  .number()
-  .refine((value) => Number.isFinite(value), { message: "Value must be a finite number" });
-
-const inventoryEventPayloadSchema = z
-  .object({
-    itemId: z.string().min(1),
-    sku: z.string().min(1).optional(),
-    name: z.string().min(1).optional(),
-    delta: finiteNumber.refine((value) => Number.isInteger(value), {
-      message: "delta must be an integer",
-    }),
-    quantity: finiteNumber.refine((value) => Number.isInteger(value) && value >= 0, {
-      message: "quantity must be a non-negative integer",
-    }),
-    adjustedAt: z.string().datetime(),
-    source: z.string().min(1),
-    reason: z.string().min(1).optional(),
-  })
-  .strict();
 
 const ticketEventPayloadSchema = z
   .object({
@@ -151,8 +129,6 @@ function getDb(client?: Prisma.TransactionClient): DbClient {
 
 function toSyncScope(scope: OfflineScope): SyncScope {
   switch (scope) {
-    case "inventory":
-      return SyncScope.inventory;
     case "tickets":
       return SyncScope.tickets;
     default:
@@ -163,8 +139,6 @@ function toSyncScope(scope: OfflineScope): SyncScope {
 
 function fromSyncScope(scope: SyncScope): OfflineScope {
   switch (scope) {
-    case SyncScope.inventory:
-      return "inventory";
     case SyncScope.tickets:
       return "tickets";
     default:
@@ -235,51 +209,6 @@ export async function selectBaseline(
   const limit = clampLimit(options.limit, MAX_BASELINE_LIMIT);
   const capturedAt = new Date().toISOString();
   const serverSeq = await getLatestServerSeq(normalizedScope);
-
-  if (scope === "inventory") {
-    const items = await prisma.legacyInventoryItem.findMany({
-      orderBy: [{ category: "asc" }, { sku: "asc" }, { id: "asc" }],
-      take: limit + 1,
-      ...(options.cursor
-        ? {
-            skip: 1,
-            cursor: { id: options.cursor },
-          }
-        : {}),
-    });
-
-    const hasMore = items.length > limit;
-    const records = hasMore ? items.slice(0, limit) : items;
-
-    const mapped: InventoryItemRecord[] = records.map((item) => ({
-      id: item.id,
-      sku: item.sku,
-      name: item.name,
-      manufacturer: item.manufacturer ?? null,
-      itemType: item.itemType ?? null,
-      quantity: item.qty,
-      updatedAt: item.updatedAt.toISOString(),
-      category: item.category,
-      acquisitionCost: item.acquisitionCost ?? null,
-      totalValue: item.totalValue ?? null,
-      purchaseDate: item.purchaseDate?.toISOString() ?? null,
-      details: item.details ?? null,
-      lastUsedAt: item.lastUsedAt?.toISOString() ?? null,
-      lastInventoryAt: item.lastInventoryAt?.toISOString() ?? null,
-      location: item.location ?? null,
-      owner: item.owner ?? null,
-      condition: item.condition ?? null,
-    }));
-
-    return {
-      scope,
-      records: mapped,
-      serverSeq,
-      capturedAt,
-      hasMore,
-      nextCursor: hasMore ? records[records.length - 1]?.id : undefined,
-    } satisfies InventoryBaselineResult;
-  }
 
   if (scope === "tickets") {
     const tickets = await prisma.ticket.findMany({
@@ -384,26 +313,6 @@ function validateIncomingEventPayload(
   scope: OfflineScope,
   event: NormalizedIncomingEvent,
 ): Record<string, unknown> {
-  if (scope === "inventory") {
-    if (event.type !== "inventory.adjustment") {
-      const issue: ZodIssue = {
-        code: z.ZodIssueCode.custom,
-        path: ["type"],
-        message: "Expected inventory.adjustment event type",
-      };
-
-      throw new SyncEventValidationError("Unsupported inventory event type", [issue]);
-    }
-
-    const result = inventoryEventPayloadSchema.safeParse(event.payload);
-
-    if (!result.success) {
-      throw new SyncEventValidationError("Invalid inventory event payload", result.error.issues);
-    }
-
-    return result.data;
-  }
-
   if (scope === "tickets") {
     if (event.type !== "ticket.checkin") {
       const issue: ZodIssue = {

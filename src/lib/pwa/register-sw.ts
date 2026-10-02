@@ -9,7 +9,7 @@ import type { OfflineScope } from "@/lib/offline/types";
 
 const SERVICE_WORKER_URL = "/service-worker.js";
 const OFFLINE_SYNC_TAG = "workbox-background-sync:offline-events";
-const OFFLINE_SCOPES: OfflineScope[] = ["inventory", "tickets"];
+const OFFLINE_SCOPES: OfflineScope[] = ["tickets"];
 
 type BeforeInstallPromptEvent = Event & {
   readonly platforms?: string[];

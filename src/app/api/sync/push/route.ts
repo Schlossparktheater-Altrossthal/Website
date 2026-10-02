@@ -10,7 +10,7 @@ import {
 } from "@/lib/sync/server";
 
 const payloadSchema = z.object({
-  scope: z.enum(["inventory", "tickets"]),
+  scope: z.enum(["tickets"]),
   clientId: z.string().min(1),
   clientMutationId: z.string().min(1),
   events: z

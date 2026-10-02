@@ -1,27 +1,4 @@
-export type OfflineScope = "inventory" | "tickets";
-
-export type InventoryItemCategoryValue =
-  "light" | "sound" | "network" | "video" | "instruments" | "cables" | "cases" | "accessories";
-
-export interface InventoryItemRecord {
-  id: string;
-  sku: string;
-  name: string;
-  manufacturer?: string | null;
-  itemType?: string | null;
-  quantity: number;
-  updatedAt: string;
-  category: InventoryItemCategoryValue;
-  acquisitionCost?: number | null;
-  totalValue?: number | null;
-  purchaseDate?: string | null;
-  details?: string | null;
-  lastUsedAt?: string | null;
-  lastInventoryAt?: string | null;
-  location?: string | null;
-  owner?: string | null;
-  condition?: string | null;
-}
+export type OfflineScope = "tickets";
 
 export type TicketStatus = "unused" | "checked_in" | "invalid" | "pending";
 
@@ -34,7 +11,7 @@ export interface TicketRecord {
   updatedAt: string;
 }
 
-export type PendingEventType = "inventory.adjustment" | "ticket.checkin";
+export type PendingEventType = "ticket.checkin";
 
 export interface PendingEvent {
   id: string;
@@ -73,15 +50,11 @@ export interface SnapshotEnvelope<TRecord> {
   capturedAt?: string;
 }
 
-export type InventorySnapshot = SnapshotEnvelope<InventoryItemRecord> & {
-  scope: "inventory";
-};
-
 export type TicketSnapshot = SnapshotEnvelope<TicketRecord> & {
   scope: "tickets";
 };
 
-export type OfflineSnapshot = InventorySnapshot | TicketSnapshot;
+export type OfflineSnapshot = TicketSnapshot;
 
 export interface DeltaEnvelope<TRecord> {
   upserts?: TRecord[];
@@ -89,12 +62,8 @@ export interface DeltaEnvelope<TRecord> {
   serverSeq: number;
 }
 
-export type InventoryDelta = DeltaEnvelope<InventoryItemRecord> & {
-  scope: "inventory";
-};
-
 export type TicketDelta = DeltaEnvelope<TicketRecord> & {
   scope: "tickets";
 };
 
-export type OfflineDelta = InventoryDelta | TicketDelta;
+export type OfflineDelta = TicketDelta;

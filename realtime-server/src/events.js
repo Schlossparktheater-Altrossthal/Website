@@ -103,7 +103,6 @@ export function createEventHandlers({ io, logger, toISO }) {
     broadcastRehearsalCreated: core.broadcastRehearsalCreated,
     broadcastRehearsalUpdated: core.broadcastRehearsalUpdated,
     sendNotification: core.sendNotification,
-    broadcastInventoryEvent: core.broadcastInventoryEvent,
     broadcastTicketScanEvent: core.broadcastTicketScanEvent,
     broadcastOnboardingDashboardUpdate: core.broadcastOnboardingDashboardUpdate,
     handleServerEvent: core.handleServerEvent,

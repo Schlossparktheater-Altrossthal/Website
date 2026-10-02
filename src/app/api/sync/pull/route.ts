@@ -5,7 +5,7 @@ import { authenticateSyncRequest } from "../auth";
 import { buildSyncEtag, selectDeltas } from "@/lib/sync/server";
 
 const payloadSchema = z.object({
-  scope: z.enum(["inventory", "tickets"]),
+  scope: z.enum(["tickets"]),
   lastServerSeq: z.number().int().nonnegative(),
   limit: z.number().int().min(1).max(500).optional(),
 });

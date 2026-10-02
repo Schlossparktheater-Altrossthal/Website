@@ -37,19 +37,7 @@ enum PayoutMethod {
 }
 
 enum SyncScope {
-  inventory
   tickets
-}
-
-enum InventoryItemCategory {
-  light
-  sound
-  network
-  video
-  instruments
-  cables
-  cases
-  accessories
 }
 
 enum TicketStatus {
@@ -1326,30 +1314,6 @@ model Task {
   labels      Json
   dueAt       DateTime?
   assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
-}
-
-/// Altbestand aus dem früheren Offline-Inventar (keine Oberfläche). Abgelöst durch InventoryAsset.
-model LegacyInventoryItem {
-  id              String                @id @default(cuid())
-  sku             String                @unique @default(cuid())
-  name            String
-  manufacturer    String?
-  itemType        String?
-  qty             Int
-  location        String?
-  owner           String?
-  condition       String?
-  acquisitionCost Float?
-  totalValue      Float?
-  purchaseDate    DateTime?
-  category        InventoryItemCategory @default(accessories)
-  details         String?
-  lastUsedAt      DateTime?
-  lastInventoryAt DateTime?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-
-  @@map("InventoryItem")
 }
 
 // ---------------------------------------------------------------------------

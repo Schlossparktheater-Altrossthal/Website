@@ -9,7 +9,6 @@ import type {
   RoomType,
   SocketData,
   TicketRealtimePayload,
-  InventoryRealtimePayload,
   ServerToClientEvents,
 } from "../types";
 import type { Server as SocketIOServer, Socket } from "socket.io";
@@ -94,14 +93,6 @@ export interface RealtimeCore {
   sendNotification(
     payload: Omit<NotificationCreatedEvent, "timestamp">,
     options?: { timestamp?: Date | number },
-  ): boolean;
-  broadcastInventoryEvent(
-    payload: InventoryRealtimePayload,
-    options?: {
-      rooms?: RoomType | RoomType[];
-      excludeSocketId?: string;
-      timestamp?: Date | number;
-    },
   ): boolean;
   broadcastTicketScanEvent(
     payload: TicketRealtimePayload,
