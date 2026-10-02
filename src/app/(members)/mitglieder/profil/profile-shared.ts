@@ -11,6 +11,7 @@ import {
   getRolePreferenceTitle,
   listRolePreferenceDefinitions,
 } from "@/lib/onboarding/role-preferences";
+import { findMatchingWishWeight, type CrewWishOption } from "@/lib/onboarding/crew-wish-option";
 import { normalizeRolePreferenceWeight } from "@/lib/onboarding/role-preference-utils";
 import { isPaymentDetailsComplete, type ProfileCompletionSummary } from "@/lib/profile-completion";
 import { getUserDisplayName } from "@/lib/names";
@@ -29,7 +30,6 @@ export const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medi
 
 export const ROLE_PREFERENCE_DEFINITIONS = {
   acting: listRolePreferenceDefinitions("acting"),
-  crew: listRolePreferenceDefinitions("crew"),
 } as const;
 
 export const DEFAULT_ROLE_PREFERENCE_WEIGHT = 60;
@@ -62,6 +62,7 @@ export type RolePreferenceFormState = {
 
 export function buildPreferenceFormState(
   preferences: ProfileClientProps["rolePreferences"],
+  crewOptions: CrewWishOption[],
 ): RolePreferenceFormState {
   const remaining = new Map(preferences.map((pref) => [pref.code, pref]));
 
@@ -84,24 +85,28 @@ export function buildPreferenceFormState(
     } satisfies RolePreferenceFormEntry;
   });
 
-  const crew: RolePreferenceFormEntry[] = ROLE_PREFERENCE_DEFINITIONS.crew.map((definition) => {
-    const existing = remaining.get(definition.code);
-    if (existing) {
-      remaining.delete(definition.code);
-    }
-    const weight = existing
-      ? normalizeRolePreferenceWeight(existing.weight)
-      : DEFAULT_ROLE_PREFERENCE_WEIGHT;
+  // Alt-Codes (z. B. `crew_tech`) zählen für jede Blaupause, die sie abdeckt.
+  const crewWeights = new Map(
+    preferences.filter((pref) => pref.domain === "crew").map((pref) => [pref.code, pref.weight]),
+  );
+  const crew: RolePreferenceFormEntry[] = crewOptions.map((option) => {
+    const existingWeight = findMatchingWishWeight(option, crewWeights);
     return {
-      code: definition.code,
-      title: definition.title,
-      description: definition.description,
+      code: option.code,
+      title: option.title,
+      description: option.description,
       domain: "crew" as const,
-      weight,
-      enabled: existing ? existing.weight > 0 : false,
+      weight:
+        existingWeight !== null
+          ? normalizeRolePreferenceWeight(existingWeight)
+          : DEFAULT_ROLE_PREFERENCE_WEIGHT,
+      enabled: existingWeight !== null && existingWeight > 0,
       isCustom: false,
     } satisfies RolePreferenceFormEntry;
   });
+  for (const option of crewOptions) {
+    for (const code of option.matchCodes) remaining.delete(code);
+  }
 
   for (const pref of remaining.values()) {
     const domain = pref.domain === "acting" ? "acting" : "crew";
@@ -219,6 +224,8 @@ export type ProfileClientProps = {
   checklist: ProfileCompletionSummary;
   /** Label der Produktion, aus der die Rollenwünsche als Vorschlag stammen. */
   rolePreferencesInheritedFrom: string | null;
+  /** Gewerks-Wünsche der Produktion (`listCrewWishOptions`). */
+  crewWishOptions: CrewWishOption[];
 };
 
 export type ProfileUser = ProfileClientProps["user"];

@@ -195,10 +195,10 @@ Heute stehen die Gewerke-Wünsche fest in `src/lib/onboarding/role-preferences.t
 
 - **Schauspiel bleibt fest**: `acting_*` sind Rollengrößen, kein Gewerk, und bleiben in `role-preferences.ts`.
 - **Gewerke-Optionen kommen aus der Produktion**: Angeboten werden die Gewerke der Produktion, für die das Onboarding läuft, mit Name/Icon/Farbe/Beschreibung ihrer Blaupause. Nur Blaupausen mit `onboardingVisible` erscheinen.
-- **Wunsch speichert die Blaupause**: `MemberRolePreference` + `templateId?`. Neue Wünsche nur noch mit `templateId`; `code` bleibt für `acting_*` und Altbestand.
-- **Migration additiv**: alte `crew_*`-Codes über `preferenceCodes` auf `templateId` übertragen (Skript, Test auf Staging-Dump). Codes ohne Treffer und `custom-…` bleiben „sonstiger Wunsch“. Erst danach `crew_*` aus `role-preferences.ts` entfernen (eigener Schritt).
-- **Eine Quelle für alle**: Onboarding-Wizard, Rückkehrer-Wizard, Profil, Ranking, Analytics und Zuweisung lesen die Optionen über eine gemeinsame Funktion (z. B. `getOnboardingDepartmentOptions(showId)` in `src/lib/departments/templates.ts`).
-- **Wunsch → Gewerk**: In der Zuweisung führt „Wunsch annehmen“ direkt zur Mitgliedschaft im Gewerk der Produktion mit dieser Blaupause (`source = onboarding-wunsch`). Hat die Produktion das Gewerk nicht, Hinweis „Gewerk fehlt – aus Blaupause anlegen“.
+- **Wunsch-Code pro Blaupause** (umgesetzt statt `templateId` am Wunsch, weil Alt-Codes nicht 1:1 passen: `crew_tech` gehört zu Licht **und** Ton): Gehört ein Alt-Code eindeutig zu genau einer Blaupause, bleibt er (`crew_costume` → Kostüm, Auswertungen über Jahre vergleichbar); sonst `tpl:<slug>` (`tpl:licht`, `tpl:ton`). Wünsche passen zu einem Gewerk über `preferenceCodes` ∪ `tpl:<slug>`.
+- **Keine Datenmigration der Wünsche**: Alte Wünsche bleiben gespeichert und werden über `matchCodes` vorbelegt (Rückkehrer, Profil: `crew_tech` füllt Licht und Ton). `crew_*` bleiben als feste Wünsche, solange keine Blaupause der Produktion sie abdeckt (z. B. `crew_direction`).
+- **Eine Quelle für alle**: `listCrewWishOptions(showId)` in `src/lib/onboarding/crew-options.ts` für Onboarding-, Regie- und Rückkehrer-Wizard und Profil; Titel für Auswertungen, Zuweisung und Mitgliederverwaltung über `loadTemplateWishTitles()`.
+- **Wunsch → Gewerk**: In der Zuweisung führt „Wunsch annehmen“ direkt zur Mitgliedschaft im Gewerk der Produktion mit dieser Blaupause (`source = onboarding-wunsch`). Hat die Produktion das Gewerk nicht, Hinweis „Gewerk fehlt – aus Blaupause anlegen“. Zuordnung über `tpl:`-Codes umgesetzt; Hinweis „Gewerk fehlt“ noch offen (selten, da Optionen aus den Gewerken der Produktion kommen).
 - **Blaupausen-Editor**, Abschnitt „Onboarding“: Schalter „im Onboarding anbieten“, kurzer Beschreibungstext (was macht man hier, Zeitaufwand), Liste der zugeordneten Alt-Codes (nur lesend, für die Migration).
 - **UI**: vor der Umsetzung Staging-Screenshots des Wizards (mobil + Desktop) ansehen; Darstellung der Optionen folgt dem bestehenden Wizard (Chips/Karten mit Stärke).
 
@@ -206,7 +206,6 @@ Datenmodell-Ergänzung:
 
 ```
 DepartmentTemplate      + onboardingVisible Boolean @default(true), + onboardingDescription String?
-MemberRolePreference    + templateId String?        // Gewerks-Wunsch; code bleibt für acting_* / Altbestand
 ```
 
 ### Rechte (Fortsetzung)
@@ -232,7 +231,7 @@ Gemeinsame UI-Regeln: `docs/Plan/projektplanung-plan.md`, Abschnitt „UI-Konzep
 
 8. **Blaupausen-Grundlage**: `modules`, `TemplatePermission`, `DepartmentPermission.mode`, Rechte-Auflösung mit Vererbung (Tests!). **Manuelle Migration**: bestehende Gewerke ohne Vorlage einer Blaupause zuordnen bzw. Blaupause erzeugen; Rechte je Gewerk in Template + Abweichungen zerlegen. Test auf Staging-Dump.
 9. **Blaupausen-Verwaltung + Gewerk anlegen**: Seite in den Einstellungen, Anlegen nur noch aus Blaupause. Danach `templateId` Pflicht (eigener Schritt).
-   9b. **Onboarding über Blaupausen** (siehe Abschnitt oben): `templateId` am Wunsch, gemeinsame Optionsquelle für alle Wizards/Profil/Zuweisung, Migration der `crew_*`-Codes (Staging-Dump), „Wunsch annehmen“ → Gewerk. Danach `crew_*` aus `role-preferences.ts` entfernen (eigener Schritt).
+   9b. **Onboarding über Blaupausen** (siehe Abschnitt oben): Wunsch-Code je Blaupause, gemeinsame Optionsquelle für alle Wizards/Profil/Zuweisung, Titel in Auswertungen. Editor-Schalter mit Phase 9.
 10. **Portal aus Bausteinen**: Tabs dynamisch, Körpermaße als Baustein, „Mehr“-Menü mobil, „Meine Teams“-Kacheln neu.
 11. **Szenenbedarf**: Modelle, Anfordern in der Szene, Eingang-Spalte, Objekt-Karten, Checklisten, Benachrichtigungen; Migration `SceneBreakdownItem` → Objekte.
 12. **Budget**: `FinanceBudget.departmentId`, Budget-Tab, Objektkosten.
@@ -247,13 +246,13 @@ Gemeinsame UI-Regeln: `docs/Plan/projektplanung-plan.md`, Abschnitt „UI-Konzep
 - E10: Budget ist ein Baustein und nutzt die vorhandenen Finanzmodelle.
 - E11 (2026-10-02): Schauspiel-Wünsche (`acting_*`) bleiben feste Codes; Gewerks-Wünsche zeigen auf Blaupausen.
 - E12 (2026-10-02): Das Onboarding bietet die Gewerke der jeweiligen Produktion an (über ihre Blaupause), nicht alle globalen Blaupausen; Schalter „im Onboarding anbieten“ pro Blaupause.
-- E13 (2026-10-02): Alte `crew_*`-Wünsche werden additiv über `preferenceCodes` migriert; Entfernen der Codes in eigenem Schritt.
+- E13 (2026-10-02, bei Umsetzung angepasst): Keine Migration der Wünsche; Wunsch-Code je Blaupause (eindeutiger Alt-Code oder `tpl:<slug>`), alte Wünsche gelten über `preferenceCodes` weiter.
 
 ### Checkliste (Fortsetzung)
 
 - [ ] Phase 8 Blaupausen-Grundlage + Migration
 - [ ] Phase 9 Blaupausen-Verwaltung, Gewerk anlegen
-- [ ] Phase 9b Onboarding über Blaupausen
+- [x] Phase 9b Onboarding über Blaupausen (2026-10-02: Migration `department_template_onboarding`, Optionen aus Gewerken der Produktion; offen: Schalter/Text im Blaupausen-Editor → kommt mit Phase 9, bis dahin per DB)
 - [ ] Phase 10 Portal aus Bausteinen
 - [ ] Phase 11 Szenenbedarf
 - [ ] Phase 12 Budget

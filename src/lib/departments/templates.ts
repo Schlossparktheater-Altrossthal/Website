@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
+import { templateMatchCodes } from "@/lib/onboarding/crew-options";
 import { prisma } from "@/lib/prisma";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -41,11 +42,11 @@ export async function findDepartmentsForPreferenceCodes(
 ): Promise<Map<string, { id: string; name: string }[]>> {
   const departments = await db.department.findMany({
     where: { showId, archivedAt: null, template: { isNot: null } },
-    select: { id: true, name: true, template: { select: { preferenceCodes: true } } },
+    select: { id: true, name: true, template: { select: { slug: true, preferenceCodes: true } } },
   });
   const byCode = new Map<string, { id: string; name: string }[]>();
   for (const department of departments) {
-    for (const code of department.template?.preferenceCodes ?? []) {
+    for (const code of department.template ? templateMatchCodes(department.template) : []) {
       const list = byCode.get(code) ?? [];
       list.push({ id: department.id, name: department.name });
       byCode.set(code, list);

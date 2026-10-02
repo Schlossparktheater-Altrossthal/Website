@@ -29,6 +29,7 @@ import {
 type RolePreferencesSectionProps = {
   onboarding: ProfileClientProps["onboarding"];
   rolePreferences: ProfileClientProps["rolePreferences"];
+  crewWishOptions: ProfileClientProps["crewWishOptions"];
   onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
   /** Herkunft der Wünsche, wenn sie aus einer früheren Produktion vorgeschlagen werden. */
@@ -38,13 +39,14 @@ type RolePreferencesSectionProps = {
 export function RolePreferencesSection({
   onboarding,
   rolePreferences,
+  crewWishOptions,
   onRolePreferencesChange,
   onOnboardingChange,
   inheritedFromLabel = null,
 }: RolePreferencesSectionProps) {
   const initialPreferences = useMemo(
-    () => buildPreferenceFormState(rolePreferences),
-    [rolePreferences],
+    () => buildPreferenceFormState(rolePreferences, crewWishOptions),
+    [rolePreferences, crewWishOptions],
   );
   const [preferenceForm, setPreferenceForm] = useState<RolePreferenceFormState>(initialPreferences);
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
@@ -145,7 +147,7 @@ export function RolePreferencesSection({
           preferences: saved,
         });
       }
-      setPreferenceForm(buildPreferenceFormState(saved));
+      setPreferenceForm(buildPreferenceFormState(saved, crewWishOptions));
       toast.success("Präferenzen gespeichert");
     } finally {
       setPreferenceSubmitting(false);

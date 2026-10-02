@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getActiveProductionId } from "@/lib/active-production";
+import { listTemplateWishCodes } from "@/lib/onboarding/crew-options";
 import { replaceProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -45,6 +46,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  const templateCodes = await listTemplateWishCodes();
   const seenCodes = new Set<string>();
   const sanitized: Array<{ code: string; domain: "acting" | "crew"; weight: number }> = [];
 
@@ -61,6 +63,13 @@ export async function PUT(request: NextRequest) {
     const definition = getRolePreferenceDefinition(code);
     if (definition) {
       if (definition.domain !== entry.domain) {
+        return NextResponse.json(
+          { error: "Unzulässige Kombination aus Rolle und Bereich." },
+          { status: 400 },
+        );
+      }
+    } else if (templateCodes.has(code)) {
+      if (entry.domain !== "crew") {
         return NextResponse.json(
           { error: "Unzulässige Kombination aus Rolle und Bereich." },
           { status: 400 },

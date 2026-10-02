@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus, generateInviteToken, hashInviteToken } from "@/lib/member-invites";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
+import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
 import {
   onboardingPathForHash,
   onboardingPathForToken,
@@ -85,6 +86,8 @@ export default async function OnboardingInvitePage({
   const whatsappLink = getOnboardingWhatsAppLink(invite.show?.meta);
   const notice = onboardingSessionNotice(await auth());
 
+  const crewOptions = await listCrewWishOptions(invite.showId);
+
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       {notice ? (
@@ -94,6 +97,7 @@ export default async function OnboardingInvitePage({
         />
       ) : null}
       <OnboardingWizard
+        crewOptions={crewOptions}
         token={token}
         sessionToken={redemption.sessionToken}
         invite={{

@@ -43,6 +43,7 @@ import { buildProductionHistory } from "@/lib/produktionen/production-history";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { ImpersonationButton } from "./impersonation-button";
+import { loadTemplateWishTitles } from "@/lib/onboarding/crew-options";
 import {
   getRolePreferenceDescription,
   getRolePreferenceTitle,
@@ -239,8 +240,8 @@ type RolePreferenceEntry = {
   weight: number;
 };
 
-function resolveRolePreferenceTitle(code: string) {
-  return getRolePreferenceTitle(code);
+function resolveRolePreferenceTitle(code: string, templateTitles: ReadonlyMap<string, string>) {
+  return templateTitles.get(code) ?? getRolePreferenceTitle(code);
 }
 
 function resolveRolePreferenceDescription(code: string) {
@@ -261,9 +262,11 @@ function rolePreferenceSectionLabel(domain: "acting" | "crew") {
 function RolePreferenceList({
   domain,
   preferences,
+  templateWishTitles,
 }: {
   domain: "acting" | "crew";
   preferences: RolePreferenceEntry[];
+  templateWishTitles: ReadonlyMap<string, string>;
 }) {
   if (!preferences.length) {
     return null;
@@ -278,7 +281,7 @@ function RolePreferenceList({
         {preferences.map((preference) => {
           const safeWeight = Math.max(0, Math.min(100, preference.weight));
           const barWidth = Math.max(safeWeight, 6);
-          const title = resolveRolePreferenceTitle(preference.code);
+          const title = resolveRolePreferenceTitle(preference.code, templateWishTitles);
           const description = resolveRolePreferenceDescription(preference.code);
           const weightLabel = resolveRolePreferenceWeightLabel(safeWeight);
           return (
@@ -456,6 +459,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   if (!allowed) {
     return <div className="text-sm text-destructive">Kein Zugriff auf die Mitgliederprofile.</div>;
   }
+  const templateWishTitles = await loadTemplateWishTitles();
 
   const resolvedParams = await params;
   const explainedPermissionsPromise = (async () => {
@@ -1082,10 +1086,18 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                     {hasRolePreferences ? (
                       <div className="mt-3 space-y-4">
                         {actingRolePreferences.length ? (
-                          <RolePreferenceList domain="acting" preferences={actingRolePreferences} />
+                          <RolePreferenceList
+                            templateWishTitles={templateWishTitles}
+                            domain="acting"
+                            preferences={actingRolePreferences}
+                          />
                         ) : null}
                         {crewRolePreferences.length ? (
-                          <RolePreferenceList domain="crew" preferences={crewRolePreferences} />
+                          <RolePreferenceList
+                            templateWishTitles={templateWishTitles}
+                            domain="crew"
+                            preferences={crewRolePreferences}
+                          />
                         ) : null}
                       </div>
                     ) : (

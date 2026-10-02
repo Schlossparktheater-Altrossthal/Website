@@ -8,9 +8,16 @@ import { CURRENT_PRODUCTION_STATUSES, currentMembershipWhere } from "@/lib/produ
 
 import { prisma } from "@/lib/prisma";
 import { calculateInviteStatus } from "@/lib/member-invites";
-import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
+import { loadTemplateWishTitles } from "@/lib/onboarding/crew-options";
+import { getRolePreferenceTitle as getStaticRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 import { databaseEnabled } from "@/lib/dev-database";
 import { DEV_ONBOARDING_ANALYTICS_FIXTURE } from "@/lib/dev-onboarding-analytics-fixture";
+
+// Titel für `tpl:`-Codes kommen aus den Blaupausen; vor jeder Berechnung neu geladen.
+let templateWishTitles = new Map<string, string>();
+function getRolePreferenceTitle(code: string): string {
+  return templateWishTitles.get(code) ?? getStaticRolePreferenceTitle(code);
+}
 
 function userShowKey(userId: string, showId: string | null) {
   return `${userId}:${showId ?? ""}`;
@@ -181,6 +188,7 @@ export async function collectOnboardingAnalytics(
   if (!databaseEnabled()) {
     return DEV_ONBOARDING_ANALYTICS_FIXTURE;
   }
+  templateWishTitles = await loadTemplateWishTitles();
 
   const [
     invites,

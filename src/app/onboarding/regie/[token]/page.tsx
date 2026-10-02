@@ -9,6 +9,7 @@ import {
   resolveOnboardingVariant,
 } from "@/lib/member-invite-links";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
+import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
 
 export const dynamic = "force-dynamic";
 
@@ -81,9 +82,12 @@ export default async function RegieOnboardingPage({
 
   const whatsappLink = getOnboardingWhatsAppLink(invite.show?.meta);
 
+  const crewOptions = await listCrewWishOptions(invite.showId);
+
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       <OnboardingWizard
+        crewOptions={crewOptions}
         sessionToken={redemption.sessionToken}
         token={token}
         invite={{

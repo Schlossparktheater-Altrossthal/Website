@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/auth";
 import { calculateInviteStatus, hashInviteToken } from "@/lib/member-invites";
 import { onboardingSessionNotice } from "@/lib/onboarding/session-notice";
+import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
 import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
 
@@ -237,6 +238,8 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     weight: preference.weight,
   }));
 
+  const crewOptions = await listCrewWishOptions(invite.show.id);
+
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
       {notice ? <OnboardingSessionNotice {...notice} /> : null}
@@ -261,6 +264,7 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         dateOfBirth={existingUser?.dateOfBirth ? existingUser.dateOfBirth.toISOString() : null}
         isLoggedIn={true}
         onboardingToken={token}
+        crewOptions={crewOptions}
       />
     </main>
   );

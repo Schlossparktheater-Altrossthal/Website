@@ -9,6 +9,7 @@ import { getAvailableOnboardings } from "@/lib/onboarding/dashboard-service";
 import { readStoredEducation, toEducationPayload } from "@/lib/education/schools";
 import { prisma } from "@/lib/prisma";
 import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
+import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
 import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { loadMemberHistory } from "@/lib/member-history";
 import { hasPermission } from "@/lib/permissions";
@@ -120,6 +121,7 @@ export default async function ProfilePage() {
     history,
     productionPreferences,
     activeShow,
+    crewWishOptions,
   ] = await Promise.all([
     prisma.dietaryRestriction.findMany({
       where: { userId, isActive: true },
@@ -160,6 +162,7 @@ export default async function ProfilePage() {
           },
         })
       : null,
+    listCrewWishOptions(photoConsentShowId),
   ]);
 
   const displayName = getUserDisplayName(
@@ -333,6 +336,7 @@ export default async function ProfilePage() {
         aversions={aversions}
         checklist={checklist}
         rolePreferencesInheritedFrom={rolePreferencesInheritedFrom}
+        crewWishOptions={crewWishOptions}
       />
     </div>
   );

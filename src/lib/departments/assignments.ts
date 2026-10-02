@@ -10,6 +10,7 @@ import {
   type AvatarFields,
   type AvatarUserSource,
 } from "@/lib/avatar-fields";
+import { loadTemplateWishTitles, templateMatchCodes } from "@/lib/onboarding/crew-options";
 import { getRolePreferenceTitle } from "@/lib/onboarding/role-preferences";
 import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
@@ -74,53 +75,56 @@ export type AssignmentData = {
  * (Onboarding), Gewerk-Zugehörigkeiten und Besetzungen.
  */
 export async function loadAssignmentData(showId: string): Promise<AssignmentData> {
-  const [departments, memberships, preferences, characters, onboardings] = await Promise.all([
-    prisma.department.findMany({
-      where: { showId, archivedAt: null },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        color: true,
-        requiresJoinApproval: true,
-        template: { select: { preferenceCodes: true } },
-      },
-    }),
-    prisma.productionMembership.findMany({
-      where: { showId, ...currentMembershipWhere(), user: { deactivatedAt: null } },
-      select: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            name: true,
-            ...AVATAR_USER_SELECT,
+  const [departments, memberships, preferences, characters, onboardings, templateTitles] =
+    await Promise.all([
+      prisma.department.findMany({
+        where: { showId, archivedAt: null },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          color: true,
+          requiresJoinApproval: true,
+          template: { select: { slug: true, preferenceCodes: true } },
+        },
+      }),
+      prisma.productionMembership.findMany({
+        where: { showId, ...currentMembershipWhere(), user: { deactivatedAt: null } },
+        select: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              name: true,
+              ...AVATAR_USER_SELECT,
+            },
           },
         },
-      },
-    }),
-    prisma.memberRolePreference.findMany({
-      where: { showId, weight: { gt: 0 } },
-      select: { userId: true, code: true, domain: true, weight: true },
-    }),
-    prisma.character.findMany({
-      where: { showId },
-      orderBy: [{ order: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        color: true,
-        rolePreferenceCode: true,
-        castings: { select: { userId: true, type: true } },
-      },
-    }),
-    prisma.productionOnboarding.findMany({
-      where: { showId },
-      select: { userId: true, notes: true, completedAt: true },
-    }),
-  ]);
+      }),
+      prisma.memberRolePreference.findMany({
+        where: { showId, weight: { gt: 0 } },
+        select: { userId: true, code: true, domain: true, weight: true },
+      }),
+      prisma.character.findMany({
+        where: { showId },
+        orderBy: [{ order: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          rolePreferenceCode: true,
+          castings: { select: { userId: true, type: true } },
+        },
+      }),
+      prisma.productionOnboarding.findMany({
+        where: { showId },
+        select: { userId: true, notes: true, completedAt: true },
+      }),
+      loadTemplateWishTitles(),
+    ]);
+  const wishTitle = (code: string) => templateTitles.get(code) ?? getRolePreferenceTitle(code);
 
   const departmentIds = departments.map((department) => department.id);
   const departmentMemberships = await prisma.departmentMembership.findMany({
@@ -179,7 +183,7 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
     if (!person) continue;
     person.wishes.push({
       code: preference.code,
-      title: getRolePreferenceTitle(preference.code),
+      title: wishTitle(preference.code),
       weight: preference.weight,
       domain: preference.domain,
     });
@@ -246,7 +250,7 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
           .filter((row) => row.showId === latest.showId)
           .map((row) => ({
             code: row.code,
-            title: getRolePreferenceTitle(row.code),
+            title: wishTitle(row.code),
             weight: row.weight,
             domain: row.domain,
           }))
@@ -263,7 +267,7 @@ export async function loadAssignmentData(showId: string): Promise<AssignmentData
       color: department.color,
       description: department.description,
       requiresJoinApproval: department.requiresJoinApproval,
-      preferenceCodes: department.template?.preferenceCodes ?? [],
+      preferenceCodes: department.template ? templateMatchCodes(department.template) : [],
     })),
     people: [...people.values()].sort((a, b) => a.name.localeCompare(b.name, "de")),
     characters: characters.map((character) => ({

@@ -573,6 +573,7 @@ async function main() {
       color: dept.color ?? null,
       requiresJoinApproval: dept.requiresJoinApproval ?? false,
       preferenceCodes: templatePreferenceCodes[dept.slug] ?? [],
+      onboardingVisible: dept.slug !== "schauspiel" && dept.slug !== "technik",
       sortOrder: index,
     };
     await prisma.departmentTemplate.upsert({

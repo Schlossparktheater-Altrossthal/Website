@@ -56,6 +56,7 @@ export function ProfileClient({
   aversions: initialAversions,
   checklist: initialChecklist,
   rolePreferencesInheritedFrom,
+  crewWishOptions,
   history,
 }: ProfileClientProps) {
   const { update: refreshSession } = useSession();
@@ -277,6 +278,7 @@ export function ProfileClient({
             onboarding={onboarding}
             onOnboardingChange={setOnboarding}
             rolePreferences={rolePreferences}
+            crewWishOptions={crewWishOptions}
             onRolePreferencesChange={handleRolePreferencesChange}
             onWhatsAppVisit={handleWhatsAppVisit}
             preferencesInheritedFrom={preferencesInheritedFrom}

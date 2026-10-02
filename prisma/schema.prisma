@@ -546,18 +546,22 @@ model FinalRehearsalDuty {
 
 /// Globale Vorlage für Gewerke. Pro Produktion werden daraus `Department`-Einträge erzeugt.
 model DepartmentTemplate {
-  id                   String       @id @default(cuid())
-  slug                 String       @unique
-  name                 String
-  description          String?
-  color                String?
+  id                    String       @id @default(cuid())
+  slug                  String       @unique
+  name                  String
+  description           String?
+  color                 String?
   /// Onboarding-Wunsch-Codes (z. B. `crew_costume`), die zu diesem Gewerk führen.
-  preferenceCodes      String[]     @default([])
-  requiresJoinApproval Boolean      @default(false)
-  sortOrder            Int          @default(0)
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  departments          Department[]
+  preferenceCodes       String[]     @default([])
+  /// Im Onboarding, Rückkehrer-Wizard und Profil als Gewerks-Wunsch anbieten.
+  onboardingVisible     Boolean      @default(true)
+  /// Kurztext für das Onboarding (was macht man hier); sonst `description`.
+  onboardingDescription String?
+  requiresJoinApproval  Boolean      @default(false)
+  sortOrder             Int          @default(0)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  departments           Department[]
 }
 
 /// Gewerk einer Produktion.

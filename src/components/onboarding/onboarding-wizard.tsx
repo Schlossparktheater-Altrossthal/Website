@@ -44,6 +44,7 @@ import {
 import { FOCUS_BADGE_STYLES } from "@/config/category-colors";
 import { useInterestSuggestions } from "@/hooks/useInterestSuggestions";
 import { cn } from "@/lib/utils";
+import type { CrewWishOption } from "@/lib/onboarding/crew-wish-option";
 import { listRolePreferenceDefinitions } from "@/lib/onboarding/role-preferences";
 import {
   deriveOnboardingFocusFromPreferences,
@@ -77,7 +78,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AllergenField } from "@/components/forms/allergen-field";
 
 const actingOptions = listRolePreferenceDefinitions("acting");
-const crewOptions = listRolePreferenceDefinitions("crew");
 
 const genderOptions = [
   { value: "female", label: "Weiblich" },
@@ -168,6 +168,8 @@ type OnboardingWizardProps = {
   sessionToken: string;
   invite: InviteMeta;
   variant?: OnboardingWizardVariant;
+  /** Gewerks-Wünsche der Produktion (`listCrewWishOptions`). */
+  crewOptions: CrewWishOption[];
 };
 
 function createInitialActingPreferences(): PreferenceEntry[] {
@@ -181,7 +183,10 @@ function createInitialActingPreferences(): PreferenceEntry[] {
   }));
 }
 
-function createInitialCrewPreferences(variant: OnboardingWizardVariant): PreferenceEntry[] {
+function createInitialCrewPreferences(
+  variant: OnboardingWizardVariant,
+  crewOptions: CrewWishOption[],
+): PreferenceEntry[] {
   return crewOptions.map((option) => {
     const isDirection = option.code === "crew_direction";
     const enabled = variant === "regie" ? isDirection : false;
@@ -239,7 +244,7 @@ function getDomainLabel(domain: "acting" | "crew", variant: OnboardingWizardVari
   return variant === "regie" ? "Regie & Teams" : "Gewerke";
 }
 
-function createInitialFormState(variant: OnboardingWizardVariant) {
+function createInitialFormState(variant: OnboardingWizardVariant, crewOptions: CrewWishOption[]) {
   return {
     firstName: "",
     lastName: "",
@@ -253,7 +258,7 @@ function createInitialFormState(variant: OnboardingWizardVariant) {
     genderCustom: "",
     memberSinceYear: String(CURRENT_YEAR),
     actingPreferences: createInitialActingPreferences(),
-    crewPreferences: createInitialCrewPreferences(variant),
+    crewPreferences: createInitialCrewPreferences(variant, crewOptions),
     interests: [] as string[],
     nutritionStyle: "omnivore" as DietaryStyleOption,
     nutritionVariant: null as DietaryVariantOption | null,
@@ -298,6 +303,7 @@ export function OnboardingWizard({
   sessionToken,
   invite,
   variant = "default",
+  crewOptions,
 }: OnboardingWizardProps) {
   const router = useRouter();
   const isRegieVariant = variant === "regie";
@@ -340,7 +346,7 @@ export function OnboardingWizard({
   const { suggestions: interestSuggestions, loading: interestsLoading } = useInterestSuggestions({
     onboardingToken: token,
   });
-  const [form, setForm] = useState(() => createInitialFormState(variant));
+  const [form, setForm] = useState(() => createInitialFormState(variant, crewOptions));
   const [whatsappVisitTracked, setWhatsappVisitTracked] = useState(false);
   const derivedFocus = useMemo(() => {
     if (isRegieVariant) {

@@ -4,7 +4,8 @@ import { differenceInYears, isAfter, isBefore, isWithinInterval } from "date-fns
 import { prisma } from "@/lib/prisma";
 import type { AllergyLevel, OnboardingFocus } from "@prisma/client";
 import { DEV_ONBOARDING_DASHBOARD, DEV_ONBOARDING_SUMMARY } from "./dashboard-dev-fixture";
-import { getRolePreferenceTitle } from "./role-preferences";
+import { loadTemplateWishTitles } from "./crew-options";
+import { getRolePreferenceTitle as getStaticRolePreferenceTitle } from "./role-preferences";
 import {
   onboardingDashboardSchema,
   onboardingSummarySchema,
@@ -21,6 +22,12 @@ const IS_PRODUCTION = process.env.NODE_ENV === "production";
 interface DateRange {
   start?: Date | null;
   end?: Date | null;
+}
+
+// Titel für `tpl:`-Codes kommen aus den Blaupausen; vor jeder Berechnung neu geladen.
+let templateWishTitles = new Map<string, string>();
+function getRolePreferenceTitle(code: string): string {
+  return templateWishTitles.get(code) ?? getStaticRolePreferenceTitle(code);
 }
 
 function normalizeTitle(show: { title: string | null; year: number }): string {
@@ -413,6 +420,8 @@ async function computeOnboardingDashboardData(
   if (!IS_PRODUCTION && onboardingId === DEV_ONBOARDING_SUMMARY.id) {
     return DEV_ONBOARDING_DASHBOARD;
   }
+
+  templateWishTitles = await loadTemplateWishTitles();
 
   const show = await prisma.show.findUnique({
     where: { id: onboardingId },

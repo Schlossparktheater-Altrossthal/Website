@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { findMatchingWishWeight, type CrewWishOption } from "@/lib/onboarding/crew-wish-option";
 import {
   getRolePreferenceDefinition,
   getRolePreferenceTitle,
@@ -112,6 +113,8 @@ type ReturneeUpdateWizardProps = {
   dateOfBirth: string | null;
   isLoggedIn: boolean;
   onboardingToken?: string | null;
+  /** Gewerks-Wünsche der Produktion (`listCrewWishOptions`). */
+  crewOptions: CrewWishOption[];
 };
 
 type DietaryEntry = {
@@ -173,6 +176,7 @@ function createInitialState(
   existingPreferences: ExistingPreference[],
   existingPhotoConsent: boolean | null,
   existingInterests: string[],
+  crewOptions: CrewWishOption[],
 ): FormState {
   const existingPreferencesByCode = new Map(
     existingPreferences.map((preference) => [preference.code, preference]),
@@ -188,17 +192,20 @@ function createInitialState(
       };
     },
   );
-  const crewPreferences: PreferenceEntry[] = listRolePreferenceDefinitions("crew").map(
-    (definition) => {
-      const existingPreference = existingPreferencesByCode.get(definition.code);
-      return {
-        code: definition.code,
-        domain: definition.domain,
-        enabled: Boolean(existingPreference),
-        weight: existingPreference?.weight ?? 0,
-      };
-    },
+  const weightsByCode = new Map(
+    existingPreferences
+      .filter((preference) => preference.domain === "crew")
+      .map((preference) => [preference.code, preference.weight]),
   );
+  const crewPreferences: PreferenceEntry[] = crewOptions.map((option) => {
+    const weight = findMatchingWishWeight(option, weightsByCode);
+    return {
+      code: option.code,
+      domain: "crew",
+      enabled: weight !== null,
+      weight: weight ?? 0,
+    };
+  });
   return {
     education: readStoredEducation(existingProfile),
     preferences: [...actingPreferences, ...crewPreferences],
@@ -254,6 +261,7 @@ export function ReturneeUpdateWizard({
   dateOfBirth,
   isLoggedIn,
   onboardingToken,
+  crewOptions,
 }: ReturneeUpdateWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -266,7 +274,12 @@ export function ReturneeUpdateWizard({
       existingPreferences,
       existingPhotoConsent,
       existingInterests,
+      crewOptions,
     ),
+  );
+  const crewOptionsByCode = useMemo(
+    () => new Map(crewOptions.map((option) => [option.code, option])),
+    [crewOptions],
   );
   const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -605,8 +618,14 @@ export function ReturneeUpdateWizard({
                       .map((preference) => (
                         <RolePreferenceLevelPicker
                           key={preference.code}
-                          title={getRolePreferenceTitle(preference.code)}
-                          description={getRolePreferenceDefinition(preference.code)?.description}
+                          title={
+                            crewOptionsByCode.get(preference.code)?.title ??
+                            getRolePreferenceTitle(preference.code)
+                          }
+                          description={
+                            crewOptionsByCode.get(preference.code)?.description ??
+                            getRolePreferenceDefinition(preference.code)?.description
+                          }
                           enabled={preference.enabled}
                           weight={preference.weight}
                           onChange={(weight) =>
