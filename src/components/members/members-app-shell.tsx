@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import type { ImpersonationDetails } from "@/lib/auth/impersonation";
 import { ImpersonationBanner } from "@/components/members/impersonation-banner/impersonation-banner";
 import { useMembersBackTarget } from "@/hooks/useMembersBackTarget";
+import { MEMBERS_MENU_TOGGLE_EVENT } from "@/components/site-header";
 
 const membersContentSectionVariants = cva("py-6 sm:py-8", {
   variants: {
@@ -239,6 +240,18 @@ function SidebarMobileAutoClose() {
   return null;
 }
 
+/** Der Menü-Knopf im Seitenkopf liegt außerhalb des SidebarProviders und meldet sich per Event. */
+function SidebarHeaderMenuToggle() {
+  const { toggleSidebar } = useSidebar();
+
+  React.useEffect(() => {
+    window.addEventListener(MEMBERS_MENU_TOGGLE_EVENT, toggleSidebar);
+    return () => window.removeEventListener(MEMBERS_MENU_TOGGLE_EVENT, toggleSidebar);
+  }, [toggleSidebar]);
+
+  return null;
+}
+
 function MembersTopbarContent({
   content,
   containerClassName,
@@ -409,6 +422,7 @@ export function MembersAppShell({
   return (
     <>
       <SidebarMobileAutoClose />
+      <SidebarHeaderMenuToggle />
       <Sidebar collapsible="icon">
         <MembersNav
           permissions={permissions}

@@ -75,12 +75,18 @@ const drawerLinkPaddingStyles = {
   paddingBlock: HEADER_SPACING.mobile.linkPaddingBlock,
 } satisfies CSSProperties;
 
+/** Event, mit dem der Header im Mitgliederbereich das Mitglieder-Menü umschaltet. */
+export const MEMBERS_MENU_TOGGLE_EVENT = "members:toggle-menu";
+
 export function SiteHeader({
   siteTitle,
   activeProduction,
+  membersMenu = false,
 }: {
   siteTitle: string;
   activeProduction?: { title: string | null; year: number } | null;
+  /** Im Mitgliederbereich öffnet der Menü-Knopf die Mitglieder-Navigation statt des Header-Sheets. */
+  membersMenu?: boolean;
 }) {
   const headerRef = useRef<HTMLElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -224,11 +230,12 @@ export function SiteHeader({
             <UserNav className="flex-shrink-0" />
 
             {/* Mobile menu button */}
-            <SheetTrigger asChild>
+            {membersMenu ? (
               <button
                 type="button"
-                aria-label="Menü öffnen"
-                className="inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md border border-border/60 text-foreground transition-all duration-300 hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-ring md:hidden"
+                aria-label="Mitglieder-Menü öffnen"
+                onClick={() => window.dispatchEvent(new Event(MEMBERS_MENU_TOGGLE_EVENT))}
+                className="inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md border border-border/60 text-foreground transition-all duration-300 hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-ring lg:hidden"
               >
                 <span className="sr-only">Menü</span>
                 <svg
@@ -245,7 +252,30 @@ export function SiteHeader({
                   <line x1="3" y1="18" x2="21" y2="18" />
                 </svg>
               </button>
-            </SheetTrigger>
+            ) : (
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Menü öffnen"
+                  className="inline-flex h-[var(--header-mobile-trigger-size)] w-[var(--header-mobile-trigger-size)] flex-shrink-0 items-center justify-center rounded-md border border-border/60 text-foreground transition-all duration-300 hover:bg-accent/30 focus:outline-none focus:ring-2 focus:ring-ring md:hidden"
+                >
+                  <span className="sr-only">Menü</span>
+                  <svg
+                    className="h-[var(--header-mobile-icon-size)] w-[var(--header-mobile-icon-size)]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="12" x2="21" y2="12" />
+                    <line x1="3" y1="18" x2="21" y2="18" />
+                  </svg>
+                </button>
+              </SheetTrigger>
+            )}
           </div>
         </nav>
       </header>
