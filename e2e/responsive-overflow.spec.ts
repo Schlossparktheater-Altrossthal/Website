@@ -52,12 +52,31 @@ const STATIC_ROUTES = [
   "/mitglieder/pages/seitensteuerung",
   "/mitglieder/server-analytics",
   "/mitglieder/server-einstellungen",
+  "/mitglieder/lager",
+  "/mitglieder/lager/neu",
+  "/mitglieder/lager/scannen",
+  "/mitglieder/lager/ausgaben",
+  "/mitglieder/lager/inventur",
+  "/mitglieder/lager/pruefungen",
+  "/mitglieder/lager/orte",
+  "/mitglieder/lager/etiketten",
+  "/mitglieder/lager/einstellungen",
 ];
 
 // Routen mit ID: Der erste passende Link der jeweiligen Übersicht liefert die echte ID.
 // Ohne Eintrag im Datenstand entfällt die Route – künstliche IDs hätten keinen Inhalt und
 // damit nichts zu messen.
 const DETAIL_ROUTES: { name: string; list: string; pattern: string; suffix?: string }[] = [
+  {
+    name: "Lager-Objekt",
+    list: "/mitglieder/lager",
+    pattern: "^/mitglieder/lager/objekt/[^/?]+$",
+  },
+  {
+    name: "Lagerort",
+    list: "/mitglieder/lager/orte",
+    pattern: "^/mitglieder/lager/orte/[^/?]+$",
+  },
   {
     name: "Gewerk-Portal",
     list: "/mitglieder/meine-gewerke",
