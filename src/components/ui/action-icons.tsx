@@ -145,6 +145,7 @@ import {
   Warehouse,
   QrCode,
   Boxes,
+  Keyboard,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -1104,4 +1105,11 @@ export function QrCodeIcon({
 
 export function BoxesIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
   return <Boxes className={className} aria-hidden {...props} />;
+}
+
+export function KeyboardIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Keyboard className={className} aria-hidden {...props} />;
 }
