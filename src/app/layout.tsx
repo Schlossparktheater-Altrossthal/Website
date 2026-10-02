@@ -70,6 +70,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Inhalt bis in die Ränder (Notch); Abstände über env(safe-area-inset-*).
   viewportFit: "cover",
+  // Android-Chrome: Tastatur verkleinert die Seite, statt Dialoge zu überdecken (iOS: visualViewport).
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "oklch(0.75 0.14 63.3)" },
     { color: "oklch(0.78 0.146 63.3)" },
