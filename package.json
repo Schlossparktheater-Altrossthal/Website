@@ -63,6 +63,7 @@
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "node prisma/seed.mjs",
     "demo:bausteine": "tsx --tsconfig tsconfig.json scripts/demo-bausteine.ts",
+    "demo:lager": "tsx --tsconfig tsconfig.json scripts/demo-lager.ts",
     "dev:termine": "tsx --tsconfig tsconfig.json scripts/dev-fixture-termine.ts",
     "swatches:gen": "node scripts/generate-swatches.mjs --json docs/swatches/palette.sample.json --out docs/swatches --size 14 --adoc docs/swatches/generated.adoc",
     "workbox:copy-lib": "pnpm exec workbox copyLibraries public/workbox",

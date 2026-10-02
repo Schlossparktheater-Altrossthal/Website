@@ -38,77 +38,18 @@ import {
   attributeFieldsFor,
   CONDITION_LABELS,
   CONDITIONS,
-  DEFAULT_INSPECTION_INTERVAL_MONTHS,
   INVENTORY_BASE_PATH,
   inventoryAssetPath,
   type AssetKind,
   type Condition,
 } from "@/lib/inventory/constants";
 import { resizeImageFile } from "@/lib/inventory/photo-client";
-import type { PlacementTarget } from "@/lib/inventory/service-types";
+import {
+  emptyAssetValues,
+  type AssetFormArea,
+  type AssetFormValues,
+} from "@/lib/inventory/asset-form-values";
 import { cn } from "@/lib/utils";
-
-export type AssetFormArea = {
-  id: string;
-  name: string;
-  prefix: string;
-  inspectionDefault: boolean;
-  categories: { id: string; name: string }[];
-};
-
-export type AssetFormValues = {
-  areaId: string;
-  categoryId: string | null;
-  kind: AssetKind;
-  name: string;
-  manufacturer: string;
-  model: string;
-  serialNumber: string;
-  description: string;
-  publicNote: string;
-  internalNote: string;
-  attributes: Record<string, string>;
-  condition: Condition;
-  unit: string;
-  minQuantity: string;
-  quantity: string;
-  placement: PlacementTarget;
-  inspectionRequired: boolean;
-  inspectionIntervalMonths: string;
-  nextInspectionAt: string;
-  acquisitionCost: string;
-  purchaseDate: string;
-  supplier: string;
-  ownership: string;
-};
-
-export function emptyAssetValues(area: AssetFormArea | undefined): AssetFormValues {
-  return {
-    areaId: area?.id ?? "",
-    categoryId: null,
-    kind: "unique",
-    name: "",
-    manufacturer: "",
-    model: "",
-    serialNumber: "",
-    description: "",
-    publicNote: "",
-    internalNote: "",
-    attributes: {},
-    condition: "good",
-    unit: "Stk.",
-    minQuantity: "",
-    quantity: "1",
-    placement: { type: "none" },
-    inspectionRequired: area?.inspectionDefault ?? false,
-    inspectionIntervalMonths: String(DEFAULT_INSPECTION_INTERVAL_MONTHS),
-    nextInspectionAt: "",
-    acquisitionCost: "",
-    purchaseDate: "",
-    supplier: "",
-    ownership: "",
-  };
-}
 
 const NO_CATEGORY = "__none__";
 
@@ -179,7 +120,8 @@ export function AssetForm({
       areaId,
       categoryId: null,
       attributes: {},
-      inspectionRequired: next?.inspectionDefault ?? current.inspectionRequired,
+      inspectionRequired:
+        current.kind === "unique" ? (next?.inspectionDefault ?? false) : current.inspectionRequired,
     }));
   };
 
@@ -340,7 +282,15 @@ export function AssetForm({
             <SegmentedControl
               aria-label="Art"
               value={values.kind}
-              onValueChange={(kind) => set("kind", kind)}
+              onValueChange={(kind) =>
+                // Prüfpflicht betrifft Geräte – Kisten und Mengenartikel standardmäßig nicht.
+                setValues((current) => ({
+                  ...current,
+                  kind,
+                  inspectionRequired:
+                    kind === "unique" ? (area?.inspectionDefault ?? false) : false,
+                }))
+              }
               fullWidth
               options={(Object.keys(ASSET_KIND_LABELS) as AssetKind[]).map((kind) => ({
                 value: kind,
@@ -649,7 +599,7 @@ export function AssetForm({
           {mode === "create" ? (
             <>
               <PlusIcon className="mr-2 h-4 w-4" />
-              {saving ? "Speichert …" : "Speichern & nächstes"}
+              {saving ? "Speichert …" : "Speichern & weiter"}
             </>
           ) : saving ? (
             "Speichert …"

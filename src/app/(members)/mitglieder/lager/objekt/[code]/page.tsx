@@ -132,6 +132,9 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
                 <AssetThumb photoId={null} kind={asset.kind} size="lg" />
               )}
               <div className="min-w-0 flex-1 space-y-2">
+                <h2 className="text-lg leading-tight font-semibold break-words text-foreground">
+                  {asset.name}
+                </h2>
                 <p className="font-mono text-sm text-muted-foreground">{asset.code}</p>
                 <p className="text-sm text-muted-foreground">
                   {[asset.area.name, asset.category?.name].filter(Boolean).join(" · ")}

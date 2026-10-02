@@ -1,47 +1,95 @@
-# Inventar-/Lagerverwaltung – Plan
+# Plan: Lager & Inventar (Technik, Kostüm, Requisite, Bühnenbau, Werkzeug)
 
-Stand: 2026-10-02. Ersetzt das alte `InventoryItem` (nur Modell + Offline-Sync, keine UI).
+Stand: 2026-10-02. Phase 1–7 und Teile von Phase 8 umgesetzt (auf main), offen: Sets, Kostümgrößen ↔ Körpermaße, Release. Checkliste am Ende wird gepflegt.
 
-## Entscheidungen
+## Ziel
 
-- Bestand wird **neu erfasst**, kein Excel-Import (alte Liste veraltet).
-- Labeldruck zunächst nur **A4-Etikettenbögen** (PDF via `pdfkit`), Etikettendrucker später.
-- Bereiche: **Technik, Kostüm, Requisite, Bühnenbau, Werkzeug** (erweiterbar).
-- Scan ohne Login zeigt öffentliche Infos (Name, Foto, Bereich, Status/Sperre, Prüfstatus, Hinweise, Kontakt) –
-  **nie** Preise, Wert, Kaufdatum, interne Notizen.
-- **Elektroprüfung (DGUV V3)** kommt rein.
-- Offline-Sync (Dexie, ereignisbasiert) bleibt als Basis für Lager ohne WLAN.
+Alles, was dem Verein gehört, wird mit einem QR-Etikett erfasst und lässt sich im Lager schnell
+und mit dem Handy verwalten: finden, ein- und umlagern, ausgeben und zurücknehmen, Mängel
+melden, Elektroprüfungen eintragen und Inventur machen – auch zu mehreren gleichzeitig. Wer ein
+Etikett ohne Login scannt, sieht trotzdem, was das ist und ob es benutzt werden darf.
 
-## Datenmodell (Entwurf)
+## Ist-Stand (Befunde)
 
-- `InventoryArea` – Bereich mit Code-Präfix (`T`, `K`, `R`, `B`, `W`), Verantwortliche über Gewerke.
-- `InventoryLocation` – Baum (Lager → Raum/Regal → Fach). Kisten/Cases sind **Objekte** mit Label (`C-…`),
-  die selbst einen Ort haben; Inhalt wandert beim Umlagern mit.
-- `InventoryItem` – `kind`: `unique` (Einzelstück, eigener Ort/Zustand) | `bulk` (Mengenartikel).
-  Code unveränderlich (`T-0042`), QR = URL `/i/<code>`. Bereichsspezifische Felder als JSON
-  (Kostüm: Größe, Epoche, Farbe, Material). Öffentliche vs. interne Felder klar getrennt.
-- `InventoryStock` – Menge eines Bulk-Artikels pro Ort/Kiste, optional Mindestbestand.
-- `InventoryDefect` – Foto, Beschreibung, Schwere (`cosmetic` | `limited` | `locked`), Status
-  (`open` → `repair` → `done`). `locked` sperrt das Objekt.
-- `InventoryEvent` – Verlauf (append-only): eingelagert, umgelagert, ausgegeben, zurück, Mangel, Prüfung, Inventur-Scan.
-- `InventoryCheckout` – Ausgabe an Produktion / Termin / Person / extern, Packliste, Rücknahme.
-- `InventoryInspection` – Prüfintervall, letzte/nächste Prüfung, Ergebnis, Protokoll-Datei.
-- `InventoryStocktake` + Zuständigkeiten pro Ort – Inventur-Sitzung, Scans als Events, Abgleich am Ende.
-- Später: `InventorySet` (Bausätze).
+| #   | Befund                                                                                  | Stelle                            |
+| --- | --------------------------------------------------------------------------------------- | --------------------------------- |
+| 1   | Altes Modell `InventoryItem` (Freitext-Ort, feste Technik-Kategorien), keine Oberfläche | `prisma/schema.prisma`            |
+| 2   | Offline-Sync-Scope `inventory` mit Dexie-Tabelle und Realtime-Event, ohne Nutzer        | `src/lib/offline`, `src/lib/sync` |
+| 3   | `qrcode` und `pdfkit` bereits vorhanden                                                 | `package.json`                    |
+
+## Entscheidungen (2026-10-02)
+
+- E1: Bestand wird **neu erfasst**, kein Excel-Import. Das alte Inventar hatte keine nützlichen
+  Daten und wird samt Offline-Sync-Scope entfernt (keine Altlasten).
+- E2: Etiketten zunächst auf **A4-Bögen** (PDF). Vorlagen für gängige Formate plus eigenes Raster.
+- E3: Bereiche Technik (T), Kostüm (K), Requisite (R), Bühnenbau (B), Werkzeug (W); `L` ist für
+  Lagerorte reserviert. Bereiche und Kategorien sind pflegbar.
+- E4: Scan ohne Login zeigt eine **öffentliche Seite** `/i/<code>`: Name, Foto, Bereich, Status,
+  Sperre, Prüfstatus, öffentlicher Hinweis – nie Preise, Kaufdaten, Notizen oder Personen.
+  Mitglieder mit Lagerzugriff werden direkt auf die Lageransicht weitergeleitet.
+- E5: **Elektroprüfung (DGUV V3)** ist Teil des Lagers. Eintragen darf jede Person mit
+  Lagerzugriff. „Nicht bestanden“ sperrt das Objekt automatisch.
+- E6: Zwei Rechte: `PRIVATE.INVENTORY.USE` (alles Tägliche inkl. Erfassen, Prüfen, Inventur
+  mitzählen) und `PRIVATE.INVENTORY.MANAGE` (Bereiche, Orte, Preise, Ausmustern, Inventur
+  starten/abschließen). Vergabe über Rollen oder Gewerke in der Rechteverwaltung.
+- E7: Lagerbetrieb bekommt eigene Komponenten (Scanner, Scan-Werkbank, Etiketten-Designer), weil
+  die Abläufe (Dauerscan, eine Hand, Handschuhe) andere Anforderungen haben als Formularseiten.
+- E8: Inventur ohne den alten Offline-Sync: Scans landen zuerst im Gerätespeicher und werden mit
+  einer eindeutigen `clientScanId` gesendet – offline und bei Wiederholung zählt nichts doppelt.
+
+## Datenmodell
+
+- `InventoryArea` (Präfix, Zähler, Prüfpflicht-Standard), `InventoryCategory`
+- `InventoryLocation` – Baum mit eigenem Code `L-0001`
+- `InventoryAsset` – `kind`: Einzelstück / Mengenartikel / Kiste; unveränderlicher Code; Ort oder
+  Kiste; Status (im Lager, ausgegeben, Reparatur, gesperrt, vermisst, ausgemustert) wird aus Mängeln
+  und Ausgaben abgeleitet; bereichsspezifische Felder in `attributes`
+- `InventoryStock` – Bestand eines Mengenartikels je Ort/Kiste
+- `InventoryPhoto`, `InventoryDefect`, `InventoryInspection` (mit Protokoll), `InventoryEvent` (Verlauf)
+- `InventoryCheckout` + `InventoryCheckoutLine` – Ausgaben mit Packliste
+- `InventoryStocktake` + `InventoryStocktakeScan` – Inventur
+
+## UI-Konzept
+
+- Bereichs-Navigation (höchstens sechs Einträge): Bestand, Scannen, Ausgaben, Inventur, Prüfungen,
+  Orte. Etiketten, CSV und Bereiche als Schaltflächen im Bestand.
+- Startseite: große Kacheln „Scannen“ und „Erfassen“, Kennzahlen (Mängel, Prüfungen, Ausgegeben,
+  ohne Etikett), Hinweise (laufende Inventur, Mindestbestand), Liste mit Suche und Filtern.
+- Erfassen: Foto, Bereich, Art, Name, Ort zuerst; Rest aufklappbar; „Speichern & weiter“ behält
+  Bereich, Art und Ort für Serienerfassung und bietet Etiketten für die Runde an.
+- Detail: Schnellaktionen Umlagern/Bestand, Mangel, Prüfung, Foto; Menü für Seltenes.
+- Scanner: Modi Info, Einlagern (Ziel scannen, dann Objekte), Ausgeben, Zurück, Prüftag;
+  Ton und Vibration, Taschenlampe, Eingabezeile für Hand-Scanner.
+- Mobil BottomSheet, Desktop Dialog (`ResponsivePanel`).
 
 ## Phasen
 
-1. Datenmodell + Migration (altes `InventoryItem` ablösen, Sync-Scope anpassen), Rechte pro Bereich.
-2. Liste/Suche, Detailseite, Anlegen mit Foto (mobil schnell), öffentliche Scan-Seite `/i/<code>`.
-3. Labeldruck A4 (Avery-Raster wählbar, Serien-/Auswahldruck, „alle ohne Label“).
-4. Scanner + Lager-Workflow: Dauerscan mit vorgewählter Aktion (Einlagern/Umlagern), Mangel melden.
-5. Ausgabe/Rücknahme, Packliste je Produktion, „Was fehlt noch?“.
-6. Inventur: parallel, offline, Live-Fortschritt via Realtime, Abgleich (fehlt / falscher Ort / unbekannt).
-7. Elektroprüfung: Intervalle, Fälligkeits-Benachrichtigung, Protokolle, Ampel auf Scan-Seite und Label.
-8. Mindestbestand, Sets, Kostüm-Größen ↔ Körpermaße, Wertexport für Versicherung.
+1. Datenmodell, Migration, Rechte, Domänenlogik
+2. Bestand, Erfassen, Detail, Orte, Bereiche, öffentliche Scan-Seite
+3. Etikettendruck A4 (Vorlagen, eigenes Raster, Startfeld, Probedruck)
+4. Scanner und Lager-Workflow
+5. Ausgaben mit Packliste, „Fehlt noch“, Rücknahme per Scan
+6. Inventur parallel und offline, Live-Fortschritt je Zone, Abgleich
+7. Elektroprüfung: Übersicht, Sammel-Eintrag, Prüftag-Scan, Monatserinnerung
+8. Mindestbestand, CSV-Export (Wertliste), Sets, Kostümgrößen ↔ Körpermaße
+9. Altlast entfernen (altes Inventar und Offline-Sync-Scope)
+10. E2E, Staging-Abnahme, Release
 
 ## Offen
 
-- UI-Konzept erst nach Staging-Screenshots (Muster: Dashboard, Sperrliste-BottomSheet).
-- Konkretes Etikettenformat (Avery-Nummer) – sobald Bögen gekauft sind.
-- Wer Prüfungen eintragen darf (Elektrofachkraft/befähigte Person).
+- Sets/Bausätze (Funkstrecke = Sender + Empfänger + Antenne)
+- Kostüm-Vorschläge passend zu Körpermaßen
+- Etikettendrucker (Brother QL o. Ä.), sobald vorhanden
+
+## Checkliste
+
+- [x] Phase 1 Datenmodell, Rechte, Domänenlogik
+- [x] Phase 2 Seiten und öffentliche Scan-Seite
+- [x] Phase 3 Etiketten
+- [x] Phase 4 Scanner
+- [x] Phase 5 Ausgaben
+- [x] Phase 6 Inventur
+- [x] Phase 7 Elektroprüfung
+- [ ] Phase 8 – Mindestbestand und CSV erledigt, Sets und Kostümgrößen offen
+- [x] Phase 9 Altlast entfernt
+- [ ] Phase 10 – E2E (`e2e/lager.spec.ts`) lokal grün, Staging-Abnahme und Release offen

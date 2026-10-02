@@ -1,4 +1,5 @@
-import { AssetForm, emptyAssetValues } from "@/components/inventory/asset-form";
+import { AssetForm } from "@/components/inventory/asset-form";
+import { emptyAssetValues } from "@/lib/inventory/asset-form-values";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PageHeader } from "@/components/members/page-header";
 import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";

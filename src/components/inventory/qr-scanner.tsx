@@ -231,7 +231,7 @@ export function QrScanner({
     <div className={cn("space-y-2", className)}>
       <div
         className={cn(
-          "relative aspect-[4/3] w-full overflow-hidden rounded-xl border-2 bg-foreground/90 transition-colors sm:aspect-video",
+          "relative aspect-[4/3] w-full overflow-hidden rounded-xl border-2 bg-muted transition-colors sm:aspect-video",
           flash ? "border-success" : "border-border",
           paused && "opacity-60",
         )}
@@ -253,7 +253,7 @@ export function QrScanner({
             />
           </div>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center text-sm text-background">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center text-sm text-foreground">
             {state === "starting" || state === "idle" ? (
               <p>Kamera startet …</p>
             ) : (
@@ -274,7 +274,7 @@ export function QrScanner({
           </div>
         )}
         {state === "running" ? (
-          <p className="absolute inset-x-0 bottom-2 text-center text-xs font-medium text-background drop-shadow">
+          <p className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-background/80 px-3 py-1 text-center text-xs font-medium text-foreground">
             {paused ? "Pausiert" : hint}
           </p>
         ) : null}

@@ -97,6 +97,8 @@ Für Terminplanung Phase 6 (`docs/Plan/terminplanung-plan.md`) gibt es einen wie
 ```bash
 DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine           # (neu) anlegen
 DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine --remove  # entfernen
+DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:lager               # Demo-Lager (Orte, Kiste, Mängel, Prüfungen)
+DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:lager --remove      # entfernen
 ```
 
 - Legt „Demo: Stellprobe + Bautag“ (vorgemerkt, in 11 Tagen) mit zwei Szenen, einem Gewerk- und
