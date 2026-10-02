@@ -1,4 +1,5 @@
 import { MemberMeasurementsControlCenter } from "@/components/members/measurements/member-measurements-control-center";
+import { SizeTable } from "@/components/members/measurements/size-table";
 import { PageHeader } from "@/components/members/page-header";
 import { getActiveProductionId } from "@/lib/active-production";
 import { hasPermission } from "@/lib/permissions";
@@ -47,6 +48,7 @@ export default async function MemberMeasurementsPage() {
         members={normalizedMembers}
         canConfigureMeasurements={allowed}
       />
+      <SizeTable members={normalizedMembers} />
     </div>
   );
 }

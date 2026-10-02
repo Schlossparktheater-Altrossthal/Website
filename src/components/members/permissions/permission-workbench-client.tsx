@@ -69,11 +69,7 @@ const GROUPS: PermissionGroup[] = [
     category: "department",
     label: "Kostüm & Verpflegung",
     description: "Bündelt Freigaben für Maße, Größen und Ernährung.",
-    keys: [
-      "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
-      "PRIVATE.PROFILE.SIZES.MANAGE",
-      "PRIVATE.PROFILE.DIETARY.MANAGE",
-    ],
+    keys: ["PRIVATE.PROFILE.MEASUREMENTS.MANAGE", "PRIVATE.PROFILE.DIETARY.MANAGE"],
   },
 ];
 

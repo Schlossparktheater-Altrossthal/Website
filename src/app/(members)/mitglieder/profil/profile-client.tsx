@@ -63,6 +63,7 @@ export function ProfileClient({
   crewWishOptions,
   history,
   measurements: initialMeasurements,
+  sizes: initialSizes,
 }: ProfileClientProps) {
   const { update: refreshSession } = useSession();
   const searchParams = useSearchParams();
@@ -89,6 +90,7 @@ export function ProfileClient({
   }, []);
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [measurements, setMeasurements] = useState(initialMeasurements ?? []);
+  const [sizes, setSizes] = useState(initialSizes);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
   const [aversions, setAversions] = useState<Aversion[]>(initialAversions);
   const [photoConsentGiven, setPhotoConsentGiven] = useState<boolean | undefined>(
@@ -252,9 +254,13 @@ export function ProfileClient({
       },
       masse: {
         missing: false,
-        summary: measurements.length
-          ? `${measurements.length} von ${MEASUREMENT_TYPE_COUNT} Maßen`
-          : "Noch keine Maße",
+        summary:
+          [
+            measurements.length ? `${measurements.length}/${MEASUREMENT_TYPE_COUNT} Maße` : null,
+            sizes.length ? `${sizes.length} ${sizes.length === 1 ? "Größe" : "Größen"}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || "Noch nichts eingetragen",
       },
       benachrichtigungen: { missing: false, summary: "Push, Ruhezeit, Geräte" },
     };
@@ -263,6 +269,7 @@ export function ProfileClient({
     aversions.length,
     interests,
     measurements.length,
+    sizes.length,
     onboarding,
     rolePreferences,
     summary.items,
@@ -305,7 +312,12 @@ export function ProfileClient({
         );
       case "masse":
         return (
-          <MeasurementsSection measurements={measurements} onMeasurementsChange={setMeasurements} />
+          <MeasurementsSection
+            measurements={measurements}
+            onMeasurementsChange={setMeasurements}
+            sizes={sizes}
+            onSizesChange={setSizes}
+          />
         );
       case "benachrichtigungen":
         return <NotificationsSection />;

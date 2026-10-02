@@ -1,4 +1,5 @@
 import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
+import type { SizeEntry } from "@/data/sizes";
 import type { EducationPayload, EducationValue } from "@/lib/education/schools";
 import type { MemberHistory } from "@/lib/member-history";
 import { z } from "zod";
@@ -165,6 +166,8 @@ export type ProfileClientProps = {
   history: MemberHistory;
   /** Eigene Körpermaße; `null`, wenn die Person nicht im Ensemble ist (Bereich ausgeblendet). */
   measurements: ProfileMeasurement[] | null;
+  /** Eigene Konfektionsgrößen, nur zusammen mit `measurements` gesetzt. */
+  sizes: SizeEntry[];
   user: {
     id: string;
     email: string;

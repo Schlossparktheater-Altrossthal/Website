@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MemberMeasurementsControlCenter } from "@/components/members/measurements/member-measurements-control-center";
+import { SizeTable } from "@/components/members/measurements/size-table";
 import { PageHeader } from "@/components/members/page-header";
 import { DeadlineBadge } from "@/components/production/deadline-badge";
 import { UserAvatar } from "@/components/user-avatar";
@@ -279,11 +280,9 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
       ) : null}
 
       {view === "masse" ? (
-        <MemberMeasurementsControlCenter
-          members={await loadMeasurementMembers(castOfShow(production.id))}
-          canConfigureMeasurements={
-            isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")
-          }
+        <MeasurementsView
+          showId={production.id}
+          canConfigure={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
         />
       ) : null}
 
@@ -332,6 +331,22 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           </Section>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+async function MeasurementsView({
+  showId,
+  canConfigure,
+}: {
+  showId: string;
+  canConfigure: boolean;
+}) {
+  const members = await loadMeasurementMembers(castOfShow(showId));
+  return (
+    <div className="space-y-4">
+      <MemberMeasurementsControlCenter members={members} canConfigureMeasurements={canConfigure} />
+      <SizeTable members={members} />
     </div>
   );
 }

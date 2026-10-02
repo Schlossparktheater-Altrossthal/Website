@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SizeDialog } from "@/components/members/measurements/size-dialog";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import {
   MEASUREMENT_TYPE_DESCRIPTIONS,
@@ -20,6 +21,12 @@ import {
   type MeasurementFormData,
   type MeasurementType,
 } from "@/data/measurements";
+import {
+  SIZE_CATEGORY_LABELS,
+  sizeCategoryEnum,
+  type SizeCategory,
+  type SizeEntry,
+} from "@/data/sizes";
 import { cn } from "@/lib/utils";
 
 import type { ProfileMeasurement } from "../profile-shared";
@@ -27,15 +34,21 @@ import type { ProfileMeasurement } from "../profile-shared";
 type MeasurementsSectionProps = {
   measurements: ProfileMeasurement[];
   onMeasurementsChange: (next: ProfileMeasurement[]) => void;
+  sizes: SizeEntry[];
+  onSizesChange: (next: SizeEntry[]) => void;
 };
 
 const NUMBER_FORMAT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 
-/** Eigene Körpermaße für das Kostüm-Team. Nur für Personen im Ensemble sichtbar. */
+/** Eigene Körpermaße und Konfektionsgrößen für das Kostüm-Team. Nur für Personen im Ensemble sichtbar. */
 export function MeasurementsSection({
   measurements,
   onMeasurementsChange,
+  sizes,
+  onSizesChange,
 }: MeasurementsSectionProps) {
+  const [editingSize, setEditingSize] = useState<SizeCategory | null>(null);
+  const sizeByCategory = new Map(sizes.map((entry) => [entry.category, entry]));
   const [editing, setEditing] = useState<MeasurementType | null>(null);
   const byType = new Map(measurements.map((entry) => [entry.type, entry]));
   const current = editing ? (byType.get(editing) ?? null) : null;
@@ -98,6 +111,48 @@ export function MeasurementsSection({
           })}
         </ListRowGroup>
       </div>
+
+      <div className="space-y-1 pt-3">
+        <p className="text-sm font-semibold text-foreground">Konfektionsgrößen</p>
+        <p className="text-xs text-muted-foreground">
+          Was du im Laden kaufen würdest – hilft bei Einkauf, Leihe und Fundus.
+        </p>
+      </div>
+      <div className="rounded-lg border border-border/60 bg-card p-1 shadow-sm">
+        <ListRowGroup>
+          {sizeCategoryEnum.options.map((category) => {
+            const entry = sizeByCategory.get(category);
+            return (
+              <ListRow
+                key={category}
+                onClick={() => setEditingSize(category)}
+                title={SIZE_CATEGORY_LABELS[category]}
+                description={
+                  <span className={cn(!entry && "text-muted-foreground")}>
+                    {entry
+                      ? `${entry.size}${entry.note ? ` · ${entry.note}` : ""}`
+                      : "Noch nicht eingetragen"}
+                  </span>
+                }
+                chevron
+              />
+            );
+          })}
+        </ListRowGroup>
+      </div>
+      <SizeDialog
+        category={editingSize}
+        entry={editingSize ? (sizeByCategory.get(editingSize) ?? null) : null}
+        onClose={() => setEditingSize(null)}
+        onSaved={(saved) => {
+          onSizesChange([...sizes.filter((size) => size.category !== saved.category), saved]);
+          setEditingSize(null);
+        }}
+        onDeleted={(category) => {
+          onSizesChange(sizes.filter((size) => size.category !== category));
+          setEditingSize(null);
+        }}
+      />
 
       <Dialog open={editing !== null} onOpenChange={(open) => (!open ? setEditing(null) : null)}>
         <DialogContent className="max-w-md">

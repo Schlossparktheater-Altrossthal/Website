@@ -31,8 +31,8 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
   },
   {
     id: "masse",
-    label: "Körpermaße",
-    description: "Deine Maße für das Kostüm-Team.",
+    label: "Maße & Größen",
+    description: "Körpermaße und Konfektionsgrößen für das Kostüm-Team.",
     group: "person",
   },
   {

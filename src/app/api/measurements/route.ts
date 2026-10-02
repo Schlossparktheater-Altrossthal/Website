@@ -10,7 +10,7 @@ import type {
 } from "@prisma/client";
 
 const measurementRequestSchema = measurementSchema.extend({
-  userId: z.string().cuid().optional(),
+  userId: z.string().min(1).optional(),
 });
 
 // GET: Hole alle Maße eines Benutzers

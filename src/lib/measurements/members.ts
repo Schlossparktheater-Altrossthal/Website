@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 
 import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
+import { isSizeCategory, type SizeEntry } from "@/data/sizes";
 import { prisma } from "@/lib/prisma";
 import { sortRoles, type Role } from "@/lib/roles";
 
-/** Personen samt Maßen für die Körpermaße-Tabelle. */
+/** Personen samt Maßen und Konfektionsgrößen für die Körpermaße-Tabellen. */
 export async function loadMeasurementMembers(where: Prisma.UserWhereInput) {
   const members = await prisma.user.findMany({
     where: { AND: [{ deactivatedAt: null }, where] },
@@ -22,6 +23,7 @@ export async function loadMeasurementMembers(where: Prisma.UserWhereInput) {
         orderBy: { type: "asc" },
         select: { id: true, type: true, value: true, unit: true, note: true, updatedAt: true },
       },
+      sizes: { select: { id: true, category: true, size: true, note: true } },
     },
   });
 
@@ -41,7 +43,17 @@ export async function loadMeasurementMembers(where: Prisma.UserWhereInput) {
       note: measurement.note,
       updatedAt: measurement.updatedAt.toISOString(),
     })),
+    sizes: toSizeEntries(member.sizes),
   }));
+}
+
+/** Gespeicherte Größen ohne unbekannte (Alt-)Kategorien. */
+export function toSizeEntries(
+  sizes: { id: string; category: string; size: string; note: string | null }[],
+): SizeEntry[] {
+  return sizes.flatMap((size) =>
+    isSizeCategory(size.category) ? [{ ...size, category: size.category }] : [],
+  );
 }
 
 /** Alle, die in einer Rolle der Produktion besetzt sind. */

@@ -61,9 +61,8 @@ type ResolvedRoleContext = {
 // Shared keys for profile data gatekeeping
 export const PROFILE_DATA_PERMISSION_KEYS = {
   measurements: "PRIVATE.PROFILE.MEASUREMENTS.MANAGE",
-  sizes: "PRIVATE.PROFILE.SIZES.MANAGE",
   dietary: "PRIVATE.PROFILE.DIETARY.MANAGE",
-} as const satisfies Record<"measurements" | "sizes" | "dietary", PermissionDefinition["key"]>;
+} as const satisfies Record<"measurements" | "dietary", PermissionDefinition["key"]>;
 
 // Registry of all permissions used by the app
 export const INVENTORY_PERMISSION_KEYS = {
@@ -138,13 +137,6 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Körpermaße verwalten",
     description:
       "Öffnet das Körpermaße-Control-Center für das Kostüm-Team, um alle Maße des Ensembles futuristisch zu überwachen, fehlende Angaben zu erkennen und Einträge live zu aktualisieren.",
-    category: "department",
-  },
-  {
-    key: PROFILE_DATA_PERMISSION_KEYS.sizes,
-    label: "Konfektionsgrößen verwalten",
-    description:
-      "Erfasst und pflegt Konfektionsgrößen sowie zugehörige Passform-Notizen für Ensemble und Kostüm-Team.",
     category: "department",
   },
   {
@@ -294,7 +286,6 @@ const PERMISSION_KEY_SET = new Set(DEFAULT_PERMISSION_KEYS);
 const MEASUREMENT_PERMISSION_KEY = PROFILE_DATA_PERMISSION_KEYS.measurements;
 
 const PROFILE_ADMIN_PERMISSION_KEYS = [
-  PROFILE_DATA_PERMISSION_KEYS.sizes,
   PROFILE_DATA_PERMISSION_KEYS.dietary,
 ] as const satisfies PermissionDefinition["key"][];
 

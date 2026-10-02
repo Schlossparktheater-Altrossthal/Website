@@ -13,6 +13,7 @@ import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
 import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { loadMemberHistory } from "@/lib/member-history";
 import { isEnsembleMember } from "@/lib/measurements/access";
+import { toSizeEntries } from "@/lib/measurements/members";
 import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
@@ -308,7 +309,16 @@ export default async function ProfilePage() {
       : null;
 
   // Körpermaße nur fürs Ensemble (Systemrolle „cast“ oder in einer Rolle besetzt).
-  const measurements = (await isEnsembleMember(userId))
+  const isEnsemble = await isEnsembleMember(userId);
+  const sizes = isEnsemble
+    ? toSizeEntries(
+        await prisma.memberSize.findMany({
+          where: { userId },
+          select: { id: true, category: true, size: true, note: true },
+        }),
+      )
+    : [];
+  const measurements = isEnsemble
     ? (
         await prisma.memberMeasurement.findMany({
           where: { userId },
@@ -330,6 +340,7 @@ export default async function ProfilePage() {
       <ProfileClient
         history={history}
         measurements={measurements}
+        sizes={sizes}
         user={{
           id: user.id,
           email: user.email ?? "",

@@ -38,7 +38,7 @@ export async function listMeasurementShowIds(userId: string) {
 }
 
 /**
- * Darf `user` die Maße von `targetUserId` sehen und ändern?
+ * Darf `user` die Maße und Konfektionsgrößen von `targetUserId` sehen und ändern?
  * Eigene Maße (wenn im Ensemble), globales Recht „Körpermaße verwalten“ oder
  * Gewerk mit Baustein „Körpermaße“ in einer Produktion, in der die Person besetzt ist.
  */
