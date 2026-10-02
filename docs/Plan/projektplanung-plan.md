@@ -1,6 +1,6 @@
 # Plan: Produktionsplanung – Meilensteine, Zeitleiste und neue Produktionsseite
 
-Stand: 2026-10-02. Phase 1–6 umgesetzt (main), Phase 7 (E2E, Staging-Abnahme, Release) offen. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-02. Phase 1–6 umgesetzt (main), Phase 7: E2E erledigt, Staging-Abnahme und Release offen. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -178,4 +178,4 @@ Jede Phase einzeln auf Staging prüfbar; Schema-Änderungen additiv.
 - [x] Phase 5 Board-Verknüpfung (Chip, geerbte Frist), „Nächste Frist“ im Gewerk, Dashboard „Nächste Fristen“, Teams-Kacheln
 - [x] Phase 5b Plan ↔ Kanban in beide Richtungen (Kartenliste, Sprünge, Warnungen, Filter)
 - [x] Phase 6 Vorlagen (speichern/übernehmen, eingebauter Vorschlag mit 10 Meilensteinen als Schätzwerte), Fristerinnerungen im Erinnerungs-Cron (d7/d2/überfällig/kritisch), Kalender-Spiegelung für Abnahmen
-- [ ] Phase 7 E2E/Release
+- [ ] Phase 7 E2E/Release – E2E erledigt (`e2e/plan.spec.ts`, Überlauf-Test um `/mitglieder/produktionen/gewerke` ergänzt, 2026-10-02); Staging-Abnahme und Prod-Release offen

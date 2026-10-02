@@ -106,6 +106,12 @@ DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:bausteine --remove 
 - Das Skript gibt die Routen und fertige Befehle aus: `pnpm e2e:screenshots … --viewport mobile,desktop`
   und `pnpm ui:check … --steps-file e2e/scenarios/baustein-organisieren.json` (klickt
   „Baustein organisieren“ → Raum → Speichern, liest „Euer Teil …“ zurück).
+- `e2e/plan.spec.ts` prüft den Produktionsplan (docs/Plan/projektplanung-plan.md): legt einen
+  Meilenstein mit festem Datum im ersten Gewerk an, hängt über „+ Karte“ eine Karte im Board daran,
+  hakt den Meilenstein trotz offener Karte ab (Rückfrage) und löscht Karte und Meilenstein wieder.
+  Ein zweiter Test prüft die Tabs und „Produktionen verwalten“ (`?verwalten=1`).
+  Braucht eine aktive Produktion mit mindestens einem Gewerk, sonst wird er übersprungen
+  (`pnpm e2e:desktop plan`).
 - Der Playwright-Test `e2e/bausteine.spec.ts` braucht keine Demo-Daten: Er legt über die
   Oberfläche eine Probe mit Gewerk-Baustein an, merkt sie vor, organisiert den Baustein im
   Gewerk-Dashboard, prüft den seitlichen Überlauf und löscht die Probe wieder

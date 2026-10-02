@@ -30,6 +30,7 @@ const STATIC_ROUTES = [
   "/mitglieder/meine-gewerke/kostuem?ansicht=termine",
   "/mitglieder/meine-gewerke/kostuem?ansicht=team",
   "/mitglieder/produktionen",
+  "/mitglieder/produktionen/gewerke",
   "/mitglieder/produktionen/stueck",
   "/mitglieder/produktionen/stueck?ansicht=rollen",
   "/mitglieder/produktionen/stueck?ansicht=auftritte",
@@ -66,13 +67,13 @@ const DETAIL_ROUTES: { name: string; list: string; pattern: string; suffix?: str
     name: "Produktion",
     list: "/mitglieder/produktionen",
     pattern:
-      "^/mitglieder/produktionen/(?!stueck$|zuweisung$|besetzung$|szenen$|rueckmeldungen-auswertung$)[^/?]+$",
+      "^/mitglieder/produktionen/(?!gewerke$|stueck$|zuweisung$|besetzung$|szenen$|rueckmeldungen-auswertung$)[^/?]+$",
   },
   {
     name: "Produktion · Ensemble",
     list: "/mitglieder/produktionen",
     pattern:
-      "^/mitglieder/produktionen/(?!stueck$|zuweisung$|besetzung$|szenen$|rueckmeldungen-auswertung$)[^/?]+$",
+      "^/mitglieder/produktionen/(?!gewerke$|stueck$|zuweisung$|besetzung$|szenen$|rueckmeldungen-auswertung$)[^/?]+$",
     suffix: "/ensemble",
   },
   {
@@ -190,17 +191,28 @@ async function expectNoHorizontalOverflow(page: Page, route: string) {
   );
 }
 
-/** Erster interner Link einer Übersicht, der auf `pattern` passt. */
+/**
+ * Erster interner Link einer Übersicht, der auf `pattern` passt. Wartet bis zu 15 s, weil
+ * manche Links erst nach der Hydration erscheinen (z. B. „Bearbeiten“ im Kopf der
+ * Produktionsseite, den `PageHeader` clientseitig in die Kopfzeile setzt).
+ */
 async function firstMatchingHref(page: Page, listPath: string, pattern: string) {
   await page.goto(listPath, { waitUntil: "domcontentloaded" });
-  return page.evaluate((source) => {
-    const matcher = new RegExp(source);
-    for (const anchor of document.querySelectorAll("a[href]")) {
-      const href = anchor.getAttribute("href");
-      if (href && matcher.test(href)) return href;
-    }
-    return null;
-  }, pattern);
+  const handle = await page
+    .waitForFunction(
+      (source) => {
+        const matcher = new RegExp(source);
+        for (const anchor of document.querySelectorAll("a[href]")) {
+          const href = anchor.getAttribute("href");
+          if (href && matcher.test(href)) return href;
+        }
+        return null;
+      },
+      pattern,
+      { timeout: 15_000 },
+    )
+    .catch(() => null);
+  return handle ? ((await handle.jsonValue()) as string | null) : null;
 }
 
 test.describe("kein horizontales Überlaufen", () => {
