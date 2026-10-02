@@ -151,7 +151,9 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
       {view === "auftritte" ? <AuftritteView data={data} /> : null}
 
       <RolePanel
-        key={`role-${openRole?.id ?? (creating?.kind === "role" ? "new" : "closed")}`}
+        // Beim Anlegen bleibt der Key stabil, bis das Panel geschlossen wird: sonst schließt es
+        // kurz und öffnet neu, solange die neue Rolle noch nicht in den Server-Daten steht.
+        key={`role-${creating?.kind === "role" ? "new" : (openRole?.id ?? "closed")}`}
         open={creating?.kind === "role" || openRole !== null}
         role={openRole}
         data={data}
@@ -159,13 +161,10 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
           setCreating(null);
           if (roleId) navigate({});
         }}
-        onCreated={(id) => {
-          setCreating(null);
-          navigate({ rolle: id });
-        }}
+        onCreated={(id) => navigate({ rolle: id })}
       />
       <ScenePanel
-        key={`scene-${openScene?.id ?? (creating?.kind === "scene" ? `new-${creating.act}` : "closed")}`}
+        key={`scene-${creating?.kind === "scene" ? `new-${creating.act}` : (openScene?.id ?? "closed")}`}
         open={creating?.kind === "scene" || openScene !== null}
         scene={openScene}
         defaultAct={creating?.kind === "scene" ? creating.act : 1}
@@ -174,10 +173,7 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
           setCreating(null);
           if (sceneId) navigate({});
         }}
-        onCreated={(id) => {
-          setCreating(null);
-          navigate({ szene: id });
-        }}
+        onCreated={(id) => navigate({ szene: id })}
       />
     </div>
   );

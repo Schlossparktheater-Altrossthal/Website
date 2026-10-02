@@ -69,6 +69,8 @@ export function RolePanel({
   const [color, setColor] = React.useState<string | null>(role?.color ?? ROLE_COLOR_OPTIONS[0]);
   const [size, setSize] = React.useState<string | null>(role?.size ?? null);
   const [saving, setSaving] = React.useState(false);
+  // Neu angelegt, aber noch nicht in den Server-Daten: erneutes Speichern aktualisiert statt doppelt anzulegen.
+  const [createdId, setCreatedId] = React.useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [adding, setAdding] = React.useState<CharacterCastingType | null>(null);
   const [personQuery, setPersonQuery] = React.useState("");
@@ -77,7 +79,7 @@ export function RolePanel({
     setSaving(true);
     const result = await saveRoleAction({
       showId: data.showId,
-      id: role?.id,
+      id: role?.id ?? createdId ?? undefined,
       name,
       description,
       color,
@@ -88,8 +90,11 @@ export function RolePanel({
       toast.error("Das hat nicht geklappt", { description: result.error, duration: 5000 });
       return;
     }
-    toast.success(role ? "Gespeichert" : "Rolle angelegt", { duration: 3000 });
-    if (!role && "id" in result && result.id) onCreated(result.id);
+    toast.success(role || createdId ? "Gespeichert" : "Rolle angelegt", { duration: 3000 });
+    if (!role && !createdId && "id" in result && result.id) {
+      setCreatedId(result.id);
+      onCreated(result.id);
+    }
   };
 
   const setCast = (userId: string, type: CharacterCastingType | null) =>
@@ -396,6 +401,8 @@ export function ScenePanel({
     roles: scene?.roles ?? [],
   }));
   const [saving, setSaving] = React.useState(false);
+  // Neu angelegt, aber noch nicht in den Server-Daten: erneutes Speichern aktualisiert statt doppelt anzulegen.
+  const [createdId, setCreatedId] = React.useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const update = <K extends keyof SceneDraft>(field: K, value: SceneDraft[K]) =>
     setDraft((current) => ({ ...current, [field]: value }));
@@ -420,7 +427,7 @@ export function ScenePanel({
     const duration = Number.parseInt(draft.duration, 10);
     const result = await saveSceneAction({
       showId: data.showId,
-      id: scene?.id,
+      id: scene?.id ?? createdId ?? undefined,
       act: draft.act,
       title: draft.title,
       location: draft.location,
@@ -434,8 +441,11 @@ export function ScenePanel({
       toast.error("Das hat nicht geklappt", { description: result.error, duration: 5000 });
       return;
     }
-    toast.success(scene ? "Gespeichert" : "Szene angelegt", { duration: 3000 });
-    if (!scene && "id" in result && result.id) onCreated(result.id);
+    toast.success(scene || createdId ? "Gespeichert" : "Szene angelegt", { duration: 3000 });
+    if (!scene && !createdId && "id" in result && result.id) {
+      setCreatedId(result.id);
+      onCreated(result.id);
+    }
   };
 
   return (
