@@ -38,7 +38,7 @@ export function BlocklistSettingsDialog(props: BlocklistSettingsDialogProps) {
         onOpenChange={setOpen}
         title={TITLE}
         description={DESCRIPTION}
-        className="h-[90dvh] sm:h-auto sm:max-h-[85dvh] sm:max-w-xl"
+        className="h-[90dvh] sm:h-[85dvh] sm:max-w-xl"
       >
         {manager}
       </BottomSheet>
