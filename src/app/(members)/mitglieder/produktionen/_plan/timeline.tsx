@@ -51,7 +51,10 @@ export function PlanTimeline({
   const days = scheduled.map((milestone) => toDay(new Date(milestone.dueAt as string)));
   const rehearsalDays = plan.rehearsals.map((event) => toDay(new Date(event.start)));
   const start = Math.min(today, ...days, ...(premiere !== null ? [premiere - 30] : [])) - 14;
-  const end = Math.max(today + 30, ...days, ...(premiere !== null ? [premiere] : [])) + 14;
+  // Rechts Platz für die Beschriftung des letzten Punktes lassen.
+  const end =
+    Math.max(today + 30, ...days, ...(premiere !== null ? [premiere] : [])) +
+    Math.ceil(170 / PX_PER_DAY[zoom]);
   const width = (end - start) * px;
   const x = (day: number) => (day - start) * px;
 
@@ -113,6 +116,50 @@ export function PlanTimeline({
     };
   };
   const byId = new Map(scheduled.map((milestone) => [milestone.id, milestone]));
+
+  // Beschriftungen je Zeile: rechts vom Punkt, bei Platzmangel darüber/darunter, sonst nur Tooltip.
+  const labelPlacement = new Map<string, "right" | "above" | "below" | "hidden">();
+  {
+    const byRow = new Map<number, { id: string; cx: number; width: number }[]>();
+    for (const milestone of scheduled) {
+      const row = rowIndex(milestone);
+      byRow.set(row, [
+        ...(byRow.get(row) ?? []),
+        {
+          id: milestone.id,
+          cx: x(toDay(new Date(milestone.dueAt as string))),
+          width: milestone.title.length * 6.6 + 14,
+        },
+      ]);
+    }
+    for (const points of byRow.values()) {
+      points.sort((a, b) => a.cx - b.cx);
+      let above = -Infinity;
+      let below = -Infinity;
+      let lastRight = -Infinity;
+      points.forEach((point, index) => {
+        const next = points[index + 1];
+        const fitsRight =
+          point.cx - 9 > lastRight && (!next || next.cx - 10 > point.cx + point.width);
+        if (fitsRight) {
+          labelPlacement.set(point.id, "right");
+          lastRight = point.cx + point.width;
+          return;
+        }
+        // Kleinere Schrift darüber/darunter, mittig zum Punkt.
+        const half = (point.width * 0.8) / 2;
+        if (point.cx - half > above && point.cx - half > lastRight) {
+          labelPlacement.set(point.id, "above");
+          above = point.cx + half;
+        } else if (point.cx - half > below) {
+          labelPlacement.set(point.id, "below");
+          below = point.cx + half;
+        } else {
+          labelPlacement.set(point.id, "hidden");
+        }
+      });
+    }
+  }
   const isRed = (milestone: PlanMilestone) =>
     milestone.health === "critical" || milestone.health === "overdue";
 
@@ -254,11 +301,7 @@ export function PlanTimeline({
                   y2={height}
                   className="stroke-border/40"
                 />
-                <text
-                  x={x(day) + 3}
-                  y={HEADER_HEIGHT - 6}
-                  className="fill-muted-foreground text-[10px]"
-                >
+                <text x={x(day) + 3} y={11} className="fill-muted-foreground text-[10px]">
                   {SHORT_DAY_FORMAT.format(fromDay(day))}
                 </text>
               </g>
@@ -267,7 +310,7 @@ export function PlanTimeline({
               <g key={`m${day}`}>
                 <line x1={x(day)} x2={x(day)} y1={0} y2={height} className="stroke-border" />
                 {zoom === "month" ? (
-                  <text x={x(day) + 4} y={18} className="fill-muted-foreground text-[11px]">
+                  <text x={x(day) + 4} y={11} className="fill-muted-foreground text-[11px]">
                     {MONTH_FORMAT.format(fromDay(day))}
                   </text>
                 ) : null}
@@ -340,7 +383,7 @@ export function PlanTimeline({
             />
             <text
               x={x(today) + 4}
-              y={HEADER_HEIGHT - 6}
+              y={HEADER_HEIGHT - 4}
               className="fill-primary text-[10px] font-semibold"
             >
               heute
@@ -357,7 +400,7 @@ export function PlanTimeline({
                 />
                 <text
                   x={x(premiere) - 4}
-                  y={HEADER_HEIGHT - 6}
+                  y={HEADER_HEIGHT - 4}
                   textAnchor="end"
                   className="fill-foreground text-[10px] font-semibold"
                 >
@@ -426,9 +469,9 @@ export function PlanTimeline({
                     />
                   ) : null}
                   {shape}
+                  <title>{milestone.title}</title>
                   <text
-                    x={cx + 12}
-                    y={cy + 4}
+                    {...labelProps(labelPlacement.get(milestone.id) ?? "right", cx, cy, dragging)}
                     className={cn(
                       "text-[12px]",
                       milestone.doneAt ? "fill-muted-foreground" : "fill-foreground",
@@ -445,4 +488,21 @@ export function PlanTimeline({
       </div>
     </div>
   );
+}
+
+function labelProps(
+  placement: "right" | "above" | "below" | "hidden",
+  cx: number,
+  cy: number,
+  dragging: boolean,
+) {
+  // Beim Ziehen immer rechts zeigen, damit die Verschiebung lesbar ist.
+  if (dragging || placement === "right") return { x: cx + 12, y: cy + 4 };
+  if (placement === "hidden") return { x: cx + 12, y: cy + 4, display: "none" };
+  return {
+    x: cx,
+    y: placement === "above" ? cy - 11 : cy + 19,
+    textAnchor: "middle" as const,
+    fontSize: 10,
+  };
 }

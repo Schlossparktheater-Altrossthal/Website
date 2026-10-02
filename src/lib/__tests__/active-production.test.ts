@@ -59,7 +59,7 @@ describe("getActiveProduction", () => {
     expect(mockMembershipFindFirst).not.toHaveBeenCalled();
     expect(mockShowFindFirst).toHaveBeenCalledWith({
       where: { id: showId },
-      select: { id: true, title: true, year: true, synopsis: true },
+      select: { id: true, title: true, year: true, synopsis: true, status: true, premiereAt: true },
     });
     expect(result).toEqual({
       id: showId,

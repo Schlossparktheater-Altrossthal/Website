@@ -1,6 +1,6 @@
 # Plan: Produktionsplanung – Meilensteine, Zeitleiste und neue Produktionsseite
 
-Stand: 2026-10-01. Phase 1 (Datenmodell + Rechnung) umgesetzt, Phase 2–7 offen. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-02. Phase 1–6 umgesetzt (main), Phase 7 (E2E, Staging-Abnahme, Release) offen. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -150,6 +150,8 @@ Orga     ● GEMA ────────────────────�
 
 Jede Phase einzeln auf Staging prüfbar; Schema-Änderungen additiv.
 
+**Umsetzungsnotizen Phase 2–6 (2026-10-02):** Plan lesen alle aktiven Produktionsmitglieder; Tabs Stück/Zuweisung/Rückmeldungen nur mit Produktionsverwaltung. Vorlagen lassen sich nur in einen leeren Plan übernehmen; Gewerk-Blaupausen (`docs/Plan/gewerke-plan.md`) sind noch nicht Teil der Vorlage. Der eingebaute Vorschlag beantwortet die offene Frage nach der ersten Vorlage nur vorläufig – Abstände mit der Leitung abstimmen. Die Fristerinnerungen laufen in `/api/cron/rehearsal-reminders` mit, ohne neuen CronJob.
+
 **Umsetzungsnotizen Phase 1:** Premiere wird aus dem ersten Datum in `Show.dates` (`YYYY-MM-DD` bzw. `YYYY-MM-DD/YYYY-MM-DD`) vorbelegt; andere Formate bleiben leer. Fehlt ein Anker, bleibt `dueAt` leer (Ampel „unscheduled“), damit ist auch eine Produktion ohne Premiere planbar (Anker „festes Datum“). Puffer: Endpunkte vor der Premiere sind durch die Premiere begrenzt, Meilensteine danach ohne Nachfolger haben keinen Puffer-Wert; „kritisch“ heißt Puffer ≤ 0 vor einem offenen Nachfolger oder Verzug durch einen überfälligen Vorgänger.
 
 ## Entscheidungen (2026-10-01)
@@ -169,9 +171,9 @@ Jede Phase einzeln auf Staging prüfbar; Schema-Änderungen additiv.
 ## Checkliste
 
 - [x] Phase 1 Datenmodell + Rechnung (Migration `20261001140000_production_plan_milestones`, `src/lib/planning/schedule.ts`; `DepartmentTask.milestoneId` folgt in Phase 5)
-- [ ] Phase 2 Neue Produktionsseite (Gerüst)
-- [ ] Phase 3 Plan mobil (Agenda, Sheet)
-- [ ] Phase 4 Zeitleiste Desktop
-- [ ] Phase 5 Board-Verknüpfung, Dashboard, Teams-Kacheln
-- [ ] Phase 6 Vorlage + Benachrichtigungen
+- [x] Phase 2 Neue Produktionsseite (Gerüst): `ProductionHeader` mit Tabs, Verwaltung im Sheet (`?verwalten=1`), Tab „Gewerke“, Premiere in den Produktionseinstellungen
+- [x] Phase 3 Plan mobil (Agenda, Kalender, BottomSheet, Meilenstein-Formular mit Live-Datum)
+- [x] Phase 4 Zeitleiste Desktop (SVG, Pfeile, kritische Kette rot, Zoom Monat/Woche, Ziehen mit Vorschau)
+- [x] Phase 5 Board-Verknüpfung (Chip, geerbte Frist), „Nächste Frist“ im Gewerk, Dashboard „Nächste Fristen“, Teams-Kacheln
+- [x] Phase 6 Vorlagen (speichern/übernehmen, eingebauter Vorschlag mit 10 Meilensteinen als Schätzwerte), Fristerinnerungen im Erinnerungs-Cron (d7/d2/überfällig/kritisch), Kalender-Spiegelung für Abnahmen
 - [ ] Phase 7 E2E/Release

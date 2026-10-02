@@ -29,7 +29,7 @@ export default async function ProduktionenPage() {
     return (
       <div className="space-y-6">
         <ProductionHeader production={null} active="plan" canManage={canManage} />
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-4 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-muted-foreground">Keine aktive Produktion ausgewählt.</p>
           {canManage ? (
             <Button asChild>

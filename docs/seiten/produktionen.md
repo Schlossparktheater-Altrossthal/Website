@@ -7,8 +7,9 @@ Auswertung der Rückmeldungen.
 
 ## Routen
 
-- `/mitglieder/produktionen` – Übersicht
-- `/mitglieder/produktionen/[showId]` – Detail einer Produktion
+- `/mitglieder/produktionen` – Tab „Plan“: Kennzahlen, Zeitleiste (ab `md`), Agenda, Kalender; `?verwalten=1` öffnet „Produktionen verwalten“ (Sheet, aus dem Wechsler der Seitenleiste)
+- `/mitglieder/produktionen/gewerke` – Tab „Gewerke“: alle Gewerke mit Kartenfortschritt und nächster Frist
+- `/mitglieder/produktionen/[showId]` – Einstellungen einer Produktion (Premiere, Endprobenwoche, Onboarding)
 - `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte; `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
 - `/mitglieder/produktionen/besetzung`, `/szenen` – leiten auf das Stück weiter
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung
@@ -16,12 +17,16 @@ Auswertung der Rückmeldungen.
 ## Permissions
 
 - `PRIVATE.PRODUCTION.SHOW.MANAGE` – Stücke verwalten (häufigster Key)
+- `PRIVATE.PRODUCTION.PLAN.MANAGE` – Produktionsplan pflegen (Meilensteine, Abhängigkeiten, Vorlagen); lesen dürfen alle aktiven Produktionsmitglieder, abhaken auch die Gewerk-Leitung
 - `PRIVATE.DEPARTMENT.OWN.VIEW` – eigene Abteilungen
 
 ## Wichtige Komponenten
 
 - `src/app/(members)/mitglieder/produktionen/actions.ts` – Server Actions
 - `src/app/(members)/mitglieder/produktionen/production-forms-client.tsx` – Formulare
+- `src/components/production/production-header.tsx` – gemeinsamer Kopf mit Tabs
+- `src/app/(members)/mitglieder/produktionen/_plan/` – Plan (Zeitleiste, Agenda, Kalender, Formular); Actions in `actions/plan.ts`, `actions/plan-templates.ts`
+- `src/lib/planning/` – Rechenkern (`schedule.ts`), Laden/Rechte (`plan-service.ts`), Vorlagen (`templates.ts`); Konzept in `docs/Plan/projektplanung-plan.md`
 - `src/app/(members)/mitglieder/produktionen/stueck/` – Stück (Ablauf, Rollen, Auftrittsplan, Panels)
 
 ## Datenfluss

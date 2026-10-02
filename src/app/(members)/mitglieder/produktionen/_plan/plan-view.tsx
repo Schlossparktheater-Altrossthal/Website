@@ -187,7 +187,7 @@ export function PlanView({
   if (plan.milestones.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border px-4 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-muted-foreground">Noch kein Plan.</p>
           {plan.canManage ? (
             <div className="flex flex-wrap justify-center gap-2">
