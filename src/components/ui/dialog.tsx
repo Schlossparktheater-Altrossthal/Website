@@ -92,11 +92,13 @@ const DialogContent = React.forwardRef<
         {...handlers}
         {...props}
       >
-        {/* Griffleiste: bleibt beim Scrollen oben stehen, nur mobil. */}
-        <div aria-hidden className="sticky top-0 z-10 -mb-4 -mt-7 h-0 sm:hidden">
-          <div data-swipe-handle className="absolute inset-x-0 top-0 h-7 touch-none">
-            <span className="absolute left-1/2 top-2 h-1.5 w-10 -translate-x-1/2 rounded-full bg-muted-foreground/40" />
-          </div>
+        {/* Griffleiste zum Wegwischen, nur mobil. */}
+        <div
+          aria-hidden
+          data-swipe-handle
+          className="absolute inset-x-0 top-0 z-10 h-7 touch-none sm:hidden"
+        >
+          <span className="absolute left-1/2 top-2 h-1.5 w-10 -translate-x-1/2 rounded-full bg-muted-foreground/40" />
         </div>
         {children}
         <DialogPrimitive.Close
