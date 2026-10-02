@@ -1,3 +1,4 @@
+import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
 import type { EducationPayload, EducationValue } from "@/lib/education/schools";
 import type { MemberHistory } from "@/lib/member-history";
 import { z } from "zod";
@@ -150,8 +151,20 @@ export function formatDateLabel(value: string | null | undefined) {
   return dateFormatter.format(date);
 }
 
+/** Eigenes Körpermaß im Profil. */
+export type ProfileMeasurement = {
+  id: string;
+  type: MeasurementType;
+  value: number;
+  unit: MeasurementUnit;
+  note: string | null;
+  updatedAt: string;
+};
+
 export type ProfileClientProps = {
   history: MemberHistory;
+  /** Eigene Körpermaße; `null`, wenn die Person nicht im Ensemble ist (Bereich ausgeblendet). */
+  measurements: ProfileMeasurement[] | null;
   user: {
     id: string;
     email: string;

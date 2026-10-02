@@ -253,7 +253,7 @@ Gemeinsame UI-Regeln: `docs/Plan/projektplanung-plan.md`, Abschnitt „UI-Konzep
 - [x] Phase 8 Blaupausen-Grundlage + Migration (2026-10-02: `modules`, `icon`, `archivedAt`, `TemplatePermission` je Rolle, `DepartmentPermission.mode`; Vererbung in `permission-inheritance.ts` mit Unit- und Integrationstests. Migration abweichend vom Plan: bestehende Gewerk-Rechte bleiben als `grant` statt in Blaupause zerlegt zu werden – Wirkung bleibt exakt gleich; Gewerke ohne Blaupause bekommen eine. `modulesOverride` nicht gebaut)
 - [x] Phase 9 Blaupausen-Verwaltung, Gewerk anlegen (2026-10-02: Seite `/mitglieder/blaupausen`, Recht `PRIVATE.DEPARTMENT.TEMPLATE.MANAGE`, Anlegen nur aus Blaupause, `templateId` Pflicht in eigener Migration. Offen: UI für `grant`/`revoke`-Abweichungen einzelner Gewerke, bisher nur per API)
 - [x] Phase 9b Onboarding über Blaupausen (2026-10-02: Migration `department_template_onboarding`, Optionen aus Gewerken der Produktion; Schalter/Text im Blaupausen-Editor seit Phase 9)
-- [ ] Phase 10 Portal aus Bausteinen
+- [ ] Phase 10 Portal aus Bausteinen (Teil 2026-10-02: Reiter „Maße“ bei Baustein `measurements`, Gewerk-Mitglieder pflegen die Maße der Besetzung, eigene Maße im Profil unter „Körpermaße“ für das Ensemble; globales Recht nur noch Standard für Vorstand)
 - [ ] Phase 11 Szenenbedarf
 - [ ] Phase 12 Budget
 - [ ] Phase 13 E2E/Release

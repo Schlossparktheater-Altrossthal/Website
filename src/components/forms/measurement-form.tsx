@@ -45,11 +45,14 @@ export function MeasurementForm({
 }: MeasurementFormProps) {
   const form = useForm<MeasurementFormData>({
     resolver: zodResolver(measurementSchema),
-    defaultValues: initialData || {
+    // Teilvorgaben (z. B. nur der Messpunkt) mit den Standardwerten ergänzen, sonst fehlt
+    // die Einheit und das Formular lässt sich nicht absenden.
+    defaultValues: {
       type: undefined,
       value: undefined,
-      unit: "CM",
+      unit: defaultUnitFor(initialData?.type),
       note: "",
+      ...initialData,
     },
   });
 
@@ -63,7 +66,7 @@ export function MeasurementForm({
       toast.success("Maße wurden erfolgreich gespeichert");
     } catch (error) {
       console.error("[MeasurementForm] Failed to submit measurement", error);
-      toast.error("Fehler beim Speichern der Maße");
+      toast.error(error instanceof Error ? error.message : "Fehler beim Speichern der Maße");
     }
   };
 
@@ -111,7 +114,15 @@ export function MeasurementForm({
                     type="number"
                     step="0.1"
                     {...field}
-                    onChange={(event) => field.onChange(parseFloat(event.target.value))}
+                    inputMode="decimal"
+                    value={Number.isFinite(field.value) ? field.value : ""}
+                    onChange={(event) =>
+                      field.onChange(
+                        event.target.value === ""
+                          ? undefined
+                          : parseFloat(event.target.value.replace(",", ".")),
+                      )
+                    }
                   />
                 </FormControl>
                 <FormMessage />
@@ -125,7 +136,7 @@ export function MeasurementForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Einheit</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Wählen Sie eine Einheit" />
@@ -166,4 +177,10 @@ export function MeasurementForm({
       </form>
     </Form>
   );
+}
+
+function defaultUnitFor(
+  type: MeasurementFormData["type"] | undefined,
+): MeasurementFormData["unit"] {
+  return type === "SHOE_SIZE" ? "EU" : "CM";
 }

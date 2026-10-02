@@ -300,13 +300,9 @@ const PROFILE_ADMIN_PERMISSION_KEYS = [
 
 // Standardzuweisungen greifen nur, solange die jeweilige Rolle existiert. Wurde eine Rolle in
 // der Rechteverwaltung gelöscht, wird sie hier stillschweigend übersprungen.
-const MEASUREMENT_DEFAULT_ROLE_NAMES = [
-  "member",
-  "cast",
-  "tech",
-  "board",
-  "finance",
-] as const satisfies readonly Role[];
+// Körpermaße aller pflegt sonst das Gewerk mit Baustein „Körpermaße“ (lib/measurements/access.ts),
+// eigene Maße jede Person im Ensemble selbst.
+const MEASUREMENT_DEFAULT_ROLE_NAMES = ["board"] as const satisfies readonly Role[];
 
 // Baseline permissions that every authenticated user should retain even when not explicitly granted
 /** Jede aktive Gewerk-Zugehörigkeit erlaubt die Gewerkeplanung. */

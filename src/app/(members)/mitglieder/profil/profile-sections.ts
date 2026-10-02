@@ -1,6 +1,6 @@
 import type { ProfileChecklistTarget } from "@/lib/profile-completion";
 
-export type ProfileSectionId = ProfileChecklistTarget | "benachrichtigungen";
+export type ProfileSectionId = ProfileChecklistTarget | "masse" | "benachrichtigungen";
 
 export type ProfileSectionDefinition = {
   id: ProfileSectionId;
@@ -27,6 +27,12 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
     id: "ernaehrung",
     label: "Ernährung & Allergien",
     description: "Damit die Verpflegung bei Proben und Aufführungen für alle passt.",
+    group: "person",
+  },
+  {
+    id: "masse",
+    label: "Körpermaße",
+    description: "Deine Maße für das Kostüm-Team.",
     group: "person",
   },
   {

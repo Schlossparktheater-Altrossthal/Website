@@ -5,6 +5,7 @@ import {
   CameraIcon,
   CreditCardIcon,
   HeartIcon,
+  RulerIcon,
   TheaterIcon,
   UserIcon,
   UtensilsIcon,
@@ -29,6 +30,7 @@ const SECTION_ICONS: Record<ProfileSectionId, IconComponent> = {
   stammdaten: UserIcon,
   zahlungen: CreditCardIcon,
   ernaehrung: UtensilsIcon,
+  masse: RulerIcon,
   freigaben: CameraIcon,
   interessen: HeartIcon,
   produktion: TheaterIcon,
@@ -38,16 +40,24 @@ const SECTION_ICONS: Record<ProfileSectionId, IconComponent> = {
 type ProfileSectionNavProps = {
   activeSection: ProfileSectionId;
   status: Record<ProfileSectionId, ProfileSectionStatus>;
+  /** Bereiche, die für diese Person nicht gelten (z. B. Körpermaße außerhalb des Ensembles). */
+  hiddenSections?: ReadonlySet<ProfileSectionId>;
 };
 
 /**
  * Bereichsliste des Profils. Mobil die Startansicht (Tippen öffnet den Bereich), auf dem
  * Desktop die linke Navigation mit markiertem aktivem Bereich.
  */
-export function ProfileSectionNav({ activeSection, status }: ProfileSectionNavProps) {
+export function ProfileSectionNav({
+  activeSection,
+  status,
+  hiddenSections,
+}: ProfileSectionNavProps) {
   const groups = (["person", "production", "settings"] as const).map((group) => ({
     group,
-    sections: PROFILE_SECTIONS.filter((section) => section.group === group),
+    sections: PROFILE_SECTIONS.filter(
+      (section) => section.group === group && !hiddenSections?.has(section.id),
+    ),
   }));
 
   return (

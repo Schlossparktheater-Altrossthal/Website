@@ -12,6 +12,8 @@ import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-c
 import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
 import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { loadMemberHistory } from "@/lib/member-history";
+import { isEnsembleMember } from "@/lib/measurements/access";
+import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
@@ -305,11 +307,29 @@ export default async function ProfilePage() {
         }
       : null;
 
+  // Körpermaße nur fürs Ensemble (Systemrolle „cast“ oder in einer Rolle besetzt).
+  const measurements = (await isEnsembleMember(userId))
+    ? (
+        await prisma.memberMeasurement.findMany({
+          where: { userId },
+          select: { id: true, type: true, value: true, unit: true, note: true, updatedAt: true },
+        })
+      ).map((entry) => ({
+        id: entry.id,
+        type: entry.type as MeasurementType,
+        value: entry.value,
+        unit: entry.unit as MeasurementUnit,
+        note: entry.note,
+        updatedAt: entry.updatedAt.toISOString(),
+      }))
+    : null;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Mein Profil" breadcrumbs={[membersBreadcrumb]} />
       <ProfileClient
         history={history}
+        measurements={measurements}
         user={{
           id: user.id,
           email: user.email ?? "",

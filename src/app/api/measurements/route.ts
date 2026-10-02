@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
+import { canEditMeasurementsOf, isEnsembleMember } from "@/lib/measurements/access";
 import { requireAuth } from "@/lib/rbac";
 import { measurementSchema } from "@/data/measurements";
 import type {
@@ -23,11 +23,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
-    const canManageAll = await hasPermission(session.user, "PRIVATE.PROFILE.MEASUREMENTS.MANAGE");
     const requestedUserId = request.nextUrl.searchParams.get("userId");
     const targetUserId = requestedUserId ?? userId;
 
-    if (targetUserId !== userId && !canManageAll) {
+    if (!(await canEditMeasurementsOf(session.user, targetUserId))) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 403 });
     }
 
@@ -66,33 +65,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
-    const canManageAll = await hasPermission(session.user, "PRIVATE.PROFILE.MEASUREMENTS.MANAGE");
-    if (!canManageAll) {
+    if (!(await canEditMeasurementsOf(session.user, targetUserId))) {
       return NextResponse.json(
-        { error: "Körpermaße können nur im Bereich Körpermaße gepflegt werden." },
+        { error: "Du darfst die Maße dieser Person nicht bearbeiten." },
         { status: 403 },
       );
     }
 
-    const targetUser = await prisma.user.findUnique({
-      where: { id: targetUserId },
-      select: {
-        role: true,
-        roles: { select: { role: true } },
-        _count: { select: { characterCastings: true } },
-      },
-    });
-
-    if (!targetUser) {
-      return NextResponse.json({ error: "Mitglied nicht gefunden" }, { status: 404 });
-    }
-
-    const isTargetInEnsemble =
-      targetUser.role === "cast" ||
-      targetUser.roles.some((entry) => entry.role === "cast") ||
-      targetUser._count.characterCastings > 0;
-
-    if (!isTargetInEnsemble) {
+    if (!(await isEnsembleMember(targetUserId))) {
       return NextResponse.json(
         { error: "Körpermaße können nur für Ensemble-Mitglieder gepflegt werden." },
         { status: 403 },
@@ -122,7 +102,42 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(measurement);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.issues[0]?.message ?? "Ungültige Angaben" },
+        { status: 400 },
+      );
+    }
     console.error("[Measurements] Failed to save measurement", error);
     return NextResponse.json({ error: "Fehler beim Speichern der Maße" }, { status: 500 });
+  }
+}
+
+// DELETE: Entferne ein einzelnes Maß (?id=...)
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await requireAuth();
+    const id = request.nextUrl.searchParams.get("id");
+    if (!session.user?.id || !id) {
+      return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
+    }
+    const measurement = await prisma.memberMeasurement.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    if (!measurement) {
+      return NextResponse.json({ error: "Maß nicht gefunden" }, { status: 404 });
+    }
+    if (!(await canEditMeasurementsOf(session.user, measurement.userId))) {
+      return NextResponse.json(
+        { error: "Du darfst die Maße dieser Person nicht bearbeiten." },
+        { status: 403 },
+      );
+    }
+    await prisma.memberMeasurement.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("[Measurements] Failed to delete measurement", error);
+    return NextResponse.json({ error: "Fehler beim Löschen des Maßes" }, { status: 500 });
   }
 }

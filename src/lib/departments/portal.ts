@@ -1,3 +1,4 @@
+import { normalizeModules } from "@/lib/departments/modules";
 import type { DepartmentMembershipRole, TaskStatus } from "@prisma/client";
 
 import { toEventResponseStatus } from "@/lib/calendar/responses";
@@ -130,6 +131,7 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
       color: true,
       requiresJoinApproval: true,
       archivedAt: true,
+      template: { select: { modules: true } },
       documents: {
         orderBy: { createdAt: "desc" },
         select: {
@@ -250,6 +252,7 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
     description: department.description,
     color: department.color,
     requiresJoinApproval: department.requiresJoinApproval,
+    modules: normalizeModules(department.template.modules),
     files: department.documents.map((document) => ({
       id: document.id,
       fileName: document.fileName,

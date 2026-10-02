@@ -19,6 +19,7 @@ import { PaymentSection } from "./sections/payment-section";
 import { NutritionSection } from "./sections/nutrition-section";
 import { InterestsSection } from "./sections/interests-section";
 import { ProductionSection } from "./sections/production-section";
+import { MeasurementsSection } from "./sections/measurements-section";
 import {
   PAYOUT_METHOD_OPTIONS,
   ProfileClientProps,
@@ -29,6 +30,9 @@ import {
   isProfilePaymentComplete,
 } from "./profile-shared";
 import { EMPTY_EDUCATION, toEducationPayload } from "@/lib/education/schools";
+import { measurementTypeEnum } from "@/data/measurements";
+
+const MEASUREMENT_TYPE_COUNT = measurementTypeEnum.options.length;
 
 const EMPTY_ONBOARDING: OnboardingProfile = {
   focus: "acting",
@@ -58,10 +62,17 @@ export function ProfileClient({
   rolePreferencesInheritedFrom,
   crewWishOptions,
   history,
+  measurements: initialMeasurements,
 }: ProfileClientProps) {
   const { update: refreshSession } = useSession();
   const searchParams = useSearchParams();
-  const selectedSection = resolveProfileSection(searchParams?.get("bereich"));
+  const hiddenSections = useMemo(
+    () => new Set<ProfileSectionId>(initialMeasurements ? [] : ["masse"]),
+    [initialMeasurements],
+  );
+  const requestedSection = resolveProfileSection(searchParams?.get("bereich"));
+  const selectedSection =
+    requestedSection && !hiddenSections.has(requestedSection) ? requestedSection : null;
   // Desktop zeigt immer einen Bereich; mobil ohne Auswahl die Bereichsliste.
   const desktopSection: ProfileSectionId = selectedSection ?? "stammdaten";
 
@@ -77,6 +88,7 @@ export function ProfileClient({
     setPreferencesInheritedFrom(null);
   }, []);
   const [interests, setInterests] = useState<string[]>(initialInterests);
+  const [measurements, setMeasurements] = useState(initialMeasurements ?? []);
   const [allergies, setAllergies] = useState<Allergy[]>(initialAllergies);
   const [aversions, setAversions] = useState<Aversion[]>(initialAversions);
   const [photoConsentGiven, setPhotoConsentGiven] = useState<boolean | undefined>(
@@ -238,12 +250,19 @@ export function ProfileClient({
             ? `${rolePreferences.filter((pref) => pref.weight > 0).length} Wünsche`
             : "Rollen- und Gewerkewünsche",
       },
+      masse: {
+        missing: false,
+        summary: measurements.length
+          ? `${measurements.length} von ${MEASUREMENT_TYPE_COUNT} Maßen`
+          : "Noch keine Maße",
+      },
       benachrichtigungen: { missing: false, summary: "Push, Ruhezeit, Geräte" },
     };
   }, [
     allergies.length,
     aversions.length,
     interests,
+    measurements.length,
     onboarding,
     rolePreferences,
     summary.items,
@@ -284,6 +303,10 @@ export function ProfileClient({
             preferencesInheritedFrom={preferencesInheritedFrom}
           />
         );
+      case "masse":
+        return (
+          <MeasurementsSection measurements={measurements} onMeasurementsChange={setMeasurements} />
+        );
       case "benachrichtigungen":
         return <NotificationsSection />;
     }
@@ -303,7 +326,11 @@ export function ProfileClient({
           aria-label="Profilbereiche"
           className={cn("lg:sticky lg:top-24", mobileSection ? "hidden lg:block" : "block")}
         >
-          <ProfileSectionNav activeSection={desktopSection} status={sectionStatus} />
+          <ProfileSectionNav
+            activeSection={desktopSection}
+            status={sectionStatus}
+            hiddenSections={hiddenSections}
+          />
         </nav>
 
         <section

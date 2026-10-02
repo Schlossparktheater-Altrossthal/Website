@@ -58,7 +58,7 @@ export function ViewSwitcher<T extends string>({
             aria-current={active ? "page" : undefined}
             scroll={false}
             className={cn(
-              "inline-flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none",
+              "inline-flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-md px-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none sm:px-3",
               active
                 ? "bg-background text-foreground shadow-sm ring-1 ring-border"
                 : "text-muted-foreground hover:text-foreground",

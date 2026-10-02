@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { MemberMeasurementsControlCenter } from "@/components/members/measurements/member-measurements-control-center";
 import { PageHeader } from "@/components/members/page-header";
 import { DeadlineBadge } from "@/components/production/deadline-badge";
 import { UserAvatar } from "@/components/user-avatar";
@@ -14,6 +15,7 @@ import { resolveTeamsViewer } from "@/lib/departments/access";
 import { loadBoard } from "@/lib/departments/board";
 import { loadTeamEvents } from "@/lib/departments/events";
 import { loadDepartmentPortal, type PortalMember } from "@/lib/departments/portal";
+import { castOfShow, loadMeasurementMembers } from "@/lib/measurements/members";
 import { cn } from "@/lib/utils";
 
 import { DepartmentBoard } from "../board/board";
@@ -22,7 +24,7 @@ import { TeamEvents } from "../events/team-events";
 import { TeamFiles } from "../files/team-files";
 import { formatDue, formatEventDate, TEAM_ROLE_LABELS, tint, ViewSwitcher } from "../team-ui";
 
-type View = "uebersicht" | "aufgaben" | "termine" | "team";
+type View = "uebersicht" | "aufgaben" | "termine" | "masse" | "team";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -41,8 +43,14 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
   // Sichtbar für Mitglieder des Gewerks sowie Regie/Board.
   if (!portal || (!portal.viewerRole && !isManager)) notFound();
 
+  const hasMeasurements = portal.modules.includes("measurements");
   const view: View =
-    ansicht === "aufgaben" || ansicht === "termine" || ansicht === "team" ? ansicht : "uebersicht";
+    ansicht === "aufgaben" ||
+    ansicht === "termine" ||
+    ansicht === "team" ||
+    (ansicht === "masse" && hasMeasurements)
+      ? ansicht
+      : "uebersicht";
   const basePath = `/mitglieder/meine-gewerke/${encodeURIComponent(portal.slug)}`;
   const canManage = isManager || portal.viewerRole === "lead";
   const leads = portal.members.filter((member) => member.role === "lead");
@@ -163,6 +171,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           { value: "uebersicht", label: "Nächstes" },
           { value: "aufgaben", label: `Aufgaben ${portal.openTasks.length}` },
           { value: "termine", label: `Termine ${portal.events.length}` },
+          ...(hasMeasurements ? [{ value: "masse" as const, label: "Maße" }] : []),
           { value: "team", label: `Team ${portal.members.length}` },
         ]}
       />
@@ -266,6 +275,15 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           data={await loadTeamEvents(portal.id, userId)}
           canRespond={portal.viewerRole !== null}
           canManage={isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"}
+        />
+      ) : null}
+
+      {view === "masse" ? (
+        <MemberMeasurementsControlCenter
+          members={await loadMeasurementMembers(castOfShow(production.id))}
+          canConfigureMeasurements={
+            isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")
+          }
         />
       ) : null}
 
