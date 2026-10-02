@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/prisma", () => ({ prisma: {} }));
+const db = vi.hoisted(() => ({
+  departmentTemplate: { findMany: vi.fn() },
+  department: { findMany: vi.fn() },
+}));
+vi.mock("@/lib/prisma", () => ({ prisma: db }));
 
 import {
   findMatchingWishWeight,
@@ -37,20 +41,18 @@ const templates = [
   template("requisite", "Requisite", ["crew_props"]),
 ];
 
-function fakeDb(departmentSlugs: string[] | null) {
-  return {
-    departmentTemplate: { findMany: vi.fn(async () => templates) },
-    department: {
-      findMany: vi.fn(async () =>
-        (departmentSlugs ?? []).map((slug) => ({ templateId: `tpl_${slug}` })),
-      ),
-    },
-  } as never;
+// Stellt die Datenbank auf die Gewerke einer Produktion ein (null = keine Gewerke).
+function stubDepartments(departmentSlugs: string[] | null) {
+  db.departmentTemplate.findMany.mockResolvedValue(templates);
+  db.department.findMany.mockResolvedValue(
+    (departmentSlugs ?? []).map((slug) => ({ templateId: `tpl_${slug}` })),
+  );
 }
 
 describe("listCrewWishOptions", () => {
   it("bietet die Gewerke der Produktion an und behält eindeutige Alt-Codes", async () => {
-    const options = await listCrewWishOptions("show", fakeDb(["kostuem", "licht", "ton"]));
+    const options = await (stubDepartments(["kostuem", "licht", "ton"]),
+    listCrewWishOptions("show"));
     expect(options.slice(0, 3).map((option) => [option.code, option.title])).toEqual([
       ["crew_costume", "Kostüm"],
       ["tpl:licht", "Licht"],
@@ -61,7 +63,8 @@ describe("listCrewWishOptions", () => {
   });
 
   it("ergänzt feste Wünsche, die keine Blaupause der Produktion abdeckt", async () => {
-    const options = await listCrewWishOptions("show", fakeDb(["kostuem", "licht", "ton"]));
+    const options = await (stubDepartments(["kostuem", "licht", "ton"]),
+    listCrewWishOptions("show"));
     const fixed = options.filter((option) => option.templateId === null).map((o) => o.code);
     expect(fixed).toContain("crew_direction");
     expect(fixed).toContain("crew_stage");
@@ -71,13 +74,14 @@ describe("listCrewWishOptions", () => {
   });
 
   it("zeigt ausgeblendete Blaupausen nicht und deckt ihre Codes trotzdem ab", async () => {
-    const options = await listCrewWishOptions("show", fakeDb(["schauspiel", "technik", "kostuem"]));
+    const options = await (stubDepartments(["schauspiel", "technik", "kostuem"]),
+    listCrewWishOptions("show"));
     expect(options.some((option) => option.title === "Schauspiel")).toBe(false);
     expect(options.some((option) => option.title === "Technik")).toBe(false);
   });
 
   it("nimmt ohne Gewerke alle sichtbaren Blaupausen", async () => {
-    const options = await listCrewWishOptions(null, fakeDb(null));
+    const options = await (stubDepartments(null), listCrewWishOptions(null));
     expect(options.filter((option) => option.templateId).map((option) => option.code)).toEqual([
       "crew_stage",
       "crew_costume",
@@ -108,7 +112,7 @@ describe("Hilfsfunktionen", () => {
   });
 
   it("liefert Titel für tpl- und eindeutige Alt-Codes", async () => {
-    const titles = await loadTemplateWishTitles(fakeDb(null));
+    const titles = await (stubDepartments(null), loadTemplateWishTitles());
     expect(titles.get("tpl:ton")).toBe("Ton");
     expect(titles.get("crew_costume")).toBe("Kostüm");
     expect(titles.has("crew_tech")).toBe(false);
