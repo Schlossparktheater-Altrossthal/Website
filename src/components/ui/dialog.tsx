@@ -112,6 +112,20 @@ const DialogContent = React.forwardRef<
   const [mobile, setMobile] = React.useState(false);
   React.useEffect(() => setMobile(isMobileViewport()), []);
   const keyboard = useKeyboardInset(mobile);
+  // `autoFocus` greift schon beim Einhängen, Radix meldet dann kein onOpenAutoFocus mehr.
+  React.useEffect(() => {
+    if (!isMobileViewport()) return;
+    const frame = window.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLElement &&
+        contentRef.current?.contains(active) &&
+        active.matches(TEXT_FIELD)
+      )
+        contentRef.current.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const mergedStyle: React.CSSProperties = {
     ...style,
