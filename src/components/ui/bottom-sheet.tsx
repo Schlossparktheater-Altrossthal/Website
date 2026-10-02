@@ -3,15 +3,13 @@
 import * as React from "react";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-
-const CLOSE_DISTANCE = 80;
 
 type BottomSheetProps = {
   open: boolean;
@@ -29,8 +27,8 @@ type BottomSheetProps = {
 };
 
 /**
- * Mobiles Blatt von unten: Griff und Kopf lassen sich nach unten wischen, der Inhalt scrollt
- * innerhalb der Bildschirmhöhe (`dvh`, damit die Browserleiste nichts verdeckt).
+ * Blatt mit festem Kopf und Fuß, dazwischen scrollt der Inhalt. Baut auf `DialogContent` auf:
+ * mobil von unten mit Wisch-Geste zum Schließen, ab 640 px ein zentrierter Dialog.
  */
 export function BottomSheet({
   open,
@@ -43,73 +41,29 @@ export function BottomSheet({
   footer,
   className,
 }: BottomSheetProps) {
-  const [offset, setOffset] = React.useState(0);
-  const start = React.useRef<number | null>(null);
-
-  const [wasOpen, setWasOpen] = React.useState(open);
-  // Beim erneuten Öffnen ohne Versatz starten (Zustand aus Props, ohne Effekt).
-  if (open !== wasOpen) {
-    setWasOpen(open);
-    if (open) setOffset(0);
-  }
-
-  const dragHandlers = {
-    onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
-      // Knöpfe im Kopf (Schließen, Aktionen) bleiben normal klickbar.
-      if (event.target instanceof Element && event.target.closest("button, a")) return;
-      start.current = event.clientY;
-      event.currentTarget.setPointerCapture(event.pointerId);
-    },
-    onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => {
-      if (start.current === null) return;
-      setOffset(Math.max(0, event.clientY - start.current));
-    },
-    onPointerUp: () => {
-      if (start.current === null) return;
-      start.current = null;
-      if (offset > CLOSE_DISTANCE) onOpenChange(false);
-      else setOffset(0);
-    },
-    onPointerCancel: () => {
-      start.current = null;
-      setOffset(0);
-    },
-  };
-
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        style={offset ? { transform: `translateY(${offset}px)`, transition: "none" } : undefined}
-        className={cn(
-          "flex max-h-[90dvh] flex-col gap-0 rounded-t-2xl p-0 [&>button:first-child]:top-5",
-          className,
-        )}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn("flex flex-col gap-0 overflow-hidden p-0 pb-0 pt-0 sm:p-0", className)}
       >
-        <div className="shrink-0 touch-none select-none px-4 pb-3 pt-2" {...dragHandlers}>
-          <span
-            aria-hidden
-            className="mx-auto mb-3 block h-1.5 w-10 rounded-full bg-muted-foreground/40"
-          />
-          <SheetHeader className="space-y-0.5 pr-8 text-left">
-            <div className="flex items-center justify-between gap-2">
-              <SheetTitle className="text-lg">{title}</SheetTitle>
-              {headerAction}
-            </div>
-            <SheetDescription className={showDescription ? undefined : "sr-only"}>
-              {description}
-            </SheetDescription>
-          </SheetHeader>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+        <DialogHeader className="shrink-0 space-y-0.5 px-4 pb-3 pr-12 pt-7 sm:px-6 sm:pr-12 sm:pt-6">
+          <div className="flex items-center justify-between gap-2">
+            <DialogTitle className="text-lg">{title}</DialogTitle>
+            {headerAction}
+          </div>
+          <DialogDescription className={showDescription ? undefined : "sr-only"}>
+            {description}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 sm:px-6">
           {children}
         </div>
         {footer ? (
-          <div className="shrink-0 border-t border-border px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+          <div className="shrink-0 border-t border-border px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
             {footer}
           </div>
         ) : null}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

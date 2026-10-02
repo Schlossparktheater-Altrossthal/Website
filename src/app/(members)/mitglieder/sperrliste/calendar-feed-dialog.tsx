@@ -17,13 +17,6 @@ import { AsyncButton } from "@/components/ui/async-button";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
@@ -351,23 +344,6 @@ export function CalendarFeedDialog() {
     </Button>
   );
 
-  if (isDesktop) {
-    return (
-      <>
-        {trigger}
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{TITLE}</DialogTitle>
-              <DialogDescription>{DESCRIPTION}</DialogDescription>
-            </DialogHeader>
-            {open ? <FeedPanel showQr /> : null}
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
-
   return (
     <>
       {trigger}
@@ -377,8 +353,9 @@ export function CalendarFeedDialog() {
         title={TITLE}
         description={DESCRIPTION}
         showDescription
+        className="sm:max-w-lg"
       >
-        {open ? <FeedPanel showQr={false} /> : null}
+        {open ? <FeedPanel showQr={isDesktop} /> : null}
       </BottomSheet>
     </>
   );

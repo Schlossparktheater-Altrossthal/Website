@@ -14,19 +14,11 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DateBadge } from "@/components/ui/date-badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import { UserAvatar } from "@/components/user-avatar";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { DAY_TIER_LABELS, type DayInfo } from "@/lib/sperrliste/day-tiers";
 import { MEMBER_GROUP_ACCENTS } from "@/config/category-colors";
@@ -558,7 +550,6 @@ function TeamDayDialog({
   onCreateEvent,
   onEditEvent,
 }: TeamDayDialogProps) {
-  const isDesktop = useMediaQuery("(min-width: 640px)");
   const events = day ? (model.entriesByDay.get(day.key) ?? []) : [];
   const blocked = entries.filter((entry) => entry.status === "blocked").length;
   const limited = entries.filter((entry) => entry.status === "limited").length;
@@ -622,29 +613,16 @@ function TeamDayDialog({
     </div>
   ) : null;
 
-  if (!isDesktop) {
-    return (
-      <BottomSheet
-        open={Boolean(day)}
-        onOpenChange={onOpenChange}
-        title={title}
-        description={summary}
-        showDescription
-      >
-        {body}
-      </BottomSheet>
-    );
-  }
-
   return (
-    <Dialog open={Boolean(day)} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{summary}</DialogDescription>
-        </DialogHeader>
-        {body}
-      </DialogContent>
-    </Dialog>
+    <BottomSheet
+      open={Boolean(day)}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={summary}
+      showDescription
+      className="sm:max-w-md"
+    >
+      {body}
+    </BottomSheet>
   );
 }

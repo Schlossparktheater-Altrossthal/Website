@@ -5,14 +5,6 @@ import { useState } from "react";
 import { Settings2Icon } from "@/components/ui/action-icons";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { ClientSperrlisteSettings } from "@/lib/sperrliste-settings";
 
 import { BlocklistSettingsManager, type SperrlisteSettingsChangePayload } from "./settings-manager";
@@ -29,7 +21,6 @@ const DESCRIPTION = "Kerntage, Sperrfrist sowie Ferien und Feiertage.";
 
 export function BlocklistSettingsDialog(props: BlocklistSettingsDialogProps) {
   const [open, setOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 640px)");
 
   const trigger = (
     <Button variant="outline" size="sm" aria-label={TITLE} onClick={() => setOpen(true)}>
@@ -39,23 +30,6 @@ export function BlocklistSettingsDialog(props: BlocklistSettingsDialogProps) {
   );
   const manager = <BlocklistSettingsManager {...props} onSaved={() => setOpen(false)} />;
 
-  if (isDesktop) {
-    return (
-      <>
-        {trigger}
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="flex max-h-[85dvh] flex-col sm:max-w-xl">
-            <DialogHeader>
-              <DialogTitle>{TITLE}</DialogTitle>
-              <DialogDescription>{DESCRIPTION}</DialogDescription>
-            </DialogHeader>
-            {manager}
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
-
   return (
     <>
       {trigger}
@@ -64,7 +38,7 @@ export function BlocklistSettingsDialog(props: BlocklistSettingsDialogProps) {
         onOpenChange={setOpen}
         title={TITLE}
         description={DESCRIPTION}
-        className="h-[90dvh]"
+        className="h-[90dvh] sm:h-auto sm:max-h-[85dvh] sm:max-w-xl"
       >
         {manager}
       </BottomSheet>
