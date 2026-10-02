@@ -452,7 +452,7 @@ function MultiSelectBar({
     <div
       role="region"
       aria-label="Mehrere Tage eintragen"
-      className="fixed inset-x-3 bottom-3 z-40 space-y-2 rounded-xl border border-primary/50 bg-card p-3 shadow-lg lg:static lg:shadow-none"
+      className="fixed inset-x-3 bottom-[calc(var(--members-bottom-nav,0px)+0.75rem)] z-40 space-y-2 rounded-xl border border-primary/50 bg-card p-3 shadow-lg lg:static lg:shadow-none"
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium" aria-live="polite">

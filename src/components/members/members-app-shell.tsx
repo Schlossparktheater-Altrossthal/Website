@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { MembersNav, type AssignmentFocus } from "@/components/members-nav";
+import { MembersBottomNav } from "@/components/members/members-bottom-nav";
 import { cn } from "@/lib/utils";
 import type { ImpersonationDetails } from "@/lib/auth/impersonation";
 import { ImpersonationBanner } from "@/components/members/impersonation-banner/impersonation-banner";
@@ -181,6 +182,7 @@ interface MembersAppShellProps {
   globalFooter?: React.ReactNode;
   impersonation?: ImpersonationDetails | null;
   pageVisibility?: Record<string, boolean>;
+  closedNavGroups?: readonly string[];
 }
 
 interface MembersTopbarSlots {
@@ -329,6 +331,7 @@ export function MembersAppShell({
   globalFooter,
   impersonation,
   pageVisibility,
+  closedNavGroups,
 }: MembersAppShellProps) {
   const [topbarContent, setTopbarContentState] = React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
   const [contentHeader, setContentHeaderState] = React.useState<React.ReactNode>(null);
@@ -411,11 +414,15 @@ export function MembersAppShell({
           isBoard={isBoard}
           isDepartmentLead={isDepartmentLead}
           pageVisibility={pageVisibility}
+          closedGroups={closedNavGroups}
         />
         <SidebarRail />
       </Sidebar>
       <MembersAppShellContext.Provider value={contextValue}>
-        <SidebarInset id="main" className="min-h-svh">
+        <SidebarInset
+          id="main"
+          className="min-h-svh pb-[var(--members-bottom-nav)] [--members-bottom-nav:calc(3.5rem+env(safe-area-inset-bottom))] lg:[--members-bottom-nav:0px]"
+        >
           <MembersTopbarContent
             content={topbarContent}
             containerClassName={contentClasses.container}
@@ -441,6 +448,15 @@ export function MembersAppShell({
             ) : null}
           </main>
           {globalFooter}
+          <MembersBottomNav
+            permissions={permissions}
+            activeProduction={activeProduction}
+            assignmentFocus={assignmentFocus}
+            hasDepartmentMemberships={hasDepartmentMemberships}
+            isBoard={isBoard}
+            isDepartmentLead={isDepartmentLead}
+            pageVisibility={pageVisibility}
+          />
         </SidebarInset>
       </MembersAppShellContext.Provider>
     </>

@@ -7,6 +7,7 @@ import { MysticBackground } from "@/components/mystic-background";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import type { AssignmentFocus } from "@/components/members-nav";
+import { MEMBERS_NAV_CLOSED_GROUPS_COOKIE, parseClosedNavGroups } from "@/lib/members-navigation";
 import { MembersPermissionsProvider } from "@/components/members/permissions-context";
 import { MembersAppShell } from "@/components/members/members-app-shell";
 import { HiddenPageGuard } from "@/components/members/hidden-page-guard";
@@ -88,6 +89,9 @@ export default async function MembersLayout({ children }: { children: React.Reac
   const cookieStore = await cookies();
   const sidebarState = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value;
   const defaultSidebarOpen = typeof sidebarState === "undefined" ? true : sidebarState === "true";
+  const closedNavGroups = parseClosedNavGroups(
+    cookieStore.get(MEMBERS_NAV_CLOSED_GROUPS_COOKIE)?.value,
+  );
 
   const session = await requireAuth();
   const [permissions, activeProduction, websiteSettingsRecord] = await Promise.all([
@@ -185,6 +189,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               isDepartmentLead={isDepartmentLead}
               impersonation={session.impersonation ?? null}
               pageVisibility={resolvedSettings.pageVisibility.members}
+              closedNavGroups={closedNavGroups}
               globalFooter={
                 <SiteFooter buildInfo={buildInfo} isAuthenticated={true} isDevBuild={isDevBuild} />
               }

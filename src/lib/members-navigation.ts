@@ -186,3 +186,16 @@ export function findMembersNavigationItem(
 export function membersNavIcon(href: string): MembersNavIcon {
   return findMembersNavigationItem(href)?.item.icon ?? defaultMembersNavIcon;
 }
+
+/** Gruppen, die ohne gespeicherte Wahl zugeklappt starten (Admin-Bereiche). */
+export const MEMBERS_NAV_DEFAULT_CLOSED_GROUPS = ["pages", "admin"] as const;
+export const MEMBERS_NAV_CLOSED_GROUPS_COOKIE = "members_nav_closed";
+
+/** Liest den Cookie-Wert; `undefined` (kein Cookie) ergibt die Voreinstellung. */
+export function parseClosedNavGroups(value: string | undefined): string[] {
+  if (value === undefined) return [...MEMBERS_NAV_DEFAULT_CLOSED_GROUPS];
+  return decodeURIComponent(value)
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}

@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronsUpDownIcon } from "@/components/ui/action-icons";
+import { ChevronDownIcon, ChevronsUpDownIcon, CloseIcon } from "@/components/ui/action-icons";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -26,9 +26,12 @@ import {
   MEMBERS_NAV_ASSIGNMENTS_GROUP_ID,
   defaultMembersNavIcon,
   membersNavigation,
+  type MembersNavGroup,
   type MembersNavItem,
 } from "@/config/members-navigation";
 import {
+  MEMBERS_NAV_CLOSED_GROUPS_COOKIE,
+  MEMBERS_NAV_DEFAULT_CLOSED_GROUPS,
   filterMembersNavigationByPermissions,
   filterMembersNavigationByQuery,
   resolveAssignmentsGroupLabel,
@@ -40,7 +43,7 @@ import { cn } from "@/lib/utils";
 
 export type { AssignmentFocus } from "@/lib/members-navigation";
 
-function isActive(pathname: string, href: string) {
+export function isMembersNavItemActive(pathname: string, href: string) {
   if (pathname === href) return true;
   if (href === "/mitglieder") return false;
   return pathname.startsWith(`${href}/`);
@@ -219,7 +222,7 @@ function MembersNavProductionSwitcher({
 }
 
 function renderItem(pathname: string, isCollapsed: boolean, item: MembersNavItem) {
-  const active = isActive(pathname, item.href);
+  const active = isMembersNavItemActive(pathname, item.href);
   const Icon = item.icon ?? defaultMembersNavIcon;
   const badgeContent = item.badge;
   const hasBadgeValue =
@@ -267,15 +270,7 @@ function renderItem(pathname: string, isCollapsed: boolean, item: MembersNavItem
   );
 }
 
-export function MembersNav({
-  permissions,
-  activeProduction,
-  assignmentFocus = "none",
-  hasDepartmentMemberships = false,
-  isBoard = false,
-  isDepartmentLead = false,
-  pageVisibility,
-}: {
+export interface MembersNavData {
   permissions?: readonly string[];
   activeProduction?: ActiveProductionNavInfo;
   assignmentFocus?: AssignmentFocus;
@@ -284,59 +279,31 @@ export function MembersNav({
   isDepartmentLead?: boolean;
   /** Seitensteuerung – kommt vom Server, damit ausgeblendete Einträge nicht erst kurz aufblitzen. */
   pageVisibility?: Record<string, boolean>;
-}) {
-  const pathname = usePathname() ?? "";
-  const router = useRouter();
-  const [query, setQuery] = useState("");
-  const normalizedQuery = query.trim().toLowerCase();
-  const isFiltering = normalizedQuery.length > 0;
-  const searchInputId = useId();
-  const { state, isMobile } = useSidebar();
-  const isCollapsed = !isMobile && state === "collapsed";
+}
 
-  const assignmentLabel = useMemo(
-    () => resolveAssignmentsGroupLabel(assignmentFocus, permissions ?? []),
-    [assignmentFocus, permissions],
-  );
-
-  const baseGroups = useMemo(
-    () =>
-      selectMembersNavigation({
-        groups: membersNavigation,
-        hasDepartmentMemberships,
-        activeProduction: activeProduction ?? null,
-      }),
-    [activeProduction, hasDepartmentMemberships],
-  );
-
-  const labelledGroups = useMemo(
-    () =>
-      baseGroups.map((group) =>
-        group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID
-          ? { ...group, label: assignmentLabel }
-          : group,
-      ),
-    [assignmentLabel, baseGroups],
-  );
-
-  const { groups: permittedGroups, flat: permittedFlat } = useMemo(
-    () =>
-      filterMembersNavigationByPermissions(labelledGroups, permissions, {
-        isBoard,
-        isDepartmentLead,
-      }),
-    [labelledGroups, permissions, isBoard, isDepartmentLead],
-  );
-
-  const { groups, flat } = useMemo(() => {
-    if (!isFiltering) {
-      return { groups: permittedGroups, flat: permittedFlat };
-    }
-
-    return filterMembersNavigationByQuery(permittedGroups, normalizedQuery);
-  }, [permittedFlat, permittedGroups, isFiltering, normalizedQuery]);
-
-  const visibleGroups = useMemo(() => {
+/** Erlaubte und sichtbare Menügruppen – gemeinsam für Seitenleiste und mobile Leiste unten. */
+export function useMembersNavGroups({
+  permissions,
+  activeProduction,
+  assignmentFocus = "none",
+  hasDepartmentMemberships = false,
+  isBoard = false,
+  isDepartmentLead = false,
+  pageVisibility,
+}: MembersNavData): MembersNavGroup[] {
+  return useMemo(() => {
+    const assignmentLabel = resolveAssignmentsGroupLabel(assignmentFocus, permissions ?? []);
+    const labelledGroups = selectMembersNavigation({
+      groups: membersNavigation,
+      hasDepartmentMemberships,
+      activeProduction: activeProduction ?? null,
+    }).map((group) =>
+      group.id === MEMBERS_NAV_ASSIGNMENTS_GROUP_ID ? { ...group, label: assignmentLabel } : group,
+    );
+    const { groups } = filterMembersNavigationByPermissions(labelledGroups, permissions, {
+      isBoard,
+      isDepartmentLead,
+    });
     const visibilityMap = pageVisibility ?? {};
     return groups
       .map((group) => ({
@@ -350,7 +317,67 @@ export function MembersNav({
           .filter((subgroup) => subgroup.items.length > 0),
       }))
       .filter((group) => group.items.length > 0 || (group.subgroups?.length ?? 0) > 0);
-  }, [groups, pageVisibility]);
+  }, [
+    activeProduction,
+    assignmentFocus,
+    hasDepartmentMemberships,
+    isBoard,
+    isDepartmentLead,
+    pageVisibility,
+    permissions,
+  ]);
+}
+
+function groupContainsPath(group: MembersNavGroup, pathname: string) {
+  return [...group.items, ...(group.subgroups?.flatMap((sub) => sub.items) ?? [])].some((item) =>
+    isMembersNavItemActive(pathname, item.href),
+  );
+}
+
+export function MembersNav({
+  closedGroups: initialClosedGroups,
+  ...data
+}: MembersNavData & {
+  /** Zugeklappte Gruppen aus dem Cookie (serverseitig gelesen, damit nichts springt). */
+  closedGroups?: readonly string[];
+}) {
+  const { activeProduction } = data;
+  const pathname = usePathname() ?? "";
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const isFiltering = normalizedQuery.length > 0;
+  const searchInputId = useId();
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const isCollapsed = !isMobile && state === "collapsed";
+
+  const permittedGroups = useMembersNavGroups(data);
+
+  const [closedGroups, setClosedGroups] = useState<ReadonlySet<string>>(() => {
+    const closed = new Set(initialClosedGroups ?? MEMBERS_NAV_DEFAULT_CLOSED_GROUPS);
+    // Die Gruppe der aktuellen Seite startet immer offen.
+    for (const group of permittedGroups) {
+      if (groupContainsPath(group, pathname)) closed.delete(group.id);
+    }
+    return closed;
+  });
+
+  const toggleGroup = useCallback((groupId: string) => {
+    setClosedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      document.cookie = `${MEMBERS_NAV_CLOSED_GROUPS_COOKIE}=${encodeURIComponent(
+        [...next].join(","),
+      )}; path=/; max-age=31536000; samesite=lax`;
+      return next;
+    });
+  }, []);
+
+  const { groups: visibleGroups, flat } = useMemo(
+    () => filterMembersNavigationByQuery(permittedGroups, normalizedQuery),
+    [permittedGroups, normalizedQuery],
+  );
 
   const emptyStateMessage = isFiltering
     ? "Keine Bereiche gefunden. Passe die Suche an."
@@ -365,6 +392,19 @@ export function MembersNav({
 
   return (
     <>
+      {isMobile ? (
+        <div className="flex items-center justify-between gap-2 border-b border-sidebar-border/60 px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <span className="text-base font-semibold text-sidebar-foreground">Menü</span>
+          <button
+            type="button"
+            onClick={() => setOpenMobile(false)}
+            className="-mr-2 inline-flex size-10 items-center justify-center rounded-md text-sidebar-foreground/80 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+            aria-label="Menü schließen"
+          >
+            <CloseIcon className="size-5" />
+          </button>
+        </div>
+      ) : null}
       {!isCollapsed && (
         <>
           <SidebarHeader className="gap-[var(--space-xs)]">
@@ -415,31 +455,45 @@ export function MembersNav({
             </Text>
           </div>
         ) : (
-          visibleGroups.map((group, index) => (
-            <SidebarGroup key={group.id} className={cn(isCollapsed && "py-1")}>
-              {isCollapsed && index > 0 ? <SidebarSeparator className="mx-0 mb-2" /> : null}
-              <details open>
-                <summary className="list-none">
-                  <SidebarGroupLabel className="cursor-pointer group-data-[collapsible=icon]:hidden">
+          visibleGroups.map((group, index) => {
+            // Eingeklappte Leiste und Suche zeigen immer alle Einträge.
+            const isOpen = isCollapsed || isFiltering || !closedGroups.has(group.id);
+            const contentId = `${searchInputId}-group-${group.id}`;
+            return (
+              <SidebarGroup key={group.id} className={cn(isCollapsed && "py-1")}>
+                {isCollapsed && index > 0 ? <SidebarSeparator className="mx-0 mb-2" /> : null}
+                <SidebarGroupLabel asChild className="group-data-[collapsible=icon]:hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={contentId}
+                    className="w-full cursor-pointer justify-between hover:text-sidebar-foreground"
+                  >
                     {group.label}
-                  </SidebarGroupLabel>
-                </summary>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => renderItem(pathname, isCollapsed, item))}
-                    {group.subgroups?.map((subgroup) => (
-                      <details key={subgroup.id} open className="space-y-1">
-                        <summary className="cursor-pointer list-none rounded-md px-2 py-1 text-xs font-medium text-sidebar-foreground/75 group-data-[collapsible=icon]:hidden">
-                          {subgroup.label}
-                        </summary>
-                        {subgroup.items.map((item) => renderItem(pathname, isCollapsed, item))}
-                      </details>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </details>
-            </SidebarGroup>
-          ))
+                    <ChevronDownIcon
+                      className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")}
+                    />
+                  </button>
+                </SidebarGroupLabel>
+                {isOpen ? (
+                  <SidebarGroupContent id={contentId}>
+                    <SidebarMenu>
+                      {group.items.map((item) => renderItem(pathname, isCollapsed, item))}
+                      {group.subgroups?.map((subgroup) => (
+                        <details key={subgroup.id} open className="space-y-1">
+                          <summary className="cursor-pointer list-none rounded-md px-2 py-1 text-xs font-medium text-sidebar-foreground/75 group-data-[collapsible=icon]:hidden">
+                            {subgroup.label}
+                          </summary>
+                          {subgroup.items.map((item) => renderItem(pathname, isCollapsed, item))}
+                        </details>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                ) : null}
+              </SidebarGroup>
+            );
+          })
         )}
       </SidebarContent>
     </>

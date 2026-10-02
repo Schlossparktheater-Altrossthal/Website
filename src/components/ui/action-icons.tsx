@@ -138,6 +138,7 @@ import {
   Wifi,
   WifiOff,
   Wrench,
+  Menu,
   X,
   XCircle,
   Zap,
@@ -1032,6 +1033,10 @@ export function WrenchIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <Wrench className={className} aria-hidden {...props} />;
+}
+
+export function MenuIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
+  return <Menu className={className} aria-hidden {...props} />;
 }
 
 export function XIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {
