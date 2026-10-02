@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createLogger } from "@/lib/logger";
 import { dispatchEventReminders } from "@/lib/notifications/event-reminders";
+import { dispatchInspectionReminders } from "@/lib/notifications/inspection-reminders";
 import { dispatchMilestoneReminders } from "@/lib/notifications/milestone-reminders";
 
 const logger = createLogger("cron:termine-reminders");
@@ -32,6 +33,13 @@ async function handle(request: Request) {
     const deadlines = await dispatchMilestoneReminders();
     if (deadlines.sent > 0 || deadlines.failed > 0) {
       logger.info("Frist-Erinnerungen versendet", deadlines);
+    }
+    // Elektroprüfungen im Lager: höchstens eine Sammelerinnerung pro Monat.
+    try {
+      const inspections = await dispatchInspectionReminders();
+      if (inspections.sent > 0) logger.info("Prüf-Erinnerung versendet", inspections);
+    } catch (error) {
+      console.error("[cron:termine-reminders] Prüf-Erinnerung fehlgeschlagen", error);
     }
     // Nur melden, wenn wirklich etwas passiert ist – der Lauf wiederholt sich alle paar Minuten.
     if (summary.sent > 0 || summary.failed > 0) {
