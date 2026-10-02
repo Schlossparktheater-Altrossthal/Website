@@ -10,6 +10,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
 import { PlanView } from "./_plan/plan-view";
+import type { PlanTemplateSummary } from "./_plan/templates-panel";
+import { SUGGESTED_TEMPLATE } from "@/lib/planning/templates";
 import { MANAGE_PARAM, ProductionManageSheet } from "./production-manage-sheet";
 
 /** Produktionsseite, Tab „Plan“ (docs/Plan/projektplanung-plan.md). */
@@ -50,12 +52,34 @@ export default async function ProduktionenPage() {
     );
   }
 
-  const plan = await loadProductionPlan(production.id, session.user);
+  const [plan, storedTemplates] = await Promise.all([
+    loadProductionPlan(production.id, session.user),
+    prisma.planTemplate.findMany({
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, name: true, items: true },
+    }),
+  ]);
+  const templates: PlanTemplateSummary[] = [
+    ...storedTemplates.map((template) => ({
+      id: template.id,
+      name: template.name,
+      count: Array.isArray(template.items) ? template.items.length : 0,
+      builtIn: false,
+    })),
+    {
+      id: SUGGESTED_TEMPLATE.id,
+      name: SUGGESTED_TEMPLATE.name,
+      count: SUGGESTED_TEMPLATE.items.length,
+      builtIn: true,
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <ProductionHeader production={production} active="plan" canManage={canManage} />
-      {plan ? <PlanView plan={plan} /> : null}
+      {plan ? (
+        <PlanView plan={plan} templates={templates} templateName={`Ablauf ${production.year}`} />
+      ) : null}
       {manageSheet}
     </div>
   );

@@ -50,6 +50,7 @@ type FormState = {
   direction: "before" | "after";
   fixedDate: string;
   predecessors: { fromId: string; lagDays: number }[];
+  mirrorToCalendar: boolean;
 };
 
 function initialState(milestone: PlanMilestone | null): FormState {
@@ -64,6 +65,7 @@ function initialState(milestone: PlanMilestone | null): FormState {
     direction: (milestone?.offsetDays ?? -1) > 0 ? "after" : "before",
     fixedDate: toDateInput(milestone?.fixedDate ?? milestone?.dueAt ?? null),
     predecessors: milestone?.predecessors ?? [],
+    mirrorToCalendar: milestone?.mirrored ?? false,
   };
 }
 
@@ -135,6 +137,7 @@ export function MilestoneForm({
       offsetDays,
       fixedDate: state.anchorType === "fixed" ? state.fixedDate || null : null,
       predecessors: state.predecessors.filter((dep) => dep.fromId !== NONE),
+      mirrorToCalendar: state.kind === "review" && state.mirrorToCalendar,
     });
   };
 
@@ -191,6 +194,18 @@ export function MilestoneForm({
           </Select>
         </div>
       </div>
+
+      {state.kind === "review" ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-primary"
+            checked={state.mirrorToCalendar}
+            onChange={(event) => update("mirrorToCalendar", event.target.checked)}
+          />
+          Als Termin in den Kalender (Sperrliste, Zusagen, Abo)
+        </label>
+      ) : null}
 
       <fieldset className="space-y-3 rounded-lg border border-border p-3">
         <legend className="px-1 text-sm font-medium">Bezug</legend>

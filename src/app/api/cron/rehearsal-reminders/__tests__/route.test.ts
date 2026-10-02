@@ -8,6 +8,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/notifications/event-reminders", () => ({
   dispatchEventReminders: mocks.dispatch,
 }));
+vi.mock("@/lib/notifications/milestone-reminders", () => ({
+  dispatchMilestoneReminders: vi.fn().mockResolvedValue({ sent: 0, skipped: 0, failed: 0 }),
+}));
 vi.mock("@/lib/logger", () => ({ createLogger: () => mocks.logger }));
 
 import { GET, POST } from "../route";

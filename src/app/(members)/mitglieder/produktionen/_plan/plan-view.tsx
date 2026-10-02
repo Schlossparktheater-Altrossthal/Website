@@ -3,6 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
+import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -31,6 +32,7 @@ import { DAY_FORMAT } from "./format";
 import { MilestoneDetail } from "./milestone-detail";
 import { MilestoneForm } from "./milestone-form";
 import { PlanCalendar } from "./plan-calendar";
+import { TemplatesPanel, type PlanTemplateSummary } from "./templates-panel";
 import { PlanTimeline, type TimelineMove } from "./timeline";
 
 type View = "timeline" | "agenda" | "calendar";
@@ -48,6 +50,7 @@ function toInput(milestone: PlanMilestone, showId: string): MilestoneInput {
     offsetDays: milestone.offsetDays,
     fixedDate: milestone.fixedDate ? milestone.fixedDate.slice(0, 10) : null,
     predecessors: milestone.predecessors,
+    mirrorToCalendar: milestone.mirrored,
   };
 }
 
@@ -67,12 +70,15 @@ function scheduleInput(milestones: PlanMilestone[]) {
  */
 export function PlanView({
   plan,
-  emptyActions,
+  templates,
+  templateName,
 }: {
   plan: ProductionPlan;
-  /** Zusätzliche Aktionen im Leerzustand, z. B. „Vorlage übernehmen“. */
-  emptyActions?: React.ReactNode;
+  templates: PlanTemplateSummary[];
+  /** Vorschlag für „Als Vorlage speichern“. */
+  templateName: string;
 }) {
+  const [templateMode, setTemplateMode] = React.useState<"apply" | "save" | null>(null);
   const isTablet = useMediaQuery("(min-width: 768px)");
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [chosenView, setChosenView] = React.useState<View | null>(null);
@@ -185,8 +191,10 @@ export function PlanView({
           <p className="text-sm text-muted-foreground">Noch kein Plan.</p>
           {plan.canManage ? (
             <div className="flex flex-wrap justify-center gap-2">
-              {emptyActions}
-              <Button onClick={() => setEditing("new")}>Ersten Meilenstein anlegen</Button>
+              <Button onClick={() => setTemplateMode("apply")}>Vorlage übernehmen</Button>
+              <Button variant="outline" onClick={() => setEditing("new")}>
+                Ersten Meilenstein anlegen
+              </Button>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">Die Leitung legt den Plan an.</p>
@@ -199,8 +207,22 @@ export function PlanView({
           ) : null}
         </div>
         {renderForm()}
+        {renderTemplates()}
       </div>
     );
+  }
+
+  function renderTemplates() {
+    return templateMode ? (
+      <TemplatesPanel
+        mode={templateMode}
+        open
+        onOpenChange={(value) => !value && setTemplateMode(null)}
+        showId={plan.showId}
+        defaultName={templateName}
+        templates={templates}
+      />
+    ) : null;
   }
 
   function renderForm() {
@@ -276,9 +298,13 @@ export function PlanView({
           aria-label="Ansicht"
         />
         {plan.canManage ? (
-          <Button className="ml-auto" onClick={() => setEditing("new")}>
-            + Meilenstein
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button onClick={() => setEditing("new")}>+ Meilenstein</Button>
+            <ActionDropdownMenu
+              label="Weitere Aktionen"
+              items={[{ label: "Als Vorlage speichern", onSelect: () => setTemplateMode("save") }]}
+            />
+          </div>
         ) : null}
       </div>
 
@@ -334,6 +360,7 @@ export function PlanView({
       ) : null}
 
       {renderForm()}
+      {renderTemplates()}
 
       <ResponsivePanel
         open={Boolean(move)}

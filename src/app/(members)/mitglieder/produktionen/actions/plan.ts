@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
@@ -36,6 +37,8 @@ const milestoneSchema = z
     anchorMilestoneId: z.string().min(1).optional().nullable(),
     offsetDays: z.number().int().min(-1000).max(1000),
     fixedDate: dateOnly.optional().nullable(),
+    /** Abnahmen (z. B. Bauprobe) als Termin in Kalender, Sperrliste und Abo spiegeln. */
+    mirrorToCalendar: z.boolean().default(false),
     predecessors: z
       .array(z.object({ fromId: z.string().min(1), lagDays: z.number().int().min(0).max(365) }))
       .max(20)
@@ -52,6 +55,57 @@ const milestoneSchema = z
 
 export type MilestoneInput = z.input<typeof milestoneSchema>;
 
+/** Legt den gespiegelten Termin an, aktualisiert oder entfernt ihn. */
+async function syncMilestoneEvent(
+  tx: Prisma.TransactionClient,
+  milestoneId: string,
+  mirror: boolean,
+  userId: string | null,
+) {
+  const milestone = await tx.showMilestone.findUnique({
+    where: { id: milestoneId },
+    select: {
+      title: true,
+      description: true,
+      dueAt: true,
+      showId: true,
+      departmentId: true,
+      calendarEventId: true,
+    },
+  });
+  if (!milestone) return;
+  if (!mirror || !milestone.dueAt) {
+    if (milestone.calendarEventId) {
+      await tx.showMilestone.update({
+        where: { id: milestoneId },
+        data: { calendarEventId: null },
+      });
+      await tx.calendarEvent.delete({ where: { id: milestone.calendarEventId } });
+    }
+    return;
+  }
+  const fields = {
+    title: milestone.title,
+    description: milestone.description,
+    start: milestone.dueAt,
+    allDay: true,
+    showId: milestone.showId,
+    departmentId: milestone.departmentId,
+  };
+  if (milestone.calendarEventId) {
+    await tx.calendarEvent.update({ where: { id: milestone.calendarEventId }, data: fields });
+  } else {
+    const event = await tx.calendarEvent.create({
+      data: { ...fields, kind: "OTHER", createdById: userId },
+      select: { id: true },
+    });
+    await tx.showMilestone.update({
+      where: { id: milestoneId },
+      data: { calendarEventId: event.id },
+    });
+  }
+}
+
 async function requirePlanManager() {
   const session = await requireAuth();
   if (!(await canManagePlan(session.user))) {
@@ -62,7 +116,7 @@ async function requirePlanManager() {
 
 export async function saveMilestoneAction(input: MilestoneInput): Promise<ProductionActionResult> {
   try {
-    await requirePlanManager();
+    const session = await requirePlanManager();
     const data = milestoneSchema.parse(input);
     const id = data.id ?? "__new__";
 
@@ -143,6 +197,12 @@ export async function saveMilestoneAction(input: MilestoneInput): Promise<Produc
         });
       }
       await recalculateShowPlan(data.showId, tx);
+      await syncMilestoneEvent(
+        tx,
+        saved.id,
+        data.mirrorToCalendar && data.kind === "review",
+        session.user?.id ?? null,
+      );
     });
 
     revalidatePath(PLAN_PATH);
@@ -161,11 +221,14 @@ export async function deleteMilestoneAction(id: string): Promise<ProductionActio
     await requirePlanManager();
     const milestone = await prisma.showMilestone.findUnique({
       where: { id },
-      select: { showId: true },
+      select: { showId: true, calendarEventId: true },
     });
     if (!milestone) throw new Error("Meilenstein nicht gefunden.");
     await prisma.$transaction(async (tx) => {
       await tx.showMilestone.delete({ where: { id } });
+      if (milestone.calendarEventId) {
+        await tx.calendarEvent.delete({ where: { id: milestone.calendarEventId } });
+      }
       await recalculateShowPlan(milestone.showId, tx);
     });
     revalidatePath(PLAN_PATH);

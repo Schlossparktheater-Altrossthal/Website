@@ -58,6 +58,8 @@ export type PlanMilestone = {
   tasksTotal: number;
   tasksDone: number;
   canComplete: boolean;
+  /** Als Termin im Kalender gespiegelt. */
+  mirrored: boolean;
 };
 
 export type PlanRehearsal = { id: string; title: string; start: string; kind: string };
@@ -156,6 +158,13 @@ export async function recalculateShowPlan(
     const next = dueDates.get(row.id) ?? null;
     if ((row.dueAt?.getTime() ?? null) === (next?.getTime() ?? null)) continue;
     await client.showMilestone.update({ where: { id: row.id }, data: { dueAt: next } });
+    // Gespiegelter Termin wandert mit; ohne Datum bleibt er auf dem letzten Stand.
+    if (row.calendarEventId && next) {
+      await client.calendarEvent.update({
+        where: { id: row.calendarEventId },
+        data: { start: next },
+      });
+    }
   }
 }
 
@@ -252,6 +261,7 @@ export async function loadProductionPlan(
       tasksTotal: row._count.tasks,
       tasksDone: doneByMilestone.get(row.id) ?? 0,
       canComplete: canManage || Boolean(row.departmentId && leadIds.has(row.departmentId)),
+      mirrored: Boolean(row.calendarEventId),
     };
   });
 
