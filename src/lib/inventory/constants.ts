@@ -218,3 +218,36 @@ export function readAttributes(value: unknown): Record<string, string> {
   }
   return result;
 }
+
+const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+const DATE_TIME_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+export function formatInventoryDate(value: Date | string | null | undefined): string {
+  if (!value) return "–";
+  return DATE_FORMAT.format(new Date(value));
+}
+
+export function formatInventoryDateTime(value: Date | string | null | undefined): string {
+  if (!value) return "–";
+  return DATE_TIME_FORMAT.format(new Date(value));
+}
+
+/** `YYYY-MM-DD` für `<input type="date">`. */
+export function toDateInputValue(value: Date | string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(date);
+}

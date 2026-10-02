@@ -10,8 +10,11 @@ import {
   hasPermission,
   INVENTORY_PERMISSION_KEYS,
 } from "@/lib/permissions";
+import type { PlacementTarget } from "@/lib/inventory/service-types";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
+
+export type { PlacementTarget };
 
 type Db = PrismaClient | Prisma.TransactionClient;
 type UserLike = Parameters<typeof hasPermission>[0];
@@ -196,9 +199,6 @@ export function locationSubtreeIds(locations: readonly LocationNode[], rootId: s
   }
   return result;
 }
-
-export type PlacementTarget =
-  { type: "location"; id: string } | { type: "container"; id: string } | { type: "none" };
 
 /** Prüft, dass eine Kiste nicht in sich selbst oder in ihren eigenen Inhalt gelegt wird. */
 async function assertNoContainerCycle(db: Db, assetId: string, containerId: string) {
