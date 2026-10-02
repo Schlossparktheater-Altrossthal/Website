@@ -281,8 +281,12 @@ function MembersTopbarContent({
       style={MEMBERS_TOPBAR_STICKY_STYLE}
     >
       <div className={cn("flex h-16 shrink-0 items-center gap-2", containerClassName)}>
-        <SidebarTrigger className="-ml-1" aria-label="Navigationsmenü umschalten" />
-        <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+        {/* Unter lg öffnet „Menü“ in der Leiste unten die Navigation. */}
+        <SidebarTrigger className="-ml-1 max-lg:hidden" aria-label="Navigationsmenü umschalten" />
+        <Separator
+          orientation="vertical"
+          className="mr-2 data-[orientation=vertical]:h-4 max-lg:hidden"
+        />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           {hasBreadcrumbs ? (
             <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground max-sm:has-[[data-mobile-hidden]]:hidden">
