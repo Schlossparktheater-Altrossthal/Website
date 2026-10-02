@@ -28,7 +28,7 @@ import { SceneOverview } from "./scene-overview";
 export default async function EventPlanningPage({
   searchParams,
 }: {
-  searchParams: Promise<{ art?: string }>;
+  searchParams: Promise<{ art?: string; ansicht?: string; tag?: string }>;
 }) {
   const session = await requireAuth();
   const production = await getActiveProduction(session.user?.id);
@@ -43,7 +43,7 @@ export default async function EventPlanningPage({
       </div>
     );
   }
-  const { art } = await searchParams;
+  const { art, ansicht, tag } = await searchParams;
 
   // Ab Vormonat, damit gerade vergangene Termine noch nachbearbeitet werden können.
   const from = addMonths(startOfMonth(new Date()), -1);
@@ -178,6 +178,8 @@ export default async function EventPlanningPage({
         preferredWeekdays={settings.preferredWeekdays}
         exceptionWeekdays={settings.exceptionWeekdays}
         initialFilter={art === "proben" ? "rehearsals" : art === "termine" ? "events" : "all"}
+        initialView={ansicht === "liste" ? "list" : "calendar"}
+        initialDay={tag && /^\d{4}-\d{2}-\d{2}$/.test(tag) ? tag : null}
         sceneOverview={showId ? <SceneOverview showId={showId} /> : null}
       />
     </div>

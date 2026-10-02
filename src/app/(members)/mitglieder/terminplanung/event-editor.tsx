@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CalendarEventKind } from "@prisma/client";
 import { toast } from "sonner";
@@ -53,6 +52,7 @@ import {
   publishRehearsalAction,
   updateRehearsalDraftAction,
 } from "./actions/drafts";
+import { planningReturnHref } from "./return-href";
 import { deleteRehearsalAction, updateRehearsalAction } from "./actions/rehearsals";
 
 type EventEditorProps = {
@@ -444,7 +444,7 @@ export function EventEditor({
         .then((result) => {
           if (result?.success) {
             toast.success(mode === "discard" ? "Entwurf verworfen." : `${noun} gelöscht.`);
-            router.push("/mitglieder/terminplanung");
+            router.push(planningReturnHref());
           } else {
             toast.error(result?.error ?? "Das hat nicht geklappt.");
           }
@@ -841,8 +841,13 @@ export function EventEditor({
               {isPublishing ? "Speichert …" : "Verbindlich ansetzen"}
             </Button>
           ) : (
-            <Button asChild variant="outline" className="flex-1 sm:flex-none">
-              <Link href="/mitglieder/terminplanung">Fertig</Link>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 sm:flex-none"
+              onClick={() => router.push(planningReturnHref())}
+            >
+              Fertig
             </Button>
           )}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { CalendarEventKind } from "@prisma/client";
 
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DateBadge } from "@/components/ui/date-badge";
 import { MonthGrid } from "@/components/ui/month-grid";
+import { PLANNING_PATH, rememberPlanningHref } from "./return-href";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SectionHeader } from "@/components/ui/section-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -122,6 +123,9 @@ type EventPlanningProps = {
   preferredWeekdays: number[];
   exceptionWeekdays: number[];
   initialFilter: Filter;
+  initialView: View;
+  /** Gewählter Tag (YYYY-MM-DD) aus der URL, sonst heute. */
+  initialDay: string | null;
   /** Szenen-Stand der Produktion (Server-Komponente). */
   sceneOverview: React.ReactNode;
 };
@@ -136,17 +140,32 @@ export function EventPlanningClient({
   preferredWeekdays,
   exceptionWeekdays,
   initialFilter,
+  initialView,
+  initialDay,
   sceneOverview,
 }: EventPlanningProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const todayKey = toDayKey(new Date());
-  const [view, setView] = useState<View>("calendar");
+  const [view, setView] = useState<View>(initialView);
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [month, setMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    const [year, monthIndex] = (initialDay ?? todayKey).split("-").map(Number);
+    return new Date(year, monthIndex - 1, 1);
   });
-  const [selectedKey, setSelectedKey] = useState(todayKey);
+  const [selectedKey, setSelectedKey] = useState(initialDay ?? todayKey);
+
+  // Ansicht, Filter und Tag in der Adresse halten, damit Zurück und „Fertig“ im Editor
+  // wieder genau hier landen (statt immer im Kalender von heute).
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (view === "list") params.set("ansicht", "liste");
+    if (filter !== "all") params.set("art", filter === "rehearsals" ? "proben" : "termine");
+    if (selectedKey !== todayKey) params.set("tag", selectedKey);
+    const search = params.toString();
+    const href = search ? `${PLANNING_PATH}?${search}` : PLANNING_PATH;
+    window.history.replaceState(window.history.state, "", href);
+    rememberPlanningHref(href);
+  }, [view, filter, selectedKey, todayKey]);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const visibleEvents = useMemo(
