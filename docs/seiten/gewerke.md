@@ -7,11 +7,14 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 ## Routen
 
 - `/mitglieder/meine-gewerke` – „Meine Teams“: Karten der eigenen Gewerke der aktiven Produktion (Regie/Board sehen zusätzlich alle weiteren)
+- `/mitglieder/blaupausen` – Blaupausen-Verwaltung (Liste links, Editor rechts; mobil Liste → Sheet): Allgemein, Bausteine, Rechte je Rolle, Onboarding
 - `/mitglieder/meine-gewerke/[slug]` – Gewerk-Portal mit `?ansicht=` Übersicht (Als Nächstes) / aufgaben / termine / team; sichtbar für aktive Mitglieder des Gewerks und Regie/Board
 
 ## Permissions
 
 - `PRIVATE.DEPARTMENT.OWN.VIEW` – eigene Abteilungen
+- `PRIVATE.DEPARTMENT.TEMPLATE.MANAGE` – Blaupausen verwalten (Migration gibt es allen Rollen mit `PRIVATE.PRODUCTION.SHOW.MANAGE`)
+- Gewerk-Rechte werden vererbt (`src/lib/departments/permission-inheritance.ts`): Recht der Blaupause für die eigene Rolle im Gewerk (`TemplatePermission`) + `grant` − `revoke` des Gewerks (`DepartmentPermission.mode`)
 
 ## Wichtige Komponenten
 
@@ -57,7 +60,8 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 
 ## Gewerke verwalten, Beitritt und Dateien (Phase 6)
 
-- Regie/Board: „Gewerk anlegen“-Kachel in „Meine Teams“, „Bearbeiten“ im Portal-Kopf (Name, Beschreibung, Farbe, Beitritt mit Prüfung, Archivieren). Actions `produktionen/actions/department-settings.ts`. Die alten Seiten `produktionen/gewerke/*` und `meine-gewerke/todos` sind entfernt.
+- Regie/Board: „Gewerk anlegen“-Kachel in „Meine Teams“ und „Teams & Zuweisung“ öffnet `create-department-panel.tsx`: „Aus Blaupause“ (Liste, schon vorhandene ausgeblendet, Archiviertes wird wiederhergestellt) oder „Neue Blaupause“ (Name, Farbe, Bausteine – Blaupause und Gewerk entstehen zusammen). Jedes Gewerk hat eine Blaupause (`Department.templateId` Pflicht, Phase 9).
+- „Bearbeiten“ im Portal-Kopf (Name, Beschreibung, Farbe, Beitritt mit Prüfung, Archivieren). Actions `produktionen/actions/department-settings.ts`. Die alten Seiten `produktionen/gewerke/*` und `meine-gewerke/todos` sind entfernt.
 - Mitglieder: „Weitere Gewerke – mitmachen?“ in „Meine Teams“: Beitreten (ohne Prüfung) oder Anfrage (Leitung/Vertretung werden benachrichtigt), Anfrage zurückziehen (`meine-gewerke/actions.ts`).
 - Dateien im Team-Tab: `DepartmentDocument` (statt FileLibrary, die keine Gewerk-Rechte kennt). Upload per `POST /api/departments/[id]/documents` (je bis 15 MB, Mitglieder ohne Gäste), Download über `GET …/documents/[documentId]`, Löschen durch Hochladende oder Leitung/Vertretung/Regie.
 

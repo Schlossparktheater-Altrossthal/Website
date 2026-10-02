@@ -78,7 +78,7 @@ export async function listCrewWishOptions(
   let templates = allTemplates;
   if (showId) {
     const departments = await db.department.findMany({
-      where: { showId, archivedAt: null, templateId: { not: null } },
+      where: { showId, archivedAt: null },
       select: { templateId: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });

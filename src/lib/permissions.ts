@@ -127,6 +127,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "department",
   },
   {
+    key: "PRIVATE.DEPARTMENT.TEMPLATE.MANAGE",
+    label: "Gewerks-Blaupausen verwalten",
+    description:
+      "Blaupausen anlegen und bearbeiten: Name, Bausteine, Standardrechte je Rolle und Onboarding-Wünsche. Änderungen wirken auf alle Gewerke dieser Blaupause.",
+    category: "department",
+  },
+  {
     key: PROFILE_DATA_PERMISSION_KEYS.measurements,
     label: "Körpermaße verwalten",
     description:

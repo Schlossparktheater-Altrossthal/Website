@@ -592,7 +592,7 @@ model TemplatePermission {
 model Department {
   id                   String                  @id @default(cuid())
   showId               String
-  templateId           String?
+  templateId           String
   slug                 String
   name                 String
   description          String?
@@ -604,7 +604,7 @@ model Department {
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   show                 Show                    @relation(fields: [showId], references: [id], onDelete: Cascade)
-  template             DepartmentTemplate?     @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  template             DepartmentTemplate      @relation(fields: [templateId], references: [id], onDelete: Restrict)
   memberships          DepartmentMembership[]
   breakdownItems       SceneBreakdownItem[]
   tasks                DepartmentTask[]

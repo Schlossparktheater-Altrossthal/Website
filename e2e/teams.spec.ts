@@ -36,15 +36,19 @@ test.describe("als admin", () => {
   test.use({ storageState: authFile("admin") });
   test.describe.configure({ mode: "serial" });
 
-  test("Gewerk anlegen, Aufgabe, Termin und Datei, dann archivieren", async ({ page }) => {
+  test("Gewerk mit neuer Blaupause anlegen, Aufgabe, Termin und Datei, dann archivieren", async ({
+    page,
+  }) => {
     const errors = await collectErrors(page);
     const name = `E2E Gewerk ${stamp}`;
 
     await page.goto("/mitglieder/meine-gewerke");
     await requireProduction(page);
-    await page.getByRole("button", { name: "Gewerk anlegen" }).click();
+    // Gewerke entstehen nur aus Blaupausen; fehlt eine, wird sie miterstellt (gewerke-plan.md E7).
+    await page.getByRole("button", { name: "Gewerk anlegen" }).first().click();
+    await page.getByRole("radio", { name: "Neue Blaupause" }).click();
     await page.getByPlaceholder("z. B. Pyrotechnik").fill(name);
-    await page.getByRole("button", { name: "Anlegen", exact: true }).click();
+    await page.getByRole("button", { name: "Blaupause + Gewerk anlegen" }).click();
     await expect(page.getByRole("heading", { name, level: 2 })).toBeVisible();
 
     // Aufgabe im Board
@@ -76,6 +80,17 @@ test.describe("als admin", () => {
     await page.getByRole("button", { name: "Archivieren" }).last().click();
     await expect(page).toHaveURL(/\/mitglieder\/meine-gewerke$/);
     await expect(page.getByText(name)).toHaveCount(0);
+
+    // Aufräumen: Test-Blaupause archivieren (Blaupausen-Verwaltung)
+    // Über die Navigation statt page.goto: ein harter Seitenwechsel bricht laufende Anfragen ab.
+    await page.getByRole("link", { name: "Blaupausen" }).click();
+    await expect(page).toHaveURL(/\/mitglieder\/blaupausen$/);
+    await page
+      .getByRole("button", { name: new RegExp(name) })
+      .first()
+      .click();
+    await page.getByRole("button", { name: "Archivieren" }).click();
+    await expect(page.getByText("Archiviert").first()).toBeVisible();
 
     expect(errors).toEqual([]);
   });

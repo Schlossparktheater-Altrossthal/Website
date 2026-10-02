@@ -11,6 +11,7 @@ import {
   CircleIcon,
   ClipboardListIcon,
   ClapperboardIcon,
+  FileStackIcon,
   LayersIcon,
   LayoutGridIcon,
   ListChecksIcon,
@@ -140,6 +141,12 @@ export const membersNavigation = [
         label: "Meine Teams",
         permissionKey: "PRIVATE.DEPARTMENT.OWN.VIEW",
         icon: UsersRoundIcon,
+      },
+      {
+        href: "/mitglieder/blaupausen",
+        label: "Blaupausen",
+        permissionKey: "PRIVATE.DEPARTMENT.TEMPLATE.MANAGE",
+        icon: FileStackIcon,
       },
       {
         href: "/mitglieder/koerpermasse",

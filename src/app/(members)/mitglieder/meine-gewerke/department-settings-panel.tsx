@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { EditIcon, PlusIcon } from "@/components/ui/action-icons";
+import { EditIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -17,6 +17,7 @@ import {
   archiveDepartmentAction,
   saveDepartmentAction,
 } from "../produktionen/actions/department-settings";
+import { CreateDepartmentPanel } from "./create-department-panel";
 
 export type DepartmentSettings = {
   id: string;
@@ -29,28 +30,36 @@ export type DepartmentSettings = {
 const inputClass =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm";
 
-/** Gewerk anlegen (`department` fehlt) oder bearbeiten – nur Regie/Board. */
-export function DepartmentSettingsButton({
-  showId,
-  department,
-  variant = "button",
-  stayOnPage = false,
-}: {
+type DepartmentSettingsButtonProps = {
   showId: string;
   department?: DepartmentSettings;
   /** `tile`: „+ Gewerk“-Kachel im Raster. */
   variant?: "button" | "tile";
   /** Nach Anlegen/Archivieren nicht ins Portal wechseln, sondern die Seite neu laden (Zuweisung). */
   stayOnPage?: boolean;
-}) {
+};
+
+/** Gewerk anlegen (`department` fehlt, nur aus Blaupause) oder bearbeiten – nur Regie/Board. */
+export function DepartmentSettingsButton(props: DepartmentSettingsButtonProps) {
+  if (!props.department) {
+    return <CreateDepartmentPanel showId={props.showId} stayOnPage={props.stayOnPage} />;
+  }
+  return <EditDepartmentPanel {...props} department={props.department} />;
+}
+
+function EditDepartmentPanel({
+  showId,
+  department,
+  stayOnPage = false,
+}: DepartmentSettingsButtonProps & { department: DepartmentSettings }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const [name, setName] = React.useState(department?.name ?? "");
-  const [description, setDescription] = React.useState(department?.description ?? "");
+  const [name, setName] = React.useState(department.name);
+  const [description, setDescription] = React.useState(department.description ?? "");
   const [color, setColor] = React.useState<string | null>(
-    department?.color ?? ROLE_COLOR_OPTIONS[0],
+    department.color ?? ROLE_COLOR_OPTIONS[0],
   );
-  const [approval, setApproval] = React.useState(department?.requiresJoinApproval ?? true);
+  const [approval, setApproval] = React.useState(department.requiresJoinApproval);
   const [saving, setSaving] = React.useState(false);
   const [confirmArchive, setConfirmArchive] = React.useState(false);
 
@@ -58,7 +67,7 @@ export function DepartmentSettingsButton({
     setSaving(true);
     const result = await saveDepartmentAction({
       showId,
-      id: department?.id,
+      id: department.id,
       name,
       description,
       color,
@@ -69,40 +78,25 @@ export function DepartmentSettingsButton({
       toast.error("Das hat nicht geklappt", { description: result.error, duration: 5000 });
       return;
     }
-    toast.success(department ? "Gespeichert" : "Gewerk angelegt", { duration: 3000 });
+    toast.success("Gespeichert", { duration: 3000 });
     setOpen(false);
-    if (!department && !stayOnPage && "slug" in result && result.slug) {
-      router.push(`/mitglieder/meine-gewerke/${encodeURIComponent(result.slug)}`);
-    } else {
-      router.refresh();
-    }
+    router.refresh();
   };
 
   return (
     <>
-      {variant === "tile" ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex h-full min-h-32 w-full flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border p-3 text-sm font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-        >
-          <PlusIcon className="h-5 w-5" aria-hidden />
-          Gewerk anlegen
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex min-h-9 items-center gap-1 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted"
-        >
-          <EditIcon className="h-3.5 w-3.5" aria-hidden />
-          Bearbeiten
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex min-h-9 items-center gap-1 rounded-full border border-border bg-card px-3 text-sm font-medium hover:bg-muted"
+      >
+        <EditIcon className="h-3.5 w-3.5" aria-hidden />
+        Bearbeiten
+      </button>
       <ResponsivePanel
         open={open}
         onOpenChange={setOpen}
-        title={department ? `${department.name} bearbeiten` : "Neues Gewerk"}
+        title={`${department.name} bearbeiten`}
         description="Gewerk bearbeiten"
         footer={
           <div className="flex gap-2">
@@ -124,7 +118,7 @@ export function DepartmentSettingsButton({
               disabled={name.trim().length < 2}
               onClick={save}
             >
-              {department ? "Speichern" : "Anlegen"}
+              Speichern
             </AsyncButton>
           </div>
         }
@@ -136,7 +130,6 @@ export function DepartmentSettingsButton({
               className={inputClass}
               value={name}
               maxLength={80}
-              autoFocus={!department}
               placeholder="z. B. Pyrotechnik"
               onChange={(event) => setName(event.target.value)}
             />
