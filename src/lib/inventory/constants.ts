@@ -251,3 +251,11 @@ export function toDateInputValue(value: Date | string | null | undefined): strin
   const date = new Date(value);
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(date);
 }
+
+/** Frist überschritten? Außerhalb von Komponenten, damit das Rendern rein bleibt. */
+export function isOverdue(
+  dueAt: Date | string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  return Boolean(dueAt) && new Date(dueAt!).getTime() < now.getTime();
+}
