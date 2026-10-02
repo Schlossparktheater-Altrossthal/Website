@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { bulkCreateAssetsAction } from "@/app/(members)/mitglieder/lager/actions/assets";
+import {
+  bulkMoveAssetsAction,
+  bulkRetireAssetsAction,
+  bulkUpdateAssetsAction,
+  updateAssetFieldAction,
+} from "@/app/(members)/mitglieder/lager/actions/bulk";
 import { prisma } from "@/lib/prisma";
 
 import { resetItState, signInAsAdmin } from "./harness";
@@ -65,5 +71,73 @@ describe("Lager: Sammelerfassung", () => {
     await signInAsAdmin();
     const result = await bulkCreateAssetsAction(Array.from({ length: 201 }, () => ({})));
     expect(result).toMatchObject({ ok: false, error: expect.stringMatching(/200/) });
+  });
+
+  it("ändert in der Zelle und für mehrere Objekte, lagert um und mustert aus", async () => {
+    await signInAsAdmin();
+    const technik = await prisma.inventoryArea.findUniqueOrThrow({ where: { prefix: "T" } });
+    const kostuem = await prisma.inventoryArea.findUniqueOrThrow({ where: { prefix: "K" } });
+    const ort = await prisma.inventoryLocation.create({
+      data: { code: `L-8${String(Date.now()).slice(-5)}`, name: "IT-Regal 2" },
+    });
+    const created = await bulkCreateAssetsAction([
+      { areaId: technik.id, kind: "unique", name: "A" },
+      { areaId: technik.id, kind: "unique", name: "B" },
+      {
+        areaId: technik.id,
+        kind: "bulk",
+        name: "C",
+        quantity: 3,
+        placement: { type: "location", id: ort.id },
+      },
+      { areaId: kostuem.id, kind: "unique", name: "D" },
+    ]);
+    if (!created.ok) throw new Error(created.error);
+    const codes = created.data.results.flatMap((entry) => (entry.ok ? [entry.code] : []));
+    const assets = await prisma.inventoryAsset.findMany({
+      where: { code: { in: codes } },
+      orderBy: { code: "asc" },
+    });
+    const byName = Object.fromEntries(assets.map((asset) => [asset.name, asset]));
+    const [a, b, c, d] = ["A", "B", "C", "D"].map((name) => byName[name]!);
+
+    expect(await updateAssetFieldAction(a!.id, "name", "A neu")).toMatchObject({ ok: true });
+    expect(await updateAssetFieldAction(a!.id, "name", " ")).toMatchObject({ ok: false });
+
+    const kategorie = await prisma.inventoryCategory.create({
+      data: { areaId: technik.id, name: `IT-Licht-${Date.now()}` },
+    });
+    expect(
+      await bulkUpdateAssetsAction([a!.id, d!.id], { categoryId: kategorie.id }),
+    ).toMatchObject({ ok: false });
+    expect(
+      await bulkUpdateAssetsAction([a!.id, b!.id], { categoryId: kategorie.id, condition: "worn" }),
+    ).toMatchObject({ ok: true, message: "2 geändert." });
+
+    const moved = await bulkMoveAssetsAction([a!.id, b!.id, c!.id], {
+      type: "location",
+      id: ort.id,
+    });
+    expect(moved).toMatchObject({ ok: true, data: { done: 2 } });
+    if (moved.ok) expect(moved.data.skipped.map((entry) => entry.code)).toEqual([c!.code]);
+
+    expect(await bulkRetireAssetsAction([a!.id, b!.id, c!.id, d!.id])).toMatchObject({
+      ok: true,
+      message: "4 ausgemustert.",
+    });
+
+    const after = await prisma.inventoryAsset.findMany({
+      where: { id: { in: [a!.id, b!.id, c!.id] } },
+      include: { stocks: true },
+      orderBy: { name: "asc" },
+    });
+    expect(after.map((asset) => [asset.name, asset.status, asset.locationId])).toEqual([
+      ["A neu", "retired", null],
+      ["B", "retired", null],
+      ["C", "retired", null],
+    ]);
+    expect(after[1]!.condition).toBe("worn");
+    expect(after[1]!.categoryId).toBe(kategorie.id);
+    expect(after[2]!.stocks).toHaveLength(0);
   });
 });
