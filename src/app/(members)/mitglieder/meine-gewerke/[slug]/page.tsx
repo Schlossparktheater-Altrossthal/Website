@@ -26,11 +26,14 @@ type View = "uebersicht" | "aufgaben" | "termine" | "team";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ ansicht?: string }>;
+  searchParams: Promise<{ ansicht?: string; karte?: string; neu?: string; meilenstein?: string }>;
 };
 
 export default async function GewerkPortalPage({ params, searchParams }: PageProps) {
-  const [{ slug }, { ansicht }] = await Promise.all([params, searchParams]);
+  const [{ slug }, { ansicht, karte, neu, meilenstein }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const { userId, isManager, production } = await resolveTeamsViewer();
   if (!userId || !production) notFound();
 
@@ -52,7 +55,11 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
       title: task.title,
       at: task.dueAt,
       overdue: task.overdue,
-      when: task.overdue ? "überfällig" : task.dueAt ? formatDue(task.dueAt) : "ohne Frist",
+      when: task.overdue
+        ? "überfällig"
+        : task.dueAt
+          ? `${formatDue(task.dueAt)}${task.inherited ? " · Meilenstein" : ""}`
+          : "ohne Frist",
       detail: task.status === "doing" ? "In Arbeit" : null,
     })),
     // Abgesagte Termine blenden wir aus, offene Antworten fallen auf.
@@ -249,6 +256,8 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           viewerId={userId}
           canEdit={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
           canManage={isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"}
+          initialTaskId={karte ?? null}
+          newForMilestoneId={neu === "1" ? (meilenstein ?? null) : null}
         />
       ) : null}
 

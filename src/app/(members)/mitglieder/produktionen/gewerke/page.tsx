@@ -45,7 +45,8 @@ export default async function ProduktionGewerkePage() {
       name: true,
       color: true,
       _count: { select: { memberships: { where: { status: "active" } } } },
-      tasks: { select: { status: true } },
+      // Fortschritt zählt nur Karten, die an einem Meilenstein des Plans hängen.
+      tasks: { where: { milestoneId: { not: null } }, select: { status: true } },
       milestones: {
         where: { doneAt: null, dueAt: { not: null } },
         orderBy: { dueAt: "asc" },
@@ -84,7 +85,7 @@ export default async function ProduktionGewerkePage() {
                 title={department.name}
                 description={[
                   `${members} ${members === 1 ? "Person" : "Personen"}`,
-                  total ? `${done}/${total} Karten` : "keine Karten",
+                  total ? `${done}/${total} Karten im Plan` : "keine Karten im Plan",
                   next ? `nächste Frist: ${next.title}` : null,
                 ]
                   .filter(Boolean)

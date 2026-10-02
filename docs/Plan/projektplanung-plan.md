@@ -145,6 +145,7 @@ Orga     ● GEMA ────────────────────�
 3. **Plan mobil zuerst**: Kennzahl-Kacheln, Agenda, Meilenstein-Sheet (anlegen/bearbeiten/erledigt), Leerzustand.
 4. **Zeitleiste Desktop/Tablet**: eigene SVG-Zeitleiste (keine Gantt-Bibliothek), Pfeile, kritische Kette, Panel rechts, Zoom; danach Ziehen mit Vorschau.
 5. **Board-Verknüpfung**: `DepartmentTask.milestoneId`, Fortschritt am Meilenstein, geerbte Frist, Chip; Dashboard-Karte „Nächste Fristen“; Teams-Kacheln mit Fortschritt.
+   5b. **Plan ↔ Kanban in beide Richtungen** (Nachtrag 2026-10-02): verknüpfte Karten im Meilenstein-Panel mit Sprung ins Board (`?ansicht=aufgaben&karte=`) und „+ Karte“ (`&neu=1&meilenstein=`); im Karten-Sheet alle Meilensteine der Produktion (eigenes Gewerk zuerst); geerbte Fristen zählen in „Als Nächstes“ und „überfällig“; Ampel Gelb bei < 7 Tagen Puffer und weniger als der Hälfte erledigter Karten oder bei einer Karte mit Datum nach der Frist; Rückfrage beim Abhaken mit offenen Karten; Board-Filter nach Meilenstein; Tab „Gewerke“ zählt nur Karten im Plan. Karten-Erinnerungen gibt es im Bestand nicht – entfällt.
 6. **Vorlage + Benachrichtigungen**: `PlanTemplate` speichern/übernehmen, Saisonwechsel; Fristerinnerungen, Verzugswarnung, Kalender-Spiegelung.
 7. **E2E, Screenshots mobil/Desktop, Staging, Release.**
 
@@ -175,5 +176,6 @@ Jede Phase einzeln auf Staging prüfbar; Schema-Änderungen additiv.
 - [x] Phase 3 Plan mobil (Agenda, Kalender, BottomSheet, Meilenstein-Formular mit Live-Datum)
 - [x] Phase 4 Zeitleiste Desktop (SVG, Pfeile, kritische Kette rot, Zoom Monat/Woche, Ziehen mit Vorschau)
 - [x] Phase 5 Board-Verknüpfung (Chip, geerbte Frist), „Nächste Frist“ im Gewerk, Dashboard „Nächste Fristen“, Teams-Kacheln
+- [x] Phase 5b Plan ↔ Kanban in beide Richtungen (Kartenliste, Sprünge, Warnungen, Filter)
 - [x] Phase 6 Vorlagen (speichern/übernehmen, eingebauter Vorschlag mit 10 Meilensteinen als Schätzwerte), Fristerinnerungen im Erinnerungs-Cron (d7/d2/überfällig/kritisch), Kalender-Spiegelung für Abnahmen
 - [ ] Phase 7 E2E/Release

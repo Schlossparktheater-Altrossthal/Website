@@ -87,6 +87,7 @@ export function PlanView({
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [editing, setEditing] = React.useState<PlanMilestone | "new" | null>(null);
   const [deleting, setDeleting] = React.useState<PlanMilestone | null>(null);
+  const [confirmDone, setConfirmDone] = React.useState<PlanMilestone | null>(null);
   const [move, setMove] = React.useState<TimelineMove | null>(null);
   const [pending, startTransition] = React.useTransition();
 
@@ -166,7 +167,12 @@ export function PlanView({
       canManage={plan.canManage}
       pending={pending}
       onSelect={handleSelect}
-      onToggleDone={() => run(() => setMilestoneDoneAction(selected.id, !selected.doneAt))}
+      onToggleDone={() => {
+        const open = selected.tasksTotal - selected.tasksDone;
+        // Offene Karten: erst nachfragen, statt stillschweigend abzuhaken.
+        if (!selected.doneAt && open > 0) setConfirmDone(selected);
+        else run(() => setMilestoneDoneAction(selected.id, !selected.doneAt));
+      }}
       onEdit={() => setEditing(selected)}
       onDelete={() => setDeleting(selected)}
     />
@@ -392,6 +398,31 @@ export function PlanView({
           ))}
         </ul>
       </ResponsivePanel>
+
+      <ConfirmDialog
+        open={Boolean(confirmDone)}
+        onOpenChange={(value) => !value && setConfirmDone(null)}
+        title="Trotzdem erledigt?"
+        description={
+          confirmDone
+            ? `${confirmDone.tasksTotal - confirmDone.tasksDone} ${
+                confirmDone.tasksTotal - confirmDone.tasksDone === 1 ? "Karte ist" : "Karten sind"
+              } noch offen. Die Karten bleiben im Board offen.`
+            : ""
+        }
+        confirmLabel="Als erledigt markieren"
+        cancelLabel="Abbrechen"
+        variant="default"
+        onCancel={() => setConfirmDone(null)}
+        onConfirm={() => {
+          const target = confirmDone;
+          if (!target) return;
+          run(
+            () => setMilestoneDoneAction(target.id, true),
+            () => setConfirmDone(null),
+          );
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(deleting)}

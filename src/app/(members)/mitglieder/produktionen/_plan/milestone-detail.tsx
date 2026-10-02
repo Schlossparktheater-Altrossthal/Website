@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -8,7 +9,7 @@ import type { PlanMilestone } from "@/lib/planning/plan-service";
 import { cn } from "@/lib/utils";
 
 import { DeadlineBadge } from "@/components/production/deadline-badge";
-import { DAY_FORMAT, describeAnchor } from "./format";
+import { DAY_FORMAT, SHORT_DAY_FORMAT, describeAnchor } from "./format";
 import { HEALTH_BADGE, HEALTH_LABELS } from "@/components/production/deadline-health";
 
 const KIND_LABELS: Record<PlanMilestone["kind"], string> = {
@@ -98,17 +99,74 @@ export function MilestoneDetail({
         <p className="whitespace-pre-line text-sm">{milestone.description}</p>
       ) : null}
 
-      {milestone.tasksTotal ? (
-        <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-          <ProgressRing value={milestone.tasksDone} max={milestone.tasksTotal} />
-          <div className="text-sm">
-            <p className="font-medium">Karten</p>
-            <p className="text-muted-foreground">
-              {milestone.tasksDone} von {milestone.tasksTotal} erledigt
-            </p>
-          </div>
+      {milestone.warnings.length ? (
+        <div className="space-y-1 rounded-lg border border-warning bg-warning/10 p-3 text-sm">
+          {milestone.warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
         </div>
       ) : null}
+
+      <section className="space-y-2" aria-label="Karten">
+        <div className="flex items-center gap-3">
+          {milestone.tasksTotal ? (
+            <ProgressRing value={milestone.tasksDone} max={milestone.tasksTotal} size={36} />
+          ) : null}
+          <p className="min-w-0 flex-1 text-sm font-medium">
+            {milestone.tasksTotal
+              ? `Karten · ${milestone.tasksDone} von ${milestone.tasksTotal} erledigt`
+              : "Noch keine Karten"}
+          </p>
+          {milestone.department && milestone.canComplete ? (
+            <Button asChild size="xs" variant="outline">
+              <Link
+                href={`/mitglieder/meine-gewerke/${encodeURIComponent(milestone.department.slug)}?ansicht=aufgaben&neu=1&meilenstein=${milestone.id}`}
+              >
+                + Karte
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+        {milestone.tasks.length ? (
+          <ul className="divide-y divide-border rounded-lg border border-border">
+            {milestone.tasks.map((task) => (
+              <li key={task.id}>
+                <Link
+                  href={`/mitglieder/meine-gewerke/${encodeURIComponent(task.departmentSlug)}?ansicht=aufgaben&karte=${task.id}`}
+                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      task.done
+                        ? "bg-success"
+                        : task.late
+                          ? "bg-warning"
+                          : "bg-muted-foreground/40",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate",
+                      task.done && "text-muted-foreground line-through",
+                    )}
+                  >
+                    {task.title}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {task.late && task.dueAt
+                      ? `nach Frist · ${SHORT_DAY_FORMAT.format(new Date(task.dueAt))}`
+                      : task.departmentSlug !== milestone.department?.slug
+                        ? task.departmentName
+                        : ""}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
 
       {milestone.predecessors.length || successors.length ? (
         <div className="space-y-1 text-sm">

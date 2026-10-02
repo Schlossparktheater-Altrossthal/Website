@@ -69,7 +69,14 @@ export type BoardTask = {
   comments: { id: string; body: string; author: string; createdAt: string }[];
 };
 
-export type BoardMilestone = { id: string; title: string; dueAt: string | null };
+export type BoardMilestone = {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  /** Gewerk des Meilensteins; `null` = ganze Produktion. */
+  departmentName: string | null;
+  own: boolean;
+};
 
 export type BoardColumn = { id: string; name: string; status: TaskStatus; tasks: BoardTask[] };
 
@@ -79,7 +86,7 @@ export type BoardData = {
   today: string;
   columns: BoardColumn[];
   members: BoardPerson[];
-  /** Wählbare Meilensteine: zuerst die des Gewerks, dann die der ganzen Produktion. */
+  /** Wählbare Meilensteine der Produktion, die des eigenen Gewerks zuerst. */
   milestones: BoardMilestone[];
 };
 
@@ -141,12 +148,15 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
     }),
     department
       ? prisma.showMilestone.findMany({
-          where: {
-            showId: department.showId,
-            OR: [{ departmentId }, { departmentId: null }],
-          },
+          where: { showId: department.showId },
           orderBy: [{ dueAt: { sort: "asc", nulls: "last" } }, { position: "asc" }],
-          select: { id: true, title: true, dueAt: true, departmentId: true },
+          select: {
+            id: true,
+            title: true,
+            dueAt: true,
+            departmentId: true,
+            department: { select: { name: true } },
+          },
         })
       : Promise.resolve([]),
   ]);
@@ -173,6 +183,8 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
             id: task.milestone.id,
             title: task.milestone.title,
             dueAt: task.milestone.dueAt?.toISOString() ?? null,
+            departmentName: null,
+            own: true,
           }
         : null,
       createdById: task.createdById,
@@ -201,6 +213,8 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
         id: milestone.id,
         title: milestone.title,
         dueAt: milestone.dueAt?.toISOString() ?? null,
+        departmentName: milestone.department?.name ?? null,
+        own: milestone.departmentId === departmentId,
       })),
   };
 }

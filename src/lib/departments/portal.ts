@@ -178,6 +178,7 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
           title: true,
           status: true,
           dueAt: true,
+          milestone: { select: { dueAt: true } },
           assignments: { select: { userId: true } },
         },
       },
@@ -218,13 +219,25 @@ export async function loadDepartmentPortal(showId: string, slug: string, userId:
     .filter((entry) => entry.status === "requested")
     .map(toMember);
 
-  const toTaskItem = ({ id, title, status, dueAt }: (typeof department.tasks)[number]) => ({
+  // Karten ohne eigenes Datum erben die Frist ihres Meilensteins (docs/Plan/projektplanung-plan.md).
+  const toTaskItem = ({
     id,
     title,
     status,
     dueAt,
-    overdue: Boolean(dueAt && dueAt < now),
-  });
+    milestone,
+  }: (typeof department.tasks)[number]) => {
+    const due = dueAt ?? milestone?.dueAt ?? null;
+    return {
+      id,
+      title,
+      status,
+      dueAt: due,
+      inherited: !dueAt && Boolean(milestone?.dueAt),
+      // Geerbte Fristen sind Kalendertage: überfällig erst nach Ablauf des Tages.
+      overdue: Boolean(due && (dueAt ? due < now : due.getTime() + 86_400_000 <= now.getTime())),
+    };
+  };
   const openTasks = department.tasks.filter((task) => task.status !== "done");
   const myTasks = openTasks.filter((task) =>
     task.assignments.some((entry) => entry.userId === userId),

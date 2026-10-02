@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   computeDueDates,
   computeSchedule,
+  daysUntil,
   toDay,
   todayInTimeZone,
   type MilestoneHealth,
@@ -33,10 +34,62 @@ export const MILESTONE_ANCHOR_LABELS: Record<MilestoneAnchor, string> = {
 type UserLike = Parameters<typeof hasPermission>[0];
 
 const milestoneInclude = {
-  department: { select: { id: true, name: true, color: true } },
+  department: { select: { id: true, slug: true, name: true, color: true } },
   predecessors: { select: { fromId: true, lagDays: true } },
-  _count: { select: { tasks: true } },
+  tasks: {
+    orderBy: [{ status: "asc" }, { dueAt: { sort: "asc", nulls: "last" } }],
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      dueAt: true,
+      department: { select: { slug: true, name: true } },
+    },
+  },
 } satisfies Prisma.ShowMilestoneInclude;
+
+export type PlanTask = {
+  id: string;
+  title: string;
+  done: boolean;
+  dueAt: string | null;
+  /** Eigenes Datum liegt nach der Frist des Meilensteins. */
+  late: boolean;
+  departmentSlug: string;
+  departmentName: string;
+};
+
+/** Schwelle für „wenig Puffer“ bei schleppendem Kartenfortschritt (Phase 5b). */
+export const PROGRESS_WARNING_DAYS = 7;
+export const PROGRESS_WARNING_RATIO = 0.5;
+
+/**
+ * Hebt eine grüne Ampel auf Gelb, wenn die Karten nicht mithalten: wenig Puffer bei weniger als
+ * der Hälfte erledigter Karten oder eine Karte mit Datum nach der Frist.
+ */
+export function applyTaskWarnings(
+  health: MilestoneHealth,
+  input: { bufferDays: number | null; tasksTotal: number; tasksDone: number; lateTasks: number },
+): { health: MilestoneHealth; warnings: string[] } {
+  const warnings: string[] = [];
+  const open = input.tasksTotal - input.tasksDone;
+  if (
+    input.bufferDays !== null &&
+    input.bufferDays < PROGRESS_WARNING_DAYS &&
+    input.tasksTotal > 0 &&
+    input.tasksDone / input.tasksTotal < PROGRESS_WARNING_RATIO
+  ) {
+    warnings.push(`Nur ${input.tasksDone} von ${input.tasksTotal} Karten erledigt, ${open} offen.`);
+  }
+  if (input.lateTasks > 0) {
+    warnings.push(
+      input.lateTasks === 1
+        ? "1 Karte ist erst nach der Frist fällig."
+        : `${input.lateTasks} Karten sind erst nach der Frist fällig.`,
+    );
+  }
+  return { health: warnings.length && health === "ok" ? "warning" : health, warnings };
+}
 
 export type PlanMilestone = {
   id: string;
@@ -49,7 +102,10 @@ export type PlanMilestone = {
   fixedDate: string | null;
   dueAt: string | null;
   doneAt: string | null;
-  department: { id: string; name: string; color: string | null } | null;
+  department: { id: string; slug: string; name: string; color: string | null } | null;
+  tasks: PlanTask[];
+  /** Hinweise aus dem Kartenstand (Phase 5b). */
+  warnings: string[];
   predecessors: { fromId: string; lagDays: number }[];
   slackDays: number | null;
   projectedAt: string | null;
@@ -184,42 +240,36 @@ export async function loadProductionPlan(
   });
   if (!show) return null;
 
-  const [rows, dependencies, departments, rehearsals, canManage, leadIds, doneTasks] =
-    await Promise.all([
-      prisma.showMilestone.findMany({
-        where: { showId },
-        include: milestoneInclude,
-        orderBy: [{ dueAt: "asc" }, { position: "asc" }],
-      }),
-      prisma.milestoneDependency.findMany({
-        where: { from: { showId } },
-        select: { fromId: true, toId: true, lagDays: true },
-      }),
-      prisma.department.findMany({
-        where: { showId, archivedAt: null },
-        select: { id: true, name: true, color: true },
-        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      }),
-      prisma.calendarEvent.findMany({
-        where: {
-          showId,
-          departmentId: null,
-          status: { not: "CANCELLED" },
-          kind: { in: ["REHEARSAL", "PERFORMANCE"] },
-          start: { gte: new Date(now.getTime() - 60 * 86_400_000) },
-        },
-        select: { id: true, title: true, start: true, kind: true },
-        orderBy: { start: "asc" },
-        take: 400,
-      }),
-      canManagePlan(user),
-      loadLeadDepartmentIds(user?.id, showId),
-      prisma.departmentTask.groupBy({
-        by: ["milestoneId"],
-        where: { milestone: { showId }, status: "done" },
-        _count: { _all: true },
-      }),
-    ]);
+  const [rows, dependencies, departments, rehearsals, canManage, leadIds] = await Promise.all([
+    prisma.showMilestone.findMany({
+      where: { showId },
+      include: milestoneInclude,
+      orderBy: [{ dueAt: "asc" }, { position: "asc" }],
+    }),
+    prisma.milestoneDependency.findMany({
+      where: { from: { showId } },
+      select: { fromId: true, toId: true, lagDays: true },
+    }),
+    prisma.department.findMany({
+      where: { showId, archivedAt: null },
+      select: { id: true, name: true, color: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
+    prisma.calendarEvent.findMany({
+      where: {
+        showId,
+        departmentId: null,
+        status: { not: "CANCELLED" },
+        kind: { in: ["REHEARSAL", "PERFORMANCE"] },
+        start: { gte: new Date(now.getTime() - 60 * 86_400_000) },
+      },
+      select: { id: true, title: true, start: true, kind: true },
+      orderBy: { start: "asc" },
+      take: 400,
+    }),
+    canManagePlan(user),
+    loadLeadDepartmentIds(user?.id, showId),
+  ]);
 
   const anchors = {
     premiereAt: show.premiereAt,
@@ -234,13 +284,38 @@ export async function loadProductionPlan(
     console.error("loadProductionPlan", error);
     cycleError = error instanceof Error ? error.message : "Plan konnte nicht berechnet werden.";
   }
-  const doneByMilestone = new Map(
-    doneTasks.map((entry) => [entry.milestoneId ?? "", entry._count._all]),
-  );
 
   const iso = (date: Date | null | undefined) => (date ? date.toISOString() : null);
   const milestones: PlanMilestone[] = rows.map((row) => {
     const entry = schedule?.get(row.id);
+    const dueDay = row.dueAt ? toDay(row.dueAt) : null;
+    const tasks: PlanTask[] = row.tasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      done: task.status === "done",
+      dueAt: iso(task.dueAt),
+      // Kartendaten liegen mittags in Ortszeit – Vergleich auf Kalendertage.
+      late: Boolean(
+        task.status !== "done" && task.dueAt && dueDay !== null && toDay(task.dueAt) > dueDay,
+      ),
+      departmentSlug: task.department.slug,
+      departmentName: task.department.name,
+    }));
+    const tasksDone = tasks.filter((task) => task.done).length;
+    const baseHealth = entry?.health ?? (row.doneAt ? "done" : "unscheduled");
+    const untilDue = row.dueAt ? daysUntil(row.dueAt, now) : null;
+    const buffer =
+      entry?.slackDays !== null && entry?.slackDays !== undefined
+        ? Math.min(entry.slackDays, untilDue ?? entry.slackDays)
+        : untilDue;
+    const { health, warnings } = row.doneAt
+      ? { health: baseHealth, warnings: [] }
+      : applyTaskWarnings(baseHealth, {
+          bufferDays: buffer,
+          tasksTotal: tasks.length,
+          tasksDone,
+          lateTasks: tasks.filter((task) => task.late).length,
+        });
     return {
       id: row.id,
       title: row.title,
@@ -257,9 +332,11 @@ export async function loadProductionPlan(
       slackDays: entry?.slackDays ?? null,
       projectedAt: iso(entry?.projectedAt),
       endangeredBy: entry?.endangeredBy ?? [],
-      health: entry?.health ?? (row.doneAt ? "done" : "unscheduled"),
-      tasksTotal: row._count.tasks,
-      tasksDone: doneByMilestone.get(row.id) ?? 0,
+      health,
+      warnings,
+      tasks,
+      tasksTotal: tasks.length,
+      tasksDone,
       canComplete: canManage || Boolean(row.departmentId && leadIds.has(row.departmentId)),
       mirrored: Boolean(row.calendarEventId),
     };

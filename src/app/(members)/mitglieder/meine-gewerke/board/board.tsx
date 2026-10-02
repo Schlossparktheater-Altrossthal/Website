@@ -44,9 +44,23 @@ type Props = {
   viewerId: string;
   canEdit: boolean;
   canManage: boolean;
+  /** Aus dem Plan: diese Karte direkt öffnen (`?karte=`). */
+  initialTaskId?: string | null;
+  /** Aus dem Plan: neue Karte für diesen Meilenstein anlegen (`?neu=1&meilenstein=`). */
+  newForMilestoneId?: string | null;
 };
 
-export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
+const ALL = "__all";
+const WITHOUT = "__none";
+
+export function DepartmentBoard({
+  data,
+  viewerId,
+  canEdit,
+  canManage,
+  initialTaskId,
+  newForMilestoneId,
+}: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [columns, setColumns] = React.useState(data.columns);
@@ -60,7 +74,18 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
   const [openTask, setOpenTask] = React.useState<{
     task: BoardTask | null;
     columnId: string;
-  } | null>(null);
+  } | null>(() => {
+    if (initialTaskId) {
+      const column = data.columns.find((entry) =>
+        entry.tasks.some((task) => task.id === initialTaskId),
+      );
+      const task = column?.tasks.find((entry) => entry.id === initialTaskId);
+      if (column && task) return { task, columnId: column.id };
+    }
+    if (newForMilestoneId && canEdit) return { task: null, columnId: data.columns[0]?.id ?? "" };
+    return null;
+  });
+  const [milestoneFilter, setMilestoneFilter] = React.useState(ALL);
   const [columnsOpen, setColumnsOpen] = React.useState(false);
   const [dragging, setDragging] = React.useState<BoardTask | null>(null);
   const [onlyMine, setOnlyMine] = React.useState(false);
@@ -80,9 +105,16 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
   };
 
   const visibleTasks = (column: BoardColumn) =>
-    onlyMine
-      ? column.tasks.filter((task) => task.assignees.some((person) => person.id === viewerId))
-      : column.tasks;
+    column.tasks.filter(
+      (task) =>
+        (!onlyMine || task.assignees.some((person) => person.id === viewerId)) &&
+        (milestoneFilter === ALL ||
+          (milestoneFilter === WITHOUT ? !task.milestone : task.milestone?.id === milestoneFilter)),
+    );
+  // Nur Meilensteine anbieten, an denen hier wirklich Karten hängen.
+  const usedMilestones = data.milestones.filter((milestone) =>
+    data.columns.some((column) => column.tasks.some((task) => task.milestone?.id === milestone.id)),
+  );
 
   const moveLocal = (taskId: string, columnId: string, index: number) => {
     setColumns((current) => {
@@ -170,7 +202,7 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
     .filter((task) => task.assignees.some((person) => person.id === viewerId)).length;
 
   const toolbar = (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={() => setOnlyMine((value) => !value)}
@@ -184,7 +216,28 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
       >
         Nur meine ({mineCount})
       </button>
-      <div className="flex items-center gap-2">
+      {usedMilestones.length ? (
+        <select
+          aria-label="Nach Meilenstein filtern"
+          value={milestoneFilter}
+          onChange={(event) => setMilestoneFilter(event.target.value)}
+          className={cn(
+            "h-9 min-w-0 max-w-48 truncate rounded-full border bg-background px-3 text-sm",
+            milestoneFilter !== ALL
+              ? "border-primary font-medium text-primary"
+              : "border-border text-muted-foreground",
+          )}
+        >
+          <option value={ALL}>Alle Meilensteine</option>
+          {usedMilestones.map((milestone) => (
+            <option key={milestone.id} value={milestone.id}>
+              {milestone.title}
+            </option>
+          ))}
+          <option value={WITHOUT}>Ohne Meilenstein</option>
+        </select>
+      ) : null}
+      <div className="ml-auto flex items-center gap-2">
         {canManage ? (
           <Button
             type="button"
@@ -315,6 +368,7 @@ export function DepartmentBoard({ data, viewerId, canEdit, canManage }: Props) {
         columns={columns}
         members={data.members}
         milestones={data.milestones}
+        initialMilestoneId={newForMilestoneId ?? null}
         initialColumnId={openTask?.columnId ?? columns[0]?.id ?? ""}
         canEdit={canEdit}
         canDelete={canManage || (canEdit && liveTask?.createdById === viewerId)}

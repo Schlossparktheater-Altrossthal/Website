@@ -36,6 +36,7 @@ export function TaskPanel({
   columns,
   members,
   milestones,
+  initialMilestoneId,
   initialColumnId,
   canEdit,
   canDelete,
@@ -50,6 +51,8 @@ export function TaskPanel({
   columns: BoardColumn[];
   members: BoardPerson[];
   milestones: BoardMilestone[];
+  /** Vorbelegung für neue Karten, z. B. „+ Karte“ aus dem Plan. */
+  initialMilestoneId?: string | null;
   initialColumnId: string;
   canEdit: boolean;
   canDelete: boolean;
@@ -57,13 +60,15 @@ export function TaskPanel({
   onDelete: () => Promise<boolean>;
   onComment: (body: string) => Promise<boolean>;
 }) {
-  const [draft, setDraft] = React.useState<TaskDraft>(() => fromTask(task, initialColumnId));
+  const [draft, setDraft] = React.useState<TaskDraft>(() =>
+    fromTask(task, initialColumnId, initialMilestoneId),
+  );
   const [key, setKey] = React.useState(`${task?.id ?? "new"}-${open}`);
   const nextKey = `${task?.id ?? "new"}-${open}`;
   // Beim Öffnen einer anderen Aufgabe den Entwurf neu setzen (ohne Effekt).
   if (key !== nextKey) {
     setKey(nextKey);
-    setDraft(fromTask(task, initialColumnId));
+    setDraft(fromTask(task, initialColumnId, initialMilestoneId));
   }
   const [saving, setSaving] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -196,14 +201,26 @@ export function TaskPanel({
                 onChange={(event) => update("milestoneId", event.target.value)}
               >
                 <option value="">Keiner</option>
-                {milestones.map((milestone) => (
-                  <option key={milestone.id} value={milestone.id}>
-                    {milestone.title}
-                    {milestone.dueAt
-                      ? ` · ${format(new Date(milestone.dueAt.slice(0, 10) + "T12:00:00"), "d. MMM", { locale: de })}`
-                      : ""}
-                  </option>
-                ))}
+                {[true, false].map((own) => {
+                  const group = milestones.filter((milestone) => milestone.own === own);
+                  if (!group.length) return null;
+                  return (
+                    <optgroup
+                      key={String(own)}
+                      label={own ? "Dieses Gewerk" : "Andere Gewerke & Produktion"}
+                    >
+                      {group.map((milestone) => (
+                        <option key={milestone.id} value={milestone.id}>
+                          {milestone.title}
+                          {!own && milestone.departmentName ? ` (${milestone.departmentName})` : ""}
+                          {milestone.dueAt
+                            ? ` · ${format(new Date(`${milestone.dueAt.slice(0, 10)}T12:00:00`), "d. MMM", { locale: de })}`
+                            : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
               {draft.milestoneId && !draft.dueAt ? (
                 <span className="block text-xs text-muted-foreground">
@@ -309,12 +326,16 @@ export function TaskPanel({
   );
 }
 
-function fromTask(task: BoardTask | null, columnId: string): TaskDraft {
+function fromTask(
+  task: BoardTask | null,
+  columnId: string,
+  milestoneId?: string | null,
+): TaskDraft {
   return {
     title: task?.title ?? "",
     description: task?.description ?? "",
     dueAt: toDateInput(task?.dueAt ?? null),
-    milestoneId: task?.milestone?.id ?? "",
+    milestoneId: task ? (task.milestone?.id ?? "") : (milestoneId ?? ""),
     priority: task?.priority ?? "normal",
     assigneeIds: task?.assignees.map((person) => person.id) ?? [],
     columnId: task?.columnId ?? columnId,
