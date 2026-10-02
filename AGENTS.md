@@ -1,340 +1,182 @@
 # AGENTS.md
 
-## Stack & Einstieg
+Projektstandards für den Mitgliederbereich und die Website des Sommertheaters Altrossthal. Details
+stehen in den Leitfäden unter `docs/` (`design-system.md`, `development.md`, `datenmodell.md`,
+`e2e-tests.md`); bei Konflikten hat diese Datei Vorrang.
 
-Webauftritt läuft auf Next.js 16 (App Router) mit React 19, TypeScript 6 und Tailwind CSS 4. Node.js 24 LTS ist die Referenzversion; aktiviere `corepack enable` und arbeite ausschließlich mit `pnpm`.
+## Stack & Befehle
 
-- App-Code liegt im `src`-Ordner: `src/app` (Routing), `src/components` (UI), `src/lib` (Logik), `prisma` (Schema), `realtime-server` (Socket.io).
-- Globale Provider kommen aus `src/app/providers.tsx`. Neue Kontexte dort integrieren, nicht lokal verschachteln.
-- Legacy-Endpunkte unter `src/pages/api` nur für Socket-Bridge. Neue APIs in `src/app/api` oder als Server Actions.
+- Next.js 16 (App Router), React 19, TypeScript 6, Tailwind CSS 4, Prisma/Postgres, Node.js 24 LTS.
+  Nur `pnpm` (`corepack enable`); einziges Lockfile ist `pnpm-lock.yaml` – keine
+  `package-lock.json` committen (Dependabot meldet sonst alles doppelt).
+- Struktur: `src/app` (Routing), `src/components` (UI), `src/lib` (Logik), `prisma` (Schema),
+  `realtime-server` (Socket.io). Globale Provider nur in `src/app/providers.tsx`.
+- `pnpm dev` (führt `prisma generate` und Migrationen aus), `pnpm lint`, `pnpm format:check`,
+  `pnpm test`, `pnpm build`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm swatches:gen`. Docker-Compose
+  stellt Postgres und Mailpit bereit.
+- `turbopack: { root: process.cwd() }` in `next.config.mjs` nie entfernen (sonst falscher
+  Workspace-Root). Nach jeder Änderung an `next.config.mjs` Dev-Server stoppen und `rm -rf .next`.
+- Sicherheits-Pins für transitive Pakete über `pnpm.overrides`, mit Begründung im Commit, nie
+  stillschweigend auf eine neue Major-Version. CI prüft `pnpm audit --prod --audit-level=high`.
+- Prettier ist verbindlich (`pnpm format`).
 
-## Design-System & Layout-System
+## Architektur & Code
 
-- **Design-Tokens statt hard-coded Farben:** Nur semantische Tokens verwenden (`bg-card`, `text-foreground`, `border-border`, `bg-muted` etc.), keine Tailwind-Farben (`bg-white`, `text-slate-*`, `bg-gray-*`). Alle Komponenten müssen in Light & Dark Mode funktionieren.
-- Farben, Schriften, Radius und Schatten kommen aus dem aktiven Website-Theme (tweakcn-Format, `src/lib/theme/`), das `ThemeStyleRegistry` im Root-Layout als `:root`/`.dark`-Variablen ausgibt. Keine eigenen Farbwerte in `globals.css` ergänzen; neue Variablen in `src/lib/theme/tweakcn.ts` (inkl. Standardwert) aufnehmen.
-- **Mitgliederbereich-Layout:** `MembersAppShell` übernimmt Container und Padding. Seiten nur `<div className="space-y-6">` — keine eigenen `mx-auto`, `px-*`, `py-*` oder `<main>`-Wrapper.
-- **Custom-Layouts:** Nur bei Bedarf `<MembersContentLayout width="..." padding="..." />` verwenden.
-- **Legacy-Code:** Bestehende Komponenten mit hard-coded Farben nutzen CSS-Override-Strategie. Neue Komponenten immer mit Design-Tokens bauen.
-- **Dokumentation:** Details zu Tokens, Typografie, Spacing in `docs/design-system.md`.
+- Standardmäßig Server Components; `"use client"` nur, wenn Interaktion es erzwingt.
+- Neue APIs in `src/app/api` oder als Server Actions. API-Fehler immer als `{ error: string }` mit
+  passendem Statuscode.
+- DB-Zugriff nur über `@/lib/prisma`; Queries gehören in die Domänen-Libs `src/lib/<domäne>/`,
+  nicht in Seiten oder Komponenten.
+- `zod` für Validierung, Alias `@/*` statt relativer Imports, `cn` aus `@/lib/utils`.
+- Verboten: `as any`, `as never`, `as unknown as …`; leere `catch`-Blöcke; `console.log` außerhalb
+  von `src/lib/logger` (sonst `console.error`/`console.warn`, serverseitig `createLogger`).
+- Keine Binärdateien neu ins Repo (Bilder, Videos, Schriften); vorhandene Assets in `public/`
+  bleiben.
+- Vor neuen Helfern mit `rg` nach bestehenden suchen. Keine zwei Exporte mit gleichem Namen.
+- Vor dem Löschen eines Moduls direkte, Barrel- (`index.ts`) und dynamische Imports prüfen.
+- **Server Actions:** `actions.ts` je Domäne, höchstens ~400 Zeilen. `"use server"` nur in echten
+  Actions-Dateien. Gemeinsame Helfer liegen ohne `"use server"` **außerhalb von `app/`** in
+  `src/lib/<domäne>/` – Turbopack verlangt sonst auch dort nur async-Exporte.
+- Zeitangaben: `Intl.DateTimeFormat` immer mit `timeZone: DEFAULT_TIME_ZONE` aus
+  `src/lib/date-time.ts` (Server läuft in UTC → Hydration-Fehler).
 
-## Tooling & lokale Entwicklung
+## Daten, Rechte & Realtime
 
-- Abhängigkeiten mit `pnpm install --frozen-lockfile`. Neue Pakete: `pnpm add <pkg>`.
-- Einziges erlaubtes Lockfile ist `pnpm-lock.yaml`. `package-lock.json` (npm) steht in `.gitignore` und darf nicht committet werden – sonst scannt Dependabot beide Manifeste und meldet jedes Advisory doppelt.
-- Sicherheits-Patches für transitive Pakete ohne Parent-Update werden über `pnpm.overrides` in `package.json` gepinnt (z. B. `ws`, `socket.io-parser`, `mysql2`). Jede Override-Zeile braucht eine Begründung im Commit; Overrides nicht stillschweigend auf Major-Versionen heben.
-- `pnpm dev` startet Turbopack-Devserver und führt vorher `prisma generate` sowie die Prisma-Migrationen aus. `turbopack.root` ist in `next.config.mjs` als Top-Level-Key `turbopack: { root: process.cwd() }` gesetzt und darf nicht entfernt werden – sonst inferiert Turbopack den Workspace-Root falsch (z. B. über eine fremde `package-lock.json` im Home-Verzeichnis), was zu fehlerhaften Compile-Fehlern führt. Nach **jeder** Änderung an `next.config.mjs` (insbesondere `turbopack.root`) den Dev-Server stoppen und `.next` löschen (`rm -rf .next`) – sonst bleibt der alte Cache inkonsistent und es kommt zum Fehler `Could not find the module … in the React Client Manifest`.
-- Zentrale Skripte: `pnpm lint`, `pnpm test`, `pnpm build` und `pnpm format:check` müssen vor jedem Commit sauber durchlaufen. CI prüft zusätzlich `pnpm audit --prod --audit-level=high` – nur Production-Dependencies lassen die Pipeline scheitern; Dev-Tool-Advisories (Vite, Vitest) behandelt Dependabot.
-- Formatierung: Prettier ist der verbindliche Formatter (Konfiguration in `.prettierrc`). `pnpm format` formatiert das gesamte Repo, `pnpm format:check` prüft in CI. Keine manuellen Stil-Anpassungen gegen Prettier.
-- DB-Skripte: `pnpm prisma:generate`, `pnpm db:migrate`, `pnpm db:seed`.
-- Swatches für die Doku: `pnpm swatches:gen`.
-- Docker-Compose stellt Postgres & Mailpit bereit. Bei DB-Änderungen `.env.example` aktualisieren.
+- Schemaänderung immer mit Migration, danach `pnpm prisma:generate`. ENV-Variablen in
+  `.env.example` und README dokumentieren.
+- Gepushte Migrationen sind **unveränderlich** – Korrekturen in eine neue Migration (Prüfsumme,
+  sonst `Init:CrashLoopBackOff` auf Staging). Recovery nach P3009 (Teil-DDL) in
+  `docs/development.md`.
+- Permission-Keys nach Schema `VISIBILITY.PAGE.CONTEXT.ACTION` (`PRIVATE` = Mitgliederbereich),
+  vor der ersten Verwendung in `DEFAULT_PERMISSION_DEFINITIONS` (`src/lib/permissions.ts`)
+  registrieren. Umbenennung nur mit Migration, die die Keys in der DB umschreibt.
+- Pflichtrollen sind nur `member`, `admin`, `owner` (`src/lib/roles.ts`); alle anderen Rollen sind
+  löschbar, `ensureSystemRoles` legt nur die Pflichtrollen nach.
+- Realtime: `@/hooks/useRealtime` und `realtime-server/src` immer gemeinsam ändern. Geteilte Module
+  (`src/lib/realtime/shared/*`, `src/lib/server-analytics-*`) bleiben `.js` + `.d.ts` (der Server
+  hat keinen Build), `.d.ts` synchron halten; `core.js` mit `node --check` und
+  `src/lib/realtime/__tests__` absichern.
 
-## Architektur- & Code-Richtlinien
+## UI-Regeln
 
-- Keine Binärdateien im Repository (PNG, JPG, Videos, Schriftarten). Stattdessen Inline-SVG oder Verweise auf bestehende Assets.
-- Standardmäßig React Server Components. `"use client"` nur bei zwingenden interaktiven Szenarien.
-- Datenbankzugriffe nur über `@/lib/prisma`. Queries in `@/lib/prisma-helpers` kapseln.
-- Validierungen mit `zod`. Pfad-Alias `@/*` statt relativer Imports. `cn` aus `@/lib/utils` für Klassenketten.
-- Type-Casts wie `as never`, `as any` oder `as unknown as ...` sind verboten. Korrekte Typen und Guards verwenden.
-- Vor neuen Hilfsfunktionen mit `rg` suchen ob eine passende bereits existiert. Keine Duplikate anlegen.
-- Vor dem Löschen von Modulen, Komponenten oder Exports immer die Verwendung prüfen: direkte Imports **und** Barrel-Exports (`index.ts`) und dynamische Imports. Ein Modul ist erst „tot“, wenn weder ein direkter noch ein Barrel-Import existiert – niemals nur auf Basis eines einzelnen Suchlaufs löschen.
-- Keine zwei exportierten Symbole mit identischem Namen (`PageHeader` existierte doppelt in `design-system/patterns` und `components/members`). Namenskollisionen sofort auflösen: konsolidieren oder eindeutig benennen.
-- Keine leeren catch-Blöcke. Fehler immer loggen oder explizit weitergeben.
-- Fehler lokal mit `console.error`, Warnungen mit `console.warn` loggen – kein `console.log` außerhalb von `src/lib/logger`. Server-seitige strukturierte Log-Events über `createLogger` aus `@/lib/logger` (persistiert in der DB).
-- Server-Actions-Dateien (`actions.ts`) nach Domäne aufteilen und schlank halten. Gemeinsame Helper in einer eigenen Datei **außerhalb des `app/`-Verzeichnisses** bündeln (z. B. `src/lib/<domäne>/actions-helpers.ts`). Eine Actions-Datei sollte nicht über ~400 Zeilen wachsen – neue Actions gehören in eine passende Domänen-Datei statt in eine bestehende Sammeldatei.
-- Nur echte Server-Actions-Dateien tragen `"use server"`. Helper-Dateien dürfen **kein** `"use server"` haben und müssen **außerhalb des `app/`-Verzeichnisses** liegen (z. B. `src/lib/produktionen/`). Grund: `"use server"` erzwingt, dass alle Exporte async sind (`Server Actions must be async functions`); Turbopack wendet diese Regel fälschlich auch auf Helper-Dateien **innerhalb** des `app/`-Verzeichnisses an, die von einer `"use server"`-Datei importiert werden. Shared Helper für Server Actions gehören daher nach `src/lib/` und werden über den `@/`-Alias importiert.
-- API-Routes geben Fehler immer als `{ error: string }` mit passendem HTTP-Statuscode zurück.
+- **Farben nur über semantische Tokens** (`bg-card`, `text-foreground`, `border-border`,
+  `text-destructive` …), nie Tailwind-Farben oder Hex-Werte; Light und Dark Mode müssen
+  funktionieren. Tokens kommen aus dem tweakcn-Theme (`src/lib/theme/`); neue Variablen in
+  `src/lib/theme/tweakcn.ts` mit Standardwert, nicht in `globals.css`. Kategorie-/Identitätsfarben
+  nur in `src/config/category-colors.ts`.
+- **Flächen:** `bg-background` = Seitenbasis (nie in Cards), `bg-card` = Cards/Sections, `bg-muted`
+  = Flächen innerhalb einer Card, `bg-popover` = nur Overlays. Rahmen `border-border`;
+  `border-primary` nur für interaktive/ausgewählte Zustände.
+- **Layout:** `MembersAppShell` liefert Container und Padding, Seiten beginnen mit
+  `<div className="space-y-6">` (kein eigenes `mx-auto`/`px-*`/`<main>`); Sonderfälle über
+  `MembersContentLayout`.
+- **Seitenaufbau** der Hauptbereiche: `PageHeader` (`src/components/members/page-header.tsx`,
+  einzeilig, Breadcrumbs nur mit echtem Elternteil) → Bereichs-Navigation → Werkzeugzeile (Suche
+  links, primäre Aktion rechts, `flex flex-wrap items-center gap-2`) → Cards. Details in
+  `docs/design-system.md` („Seiten-Muster“).
+- **Komponenten:**
+  - `Button`-Varianten: `primary` Haupt-, `outline` Sekundär-, `ghost` Tertiär-, `destructive`
+    Löschaktion (mit `TrashIcon`; Bearbeiten mit `EditIcon`).
+  - Ladezustand: `AsyncButton`, nie `Button` + `Loader2`.
+  - Destruktive Bestätigung: `ConfirmDialog`; `window.confirm`/`prompt` verboten.
+  - Create/Edit-Dialoge: `ModalFormDialog`. Props geteilter Patterns: `src/lib/ui-standards.ts`.
+  - Personenbilder nur über `UserAvatar` (Felder via `toAvatarFields`), keine eigenen
+    Initialen-Kreise.
+  - Badges über `Badge` mit Status-Tokens: success aktiv, warning ausstehend, destructive
+    Fehler/gesperrt, muted neutral.
+  - Feedback über `sonner`: `toast.success`/`error`/`info` mit kurzem Titel, optional
+    `description`.
+  - Hinweisboxen: `bg-muted border border-border rounded-lg p-4`; Warnung/Fehler mit
+    `warning`-/`destructive`-Token (`bg-…/10 border-…`).
+  - Laden: `Skeleton` und `loading.tsx`, kein `animate-pulse` direkt.
+  - Leerzustand: `py-12 text-center text-sm text-muted-foreground`, Icon optional.
+  - `StatTile` mit fehlendem Wert zeigt `–` plus Hinweis (`tone="neutral"`) statt zu verschwinden;
+    Link auf die Pflegeseite nur bei geprüftem Recht.
+  - Inline-Skripte (Anti-Flash) nur über `InlineScript`.
+- **Icons:** Standard-Icons aus `src/components/ui/action-icons.tsx`, neue projektweite Icons dort
+  ergänzen; nur seitenspezifische Deko direkt aus `lucide-react`. Seiten-Icons ausschließlich in
+  `src/config/members-navigation.ts`, abgerufen über `membersNavIcon(href)`.
+- Typografie-Skala aus `docs/design-system.md`; für neue Stellen `Heading`/`Text` aus
+  `@/components/ui/typography`.
+- Barrierefreiheit: semantisches HTML, `aria`-Attribute, sichtbarer Fokus.
 
-## Daten, Backend & Realtime
+## Responsive
 
-- Schemaänderungen in `prisma/schema.prisma` stets mit Migration begleiten, danach `pnpm prisma:generate`.
-- Migrationen sind nach dem Push **unveränderlich**: Eine einmal gepushte oder auf Staging/Prod angewandte Migration wird nie mehr editiert. Korrekturen kommen in eine neue Migration. Grund: `prisma migrate deploy` vergleicht Prüfsummen – eine nachträglich geänderte, bereits angewandte Migration blockiert den Staging-Init-Container dauerhaft (`Init:CrashLoopBackOff`).
-- Schlägt `migrate deploy` fehl (P3009), läuft Prisma auf Postgres nicht transaktional: Ein fehlgeschlagener Lauf hinterlässt Teil-DDL (bereits angelegte Spalten bleiben stehen). Recovery: Teil-DDL manuell zurückrollen, den fehlgeschlagenen Eintrag aus `_prisma_migrations` entfernen und neu deployen. Details in `docs/development.md`.
-- ENV-Variablen in `.env.example` und README dokumentieren.
-- Realtime-Ereignisse über `@/hooks/useRealtime` und `realtime-server/src`. Frontend und Backend gleichzeitig pflegen.
-- Geteilte Module des Realtime-Servers (`src/lib/realtime/shared/*`, `src/lib/server-analytics-*`) bleiben handgepflegt als `.js` + `.d.ts`. Der Realtime-Server hat keine Build-Stufe und kann `.ts` nicht laden – keine TS-Migration. Bei Änderungen an der `.js` die zugehörige `.d.ts` synchron halten.
-- Änderungen an `src/lib/realtime/shared/core.js` mit `node --check` und den Realtime-Tests (`src/lib/realtime/__tests__`) absichern, bevor sie committet werden.
-- Neue Permission-Keys müssen in `DEFAULT_PERMISSION_DEFINITIONS` in `src/lib/permissions.ts` registriert werden, bevor sie verwendet werden.
-- Bei Umbenennung von Permission-Keys eine neue Prisma-Migration erstellen, die alte Keys in der DB umbenennt.
-- Pflichtrollen sind `member`, `admin` und `owner` (`MANDATORY_ROLES` und `isMandatoryRole` in `src/lib/roles.ts`). Nur sie sind vor Löschen und Umbenennen geschützt. Alle übrigen Rollen – auch die eingebauten Vorstand, Ensemble, Technik und Finanzen – sind in der Rechteverwaltung löschbar; `ensureSystemRoles` legt deshalb nur noch die Pflichtrollen nach, sonst käme eine gelöschte Rolle beim nächsten Aufruf zurück. Umbenennen ist Rollen ohne feste Systemrolle vorbehalten (Reorder und Rechte bleiben unberührt).
+Referenz: `docs/design-system.md` („Breakpoints & Responsive“), Status je Seite in
+`docs/responsiveness-matrix.md`.
 
-## UI, UX & Content
+- Mobile-first. Drei Klassen: Handy (<640px), Tablet (768–1023px), Desktop (≥1024px); nur die
+  Tailwind-Breakpoints plus `2xl` = 1920px. Touch-Targets mindestens 44px (`min-h-11`).
+- **Nichts wird breiter als sein Container:** Werkzeugzeilen umbrechen (`flex-wrap`), lange Werte
+  `min-w-0` + `break-words`, Raster mit expliziter Basis (`grid grid-cols-1 … lg:grid-cols-2`),
+  breite Tabellen/Kalender in innerem `overflow-x-auto`. Eine einzige zu breite Box lässt
+  iOS-Safari die ganze Seite verkleinern (`docs/Analysen/handy-ueberlauf-webkit-befunde.md`).
+- **Bereichs-Navigation:** `SectionNav` für URL-Zustand (ab vier Einträgen mobil `Select`),
+  `SegmentedControl` für Client-State (auch innerhalb von Cards), `ViewSwitcher` für Portale,
+  Bereichsliste mit `?bereich=`-Drill-down bei vielen Unterbereichen (Beispiel: Profil). Kein
+  horizontales Scrollen auf Umschaltern, keine orange gefüllten `TabsList`-Pills für neue
+  Bereichs-Navigation.
+- Tages-Details mobil als Bottom-`Sheet`, am Desktop daneben. Header-Navigation unter `md` als
+  `Sheet`; Sidebar bis 1023px als `Sheet` (`SIDEBAR_MOBILE_BREAKPOINT`).
 
-- Tailwind CSS und shadcn/ui sind die Basis. Komponenten aus `src/components/ui` verwenden und konsistent erweitern.
-- Barrierefreiheit hat Priorität: semantische HTML-Strukturen, `aria`-Attribute, sichtbare Fokuszustände.
-- Feedback-Komponenten laufen über `sonner`.
-- **Zeitangaben für die Anzeige:** `Intl.DateTimeFormat` immer mit `timeZone: DEFAULT_TIME_ZONE` aus `src/lib/date-time.ts` erzeugen. Ohne feste Zeitzone rendert der Server (Container läuft in UTC) eine andere Uhrzeit als der Browser – das erzeugt Hydration-Fehler und verschobene Zeitangaben.
+## Tests & Prüfung
 
-## RESPONSIVE DESIGN PATTERNS
+- Vitest-Tests nahe am Code, Komponenten mit `@testing-library/react`. Beim Umbau Tests und
+  `vi.mock`-Mocks mitziehen.
+- `pnpm lint` ohne Errors; Fehler beheben statt `eslint-disable` (Ausnahme nur mit Begründung).
+  Warnings `react-hooks/set-state-in-effect` und `react-hooks/refs` sind erlaubt
+  (`eslint.config.mjs`).
+- **E2E:** erster Klick auf einen Client-Button nach vollem Seitenaufruf über `clickUntil`
+  (`e2e/helpers.ts`); „kommende“ Testtermine immer in die Zukunft datieren (Anzeige in
+  `Europe/Berlin`, Runner in UTC). Overflow-Test `e2e/responsive-overflow.spec.ts` und Projekte:
+  `docs/e2e-tests.md`.
+- **Prüfstufen:**
 
-- Die autoritative Referenz für Breakpoints, Nutzerklassen und Container liegt in `docs/design-system.md` (Abschnitt „Breakpoints & Responsive"). Den Vollstatus je Seite führt `docs/responsiveness-matrix.md`.
-- Es gelten drei Nutzerklassen: Handy (<640px), Tablet (768–1023px), Desktop (≥1024px). Basis sind die Tailwind-Default-Breakpoints; `globals.css` (`@theme inline`) überschreibt `--breakpoint-xs: 20rem` (reserviert, derzeit ungenutzt) und `--breakpoint-2xl: 120rem` (=1920px). Weitere custom Breakpoints gibt es nicht.
-- **Tablet ist eine eigene Kategorie:** Auf Tablet darf keine Seite erzwungen horizontal scrollen. Breite Tabellen/Kalender brauchen einen Tablet-Fallback oder einen inneren `overflow-x-auto`-Container innerhalb ihrer Karte. Prüfung bei 768px, 834px und 1024px.
-- Bereichs-Navigation einer Seite: `SectionNav` (`src/components/ui/section-nav.tsx`) für Zustand in der URL — Pills direkt unter dem Seitenkopf, aktiv `bg-background shadow-sm ring-1 ring-border`, mobil volle Breite, ab vier Einträgen dort `Select` (Stück, Mitgliederverwaltung). Für Client-State dieselbe Optik als `SegmentedControl` (Sperrliste, Teams & Zuweisung, Terminplanung), für Portale der `ViewSwitcher` (Meine Teams), für Drill-downs die Bereichsliste (Profil). Horizontal scrolling auf Umschaltern ist verboten.
-- `SegmentedControl` deckt auch Umschalter **innerhalb** einer Karte ab (Client-State, `role=radiogroup`, z. B. die Verfügbarkeit eines Tages). Orange gefüllte `TabsList`-Pills sind für die Bereichs-Navigation nicht vorgesehen; im Bestand stehen sie noch auf Mitglieder-Detail, Server-Analytics und Website & Theme.
-- Tages-Details auf Mobilgeräten öffnen als Bottom-`Sheet`, damit ein Tipp sichtbar etwas auslöst; am Desktop stehen sie daneben.
-- **Nichts darf breiter als sein Container werden.** Werkzeugzeilen brechen um (`flex-wrap`), statt den Viewport aufzureißen; lange Werte bekommen `min-w-0` plus Umbrechmöglichkeit (`break-words`); Umschalter und Bereichs-Navigationen ragen nie über den Rand. Grund: Eine einzige zu breite Box lässt iOS-Safari den Layout-Viewport verdoppeln und rendert danach die ganze Seite winzig – am Gerät gemessen in `docs/Analysen/handy-ueberlauf-webkit-befunde.md`. Für Raster gilt: Die Grundregel in `globals.css` begrenzt implizite Spalten auf `minmax(0, 1fr)`; neue Raster nennen ihre Basis-Spalte trotzdem explizit (`grid grid-cols-1 gap-4 lg:grid-cols-2`).
-- **Werkzeugzeilen-Muster:** Suche links, primäre Aktion rechts, einzeilig (`flex flex-wrap items-center gap-2`, Aktionsgruppe `ml-auto`). Wird der Platz knapp, darf die Aktionsgruppe in die nächste Zeile rutschen – nie darf die Zeile seitlich überlaufen.
-- Seiten mit vielen Unterbereichen (z. B. Profil): statt Tabs eine Bereichsliste mit Drill-down per `?bereich=` – mobil erst die Liste, dann der Bereich mit „‹ Zurück", ab `lg` Liste als linke Navigation. So funktionieren Browser-Zurück und Deep-Links (Beispiel: `src/app/(members)/mitglieder/profil`).
-- Header-Navigation: unter `md` (768px) `Sheet`, ab `md` horizontale Navigation.
-- Sidebar: bis 1023px `Sheet`, ab 1024px feste Sidebar (JS-Breakpoint `SIDEBAR_MOBILE_BREAKPOINT` in `src/components/ui/sidebar.tsx`).
-- **Responsive-Verifikation:** Der Overflow-Test `e2e/responsive-overflow.spec.ts` läuft in den Playwright-Projekten `chromium` (1280×720), `mobile` (390×844), `mobile-webkit` (402×874, `browserName: webkit` – die Engine des gemeldeten iPhones), `tablet-portrait` (834×1112) und `tablet-landscape` (1024×768). Er deckt alle Routen des Mitgliederbereichs ab, Detailrouten mit der ID aus dem ersten passenden Link der jeweiligen Übersicht. Gemessen wird erst, wenn der Ladezustand weg ist, die Dokumentbreite zweimal hintereinander gleich bleibt **und die Adresse sich nicht ändert** (`waitForStableWidth` in `scripts/lib/e2e-session.mjs`) – gegen einen kalten Dev-Server meldet die Prüfung sonst Seiten als überlaufend, die im warmen Lauf grün sind (am 2026-09-29 fünf Fehlbefunde). Die Messung überlebt einen Client-Redirect: Next liefert das `redirect()` einer Seite als RSC-Anweisung (HTTP 200), wenn ein Elter-Layout davor schon gestreamt hat, sodass die Umleitung erst nach der Hydration läuft (Alt-Routen `/mitglieder/probenplanung`, `…/terminfinder`); sie beginnt dann auf der Zielseite neu, statt mit „Execution context was destroyed" abzubrechen. Ein Fehlschlag nennt die äußerste überstehende Box und den Inhalt, der sie aufreißt. Lokal einmalig `pnpm exec playwright install chromium webkit`. UI-Änderungen zusätzlich visuell per Screenshot in Handy/Tablet/Desktop, hell+dunkel, absichern: `pnpm e2e:screenshots --viewport all` (Screenshots ins Review mitliefern). Abläufe **nach einer Interaktion** prüft `pnpm ui:check <route> --steps-file <datei>` (Klickfolge, Überlaufmessung, Screenshots, `report.json` in `test-results/ui-check/`, Details in `docs/e2e-tests.md`). Beide Skripte laufen headless – nur dort feuert `requestAnimationFrame`, im versteckten Tab des integrierten Browsers scheitern normale Klicks und Screenshots. Live mitverfolgen mit `--headed --slow-mo <ms>` (optional `--keep-open`), auch bei verdecktem Fenster.
+  | Änderung                   | Pflicht                                                                                                                                                                   |
+  | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Nur Doku                   | keine Checks                                                                                                                                                              |
+  | Code ohne sichtbare UI     | `lint`, `format:check`, `test`, `build`                                                                                                                                   |
+  | Kleiner UI-Fix             | wie oben + Screenshot der betroffenen Ansicht                                                                                                                             |
+  | Neue/umgebaute UI          | wie oben + `pnpm e2e:screenshots --viewport all` (Handy/Tablet/Desktop, hell+dunkel, relevante Datenzustände) ansehen und im Review beilegen; Abläufe mit `pnpm ui:check` |
+  | Serie mehrerer Plan-Phasen | je Phase `lint` + betroffene Tests; `build`, volle Tests und Screenshots am Ende der Serie                                                                                |
+  | Nur `realtime-server`      | die dort relevanten Checks                                                                                                                                                |
 
-## Tests, Qualitätssicherung & Reviews
-
-- **Visuelle Pflichtprüfung (gilt für jede Änderung):** Alles, was die sichtbare Oberfläche betrifft, wird vor dem Commit auf **Handy, Tablet und Desktop, in hell und dunkel** per Screenshot geprüft – nie nur am Code. Die Screenshots werden angesehen und dem Review beigelegt. Bei datenabhängigen Seiten kommen die relevanten Zustände dazu (leer, gefüllt, Fehler). Erst wenn alle Ansichten stimmen, ist die Aufgabe fertig.
-- Vor jedem Commit `pnpm lint`, `pnpm format:check`, `pnpm test` und `pnpm build` ausführen. `pnpm lint` muss ohne Errors durchlaufen – gefundene Fehler werden behoben, nicht per `eslint-disable` unterdrückt (Ausnahmen nur mit Begründung im Code). Warnings der React-Compiler-Regeln (`react-hooks/set-state-in-effect`, `react-hooks/refs`) sind dokumentiert erlaubt, solange der React Compiler nicht aktiv ist (Begründung in `eslint.config.mjs`).
-- Vitest-Tests liegen nahe am Quellcode. React-Komponenten mit `@testing-library/react` testen.
-- **E2E-Klicks nach einem vollen Seitenaufruf:** `next dev` liefert das HTML aus, bevor React hydratisiert hat – ein Klick in diesem Fenster verpufft wirkungslos (im CI reproduzierbar, lokal kaum messbar). Der erste Klick auf einen Client-Button einer frisch geladenen Seite läuft deshalb über `clickUntil` aus `e2e/helpers.ts` (Klick wiederholen, bis die Wirkung eintritt); Links und Client-Navigationen brauchen das nicht. Details und Begründung in `docs/e2e-tests.md`.
-- **Testdaten sind unabhängig von der Tageszeit:** Die Suite läuft zu jeder Uhrzeit. Ein Termin, der „heute“ angelegt wird, ist abends ein vergangener Termin und verschwindet aus Listen mit kommenden Terminen – `e2e/teams.spec.ts` datiert den Gewerk-Termin deshalb explizit auf morgen (CI-Fehlschlag am 2026-09-29 um 21:55 Ortszeit). Termine für „kommende“ Listen immer in die Zukunft datieren; die Anzeige rechnet in `Europe/Berlin`, der Runner in UTC.
-- Beim Umbau oder bei der Migration einer Komponente/eines Moduls die zugehörigen Tests und `vi.mock`-Mocks mitpflegen: neue interne Abhängigkeiten müssen auch im Mock bereitstehen, sonst brechen Tests zur Laufzeit.
-- UI-Änderungen visuell mit Preview-Deployments absichern.
-- Bei UI-Arbeit konsequent mit Screenshots arbeiten: Vorher/Nachher aufnehmen und zur Verifikation heranziehen. Die visuelle Prüfung erfolgt anhand der Screenshots, nicht nur anhand der Beschreibung – Screenshots im Review mitliefern. Wo relevant, in Light- und Dark-Mode prüfen.
+  Nicht ausführbare Checks als Blockade dokumentieren. Abnahme erfolgt auf Staging.
 
 ## Commits
 
-- Nach jeder abgeschlossenen Aufgabe wird committet – nicht erst auf explizite Aufforderung. Jede Aufgabe als atomarer Commit.
-- Commit-Messages folgen dem Conventional-Commits-Format: `type(scope): description`.
-- Die Beschreibung ist immer auf Englisch, im Imperativ formuliert (`Fix …` statt `Fixed …` oder `Fixes …`) und ausdrucksstark: Sie sagt, was geändert wurde und warum. Nie nur `update`, `changes` oder `wip`.
-- Feste Kategorien (`type`):
-  - `feat` – neues Feature
-  - `fix` – Fehlerbehebung
-  - `docs` – reine Dokumentationsänderung
-  - `style` – Formatierung, keine Logik (z. B. Prettier)
-  - `refactor` – Umbau ohne Verhaltensänderung
-  - `perf` – Performance-Verbesserung
-  - `test` – Tests ergänzen oder anpassen
-  - `build` – Build-System, Dependencies, Tooling
-  - `ci` – CI/CD-Konfiguration
-  - `chore` – sonstige Wartungsarbeiten
-  - `revert` – Änderung rückgängig machen
-- `scope` (optional) benennt den betroffenen Bereich, z. B. `feat(tickets)`, `fix(sync)`, `chore(deps)`.
-- Breaking Changes mit `!` kennzeichnen: `feat(api)!: …`.
-- Ein Commit = genau eine abgeschlossene, atomare Änderung. Keine Themen mischen.
-- Keine Secrets oder API-Keys in Commit-Messages.
-- Beispiele: `feat(tickets): add QR check-in for rehearsals`, `fix(profile): validate email format before saving`, `refactor(sync): extract generic buildDelta helper`.
+- Nach jeder abgeschlossenen Aufgabe bzw. Phase atomar committen, ohne extra Aufforderung; keine
+  Themen mischen.
+- Conventional Commits `type(scope): description`, Beschreibung englisch im Imperativ und mit
+  Aussage (was und warum). Typen: `feat fix docs style refactor perf test build ci chore revert`;
+  Breaking Change mit `!`. Keine Secrets in Messages.
 
-## Dokumentation & Kommunikation
+## Doku & Pläne
 
-- README, `docs/**` und `.env.example` bei relevanten Änderungen aktualisieren.
-- Bei Änderungen an Seiten (Routen, Permissions, Komponenten) die zugehörige Datei in `docs/seiten/` aktualisieren.
-- PR-Beschreibungen mit Kontext, Entscheidungspunkten und QA-Schritten versehen.
-- In Texten und Kommentaren generische Maskulina verwenden, keine Genderschreibweisen.
-- Diese `AGENTS.md` bei neuen Standards fortschreiben und Änderungen begründen.
+- README, `docs/**` und `.env.example` bei relevanten Änderungen mitpflegen; bei Änderungen an
+  Seiten (Route, Rechte, Komponenten) die Datei in `docs/seiten/`.
+- Texte und Kommentare mit generischem Maskulinum, keine Genderschreibweisen.
+- **Pläne** liegen ausschließlich in `docs/Plan/` (Ausnahme `docs/redesign-plan/`), entstehen
+  sofort als Datei, werden im selben Commit in `docs/Plan/README.md` eingetragen und nie gelöscht –
+  umgesetzte Pläne bekommen eine neue `Stand:`-Zeile und abgehakte Checkliste, kein `…-v2.md`.
+  Aufbau und Vorlage: `docs/Plan/README.md`. Phasenzahl nach Umfang; jede Phase einzeln
+  committbar und auf Staging prüfbar.
+- Studien, Analysen und Prüfberichte nach `docs/Analysen/`. Verweise immer mit vollem Pfad.
+- Neue Standards hier ergänzen – kurz, an der passenden Stelle, Hintergrund in die Fach-Doku.
 
-## Pläne, Studien & Analysen
+## GitHub
 
-- **Jeder Plan liegt in `docs/Plan/`** – Entwürfe, Umbau-, Migrations- und Testpläne. Nichts Plan-artiges liegt direkt in `docs/` oder in anderen Ordnern. `docs/redesign-plan/` ist der einzige Ausnahmefall (Sprint-Notizen, kein Plan im Sinne dieser Regel).
-- **Ein Plan entsteht immer sofort als Datei in `docs/Plan/`** – auch ein Entwurf oder eine Zwischenfassung. Ein Plan wird nie nur im Chat oder in einer Sitzungs-/Arbeitsnotiz gehalten, sondern beim ersten Aufschreiben angelegt, im selben Schritt in `docs/Plan/README.md` eingetragen und committet. Gilt ausnahmslos für jeden Plan.
-- **Pläne werden nie gelöscht**, auch nicht nach der Umsetzung. Ein umgesetzter Plan bleibt als Entscheidungs- und Ergebnisarchiv liegen: `Stand:`-Zeile auf den neuen Status setzen (z. B. „umgesetzt am 2026-09-28"), Checkliste abhaken. Statt ein neues Dokument anzulegen wird der bestehende Plan fortgeschrieben – kein `…-plan-v2.md`.
-- **Studien, Analysen sowie Prüf- und Abschlussberichte** gehören nach `docs/Analysen/`. Technische Leitfäden (`docs/design-system.md`, `docs/development.md`, `docs/datenmodell.md`, `docs/e2e-tests.md` …) bleiben in `docs/`, ebenso die Seiten-Doku in `docs/seiten/`.
-- **Aufbau** (lebendes Beispiel: `docs/Plan/gewerke-plan.md`, Index und Vorlage: `docs/Plan/README.md`):
-  - Titelzeile `# Plan: <Titel>`, direkt darunter `Stand: <YYYY-MM-DD>. <Status in einem Satz>. Checkliste am Ende wird gepflegt.`
-  - `## Ziel`; bei Plänen, die auf einem Bestand aufsetzen, danach `## Ist-Stand (Befunde)` (möglichst als Tabelle `| # | Befund | Stelle |`)
-  - plangebundene Abschnitte nach Bedarf (`## Zielbild`, `## Entscheidungen (<Datum>)` mit `E1:` …, `## Datenmodell`, `## UI-Konzept`, `## Rechte` …), danach `## Phasen`
-  - am Ende `## Checkliste` mit `- [x] Phase 1 …` / `- [ ] …`. Bei langen Phasen darf sie nur den Phasenstatus zusammenfassen; die Detail-Häkchen stehen dann in der Phase.
-- **Die Anzahl der Phasen gibt der Umfang vor.** Das Beispiel `gewerke-plan.md` ist keine Schablone: Pläne dürfen deutlich mehr als sechs Phasen haben, Zwischenphasen (`Phase 3b`) und Nachträge eingeschlossen. Jede Phase muss für sich abschließbar sein – eigener Commit, einzeln auf Staging prüfbar.
-- Neue Pläne werden sofort in `docs/Plan/README.md` eingetragen; Verweise auf Pläne und Analysen immer mit vollem Pfad (`docs/Plan/<datei>.md`, `docs/Analysen/<datei>.md`) – auch in Code-Kommentaren und in `docs/seiten/`.
-
-## Ausnahmen & Sonderfälle
-
-- Reine Dokumentationsänderungen dürfen ohne `pnpm lint/test/build` abgeschlossen werden.
-- Arbeiten nur am `realtime-server` erfordern nur die dort relevanten Checks.
-- Wenn Checks nicht ausführbar sind, Blockade dokumentieren und manuelle Tests beilegen.
-
-## Einführung
-
-Diese Datei definiert die Projektstandards für die Website des Sommertheaters Altrossthal. Jeder, der an diesem Code arbeitet, soll diese Regeln einhalten, damit der Code verständlich, konsistent und wartbar bleibt.
-
-## Benennungskonventionen
-
-- Permission-Keys folgen dem Schema `VISIBILITY.PAGE.CONTEXT.ACTION`.
-  - `VISIBILITY` ist `PRIVATE` für den Mitgliederbereich.
-- TypeScript-Variablen verwenden `camelCase` mit beschreibenden englischen Namen.
-- Konstanten verwenden `SCREAMING_SNAKE_CASE`.
-- React-Komponenten verwenden `PascalCase`.
-- Funktionen verwenden `camelCase` und beginnen mit einem Verb wie `get`, `resolve`, `read`, `save`, `handle`, `ensure`.
-- Permission-Keys dürfen niemals als hardcodierte Strings verwendet werden, ohne dass sie in `DEFAULT_PERMISSION_DEFINITIONS` in `src/lib/permissions.ts` registriert sind.
-
-## Icons
-
-- Alle Standard-Icons sind in `src/components/ui/action-icons.tsx` definiert und müssen von dort importiert werden, nicht direkt aus `lucide-react`.
-- Neue projektweit gebrauchte Icons zuerst in `src/components/ui/action-icons.tsx` ergänzen.
-- Seitenspezifische dekorative Icons dürfen direkt aus `lucide-react` importiert werden.
-- Diese Regel hat Vorrang vor `docs/design-system.md`, auch wenn dort direkte `lucide-react`-Imports referenziert werden.
-- **Seiten-Icons:** Jede Seite hat genau ein Symbol, und zwar in der Navigations-Registry `src/config/members-navigation.ts`. Sidebar, mobiles Sheet, Seitensteuerung, Dashboard-Schnellzugriff und Benachrichtigungen beziehen es über `membersNavIcon(href)` aus `src/lib/members-navigation.ts` – keine zweite Icon-Liste, keine eigenen SVG-Pfade, kein zweites Symbol für dieselbe Seite. Die Zuordnung steht in `docs/design-system.md` (Abschnitt „Seiten-Icons"), Hintergrund in `docs/Plan/seiten-icons-plan.md`.
-
-## UI-Komponenten
-
-- Buttons verwenden die `Button`-Komponente aus `src/components/ui/button.tsx` mit dem passenden Variant:
-  - `primary` für Hauptaktionen
-  - `destructive` für Löschaktionen
-  - `outline` für Sekundäraktionen
-  - `ghost` für Tertiäraktionen
-- Löschaktionen verwenden immer `variant="destructive"` und das `TrashIcon`.
-- Bearbeitungsaktionen verwenden immer das `EditIcon`.
-- Dialoge für destruktive Aktionen müssen vor der Ausführung eine Bestätigung abfragen.
-- Für alle Buttons mit Ladezustand AsyncButton aus `src/components/ui/async-button.tsx` verwenden. Nie Button manuell mit Loader2 kombinieren.
-- Personenbilder laufen immer über `UserAvatar` aus `src/components/user-avatar.tsx`; die Komponente löst `avatarSource` (Upload, Gravatar, Initialen) selbst auf. Eigene Initialen-Kreise sind verboten, weil sie das festgelegte Bild der Person verschweigen. Die nötigen Felder liefern die Server-Libs über `AvatarFields`/`toAvatarFields` aus `src/lib/avatar-fields.ts`.
-- Für alle destruktiven Bestätigungen ConfirmDialog aus `src/components/ui/confirm-dialog.tsx` verwenden. `window.confirm` ist verboten.
-- Für alle Create/Edit-Dialoge ModalFormDialog aus `src/components/ui/modal-form-dialog.tsx` verwenden.
-- `src/lib/ui-standards.ts` ist die Single Source of Truth für Props-Interfaces aller geteilten UI-Patterns.
-- Inline-Skripte (Anti-Flash, müssen vor dem ersten Paint laufen) rendern über `InlineScript` aus `src/components/ui/inline-script.tsx`: Der Server liefert `text/javascript`, der Client `text/plain` (inert). Ein direkt gerendertes `<script>` erzeugt in React 19 die Konsolenfehlermeldung „Encountered a script tag while rendering React component" — sichtbar auf jeder Fehler- oder 404-Seite, weil React dort clientseitig neu rendert.
-
-## Design-Tokens
-
-- Farben immer über semantische CSS-Variablen des Themes verwenden, z. B. `text-primary`, `text-destructive`, `bg-muted`.
-- Hardcodierte Farbwerte sind nicht erlaubt.
-- Kategorie- und Identitätsfarben (Rollen, Gewerke, Interessen) ausschließlich zentral in `src/config/category-colors.ts` pflegen – nie in Komponenten hardcoden.
-- Die autoritative Token-Referenz ist `docs/design-system.md`. Bei Konflikten hat `AGENTS.md` Vorrang.
-
-## Surface & Card Hierarchie
-
-- `bg-background` ist die Seitenbasis. Innerhalb einer Card darf es nie verwendet werden.
-- `bg-card` gilt für alle primären Cards und Section-Container.
-- `bg-muted` gilt für verschachtelte/sekundäre Flächen innerhalb einer Card (Sub-Cards, innere Sektionen).
-- `bg-popover` ist ausschließlich für Overlays, Dropdowns und Tooltips reserviert.
-- Card-Rahmen verwenden `border-border`. `border-primary` (orange) ist auf strukturellen Containern verboten — orange Rahmen sind ausschließlich für interaktive/ausgewählte Zustände reserviert.
-- Niemals hardcodierte Farben für Flächen verwenden. Immer semantische Tokens nutzen.
-
-## Responsive Design
-
-- Mobile-first: Basis-Styles immer zuerst für Mobile schreiben und mit `sm:`, `md:`, `lg:`, `xl:` und `2xl:` erweitern.
-- Keine fixen Pixelbreiten verwenden. Nutze Tailwind-Responsive-Utilities und das Container-System aus `docs/design-system.md`.
-- Touch-Targets auf Mobile mindestens 44px Höhe sicherstellen (z. B. `min-h-11` oder `size="lg"` bei Buttons).
-- Layouts auf Mobile vertikal stapeln und erst mit `lg:flex-row` auf horizontal umstellen.
-
-## Seiten-Patterns
-
-- Die acht Hauptbereiche (Dashboard, Profil, Meine Teams, Teams & Zuweisung, Sperrliste, Stück, Mitglieder, Terminplanung) verwenden den `PageHeader` aus `src/components/members/page-header.tsx` und bleiben einzeilig; `breadcrumbs` nur mit echtem Elternteil (`[eltern, aktuelle Seite]`), die Wurzelzeile „Mitgliederbereich“ entfällt.
-- Aufbau dieser Seiten (Details in `docs/design-system.md`, Abschnitt „Seiten-Muster“): Kopf → Bereichs-Navigation (eines der vier Muster) → bei Bedarf Werkzeugzeile (Suche links, primäre Aktion rechts, einzeilig) → Inhalt in Cards → Leerzustand `py-12 text-center text-sm text-muted-foreground`.
-
-## Typografie & Abstände
-
-- Folge der Typografie-Skala aus `docs/design-system.md` (`text-h1`, `text-h2`, `text-body` usw.). Im Bestand stehen die Größen direkt am Element (rohe `<h1>`–`<h3>` mit Tailwind-Klassen); die Komponenten `Heading` und `Text` aus `@/components/ui/typography` stehen für neue Stellen bereit.
-
-## Badge & Status
-
-- Badges verwenden die Badge-Komponente aus src/components/ui/badge.tsx.
-- Status-Semantik: success-Token für positiv/aktiv, warning-Token für ausstehend/Hinweis, destructive-Token für Fehler/gesperrt, muted für neutral/inaktiv.
-- Nie hardcodierte Farben für Statusbadges. Immer variant oder className mit semantischem Token.
-
-## Empty States
-
-- Leere Zustände immer mit zentriertem Text und muted-foreground Farbe darstellen.
-- Struktur: umschließende div mit py-12 text-center, Icon optional in text-muted-foreground, darunter p mit text-muted-foreground.
-- Kein window.confirm, kein gestrichelter Box-Eigenbau ohne diese Struktur.
-- Kennzahl-Kacheln (`StatTile`) verschwinden nicht, wenn ein Wert fehlt: Sie zeigen `–` plus eine Hinweiszeile in `tone="neutral"` und bleiben im Raster.
-- Eine Kachel entfällt nur, wenn ihr Bezug fehlt (z. B. keine aktive Produktion) oder der Meilenstein vorbei ist (Endprobenwoche).
-- Kacheln, die einen fehlenden Pflegewert melden, verlinken ihn für Berechtigte direkt auf die zuständige Seite (`href` nur setzen, wenn das Recht geprüft ist).
-
-## Skeleton & Ladezeichen
-
-- Ladezeichen immer mit der Skeleton-Komponente aus src/components/ui/skeleton.tsx.
-- animate-pulse direkt auf Elementen ist verboten. Immer Skeleton verwenden.
-- Suspense-Fallbacks verwenden dedizierte loading.tsx Dateien mit Skeleton-Komponenten.
-
-## Toast & Feedback
-
-- toast.success für erfolgreich abgeschlossene Aktionen.
-- toast.error für Fehler die eine Nutzeraktion erfordern.
-- toast.info für neutrale Statusänderungen und Echtzeit-Events.
-- Dauer: Erfolg 3000ms, Fehler 5000ms, Info 2000ms.
-- Toasts haben immer einen kurzen Titel und optional eine description für Details.
-
-## Callout & Hinweisboxen
-
-- Hinweisboxen verwenden bg-muted border border-border rounded-lg p-4.
-- Warnhinweise verwenden bg-warning/10 border border-warning text-warning-foreground rounded-lg p-4.
-- Fehlerhinweise verwenden bg-destructive/10 border border-destructive text-destructive-foreground rounded-lg p-4.
-- Nie eigene Farben oder hardcodierte Hintergründe für Hinweisboxen.
-
----
-
-## GitHub-Projektstruktur & Review-Workflow
-
-### Projektstruktur
-
-Die GitHub-Projektstruktur folgt einem Release-basierten Schema.
-
-**Project Board:** https://github.com/orgs/Schlossparktheater-Altrossthal/projects/2
-Status-Spalten: Backlog → Ready → In Progress → In Review → Done
-
-**Milestones:** Release-basiert nach Schema v0.x / v1.x
-
-- v0.1: Sicherheitskritische Findings und Blocker aus dem Code-Review: API-Validierung (Allergien), Dockerfile-Härtung (non-root, HEALTHCHECK), CSP unsafe-eval und Ersatz nativer Browser-Dialoge.
-- v0.2: Architektur und Code-Qualität: Namenskollisionen auflösen, Regelverstöße beheben, "use client"-Bereinigung, Datei-Aufteilung und UI-Pattern-Konsistenz.
-- v1.0: Cleanup, Dokumentation und Ops: tote Codepfade, Design-Token-Konsistenz, Ladezustände, ENV-/Doku-Pflege und Deployment-Härtung.
-
-**Labels:**
-
-- Priorität: `priority: critical`, `priority: high`, `priority: low`
-- Typ: `type: security`, `type: architecture`, `type: bug`, `type: dx`, `type: testing`, `type: ops`, `type: docs`
-- Aufwand: `effort: S`, `effort: M`, `effort: L`
-- Feature-Wünsche außerhalb des Review-Workflows erhalten zusätzlich `Feature`, weil die Typ-Liste nur Review-Kategorien abdeckt. `priority:*`, `type:*` und `effort:*` bleiben trotzdem Pflicht.
-
-### Issue-Format
-
-Issues sind keine Ticket-Formulare. Sie erklären kurz und klar was aufgefallen ist
-und was dagegen zu tun ist — so wie ein Entwickler es einem Kollegen erklären würde.
-
-Jeder Issue-Body folgt dieser Struktur:
-
-**Was ist aufgefallen**
-Das Problem in eigenen Worten. Was ist falsch, wo liegt es, warum ist es ein Problem.
-Datei und Zeile nennen wenn bekannt. Konkret, nicht abstrakt.
-
-**Was zu tun ist**
-Was geändert werden muss und warum das die richtige Lösung ist.
-Fließtext oder kurze natürliche Aufzählung — nur wenn wirklich nötig.
-
-**Commit-Vorschlag**
-`type(scope): description`
-
-Regeln:
-
-- Kein Emoji in Titel oder Body
-- Kein steifer Formular-Stil ("Fundstelle", "Akzeptanzkriterien" etc.)
-- Natürlicher Ton, aktive Sprache, auf Deutsch
-- Technisch präzise, so kurz wie möglich
-- Labels immer: priority:* + type:* + effort:*
-- Jeder Issue hat einen Milestone (Release-Schema: v0.1, v0.2, v1.0)
-- Feature-Wünsche sind die Ausnahme: Sie liegen ohne Milestone im Backlog, bis ein Release sie aufnimmt. Der Abschnitt **Was ist aufgefallen** beschreibt dann die Lücke im Ist-Stand statt eines Fehlers.
-
-### Review-Workflow
-
-Wenn ein Code-Review durchgeführt wird, gilt folgender Prozess:
-
-1. **Review durchführen** mit dem DeepSeek-Review-Prompt (siehe `docs/review-prompt.md`)
-2. **Issues erstellen** — jeder Finding wird ein eigenes Issue (Format siehe oben), mit:
-   - Titel: kurz, präzise, Deutsch, kein Emoji
-   - Labels: immer `priority:*` + `type:*` + `effort:*`
-   - Milestone: passendes Release
-3. **Issues dem Project zuweisen** — Status initial auf Backlog
-4. **AGENTS.md aktualisieren** — neue Standards oder geänderte Prozesse sofort dokumentieren
-
-Zusätzlich zum manuellen Review meldet GitHub unter „Security and quality → Code quality" automatische CodeQL-Findings mit den Scores für Maintainability und Reliability. Diese Findings hängen nicht an der `code-scanning`-API — `gh api repos/<owner>/<repo>/code-scanning/alerts` antwortet dort mit 404 („no analysis found"). Richtig ist:
-
-- Liste der offenen Findings: `gh api repos/<owner>/<repo>/code-quality/findings?state=open`
-- Details je Finding (Pfad, Zeile, Meldungstext): `gh api repos/<owner>/<repo>/code-quality/findings/<nummer>`
-
-Rein mechanische Findings (tote Zuweisung, triviale Bedingung, nicht geschlossene Datei, fehlendes `await`) werden direkt behoben und als eigener `fix(...)`-Commit abgelegt; sie brauchen kein Issue und keinen Milestone. Issues entstehen nur für Findings mit Entscheidungsbedarf oder Verhaltensänderung.
-
-### Regeln für Issues
-
-- Kein Emoji in Titeln oder Bodies
-- Jedes Issue = genau ein abgeschlossener Fix
-- Kein Issue ohne Label; Review-Findings zusätzlich ohne Ausnahme mit Milestone
-- Feature-Wünsche ohne Milestone nur mit `Feature`-Label, damit sie im Backlog auffindbar bleiben
-- `window.confirm` / `window.prompt` immer als `priority: critical` + `type: bug`
-- Sicherheitsprobleme immer ins früheste Release
-
-### Regeln für Milestones
-
-- Schema: v0.1, v0.2, v1.0
-- Sicherheit und Blocker immer in v0.1
-- Ein Milestone wird geschlossen sobald alle Issues darin Done sind
-- Neue Milestones werden beim nächsten Review-Zyklus angelegt
+- Board: https://github.com/orgs/Schlossparktheater-Altrossthal/projects/2 (Backlog → Ready → In
+  Progress → In Review → Done). Neue Issues starten im Backlog.
+- Labels Pflicht: `priority:*` (critical/high/low) + `type:*` (security, architecture, bug, dx,
+  testing, ops, docs) + `effort:*` (S/M/L); Feature-Wünsche zusätzlich `Feature`.
+- Milestones benennen, falls gesetzt, ein echtes geplantes Release (z. B. `v1.12.0`).
+  Sicherheitsprobleme kommen ins nächste Release.
+- Issue = ein Fix. Deutsch, natürlicher Ton, kein Emoji, kein Formular-Stil. Body: **Was ist
+  aufgefallen** (konkret, mit Datei/Zeile) → **Was zu tun ist** → **Commit-Vorschlag**.
+- CodeQL-Findings: `gh api repos/<owner>/<repo>/code-quality/findings?state=open` (nicht die
+  `code-scanning`-API). Mechanische Findings direkt als `fix(...)`-Commit beheben, Issues nur bei
+  Entscheidungsbedarf.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

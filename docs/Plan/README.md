@@ -1,7 +1,7 @@
 # Pläne
 
 Hier liegen alle Pläne des Projekts: Entwürfe, Umbau-, Migrations- und Testpläne. Die Regeln dazu
-stehen in `AGENTS.md` (Abschnitt „Pläne, Studien & Analysen"); diese Datei ist Index und Vorlage.
+stehen in `AGENTS.md` (Abschnitt „Doku & Pläne"); diese Datei ist Index und Vorlage.
 
 - **Ein Plan wird nie gelöscht.** Ist er umgesetzt, bleibt er liegen: `Stand:`-Zeile auf den neuen
   Status setzen, Checkliste abhaken. Der Ordner ist damit auch Entscheidungs- und Ergebnisarchiv.
@@ -14,6 +14,7 @@ stehen in `AGENTS.md` (Abschnitt „Pläne, Studien & Analysen"); diese Datei is
 
 | Datei                                                                            | Titel                                                                   | Stand      | Status                                                                              |
 | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------- |
+| [agents-md-ueberarbeitung-plan.md](agents-md-ueberarbeitung-plan.md)             | AGENTS.md überarbeiten                                                  | 2026-10-02 | Umgesetzt                                                                           |
 | [benachrichtigungen-plan.md](benachrichtigungen-plan.md)                         | Benachrichtigungen neu (Glocke, PWA, Web Push)                          | 2026-09-27 | Phase 1–6 umgesetzt, offen Phase 7 (Release)                                        |
 | [datenportal-plan.md](datenportal-plan.md)                                       | Datenportal (Report-Builder)                                            | 2026-09-26 | Phase 1–2 umgesetzt, offen Phase 3                                                  |
 | [ernaehrung-allergien-plan.md](ernaehrung-allergien-plan.md)                     | Ernährung & Allergien – Datenmodell, Eingabe und Darstellung            | 2026-09-30 | Phase 0–7 umgesetzt; E2E nachzuholen                                                |
