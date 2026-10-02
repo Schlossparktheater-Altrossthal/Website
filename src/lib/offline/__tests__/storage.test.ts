@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { OfflineDatabase } from "../db";
-import type { OfflineDelta, OfflineSnapshot } from "../types";
+import type { OfflineDelta } from "../types";
 
 describe("offline storage", () => {
   let db: OfflineDatabase;
