@@ -7,11 +7,8 @@ import { PageHeader } from "@/components/members/page-header";
 import { LayoutGridIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
-import {
-  listContainerOptions,
-  listInventoryAreas,
-  listLocationOptions,
-} from "@/lib/inventory/queries";
+import { loadInventoryCatalog } from "@/lib/inventory/catalog";
+import { listContainerOptions, listLocationOptions } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
 import type { PlacementTarget } from "@/lib/inventory/service-types";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
@@ -30,7 +27,7 @@ export default async function NewAssetPage({ searchParams }: { searchParams: Sea
 
   const params = await searchParams;
   const [areas, locations, containers] = await Promise.all([
-    listInventoryAreas(),
+    loadInventoryCatalog(),
     listLocationOptions(),
     listContainerOptions(),
   ]);

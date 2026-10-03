@@ -7,11 +7,12 @@ import {
   revalidateInventory,
   type InventoryActionResult,
 } from "@/lib/inventory/actions-helpers";
-import { inventoryAssetPath, parseInventoryCode } from "@/lib/inventory/constants";
+import { inventoryAssetPath, parseScanToken } from "@/lib/inventory/constants";
 import { buildScanResult, type ScanResult } from "@/lib/inventory/scan";
 import {
   placeAsset,
   requireInventoryAccess,
+  resolveScanToken,
   setBulkStock,
   type PlacementTarget,
 } from "@/lib/inventory/service";
@@ -27,8 +28,10 @@ const targetSchema = z.discriminatedUnion("type", [
 export async function lookupCodeAction(raw: string): Promise<InventoryActionResult<ScanResult>> {
   try {
     await requireInventoryAccess("use");
-    const code = parseInventoryCode(raw);
-    if (!code) throw new Error("Kein gültiger Lager-Code.");
+    const token = parseScanToken(raw);
+    const code = token ? await resolveScanToken(token) : null;
+    if (!code)
+      throw new Error(token ? "Dieses Etikett ist nicht vergeben." : "Kein gültiger Lager-Code.");
     const result = await buildScanResult(code);
     if (!result) throw new Error(`${code} ist nicht vergeben.`);
     return { ok: true, data: result };

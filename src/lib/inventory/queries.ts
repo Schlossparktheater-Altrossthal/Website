@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import {
   INSPECTION_SOON_DAYS,
   inspectionState,
-  readAttributes,
+  assetDisplayName,
   type AssetKind,
   type AssetStatus,
   type Condition,
@@ -14,6 +14,9 @@ import {
   loadLocationLabeler,
   locationSubtreeIds,
 } from "@/lib/inventory/service";
+import { loadEffectiveFields } from "@/lib/inventory/catalog";
+import { ASSET_NAME_SELECT } from "@/lib/inventory/selects";
+import { categoryPathLabel, describeSpecs, readSpecs } from "@/lib/inventory/specs";
 import { prisma } from "@/lib/prisma";
 
 export const INVENTORY_PAGE_SIZE = 50;
@@ -21,7 +24,10 @@ export const INVENTORY_PAGE_SIZE = 50;
 export type InventoryListFilter = {
   query?: string;
   areaId?: string;
+  /** Kategorie inklusive aller Unterkategorien. */
   categoryId?: string;
+  /** Nur Exemplare eines Artikeltyps. */
+  productId?: string;
   locationId?: string;
   /** Besondere Sichten der Übersicht. */
   view?:
@@ -62,15 +68,15 @@ function sortOrder(sort: InventorySort): Prisma.InventoryAssetOrderByWithRelatio
     case "code":
       return [{ code: dir }];
     case "name":
-      return [{ name: dir }, { code: "asc" }];
+      return [{ product: { name: dir } }, { code: "asc" }];
     case "area":
       return [{ area: { sortOrder: dir } }, { code: "asc" }];
     case "category":
-      return [{ category: { name: dir } }, { name: "asc" }];
+      return [{ product: { category: { name: dir } } }, { product: { name: "asc" } }];
     case "condition":
-      return [{ condition: dir }, { name: "asc" }];
+      return [{ condition: dir }, { product: { name: "asc" } }];
     case "status":
-      return [{ status: dir }, { name: "asc" }];
+      return [{ status: dir }, { product: { name: "asc" } }];
     case "inspection":
       return [{ nextInspectionAt: { sort: dir, nulls } }, { code: "asc" }];
     case "updated":
@@ -90,6 +96,8 @@ export type InventoryListItem = {
   place: string | null;
   quantity: number;
   unit: string | null;
+  productId: string;
+  productPublicId: string;
   photoId: string | null;
   openDefects: number;
   inspection: InspectionState;
@@ -103,16 +111,38 @@ export type InventoryListItem = {
 /** Mengenartikel unter Mindestbestand (Spaltenvergleich, daher in JS). */
 export async function lowStockAssetIds(): Promise<string[]> {
   const candidates = await prisma.inventoryAsset.findMany({
-    where: { kind: "bulk", minQuantity: { not: null }, status: { not: "retired" } },
-    select: { id: true, quantity: true, minQuantity: true },
+    where: { kind: "bulk", product: { minQuantity: { not: null } }, status: { not: "retired" } },
+    select: { id: true, quantity: true, product: { select: { minQuantity: true } } },
   });
   return candidates
-    .filter((asset) => asset.minQuantity !== null && asset.quantity < asset.minQuantity)
+    .filter(
+      (asset) => asset.product.minQuantity !== null && asset.quantity < asset.product.minQuantity,
+    )
     .map((asset) => asset.id);
 }
 
+/** Kategorie samt aller Unterkategorien. */
+export async function categorySubtreeIds(categoryId: string): Promise<string[]> {
+  const category = await prisma.inventoryCategory.findUnique({
+    where: { id: categoryId },
+    select: { areaId: true },
+  });
+  if (!category) return [categoryId];
+  const all = await prisma.inventoryCategory.findMany({
+    where: { areaId: category.areaId },
+    select: { id: true, parentId: true },
+  });
+  const result = [categoryId];
+  for (let index = 0; index < result.length; index += 1) {
+    for (const entry of all) {
+      if (entry.parentId === result[index] && !result.includes(entry.id)) result.push(entry.id);
+    }
+  }
+  return result;
+}
+
 function buildWhere(
-  filter: InventoryListFilter,
+  filter: InventoryListFilter & { categoryIds?: string[] },
   locationIds: string[] | null,
   lowIds: string[] | null = null,
 ): Prisma.InventoryAssetWhereInput {
@@ -124,7 +154,10 @@ function buildWhere(
     and.push({ status: { not: "retired" } });
   }
   if (filter.areaId) and.push({ areaId: filter.areaId });
-  if (filter.categoryId) and.push({ categoryId: filter.categoryId });
+  if (filter.categoryIds?.length) {
+    and.push({ product: { categoryId: { in: filter.categoryIds } } });
+  }
+  if (filter.productId) and.push({ productId: filter.productId });
   if (locationIds) {
     and.push({
       OR: [
@@ -141,12 +174,19 @@ function buildWhere(
       and.push({
         OR: [
           { code: { contains: word, mode: "insensitive" } },
-          { name: { contains: word, mode: "insensitive" } },
-          { manufacturer: { contains: word, mode: "insensitive" } },
-          { model: { contains: word, mode: "insensitive" } },
+          { label: { contains: word, mode: "insensitive" } },
           { serialNumber: { contains: word, mode: "insensitive" } },
-          { description: { contains: word, mode: "insensitive" } },
-          { category: { name: { contains: word, mode: "insensitive" } } },
+          {
+            product: {
+              OR: [
+                { name: { contains: word, mode: "insensitive" } },
+                { manufacturer: { contains: word, mode: "insensitive" } },
+                { model: { contains: word, mode: "insensitive" } },
+                { description: { contains: word, mode: "insensitive" } },
+                { category: { name: { contains: word, mode: "insensitive" } } },
+              ],
+            },
+          },
         ],
       });
     }
@@ -158,7 +198,7 @@ function buildWhere(
       break;
     case "inspection":
       and.push({
-        inspectionRequired: true,
+        product: { inspectionRequired: true },
         OR: [{ nextInspectionAt: null }, { nextInspectionAt: { lte: soon } }],
       });
       break;
@@ -183,8 +223,9 @@ function buildWhere(
 export async function listInventoryAssets(filter: InventoryListFilter) {
   const { locations, label } = await loadLocationLabeler();
   const locationIds = filter.locationId ? locationSubtreeIds(locations, filter.locationId) : null;
+  const categoryIds = filter.categoryId ? await categorySubtreeIds(filter.categoryId) : undefined;
   const lowIds = filter.view === "low" ? await lowStockAssetIds() : null;
-  const where = buildWhere(filter, locationIds, lowIds);
+  const where = buildWhere({ ...filter, categoryIds }, locationIds, lowIds);
   const page = Math.max(1, filter.page ?? 1);
   const pageSize = filter.pageSize ?? INVENTORY_PAGE_SIZE;
   const [total, assets] = await Promise.all([
@@ -201,20 +242,28 @@ export async function listInventoryAssets(filter: InventoryListFilter) {
       select: {
         id: true,
         code: true,
-        name: true,
+        label: true,
         kind: true,
         status: true,
         condition: true,
         areaId: true,
-        categoryId: true,
         quantity: true,
-        unit: true,
         locationId: true,
         labelPrintedAt: true,
-        inspectionRequired: true,
         nextInspectionAt: true,
         area: { select: { name: true, prefix: true } },
-        category: { select: { name: true } },
+        product: {
+          select: {
+            id: true,
+            publicId: true,
+            name: true,
+            categoryId: true,
+            unit: true,
+            inspectionRequired: true,
+            category: { select: { name: true } },
+            photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+          },
+        },
         container: { select: { code: true, name: true, locationId: true } },
         stocks: { select: { locationId: true, container: { select: { code: true } } } },
         photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
@@ -227,25 +276,27 @@ export async function listInventoryAssets(filter: InventoryListFilter) {
   const items: InventoryListItem[] = assets.map((asset) => ({
     id: asset.id,
     code: asset.code,
-    name: asset.name,
+    name: assetDisplayName(asset),
     kind: asset.kind,
     status: asset.status,
     areaName: asset.area.name,
     areaPrefix: asset.area.prefix,
-    categoryName: asset.category?.name ?? null,
+    categoryName: asset.product.category?.name ?? null,
     place: describePlace(asset, label),
     quantity: asset.quantity,
-    unit: asset.unit,
-    photoId: asset.photos[0]?.id ?? null,
+    unit: asset.product.unit,
+    productId: asset.product.id,
+    productPublicId: asset.product.publicId,
+    photoId: asset.photos[0]?.id ?? asset.product.photos[0]?.id ?? null,
     openDefects: asset._count.defects,
     inspection: inspectionState({
-      inspectionRequired: asset.inspectionRequired,
+      inspectionRequired: asset.product.inspectionRequired,
       nextInspectionAt: asset.nextInspectionAt,
       lastInspectionFailed: asset.inspections[0]?.result === "failed",
     }),
     labelPrinted: Boolean(asset.labelPrintedAt),
     areaId: asset.areaId,
-    categoryId: asset.categoryId,
+    categoryId: asset.product.categoryId,
     condition: asset.condition,
     nextInspectionAt: asset.nextInspectionAt,
   }));
@@ -288,7 +339,7 @@ export async function getInventoryOverviewStats() {
     prisma.inventoryAsset.count({
       where: {
         ...active,
-        inspectionRequired: true,
+        product: { inspectionRequired: true },
         OR: [{ nextInspectionAt: null }, { nextInspectionAt: { lte: soon } }],
       },
     }),
@@ -319,7 +370,7 @@ export async function listInventoryAreas() {
       inspectionDefault: true,
       categories: {
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-        select: { id: true, name: true },
+        select: { id: true, name: true, parentId: true },
       },
       _count: { select: { assets: true } },
     },
@@ -348,12 +399,12 @@ export async function listContainerOptions() {
   const containers = await prisma.inventoryAsset.findMany({
     where: { kind: "container", status: { not: "retired" } },
     orderBy: { code: "asc" },
-    select: { id: true, code: true, name: true, locationId: true },
+    select: { id: true, code: true, ...ASSET_NAME_SELECT, locationId: true },
   });
   return containers.map((container) => ({
     id: container.id,
     code: container.code,
-    name: container.name,
+    name: assetDisplayName(container),
     path: label(container.locationId),
   }));
 }
@@ -365,18 +416,39 @@ export async function getInventoryAssetDetail(code: string, options: { includeCo
     where: { code },
     include: {
       area: { select: { id: true, name: true, prefix: true } },
-      category: { select: { id: true, name: true } },
+      product: {
+        include: {
+          photos: { select: { id: true }, orderBy: { sortOrder: "asc" } },
+          _count: { select: { assets: { where: { status: { not: "retired" } } } } },
+        },
+      },
       location: { select: { id: true, code: true, name: true } },
-      container: { select: { id: true, code: true, name: true, locationId: true } },
+      container: {
+        select: { id: true, code: true, ...ASSET_NAME_SELECT, locationId: true },
+      },
       photos: { select: { id: true }, orderBy: { sortOrder: "asc" } },
       contents: {
         orderBy: { code: "asc" },
-        select: { id: true, code: true, name: true, kind: true, status: true, quantity: true },
+        select: {
+          id: true,
+          code: true,
+          ...ASSET_NAME_SELECT,
+          kind: true,
+          status: true,
+          quantity: true,
+        },
       },
       storedStocks: {
         select: {
           quantity: true,
-          asset: { select: { id: true, code: true, name: true, unit: true } },
+          asset: {
+            select: {
+              id: true,
+              code: true,
+              ...ASSET_NAME_SELECT,
+              product: { select: { name: true, unit: true } },
+            },
+          },
         },
       },
       stocks: {
@@ -385,7 +457,7 @@ export async function getInventoryAssetDetail(code: string, options: { includeCo
           id: true,
           quantity: true,
           locationId: true,
-          container: { select: { id: true, code: true, name: true } },
+          container: { select: { id: true, code: true, ...ASSET_NAME_SELECT } },
         },
       },
       defects: {
@@ -438,23 +510,63 @@ export async function getInventoryAssetDetail(code: string, options: { includeCo
     },
   });
   if (!asset) return null;
-  const { label } = await loadLocationLabeler();
-  const { acquisitionCost, ...rest } = asset;
+  const [{ label }, fields, categories] = await Promise.all([
+    loadLocationLabeler(),
+    loadEffectiveFields(prisma, asset.areaId, asset.product.categoryId),
+    prisma.inventoryCategory.findMany({
+      where: { areaId: asset.areaId },
+      select: { id: true, parentId: true, name: true },
+    }),
+  ]);
+  const { acquisitionCost, product, ...rest } = asset;
+  const named = <T extends { label: string | null; product: { name: string } }>(entry: T) => ({
+    ...entry,
+    name: assetDisplayName(entry),
+  });
   return {
     ...rest,
+    name: assetDisplayName(asset),
     kind: asset.kind as AssetKind,
     status: asset.status as AssetStatus,
     condition: asset.condition as Condition,
-    attributes: readAttributes(asset.attributes),
+    product: {
+      id: product.id,
+      publicId: product.publicId,
+      name: product.name,
+      categoryId: product.categoryId,
+      manufacturer: product.manufacturer,
+      model: product.model,
+      description: product.description,
+      publicNote: product.publicNote,
+      unit: product.unit,
+      minQuantity: product.minQuantity,
+      inspectionRequired: product.inspectionRequired,
+      inspectionIntervalMonths: product.inspectionIntervalMonths,
+      specs: readSpecs(product.specs),
+      photos: product.photos,
+      exemplarCount: product._count.assets,
+    },
+    categoryPath: categoryPathLabel(categories, product.categoryId),
+    fields,
+    specRows: describeSpecs(fields, readSpecs(product.specs)),
+    /** Eigene Fotos des Exemplars zuerst, danach die des Typs. */
+    allPhotos: [...asset.photos, ...product.photos],
+    container: asset.container ? named(asset.container) : null,
+    contents: asset.contents.map(named),
+    storedStocks: asset.storedStocks.map((stock) => ({
+      ...stock,
+      asset: { ...named(stock.asset), unit: stock.asset.product.unit },
+    })),
     acquisitionCost: options.includeCost && acquisitionCost ? Number(acquisitionCost) : null,
     locationPath: label(asset.locationId),
     containerPath: asset.container ? label(asset.container.locationId) : null,
     stocks: asset.stocks.map((stock) => ({
       ...stock,
+      container: stock.container ? named(stock.container) : null,
       locationPath: label(stock.locationId),
     })),
     inspectionState: inspectionState({
-      inspectionRequired: asset.inspectionRequired,
+      inspectionRequired: product.inspectionRequired,
       nextInspectionAt: asset.nextInspectionAt,
       lastInspectionFailed: asset.inspections[0]?.result === "failed",
     }),
@@ -463,25 +575,36 @@ export async function getInventoryAssetDetail(code: string, options: { includeCo
 
 export type InventoryAssetDetail = NonNullable<Awaited<ReturnType<typeof getInventoryAssetDetail>>>;
 
-/** Öffentliche Scan-Ansicht: bewusst ohne Preise, Notizen, Seriennummern oder Personen. */
-export async function getPublicAssetView(code: string) {
+/**
+ * Öffentliche Scan-Ansicht über die zufällige `publicId` – bewusst ohne Preise, Notizen,
+ * Seriennummern oder Personen.
+ */
+export async function getPublicAssetView(publicId: string) {
   const asset = await prisma.inventoryAsset.findUnique({
-    where: { code },
+    where: { publicId },
     select: {
       code: true,
-      name: true,
+      label: true,
       kind: true,
       status: true,
-      manufacturer: true,
-      model: true,
-      description: true,
-      publicNote: true,
-      attributes: true,
-      inspectionRequired: true,
+      areaId: true,
       nextInspectionAt: true,
       lastInspectionAt: true,
       area: { select: { name: true, prefix: true } },
-      category: { select: { name: true } },
+      product: {
+        select: {
+          name: true,
+          categoryId: true,
+          manufacturer: true,
+          model: true,
+          description: true,
+          publicNote: true,
+          specs: true,
+          inspectionRequired: true,
+          category: { select: { name: true } },
+          photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+        },
+      },
       photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
       inspections: { select: { result: true }, orderBy: { inspectedAt: "desc" }, take: 1 },
       defects: {
@@ -491,23 +614,24 @@ export async function getPublicAssetView(code: string) {
     },
   });
   if (!asset) return null;
+  const fields = await loadEffectiveFields(prisma, asset.areaId, asset.product.categoryId);
   return {
     code: asset.code,
-    name: asset.name,
+    name: assetDisplayName(asset),
     kind: asset.kind as AssetKind,
     status: asset.status as AssetStatus,
-    manufacturer: asset.manufacturer,
-    model: asset.model,
-    description: asset.description,
-    publicNote: asset.publicNote,
-    attributes: readAttributes(asset.attributes),
+    manufacturer: asset.product.manufacturer,
+    model: asset.product.model,
+    description: asset.product.description,
+    publicNote: asset.product.publicNote,
+    specRows: describeSpecs(fields, readSpecs(asset.product.specs)),
     areaName: asset.area.name,
     areaPrefix: asset.area.prefix,
-    categoryName: asset.category?.name ?? null,
-    photoId: asset.photos[0]?.id ?? null,
+    categoryName: asset.product.category?.name ?? null,
+    photoId: asset.photos[0]?.id ?? asset.product.photos[0]?.id ?? null,
     nextInspectionAt: asset.nextInspectionAt,
     inspectionState: inspectionState({
-      inspectionRequired: asset.inspectionRequired,
+      inspectionRequired: asset.product.inspectionRequired,
       nextInspectionAt: asset.nextInspectionAt,
       lastInspectionFailed: asset.inspections[0]?.result === "failed",
     }),
@@ -545,7 +669,7 @@ export async function getLocationDetail(code: string) {
       select: {
         id: true,
         code: true,
-        name: true,
+        ...ASSET_NAME_SELECT,
         kind: true,
         status: true,
         _count: { select: { contents: true } },
@@ -555,7 +679,14 @@ export async function getLocationDetail(code: string) {
       where: { locationId: location.id },
       select: {
         quantity: true,
-        asset: { select: { id: true, code: true, name: true, unit: true } },
+        asset: {
+          select: {
+            id: true,
+            code: true,
+            ...ASSET_NAME_SELECT,
+            product: { select: { name: true, unit: true } },
+          },
+        },
       },
     }),
   ]);
@@ -565,7 +696,15 @@ export async function getLocationDetail(code: string) {
     parent: location.parentId
       ? (all.find((entry) => entry.id === location.parentId) ?? null)
       : null,
-    assets,
-    stocks,
+    assets: assets.map((asset) => ({ ...asset, name: assetDisplayName(asset) })),
+    stocks: stocks.map((stock) => ({
+      quantity: stock.quantity,
+      asset: {
+        id: stock.asset.id,
+        code: stock.asset.code,
+        name: assetDisplayName(stock.asset),
+        unit: stock.asset.product.unit,
+      },
+    })),
   };
 }

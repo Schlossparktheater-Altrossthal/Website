@@ -35,7 +35,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ASSET_KIND_HINTS,
   ASSET_KIND_LABELS,
-  attributeFieldsFor,
   CONDITION_LABELS,
   CONDITIONS,
   INVENTORY_BASE_PATH,
@@ -44,6 +43,7 @@ import {
   type Condition,
 } from "@/lib/inventory/constants";
 import { resizeImageFile } from "@/lib/inventory/photo-client";
+import { catalogFields, categoryPath, type FieldDef } from "@/lib/inventory/specs";
 import {
   emptyAssetValues,
   type AssetFormArea,
@@ -59,6 +59,7 @@ function toPayload(values: AssetFormValues) {
     ...values,
     minQuantity: number(values.minQuantity),
     quantity: number(values.quantity),
+    count: number(values.count) ?? 1,
     inspectionIntervalMonths: number(values.inspectionIntervalMonths),
     acquisitionCost: number(values.acquisitionCost.replace(",", ".")),
     nextInspectionAt: values.nextInspectionAt || null,
@@ -98,7 +99,15 @@ export function AssetForm({
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const area = areas.find((entry) => entry.id === values.areaId);
-  const attributeFields = area ? attributeFieldsFor(area.prefix) : [];
+  const specFields = catalogFields(area, values.categoryId);
+  const categoryOptions = (area?.categories ?? [])
+    .map((category) => ({
+      id: category.id,
+      label: categoryPath(area?.categories ?? [], category.id)
+        .map((entry) => entry.name)
+        .join(" › "),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "de"));
 
   React.useEffect(() => {
     if (!photo) {
@@ -119,7 +128,7 @@ export function AssetForm({
       ...current,
       areaId,
       categoryId: null,
-      attributes: {},
+      specs: {},
       inspectionRequired:
         current.kind === "unique" ? (next?.inspectionDefault ?? false) : current.inspectionRequired,
     }));
@@ -151,7 +160,7 @@ export function AssetForm({
           return;
         }
         toast.success(result.message ?? "Angelegt.");
-        setCreated((current) => [result.data.code, ...current]);
+        setCreated((current) => [...result.data.codes, ...current]);
         // Für die nächste Erfassung bleiben Bereich, Kategorie, Art und Ort stehen.
         setValues((current) => ({
           ...emptyAssetValues(area),
@@ -332,9 +341,9 @@ export function AssetForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NO_CATEGORY}>Ohne Kategorie</SelectItem>
-                {(area?.categories ?? []).map((category) => (
+                {categoryOptions.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
-                    {category.name}
+                    {category.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -368,6 +377,25 @@ export function AssetForm({
               onChange={(placement) => set("placement", placement)}
               options={placementOptions}
             />
+            {values.kind !== "bulk" ? (
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label htmlFor="asset-count">Anzahl</Label>
+                  <Input
+                    id="asset-count"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={200}
+                    value={values.count}
+                    onChange={(event) => set("count", event.target.value)}
+                  />
+                </div>
+                <p className="self-end pb-2 text-xs text-muted-foreground">
+                  Jedes Stück bekommt ein eigenes Etikett.
+                </p>
+              </div>
+            ) : null}
             {values.kind === "bulk" ? (
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1.5">
@@ -395,20 +423,15 @@ export function AssetForm({
           </div>
         ) : null}
 
-        {attributeFields.length ? (
+        {specFields.length ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {attributeFields.map((field) => (
-              <div key={field.key} className="space-y-1.5">
-                <Label htmlFor={`attr-${field.key}`}>{field.label}</Label>
-                <Input
-                  id={`attr-${field.key}`}
-                  value={values.attributes[field.key] ?? ""}
-                  placeholder={field.placeholder}
-                  onChange={(event) =>
-                    set("attributes", { ...values.attributes, [field.key]: event.target.value })
-                  }
-                />
-              </div>
+            {specFields.map((field) => (
+              <SpecField
+                key={field.key}
+                field={field}
+                value={values.specs[field.key]}
+                onChange={(value) => set("specs", { ...values.specs, [field.key]: value })}
+              />
             ))}
           </div>
         ) : null}
@@ -444,12 +467,23 @@ export function AssetForm({
                 value={values.model}
                 onChange={(value) => set("model", value)}
               />
-              <TextField
-                id="serial"
-                label="Seriennummer"
-                value={values.serialNumber}
-                onChange={(value) => set("serialNumber", value)}
-              />
+              {mode === "edit" || values.count.trim() === "1" ? (
+                <TextField
+                  id="serial"
+                  label="Seriennummer"
+                  value={values.serialNumber}
+                  onChange={(value) => set("serialNumber", value)}
+                />
+              ) : null}
+              {mode === "edit" || values.count.trim() === "1" ? (
+                <TextField
+                  id="label"
+                  label="Zusatz zum Namen"
+                  value={values.label}
+                  placeholder="z. B. Kiste 3"
+                  onChange={(value) => set("label", value)}
+                />
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="asset-description">Beschreibung</Label>
@@ -619,6 +653,64 @@ export function AssetForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+const NO_VALUE = "__none__";
+
+function SpecField({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDef;
+  value: string | boolean | undefined;
+  onChange: (value: string | boolean) => void;
+}) {
+  const id = `spec-${field.key}`;
+  const label = `${field.label}${field.unit ? ` (${field.unit})` : ""}${field.required ? " *" : ""}`;
+  if (field.type === "boolean") {
+    return (
+      <label className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <Switch checked={value === true} onCheckedChange={onChange} aria-label={field.label} />
+      </label>
+    );
+  }
+  if (field.type === "select") {
+    return (
+      <div className="space-y-1.5">
+        <Label>{label}</Label>
+        <Select
+          value={typeof value === "string" && value ? value : NO_VALUE}
+          onValueChange={(next) => onChange(next === NO_VALUE ? "" : next)}
+        >
+          <SelectTrigger aria-label={field.label}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_VALUE}>–</SelectItem>
+            {field.options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={typeof value === "string" ? value : ""}
+        placeholder={field.placeholder ?? undefined}
+        inputMode={field.type === "number" ? "decimal" : undefined}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
   );
 }
 

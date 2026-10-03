@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/rbac";
 
 /**
- * Fotos aus dem Lager. Objektfotos sind öffentlich (Scan-Seite ohne Login), Fotos von
+ * Fotos aus dem Lager. Fotos von Artikeltypen und Exemplaren sind öffentlich (Scan-Seite ohne Login), Fotos von
  * Mängeln nur mit Lagerzugriff.
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,13 +16,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       data: true,
       mimeType: true,
       defectId: true,
+      productId: true,
       asset: { select: { status: true } },
     },
   });
   if (!photo) {
     return NextResponse.json({ error: "Foto nicht gefunden" }, { status: 404 });
   }
-  const isPublic = !photo.defectId && photo.asset && photo.asset.status !== "retired";
+  const isPublic =
+    !photo.defectId &&
+    (Boolean(photo.productId) || (photo.asset && photo.asset.status !== "retired"));
   if (!isPublic) {
     const session = await getSession();
     const access = await getInventoryAccess(session?.user);

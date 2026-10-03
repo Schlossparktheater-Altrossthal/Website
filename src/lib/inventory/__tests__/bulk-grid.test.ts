@@ -20,9 +20,20 @@ const ctx: BulkContext = {
       name: "Technik",
       prefix: "T",
       inspectionDefault: true,
+      fields: [
+        {
+          key: "power",
+          label: "Leistung",
+          type: "text",
+          unit: null,
+          options: [],
+          placeholder: null,
+          required: false,
+        },
+      ],
       categories: [
-        { id: "c-licht", name: "Licht" },
-        { id: "c-kabel", name: "Kabel" },
+        { id: "c-licht", parentId: null, name: "Licht", fields: [] },
+        { id: "c-kabel", parentId: null, name: "Kabel", fields: [] },
       ],
     },
     {
@@ -30,7 +41,18 @@ const ctx: BulkContext = {
       name: "Kostüm",
       prefix: "K",
       inspectionDefault: false,
-      categories: [{ id: "c-kleid", name: "Kleider" }],
+      fields: [
+        {
+          key: "size",
+          label: "Größe",
+          type: "text",
+          unit: null,
+          options: [],
+          placeholder: null,
+          required: false,
+        },
+      ],
+      categories: [{ id: "c-kleid", parentId: null, name: "Kleider", fields: [] }],
     },
   ],
   placement: {
@@ -102,7 +124,7 @@ describe("validateRow", () => {
       name: "PAR 64",
       condition: "good",
       placement: { type: "location", id: "l1" },
-      attributes: { power: "575 W" },
+      specs: { power: "575 W" },
       inspectionRequired: true,
       quantity: null,
       unit: null,

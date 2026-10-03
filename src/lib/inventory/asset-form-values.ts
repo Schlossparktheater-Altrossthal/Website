@@ -4,6 +4,7 @@ import {
   type Condition,
 } from "@/lib/inventory/constants";
 import type { PlacementTarget } from "@/lib/inventory/service-types";
+import type { CategoryNode, FieldDef } from "@/lib/inventory/specs";
 
 /** Werte des Erfassungsformulars – ohne "use client", damit Seiten sie vorbelegen können. */
 export type AssetFormArea = {
@@ -11,7 +12,8 @@ export type AssetFormArea = {
   name: string;
   prefix: string;
   inspectionDefault: boolean;
-  categories: { id: string; name: string }[];
+  fields: FieldDef[];
+  categories: (CategoryNode & { fields: FieldDef[] })[];
 };
 
 export type AssetFormValues = {
@@ -21,11 +23,13 @@ export type AssetFormValues = {
   name: string;
   manufacturer: string;
   model: string;
+  label: string;
+  count: string;
   serialNumber: string;
   description: string;
   publicNote: string;
   internalNote: string;
-  attributes: Record<string, string>;
+  specs: Record<string, string | boolean>;
   condition: Condition;
   unit: string;
   minQuantity: string;
@@ -48,11 +52,13 @@ export function emptyAssetValues(area: AssetFormArea | undefined): AssetFormValu
     name: "",
     manufacturer: "",
     model: "",
+    label: "",
+    count: "1",
     serialNumber: "",
     description: "",
     publicNote: "",
     internalNote: "",
-    attributes: {},
+    specs: {},
     condition: "good",
     unit: "Stk.",
     minQuantity: "",

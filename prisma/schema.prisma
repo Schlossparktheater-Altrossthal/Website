@@ -1417,19 +1417,91 @@ model InventoryArea {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   categories        InventoryCategory[]
+  fields            InventoryFieldDef[]
+  products          InventoryProduct[]
   assets            InventoryAsset[]
   stocktakes        InventoryStocktake[]
 }
 
+/// Kategorie als Baum je Bereich, z. B. Ton › Mikrofone › Kondensator.
 model InventoryCategory {
-  id        String           @id @default(cuid())
+  id        String              @id @default(cuid())
   areaId    String
+  parentId  String?
   name      String
-  sortOrder Int              @default(0)
-  area      InventoryArea    @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  assets    InventoryAsset[]
+  sortOrder Int                 @default(0)
+  area      InventoryArea       @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  parent    InventoryCategory?  @relation("InventoryCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  InventoryCategory[] @relation("InventoryCategoryTree")
+  fields    InventoryFieldDef[]
+  products  InventoryProduct[]
 
-  @@unique([areaId, name])
+  @@unique([areaId, parentId, name])
+  @@index([parentId])
+}
+
+enum InventoryFieldType {
+  text
+  number
+  select
+  boolean
+}
+
+/// Merkmal eines Bereichs (gilt für alle Artikel darin) oder einer Kategorie (gilt auch für alle
+/// Unterkategorien). Genau eins von `areaId`/`categoryId` ist gesetzt. Werte stehen in
+/// `InventoryProduct.specs`.
+model InventoryFieldDef {
+  id          String             @id @default(cuid())
+  areaId      String?
+  categoryId  String?
+  /// Stabiler Schlüssel in `specs`, z. B. „power“.
+  key         String
+  label       String
+  type        InventoryFieldType @default(text)
+  unit        String?
+  /// Auswahlwerte bei `select`.
+  options     String[]           @default([])
+  placeholder String?
+  required    Boolean            @default(false)
+  sortOrder   Int                @default(0)
+  area        InventoryArea?     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  category    InventoryCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([areaId, key])
+  @@unique([categoryId, key])
+}
+
+/// Artikeltyp: Stammdaten und Merkmale, die für alle Exemplare gleich sind.
+model InventoryProduct {
+  id                       String             @id @default(cuid())
+  /// Zufällige, nicht erratbare Kennung für URLs.
+  publicId                 String             @unique
+  areaId                   String
+  categoryId               String?
+  /// Einzelstück, Mengenartikel oder Kiste/Case – gilt für alle Exemplare.
+  kind                     InventoryAssetKind @default(unique)
+  name                     String
+  manufacturer             String?
+  model                    String?
+  description              String?
+  /// Öffentlich sichtbarer Hinweis auf der Scan-Seite.
+  publicNote               String?
+  /// Merkmalswerte nach `InventoryFieldDef.key`.
+  specs                    Json               @default("{}")
+  unit                     String?
+  minQuantity              Int?
+  inspectionRequired       Boolean            @default(false)
+  inspectionIntervalMonths Int?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  area                     InventoryArea      @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  category                 InventoryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  assets                   InventoryAsset[]
+  photos                   InventoryPhoto[]
+
+  @@index([areaId])
+  @@index([categoryId])
+  @@index([name])
 }
 
 /// Fester Lagerort als Baum: Lager → Raum/Regal → Fach.
@@ -1437,6 +1509,8 @@ model InventoryLocation {
   id          String                   @id @default(cuid())
   /// Label-Code des Lagerplatzes, z. B. „L-0007“ – zum Scannen beim Einlagern.
   code        String                   @unique
+  /// Zufällige Kennung für QR-Code und URL.
+  publicId    String                   @unique
   name        String
   description String?
   parentId    String?
@@ -1453,58 +1527,55 @@ model InventoryLocation {
   @@index([parentId])
 }
 
+/// Exemplar eines Artikeltyps mit eigenem Label, Ort und Zustand. Mengenartikel haben genau
+/// ein Exemplar, das die Bestände je Lagerplatz trägt.
 model InventoryAsset {
-  id                       String                   @id @default(cuid())
-  /// Unveränderlicher Label-Code, z. B. „T-0042“.
-  code                     String                   @unique
-  areaId                   String
-  categoryId               String?
-  kind                     InventoryAssetKind       @default(unique)
-  status                   InventoryAssetStatus     @default(available)
-  condition                InventoryCondition       @default(good)
-  name                     String
-  manufacturer             String?
-  model                    String?
-  serialNumber             String?
-  description              String?
-  /// Öffentlich sichtbarer Hinweis auf der Scan-Seite.
-  publicNote               String?
-  internalNote             String?
-  /// Bereichsspezifische Felder (Kostüm: Größe, Epoche, Farbe, Material …).
-  attributes               Json                     @default("{}")
-  locationId               String?
-  containerId              String?
+  id               String                   @id @default(cuid())
+  /// Unveränderlicher Label-Code, z. B. „T-0042“ – lesbar, nur mit Login auflösbar.
+  code             String                   @unique
+  /// Zufällige, nicht erratbare Kennung für QR-Code und URL.
+  publicId         String                   @unique
+  productId        String
+  /// Aus dem Artikeltyp übernommen (unveränderlich) – bestimmt Code-Präfix und Abfragen.
+  areaId           String
+  /// Aus dem Artikeltyp übernommen (unveränderlich).
+  kind             InventoryAssetKind       @default(unique)
+  status           InventoryAssetStatus     @default(available)
+  condition        InventoryCondition       @default(good)
+  /// Zusatz zum Typnamen, z. B. „Kiste 3“ oder „links“.
+  label            String?
+  serialNumber     String?
+  internalNote     String?
+  locationId       String?
+  containerId      String?
   /// Gesamtmenge (Mengenartikel: Summe der Bestände).
-  quantity                 Int                      @default(1)
-  unit                     String?
-  minQuantity              Int?
-  acquisitionCost          Decimal?                 @db.Decimal(10, 2)
-  purchaseDate             DateTime?
-  supplier                 String?
-  ownership                String?
-  inspectionRequired       Boolean                  @default(false)
-  inspectionIntervalMonths Int?
-  lastInspectionAt         DateTime?
-  nextInspectionAt         DateTime?
-  lastSeenAt               DateTime?
-  labelPrintedAt           DateTime?
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
-  area                     InventoryArea            @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  category                 InventoryCategory?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  location                 InventoryLocation?       @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  container                InventoryAsset?          @relation("InventoryContainment", fields: [containerId], references: [id], onDelete: SetNull)
-  contents                 InventoryAsset[]         @relation("InventoryContainment")
-  stocks                   InventoryStock[]         @relation("InventoryStockAsset")
-  storedStocks             InventoryStock[]         @relation("InventoryStockContainer")
-  photos                   InventoryPhoto[]
-  defects                  InventoryDefect[]
-  inspections              InventoryInspection[]
-  events                   InventoryEvent[]
-  checkoutLines            InventoryCheckoutLine[]
-  scans                    InventoryStocktakeScan[] @relation("InventoryScanAsset")
-  containerScans           InventoryStocktakeScan[] @relation("InventoryScanContainer")
+  quantity         Int                      @default(1)
+  acquisitionCost  Decimal?                 @db.Decimal(10, 2)
+  purchaseDate     DateTime?
+  supplier         String?
+  ownership        String?
+  lastInspectionAt DateTime?
+  nextInspectionAt DateTime?
+  lastSeenAt       DateTime?
+  labelPrintedAt   DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  product          InventoryProduct         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  area             InventoryArea            @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  location         InventoryLocation?       @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  container        InventoryAsset?          @relation("InventoryContainment", fields: [containerId], references: [id], onDelete: SetNull)
+  contents         InventoryAsset[]         @relation("InventoryContainment")
+  stocks           InventoryStock[]         @relation("InventoryStockAsset")
+  storedStocks     InventoryStock[]         @relation("InventoryStockContainer")
+  photos           InventoryPhoto[]
+  defects          InventoryDefect[]
+  inspections      InventoryInspection[]
+  events           InventoryEvent[]
+  checkoutLines    InventoryCheckoutLine[]
+  scans            InventoryStocktakeScan[] @relation("InventoryScanAsset")
+  containerScans   InventoryStocktakeScan[] @relation("InventoryScanContainer")
 
+  @@index([productId])
   @@index([areaId])
   @@index([locationId])
   @@index([containerId])
@@ -1528,16 +1599,19 @@ model InventoryStock {
 }
 
 model InventoryPhoto {
-  id        String           @id @default(cuid())
+  id        String            @id @default(cuid())
+  productId String?
   assetId   String?
   defectId  String?
   data      Bytes
   mimeType  String
-  sortOrder Int              @default(0)
-  createdAt DateTime         @default(now())
-  asset     InventoryAsset?  @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  defect    InventoryDefect? @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  sortOrder Int               @default(0)
+  createdAt DateTime          @default(now())
+  product   InventoryProduct? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  asset     InventoryAsset?   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  defect    InventoryDefect?  @relation(fields: [defectId], references: [id], onDelete: Cascade)
 
+  @@index([productId])
   @@index([assetId])
   @@index([defectId])
 }

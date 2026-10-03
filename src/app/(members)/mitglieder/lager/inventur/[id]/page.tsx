@@ -81,11 +81,19 @@ async function CounterView({ stocktakeId }: { stocktakeId: string }) {
     loadLocationLabeler(),
   ]);
   if (!progress) notFound();
+  // Lagerplätze nach lesbarem Code und nach QR-Kennung – damit die Zone auch offline wechselt.
   const locations = Object.fromEntries(
-    labeler.locations.map((location) => [
-      location.code,
-      { id: location.id, code: location.code, name: labeler.label(location.id) ?? location.name },
-    ]),
+    labeler.locations.flatMap((location) => {
+      const entry = {
+        id: location.id,
+        code: location.code,
+        name: labeler.label(location.id) ?? location.name,
+      };
+      return [
+        [location.code, entry],
+        [location.publicId, entry],
+      ];
+    }),
   );
   return (
     <StocktakeCounter stocktakeId={stocktakeId} initialProgress={progress} locations={locations} />

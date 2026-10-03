@@ -60,7 +60,7 @@ export async function updateAssetFieldAction(
     const input = fieldSchema.parse({ field, value });
     const asset = await prisma.inventoryAsset.findUnique({
       where: { id: assetId },
-      select: { code: true, areaId: true, status: true },
+      select: { code: true, areaId: true, status: true, productId: true },
     });
     if (!asset) throw new Error("Objekt nicht gefunden.");
     if (asset.status === "retired") throw new Error("Ausgemusterte Objekte sind nur zur Ansicht.");
@@ -68,12 +68,36 @@ export async function updateAssetFieldAction(
       await assertCategoryForAreas(input.value, [asset.areaId]);
     }
 
-    const data =
-      input.field === "name" || input.field === "condition"
-        ? { [input.field]: input.value }
-        : { [input.field]: input.value || null };
     await prisma.$transaction(async (tx) => {
-      await tx.inventoryAsset.update({ where: { id: assetId }, data });
+      // Name, Kategorie, Hersteller und Modell gehören zum Artikeltyp – gilt für alle Exemplare.
+      switch (input.field) {
+        case "name":
+          await tx.inventoryProduct.update({
+            where: { id: asset.productId },
+            data: { name: input.value },
+          });
+          break;
+        case "categoryId":
+        case "manufacturer":
+        case "model":
+          await tx.inventoryProduct.update({
+            where: { id: asset.productId },
+            data: { [input.field]: input.value || null },
+          });
+          break;
+        case "condition":
+          await tx.inventoryAsset.update({
+            where: { id: assetId },
+            data: { condition: input.value },
+          });
+          break;
+        case "serialNumber":
+          await tx.inventoryAsset.update({
+            where: { id: assetId },
+            data: { serialNumber: input.value || null },
+          });
+          break;
+      }
       await recordEvent(tx, {
         assetId,
         type: "updated",
@@ -107,7 +131,7 @@ export async function bulkUpdateAssetsAction(
     const input = patchSchema.parse(patch);
     const assets = await prisma.inventoryAsset.findMany({
       where: { id: { in: ids }, status: { not: "retired" } },
-      select: { id: true, areaId: true },
+      select: { id: true, areaId: true, productId: true },
     });
     if (input.categoryId) {
       await assertCategoryForAreas(
@@ -122,13 +146,19 @@ export async function bulkUpdateAssetsAction(
       .filter(Boolean)
       .join(" und ");
     await prisma.$transaction(async (tx) => {
-      await tx.inventoryAsset.updateMany({
-        where: { id: { in: assets.map((asset) => asset.id) } },
-        data: {
-          ...(input.categoryId !== undefined ? { categoryId: input.categoryId || null } : {}),
-          ...(input.condition ? { condition: input.condition } : {}),
-        },
-      });
+      if (input.categoryId !== undefined) {
+        // Die Kategorie gehört zum Artikeltyp.
+        await tx.inventoryProduct.updateMany({
+          where: { id: { in: [...new Set(assets.map((asset) => asset.productId))] } },
+          data: { categoryId: input.categoryId || null },
+        });
+      }
+      if (input.condition) {
+        await tx.inventoryAsset.updateMany({
+          where: { id: { in: assets.map((asset) => asset.id) } },
+          data: { condition: input.condition },
+        });
+      }
       await tx.inventoryEvent.createMany({
         data: assets.map((asset) => ({
           assetId: asset.id,

@@ -4,12 +4,9 @@ import { BulkCapture } from "@/components/inventory/bulk-capture";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PageHeader } from "@/components/members/page-header";
 import { Button } from "@/components/ui/button";
+import { loadInventoryCatalog } from "@/lib/inventory/catalog";
 import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
-import {
-  listContainerOptions,
-  listInventoryAreas,
-  listLocationOptions,
-} from "@/lib/inventory/queries";
+import { listContainerOptions, listLocationOptions } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
@@ -20,7 +17,7 @@ export default async function BulkCapturePage() {
   if (!access.canUse) return <NoInventoryAccess />;
 
   const [areas, locations, containers] = await Promise.all([
-    listInventoryAreas(),
+    loadInventoryCatalog(),
     listLocationOptions(),
     listContainerOptions(),
   ]);

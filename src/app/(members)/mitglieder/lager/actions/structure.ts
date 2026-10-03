@@ -11,6 +11,7 @@ import {
 } from "@/lib/inventory/actions-helpers";
 import { LOCATION_CODE_PREFIX } from "@/lib/inventory/constants";
 import { allocateLocationCode, requireInventoryAccess } from "@/lib/inventory/service";
+import { createPublicId } from "@/lib/inventory/public-id";
 import { prisma } from "@/lib/prisma";
 
 const locationSchema = z.object({
@@ -44,7 +45,7 @@ export async function createLocationAction(
       const code = await allocateLocationCode(tx);
       const siblings = await tx.inventoryLocation.count({ where: { parentId: data.parentId } });
       return tx.inventoryLocation.create({
-        data: { ...data, code, sortOrder: siblings },
+        data: { ...data, code, publicId: createPublicId(), sortOrder: siblings },
         select: { id: true, code: true },
       });
     });

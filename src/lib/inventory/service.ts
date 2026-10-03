@@ -3,8 +3,11 @@ import { Prisma, type InventoryAssetStatus, type PrismaClient } from "@prisma/cl
 import {
   formatInventoryCode,
   isLocationCode,
+  assetDisplayName,
   LOCATION_CODE_PREFIX,
+  parseInventoryCode,
 } from "@/lib/inventory/constants";
+import { isPublicId } from "@/lib/inventory/public-id";
 import {
   findUserIdsWithPermission,
   hasPermission,
@@ -143,9 +146,58 @@ export async function resolveInventoryCode(code: string, db: Db = prisma) {
   }
   const asset = await db.inventoryAsset.findUnique({
     where: { code },
-    select: { id: true, code: true, kind: true, name: true },
+    select: { id: true, code: true, kind: true, label: true, product: { select: { name: true } } },
   });
-  return asset ? ({ type: "asset", ...asset } satisfies ResolvedCode) : null;
+  return asset
+    ? ({
+        type: "asset",
+        id: asset.id,
+        code: asset.code,
+        kind: asset.kind,
+        name: assetDisplayName(asset),
+      } satisfies ResolvedCode)
+    : null;
+}
+
+/**
+ * Macht aus einem Scan-Token (`parseScanToken`) den lesbaren Code. Zufällige Kennungen werden
+ * nachgeschlagen; unbekannte ergeben `null`.
+ */
+export async function resolveScanToken(token: string, db: Db = prisma): Promise<string | null> {
+  if (!isPublicId(token)) return parseInventoryCode(token);
+  const [asset, location] = await Promise.all([
+    db.inventoryAsset.findUnique({ where: { publicId: token }, select: { code: true } }),
+    db.inventoryLocation.findUnique({ where: { publicId: token }, select: { code: true } }),
+  ]);
+  return asset?.code ?? location?.code ?? null;
+}
+
+/** Wie `resolveScanToken`, für viele Tokens auf einmal (Token → Code). */
+export async function resolveScanTokens(
+  tokens: readonly string[],
+  db: Db = prisma,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const publicIds = tokens.filter(isPublicId);
+  for (const token of tokens) {
+    if (isPublicId(token)) continue;
+    const code = parseInventoryCode(token);
+    if (code) result.set(token, code);
+  }
+  if (publicIds.length) {
+    const [assets, locations] = await Promise.all([
+      db.inventoryAsset.findMany({
+        where: { publicId: { in: publicIds } },
+        select: { publicId: true, code: true },
+      }),
+      db.inventoryLocation.findMany({
+        where: { publicId: { in: publicIds } },
+        select: { publicId: true, code: true },
+      }),
+    ]);
+    for (const entry of [...assets, ...locations]) result.set(entry.publicId, entry.code);
+  }
+  return result;
 }
 
 export type LocationNode = { id: string; code: string; name: string; parentId: string | null };
@@ -175,7 +227,7 @@ export function buildLocationLabeler(locations: readonly LocationNode[]) {
 
 export async function loadLocationLabeler(db: Db = prisma) {
   const locations = await db.inventoryLocation.findMany({
-    select: { id: true, code: true, name: true, parentId: true },
+    select: { id: true, code: true, publicId: true, name: true, parentId: true },
   });
   return { locations, label: buildLocationLabeler(locations) };
 }
@@ -246,12 +298,18 @@ export async function placeAsset(
   } else if (input.target.type === "container") {
     const container = await db.inventoryAsset.findUnique({
       where: { id: input.target.id },
-      select: { id: true, kind: true, code: true, name: true },
+      select: {
+        id: true,
+        kind: true,
+        code: true,
+        label: true,
+        product: { select: { name: true } },
+      },
     });
     if (!container || container.kind !== "container") throw new Error("Das ist keine Kiste.");
     await assertNoContainerCycle(db, asset.id, container.id);
     containerId = container.id;
-    targetLabel = `${container.code} ${container.name}`;
+    targetLabel = `${container.code} ${assetDisplayName(container)}`;
   }
 
   if (asset.locationId === locationId && asset.containerId === containerId) {

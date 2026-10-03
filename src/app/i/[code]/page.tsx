@@ -7,7 +7,6 @@ import { AlertTriangleIcon, ShieldCheckIcon } from "@/components/ui/action-icons
 import {
   ASSET_STATUS_LABELS,
   ASSET_STATUS_TONES,
-  attributeFieldsFor,
   formatInventoryDate,
   INSPECTION_STATE_LABELS,
   INSPECTION_STATE_TONES,
@@ -16,6 +15,7 @@ import {
   isLocationCode,
   parseInventoryCode,
 } from "@/lib/inventory/constants";
+import { isPublicId } from "@/lib/inventory/public-id";
 import { getPublicAssetView } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
@@ -28,30 +28,45 @@ export const metadata: Metadata = {
 };
 
 /**
- * Ziel der QR-Codes auf den Etiketten. Mitglieder mit Lagerzugriff landen direkt in der
- * Lageransicht, alle anderen sehen eine öffentliche Kurzinfo – ohne Preise, Notizen oder Personen.
+ * Ziel der QR-Codes auf den Etiketten: `/i/<publicId>` mit zufälliger, nicht erratbarer Kennung.
+ * Mitglieder mit Lagerzugriff landen direkt in der Lageransicht, alle anderen sehen eine
+ * öffentliche Kurzinfo – ohne Preise, Notizen oder Personen. Lesbare Codes (`/i/T-0042`) lösen
+ * nur mit Lagerzugriff auf, damit sich der Bestand von außen nicht durchprobieren lässt.
  */
 export default async function PublicInventoryPage({
   params,
 }: {
   params: Promise<{ code: string }>;
 }) {
-  const { code: rawCode } = await params;
-  const code = parseInventoryCode(decodeURIComponent(rawCode));
-  if (!code) notFound();
+  const { code: raw } = await params;
+  const value = decodeURIComponent(raw).trim();
 
   const session = await getSession().catch(() => null);
   const access = session?.user ? await getInventoryAccess(session.user) : null;
-  const target = isLocationCode(code) ? inventoryLocationPath(code) : inventoryAssetPath(code);
+
+  if (!isPublicId(value)) {
+    const code = parseInventoryCode(value);
+    if (!code || !access?.canUse) notFound();
+    redirect(isLocationCode(code) ? inventoryLocationPath(code) : inventoryAssetPath(code));
+  }
+
+  const [location, assetCode] = await Promise.all([
+    prisma.inventoryLocation.findUnique({
+      where: { publicId: value },
+      select: { code: true, name: true },
+    }),
+    prisma.inventoryAsset.findUnique({ where: { publicId: value }, select: { code: true } }),
+  ]);
+  const target = location
+    ? inventoryLocationPath(location.code)
+    : assetCode
+      ? inventoryAssetPath(assetCode.code)
+      : null;
+  if (!target) notFound();
   if (access?.canUse) redirect(target);
   const loginHref = `/login?callbackUrl=${encodeURIComponent(target)}`;
 
-  if (isLocationCode(code)) {
-    const location = await prisma.inventoryLocation.findUnique({
-      where: { code },
-      select: { code: true, name: true },
-    });
-    if (!location) notFound();
+  if (location) {
     return (
       <PublicShell loginHref={session?.user ? null : loginHref}>
         <p className="font-mono text-sm text-muted-foreground">{location.code}</p>
@@ -61,11 +76,9 @@ export default async function PublicInventoryPage({
     );
   }
 
-  const asset = await getPublicAssetView(code);
+  const asset = await getPublicAssetView(value);
   if (!asset) notFound();
-  const attributes = attributeFieldsFor(asset.areaPrefix)
-    .map((field) => ({ label: field.label, value: asset.attributes[field.key] }))
-    .filter((entry): entry is { label: string; value: string } => Boolean(entry.value));
+  const attributes = asset.specRows;
 
   return (
     <PublicShell loginHref={session?.user ? null : loginHref}>

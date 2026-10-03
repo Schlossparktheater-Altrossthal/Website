@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getAppBaseUrl } from "@/lib/app-url";
 import {
+  assetDisplayName,
   formatInventoryDate,
   inventoryPublicUrl,
   isLocationCode,
@@ -95,16 +96,22 @@ export async function POST(request: NextRequest) {
       where: { code: { in: assetCodes } },
       select: {
         code: true,
-        name: true,
-        inspectionRequired: true,
+        publicId: true,
+        label: true,
         nextInspectionAt: true,
         area: { select: { name: true } },
-        category: { select: { name: true } },
+        product: {
+          select: {
+            name: true,
+            inspectionRequired: true,
+            category: { select: { name: true } },
+          },
+        },
       },
     }),
     prisma.inventoryLocation.findMany({
       where: { code: { in: locationCodes } },
-      select: { id: true, code: true, name: true },
+      select: { id: true, code: true, publicId: true, name: true },
     }),
     loadLocationLabeler(),
   ]);
@@ -113,16 +120,16 @@ export async function POST(request: NextRequest) {
   for (const asset of assets) {
     byCode.set(asset.code, {
       code: asset.code,
-      url: inventoryPublicUrl(base, asset.code),
-      title: asset.name,
-      subtitle: [asset.area.name, asset.category?.name].filter(Boolean).join(" · "),
-      footnote: asset.inspectionRequired ? inspectionNote(asset.nextInspectionAt) : null,
+      url: inventoryPublicUrl(base, asset.publicId),
+      title: assetDisplayName(asset),
+      subtitle: [asset.area.name, asset.product.category?.name].filter(Boolean).join(" · "),
+      footnote: asset.product.inspectionRequired ? inspectionNote(asset.nextInspectionAt) : null,
     });
   }
   for (const location of locations) {
     byCode.set(location.code, {
       code: location.code,
-      url: inventoryPublicUrl(base, location.code),
+      url: inventoryPublicUrl(base, location.publicId),
       title: labeler.label(location.id) ?? location.name,
       subtitle: "Lagerplatz",
       footnote: null,

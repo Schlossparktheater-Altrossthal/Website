@@ -3,8 +3,10 @@
  * (docs/Plan/inventar-plan.md). Werte spiegeln die Prisma-Enums.
  */
 
+import { isPublicId } from "@/lib/inventory/public-id";
+
 export const INVENTORY_BASE_PATH = "/mitglieder/lager";
-/** Öffentliche Kurz-URL im QR-Code: `/i/<code>`. */
+/** Öffentliche Kurz-URL im QR-Code: `/i/<publicId>`. */
 export const INVENTORY_PUBLIC_PATH = "/i";
 
 export const ASSET_KINDS = ["unique", "bulk", "container"] as const;
@@ -172,12 +174,27 @@ export function parseInventoryCode(raw: string): string | null {
   return formatInventoryCode(match[1]!, Number(match[2]));
 }
 
+/**
+ * Liest einen Scan: QR-URL mit zufälliger Kennung (`…/i/<publicId>`) oder eine nackte
+ * Kennung ergibt die `publicId`, sonst der normalisierte lesbare Code. Der Server löst beides mit
+ * `resolveScanToken` auf. Kennungen (12 Zeichen) und Codes (höchstens 11) überschneiden sich nicht.
+ */
+export function parseScanToken(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const urlMatch = trimmed.match(/\/i\/([^/?#\s]+)/i);
+  const candidate = urlMatch?.[1] ? decodeURIComponent(urlMatch[1]) : trimmed;
+  if (isPublicId(candidate)) return candidate;
+  return parseInventoryCode(candidate);
+}
+
 export function isLocationCode(code: string): boolean {
   return code.startsWith(`${LOCATION_CODE_PREFIX}-`);
 }
 
-export function inventoryPublicUrl(origin: string, code: string): string {
-  return `${origin.replace(/\/$/, "")}${INVENTORY_PUBLIC_PATH}/${encodeURIComponent(code)}`;
+/** Ziel des QR-Codes – immer über die zufällige `publicId`, nie über den lesbaren Code. */
+export function inventoryPublicUrl(origin: string, publicId: string): string {
+  return `${origin.replace(/\/$/, "")}${INVENTORY_PUBLIC_PATH}/${encodeURIComponent(publicId)}`;
 }
 
 export function inventoryAssetPath(code: string): string {
@@ -196,35 +213,15 @@ export const INVENTORY_TABLE_PAGE_SIZE = 100;
 /** Höchstzahl Zeilen je Sammelerfassung-Aufruf. */
 export const MAX_BULK_ROWS = 200;
 
-/** Bereichsspezifische Zusatzfelder (gespeichert in `attributes`). */
-export type AttributeField = { key: string; label: string; placeholder?: string };
+/** Höchstzahl Exemplare, die eine Erfassung auf einmal anlegt. */
+export const MAX_EXEMPLARS_PER_CAPTURE = 200;
 
-export const AREA_ATTRIBUTE_FIELDS: Record<string, AttributeField[]> = {
-  K: [
-    { key: "size", label: "Größe", placeholder: "z. B. 38 oder M" },
-    { key: "era", label: "Epoche / Stil", placeholder: "z. B. 1920er" },
-    { key: "color", label: "Farbe" },
-    { key: "material", label: "Material" },
-    { key: "gender", label: "Schnitt", placeholder: "Damen, Herren, unisex" },
-  ],
-  T: [
-    { key: "power", label: "Leistung", placeholder: "z. B. 575 W" },
-    { key: "connector", label: "Anschluss", placeholder: "z. B. Schuko, CEE 16 A" },
-  ],
-  W: [{ key: "power", label: "Leistung", placeholder: "z. B. 750 W" }],
-};
-
-export function attributeFieldsFor(prefix: string): AttributeField[] {
-  return AREA_ATTRIBUTE_FIELDS[prefix] ?? [];
-}
-
-export function readAttributes(value: unknown): Record<string, string> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const result: Record<string, string> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (typeof entry === "string" && entry.trim()) result[key] = entry;
-  }
-  return result;
+/** Anzeigename eines Exemplars: Typname plus optionaler Zusatz („Kiste 3“). */
+export function assetDisplayName(asset: {
+  label?: string | null;
+  product: { name: string };
+}): string {
+  return asset.label ? `${asset.product.name} · ${asset.label}` : asset.product.name;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {

@@ -1,6 +1,6 @@
 # Plan: Lager 2 – Artikeltypen, Kategorien mit Feldern, Projekte
 
-Stand: 2026-10-03. Konzept abgestimmt, nichts umgesetzt. Baut auf `docs/Plan/inventar-plan.md` auf.
+Stand: 2026-10-03. Phase 1–2 umgesetzt (auf main), Rest offen. Checkliste am Ende. Baut auf `docs/Plan/inventar-plan.md` auf.
 
 ## Anlass (Feedback)
 
@@ -37,25 +37,26 @@ Ursache von 1, 2 und 4: Es fehlt die Ebene **Artikeltyp**. Zusatzfelder sind fes
   - Der lesbare Code `T-0042` bleibt auf dem Etikett zum Ablesen/Ansagen und für die Suche,
     löst aber **nur mit Login** auf. `/i/T-0042` ohne Login → 404.
   - Scanner akzeptiert beides (QR-URL und eingetippten Code).
-  - Öffentliche Seite zusätzlich mit Rate-Limit; Inhalte wie bisher (E4) ohne Preise/Personen.
+  - Öffentliche Seite ohne Preise/Personen wie bisher (E4). Auf ein Rate-Limit verzichtet: Bei
+    ≈ 70 Bit Zufall ist Durchprobieren aussichtslos.
 
 ## Datenmodell (Entwurf)
 
 ```
 InventoryArea           wie bisher (Präfix, nextNumber, inspectionDefault)
 InventoryCategory       id, areaId, parentId?, name, sortOrder          (Baum)
-InventoryFieldDef       id, categoryId, key, label, type(text|number|select|boolean),
-                        unit?, options Json?, required, sortOrder
-InventoryProduct        id, publicId, areaId, categoryId, name, manufacturer?, model?,
-                        description?, specs Json, tracking(unit|quantity), unit?,
-                        minQuantity?, inspectionRequired, inspectionIntervalMonths?,
-                        publicNote?
-InventoryProductPhoto   Fotos/Dokumente am Typ
-InventoryAsset          id, publicId, code (T-0042), productId, kind(item|container),
-                        status, condition, serialNumber?, locationId?, containerId?,
-                        acquisitionCost?, purchaseDate?, supplier?, ownership?,
-                        internalNote?, lastInspectionAt?, nextInspectionAt?, lastSeenAt?
-InventoryStock          Mengen-Typen: productId + locationId|containerId + quantity
+InventoryFieldDef       id, areaId? | categoryId?, key, label, type(text|number|select|boolean),
+                        unit?, options[], placeholder?, required, sortOrder
+InventoryProduct        id, publicId, areaId, categoryId?, kind(unique|bulk|container), name,
+                        manufacturer?, model?, description?, publicNote?, specs Json, unit?,
+                        minQuantity?, inspectionRequired, inspectionIntervalMonths?
+InventoryPhoto          productId? | assetId? | defectId?  (Typ-Fotos sind Standard)
+InventoryAsset          id, publicId, code (T-0042), productId, areaId + kind (vom Typ,
+                        unveränderlich), label?, status, condition, serialNumber?,
+                        locationId?, containerId?, quantity, acquisitionCost?, purchaseDate?,
+                        supplier?, ownership?, internalNote?, lastInspectionAt?,
+                        nextInspectionAt?, lastSeenAt?, labelPrintedAt?
+InventoryStock          wie bisher am (einzigen) Exemplar eines Mengen-Typs
 Defect/Inspection/Event/Photo  am Exemplar (wie bisher)
 
 InventoryContact        id, name, contactPerson?, email?, phone?, note?
@@ -67,6 +68,13 @@ InventoryCheckout       → gehört zu einem Projekt (oder frei für Person); Ze
                         bzw. Mengen, Scan prüft gegen Projektpositionen
 ```
 
+- Umgesetzt (Phase 1): Mengenartikel-Typen haben genau **ein** Exemplar, das die Bestände trägt –
+  so bleiben Bestände, Ausgaben, Verlauf und Inventur unverändert nutzbar. `areaId` und `kind`
+  stehen bewusst auch am Exemplar (vom Typ kopiert, unveränderlich), weil Code-Präfix, Filter und
+  Inventur darauf aufbauen.
+- Merkmale gibt es auf Bereichsebene (gelten für alle Kategorien) und je Kategorie (vererbt).
+  Die früher fest im Code stehenden Zusatzfelder sind als Bereichs-Merkmale migriert; für Ton
+  und Licht gibt es Start-Unterkategorien (Mikrofone › Dynamisch/Kondensator, Endstufen, …).
 - Feldwerte: `specs` als JSONB mit GIN-Index; Zod-Schema wird zur Laufzeit aus den
   `InventoryFieldDef` des Kategorie-Pfads gebaut.
 - Belegungszeitraum eines Projekts = frühester Phasenbeginn bis spätestes Phasenende.
@@ -103,8 +111,8 @@ InventoryCheckout       → gehört zu einem Projekt (oder frei für Person); Ze
 
 ## Checkliste
 
-- [ ] Phase 1 – Schema
-- [ ] Phase 2 – publicId
+- [x] Phase 1 – Schema (Migration `20261003200000_inventory_products`, leert Lagerdaten)
+- [x] Phase 2 – publicId (QR/Etiketten, `/i/<publicId>`, Scanner, Inventur)
 - [ ] Phase 3 – Bestand nach Typ
 - [ ] Phase 4 – Erfassen-Wizard
 - [ ] Phase 5 – Katalogverwaltung

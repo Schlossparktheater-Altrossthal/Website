@@ -208,7 +208,9 @@ export function BulkCapture({
     return map;
   }, [rows, validations, showAllErrors, effectivePresets]);
   const invalidCount = pending.filter((row) => validations.get(row.id)?.input === null).length;
-  const savedCodes = rows.flatMap((row) => (row.savedCode ? [row.savedCode] : []));
+  const savedCodes = rows.flatMap(
+    (row) => row.savedCodes ?? (row.savedCode ? [row.savedCode] : []),
+  );
 
   const jumpToFirstError = () => {
     setShowAllErrors(true);
@@ -236,7 +238,7 @@ export function BulkCapture({
     }
     setSaving(true);
     try {
-      const results = new Map<string, { code?: string; error?: string }>();
+      const results = new Map<string, { codes?: string[]; error?: string }>();
       for (let start = 0; start < valid.length; start += MAX_BULK_ROWS) {
         const chunk = valid.slice(start, start + MAX_BULK_ROWS);
         const response = await bulkCreateAssetsAction(
@@ -248,7 +250,7 @@ export function BulkCapture({
         }
         for (const result of response.data.results) {
           const row = chunk[result.index]!;
-          results.set(row.id, result.ok ? { code: result.code } : { error: result.error });
+          results.set(row.id, result.ok ? { codes: result.codes } : { error: result.error });
         }
       }
       setDraft((current) => ({
@@ -256,12 +258,20 @@ export function BulkCapture({
         rows: current.rows.map((row) => {
           const result = results.get(row.id);
           if (!result) return row;
-          return result.code
-            ? { ...row, savedCode: result.code, serverError: undefined }
+          return result.codes
+            ? {
+                ...row,
+                savedCode: result.codes[0],
+                savedCodes: result.codes,
+                serverError: undefined,
+              }
             : { ...row, serverError: result.error };
         }),
       }));
-      const created = [...results.values()].filter((result) => result.code).length;
+      const created = [...results.values()].reduce(
+        (sum, result) => sum + (result.codes?.length ?? 0),
+        0,
+      );
       const failed = results.size - created;
       if (created) {
         toast.success(
@@ -570,6 +580,9 @@ export function BulkCapture({
                 target="_blank"
               >
                 {row.savedCode}
+                {row.savedCodes && row.savedCodes.length > 1
+                  ? ` +${row.savedCodes.length - 1}`
+                  : ""}
               </Link>
             ) : row ? (
               <span className="flex items-center gap-1">

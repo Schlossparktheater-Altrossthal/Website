@@ -2,11 +2,15 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { optionalId, optionalText } from "@/lib/inventory/actions-helpers";
+import { loadEffectiveFields } from "@/lib/inventory/catalog";
 import {
   ASSET_KINDS,
   CONDITIONS,
   DEFAULT_INSPECTION_INTERVAL_MONTHS,
+  MAX_EXEMPLARS_PER_CAPTURE,
 } from "@/lib/inventory/constants";
+import { createPublicId } from "@/lib/inventory/public-id";
+import { parseSpecs } from "@/lib/inventory/specs";
 import {
   allocateAssetCode,
   placeAsset,
@@ -43,41 +47,64 @@ const dateString = z
     return date;
   });
 
-export const assetSchema = z.object({
+/** Stammdaten eines Artikeltyps (gelten für alle Exemplare). */
+export const productSchema = z.object({
   areaId: z.string().min(1, "Bitte einen Bereich wählen."),
   categoryId: optionalId,
   kind: z.enum(ASSET_KINDS),
   name: z.string().trim().min(1, "Bitte einen Namen angeben.").max(160),
   manufacturer: optionalText(120),
   model: optionalText(120),
-  serialNumber: optionalText(120),
   description: optionalText(4000),
   publicNote: optionalText(500),
-  internalNote: optionalText(4000),
-  attributes: z.record(z.string(), z.string().trim().max(200)).default({}),
-  condition: z.enum(CONDITIONS).default("good"),
+  /** Rohwerte – geprüft gegen die Merkmale von Bereich und Kategorie (`parseSpecs`). */
+  specs: z.record(z.string(), z.unknown()).default({}),
   unit: optionalText(30),
   minQuantity: z.coerce.number().int().min(0).optional().nullable(),
-  quantity: z.coerce.number().int().min(0).max(100_000).optional().nullable(),
-  placement: placementSchema.default({ type: "none" }),
   inspectionRequired: z.boolean().default(false),
   inspectionIntervalMonths: z.coerce.number().int().min(1).max(120).optional().nullable(),
+});
+
+export type ProductInput = z.infer<typeof productSchema>;
+
+/** Angaben je Exemplar. */
+const exemplarShape = {
+  label: optionalText(80),
+  serialNumber: optionalText(120),
+  internalNote: optionalText(4000),
+  condition: z.enum(CONDITIONS).default("good"),
+  /** Mengenartikel: Anfangsbestand am gewählten Ort. */
+  quantity: z.coerce.number().int().min(0).max(100_000).optional().nullable(),
+  /** Einzelstücke/Kisten: so viele Exemplare mit fortlaufenden Codes anlegen. */
+  count: z.coerce.number().int().min(1).max(MAX_EXEMPLARS_PER_CAPTURE).default(1),
+  placement: placementSchema.default({ type: "none" }),
   nextInspectionAt: dateString,
   acquisitionCost: z.coerce.number().min(0).max(10_000_000).optional().nullable(),
   purchaseDate: dateString,
   supplier: optionalText(160),
   ownership: optionalText(160),
-});
+};
+
+/**
+ * Erfassung: entweder ein bestehender Typ (`productId`) oder ein neuer Typ aus den
+ * Stammdaten – plus die Angaben für die neuen Exemplare.
+ */
+export const assetSchema = productSchema
+  .extend({ productId: optionalId, ...exemplarShape })
+  .refine((input) => !(input.serialNumber && input.count > 1), {
+    message: "Eine Seriennummer passt nur zu einem einzelnen Exemplar.",
+    path: ["serialNumber"],
+  });
 
 export type AssetInput = z.infer<typeof assetSchema>;
 
-export function cleanAttributes(attributes: Record<string, string>) {
-  return Object.fromEntries(Object.entries(attributes).filter(([, value]) => value.trim()));
-}
-
-export async function assertCategory(areaId: string, categoryId: string | null) {
+export async function assertCategory(
+  db: Prisma.TransactionClient | typeof prisma,
+  areaId: string,
+  categoryId: string | null,
+) {
   if (!categoryId) return;
-  const category = await prisma.inventoryCategory.findUnique({
+  const category = await db.inventoryCategory.findUnique({
     where: { id: categoryId },
     select: { areaId: true },
   });
@@ -102,7 +129,44 @@ export function costData(
   };
 }
 
-/** Legt ein Objekt samt Ort/Bestand, Verlauf und optionalem Foto an. Gibt den neuen Code zurück. */
+/** Stammdaten für Anlegen/Ändern eines Typs inklusive geprüfter Merkmale. */
+export async function productData(tx: Prisma.TransactionClient, input: ProductInput) {
+  await assertCategory(tx, input.areaId, input.categoryId);
+  const fields = await loadEffectiveFields(tx, input.areaId, input.categoryId);
+  const bulk = input.kind === "bulk";
+  return {
+    categoryId: input.categoryId,
+    name: input.name,
+    manufacturer: input.manufacturer,
+    model: input.model,
+    description: input.description,
+    publicNote: input.publicNote,
+    specs: parseSpecs(fields, input.specs),
+    unit: bulk ? input.unit : null,
+    minQuantity: bulk ? (input.minQuantity ?? null) : null,
+    inspectionRequired: input.inspectionRequired,
+    inspectionIntervalMonths: input.inspectionRequired
+      ? (input.inspectionIntervalMonths ?? DEFAULT_INSPECTION_INTERVAL_MONTHS)
+      : null,
+  };
+}
+
+export async function createProductInTx(tx: Prisma.TransactionClient, input: ProductInput) {
+  return tx.inventoryProduct.create({
+    data: {
+      publicId: createPublicId(),
+      areaId: input.areaId,
+      kind: input.kind,
+      ...(await productData(tx, input)),
+    },
+    select: { id: true, areaId: true, kind: true, inspectionRequired: true },
+  });
+}
+
+/**
+ * Legt Exemplare an – für einen bestehenden Typ oder zusammen mit einem neuen Typ – samt
+ * Ort/Bestand, Verlauf und optionalem Foto. Gibt die neuen Codes zurück.
+ */
 export async function createAssetInTx(
   tx: Prisma.TransactionClient,
   input: AssetInput,
@@ -112,63 +176,77 @@ export async function createAssetInTx(
     photo?: { data: Uint8Array<ArrayBuffer>; mimeType: string } | null;
     eventMessage?: string;
   },
-): Promise<{ id: string; code: string }> {
-  const code = await allocateAssetCode(tx, input.areaId);
-  const interval = input.inspectionRequired
-    ? (input.inspectionIntervalMonths ?? DEFAULT_INSPECTION_INTERVAL_MONTHS)
-    : null;
-  const asset = await tx.inventoryAsset.create({
-    data: {
-      code,
-      areaId: input.areaId,
-      categoryId: input.categoryId,
-      kind: input.kind,
-      name: input.name,
-      manufacturer: input.manufacturer,
-      model: input.model,
-      serialNumber: input.serialNumber,
-      description: input.description,
-      publicNote: input.publicNote,
-      internalNote: input.internalNote,
-      attributes: cleanAttributes(input.attributes),
-      condition: input.condition,
-      unit: input.kind === "bulk" ? input.unit : null,
-      minQuantity: input.kind === "bulk" ? (input.minQuantity ?? null) : null,
-      quantity: input.kind === "bulk" ? 0 : 1,
-      inspectionRequired: input.inspectionRequired,
-      inspectionIntervalMonths: interval,
-      // Ohne bekannte letzte Prüfung gilt das Objekt als sofort zu prüfen.
-      nextInspectionAt: input.inspectionRequired ? input.nextInspectionAt : null,
-      lastSeenAt: new Date(),
-      ...costData(input, options.canManage),
-    },
-  });
-  const { userId } = options;
-  await recordEvent(tx, {
-    assetId: asset.id,
-    type: "created",
-    message: options.eventMessage ?? "Erfasst",
-    userId,
-  });
-  if (options.photo) {
-    await tx.inventoryPhoto.create({
-      data: { assetId: asset.id, data: options.photo.data, mimeType: options.photo.mimeType },
+): Promise<{ productId: string; codes: string[] }> {
+  let product;
+  if (input.productId) {
+    product = await tx.inventoryProduct.findUnique({
+      where: { id: input.productId },
+      select: {
+        id: true,
+        areaId: true,
+        kind: true,
+        inspectionRequired: true,
+        _count: { select: { assets: true } },
+      },
     });
-  }
-  if (input.kind === "bulk") {
-    if (input.placement.type !== "none" && input.quantity) {
-      await setBulkStock(tx, {
-        assetId: asset.id,
-        target: input.placement,
-        quantity: input.quantity,
-        userId,
-        mode: "set",
+    if (!product) throw new Error("Artikeltyp nicht gefunden.");
+    if (product.kind === "bulk" && product._count.assets > 0) {
+      throw new Error("Diesen Mengenartikel gibt es schon – bitte dort den Bestand anpassen.");
+    }
+  } else {
+    product = await createProductInTx(tx, input);
+    if (options.photo) {
+      await tx.inventoryPhoto.create({
+        data: { productId: product.id, data: options.photo.data, mimeType: options.photo.mimeType },
       });
     }
-  } else if (input.placement.type !== "none") {
-    await placeAsset(tx, { assetId: asset.id, target: input.placement, userId });
   }
-  return { id: asset.id, code };
+
+  const count = product.kind === "bulk" ? 1 : input.count;
+  const codes: string[] = [];
+  const { userId } = options;
+  for (let index = 0; index < count; index += 1) {
+    const code = await allocateAssetCode(tx, product.areaId);
+    const asset = await tx.inventoryAsset.create({
+      data: {
+        code,
+        publicId: createPublicId(),
+        productId: product.id,
+        areaId: product.areaId,
+        kind: product.kind,
+        label: count > 1 ? null : input.label,
+        serialNumber: count > 1 ? null : input.serialNumber,
+        internalNote: input.internalNote,
+        condition: input.condition,
+        quantity: product.kind === "bulk" ? 0 : 1,
+        // Ohne bekannte letzte Prüfung gilt das Exemplar als sofort zu prüfen.
+        nextInspectionAt: product.inspectionRequired ? input.nextInspectionAt : null,
+        lastSeenAt: new Date(),
+        ...costData(input, options.canManage),
+      },
+    });
+    codes.push(code);
+    await recordEvent(tx, {
+      assetId: asset.id,
+      type: "created",
+      message: options.eventMessage ?? "Erfasst",
+      userId,
+    });
+    if (product.kind === "bulk") {
+      if (input.placement.type !== "none" && input.quantity) {
+        await setBulkStock(tx, {
+          assetId: asset.id,
+          target: input.placement,
+          quantity: input.quantity,
+          userId,
+          mode: "set",
+        });
+      }
+    } else if (input.placement.type !== "none") {
+      await placeAsset(tx, { assetId: asset.id, target: input.placement, userId });
+    }
+  }
+  return { productId: product.id, codes };
 }
 
 /** Mustert aus (Ort, Kiste und Bestand werden frei) oder nimmt wieder auf. */

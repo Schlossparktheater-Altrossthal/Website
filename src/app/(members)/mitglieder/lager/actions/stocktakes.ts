@@ -8,12 +8,14 @@ import {
   revalidateInventory,
   type InventoryActionResult,
 } from "@/lib/inventory/actions-helpers";
-import { INVENTORY_BASE_PATH, isLocationCode, parseInventoryCode } from "@/lib/inventory/constants";
+import { assetDisplayName, INVENTORY_BASE_PATH, isLocationCode } from "@/lib/inventory/constants";
+import { ASSET_NAME_SELECT } from "@/lib/inventory/selects";
 import {
   placeAsset,
   recordEvent,
   refreshAssetStatus,
   requireInventoryAccess,
+  resolveScanTokens,
   setBulkStock,
 } from "@/lib/inventory/service";
 import {
@@ -83,15 +85,13 @@ export async function submitStocktakeScansAction(
     if (!stocktake) throw new Error("Inventur nicht gefunden.");
     if (stocktake.status !== "open") throw new Error("Diese Inventur ist abgeschlossen.");
 
-    const codes = [
-      ...new Set(
-        list.map((scan) => parseInventoryCode(scan.code)).filter((c): c is string => Boolean(c)),
-      ),
-    ];
+    // Scans enthalten den lesbaren Code oder die zufällige Kennung aus dem QR-Code.
+    const tokenCodes = await resolveScanTokens(list.map((scan) => scan.code));
+    const codes = [...new Set(tokenCodes.values())];
     const [assets, locations, existing] = await Promise.all([
       prisma.inventoryAsset.findMany({
         where: { code: { in: codes } },
-        select: { id: true, code: true, name: true, kind: true },
+        select: { id: true, code: true, ...ASSET_NAME_SELECT, kind: true },
       }),
       prisma.inventoryLocation.findMany({
         where: { code: { in: codes.filter(isLocationCode) } },
@@ -118,7 +118,7 @@ export async function submitStocktakeScansAction(
       scannedAt: Date;
     }[] = [];
     for (const scan of list) {
-      const code = parseInventoryCode(scan.code) ?? scan.code.slice(0, 40);
+      const code = tokenCodes.get(scan.code) ?? scan.code.slice(0, 40);
       if (seen.has(scan.clientScanId)) {
         outcomes.push({ clientScanId: scan.clientScanId, status: "duplicate", code });
         continue;
@@ -150,7 +150,7 @@ export async function submitStocktakeScansAction(
         clientScanId: scan.clientScanId,
         status: asset ? "ok" : "unknown",
         code,
-        name: asset?.name,
+        name: asset ? assetDisplayName(asset) : undefined,
         kind: asset?.kind,
       });
     }

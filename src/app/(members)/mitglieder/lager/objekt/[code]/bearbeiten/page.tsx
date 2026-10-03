@@ -9,10 +9,10 @@ import {
   inventoryAssetPath,
   toDateInputValue,
 } from "@/lib/inventory/constants";
+import { loadInventoryCatalog } from "@/lib/inventory/catalog";
 import {
   getInventoryAssetDetail,
   listContainerOptions,
-  listInventoryAreas,
   listLocationOptions,
 } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
@@ -29,7 +29,7 @@ export default async function EditAssetPage({ params }: { params: Promise<{ code
   });
   if (!asset) notFound();
   const [areas, locations, containers] = await Promise.all([
-    listInventoryAreas(),
+    loadInventoryCatalog(),
     listLocationOptions(),
     listContainerOptions(),
   ]);
@@ -55,21 +55,27 @@ export default async function EditAssetPage({ params }: { params: Promise<{ code
         initialValues={{
           ...emptyAssetValues(area),
           areaId: asset.areaId,
-          categoryId: asset.categoryId,
+          categoryId: asset.product.categoryId,
           kind: asset.kind,
-          name: asset.name,
-          manufacturer: asset.manufacturer ?? "",
-          model: asset.model ?? "",
+          name: asset.product.name,
+          label: asset.label ?? "",
+          manufacturer: asset.product.manufacturer ?? "",
+          model: asset.product.model ?? "",
           serialNumber: asset.serialNumber ?? "",
-          description: asset.description ?? "",
-          publicNote: asset.publicNote ?? "",
+          description: asset.product.description ?? "",
+          publicNote: asset.product.publicNote ?? "",
           internalNote: asset.internalNote ?? "",
-          attributes: asset.attributes,
+          specs: Object.fromEntries(
+            Object.entries(asset.product.specs).map(([key, value]) => [
+              key,
+              typeof value === "boolean" ? value : String(value),
+            ]),
+          ),
           condition: asset.condition,
-          unit: asset.unit ?? "",
-          minQuantity: asset.minQuantity?.toString() ?? "",
-          inspectionRequired: asset.inspectionRequired,
-          inspectionIntervalMonths: asset.inspectionIntervalMonths?.toString() ?? "",
+          unit: asset.product.unit ?? "",
+          minQuantity: asset.product.minQuantity?.toString() ?? "",
+          inspectionRequired: asset.product.inspectionRequired,
+          inspectionIntervalMonths: asset.product.inspectionIntervalMonths?.toString() ?? "",
           nextInspectionAt: toDateInputValue(asset.nextInspectionAt),
           acquisitionCost: asset.acquisitionCost?.toString().replace(".", ",") ?? "",
           purchaseDate: toDateInputValue(asset.purchaseDate),

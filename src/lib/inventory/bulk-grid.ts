@@ -1,14 +1,13 @@
 import type { AssetFormArea } from "@/lib/inventory/asset-form-values";
 import {
-  AREA_ATTRIBUTE_FIELDS,
   ASSET_KIND_LABELS,
   ASSET_KINDS,
-  attributeFieldsFor,
   CONDITION_LABELS,
   CONDITIONS,
   parseInventoryCode,
   type AssetKind,
 } from "@/lib/inventory/constants";
+import { catalogFields, categoryPath, type FieldDef } from "@/lib/inventory/specs";
 
 /**
  * Sammelerfassung als Tabelle: Spalten, Auflösen getippter/eingefügter Werte und Umwandeln
@@ -24,8 +23,10 @@ export type GridOption = { value: string; label: string; hint?: string; keywords
 export type DraftRow = {
   id: string;
   cells: Record<string, string>;
-  /** Nach dem Speichern: vergebener Code, die Zeile ist dann schreibgeschützt. */
+  /** Nach dem Speichern: erster vergebener Code, die Zeile ist dann schreibgeschützt. */
   savedCode?: string;
+  /** Alle vergebenen Codes (Anzahl > 1 legt mehrere Exemplare an). */
+  savedCodes?: string[];
   /** Fehler vom Server für diese Zeile. */
   serverError?: string;
 };
@@ -170,9 +171,13 @@ function rowArea(row: DraftRow, ctx: BulkContext) {
 }
 
 function categoryOptions(row: DraftRow, ctx: BulkContext): GridOption[] {
-  return (rowArea(row, ctx)?.categories ?? []).map((category) => ({
+  const categories = rowArea(row, ctx)?.categories ?? [];
+  return categories.map((category) => ({
     value: category.id,
-    label: category.name,
+    label: categoryPath(categories, category.id)
+      .map((entry) => entry.name)
+      .join(" › "),
+    keywords: [category.name],
   }));
 }
 
@@ -180,15 +185,24 @@ export function rowKind(row: DraftRow): AssetKind {
   return (resolveOption(kindOptions, row.cells.kind ?? "")?.value as AssetKind) ?? "unique";
 }
 
-/** Zusatzfelder: im festen Bereich die des Bereichs, gemischt die aller Bereiche. */
-function attributeColumns(ctx: BulkContext) {
-  if (!ctx.mixed) {
-    const area = ctx.areas.find((entry) => entry.id === ctx.areaId);
-    return area ? attributeFieldsFor(area.prefix) : [];
-  }
-  const seen = new Map<string, { key: string; label: string; placeholder?: string }>();
-  for (const area of ctx.areas) {
-    for (const field of AREA_ATTRIBUTE_FIELDS[area.prefix] ?? []) {
+/** Merkmale einer Zeile: die von Bereich und gewählter Kategorie (samt Elternkategorien). */
+function rowFields(row: DraftRow, ctx: BulkContext): FieldDef[] {
+  const area = rowArea(row, ctx);
+  const categoryId = area
+    ? (resolveOption(categoryOptions(row, ctx), row.cells.category ?? "")?.value ?? null)
+    : null;
+  return catalogFields(area, categoryId);
+}
+
+/**
+ * Merkmalsspalten: alle Merkmale, die im festen Bereich (gemischt: in allen Bereichen) vorkommen.
+ * Für eine Zeile aktiv sind nur die ihres Bereichs und ihrer Kategorie.
+ */
+function attributeColumns(ctx: BulkContext): FieldDef[] {
+  const areas = ctx.mixed ? ctx.areas : ctx.areas.filter((entry) => entry.id === ctx.areaId);
+  const seen = new Map<string, FieldDef>();
+  for (const area of areas) {
+    for (const field of [...area.fields, ...area.categories.flatMap((entry) => entry.fields)]) {
       if (!seen.has(field.key)) seen.set(field.key, field);
     }
   }
@@ -242,7 +256,7 @@ export function bulkColumns(ctx: BulkContext): GridColumn[] {
       label: "Menge",
       width: 72,
       type: "number",
-      inactive: (row) => rowKind(row) !== "bulk",
+      // Mengenartikel: Bestand am Ort. Sonst: so viele Exemplare mit eigenem Code.
       placeholder: (row) => (rowKind(row) === "bulk" ? "0" : "1"),
       hideable: true,
       defaultVisible: true,
@@ -279,13 +293,10 @@ export function bulkColumns(ctx: BulkContext): GridColumn[] {
     },
     ...attributeColumns(ctx).map<GridColumn>((field) => ({
       key: `${ATTRIBUTE_PREFIX}${field.key}`,
-      label: field.label,
+      label: field.unit ? `${field.label} (${field.unit})` : field.label,
       width: 120,
       type: "text",
-      inactive: (row) =>
-        !attributeFieldsFor(rowArea(row, ctx)?.prefix ?? "").some(
-          (entry) => entry.key === field.key,
-        ),
+      inactive: (row) => !rowFields(row, ctx).some((entry) => entry.key === field.key),
       placeholder: () => field.placeholder ?? "",
       hideable: true,
       defaultVisible: true,
@@ -479,10 +490,21 @@ export function validateRow(row: DraftRow, ctx: BulkContext): RowValidation {
   const inspection = resolved("inspection");
 
   let quantity: number | null = null;
+  let count = 1;
   if (kind === "bulk" && cell("quantity")) {
     quantity = parseNumber(cell("quantity"));
     if (quantity === null || !Number.isInteger(quantity) || quantity < 0 || quantity > 100_000) {
       errors.quantity = "Ganze Zahl von 0 bis 100 000.";
+    }
+  } else if (kind !== "bulk" && cell("quantity")) {
+    const parsed = parseNumber(cell("quantity"));
+    if (parsed === null || !Number.isInteger(parsed) || parsed < 1 || parsed > 200) {
+      errors.quantity = "Anzahl von 1 bis 200.";
+    } else {
+      count = parsed;
+      if (count > 1 && cell("serialNumber")) {
+        errors.serialNumber = "Seriennummer nur bei Anzahl 1.";
+      }
     }
   }
   // Bestand hängt an einem Lagerplatz – ohne Ort ginge die Menge verloren.
@@ -499,10 +521,10 @@ export function validateRow(row: DraftRow, ctx: BulkContext): RowValidation {
 
   if (Object.keys(errors).length || !area) return { errors, input: null };
 
-  const attributes: Record<string, string> = {};
-  for (const field of attributeFieldsFor(area.prefix)) {
+  const specs: Record<string, string> = {};
+  for (const field of catalogFields(area, categoryId)) {
     const value = cell(`${ATTRIBUTE_PREFIX}${field.key}`);
-    if (value) attributes[field.key] = value;
+    if (value) specs[field.key] = value;
   }
   const [placementType, placementId] = placementValue?.split(":") ?? [];
   const inspectionRequired =
@@ -520,10 +542,11 @@ export function validateRow(row: DraftRow, ctx: BulkContext): RowValidation {
       serialNumber: kind === "bulk" ? null : cell("serialNumber") || null,
       publicNote: cell("publicNote") || null,
       internalNote: cell("internalNote") || null,
-      attributes,
+      specs,
       condition,
       unit: kind === "bulk" ? cell("unit") || "Stk." : null,
       quantity: kind === "bulk" ? quantity : null,
+      count,
       placement:
         placementType && placementId ? { type: placementType, id: placementId } : { type: "none" },
       inspectionRequired,

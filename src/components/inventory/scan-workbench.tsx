@@ -55,7 +55,7 @@ import {
   INVENTORY_BASE_PATH,
   inventoryAssetPath,
   inventoryLocationPath,
-  parseInventoryCode,
+  parseScanToken,
 } from "@/lib/inventory/constants";
 import type { ScanResult } from "@/lib/inventory/scan";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -231,7 +231,7 @@ export function ScanWorkbench({
 
   const handle = React.useCallback(
     async (raw: string) => {
-      const code = parseInventoryCode(raw);
+      const code = parseScanToken(raw);
       if (!code) {
         push({ tone: "error", title: "Kein Lager-Code", detail: raw.slice(0, 60) });
         return;

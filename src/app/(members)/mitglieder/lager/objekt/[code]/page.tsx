@@ -15,7 +15,6 @@ import {
   ASSET_KIND_LABELS,
   ASSET_STATUS_LABELS,
   ASSET_STATUS_TONES,
-  attributeFieldsFor,
   CONDITION_LABELS,
   formatInventoryDate,
   formatInventoryDateTime,
@@ -65,16 +64,15 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
       ? { type: "location", id: asset.locationId }
       : { type: "none" };
   const locked = asset.status === "locked";
-  const attributes = attributeFieldsFor(asset.area.prefix)
-    .map((field) => ({ label: field.label, value: asset.attributes[field.key] }))
-    .filter((entry): entry is { label: string; value: string } => Boolean(entry.value));
   const details: { label: string; value: string }[] = [
     { label: "Art", value: ASSET_KIND_LABELS[asset.kind] },
     { label: "Zustand", value: CONDITION_LABELS[asset.condition] },
-    ...(asset.manufacturer ? [{ label: "Hersteller", value: asset.manufacturer }] : []),
-    ...(asset.model ? [{ label: "Modell", value: asset.model }] : []),
+    ...(asset.product.manufacturer
+      ? [{ label: "Hersteller", value: asset.product.manufacturer }]
+      : []),
+    ...(asset.product.model ? [{ label: "Modell", value: asset.product.model }] : []),
     ...(asset.serialNumber ? [{ label: "Seriennummer", value: asset.serialNumber }] : []),
-    ...attributes,
+    ...asset.specRows,
     ...(asset.lastSeenAt
       ? [{ label: "Zuletzt gesehen", value: formatInventoryDate(asset.lastSeenAt) }]
       : []),
@@ -99,7 +97,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
         ...(asset.ownership ? [{ label: "Eigentum", value: asset.ownership }] : []),
       ]
     : [];
-  const unit = asset.unit ?? "Stk.";
+  const unit = asset.product.unit ?? "Stk.";
 
   return (
     <div className="space-y-6">
@@ -128,7 +126,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
         <div className="space-y-6 lg:col-span-2">
           <section className={CARD}>
             <div className="flex items-start gap-4">
-              {asset.photos.length ? null : (
+              {asset.allPhotos.length ? null : (
                 <AssetThumb photoId={null} kind={asset.kind} size="lg" />
               )}
               <div className="min-w-0 flex-1 space-y-2">
@@ -137,7 +135,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
                 </h2>
                 <p className="font-mono text-sm text-muted-foreground">{asset.code}</p>
                 <p className="text-sm text-muted-foreground">
-                  {[asset.area.name, asset.category?.name].filter(Boolean).join(" · ")}
+                  {[asset.area.name, asset.categoryPath].filter(Boolean).join(" · ")}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   <ToneBadge tone={ASSET_STATUS_TONES[asset.status]}>
@@ -153,21 +151,24 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
                   {asset.kind === "bulk" ? (
                     <ToneBadge
                       tone={
-                        asset.minQuantity !== null && asset.quantity < asset.minQuantity
+                        asset.product.minQuantity !== null &&
+                        asset.quantity < asset.product.minQuantity
                           ? "warning"
                           : "muted"
                       }
                     >
                       {asset.quantity} {unit}
-                      {asset.minQuantity !== null ? ` (min. ${asset.minQuantity})` : ""}
+                      {asset.product.minQuantity !== null
+                        ? ` (min. ${asset.product.minQuantity})`
+                        : ""}
                     </ToneBadge>
                   ) : null}
                   {!asset.labelPrintedAt ? <ToneBadge tone="info">Kein Etikett</ToneBadge> : null}
                 </div>
               </div>
             </div>
-            {asset.photos.length ? (
-              <PhotoStrip photoIds={asset.photos.map((photo) => photo.id)} alt={asset.name} />
+            {asset.allPhotos.length ? (
+              <PhotoStrip photoIds={asset.allPhotos.map((photo) => photo.id)} alt={asset.name} />
             ) : null}
           </section>
 
@@ -178,8 +179,8 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
               name: asset.name,
               kind: asset.kind,
               status: asset.status,
-              unit: asset.unit,
-              inspectionIntervalMonths: asset.inspectionIntervalMonths,
+              unit: asset.product.unit,
+              inspectionIntervalMonths: asset.product.inspectionIntervalMonths,
               placement,
             }}
             stocks={asset.stocks.map((stock) => ({
@@ -301,7 +302,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
                       href={inventoryAssetPath(stock.asset.code)}
                       title={stock.asset.name}
                       description={stock.asset.code}
-                      trailing={`${stock.quantity} ${stock.asset.unit ?? "Stk."}`}
+                      trailing={`${stock.quantity} ${stock.asset.product.unit ?? "Stk."}`}
                     />
                   ))}
                 </ListRowGroup>
@@ -329,13 +330,13 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
             />
           </section>
 
-          {asset.inspectionRequired || asset.inspections.length ? (
+          {asset.product.inspectionRequired || asset.inspections.length ? (
             <section className={CARD}>
               <SectionHeader
                 title="Prüfungen"
                 description={
-                  asset.inspectionRequired
-                    ? `Alle ${asset.inspectionIntervalMonths ?? 12} Monate · nächste ${formatInventoryDate(asset.nextInspectionAt)}`
+                  asset.product.inspectionRequired
+                    ? `Alle ${asset.product.inspectionIntervalMonths ?? 12} Monate · nächste ${formatInventoryDate(asset.nextInspectionAt)}`
                     : undefined
                 }
               />
@@ -391,13 +392,15 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
                 </div>
               ))}
             </dl>
-            {asset.description ? (
-              <p className="text-sm whitespace-pre-line text-foreground">{asset.description}</p>
+            {asset.product.description ? (
+              <p className="text-sm whitespace-pre-line text-foreground">
+                {asset.product.description}
+              </p>
             ) : null}
-            {asset.publicNote ? (
+            {asset.product.publicNote ? (
               <div className="rounded-md border border-info/30 bg-info/10 p-3 text-sm">
                 <p className="text-xs text-muted-foreground">Öffentlicher Hinweis</p>
-                {asset.publicNote}
+                {asset.product.publicNote}
               </div>
             ) : null}
             {asset.internalNote ? (

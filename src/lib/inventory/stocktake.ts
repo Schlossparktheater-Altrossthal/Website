@@ -1,3 +1,5 @@
+import { assetDisplayName } from "@/lib/inventory/constants";
+import { ASSET_NAME_SELECT } from "@/lib/inventory/selects";
 import { buildLocationLabeler, locationSubtreeIds } from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
 
@@ -81,7 +83,7 @@ export async function buildStocktakeReview(stocktakeId: string): Promise<Stockta
     ? new Set(locationSubtreeIds(locations, stocktake.locationId))
     : null;
 
-  const assets: ScopeAsset[] = await prisma.inventoryAsset.findMany({
+  const scopeRows = await prisma.inventoryAsset.findMany({
     where: {
       status: { not: "retired" },
       ...(stocktake.areaId ? { areaId: stocktake.areaId } : {}),
@@ -89,7 +91,7 @@ export async function buildStocktakeReview(stocktakeId: string): Promise<Stockta
     select: {
       id: true,
       code: true,
-      name: true,
+      ...ASSET_NAME_SELECT,
       kind: true,
       locationId: true,
       containerId: true,
@@ -97,6 +99,10 @@ export async function buildStocktakeReview(stocktakeId: string): Promise<Stockta
       container: { select: { id: true, locationId: true } },
     },
   });
+  const assets: ScopeAsset[] = scopeRows.map(({ label, product, ...row }) => ({
+    ...row,
+    name: assetDisplayName({ label, product }),
+  }));
   const stocks = await prisma.inventoryStock.findMany({
     where: { asset: { status: { not: "retired" } } },
     select: {
@@ -277,7 +283,7 @@ export async function getStocktakeProgress(stocktakeId: string): Promise<Stockta
         code: true,
         scannedAt: true,
         locationId: true,
-        asset: { select: { name: true } },
+        asset: { select: ASSET_NAME_SELECT },
         user: { select: { firstName: true, lastName: true, name: true } },
       },
     }),
@@ -294,7 +300,7 @@ export async function getStocktakeProgress(stocktakeId: string): Promise<Stockta
     zones: review.zones,
     recent: recent.map((scan) => ({
       code: scan.code,
-      name: scan.asset?.name ?? null,
+      name: scan.asset ? assetDisplayName(scan.asset) : null,
       by: personName(scan.user),
       at: scan.scannedAt.toISOString(),
       place: label(scan.locationId),

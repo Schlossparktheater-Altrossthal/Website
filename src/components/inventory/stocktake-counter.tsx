@@ -27,7 +27,7 @@ import {
   INVENTORY_BASE_PATH,
   formatInventoryDateTime,
   isLocationCode,
-  parseInventoryCode,
+  parseScanToken,
 } from "@/lib/inventory/constants";
 import type { StocktakeProgress } from "@/lib/inventory/stocktake";
 import { cn } from "@/lib/utils";
@@ -92,7 +92,10 @@ export function StocktakeCounter({
   const [online, setOnline] = React.useState(true);
   const [log, setLog] = React.useState<LogEntry[]>([]);
   const [bulk, setBulk] = React.useState<{
+    /** Scan-Token (Code oder QR-Kennung) – der Server löst es auf. */
     code: string;
+    /** Lesbarer Code für die Anzeige. */
+    label: string;
     name: string;
     unit: string | null;
   } | null>(null);
@@ -207,13 +210,14 @@ export function StocktakeCounter({
 
   const onScan = React.useCallback(
     async (raw: string) => {
-      const code = parseInventoryCode(raw);
+      const code = parseScanToken(raw);
       if (!code) {
         push({ tone: "error", title: "Kein Lager-Code", detail: raw.slice(0, 60) });
         return;
       }
-      if (isLocationCode(code)) {
-        const location = locationByCode.get(code);
+      const knownLocation = locationByCode.get(code);
+      if (knownLocation || isLocationCode(code)) {
+        const location = knownLocation;
         if (!location) {
           push({ tone: "error", title: code, detail: "Unbekannter Lagerplatz" });
           return;
@@ -236,12 +240,17 @@ export function StocktakeCounter({
         const lookup = await lookupCodeAction(code);
         if (lookup.ok && lookup.data.type === "asset" && lookup.data.kind === "bulk") {
           setQuantity("");
-          setBulk({ code, name: lookup.data.name, unit: lookup.data.unit });
+          setBulk({
+            code,
+            name: lookup.data.name,
+            unit: lookup.data.unit,
+            label: lookup.data.code,
+          });
           return;
         }
         if (lookup.ok && lookup.data.type === "asset") {
           enqueue(code, lookup.data.name, null);
-          push({ tone: "ok", title: `${code} ${lookup.data.name}` });
+          push({ tone: "ok", title: `${lookup.data.code} ${lookup.data.name}` });
           return;
         }
         if (!lookup.ok) {
@@ -265,7 +274,7 @@ export function StocktakeCounter({
     enqueue(bulk.code, bulk.name, amount);
     push({
       tone: "ok",
-      title: `${bulk.code} ${bulk.name}`,
+      title: `${bulk.label} ${bulk.name}`,
       detail: `${amount} ${bulk.unit ?? "Stk."} gezählt`,
     });
     setBulk(null);

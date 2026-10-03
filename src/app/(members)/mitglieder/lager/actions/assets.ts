@@ -10,37 +10,33 @@ import {
   type InventoryActionResult,
 } from "@/lib/inventory/actions-helpers";
 import {
-  assertCategory,
   assetSchema,
-  cleanAttributes,
   costData,
   createAssetInTx,
+  productData,
+  productSchema,
   setAssetRetiredInTx,
 } from "@/lib/inventory/asset-write";
-import {
-  addMonths,
-  DEFAULT_INSPECTION_INTERVAL_MONTHS,
-  inventoryAssetPath,
-  MAX_BULK_ROWS,
-} from "@/lib/inventory/constants";
+import { addMonths, inventoryAssetPath, MAX_BULK_ROWS } from "@/lib/inventory/constants";
 import { recordEvent, requireInventoryAccess } from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
 
 export async function createAssetAction(
   formData: FormData,
-): Promise<InventoryActionResult<{ code: string }>> {
+): Promise<InventoryActionResult<{ codes: string[] }>> {
   try {
     const { access, userId } = await requireInventoryAccess("use");
     const input = readJsonField(formData, "asset", assetSchema);
     const photo = await readPhotoFile(formData);
-    await assertCategory(input.areaId, input.categoryId);
 
-    const { code } = await prisma.$transaction((tx) =>
+    const { codes } = await prisma.$transaction((tx) =>
       createAssetInTx(tx, input, { userId, canManage: access.canManage, photo }),
     );
 
     revalidateInventory();
-    return { ok: true, message: `${code} angelegt.`, data: { code } };
+    const message =
+      codes.length === 1 ? `${codes[0]} angelegt.` : `${codes.length} Exemplare angelegt.`;
+    return { ok: true, message, data: { codes } };
   } catch (error) {
     console.error("createAssetAction", error);
     return failure(error, "Objekt konnte nicht angelegt werden.");
@@ -48,7 +44,7 @@ export async function createAssetAction(
 }
 
 export type BulkCreateRowResult =
-  { index: number; ok: true; code: string } | { index: number; ok: false; error: string };
+  { index: number; ok: true; codes: string[] } | { index: number; ok: false; error: string };
 
 /**
  * Sammelerfassung: legt Zeile für Zeile an, jede in eigener Transaktion – eine fehlerhafte
@@ -93,14 +89,14 @@ export async function bulkCreateAssetsAction(
         continue;
       }
       try {
-        const { code } = await prisma.$transaction((tx) =>
+        const { codes } = await prisma.$transaction((tx) =>
           createAssetInTx(tx, input, {
             userId,
             canManage: access.canManage,
             eventMessage: "Erfasst (Sammelerfassung)",
           }),
         );
-        results.push({ index, ok: true, code });
+        results.push({ index, ok: true, codes });
       } catch (error) {
         console.error("bulkCreateAssetsAction row", index, error);
         results.push({ index, ...failure(error, "Zeile konnte nicht angelegt werden.") });
@@ -123,8 +119,22 @@ export async function bulkCreateAssetsAction(
   }
 }
 
-const updateSchema = assetSchema.omit({ placement: true, quantity: true, kind: true });
+const updateSchema = productSchema.omit({ kind: true }).extend({
+  label: z.string().trim().max(80).optional().nullable(),
+  serialNumber: z.string().trim().max(120).optional().nullable(),
+  internalNote: z.string().trim().max(4000).optional().nullable(),
+  condition: assetSchema.shape.condition,
+  nextInspectionAt: assetSchema.shape.nextInspectionAt,
+  acquisitionCost: assetSchema.shape.acquisitionCost,
+  purchaseDate: assetSchema.shape.purchaseDate,
+  supplier: assetSchema.shape.supplier,
+  ownership: assetSchema.shape.ownership,
+});
 
+/**
+ * Ändert ein Exemplar und die Stammdaten seines Typs. Typ-Angaben (Name, Merkmale, Prüfpflicht …)
+ * gelten danach für alle Exemplare dieses Typs.
+ */
 export async function updateAssetAction(
   assetId: string,
   formData: FormData,
@@ -134,46 +144,33 @@ export async function updateAssetAction(
     const input = readJsonField(formData, "asset", updateSchema);
     const existing = await prisma.inventoryAsset.findUnique({
       where: { id: assetId },
-      select: {
-        code: true,
-        kind: true,
-        areaId: true,
-        inspectionRequired: true,
-        lastInspectionAt: true,
-      },
+      select: { code: true, kind: true, areaId: true, productId: true, lastInspectionAt: true },
     });
     if (!existing) throw new Error("Objekt nicht gefunden.");
     if (input.areaId !== existing.areaId) {
       throw new Error("Der Bereich bestimmt den Code und lässt sich nicht mehr ändern.");
     }
-    await assertCategory(existing.areaId, input.categoryId);
-
-    const interval = input.inspectionRequired
-      ? (input.inspectionIntervalMonths ?? DEFAULT_INSPECTION_INTERVAL_MONTHS)
-      : null;
-    let nextInspectionAt = input.inspectionRequired ? input.nextInspectionAt : null;
-    if (input.inspectionRequired && !nextInspectionAt && existing.lastInspectionAt && interval) {
-      nextInspectionAt = addMonths(existing.lastInspectionAt, interval);
-    }
 
     await prisma.$transaction(async (tx) => {
+      const product = await productData(tx, { ...input, kind: existing.kind });
+      let nextInspectionAt = product.inspectionRequired ? input.nextInspectionAt : null;
+      const interval = product.inspectionIntervalMonths;
+      if (
+        product.inspectionRequired &&
+        !nextInspectionAt &&
+        existing.lastInspectionAt &&
+        interval
+      ) {
+        nextInspectionAt = addMonths(existing.lastInspectionAt, interval);
+      }
+      await tx.inventoryProduct.update({ where: { id: existing.productId }, data: product });
       await tx.inventoryAsset.update({
         where: { id: assetId },
         data: {
-          categoryId: input.categoryId,
-          name: input.name,
-          manufacturer: input.manufacturer,
-          model: input.model,
-          serialNumber: input.serialNumber,
-          description: input.description,
-          publicNote: input.publicNote,
-          internalNote: input.internalNote,
-          attributes: cleanAttributes(input.attributes),
+          label: input.label || null,
+          serialNumber: input.serialNumber || null,
+          internalNote: input.internalNote || null,
           condition: input.condition,
-          unit: existing.kind === "bulk" ? input.unit : null,
-          minQuantity: existing.kind === "bulk" ? (input.minQuantity ?? null) : null,
-          inspectionRequired: input.inspectionRequired,
-          inspectionIntervalMonths: interval,
           nextInspectionAt,
           ...costData(input, access.canManage),
         },

@@ -175,12 +175,12 @@ export async function recordInspectionAction(
       const id = await prisma.$transaction(async (tx) => {
         const asset = await tx.inventoryAsset.findUnique({
           where: { id: assetId },
-          select: { inspectionIntervalMonths: true },
+          select: { product: { select: { inspectionIntervalMonths: true } } },
         });
         if (!asset) throw new Error("Objekt nicht gefunden.");
         const interval =
           input.intervalMonths ??
-          asset.inspectionIntervalMonths ??
+          asset.product.inspectionIntervalMonths ??
           DEFAULT_INSPECTION_INTERVAL_MONTHS;
         const nextDueAt = input.result === "passed" ? addMonths(input.inspectedAt, interval) : null;
         const inspection = await tx.inventoryInspection.create({
