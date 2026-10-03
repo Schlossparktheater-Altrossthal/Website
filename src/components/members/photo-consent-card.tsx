@@ -205,8 +205,8 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
   const keepsProof =
     hasConsent && summary.hasProof && !summary.revokedAt && summary.status !== "rejected";
 
-  const submit = async () => {
-    const error = validatePhotoConsentDraft(draft, {
+  const submit = async (values: PhotoConsentDraft = draft) => {
+    const error = validatePhotoConsentDraft(values, {
       isMinor,
       hasExistingProof: keepsProof,
     });
@@ -219,7 +219,7 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
     try {
       const response = await fetch("/api/photo-consents", {
         method: "POST",
-        body: photoConsentDraftToFormData(draft),
+        body: photoConsentDraftToFormData(values),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
@@ -264,9 +264,26 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
           Bitte trage zuerst dein Geburtsdatum ein. Daran sehen wir, ob ein Elternteil
           unterschreiben muss.
         </p>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/mitglieder/profil?bereich=stammdaten">Geburtsdatum eintragen</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/mitglieder/profil?bereich=stammdaten">Geburtsdatum eintragen</Link>
+          </Button>
+          <AsyncButton
+            type="button"
+            size="sm"
+            variant="ghost"
+            isLoading={submitting}
+            loadingText="Wird gespeichert …"
+            onClick={() => void submit({ ...EMPTY_PHOTO_CONSENT_DRAFT, level: "none" })}
+          >
+            Keine Aufnahmen erlauben
+          </AsyncButton>
+        </div>
+        {formError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {formError}
+          </p>
+        ) : null}
       </div>
     );
   }

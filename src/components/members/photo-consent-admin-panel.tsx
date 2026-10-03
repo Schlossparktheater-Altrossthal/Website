@@ -530,27 +530,32 @@ export function PhotoConsentAdminPanel() {
             className="min-h-11 pl-9"
           />
         </div>
-        <Select
-          value={showId ?? "all"}
-          onValueChange={(value) => {
-            setLoading(true);
-            setBucketTouched(false);
-            void load(value);
-          }}
-        >
-          <SelectTrigger className="min-h-11 w-full min-w-0 sm:w-56" aria-label="Produktion">
-            <SelectValue placeholder="Produktion" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle Produktionen</SelectItem>
-            {shows.map((show) => (
-              <SelectItem key={show.id} value={show.id}>
-                {show.title} ({show.year})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <ActionDropdownMenu items={menuItems} className="size-11" label="Weitere Aktionen" />
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+          <Select
+            value={showId ?? "all"}
+            onValueChange={(value) => {
+              setLoading(true);
+              setBucketTouched(false);
+              void load(value);
+            }}
+          >
+            <SelectTrigger
+              className="min-h-11 min-w-0 flex-1 sm:w-56 sm:flex-none"
+              aria-label="Produktion"
+            >
+              <SelectValue placeholder="Produktion" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Produktionen</SelectItem>
+              {shows.map((show) => (
+                <SelectItem key={show.id} value={show.id}>
+                  {show.title} ({show.year})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <ActionDropdownMenu items={menuItems} className="size-11" label="Weitere Aktionen" />
+        </div>
         <input
           ref={templateInputRef}
           type="file"
