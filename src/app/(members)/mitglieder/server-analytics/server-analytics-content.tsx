@@ -18,6 +18,7 @@ import {
   useState,
   useTransition,
   type FormEvent,
+  type ReactNode,
 } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -579,12 +580,15 @@ type ServerAnalyticsContentProps = {
   initialAnalytics: ServerAnalytics;
   canReset?: boolean;
   canManageSettings?: boolean;
+  /** Reiter „Ladezeiten“ (serverseitig geladen) */
+  performanceSlot?: ReactNode;
 };
 
 export function ServerAnalyticsContent({
   initialAnalytics,
   canReset = false,
   canManageSettings = false,
+  performanceSlot,
 }: ServerAnalyticsContentProps) {
   const { socket, isConnected, connectionStatus } = useRealtime();
   const [analytics, setAnalytics] = useState<ServerAnalytics>(initialAnalytics);
@@ -990,6 +994,7 @@ export function ServerAnalyticsContent({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="overview">Kennzahlen</TabsTrigger>
+            {performanceSlot ? <TabsTrigger value="performance">Ladezeiten</TabsTrigger> : null}
             {canManageSettings ? <TabsTrigger value="settings">Einstellungen</TabsTrigger> : null}
             <TabsTrigger value="logs">Serverlogs</TabsTrigger>
           </TabsList>
@@ -998,6 +1003,12 @@ export function ServerAnalyticsContent({
             <p>{hasLogs ? lastLogSeenLabel : "Keine Meldungen"}</p>
           </div>
         </div>
+
+        {performanceSlot ? (
+          <TabsContent value="performance" className="space-y-6">
+            {performanceSlot}
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="overview" className="space-y-6">
           <OverviewMetrics metrics={overviewMetrics} renderBadge={renderMockDataBadge} />

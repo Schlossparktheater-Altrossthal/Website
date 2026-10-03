@@ -2397,6 +2397,37 @@ model AnalyticsPageView {
   @@index([analyticsSessionId])
 }
 
+/// Echte Ladezeiten aus dem Browser (Erstaufruf und Seitenwechsel), eine Zeile pro Messung.
+model AnalyticsPerformanceSample {
+  id                 String   @id @default(cuid())
+  createdAt          DateTime @default(now())
+  /// Route mit Platzhaltern statt IDs, z. B. /mitglieder/mitgliederverwaltung/[id]
+  route              String
+  /// "load" = Erstaufruf/Reload, "navigation" = Seitenwechsel innerhalb der App
+  kind               String
+  /// Zeit bis die Seite inhaltlich fertig angezeigt wird
+  durationMs         Int
+  /// Seitenwechsel: Zeit bis zur ersten sichtbaren Reaktion (Ladeskelett/URL-Wechsel)
+  feedbackMs         Int?
+  ttfbMs             Int?
+  fcpMs              Int?
+  lcpMs              Int?
+  inpMs              Int?
+  cls                Float?
+  deviceType         String
+  browser            String
+  browserVersion     String?
+  os                 String
+  userAgent          String?
+  effectiveType      String?
+  standalone         Boolean  @default(false)
+  analyticsSessionId String?
+
+  @@index([createdAt])
+  @@index([route, kind])
+  @@map("analytics_performance_samples")
+}
+
 model AnalyticsDeviceSnapshot {
   id                      String   @id @default(cuid())
   sessionId               String?  @unique

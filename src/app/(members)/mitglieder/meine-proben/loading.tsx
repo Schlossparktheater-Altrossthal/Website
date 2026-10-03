@@ -5,7 +5,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 // das nicht zur Listenform dieser Seite passt.
 export default function LoadingMyEventsPage() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-label="Seite wird geladen">
+    <div
+      className="space-y-6"
+      aria-busy="true"
+      data-route-loading=""
+      aria-label="Seite wird geladen"
+    >
       <div className="space-y-2">
         <Skeleton className="h-8 w-56 max-w-full" />
         <Skeleton className="h-4 w-80 max-w-full" />

@@ -1,7 +1,9 @@
+import { loadPerformanceSummary } from "@/lib/analytics/performance-summary";
 import { collectServerAnalytics } from "@/lib/server-analytics";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
+import { PerformanceSection } from "./performance-section";
 import { ServerAnalyticsContent } from "./server-analytics-content";
 
 function userHasOwnerRole(
@@ -43,13 +45,17 @@ export default async function ServerAnalyticsPage() {
 
   const user = session.user!;
   const isOwner = userHasOwnerRole(user);
-  const analytics = await collectServerAnalytics();
+  const [analytics, performanceSummary] = await Promise.all([
+    collectServerAnalytics(),
+    loadPerformanceSummary(),
+  ]);
 
   return (
     <ServerAnalyticsContent
       initialAnalytics={analytics}
       canReset={isOwner}
       canManageSettings={isOwner}
+      performanceSlot={<PerformanceSection summary={performanceSummary} />}
     />
   );
 }
