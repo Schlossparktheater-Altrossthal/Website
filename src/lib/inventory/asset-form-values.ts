@@ -1,6 +1,6 @@
 import {
   DEFAULT_INSPECTION_INTERVAL_MONTHS,
-  type AssetKind,
+  type ProductKind,
   type Condition,
 } from "@/lib/inventory/constants";
 import type { PlacementTarget } from "@/lib/inventory/service-types";
@@ -25,7 +25,7 @@ export type SpecFormValues = Record<string, string | boolean>;
 export type ProductFormValues = {
   areaId: string;
   categoryId: string | null;
-  kind: AssetKind;
+  kind: ProductKind;
   name: string;
   manufacturer: string;
   model: string;

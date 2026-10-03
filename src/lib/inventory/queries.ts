@@ -5,6 +5,7 @@ import {
   inspectionState,
   assetDisplayName,
   type AssetKind,
+  type ProductKind,
   type AssetStatus,
   type Condition,
   type InspectionState,
@@ -15,6 +16,7 @@ import {
   locationSubtreeIds,
 } from "@/lib/inventory/service";
 import { loadEffectiveFields } from "@/lib/inventory/catalog";
+import { loadAvailability } from "@/lib/inventory/projects";
 import { ASSET_NAME_SELECT } from "@/lib/inventory/selects";
 import { categoryPathLabel, describeSpecs, readSpecs } from "@/lib/inventory/specs";
 import { prisma } from "@/lib/prisma";
@@ -277,12 +279,12 @@ export async function listInventoryAssets(filter: InventoryListFilter) {
     id: asset.id,
     code: asset.code,
     name: assetDisplayName(asset),
-    kind: asset.kind,
+    kind: asset.kind as AssetKind,
     status: asset.status,
     areaName: asset.area.name,
     areaPrefix: asset.area.prefix,
     categoryName: asset.product.category?.name ?? null,
-    place: describePlace(asset, label),
+    place: describePlace({ ...asset, kind: asset.kind as AssetKind }, label),
     quantity: asset.quantity,
     unit: asset.product.unit,
     productId: asset.product.id,
@@ -723,7 +725,7 @@ export type InventoryProductListItem = {
   id: string;
   publicId: string;
   name: string;
-  kind: AssetKind;
+  kind: ProductKind;
   areaName: string;
   areaPrefix: string;
   categoryPath: string | null;
@@ -736,6 +738,8 @@ export type InventoryProductListItem = {
   counts: ProductStatusCounts;
   /** Mengenartikel unter Mindestbestand. */
   low: boolean;
+  /** Sets: Anzahl Bestandteile. */
+  componentCount: number;
   /** Einzelnes Exemplar – die Zeile führt dann direkt dorthin. */
   singleCode: string | null;
   places: string[];
@@ -756,6 +760,27 @@ export async function listInventoryProducts(filter: InventoryListFilter) {
   const where = buildWhere({ ...filter, view: "all", categoryIds }, locationIds);
   const matching = await prisma.inventoryAsset.groupBy({ by: ["productId"], where });
   const productIds = matching.map((entry) => entry.productId);
+  // Sets haben keine Exemplare und damit keinen Ort – sie erscheinen ohne Ortsfilter.
+  if (!filter.locationId) {
+    const words = filter.query?.trim().split(/\s+/).filter(Boolean).slice(0, 5) ?? [];
+    const sets = await prisma.inventoryProduct.findMany({
+      where: {
+        kind: "set",
+        ...(filter.areaId ? { areaId: filter.areaId } : {}),
+        ...(categoryIds ? { categoryId: { in: categoryIds } } : {}),
+        AND: words.map((word) => ({
+          OR: [
+            { name: { contains: word, mode: "insensitive" as const } },
+            { manufacturer: { contains: word, mode: "insensitive" as const } },
+            { model: { contains: word, mode: "insensitive" as const } },
+            { category: { name: { contains: word, mode: "insensitive" as const } } },
+          ],
+        })),
+      },
+      select: { id: true },
+    });
+    productIds.push(...sets.map((set) => set.id));
+  }
   const page = Math.max(1, filter.page ?? 1);
   const pageSize = filter.pageSize ?? INVENTORY_PAGE_SIZE;
 
@@ -775,6 +800,7 @@ export async function listInventoryProducts(filter: InventoryListFilter) {
         model: true,
         unit: true,
         minQuantity: true,
+        _count: { select: { components: true } },
         area: { select: { name: true, prefix: true } },
         photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
         assets: {
@@ -820,7 +846,7 @@ export async function listInventoryProducts(filter: InventoryListFilter) {
       id: product.id,
       publicId: product.publicId,
       name: product.name,
-      kind: product.kind as AssetKind,
+      kind: product.kind as ProductKind,
       areaName: product.area.name,
       areaPrefix: product.area.prefix,
       categoryPath: categoryPathLabel(categories, product.categoryId),
@@ -831,6 +857,7 @@ export async function listInventoryProducts(filter: InventoryListFilter) {
       total,
       counts,
       low: product.kind === "bulk" && product.minQuantity !== null && total < product.minQuantity,
+      componentCount: product._count.components,
       singleCode:
         product.kind !== "bulk" && product.assets.length === 1 ? product.assets[0]!.code : null,
       places: [...places],
@@ -890,6 +917,31 @@ export async function getInventoryProductDetail(publicId: string) {
     }),
   ]);
   const active = product.assets.filter((asset) => asset.status !== "retired");
+  // Sets: Bestandteile mit heutigem Bestand (ohne Projektzeitraum).
+  const setAvailability =
+    product.kind === "set"
+      ? (await loadAvailability([product.id], { startsOn: null, endsOn: null })).get(product.id)
+      : undefined;
+  const components = await prisma.inventoryProductComponent.findMany({
+    where: { setId: product.id },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      quantity: true,
+      component: {
+        select: {
+          id: true,
+          publicId: true,
+          name: true,
+          kind: true,
+          photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+        },
+      },
+    },
+  });
+  const usedInSets = await prisma.inventoryProductComponent.findMany({
+    where: { componentId: product.id },
+    select: { quantity: true, set: { select: { publicId: true, name: true } } },
+  });
   const counts = emptyCounts();
   for (const asset of product.assets) counts[asset.status] += 1;
 
@@ -940,7 +992,7 @@ export async function getInventoryProductDetail(publicId: string) {
     id: product.id,
     publicId: product.publicId,
     name: product.name,
-    kind: product.kind as AssetKind,
+    kind: product.kind as ProductKind,
     area: product.area,
     categoryId: product.categoryId,
     categoryPath: categoryPathLabel(categories, product.categoryId),
@@ -961,6 +1013,19 @@ export async function getInventoryProductDetail(publicId: string) {
         ? active.reduce((sum, asset) => sum + asset.quantity, 0)
         : active.length,
     activeCodes: active.map((asset) => asset.code),
+    setCapacity: setAvailability?.capacity ?? 0,
+    components: components.map((entry) => ({
+      productId: entry.component.id,
+      publicId: entry.component.publicId,
+      name: entry.component.name,
+      kind: entry.component.kind as ProductKind,
+      photoId: entry.component.photos[0]?.id ?? null,
+      quantity: entry.quantity,
+      capacity:
+        setAvailability?.components?.find((item) => item.productId === entry.component.id)
+          ?.availability.capacity ?? 0,
+    })),
+    usedInSets: usedInSets.map((entry) => ({ ...entry.set, quantity: entry.quantity })),
     exemplars,
     placeGroups,
   };
@@ -974,7 +1039,7 @@ export type ProductSearchHit = {
   id: string;
   publicId: string;
   name: string;
-  kind: AssetKind;
+  kind: ProductKind;
   areaId: string;
   areaName: string;
   areaPrefix: string;
@@ -1031,7 +1096,7 @@ export async function searchInventoryProducts(
     id: product.id,
     publicId: product.publicId,
     name: product.name,
-    kind: product.kind as AssetKind,
+    kind: product.kind as ProductKind,
     areaId: product.areaId,
     areaName: product.area.name,
     areaPrefix: product.area.prefix,

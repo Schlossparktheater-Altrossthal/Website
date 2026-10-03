@@ -9,6 +9,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import Link from "next/link";
 import {
   assetDisplayName,
+  type AssetKind,
   formatInventoryDate,
   INVENTORY_BASE_PATH,
   inventoryProductPath,
@@ -46,7 +47,23 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
             orderBy: { sortOrder: "asc" },
             select: {
               quantity: true,
-              product: { select: { id: true, publicId: true, name: true, kind: true, unit: true } },
+              product: {
+                select: {
+                  id: true,
+                  publicId: true,
+                  name: true,
+                  kind: true,
+                  unit: true,
+                  components: {
+                    select: {
+                      quantity: true,
+                      component: {
+                        select: { id: true, publicId: true, name: true, kind: true, unit: true },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -138,7 +155,7 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
             assetId: line.asset.id,
             code: line.asset.code,
             name: assetDisplayName(line.asset),
-            kind: line.asset.kind,
+            kind: line.asset.kind as AssetKind,
             unit: line.asset.product.unit,
             photoId: line.asset.photos[0]?.id ?? line.asset.product.photos[0]?.id ?? null,
             place,
@@ -151,7 +168,15 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
   );
 }
 
-/** Soll/Ist je Artikeltyp für Projekt-Ausgaben: was laut Projekt mit muss, was gepackt ist. */
+type PackProduct = {
+  id: string;
+  publicId: string;
+  name: string;
+  kind: string;
+  unit: string | null;
+};
+
+/** Soll/Ist je Artikeltyp für Projekt-Ausgaben; Sets zählen über ihre Bestandteile. */
 function ProjectPackProgress({
   project,
   packed,
@@ -161,18 +186,37 @@ function ProjectPackProgress({
     title: string;
     lines: {
       quantity: number;
-      product: { id: string; publicId: string; name: string; kind: string; unit: string | null };
+      product: PackProduct & { components: { quantity: number; component: PackProduct }[] };
     }[];
   };
   packed: Map<string, number>;
 }) {
-  const done = project.lines.filter(
-    (line) => (packed.get(line.product.id) ?? 0) >= line.quantity,
-  ).length;
+  const needed = new Map<string, { product: PackProduct; quantity: number; via: string[] }>();
+  const need = (product: PackProduct, quantity: number, via?: string) => {
+    const entry = needed.get(product.id) ?? { product, quantity: 0, via: [] };
+    entry.quantity += quantity;
+    if (via && !entry.via.includes(via)) entry.via.push(via);
+    needed.set(product.id, entry);
+  };
+  for (const line of project.lines) {
+    if (line.product.kind === "set") {
+      for (const part of line.product.components) {
+        need(
+          part.component,
+          part.quantity * line.quantity,
+          `${line.quantity} × ${line.product.name}`,
+        );
+      }
+    } else {
+      need(line.product, line.quantity);
+    }
+  }
+  const rows = [...needed.values()];
+  const done = rows.filter((row) => (packed.get(row.product.id) ?? 0) >= row.quantity).length;
   return (
     <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
       <SectionHeader
-        title={`Packliste · ${done}/${project.lines.length} vollständig`}
+        title={`Packliste · ${done}/${rows.length} vollständig`}
         description={
           <>
             Bedarf aus dem Projekt{" "}
@@ -185,22 +229,23 @@ function ProjectPackProgress({
           </>
         }
       />
-      {project.lines.length ? (
+      {rows.length ? (
         <ListRowGroup>
-          {project.lines.map((line) => {
-            const count = packed.get(line.product.id) ?? 0;
+          {rows.map((row) => {
+            const count = packed.get(row.product.id) ?? 0;
             const tone =
-              count >= line.quantity ? "success" : count > 0 ? "info" : ("muted" as const);
+              count >= row.quantity ? "success" : count > 0 ? "info" : ("muted" as const);
             return (
               <ListRow
-                key={line.product.id}
+                key={row.product.id}
                 density="compact"
-                href={inventoryProductPath(line.product.publicId)}
-                title={line.product.name}
+                href={inventoryProductPath(row.product.publicId)}
+                title={row.product.name}
+                description={row.via.length ? `für ${row.via.join(", ")}` : undefined}
                 trailing={
                   <ToneBadge tone={tone}>
-                    {count}/{line.quantity}
-                    {line.product.kind === "bulk" ? ` ${line.product.unit ?? "Stk."}` : ""}
+                    {count}/{row.quantity}
+                    {row.product.kind === "bulk" ? ` ${row.product.unit ?? "Stk."}` : ""}
                   </ToneBadge>
                 }
               />

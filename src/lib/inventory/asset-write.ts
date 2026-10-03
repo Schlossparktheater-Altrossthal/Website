@@ -4,10 +4,11 @@ import { z } from "zod";
 import { optionalId, optionalText } from "@/lib/inventory/actions-helpers";
 import { loadEffectiveFields } from "@/lib/inventory/catalog";
 import {
-  ASSET_KINDS,
   CONDITIONS,
   DEFAULT_INSPECTION_INTERVAL_MONTHS,
   MAX_EXEMPLARS_PER_CAPTURE,
+  PRODUCT_KINDS,
+  type AssetKind,
 } from "@/lib/inventory/constants";
 import { createPublicId } from "@/lib/inventory/public-id";
 import { parseSpecs } from "@/lib/inventory/specs";
@@ -51,7 +52,7 @@ const dateString = z
 export const productSchema = z.object({
   areaId: z.string().min(1, "Bitte einen Bereich wählen."),
   categoryId: optionalId,
-  kind: z.enum(ASSET_KINDS),
+  kind: z.enum(PRODUCT_KINDS),
   name: z.string().trim().min(1, "Bitte einen Namen angeben.").max(160),
   manufacturer: optionalText(120),
   model: optionalText(120),
@@ -134,6 +135,7 @@ export async function productData(tx: Prisma.TransactionClient, input: ProductIn
   await assertCategory(tx, input.areaId, input.categoryId);
   const fields = await loadEffectiveFields(tx, input.areaId, input.categoryId);
   const bulk = input.kind === "bulk";
+  const set = input.kind === "set";
   return {
     categoryId: input.categoryId,
     name: input.name,
@@ -144,10 +146,12 @@ export async function productData(tx: Prisma.TransactionClient, input: ProductIn
     specs: parseSpecs(fields, input.specs),
     unit: bulk ? input.unit : null,
     minQuantity: bulk ? (input.minQuantity ?? null) : null,
-    inspectionRequired: input.inspectionRequired,
-    inspectionIntervalMonths: input.inspectionRequired
-      ? (input.inspectionIntervalMonths ?? DEFAULT_INSPECTION_INTERVAL_MONTHS)
-      : null,
+    // Sets werden nicht selbst geprüft – ihre Bestandteile schon.
+    inspectionRequired: set ? false : input.inspectionRequired,
+    inspectionIntervalMonths:
+      !set && input.inspectionRequired
+        ? (input.inspectionIntervalMonths ?? DEFAULT_INSPECTION_INTERVAL_MONTHS)
+        : null,
   };
 }
 
@@ -209,7 +213,11 @@ export async function createAssetInTx(
     });
   }
 
-  const count = product.kind === "bulk" ? 1 : input.count;
+  if (product.kind === "set") {
+    throw new Error("Sets haben keine eigenen Exemplare – bitte die Bestandteile erfassen.");
+  }
+  const kind = product.kind as AssetKind;
+  const count = kind === "bulk" ? 1 : input.count;
   const codes: string[] = [];
   const { userId } = options;
   for (let index = 0; index < count; index += 1) {
@@ -220,7 +228,7 @@ export async function createAssetInTx(
         publicId: createPublicId(),
         productId: product.id,
         areaId: product.areaId,
-        kind: product.kind,
+        kind,
         label: count > 1 ? null : input.label,
         serialNumber: count > 1 ? null : input.serialNumber,
         internalNote: input.internalNote,

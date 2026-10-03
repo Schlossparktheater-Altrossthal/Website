@@ -1360,6 +1360,9 @@ enum InventoryAssetKind {
   bulk
   /// Kiste/Case – hat ein Label und nimmt andere Objekte auf.
   container
+  /// Set aus anderen Artikeltypen (Funkstrecke = Sender + Empfänger) – nur am Typ, ohne eigene
+  /// Exemplare. Planung und Packliste rechnen auf die Bestandteile herunter.
+  set
 }
 
 enum InventoryAssetStatus {
@@ -1475,13 +1478,13 @@ model InventoryFieldDef {
 
 /// Artikeltyp: Stammdaten und Merkmale, die für alle Exemplare gleich sind.
 model InventoryProduct {
-  id                       String                 @id @default(cuid())
+  id                       String                      @id @default(cuid())
   /// Zufällige, nicht erratbare Kennung für URLs.
-  publicId                 String                 @unique
+  publicId                 String                      @unique
   areaId                   String
   categoryId               String?
   /// Einzelstück, Mengenartikel oder Kiste/Case – gilt für alle Exemplare.
-  kind                     InventoryAssetKind     @default(unique)
+  kind                     InventoryAssetKind          @default(unique)
   name                     String
   manufacturer             String?
   model                    String?
@@ -1489,18 +1492,20 @@ model InventoryProduct {
   /// Öffentlich sichtbarer Hinweis auf der Scan-Seite.
   publicNote               String?
   /// Merkmalswerte nach `InventoryFieldDef.key`.
-  specs                    Json                   @default("{}")
+  specs                    Json                        @default("{}")
   unit                     String?
   minQuantity              Int?
-  inspectionRequired       Boolean                @default(false)
+  inspectionRequired       Boolean                     @default(false)
   inspectionIntervalMonths Int?
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
-  area                     InventoryArea          @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  category                 InventoryCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt                DateTime                    @default(now())
+  updatedAt                DateTime                    @updatedAt
+  area                     InventoryArea               @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  category                 InventoryCategory?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   assets                   InventoryAsset[]
   photos                   InventoryPhoto[]
   projectLines             InventoryProjectLine[]
+  components               InventoryProductComponent[] @relation("InventorySetComponents")
+  usedInSets               InventoryProductComponent[] @relation("InventorySetUsage")
 
   @@index([areaId])
   @@index([categoryId])
@@ -1672,6 +1677,20 @@ model InventoryEvent {
   user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([assetId, createdAt])
+}
+
+/// Bestandteil eines Sets, z. B. „1 × Taschensender“ in „Funkstrecke“.
+model InventoryProductComponent {
+  id          String           @id @default(cuid())
+  setId       String
+  componentId String
+  quantity    Int              @default(1)
+  sortOrder   Int              @default(0)
+  set         InventoryProduct @relation("InventorySetComponents", fields: [setId], references: [id], onDelete: Cascade)
+  component   InventoryProduct @relation("InventorySetUsage", fields: [componentId], references: [id], onDelete: Restrict)
+
+  @@unique([setId, componentId])
+  @@index([componentId])
 }
 
 enum InventoryProjectStatus {

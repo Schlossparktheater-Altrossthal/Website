@@ -35,6 +35,17 @@ function placesText(places: string[]) {
 }
 
 function ProductSummary({ item }: { item: InventoryProductListItem }) {
+  if (item.kind === "set") {
+    return (
+      <>
+        <span className="font-medium text-foreground">Set</span>
+        {` · ${item.componentCount} ${item.componentCount === 1 ? "Bestandteil" : "Bestandteile"}`}
+        {item.categoryPath ? (
+          <span className="hidden sm:inline"> · {item.categoryPath}</span>
+        ) : null}
+      </>
+    );
+  }
   const amount =
     item.kind === "bulk"
       ? `${item.total} ${item.unit ?? "Stk."}`
@@ -54,6 +65,7 @@ function ProductSummary({ item }: { item: InventoryProductListItem }) {
 
 function ProductSignals({ item }: { item: InventoryProductListItem }) {
   const { counts } = item;
+  if (item.kind === "set") return null;
   const signals: React.ReactNode[] = [];
   if (item.kind !== "bulk" && item.total > 1) {
     const free = counts.available;

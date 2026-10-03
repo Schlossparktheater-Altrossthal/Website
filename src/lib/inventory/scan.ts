@@ -71,7 +71,7 @@ export async function buildScanResult(code: string): Promise<ScanResult | null> 
     id: asset.id,
     code: asset.code,
     name: assetDisplayName(asset),
-    kind: asset.kind,
+    kind: asset.kind as AssetKind,
     status: asset.status,
     areaName: asset.area.name,
     unit: asset.product.unit,

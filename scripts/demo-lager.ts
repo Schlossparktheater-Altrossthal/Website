@@ -30,6 +30,9 @@ async function remove() {
     data: { containerId: null },
   });
   await prisma.inventoryAsset.deleteMany({ where: { productId: { in: productIds } } });
+  await prisma.inventoryProductComponent.deleteMany({ where: { setId: { in: productIds } } });
+  // Sets zuerst – ihre Bestandteile dürfen erst danach weg.
+  await prisma.inventoryProduct.deleteMany({ where: { id: { in: productIds }, kind: "set" } });
   await prisma.inventoryProduct.deleteMany({ where: { id: { in: productIds } } });
   const root = await prisma.inventoryLocation.findFirst({ where: { name: ROOT, parentId: null } });
   if (root) {
@@ -225,6 +228,47 @@ async function main() {
     count: 2,
     placement: { type: "location", id: fundus.id },
   });
+  // Funkstrecke als Set aus Sender und Empfänger.
+  const funk = category(technik, "Funkstrecken");
+  await capture({
+    areaId: technik.id,
+    categoryId: funk,
+    name: "Demo Taschensender",
+    manufacturer: "Sennheiser",
+    model: "SK 100 G4",
+    count: 4,
+    placement: { type: "container", id: box.id },
+  });
+  await capture({
+    areaId: technik.id,
+    categoryId: funk,
+    name: "Demo Funk-Empfänger",
+    manufacturer: "Sennheiser",
+    model: "EM 100 G4",
+    count: 3,
+    placement: { type: "location", id: regalB.id },
+  });
+  const [sender, receiver] = await Promise.all(
+    ["Demo Taschensender", "Demo Funk-Empfänger"].map((name) =>
+      prisma.inventoryProduct.findFirstOrThrow({ where: { name } }),
+    ),
+  );
+  const funkSet = await prisma.inventoryProduct.create({
+    data: {
+      publicId: createPublicId(),
+      areaId: technik.id,
+      categoryId: funk,
+      kind: "set",
+      name: "Demo Funkstrecke",
+      components: {
+        create: [
+          { componentId: sender!.id, quantity: 1, sortOrder: 0 },
+          { componentId: receiver!.id, quantity: 1, sortOrder: 1 },
+        ],
+      },
+    },
+  });
+
   // Zwei Projekte im selben Zeitraum: das zweite bekommt nicht genug LED-PARs.
   const parProduct = await prisma.inventoryProduct.findFirstOrThrow({
     where: { name: "Demo LED-PAR 64 RGBW" },
@@ -265,6 +309,7 @@ async function main() {
           { productId: parProduct.id, quantity: 4, sortOrder: 0 },
           { productId: profilerProduct.id, quantity: 2, sortOrder: 1 },
           { productId: cableProduct.id, quantity: 6, sortOrder: 2 },
+          { productId: funkSet.id, quantity: 2, sortOrder: 3 },
         ],
       },
     },
@@ -279,7 +324,12 @@ async function main() {
       startsOn: day(21),
       endsOn: day(21),
       phases: { create: [{ kind: "event", startsOn: day(21), endsOn: day(21) }] },
-      lines: { create: [{ productId: parProduct.id, quantity: 2, sortOrder: 0 }] },
+      lines: {
+        create: [
+          { productId: parProduct.id, quantity: 2, sortOrder: 0 },
+          { productId: funkSet.id, quantity: 2, sortOrder: 1 },
+        ],
+      },
     },
   });
   console.log("Demo-Lager angelegt.");

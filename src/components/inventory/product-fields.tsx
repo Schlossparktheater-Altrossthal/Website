@@ -17,11 +17,23 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { AssetFormArea, ProductFormValues } from "@/lib/inventory/asset-form-values";
-import { ASSET_KIND_HINTS, ASSET_KIND_LABELS, type AssetKind } from "@/lib/inventory/constants";
+import {
+  ASSET_KIND_HINTS,
+  ASSET_KIND_LABELS,
+  PRODUCT_KINDS,
+  type ProductKind,
+} from "@/lib/inventory/constants";
 import { catalogFields, categoryPath, type FieldDef } from "@/lib/inventory/specs";
 import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
+
+const SHORT_KIND_LABELS: Record<ProductKind, string> = {
+  unique: "Gerät / Stück",
+  bulk: "Menge",
+  container: "Kiste",
+  set: "Set",
+};
 
 export function categoryOptions(area: AssetFormArea | undefined) {
   const categories = area?.categories ?? [];
@@ -119,7 +131,7 @@ export function ProductFields({
           <SegmentedControl
             aria-label="Art"
             value={values.kind}
-            onValueChange={(kind: AssetKind) =>
+            onValueChange={(kind: ProductKind) =>
               // Prüfpflicht betrifft Geräte – Kisten und Mengenartikel standardmäßig nicht.
               onChange({
                 ...values,
@@ -128,9 +140,9 @@ export function ProductFields({
               })
             }
             fullWidth
-            options={(Object.keys(ASSET_KIND_LABELS) as AssetKind[]).map((kind) => ({
+            options={PRODUCT_KINDS.map((kind) => ({
               value: kind,
-              label: kind === "container" ? "Kiste" : kind === "bulk" ? "Menge" : "Gerät / Stück",
+              label: SHORT_KIND_LABELS[kind],
               ariaLabel: ASSET_KIND_LABELS[kind],
             }))}
           />
@@ -227,7 +239,7 @@ export function ProductFields({
         </fieldset>
       ) : null}
 
-      {!bulk ? (
+      {!bulk && values.kind !== "set" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
           <label htmlFor="product-inspection" className="min-w-0">
             <span className="block text-sm font-medium text-foreground">Prüfpflichtig</span>

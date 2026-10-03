@@ -9,19 +9,26 @@ export const INVENTORY_BASE_PATH = "/mitglieder/lager";
 /** Öffentliche Kurz-URL im QR-Code: `/i/<publicId>`. */
 export const INVENTORY_PUBLIC_PATH = "/i";
 
+/** Arten von Exemplaren (haben Codes und Orte). */
 export const ASSET_KINDS = ["unique", "bulk", "container"] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
-export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
+/** Arten von Artikeltypen: wie Exemplare, dazu Sets ohne eigene Exemplare. */
+export const PRODUCT_KINDS = [...ASSET_KINDS, "set"] as const;
+export type ProductKind = (typeof PRODUCT_KINDS)[number];
+
+export const ASSET_KIND_LABELS: Record<ProductKind, string> = {
   unique: "Einzelstück",
   bulk: "Mengenartikel",
   container: "Kiste / Case",
+  set: "Set",
 };
 
-export const ASSET_KIND_HINTS: Record<AssetKind, string> = {
+export const ASSET_KIND_HINTS: Record<ProductKind, string> = {
   unique: "Eigenes Label, eigener Ort und Zustand",
   bulk: "Stückzahl je Lagerplatz, z. B. Kabel",
   container: "Nimmt andere Objekte auf",
+  set: "Besteht aus anderen Artikeln, z. B. Funkstrecke = Sender + Empfänger",
 };
 
 export const ASSET_STATUSES = [

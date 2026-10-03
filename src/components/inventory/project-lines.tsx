@@ -16,7 +16,7 @@ import { ToneBadge } from "@/components/inventory/tone-badge";
 import { PlusIcon, SearchIcon, TrashIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { inventoryProductPath, type AssetKind } from "@/lib/inventory/constants";
+import { inventoryProductPath, type ProductKind } from "@/lib/inventory/constants";
 import { inventoryProjectPath, PROJECT_STATUS_LABELS } from "@/lib/inventory/project-constants";
 import type { Availability, LineVerdict } from "@/lib/inventory/projects";
 import type { ProductSearchHit } from "@/lib/inventory/queries";
@@ -28,7 +28,7 @@ export type ProjectLineView = {
     id: string;
     publicId: string;
     name: string;
-    kind: AssetKind;
+    kind: ProductKind;
     unit: string | null;
     categoryPath: string | null;
     photoId: string | null;
@@ -128,7 +128,18 @@ function LineRow({
   const [quantity, setQuantity] = React.useState(String(line.quantity));
   React.useEffect(() => setQuantity(String(line.quantity)), [line.quantity]);
   const availability = line.availability;
-  const unit = line.product.kind === "bulk" ? (line.product.unit ?? "Stk.") : "Stk.";
+  const unit =
+    line.product.kind === "set"
+      ? "Sets"
+      : line.product.kind === "bulk"
+        ? (line.product.unit ?? "Stk.")
+        : "Stk.";
+  // Sets: welche Bestandteile begrenzen?
+  const limiting = (availability?.components ?? []).filter(
+    (component) =>
+      component.availability.capacity - component.availability.confirmed <
+      component.quantity * line.quantity,
+  );
   const free = availability ? availability.capacity - availability.confirmed : 0;
   const commit = () => {
     const next = Number(quantity);
@@ -157,6 +168,17 @@ function LineRow({
             ? ` · ${availability.total - availability.capacity} defekt/fehlt`
             : ""}
         </p>
+        {limiting.length ? (
+          <p className="truncate text-xs text-destructive">
+            Zu wenig:{" "}
+            {limiting
+              .map(
+                (component) =>
+                  `${component.name} (${component.availability.capacity - component.availability.confirmed}/${component.quantity * line.quantity})`,
+              )
+              .join(", ")}
+          </p>
+        ) : null}
         {availability?.reservations.length ? (
           <p className="truncate text-xs text-muted-foreground">
             Auch in:{" "}

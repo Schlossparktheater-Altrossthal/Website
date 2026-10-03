@@ -117,12 +117,37 @@ export async function addToCheckoutAction(
       if (asset.status === "locked") warning = "Gesperrt – Mangel beachten!";
       // Projekt-Ausgabe: gegen den geplanten Bedarf prüfen (nur Hinweis, keine Sperre).
       if (checkout.projectId && !warning) {
-        const planned = await tx.inventoryProjectLine.findUnique({
+        // Geplant direkt oder als Bestandteil eines Sets.
+        const lines = await tx.inventoryProjectLine.findMany({
           where: {
-            projectId_productId: { projectId: checkout.projectId, productId: asset.productId },
+            projectId: checkout.projectId,
+            OR: [
+              { productId: asset.productId },
+              { product: { components: { some: { componentId: asset.productId } } } },
+            ],
           },
-          select: { quantity: true },
+          select: {
+            productId: true,
+            quantity: true,
+            product: {
+              select: {
+                components: {
+                  where: { componentId: asset.productId },
+                  select: { quantity: true },
+                },
+              },
+            },
+          },
         });
+        const plannedQuantity = lines.reduce(
+          (sum, line) =>
+            sum +
+            (line.productId === asset.productId
+              ? line.quantity
+              : line.quantity * (line.product.components[0]?.quantity ?? 0)),
+          0,
+        );
+        const planned = plannedQuantity ? { quantity: plannedQuantity } : null;
         if (!planned) {
           warning = "Nicht im Projekt eingeplant";
         } else {

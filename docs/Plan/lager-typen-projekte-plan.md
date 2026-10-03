@@ -1,6 +1,6 @@
 # Plan: Lager 2 – Artikeltypen, Kategorien mit Feldern, Projekte
 
-Stand: 2026-10-03. Phase 1–7 umgesetzt (lokal getestet), offen: Sets (Phase 8), Staging/Release. Checkliste am Ende. Baut auf `docs/Plan/inventar-plan.md` auf.
+Stand: 2026-10-03. Phase 1–8 umgesetzt, Phase 1–7 auf Staging getestet (E2E grün), offen: Prod-Release. Checkliste am Ende. Baut auf `docs/Plan/inventar-plan.md` auf.
 
 ## Anlass (Feedback)
 
@@ -123,7 +123,11 @@ InventoryCheckout       → gehört zu einem Projekt (oder frei für Person); Ze
       Bedarf je Typ mit Ampel frei/knapp/fehlt; Migration `20261003220000_inventory_projects`)
 - [x] Phase 7 – Ausgabe aus dem Projekt, Packliste Soll/Ist, Warnung bei nicht geplantem
       oder zu viel Material
-- [ ] Phase 8 – Sets
+- [x] Phase 8 – Sets: Artikeltyp der Art `set` ohne eigene Exemplare, Bestandteile in
+      `InventoryProductComponent` (keine verschachtelten Sets). Verfügbarkeit = knappster
+      Bestandteil; Sets anderer Projekte belegen Bestandteile; Eigenbedarf eines Projekts (direkt +
+      über Sets) wird je Bestandteil zusammengezählt. Packliste und Scan-Warnung rechnen auf
+      Bestandteile herunter. Migration `20261003230000_inventory_sets`.
 - [ ] Phase 9 – E2E (`lager`, `lager-tabelle`, `lager-projekte`) gegen Staging, Release
 
 ## Erkenntnisse

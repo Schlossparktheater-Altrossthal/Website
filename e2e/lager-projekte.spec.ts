@@ -58,6 +58,23 @@ test.describe("als admin", () => {
     const [first] = range.match(/T-\d{4,}/g) ?? [];
     expect(first).toBeTruthy();
 
+    // Set aus zwei Lampen: aus dem Bestand lässt sich genau eines zusammenstellen.
+    const setName = `E2E Lampenpaar ${stamp}`;
+    await page.goto("/mitglieder/lager/neu");
+    await page.getByLabel("Was möchtest du erfassen?").fill(setName);
+    await clickUntil(page.getByRole("button", { name: `Neuer Artikeltyp „${setName}“` }), () =>
+      expect(page.getByText("Neuer Artikeltyp", { exact: true })).toBeVisible(),
+    );
+    await page.getByRole("radio", { name: "Set" }).click();
+    await page.getByLabel("Bestandteil suchen").fill(product);
+    await page.getByRole("button", { name: new RegExp(product) }).click();
+    await page.getByLabel(`Anzahl ${product} je Set`).fill("2");
+    await page.getByRole("button", { name: "Set anlegen" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: setName })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText("1 Set", { exact: true })).toBeVisible();
+
     const projectA = `E2E Stadtfest ${stamp}`;
     await createProject(page, projectA, "Bestätigt");
     await addMaterial(page, product, 2);

@@ -1,5 +1,5 @@
-import { BoxesIcon, PackageIcon } from "@/components/ui/action-icons";
-import type { AssetKind } from "@/lib/inventory/constants";
+import { BoxesIcon, FileStackIcon, PackageIcon } from "@/components/ui/action-icons";
+import type { ProductKind } from "@/lib/inventory/constants";
 import { cn } from "@/lib/utils";
 
 /** Quadratisches Vorschaubild eines Objekts; ohne Foto ein Symbol für die Objektart. */
@@ -10,7 +10,7 @@ export function AssetThumb({
   className,
 }: {
   photoId: string | null;
-  kind: AssetKind;
+  kind: ProductKind;
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
@@ -31,7 +31,7 @@ export function AssetThumb({
       />
     );
   }
-  const Icon = kind === "container" ? PackageIcon : BoxesIcon;
+  const Icon = kind === "container" ? PackageIcon : kind === "set" ? FileStackIcon : BoxesIcon;
   return (
     <span
       className={cn(

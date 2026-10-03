@@ -28,16 +28,48 @@ export type Availability = {
   capacity: number;
   /** Bestand inkl. Reparatur/Gesperrt/Vermisst – zeigt, was „eigentlich“ da wäre. */
   total: number;
-  /** Andere Projekte im selben Zeitraum. */
+  /** Andere Projekte im selben Zeitraum (bei Sets: die ihrer Bestandteile). */
   reservations: Reservation[];
   /** Fest (bestätigt) bzw. weich (angefragt) belegt. */
   confirmed: number;
   requested: number;
+  /** Nur bei Sets: Bestandteile mit Menge je Set und ihrer eigenen Verfügbarkeit. */
+  components?: { productId: string; name: string; quantity: number; availability: Availability }[];
 };
+
+type ComponentRow = { setId: string; componentId: string; quantity: number; name: string };
+
+/** Bestandteile von Sets (Set-ID → Liste). */
+async function loadComponents(db: Db, setIds: readonly string[]) {
+  const map = new Map<string, ComponentRow[]>();
+  if (!setIds.length) return map;
+  const rows = await db.inventoryProductComponent.findMany({
+    where: { setId: { in: [...setIds] } },
+    orderBy: [{ sortOrder: "asc" }],
+    select: {
+      setId: true,
+      componentId: true,
+      quantity: true,
+      component: { select: { name: true } },
+    },
+  });
+  for (const row of rows) {
+    const list = map.get(row.setId) ?? [];
+    list.push({
+      setId: row.setId,
+      componentId: row.componentId,
+      quantity: row.quantity,
+      name: row.component.name,
+    });
+    map.set(row.setId, list);
+  }
+  return map;
+}
 
 /**
  * Verfügbarkeit je Artikeltyp für einen Zeitraum. Gezählt werden nutzbare Exemplare minus
- * Bedarf anderer Projekte, deren Belegung sich mit dem Zeitraum überschneidet.
+ * Bedarf anderer Projekte, deren Belegung sich mit dem Zeitraum überschneidet. Sets werden auf
+ * ihre Bestandteile heruntergerechnet – auch die Sets anderer Projekte belegen Bestandteile.
  */
 export async function loadAvailability(
   productIds: readonly string[],
@@ -47,9 +79,34 @@ export async function loadAvailability(
   const db = options.db ?? prisma;
   const result = new Map<string, Availability>();
   if (!productIds.length) return result;
+
+  const requested = await db.inventoryProduct.findMany({
+    where: { id: { in: [...productIds] } },
+    select: { id: true, kind: true },
+  });
+  const requestedSets = requested.filter((product) => product.kind === "set").map((p) => p.id);
+  const ownComponents = await loadComponents(db, requestedSets);
+  const baseIds = new Set<string>();
+  for (const product of requested) {
+    if (product.kind === "set") {
+      for (const component of ownComponents.get(product.id) ?? [])
+        baseIds.add(component.componentId);
+    } else {
+      baseIds.add(product.id);
+    }
+  }
+
+  // Sets, in denen diese Grundtypen stecken – deren Projektzeilen belegen sie mit.
+  const usage = await db.inventoryProductComponent.findMany({
+    where: { componentId: { in: [...baseIds] } },
+    select: { setId: true },
+  });
+  const relatedSets = [...new Set(usage.map((entry) => entry.setId))];
+  const setComponents = await loadComponents(db, relatedSets);
+
   const [products, lines] = await Promise.all([
     db.inventoryProduct.findMany({
-      where: { id: { in: [...productIds] } },
+      where: { id: { in: [...baseIds] } },
       select: {
         id: true,
         kind: true,
@@ -62,7 +119,7 @@ export async function loadAvailability(
     window.startsOn && window.endsOn
       ? db.inventoryProjectLine.findMany({
           where: {
-            productId: { in: [...productIds] },
+            productId: { in: [...baseIds, ...relatedSets] },
             project: {
               status: { in: RESERVING_STATUSES },
               ...(options.excludeProjectId ? { id: { not: options.excludeProjectId } } : {}),
@@ -87,6 +144,8 @@ export async function loadAvailability(
         })
       : Promise.resolve([]),
   ]);
+
+  const base = new Map<string, Availability>();
   for (const product of products) {
     const bulk = product.kind === "bulk";
     const usable = product.assets.filter((asset) =>
@@ -94,7 +153,7 @@ export async function loadAvailability(
     );
     const sum = (list: typeof product.assets) =>
       bulk ? list.reduce((total, asset) => total + asset.quantity, 0) : list.length;
-    result.set(product.id, {
+    base.set(product.id, {
       capacity: sum(usable),
       total: sum(product.assets),
       reservations: [],
@@ -102,20 +161,86 @@ export async function loadAvailability(
       requested: 0,
     });
   }
+  const book = (
+    productId: string,
+    quantity: number,
+    project: (typeof lines)[number]["project"],
+  ) => {
+    const entry = base.get(productId);
+    if (!entry) return;
+    const existing = entry.reservations.find((item) => item.projectId === project.id);
+    if (existing) existing.quantity += quantity;
+    else {
+      entry.reservations.push({
+        projectId: project.id,
+        publicId: project.publicId,
+        title: project.title,
+        status: project.status as ProjectStatus,
+        quantity,
+        startsOn: project.startsOn,
+        endsOn: project.endsOn,
+      });
+    }
+    if (project.status === "confirmed") entry.confirmed += quantity;
+    else entry.requested += quantity;
+  };
   for (const line of lines) {
-    const entry = result.get(line.productId);
-    if (!entry) continue;
-    entry.reservations.push({
-      projectId: line.project.id,
-      publicId: line.project.publicId,
-      title: line.project.title,
-      status: line.project.status as ProjectStatus,
-      quantity: line.quantity,
-      startsOn: line.project.startsOn,
-      endsOn: line.project.endsOn,
+    const components = setComponents.get(line.productId);
+    if (components) {
+      for (const component of components) {
+        book(component.componentId, line.quantity * component.quantity, line.project);
+      }
+    } else {
+      book(line.productId, line.quantity, line.project);
+    }
+  }
+
+  for (const product of requested) {
+    if (product.kind !== "set") {
+      const entry = base.get(product.id);
+      if (entry) result.set(product.id, entry);
+      continue;
+    }
+    const components = (ownComponents.get(product.id) ?? []).map((component) => ({
+      productId: component.componentId,
+      name: component.name,
+      quantity: component.quantity,
+      availability: base.get(component.componentId) ?? {
+        capacity: 0,
+        total: 0,
+        reservations: [],
+        confirmed: 0,
+        requested: 0,
+      },
+    }));
+    // Ein Set ist so oft verfügbar, wie sein knappster Bestandteil es zulässt.
+    const sets = (pick: (entry: Availability) => number) =>
+      components.length
+        ? Math.min(
+            ...components.map((component) =>
+              Math.floor(pick(component.availability) / component.quantity),
+            ),
+          )
+        : 0;
+    const capacity = sets((entry) => entry.capacity);
+    const afterConfirmed = sets((entry) => entry.capacity - entry.confirmed);
+    const afterRequested = sets((entry) => entry.capacity - entry.confirmed - entry.requested);
+    const reservations = new Map<string, Reservation>();
+    for (const component of components) {
+      for (const reservation of component.availability.reservations) {
+        if (!reservations.has(reservation.projectId)) {
+          reservations.set(reservation.projectId, { ...reservation });
+        }
+      }
+    }
+    result.set(product.id, {
+      capacity,
+      total: sets((entry) => entry.total),
+      reservations: [...reservations.values()],
+      confirmed: capacity - afterConfirmed,
+      requested: afterConfirmed - afterRequested,
+      components,
     });
-    if (line.project.status === "confirmed") entry.confirmed += line.quantity;
-    else entry.requested += line.quantity;
   }
   return result;
 }
@@ -252,6 +377,42 @@ export async function getInventoryProjectDetail(publicId: string) {
     ),
     prisma.inventoryCategory.findMany({ select: { id: true, parentId: true, name: true } }),
   ]);
+  // Eigenbedarf je Grundtyp: direkte Zeilen plus Bestandteile von Sets zusammengezählt.
+  const own = new Map<string, number>();
+  for (const line of project.lines) {
+    const components = availability.get(line.productId)?.components;
+    if (components) {
+      for (const component of components) {
+        own.set(
+          component.productId,
+          (own.get(component.productId) ?? 0) + component.quantity * line.quantity,
+        );
+      }
+    } else {
+      own.set(line.productId, (own.get(line.productId) ?? 0) + line.quantity);
+    }
+  }
+  const order: LineVerdict[] = ["ok", "tight", "short"];
+  const worst = (verdicts: LineVerdict[]) =>
+    verdicts.reduce<LineVerdict>(
+      (current, next) => (order.indexOf(next) > order.indexOf(current) ? next : current),
+      "ok",
+    );
+  const verdictFor = (productId: string): LineVerdict => {
+    const entry = availability.get(productId);
+    if (!entry) return "short";
+    if (entry.components) {
+      return entry.components.length
+        ? worst(
+            entry.components.map((component) =>
+              lineVerdict(own.get(component.productId) ?? 0, component.availability),
+            ),
+          )
+        : "short";
+    }
+    return lineVerdict(own.get(productId) ?? 0, entry);
+  };
+
   return {
     ...project,
     status: project.status as ProjectStatus,
@@ -270,7 +431,7 @@ export async function getInventoryProjectDetail(publicId: string) {
           photoId: line.product.photos[0]?.id ?? null,
         },
         availability: entry ?? null,
-        verdict: project.startsOn ? lineVerdict(line.quantity, entry) : ("ok" as LineVerdict),
+        verdict: project.startsOn ? verdictFor(line.productId) : ("ok" as LineVerdict),
       };
     }),
   };

@@ -9,10 +9,15 @@ import {
   createAssetAction,
   searchProductsAction,
 } from "@/app/(members)/mitglieder/lager/actions/assets";
+import { createSetAction } from "@/app/(members)/mitglieder/lager/actions/sets";
 import { AssetThumb } from "@/components/inventory/asset-thumb";
 import { ConditionSelect, ExemplarFields } from "@/components/inventory/exemplar-fields";
 import { PlacementPicker, type PlacementOptions } from "@/components/inventory/placement-picker";
 import { ProductFields } from "@/components/inventory/product-fields";
+import {
+  SetComponentsField,
+  type SetComponentDraft,
+} from "@/components/inventory/set-components-editor";
 import {
   CameraIcon,
   CheckCircleIcon,
@@ -87,6 +92,7 @@ export function CaptureWizard({
     product: ProductSearchHit | null;
   } | null>(null);
   const [session, setSession] = React.useState<string[]>([]);
+  const [components, setComponents] = React.useState<SetComponentDraft[]>([]);
 
   const kind = product?.kind ?? draft?.kind ?? "unique";
   const inspectionRequired = product?.inspectionRequired ?? draft?.inspectionRequired ?? false;
@@ -98,6 +104,11 @@ export function CaptureWizard({
     setStep("details");
   };
   const choose = (hit: ProductSearchHit) => {
+    // Sets haben keine eigenen Exemplare – dort gibt es nichts zu erfassen.
+    if (hit.kind === "set") {
+      router.push(inventoryProductPath(hit.publicId));
+      return;
+    }
     setProduct(hit);
     setDraft(null);
     setStep("details");
@@ -114,6 +125,24 @@ export function CaptureWizard({
     event.preventDefault();
     if (saving) return;
     if (!product && !draft) return;
+    if (draft && draft.kind === "set") {
+      setSaving(true);
+      const response = await createSetAction({
+        product: productPayload(draft),
+        components: components.map((entry) => ({
+          productId: entry.productId,
+          quantity: entry.quantity,
+        })),
+      });
+      setSaving(false);
+      if (!response.ok) {
+        toast.error(response.error);
+        return;
+      }
+      toast.success(response.message ?? "Set angelegt.");
+      router.push(inventoryProductPath(response.data.publicId));
+      return;
+    }
     setSaving(true);
     const formData = new FormData();
     const payload = {
@@ -199,68 +228,86 @@ export function CaptureWizard({
               Zurück zur Suche
             </Button>
           </div>
-          <PhotoInput photo={photo} onChange={setPhoto} />
+          {draft.kind !== "set" ? <PhotoInput photo={photo} onChange={setPhoto} /> : null}
           <ProductFields values={draft} onChange={setDraft} areas={areas} mode="create" />
         </section>
       ) : null}
 
-      <section className={CARD}>
-        <h2 className="text-base font-semibold text-foreground">
-          {kind === "bulk" ? "Wie viel und wo?" : "Wie viele und wo?"}
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          {kind === "bulk" ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="capture-quantity">
-                Menge ({product?.unit ?? draft?.unit ?? "Stk."})
-              </Label>
-              <Input
-                id="capture-quantity"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={capture.quantity}
-                onChange={(event) => setCapture({ ...capture, quantity: event.target.value })}
-              />
-            </div>
-          ) : (
-            <CountStepper
-              value={capture.count}
-              onChange={(value) => setCapture({ ...capture, count: value })}
-            />
-          )}
-          <ConditionSelect
-            value={capture.condition}
-            onChange={(condition) => setCapture({ ...capture, condition })}
-          />
-          <div className="col-span-2 space-y-1.5">
-            <Label>{count > 1 ? "Wo liegen sie?" : "Wo liegt es?"}</Label>
-            <PlacementPicker
-              value={capture.placement}
-              onChange={(placement) => setCapture({ ...capture, placement })}
-              options={placementOptions}
-            />
-            {count > 1 ? (
-              <p className="text-xs text-muted-foreground">
-                Alle {count} kommen erst einmal hierhin – umlagern geht später per Scan.
-              </p>
-            ) : null}
+      {kind === "set" ? (
+        <section className={CARD}>
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Woraus besteht das Set?</h2>
+            <p className="text-sm text-muted-foreground">
+              Menge je Set – im Projekt plant man dann z. B. „4 × Funkstrecke“.
+            </p>
           </div>
-        </div>
-        {product ? <PhotoInput photo={photo} onChange={setPhoto} compact /> : null}
-        <MoreDetails
-          values={capture}
-          onChange={setCapture}
-          single={kind === "bulk" || count === 1}
-          inspectionRequired={inspectionRequired}
-          canManage={canManage}
-        />
-      </section>
+          <SetComponentsField value={components} onChange={setComponents} />
+        </section>
+      ) : (
+        <section className={CARD}>
+          <h2 className="text-base font-semibold text-foreground">
+            {kind === "bulk" ? "Wie viel und wo?" : "Wie viele und wo?"}
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            {kind === "bulk" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="capture-quantity">
+                  Menge ({product?.unit ?? draft?.unit ?? "Stk."})
+                </Label>
+                <Input
+                  id="capture-quantity"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={capture.quantity}
+                  onChange={(event) => setCapture({ ...capture, quantity: event.target.value })}
+                />
+              </div>
+            ) : (
+              <CountStepper
+                value={capture.count}
+                onChange={(value) => setCapture({ ...capture, count: value })}
+              />
+            )}
+            <ConditionSelect
+              value={capture.condition}
+              onChange={(condition) => setCapture({ ...capture, condition })}
+            />
+            <div className="col-span-2 space-y-1.5">
+              <Label>{count > 1 ? "Wo liegen sie?" : "Wo liegt es?"}</Label>
+              <PlacementPicker
+                value={capture.placement}
+                onChange={(placement) => setCapture({ ...capture, placement })}
+                options={placementOptions}
+              />
+              {count > 1 ? (
+                <p className="text-xs text-muted-foreground">
+                  Alle {count} kommen erst einmal hierhin – umlagern geht später per Scan.
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {product ? <PhotoInput photo={photo} onChange={setPhoto} compact /> : null}
+          <MoreDetails
+            values={capture}
+            onChange={setCapture}
+            single={kind === "bulk" || count === 1}
+            inspectionRequired={inspectionRequired}
+            canManage={canManage}
+          />
+        </section>
+      )}
 
       <div className="sticky bottom-[var(--members-bottom-nav,0px)] z-10 -mx-1 flex gap-2 bg-background/95 px-1 py-3 backdrop-blur">
         <Button type="submit" size="lg" disabled={saving} className="flex-1 sm:flex-none">
           <PlusIcon className="mr-2 h-4 w-4" />
-          {saving ? "Speichert …" : kind === "bulk" || count === 1 ? "Anlegen" : `${count} anlegen`}
+          {saving
+            ? "Speichert …"
+            : kind === "set"
+              ? "Set anlegen"
+              : kind === "bulk" || count === 1
+                ? "Anlegen"
+                : `${count} anlegen`}
         </Button>
         <Button
           type="button"
@@ -359,7 +406,7 @@ function TypeStep({
                   </span>
                 </span>
                 <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                  {hit.kind === "bulk" ? "Menge" : `${hit.count} Stk.`}
+                  {hit.kind === "set" ? "Set" : hit.kind === "bulk" ? "Menge" : `${hit.count} Stk.`}
                 </span>
               </button>
             </li>
