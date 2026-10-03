@@ -105,12 +105,16 @@ export function PageHeader({
           <MembersTopbarQuickActions>{quickActions}</MembersTopbarQuickActions>
         ) : null}
       </MembersTopbar>
-      {(descriptionNode || actions) && (
-        <MembersContentHeader className={className}>
-          {descriptionNode ? <div className="space-y-2">{descriptionNode}</div> : null}
-          {actions ? <MembersPageActions>{actions}</MembersPageActions> : null}
-        </MembersContentHeader>
-      )}
+      {/* Jede Seite bekommt denselben Kopf: Titel, optional Beschreibung, Aktionen rechts. */}
+      <MembersContentHeader className={className}>
+        <div className="min-w-0 space-y-1">
+          <Heading level="h1" className="text-2xl md:text-3xl">
+            {title}
+          </Heading>
+          {descriptionNode}
+        </div>
+        {actions ? <MembersPageActions>{actions}</MembersPageActions> : null}
+      </MembersContentHeader>
     </>
   );
 }

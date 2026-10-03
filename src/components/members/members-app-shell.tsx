@@ -452,8 +452,8 @@ export function MembersAppShell({
           ) : null}
           <main className="flex-1 pb-12">
             {contentHeader ? (
-              <header className="border-b border-border/60 bg-background/60">
-                <div className={cn(contentClasses.container, "py-6 sm:py-8")}>{contentHeader}</div>
+              <header>
+                <div className={cn(contentClasses.container, "pt-6 sm:pt-8")}>{contentHeader}</div>
               </header>
             ) : null}
             <section className={contentClasses.section}>

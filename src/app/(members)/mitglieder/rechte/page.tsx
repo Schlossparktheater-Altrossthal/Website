@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/members/page-header";
 import { requireAuth } from "@/lib/rbac";
 import { ensurePermissionDefinitions, ensureSystemRoles, hasPermission } from "@/lib/permissions";
 import { PermissionWorkbench } from "@/components/members/permissions/permission-workbench";
@@ -11,15 +12,12 @@ export default async function RechteVerwaltungPage() {
     return <div className="text-sm text-destructive">Kein Zugriff auf die Rechteverwaltung</div>;
   }
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Rollen &amp; Rechte</h1>
-        <p className="text-sm text-muted-foreground">
-          Haken setzen erlaubt der Rolle das Recht. Änderungen gelten sofort. Rollen vergibst du in
-          der Mitgliederverwaltung.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        title="Rollen & Rechte"
+        description="Haken setzen erlaubt der Rolle das Recht. Änderungen gelten sofort. Rollen vergibst du in der Mitgliederverwaltung."
+      />
       <PermissionWorkbench />
-    </div>
+    </>
   );
 }
