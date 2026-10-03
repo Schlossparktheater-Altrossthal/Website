@@ -579,7 +579,7 @@ export function MemberMeasurementsControlCenter({
   return (
     <div className="space-y-5">
       <div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <StatBlock
             label="Ensemble"
             value={NUMBER_FORMATTER.format(globalStats.totalMembers)}
@@ -736,7 +736,7 @@ export function MemberMeasurementsControlCenter({
               </div>
             </div>
             {mobileMember ? (
-              <div className="grid gap-3">
+              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
                 {activeMeasurementTypes.map((type) => {
                   const entry = mobileMember.measurementMap.get(type) ?? null;
                   const unitLabel = entry
@@ -756,28 +756,21 @@ export function MemberMeasurementsControlCenter({
                             })
                       }
                       className={cn(
-                        "flex w-full flex-col gap-2 rounded-xl border border-border/60 bg-background px-4 py-3 text-left text-sm text-foreground shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        entry
-                          ? "hover:border-primary/40 hover:bg-primary/5"
-                          : "border-dashed border-destructive/60",
+                        // Kompakte Listenzeile statt Karte: Maß links, Wert rechts.
+                        "flex min-h-12 w-full items-center justify-between gap-3 px-4 py-2 text-left text-sm text-foreground transition hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                       )}
                     >
-                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/80">
-                        {MEASUREMENT_TYPE_LABELS[type]}
-                      </span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-lg font-semibold">
-                          {entry ? formatValue(entry.value) : "—"}
+                      <span className="font-medium">{MEASUREMENT_TYPE_LABELS[type]}</span>
+                      {entry ? (
+                        <span className="flex items-baseline gap-1">
+                          <span className="font-semibold">{formatValue(entry.value)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {unitLabel ?? entry.unit}
+                          </span>
                         </span>
-                        <span
-                          className={cn(
-                            "text-xs",
-                            entry ? "text-muted-foreground" : "text-destructive/80",
-                          )}
-                        >
-                          {entry ? (unitLabel ?? entry.unit) : "Fehlt"}
-                        </span>
-                      </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">+ eintragen</span>
+                      )}
                     </button>
                   );
                 })}
@@ -1075,14 +1068,14 @@ export function MemberMeasurementsControlCenter({
 
 function StatBlock({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-4 py-3 shadow-sm">
-      <div className="space-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="flex min-w-0 items-start justify-between gap-3 rounded-xl border border-border/70 bg-gradient-to-br from-card/90 to-muted/50 px-3 py-2.5 shadow-sm sm:px-4 sm:py-3">
+      <div className="min-w-0 space-y-1">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
           {label}
         </p>
         <p className="text-xl font-bold leading-tight text-foreground">{value}</p>
       </div>
-      <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/80 bg-card/80 text-muted-foreground">
+      <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border sm:flex border-border/80 bg-card/80 text-muted-foreground">
         {icon}
       </span>
     </div>
