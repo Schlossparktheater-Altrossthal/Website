@@ -151,6 +151,10 @@ Profilfoto, damit man Gesichter zuordnen kann.
 - Die Fotoliste-PDF enthält keine Unterschriften; sie ist eine Arbeitsliste für Fotografen. Der
   SVG-Renderer (`src/lib/signature-svg.ts`) liefert dafür bei Bedarf `signatureToSvgString`.
 - Der Bereich „Einwilligungen" heißt jetzt „Prüfen", „Fotografen" heißt „Fotoliste".
+- Ohne Geburtsdatum zeigt das Profil statt des Formulars einen Hinweis plus „Keine Aufnahmen
+  erlauben" (die anderen Stufen brauchen das Alter).
+- Die E2E-Testnutzer haben kein Geburtsdatum; der Profil-Test überspringt sich dann. Das Formular
+  wurde per abgefangener API-Antwort (volljährig/minderjährig) auf Staging fotografiert.
 
 ## Checkliste
 
