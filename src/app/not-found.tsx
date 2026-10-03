@@ -10,10 +10,10 @@ export default function NotFound() {
       <div className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
         <p className="font-serif text-5xl text-primary">404</p>
         <div className="space-y-2">
-          <Heading level="h1" className="text-2xl">
+          <Heading level="h1" className="text-center text-2xl">
             Seite nicht gefunden
           </Heading>
-          <Text tone="muted" variant="body">
+          <Text tone="muted" variant="body" className="text-center">
             Diese Adresse gibt es nicht (mehr). Vielleicht wurde die Seite verschoben oder der Link
             ist veraltet.
           </Text>
