@@ -626,10 +626,14 @@ Terminplanung folgen diesem Aufbau (Stand 2026-09-26):
    `title`, optional `description`, `actions`, `status`. `breadcrumbs` nur mit echtem Elternteil
    und die aktuelle Seite als letzter Eintrag (`[eltern, aktuelle Seite]`); die frühere
    Wurzelzeile „Mitgliederbereich“ entfällt, weil sie auf jeder Seite dasselbe Wort trug.
+   Seit 2026-10-03 rendert `PageHeader` zusätzlich immer eine H1 mit Titel im Inhalt (darunter
+   Beschreibung, Aktionen rechts) – ohne Trennband; Seiten bauen keine eigene H1 mehr.
 2. **Bereichs-Navigation** — je nach Art des Zustands eines dieser vier Muster:
    - `SectionNav` (`src/components/ui/section-nav.tsx`) — Pills mit Zustand in der URL
      (`?ansicht=`, `?tab=`), mobil volle Breite; ab vier Einträgen dort ein `Select`.
-     Einsatz: Stück, Mitgliederverwaltung.
+     Einsatz: Stück, Mitgliederverwaltung. Mit `variant="underline"` als Unterstrich-Reiter für
+     die Hauptbereiche einer Seite, wenn darunter noch eine Pill-Leiste für Unterbereiche folgt
+     (Produktion: Plan/Gewerke/Stück… über Ablauf/Rollen/Auftritte), seit 2026-10-03.
    - `SegmentedControl` (`src/components/ui/segmented-control.tsx`) — dieselbe Optik, aber
      Client-State (`role=radiogroup`). Einsatz: Sperrliste, Teams & Zuweisung, Terminplanung.
    - `ViewSwitcher` (eigene Pills in `meine-gewerke/team-ui.tsx`) — Ansichten eines Portals.
