@@ -17,6 +17,8 @@ export const performanceSampleSchema = z.object({
   kind: z.enum(PERFORMANCE_SAMPLE_KINDS),
   durationMs: z.number().nonnegative().max(MAX_DURATION_MS),
   feedbackMs: durationSchema,
+  serverMs: durationSchema,
+  requestCount: z.number().int().nonnegative().max(500).nullish(),
   ttfbMs: durationSchema,
   fcpMs: durationSchema,
   lcpMs: durationSchema,
@@ -134,6 +136,8 @@ export function buildPerformanceRows(
     kind: sample.kind,
     durationMs: Math.round(sample.durationMs),
     feedbackMs: roundOrNull(sample.feedbackMs),
+    serverMs: roundOrNull(sample.serverMs),
+    requestCount: sample.requestCount ?? null,
     ttfbMs: roundOrNull(sample.ttfbMs),
     fcpMs: roundOrNull(sample.fcpMs),
     lcpMs: roundOrNull(sample.lcpMs),
@@ -159,6 +163,8 @@ export type PerformanceSampleRow = {
   kind: string;
   durationMs: number;
   feedbackMs: number | null;
+  serverMs: number | null;
+  requestCount: number | null;
   ttfbMs: number | null;
   lcpMs: number | null;
   inpMs: number | null;
@@ -178,13 +184,21 @@ export type PerformanceStats = {
 export type PerformanceGroup = PerformanceStats & {
   key: string;
   feedbackP75: number | null;
+  /** Seitenwechsel: Server-Anfrage für die Zielseite (inkl. Netz), 75 % */
+  serverP75: number | null;
+  /** Seitenwechsel: Server-Anfragen je Wechsel (inkl. Vorab-Laden), Median */
+  requestsMedian: number | null;
 };
 
 export type PerformanceSummary = {
   days: number;
   total: number;
   load: PerformanceStats & { ttfbP75: number | null; lcpP75: number | null; inpP75: number | null };
-  navigation: PerformanceStats & { feedbackP75: number | null };
+  navigation: PerformanceStats & {
+    feedbackP75: number | null;
+    serverP75: number | null;
+    requestsMedian: number | null;
+  };
   routes: Array<PerformanceGroup & { kind: PerformanceSampleKind }>;
   devices: Array<PerformanceGroup & { kind: PerformanceSampleKind }>;
   browsers: Array<PerformanceGroup & { kind: PerformanceSampleKind }>;
@@ -214,6 +228,14 @@ function p75Of(values: Array<number | null>): number | null {
   );
 }
 
+function medianOf(values: Array<number | null>): number | null {
+  const filtered = values.filter((v): v is number => typeof v === "number");
+  return percentile(
+    filtered.sort((a, b) => a - b),
+    50,
+  );
+}
+
 function groupBy(
   rows: PerformanceSampleRow[],
   keyOf: (row: PerformanceSampleRow) => string,
@@ -233,6 +255,8 @@ function groupBy(
         key,
         ...stats(list.map((row) => row.durationMs)),
         feedbackP75: p75Of(list.map((row) => row.feedbackMs)),
+        serverP75: p75Of(list.map((row) => row.serverMs)),
+        requestsMedian: medianOf(list.map((row) => row.requestCount)),
       };
     })
     .sort((a, b) => b.count - a.count);
@@ -259,6 +283,8 @@ export function summarizePerformanceSamples(
     navigation: {
       ...stats(navigations.map((row) => row.durationMs)),
       feedbackP75: p75Of(navigations.map((row) => row.feedbackMs)),
+      serverP75: p75Of(navigations.map((row) => row.serverMs)),
+      requestsMedian: medianOf(navigations.map((row) => row.requestCount)),
     },
     routes: groupBy(rows, (row) => row.route),
     devices: groupBy(rows, deviceLabel),

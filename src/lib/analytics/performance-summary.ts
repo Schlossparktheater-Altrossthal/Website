@@ -13,6 +13,8 @@ export async function loadPerformanceSummary(days = 14): Promise<PerformanceSumm
       kind: true,
       durationMs: true,
       feedbackMs: true,
+      serverMs: true,
+      requestCount: true,
       ttfbMs: true,
       lcpMs: true,
       inpMs: true,

@@ -2409,6 +2409,10 @@ model AnalyticsPerformanceSample {
   durationMs         Int
   /// Seitenwechsel: Zeit bis zur ersten sichtbaren Reaktion (Ladeskelett/URL-Wechsel)
   feedbackMs         Int?
+  /// Seitenwechsel: Dauer der Server-Anfrage (RSC) inkl. Netz, Rest ist Browser-Rendering
+  serverMs           Int?
+  /// Seitenwechsel: Anzahl der Server-Anfragen (inkl. Vorab-Laden) während des Wechsels
+  requestCount       Int?
   ttfbMs             Int?
   fcpMs              Int?
   lcpMs              Int?
@@ -2426,6 +2430,25 @@ model AnalyticsPerformanceSample {
   @@index([createdAt])
   @@index([route, kind])
   @@map("analytics_performance_samples")
+}
+
+/// Fehler aus Server-Rendering (onRequestError) und Browser (JS-Fehler), eine Zeile pro Vorkommen.
+model AnalyticsErrorEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  /// "server" oder "client"
+  source    String
+  route     String
+  message   String
+  /// Kurzer Stack-Ausschnitt bzw. Next.js-Digest zur Wiedererkennung
+  detail    String?
+  browser   String?
+  os        String?
+  userId    String?
+
+  @@index([createdAt])
+  @@index([route])
+  @@map("analytics_error_events")
 }
 
 model AnalyticsDeviceSnapshot {

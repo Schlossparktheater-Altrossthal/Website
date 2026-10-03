@@ -14,6 +14,8 @@ type Sample = {
   kind: "load" | "navigation";
   durationMs: number;
   feedbackMs?: number | null;
+  serverMs?: number | null;
+  requestCount?: number | null;
   ttfbMs?: number | null;
   fcpMs?: number | null;
   lcpMs?: number | null;
@@ -70,6 +72,30 @@ function whenContentVisible(): Promise<number | null> {
   });
 }
 
+/**
+ * Server-Anfragen (RSC) während eines Seitenwechsels aus der Resource-Timing-API: Anzahl inkl.
+ * Vorab-Laden und Dauer der Anfrage für die Zielseite (fehlt, wenn sie aus dem Cache kam).
+ */
+function collectServerTiming(start: number, end: number, targetPath: string) {
+  let requestCount = 0;
+  let serverMs: number | null = null;
+  let latestStart = -1;
+  for (const entry of performance.getEntriesByType("resource") as PerformanceResourceTiming[]) {
+    if (entry.startTime < start || entry.startTime > end || !entry.name.includes("_rsc=")) continue;
+    requestCount += 1;
+    try {
+      const url = new URL(entry.name);
+      if (url.pathname === targetPath && entry.startTime > latestStart) {
+        latestStart = entry.startTime;
+        serverMs = Math.round(entry.responseEnd - entry.startTime);
+      }
+    } catch {
+      // ungültige URL ignorieren
+    }
+  }
+  return { requestCount, serverMs };
+}
+
 // Zustand pro Seitenaufruf (ein harter Reload lädt das Modul neu). Bewusst außerhalb von React,
 // damit Beacons beim Verlassen der Seite ohne Render-Abhängigkeiten verschickt werden können.
 const state = {
@@ -110,6 +136,23 @@ function flush(includeLoad: boolean) {
   }).catch(() => {});
 }
 
+const ERROR_ENDPOINT = "/api/analytics/errors";
+const MAX_ERRORS_PER_PAGE = 5;
+const reportedErrors = new Set<string>();
+
+/** JS-Fehler im Browser melden – je Seitenaufruf höchstens 5 verschiedene. */
+function reportClientError(message: string, detail: string | null) {
+  const key = message.slice(0, 200);
+  if (!key || reportedErrors.has(key) || reportedErrors.size >= MAX_ERRORS_PER_PAGE) return;
+  reportedErrors.add(key);
+  void fetch(ERROR_ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ path: window.location.pathname, message: key, detail }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 export function PerformanceReporter({
   analyticsSessionId,
 }: {
@@ -133,6 +176,7 @@ export function PerformanceReporter({
 
   // Erstaufruf messen
   useEffect(() => {
+    performance.setResourceTimingBufferSize?.(1000);
     const path = window.location.pathname;
     let cancelled = false;
     void whenContentVisible().then((end) => {
@@ -168,12 +212,29 @@ export function PerformanceReporter({
       if (document.visibilityState === "hidden") flush(true);
     };
     const onPageHide = () => flush(true);
+    const onError = (event: ErrorEvent) => {
+      // Fehler aus fremden Skripten/Erweiterungen liefern nur "Script error." ohne Details.
+      if (!event.message || event.message === "Script error.") return;
+      reportClientError(event.message, event.error?.stack?.slice(0, 600) ?? null);
+    };
+    const onRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const message = reason instanceof Error ? reason.message : String(reason ?? "");
+      reportClientError(
+        `Unbehandelt: ${message}`,
+        reason instanceof Error ? (reason.stack?.slice(0, 600) ?? null) : null,
+      );
+    };
 
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPopState);
     document.addEventListener("visibilitychange", onHidden);
     window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
     return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("popstate", onPopState);
       document.removeEventListener("visibilitychange", onHidden);
@@ -199,7 +260,10 @@ export function PerformanceReporter({
         kind: "navigation",
         durationMs: Math.round(end - pending.start),
         feedbackMs: Math.round(feedback),
+        ...collectServerTiming(pending.start, end, pathname),
       });
+      // Puffer klein halten, damit lange Sitzungen nicht an das Limit der Timing-API stoßen.
+      performance.clearResourceTimings?.();
       if (state.queue.length >= 10) flush(false);
     });
     return () => {

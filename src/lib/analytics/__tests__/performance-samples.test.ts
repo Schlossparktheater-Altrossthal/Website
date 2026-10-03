@@ -84,6 +84,8 @@ describe("summarizePerformanceSamples", () => {
     kind: "navigation",
     durationMs: 500,
     feedbackMs: 50,
+    serverMs: 120,
+    requestCount: 3,
     ttfbMs: null,
     lcpMs: null,
     inpMs: null,
