@@ -63,3 +63,11 @@ describe("summarizeUsage", () => {
     expect(summary.kpis.pageViews).toEqual({ current: 1, previous: 1 });
   });
 });
+
+describe("routeLabel", () => {
+  it("nutzt Menünamen statt Pfaden", async () => {
+    const { routeLabel } = await import("../route-labels");
+    expect(routeLabel("/mitglieder/sperrliste")).toBe("Sperrliste");
+    expect(routeLabel("/mitglieder/mitgliederverwaltung/[id]")).toMatch(/› Detail$/);
+  });
+});

@@ -42,7 +42,8 @@ const tooltipStyle = {
 
 function changeHint(current: number, previous: number, label: string) {
   const change = formatChange(current, previous);
-  return change ? `${change} ggü. ${label}` : `vorher ${numberFormat.format(previous)}`;
+  if (change) return `${change} ggü. ${label}`;
+  return previous > 0 ? `vorher ${numberFormat.format(previous)}` : "noch kein Vergleichswert";
 }
 
 function formatDay(date: string) {
@@ -106,11 +107,11 @@ export function StatisticsOverview({ statistics }: { statistics: MemberStatistic
           tone="info"
         />
         <StatTile
-          label="Seitenwechsel (75 %)"
+          label="Seitenwechsel"
           value={formatMs(performance.navigation.p75)}
           hint={
             performance.navigation.count
-              ? `${numberFormat.format(performance.navigation.count)} Messungen`
+              ? `75 %-Wert · ${numberFormat.format(performance.navigation.count)} Messungen`
               : "noch keine Messungen"
           }
           icon={<MousePointerClick />}

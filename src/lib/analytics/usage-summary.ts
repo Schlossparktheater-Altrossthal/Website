@@ -9,6 +9,11 @@ export type UsagePeriod = (typeof USAGE_PERIODS)[number];
 /** Pause, ab der ein neuer Besuch beginnt (übliche Definition in Webanalyse-Tools). */
 const VISIT_GAP_MS = 30 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/**
+ * Höchstens so viel Zeit zählt je Seitenaufruf zur Besuchsdauer: Ein offen gelassener Tab misst
+ * sonst Stunden, obwohl niemand liest.
+ */
+const MAX_COUNTED_TIME_ON_PAGE_MS = 10 * 60 * 1000;
 
 export type UsagePageViewRow = {
   path: string;
@@ -73,7 +78,7 @@ function visitsOf(rows: UsagePageViewRow[]): Visit[] {
     let current: Visit | null = null;
     for (const row of list) {
       const start = row.createdAt.getTime();
-      const end = start + Math.min(row.timeOnPageMs ?? 0, VISIT_GAP_MS);
+      const end = start + Math.min(row.timeOnPageMs ?? 0, MAX_COUNTED_TIME_ON_PAGE_MS);
       if (current && start - current.end <= VISIT_GAP_MS) {
         current.end = Math.max(current.end, end);
       } else {

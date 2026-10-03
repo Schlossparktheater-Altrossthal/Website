@@ -55,10 +55,7 @@ export function formatChange(current: number, previous: number): string | null {
   return `${rounded > 0 ? "+" : ""}${rounded} %`;
 }
 
-/** Strip der Mitgliederbereichs-Wurzel für kompakte Seitennamen. */
-export function shortRoute(route: string) {
-  return route.replace(/^\/mitglieder/, "") || "/ (Start)";
-}
+export { routeLabel as shortRoute } from "@/lib/analytics/route-labels";
 
 // Grenzen angelehnt an die Web-Vitals-Empfehlungen (LCP gut < 2,5 s); Seitenwechsel sollen
 // sich unter einer Sekunde anfühlen.
