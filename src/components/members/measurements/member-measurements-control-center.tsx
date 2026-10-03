@@ -291,7 +291,7 @@ export function MemberMeasurementsControlCenter({
             <div className="flex items-center justify-between gap-2 pr-2 text-sm">
               <span className="font-medium text-foreground">{item.label}</span>
               {item.missingCount > 0 ? (
-                <span className="text-[11px] tabular-nums text-muted-foreground">
+                <span className="shrink-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">
                   {item.missingCount} offen
                 </span>
               ) : (
@@ -301,9 +301,9 @@ export function MemberMeasurementsControlCenter({
           );
         },
         meta: {
-          headerClassName: "sticky left-0 z-20 min-w-[150px] bg-muted/30 sm:min-w-[170px]",
+          headerClassName: "sticky left-0 z-20 min-w-[170px] bg-muted/30 sm:min-w-[200px]",
           cellClassName:
-            "sticky left-0 z-10 min-w-[150px] border-r border-border/60 bg-card px-3 py-1.5 text-sm font-medium text-foreground sm:min-w-[170px] sm:px-4 sm:py-2",
+            "sticky left-0 z-10 min-w-[170px] border-r border-border/60 bg-card px-3 py-1.5 text-sm font-medium text-foreground sm:min-w-[200px] sm:px-4 sm:py-2",
         },
       },
     ];
