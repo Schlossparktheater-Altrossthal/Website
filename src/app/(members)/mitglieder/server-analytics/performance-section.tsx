@@ -152,27 +152,34 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
                           ? "Gerät"
                           : "Browser"}
                     </th>
-                    <th className="px-3 py-2 text-right">Anzahl</th>
-                    <th className="px-3 py-2 text-right">Median</th>
+                    <th className="hidden px-3 py-2 text-right sm:table-cell">Anzahl</th>
+                    <th className="hidden px-3 py-2 text-right sm:table-cell">Median</th>
                     <th className="px-3 py-2 text-right">75 %</th>
-                    <th className="px-3 py-2 text-right">95 %</th>
+                    <th className="hidden px-3 py-2 text-right sm:table-cell">95 %</th>
                     {kind === "navigation" ? (
-                      <th className="px-3 py-2 text-right">Reaktion 75 %</th>
+                      <th className="hidden px-3 py-2 text-right sm:table-cell">Reaktion 75 %</th>
                     ) : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {rows.map((row) => (
                     <tr key={row.key} className="bg-background/60">
-                      <td className="max-w-[16rem] truncate px-3 py-2 font-medium text-foreground sm:max-w-none">
-                        {grouping === "routes"
-                          ? row.key.replace(/^\/mitglieder/, "") || "/"
-                          : row.key}
+                      <td className="max-w-[14rem] px-3 py-2 font-medium text-foreground sm:max-w-none">
+                        <span className="block truncate">
+                          {grouping === "routes"
+                            ? row.key.replace(/^\/mitglieder/, "") || "/"
+                            : row.key}
+                        </span>
+                        <span className="block text-xs font-normal text-muted-foreground sm:hidden">
+                          {numberFormat.format(row.count)} Messungen · Median {formatMs(row.p50)}
+                        </span>
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
                         {numberFormat.format(row.count)}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{formatMs(row.p50)}</td>
+                      <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
+                        {formatMs(row.p50)}
+                      </td>
                       <td
                         className={cn(
                           "px-3 py-2 text-right font-semibold tabular-nums",
@@ -181,9 +188,11 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
                       >
                         {formatMs(row.p75)}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{formatMs(row.p95)}</td>
+                      <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
+                        {formatMs(row.p95)}
+                      </td>
                       {kind === "navigation" ? (
-                        <td className="px-3 py-2 text-right tabular-nums">
+                        <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">
                           {formatMs(row.feedbackP75)}
                         </td>
                       ) : null}
