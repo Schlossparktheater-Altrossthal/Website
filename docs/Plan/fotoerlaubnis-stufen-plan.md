@@ -1,6 +1,6 @@
 # Plan: Fotoerlaubnis als Stufen – Profil, Onboarding, Verwaltung, Unterschrift
 
-Stand: 2026-10-03. Entwurf, nichts umgesetzt. Löst die frei pflegbaren Zwecke aus
+Stand: 2026-10-03. Entschieden (E1–E6), nichts umgesetzt. Löst die frei pflegbaren Zwecke aus
 `docs/Plan/fotoerlaubnis-plan.md` ab. Checkliste am Ende wird gepflegt.
 
 ## Ziel
@@ -138,14 +138,9 @@ Profilfoto, damit man Gesichter zuordnen kann.
 - E2: Die Fotoerlaubnis bleibt produktionsgebunden. Minderjährige geben jede Produktion neu ab (Eltern-Unterschrift),
   Volljährige können vorausfüllen, unterschreiben aber neu.
 - E3: Digitale Unterschriften nur vektoriell (`signaturePayload`), Anzeige als SVG, Replay in der Prüfansicht.
-
-### Offen
-
-- O1: Sollen auch Volljährige bei unveränderter Stufe neu unterschreiben müssen? (Vorschlag: ja, ein Tipp auf
-  das Pad, damit die Erlaubnis rechtlich je Produktion vorliegt.)
-- O2: Bleibt der Reiter „Fotografen“ für Leute mit reinem Leserecht, oder wird es eine eigene Seite?
-- O3: Altbestand mit Stufe `null`: als „unbekannt“ stehen lassen, bis jemand nachträgt? (Vorschlag: ja, keine
-  geratene Migration.)
+- E4: Auch Volljährige unterschreiben je Produktion neu, auch bei unveränderter Stufe.
+- E5: Altbestand ohne Auswahl bekommt `level = null` („Stufe unbekannt“), nachgetragen wird in der Verwaltung vom Papier.
+- E6: Die Fotografen-Liste bleibt ein Reiter unter Fotoerlaubnisse.
 
 ## Checkliste
 
