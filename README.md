@@ -105,12 +105,17 @@ missing or invalid the request is rejected with `401`.
 Aggregation windows and retention policies are configurable via the environment
 variables `ANALYTICS_HTTP_WINDOW_MINUTES`, `ANALYTICS_HTTP_BUCKET_MINUTES`,
 `ANALYTICS_SESSION_WINDOW_DAYS`, `ANALYTICS_SESSION_RETENTION_DAYS`,
-`ANALYTICS_PAGE_WINDOW_DAYS` and `ANALYTICS_PAGE_RETENTION_DAYS`. These values
-act as initial defaults and can later be adjusted directly from the
-“Einstellungen” tab on the server analytics page. All scripts under
+`ANALYTICS_PAGE_WINDOW_DAYS` and `ANALYTICS_PAGE_RETENTION_DAYS`. All scripts under
 `scripts/cron/*` use the shared pipeline logic, so the same configuration
 applies whether the job is triggered via the API route or a standalone task
 runner.
+
+The statistics page (`/mitglieder/server-analytics`) reads raw data directly:
+page views/time on page (`AnalyticsPageView`), real load times measured in the
+browser (`analytics_performance_samples`, retention
+`ANALYTICS_PERFORMANCE_RETENTION_DAYS`, default 60) and errors from server
+rendering (`onRequestError` in `src/instrumentation.ts`) and the browser
+(`analytics_error_events`, 60 days). See `docs/seiten/server.md`.
 
 ### Quality checks
 

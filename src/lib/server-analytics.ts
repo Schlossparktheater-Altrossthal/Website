@@ -727,7 +727,7 @@ function finalizeResourceMeasurement(measurement: ResourceMeasurement): ServerRe
   };
 }
 
-async function collectSystemResourceUsage(): Promise<ServerResourceUsage[]> {
+export async function collectSystemResourceUsage(): Promise<ServerResourceUsage[]> {
   const resources: ResourceMeasurement[] = [];
 
   const cpuCount = Math.max(os.cpus().length, 1);
