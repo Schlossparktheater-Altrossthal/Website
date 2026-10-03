@@ -2115,6 +2115,18 @@ enum PhotoConsentStatus {
   noPhotos
 }
 
+/// Stufe der Fotoerlaubnis wie auf den Papierformularen (docs/Plan/fotoerlaubnis-stufen-plan.md).
+enum PhotoConsentLevel {
+  /// intern + Programmheft/Flyer + Werbung
+  all
+  /// intern, Werbung nur nach Rückfrage (nur Volljährige)
+  promoOnRequest
+  /// nur intern (Verwendung innerhalb der Gruppe)
+  internal
+  /// gar nicht
+  none
+}
+
 /// Zielgruppe eines Fotoerlaubnis-Zwecks: nur Volljährige, nur Minderjährige oder beide.
 enum PhotoConsentPurposeAudience {
   adult
@@ -2129,6 +2141,8 @@ model PhotoConsent {
   showId              String
   revokedAt           DateTime?
   status              PhotoConsentStatus    @default(pending)
+  /// null = Altbestand ohne erfasste Stufe („Stufe unbekannt“)
+  level               PhotoConsentLevel?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   approvedAt          DateTime?
@@ -2192,6 +2206,7 @@ model PhotoConsentVersion {
   consentId           String
   version             Int
   status              PhotoConsentStatus
+  level               PhotoConsentLevel?
   purposesSnapshot    Json?
   exclusionNote       String?            @db.Text
   documentName        String?
