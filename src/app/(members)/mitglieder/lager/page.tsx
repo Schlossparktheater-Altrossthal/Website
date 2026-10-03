@@ -5,6 +5,7 @@ import { AssetFilters } from "@/components/inventory/asset-filters";
 import { AssetList } from "@/components/inventory/asset-list";
 import { AssetTable } from "@/components/inventory/asset-table";
 import { AssetViewToggle } from "@/components/inventory/asset-view-toggle";
+import { ProductList } from "@/components/inventory/product-list";
 import { LagerNav } from "@/components/inventory/lager-nav";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PageHeader } from "@/components/members/page-header";
@@ -13,6 +14,7 @@ import {
   ArrowRightLeftIcon,
   DownloadIcon,
   LayoutGridIcon,
+  ListIcon,
   PlusIcon,
   PrinterIcon,
   QrCodeIcon,
@@ -33,6 +35,7 @@ import {
   listInventoryAreas,
   listContainerOptions,
   listInventoryAssets,
+  listInventoryProducts,
   listLocationOptions,
   parseInventorySort,
   type InventoryListFilter,
@@ -90,11 +93,16 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
       : {}),
   };
 
+  // Liste ohne Sonderansicht: nach Artikeltyp gruppiert. Sonderansichten (Mängel, Prüfung …)
+  // und die Tabelle zeigen einzelne Exemplare.
+  const grouped = !table && filter.view === "all";
   const [stats, areas, locations, list, containers] = await Promise.all([
     getInventoryOverviewStats(),
     listInventoryAreas(),
     listLocationOptions(),
-    listInventoryAssets(filter),
+    grouped
+      ? listInventoryProducts(filter).then((result) => ({ ...result, kind: "products" as const }))
+      : listInventoryAssets(filter).then((result) => ({ ...result, kind: "assets" as const })),
     table ? listContainerOptions() : Promise.resolve([]),
   ]);
 
@@ -143,7 +151,7 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
           <span className="min-w-0">
             <span className="block text-base font-semibold text-foreground">Erfassen</span>
             <span className="block text-sm text-muted-foreground">
-              Neues Objekt mit Foto anlegen
+              Artikel wählen, Anzahl und Ort
             </span>
           </span>
         </Link>
@@ -217,7 +225,9 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
           <h2 id="lager-bestand" className="text-lg font-semibold text-foreground">
             Bestand
             <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {list.total} {list.total === 1 ? "Objekt" : "Objekte"}
+              {list.kind === "products"
+                ? `${list.total} Artikel`
+                : `${list.total} ${list.total === 1 ? "Exemplar" : "Exemplare"}`}
             </span>
           </h2>
           <div className="ml-auto flex flex-wrap gap-2">
@@ -236,6 +246,14 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
                 </a>
               </Button>
             ) : null}
+            {access.canCatalog ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`${INVENTORY_BASE_PATH}/katalog`}>
+                  <ListIcon className="mr-2 h-4 w-4" />
+                  Kategorien
+                </Link>
+              </Button>
+            ) : null}
             {access.canManage ? (
               <Button asChild variant="outline" size="sm">
                 <Link href={`${INVENTORY_BASE_PATH}/einstellungen`}>
@@ -250,7 +268,17 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
           areas={areas.map((area) => ({ id: area.id, name: area.name }))}
           locations={locations.map((location) => ({ id: location.id, path: location.path }))}
         />
-        {list.items.length && table ? (
+        {list.kind === "products" ? (
+          list.items.length ? (
+            <ProductList items={list.items} />
+          ) : (
+            <div className="rounded-lg border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+              {stats.total === 0
+                ? "Noch nichts erfasst. Leg mit „Erfassen“ den ersten Artikel an."
+                : "Keine Treffer für diese Auswahl."}
+            </div>
+          )
+        ) : list.items.length && table ? (
           <>
             <div className="lg:hidden">
               <AssetList items={list.items} />

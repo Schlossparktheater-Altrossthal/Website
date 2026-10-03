@@ -72,6 +72,22 @@ export function effectiveFields(
 }
 
 /** Wirksame Merkmale aus einem geladenen Katalog (auch im Browser nutzbar). */
+/** Schlüssel aus einer Bezeichnung: „Leistung an 4 Ω“ → „leistungAn4“. */
+export function fieldKeyFromLabel(label: string): string {
+  const words = label
+    .normalize("NFKD")
+    .replace(/ß/g, "ss")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  const key = words
+    .map((word, index) => (index ? word[0]!.toUpperCase() + word.slice(1) : word))
+    .join("")
+    .slice(0, 40);
+  return /^[a-z]/.test(key) ? key : `f${key}`;
+}
+
 export function catalogFields(
   area:
     | {
@@ -161,21 +177,19 @@ export function formatSpecValue(field: Pick<FieldDef, "type" | "unit">, value: S
   return field.unit ? `${text} ${field.unit}` : text;
 }
 
-/** Merkmale als Liste für Anzeigen; unbekannte Schlüssel erscheinen mit ihrem Schlüssel. */
+/**
+ * Merkmale als Liste für Anzeigen. Werte ohne (noch) gültige Definition – Merkmal gelöscht oder
+ * Kategorie gewechselt – bleiben gespeichert, werden aber nicht angezeigt.
+ */
 export function describeSpecs(
   fields: readonly FieldDef[],
   specs: Specs,
 ): { key: string; label: string; value: string }[] {
-  const known = new Set(fields.map((field) => field.key));
-  const rows = fields
+  return fields
     .filter((field) => specs[field.key] !== undefined)
     .map((field) => ({
       key: field.key,
       label: field.label,
       value: formatSpecValue(field, specs[field.key]!),
     }));
-  for (const [key, value] of Object.entries(specs)) {
-    if (!known.has(key)) rows.push({ key, label: key, value: String(value) });
-  }
-  return rows;
 }

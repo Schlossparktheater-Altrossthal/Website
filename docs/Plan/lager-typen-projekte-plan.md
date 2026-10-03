@@ -1,6 +1,6 @@
 # Plan: Lager 2 – Artikeltypen, Kategorien mit Feldern, Projekte
 
-Stand: 2026-10-03. Phase 1–2 umgesetzt (auf main), Rest offen. Checkliste am Ende. Baut auf `docs/Plan/inventar-plan.md` auf.
+Stand: 2026-10-03. Phase 1–7 umgesetzt (lokal getestet), offen: Sets (Phase 8), Staging/Release. Checkliste am Ende. Baut auf `docs/Plan/inventar-plan.md` auf.
 
 ## Anlass (Feedback)
 
@@ -113,10 +113,24 @@ InventoryCheckout       → gehört zu einem Projekt (oder frei für Person); Ze
 
 - [x] Phase 1 – Schema (Migration `20261003200000_inventory_products`, leert Lagerdaten)
 - [x] Phase 2 – publicId (QR/Etiketten, `/i/<publicId>`, Scanner, Inventur)
-- [ ] Phase 3 – Bestand nach Typ
-- [ ] Phase 4 – Erfassen-Wizard
-- [ ] Phase 5 – Katalogverwaltung
-- [ ] Phase 6 – Projekte
-- [ ] Phase 7 – Ausgabe/Packliste
+- [x] Phase 3 – Bestand nach Typ (`listInventoryProducts`, `/lager/typ/<publicId>`; Sonderansichten
+      und Tabelle bleiben je Exemplar)
+- [x] Phase 4 – Erfassen-Assistent (`capture-wizard.tsx`: Typ suchen/neu → Anzahl/Ort → fertig),
+      getrennte Formulare für Typ (`product-form`) und Exemplar (`exemplar-form`)
+- [x] Phase 5 – Katalog `/lager/katalog` (Kategorienbaum, Merkmale je Bereich/Kategorie),
+      Recht `PRIVATE.INVENTORY.CATALOG` (in MANAGE enthalten)
+- [x] Phase 6 – Projekte `/lager/projekte` (Kunde, Ort, Projektleitung, Produktion, Termine,
+      Bedarf je Typ mit Ampel frei/knapp/fehlt; Migration `20261003220000_inventory_projects`)
+- [x] Phase 7 – Ausgabe aus dem Projekt, Packliste Soll/Ist, Warnung bei nicht geplantem
+      oder zu viel Material
 - [ ] Phase 8 – Sets
-- [ ] Phase 9 – E2E/Release
+- [ ] Phase 9 – E2E (`lager`, `lager-tabelle`, `lager-projekte`) gegen Staging, Release
+
+## Erkenntnisse
+
+- Prisma 7 meldet unbekannte Felder in `select` nicht zuverlässig (z. B. `findUnique`) – nach
+  Schemaänderungen entfernte Felder per Suche prüfen, nicht nur auf `pnpm typecheck` verlassen.
+- `next dev` (Turbopack) nach `prisma generate` neu starten; während E2E-Läufen keine Dateien
+  ändern (HMR-Abstürze verfälschen Ergebnisse).
+- Navigation: „Prüfungen“ ist aus den Lager-Tabs gewandert (Kachel „Prüfung fällig“ führt hin),
+  dafür „Projekte“.

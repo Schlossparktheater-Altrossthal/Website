@@ -201,6 +201,10 @@ export function inventoryAssetPath(code: string): string {
   return `${INVENTORY_BASE_PATH}/objekt/${encodeURIComponent(code)}`;
 }
 
+export function inventoryProductPath(publicId: string): string {
+  return `${INVENTORY_BASE_PATH}/typ/${encodeURIComponent(publicId)}`;
+}
+
 export function inventoryLocationPath(code: string): string {
   return `${INVENTORY_BASE_PATH}/orte/${encodeURIComponent(code)}`;
 }

@@ -23,6 +23,8 @@ async function remove() {
   });
   const productIds = products.map((product) => product.id);
   await prisma.inventoryCheckout.deleteMany({ where: { title: { startsWith: "Demo" } } });
+  await prisma.inventoryProject.deleteMany({ where: { title: { startsWith: "Demo" } } });
+  await prisma.inventoryContact.deleteMany({ where: { name: { startsWith: "Demo" } } });
   await prisma.inventoryAsset.updateMany({
     where: { productId: { in: productIds } },
     data: { containerId: null },
@@ -222,6 +224,63 @@ async function main() {
     specs: { size: "58" },
     count: 2,
     placement: { type: "location", id: fundus.id },
+  });
+  // Zwei Projekte im selben Zeitraum: das zweite bekommt nicht genug LED-PARs.
+  const parProduct = await prisma.inventoryProduct.findFirstOrThrow({
+    where: { name: "Demo LED-PAR 64 RGBW" },
+  });
+  const profilerProduct = await prisma.inventoryProduct.findFirstOrThrow({
+    where: { name: "Demo Profilscheinwerfer 750 W" },
+  });
+  const cableProduct = await prisma.inventoryProduct.findFirstOrThrow({
+    where: { name: "Demo XLR-Kabel 10 m" },
+  });
+  const contact = await prisma.inventoryContact.create({
+    data: { name: "Demo Muster GmbH", contactPerson: "Erika Muster", phone: "030 123456" },
+  });
+  const day = (offset: number) => {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    date.setUTCDate(date.getUTCDate() + offset);
+    return date;
+  };
+  await prisma.inventoryProject.create({
+    data: {
+      publicId: createPublicId(),
+      title: "Demo Stadtfest Berlin",
+      status: "confirmed",
+      contactId: contact.id,
+      venue: "Berlin",
+      leadName: "Max Mustermann",
+      startsOn: day(20),
+      endsOn: day(22),
+      phases: {
+        create: [
+          { kind: "setup", startsOn: day(20), endsOn: day(20) },
+          { kind: "event", startsOn: day(21), endsOn: day(21) },
+          { kind: "teardown", startsOn: day(22), endsOn: day(22) },
+        ],
+      },
+      lines: {
+        create: [
+          { productId: parProduct.id, quantity: 4, sortOrder: 0 },
+          { productId: profilerProduct.id, quantity: 2, sortOrder: 1 },
+          { productId: cableProduct.id, quantity: 6, sortOrder: 2 },
+        ],
+      },
+    },
+  });
+  await prisma.inventoryProject.create({
+    data: {
+      publicId: createPublicId(),
+      title: "Demo Firmenfeier",
+      status: "request",
+      contactId: contact.id,
+      venue: "Dresden",
+      startsOn: day(21),
+      endsOn: day(21),
+      phases: { create: [{ kind: "event", startsOn: day(21), endsOn: day(21) }] },
+      lines: { create: [{ productId: parProduct.id, quantity: 2, sortOrder: 0 }] },
+    },
   });
   console.log("Demo-Lager angelegt.");
 }

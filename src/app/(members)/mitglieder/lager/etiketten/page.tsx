@@ -1,7 +1,12 @@
 import { LabelDesigner, type LabelCandidate } from "@/components/inventory/label-designer";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PageHeader } from "@/components/members/page-header";
-import { INVENTORY_BASE_PATH, parseInventoryCode } from "@/lib/inventory/constants";
+import {
+  assetDisplayName,
+  INVENTORY_BASE_PATH,
+  parseInventoryCode,
+} from "@/lib/inventory/constants";
+import { ASSET_NAME_SELECT } from "@/lib/inventory/selects";
 import { getInventoryAccess, loadLocationLabeler } from "@/lib/inventory/service";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { prisma } from "@/lib/prisma";
@@ -26,27 +31,35 @@ export default async function LabelsPage({ searchParams }: { searchParams: Searc
       where: { labelPrintedAt: null, status: { not: "retired" } },
       orderBy: { code: "asc" },
       take: 1000,
-      select: { code: true, name: true },
+      select: { code: true, ...ASSET_NAME_SELECT },
     }),
     prisma.inventoryAsset.findMany({
       where: { kind: "container", status: { not: "retired" } },
       orderBy: { code: "asc" },
-      select: { code: true, name: true },
+      select: { code: true, ...ASSET_NAME_SELECT },
     }),
     loadLocationLabeler(),
     requested.length
       ? prisma.inventoryAsset.findMany({
           where: { code: { in: requested } },
-          select: { code: true, name: true },
+          select: { code: true, ...ASSET_NAME_SELECT },
         })
       : Promise.resolve([]),
   ]);
+  const toCandidate = (asset: {
+    code: string;
+    label: string | null;
+    product: { name: string };
+  }) => ({
+    code: asset.code,
+    name: assetDisplayName(asset),
+  });
   const locations: LabelCandidate[] = labeler.locations
     .map((location) => ({ code: location.code, name: labeler.label(location.id) ?? location.name }))
     .sort((a, b) => a.code.localeCompare(b.code));
 
   const names = new Map<string, string>([
-    ...requestedAssets.map((asset) => [asset.code, asset.name] as const),
+    ...requestedAssets.map((asset) => [asset.code, assetDisplayName(asset)] as const),
     ...locations.map((location) => [location.code, location.name] as const),
   ]);
   const initial = (params.quelle === "orte" ? locations.map((l) => l.code) : requested).map(
@@ -69,8 +82,8 @@ export default async function LabelsPage({ searchParams }: { searchParams: Searc
       <LabelDesigner
         initial={initial}
         presets={[
-          { id: "unlabeled", label: "Ohne Etikett", items: unlabeled },
-          { id: "containers", label: "Alle Kisten", items: containers },
+          { id: "unlabeled", label: "Ohne Etikett", items: unlabeled.map(toCandidate) },
+          { id: "containers", label: "Alle Kisten", items: containers.map(toCandidate) },
           { id: "locations", label: "Alle Lagerorte", items: locations },
         ]}
       />

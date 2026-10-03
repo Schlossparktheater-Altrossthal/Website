@@ -264,7 +264,7 @@ export async function listInventoryAssets(filter: InventoryListFilter) {
             photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
           },
         },
-        container: { select: { code: true, name: true, locationId: true } },
+        container: { select: { code: true, ...ASSET_NAME_SELECT, locationId: true } },
         stocks: { select: { locationId: true, container: { select: { code: true } } } },
         photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
         inspections: { select: { result: true }, orderBy: { inspectedAt: "desc" }, take: 1 },
@@ -308,7 +308,12 @@ function describePlace(
   asset: {
     kind: AssetKind;
     locationId: string | null;
-    container: { code: string; name: string; locationId: string | null } | null;
+    container: {
+      code: string;
+      label: string | null;
+      product: { name: string };
+      locationId: string | null;
+    } | null;
     stocks: { locationId: string | null; container: { code: string } | null }[];
   },
   label: (id: string | null | undefined) => string | null,
@@ -322,8 +327,8 @@ function describePlace(
   if (asset.container) {
     const parent = label(asset.container.locationId);
     return parent
-      ? `${asset.container.code} ${asset.container.name} · ${parent}`
-      : `${asset.container.code} ${asset.container.name}`;
+      ? `${asset.container.code} ${assetDisplayName(asset.container)} · ${parent}`
+      : `${asset.container.code} ${assetDisplayName(asset.container)}`;
   }
   return label(asset.locationId);
 }
@@ -707,4 +712,335 @@ export async function getLocationDetail(code: string) {
       },
     })),
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Artikeltypen (docs/Plan/lager-typen-projekte-plan.md, Phase 3)
+
+export type ProductStatusCounts = Record<AssetStatus, number>;
+
+export type InventoryProductListItem = {
+  id: string;
+  publicId: string;
+  name: string;
+  kind: AssetKind;
+  areaName: string;
+  areaPrefix: string;
+  categoryPath: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  photoId: string | null;
+  unit: string | null;
+  /** Aktive (nicht ausgemusterte) Exemplare bzw. Gesamtmenge bei Mengenartikeln. */
+  total: number;
+  counts: ProductStatusCounts;
+  /** Mengenartikel unter Mindestbestand. */
+  low: boolean;
+  /** Einzelnes Exemplar – die Zeile führt dann direkt dorthin. */
+  singleCode: string | null;
+  places: string[];
+};
+
+function emptyCounts(): ProductStatusCounts {
+  return { available: 0, checked_out: 0, repair: 0, locked: 0, missing: 0, retired: 0 };
+}
+
+/**
+ * Bestand nach Artikeltyp: ein Eintrag je Typ, dessen aktive Exemplare zum Filter passen.
+ * Gezählt werden alle aktiven Exemplare des Typs (nicht nur die gefilterten).
+ */
+export async function listInventoryProducts(filter: InventoryListFilter) {
+  const { locations, label } = await loadLocationLabeler();
+  const locationIds = filter.locationId ? locationSubtreeIds(locations, filter.locationId) : null;
+  const categoryIds = filter.categoryId ? await categorySubtreeIds(filter.categoryId) : undefined;
+  const where = buildWhere({ ...filter, view: "all", categoryIds }, locationIds);
+  const matching = await prisma.inventoryAsset.groupBy({ by: ["productId"], where });
+  const productIds = matching.map((entry) => entry.productId);
+  const page = Math.max(1, filter.page ?? 1);
+  const pageSize = filter.pageSize ?? INVENTORY_PAGE_SIZE;
+
+  const [products, categories] = await Promise.all([
+    prisma.inventoryProduct.findMany({
+      where: { id: { in: productIds } },
+      orderBy: [{ name: "asc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        publicId: true,
+        name: true,
+        kind: true,
+        categoryId: true,
+        manufacturer: true,
+        model: true,
+        unit: true,
+        minQuantity: true,
+        area: { select: { name: true, prefix: true } },
+        photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+        assets: {
+          where: { status: { not: "retired" } },
+          orderBy: { code: "asc" },
+          select: {
+            code: true,
+            status: true,
+            quantity: true,
+            locationId: true,
+            container: { select: { code: true, locationId: true } },
+            stocks: { select: { locationId: true, container: { select: { code: true } } } },
+            photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+          },
+        },
+      },
+    }),
+    prisma.inventoryCategory.findMany({ select: { id: true, parentId: true, name: true } }),
+  ]);
+
+  const items: InventoryProductListItem[] = products.map((product) => {
+    const counts = emptyCounts();
+    const places = new Set<string>();
+    for (const asset of product.assets) {
+      counts[asset.status] += 1;
+      if (product.kind === "bulk") {
+        for (const stock of asset.stocks) {
+          const text = stock.container ? stock.container.code : label(stock.locationId);
+          if (text) places.add(text);
+        }
+      } else {
+        const text = asset.container
+          ? (label(asset.container.locationId) ?? asset.container.code)
+          : label(asset.locationId);
+        if (text) places.add(text);
+      }
+    }
+    const total =
+      product.kind === "bulk"
+        ? product.assets.reduce((sum, asset) => sum + asset.quantity, 0)
+        : product.assets.length;
+    return {
+      id: product.id,
+      publicId: product.publicId,
+      name: product.name,
+      kind: product.kind as AssetKind,
+      areaName: product.area.name,
+      areaPrefix: product.area.prefix,
+      categoryPath: categoryPathLabel(categories, product.categoryId),
+      manufacturer: product.manufacturer,
+      model: product.model,
+      photoId: product.photos[0]?.id ?? product.assets[0]?.photos[0]?.id ?? null,
+      unit: product.unit,
+      total,
+      counts,
+      low: product.kind === "bulk" && product.minQuantity !== null && total < product.minQuantity,
+      singleCode:
+        product.kind !== "bulk" && product.assets.length === 1 ? product.assets[0]!.code : null,
+      places: [...places],
+    };
+  });
+
+  return {
+    items,
+    total: productIds.length,
+    page,
+    pageCount: Math.max(1, Math.ceil(productIds.length / pageSize)),
+  };
+}
+
+/** Typ-Detailseite: Stammdaten, Merkmale und alle Exemplare gruppiert nach Ort. */
+export async function getInventoryProductDetail(publicId: string) {
+  const product = await prisma.inventoryProduct.findUnique({
+    where: { publicId },
+    include: {
+      area: { select: { id: true, name: true, prefix: true } },
+      photos: { select: { id: true }, orderBy: { sortOrder: "asc" } },
+      assets: {
+        orderBy: { code: "asc" },
+        select: {
+          id: true,
+          code: true,
+          label: true,
+          status: true,
+          condition: true,
+          quantity: true,
+          serialNumber: true,
+          locationId: true,
+          nextInspectionAt: true,
+          labelPrintedAt: true,
+          container: { select: { code: true, locationId: true, ...ASSET_NAME_SELECT } },
+          stocks: {
+            orderBy: { quantity: "desc" },
+            select: {
+              quantity: true,
+              locationId: true,
+              container: { select: { code: true, ...ASSET_NAME_SELECT } },
+            },
+          },
+          inspections: { select: { result: true }, orderBy: { inspectedAt: "desc" }, take: 1 },
+          _count: { select: { defects: { where: { status: { not: "done" } } } } },
+        },
+      },
+    },
+  });
+  if (!product) return null;
+  const [{ label }, fields, categories] = await Promise.all([
+    loadLocationLabeler(),
+    loadEffectiveFields(prisma, product.areaId, product.categoryId),
+    prisma.inventoryCategory.findMany({
+      where: { areaId: product.areaId },
+      select: { id: true, parentId: true, name: true },
+    }),
+  ]);
+  const active = product.assets.filter((asset) => asset.status !== "retired");
+  const counts = emptyCounts();
+  for (const asset of product.assets) counts[asset.status] += 1;
+
+  const exemplars = product.assets.map((asset) => ({
+    id: asset.id,
+    code: asset.code,
+    label: asset.label,
+    status: asset.status as AssetStatus,
+    condition: asset.condition as Condition,
+    serialNumber: asset.serialNumber,
+    quantity: asset.quantity,
+    openDefects: asset._count.defects,
+    labelPrinted: Boolean(asset.labelPrintedAt),
+    nextInspectionAt: asset.nextInspectionAt,
+    inspection: inspectionState({
+      inspectionRequired: product.inspectionRequired,
+      nextInspectionAt: asset.nextInspectionAt,
+      lastInspectionFailed: asset.inspections[0]?.result === "failed",
+    }),
+    place: asset.container
+      ? `${asset.container.code} ${assetDisplayName(asset.container)}`
+      : (label(asset.locationId) ?? "Ohne Ort"),
+    stocks: asset.stocks.map((stock) => ({
+      quantity: stock.quantity,
+      place: stock.container
+        ? `${stock.container.code} ${assetDisplayName(stock.container)}`
+        : (label(stock.locationId) ?? "Ohne Ort"),
+    })),
+  }));
+
+  // Exemplare nach Ort gruppiert (ausgemusterte zuletzt, eigene Gruppe).
+  const groups = new Map<string, typeof exemplars>();
+  for (const exemplar of exemplars) {
+    const key = exemplar.status === "retired" ? "Ausgemustert" : exemplar.place;
+    groups.set(key, [...(groups.get(key) ?? []), exemplar]);
+  }
+  const placeGroups = [...groups.entries()]
+    .map(([place, entries]) => ({ place, exemplars: entries }))
+    .sort((a, b) =>
+      a.place === "Ausgemustert"
+        ? 1
+        : b.place === "Ausgemustert"
+          ? -1
+          : a.place.localeCompare(b.place, "de"),
+    );
+
+  return {
+    id: product.id,
+    publicId: product.publicId,
+    name: product.name,
+    kind: product.kind as AssetKind,
+    area: product.area,
+    categoryId: product.categoryId,
+    categoryPath: categoryPathLabel(categories, product.categoryId),
+    manufacturer: product.manufacturer,
+    model: product.model,
+    description: product.description,
+    publicNote: product.publicNote,
+    unit: product.unit,
+    minQuantity: product.minQuantity,
+    inspectionRequired: product.inspectionRequired,
+    inspectionIntervalMonths: product.inspectionIntervalMonths,
+    specs: readSpecs(product.specs),
+    specRows: describeSpecs(fields, readSpecs(product.specs)),
+    photos: product.photos,
+    counts,
+    total:
+      product.kind === "bulk"
+        ? active.reduce((sum, asset) => sum + asset.quantity, 0)
+        : active.length,
+    activeCodes: active.map((asset) => asset.code),
+    exemplars,
+    placeGroups,
+  };
+}
+
+export type InventoryProductDetail = NonNullable<
+  Awaited<ReturnType<typeof getInventoryProductDetail>>
+>;
+
+export type ProductSearchHit = {
+  id: string;
+  publicId: string;
+  name: string;
+  kind: AssetKind;
+  areaId: string;
+  areaName: string;
+  areaPrefix: string;
+  categoryPath: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  photoId: string | null;
+  inspectionRequired: boolean;
+  unit: string | null;
+  count: number;
+};
+
+/** Typ-Suche für die Erfassung: Name, Hersteller, Modell, Kategorie. */
+export async function searchInventoryProducts(
+  query: string,
+  take = 12,
+  where: Prisma.InventoryProductWhereInput = {},
+): Promise<ProductSearchHit[]> {
+  const words = query.trim().split(/\s+/).filter(Boolean).slice(0, 5);
+  const [products, categories] = await Promise.all([
+    prisma.inventoryProduct.findMany({
+      where: {
+        ...where,
+        AND: words.map((word) => ({
+          OR: [
+            { name: { contains: word, mode: "insensitive" as const } },
+            { manufacturer: { contains: word, mode: "insensitive" as const } },
+            { model: { contains: word, mode: "insensitive" as const } },
+            { category: { name: { contains: word, mode: "insensitive" as const } } },
+          ],
+        })),
+      },
+      orderBy: words.length ? [{ name: "asc" }] : [{ updatedAt: "desc" }],
+      take,
+      select: {
+        id: true,
+        publicId: true,
+        name: true,
+        kind: true,
+        areaId: true,
+        categoryId: true,
+        manufacturer: true,
+        model: true,
+        inspectionRequired: true,
+        unit: true,
+        area: { select: { name: true, prefix: true } },
+        photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+        _count: { select: { assets: { where: { status: { not: "retired" } } } } },
+      },
+    }),
+    prisma.inventoryCategory.findMany({ select: { id: true, parentId: true, name: true } }),
+  ]);
+  return products.map((product) => ({
+    id: product.id,
+    publicId: product.publicId,
+    name: product.name,
+    kind: product.kind as AssetKind,
+    areaId: product.areaId,
+    areaName: product.area.name,
+    areaPrefix: product.area.prefix,
+    categoryPath: categoryPathLabel(categories, product.categoryId),
+    manufacturer: product.manufacturer,
+    model: product.model,
+    photoId: product.photos[0]?.id ?? null,
+    inspectionRequired: product.inspectionRequired,
+    unit: product.unit,
+    count: product._count.assets,
+  }));
 }

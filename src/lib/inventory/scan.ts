@@ -1,4 +1,5 @@
 import {
+  assetDisplayName,
   inspectionState,
   isLocationCode,
   type AssetKind,
@@ -43,16 +44,22 @@ export async function buildScanResult(code: string): Promise<ScanResult | null> 
     select: {
       id: true,
       code: true,
-      name: true,
+      label: true,
       kind: true,
       status: true,
-      unit: true,
       quantity: true,
       locationId: true,
-      inspectionRequired: true,
+      product: {
+        select: {
+          name: true,
+          unit: true,
+          inspectionRequired: true,
+          photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+        },
+      },
       nextInspectionAt: true,
       area: { select: { name: true } },
-      container: { select: { code: true, name: true } },
+      container: { select: { code: true, label: true, product: { select: { name: true } } } },
       photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
       inspections: { select: { result: true }, orderBy: { inspectedAt: "desc" }, take: 1 },
       defects: { where: { status: { not: "done" } }, select: { severity: true } },
@@ -63,20 +70,20 @@ export async function buildScanResult(code: string): Promise<ScanResult | null> 
     type: "asset",
     id: asset.id,
     code: asset.code,
-    name: asset.name,
+    name: assetDisplayName(asset),
     kind: asset.kind,
     status: asset.status,
     areaName: asset.area.name,
-    unit: asset.unit,
+    unit: asset.product.unit,
     quantity: asset.quantity,
     place: asset.container
-      ? `${asset.container.code} ${asset.container.name}`
+      ? `${asset.container.code} ${assetDisplayName(asset.container)}`
       : label(asset.locationId),
-    photoId: asset.photos[0]?.id ?? null,
+    photoId: asset.photos[0]?.id ?? asset.product.photos[0]?.id ?? null,
     openDefects: asset.defects.length,
     locked: asset.status === "locked" || asset.defects.some((d) => d.severity === "locked"),
     inspection: inspectionState({
-      inspectionRequired: asset.inspectionRequired,
+      inspectionRequired: asset.product.inspectionRequired,
       nextInspectionAt: asset.nextInspectionAt,
       lastInspectionFailed: asset.inspections[0]?.result === "failed",
     }),

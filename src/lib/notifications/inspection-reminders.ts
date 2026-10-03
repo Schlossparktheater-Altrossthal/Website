@@ -17,7 +17,10 @@ export async function dispatchInspectionReminders(now: Date = new Date()) {
   if (already > 0) return { sent: 0, skipped: 1 };
 
   const soon = new Date(now.getTime() + INSPECTION_SOON_DAYS * 86_400_000);
-  const base = { inspectionRequired: true, status: { not: "retired" as const } };
+  const base = {
+    product: { inspectionRequired: true },
+    status: { not: "retired" as const },
+  };
   const [overdue, upcoming] = await Promise.all([
     prisma.inventoryAsset.count({
       where: { ...base, OR: [{ nextInspectionAt: null }, { nextInspectionAt: { lt: now } }] },

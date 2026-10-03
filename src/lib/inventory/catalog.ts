@@ -103,3 +103,45 @@ export async function loadInventoryCatalog(db: Db = prisma) {
 
 export type InventoryCatalog = Awaited<ReturnType<typeof loadInventoryCatalog>>;
 export type InventoryCatalogArea = InventoryCatalog[number];
+
+/** Katalogpflege: wie `loadInventoryCatalog`, zusätzlich Feld-IDs und Artikelzahlen. */
+export async function loadCatalogForEditing(db: Db = prisma) {
+  const areas = await db.inventoryArea.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      prefix: true,
+      fields: {
+        orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+        select: { id: true, ...FIELD_SELECT },
+      },
+      categories: {
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          parentId: true,
+          name: true,
+          fields: {
+            orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+            select: { id: true, ...FIELD_SELECT },
+          },
+          _count: { select: { products: true } },
+        },
+      },
+    },
+  });
+  return areas.map((area) => ({
+    id: area.id,
+    name: area.name,
+    prefix: area.prefix,
+    fields: area.fields.map((field) => ({ ...toFieldDef(field), id: field.id })),
+    categories: area.categories.map((category) => ({
+      id: category.id,
+      parentId: category.parentId,
+      name: category.name,
+      productCount: category._count.products,
+      fields: category.fields.map((field) => ({ ...toFieldDef(field), id: field.id })),
+    })),
+  }));
+}

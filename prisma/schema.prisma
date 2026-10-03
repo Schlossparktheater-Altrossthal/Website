@@ -276,6 +276,7 @@ model User {
   inventoryDefects      InventoryDefect[]        @relation("InventoryDefectReporter")
   inventoryInspections  InventoryInspection[]
   inventoryCheckouts    InventoryCheckout[]      @relation("InventoryCheckoutBorrower")
+  inventoryProjectsLed  InventoryProject[]       @relation("InventoryProjectLead")
   inventoryScans        InventoryStocktakeScan[]
   firstName             String?
   lastName              String?
@@ -412,6 +413,7 @@ model OwnerSetupToken {
 model Show {
   id                      String                    @id @default(cuid())
   inventoryCheckouts      InventoryCheckout[]
+  inventoryProjects       InventoryProject[]
   year                    Int
   title                   String?
   synopsis                String?
@@ -1473,13 +1475,13 @@ model InventoryFieldDef {
 
 /// Artikeltyp: Stammdaten und Merkmale, die für alle Exemplare gleich sind.
 model InventoryProduct {
-  id                       String             @id @default(cuid())
+  id                       String                 @id @default(cuid())
   /// Zufällige, nicht erratbare Kennung für URLs.
-  publicId                 String             @unique
+  publicId                 String                 @unique
   areaId                   String
   categoryId               String?
   /// Einzelstück, Mengenartikel oder Kiste/Case – gilt für alle Exemplare.
-  kind                     InventoryAssetKind @default(unique)
+  kind                     InventoryAssetKind     @default(unique)
   name                     String
   manufacturer             String?
   model                    String?
@@ -1487,17 +1489,18 @@ model InventoryProduct {
   /// Öffentlich sichtbarer Hinweis auf der Scan-Seite.
   publicNote               String?
   /// Merkmalswerte nach `InventoryFieldDef.key`.
-  specs                    Json               @default("{}")
+  specs                    Json                   @default("{}")
   unit                     String?
   minQuantity              Int?
-  inspectionRequired       Boolean            @default(false)
+  inspectionRequired       Boolean                @default(false)
   inspectionIntervalMonths Int?
-  createdAt                DateTime           @default(now())
-  updatedAt                DateTime           @updatedAt
-  area                     InventoryArea      @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  category                 InventoryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  area                     InventoryArea          @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  category                 InventoryCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   assets                   InventoryAsset[]
   photos                   InventoryPhoto[]
+  projectLines             InventoryProjectLine[]
 
   @@index([areaId])
   @@index([categoryId])
@@ -1671,10 +1674,100 @@ model InventoryEvent {
   @@index([assetId, createdAt])
 }
 
+enum InventoryProjectStatus {
+  /// Angefragt – reserviert weich (zählt in der Verfügbarkeit als Warnung).
+  request
+  confirmed
+  done
+  cancelled
+}
+
+enum InventoryProjectPhaseKind {
+  setup
+  event
+  teardown
+  other
+}
+
+/// Kunde/Veranstalter für Lager-Projekte.
+model InventoryContact {
+  id            String             @id @default(cuid())
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  note          String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  projects      InventoryProject[]
+
+  @@index([name])
+}
+
+/// Einsatz mit Material aus dem Lager: Veranstaltung, Verleih oder eigene Produktion.
+model InventoryProject {
+  id         String                  @id @default(cuid())
+  /// Zufällige Kennung für URLs.
+  publicId   String                  @unique
+  title      String
+  status     InventoryProjectStatus  @default(request)
+  contactId  String?
+  venue      String?
+  leadUserId String?
+  /// Projektleitung ohne Mitgliedskonto.
+  leadName   String?
+  showId     String?
+  note       String?
+  /// Belegungszeitraum (frühester Phasenbeginn bis spätestes Phasenende) – aus den Phasen
+  /// berechnet, für schnelle Überschneidungsabfragen.
+  startsOn   DateTime?               @db.Date
+  endsOn     DateTime?               @db.Date
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  contact    InventoryContact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  lead       User?                   @relation("InventoryProjectLead", fields: [leadUserId], references: [id], onDelete: SetNull)
+  show       Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
+  phases     InventoryProjectPhase[]
+  lines      InventoryProjectLine[]
+  checkouts  InventoryCheckout[]
+
+  @@index([startsOn, endsOn])
+  @@index([status])
+}
+
+model InventoryProjectPhase {
+  id        String                    @id @default(cuid())
+  projectId String
+  kind      InventoryProjectPhaseKind @default(event)
+  label     String?
+  startsOn  DateTime                  @db.Date
+  endsOn    DateTime                  @db.Date
+  project   InventoryProject          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+/// Bedarf eines Projekts auf Typ-Ebene, z. B. „12 × Source Four“.
+model InventoryProjectLine {
+  id        String           @id @default(cuid())
+  projectId String
+  productId String
+  quantity  Int              @default(1)
+  note      String?
+  sortOrder Int              @default(0)
+  project   InventoryProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  product   InventoryProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, productId])
+  @@index([productId])
+}
+
 /// Ausgabe an Produktion, Person oder extern – mit Packliste.
 model InventoryCheckout {
   id           String                  @id @default(cuid())
   title        String
+  /// Ausgabe für ein Projekt – die Packliste prüft gegen dessen Bedarf.
+  projectId    String?
   showId       String?
   borrowerId   String?
   borrowerName String?
@@ -1683,10 +1776,12 @@ model InventoryCheckout {
   note         String?
   createdAt    DateTime                @default(now())
   closedAt     DateTime?
+  project      InventoryProject?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
   show         Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
   borrower     User?                   @relation("InventoryCheckoutBorrower", fields: [borrowerId], references: [id], onDelete: SetNull)
   lines        InventoryCheckoutLine[]
 
+  @@index([projectId])
   @@index([status])
 }
 

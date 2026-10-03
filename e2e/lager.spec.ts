@@ -3,7 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { authFile } from "./env";
 import { clickUntil } from "./helpers";
 
-// Lager (docs/Plan/inventar-plan.md): Lagerort und Objekte anlegen, scannen, Mangel und Prüfung,
+// Lager (docs/Plan/inventar-plan.md, lager-typen-projekte-plan.md): Lagerort, Artikeltyp mit
+// mehreren Exemplaren und Kiste anlegen, scannen, Mangel und Prüfung,
 // Etiketten-PDF, öffentliche Scan-Seite – und am Ende alles ausmustern bzw. löschen.
 // Alle Daten tragen das Präfix „E2E“.
 
@@ -15,26 +16,36 @@ async function collectErrors(page: Page) {
   return errors;
 }
 
-async function createAsset(page: Page, name: string, kind: "Einzelstück" | "Kiste", place: string) {
+async function createAsset(
+  page: Page,
+  name: string,
+  kind: "Gerät" | "Kiste",
+  place: string,
+  count = 1,
+) {
   await page.goto("/mitglieder/lager/neu");
-  await clickUntil(page.getByRole("button", { name: /Technik/ }).first(), () =>
-    expect(page.getByRole("button", { name: /Technik/ }).first()).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    ),
+  // Schritt 1: neuen Artikeltyp anlegen (Bereich ist vorbelegt: Technik).
+  await page.getByLabel("Was möchtest du erfassen?").fill(name);
+  await clickUntil(page.getByRole("button", { name: `Neuer Artikeltyp „${name}“` }), () =>
+    expect(page.getByText("Neuer Artikeltyp", { exact: true })).toBeVisible(),
   );
-  await page
-    .getByRole("radio", { name: kind === "Kiste" ? "Kiste / Case" : "Einzelstück" })
-    .click();
-  await page.getByLabel("Name").fill(name);
+  if (kind === "Kiste") await page.getByRole("radio", { name: "Kiste / Case" }).click();
+  // Schritt 2: Anzahl und Ort.
+  if (count > 1) await page.getByLabel("Anzahl").fill(String(count));
   await page.getByRole("combobox", { name: "Lagerort" }).click();
   await page.getByRole("option", { name: new RegExp(place) }).click();
-  await page.getByRole("button", { name: /Speichern & weiter/ }).click();
-  const banner = page.getByText(/^T-\d{4,} angelegt – gleich das nächste/);
-  await expect(banner).toBeVisible({ timeout: 20_000 });
-  const code = (await banner.textContent())?.match(/T-\d{4,}/)?.[0];
-  expect(code).toBeTruthy();
-  return code!;
+  await page.getByRole("button", { name: /anlegen$|^Anlegen$/ }).click();
+  const range = page.locator("p.text-sm .font-mono").first();
+  await expect(range).toBeVisible({ timeout: 20_000 });
+  const ends = (await range.textContent())?.match(/T-\d{4,}/g) ?? [];
+  expect(ends).toHaveLength(count > 1 ? 2 : 1);
+  // „T-0002 … T-0004“ – die Codes dazwischen sind fortlaufend.
+  const from = Number(ends[0]!.slice(2));
+  const width = ends[0]!.length - 2;
+  return Array.from(
+    { length: count },
+    (_, index) => `T-${String(from + index).padStart(width, "0")}`,
+  );
 }
 
 test.describe("als admin", () => {
@@ -64,8 +75,16 @@ test.describe("als admin", () => {
     expect(locationCode).toBeTruthy();
 
     // Kiste und Gerät erfassen.
-    const boxCode = await createAsset(page, boxName, "Kiste", locationName);
-    const itemCode = await createAsset(page, itemName, "Einzelstück", locationName);
+    const [boxCode] = await createAsset(page, boxName, "Kiste", locationName);
+    const itemCodes = await createAsset(page, itemName, "Gerät", locationName, 3);
+    const itemCode = itemCodes[0]!;
+
+    // Typ-Seite: drei Exemplare desselben Typs am Ort.
+    await page.goto(`/mitglieder/lager/objekt/${itemCode}`);
+    await page.getByRole("link", { name: "Alle 3 Exemplare dieses Typs" }).click();
+    await expect(page).toHaveURL(/\/lager\/typ\//);
+    await expect(page.getByRole("heading", { level: 1, name: itemName })).toBeVisible();
+    await expect(page.getByText("3 Exemplare", { exact: true }).first()).toBeVisible();
 
     // Scanner, Modus Einlagern: erst Kiste als Ziel, dann das Gerät (Eingabe statt Kamera).
     await page.goto("/mitglieder/lager/scannen?modus=einlagern");
@@ -75,7 +94,7 @@ test.describe("als admin", () => {
         expect(manualInput).toBeVisible(),
       );
     }
-    await manualInput.fill(boxCode);
+    await manualInput.fill(boxCode!);
     await manualInput.press("Enter");
     await expect(page.getByText(`Ziel: Kiste ${boxCode}`)).toBeVisible();
     await manualInput.fill(itemCode.toLowerCase().replace("-", ""));
@@ -109,7 +128,7 @@ test.describe("als admin", () => {
     // Etiketten-PDF.
     const pdf = await page.request.post("/api/lager/labels", {
       data: {
-        codes: [itemCode, boxCode, locationCode],
+        codes: [itemCode, boxCode!, locationCode],
         templateId: "70x36",
         skip: 2,
         outlines: true,
@@ -120,16 +139,21 @@ test.describe("als admin", () => {
     expect(pdf.status()).toBe(200);
     expect(pdf.headers()["content-type"]).toContain("application/pdf");
 
-    // Öffentliche Scan-Seite ohne Login: Name ja, keine internen Daten.
+    // Öffentliche Scan-Seite ohne Login: nur über die zufällige Kennung, keine internen Daten.
+    await page.goto(`/mitglieder/lager/objekt/${itemCode}`);
+    const publicHref = await page.getByRole("link", { name: "Scan-Seite" }).getAttribute("href");
+    expect(publicHref).toMatch(/^\/i\/[1-9A-HJ-NP-Za-km-z]{12}$/);
     const anonymous = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const publicPage = await anonymous.newPage();
-    await publicPage.goto(`/i/${itemCode}`);
+    await publicPage.goto(publicHref!);
     await expect(publicPage.getByRole("heading", { name: itemName })).toBeVisible();
     await expect(publicPage.getByText(/Anschaffung|Interne Notiz/)).toHaveCount(0);
+    const guessed = await publicPage.goto(`/i/${itemCode}`);
+    expect(guessed?.status()).toBe(404);
     await anonymous.close();
 
     // Aufräumen: ausmustern, dann Lagerort löschen.
-    for (const code of [itemCode, boxCode]) {
+    for (const code of [...itemCodes, boxCode!]) {
       await page.goto(`/mitglieder/lager/objekt/${code}`);
       await clickUntil(page.getByRole("button", { name: "Weitere Aktionen" }), () =>
         expect(page.getByRole("menuitem", { name: "Ausmustern" })).toBeVisible(),

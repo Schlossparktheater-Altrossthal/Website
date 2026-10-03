@@ -22,26 +22,35 @@ export type { PlacementTarget };
 type Db = PrismaClient | Prisma.TransactionClient;
 type UserLike = Parameters<typeof hasPermission>[0];
 
-export type InventoryAccess = { canUse: boolean; canManage: boolean };
+export type InventoryAccess = { canUse: boolean; canManage: boolean; canCatalog: boolean };
 
 export async function getInventoryAccess(user: UserLike): Promise<InventoryAccess> {
-  const [canUse, canManage] = await Promise.all([
+  const [canUse, canManage, canCatalog] = await Promise.all([
     hasPermission(user, INVENTORY_PERMISSION_KEYS.use),
     hasPermission(user, INVENTORY_PERMISSION_KEYS.manage),
+    hasPermission(user, INVENTORY_PERMISSION_KEYS.catalog),
   ]);
-  // Verwalten schließt Nutzen ein.
-  return { canUse: canUse || canManage, canManage };
+  // Verwalten schließt Nutzen und Katalogpflege ein; Katalogpflege setzt Lagerzugriff voraus.
+  return {
+    canUse: canUse || canManage || canCatalog,
+    canManage,
+    canCatalog: canCatalog || canManage,
+  };
 }
 
-export async function requireInventoryAccess(level: "use" | "manage" = "use") {
+const ACCESS_ERRORS = {
+  use: "Du hast keinen Zugriff auf das Lager.",
+  manage: "Du darfst das Lager nicht verwalten.",
+  catalog: "Du darfst Kategorien und Merkmale nicht pflegen.",
+} as const;
+
+export async function requireInventoryAccess(level: "use" | "manage" | "catalog" = "use") {
   const session = await requireAuth();
   const access = await getInventoryAccess(session.user);
-  if (level === "manage" ? !access.canManage : !access.canUse) {
-    throw new Error(
-      level === "manage"
-        ? "Du darfst das Lager nicht verwalten."
-        : "Du hast keinen Zugriff auf das Lager.",
-    );
+  const allowed =
+    level === "manage" ? access.canManage : level === "catalog" ? access.canCatalog : access.canUse;
+  if (!allowed) {
+    throw new Error(ACCESS_ERRORS[level]);
   }
   return { session, access, userId: session.user?.id ?? null };
 }

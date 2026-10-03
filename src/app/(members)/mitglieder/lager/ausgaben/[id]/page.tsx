@@ -4,7 +4,17 @@ import { CheckoutPacklist } from "@/components/inventory/checkout-packlist";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { ToneBadge } from "@/components/inventory/tone-badge";
 import { PageHeader } from "@/components/members/page-header";
-import { formatInventoryDate, INVENTORY_BASE_PATH, isOverdue } from "@/lib/inventory/constants";
+import { ListRow, ListRowGroup } from "@/components/ui/list-row";
+import { SectionHeader } from "@/components/ui/section-header";
+import Link from "next/link";
+import {
+  assetDisplayName,
+  formatInventoryDate,
+  INVENTORY_BASE_PATH,
+  inventoryProductPath,
+  isOverdue,
+} from "@/lib/inventory/constants";
+import { inventoryProjectPath } from "@/lib/inventory/project-constants";
 import { getInventoryAccess, loadLocationLabeler } from "@/lib/inventory/service";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { prisma } from "@/lib/prisma";
@@ -27,6 +37,20 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
       createdAt: true,
       closedAt: true,
       show: { select: { title: true, year: true } },
+      project: {
+        select: {
+          id: true,
+          publicId: true,
+          title: true,
+          lines: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              quantity: true,
+              product: { select: { id: true, publicId: true, name: true, kind: true, unit: true } },
+            },
+          },
+        },
+      },
       lines: {
         orderBy: { checkedOutAt: "asc" },
         select: {
@@ -37,9 +61,16 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
             select: {
               id: true,
               code: true,
-              name: true,
+              label: true,
+              productId: true,
+              product: {
+                select: {
+                  name: true,
+                  unit: true,
+                  photos: { select: { id: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+                },
+              },
               kind: true,
-              unit: true,
               locationId: true,
               container: { select: { code: true } },
               stocks: {
@@ -79,6 +110,16 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
         <span>seit {formatInventoryDate(checkout.createdAt)}</span>
         {checkout.dueAt ? <span>zurück bis {formatInventoryDate(checkout.dueAt)}</span> : null}
       </div>
+      {checkout.project ? (
+        <ProjectPackProgress
+          project={checkout.project}
+          packed={checkout.lines.reduce((map, line) => {
+            const outstanding = line.quantity - line.returnedQuantity;
+            map.set(line.asset.productId, (map.get(line.asset.productId) ?? 0) + outstanding);
+            return map;
+          }, new Map<string, number>())}
+        />
+      ) : null}
       {checkout.note ? (
         <p className="text-sm whitespace-pre-line text-foreground">{checkout.note}</p>
       ) : null}
@@ -96,10 +137,10 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
             id: line.id,
             assetId: line.asset.id,
             code: line.asset.code,
-            name: line.asset.name,
+            name: assetDisplayName(line.asset),
             kind: line.asset.kind,
-            unit: line.asset.unit,
-            photoId: line.asset.photos[0]?.id ?? null,
+            unit: line.asset.product.unit,
+            photoId: line.asset.photos[0]?.id ?? line.asset.product.photos[0]?.id ?? null,
             place,
             quantity: line.quantity,
             returnedQuantity: line.returnedQuantity,
@@ -107,5 +148,68 @@ export default async function CheckoutDetailPage({ params }: { params: Promise<{
         })}
       />
     </div>
+  );
+}
+
+/** Soll/Ist je Artikeltyp für Projekt-Ausgaben: was laut Projekt mit muss, was gepackt ist. */
+function ProjectPackProgress({
+  project,
+  packed,
+}: {
+  project: {
+    publicId: string;
+    title: string;
+    lines: {
+      quantity: number;
+      product: { id: string; publicId: string; name: string; kind: string; unit: string | null };
+    }[];
+  };
+  packed: Map<string, number>;
+}) {
+  const done = project.lines.filter(
+    (line) => (packed.get(line.product.id) ?? 0) >= line.quantity,
+  ).length;
+  return (
+    <section className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
+      <SectionHeader
+        title={`Packliste · ${done}/${project.lines.length} vollständig`}
+        description={
+          <>
+            Bedarf aus dem Projekt{" "}
+            <Link
+              href={inventoryProjectPath(project.publicId)}
+              className="font-medium text-primary hover:underline"
+            >
+              {project.title}
+            </Link>
+          </>
+        }
+      />
+      {project.lines.length ? (
+        <ListRowGroup>
+          {project.lines.map((line) => {
+            const count = packed.get(line.product.id) ?? 0;
+            const tone =
+              count >= line.quantity ? "success" : count > 0 ? "info" : ("muted" as const);
+            return (
+              <ListRow
+                key={line.product.id}
+                density="compact"
+                href={inventoryProductPath(line.product.publicId)}
+                title={line.product.name}
+                trailing={
+                  <ToneBadge tone={tone}>
+                    {count}/{line.quantity}
+                    {line.product.kind === "bulk" ? ` ${line.product.unit ?? "Stk."}` : ""}
+                  </ToneBadge>
+                }
+              />
+            );
+          })}
+        </ListRowGroup>
+      ) : (
+        <p className="text-sm text-muted-foreground">Im Projekt ist noch kein Material geplant.</p>
+      )}
+    </section>
   );
 }

@@ -118,7 +118,7 @@ test.describe("als admin", () => {
 
     // Mengenartikel mit Bestand angelegt.
     await page.goto(`/mitglieder/lager/objekt/${codes[0]}`);
-    await expect(page.getByRole("heading", { name: `E2E Kabel ${stamp}` })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: `E2E Kabel ${stamp}` })).toBeVisible();
     await expect(page.getByText("12 Stk.").first()).toBeVisible();
 
     // Bestand als Tabelle: nach Name sortiert, nur die Objekte dieses Laufs.

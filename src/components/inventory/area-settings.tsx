@@ -1,20 +1,18 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import {
-  deleteCategoryAction,
-  saveAreaAction,
-  saveCategoryAction,
-} from "@/app/(members)/mitglieder/lager/actions/structure";
-import { CloseIcon, EditIcon, PlusIcon } from "@/components/ui/action-icons";
+import { saveAreaAction } from "@/app/(members)/mitglieder/lager/actions/structure";
+import { EditIcon, PlusIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { Switch } from "@/components/ui/switch";
+import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
 
 export type AreaSettingsItem = {
   id: string;
@@ -119,7 +117,15 @@ export function AreaSettings({ areas }: { areas: AreaSettingsItem[] }) {
                 <EditIcon />
               </Button>
             </div>
-            <CategoryEditor area={area} run={run} />
+            <p className="text-sm text-muted-foreground">
+              {area.categories.length} Kategorien ·{" "}
+              <Link
+                href={`${INVENTORY_BASE_PATH}/katalog`}
+                className="font-medium text-primary hover:underline"
+              >
+                Kategorien & Merkmale pflegen
+              </Link>
+            </p>
           </section>
         ))}
       </div>
@@ -189,56 +195,6 @@ export function AreaSettings({ areas }: { areas: AreaSettingsItem[] }) {
           </div>
         ) : null}
       </ResponsivePanel>
-    </div>
-  );
-}
-
-function CategoryEditor({
-  area,
-  run,
-}: {
-  area: AreaSettingsItem;
-  run: (promise: Promise<{ ok: boolean; error?: string; message?: string }>) => Promise<boolean>;
-}) {
-  const [name, setName] = React.useState("");
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {area.categories.map((category) => (
-          <span
-            key={category.id}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 py-1 pr-1 pl-3 text-xs text-foreground"
-          >
-            {category.name}
-            <button
-              type="button"
-              className="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
-              aria-label={`${category.name} löschen`}
-              onClick={() => run(deleteCategoryAction(category.id))}
-            >
-              <CloseIcon className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-      </div>
-      <form
-        className="flex gap-2"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          if (await run(saveCategoryAction(area.id, null, name))) setName("");
-        }}
-      >
-        <Input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Neue Kategorie"
-          aria-label={`Neue Kategorie in ${area.name}`}
-          className="h-9 min-w-0 flex-1"
-        />
-        <Button type="submit" size="sm" variant="outline" disabled={!name.trim()}>
-          Hinzufügen
-        </Button>
-      </form>
     </div>
   );
 }

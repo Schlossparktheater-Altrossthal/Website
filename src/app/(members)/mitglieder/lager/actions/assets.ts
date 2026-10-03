@@ -17,26 +17,35 @@ import {
   productSchema,
   setAssetRetiredInTx,
 } from "@/lib/inventory/asset-write";
-import { addMonths, inventoryAssetPath, MAX_BULK_ROWS } from "@/lib/inventory/constants";
+import {
+  addMonths,
+  CONDITIONS,
+  inventoryAssetPath,
+  inventoryProductPath,
+  MAX_BULK_ROWS,
+} from "@/lib/inventory/constants";
+import { searchInventoryProducts, type ProductSearchHit } from "@/lib/inventory/queries";
 import { recordEvent, requireInventoryAccess } from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
 
 export async function createAssetAction(
   formData: FormData,
-): Promise<InventoryActionResult<{ codes: string[] }>> {
+): Promise<InventoryActionResult<{ codes: string[]; product: ProductSearchHit | null }>> {
   try {
     const { access, userId } = await requireInventoryAccess("use");
     const input = readJsonField(formData, "asset", assetSchema);
     const photo = await readPhotoFile(formData);
 
-    const { codes } = await prisma.$transaction((tx) =>
+    const { codes, productId } = await prisma.$transaction((tx) =>
       createAssetInTx(tx, input, { userId, canManage: access.canManage, photo }),
     );
+    // Für „weitere Exemplare zu diesem Typ“ direkt im Anschluss.
+    const [product] = await searchInventoryProducts("", 1, { id: productId });
 
     revalidateInventory();
     const message =
       codes.length === 1 ? `${codes[0]} angelegt.` : `${codes.length} Exemplare angelegt.`;
-    return { ok: true, message, data: { codes } };
+    return { ok: true, message, data: { codes, product: product ?? null } };
   } catch (error) {
     console.error("createAssetAction", error);
     return failure(error, "Objekt konnte nicht angelegt werden.");
@@ -119,51 +128,116 @@ export async function bulkCreateAssetsAction(
   }
 }
 
-const updateSchema = productSchema.omit({ kind: true }).extend({
+/** Typ-Suche beim Erfassen. */
+export async function searchProductsAction(
+  query: string,
+): Promise<InventoryActionResult<ProductSearchHit[]>> {
+  try {
+    await requireInventoryAccess("use");
+    const text = z
+      .string()
+      .max(120)
+      .parse(query ?? "");
+    return { ok: true, data: await searchInventoryProducts(text) };
+  } catch (error) {
+    return failure(error, "Suche fehlgeschlagen.");
+  }
+}
+
+const productUpdateSchema = productSchema.omit({ kind: true });
+
+/** Stammdaten eines Artikeltyps ändern – gilt für alle Exemplare. */
+export async function updateProductAction(
+  productId: string,
+  formData: FormData,
+): Promise<InventoryActionResult> {
+  try {
+    const { userId } = await requireInventoryAccess("use");
+    const input = readJsonField(formData, "product", productUpdateSchema);
+    const existing = await prisma.inventoryProduct.findUnique({
+      where: { id: productId },
+      select: {
+        areaId: true,
+        kind: true,
+        publicId: true,
+        assets: { select: { id: true, lastInspectionAt: true, nextInspectionAt: true } },
+      },
+    });
+    if (!existing) throw new Error("Artikeltyp nicht gefunden.");
+    if (input.areaId !== existing.areaId) {
+      throw new Error("Der Bereich bestimmt die Codes und lässt sich nicht mehr ändern.");
+    }
+    const photo = await readPhotoFile(formData);
+
+    await prisma.$transaction(async (tx) => {
+      const data = await productData(tx, { ...input, kind: existing.kind });
+      await tx.inventoryProduct.update({ where: { id: productId }, data });
+      // Prüftermine nachziehen: ohne Prüfpflicht keine, sonst aus der letzten Prüfung.
+      for (const asset of existing.assets) {
+        let nextInspectionAt: Date | null = null;
+        if (data.inspectionRequired) {
+          nextInspectionAt =
+            asset.lastInspectionAt && data.inspectionIntervalMonths
+              ? addMonths(asset.lastInspectionAt, data.inspectionIntervalMonths)
+              : asset.nextInspectionAt;
+        }
+        if (nextInspectionAt?.getTime() !== asset.nextInspectionAt?.getTime()) {
+          await tx.inventoryAsset.update({ where: { id: asset.id }, data: { nextInspectionAt } });
+        }
+      }
+      if (photo) {
+        const photos = await tx.inventoryPhoto.count({ where: { productId } });
+        if (photos >= 8) throw new Error("Höchstens 8 Fotos je Artikel.");
+        await tx.inventoryPhoto.create({
+          data: { productId, data: photo.data, mimeType: photo.mimeType, sortOrder: photos },
+        });
+      }
+      if (existing.assets.length) {
+        await tx.inventoryEvent.createMany({
+          data: existing.assets.map((asset) => ({
+            assetId: asset.id,
+            type: "updated",
+            message: "Angaben des Artikeltyps geändert",
+            userId,
+          })),
+        });
+      }
+    });
+
+    revalidateInventory(inventoryProductPath(existing.publicId));
+    return { ok: true, message: "Gespeichert." };
+  } catch (error) {
+    console.error("updateProductAction", error);
+    return failure(error, "Änderungen konnten nicht gespeichert werden.");
+  }
+}
+
+const exemplarUpdateSchema = z.object({
   label: z.string().trim().max(80).optional().nullable(),
   serialNumber: z.string().trim().max(120).optional().nullable(),
   internalNote: z.string().trim().max(4000).optional().nullable(),
-  condition: assetSchema.shape.condition,
-  nextInspectionAt: assetSchema.shape.nextInspectionAt,
-  acquisitionCost: assetSchema.shape.acquisitionCost,
-  purchaseDate: assetSchema.shape.purchaseDate,
-  supplier: assetSchema.shape.supplier,
-  ownership: assetSchema.shape.ownership,
+  condition: z.enum(CONDITIONS),
+  nextInspectionAt: z.coerce.date().optional().nullable(),
+  acquisitionCost: z.coerce.number().min(0).max(10_000_000).optional().nullable(),
+  purchaseDate: z.coerce.date().optional().nullable(),
+  supplier: z.string().trim().max(160).optional().nullable(),
+  ownership: z.string().trim().max(160).optional().nullable(),
 });
 
-/**
- * Ändert ein Exemplar und die Stammdaten seines Typs. Typ-Angaben (Name, Merkmale, Prüfpflicht …)
- * gelten danach für alle Exemplare dieses Typs.
- */
+/** Angaben eines einzelnen Exemplars ändern (Zusatz, Seriennummer, Zustand, Anschaffung …). */
 export async function updateAssetAction(
   assetId: string,
   formData: FormData,
 ): Promise<InventoryActionResult> {
   try {
     const { access, userId } = await requireInventoryAccess("use");
-    const input = readJsonField(formData, "asset", updateSchema);
+    const input = readJsonField(formData, "asset", exemplarUpdateSchema);
     const existing = await prisma.inventoryAsset.findUnique({
       where: { id: assetId },
-      select: { code: true, kind: true, areaId: true, productId: true, lastInspectionAt: true },
+      select: { code: true, product: { select: { inspectionRequired: true } } },
     });
     if (!existing) throw new Error("Objekt nicht gefunden.");
-    if (input.areaId !== existing.areaId) {
-      throw new Error("Der Bereich bestimmt den Code und lässt sich nicht mehr ändern.");
-    }
-
     await prisma.$transaction(async (tx) => {
-      const product = await productData(tx, { ...input, kind: existing.kind });
-      let nextInspectionAt = product.inspectionRequired ? input.nextInspectionAt : null;
-      const interval = product.inspectionIntervalMonths;
-      if (
-        product.inspectionRequired &&
-        !nextInspectionAt &&
-        existing.lastInspectionAt &&
-        interval
-      ) {
-        nextInspectionAt = addMonths(existing.lastInspectionAt, interval);
-      }
-      await tx.inventoryProduct.update({ where: { id: existing.productId }, data: product });
       await tx.inventoryAsset.update({
         where: { id: assetId },
         data: {
@@ -171,13 +245,22 @@ export async function updateAssetAction(
           serialNumber: input.serialNumber || null,
           internalNote: input.internalNote || null,
           condition: input.condition,
-          nextInspectionAt,
-          ...costData(input, access.canManage),
+          ...(existing.product.inspectionRequired
+            ? { nextInspectionAt: input.nextInspectionAt ?? null }
+            : {}),
+          ...costData(
+            {
+              acquisitionCost: input.acquisitionCost ?? null,
+              purchaseDate: input.purchaseDate ?? null,
+              supplier: input.supplier || null,
+              ownership: input.ownership || null,
+            },
+            access.canManage,
+          ),
         },
       });
       await recordEvent(tx, { assetId, type: "updated", message: "Angaben geändert", userId });
     });
-
     revalidateInventory(inventoryAssetPath(existing.code));
     return { ok: true, message: "Gespeichert." };
   } catch (error) {
@@ -221,9 +304,12 @@ export async function deleteAssetPhotoAction(photoId: string): Promise<Inventory
     await requireInventoryAccess("use");
     const photo = await prisma.inventoryPhoto.delete({
       where: { id: photoId },
-      select: { asset: { select: { code: true } } },
+      select: { asset: { select: { code: true } }, product: { select: { publicId: true } } },
     });
-    revalidateInventory(photo.asset ? inventoryAssetPath(photo.asset.code) : null);
+    revalidateInventory(
+      photo.asset ? inventoryAssetPath(photo.asset.code) : null,
+      photo.product ? inventoryProductPath(photo.product.publicId) : null,
+    );
     return { ok: true, message: "Foto entfernt." };
   } catch (error) {
     console.error("deleteAssetPhotoAction", error);

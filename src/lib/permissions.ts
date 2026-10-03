@@ -68,6 +68,7 @@ export const PROFILE_DATA_PERMISSION_KEYS = {
 export const INVENTORY_PERMISSION_KEYS = {
   use: "PRIVATE.INVENTORY.USE",
   manage: "PRIVATE.INVENTORY.MANAGE",
+  catalog: "PRIVATE.INVENTORY.CATALOG",
 } as const;
 
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
@@ -83,6 +84,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Lager verwalten",
     description:
       "Bereiche, Kategorien und Lagerorte pflegen, Preise und Werte sehen, Objekte ausmustern sowie Inventuren starten und abschließen.",
+    category: "inventory",
+  },
+  {
+    key: INVENTORY_PERMISSION_KEYS.catalog,
+    label: "Lager-Katalog pflegen",
+    description:
+      "Kategorien (z. B. Ton › Mikrofone › Kondensator) und ihre Merkmale (Leistung, Richtcharakteristik …) anlegen und ändern. „Lager verwalten“ schließt das ein.",
     category: "inventory",
   },
   {

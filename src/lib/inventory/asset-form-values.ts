@@ -4,9 +4,13 @@ import {
   type Condition,
 } from "@/lib/inventory/constants";
 import type { PlacementTarget } from "@/lib/inventory/service-types";
-import type { CategoryNode, FieldDef } from "@/lib/inventory/specs";
+import type { CategoryNode, FieldDef, Specs } from "@/lib/inventory/specs";
 
-/** Werte des Erfassungsformulars – ohne "use client", damit Seiten sie vorbelegen können. */
+/**
+ * Formularwerte für Artikeltyp und Exemplar – ohne "use client", damit Seiten sie vorbelegen
+ * können. Zahlen bleiben Text, bis abgeschickt wird.
+ */
+
 export type AssetFormArea = {
   id: string;
   name: string;
@@ -16,27 +20,29 @@ export type AssetFormArea = {
   categories: (CategoryNode & { fields: FieldDef[] })[];
 };
 
-export type AssetFormValues = {
+export type SpecFormValues = Record<string, string | boolean>;
+
+export type ProductFormValues = {
   areaId: string;
   categoryId: string | null;
   kind: AssetKind;
   name: string;
   manufacturer: string;
   model: string;
-  label: string;
-  count: string;
-  serialNumber: string;
   description: string;
   publicNote: string;
-  internalNote: string;
-  specs: Record<string, string | boolean>;
-  condition: Condition;
+  specs: SpecFormValues;
   unit: string;
   minQuantity: string;
-  quantity: string;
-  placement: PlacementTarget;
   inspectionRequired: boolean;
   inspectionIntervalMonths: string;
+};
+
+export type ExemplarFormValues = {
+  label: string;
+  serialNumber: string;
+  internalNote: string;
+  condition: Condition;
   nextInspectionAt: string;
   acquisitionCost: string;
   purchaseDate: string;
@@ -44,7 +50,13 @@ export type AssetFormValues = {
   ownership: string;
 };
 
-export function emptyAssetValues(area: AssetFormArea | undefined): AssetFormValues {
+export type CaptureFormValues = ExemplarFormValues & {
+  count: string;
+  quantity: string;
+  placement: PlacementTarget;
+};
+
+export function emptyProductValues(area: AssetFormArea | undefined): ProductFormValues {
   return {
     areaId: area?.id ?? "",
     categoryId: null,
@@ -52,24 +64,70 @@ export function emptyAssetValues(area: AssetFormArea | undefined): AssetFormValu
     name: "",
     manufacturer: "",
     model: "",
-    label: "",
-    count: "1",
-    serialNumber: "",
     description: "",
     publicNote: "",
-    internalNote: "",
     specs: {},
-    condition: "good",
     unit: "Stk.",
     minQuantity: "",
-    quantity: "1",
-    placement: { type: "none" },
     inspectionRequired: area?.inspectionDefault ?? false,
     inspectionIntervalMonths: String(DEFAULT_INSPECTION_INTERVAL_MONTHS),
+  };
+}
+
+export function emptyExemplarValues(): ExemplarFormValues {
+  return {
+    label: "",
+    serialNumber: "",
+    internalNote: "",
+    condition: "good",
     nextInspectionAt: "",
     acquisitionCost: "",
     purchaseDate: "",
     supplier: "",
     ownership: "",
+  };
+}
+
+export function emptyCaptureValues(placement: PlacementTarget): CaptureFormValues {
+  return { ...emptyExemplarValues(), count: "1", quantity: "", placement };
+}
+
+export function specsToFormValues(specs: Specs): SpecFormValues {
+  return Object.fromEntries(
+    Object.entries(specs).map(([key, value]) => [
+      key,
+      typeof value === "boolean" ? value : String(value),
+    ]),
+  );
+}
+
+const number = (value: string) => {
+  const trimmed = value.trim().replace(",", ".");
+  return trimmed === "" ? null : Number(trimmed);
+};
+
+export function productPayload(values: ProductFormValues) {
+  return {
+    ...values,
+    minQuantity: number(values.minQuantity),
+    inspectionIntervalMonths: number(values.inspectionIntervalMonths),
+  };
+}
+
+export function exemplarPayload(values: ExemplarFormValues) {
+  return {
+    ...values,
+    acquisitionCost: number(values.acquisitionCost),
+    nextInspectionAt: values.nextInspectionAt || null,
+    purchaseDate: values.purchaseDate || null,
+  };
+}
+
+export function capturePayload(values: CaptureFormValues) {
+  return {
+    ...exemplarPayload(values),
+    count: number(values.count) ?? 1,
+    quantity: number(values.quantity),
+    placement: values.placement,
   };
 }

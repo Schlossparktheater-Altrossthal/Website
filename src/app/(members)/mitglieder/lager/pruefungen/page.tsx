@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { SectionHeader } from "@/components/ui/section-header";
 import {
+  assetDisplayName,
   formatInventoryDate,
   INSPECTION_RESULT_LABELS,
   INVENTORY_BASE_PATH,
   inventoryAssetPath,
 } from "@/lib/inventory/constants";
+import { ASSET_NAME_SELECT } from "@/lib/inventory/selects";
 import { listInventoryAssets } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
@@ -37,11 +39,11 @@ export default async function InspectionsPage() {
         result: true,
         inspectedAt: true,
         inspectorName: true,
-        asset: { select: { code: true, name: true } },
+        asset: { select: { code: true, ...ASSET_NAME_SELECT } },
       },
     }),
     prisma.inventoryAsset.count({
-      where: { inspectionRequired: true, status: { not: "retired" } },
+      where: { product: { inspectionRequired: true }, status: { not: "retired" } },
     }),
   ]);
   const nextDates = await prisma.inventoryAsset.findMany({
@@ -93,7 +95,7 @@ export default async function InspectionsPage() {
                 key={inspection.id}
                 density="compact"
                 href={inventoryAssetPath(inspection.asset.code)}
-                title={`${inspection.asset.code} · ${inspection.asset.name}`}
+                title={`${inspection.asset.code} · ${assetDisplayName(inspection.asset)}`}
                 description={`${inspection.kind} · ${formatInventoryDate(inspection.inspectedAt)}${inspection.inspectorName ? ` · ${inspection.inspectorName}` : ""}`}
                 trailing={
                   <ToneBadge tone={inspection.result === "passed" ? "success" : "destructive"}>

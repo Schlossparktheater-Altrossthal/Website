@@ -9,7 +9,11 @@ import {
   revalidateInventory,
   type InventoryActionResult,
 } from "@/lib/inventory/actions-helpers";
-import { INVENTORY_BASE_PATH, inventoryAssetPath } from "@/lib/inventory/constants";
+import {
+  assetDisplayName,
+  INVENTORY_BASE_PATH,
+  inventoryAssetPath,
+} from "@/lib/inventory/constants";
 import { recordEvent, refreshAssetStatus, requireInventoryAccess } from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
 
@@ -18,6 +22,7 @@ const checkoutPath = (id: string) => `${INVENTORY_BASE_PATH}/ausgaben/${id}`;
 const checkoutSchema = z
   .object({
     title: z.string().trim().min(1, "Wofür wird ausgegeben?").max(160),
+    projectId: optionalId,
     showId: optionalId,
     borrowerId: optionalId,
     borrowerName: optionalText(160),
@@ -81,7 +86,7 @@ export async function addToCheckoutAction(
     const outcome = await prisma.$transaction(async (tx) => {
       const checkout = await tx.inventoryCheckout.findUnique({
         where: { id: checkoutId },
-        select: { status: true, title: true },
+        select: { status: true, title: true, projectId: true },
       });
       if (!checkout || checkout.status !== "open")
         throw new Error("Diese Ausgabe ist geschlossen.");
@@ -90,7 +95,9 @@ export async function addToCheckoutAction(
         select: {
           id: true,
           code: true,
-          name: true,
+          label: true,
+          productId: true,
+          product: { select: { name: true } },
           kind: true,
           status: true,
           quantity: true,
@@ -108,6 +115,30 @@ export async function addToCheckoutAction(
       if (asset.status === "retired") throw new Error("Ausgemustert.");
       let warning: string | undefined;
       if (asset.status === "locked") warning = "Gesperrt – Mangel beachten!";
+      // Projekt-Ausgabe: gegen den geplanten Bedarf prüfen (nur Hinweis, keine Sperre).
+      if (checkout.projectId && !warning) {
+        const planned = await tx.inventoryProjectLine.findUnique({
+          where: {
+            projectId_productId: { projectId: checkout.projectId, productId: asset.productId },
+          },
+          select: { quantity: true },
+        });
+        if (!planned) {
+          warning = "Nicht im Projekt eingeplant";
+        } else {
+          const packed = await tx.inventoryCheckoutLine.aggregate({
+            where: {
+              checkout: { projectId: checkout.projectId },
+              asset: { productId: asset.productId },
+              NOT: { assetId },
+            },
+            _sum: { quantity: true },
+          });
+          if ((packed._sum.quantity ?? 0) + amount > planned.quantity) {
+            warning = `Mehr als geplant (${planned.quantity})`;
+          }
+        }
+      }
       const elsewhere = asset.checkoutLines.find((line) => line.returnedQuantity < line.quantity);
       if (asset.kind !== "bulk" && elsewhere) {
         throw new Error(`Schon ausgegeben: ${elsewhere.checkout.title}`);
@@ -121,7 +152,7 @@ export async function addToCheckoutAction(
           return {
             assetId,
             code: asset.code,
-            name: asset.name,
+            name: assetDisplayName(asset),
             quantity: 1,
             warning: "Schon auf der Liste",
           };
@@ -150,7 +181,13 @@ export async function addToCheckoutAction(
       });
       await tx.inventoryAsset.update({ where: { id: assetId }, data: { lastSeenAt: new Date() } });
       await refreshAssetStatus(tx, assetId, { seen: true });
-      return { assetId, code: asset.code, name: asset.name, quantity: lineQuantity, warning };
+      return {
+        assetId,
+        code: asset.code,
+        name: assetDisplayName(asset),
+        quantity: lineQuantity,
+        warning,
+      };
     });
     revalidateInventory(checkoutPath(checkoutId), inventoryAssetPath(outcome.code));
     return { ok: true, data: outcome };
@@ -183,7 +220,9 @@ export async function returnAssetAction(
           quantity: true,
           returnedQuantity: true,
           checkout: { select: { id: true, title: true } },
-          asset: { select: { code: true, name: true, kind: true } },
+          asset: {
+            select: { code: true, kind: true, label: true, product: { select: { name: true } } },
+          },
         },
       });
       const line = lines.find((entry) => entry.returnedQuantity < entry.quantity);
@@ -212,7 +251,7 @@ export async function returnAssetAction(
       await refreshAssetStatus(tx, assetId, { seen: true });
       return {
         code: line.asset.code,
-        name: line.asset.name,
+        name: assetDisplayName(line.asset),
         checkoutTitle: line.checkout.title,
         checkoutId: line.checkout.id,
         open: line.quantity - returned,

@@ -11,6 +11,7 @@ import {
   type InventoryActionResult,
 } from "@/lib/inventory/actions-helpers";
 import {
+  assetDisplayName,
   addMonths,
   DEFAULT_INSPECTION_INTERVAL_MONTHS,
   DEFECT_SEVERITIES,
@@ -46,7 +47,7 @@ export async function reportDefectAction(
     const asset = await prisma.$transaction(async (tx) => {
       const asset = await tx.inventoryAsset.findUnique({
         where: { id: assetId },
-        select: { code: true, name: true },
+        select: { code: true, label: true, product: { select: { name: true } } },
       });
       if (!asset) throw new Error("Objekt nicht gefunden.");
       const defect = await tx.inventoryDefect.create({
@@ -79,7 +80,7 @@ export async function reportDefectAction(
           type: NOTIFICATION_TYPES.INVENTORY_DEFECT,
           recipients: await inventoryManagerIds(),
           actorId: userId,
-          title: `Mangel an ${asset.code} ${asset.name}`,
+          title: `Mangel an ${asset.code} ${assetDisplayName(asset)}`,
           body: `${input.title} – ${DEFECT_SEVERITY_LABELS[input.severity]}`,
           actionUrl: inventoryAssetPath(asset.code),
           groupKey: `inventory-defect:${assetId}`,
@@ -175,7 +176,10 @@ export async function recordInspectionAction(
       const id = await prisma.$transaction(async (tx) => {
         const asset = await tx.inventoryAsset.findUnique({
           where: { id: assetId },
-          select: { product: { select: { inspectionIntervalMonths: true } } },
+          select: {
+            productId: true,
+            product: { select: { inspectionRequired: true, inspectionIntervalMonths: true } },
+          },
         });
         if (!asset) throw new Error("Objekt nicht gefunden.");
         const interval =
@@ -195,11 +199,16 @@ export async function recordInspectionAction(
             note: input.note,
           },
         });
+        // Wer prüft, macht den Artikeltyp prüfpflichtig (gilt für alle Exemplare).
+        if (!asset.product.inspectionRequired || !asset.product.inspectionIntervalMonths) {
+          await tx.inventoryProduct.update({
+            where: { id: asset.productId },
+            data: { inspectionRequired: true, inspectionIntervalMonths: interval },
+          });
+        }
         await tx.inventoryAsset.update({
           where: { id: assetId },
           data: {
-            inspectionRequired: true,
-            inspectionIntervalMonths: interval,
             lastInspectionAt: input.inspectedAt,
             nextInspectionAt: nextDueAt,
             lastSeenAt: new Date(),

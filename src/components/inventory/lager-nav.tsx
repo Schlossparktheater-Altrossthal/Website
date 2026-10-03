@@ -3,6 +3,7 @@ import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
 
 export type LagerSection =
   | "uebersicht"
+  | "projekte"
   | "scannen"
   | "inventur"
   | "ausgaben"
@@ -11,14 +12,14 @@ export type LagerSection =
   | "etiketten"
   | "einstellungen";
 
-// Höchstens sechs Einträge, damit die Pills auch auf Tablets in eine Zeile passen. Etiketten
-// und Bereiche erreicht man über Schaltflächen im Bestand.
+// Höchstens sieben Einträge, damit die Pills auch auf Tablets in eine Zeile passen. Etiketten,
+// Prüfungen und Bereiche erreicht man über Kacheln und Schaltflächen im Bestand.
 const SECTIONS: { id: LagerSection; label: string; path: string; manageOnly?: boolean }[] = [
   { id: "uebersicht", label: "Bestand", path: "" },
+  { id: "projekte", label: "Projekte", path: "/projekte" },
   { id: "scannen", label: "Scannen", path: "/scannen" },
   { id: "ausgaben", label: "Ausgaben", path: "/ausgaben" },
   { id: "inventur", label: "Inventur", path: "/inventur" },
-  { id: "pruefungen", label: "Prüfungen", path: "/pruefungen" },
   { id: "orte", label: "Orte", path: "/orte" },
 ];
 

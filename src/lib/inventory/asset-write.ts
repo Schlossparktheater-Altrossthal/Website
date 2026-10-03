@@ -195,11 +195,18 @@ export async function createAssetInTx(
     }
   } else {
     product = await createProductInTx(tx, input);
-    if (options.photo) {
-      await tx.inventoryPhoto.create({
-        data: { productId: product.id, data: options.photo.data, mimeType: options.photo.mimeType },
-      });
-    }
+  }
+  if (options.photo) {
+    // Fotos gehören zum Typ – alle Exemplare zeigen sie.
+    const photos = await tx.inventoryPhoto.count({ where: { productId: product.id } });
+    await tx.inventoryPhoto.create({
+      data: {
+        productId: product.id,
+        data: options.photo.data,
+        mimeType: options.photo.mimeType,
+        sortOrder: photos,
+      },
+    });
   }
 
   const count = product.kind === "bulk" ? 1 : input.count;

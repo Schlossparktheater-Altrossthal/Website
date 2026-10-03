@@ -140,37 +140,3 @@ export async function saveAreaAction(
     return failure(error, "Bereich konnte nicht gespeichert werden.");
   }
 }
-
-export async function saveCategoryAction(
-  areaId: string,
-  id: string | null,
-  name: string,
-): Promise<InventoryActionResult> {
-  try {
-    await requireInventoryAccess("manage");
-    const value = z.string().trim().min(1, "Bitte einen Namen angeben.").max(60).parse(name);
-    if (id) {
-      await prisma.inventoryCategory.update({ where: { id }, data: { name: value } });
-    } else {
-      const count = await prisma.inventoryCategory.count({ where: { areaId } });
-      await prisma.inventoryCategory.create({ data: { areaId, name: value, sortOrder: count } });
-    }
-    revalidateInventory();
-    return { ok: true, message: "Kategorie gespeichert." };
-  } catch (error) {
-    console.error("saveCategoryAction", error);
-    return failure(error, "Kategorie konnte nicht gespeichert werden.");
-  }
-}
-
-export async function deleteCategoryAction(id: string): Promise<InventoryActionResult> {
-  try {
-    await requireInventoryAccess("manage");
-    await prisma.inventoryCategory.delete({ where: { id } });
-    revalidateInventory();
-    return { ok: true, message: "Kategorie gelöscht." };
-  } catch (error) {
-    console.error("deleteCategoryAction", error);
-    return failure(error, "Kategorie konnte nicht gelöscht werden.");
-  }
-}

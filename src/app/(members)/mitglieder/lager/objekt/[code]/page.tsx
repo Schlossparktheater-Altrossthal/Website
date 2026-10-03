@@ -22,8 +22,10 @@ import {
   INSPECTION_STATE_LABELS,
   INSPECTION_STATE_TONES,
   INVENTORY_BASE_PATH,
+  INVENTORY_PUBLIC_PATH,
   inventoryAssetPath,
   inventoryLocationPath,
+  inventoryProductPath,
 } from "@/lib/inventory/constants";
 import {
   getInventoryAssetDetail,
@@ -136,6 +138,26 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
                 <p className="font-mono text-sm text-muted-foreground">{asset.code}</p>
                 <p className="text-sm text-muted-foreground">
                   {[asset.area.name, asset.categoryPath].filter(Boolean).join(" · ")}
+                </p>
+                <p className="text-sm">
+                  <Link
+                    href={inventoryProductPath(asset.product.publicId)}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {asset.kind === "bulk"
+                      ? "Zum Artikel"
+                      : asset.product.exemplarCount > 1
+                        ? `Alle ${asset.product.exemplarCount} Exemplare dieses Typs`
+                        : "Zum Artikeltyp"}
+                  </Link>
+                  {" · "}
+                  <Link
+                    href={`${INVENTORY_PUBLIC_PATH}/${asset.publicId}`}
+                    className="text-muted-foreground hover:text-foreground hover:underline"
+                    prefetch={false}
+                  >
+                    Scan-Seite
+                  </Link>
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   <ToneBadge tone={ASSET_STATUS_TONES[asset.status]}>
