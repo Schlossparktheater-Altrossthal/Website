@@ -4,7 +4,7 @@ import { hasPermission } from "@/lib/permissions";
 import { renderPdfTemplate } from "@/lib/pdf/engine";
 import { prisma } from "@/lib/prisma";
 import {
-  PHOTO_CONSENT_STATUS_LABELS,
+  PHOTO_PERMISSION_LABELS,
   loadPhotoConsentOverview,
   photoConsentOverviewToCsv,
 } from "@/lib/produktionen/photo-consent-overview";
@@ -53,14 +53,11 @@ export async function GET(request: NextRequest) {
     const result = await renderPdfTemplate("photo-consent-list", {
       showTitle: show.title ?? `Produktion ${show.year}`,
       generatedAt: new Date(),
-      purposes: overview.purposes,
       rows: overview.rows.map((row) => ({
         name: row.name,
-        permission: row.permission,
-        status: PHOTO_CONSENT_STATUS_LABELS[row.status],
+        permission: PHOTO_PERMISSION_LABELS[row.permission],
         exclusionNote: row.exclusionNote,
         isMinor: row.isMinor,
-        purposes: row.purposes,
       })),
     });
     return new NextResponse(new Uint8Array(result.buffer), {

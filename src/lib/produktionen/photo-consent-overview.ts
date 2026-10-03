@@ -1,16 +1,43 @@
-import type { PhotoConsentStatus } from "@prisma/client";
+import type { PhotoConsentLevel, PhotoConsentStatus } from "@prisma/client";
 
 import { getUserDisplayName } from "@/lib/names";
 import { calculatePhotoConsentAge } from "@/lib/photo-consent-summary";
-import { ensurePhotoConsentPurposes } from "@/lib/photo-consent-purposes";
 import { prisma } from "@/lib/prisma";
 
-export type PhotoPermission = "allowed" | "restricted" | "forbidden";
+/**
+ * Was Fotografen für eine Person wissen müssen. Die Stufen entsprechen `PhotoConsentLevel`;
+ * dazu kommen „missing“ (nicht abgegeben, nicht geprüft oder abgelehnt → nicht fotografieren)
+ * und „unknown“ (Altbestand freigegeben, aber ohne erfasste Stufe).
+ */
+export type PhotoPermission = PhotoConsentLevel | "missing" | "unknown";
+
+export type PhotoPermissionTone = "success" | "warning" | "info" | "destructive" | "muted";
 
 export const PHOTO_PERMISSION_LABELS: Record<PhotoPermission, string> = {
-  allowed: "Darf fotografiert werden",
-  restricted: "Eingeschränkt",
-  forbidden: "Nicht fotografieren",
+  all: "Alles erlaubt",
+  promoOnRequest: "Werbung nur nach Rückfrage",
+  internal: "Nur intern",
+  none: "Gar nicht",
+  missing: "Nicht fotografieren",
+  unknown: "Stufe unbekannt",
+};
+
+export const PHOTO_PERMISSION_HINTS: Record<PhotoPermission, string> = {
+  all: "Intern, Programmheft, Flyer und Werbung",
+  promoOnRequest: "Für Werbung vorher im Einzelfall fragen",
+  internal: "Nur Aufnahmen für die Gruppe",
+  none: "Keine Aufnahmen",
+  missing: "Keine gültige Erlaubnis",
+  unknown: "Beim Team nachfragen",
+};
+
+export const PHOTO_PERMISSION_TONES: Record<PhotoPermission, PhotoPermissionTone> = {
+  all: "success",
+  promoOnRequest: "warning",
+  internal: "info",
+  none: "destructive",
+  missing: "destructive",
+  unknown: "muted",
 };
 
 export const PHOTO_CONSENT_STATUS_LABELS: Record<PhotoConsentStatus | "none", string> = {
@@ -28,83 +55,62 @@ export type PhotoConsentOverviewRow = {
   permission: PhotoPermission;
   exclusionNote: string | null;
   isMinor: boolean;
-  /** Alle Zwecke des Katalogs mit ihrem Zustand für diese Person (Katalogreihenfolge). */
-  purposes: Array<{ label: string; chosen: boolean }>;
 };
 
 export type PhotoConsentOverview = {
-  /** Labels der Zwecke in Katalogreihenfolge (Spalten der Tabelle). */
-  purposes: string[];
   rows: PhotoConsentOverviewRow[];
 };
 
 /**
- * Für Fotograf:innen zählt nur eine freigegebene Erlaubnis. Ausstehend, abgelehnt oder
- * fehlend heißt „nicht fotografieren“; Ausschlüsse machen sie „eingeschränkt“.
+ * Für Fotografen zählt nur eine freigegebene Erlaubnis mit ihrer Stufe. „Gar nicht“ ist ohne
+ * Freigabe wirksam; alles andere ohne Freigabe heißt „nicht fotografieren“.
  */
 export function classifyPhotoPermission(
-  consent: {
-    status: PhotoConsentStatus;
-    exclusionNote: string | null;
-  } | null,
+  consent: { status: PhotoConsentStatus; level: PhotoConsentLevel | null } | null,
 ): PhotoPermission {
-  if (!consent || consent.status !== "approved") {
-    return "forbidden";
-  }
-  return consent.exclusionNote?.trim() ? "restricted" : "allowed";
+  if (!consent) return "missing";
+  if (consent.status === "noPhotos" || consent.level === "none") return "none";
+  if (consent.status !== "approved") return "missing";
+  return consent.level ?? "unknown";
 }
 
-const PERMISSION_ORDER: PhotoPermission[] = ["forbidden", "restricted", "allowed"];
+/** Restriktivste zuerst; „unbekannt“ am Ende (E5). */
+export const PHOTO_PERMISSION_ORDER: readonly PhotoPermission[] = [
+  "none",
+  "missing",
+  "internal",
+  "promoOnRequest",
+  "all",
+  "unknown",
+];
 
 /** Alle aktiven Mitglieder einer Produktion mit ihrer Fotoerlaubnis für genau diese Produktion. */
 export async function loadPhotoConsentOverview(showId: string): Promise<PhotoConsentOverview> {
-  await ensurePhotoConsentPurposes(showId);
-
-  const [memberships, purposeRows] = await Promise.all([
-    prisma.productionMembership.findMany({
-      where: { showId, status: "active" },
-      select: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            name: true,
-            email: true,
-            dateOfBirth: true,
-            photoConsents: {
-              where: { showId, revokedAt: null },
-              take: 1,
-              select: {
-                status: true,
-                exclusionNote: true,
-                choices: { select: { purposeId: true, chosen: true } },
-              },
-            },
+  const memberships = await prisma.productionMembership.findMany({
+    where: { showId, status: "active" },
+    select: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          name: true,
+          email: true,
+          dateOfBirth: true,
+          photoConsents: {
+            where: { showId, revokedAt: null },
+            take: 1,
+            select: { status: true, level: true, exclusionNote: true },
           },
         },
       },
-    }),
-    prisma.photoConsentPurpose.findMany({
-      where: { showId, isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      select: { id: true, label: true },
-    }),
-  ]);
-
-  const purposes = purposeRows.map((purpose) => purpose.label);
+    },
+  });
 
   const rows = memberships
     .map(({ user }) => {
       const consent = user.photoConsents[0] ?? null;
       const age = calculatePhotoConsentAge(user.dateOfBirth);
-      const chosenByPurpose = new Map(
-        (consent?.choices ?? []).map((choice) => [choice.purposeId, choice.chosen]),
-      );
-      const purposeState = purposeRows.map((purpose) => ({
-        label: purpose.label,
-        chosen: chosenByPurpose.get(purpose.id) ?? false,
-      }));
       return {
         userId: user.id,
         name: getUserDisplayName(user, "Unbekanntes Mitglied"),
@@ -112,16 +118,15 @@ export async function loadPhotoConsentOverview(showId: string): Promise<PhotoCon
         permission: classifyPhotoPermission(consent),
         exclusionNote: consent?.exclusionNote?.trim() || null,
         isMinor: age !== null && age < 18,
-        purposes: purposeState,
       } satisfies PhotoConsentOverviewRow;
     })
     .sort(
       (a, b) =>
-        PERMISSION_ORDER.indexOf(a.permission) - PERMISSION_ORDER.indexOf(b.permission) ||
-        a.name.localeCompare(b.name, "de"),
+        PHOTO_PERMISSION_ORDER.indexOf(a.permission) -
+          PHOTO_PERMISSION_ORDER.indexOf(b.permission) || a.name.localeCompare(b.name, "de"),
     );
 
-  return { purposes, rows };
+  return { rows };
 }
 
 function csvCell(value: string): string {
@@ -130,31 +135,19 @@ function csvCell(value: string): string {
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
-/** CSV für Excel/LibreOffice (Semikolon, UTF-8 mit BOM). Eine Spalte je Zweck. */
+/** CSV für Excel/LibreOffice (Semikolon, UTF-8 mit BOM). */
 export function photoConsentOverviewToCsv(overview: PhotoConsentOverview): string {
-  const header = [
-    "Name",
-    "Fotografieren",
-    "Fotoerlaubnis",
-    ...overview.purposes,
-    "Ausschlüsse",
-    "Minderjährig",
-  ];
-  const lines = overview.rows.map((row) => {
-    const purposeCells = overview.purposes.map((purposeLabel) => {
-      const state = row.purposes.find((purpose) => purpose.label === purposeLabel);
-      return state?.chosen ? "ja" : "";
-    });
-    return [
+  const header = ["Name", "Fotografieren", "Fotoerlaubnis", "Hinweis", "Minderjährig"];
+  const lines = overview.rows.map((row) =>
+    [
       row.name,
       PHOTO_PERMISSION_LABELS[row.permission],
       PHOTO_CONSENT_STATUS_LABELS[row.status],
-      ...purposeCells,
       row.exclusionNote ?? "",
       row.isMinor ? "ja" : "nein",
     ]
       .map(csvCell)
-      .join(";");
-  });
+      .join(";"),
+  );
   return `﻿${[header.map(csvCell).join(";"), ...lines].join("\r\n")}\r\n`;
 }

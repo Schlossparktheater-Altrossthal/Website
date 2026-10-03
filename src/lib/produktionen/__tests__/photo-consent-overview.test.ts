@@ -2,19 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   membershipFindMany: vi.fn(),
-  purposeFindMany: vi.fn(),
-  purposeCount: vi.fn(),
-  purposeCreateMany: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     productionMembership: { findMany: mocks.membershipFindMany },
-    photoConsentPurpose: {
-      findMany: mocks.purposeFindMany,
-      count: mocks.purposeCount,
-      createMany: mocks.purposeCreateMany,
-    },
   },
 }));
 
@@ -25,62 +17,47 @@ import {
 } from "../photo-consent-overview";
 
 describe("classifyPhotoPermission", () => {
-  it("erlaubt nur freigegebene Einverständnisse", () => {
-    expect(classifyPhotoPermission({ status: "approved", exclusionNote: null })).toBe("allowed");
-    expect(classifyPhotoPermission({ status: "pending", exclusionNote: null })).toBe("forbidden");
-    expect(classifyPhotoPermission({ status: "rejected", exclusionNote: null })).toBe("forbidden");
-    expect(classifyPhotoPermission({ status: "noPhotos", exclusionNote: null })).toBe("forbidden");
-    expect(classifyPhotoPermission(null)).toBe("forbidden");
+  it("zeigt die Stufe nur bei freigegebener Erlaubnis", () => {
+    expect(classifyPhotoPermission({ status: "approved", level: "all" })).toBe("all");
+    expect(classifyPhotoPermission({ status: "approved", level: "internal" })).toBe("internal");
+    expect(classifyPhotoPermission({ status: "pending", level: "all" })).toBe("missing");
+    expect(classifyPhotoPermission({ status: "rejected", level: "all" })).toBe("missing");
+    expect(classifyPhotoPermission(null)).toBe("missing");
   });
 
-  it("markiert Ausschlüsse als eingeschränkt", () => {
-    expect(
-      classifyPhotoPermission({
-        status: "approved",
-        exclusionNote: "Keine Nahaufnahmen",
-      }),
-    ).toBe("restricted");
-    expect(classifyPhotoPermission({ status: "approved", exclusionNote: "  " })).toBe("allowed");
+  it("wertet „gar nicht“ ohne Freigabe und Altbestand als unbekannt", () => {
+    expect(classifyPhotoPermission({ status: "noPhotos", level: null })).toBe("none");
+    expect(classifyPhotoPermission({ status: "pending", level: "none" })).toBe("none");
+    expect(classifyPhotoPermission({ status: "approved", level: null })).toBe("unknown");
   });
+});
+
+const user = (id: string, firstName: string, consent: object | null, minor = false) => ({
+  user: {
+    id,
+    firstName,
+    lastName: "X",
+    name: null,
+    email: null,
+    dateOfBirth: minor
+      ? new Date(Date.now() - 15 * 365 * 24 * 60 * 60 * 1000)
+      : new Date("1990-01-01"),
+    photoConsents: consent ? [consent] : [],
+  },
 });
 
 describe("loadPhotoConsentOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.purposeCount.mockResolvedValue(1);
-    mocks.purposeFindMany.mockResolvedValue([]);
   });
 
-  it("sortiert „nicht fotografieren“ nach oben und erkennt Minderjährige", async () => {
+  it("sortiert die restriktivsten nach oben, unbekannt ans Ende", async () => {
     mocks.membershipFindMany.mockResolvedValue([
-      {
-        user: {
-          id: "a",
-          firstName: "Anna",
-          lastName: "A",
-          name: null,
-          email: null,
-          dateOfBirth: new Date("1990-01-01"),
-          photoConsents: [
-            {
-              status: "approved",
-              exclusionNote: null,
-              choices: [{ purposeId: "p1", chosen: true }],
-            },
-          ],
-        },
-      },
-      {
-        user: {
-          id: "b",
-          firstName: "Ben",
-          lastName: "B",
-          name: null,
-          email: null,
-          dateOfBirth: new Date(Date.now() - 15 * 365 * 24 * 60 * 60 * 1000),
-          photoConsents: [],
-        },
-      },
+      user("a", "Anna", { status: "approved", level: "all", exclusionNote: null }),
+      user("b", "Ben", null, true),
+      user("c", "Cleo", { status: "approved", level: null, exclusionNote: null }),
+      user("d", "Dana", { status: "noPhotos", level: "none", exclusionNote: null }),
+      user("e", "Emil", { status: "approved", level: "internal", exclusionNote: " " }),
     ]);
 
     const overview = await loadPhotoConsentOverview("show-1");
@@ -90,78 +67,37 @@ describe("loadPhotoConsentOverview", () => {
       status: "active",
     });
     expect(
-      overview.rows.map((row) => [row.userId, row.permission, row.status, row.isMinor]),
+      overview.rows.map((row) => [row.userId, row.permission, row.isMinor, row.exclusionNote]),
     ).toEqual([
-      ["b", "forbidden", "none", true],
-      ["a", "allowed", "approved", false],
-    ]);
-  });
-
-  it("liefert jeden Zweck in Katalogreihenfolge mit gewähltem Zustand", async () => {
-    mocks.purposeFindMany.mockResolvedValue([
-      { id: "p1", label: "Private Foto- und Filmaufnahmen" },
-      { id: "p2", label: "Programmheft und Werbung" },
-    ]);
-    mocks.membershipFindMany.mockResolvedValue([
-      {
-        user: {
-          id: "a",
-          firstName: "Anna",
-          lastName: "A",
-          name: null,
-          email: null,
-          dateOfBirth: new Date("1990-01-01"),
-          photoConsents: [
-            {
-              status: "approved",
-              exclusionNote: null,
-              choices: [{ purposeId: "p1", chosen: true }],
-            },
-          ],
-        },
-      },
-    ]);
-
-    const overview = await loadPhotoConsentOverview("show-1");
-
-    expect(overview.purposes).toEqual([
-      "Private Foto- und Filmaufnahmen",
-      "Programmheft und Werbung",
-    ]);
-    expect(overview.rows[0].purposes).toEqual([
-      { label: "Private Foto- und Filmaufnahmen", chosen: true },
-      { label: "Programmheft und Werbung", chosen: false },
+      ["d", "none", false, null],
+      ["b", "missing", true, null],
+      ["e", "internal", false, null],
+      ["a", "all", false, null],
+      ["c", "unknown", false, null],
     ]);
   });
 });
 
 describe("photoConsentOverviewToCsv", () => {
-  it("erzeugt Excel-taugliches CSV mit einer Spalte je Zweck und entschärft Formeln", () => {
+  it("erzeugt Excel-taugliches CSV und entschärft Formeln", () => {
     const csv = photoConsentOverviewToCsv({
-      purposes: ["Private Foto- und Filmaufnahmen", "Programmheft und Werbung"],
       rows: [
         {
           userId: "a",
           name: '=HYPERLINK("x")',
           status: "approved",
-          permission: "restricted",
+          permission: "internal",
           exclusionNote: 'Keine "Nahaufnahmen"',
           isMinor: false,
-          purposes: [
-            { label: "Private Foto- und Filmaufnahmen", chosen: true },
-            { label: "Programmheft und Werbung", chosen: false },
-          ],
         },
       ],
     });
 
-    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(csv.startsWith("﻿")).toBe(true);
     const lines = csv.slice(1).trimEnd().split("\r\n");
-    expect(lines[0]).toBe(
-      '"Name";"Fotografieren";"Fotoerlaubnis";"Private Foto- und Filmaufnahmen";"Programmheft und Werbung";"Ausschlüsse";"Minderjährig"',
-    );
+    expect(lines[0]).toBe('"Name";"Fotografieren";"Fotoerlaubnis";"Hinweis";"Minderjährig"');
     expect(lines[1]).toBe(
-      '"\'=HYPERLINK(""x"")";"Eingeschränkt";"Erteilt";"ja";"";"Keine ""Nahaufnahmen""";"nein"',
+      `"'=HYPERLINK(""x"")";"Nur intern";"Erteilt";"Keine ""Nahaufnahmen""";"nein"`,
     );
   });
 });

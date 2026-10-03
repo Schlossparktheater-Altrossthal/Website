@@ -23,15 +23,13 @@ const generatedAtSchema = z
 const photoConsentListSchema = z.object({
   showTitle: optionalString,
   generatedAt: generatedAtSchema,
-  purposes: z.array(z.string().trim().min(1)),
   rows: z.array(
     z.object({
       name: z.string().trim().min(1),
+      /** Anzeigetext der Stufe, z. B. „Nur intern“. */
       permission: z.string(),
-      status: z.string(),
       exclusionNote: optionalString,
       isMinor: z.boolean(),
-      purposes: z.array(z.object({ label: z.string(), chosen: z.boolean() })),
     }),
   ),
 });
@@ -89,88 +87,46 @@ export const photoConsentListTemplate: PdfTemplate<PhotoConsentListData> = {
     doc.moveDown(0.8);
 
     const cellPadding = 5;
-    const nameWidth = 150;
-    const statusWidth = 72;
-    const exclusionWidth = 110;
-    const purposes = data.purposes;
-    const remainingWidth =
-      doc.page.width -
-      doc.page.margins.left -
-      doc.page.margins.right -
-      nameWidth -
-      statusWidth -
-      exclusionWidth;
-    const purposeWidth = purposes.length
-      ? Math.floor(remainingWidth / purposes.length)
-      : remainingWidth;
+    const tableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const nameWidth = 200;
+    const permissionWidth = 170;
+    const minorWidth = 70;
+    const noteWidth = tableWidth - nameWidth - permissionWidth - minorWidth;
+    const columns = [
+      { label: "Name", width: nameWidth },
+      { label: "Fotografieren", width: permissionWidth },
+      { label: "Hinweis", width: noteWidth },
+      { label: "Minderjährig", width: minorWidth },
+    ];
 
     const headerHeight = 18;
     const rowHeight = 16;
 
-    const drawHeader = () => {
-      doc.font("Helvetica-Bold").fontSize(8);
-      doc.fillColor("#ffffff");
-      doc
-        .rect(
-          doc.page.margins.left,
-          doc.y,
-          doc.page.width - doc.page.margins.left - doc.page.margins.right,
-          headerHeight,
-        )
-        .fill("#111827");
-      doc.fillColor("#ffffff");
+    const drawCells = (values: string[]) => {
       let x = doc.page.margins.left;
-      doc.text("Name", x + cellPadding, doc.y + 6, { width: nameWidth - cellPadding * 2 });
-      x += nameWidth;
-      doc.text("Fotoerlaubnis", x + cellPadding, doc.y + 6, {
-        width: statusWidth - cellPadding * 2,
-      });
-      x += statusWidth;
-      for (const purpose of purposes) {
-        doc.text(purpose, x + cellPadding, doc.y + 6, {
-          width: purposeWidth - cellPadding * 2,
-          height: headerHeight - 4,
+      const top = doc.y;
+      columns.forEach((column, index) => {
+        doc.text(values[index] ?? "", x + cellPadding, top + 4, {
+          width: column.width - cellPadding * 2,
+          height: rowHeight - 4,
           ellipsis: true,
         });
-        x += purposeWidth;
-      }
-      doc.text("Ausschlüsse", x + cellPadding, doc.y + 6, {
-        width: exclusionWidth - cellPadding * 2,
+        x += column.width;
       });
+      doc.y = top;
+    };
+
+    const drawHeader = () => {
+      doc.rect(doc.page.margins.left, doc.y, tableWidth, headerHeight).fill("#111827");
+      doc.font("Helvetica-Bold").fontSize(8).fillColor("#ffffff");
+      drawCells(columns.map((column) => column.label));
       doc.y += headerHeight;
     };
 
     const drawRow = (row: PhotoConsentListData["rows"][number]) => {
       ensureSpace(doc, rowHeight);
-      let x = doc.page.margins.left;
       doc.font("Helvetica").fontSize(8).fillColor("#111827");
-      doc.text(row.name, x + cellPadding, doc.y + 4, {
-        width: nameWidth - cellPadding * 2,
-        height: rowHeight - 4,
-        ellipsis: true,
-      });
-      x += nameWidth;
-      doc.text(row.status, x + cellPadding, doc.y + 4, {
-        width: statusWidth - cellPadding * 2,
-        height: rowHeight - 4,
-        ellipsis: true,
-      });
-      x += statusWidth;
-      const chosenByLabel = new Map(row.purposes.map((purpose) => [purpose.label, purpose.chosen]));
-      for (const purpose of purposes) {
-        const chosen = chosenByLabel.get(purpose) ?? false;
-        doc.text(chosen ? "x" : "", x + cellPadding, doc.y + 4, {
-          width: purposeWidth - cellPadding * 2,
-          height: rowHeight - 4,
-          align: "center",
-        });
-        x += purposeWidth;
-      }
-      doc.text(row.exclusionNote ?? "", x + cellPadding, doc.y + 4, {
-        width: exclusionWidth - cellPadding * 2,
-        height: rowHeight - 4,
-        ellipsis: true,
-      });
+      drawCells([row.name, row.permission, row.exclusionNote ?? "", row.isMinor ? "ja" : ""]);
       doc.y += rowHeight;
     };
 

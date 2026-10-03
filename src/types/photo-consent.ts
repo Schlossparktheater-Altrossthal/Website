@@ -1,33 +1,15 @@
-import type { PhotoConsentPurposeAudience } from "@prisma/client";
+import type { PhotoConsentLevelValue } from "@/lib/photo-consent-levels";
 
 import type { SignaturePayload } from "./signature";
 
 export type PhotoConsentStatus = "none" | "pending" | "approved" | "rejected" | "noPhotos";
 
-export type PhotoConsentAudienceValue = PhotoConsentPurposeAudience;
-
-/** Ein ankreuzbarer Zweck mit dem Zustand für die anzeigende Person. */
-export type PhotoConsentPurposeView = {
-  purposeId: string;
-  code: string;
-  label: string;
-  description: string | null;
-  appliesTo: PhotoConsentAudienceValue;
-  isRefusal: boolean;
-  chosen: boolean;
-};
-
-/** Snapshot eines Zwecks in einer archivierten Version. */
-export type PhotoConsentPurposeSnapshot = {
-  code: string;
-  label: string;
-  chosen: boolean;
-};
-
 export type PhotoConsentVersionView = {
   id: string;
   version: number;
   status: Exclude<PhotoConsentStatus, "none">;
+  /** Stufe dieser Version; `null` bei Altversionen ohne erkennbare Auswahl. */
+  level: PhotoConsentLevelValue | null;
   submittedAt: string;
   source: string;
   hasDocument: boolean;
@@ -35,19 +17,31 @@ export type PhotoConsentVersionView = {
   documentUrl: string | null;
   signatureVersion: string | null;
   exclusionNote: string | null;
-  purposes: PhotoConsentPurposeSnapshot[];
+};
+
+/** Erlaubnis aus einer früheren Produktion, zum Vorausfüllen bei Volljährigen. */
+export type PhotoConsentPrevious = {
+  showTitle: string;
+  level: PhotoConsentLevelValue;
+  exclusionNote: string | null;
 };
 
 export type PhotoConsentSummary = {
   status: PhotoConsentStatus;
+  /** Gewählte Stufe; `null`, wenn noch nichts oder nur ein Altbestand ohne Stufe vorliegt. */
+  level: PhotoConsentLevelValue | null;
   revokedAt: string | null;
+  /** Minderjährig: Nachweis muss von den Eltern stammen. */
   requiresDocument: boolean;
   hasDocument: boolean;
+  /** Dokument oder digitale Unterschrift liegt vor. */
+  hasProof: boolean;
   submittedAt: string | null;
   updatedAt: string | null;
   approvedAt: string | null;
   approvedByName: string | null;
   rejectionReason: string | null;
+  /** Freies Hinweisfeld („Hinweis“), z. B. „keine Nahaufnahmen“. */
   exclusionNote: string | null;
   requiresDateOfBirth: boolean;
   age: number | null;
@@ -59,7 +53,8 @@ export type PhotoConsentSummary = {
   signatureVersion: string | null;
   signatureCapturedAt: string | null;
   signaturePayload: SignaturePayload | null;
-  purposes: PhotoConsentPurposeView[];
+  showTitle: string | null;
+  previous: PhotoConsentPrevious | null;
   versions: PhotoConsentVersionView[];
 };
 
@@ -71,6 +66,7 @@ export type PhotoConsentAdminEntry = {
   name: string | null;
   email: string | null;
   status: Exclude<PhotoConsentStatus, "none">;
+  level: PhotoConsentLevelValue | null;
   submittedAt: string;
   updatedAt: string;
   approvedAt: string | null;
@@ -78,8 +74,10 @@ export type PhotoConsentAdminEntry = {
   rejectionReason: string | null;
   exclusionNote: string | null;
   hasDocument: boolean;
+  hasProof: boolean;
   requiresDocument: boolean;
   requiresDateOfBirth: boolean;
+  isMinor: boolean;
   dateOfBirth: string | null;
   age: number | null;
   documentName: string | null;
@@ -90,8 +88,15 @@ export type PhotoConsentAdminEntry = {
   signatureVersion: string | null;
   signatureCapturedAt: string | null;
   signaturePayload: SignaturePayload | null;
-  purposes: PhotoConsentPurposeView[];
   versions: PhotoConsentVersionView[];
+};
+
+/** Mitglied der Produktion, das noch keine Fotoerlaubnis abgegeben hat. */
+export type PhotoConsentMissingEntry = {
+  userId: string;
+  name: string;
+  email: string | null;
+  isMinor: boolean;
 };
 
 export type PhotoConsentShowOption = {
@@ -99,17 +104,4 @@ export type PhotoConsentShowOption = {
   title: string;
   year: number;
   status: "planning" | "active" | "finished" | "archived";
-};
-
-export type PhotoConsentPurposeAdminEntry = {
-  id: string;
-  showId: string;
-  code: string;
-  label: string;
-  description: string | null;
-  sortOrder: number;
-  appliesTo: PhotoConsentAudienceValue;
-  isRefusal: boolean;
-  isActive: boolean;
-  choiceCount: number;
 };

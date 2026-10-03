@@ -1,116 +1,182 @@
 import { Prisma } from "@prisma/client";
 
-import type {
-  PhotoConsentChoiceRecord,
-  PhotoConsentPurposeRecord,
-  PersistedPhotoConsentStatus,
-} from "@/lib/photo-consent-summary";
-import type { PhotoConsentPurposeSnapshot } from "@/types/photo-consent";
+import {
+  isPhotoConsentLevelAllowed,
+  photoConsentStatusForLevel,
+  type PhotoConsentLevelValue,
+} from "@/lib/photo-consent-levels";
+import type { PersistedPhotoConsentStatus } from "@/lib/photo-consent-summary";
+import { signaturePayloadSchema, type SignaturePayload } from "@/types/signature";
 
-export type PhotoConsentSelectionInput = ReadonlyArray<{ purposeId: string; chosen: boolean }>;
+export const MAX_PHOTO_CONSENT_NOTE = 1000;
 
-export type NormalizedPhotoConsentSelection = {
-  /** Alle Zwecke mit ihrem Zustand (Basis für die Choice-Tabelle). */
-  choices: PhotoConsentChoiceRecord[];
-  /** true, wenn der Ablehnungs-Zweck („gar nicht“) angekreuzt ist. */
-  isRefusal: boolean;
+export type PhotoConsentDocumentInput = {
+  name: string;
+  mime: string;
+  size: number;
+  data: Uint8Array<ArrayBuffer>;
+};
+
+export type PhotoConsentSignatureInput = {
+  version: string;
+  capturedAt: Date;
+  payload: SignaturePayload;
+};
+
+export type PhotoConsentSubmissionCheck = {
+  level: PhotoConsentLevelValue;
+  isMinor: boolean | null;
+  hasDateOfBirth: boolean;
+  /** Neuer Nachweis (Dokument oder Unterschrift) liegt dieser Einreichung bei. */
+  hasNewProof: boolean;
+  /** Für diese Produktion liegt schon ein Nachweis vor. */
+  hasExistingProof: boolean;
+  /** Nur Minderjährige: Eltern-Nachweis wird später nachgereicht. */
+  deferProof: boolean;
 };
 
 /**
- * Normalisiert die Auswahl: unbekannte IDs werden verworfen, „gar nicht“ ist exklusiv
- * (ist es angekreuzt, gelten alle anderen als nicht angekreuzt).
+ * Prüft eine Einreichung und liefert eine Fehlermeldung oder `null`. „Gar nicht“ braucht weder
+ * Geburtsdatum noch Nachweis; sonst ist für jede Produktion ein Nachweis Pflicht (E4), den nur
+ * Minderjährige nachreichen dürfen.
  */
-export function normalizePhotoConsentSelection(
-  purposes: readonly PhotoConsentPurposeRecord[],
-  selection: PhotoConsentSelectionInput,
-): NormalizedPhotoConsentSelection {
-  const knownIds = new Set(purposes.map((purpose) => purpose.id));
-  const chosenByPurpose = new Map<string, boolean>();
-
-  for (const entry of selection) {
-    if (!knownIds.has(entry.purposeId)) {
-      continue;
-    }
-    chosenByPurpose.set(entry.purposeId, entry.chosen);
+export function checkPhotoConsentSubmission(input: PhotoConsentSubmissionCheck): string | null {
+  if (input.level === "none") {
+    return null;
   }
-
-  const isRefusal = purposes.some(
-    (purpose) => purpose.isRefusal && chosenByPurpose.get(purpose.id) === true,
-  );
-
-  const choices: PhotoConsentChoiceRecord[] = purposes.map((purpose) => ({
-    purposeId: purpose.id,
-    chosen: isRefusal
-      ? purpose.isRefusal && chosenByPurpose.get(purpose.id) === true
-      : chosenByPurpose.get(purpose.id) === true,
-  }));
-
-  return { choices, isRefusal };
-}
-
-/** Snapshot der angekreuzten Zwecke für die Versionshistorie. */
-export function buildPhotoConsentPurposeSnapshot(
-  purposes: readonly PhotoConsentPurposeRecord[],
-  choices: readonly PhotoConsentChoiceRecord[],
-): PhotoConsentPurposeSnapshot[] {
-  const chosenByPurpose = new Map(choices.map((choice) => [choice.purposeId, choice.chosen]));
-  return purposes
-    .slice()
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((purpose) => ({
-      code: purpose.code,
-      label: purpose.label,
-      chosen: chosenByPurpose.get(purpose.id) ?? false,
-    }));
-}
-
-/** Ohne Einverständnis ist der Zustand sofort „keine Aufnahmen“, sonst wartet er auf Prüfung. */
-export function derivePhotoConsentStatus(isRefusal: boolean): "noPhotos" | "pending" {
-  return isRefusal ? "noPhotos" : "pending";
-}
-
-/**
- * Legt beim Onboarding die Standard-Zwecke als Vorauswahl an (alle erlaubten außer „gar nicht“).
- * Die Detail-Auswahl pflegt das Mitglied später im Profil.
- */
-export async function seedDefaultPhotoConsentChoices(
-  tx: Prisma.TransactionClient,
-  consentId: string,
-  showId: string,
-  isMinor: boolean,
-): Promise<void> {
-  const purposes = await tx.photoConsentPurpose.findMany({
-    where: { showId, isActive: true, isRefusal: false },
-    orderBy: [{ sortOrder: "asc" }],
-  });
-  const audience = isMinor ? "minor" : "adult";
-  const selected = purposes.filter(
-    (purpose) => purpose.appliesTo === "both" || purpose.appliesTo === audience,
-  );
-  if (selected.length === 0) {
-    return;
+  if (!input.hasDateOfBirth || input.isMinor === null) {
+    return "Bitte hinterlege zuerst dein Geburtsdatum im Profil";
   }
-  await tx.photoConsentChoice.createMany({
-    data: selected.map((purpose) => ({ consentId, purposeId: purpose.id, chosen: true })),
-    skipDuplicates: true,
-  });
+  if (!isPhotoConsentLevelAllowed(input.level, input.isMinor)) {
+    return "Diese Stufe gibt es nur für Volljährige";
+  }
+  if (input.hasNewProof || input.hasExistingProof) {
+    return null;
+  }
+  if (input.isMinor && input.deferProof) {
+    return null;
+  }
+  return input.isMinor
+    ? "Bitte lass ein Elternteil unterschreiben oder lade das unterschriebene Formular hoch"
+    : "Bitte unterschreibe die Fotoerlaubnis";
 }
 
-export type PhotoConsentVersionPayload = {
-  consentId: string;
-  status: PersistedPhotoConsentStatus;
-  purposesSnapshot: Prisma.InputJsonValue;
+type ProofFields = Pick<
+  Prisma.PhotoConsentUncheckedCreateInput,
+  | "documentData"
+  | "documentMime"
+  | "documentName"
+  | "documentSize"
+  | "documentUploadedAt"
+  | "signatureVersion"
+  | "signaturePayload"
+  | "signatureCapturedAt"
+>;
+
+export type PersistPhotoConsentInput = {
+  userId: string;
+  showId: string;
+  level: PhotoConsentLevelValue;
   exclusionNote: string | null;
-  document: { name: string; mime: string; size: number; data: Uint8Array<ArrayBuffer> } | null;
-  signature: { version: string; capturedAt: Date; payload: Prisma.InputJsonValue } | null;
+  document: PhotoConsentDocumentInput | null;
+  signature: PhotoConsentSignatureInput | null;
   submittedById: string | null;
   source: string;
 };
 
 /**
- * Hängt eine unveränderliche Version an eine Fotoerlaubnis an. Die Versionsnummer zählt je
- * Erlaubnis hoch; die aktuelle Auswahl wird als Snapshot mitgeschrieben.
+ * Speichert eine Einreichung: aktualisiert die Fotoerlaubnis der Produktion und hängt eine
+ * Version an. Ein neuer Nachweis ersetzt den alten vollständig (Dokument oder Unterschrift,
+ * nie beides); ohne neuen Nachweis bleibt der vorhandene stehen.
  */
+export async function persistPhotoConsentSubmission(
+  tx: Prisma.TransactionClient,
+  input: PersistPhotoConsentInput,
+): Promise<{ id: string; status: PersistedPhotoConsentStatus; hasProof: boolean }> {
+  const status = photoConsentStatusForLevel(input.level);
+  const now = new Date();
+
+  const proofData: ProofFields = input.document
+    ? {
+        documentData: input.document.data,
+        documentMime: input.document.mime,
+        documentName: input.document.name,
+        documentSize: input.document.size,
+        documentUploadedAt: now,
+        signatureVersion: null,
+        signaturePayload: Prisma.JsonNull,
+        signatureCapturedAt: null,
+      }
+    : input.signature
+      ? {
+          documentData: null,
+          documentMime: null,
+          documentName: null,
+          documentSize: null,
+          documentUploadedAt: null,
+          signatureVersion: input.signature.version,
+          signaturePayload: input.signature.payload,
+          signatureCapturedAt: input.signature.capturedAt,
+        }
+      : {};
+
+  const base = {
+    status,
+    level: input.level,
+    exclusionNote: input.exclusionNote,
+    approvedAt: null,
+    approvedById: null,
+    rejectionReason: null,
+  };
+
+  const consent = await tx.photoConsent.upsert({
+    where: { userId_showId: { userId: input.userId, showId: input.showId } },
+    create: {
+      userId: input.userId,
+      showId: input.showId,
+      ...base,
+      ...proofData,
+    },
+    update: { ...base, revokedAt: null, ...proofData },
+    select: { id: true, status: true, documentUploadedAt: true, signatureCapturedAt: true },
+  });
+
+  await appendPhotoConsentVersion(tx, {
+    consentId: consent.id,
+    status,
+    level: input.level,
+    exclusionNote: input.exclusionNote,
+    document: input.document,
+    signature: input.signature
+      ? {
+          version: input.signature.version,
+          capturedAt: input.signature.capturedAt,
+          payload: input.signature.payload,
+        }
+      : null,
+    submittedById: input.submittedById,
+    source: input.source,
+  });
+
+  return {
+    id: consent.id,
+    status: consent.status,
+    hasProof: Boolean(consent.documentUploadedAt || consent.signatureCapturedAt),
+  };
+}
+
+export type PhotoConsentVersionPayload = {
+  consentId: string;
+  status: PersistedPhotoConsentStatus;
+  level: PhotoConsentLevelValue | null;
+  exclusionNote: string | null;
+  document: PhotoConsentDocumentInput | null;
+  signature: { version: string; capturedAt: Date; payload: Prisma.InputJsonValue } | null;
+  submittedById: string | null;
+  source: string;
+};
+
+/** Hängt eine unveränderliche Version an eine Fotoerlaubnis an (Nummer zählt je Erlaubnis hoch). */
 export async function appendPhotoConsentVersion(
   tx: Prisma.TransactionClient,
   payload: PhotoConsentVersionPayload,
@@ -128,7 +194,8 @@ export async function appendPhotoConsentVersion(
       consentId: payload.consentId,
       version,
       status: payload.status,
-      purposesSnapshot: payload.purposesSnapshot,
+      level: payload.level,
+      purposesSnapshot: Prisma.JsonNull,
       exclusionNote: payload.exclusionNote,
       documentName: payload.document?.name ?? null,
       documentMime: payload.document?.mime ?? null,
@@ -144,4 +211,35 @@ export async function appendPhotoConsentVersion(
   });
 
   return version;
+}
+
+/** Liest Unterschrift-Daten aus einem Formularfeld (JSON-String oder Objekt). */
+export function parseSignatureInput(raw: unknown): {
+  signature: PhotoConsentSignatureInput | null;
+  error: string | null;
+} {
+  if (raw === undefined || raw === null || raw === "") {
+    return { signature: null, error: null };
+  }
+  let value: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      return { signature: null, error: "Signaturdaten konnten nicht gelesen werden" };
+    }
+  }
+  const parsed = signaturePayloadSchema.safeParse(value);
+  if (!parsed.success) {
+    return { signature: null, error: "Ungültige Signaturdaten" };
+  }
+  const endedAt = new Date(parsed.data.endedAt);
+  return {
+    signature: {
+      version: parsed.data.version,
+      capturedAt: Number.isNaN(endedAt.valueOf()) ? new Date() : endedAt,
+      payload: parsed.data,
+    },
+    error: null,
+  };
 }

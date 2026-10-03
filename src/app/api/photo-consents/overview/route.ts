@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const selected = shows.find((show) => show.id === requestedShowId) ?? shows[0] ?? null;
 
   if (!selected) {
-    return NextResponse.json({ shows, showId: null, showTitle: null, purposes: [], rows: [] });
+    return NextResponse.json({ shows, showId: null, showTitle: null, rows: [] });
   }
 
   const overview = await loadPhotoConsentOverview(selected.id);
@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
     })),
     showId: selected.id,
     showTitle: selected.title ?? `Produktion ${selected.year}`,
-    purposes: overview.purposes,
     rows: overview.rows,
   });
 }

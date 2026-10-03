@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import {
   firstConsent,
+  loadPreviousPhotoConsent,
   photoConsentsForShow,
   resolvePhotoConsentShowId,
 } from "@/lib/photo-consent-scope";
@@ -13,22 +13,18 @@ import {
   createPhotoConsentBoardNotification,
   dispatchPhotoConsentBoardNotification,
 } from "@/lib/photo-consent-notifications";
+import { isPhotoConsentLevel } from "@/lib/photo-consent-levels";
+import { buildPhotoConsentSummary, calculatePhotoConsentAge } from "@/lib/photo-consent-summary";
 import {
-  buildPhotoConsentSummary,
-  calculatePhotoConsentAge,
-  type PhotoConsentPurposeRecord,
-} from "@/lib/photo-consent-summary";
-import { listPhotoConsentPurposes } from "@/lib/photo-consent-purposes";
-import {
+  MAX_PHOTO_CONSENT_NOTE,
   appendPhotoConsentVersion,
-  buildPhotoConsentPurposeSnapshot,
-  derivePhotoConsentStatus,
-  normalizePhotoConsentSelection,
+  checkPhotoConsentSubmission,
+  parseSignatureInput,
+  persistPhotoConsentSubmission,
+  type PhotoConsentDocumentInput,
 } from "@/lib/photo-consent-submission";
-import { signaturePayloadSchema, type SignaturePayload } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024; // 8 MB
-const MAX_EXCLUSION_NOTE = 1000;
 const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
 
 type UploadedFile = {
@@ -36,16 +32,6 @@ type UploadedFile = {
   type?: string | null;
   size: number;
   arrayBuffer(): Promise<ArrayBuffer>;
-};
-
-type PurposeRow = {
-  id: string;
-  code: string;
-  label: string;
-  description: string | null;
-  appliesTo: PhotoConsentPurposeRecord["appliesTo"];
-  isRefusal: boolean;
-  sortOrder: number;
 };
 
 function isFileLike(value: unknown): value is UploadedFile {
@@ -56,49 +42,12 @@ function isFileLike(value: unknown): value is UploadedFile {
   return typeof maybeFile.size === "number" && typeof maybeFile.arrayBuffer === "function";
 }
 
-function toPurposeRecord(purpose: PurposeRow): PhotoConsentPurposeRecord {
-  return {
-    id: purpose.id,
-    code: purpose.code,
-    label: purpose.label,
-    description: purpose.description,
-    appliesTo: purpose.appliesTo,
-    isRefusal: purpose.isRefusal,
-    sortOrder: purpose.sortOrder,
-  };
-}
-
 function parseBoolean(value: unknown): boolean {
   if (typeof value === "string") {
     const normalized = value.trim().toLowerCase();
     return ["1", "true", "yes", "on"].includes(normalized);
   }
   return value === true;
-}
-
-function parseSelection(value: unknown): Array<{ purposeId: string; chosen: boolean }> {
-  if (typeof value !== "string" || !value.trim()) {
-    return [];
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(parsed)) {
-    return [];
-  }
-  return parsed.flatMap((entry) => {
-    if (typeof entry !== "object" || entry === null) {
-      return [];
-    }
-    const record = entry as { purposeId?: unknown; chosen?: unknown };
-    if (typeof record.purposeId !== "string") {
-      return [];
-    }
-    return [{ purposeId: record.purposeId, chosen: record.chosen === true }];
-  });
 }
 
 function sanitizeFilename(name: string): string {
@@ -118,57 +67,65 @@ export async function GET() {
   }
 
   const showId = await resolvePhotoConsentShowId(userId);
-  const purposes = showId ? await listPhotoConsentPurposes(showId) : [];
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      dateOfBirth: true,
-      photoConsents: photoConsentsForShow(
-        showId,
-        {
-          id: true,
-          status: true,
-          revokedAt: true,
-          createdAt: true,
-          updatedAt: true,
-          approvedAt: true,
-          rejectionReason: true,
-          exclusionNote: true,
-          documentUploadedAt: true,
-          documentName: true,
-          documentMime: true,
-          signatureVersion: true,
-          signatureCapturedAt: true,
-          signaturePayload: true,
-          approvedBy: { select: { name: true } },
-          choices: { select: { purposeId: true, chosen: true } },
-          versions: {
-            orderBy: { version: "desc" },
-            select: {
-              id: true,
-              version: true,
-              status: true,
-              submittedAt: true,
-              source: true,
-              documentName: true,
-              documentUploadedAt: true,
-              signatureVersion: true,
-              exclusionNote: true,
-              purposesSnapshot: true,
+  const [user, show] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        dateOfBirth: true,
+        photoConsents: photoConsentsForShow(
+          showId,
+          {
+            id: true,
+            status: true,
+            level: true,
+            revokedAt: true,
+            createdAt: true,
+            updatedAt: true,
+            approvedAt: true,
+            rejectionReason: true,
+            exclusionNote: true,
+            documentUploadedAt: true,
+            documentName: true,
+            documentMime: true,
+            signatureVersion: true,
+            signatureCapturedAt: true,
+            signaturePayload: true,
+            approvedBy: { select: { name: true } },
+            versions: {
+              orderBy: { version: "desc" },
+              select: {
+                id: true,
+                version: true,
+                status: true,
+                level: true,
+                submittedAt: true,
+                source: true,
+                documentName: true,
+                documentUploadedAt: true,
+                signatureVersion: true,
+                exclusionNote: true,
+              },
             },
           },
-        },
-        { includeRevoked: true },
-      ),
-    },
-  });
+          { includeRevoked: true },
+        ),
+      },
+    }),
+    showId
+      ? prisma.show.findUnique({ where: { id: showId }, select: { title: true, year: true } })
+      : null,
+  ]);
 
   if (!user) {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
 
   const consent = firstConsent(user.photoConsents);
+  const age = calculatePhotoConsentAge(user.dateOfBirth);
+  // Vorausfüllen nur für Volljährige; Minderjährige geben jede Produktion neu ab (E2).
+  const previous =
+    age !== null && age >= 18 ? await loadPreviousPhotoConsent(userId, showId) : null;
 
   const summary = buildPhotoConsentSummary(
     {
@@ -182,9 +139,9 @@ export async function GET() {
         : null,
     },
     {
-      purposes: purposes.map(toPurposeRecord),
-      choices: consent?.choices ?? [],
       versions: consent?.versions ?? [],
+      showTitle: show ? (show.title ?? `Produktion ${show.year}`) : null,
+      previous,
     },
   );
 
@@ -275,7 +232,7 @@ export async function POST(request: NextRequest) {
       await appendPhotoConsentVersion(tx, {
         consentId: existing.id,
         status: "noPhotos",
-        purposesSnapshot: [],
+        level: "none",
         exclusionNote: existing.exclusionNote,
         document: null,
         signature: null,
@@ -297,18 +254,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ revoked: true, revokedAt: now.toISOString() });
   }
 
-  if (!parseBoolean(body.confirm)) {
-    return NextResponse.json({ error: "Bitte bestätige dein Einverständnis" }, { status: 400 });
+  const level = body.level;
+  if (!isPhotoConsentLevel(level)) {
+    return NextResponse.json({ error: "Bitte wähle eine Stufe aus" }, { status: 400 });
   }
 
-  const rawExclusionNote = typeof body.exclusionNote === "string" ? body.exclusionNote.trim() : "";
-  if (rawExclusionNote.length > MAX_EXCLUSION_NOTE) {
+  const rawNote = typeof body.exclusionNote === "string" ? body.exclusionNote.trim() : "";
+  if (rawNote.length > MAX_PHOTO_CONSENT_NOTE) {
     return NextResponse.json(
-      { error: `Bitte kürze deine Hinweise auf maximal ${MAX_EXCLUSION_NOTE} Zeichen` },
+      { error: `Bitte kürze deinen Hinweis auf maximal ${MAX_PHOTO_CONSENT_NOTE} Zeichen` },
       { status: 400 },
     );
   }
-  const exclusionNote = rawExclusionNote ? rawExclusionNote : null;
+  const exclusionNote = rawNote ? rawNote : null;
 
   const showId = await resolvePhotoConsentShowId(userId);
   if (!showId) {
@@ -317,13 +275,6 @@ export async function POST(request: NextRequest) {
       { status: 409 },
     );
   }
-
-  const purposeRows = await listPhotoConsentPurposes(showId);
-  const purposes = purposeRows.map(toPurposeRecord);
-
-  const selection = parseSelection(body.purposes);
-  const { choices, isRefusal } = normalizePhotoConsentSelection(purposes, selection);
-  const status = derivePhotoConsentStatus(isRefusal);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -335,8 +286,8 @@ export async function POST(request: NextRequest) {
       dateOfBirth: true,
       photoConsents: photoConsentsForShow(showId, {
         id: true,
-        status: true,
         documentUploadedAt: true,
+        signatureCapturedAt: true,
       }),
     },
   });
@@ -345,74 +296,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
   }
 
-  const existingConsent = firstConsent(user.photoConsents);
-  const documentFile = documentFiles[0] ?? null;
-
-  const requiresDateOfBirth = !user.dateOfBirth;
-  if (requiresDateOfBirth && status !== "noPhotos") {
-    return NextResponse.json(
-      { error: "Bitte hinterlege zuerst dein Geburtsdatum im Profil", requiresDateOfBirth: true },
-      { status: 400 },
-    );
+  const { signature, error: signatureError } = parseSignatureInput(body.signaturePayload);
+  if (signatureError) {
+    return NextResponse.json({ error: signatureError }, { status: 400 });
   }
 
-  const age = calculatePhotoConsentAge(user.dateOfBirth);
-  const requiresDocument = age !== null && age < 18;
-
-  if (
-    status === "pending" &&
-    requiresDocument &&
-    !documentFile &&
-    !existingConsent?.documentUploadedAt
-  ) {
-    return NextResponse.json(
-      { error: "Bitte lade die unterschriebene Einverständniserklärung hoch" },
-      { status: 400 },
-    );
-  }
-
-  let signaturePayload: SignaturePayload | null = null;
-  let signatureVersion: string | null = null;
-  let signatureCapturedAt: Date | null = null;
-
-  const rawSignaturePayload = body.signaturePayload;
-  if (rawSignaturePayload !== undefined && rawSignaturePayload !== null) {
-    let parsedValue: unknown = null;
-    if (typeof rawSignaturePayload === "string") {
-      const trimmed = rawSignaturePayload.trim();
-      if (trimmed) {
-        try {
-          parsedValue = JSON.parse(trimmed);
-        } catch {
-          return NextResponse.json(
-            { error: "Signaturdaten konnten nicht gelesen werden" },
-            { status: 400 },
-          );
-        }
-      }
-    } else if (typeof rawSignaturePayload === "object") {
-      parsedValue = rawSignaturePayload;
-    }
-
-    if (parsedValue) {
-      const parsed = signaturePayloadSchema.safeParse(parsedValue);
-      if (!parsed.success) {
-        return NextResponse.json({ error: "Ungültige Signaturdaten" }, { status: 400 });
-      }
-      signaturePayload = parsed.data;
-      signatureVersion = parsed.data.version;
-      const parsedDate = new Date(parsed.data.endedAt);
-      signatureCapturedAt = Number.isNaN(parsedDate.valueOf()) ? new Date() : parsedDate;
-    }
-  }
-
-  let documentBuffer: Uint8Array<ArrayBuffer> | null = null;
-  let documentMime: string | null = null;
-  let documentName: string | null = null;
-  let documentSize: number | null = null;
-
-  if (documentFile) {
-    const upload = documentFile;
+  let document: PhotoConsentDocumentInput | null = null;
+  const upload = documentFiles[0] ?? null;
+  if (upload) {
     if (upload.size > MAX_DOCUMENT_BYTES) {
       return NextResponse.json({ error: "Dokument darf maximal 8 MB groß sein" }, { status: 400 });
     }
@@ -423,28 +314,32 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    documentBuffer = new Uint8Array(await upload.arrayBuffer());
-    documentMime = mime || "application/octet-stream";
-    documentName = sanitizeFilename(upload.name || "einverstaendnis.pdf");
-    documentSize = upload.size;
+    document = {
+      name: sanitizeFilename(upload.name || "einverstaendnis.pdf"),
+      mime: mime || "application/octet-stream",
+      size: upload.size,
+      data: new Uint8Array(await upload.arrayBuffer()),
+    };
   }
 
-  const now = new Date();
-  const docData = documentBuffer
-    ? {
-        documentData: documentBuffer,
-        documentMime,
-        documentName,
-        documentSize,
-        documentUploadedAt: now,
-      }
-    : {};
-
-  const signatureData = signaturePayload
-    ? { signatureVersion, signaturePayload, signatureCapturedAt: signatureCapturedAt ?? now }
-    : documentBuffer
-      ? { signatureVersion: null, signaturePayload: Prisma.JsonNull, signatureCapturedAt: null }
-      : {};
+  const existingConsent = firstConsent(user.photoConsents);
+  const age = calculatePhotoConsentAge(user.dateOfBirth);
+  const checkError = checkPhotoConsentSubmission({
+    level,
+    isMinor: age === null ? null : age < 18,
+    hasDateOfBirth: Boolean(user.dateOfBirth),
+    hasNewProof: Boolean(document || signature),
+    hasExistingProof: Boolean(
+      existingConsent?.documentUploadedAt || existingConsent?.signatureCapturedAt,
+    ),
+    deferProof: parseBoolean(body.deferProof),
+  });
+  if (checkError) {
+    return NextResponse.json(
+      { error: checkError, requiresDateOfBirth: !user.dateOfBirth },
+      { status: 400 },
+    );
+  }
 
   const actorDisplayName = getUserDisplayName(
     {
@@ -455,76 +350,20 @@ export async function POST(request: NextRequest) {
     },
     "Unbekanntes Mitglied",
   );
-
   const subjectDisplayName = getUserDisplayName(
     { firstName: user.firstName, lastName: user.lastName, name: user.name, email: user.email },
     "Unbekanntes Mitglied",
   );
 
-  const purposesSnapshot = buildPhotoConsentPurposeSnapshot(purposes, choices);
-
   const { notification } = await prisma.$transaction(async (tx) => {
-    const consent = await tx.photoConsent.upsert({
-      where: { userId_showId: { userId, showId } },
-      create: {
-        userId,
-        showId,
-        status,
-        approvedAt: null,
-        approvedById: null,
-        rejectionReason: null,
-        exclusionNote,
-        ...docData,
-        ...signatureData,
-      },
-      update: {
-        status,
-        approvedAt: null,
-        approvedById: null,
-        rejectionReason: null,
-        revokedAt: null,
-        exclusionNote,
-        ...(documentBuffer ? docData : {}),
-        ...(signaturePayload || documentBuffer ? signatureData : {}),
-      },
-      select: {
-        id: true,
-        status: true,
-        documentUploadedAt: true,
-      },
-    });
-
-    await tx.photoConsentChoice.deleteMany({ where: { consentId: consent.id } });
-    if (choices.length > 0) {
-      await tx.photoConsentChoice.createMany({
-        data: choices.map((choice) => ({
-          consentId: consent.id,
-          purposeId: choice.purposeId,
-          chosen: choice.chosen,
-        })),
-      });
-    }
-
-    await appendPhotoConsentVersion(tx, {
-      consentId: consent.id,
-      status,
-      purposesSnapshot,
+    const consent = await persistPhotoConsentSubmission(tx, {
+      userId,
+      showId,
+      level,
       exclusionNote,
-      document: documentBuffer
-        ? {
-            name: documentName ?? "einverstaendnis.pdf",
-            mime: documentMime ?? "",
-            size: documentSize ?? 0,
-            data: documentBuffer,
-          }
-        : null,
-      signature: signaturePayload
-        ? {
-            version: signatureVersion ?? "velocity.v1",
-            capturedAt: signatureCapturedAt ?? now,
-            payload: signaturePayload,
-          }
-        : null,
+      // „Gar nicht“ braucht keinen Nachweis; mitgeschickte Daten werden verworfen.
+      document: level === "none" ? null : document,
+      signature: level === "none" ? null : signature,
       submittedById: userId,
       source: "member",
     });
@@ -532,7 +371,7 @@ export async function POST(request: NextRequest) {
     const notification = await createPhotoConsentBoardNotification(tx, {
       consentId: consent.id,
       status: consent.status,
-      hasDocument: Boolean(consent.documentUploadedAt),
+      hasDocument: consent.hasProof,
       subjectUserId: userId,
       subjectName: subjectDisplayName,
       changeType: "submitted",

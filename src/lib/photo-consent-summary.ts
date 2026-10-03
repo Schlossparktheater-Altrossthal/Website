@@ -1,12 +1,6 @@
-import type { PhotoConsentPurposeAudience } from "@prisma/client";
-
-import {
-  purposeAppliesToAudience,
-  resolvePhotoConsentAudience,
-} from "@/lib/photo-consent-purposes";
+import type { PhotoConsentLevelValue } from "@/lib/photo-consent-levels";
 import type {
-  PhotoConsentPurposeSnapshot,
-  PhotoConsentPurposeView,
+  PhotoConsentPrevious,
   PhotoConsentSummary,
   PhotoConsentVersionView,
 } from "@/types/photo-consent";
@@ -18,6 +12,7 @@ export type PersistedPhotoConsentStatus = "pending" | "approved" | "rejected" | 
 type ConsentRecord = {
   id?: string;
   status: PersistedPhotoConsentStatus | "none";
+  level?: PhotoConsentLevelValue | null;
   revokedAt?: Date | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -33,41 +28,24 @@ type ConsentRecord = {
   signaturePayload?: unknown;
 };
 
-export type PhotoConsentPurposeRecord = {
-  id: string;
-  code: string;
-  label: string;
-  description: string | null;
-  appliesTo: PhotoConsentPurposeAudience;
-  isRefusal: boolean;
-  sortOrder: number;
-};
-
-export type PhotoConsentChoiceRecord = {
-  purposeId: string;
-  chosen: boolean;
-};
-
 export type PhotoConsentVersionRecord = {
   id: string;
   version: number;
   status: PersistedPhotoConsentStatus;
+  level?: PhotoConsentLevelValue | null;
   submittedAt: Date;
   source: string;
   documentName: string | null;
   documentUploadedAt: Date | null;
   signatureVersion: string | null;
   exclusionNote?: string | null;
-  purposesSnapshot: unknown;
 };
 
-export type PhotoConsentCatalog = {
-  purposes: readonly PhotoConsentPurposeRecord[];
-  choices: readonly PhotoConsentChoiceRecord[];
-  versions: readonly PhotoConsentVersionRecord[];
+export type PhotoConsentSummaryExtras = {
+  versions?: readonly PhotoConsentVersionRecord[];
+  showTitle?: string | null;
+  previous?: PhotoConsentPrevious | null;
 };
-
-const EMPTY_CATALOG: PhotoConsentCatalog = { purposes: [], choices: [], versions: [] };
 
 type PhotoConsentUserLike = {
   dateOfBirth: Date | null;
@@ -85,44 +63,10 @@ export function calculatePhotoConsentAge(date: Date | null | undefined): number 
   return age;
 }
 
-/** Kombiniert Katalog und angekreuzte Auswahl zu anzeigbaren Zwecken. */
-export function buildPhotoConsentPurposeViews(
-  purposes: readonly PhotoConsentPurposeRecord[],
-  choices: readonly PhotoConsentChoiceRecord[],
-  age: number | null,
-): PhotoConsentPurposeView[] {
-  const audience = resolvePhotoConsentAudience(age);
-  const chosenByPurpose = new Map(choices.map((choice) => [choice.purposeId, choice.chosen]));
-
-  return purposes
-    .filter((purpose) => (audience ? purposeAppliesToAudience(purpose.appliesTo, audience) : true))
-    .slice()
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((purpose) => ({
-      purposeId: purpose.id,
-      code: purpose.code,
-      label: purpose.label,
-      description: purpose.description,
-      appliesTo: purpose.appliesTo,
-      isRefusal: purpose.isRefusal,
-      chosen: chosenByPurpose.get(purpose.id) ?? false,
-    }));
-}
-
-function parsePurposeSnapshot(value: unknown): PhotoConsentPurposeSnapshot[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.flatMap((entry) => {
-    if (typeof entry !== "object" || entry === null) {
-      return [];
-    }
-    const record = entry as { code?: unknown; label?: unknown; chosen?: unknown };
-    if (typeof record.code !== "string" || typeof record.label !== "string") {
-      return [];
-    }
-    return [{ code: record.code, label: record.label, chosen: record.chosen === true }];
-  });
+export function parseSignaturePayload(value: unknown): SignaturePayload | null {
+  if (!value) return null;
+  const parsed = signaturePayloadSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 export function buildPhotoConsentVersionViews(
@@ -135,6 +79,7 @@ export function buildPhotoConsentVersionViews(
       id: version.id,
       version: version.version,
       status: version.status,
+      level: version.level ?? null,
       submittedAt: version.submittedAt.toISOString(),
       source: version.source,
       hasDocument: Boolean(version.documentUploadedAt),
@@ -144,13 +89,12 @@ export function buildPhotoConsentVersionViews(
         : null,
       signatureVersion: version.signatureVersion,
       exclusionNote: version.exclusionNote ?? null,
-      purposes: parsePurposeSnapshot(version.purposesSnapshot),
     }));
 }
 
 export function buildPhotoConsentSummary(
   user: PhotoConsentUserLike,
-  catalog: PhotoConsentCatalog = EMPTY_CATALOG,
+  extras: PhotoConsentSummaryExtras = {},
 ): PhotoConsentSummary {
   const consent = user.photoConsent;
   const dateOfBirth = user.dateOfBirth;
@@ -165,26 +109,21 @@ export function buildPhotoConsentSummary(
       ? `/api/photo-consents/${consent.id}/document?mode=inline`
       : null;
 
-  const signatureVersion = consent?.signatureVersion ?? null;
   const signatureCapturedAt =
     consent?.signatureCapturedAt && !Number.isNaN(consent.signatureCapturedAt.valueOf())
       ? consent.signatureCapturedAt.toISOString()
       : null;
-
-  let signaturePayload: SignaturePayload | null = null;
-  if (consent?.signaturePayload) {
-    const parsed = signaturePayloadSchema.safeParse(consent.signaturePayload);
-    if (parsed.success) {
-      signaturePayload = parsed.data;
-    }
-  }
+  const signaturePayload = parseSignaturePayload(consent?.signaturePayload);
+  const hasDocument = Boolean(consent?.documentUploadedAt);
 
   return {
     status,
+    level: consent?.level ?? null,
     revokedAt: consent?.revokedAt?.toISOString() ?? null,
     requiresDocument,
     requiresDateOfBirth,
-    hasDocument: Boolean(consent?.documentUploadedAt),
+    hasDocument,
+    hasProof: hasDocument || Boolean(signaturePayload),
     submittedAt: consent?.createdAt?.toISOString() ?? null,
     updatedAt: consent?.updatedAt?.toISOString() ?? null,
     approvedAt: consent?.approvedAt?.toISOString() ?? null,
@@ -199,10 +138,11 @@ export function buildPhotoConsentSummary(
       : null,
     documentMime,
     documentPreviewUrl,
-    signatureVersion,
+    signatureVersion: consent?.signatureVersion ?? null,
     signatureCapturedAt,
     signaturePayload,
-    purposes: buildPhotoConsentPurposeViews(catalog.purposes, catalog.choices, age),
-    versions: buildPhotoConsentVersionViews(catalog.versions),
+    showTitle: extras.showTitle ?? null,
+    previous: extras.previous ?? null,
+    versions: buildPhotoConsentVersionViews(extras.versions ?? []),
   };
 }

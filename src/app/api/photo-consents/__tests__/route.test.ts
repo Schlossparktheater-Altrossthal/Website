@@ -15,12 +15,10 @@ const mocks = vi.hoisted(() => ({
   consentUpdate: vi.fn(),
   versionFindFirst: vi.fn(),
   versionCreate: vi.fn(),
-  purposeCount: vi.fn(),
-  purposeFindMany: vi.fn(),
-  purposeCreateMany: vi.fn(),
-  choiceDeleteMany: vi.fn(),
-  choiceCreateMany: vi.fn(),
+  consentFindFirst: vi.fn(),
   showFindMany: vi.fn(),
+  showFindUnique: vi.fn(),
+  membershipFindMany: vi.fn(),
   createNotification: vi.fn(),
 }));
 
@@ -37,10 +35,6 @@ vi.mock("@/lib/prisma", () => {
   const tx = {
     photoConsent: { upsert: mocks.consentUpsert, update: mocks.consentUpdate },
     photoConsentVersion: { findFirst: mocks.versionFindFirst, create: mocks.versionCreate },
-    photoConsentChoice: {
-      deleteMany: mocks.choiceDeleteMany,
-      createMany: mocks.choiceCreateMany,
-    },
   };
   return {
     prisma: {
@@ -48,13 +42,10 @@ vi.mock("@/lib/prisma", () => {
       photoConsent: {
         findMany: mocks.consentFindMany,
         findUnique: mocks.consentFindUnique,
+        findFirst: mocks.consentFindFirst,
       },
-      photoConsentPurpose: {
-        count: mocks.purposeCount,
-        findMany: mocks.purposeFindMany,
-        createMany: mocks.purposeCreateMany,
-      },
-      show: { findMany: mocks.showFindMany },
+      productionMembership: { findMany: mocks.membershipFindMany },
+      show: { findMany: mocks.showFindMany, findUnique: mocks.showFindUnique },
       $transaction: async <T>(fn: (client: typeof tx) => Promise<T>) => fn(tx),
     },
   };
@@ -70,6 +61,17 @@ const adminRequest = (query = "") =>
   ({
     nextUrl: new URL(`http://localhost/api/photo-consents/admin${query}`),
   }) as NextRequest;
+
+const signature = {
+  version: "velocity.v1",
+  width: 300,
+  height: 120,
+  duration: 100,
+  startedAt: "2026-10-03T10:00:00.000Z",
+  endedAt: "2026-10-03T10:00:00.100Z",
+  boundingBox: { minX: 0, minY: 0, maxX: 10, maxY: 10 },
+  strokes: [{ points: [{ x: 0, y: 0, time: 0 }] }],
+};
 
 const consentRecord = {
   id: "consent-1",
@@ -94,8 +96,8 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
     mocks.requireAuth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.getActiveProductionId.mockResolvedValue("show-2027");
     mocks.createNotification.mockResolvedValue(null);
-    mocks.purposeCount.mockResolvedValue(1);
-    mocks.purposeFindMany.mockResolvedValue([]);
+    mocks.showFindUnique.mockResolvedValue({ title: "Faust", year: 2027 });
+    mocks.consentFindFirst.mockResolvedValue(null);
   });
 
   it("liest nur die Erlaubnis der aktuellen Produktion", async () => {
@@ -108,6 +110,7 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
     const data = await response.json();
 
     expect(data.consent.status).toBe("none");
+    expect(data.consent.showTitle).toBe("Faust");
     const select = mocks.userFindUnique.mock.calls[0][0].select;
     expect(select.photoConsents.where).toEqual({ showId: "show-2027" });
   });
@@ -115,7 +118,7 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
   it("lehnt eine Erlaubnis ohne Produktionszuordnung ab", async () => {
     mocks.getActiveProductionId.mockResolvedValue(null);
 
-    const response = await POST(jsonRequest({ confirm: true }));
+    const response = await POST(jsonRequest({ level: "all", signaturePayload: signature }));
 
     expect(response.status).toBe(409);
     expect(mocks.consentUpsert).not.toHaveBeenCalled();
@@ -132,13 +135,65 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
     });
     mocks.consentUpsert.mockResolvedValue(consentRecord);
 
-    const response = await POST(jsonRequest({ confirm: true }));
+    const response = await POST(
+      jsonRequest({
+        level: "internal",
+        exclusionNote: "keine Nahaufnahmen",
+        signaturePayload: signature,
+      }),
+    );
 
     expect(response.status).toBe(200);
     const args = mocks.consentUpsert.mock.calls[0][0];
     expect(args.where).toEqual({ userId_showId: { userId: "user-1", showId: "show-2027" } });
-    expect(args.create).toMatchObject({ userId: "user-1", showId: "show-2027", status: "pending" });
+    expect(args.create).toMatchObject({
+      userId: "user-1",
+      showId: "show-2027",
+      status: "pending",
+      level: "internal",
+      exclusionNote: "keine Nahaufnahmen",
+      documentData: null,
+    });
     expect(args.update).toMatchObject({ status: "pending", approvedAt: null, revokedAt: null });
+    expect(mocks.versionCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ level: "internal", signatureVersion: "velocity.v1" }),
+    });
+  });
+
+  it("verlangt auch von Volljährigen eine Unterschrift je Produktion", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      firstName: "Anna",
+      lastName: "A",
+      name: null,
+      email: null,
+      dateOfBirth: new Date("1990-01-01"),
+      photoConsents: [],
+    });
+
+    const response = await POST(jsonRequest({ level: "all" }));
+
+    expect(response.status).toBe(400);
+    expect(mocks.consentUpsert).not.toHaveBeenCalled();
+  });
+
+  it("speichert „gar nicht“ sofort und ohne Nachweis", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      firstName: "Anna",
+      lastName: "A",
+      name: null,
+      email: null,
+      dateOfBirth: null,
+      photoConsents: [],
+    });
+    mocks.consentUpsert.mockResolvedValue({ ...consentRecord, status: "noPhotos" });
+
+    const response = await POST(jsonRequest({ level: "none" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.consentUpsert.mock.calls[0][0].create).toMatchObject({
+      status: "noPhotos",
+      level: "none",
+    });
   });
 
   it("widerruft die aktive Einwilligung mit Datum und Versionshistorie", async () => {
@@ -181,10 +236,43 @@ describe("Fotoerlaubnis pro Produktion (Mitglied)", () => {
       photoConsents: [],
     });
 
-    const response = await POST(jsonRequest({ confirm: true }));
+    const response = await POST(jsonRequest({ level: "all" }));
 
     expect(response.status).toBe(400);
     expect(mocks.consentUpsert).not.toHaveBeenCalled();
+  });
+
+  it("bietet Minderjährigen keine Rückfrage-Stufe an", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      firstName: "Ben",
+      lastName: "B",
+      name: null,
+      email: null,
+      dateOfBirth: new Date(Date.now() - 15 * 365 * 24 * 60 * 60 * 1000),
+      photoConsents: [],
+    });
+
+    const response = await POST(
+      jsonRequest({ level: "promoOnRequest", signaturePayload: signature }),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it("lässt Minderjährige den Eltern-Nachweis nachreichen", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      firstName: "Ben",
+      lastName: "B",
+      name: null,
+      email: null,
+      dateOfBirth: new Date(Date.now() - 15 * 365 * 24 * 60 * 60 * 1000),
+      photoConsents: [],
+    });
+    mocks.consentUpsert.mockResolvedValue(consentRecord);
+
+    const response = await POST(jsonRequest({ level: "all", deferProof: true }));
+
+    expect(response.status).toBe(200);
   });
 });
 
@@ -197,8 +285,7 @@ describe("Fotoerlaubnis-Verwaltung", () => {
     mocks.showFindMany.mockResolvedValue([
       { id: "show-2027", title: null, year: 2027, status: "planning" },
     ]);
-    mocks.purposeCount.mockResolvedValue(1);
-    mocks.purposeFindMany.mockResolvedValue([]);
+    mocks.membershipFindMany.mockResolvedValue([]);
   });
 
   it("zeigt standardmäßig die aktuell ausgewählte Produktion", async () => {

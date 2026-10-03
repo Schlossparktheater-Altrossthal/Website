@@ -27,7 +27,7 @@ describe("Fotoerlaubnis-Export", () => {
     vi.clearAllMocks();
     mocks.hasPermission.mockResolvedValue(false);
     mocks.showFindUnique.mockResolvedValue({ title: "Die unendliche Geschichte", year: 2026 });
-    mocks.load.mockResolvedValue({ purposes: [], rows: [] });
+    mocks.load.mockResolvedValue({ rows: [] });
     mocks.renderPdfTemplate.mockResolvedValue({
       buffer: Buffer.from("pdf"),
       filename: "fotoerlaubnis-die-unendliche-geschichte.pdf",
@@ -62,7 +62,7 @@ describe("Fotoerlaubnis-Export", () => {
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(mocks.renderPdfTemplate).toHaveBeenCalledWith(
       "photo-consent-list",
-      expect.objectContaining({ showTitle: "Die unendliche Geschichte", purposes: [] }),
+      expect.objectContaining({ showTitle: "Die unendliche Geschichte", rows: [] }),
     );
   });
 
