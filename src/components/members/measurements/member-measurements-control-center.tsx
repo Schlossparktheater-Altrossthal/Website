@@ -5,6 +5,7 @@ import {
   ArrowDownAZIcon,
   ArrowUpAZIcon,
   BarChart3Icon,
+  CheckIcon,
   Clock3Icon,
   FileDownIcon,
   RulerIcon,
@@ -290,19 +291,11 @@ export function MemberMeasurementsControlCenter({
             <div className="flex items-center justify-between gap-2 pr-2 text-sm">
               <span className="font-medium text-foreground">{item.label}</span>
               {item.missingCount > 0 ? (
-                <Badge
-                  variant="outline"
-                  className="border-destructive/50 bg-destructive/10 px-2 py-0.5 text-[10px] text-destructive"
-                >
+                <span className="text-[11px] tabular-nums text-muted-foreground">
                   {item.missingCount} offen
-                </Badge>
+                </span>
               ) : (
-                <Badge
-                  variant="outline"
-                  className="border-success/40 bg-success/10 px-2 py-0.5 text-[10px] text-success"
-                >
-                  Vollständig
-                </Badge>
+                <CheckIcon className="h-3.5 w-3.5 text-success" aria-label="Vollständig" />
               )}
             </div>
           );
@@ -310,7 +303,7 @@ export function MemberMeasurementsControlCenter({
         meta: {
           headerClassName: "sticky left-0 z-20 min-w-[150px] bg-muted/30 sm:min-w-[170px]",
           cellClassName:
-            "sticky left-0 z-10 min-w-[150px] border-r border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground sm:min-w-[170px] sm:px-4 sm:py-3",
+            "sticky left-0 z-10 min-w-[150px] border-r border-border/60 bg-card px-3 py-1.5 text-sm font-medium text-foreground sm:min-w-[170px] sm:px-4 sm:py-2",
         },
       },
     ];
@@ -327,20 +320,37 @@ export function MemberMeasurementsControlCenter({
             <span className="w-full truncate text-sm font-semibold text-foreground">
               {member.displayName}
             </span>
-            <span className="w-full truncate text-[10px]">
-              {member.stats.captured}/{member.stats.total} Maße
-              {member.stats.missing > 0 ? ` · ${member.stats.missing} offen` : " · Vollständig"}
+            <span className="flex w-full items-center gap-1.5 text-[10px] tabular-nums">
+              <span className="h-1 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden>
+                <span
+                  className={cn(
+                    "block h-full rounded-full",
+                    member.stats.missing > 0 ? "bg-primary" : "bg-success",
+                  )}
+                  style={{
+                    width: `${member.stats.total ? (member.stats.captured / member.stats.total) * 100 : 0}%`,
+                  }}
+                />
+              </span>
+              {member.stats.captured}/{member.stats.total}
             </span>
           </button>
         ),
         cell: ({ row }) => {
           const entry = row.original.entryMap.get(member.id) ?? null;
           const unitLabel = entry ? (MEASUREMENT_UNIT_LABELS[entry.unit] ?? entry.unit) : undefined;
-          const secondaryText = entry?.note?.trim()
-            ? entry.note
-            : entry?.updatedAt
-              ? ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))
-              : null;
+          // Datum nur im Tooltip – sonst verdoppelt es die Zeilenhöhe der ganzen Tabelle.
+          const secondaryText = entry?.note?.trim() ? entry.note : null;
+          const tooltip = entry
+            ? [
+                entry.note?.trim(),
+                entry.updatedAt
+                  ? `Stand ${ABSOLUTE_DATE_FORMATTER.format(new Date(entry.updatedAt))}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ") || undefined
+            : "Maß eintragen";
 
           return (
             <button
@@ -355,25 +365,22 @@ export function MemberMeasurementsControlCenter({
                     })
               }
               className={cn(
-                "flex h-full w-full flex-col gap-1 rounded-md border border-transparent px-2 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                "flex h-full w-full flex-col gap-0.5 rounded-md border border-transparent px-2 py-1 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 entry
                   ? "hover:border-primary/40 hover:bg-primary/5"
-                  : "text-muted-foreground hover:border-dashed hover:border-destructive/50 hover:bg-destructive/5",
+                  : "text-muted-foreground hover:border-dashed hover:border-primary/50 hover:bg-primary/5",
               )}
-              title={entry?.note ?? undefined}
+              title={tooltip}
             >
               <div className="flex items-baseline gap-1">
                 <span className="font-semibold text-foreground">
                   {entry ? formatValue(entry.value) : "—"}
                 </span>
-                <span
-                  className={cn(
-                    "text-[10px]",
-                    entry ? "text-muted-foreground" : "text-destructive/80",
-                  )}
-                >
-                  {entry ? (unitLabel ?? entry.unit) : "Fehlt"}
-                </span>
+                {entry ? (
+                  <span className="text-[10px] text-muted-foreground">
+                    {unitLabel ?? entry.unit}
+                  </span>
+                ) : null}
               </div>
               {secondaryText ? (
                 <span className="truncate text-[10px] text-muted-foreground/80">
@@ -571,7 +578,7 @@ export function MemberMeasurementsControlCenter({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm">
+      <div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <StatBlock
             label="Ensemble"
@@ -591,7 +598,7 @@ export function MemberMeasurementsControlCenter({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/70 bg-card/60 p-3 shadow-sm">
+      <div>
         <div className="space-y-3">
           <div className="grid gap-3 lg:grid-cols-[2fr_auto] lg:items-center">
             <div className="space-y-1">

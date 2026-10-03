@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import {
   ChevronDownIcon,
+  CheckIcon,
   LockIcon,
   MoreVerticalIcon,
   PlusIcon,
@@ -458,7 +459,8 @@ export function PermissionWorkbenchClient({
 
       {/* Desktop: Matrix, alle Bereiche offen */}
       {categories.length ? (
-        <div className="hidden overflow-x-auto rounded-lg border md:block">
+        // Eigener Scrollbereich: Nur so bleiben die Spaltenköpfe (sticky top-0) beim Scrollen stehen.
+        <div className="hidden max-h-[calc(100dvh-14rem)] overflow-auto rounded-lg border md:block">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
@@ -484,7 +486,7 @@ export function PermissionWorkbenchClient({
                       {roleLabel(role)}
                     </span>
                     <span className="block text-center text-[11px] font-normal text-muted-foreground">
-                      {countLabel(role)}
+                      immer alles
                     </span>
                   </th>
                 ))}
@@ -497,7 +499,7 @@ export function PermissionWorkbenchClient({
                     <th
                       scope="colgroup"
                       colSpan={1 + roles.length + systemRoles.length}
-                      className="border-b bg-muted/60 px-4 pb-1.5 pt-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                      className="border-b border-t border-border bg-muted px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-foreground"
                     >
                       <span className="sticky left-4">{category.label}</span>
                     </th>
@@ -543,7 +545,10 @@ export function PermissionWorkbenchClient({
                           key={role.id}
                           className="border-b border-l border-border/40 bg-muted/30 text-center"
                         >
-                          <PermissionToggle checked disabled aria-label={lockedHint} />
+                          <CheckIcon
+                            className="mx-auto size-4 text-muted-foreground/60"
+                            aria-label={lockedHint}
+                          />
                         </td>
                       ))}
                     </tr>

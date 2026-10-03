@@ -46,6 +46,8 @@ export interface SectionNavProps {
   activeId: string;
   ariaLabel?: string;
   className?: string;
+  /** "pills" (Standard) für Unterbereiche, "underline" für die Hauptbereiche einer Seite. */
+  variant?: "pills" | "underline";
 }
 
 export const UI_PATTERNS = {

@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarRange } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -193,8 +194,16 @@ export function PlanView({
   if (plan.milestones.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <p className="text-sm text-muted-foreground">Noch kein Plan.</p>
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-4 py-12 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <CalendarRange className="h-6 w-6" aria-hidden />
+          </span>
+          <div className="space-y-1">
+            <p className="font-medium">Noch kein Plan</p>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Meilensteine und Fristen bis zur Premiere – am schnellsten mit einer Vorlage.
+            </p>
+          </div>
           {plan.canManage ? (
             <div className="flex flex-wrap justify-center gap-2">
               <Button onClick={() => setTemplateMode("apply")}>Vorlage übernehmen</Button>

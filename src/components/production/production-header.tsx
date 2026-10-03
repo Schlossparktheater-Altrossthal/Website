@@ -78,14 +78,20 @@ export function ProductionHeader({
     (tab) => canManage || !tab.managerOnly || extraTabs.includes(tab.id) || tab.id === active,
   );
 
+  const statusBadge = production?.status ? (
+    <Badge variant="outline">{PRODUCTION_STATUS_LABELS[production.status]}</Badge>
+  ) : null;
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageHeader
         title={title}
-        description={description}
-        status={
-          production?.status ? (
-            <Badge variant="outline">{PRODUCTION_STATUS_LABELS[production.status]}</Badge>
+        description={
+          description || statusBadge ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {statusBadge}
+              {description ? <span>{description}</span> : null}
+            </div>
           ) : undefined
         }
         actions={
@@ -102,6 +108,7 @@ export function ProductionHeader({
           items={tabs.map(({ id, label, href }) => ({ id, label, href }))}
           activeId={active}
           ariaLabel="Produktionsbereiche"
+          variant="underline"
         />
       ) : null}
     </div>
