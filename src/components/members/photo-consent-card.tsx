@@ -1,281 +1,165 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
+import {
+  EMPTY_PHOTO_CONSENT_DRAFT,
+  PhotoConsentForm,
+  photoConsentDraftToFormData,
+  validatePhotoConsentDraft,
+  type PhotoConsentDraft,
+} from "@/components/photo-consent/photo-consent-form";
+import { PhotoConsentLevelDot } from "@/components/photo-consent/photo-consent-level-badge";
+import { HistoryIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { photoConsentLevelLabel } from "@/lib/photo-consent-levels";
 import type { PhotoConsentSummary, PhotoConsentVersionView } from "@/types/photo-consent";
-import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
-import {
-  CameraIcon,
-  CheckCircle2Icon,
-  ChevronDownIcon,
-  EditIcon,
-  HistoryIcon,
-  PrinterIcon,
-  RefreshIcon,
-  UploadIcon,
-} from "@/components/ui/action-icons";
 
-const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
-const MAX_NOTE_LENGTH = 1000;
-const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
-
-const statusLabels: Record<PhotoConsentSummary["status"], string> = {
-  none: "Noch nicht übermittelt",
-  pending: "Wartet auf Prüfung",
-  approved: "Freigabe erteilt",
-  rejected: "Abgelehnt",
-  noPhotos: "Keine Aufnahmen",
-};
-
-const statusBadgeClasses: Record<PhotoConsentSummary["status"], string> = {
-  none: "border-info/45 bg-info/15 text-info",
-  pending: "border-warning/45 bg-warning/15 text-warning",
-  approved: "border-success/45 bg-success/15 text-success",
-  rejected: "border-destructive/45 bg-destructive/15 text-destructive",
-  noPhotos: "border-muted bg-muted/40 text-muted-foreground",
-};
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+const dateFormatter = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeZone: DEFAULT_TIME_ZONE,
+});
 
 function formatDate(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return null;
-  return dateFormatter.format(date);
+  return Number.isNaN(date.valueOf()) ? null : dateFormatter.format(date);
 }
 
-type SignatureMode = "upload" | "signature";
+type StatusInfo = {
+  label: string;
+  variant: "success" | "warning" | "destructive" | "muted" | "info";
+  detail: string | null;
+  /** Mitglied muss noch etwas tun. */
+  actionLabel: string | null;
+};
+
+function describeStatus(summary: PhotoConsentSummary): StatusInfo {
+  if (summary.revokedAt) {
+    return {
+      label: "Widerrufen",
+      variant: "destructive",
+      detail: `Am ${formatDate(summary.revokedAt) ?? "unbekannt"} widerrufen. Du wirst nicht fotografiert.`,
+      actionLabel: "Neu abgeben",
+    };
+  }
+  switch (summary.status) {
+    case "approved":
+      return {
+        label: "Freigegeben",
+        variant: "success",
+        detail: `Am ${formatDate(summary.approvedAt) ?? "unbekannt"}${
+          summary.approvedByName ? ` durch ${summary.approvedByName}` : ""
+        }.`,
+        actionLabel: summary.level ? null : "Stufe angeben",
+      };
+    case "noPhotos":
+      return {
+        label: "Keine Aufnahmen",
+        variant: "muted",
+        detail: "Gilt sofort, ohne Prüfung.",
+        actionLabel: null,
+      };
+    case "rejected":
+      return {
+        label: "Abgelehnt",
+        variant: "destructive",
+        detail: summary.rejectionReason ? `Grund: ${summary.rejectionReason}` : null,
+        actionLabel: "Neu abgeben",
+      };
+    case "pending":
+      return summary.hasProof
+        ? {
+            label: "Wird geprüft",
+            variant: "warning",
+            detail: "Das Team prüft deine Fotoerlaubnis. Bis dahin wirst du nicht fotografiert.",
+            actionLabel: null,
+          }
+        : {
+            label: "Unterschrift fehlt",
+            variant: "warning",
+            detail: summary.requiresDocument
+              ? "Ein Elternteil muss noch unterschreiben."
+              : "Die Unterschrift fehlt noch.",
+            actionLabel: "Unterschrift nachreichen",
+          };
+    default:
+      return { label: "Fehlt", variant: "info", detail: null, actionLabel: null };
+  }
+}
+
+function VersionList({ versions }: { versions: PhotoConsentVersionView[] }) {
+  return (
+    <ol className="divide-y divide-border rounded-lg border border-border text-xs">
+      {versions.map((version) => (
+        <li
+          key={version.id}
+          className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <PhotoConsentLevelDot level={version.level} />
+            <span className="font-medium text-foreground">
+              {version.source === "revocation"
+                ? "Widerrufen"
+                : photoConsentLevelLabel(version.level)}
+            </span>
+            {version.signatureVersion ? (
+              <span className="text-muted-foreground">· unterschrieben</span>
+            ) : version.hasDocument ? (
+              <span className="text-muted-foreground">· Dokument</span>
+            ) : null}
+          </span>
+          <span className="text-muted-foreground">
+            V{version.version} · {formatDate(version.submittedAt) ?? "unbekannt"}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 interface PhotoConsentCardProps {
   onSummaryChange?: (summary: PhotoConsentSummary | null) => void;
 }
 
-function buildInitialSelection(summary: PhotoConsentSummary | null): Record<string, boolean> {
-  const selection: Record<string, boolean> = {};
-  for (const purpose of summary?.purposes ?? []) {
-    selection[purpose.purposeId] = purpose.chosen;
-  }
-  return selection;
-}
-
-function ConsentPrintArea({ purposes }: { purposes: PhotoConsentSummary["purposes"] }) {
-  return (
-    <div className="print-area hidden print:block">
-      <h1 className="text-lg font-bold">Einverständniserklärung Foto- &amp; Filmerlaubnis</h1>
-      <p className="mt-3 text-sm">
-        Von mir / von meinem Kind <span className="inline-block w-64 border-b border-foreground" />{" "}
-        dürfen Aufnahmen (Foto &amp; Film) in der Theater-AG für folgende Verwendungszwecke gemacht
-        werden.
-      </p>
-      <ul className="mt-4 space-y-2 text-sm">
-        {purposes.map((purpose) => (
-          <li key={purpose.purposeId} className="flex items-start gap-2">
-            <span className="mt-0.5 inline-block h-4 w-4 border border-foreground" aria-hidden />
-            <span>{purpose.label}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-4 text-xs">Zutreffendes bitte ankreuzen.</p>
-      <div className="mt-10 flex items-end gap-4 text-sm">
-        <span className="inline-block w-56 border-b border-foreground" />
-        <span>Unterschrift</span>
-      </div>
-    </div>
-  );
-}
-
-function VersionHistory({ versions }: { versions: PhotoConsentVersionView[] }) {
-  const [leftId, setLeftId] = useState<string | null>(versions[versions.length - 1]?.id ?? null);
-  const [rightId, setRightId] = useState<string | null>(versions[0]?.id ?? null);
-
-  if (versions.length === 0) {
-    return null;
-  }
-
-  const left = versions.find((version) => version.id === leftId) ?? versions[versions.length - 1];
-  const right = versions.find((version) => version.id === rightId) ?? versions[0];
-  const purposeCodes = Array.from(
-    new Set([...left.purposes, ...right.purposes].map((purpose) => purpose.code)),
-  );
-
-  const versionLabel = (version: PhotoConsentVersionView) =>
-    `Version ${version.version} · ${formatDate(version.submittedAt) ?? "unbekannt"}`;
-
-  return (
-    <div className="space-y-3 rounded-lg border border-border/60 p-3">
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <HistoryIcon className="h-4 w-4" aria-hidden="true" />
-        Verlauf
-      </div>
-
-      {versions.length >= 2 ? (
-        <div className="space-y-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Select value={left.id} onValueChange={setLeftId}>
-              <SelectTrigger aria-label="Ältere Version wählen">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {versions.map((version) => (
-                  <SelectItem key={version.id} value={version.id}>
-                    {versionLabel(version)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={right.id} onValueChange={setRightId}>
-              <SelectTrigger aria-label="Neuere Version wählen">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {versions.map((version) => (
-                  <SelectItem key={version.id} value={version.id}>
-                    {versionLabel(version)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1 text-xs">
-            <div className="grid grid-cols-[1fr_2.5rem_2.5rem] gap-2 rounded-md bg-muted p-2 font-medium text-foreground">
-              <span>Zweck</span>
-              <span className="text-center">V{left.version}</span>
-              <span className="text-center">V{right.version}</span>
-            </div>
-            {purposeCodes.map((code) => {
-              const leftChosen =
-                left.purposes.find((purpose) => purpose.code === code)?.chosen ?? false;
-              const rightChosen =
-                right.purposes.find((purpose) => purpose.code === code)?.chosen ?? false;
-              const label =
-                left.purposes.find((purpose) => purpose.code === code)?.label ??
-                right.purposes.find((purpose) => purpose.code === code)?.label ??
-                code;
-              const changed = leftChosen !== rightChosen;
-              return (
-                <div
-                  key={code}
-                  className={cn(
-                    "grid grid-cols-[1fr_2.5rem_2.5rem] gap-2 rounded-md border p-2",
-                    changed ? "border-warning/40 bg-warning/10" : "border-border/50",
-                  )}
-                >
-                  <span className="font-medium text-foreground">{label}</span>
-                  <span className="text-center">{leftChosen ? "✓" : "–"}</span>
-                  <span className="text-center">{rightChosen ? "✓" : "–"}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 text-xs">
-            <div className="rounded-md border border-border/50 p-2">
-              <span className="font-medium text-foreground">Ausschlüsse V{left.version}</span>
-              <p className="mt-1 text-muted-foreground">{left.exclusionNote || "–"}</p>
-            </div>
-            <div className="rounded-md border border-border/50 p-2">
-              <span className="font-medium text-foreground">Ausschlüsse V{right.version}</span>
-              <p className="mt-1 text-muted-foreground">{right.exclusionNote || "–"}</p>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <ul className="space-y-2 text-xs text-muted-foreground">
-        {versions.map((version) => {
-          const chosen = version.purposes.filter((purpose) => purpose.chosen);
-          return (
-            <li key={version.id} className="rounded-md border border-border/50 p-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-foreground">
-                  Version {version.version} ·{" "}
-                  {version.source === "revocation" ? "Widerrufen" : statusLabels[version.status]}
-                </span>
-                <span>{formatDate(version.submittedAt) ?? "unbekannt"}</span>
-              </div>
-              {chosen.length > 0 ? (
-                <p className="mt-1">Angekreuzt: {chosen.map((entry) => entry.label).join(", ")}</p>
-              ) : (
-                <p className="mt-1">Keine Verwendungszwecke angekreuzt.</p>
-              )}
-              {version.hasDocument && version.documentUrl ? (
-                <a
-                  className="mt-1 inline-block text-foreground underline underline-offset-2"
-                  href={version.documentUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {version.documentName ?? "Nachweis ansehen"}
-                </a>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
+/** Fotoerlaubnis im Profil: kompakte Statuszeile oder das Formular zum Abgeben/Ändern. */
 export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}) {
   const [summary, setSummary] = useState<PhotoConsentSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selection, setSelection] = useState<Record<string, boolean>>({});
-  const [confirm, setConfirm] = useState(false);
-  const [note, setNote] = useState("");
-  const [noteError, setNoteError] = useState<string | null>(null);
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [documentError, setDocumentError] = useState<string | null>(null);
-  const [signatureMode, setSignatureMode] = useState<SignatureMode>("upload");
-  const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<PhotoConsentDraft>(EMPTY_PHOTO_CONSENT_DRAFT);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [refusalConfirmOpen, setRefusalConfirmOpen] = useState(false);
-  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
+  const [revokeOpen, setRevokeOpen] = useState(false);
   const [revoking, setRevoking] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     onSummaryChange?.(summary);
   }, [summary, onSummaryChange]);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const response = await fetch("/api/photo-consents", { cache: "no-store" });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        setError(data?.error ?? "Status konnte nicht geladen werden");
+        setLoadError(data?.error ?? "Fotoerlaubnis konnte nicht geladen werden.");
         return;
       }
       const consent: PhotoConsentSummary | null = data?.consent ?? null;
       setSummary(consent);
-      setSelection(buildInitialSelection(consent));
-      setNote(consent?.exclusionNote ?? "");
+      setEditing(!consent || consent.status === "none");
     } catch {
-      setError("Netzwerkfehler beim Laden der Fotoerlaubnis");
+      setLoadError("Netzwerkfehler beim Laden der Fotoerlaubnis.");
     } finally {
       setLoading(false);
     }
@@ -285,141 +169,76 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
     void load();
   }, [load]);
 
-  const purposes = summary?.purposes ?? [];
-  const status = summary?.status ?? "none";
-  const requiresDocument = summary?.requiresDocument ?? false;
-  const requiresDateOfBirth = summary?.requiresDateOfBirth ?? false;
-
-  const refusalPurpose = purposes.find((purpose) => purpose.isRefusal) ?? null;
-  const isRefusalSelected = refusalPurpose ? Boolean(selection[refusalPurpose.purposeId]) : false;
-  const hasSelectedPurpose = purposes.some((purpose) => Boolean(selection[purpose.purposeId]));
-
-  const isRevoked = Boolean(summary?.revokedAt);
-  const isCollapsible = !isRevoked && (status === "approved" || status === "noPhotos");
-
-  useEffect(() => {
-    if (status === "approved" || status === "noPhotos") {
-      setEditing(false);
-    } else {
-      setEditing(true);
-    }
-  }, [status]);
-
-  const resetDocument = useCallback(() => {
-    setDocumentFile(null);
-    setDocumentError(null);
-    setSignatureResult(null);
-    setSignatureMode("upload");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = "";
-    }
-  }, []);
-
-  const handleTogglePurpose = (purposeId: string, next: boolean) => {
-    setSelection((prev) => {
-      const updated = { ...prev, [purposeId]: next };
-      const toggled = purposes.find((purpose) => purpose.purposeId === purposeId);
-      if (next && toggled?.isRefusal) {
-        // „Gar nicht“ schließt alle anderen Zwecke aus.
-        for (const purpose of purposes) {
-          if (purpose.purposeId !== purposeId) {
-            updated[purpose.purposeId] = false;
-          }
-        }
-      } else if (next) {
-        if (refusalPurpose) {
-          updated[refusalPurpose.purposeId] = false;
-        }
-      }
-      return updated;
+  const startEditing = () => {
+    setDraft({
+      ...EMPTY_PHOTO_CONSENT_DRAFT,
+      level: summary?.level ?? null,
+      note: summary?.exclusionNote ?? "",
     });
+    setFormError(null);
+    setEditing(true);
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) {
-      setDocumentFile(null);
-      setDocumentError(null);
-      return;
-    }
-    setSignatureMode("upload");
-    setSignatureResult(null);
-    if (file.size > MAX_DOCUMENT_BYTES) {
-      setDocumentError("Dokument darf maximal 8 MB groß sein");
-      event.target.value = "";
-      setDocumentFile(null);
-      return;
-    }
-    const type = file.type?.toLowerCase() ?? "";
-    if (type && !ALLOWED_TYPES.has(type)) {
-      setDocumentError("Bitte nutze PDF oder Bilddateien (JPG/PNG)");
-      event.target.value = "";
-      setDocumentFile(null);
-      return;
-    }
-    setDocumentError(null);
-    setDocumentFile(file);
-  };
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
+  }
 
-  const handleSelectUploadMode = () => {
-    setSignatureMode("upload");
-    setSignatureResult(null);
-    setDocumentError(null);
-  };
+  if (loadError || !summary) {
+    return (
+      <div className="space-y-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm">
+        <p className="text-destructive">{loadError ?? "Fotoerlaubnis nicht verfügbar."}</p>
+        <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
+          Erneut laden
+        </Button>
+      </div>
+    );
+  }
 
-  const handleSelectSignatureMode = () => {
-    if (requiresDocument) {
+  const isMinor = summary.requiresDocument;
+  const hasConsent = summary.status !== "none";
+  const keepsProof =
+    hasConsent && summary.hasProof && !summary.revokedAt && summary.status !== "rejected";
+
+  const submit = async () => {
+    const error = validatePhotoConsentDraft(draft, {
+      isMinor,
+      hasExistingProof: keepsProof,
+    });
+    if (error) {
+      setFormError(error);
       return;
     }
-    setSignatureMode("signature");
-    setDocumentFile(null);
-    setDocumentError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const submitConsent = async () => {
-    setDocumentError(null);
+    setFormError(null);
     setSubmitting(true);
     try {
-      const payloadPurposes = purposes.map((purpose) => ({
-        purposeId: purpose.purposeId,
-        chosen: Boolean(selection[purpose.purposeId]),
-      }));
-
-      const formData = new FormData();
-      formData.append("confirm", "1");
-      formData.append("exclusionNote", note.trim());
-      formData.append("purposes", JSON.stringify(payloadPurposes));
-      if (documentFile) {
-        formData.append("document", documentFile);
-      }
-      if (!requiresDocument && signatureMode === "signature" && signatureResult) {
-        formData.append("signaturePayload", JSON.stringify(signatureResult.payload));
-      }
-
-      const response = await fetch("/api/photo-consents", { method: "POST", body: formData });
+      const response = await fetch("/api/photo-consents", {
+        method: "POST",
+        body: photoConsentDraftToFormData(draft),
+      });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        setDocumentError(data?.error ?? "Übermittlung fehlgeschlagen");
+        setFormError(data?.error ?? "Abgeben fehlgeschlagen.");
         return;
       }
-      toast.success(isRefusalSelected ? "Ablehnung übermittelt" : "Fotoerlaubnis übermittelt");
-      setConfirm(false);
-      resetDocument();
+      toast.success(
+        draft.level === "none" ? "Gespeichert: keine Aufnahmen" : "Fotoerlaubnis abgegeben",
+      );
+      setShowHistory(false);
       await load();
     } catch {
-      setDocumentError("Netzwerkfehler beim Übermitteln");
+      setFormError("Netzwerkfehler beim Abgeben.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const revokeConsent = async () => {
+  const revoke = async () => {
     setRevoking(true);
     try {
       const formData = new FormData();
@@ -427,492 +246,162 @@ export function PhotoConsentCard({ onSummaryChange }: PhotoConsentCardProps = {}
       const response = await fetch("/api/photo-consents", { method: "POST", body: formData });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        toast.error("Widerruf fehlgeschlagen", {
-          description: data?.error ?? "Bitte versuche es erneut.",
-        });
+        toast.error("Widerruf fehlgeschlagen", { description: data?.error });
         return;
       }
-      toast.success("Fotoerlaubnis widerrufen", {
-        description: `Widerrufen am ${formatDate(data?.revokedAt) ?? "heute"}.`,
-      });
-      setRevokeConfirmOpen(false);
+      toast.success("Fotoerlaubnis widerrufen");
+      setRevokeOpen(false);
       await load();
-    } catch {
-      toast.error("Widerruf fehlgeschlagen", { description: "Netzwerkfehler." });
     } finally {
       setRevoking(false);
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setDocumentError(null);
-    setNoteError(null);
-
-    if (!hasSelectedPurpose) {
-      setDocumentError("Bitte wähle mindestens einen Punkt aus");
-      return;
-    }
-    if (!confirm) {
-      setDocumentError("Bitte bestätige dein Einverständnis");
-      return;
-    }
-    if (note.trim().length > MAX_NOTE_LENGTH) {
-      setNoteError(`Bitte kürze deine Hinweise auf maximal ${MAX_NOTE_LENGTH} Zeichen`);
-      return;
-    }
-
-    // „Gar nicht“ braucht keinen Nachweis.
-    if (!isRefusalSelected) {
-      if (requiresDocument && !documentFile && !summary?.hasDocument) {
-        setDocumentError("Bitte lade die unterschriebene Einverständniserklärung hoch");
-        return;
-      }
-      if (!requiresDocument && signatureMode === "signature" && !signatureResult) {
-        setDocumentError("Bitte zeichne deine digitale Unterschrift.");
-        return;
-      }
-    }
-
-    if (isRefusalSelected) {
-      setRefusalConfirmOpen(true);
-      return;
-    }
-
-    void submitConsent();
-  };
-
-  const statusBadge = useMemo(() => {
-    if (isRevoked) {
-      return (
-        <Badge
-          size="sm"
-          className="whitespace-nowrap border-destructive/45 bg-destructive/15 text-destructive"
-        >
-          Widerrufen am {formatDate(summary?.revokedAt) ?? "unbekannt"}
-        </Badge>
-      );
-    }
+  if (summary.requiresDateOfBirth && editing) {
     return (
-      <Badge size="sm" className={cn("whitespace-nowrap", statusBadgeClasses[status])}>
-        {statusLabels[status]}
-      </Badge>
+      <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">
+        <p>
+          Bitte trage zuerst dein Geburtsdatum ein. Daran sehen wir, ob ein Elternteil
+          unterschreiben muss.
+        </p>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/mitglieder/profil?bereich=stammdaten">Geburtsdatum eintragen</Link>
+        </Button>
+      </div>
     );
-  }, [isRevoked, status, summary?.revokedAt]);
+  }
 
-  const chosenPurposes = purposes.filter((purpose) => Boolean(selection[purpose.purposeId]));
-
-  const handleStartEditing = () => {
-    setEditing(true);
-    setConfirm(false);
-    setDocumentError(null);
-    setNoteError(null);
-    setNote(summary?.exclusionNote ?? "");
-    setSelection(buildInitialSelection(summary));
-    resetDocument();
-  };
-
-  const handleCancelEditing = () => {
-    setEditing(false);
-    setConfirm(false);
-    setDocumentError(null);
-    setNoteError(null);
-    resetDocument();
-  };
-
-  return (
-    <Card variant="plain" size="flush">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CameraIcon className="h-4 w-4" aria-hidden="true" />
-          <span>Fotoerlaubnis</span>
-          {statusBadge}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {!collapsed && summary?.versions && summary.versions.length > 0 ? (
+  if (editing) {
+    return (
+      <div className="space-y-6">
+        {summary.showTitle ? (
+          <p className="text-sm text-muted-foreground">
+            Gilt für <span className="font-medium text-foreground">{summary.showTitle}</span>. Für
+            jede Produktion wird die Fotoerlaubnis neu abgegeben.
+          </p>
+        ) : null}
+        <PhotoConsentForm
+          value={draft}
+          onChange={(next) => {
+            setDraft(next);
+            setFormError(null);
+          }}
+          isMinor={isMinor}
+          previous={summary.previous}
+          hasExistingProof={keepsProof}
+          disabled={submitting}
+        />
+        {draft.level && draft.level !== "none" ? (
+          <p className="text-xs text-muted-foreground">
+            Mit dem Abgeben {isMinor ? "erlaubt ein Elternteil" : "erlaube ich"} dem Sommertheater
+            Aufnahmen im gewählten Umfang für diese Produktion. Die Erlaubnis kann jederzeit
+            widerrufen werden.
+          </p>
+        ) : null}
+        {formError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {formError}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <AsyncButton
+            type="button"
+            isLoading={submitting}
+            loadingText="Wird gespeichert …"
+            onClick={() => void submit()}
+            className="min-h-11"
+          >
+            {draft.level === "none" ? "Speichern" : "Fotoerlaubnis abgeben"}
+          </AsyncButton>
+          {hasConsent ? (
             <Button
               type="button"
               variant="ghost"
-              size="xs"
-              onClick={() => setShowHistory((prev) => !prev)}
-              aria-expanded={showHistory}
+              className="min-h-11"
+              disabled={submitting}
+              onClick={() => setEditing(false)}
             >
-              <HistoryIcon className="mr-1 h-4 w-4" aria-hidden="true" />
+              Abbrechen
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  const status = describeStatus(summary);
+  const canRevoke = !summary.revokedAt && summary.status !== "noPhotos";
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <PhotoConsentLevelDot level={summary.revokedAt ? "none" : summary.level} />
+          <span className="text-base font-semibold text-foreground">
+            {summary.revokedAt ? "Gar nicht" : photoConsentLevelLabel(summary.level)}
+          </span>
+          <Badge variant={status.variant} size="sm">
+            {status.label}
+          </Badge>
+        </div>
+        {status.detail ? <p className="text-sm text-muted-foreground">{status.detail}</p> : null}
+        {summary.exclusionNote ? (
+          <p className="text-sm text-foreground">
+            <span className="text-muted-foreground">Hinweis: </span>
+            {summary.exclusionNote}
+          </p>
+        ) : null}
+        {summary.showTitle ? (
+          <p className="text-xs text-muted-foreground">Gilt für {summary.showTitle}.</p>
+        ) : null}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={status.actionLabel ? "default" : "outline"}
+            onClick={startEditing}
+          >
+            {status.actionLabel ?? "Ändern"}
+          </Button>
+          {summary.versions.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-expanded={showHistory}
+              onClick={() => setShowHistory((current) => !current)}
+            >
+              <HistoryIcon className="mr-1.5 size-4" aria-hidden />
               Verlauf ({summary.versions.length})
             </Button>
           ) : null}
-          {!collapsed && requiresDocument ? (
-            <Button type="button" variant="outline" size="xs" onClick={() => window.print()}>
-              <PrinterIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-              Drucken
-            </Button>
-          ) : null}
-          {!collapsed && !isRevoked && (status === "approved" || status === "noPhotos") ? (
+          {canRevoke ? (
             <Button
               type="button"
-              variant="destructive"
-              size="xs"
-              disabled={revoking}
-              onClick={() => setRevokeConfirmOpen(true)}
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setRevokeOpen(true)}
             >
               Widerrufen
             </Button>
           ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => setCollapsed((prev) => !prev)}
-            aria-expanded={!collapsed}
-          >
-            {collapsed ? "Öffnen" : "Einklappen"}
-            <ChevronDownIcon
-              className={cn(
-                "ml-1 h-4 w-4 transition-transform",
-                collapsed ? "rotate-0" : "rotate-180",
-              )}
-              aria-hidden="true"
-            />
-          </Button>
         </div>
       </div>
 
-      {collapsed ? null : (
-        <CardContent className="space-y-4 p-4 text-sm">
-          {loading ? (
-            <p className="text-muted-foreground">Lade Status …</p>
-          ) : error ? (
-            <div className="space-y-3">
-              <p className="text-destructive">{error}</p>
-              <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
-                Erneut versuchen
-              </Button>
-            </div>
-          ) : showHistory ? (
-            <VersionHistory versions={summary?.versions ?? []} />
-          ) : isRevoked ? (
-            <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
-              <p className="font-medium text-foreground">
-                Widerrufen am {formatDate(summary?.revokedAt) ?? "unbekannt"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Deine Fotoerlaubnis ist widerrufen. Es dürfen keine neuen Aufnahmen mehr verwendet
-                werden – du kannst sie jederzeit neu einreichen.
-              </p>
-              <Button type="button" size="sm" onClick={handleStartEditing}>
-                <EditIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                Erneut einreichen
-              </Button>
-            </div>
-          ) : isCollapsible && !editing ? (
-            <div
-              className={cn(
-                "space-y-2 rounded-lg border p-3",
-                status === "approved"
-                  ? "border-success/40 bg-success/10 text-foreground"
-                  : "border-muted bg-muted/40 text-foreground",
-              )}
-            >
-              {status === "approved" ? (
-                <>
-                  <p className="flex items-center gap-2">
-                    <CheckCircle2Icon className="h-4 w-4 text-success" aria-hidden="true" />
-                    Vielen Dank – deine Fotoerlaubnis ist freigegeben.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Bestätigt am {formatDate(summary?.approvedAt) ?? "unbekannt"}
-                    {summary?.approvedByName ? ` durch ${summary.approvedByName}` : ""}.
-                  </p>
-                  {chosenPurposes.length > 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Erlaubt: {chosenPurposes.map((purpose) => purpose.label).join(", ")}
-                    </p>
-                  ) : null}
-                  {summary?.exclusionNote ? (
-                    <p className="text-xs text-muted-foreground">
-                      Deine Ausschlüsse: {summary.exclusionNote}
-                    </p>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <p className="font-medium text-foreground">Keine Aufnahmen erlaubt</p>
-                  <p className="text-xs text-muted-foreground">
-                    Du hast „gar nicht“ gewählt. Du kannst das jederzeit ändern.
-                  </p>
-                </>
-              )}
-              <div className="mt-1 flex flex-wrap gap-2">
-                <Button type="button" size="sm" onClick={handleStartEditing}>
-                  <EditIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                  Ändern
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void load()}>
-                  <RefreshIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                  Aktualisieren
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              {" "}
-              {requiresDateOfBirth ? (
-                <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-foreground">
-                  <p>
-                    Bitte trage zuerst dein Geburtsdatum ein. Daran sehen wir, ob zusätzlich eine
-                    Einwilligung der Eltern nötig ist.
-                  </p>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href="/mitglieder/profil?bereich=stammdaten">Geburtsdatum eintragen</Link>
-                  </Button>
-                </div>
-              ) : null}{" "}
-              {status === "rejected" && summary?.rejectionReason ? (
-                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
-                  Ablehnungsgrund: {summary.rejectionReason}
-                </div>
-              ) : null}
-              {status === "approved" ? (
-                <div className="rounded-md border border-info/40 bg-info/10 p-3 text-xs text-info">
-                  Deine Freigabe wird nach dem Speichern erneut geprüft.
-                </div>
-              ) : null}
-              <fieldset className="space-y-2 rounded-lg border border-border/60 p-3">
-                <legend className="px-1 text-sm font-semibold text-foreground">
-                  Was darf gemacht werden?
-                </legend>
-                <div className="space-y-2">
-                  {purposes.map((purpose) => (
-                    <label
-                      key={purpose.purposeId}
-                      className="flex items-start gap-3 rounded-md border border-border/50 p-2 hover:bg-muted/40"
-                    >
-                      <Checkbox
-                        checked={Boolean(selection[purpose.purposeId])}
-                        disabled={
-                          submitting ||
-                          (!purpose.isRefusal && isRefusalSelected && !selection[purpose.purposeId])
-                        }
-                        onCheckedChange={(checked) =>
-                          handleTogglePurpose(purpose.purposeId, checked === true)
-                        }
-                        className="mt-0.5"
-                      />
-                      <span>
-                        <span className="font-medium text-foreground">{purpose.label}</span>
-                        {purpose.description ? (
-                          <span className="block text-xs text-muted-foreground">
-                            {purpose.description}
-                          </span>
-                        ) : null}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              {requiresDocument ? (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-3">
-                  <PrinterIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  <span className="text-xs text-muted-foreground">
-                    Jünger als 18? Drucke das Formular aus, lass es von deinen
-                    Erziehungsberechtigten unterschreiben und lade es als Foto oder Datei hoch.
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    className="ml-auto"
-                    onClick={() => window.print()}
-                  >
-                    Drucken
-                  </Button>
-                </div>
-              ) : null}
-              {isRefusalSelected ? (
-                <div className="rounded-lg border border-muted bg-muted/40 p-3 text-muted-foreground">
-                  Du hast „gar nicht“ gewählt. Es ist kein Nachweis nötig – deine Ablehnung wird
-                  sofort gespeichert.
-                </div>
-              ) : (
-                <div className="space-y-3 rounded-lg border border-border/60 p-3">
-                  <div className="text-sm font-semibold text-foreground">
-                    {requiresDocument
-                      ? "Einverständnis der Erziehungsberechtigten"
-                      : "Unterschrift oder Nachweis"}
-                  </div>
-                  {requiresDocument ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => cameraInputRef.current?.click()}
-                        disabled={submitting}
-                      >
-                        <CameraIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                        Foto aufnehmen
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={submitting}
-                      >
-                        <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                        Datei wählen
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          variant={signatureMode === "upload" ? "default" : "outline"}
-                          size="sm"
-                          onClick={handleSelectUploadMode}
-                          disabled={submitting}
-                        >
-                          <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                          Hochladen
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={signatureMode === "signature" ? "default" : "outline"}
-                          size="sm"
-                          onClick={handleSelectSignatureMode}
-                          disabled={submitting}
-                        >
-                          Digital unterschreiben
-                        </Button>
-                      </div>
-                      {signatureMode === "signature" ? (
-                        <SignaturePad value={signatureResult} onChange={setSignatureResult} />
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={submitting}
-                          >
-                            <UploadIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                            Datei wählen
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="application/pdf,image/jpeg,image/png"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  {documentFile ? (
-                    <p className="text-xs text-muted-foreground">Ausgewählt: {documentFile.name}</p>
-                  ) : summary?.hasDocument && summary.documentName ? (
-                    <p className="text-xs text-muted-foreground">
-                      Bereits hinterlegt: {summary.documentName}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-              <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                <div className="text-sm font-semibold text-foreground">
-                  Optional: Bereiche ausschließen
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Notiere, auf welchen Kanälen oder Motiven du nicht erscheinen möchtest.
-                </p>
-                <Textarea
-                  value={note}
-                  onChange={(event) => {
-                    setNote(event.target.value);
-                    if (noteError) setNoteError(null);
-                  }}
-                  maxLength={MAX_NOTE_LENGTH}
-                  rows={3}
-                  disabled={submitting}
-                  placeholder="Zum Beispiel: keine Nahaufnahmen"
-                />
-                <div className="flex justify-between text-[11px] text-foreground/50">
-                  <span>Max. {MAX_NOTE_LENGTH} Zeichen</span>
-                  <span>
-                    {note.length}/{MAX_NOTE_LENGTH}
-                  </span>
-                </div>
-                {noteError ? <p className="text-sm text-destructive">{noteError}</p> : null}
-              </div>
-              <label className="flex items-start gap-3 rounded-lg border border-border/60 p-3">
-                <Checkbox
-                  checked={confirm}
-                  onCheckedChange={(checked) => setConfirm(checked === true)}
-                  disabled={submitting}
-                  className="mt-0.5"
-                />
-                <span className="text-foreground/80">
-                  <span className="font-semibold text-foreground">Ich bestätige,</span> dass die
-                  Angaben stimmen und ich die Fotoerlaubnis so abgeben möchte.
-                </span>
-              </label>
-              {documentError ? <p className="text-sm text-destructive">{documentError}</p> : null}
-              <div className="flex flex-wrap gap-2">
-                <Button type="submit" disabled={submitting} className="min-h-11">
-                  {submitting ? "Wird gesendet …" : "Fotoerlaubnis abgeben"}
-                </Button>
-                {editing && isCollapsible ? (
-                  <Button type="button" variant="ghost" onClick={handleCancelEditing}>
-                    Abbrechen
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      )}
-
-      <ConsentPrintArea purposes={purposes} />
+      {showHistory ? <VersionList versions={summary.versions} /> : null}
 
       <ConfirmDialog
-        open={refusalConfirmOpen}
-        onOpenChange={setRefusalConfirmOpen}
-        title="Aufnahmen komplett ablehnen?"
-        description="Du erlaubst dann keine Foto- und Filmaufnahmen. Du kannst das jederzeit ändern."
-        confirmLabel="Ablehnen"
-        cancelLabel="Abbrechen"
-        variant="destructive"
-        onConfirm={() => {
-          setRefusalConfirmOpen(false);
-          void submitConsent();
-        }}
-        onCancel={() => setRefusalConfirmOpen(false)}
-      />
-
-      <ConfirmDialog
-        open={revokeConfirmOpen}
-        onOpenChange={setRevokeConfirmOpen}
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
         title="Fotoerlaubnis widerrufen?"
-        description="Deine Einwilligung wird mit heutigem Datum widerrufen. Es dürfen keine Aufnahmen mehr verwendet werden."
-        confirmLabel="Widerrufen"
+        description="Ab sofort wirst du für diese Produktion nicht mehr fotografiert. Du kannst später eine neue Erlaubnis abgeben."
+        confirmLabel={revoking ? "Wird widerrufen …" : "Widerrufen"}
         cancelLabel="Abbrechen"
         variant="destructive"
-        onConfirm={() => {
-          setRevokeConfirmOpen(false);
-          void revokeConsent();
-        }}
-        onCancel={() => setRevokeConfirmOpen(false)}
+        onConfirm={() => void revoke()}
+        onCancel={() => setRevokeOpen(false)}
       />
-    </Card>
+    </div>
   );
 }

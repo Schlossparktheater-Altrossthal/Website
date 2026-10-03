@@ -9,6 +9,7 @@ import { PhotoConsentCard } from "@/components/members/photo-consent-card";
 import { buildProfileChecklist } from "@/lib/profile-completion";
 import { getUserDisplayName } from "@/lib/names";
 import { cn } from "@/lib/utils";
+import { isPhotoConsentDone } from "@/lib/photo-consent-levels";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 import { ProfileHeader } from "./profile-header";
 import { NotificationsSection } from "./sections/notifications-section";
@@ -163,7 +164,7 @@ export function ProfileClient({
   );
 
   const handlePhotoConsentSummary = useCallback((nextSummary: PhotoConsentSummary | null) => {
-    setPhotoConsentGiven(Boolean(nextSummary && nextSummary.status === "approved"));
+    setPhotoConsentGiven(isPhotoConsentDone(nextSummary));
   }, []);
 
   const handleWhatsAppVisit = useCallback(async () => {

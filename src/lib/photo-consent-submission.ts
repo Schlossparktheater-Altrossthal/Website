@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import {
+  MAX_PHOTO_CONSENT_NOTE,
   isPhotoConsentLevelAllowed,
   photoConsentStatusForLevel,
   type PhotoConsentLevelValue,
@@ -8,7 +9,7 @@ import {
 import type { PersistedPhotoConsentStatus } from "@/lib/photo-consent-summary";
 import { signaturePayloadSchema, type SignaturePayload } from "@/types/signature";
 
-export const MAX_PHOTO_CONSENT_NOTE = 1000;
+export { MAX_PHOTO_CONSENT_NOTE };
 
 export type PhotoConsentDocumentInput = {
   name: string;

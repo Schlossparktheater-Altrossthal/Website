@@ -18,6 +18,7 @@ import type { MeasurementType, MeasurementUnit } from "@/data/measurements";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { sortRoles, type Role } from "@/lib/roles";
+import { isPhotoConsentDone } from "@/lib/photo-consent-levels";
 import { buildPhotoConsentSummary } from "@/lib/photo-consent-summary";
 import {
   firstConsent,
@@ -108,6 +109,7 @@ export default async function ProfilePage() {
         documentUploadedAt: true,
         documentName: true,
         documentMime: true,
+        signatureCapturedAt: true,
         approvedBy: { select: { name: true } },
       }),
     },
@@ -277,7 +279,14 @@ export default async function ProfilePage() {
     hasBirthdate,
     hasPaymentDetails,
     hasDietaryPreference,
-    photoConsent: { confirmed: photoConsentSummary.status === "approved" },
+    photoConsent: {
+      confirmed: isPhotoConsentDone({
+        status: photoConsentSummary.status,
+        hasProof: Boolean(
+          currentPhotoConsent?.documentUploadedAt || currentPhotoConsent?.signatureCapturedAt,
+        ),
+      }),
+    },
   });
 
   const onboarding =

@@ -1,4 +1,22 @@
+import { isPhotoConsentDone } from "@/lib/photo-consent-levels";
 import { firstConsent, photoConsentsForShow } from "@/lib/photo-consent-scope";
+
+function isConsentDone(
+  consent: {
+    status: string;
+    documentUploadedAt: Date | null;
+    signatureCapturedAt: Date | null;
+  } | null,
+): boolean {
+  return isPhotoConsentDone(
+    consent
+      ? {
+          status: consent.status,
+          hasProof: Boolean(consent.documentUploadedAt || consent.signatureCapturedAt),
+        }
+      : null,
+  );
+}
 import { prisma } from "@/lib/prisma";
 import {
   buildProfileChecklist,
@@ -27,7 +45,11 @@ export async function loadProfileChecklist(
       payoutPaypalHandle: true,
       payoutNote: true,
       onboardingProfile: { select: { dietaryPreference: true } },
-      photoConsents: photoConsentsForShow(photoConsentShowId, { status: true }),
+      photoConsents: photoConsentsForShow(photoConsentShowId, {
+        status: true,
+        documentUploadedAt: true,
+        signatureCapturedAt: true,
+      }),
     },
   });
   if (!user) return null;
@@ -37,6 +59,6 @@ export async function loadProfileChecklist(
     hasBirthdate: Boolean(user.dateOfBirth),
     hasPaymentDetails: isPaymentDetailsComplete(user),
     hasDietaryPreference: Boolean(user.onboardingProfile?.dietaryPreference?.trim()),
-    photoConsent: { confirmed: firstConsent(user.photoConsents)?.status === "approved" },
+    photoConsent: { confirmed: isConsentDone(firstConsent(user.photoConsents)) },
   });
 }

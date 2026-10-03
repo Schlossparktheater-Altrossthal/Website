@@ -4,6 +4,9 @@ import type { PhotoConsentLevel } from "@prisma/client";
  * Stufen der Fotoerlaubnis, wie auf den Papierformularen (docs/Plan/fotoerlaubnis-stufen-plan.md).
  * Die Reihenfolge ist die Anzeigereihenfolge im Formular (großzügigste zuerst).
  */
+/** Höchstlänge des Hinweisfelds. */
+export const MAX_PHOTO_CONSENT_NOTE = 1000;
+
 export const PHOTO_CONSENT_LEVELS = ["all", "promoOnRequest", "internal", "none"] as const;
 
 export type PhotoConsentLevelValue = PhotoConsentLevel;
@@ -134,4 +137,19 @@ export function photoConsentLevelFromPurposeCodes(
   if (codes.has("promo_on_request")) return "promoOnRequest";
   if (codes.has("internal")) return "internal";
   return null;
+}
+
+/**
+ * Hat das Mitglied seinen Teil erledigt? Freigegeben, „gar nicht“ oder abgegeben mit Nachweis
+ * (wartet nur noch auf die Prüfung). Fehlender Nachweis oder Ablehnung bleibt offen.
+ */
+export function isPhotoConsentDone(
+  consent: {
+    status: string;
+    hasProof: boolean;
+  } | null,
+): boolean {
+  if (!consent) return false;
+  if (consent.status === "approved" || consent.status === "noPhotos") return true;
+  return consent.status === "pending" && consent.hasProof;
 }
