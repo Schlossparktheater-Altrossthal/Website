@@ -142,13 +142,23 @@ Profilfoto, damit man Gesichter zuordnen kann.
 - E5: Altbestand ohne Auswahl bekommt `level = null` („Stufe unbekannt“), nachgetragen wird in der Verwaltung vom Papier.
 - E6: Die Fotografen-Liste bleibt ein Reiter unter Fotoerlaubnisse.
 
+## Abweichungen bei der Umsetzung (2026-10-03)
+
+- Die Spalte `exclusionNote` bleibt bestehen und dient als Hinweisfeld (kein Umbenennen, weniger
+  Migration); in der Oberfläche heißt sie „Hinweis".
+- „Gar nicht" behält den Status `noPhotos` (statt `approved`), alle Status-Abfragen bleiben gültig.
+- Das Elternformular bleibt das hochgeladene PDF (ohne vorausgefüllte Stufe).
+- Die Fotoliste-PDF enthält keine Unterschriften; sie ist eine Arbeitsliste für Fotografen. Der
+  SVG-Renderer (`src/lib/signature-svg.ts`) liefert dafür bei Bedarf `signatureToSvgString`.
+- Der Bereich „Einwilligungen" heißt jetzt „Prüfen", „Fotografen" heißt „Fotoliste".
+
 ## Checkliste
 
-- [ ] Phase 1 Datenmodell + Migration
-- [ ] Phase 2 API + SVG-Renderer
-- [ ] Phase 3 PhotoConsentForm + Profil
-- [ ] Phase 4 Onboarding + Rückkehrer
-- [ ] Phase 5 Verwaltung
-- [ ] Phase 6 Fotografen-Liste + Export
+- [x] Phase 1 Datenmodell + Migration
+- [x] Phase 2 API + SVG-Renderer
+- [x] Phase 3 PhotoConsentForm + Profil
+- [x] Phase 4 Onboarding + Rückkehrer
+- [x] Phase 5 Verwaltung
+- [x] Phase 6 Fotografen-Liste + Export
 - [ ] Phase 7 Aufräumen Zwecke
 - [ ] Phase 8 E2E, Screenshots, Release
