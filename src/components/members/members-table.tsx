@@ -1,4 +1,5 @@
 "use client";
+import { SlidersHorizontalIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -19,6 +20,7 @@ import {
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -165,6 +167,7 @@ export function MembersTable({
     });
   }, [rows, query, roleFilter, statusFilter, productionFilter]);
 
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const hasExtraFilters = roleFilter !== "all" || productionFilter !== "all" || query !== "";
   const resetFilters = () => {
     setQuery("");
@@ -359,6 +362,46 @@ export function MembersTable({
     );
   };
 
+  // Mobil wandern die Filter in ein BottomSheet; auf breiten Bildschirmen stehen sie in der Leiste.
+  const renderFilterSelects = (triggerClass?: string) => (
+    <>
+      <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <SelectTrigger className={triggerClass ?? "sm:w-44"} aria-label="Nach Rolle filtern">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Alle Rollen</SelectItem>
+          {ROLES.map((role) => (
+            <SelectItem key={role} value={role}>
+              {ROLE_LABELS[role] ?? role}
+            </SelectItem>
+          ))}
+          {availableCustomRoles.map((cr) => (
+            <SelectItem key={cr.id} value={`custom:${cr.id}`}>
+              {cr.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {productionTitle ? (
+        <Select
+          value={productionFilter}
+          onValueChange={(value) => setProductionFilter(value as ProductionFilter)}
+        >
+          <SelectTrigger className={triggerClass ?? "sm:w-52"} aria-label="Nach Produktion filtern">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Produktionen</SelectItem>
+            <SelectItem value="in">In „{productionTitle}“</SelectItem>
+            <SelectItem value="out">Nicht in „{productionTitle}“</SelectItem>
+          </SelectContent>
+        </Select>
+      ) : null}
+    </>
+  );
+  const activeFilterCount = (roleFilter !== "all" ? 1 : 0) + (productionFilter !== "all" ? 1 : 0);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
@@ -376,42 +419,48 @@ export function MembersTable({
             className="pl-9"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="sm:w-44" aria-label="Nach Rolle filtern">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Rollen</SelectItem>
-              {ROLES.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {ROLE_LABELS[role] ?? role}
-                </SelectItem>
-              ))}
-              {availableCustomRoles.map((cr) => (
-                <SelectItem key={cr.id} value={`custom:${cr.id}`}>
-                  {cr.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {productionTitle ? (
-            <Select
-              value={productionFilter}
-              onValueChange={(value) => setProductionFilter(value as ProductionFilter)}
-            >
-              <SelectTrigger className="sm:w-52" aria-label="Nach Produktion filtern">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Produktionen</SelectItem>
-                <SelectItem value="in">In „{productionTitle}“</SelectItem>
-                <SelectItem value="out">Nicht in „{productionTitle}“</SelectItem>
-              </SelectContent>
-            </Select>
-          ) : null}
-          {addMemberSlot ? <div className="col-span-2 sm:col-span-1">{addMemberSlot}</div> : null}
+        <div className="hidden sm:flex sm:items-center sm:gap-2">
+          {renderFilterSelects()}
+          {addMemberSlot}
         </div>
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
+          <Button type="button" variant="outline" onClick={() => setFiltersOpen(true)}>
+            <SlidersHorizontalIcon className="h-4 w-4" aria-hidden />
+            Filter
+            {activeFilterCount ? (
+              <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[11px]">
+                {activeFilterCount}
+              </Badge>
+            ) : null}
+          </Button>
+          {addMemberSlot ? <div className="[&_button]:w-full">{addMemberSlot}</div> : null}
+        </div>
+        <BottomSheet
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          title="Filter"
+          description="Mitgliederliste nach Rolle und Produktion filtern"
+          footer={
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setRoleFilter("all");
+                  setProductionFilter("all");
+                }}
+              >
+                Zurücksetzen
+              </Button>
+              <Button type="button" className="flex-1" onClick={() => setFiltersOpen(false)}>
+                {filteredRows.length} anzeigen
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex flex-col gap-3">{renderFilterSelects("w-full")}</div>
+        </BottomSheet>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
