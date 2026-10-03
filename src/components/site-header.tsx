@@ -100,7 +100,6 @@ export function SiteHeader({
       ? `${productionYear} · ${productionTitle}`
       : productionYear
     : null;
-  const productionYearShort = productionYear ? productionYear.slice(-2).padStart(2, "0") : null;
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") {
@@ -198,10 +197,20 @@ export function SiteHeader({
 
           {productionLabel ? (
             <>
-              {/* Mobil trägt der Header nur den kurzen Jahrgang. */}
-              <span className="inline-flex items-center text-sm font-semibold text-foreground select-none md:hidden">
-                <span aria-hidden="true">{productionYearShort}</span>
-                <span className="sr-only">{productionLabel}</span>
+              {/* Mobil zweizeilig: Produktionstitel (gekürzt) über dem Jahrgang – die bloße
+                  Jahreszahl „27“ war ohne Kontext nicht verständlich. */}
+              <span
+                title={productionLabel}
+                className="flex min-w-0 flex-1 flex-col items-center px-2 text-center leading-tight select-none md:hidden"
+              >
+                <span className="w-full truncate text-sm font-semibold text-foreground">
+                  {productionTitle ?? productionYear}
+                </span>
+                {productionTitle ? (
+                  <span className="text-[11px] text-muted-foreground">
+                    Jahrgang {productionYear}
+                  </span>
+                ) : null}
               </span>
               {/* Ab md: Jahr und Produktionstitel. `justify-between` verteilt den Freiraum gleich
                   groß, dadurch sitzt der Zusatz optisch mittig zwischen Titel und Aktionen. */}
