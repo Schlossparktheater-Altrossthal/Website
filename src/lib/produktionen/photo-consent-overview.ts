@@ -1,44 +1,22 @@
 import type { PhotoConsentLevel, PhotoConsentStatus } from "@prisma/client";
 
+import {
+  PHOTO_PERMISSION_LABELS,
+  PHOTO_PERMISSION_ORDER,
+  type PhotoPermission,
+} from "@/lib/photo-consent-permissions";
+
 import { getUserDisplayName } from "@/lib/names";
 import { calculatePhotoConsentAge } from "@/lib/photo-consent-summary";
 import { prisma } from "@/lib/prisma";
 
-/**
- * Was Fotografen für eine Person wissen müssen. Die Stufen entsprechen `PhotoConsentLevel`;
- * dazu kommen „missing“ (nicht abgegeben, nicht geprüft oder abgelehnt → nicht fotografieren)
- * und „unknown“ (Altbestand freigegeben, aber ohne erfasste Stufe).
- */
-export type PhotoPermission = PhotoConsentLevel | "missing" | "unknown";
-
-export type PhotoPermissionTone = "success" | "warning" | "info" | "destructive" | "muted";
-
-export const PHOTO_PERMISSION_LABELS: Record<PhotoPermission, string> = {
-  all: "Alles erlaubt",
-  promoOnRequest: "Werbung nur nach Rückfrage",
-  internal: "Nur intern",
-  none: "Gar nicht",
-  missing: "Nicht fotografieren",
-  unknown: "Stufe unbekannt",
-};
-
-export const PHOTO_PERMISSION_HINTS: Record<PhotoPermission, string> = {
-  all: "Intern, Programmheft, Flyer und Werbung",
-  promoOnRequest: "Für Werbung vorher im Einzelfall fragen",
-  internal: "Nur Aufnahmen für die Gruppe",
-  none: "Keine Aufnahmen",
-  missing: "Keine gültige Erlaubnis",
-  unknown: "Beim Team nachfragen",
-};
-
-export const PHOTO_PERMISSION_TONES: Record<PhotoPermission, PhotoPermissionTone> = {
-  all: "success",
-  promoOnRequest: "warning",
-  internal: "info",
-  none: "destructive",
-  missing: "destructive",
-  unknown: "muted",
-};
+export {
+  PHOTO_PERMISSION_HINTS,
+  PHOTO_PERMISSION_LABELS,
+  PHOTO_PERMISSION_ORDER,
+  PHOTO_PERMISSION_TONES,
+  type PhotoPermission,
+} from "@/lib/photo-consent-permissions";
 
 export const PHOTO_CONSENT_STATUS_LABELS: Record<PhotoConsentStatus | "none", string> = {
   none: "Fehlt",
@@ -73,16 +51,6 @@ export function classifyPhotoPermission(
   if (consent.status !== "approved") return "missing";
   return consent.level ?? "unknown";
 }
-
-/** Restriktivste zuerst; „unbekannt“ am Ende (E5). */
-export const PHOTO_PERMISSION_ORDER: readonly PhotoPermission[] = [
-  "none",
-  "missing",
-  "internal",
-  "promoOnRequest",
-  "all",
-  "unknown",
-];
 
 /** Alle aktiven Mitglieder einer Produktion mit ihrer Fotoerlaubnis für genau diese Produktion. */
 export async function loadPhotoConsentOverview(showId: string): Promise<PhotoConsentOverview> {

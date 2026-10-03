@@ -12,7 +12,7 @@ Berechtigungen konfigurieren.
 - `/mitglieder/mitgliederverwaltung/aufbewahrung` – Aufbewahrung & Löschfristen
 - `/mitglieder/rollenverwaltung` – Rollen
 - `/mitglieder/rechte` – Berechtigungen (Permission-Workbench)
-- `/mitglieder/fotoerlaubnisse` – Fotoerlaubnisse prüfen und Zwecke pflegen
+- `/mitglieder/fotoerlaubnisse` – Fotoerlaubnisse prüfen und Fotoliste
 
 ## Permissions
 
@@ -109,29 +109,26 @@ zeigt der Nutzungsbericht in der Mitglieder-Detailseite (`/api/members/[id]/usag
 
 ## Fotoerlaubnisse (`/mitglieder/fotoerlaubnisse`)
 
-Drei Bereiche über `SectionNav` (`?bereich=`), Plan: `docs/Plan/fotoerlaubnis-plan.md`:
+Zwei Bereiche über `SectionNav` (`?bereich=`), Plan: `docs/Plan/fotoerlaubnis-stufen-plan.md`.
+Jede Erlaubnis hat genau eine **Stufe** (`PhotoConsentLevel`: Alles, Werbung nur nach Rückfrage
+(nur Volljährige), Nur intern, Gar nicht) und ein optionales Hinweisfeld.
 
-- **Einwilligungen**: Liste je Produktion mit Suche, Status-Filter und Export (CSV und PDF). Offene
-  Einreichungen lassen sich freigeben, ablehnen (Begründung im Dialog) oder zurücksetzen. Ein
-  Zurücksetzen entfernt den eingereichten Nachweis, damit neu eingereicht werden kann; der
-  Verlauf bleibt erhalten. Der Status `noPhotos` steht für „gar nicht". Die Karten sind kompakt
-  und klappen die Details (Zeiten, Dokument, Ausschlüsse, Unterschrift) auf Wunsch aus. Die
-  Fotoliste enthält je Verwendungszweck eine eigene Spalte („Angekreuzt") und ist auch als PDF
-  exportierbar.
-- **Zwecke**: der Katalog der abgefragten Verwendungszwecke je Produktion
-  (`PhotoConsentPurpose`) – anlegen, bearbeiten, per Drag & Drop sortieren, deaktivieren.
-  Deaktivieren erhält bestehende Auswahlen. Benannte Vorlagen (Standard, Nur intern, Ohne Social
-  Media) setzen den Katalog einer Produktion in einem Schritt.
-- **Fotografen** (`PRIVATE.PHOTOCONSENT.VIEW`): reine Leseansicht der Fotoliste für
-  Fotograf:innen – wer darf fotografiert werden, wer nicht – ohne Verwaltungsfunktionen. Die
-  Verwaltungsbereiche Einwilligungen und Zwecke brauchen `PRIVATE.ADMIN.PHOTOCONSENT.MANAGE`.
+- **Prüfen** (`PRIVATE.ADMIN.PHOTOCONSENT.MANAGE`): Zähler-Chips als Filter – Zu prüfen, Ohne
+  Nachweis, Nicht abgegeben (aktive Mitglieder ohne Erlaubnis, „Alle erinnern"), Stufe unbekannt
+  (Altbestand ohne Stufe) und Erledigt. Eine Zeile pro Person; ein Tipp öffnet ein BottomSheet mit
+  Stufe (änderbar, z. B. vom Papierformular nachtragen), Hinweis, Nachweis (digitale Unterschrift
+  als SVG mit Wiedergabe, Bild oder PDF) und Verlauf, dazu Freigeben, Ablehnen und Zurücksetzen.
+  Unter „Zu prüfen" lassen sich mehrere Einträge auf einmal freigeben. Export (CSV, PDF) und
+  Elternformular liegen im „⋯"-Menü.
+- **Fotoliste** (`PRIVATE.PHOTOCONSENT.VIEW`): Leseansicht für Fotografen, gruppiert nach
+  Ampel (Gar nicht, Nicht fotografieren, Nur intern, Nachfragen, Alles, Stufe unbekannt) mit
+  Hinweisen.
 
-Rechte: `PRIVATE.ADMIN.PHOTOCONSENT.MANAGE` (verwalten) und `PRIVATE.PHOTOCONSENT.VIEW`
-(Fotoliste lesen). Mitglieder können ihre eigene Einwilligung im Profil widerrufen
-(`revokedAt`, erscheint als eigener Verlaufseintrag) und Versionen vergleichen. Automatische
-Erinnerungen an Mitglieder ohne (gültige) Erlaubnis laufen über die Cron-Route
-`/api/cron/photo-consent-reminders` (`x-cron-secret`).
+Freigabe braucht eine Stufe und – außer bei „Gar nicht" – einen Nachweis. Mitglieder können ihre
+Erlaubnis im Profil widerrufen (`revokedAt`, eigener Verlaufseintrag). Automatische Erinnerungen
+laufen über die Cron-Route `/api/cron/photo-consent-reminders` (`x-cron-secret`).
 
-Daten: `PhotoConsent`, `PhotoConsentChoice`, `PhotoConsentVersion`, `PhotoConsentPurpose`.
-API: `src/app/api/photo-consents/*` (`admin`, `purposes`, `purposes/template`, `export`,
-`overview`, `parental-template`).
+Daten: `PhotoConsent` (`level`, `exclusionNote` = Hinweis), `PhotoConsentVersion`. Die alten
+Tabellen `PhotoConsentPurpose`/`PhotoConsentChoice` werden nicht mehr gelesen (Entfernen:
+Phase 7 des Plans). API: `src/app/api/photo-consents/*` (`admin` mit `ids` für Sammelfreigabe und
+Aktion `setLevel`, `export`, `overview`, `parental-template`).

@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { PhotoConsentLevelDot } from "@/components/photo-consent/photo-consent-level-badge";
+import { SearchIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,62 +14,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import {
+  PHOTO_PERMISSION_HINTS,
+  PHOTO_PERMISSION_LABELS,
+  PHOTO_PERMISSION_ORDER,
+  PHOTO_PERMISSION_TONES,
+  type PhotoPermission,
+} from "@/lib/photo-consent-permissions";
 
 type ShowOption = { id: string; title: string; year: number; status: string };
 
 type PhotographerRow = {
   userId: string;
   name: string;
-  status: "pending" | "approved" | "rejected" | "noPhotos" | "none";
-  permission: "allowed" | "restricted" | "forbidden";
+  permission: PhotoPermission;
   exclusionNote: string | null;
   isMinor: boolean;
-  purposes: Array<{ label: string; chosen: boolean }>;
 };
 
 type OverviewPayload = {
   shows: ShowOption[];
   showId: string | null;
   showTitle: string | null;
-  purposes: string[];
   rows: PhotographerRow[];
 };
 
-const PERMISSION_LABELS: Record<PhotographerRow["permission"], string> = {
-  allowed: "Darf fotografiert werden",
-  restricted: "Eingeschränkt",
-  forbidden: "Nicht fotografieren",
-};
-
-const PERMISSION_BADGE_CLASSES: Record<PhotographerRow["permission"], string> = {
-  allowed: "border-success/45 bg-success/15 text-success",
-  restricted: "border-warning/45 bg-warning/15 text-warning",
-  forbidden: "border-destructive/45 bg-destructive/15 text-destructive",
-};
-
-function CountBadge({
-  label,
-  count,
-  className,
-}: {
-  label: string;
-  count: number;
-  className?: string;
-}) {
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 text-xs", className)}>
-      <span className="font-semibold">{count}</span>
-      <span className="text-muted-foreground">{label}</span>
-    </span>
-  );
-}
-
+/** Fotoliste für Fotografen: eine Ampel je Person, restriktivste zuerst, Hinweise direkt sichtbar. */
 export function PhotoConsentPhotographerView() {
   const [data, setData] = useState<OverviewPayload | null>(null);
   const [showId, setShowId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async (targetShowId: string | null) => {
     setLoading(true);
@@ -77,13 +55,13 @@ export function PhotoConsentPhotographerView() {
       const response = await fetch(`/api/photo-consents/overview${query}`, { cache: "no-store" });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        setError(payload?.error ?? "Fotoliste konnte nicht geladen werden");
+        setError(payload?.error ?? "Fotoliste konnte nicht geladen werden.");
         return;
       }
       setData(payload as OverviewPayload);
       setShowId((payload as OverviewPayload).showId);
     } catch {
-      setError("Netzwerkfehler beim Laden der Fotoliste");
+      setError("Netzwerkfehler beim Laden der Fotoliste.");
     } finally {
       setLoading(false);
     }
@@ -93,168 +71,102 @@ export function PhotoConsentPhotographerView() {
     void load(null);
   }, [load]);
 
-  const rows = data?.rows ?? [];
-  const purposes = data?.purposes ?? [];
-  const allowed = rows.filter((row) => row.permission === "allowed").length;
-  const restricted = rows.filter((row) => row.permission === "restricted").length;
-  const forbidden = rows.filter((row) => row.permission === "forbidden").length;
+  const groups = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const rows = (data?.rows ?? []).filter((row) => !term || row.name.toLowerCase().includes(term));
+    return PHOTO_PERMISSION_ORDER.map((permission) => ({
+      permission,
+      rows: rows.filter((row) => row.permission === permission),
+    })).filter((group) => group.rows.length > 0);
+  }, [data?.rows, search]);
 
   return (
-    <Card variant="plain" size="flush">
-      <CardContent className="space-y-4 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-foreground">Fotoliste</h2>
-            <p className="text-xs text-muted-foreground">
-              Wer darf fotografiert werden – ohne Verwaltungsfunktionen.
-            </p>
-          </div>
-          <div className="ml-auto">
-            <Select
-              value={showId ?? ""}
-              onValueChange={(value) => void load(value)}
-              disabled={loading && !data}
-            >
-              <SelectTrigger className="h-9 w-52" aria-label="Produktion auswählen">
-                <SelectValue placeholder="Produktion" />
-              </SelectTrigger>
-              <SelectContent>
-                {(data?.shows ?? []).map((show) => (
-                  <SelectItem key={show.id} value={show.id}>
-                    {show.title} ({show.year})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-0 flex-1 basis-56">
+          <SearchIcon
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Name suchen"
+            aria-label="Fotoliste durchsuchen"
+            className="min-h-11 pl-9"
+          />
         </div>
+        <Select
+          value={showId ?? ""}
+          onValueChange={(value) => void load(value)}
+          disabled={loading && !data}
+        >
+          <SelectTrigger className="min-h-11 w-full min-w-0 sm:w-56" aria-label="Produktion">
+            <SelectValue placeholder="Produktion" />
+          </SelectTrigger>
+          <SelectContent>
+            {(data?.shows ?? []).map((show) => (
+              <SelectItem key={show.id} value={show.id}>
+                {show.title} ({show.year})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-        {loading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-y border-border/60 py-2">
-              <CountBadge label="dürfen" count={allowed} className="text-success" />
-              <CountBadge label="eingeschränkt" count={restricted} className="text-warning" />
-              <CountBadge label="nicht" count={forbidden} className="text-destructive" />
-            </div>
-
-            {rows.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                Für diese Produktion sind noch keine Mitglieder mit Fotoerlaubnis erfasst.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {/* Desktop: Tabelle */}
-                <div className="hidden overflow-x-auto lg:block">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-border/70 text-left text-xs text-muted-foreground">
-                        <th className="px-2 py-2 font-medium">Name</th>
-                        <th className="px-2 py-2 font-medium">Fotografieren</th>
-                        {purposes.map((purpose) => (
-                          <th key={purpose} className="px-2 py-2 text-center font-medium">
-                            {purpose}
-                          </th>
-                        ))}
-                        <th className="px-2 py-2 font-medium">Ausschlüsse</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row) => (
-                        <tr key={row.userId} className="border-b border-border/50 align-top">
-                          <td className="px-2 py-2">
-                            <span className="font-medium text-foreground">
-                              {row.name}
-                              {row.isMinor ? (
-                                <Badge size="sm" variant="muted" className="ml-2">
-                                  Minderjährig
-                                </Badge>
-                              ) : null}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2">
-                            <Badge
-                              size="sm"
-                              className={cn(
-                                "whitespace-nowrap",
-                                PERMISSION_BADGE_CLASSES[row.permission],
-                              )}
-                            >
-                              {PERMISSION_LABELS[row.permission]}
-                            </Badge>
-                          </td>
-                          {purposes.map((purpose) => {
-                            const chosen =
-                              row.purposes.find((entry) => entry.label === purpose)?.chosen ??
-                              false;
-                            return (
-                              <td key={purpose} className="px-2 py-2 text-center">
-                                {chosen ? "✓" : "–"}
-                              </td>
-                            );
-                          })}
-                          <td className="px-2 py-2 text-muted-foreground">
-                            {row.exclusionNote ?? "–"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobil/Tablet: Karten */}
-                <ul className="space-y-2 lg:hidden">
-                  {rows.map((row) => (
-                    <li key={row.userId} className="rounded-lg border border-border/60 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-medium text-foreground">
-                          {row.name}
-                          {row.isMinor ? (
-                            <Badge size="sm" variant="muted" className="ml-2">
-                              Minderjährig
-                            </Badge>
-                          ) : null}
-                        </span>
-                        <Badge
-                          size="sm"
-                          className={cn(
-                            "whitespace-nowrap",
-                            PERMISSION_BADGE_CLASSES[row.permission],
-                          )}
-                        >
-                          {PERMISSION_LABELS[row.permission]}
-                        </Badge>
-                      </div>
-                      {row.exclusionNote ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Ausschlüsse: {row.exclusionNote}
-                        </p>
-                      ) : null}
-                      {purposes.length > 0 ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Erlaubt:{" "}
-                          {purposes
-                            .filter(
-                              (purpose) =>
-                                row.purposes.find((entry) => entry.label === purpose)?.chosen,
-                            )
-                            .join(", ") || "–"}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+      {loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : groups.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          {search
+            ? "Niemand passt zur Suche."
+            : "Für diese Produktion sind keine Mitglieder erfasst."}
+        </p>
+      ) : (
+        <div className="space-y-5">
+          {groups.map((group) => (
+            <section key={group.permission} className="space-y-1.5">
+              <h3 className="flex flex-wrap items-baseline gap-x-2 px-1 text-sm font-semibold text-foreground">
+                <span className="inline-flex items-center gap-2">
+                  <PhotoConsentLevelDot tone={PHOTO_PERMISSION_TONES[group.permission]} />
+                  {PHOTO_PERMISSION_LABELS[group.permission]}
+                  <span className="font-normal text-muted-foreground tabular-nums">
+                    {group.rows.length}
+                  </span>
+                </span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {PHOTO_PERMISSION_HINTS[group.permission]}
+                </span>
+              </h3>
+              <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+                {group.rows.map((row) => (
+                  <li
+                    key={row.userId}
+                    className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2"
+                  >
+                    <span className="min-w-0 text-sm font-medium text-foreground">{row.name}</span>
+                    {row.isMinor ? (
+                      <Badge variant="muted" size="sm">
+                        U18
+                      </Badge>
+                    ) : null}
+                    {row.exclusionNote ? (
+                      <span className="w-full min-w-0 break-words text-xs text-warning sm:ml-auto sm:w-auto">
+                        {row.exclusionNote}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

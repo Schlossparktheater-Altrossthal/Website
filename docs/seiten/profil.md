@@ -62,38 +62,18 @@ Drei Karten statt eines Formulars (Plan: `docs/Plan/ernaehrung-allergien-plan.md
 ## Fotoerlaubnis (`?bereich=freigaben`)
 
 `PhotoConsentCard` (`src/components/members/photo-consent-card.tsx`) zeigt die Fotoerlaubnis der
-aktiven Produktion (Plan: `docs/Plan/fotoerlaubnis-plan.md`):
+aktiven Produktion (Plan: `docs/Plan/fotoerlaubnis-stufen-plan.md`):
 
-- **Verwendungszwecke** als Mehrfachauswahl aus dem Katalog der Produktion
-  (`PhotoConsentPurpose`); „gar nicht" ist exklusiv und schließt alle anderen aus.
-- **Ablehnung** („gar nicht") ist ein eigener Zustand (`noPhotos`), sofort wirksam, ohne Nachweis.
-- **Nachweis**: Minderjährige laden die elterliche Einwilligung als Kamera-Foto oder Datei hoch;
-  Volljährige laden hoch oder unterschreiben direkt.
-- **Drucken** erzeugt aus denselben Zwecken ein unterschreibbares Formular (Browser-Druck).
-- **Verlauf**: jede Einreichung wird als `PhotoConsentVersion` archiviert und bleibt einsehbar.
-  Zwei Versionen lassen sich nebeneinander vergleichen (angekreuzte Zwecke und Ausschlüsse,
-  geänderte Punkte hervorgehoben).
-- **Widerruf**: eine erteilte oder „gar nicht"-Erlaubnis lässt sich widerrufen; `revokedAt` wird
-  gesetzt und erscheint als „Widerrufen am …" in Kopf und Verlauf. „Erneut einreichen" legt eine
-  neue Einreichung an.
-- **Einklappen**: die Karte lässt sich über „Einklappen" auf die Kopfzeile reduzieren.
-- Nach einer Freigabe lässt sich mit neuer Unterschrift bzw. neuem Dokument ändern; dabei entsteht
-  eine neue Version und der Eintrag geht erneut in Prüfung.
-
-- Spuren hat drei Zustände: „Nicht angegeben", „Spuren sind unproblematisch", „Spuren sind
-  gefährlich". „Nicht angegeben" heißt für die Küche **ungeklärt, strikt behandeln** – nicht
-  „unbedenklich".
-- Die Auswahllisten liegen zentral in `src/data/dietary-preferences.ts` (Stil, Unterform,
-  Strengegrad samt toleranter Parser für die gespeicherten Labels), `src/data/allergens.ts`
-  (Katalog, Art) und `src/data/allergy-styles.ts` (Schweregrad, Spuren). Profil, beide
-  Onboarding-Wizards und das Dashboard nutzen dieselben Quellen.
-- Gespeichert werden deutsche Labels, keine Codes (`MemberOnboardingProfile.dietaryPreference`,
-  `…Variant`, `…Strictness`, Entscheidung E1 im Plan). Achtung bei Anzeige und Auswertung:
-  `resolveDietaryStyleLabel` und `parseDietaryStyleFromLabel` sind das Paar zum Schreiben/Lesen.
-- Eigene Ernährungsdaten hängen an `requireAuth()`, nicht an einem Permission-Key; die
-  Auswertung bleibt `PRIVATE.DATA.PORTAL.HEALTH` (Entscheidung E11).
-- Änderungen an der Oberfläche bitte in Handy/Tablet/Desktop, hell und dunkel, per Screenshot
-  prüfen: `pnpm e2e:screenshots -- --role admin --viewport all --scheme all "/mitglieder/profil?bereich=ernaehrung"`.
+- Liegt eine Erlaubnis vor, nur eine **Statuszeile** (Stufe, Status, Hinweis) mit „Ändern",
+  „Verlauf" und „Widerrufen". Fehlt etwas (Unterschrift, Ablehnung), heißt der Knopf passend,
+  z. B. „Unterschrift nachreichen".
+- Das Formular ist `PhotoConsentForm` (`src/components/photo-consent/photo-consent-form.tsx`),
+  dasselbe wie im Onboarding und im Rückkehrer-Assistenten: **Stufe** als Radio-Kacheln,
+  **Nachweis** über einen Umschalter (Unterschreiben, Foto/PDF hochladen, bei Minderjährigen
+  „Später"), optionaler **Hinweis**. Volljährige können die Stufe der Vorproduktion übernehmen,
+  unterschreiben aber je Produktion neu.
+- Digitale Unterschriften werden nur vektoriell gespeichert (`signaturePayload`, `velocity.v1`).
+- Ohne Geburtsdatum erscheint statt des Formulars ein Hinweis mit Link zu den Stammdaten.
 
 ## Datenfluss
 

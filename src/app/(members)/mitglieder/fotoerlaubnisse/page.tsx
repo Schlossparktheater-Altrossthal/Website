@@ -1,15 +1,13 @@
 import { PhotoConsentAdminPanel } from "@/components/members/photo-consent-admin-panel";
 import { PhotoConsentPhotographerView } from "@/components/members/photo-consent-photographer-view";
-import { PhotoConsentPurposesPanel } from "@/components/members/photo-consent-purposes-panel";
 import { PageHeader } from "@/components/members/page-header";
 import { SectionNav } from "@/components/ui/section-nav";
 import { ensurePermissionDefinitions, hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 
 const SECTIONS = [
-  { id: "einwilligungen", label: "Einwilligungen", href: "/mitglieder/fotoerlaubnisse" },
-  { id: "zwecke", label: "Zwecke", href: "/mitglieder/fotoerlaubnisse?bereich=zwecke" },
-  { id: "fotografen", label: "Fotografen", href: "/mitglieder/fotoerlaubnisse?bereich=fotografen" },
+  { id: "einwilligungen", label: "Prüfen", href: "/mitglieder/fotoerlaubnisse" },
+  { id: "fotografen", label: "Fotoliste", href: "/mitglieder/fotoerlaubnisse?bereich=fotografen" },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -35,8 +33,8 @@ export default async function FotoErlaubnissePage({
   const params = await searchParams;
   const requested = params.bereich;
   const activeSection: SectionId = canManage
-    ? requested === "zwecke" || requested === "fotografen"
-      ? requested
+    ? requested === "fotografen"
+      ? "fotografen"
       : "einwilligungen"
     : "fotografen";
 
@@ -49,7 +47,7 @@ export default async function FotoErlaubnissePage({
     <div className="space-y-6">
       <PageHeader
         title="Fotoerlaubnisse"
-        description="Einwilligungen je Produktion prüfen und die abgefragten Verwendungszwecke pflegen."
+        description="Fotoerlaubnisse je Produktion prüfen und die Fotoliste ansehen."
       />
       <SectionNav
         items={visibleSections}
@@ -58,8 +56,6 @@ export default async function FotoErlaubnissePage({
       />
       {activeSection === "fotografen" ? (
         <PhotoConsentPhotographerView />
-      ) : activeSection === "zwecke" ? (
-        <PhotoConsentPurposesPanel />
       ) : (
         <PhotoConsentAdminPanel />
       )}
