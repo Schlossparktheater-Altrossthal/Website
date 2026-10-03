@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -41,7 +41,14 @@ import {
   RolePreferenceLevelHint,
   RolePreferenceLevelPicker,
 } from "@/components/onboarding/role-preference-level-picker";
-import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
+import {
+  EMPTY_PHOTO_CONSENT_DRAFT,
+  PhotoConsentForm,
+  validatePhotoConsentDraft,
+  type PhotoConsentDraft,
+} from "@/components/photo-consent/photo-consent-form";
+import type { PhotoConsentLevelValue } from "@/lib/photo-consent-levels";
+import type { PhotoConsentPrevious } from "@/types/photo-consent";
 import { AllergenField } from "@/components/forms/allergen-field";
 import { ALLERGEN_KIND_OPTIONS } from "@/data/allergens";
 import {
@@ -104,11 +111,20 @@ type PreferenceEntry = {
   enabled: boolean;
 };
 
+export type ExistingPhotoConsent = {
+  level: PhotoConsentLevelValue | null;
+  note: string | null;
+  hasProof: boolean;
+};
+
 type ReturneeUpdateWizardProps = {
   existingProfile: ExistingProfile;
   existingDietary: ExistingDietary[];
   existingPreferences: ExistingPreference[];
-  existingPhotoConsent: boolean | null;
+  /** Fotoerlaubnis, die für diese Produktion schon vorliegt. */
+  existingPhotoConsent: ExistingPhotoConsent | null;
+  /** Letzte Erlaubnis aus einer früheren Produktion (Vorausfüllen für Volljährige). */
+  previousPhotoConsent: PhotoConsentPrevious | null;
   existingInterests: string[];
   dateOfBirth: string | null;
   isLoggedIn: boolean;
@@ -133,7 +149,6 @@ type FormState = {
   education: EducationValue;
   preferences: PreferenceEntry[];
   interests: string[];
-  photoConsent: boolean;
   dietaryStyle: DietaryStyleOption;
   dietaryVariant: DietaryVariantOption | null;
   dietaryCustomLabel: string;
@@ -174,7 +189,6 @@ function createInitialState(
   existingProfile: ExistingProfile,
   existingDietary: ExistingDietary[],
   existingPreferences: ExistingPreference[],
-  existingPhotoConsent: boolean | null,
   existingInterests: string[],
   crewOptions: CrewWishOption[],
 ): FormState {
@@ -210,7 +224,6 @@ function createInitialState(
     education: readStoredEducation(existingProfile),
     preferences: [...actingPreferences, ...crewPreferences],
     interests: existingInterests,
-    photoConsent: existingPhotoConsent ?? true,
     // Die gespeicherten Labels werden tolerant zurückgelesen, damit auch Altbestände passen.
     ...readStoredDietaryPreference(existingProfile),
     dietary: existingDietary.map((entry) => ({
@@ -257,6 +270,7 @@ export function ReturneeUpdateWizard({
   existingDietary,
   existingPreferences,
   existingPhotoConsent,
+  previousPhotoConsent,
   existingInterests,
   dateOfBirth,
   isLoggedIn,
@@ -272,7 +286,6 @@ export function ReturneeUpdateWizard({
       existingProfile,
       existingDietary,
       existingPreferences,
-      existingPhotoConsent,
       existingInterests,
       crewOptions,
     ),
@@ -281,11 +294,11 @@ export function ReturneeUpdateWizard({
     () => new Map(crewOptions.map((option) => [option.code, option])),
     [crewOptions],
   );
-  const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
-  const [documentError, setDocumentError] = useState<string | null>(null);
-  const documentInputRef = useRef<HTMLInputElement>(null);
+  const [photoDraft, setPhotoDraft] = useState<PhotoConsentDraft>(() => ({
+    ...EMPTY_PHOTO_CONSENT_DRAFT,
+    level: existingPhotoConsent?.level ?? null,
+    note: existingPhotoConsent?.note ?? "",
+  }));
   // Übernommene Ernährungs- und Allergieangaben müssen für die neue Produktion bestätigt werden.
   const hasPrefilledDietary = needsDietaryConfirmation(existingProfile, existingDietary);
   const [dietaryConfirmed, setDietaryConfirmed] = useState(false);
@@ -297,89 +310,6 @@ export function ReturneeUpdateWizard({
     () => form.preferences.filter((preference) => preference.enabled),
     [form.preferences],
   );
-
-  const setDocumentFromSignature = (result: SignatureResult | null) => {
-    if (!result) {
-      setDocumentFile(null);
-      setDocumentError(null);
-      return;
-    }
-    const dataUrl = result.dataUrl;
-    const commaIndex = dataUrl.indexOf(",");
-    if (commaIndex === -1) {
-      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
-      setDocumentFile(null);
-      return;
-    }
-    const header = dataUrl.slice(0, commaIndex);
-    const mimeMatch = header.match(/data:(.*?);base64/);
-    const mime = (mimeMatch?.[1] ?? "image/png").toLowerCase();
-    const base64 = dataUrl.slice(commaIndex + 1);
-    try {
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let index = 0; index < binary.length; index += 1) {
-        bytes[index] = binary.charCodeAt(index);
-      }
-      const file = new File([bytes], "signature.png", { type: mime || "image/png" });
-      setDocumentFile(file);
-      setDocumentError(null);
-    } catch (conversionError) {
-      console.error("[returnee-update-wizard.signature]", conversionError);
-      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
-      setDocumentFile(null);
-    }
-  };
-
-  const handleDocumentInput = (file: File | null) => {
-    if (!file) {
-      setDocumentFile(null);
-      setDocumentError(null);
-      return;
-    }
-    setDocumentFile(file);
-    setDocumentError(null);
-    if (documentMode !== "upload") {
-      setDocumentMode("upload");
-    }
-  };
-
-  const handleSelectSignatureMode = () => {
-    if (isMinor) return;
-    setDocumentMode("signature");
-    setDocumentFile(null);
-  };
-
-  const handleSignatureChange = (result: SignatureResult | null) => {
-    if (documentMode !== "signature") {
-      setDocumentMode("signature");
-    }
-    setSignatureResult(result);
-    setDocumentFromSignature(result);
-  };
-
-  const handleDownloadParentalTemplate = async () => {
-    setDocumentError(null);
-    try {
-      const response = await fetch("/api/photo-consents/parental-template");
-      if (!response.ok) {
-        setDocumentError("Das Elternformular konnte nicht heruntergeladen werden.");
-        return;
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "einverstaendnis-eltern.pdf";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (downloadError) {
-      console.error("[returnee-update-wizard.parental-template]", downloadError);
-      setDocumentError("Das Elternformular konnte nicht heruntergeladen werden.");
-    }
-  };
 
   const updatePreference = (code: string, updates: Partial<PreferenceEntry>) => {
     setForm((prev) => ({
@@ -435,13 +365,12 @@ export function ReturneeUpdateWizard({
       return;
     }
     if (step === 3) {
-      // Wie im Onboarding: Ohne Zustimmung braucht es kein Formular.
-      if (form.photoConsent && !documentFile) {
-        setError(
-          isMinor
-            ? "Bitte lade das unterschriebene Elternformular hoch."
-            : "Bitte lade ein Dokument hoch oder unterschreibe digital.",
-        );
+      const photoError = validatePhotoConsentDraft(photoDraft, {
+        isMinor,
+        hasExistingProof: Boolean(existingPhotoConsent?.hasProof),
+      });
+      if (photoError) {
+        setError(photoError);
         return;
       }
     }
@@ -479,7 +408,20 @@ export function ReturneeUpdateWizard({
           weight: preference.weight,
         })),
         interests: form.interests,
-        photoConsent: form.photoConsent,
+        photoConsent: {
+          level: photoDraft.level,
+          note: photoDraft.note.trim() || null,
+          deferProof: photoDraft.level !== "none" && photoDraft.proofMode === "later",
+          signature:
+            photoDraft.level !== "none" &&
+            photoDraft.proofMode === "signature" &&
+            photoDraft.signature
+              ? {
+                  version: photoDraft.signature.payload.version,
+                  payload: photoDraft.signature.payload,
+                }
+              : null,
+        },
         dietaryPreference: {
           style: form.dietaryStyle,
           variant: supportsDietaryVariant(form.dietaryStyle) ? form.dietaryVariant : null,
@@ -503,8 +445,8 @@ export function ReturneeUpdateWizard({
 
       const body = new FormData();
       body.append("payload", JSON.stringify(payload));
-      if (documentFile) {
-        body.append("document", documentFile);
+      if (photoDraft.level !== "none" && photoDraft.proofMode === "upload" && photoDraft.document) {
+        body.append("document", photoDraft.document);
       }
       if (onboardingToken) {
         body.append("onboardingToken", onboardingToken);
@@ -658,103 +600,20 @@ export function ReturneeUpdateWizard({
 
           {step === 3 ? (
             <section className="space-y-4">
-              <label className="flex items-start gap-3 rounded-lg border border-border/70 p-4">
-                <Checkbox
-                  checked={form.photoConsent}
-                  onCheckedChange={(checked) =>
-                    setForm((prev) => ({ ...prev, photoConsent: checked === true }))
-                  }
-                />
-                <div className="space-y-1 text-sm">
-                  <p className="font-medium">
-                    Ich bin einverstanden, dass Fotos/Videos von mir für das Schultheater genutzt
-                    werden.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Die Zustimmung kann jederzeit im Profil angepasst werden.
-                  </p>
-                </div>
-              </label>
-
-              {isMinor ? (
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-border bg-muted p-4 text-sm">
-                    <p className="font-medium">Zustimmung der Erziehungsberechtigten</p>
-                    <p className="text-xs text-muted-foreground">
-                      Da du noch minderjährig bist, benötigen wir die unterschriebene
-                      Einverständniserklärung deiner Erziehungsberechtigten. Lade sie als PDF oder
-                      Bilddatei (JPG/PNG) hoch.
-                    </p>
-                  </div>
-                  <Button type="button" variant="outline" onClick={handleDownloadParentalTemplate}>
-                    Elternformular herunterladen
-                  </Button>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium">
-                      Unterschriebenes Elternformular (PDF, JPG, PNG)
-                    </label>
-                    <Input
-                      type="file"
-                      accept="application/pdf,image/jpeg,image/png"
-                      onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {documentFile
-                        ? `Ausgewählt: ${documentFile.name}`
-                        : "Lade das unterschriebene Formular deiner Erziehungsberechtigten hoch."}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-primary"
-                      onClick={() => documentInputRef.current?.click()}
-                    >
-                      Unterschrift hochladen
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-primary"
-                      onClick={handleSelectSignatureMode}
-                    >
-                      Digital unterschreiben
-                    </Button>
-                  </div>
-                  <input
-                    ref={documentInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*,application/pdf"
-                    capture="environment"
-                    onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
-                  />
-                  {documentMode === "signature" ? (
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium">Digital unterschreiben</label>
-                      <SignaturePad value={signatureResult} onChange={handleSignatureChange} />
-                      <p className="text-xs text-muted-foreground">
-                        {documentFile
-                          ? "Deine digitale Unterschrift ist hinterlegt."
-                          : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
-                      </p>
-                    </div>
-                  ) : null}
-                  {documentFile ? (
-                    <p className="text-xs text-muted-foreground">
-                      Ausgewählt: <span className="min-w-0 truncate">{documentFile.name}</span>
-                    </p>
-                  ) : null}
-                </div>
-              )}
-
-              {documentError ? <p className="text-xs text-destructive">{documentError}</p> : null}
+              <p className="text-sm text-muted-foreground">
+                Die Fotoerlaubnis gilt für jede Produktion neu.
+                {isMinor ? " Ein Elternteil muss wieder unterschreiben." : ""}
+              </p>
+              <PhotoConsentForm
+                value={photoDraft}
+                onChange={(next) => {
+                  setPhotoDraft(next);
+                  setError(null);
+                }}
+                isMinor={isMinor}
+                previous={isMinor ? null : previousPhotoConsent}
+                hasExistingProof={Boolean(existingPhotoConsent?.hasProof)}
+              />
             </section>
           ) : null}
 

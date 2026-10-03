@@ -11,6 +11,7 @@ import { onboardingSessionNotice } from "@/lib/onboarding/session-notice";
 import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
 import { readProductionPreferences } from "@/lib/onboarding/production-preferences";
 import { prisma } from "@/lib/prisma";
+import { loadPreviousPhotoConsent } from "@/lib/photo-consent-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -194,7 +195,12 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     // Fotoerlaubnis gilt pro Produktion: nur eine bereits für diese Produktion erteilte vorausfüllen.
     prisma.photoConsent.findFirst({
       where: { userId, showId: invite.show.id, revokedAt: null },
-      select: { status: true },
+      select: {
+        level: true,
+        exclusionNote: true,
+        documentUploadedAt: true,
+        signatureCapturedAt: true,
+      },
     }),
     prisma.user.findUnique({
       where: { id: userId },
@@ -238,7 +244,10 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
     weight: preference.weight,
   }));
 
-  const crewOptions = await listCrewWishOptions(invite.show.id);
+  const [crewOptions, previousPhotoConsent] = await Promise.all([
+    listCrewWishOptions(invite.show.id),
+    loadPreviousPhotoConsent(userId, invite.show.id),
+  ]);
 
   return (
     <main id="main" className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
@@ -258,8 +267,18 @@ export default async function OnboardingReturneeUpdatePage({ params }: UpdatePag
         existingDietary={dietary}
         existingPreferences={preferences}
         existingPhotoConsent={
-          existingPhotoConsent ? existingPhotoConsent.status === "approved" : null
+          existingPhotoConsent
+            ? {
+                level: existingPhotoConsent.level,
+                note: existingPhotoConsent.exclusionNote,
+                hasProof: Boolean(
+                  existingPhotoConsent.documentUploadedAt ||
+                  existingPhotoConsent.signatureCapturedAt,
+                ),
+              }
+            : null
         }
+        previousPhotoConsent={previousPhotoConsent}
         existingInterests={existingInterests.map((entry) => entry.interest.name)}
         dateOfBirth={existingUser?.dateOfBirth ? existingUser.dateOfBirth.toISOString() : null}
         isLoggedIn={true}

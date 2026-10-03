@@ -20,6 +20,15 @@ import { getActiveProductionId } from "@/lib/active-production";
 import { ONBOARDING_TOKEN_COOKIE } from "@/lib/authentik/config";
 import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
+import { MAX_PHOTO_CONSENT_NOTE, PHOTO_CONSENT_LEVELS } from "@/lib/photo-consent-levels";
+import { calculatePhotoConsentAge } from "@/lib/photo-consent-summary";
+import {
+  checkPhotoConsentSubmission,
+  persistPhotoConsentSubmission,
+  type PhotoConsentDocumentInput,
+  type PhotoConsentSignatureInput,
+} from "@/lib/photo-consent-submission";
+import { signatureSubmissionSchema } from "@/types/signature";
 import {
   sanitizeProductionRoles,
   syncProductionRoles,
@@ -88,7 +97,12 @@ const payloadSchema = z.object({
   dietaryPreferenceStrictness: z.string().nullable().optional(),
   dietary: z.array(dietarySchema),
   notes: z.string().nullable(),
-  photoConsent: z.boolean(),
+  photoConsent: z.object({
+    level: z.enum(PHOTO_CONSENT_LEVELS),
+    note: z.string().max(MAX_PHOTO_CONSENT_NOTE).optional().nullable(),
+    deferProof: z.boolean().optional(),
+    signature: signatureSubmissionSchema.optional().nullable(),
+  }),
   /** Fehlt das Feld, bleiben die Interessen unverändert (ältere Clients). */
   interests: z.array(z.string()).optional(),
 });
@@ -200,12 +214,28 @@ export async function POST(request: NextRequest) {
     return result;
   })();
 
-  let documentBuffer: Uint8Array<ArrayBuffer> | null = null;
-  let documentMime: string | null = null;
-  let documentName: string | null = null;
-  let documentSize: number | null = null;
+  const photoLevel = data.photoConsent.level;
+  const photoNote = data.photoConsent.note?.trim() || null;
+  const signaturePayload =
+    photoLevel === "none" ? null : (data.photoConsent.signature?.payload ?? null);
+  const photoSignature: PhotoConsentSignatureInput | null = signaturePayload
+    ? {
+        version: signaturePayload.version,
+        capturedAt: (() => {
+          const parsed = new Date(signaturePayload.endedAt);
+          return Number.isNaN(parsed.valueOf()) ? new Date() : parsed;
+        })(),
+        payload: signaturePayload,
+      }
+    : null;
 
-  if (documentFile instanceof File && documentFile.size > 0) {
+  let photoDocument: PhotoConsentDocumentInput | null = null;
+  if (
+    photoLevel !== "none" &&
+    !photoSignature &&
+    documentFile instanceof File &&
+    documentFile.size > 0
+  ) {
     if (documentFile.size > MAX_DOCUMENT_BYTES) {
       return NextResponse.json({ error: "Dokument darf maximal 8 MB groß sein" }, { status: 400 });
     }
@@ -216,11 +246,13 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const arrayBuffer = await documentFile.arrayBuffer();
-    documentBuffer = new Uint8Array(arrayBuffer);
-    documentMime = type || null;
-    documentName = sanitizeFilename(documentFile.name);
-    documentSize = documentBuffer.length;
+    const bytes = new Uint8Array(await documentFile.arrayBuffer());
+    photoDocument = {
+      name: sanitizeFilename(documentFile.name),
+      mime: type || "application/octet-stream",
+      size: bytes.length,
+      data: bytes,
+    };
   }
 
   let targetShowId: string | null = null;
@@ -271,6 +303,32 @@ export async function POST(request: NextRequest) {
   const reactivate = isDeactivated && Boolean(targetInviteId);
 
   const consentShowId = targetShowId ?? (await getActiveProductionId(userId));
+
+  const [photoUser, existingConsent] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { dateOfBirth: true } }),
+    consentShowId
+      ? prisma.photoConsent.findUnique({
+          where: { userId_showId: { userId, showId: consentShowId } },
+          select: { documentUploadedAt: true, signatureCapturedAt: true, revokedAt: true },
+        })
+      : null,
+  ]);
+  const photoAge = calculatePhotoConsentAge(photoUser?.dateOfBirth ?? null);
+  const photoError = checkPhotoConsentSubmission({
+    level: photoLevel,
+    isMinor: photoAge === null ? null : photoAge < 18,
+    hasDateOfBirth: Boolean(photoUser?.dateOfBirth),
+    hasNewProof: Boolean(photoSignature || photoDocument),
+    hasExistingProof: Boolean(
+      existingConsent &&
+      !existingConsent.revokedAt &&
+      (existingConsent.documentUploadedAt || existingConsent.signatureCapturedAt),
+    ),
+    deferProof: Boolean(data.photoConsent.deferProof),
+  });
+  if (photoError) {
+    return NextResponse.json({ error: photoError }, { status: 400 });
+  }
 
   const legacyBackground = legacyBackgroundFromPayload({
     educationCategory: data.educationCategory,
@@ -325,7 +383,7 @@ export async function POST(request: NextRequest) {
             dietaryPreferenceStrictness: dietary.strictness,
             dietary: uniqueDietaryEntries,
             preferences,
-            photoConsent: data.photoConsent,
+            photoConsent: photoLevel !== "none",
             education: {
               category: data.educationCategory,
               schoolName: educationSchoolName,
@@ -411,32 +469,16 @@ export async function POST(request: NextRequest) {
       });
 
       if (consentShowId) {
-        const documentFields = documentBuffer
-          ? {
-              documentData: documentBuffer,
-              documentMime,
-              documentName,
-              documentSize,
-              documentUploadedAt: new Date(),
-            }
-          : {};
         // Jede Änderung muss erneut freigegeben werden.
-        await tx.photoConsent.upsert({
-          where: { userId_showId: { userId, showId: consentShowId } },
-          update: {
-            status: data.photoConsent ? "pending" : "noPhotos",
-            approvedAt: null,
-            approvedById: null,
-            rejectionReason: null,
-            revokedAt: null,
-            ...documentFields,
-          },
-          create: {
-            userId,
-            showId: consentShowId,
-            status: data.photoConsent ? "pending" : "noPhotos",
-            ...documentFields,
-          },
+        await persistPhotoConsentSubmission(tx, {
+          userId,
+          showId: consentShowId,
+          level: photoLevel,
+          exclusionNote: photoNote,
+          document: photoDocument,
+          signature: photoSignature,
+          submittedById: userId,
+          source: "returnee",
         });
       }
 

@@ -20,9 +20,14 @@ import {
 } from "@/data/dietary-preferences";
 import { ALLERGEN_KIND_VALUES } from "@/data/allergens";
 import { broadcastOnboardingDashboardSnapshot } from "@/lib/onboarding/dashboard-events";
-import { ensurePhotoConsentPurposes } from "@/lib/photo-consent-purposes";
-import { seedDefaultPhotoConsentChoices } from "@/lib/photo-consent-submission";
-import { signatureSubmissionSchema, type SignaturePayload } from "@/types/signature";
+import { MAX_PHOTO_CONSENT_NOTE, PHOTO_CONSENT_LEVELS } from "@/lib/photo-consent-levels";
+import {
+  checkPhotoConsentSubmission,
+  persistPhotoConsentSubmission,
+  type PhotoConsentDocumentInput,
+  type PhotoConsentSignatureInput,
+} from "@/lib/photo-consent-submission";
+import { signatureSubmissionSchema } from "@/types/signature";
 
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
@@ -119,14 +124,12 @@ const payloadSchema = z.object({
   preferences: z.array(preferenceSchema),
   interests: z.array(z.string().min(1)).max(MAX_INTERESTS_PER_USER),
   dietaryPreference: nutritionPreferenceSchema,
-  photoConsent: z
-    .object({
-      consent: z.boolean(),
-      skipDocument: z.boolean().optional(),
-      signature: signatureSubmissionSchema.optional().nullable(),
-    })
-    .optional()
-    .default({ consent: true, signature: null }),
+  photoConsent: z.object({
+    level: z.enum(PHOTO_CONSENT_LEVELS),
+    note: z.string().max(MAX_PHOTO_CONSENT_NOTE).optional().nullable(),
+    deferProof: z.boolean().optional(),
+    signature: signatureSubmissionSchema.optional().nullable(),
+  }),
   dietary: z.array(dietarySchema).optional().default([]),
 });
 
@@ -255,29 +258,28 @@ export async function POST(request: NextRequest) {
   }
 
   const age = calculateAge(dateOfBirth);
-  const photoConsent = payload.photoConsent ?? {
-    consent: true,
-    skipDocument: false,
-    signature: null,
-  };
-  const skipDocument = Boolean(photoConsent.skipDocument);
-  const signatureSubmission = photoConsent.signature ?? null;
-
-  const signaturePayload: SignaturePayload | null = signatureSubmission?.payload ?? null;
-  const signatureVersion = signatureSubmission?.version ?? null;
-  const signatureCapturedAt = signaturePayload
-    ? (() => {
-        const parsed = new Date(signaturePayload.endedAt);
-        return Number.isNaN(parsed.valueOf()) ? new Date() : parsed;
-      })()
+  const photoConsent = payload.photoConsent;
+  const photoLevel = photoConsent.level;
+  const photoNote = photoConsent.note?.trim() || null;
+  const signaturePayload = photoLevel === "none" ? null : (photoConsent.signature?.payload ?? null);
+  const photoSignature: PhotoConsentSignatureInput | null = signaturePayload
+    ? {
+        version: signaturePayload.version,
+        capturedAt: (() => {
+          const parsed = new Date(signaturePayload.endedAt);
+          return Number.isNaN(parsed.valueOf()) ? new Date() : parsed;
+        })(),
+        payload: signaturePayload,
+      }
     : null;
 
-  let documentBuffer: Uint8Array<ArrayBuffer> | null = null;
-  let documentMime: string | null = null;
-  let documentName: string | null = null;
-  let documentSize: number | null = null;
-
-  if (documentFile instanceof File && documentFile.size > 0) {
+  let photoDocument: PhotoConsentDocumentInput | null = null;
+  if (
+    photoLevel !== "none" &&
+    !photoSignature &&
+    documentFile instanceof File &&
+    documentFile.size > 0
+  ) {
     if (documentFile.size > MAX_DOCUMENT_BYTES) {
       return NextResponse.json({ error: "Dokument darf maximal 8 MB groß sein" }, { status: 400 });
     }
@@ -288,26 +290,25 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const arrayBuffer = await documentFile.arrayBuffer();
-    documentBuffer = new Uint8Array(arrayBuffer);
-    documentMime = type || null;
-    documentName = sanitizeFilename(documentFile.name);
-    documentSize = documentBuffer.length;
+    const data = new Uint8Array(await documentFile.arrayBuffer());
+    photoDocument = {
+      name: sanitizeFilename(documentFile.name),
+      mime: type || "application/octet-stream",
+      size: data.length,
+      data,
+    };
   }
 
-  if (signaturePayload && !documentBuffer) {
-    return NextResponse.json(
-      { error: "Digitale Unterschrift konnte nicht gespeichert werden" },
-      { status: 400 },
-    );
-  }
-
-  if (!documentBuffer && photoConsent.consent && !skipDocument) {
-    const missingDocumentMessage =
-      age !== null && age < 18
-        ? "Bitte lade die unterschriebene Einverständniserklärung deiner Erziehungsberechtigten hoch oder wähle aus, dass du sie später nachreichst."
-        : "Bitte lade dein unterschriebenes Einverständnis hoch, unterschreibe digital oder markiere, dass du es später nachreichst.";
-    return NextResponse.json({ error: missingDocumentMessage }, { status: 400 });
+  const photoError = checkPhotoConsentSubmission({
+    level: photoLevel,
+    isMinor: age === null ? null : age < 18,
+    hasDateOfBirth: Boolean(dateOfBirth),
+    hasNewProof: Boolean(photoSignature || photoDocument),
+    hasExistingProof: false,
+    deferProof: Boolean(photoConsent.deferProof),
+  });
+  if (photoError) {
+    return NextResponse.json({ error: photoError }, { status: 400 });
   }
 
   const redemption = await prisma.memberInviteRedemption.findUnique({
@@ -385,16 +386,14 @@ export async function POST(request: NextRequest) {
     },
     dietary,
     photoConsent: {
-      consent: photoConsent.consent,
-      hasDocument: Boolean(documentBuffer),
-      skipDocument,
+      level: photoLevel,
+      hasProof: Boolean(photoSignature || photoDocument),
+      deferProof: Boolean(photoConsent.deferProof),
     },
   };
 
   try {
     const passwordHash = await hashPassword(password);
-    // Zwecke der Produktion sicherstellen, damit die Vorauswahl angelegt werden kann.
-    await ensurePhotoConsentPurposes(invite.showId);
     const result = await prisma.$transaction(async (tx) => {
       const latestInvite = await tx.memberInvite.findUnique({ where: { id: invite.id } });
       if (!latestInvite || !isInviteUsable(latestInvite)) {
@@ -491,7 +490,7 @@ export async function POST(request: NextRequest) {
             dietaryPreferenceStrictness: dietaryStrictnessDisplay,
             dietary,
             preferences,
-            photoConsent: photoConsent.consent,
+            photoConsent: photoLevel !== "none",
             education: {
               category: payload.educationCategory ?? null,
               schoolName: educationSchoolName,
@@ -580,34 +579,16 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const shouldCreateConsent =
-        photoConsent.consent || documentBuffer || (age !== null && age < 18);
-      if (shouldCreateConsent) {
-        const consent = await tx.photoConsent.create({
-          data: {
-            userId: user.id,
-            showId: invite.showId,
-            status: photoConsent.consent ? "pending" : "noPhotos",
-            documentName: documentName,
-            documentMime: documentMime,
-            documentSize: documentSize ?? undefined,
-            documentUploadedAt: documentBuffer ? new Date() : null,
-            documentData: documentBuffer ?? undefined,
-            signatureVersion: signaturePayload ? (signatureVersion ?? "velocity.v1") : null,
-            signatureCapturedAt: signaturePayload ? (signatureCapturedAt ?? new Date()) : null,
-            signaturePayload: signaturePayload ?? undefined,
-          },
-          select: { id: true },
-        });
-        if (photoConsent.consent) {
-          await seedDefaultPhotoConsentChoices(
-            tx,
-            consent.id,
-            invite.showId,
-            age !== null && age < 18,
-          );
-        }
-      }
+      await persistPhotoConsentSubmission(tx, {
+        userId: user.id,
+        showId: invite.showId,
+        level: photoLevel,
+        exclusionNote: photoNote,
+        document: photoDocument,
+        signature: photoSignature,
+        submittedById: user.id,
+        source: "onboarding",
+      });
 
       return { userId: user.id, email: user.email };
     });

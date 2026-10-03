@@ -44,7 +44,15 @@ vi.mock("@/lib/prisma", () => {
       upsert: mocks.restrictionUpsert,
       updateMany: mocks.restrictionUpdateMany,
     },
-    photoConsent: { upsert: mocks.consentUpsert },
+    photoConsent: {
+      upsert: mocks.consentUpsert.mockResolvedValue({
+        id: "consent-1",
+        status: "pending",
+        documentUploadedAt: null,
+        signatureCapturedAt: new Date(),
+      }),
+    },
+    photoConsentVersion: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn() },
     productionMembership: { upsert: mocks.membershipUpsert },
     user: { update: mocks.userUpdate },
     memberInvite: { update: mocks.inviteUpdate },
@@ -52,6 +60,8 @@ vi.mock("@/lib/prisma", () => {
   return {
     prisma: {
       memberInvite: { findUnique: mocks.inviteFindUnique },
+      user: { findUnique: vi.fn().mockResolvedValue({ dateOfBirth: new Date("1990-01-01") }) },
+      photoConsent: { findUnique: vi.fn().mockResolvedValue(null) },
       $transaction: async <T>(fn: (client: typeof tx) => Promise<T>) => fn(tx),
     },
   };
@@ -69,7 +79,23 @@ const payload = {
   dietaryPreferenceStrictness: null,
   dietary: [],
   notes: null,
-  photoConsent: true,
+  photoConsent: {
+    level: "all",
+    note: null,
+    signature: {
+      version: "velocity.v1",
+      payload: {
+        version: "velocity.v1",
+        width: 300,
+        height: 120,
+        duration: 100,
+        startedAt: "2026-10-03T10:00:00.000Z",
+        endedAt: "2026-10-03T10:00:00.100Z",
+        boundingBox: { minX: 0, minY: 0, maxX: 10, maxY: 10 },
+        strokes: [{ points: [{ x: 0, y: 0, time: 0 }] }],
+      },
+    },
+  },
 };
 
 function request(onboardingToken?: string, overrides: Record<string, unknown> = {}) {
@@ -106,7 +132,7 @@ describe("Rückkehrer-Onboarding: Fotoerlaubnis", () => {
     expect(response.status).toBe(200);
     const args = mocks.consentUpsert.mock.calls[0][0];
     expect(args.where).toEqual({ userId_showId: { userId: "user-1", showId: "show-2027" } });
-    expect(args.create).toMatchObject({ showId: "show-2027", status: "pending" });
+    expect(args.create).toMatchObject({ showId: "show-2027", status: "pending", level: "all" });
     expect(args.update).toMatchObject({
       status: "pending",
       approvedAt: null,
@@ -135,6 +161,15 @@ describe("Rückkehrer-Onboarding: Fotoerlaubnis", () => {
     const response = await POST(request());
 
     expect(response.status).toBe(200);
+    expect(mocks.consentUpsert).not.toHaveBeenCalled();
+  });
+
+  it("verlangt für die neue Produktion eine neue Unterschrift", async () => {
+    const response = await POST(
+      request("token-abc", { photoConsent: { level: "internal", note: null } }),
+    );
+
+    expect(response.status).toBe(400);
     expect(mocks.consentUpsert).not.toHaveBeenCalled();
   });
 });

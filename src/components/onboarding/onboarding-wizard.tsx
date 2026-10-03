@@ -26,7 +26,14 @@ import {
   toEducationPayload,
   validateEducation,
 } from "@/lib/education/schools";
-import { SignaturePad, type SignatureResult } from "@/components/onboarding/signature-pad";
+import {
+  EMPTY_PHOTO_CONSENT_DRAFT,
+  PhotoConsentForm,
+  validatePhotoConsentDraft,
+  type PhotoConsentDraft,
+} from "@/components/photo-consent/photo-consent-form";
+import { PhotoConsentLevelBadge } from "@/components/photo-consent/photo-consent-level-badge";
+import { PHOTO_CONSENT_LEVEL_DEFINITIONS } from "@/lib/photo-consent-levels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,9 +120,6 @@ const steps = [
   { title: "Hinweise" },
   { title: "Check" },
 ];
-
-const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
-const ALLOWED_DOCUMENT_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/jpg"]);
 
 type PreferenceEntry = {
   code: string;
@@ -264,7 +268,6 @@ function createInitialFormState(variant: OnboardingWizardVariant, crewOptions: C
     nutritionVariant: null as DietaryVariantOption | null,
     nutritionCustomStyle: "",
     nutritionStrictness: DEFAULT_STRICTNESS as DietaryStrictnessOption,
-    photoConsent: { consent: true, skipDocument: false },
     dietary: [] as DietaryEntry[],
   };
 }
@@ -336,13 +339,7 @@ export function OnboardingWizard({
     [sessionToken],
   );
   const [success, setSuccess] = useState(false);
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [documentError, setDocumentError] = useState<string | null>(null);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
-  const [parentalTemplateDownloaded, setParentalTemplateDownloaded] = useState(false);
-  const [documentMode, setDocumentMode] = useState<"upload" | "signature">("upload");
-  const [signatureResult, setSignatureResult] = useState<SignatureResult | null>(null);
-  const documentInputRef = useRef<HTMLInputElement>(null);
+  const [photoDraft, setPhotoDraft] = useState<PhotoConsentDraft>(EMPTY_PHOTO_CONSENT_DRAFT);
   const { suggestions: interestSuggestions, loading: interestsLoading } = useInterestSuggestions({
     onboardingToken: token,
   });
@@ -547,33 +544,20 @@ export function OnboardingWizard({
   }, [form.actingPreferences, form.crewPreferences, isRegieVariant]);
 
   const photoConsentMessage = useMemo(() => {
-    if (!form.photoConsent.consent) {
-      return "Du hast aktuell nicht zugestimmt. Das ist in Ordnung – du kannst es später im Mitgliederbereich nachholen.";
+    if (!photoDraft.level) {
+      return "Noch keine Auswahl.";
     }
-    if (form.photoConsent.skipDocument) {
-      return isMinor
-        ? "Du reichst die Zustimmung deiner Erziehungsberechtigten später nach."
-        : "Du reichst dein unterschriebenes Formular später nach.";
+    const label = PHOTO_CONSENT_LEVEL_DEFINITIONS[photoDraft.level].label;
+    if (photoDraft.level === "none") {
+      return `${label}: Es werden keine Aufnahmen gemacht.`;
     }
-    if (!documentFile) {
-      return isMinor
-        ? "Die unterschriebene Zustimmung deiner Erziehungsberechtigten fehlt noch oder wird später nachgereicht."
-        : "Bitte lade dein Einverständnis hoch oder unterschreibe digital.";
+    if (photoDraft.proofMode === "later") {
+      return `${label} – die Unterschrift eines Elternteils reichst du später im Profil nach.`;
     }
-    if (isMinor) {
-      return "Einverständnis deiner Erziehungsberechtigten ist hinterlegt.";
-    }
-    if (documentMode === "signature") {
-      return "Du hast die Fotoeinverständnis digital unterschrieben.";
-    }
-    return "Deine unterschriebene Fotoeinverständnis wird mitgeschickt.";
-  }, [
-    documentFile,
-    documentMode,
-    form.photoConsent.consent,
-    form.photoConsent.skipDocument,
-    isMinor,
-  ]);
+    return photoDraft.proofMode === "signature"
+      ? `${label} – digital unterschrieben.`
+      : `${label} – unterschriebenes Formular wird mitgeschickt.`;
+  }, [photoDraft.level, photoDraft.proofMode]);
 
   const handleAddDietary = () => {
     const trimmed = dietaryDraft.allergen.trim();
@@ -626,128 +610,6 @@ export function OnboardingWizard({
       dietary: prev.dietary.filter((entry) => entry.id !== id),
     }));
   };
-
-  const setDocumentFromFile = useCallback(
-    (file: File | null) => {
-      if (!file) {
-        setDocumentFile(null);
-        setDocumentError(null);
-        return;
-      }
-      if (file.size > MAX_DOCUMENT_BYTES) {
-        setDocumentError("Dokument darf maximal 8 MB groß sein");
-        setDocumentFile(null);
-        return;
-      }
-      const type = file.type?.toLowerCase() ?? "";
-      if (type && !ALLOWED_DOCUMENT_TYPES.has(type)) {
-        setDocumentError("Bitte nutze PDF oder Bilddateien (JPG/PNG)");
-        setDocumentFile(null);
-        return;
-      }
-      setDocumentError(null);
-      setDocumentFile(file);
-      setForm((prev) => ({
-        ...prev,
-        photoConsent: { ...prev.photoConsent, skipDocument: false },
-      }));
-    },
-    [setDocumentError, setDocumentFile, setForm],
-  );
-
-  const handleDocumentInput = (file: File | null) => {
-    if (documentMode !== "upload") {
-      setDocumentMode("upload");
-    }
-    setSignatureResult(null);
-    setDocumentFromFile(file);
-  };
-
-  const handleSelectSignatureMode = () => {
-    if (isMinor || documentMode === "signature") return;
-    setDocumentMode("signature");
-    setSignatureResult(null);
-    setDocumentFromFile(null);
-  };
-
-  const handleDownloadParentalTemplate = async () => {
-    setDownloadError(null);
-    try {
-      const response = await fetch("/api/photo-consents/parental-template");
-      if (!response.ok) {
-        setDownloadError("Elternformular nicht verfügbar.");
-        return;
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "einverstaendnis-eltern.pdf";
-      document.body.appendChild(link);
-      link.click();
-      setParentalTemplateDownloaded(true);
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("[onboarding-wizard.parental-template]", e);
-      setDownloadError("Elternformular nicht verfügbar.");
-    }
-  };
-
-  useEffect(() => {
-    if (!isMinor) {
-      return;
-    }
-    if (documentMode === "signature") {
-      setDocumentMode("upload");
-      setDocumentFromFile(null);
-    }
-    if (signatureResult) {
-      setSignatureResult(null);
-    }
-  }, [documentMode, isMinor, setDocumentFromFile, signatureResult]);
-
-  const handleSignatureChange = (result: SignatureResult | null) => {
-    if (documentMode !== "signature") {
-      setDocumentMode("signature");
-    }
-    setSignatureResult(result);
-  };
-
-  useEffect(() => {
-    if (!signatureResult) {
-      if (documentMode === "signature") {
-        setDocumentFromFile(null);
-        setDocumentError(null);
-      }
-      return;
-    }
-    const dataUrl = signatureResult.dataUrl;
-    const commaIndex = dataUrl.indexOf(",");
-    if (commaIndex === -1) {
-      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
-      setDocumentFile(null);
-      return;
-    }
-    const header = dataUrl.slice(0, commaIndex);
-    const mimeMatch = header.match(/data:(.*?);base64/);
-    const mime = (mimeMatch?.[1] ?? "image/png").toLowerCase();
-    const base64 = dataUrl.slice(commaIndex + 1);
-    try {
-      const binary = atob(base64);
-      const length = binary.length;
-      const bytes = new Uint8Array(length);
-      for (let index = 0; index < length; index += 1) {
-        bytes[index] = binary.charCodeAt(index);
-      }
-      const file = new File([bytes], "digitale-unterschrift.png", { type: mime || "image/png" });
-      setDocumentFromFile(file);
-    } catch (conversionError) {
-      console.error("[onboarding.signature]", conversionError);
-      setDocumentError("Unterschrift konnte nicht verarbeitet werden.");
-      setDocumentFile(null);
-    }
-  }, [documentMode, setDocumentError, setDocumentFile, setDocumentFromFile, signatureResult]);
 
   const goNext = () => {
     setError(null);
@@ -829,20 +691,9 @@ export function OnboardingWizard({
       return;
     }
     if (step === 4) {
-      if (isMinor && !form.photoConsent.consent) {
-        setError("Bitte bestätige dein eigenes Fotoeinverständnis über das Kästchen oben.");
-        return;
-      }
-      if (isMinor && !documentFile && !parentalTemplateDownloaded) {
-        setError(
-          "Bitte lade das unterschriebene Elternformular hoch oder lade zuerst das Elternformular herunter.",
-        );
-        return;
-      }
-      if (form.photoConsent.consent && !form.photoConsent.skipDocument && !documentFile) {
-        setError(
-          "Bitte lade dein unterschriebenes Einverständnis hoch oder unterschreibe digital.",
-        );
+      const photoError = validatePhotoConsentDraft(photoDraft, { isMinor });
+      if (photoError) {
+        setError(photoError);
         return;
       }
       setStep(5);
@@ -905,9 +756,13 @@ export function OnboardingWizard({
       const memberSinceYear = Number.isFinite(parsedYear) ? parsedYear : null;
       const notes = form.notes.trim();
       const educationPayload = toEducationPayload(form.education);
-      const signatureSubmission =
-        documentMode === "signature" && signatureResult
-          ? { version: signatureResult.payload.version, payload: signatureResult.payload }
+      const photoSignature =
+        photoDraft.level !== "none" && photoDraft.proofMode === "signature" && photoDraft.signature
+          ? { version: photoDraft.signature.payload.version, payload: photoDraft.signature.payload }
+          : null;
+      const photoDocument =
+        photoDraft.level !== "none" && photoDraft.proofMode === "upload"
+          ? photoDraft.document
           : null;
 
       const payload = {
@@ -934,9 +789,10 @@ export function OnboardingWizard({
           strictness: form.nutritionStrictness,
         },
         photoConsent: {
-          consent: form.photoConsent.consent,
-          skipDocument: form.photoConsent.skipDocument,
-          signature: signatureSubmission,
+          level: photoDraft.level,
+          note: photoDraft.note.trim() || null,
+          deferProof: photoDraft.level !== "none" && photoDraft.proofMode === "later",
+          signature: photoSignature,
         },
         dietary: form.dietary.map((entry) => ({
           allergen: entry.allergen,
@@ -952,8 +808,8 @@ export function OnboardingWizard({
 
       const body = new FormData();
       body.append("payload", JSON.stringify(payload));
-      if (documentFile) {
-        body.append("document", documentFile);
+      if (photoDocument) {
+        body.append("document", photoDocument);
       }
 
       const response = await fetch("/api/onboarding/complete", {
@@ -1534,148 +1390,27 @@ export function OnboardingWizard({
       {step === 4 && (
         <Card className="border border-border/70">
           <CardHeader>
-            <CardTitle>Fotoeinverständnis</CardTitle>
+            <CardTitle>Fotoerlaubnis</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Wir dokumentieren Proben, Aufführungen und Werkstätten. Deine Zustimmung hilft uns bei
-              Social Media, Presse und Erinnerungen.
+              Wir dokumentieren Proben und Aufführungen. Wähle aus, welche Aufnahmen erlaubt sind –
+              die Erlaubnis gilt für diese Produktion und lässt sich im Profil jederzeit ändern.
             </p>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <label className="flex items-start gap-3 rounded-lg border border-border/70 p-4">
-              <input
-                type="checkbox"
-                checked={form.photoConsent.consent}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    photoConsent: { ...prev.photoConsent, consent: event.target.checked },
-                  }))
-                }
-                className="mt-1 h-4 w-4"
-              />
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">
-                  Ich bin einverstanden, dass Fotos/Videos von mir für das Schultheater genutzt
-                  werden.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Die genauen Verwendungszwecke (privat, Programmheft, Social Media oder „gar
-                  nicht“) legst du später im Profil fest und kannst sie jederzeit ändern.
-                </p>
-              </div>
-            </label>
-
-            {isMinor ? (
-              <div className="space-y-2 rounded-lg border border-warning/50 bg-warning/10 p-4 text-sm text-warning-foreground">
-                <p className="font-medium">Du bist unter 18 Jahre alt</p>
-                <p>
-                  Wir benötigen die unterschriebene Foto-Einverständniserklärung deiner
-                  Erziehungsberechtigten. Lade das Dokument als PDF oder Bilddatei hoch.
-                </p>
-                <p>
-                  Deine eigene Zustimmung gibst du direkt über das Kästchen oben – sie ist
-                  verpflichtend.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2 rounded-lg border border-success/50 bg-success/10 p-4 text-sm text-success-foreground">
-                <p className="font-medium">Du bist volljährig</p>
-                <p>
-                  Du kannst das Formular als Datei hochladen oder hier direkt digital
-                  unterschreiben.
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-3 text-sm">
-              {isMinor ? (
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="text-primary"
-                      onClick={handleDownloadParentalTemplate}
-                    >
-                      Elternformular herunterladen
-                    </Button>
-                    {downloadError && (
-                      <p className="text-xs text-destructive">Elternformular nicht verfügbar.</p>
-                    )}
-                    <label className="block font-medium">
-                      Einverständnis der Erziehungsberechtigten (PDF, JPG, PNG)
-                    </label>
-                    <Input
-                      type="file"
-                      accept="application/pdf,image/jpeg,image/png"
-                      onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {documentFile
-                        ? `Ausgewählt: ${documentFile.name}`
-                        : "Lade die unterschriebene Zustimmung deiner Erziehungsberechtigten hoch."}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-primary"
-                      onClick={() => documentInputRef.current?.click()}
-                    >
-                      Unterschrift hochladen
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-primary"
-                      onClick={handleSelectSignatureMode}
-                    >
-                      Digital unterschreiben
-                    </Button>
-                  </div>
-                  <input
-                    ref={documentInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="image/*,application/pdf"
-                    capture="environment"
-                    onChange={(event) => handleDocumentInput(event.target.files?.[0] ?? null)}
-                  />
-                  {documentMode === "signature" ? (
-                    <div className="space-y-2">
-                      <label className="block font-medium">Digital unterschreiben</label>
-                      <SignaturePad value={signatureResult} onChange={handleSignatureChange} />
-                      <div className="space-y-1 text-xs text-muted-foreground leading-relaxed">
-                        <p>
-                          {documentFile
-                            ? "Deine digitale Unterschrift wird mitgeschickt."
-                            : "Zeichne deine Unterschrift mit Finger, Stift oder Maus."}
-                        </p>
-                        <p>
-                          Mit meiner digitalen Unterschrift erlaube ich dem Schultheater, Fotos und
-                          Videos von mir im Rahmen von Proben, Aufführungen und der
-                          Öffentlichkeitsarbeit zu erstellen und zu veröffentlichen. Mir ist
-                          bewusst, dass ich diese Einwilligung jederzeit mit Wirkung für die Zukunft
-                          widerrufen kann.
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
-                  {documentFile ? (
-                    <p className="text-xs text-muted-foreground">
-                      Ausgewählt: <span className="min-w-0 truncate">{documentFile.name}</span>
-                    </p>
-                  ) : null}
-                </>
-              )}
-              {documentError && <p className="text-xs text-destructive">{documentError}</p>}
-            </div>
+          <CardContent>
+            {!form.dateOfBirth ? (
+              <p className="mb-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                Ohne Geburtsdatum wissen wir nicht, ob ein Elternteil unterschreiben muss. Trage es
+                im ersten Schritt ein.
+              </p>
+            ) : null}
+            <PhotoConsentForm
+              value={photoDraft}
+              onChange={(next) => {
+                setPhotoDraft(next);
+                setError(null);
+              }}
+              isMinor={isMinor}
+            />
           </CardContent>
         </Card>
       )}
@@ -2331,16 +2066,7 @@ export function OnboardingWizard({
                       <ShieldCheckIcon className="h-4 w-4 text-primary" />
                       Fotoerlaubnis
                     </div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        form.photoConsent.consent
-                          ? "border-success/40 bg-success/10 text-success"
-                          : "border-warning/40 bg-warning/10 text-warning"
-                      }
-                    >
-                      {form.photoConsent.consent ? "Erteilt" : "Offen"}
-                    </Badge>
+                    <PhotoConsentLevelBadge level={photoDraft.level} />
                   </div>
                   <p className="text-xs text-muted-foreground">{photoConsentMessage}</p>
                 </div>
