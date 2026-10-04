@@ -24,12 +24,14 @@ import {
   UserRoundIcon,
   UsersRoundIcon,
   WarehouseIcon,
+  WheatOffIcon,
 } from "@/components/ui/action-icons";
 
 export type MembersNavIconProps = { className?: string };
 export type MembersNavIcon = ComponentType<MembersNavIconProps>;
 
-export type MembersNavGroupId = "general" | "assignments" | "production" | "admin" | "pages";
+export type MembersNavGroupId =
+  "general" | "assignments" | "production" | "food" | "admin" | "pages";
 
 export const MEMBERS_NAV_ASSIGNMENTS_GROUP_ID: MembersNavGroupId = "assignments";
 export const MEMBERS_NAV_PRODUCTION_GROUP_ID: MembersNavGroupId = "production";
@@ -159,6 +161,18 @@ export const membersNavigation = [
         label: "Lager",
         permissionKey: "PRIVATE.INVENTORY.USE",
         icon: WarehouseIcon,
+      },
+    ],
+  },
+  {
+    id: "food",
+    label: "Verpflegung",
+    items: [
+      {
+        href: "/mitglieder/verpflegung/zuordnung",
+        label: "Allergie-Zuordnung",
+        permissionKey: "PRIVATE.FOOD.TAXONOMY.MANAGE",
+        icon: WheatOffIcon,
       },
     ],
   },

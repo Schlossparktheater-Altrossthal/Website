@@ -71,7 +71,19 @@ export const INVENTORY_PERMISSION_KEYS = {
   catalog: "PRIVATE.INVENTORY.CATALOG",
 } as const;
 
+/** Verpflegung (docs/Plan/ernaehrung-rezepte-ui-plan.md). Rezepte selbst darf jedes Mitglied. */
+export const FOOD_PERMISSION_KEYS = {
+  taxonomyManage: "PRIVATE.FOOD.TAXONOMY.MANAGE",
+} as const;
+
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
+  {
+    key: FOOD_PERMISSION_KEYS.taxonomyManage,
+    label: "Verpflegung: ungeklärte Allergie-Angaben zuordnen",
+    description:
+      "Freitext-Angaben zu Allergien und Unverträglichkeiten aller Mitglieder sehen und der Lebensmittel-Taxonomie zuordnen. Besondere Datenkategorie nach DSGVO Art. 9 – typischerweise über das Gewerk vergeben, das die Essensplanung macht.",
+    category: "department",
+  },
   {
     key: INVENTORY_PERMISSION_KEYS.use,
     label: "Lager nutzen",
@@ -295,6 +307,7 @@ const MEASUREMENT_PERMISSION_KEY = PROFILE_DATA_PERMISSION_KEYS.measurements;
 
 const PROFILE_ADMIN_PERMISSION_KEYS = [
   PROFILE_DATA_PERMISSION_KEYS.dietary,
+  FOOD_PERMISSION_KEYS.taxonomyManage,
 ] as const satisfies PermissionDefinition["key"][];
 
 // Standardzuweisungen greifen nur, solange die jeweilige Rolle existiert. Wurde eine Rolle in

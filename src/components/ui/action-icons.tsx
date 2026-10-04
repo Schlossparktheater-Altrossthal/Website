@@ -149,6 +149,8 @@ import {
   QrCode,
   Boxes,
   Keyboard,
+  ChefHat,
+  WheatOff,
 } from "lucide-react";
 import type * as React from "react";
 
@@ -1133,4 +1135,18 @@ export function Minimize2Icon({
   ...props
 }: { className?: string } & IconProps) {
   return <Minimize2 className={className} aria-hidden {...props} />;
+}
+
+export function ChefHatIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <ChefHat className={className} aria-hidden {...props} />;
+}
+
+export function WheatOffIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <WheatOff className={className} aria-hidden {...props} />;
 }
