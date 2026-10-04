@@ -60,3 +60,6 @@ tests/integration/.pre-migration.json
 e2e/.auth/
 playwright-report/
 test-results/
+
+# Gebündelte Hilfsskripte (pnpm food:bundle)
+/dist

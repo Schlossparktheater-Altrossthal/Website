@@ -308,6 +308,20 @@ pnpm food:import link-restrictions --csv /tmp/allergien.csv
 pnpm food:import link-restrictions --apply
 ```
 
+**Auf Staging/Prod** fehlt `tsx` im Image. Das Skript lokal bündeln und in den Pod kopieren
+(Prisma, exceljs, pg kommen aus dem Image):
+
+```bash
+pnpm food:bundle   # → dist/food-import.mjs
+kubectl -n <ns> cp dist/food-import.mjs <pod>:/app/food-import.tmp.mjs -c website
+kubectl -n <ns> cp <ordner mit Taxonomie-/BLS-Dateien> <pod>:/tmp/food -c website
+kubectl -n <ns> exec <pod> -c website -- sh -c \
+  'cd /app && node food-import.tmp.mjs taxonomy --dir /tmp/food && node --max-old-space-size=512 food-import.tmp.mjs bls /tmp/food/bls'
+```
+
+Staging wird nachts aus Prod neu aufgesetzt (db-sync): Ein Import nur auf Staging ist am nächsten
+Morgen weg. Sobald Prod importiert ist, kommen die Daten mit dem Sync automatisch nach Staging.
+
 Reihenfolge einhalten: Der BLS-Import ordnet Lebensmittel über die Taxonomie zu. Nach Änderungen
 an `custom.ts` oder `src/lib/food/bls/map.ts` beide Importe erneut ausführen. Quellenangaben
 (Pflicht bei CC BY/ODbL) stehen in `BLS_ATTRIBUTION` und `OFF_ATTRIBUTION`.
