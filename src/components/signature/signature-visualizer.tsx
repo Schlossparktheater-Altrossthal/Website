@@ -83,10 +83,16 @@ function replayPolylines(payload: SignaturePayload, time: number) {
 export function SignatureVisualizer({ payload, mode, className }: SignatureVisualizerProps) {
   const { viewBox } = useMemo(() => signatureToSvgGeometry(payload), [payload]);
   const segments = useMemo(() => computeSegments(payload), [payload]);
-  const maxVelocity = useMemo(
-    () => segments.reduce((max, segment) => Math.max(max, segment.velocity), 0),
-    [segments],
-  );
+  // Obergrenze der Farbskala ist das 90. Perzentil statt des Maximums, damit einzelne
+  // Ausreißer (Sprünge zwischen Messpunkten) nicht alles andere „langsam“ aussehen lassen.
+  const maxVelocity = useMemo(() => {
+    const sorted = segments
+      .map((segment) => segment.velocity)
+      .filter((velocity) => Number.isFinite(velocity) && velocity > 0)
+      .sort((a, b) => a - b);
+    if (!sorted.length) return 0;
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9))];
+  }, [segments]);
   const duration = Math.max(
     payload.duration,
     segments.length ? segments[segments.length - 1].end.time : 0,
