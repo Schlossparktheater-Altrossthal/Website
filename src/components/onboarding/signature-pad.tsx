@@ -109,6 +109,8 @@ function SignatureCanvas({
   const [locked, setLocked] = useState(false);
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
   const [usedPen, setUsedPen] = useState(false);
+  /** Zuletzt selbst gemeldeter Wert – kommt er als `value` zurück, ist der Canvas schon aktuell. */
+  const emittedRef = useRef<SignatureResult | null>(null);
 
   const initializeCanvas = useCallback(
     (result: SignatureResult | null) => {
@@ -177,8 +179,15 @@ function SignatureCanvas({
   );
 
   useEffect(() => {
-    initializeCanvas(value);
-    const handleResize = () => initializeCanvas(value);
+    // Nicht neu aufbauen, wenn nur die eigene Eingabe zurückkommt: das würde die Schrift neu
+    // zeichnen und – falls sich das Layout minimal verschiebt – das Weiterschreiben sperren.
+    if (!value || value !== emittedRef.current) initializeCanvas(value);
+    // Mobil feuert schon das Ein-/Ausblenden der Adressleiste „resize“. Mit Strichen auf dem
+    // Canvas bleibt die Größe daher stehen, sonst würde die Unterschrift neu skaliert und gesperrt.
+    const handleResize = () => {
+      if (strokesRef.current.length) return;
+      initializeCanvas(null);
+    };
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
@@ -270,13 +279,16 @@ function SignatureCanvas({
       currentStrokeRef.current = null;
       const payload = buildPayload(canvas.width, canvas.height);
       if (!payload) {
+        emittedRef.current = null;
         onChange(null);
         return;
       }
       timeOffsetRef.current = payload.duration;
       const parsedStart = Date.parse(payload.startedAt);
       startEpochRef.current = Number.isFinite(parsedStart) ? parsedStart : startEpochRef.current;
-      onChange({ dataUrl: canvas.toDataURL("image/png"), payload });
+      const result = { dataUrl: canvas.toDataURL("image/png"), payload };
+      emittedRef.current = result;
+      onChange(result);
     },
     [buildPayload, onChange, recordPoint],
   );
@@ -334,6 +346,7 @@ function SignatureCanvas({
     startHighResRef.current = null;
     startEpochRef.current = null;
     timeOffsetRef.current = 0;
+    emittedRef.current = null;
     onChange(null);
   }, [onChange]);
 
@@ -347,16 +360,22 @@ function SignatureCanvas({
 
   return (
     <div ref={containerRef} className={cn("space-y-2", fill && "flex min-h-0 flex-col", className)}>
-      <div className={cn(fill && "relative min-h-0 flex-1")}>
+      <div className={cn(fill && "relative min-h-0 flex-1 overflow-hidden")}>
         <canvas
           ref={canvasRef}
           className={cn(
             "w-full touch-none rounded-lg border border-border bg-card shadow-inner",
-            fill && "absolute inset-0 h-full",
+            fill && "absolute left-0 top-0",
             locked && "cursor-not-allowed",
             canvasClassName,
           )}
-          style={fill || !canvasSize ? undefined : { height: `${canvasSize.height}px` }}
+          style={
+            canvasSize
+              ? fill
+                ? { width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }
+                : { height: `${canvasSize.height}px` }
+              : undefined
+          }
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={stopDrawing}
@@ -367,7 +386,9 @@ function SignatureCanvas({
         />
       </div>
       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span className="min-w-0">{hint}</span>
+        <span className="min-w-0 truncate" title={hint}>
+          {hint}
+        </span>
         <div className="flex shrink-0 items-center gap-1">
           <Button type="button" variant="ghost" size="sm" onClick={handleClear} disabled={isEmpty}>
             Zurücksetzen
