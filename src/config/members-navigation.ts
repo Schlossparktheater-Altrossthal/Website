@@ -7,6 +7,7 @@ import {
   CalendarCheckIcon,
   CalendarCogIcon,
   CalendarXIcon,
+  ChefHatIcon,
   CameraIcon,
   CircleIcon,
   ClipboardListIcon,
@@ -168,6 +169,12 @@ export const membersNavigation = [
     id: "food",
     label: "Verpflegung",
     items: [
+      {
+        href: "/mitglieder/rezepte",
+        label: "Rezepte",
+        permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
+        icon: ChefHatIcon,
+      },
       {
         href: "/mitglieder/verpflegung/zuordnung",
         label: "Allergie-Zuordnung",
