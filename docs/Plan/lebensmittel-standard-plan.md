@@ -1,6 +1,6 @@
 # Plan: Lebensmittel-Standard – Allergene, Ernährungsformen, Lebensmittel, Nährwerte
 
-Stand: 2026-10-04. Konzept. Grundlage für [`docs/Plan/rezepte-plan.md`](rezepte-plan.md) und
+Stand: 2026-10-04. Phase 1, 2, 4, 5 umgesetzt (Daten und Logik ohne Oberfläche), Teil von Phase 3 (automatische Verknüpfung beim Speichern); offen Oberfläche, Migration, Release. Grundlage für [`docs/Plan/rezepte-plan.md`](rezepte-plan.md) und
 [`docs/Plan/verpflegung-plan.md`](verpflegung-plan.md). Checkliste am Ende wird gepflegt.
 
 **Planfamilie:** **Lebensmittel-Standard** · [Rezepte](rezepte-plan.md) · [Phasen & Vorstellungen](produktionsphasen-vorstellungen-plan.md) · [Verpflegung](verpflegung-plan.md) · [Einkauf & Belege](einkauf-belege-plan.md) · [Dienstplan](dienstplan-plan.md) · [Index](README.md)
@@ -84,6 +84,30 @@ Vorher Dump, Probelauf in lokaler Vorschau/Staging.
 6. Migration Bestandsdaten (siehe oben).
 7. Doku, E2E, Release.
 
+## Umsetzung (2026-10-04)
+
+- **Code:** `src/lib/food/` – `taxonomy/` (OFF-Parser, eigene Ergänzungen, `TaxonIndex`),
+  `conflicts.ts` (die eine Prüffunktion), `bls/` und `off/` (Adapter), `items.ts`,
+  `restriction-link.ts`/`restriction-store.ts`. Import: `pnpm food:import` (siehe
+  `docs/development.md`, Abschnitt „Lebensmittel-Daten importieren“).
+- **Modelle:** `FoodTaxon`, `FoodTaxonAlias`, `FoodItem`, `FoodNutrient`, `FoodDataImport`,
+  `DietaryRestriction.taxonCode` (Migration `20261004120000_food_standard_recipes`).
+- **Erkenntnisse aus den echten Daten:**
+  - OFF führt Hafer ohne Gluten und Milchprodukte ohne Laktose; Tierarten (Schwein, Rind) hängen
+    an `en:animal` ohne vegan/vegetarisch → Korrekturen in `custom.ts`.
+  - Die OFF-Allergenliste führt Einzelzutaten („Haselnüsse“, „Pistazie“) als Synonym von
+    „Schalenfrüchte“ → bei Synonymen gewinnt die genauere Zutat.
+  - „laktosefrei“/„glutenfrei“ heben Auslöser nur für die eigene Zutat auf (Rezepte prüfen je
+    Zutat).
+  - BLS liefert gemessene Laktose, Fruktose, Sorbit, Alkohol → werden als Auslöser genutzt.
+- **Stand BLS-Zuordnung:** 7.140 Lebensmittel, davon 962 sicher, 6.144 teilweise (meist Gerichte,
+  Prüfung meldet dort „prüfen“), 34 ungeklärt.
+- **Bekannte Lücken:** Histamin, Fruktose und Nachtschatten nur über eine Auswahl von
+  Lebensmitteln; FODMAP, Phenylalanin, Kreuzallergien, Zusatzstoffe sind „manuell prüfen“.
+- **Noch offen für Staging/Prod:** Import per `kubectl exec` oder Job (BLS-ZIP muss ins Pod),
+  danach `link-restrictions` (Bericht), Migration der ungeklärten Freitexte gemeinsam mit dem User.
+- **Quellenangabe in der Oberfläche** (CC BY/ODbL) ist Pflicht, sobald Daten angezeigt werden.
+
 ## Entscheidungen (2026-10-04)
 
 - E1: Freitext bleibt, wird aber so weit wie möglich automatisch verknüpft (Alias-Lernen);
@@ -92,10 +116,10 @@ Vorher Dump, Probelauf in lokaler Vorschau/Staging.
 
 ## Checkliste
 
-- [ ] Phase 1 Taxonomie
-- [ ] Phase 2 Datenmodell + Prüffunktion
-- [ ] Phase 3 Profil/Onboarding
-- [ ] Phase 4 BLS-Adapter
-- [ ] Phase 5 OFF-Adapter
+- [x] Phase 1 Taxonomie (OFF-Import + `custom.ts`)
+- [x] Phase 2 Datenmodell + Prüffunktion (`src/lib/food/conflicts.ts`)
+- [ ] Phase 3 Profil/Onboarding (Teil: `taxonCode` wird beim Speichern automatisch gesetzt; Suche im Baum in der Oberfläche offen)
+- [x] Phase 4 BLS-Adapter
+- [x] Phase 5 OFF-Adapter (Barcode → `FoodItem`, Cache 30 Tage; Oberfläche offen)
 - [ ] Phase 6 Migration
 - [ ] Phase 7 Doku/E2E/Release
