@@ -98,7 +98,7 @@ export function ImageViewer({ open, onClose, src, alt, downloadHref }: ImageView
       <DialogPrimitive.Portal>
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed inset-0 z-[60] flex flex-col bg-black/95 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] focus:outline-none"
+          className="fixed inset-0 z-[60] flex flex-col bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] focus:outline-none"
         >
           <DialogPrimitive.Title className="sr-only">{alt}</DialogPrimitive.Title>
           <div className="flex items-center justify-end gap-1 p-2 text-white">
