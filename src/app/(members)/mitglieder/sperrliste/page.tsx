@@ -224,6 +224,26 @@ export default async function BlocklistPage() {
       : null,
   ]);
 
+  // Solange in der Produktion noch niemand besetzt bzw. keinem Gewerk zugeordnet ist, zählt für
+  // diese Seite der Onboarding-Schwerpunkt – sonst stünde z. B. das ganze Ensemble unter „Offen“.
+  const isActing = (membership: { department: { template: { slug: string } } }) =>
+    membership.department.template.slug === ACTING_TEMPLATE_SLUG;
+  const castingAssigned = users.some(
+    (user) => user.characterCastings.length > 0 || user.departmentMemberships.some(isActing),
+  );
+  const crewAssigned = users.some((user) =>
+    user.departmentMemberships.some((membership) => !isActing(membership)),
+  );
+  const groupFromAssignments = (user: (typeof users)[number], focus: string | null) => {
+    const acting = castingAssigned
+      ? user.characterCastings.length > 0 || user.departmentMemberships.some(isActing)
+      : focus === "acting" || focus === "both";
+    const crew = crewAssigned
+      ? user.departmentMemberships.some((membership) => !isActing(membership))
+      : focus === "tech" || focus === "both";
+    return assignmentsToGroup(acting, crew);
+  };
+
   const records: MemberRecord[] = users.map((user) => ({
     id: user.id,
     firstName: user.firstName,
@@ -233,15 +253,7 @@ export default async function BlocklistPage() {
     avatarSource: user.avatarSource,
     avatarUpdatedAt: user.avatarImageUpdatedAt,
     group: activeProductionId
-      ? assignmentsToGroup(
-          user.characterCastings.length > 0 ||
-            user.departmentMemberships.some(
-              (membership) => membership.department.template.slug === ACTING_TEMPLATE_SLUG,
-            ),
-          user.departmentMemberships.some(
-            (membership) => membership.department.template.slug !== ACTING_TEMPLATE_SLUG,
-          ),
-        )
+      ? groupFromAssignments(user, user.onboardingProfile?.focus ?? null)
       : focusToGroup(user.onboardingProfile?.focus),
     blockedDays: user.blockedDays.map((day) => ({
       id: day.id,

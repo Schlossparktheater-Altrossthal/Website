@@ -65,7 +65,9 @@ export function ExportButton({
     const days = buildDayInfos(
       { start, end },
       { preferredWeekdays, exceptionWeekdays, holidays, finalWeek },
-    ).filter((day) => day.tier !== "off");
+      // Nur Kerntage (Wochentage aus den Einstellungen, Endprobenwoche) – wie im PDF-Kopf
+      // angegeben; Ferien, Feiertage und Termintage sind Ausnahmen und gehören nicht dazu.
+    ).filter((day) => day.tier === "core");
     if (!days.length) {
       toast.info("Keine Kerntage in den nächsten zwei Wochen", { duration: 2000 });
       return;
