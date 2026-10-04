@@ -21,16 +21,40 @@ type SignatureSegment = {
   velocity: number;
 };
 
+const VELOCITY_WINDOW_MS = 60;
+
+/**
+ * Tempo je Abschnitt, geglättet über ein Zeitfenster: Geräte liefern Punkte oft gebündelt mit
+ * gleichem Zeitstempel, Einzelabschnitte schwanken dadurch zwischen 0 und Ausreißern.
+ */
 function computeSegments(payload: SignaturePayload): SignatureSegment[] {
   const segments: SignatureSegment[] = [];
   payload.strokes.forEach((stroke) => {
     const points = stroke.points;
+    // kumulierte Weglänge je Punkt
+    const distances = [0];
+    for (let index = 1; index < points.length; index += 1) {
+      const previous = points[index - 1];
+      const current = points[index];
+      distances.push(
+        distances[index - 1] + Math.hypot(current.x - previous.x, current.y - previous.y),
+      );
+    }
+    let low = 0;
+    let high = 0;
     for (let index = 1; index < points.length; index += 1) {
       const start = points[index - 1];
       const end = points[index];
-      const distance = Math.hypot(end.x - start.x, end.y - start.y);
-      const delta = end.time - start.time;
-      segments.push({ start, end, velocity: delta > 0 ? distance / delta : 0 });
+      const center = (start.time + end.time) / 2;
+      while (low < index - 1 && points[low + 1].time <= center - VELOCITY_WINDOW_MS / 2) low += 1;
+      while (high < points.length - 1 && points[high].time < center + VELOCITY_WINDOW_MS / 2) {
+        high += 1;
+      }
+      const from = Math.min(low, index - 1);
+      const to = Math.max(high, index);
+      const span = points[to].time - points[from].time;
+      const velocity = span > 0 ? (distances[to] - distances[from]) / span : 0;
+      segments.push({ start, end, velocity });
     }
   });
   return segments;
