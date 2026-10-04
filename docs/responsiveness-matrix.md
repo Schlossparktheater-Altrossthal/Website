@@ -32,7 +32,7 @@ Legende: ✅ ok · ⚠️ funktioniert, aber mit Einschränkung · ❓ unklar ·
 | `/mitglieder/produktionen/stueck`                        | ✅    | ✅     | ✅      | gemessen              | `SectionNav`; Auftritte-Tabelle scrollt innen                 |
 | `/mitglieder/sperrliste`                                 | ✅    | ✅     | ✅      | gemessen              | Karten↔Tabelle, Tag-Stufen; frühere Tablet-Schuld ist behoben |
 | `/mitglieder/terminplanung`                              | ✅    | ✅     | ✅      | gemessen              | Liste nach Monaten                                            |
-| `/mitglieder/probenplanung`                              | ✅    | ✅     | ✅      | automatisch           | Kalender mit innerem `overflow-x-auto`                        |
+| `/mitglieder/probenplanung`                              | ➖    | ➖     | ➖      | automatisch           | Redirect auf `/mitglieder/terminplanung?art=proben`           |
 | `/mitglieder/datenportal`                                | ✅    | ✅     | ✅      | gemessen              | Ergebnistabelle scrollt innen (`hidden md:block`)             |
 | `/mitglieder/mitgliederverwaltung`                       | ✅    | ✅     | ✅      | gemessen              | Karten↔Tabelle, `SectionNav`                                  |
 | `/mitglieder/mitgliederverwaltung/[userId]`              | ✅    | ✅     | ✅      | visuell (dynamisch)   | `xl:grid-cols-[320px_1fr]`                                    |
@@ -59,6 +59,8 @@ Legende: ✅ ok · ⚠️ funktioniert, aber mit Einschränkung · ❓ unklar ·
 | Route                                                | Zustand                                                          |
 | ---------------------------------------------------- | ---------------------------------------------------------------- |
 | `/mitglieder/dashboard`                              | ➖ Redirect auf `/mitglieder`                                    |
+| `/mitglieder/probenplanung`                          | ➖ Redirect auf `/mitglieder/terminplanung?art=proben`           |
+| `/mitglieder/probenplanung/terminfinder`             | ➖ Redirect auf `/mitglieder/terminplanung/terminfinder`         |
 | `/mitglieder/rollenverwaltung`                       | ➖ Redirect                                                      |
 | `/mitglieder/produktionen/besetzung`                 | ➖ Redirect auf `/mitglieder/produktionen/stueck?ansicht=rollen` |
 | `/mitglieder/produktionen/szenen`                    | ➖ Redirect auf das Stück                                        |

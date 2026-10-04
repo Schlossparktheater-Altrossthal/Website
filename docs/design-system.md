@@ -111,7 +111,7 @@ Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `global
 - Width: `2xl` (96rem)
 - Padding: `default` (`var(--layout-gutter)`)
 - Spacing: `comfortable` (`py-6 sm:py-8`)
-- Gap: `md` (`space-y-6`)
+- Gap: `md` (`space-y-8`; die Stufe `sm` wäre `space-y-6`)
 
 **❌ NICHT tun:**
 
@@ -191,6 +191,28 @@ Drei Nutzerklassen bestimmen die Breakpoint-Entscheidungen im Mitgliederbereich.
 - Screenshots: `pnpm e2e:screenshots --viewport all` erzeugt Handy/Tablet/Desktop in hell + dunkel.
 - `pnpm ui:check` prüft dieselben Regeln bei Bedarf in WebKit (`--browser webkit`); die Viewports `mobile-iphone` (402×874) und `tablet-mini` (744×1133) bilden das gemeldete Handy und das iPad mini hochkant ab.
 - Vollständige Status-Übersicht: `docs/responsiveness-matrix.md`.
+
+## Kanonische UI-Werte
+
+Diese Werte gelten verbindlich und stammen aus den geteilten Komponenten – nicht aus
+Einzelseiten. Herleitung und geprüfte Abweichungen: `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`.
+
+| Baustein             | Kanonisch                                                                                                         | Quelle                                           |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Card                 | `rounded-lg`; `plain` `border-border/60 bg-card shadow-sm`, `default` `border-border/50 bg-card/60 backdrop-blur` | `src/components/ui/card.tsx`                     |
+| Listenzeile / Gruppe | `ListRow` `rounded-md`, `min-h-12 py-2.5`; `ListRowGroup` `rounded-lg border border-border`                       | `src/components/ui/list-row.tsx`                 |
+| Kennzahl-Kachel      | `StatTile` `rounded-lg border p-3 shadow-sm`                                                                      | `src/components/ui/stat-tile.tsx`                |
+| Formularfeld         | `Input`/`Select` `h-10 rounded-md border-input bg-background`                                                     | `src/components/ui/input.tsx`, `select.tsx`      |
+| Button-Höhen         | `xs h-8` · `sm h-9` · `md h-10` · `lg h-11` · `xl h-12` · `icon h-9 w-9`                                          | `src/components/ui/button.tsx`                   |
+| Umschalter           | Container `rounded-lg bg-muted/70 p-0.5`, Einträge `h-10`                                                         | `ui/segmented-control.tsx`, `ui/section-nav.tsx` |
+| Badge / Pills        | `rounded-full`                                                                                                    | `src/components/ui/badge.tsx`                    |
+| Seitentitel (H1)     | `text-2xl md:text-3xl font-semibold` (über `PageHeader`)                                                          | `src/components/members/page-header.tsx`         |
+
+**Radius-Skala:** `rounded-md` für Steuerelemente und Listenzeilen, `rounded-lg` für Container
+(Cards, Kacheln, Listengruppen, Umschalter), `rounded-full` für Pills und Badges. `rounded-xl`
+ist für Cards/Container unzulässig; `rounded-2xl` bleibt dem mobilen Dialog (`rounded-t-2xl`)
+vorbehalten. **Rahmen:** Standard `border-border`, abgeschwächt `border-border/60`; weitere
+Alpha-Stufen (`/30`, `/40`, `/50`, `/70`, `/80`) sind zu vermeiden.
 
 ## Komponentenrichtlinien
 
@@ -652,27 +674,36 @@ Terminplanung folgen diesem Aufbau (Stand 2026-09-26):
      Bereich mit „‹ Zurück“, ab `lg` als linke Navigation (`?bereich=`).
      Aktiv ist jeweils ein heller Eintrag mit Ring (`bg-background text-foreground shadow-sm
 ring-1 ring-border`) oder eine gleichwertige Aktivklasse; horizontal gescrollt wird nie.
-3. **Werkzeugzeile** — Suche links (`h-11`, Suchicon `pl-9`), primäre Aktion rechts
-   (`Button` primary, `h-11 shrink-0`) in einer Zeile. Einsatz: Stück, Mitgliederverwaltung.
-4. **Inhalt** — Karten `rounded-xl border border-border bg-card`; Listenzeilen
-   `min-h-16 rounded-xl border border-border bg-card p-3` mit `hover:bg-muted/40`.
+3. **Werkzeugzeile** — Suche links (`Input` mit Suchicon `pl-9`), primäre Aktion rechts
+   (`Button` primary) in einer Zeile (`flex flex-wrap items-center gap-2`, Aktionsgruppe
+   `ml-auto`). Innerhalb der Zeile eine einheitliche Höhe: Standard `h-10`, für 44-px-Touch-Ziele
+   `h-11`. Einsatz: Stück, Mitgliederverwaltung, Lager, Datenportal.
+4. **Inhalt** — Karten aus `Card` (`rounded-lg`; `plain`: `border-border/60 bg-card shadow-sm`,
+   `default`: `border-border/50 bg-card/60 backdrop-blur`); Listenzeilen aus `ListRow`
+   (`rounded-md`, `min-h-12 py-2.5`, `hover:bg-muted/50`), die Gruppe aus `ListRowGroup`
+   (`rounded-lg border border-border`). Kanonische Werte: `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`.
 5. **Leerzustand** — `py-12 text-center text-sm text-muted-foreground`; in Kartenlisten
    kompakter (`px-3 py-4`, z. B. Dashboard).
 6. **Überschriften im Inhalt** — mit den Größen der Skala direkt am Element: Seitentitel
-   `text-3xl`/`text-2xl font-semibold`, Abschnitt `text-sm font-semibold` oder
-   `text-sm font-medium text-muted-foreground`, Label `text-xs font-medium uppercase
+   (H1 aus `PageHeader`) `text-2xl md:text-3xl font-semibold`, Abschnitt `text-sm font-semibold`
+   oder `text-sm font-medium text-muted-foreground`, Label `text-xs font-medium uppercase
 tracking-wide text-muted-foreground`. `Heading` und `Text` stehen bereit, sind im Bestand
-   aber nicht durchgängig im Einsatz.
+   aber nicht durchgängig im Einsatz. Kein eigenes `<h1>` und keine zweite Titelgröße.
 7. **Rückmeldung** — `sonner`: Erfolg `duration: 3000`, Fehler mit `description` und
    `duration: 5000`.
-8. **Abstände** — Seite `space-y-6`; dichtere Arbeitsseiten (`Stück`, `Teams & Zuweisung`)
+8. **Abstände** — die Shell stapelt ihre Bereiche mit `space-y-8` (gap `md`); die Seite innen
+   `space-y-6`, dichtere Arbeitsseiten (`Stück`, `Teams & Zuweisung`, `Terminplanung`)
    `space-y-4`.
 
 Die Produktionsseiten (`/mitglieder/produktionen`, Gewerke, Stück, Zuweisung, Rückmeldungen)
 teilen sich `ProductionHeader` (`components/production/production-header.tsx`): Titel, Status,
 Premiere mit Countdown und `SectionNav` als Tabs. Bestand außerhalb des Musters: die
-Detailseiten von Produktionen und einige Einstellungsseiten ein eigenes `<h1>`; Mitglieder-Detail,
-Server-Analytics und Website & Theme nutzen noch orange gefüllte `TabsList`-Pills.
+Detailseiten von Produktionen (`produktionen/[showId]`, `…/ensemble`), `datenportal`,
+`website`, `server-einstellungen` und das Onboarding-Dashboard rendern ein eigenes `<h1>` statt
+`PageHeader` (Größen weichen ab, siehe `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`);
+Mitglieder-Detail (`mitgliederverwaltung/[userId]`), Website & Theme (`website`) und das
+Onboarding-Dashboard nutzen noch orange gefüllte `TabsList`-Pills. Server-Analytics nutzt
+inzwischen `SectionNav`.
 
 ## Checkliste: Design System Compliance
 
@@ -680,6 +711,8 @@ Beim Erstellen oder Refactoren von Komponenten:
 
 - [ ] Verwendet Design-Tokens statt hard-coded Farben
 - [ ] Folgt dem Container-System (keine eigenen `mx-auto`, `px-*`)
+- [ ] Radien/Höhen/Rahmen aus den Primitives (`rounded-md` Steuerelemente, `rounded-lg` Container,
+      `rounded-full` Pills; kein `rounded-xl` für Cards) – siehe „Kanonische UI-Werte“
 - [ ] Nutzt semantische HTML-Elemente (`<section>`, `<article>`, `<header>`)
 - [ ] Icons haben `aria-hidden` wenn dekorativ
 - [ ] Buttons haben `title` oder `aria-label` bei Icon-only
@@ -690,6 +723,7 @@ Beim Erstellen oder Refactoren von Komponenten:
 - [ ] Komponente funktioniert in Light & Dark Mode
 - [ ] Seitenkopf über `PageHeader` (einzeilig, kein Wurzel-Breadcrumb)
 - [ ] Bereichs-Navigation über eines der vier Muster; kein horizontal scrollender Umschalter
-- [ ] Überschriften mit den Größen der Skala (Seitentitel `text-2xl`/`text-3xl` im Inhalt)
+- [ ] Genau ein Seitenkopf über `PageHeader` (H1 `text-2xl md:text-3xl`), kein eigenes `<h1>` und
+      keine zweite Titelgröße
 - [ ] Leerzustand `py-12 text-center` mit `text-muted-foreground`
 - [ ] Auf Handy, Tablet und Desktop in hell und dunkel per Screenshot geprüft (Pflicht, nie nur am Code)

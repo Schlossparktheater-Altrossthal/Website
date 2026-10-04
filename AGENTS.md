@@ -64,12 +64,22 @@ stehen in den Leitfäden unter `docs/` (`design-system.md`, `development.md`, `d
   funktionieren. Tokens kommen aus dem tweakcn-Theme (`src/lib/theme/`); neue Variablen in
   `src/lib/theme/tweakcn.ts` mit Standardwert, nicht in `globals.css`. Kategorie-/Identitätsfarben
   nur in `src/config/category-colors.ts`.
-- **Flächen:** `bg-background` = Seitenbasis (nie in Cards), `bg-card` = Cards/Sections, `bg-muted`
-  = Flächen innerhalb einer Card, `bg-popover` = nur Overlays. Rahmen `border-border`;
-  `border-primary` nur für interaktive/ausgewählte Zustände.
-- **Layout:** `MembersAppShell` liefert Container und Padding, Seiten beginnen mit
-  `<div className="space-y-6">` (kein eigenes `mx-auto`/`px-*`/`<main>`); Sonderfälle über
-  `MembersContentLayout`.
+- **Flächen:** `bg-background` = Seitenbasis und Formularfeld-Fläche (`Input`/`Select`), als
+  Karten-/Containerfläche nie innerhalb einer Card; `bg-card` = Cards/Sections, `bg-muted` =
+  Flächen innerhalb einer Card, `bg-popover` = nur Overlays. Rahmen `border-border` (abgeschwächt
+  `border-border/60`); `border-primary` nur für interaktive/ausgewählte Zustände.
+- **Kanonische Werte** kommen aus den Primitives, nicht aus Einzelseiten: Card `rounded-lg`,
+  Listenzeile `ListRow` `rounded-md`/`min-h-12`, Kachel `StatTile` `rounded-lg`, Feld `h-10`
+  `rounded-md`, `Button` `xs h-8`/`sm h-9`/`md h-10`/`lg h-11`, Badge/Pills `rounded-full`.
+  Radius-Skala: `rounded-md` (Steuerelemente/Zeilen), `rounded-lg` (Container), `rounded-full`
+  (Pills); kein `rounded-xl` für Cards. Herleitung:
+  `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`.
+- **Layout:** `MembersAppShell` liefert Container, Padding (`py-6 sm:py-8`) und den Abstand
+  zwischen den Bereichen (`space-y-8`); Seiten setzen innen `<div className="space-y-6">`
+  (dichtere Arbeitsseiten `space-y-4`) und kein eigenes `mx-auto`/`px-*`/`py-*`/`<main>`;
+  Sonderfälle über `MembersContentLayout`.
+- **Ein Seitenkopf pro Seite** über `PageHeader` (`text-2xl md:text-3xl font-semibold`) – kein
+  eigenes `<h1>`, keine zweite Titelgröße.
 - **Seitenaufbau** der Hauptbereiche: `PageHeader` (`src/components/members/page-header.tsx`,
   einzeilig, Breadcrumbs nur mit echtem Elternteil) → Bereichs-Navigation → Werkzeugzeile (Suche
   links, primäre Aktion rechts, `flex flex-wrap items-center gap-2`) → Cards. Details in
