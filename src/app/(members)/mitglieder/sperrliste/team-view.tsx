@@ -23,7 +23,13 @@ import { FullscreenOverlay } from "@/components/ui/fullscreen-overlay";
 import { Input } from "@/components/ui/input";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { UserAvatar } from "@/components/user-avatar";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { DAY_TIER_LABELS, type DayInfo } from "@/lib/sperrliste/day-tiers";
@@ -34,9 +40,18 @@ import { CalendarEntryList, CalendarLegend, DayChips, formatLongDate } from "./d
 import { MEMBER_GROUP_LABELS, type MemberGroup, type TeamEntry, type TeamMember } from "./types";
 import type { CalendarModel } from "./use-calendar-model";
 
-type GroupFilter = "all" | "actors" | "crew";
+type GroupFilter = "all" | "actors" | "crew" | "unassigned";
+/** `planning`: Kern- und Ausnahmetage (Standard), `events`: Tage mit Termin/Probe. */
+type DayFilter = "planning" | "core" | "events" | "all";
 
-const GROUP_ORDER: MemberGroup[] = ["actors", "both", "crew", "other"];
+const DAY_FILTER_LABELS: Record<DayFilter, string> = {
+  planning: "Kern- & Ausnahmetage",
+  core: "Nur Kerntage",
+  events: "Nur Termine/Proben",
+  all: "Alle Tage",
+};
+
+const GROUP_ORDER: MemberGroup[] = ["actors", "both", "crew", "unassigned"];
 const WEEKDAY_SHORT = new Intl.DateTimeFormat("de-DE", { weekday: "short" });
 
 type TeamViewProps = {
@@ -52,6 +67,7 @@ type TeamViewProps = {
 
 function matchesGroup(member: TeamMember, filter: GroupFilter) {
   if (filter === "all") return true;
+  if (filter === "unassigned") return member.group === "unassigned";
   if (filter === "actors") return member.group === "actors" || member.group === "both";
   return member.group === "crew" || member.group === "both";
 }
@@ -73,13 +89,14 @@ export function TeamView({
   onEditEvent,
 }: TeamViewProps) {
   const [groupFilter, setGroupFilter] = useState<GroupFilter>("all");
-  const [allDays, setAllDays] = useState(false);
+  const [dayFilter, setDayFilter] = useState<DayFilter>("planning");
   const [mode, setMode] = useState<"days" | "people">("days");
   const [query, setQuery] = useState("");
   const [openDayKey, setOpenDayKey] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const closeFullscreen = useCallback(() => setFullscreen(false), []);
 
+  const hasUnassigned = members.some((member) => member.group === "unassigned");
   const visibleMembers = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("de-DE");
     return members.filter(
@@ -91,8 +108,14 @@ export function TeamView({
   const visibleIds = useMemo(() => new Set(visibleMembers.map((m) => m.id)), [visibleMembers]);
 
   const days = useMemo(
-    () => model.monthDays.filter((day) => allDays || day.tier !== "off"),
-    [allDays, model.monthDays],
+    () =>
+      model.monthDays.filter((day) => {
+        if (dayFilter === "all") return true;
+        if (dayFilter === "core") return day.tier === "core";
+        if (dayFilter === "events") return (model.entriesByDay.get(day.key)?.length ?? 0) > 0;
+        return day.tier !== "off";
+      }),
+    [dayFilter, model.entriesByDay, model.monthDays],
   );
 
   /** Einträge je Tag, gefiltert auf die sichtbaren Personen. */
@@ -135,12 +158,21 @@ export function TeamView({
             { value: "all", label: `Alle` },
             { value: "actors", label: "Schauspiel" },
             { value: "crew", label: "Gewerke" },
+            ...(hasUnassigned ? [{ value: "unassigned" as const, label: "Offen" }] : []),
           ]}
         />
-        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-          Alle Tage
-          <Switch checked={allDays} onCheckedChange={setAllDays} aria-label="Alle Tage anzeigen" />
-        </label>
+        <Select value={dayFilter} onValueChange={(value) => setDayFilter(value as DayFilter)}>
+          <SelectTrigger className="ml-auto h-9 w-auto gap-2 text-xs" aria-label="Tage filtern">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {(Object.keys(DAY_FILTER_LABELS) as DayFilter[]).map((value) => (
+              <SelectItem key={value} value={value}>
+                {DAY_FILTER_LABELS[value]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="relative w-full sm:w-48">
           <SearchIcon
             className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
@@ -158,7 +190,11 @@ export function TeamView({
 
       {days.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
-          In diesem Monat gibt es keine Kern- oder Ausnahmetage.
+          {dayFilter === "events"
+            ? "In diesem Monat gibt es keine Termine oder Proben."
+            : dayFilter === "core"
+              ? "In diesem Monat gibt es keine Kerntage."
+              : "In diesem Monat gibt es keine Kern- oder Ausnahmetage."}
         </p>
       ) : (
         <>

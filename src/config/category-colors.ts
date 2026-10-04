@@ -55,11 +55,11 @@ export const RANKING_ROLE_STYLES: Record<string, string> = {
 };
 
 /** Kennfarbe (Streifen/Punkt) je Personengruppe in Team-Übersichten, passend zum Fokus. */
-export const MEMBER_GROUP_ACCENTS: Record<"actors" | "crew" | "both" | "other", string> = {
+export const MEMBER_GROUP_ACCENTS: Record<"actors" | "crew" | "both" | "unassigned", string> = {
   actors: "bg-violet-500",
   crew: "bg-cyan-500",
   both: "bg-indigo-500",
-  other: "bg-muted-foreground/50",
+  unassigned: "bg-muted-foreground/50",
 };
 
 /** Auswahl für Rollenfarben (Kacheln, Szenen-Chips). Gespeichert wird der Hex-Wert. */

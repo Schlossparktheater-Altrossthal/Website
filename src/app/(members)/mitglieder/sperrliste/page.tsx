@@ -30,7 +30,17 @@ import {
 } from "@/lib/sperrliste-settings";
 
 import { BlocklistPageClient, type BlocklistPageData } from "./page-client";
-import { KIND_TO_STATUS, focusToGroup, type TeamEntry, type TeamMember } from "./types";
+import {
+  KIND_TO_STATUS,
+  assignmentsToGroup,
+  focusToGroup,
+  type MemberGroup,
+  type TeamEntry,
+  type TeamMember,
+} from "./types";
+
+/** Blaupause des Gewerks „Schauspiel“ – Mitglieder dort zählen zum Ensemble. */
+const ACTING_TEMPLATE_SLUG = "schauspiel";
 
 const DESCRIPTION = "Trage ein, wann du nicht kannst – das Team sieht auf einen Blick, wer fehlt.";
 
@@ -39,7 +49,7 @@ type MemberRecord = AvatarFields & {
   firstName: string | null;
   lastName: string | null;
   name: string | null;
-  focus: string | null;
+  group: MemberGroup;
   blockedDays: {
     id: string;
     date: string;
@@ -58,7 +68,7 @@ function buildTeam(records: MemberRecord[], includeReasons: boolean) {
       email: record.email,
       avatarSource: record.avatarSource,
       avatarUpdatedAt: record.avatarUpdatedAt,
-      group: focusToGroup(record.focus),
+      group: record.group,
     });
     for (const day of record.blockedDays) {
       entries.push({
@@ -86,7 +96,7 @@ export default async function BlocklistPage() {
     const team = buildTeam(
       DEV_SPERRLISTE_OVERVIEW_MEMBERS_FIXTURE.map((member) => ({
         ...member,
-        focus: member.onboardingFocus,
+        group: focusToGroup(member.onboardingFocus),
         blockedDays: member.blockedDays.map(({ id, date, kind, reason }) => ({
           id,
           date,
@@ -173,6 +183,19 @@ export default async function BlocklistPage() {
         avatarSource: true,
         avatarImageUpdatedAt: true,
         onboardingProfile: { select: { focus: true } },
+        // Ohne Produktion passt `showId: ""` auf nichts – dann zählt der Onboarding-Schwerpunkt.
+        characterCastings: {
+          where: { character: { showId: activeProductionId ?? "" } },
+          select: { id: true },
+          take: 1,
+        },
+        departmentMemberships: {
+          where: {
+            status: "active",
+            department: { showId: activeProductionId ?? "", archivedAt: null },
+          },
+          select: { department: { select: { template: { select: { slug: true } } } } },
+        },
         blockedDays: {
           where: { date: { gte: from, lt: to } },
           orderBy: { date: "asc" },
@@ -209,7 +232,17 @@ export default async function BlocklistPage() {
     email: user.email,
     avatarSource: user.avatarSource,
     avatarUpdatedAt: user.avatarImageUpdatedAt,
-    focus: user.onboardingProfile?.focus ?? null,
+    group: activeProductionId
+      ? assignmentsToGroup(
+          user.characterCastings.length > 0 ||
+            user.departmentMemberships.some(
+              (membership) => membership.department.template.slug === ACTING_TEMPLATE_SLUG,
+            ),
+          user.departmentMemberships.some(
+            (membership) => membership.department.template.slug !== ACTING_TEMPLATE_SLUG,
+          ),
+        )
+      : focusToGroup(user.onboardingProfile?.focus),
     blockedDays: user.blockedDays.map((day) => ({
       id: day.id,
       date: format(day.date, "yyyy-MM-dd"),

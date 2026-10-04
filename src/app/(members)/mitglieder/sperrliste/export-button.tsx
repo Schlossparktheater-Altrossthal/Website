@@ -17,7 +17,7 @@ const PDF_ZONE: Record<MemberGroup, "acting" | "crew" | "both" | "unknown"> = {
   actors: "acting",
   crew: "crew",
   both: "both",
-  other: "unknown",
+  unassigned: "unknown",
 };
 
 const FALLBACK_LABEL = {
