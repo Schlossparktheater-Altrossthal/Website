@@ -46,7 +46,8 @@ export async function listPendingRestrictions(): Promise<PendingRestrictionGroup
       const fromLink = linked.flatMap((code) =>
         suggestTaxa(index, index.get(code)?.nameDe ?? code, 1).filter((item) => item.code === code),
       );
-      const fromSearch = suggestTaxa(index, text, 4);
+      // Sicherer Treffer: nur diesen anbieten (ein Klick bestätigt), sonst zusätzlich die Suche.
+      const fromSearch = link.kind === "sure" ? [] : suggestTaxa(index, text, 4);
       const suggestions = [
         ...new Map([...fromLink, ...fromSearch].map((s) => [s.code, s])).values(),
       ];

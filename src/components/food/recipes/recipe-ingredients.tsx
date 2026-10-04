@@ -76,7 +76,7 @@ export function RecipeIngredients({
           const withoutNutrients = !ingredient.foodName;
           return (
             <li key={ingredient.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2">
-              <span className="w-24 shrink-0 text-sm tabular-nums text-muted-foreground">
+              <span className="w-16 shrink-0 text-sm tabular-nums text-muted-foreground sm:w-24">
                 {formatAmount(ingredient.amount, ingredient.unit, factor)}
               </span>
               <div className="min-w-0 flex-1">

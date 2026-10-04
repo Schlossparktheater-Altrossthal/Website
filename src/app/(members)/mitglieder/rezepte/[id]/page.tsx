@@ -130,7 +130,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                     {computed.allergenLabels.map((allergen) => (
                       <Badge
                         key={allergen.code}
-                        variant={allergen.lmiv ? "destructive" : "muted"}
+                        variant={allergen.lmiv ? "warning" : "muted"}
                         size="sm"
                       >
                         {allergen.name}
