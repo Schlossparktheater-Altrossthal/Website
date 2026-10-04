@@ -41,7 +41,8 @@ Verbindliche Werte und Herleitung: `docs/design-system.md` (Abschnitt „Kanonis
 
 Immer `Card` aus `src/components/ui/card.tsx` verwenden – sie bringt Radius und Rahmen mit
 (`rounded-lg`; `plain` `border-border/60 bg-card shadow-sm`, `default` `border-border/50 bg-card/60
-backdrop-blur`). Keine eigenen Kartenrahmen mit `rounded-xl` oder abweichenden Alpha-Stufen.
+backdrop-blur`). Radius und Rahmen kommen aus der Komponente – für neue Karten keine eigenen
+Werte. (Ausnahme im Bestand: Onboarding-Dashboard-Kopf `rounded-2xl`.)
 
 ```tsx
 <Card variant="plain" size="md">

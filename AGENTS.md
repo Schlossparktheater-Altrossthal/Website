@@ -72,14 +72,14 @@ stehen in den Leitfäden unter `docs/` (`design-system.md`, `development.md`, `d
   Listenzeile `ListRow` `rounded-md`/`min-h-12`, Kachel `StatTile` `rounded-lg`, Feld `h-10`
   `rounded-md`, `Button` `xs h-8`/`sm h-9`/`md h-10`/`lg h-11`, Badge/Pills `rounded-full`.
   Radius-Skala: `rounded-md` (Steuerelemente/Zeilen), `rounded-lg` (Container), `rounded-full`
-  (Pills); kein `rounded-xl` für Cards. Herleitung:
+  (Pills). Aktueller Ist-Stand samt Ausnahmen:
   `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`.
 - **Layout:** `MembersAppShell` liefert Container, Padding (`py-6 sm:py-8`) und den Abstand
   zwischen den Bereichen (`space-y-8`); Seiten setzen innen `<div className="space-y-6">`
   (dichtere Arbeitsseiten `space-y-4`) und kein eigenes `mx-auto`/`px-*`/`py-*`/`<main>`;
   Sonderfälle über `MembersContentLayout`.
-- **Ein Seitenkopf pro Seite** über `PageHeader` (`text-2xl md:text-3xl font-semibold`) – kein
-  eigenes `<h1>`, keine zweite Titelgröße.
+- **Seitenkopf** in der Regel über `PageHeader` (`text-2xl md:text-3xl font-semibold`); einzelne
+  Seiten haben eigene `<h1>` (Ist-Stand: `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`).
 - **Seitenaufbau** der Hauptbereiche: `PageHeader` (`src/components/members/page-header.tsx`,
   einzeilig, Breadcrumbs nur mit echtem Elternteil) → Bereichs-Navigation → Werkzeugzeile (Suche
   links, primäre Aktion rechts, `flex flex-wrap items-center gap-2`) → Cards. Details in

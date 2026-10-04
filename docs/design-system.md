@@ -194,8 +194,9 @@ Drei Nutzerklassen bestimmen die Breakpoint-Entscheidungen im Mitgliederbereich.
 
 ## Kanonische UI-Werte
 
-Diese Werte gelten verbindlich und stammen aus den geteilten Komponenten – nicht aus
-Einzelseiten. Herleitung und geprüfte Abweichungen: `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`.
+Diese Werte sind der Standard der geteilten Komponenten und damit der Maßstab für neue Seiten –
+nicht aus Einzelseiten abgeleitet. Einzelne Seiten weichen ab; der aktuelle Bestand steht in
+`docs/Analysen/ui-konsistenz-audit-2026-10-04.md`.
 
 | Baustein             | Kanonisch                                                                                                         | Quelle                                           |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
@@ -209,10 +210,10 @@ Einzelseiten. Herleitung und geprüfte Abweichungen: `docs/Analysen/ui-konsisten
 | Seitentitel (H1)     | `text-2xl md:text-3xl font-semibold` (über `PageHeader`)                                                          | `src/components/members/page-header.tsx`         |
 
 **Radius-Skala:** `rounded-md` für Steuerelemente und Listenzeilen, `rounded-lg` für Container
-(Cards, Kacheln, Listengruppen, Umschalter), `rounded-full` für Pills und Badges. `rounded-xl`
-ist für Cards/Container unzulässig; `rounded-2xl` bleibt dem mobilen Dialog (`rounded-t-2xl`)
-vorbehalten. **Rahmen:** Standard `border-border`, abgeschwächt `border-border/60`; weitere
-Alpha-Stufen (`/30`, `/40`, `/50`, `/70`, `/80`) sind zu vermeiden.
+(Cards, Kacheln, Listengruppen, Umschalter), `rounded-full` für Pills und Badges. Im Bestand
+zusätzlich `rounded-2xl` (Onboarding-Dashboard-Kopf, mobiler Dialog `rounded-t-2xl`) und
+vereinzelt `rounded-xl` außerhalb von Cards. **Rahmen:** `border-border`, abgeschwächt
+`border-border/60`; Cards `border-border/50`–`/60`; Formularfelder `border-input`.
 
 ## Komponentenrichtlinien
 
@@ -684,11 +685,11 @@ ring-1 ring-border`) oder eine gleichwertige Aktivklasse; horizontal gescrollt w
    (`rounded-lg border border-border`). Kanonische Werte: `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`.
 5. **Leerzustand** — `py-12 text-center text-sm text-muted-foreground`; in Kartenlisten
    kompakter (`px-3 py-4`, z. B. Dashboard).
-6. **Überschriften im Inhalt** — mit den Größen der Skala direkt am Element: Seitentitel
-   (H1 aus `PageHeader`) `text-2xl md:text-3xl font-semibold`, Abschnitt `text-sm font-semibold`
+6. **Überschriften im Inhalt** — mit den Größen der Skala direkt am Element: Seitentitel als H1
+   über `PageHeader` (`text-2xl md:text-3xl font-semibold`), Abschnitt `text-sm font-semibold`
    oder `text-sm font-medium text-muted-foreground`, Label `text-xs font-medium uppercase
 tracking-wide text-muted-foreground`. `Heading` und `Text` stehen bereit, sind im Bestand
-   aber nicht durchgängig im Einsatz. Kein eigenes `<h1>` und keine zweite Titelgröße.
+   aber nicht durchgängig im Einsatz.
 7. **Rückmeldung** — `sonner`: Erfolg `duration: 3000`, Fehler mit `description` und
    `duration: 5000`.
 8. **Abstände** — die Shell stapelt ihre Bereiche mit `space-y-8` (gap `md`); die Seite innen
@@ -697,13 +698,12 @@ tracking-wide text-muted-foreground`. `Heading` und `Text` stehen bereit, sind i
 
 Die Produktionsseiten (`/mitglieder/produktionen`, Gewerke, Stück, Zuweisung, Rückmeldungen)
 teilen sich `ProductionHeader` (`components/production/production-header.tsx`): Titel, Status,
-Premiere mit Countdown und `SectionNav` als Tabs. Bestand außerhalb des Musters: die
-Detailseiten von Produktionen (`produktionen/[showId]`, `…/ensemble`), `datenportal`,
-`website`, `server-einstellungen` und das Onboarding-Dashboard rendern ein eigenes `<h1>` statt
-`PageHeader` (Größen weichen ab, siehe `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`);
-Mitglieder-Detail (`mitgliederverwaltung/[userId]`), Website & Theme (`website`) und das
-Onboarding-Dashboard nutzen noch orange gefüllte `TabsList`-Pills. Server-Analytics nutzt
-inzwischen `SectionNav`.
+Premiere mit Countdown und `SectionNav` als Tabs. Aktueller Bestand: die Detailseiten von
+Produktionen (`produktionen/[showId]`, `…/ensemble`), `datenportal`, `website`,
+`server-einstellungen` und das Onboarding-Dashboard rendern ein eigenes `<h1>` statt `PageHeader`
+(Größen in `docs/Analysen/ui-konsistenz-audit-2026-10-04.md`); Mitglieder-Detail
+(`mitgliederverwaltung/[userId]`), Website & Theme und das Onboarding-Dashboard nutzen orange
+gefüllte `TabsList`-Pills. Server-Analytics nutzt `SectionNav`.
 
 ## Checkliste: Design System Compliance
 
@@ -712,7 +712,7 @@ Beim Erstellen oder Refactoren von Komponenten:
 - [ ] Verwendet Design-Tokens statt hard-coded Farben
 - [ ] Folgt dem Container-System (keine eigenen `mx-auto`, `px-*`)
 - [ ] Radien/Höhen/Rahmen aus den Primitives (`rounded-md` Steuerelemente, `rounded-lg` Container,
-      `rounded-full` Pills; kein `rounded-xl` für Cards) – siehe „Kanonische UI-Werte“
+      `rounded-full` Pills) – siehe „Kanonische UI-Werte“
 - [ ] Nutzt semantische HTML-Elemente (`<section>`, `<article>`, `<header>`)
 - [ ] Icons haben `aria-hidden` wenn dekorativ
 - [ ] Buttons haben `title` oder `aria-label` bei Icon-only
@@ -723,7 +723,7 @@ Beim Erstellen oder Refactoren von Komponenten:
 - [ ] Komponente funktioniert in Light & Dark Mode
 - [ ] Seitenkopf über `PageHeader` (einzeilig, kein Wurzel-Breadcrumb)
 - [ ] Bereichs-Navigation über eines der vier Muster; kein horizontal scrollender Umschalter
-- [ ] Genau ein Seitenkopf über `PageHeader` (H1 `text-2xl md:text-3xl`), kein eigenes `<h1>` und
-      keine zweite Titelgröße
+- [ ] Genau ein Seitenkopf über `PageHeader` (H1 `text-2xl md:text-3xl`); Abweichungen einzelner
+      Seiten stehen im Ist-Stand (`docs/Analysen/ui-konsistenz-audit-2026-10-04.md`)
 - [ ] Leerzustand `py-12 text-center` mit `text-muted-foreground`
 - [ ] Auf Handy, Tablet und Desktop in hell und dunkel per Screenshot geprüft (Pflicht, nie nur am Code)
