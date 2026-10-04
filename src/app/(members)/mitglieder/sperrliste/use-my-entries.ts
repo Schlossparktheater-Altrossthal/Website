@@ -120,9 +120,35 @@ export function useMyEntries({
     [applyLocal, entries],
   );
 
+  /** Rückgängig nach dem Sammel-Eintrag: die dabei neu angelegten Tage wieder löschen. */
+  const undoAdded = useCallback(
+    async (added: BlockDayResponse[]) => {
+      const results = await Promise.allSettled(
+        added.map(async (entry) => {
+          const response = await fetch(`/api/block-days/${entry.id}`, { method: "DELETE" });
+          if (!response.ok) throw new Error(await readError(response, "Löschen fehlgeschlagen"));
+          return entry.date;
+        }),
+      );
+      const removed = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+      applyLocal([], removed);
+      if (removed.length < added.length) {
+        toast.error("Nicht alles rückgängig gemacht", {
+          description: `${added.length - removed.length} Tage sind noch eingetragen.`,
+          duration: 5000,
+        });
+      }
+    },
+    [applyLocal],
+  );
+
   /** Mehrere Tage auf einmal eintragen (z. B. Urlaub). Bestehende Tage bleiben unverändert. */
   const addRange = useCallback(
     async (dates: string[], status: SettableStatus, reason: string | null) => {
+      // Schon eingetragene Tage lässt der Server unverändert – Rückgängig darf nur neue löschen.
+      const existingDates = new Set(entries.map((entry) => entry.date));
       try {
         const response = await fetch("/api/block-days/bulk", {
           method: "POST",
@@ -147,11 +173,15 @@ export function useMyEntries({
           })),
         );
         const skipped = payload.skipped?.length ?? 0;
-        toast.success(`${payload.created.length} Tage eingetragen`, {
+        const added = payload.created.filter((entry) => !existingDates.has(entry.date));
+        toast.success(`${added.length} ${added.length === 1 ? "Tag" : "Tage"} eingetragen`, {
           description: skipped
             ? `${skipped} Tage liegen in der Sperrfrist und wurden übersprungen.`
             : undefined,
-          duration: 3000,
+          duration: 6000,
+          action: added.length
+            ? { label: "Rückgängig", onClick: () => void undoAdded(added) }
+            : undefined,
         });
         return true;
       } catch (error) {
@@ -163,7 +193,7 @@ export function useMyEntries({
         return false;
       }
     },
-    [applyLocal],
+    [applyLocal, entries, undoAdded],
   );
 
   return { entries, setDay, addRange, pendingKey };

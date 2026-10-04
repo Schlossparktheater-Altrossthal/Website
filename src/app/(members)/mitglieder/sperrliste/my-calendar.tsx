@@ -89,17 +89,8 @@ export function MyCalendar(props: MyCalendarProps) {
   const isCurrentMonth =
     month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
 
+  // Antippen in der Mehrfachauswahl, Halten, Ziehen und Tastenkürzel erledigt das Raster.
   const selectDay = (key: string) => {
-    if (multi) {
-      if (model.dayMap.get(key)?.isPast) return;
-      setMulti((current) => {
-        const next = new Set(current);
-        if (next.has(key)) next.delete(key);
-        else next.add(key);
-        return next;
-      });
-      return;
-    }
     setSelectedKey(key);
     // Mobil öffnet ein Tipp sofort das Blatt – so ist klar, dass sich etwas tut.
     if (!isDesktop) setSheetOpen(true);
@@ -158,8 +149,12 @@ export function MyCalendar(props: MyCalendarProps) {
         <MonthGrid
           month={month}
           showWeekNumbers
-          selectedKey={multi ? null : isDesktop || sheetOpen ? selectedKey : null}
-          selectedKeys={multi ?? undefined}
+          selectedKey={isDesktop || sheetOpen ? selectedKey : null}
+          multiSelect={
+            readOnly
+              ? undefined
+              : { keys: multi, onChange: setMulti, isSelectable: (key) => key >= todayKey }
+          }
           emphasizedWeekdays={model.preferredWeekdaySet}
           onSelect={selectDay}
           onMonthChange={onMonthChange}
@@ -178,14 +173,34 @@ export function MyCalendar(props: MyCalendarProps) {
           <MultiSelectBar
             count={multi.size}
             onCancel={() => setMulti(null)}
+            onQuickSelect={(kind) => {
+              const keys = model.monthDays
+                .filter((day) => day.key >= todayKey)
+                .filter((day) => {
+                  const weekday = parseDayKey(day.key).getDay();
+                  return kind === "weekend"
+                    ? weekday === 0 || weekday === 6
+                    : model.preferredWeekdaySet.has(weekday);
+                })
+                .map((day) => day.key);
+              setMulti((current) => new Set([...(current ?? []), ...keys]));
+            }}
+            hasCoreDays={model.preferredWeekdaySet.size > 0}
             onApply={async (status, reason) => {
               const ok = await onAddRange([...multi].sort(), status, reason);
               if (ok) setMulti(null);
             }}
           />
         ) : (
-          <p className="text-center text-xs text-muted-foreground lg:hidden">
-            Tippe auf einen Tag, um dich einzutragen.
+          <p className="text-center text-xs text-muted-foreground">
+            <span className="lg:hidden">
+              Tippe auf einen Tag, um dich einzutragen – halten und ziehen für mehrere Tage.
+            </span>
+            {readOnly ? null : (
+              <span className="hidden lg:inline">
+                Mehrere Tage: mit der Maus ziehen, Shift- oder Strg-Klick.
+              </span>
+            )}
           </p>
         )}
         <div className="flex flex-col gap-1.5 border-t border-border pt-3 sm:flex-row sm:flex-wrap sm:gap-x-4">
@@ -440,10 +455,14 @@ const MULTI_STATUSES = ["blocked", "limited", "preferred"] as const;
 function MultiSelectBar({
   count,
   onCancel,
+  onQuickSelect,
+  hasCoreDays,
   onApply,
 }: {
   count: number;
   onCancel: () => void;
+  onQuickSelect: (kind: "weekend" | "core") => void;
+  hasCoreDays: boolean;
   onApply: (status: (typeof MULTI_STATUSES)[number], reason: string | null) => Promise<void>;
 }) {
   const [reason, setReason] = useState("");
@@ -458,12 +477,23 @@ function MultiSelectBar({
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium" aria-live="polite">
           {count === 0
-            ? "Tippe auf die Tage, die du eintragen willst"
+            ? "Tippe auf die Tage oder ziehe darüber"
             : `${count} ${count === 1 ? "Tag" : "Tage"} ausgewählt`}
         </p>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Abbrechen
         </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">Dazu im Monat:</span>
+        <Button type="button" variant="outline" size="xs" onClick={() => onQuickSelect("weekend")}>
+          Wochenenden
+        </Button>
+        {hasCoreDays ? (
+          <Button type="button" variant="outline" size="xs" onClick={() => onQuickSelect("core")}>
+            Kerntage
+          </Button>
+        ) : null}
       </div>
       <Input
         value={reason}
