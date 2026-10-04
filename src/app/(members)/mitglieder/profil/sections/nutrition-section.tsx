@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { splitAllergenList } from "@/lib/food/split-list";
 import {
   Dialog,
   DialogContent,
@@ -129,6 +130,7 @@ export function NutritionSection({
   const [allergySubmitting, setAllergySubmitting] = useState(false);
   const [allergyDialogOpen, setAllergyDialogOpen] = useState(false);
   const [pendingDeleteAllergen, setPendingDeleteAllergen] = useState<string | null>(null);
+  const [pendingSplit, setPendingSplit] = useState<string[] | null>(null);
 
   const [aversionState, setAversionState] = useState<AversionFormState>(EMPTY_AVERSION_FORM);
   const [editingAversionId, setEditingAversionId] = useState<string | null>(null);
@@ -198,50 +200,58 @@ export function NutritionSection({
       return;
     }
 
+    const parts = editingAllergyId ? [] : splitAllergenList(parseResult.data.allergen);
+    if (parts.length > 1) {
+      setPendingSplit(parts);
+      return;
+    }
+    await saveAllergies([parseResult.data.allergen]);
+  };
+
+  /**
+   * Speichert eine oder mehrere Angaben mit denselben Details (Art, Schweregrad, Spuren …).
+   * Mehrere entstehen, wenn ein Sammeleintrag („Erdnüsse, rote Beete“) aufgeteilt wird.
+   */
+  const saveAllergies = async (allergens: string[]) => {
     setAllergySubmitting(true);
     try {
-      const result = await upsertAllergyAction({
-        allergen: parseResult.data.allergen,
-        kind: parseResult.data.kind,
-        level: parseResult.data.level,
-        tracesOk: parseResult.data.tracesOk,
-        diagnosed: parseResult.data.diagnosed,
-        symptoms: parseResult.data.symptoms,
-        treatment: parseResult.data.treatment,
-        note: parseResult.data.note,
-      });
-      if (!result.ok) {
-        setAllergyError(result.error);
-        toast.error(result.error);
-        return;
+      const saved: Allergy[] = [];
+      for (const allergen of allergens) {
+        const result = await upsertAllergyAction({
+          allergen,
+          kind: allergyState.kind,
+          level: allergyState.level,
+          tracesOk: allergyState.tracesOk,
+          diagnosed: allergyState.diagnosed,
+          symptoms: allergyState.symptoms || null,
+          treatment: allergyState.treatment || null,
+          note: allergyState.note || null,
+        });
+        if (!result.ok) {
+          setAllergyError(result.error);
+          toast.error(result.error);
+          break;
+        }
+        saved.push({ ...result.data.allergy });
       }
-      const updated = result.data.allergy;
-      const payload: Allergy = {
-        id: updated.id,
-        allergen: updated.allergen,
-        kind: updated.kind,
-        level: updated.level,
-        tracesOk: updated.tracesOk,
-        diagnosed: updated.diagnosed,
-        symptoms: updated.symptoms,
-        treatment: updated.treatment,
-        note: updated.note,
-        updatedAt: updated.updatedAt,
-      };
+      if (saved.length === 0) return;
+
       const nextAllergies = [...allergies];
-      const index = nextAllergies.findIndex(
-        (entry) =>
-          entry.id === updated.id ||
-          entry.allergen.toLowerCase() === updated.allergen.toLowerCase(),
-      );
-      if (index >= 0) {
-        nextAllergies[index] = payload;
-      } else {
-        nextAllergies.push(payload);
+      for (const payload of saved) {
+        const index = nextAllergies.findIndex(
+          (entry) =>
+            entry.id === payload.id ||
+            entry.allergen.toLowerCase() === payload.allergen.toLowerCase(),
+        );
+        if (index >= 0) nextAllergies[index] = payload;
+        else nextAllergies.push(payload);
       }
       nextAllergies.sort((a, b) => a.allergen.localeCompare(b.allergen, "de"));
       onAllergiesChange(nextAllergies);
-      toast.success("Allergie gespeichert");
+      if (saved.length < allergens.length) return;
+      toast.success(
+        saved.length > 1 ? `${saved.length} Einträge gespeichert` : "Allergie gespeichert",
+      );
       setAllergyDialogOpen(false);
       setEditingAllergyId(null);
       setAllergyState(EMPTY_ALLERGY_FORM);
@@ -583,6 +593,15 @@ export function NutritionSection({
                           Keine Spuren
                         </Badge>
                       ) : null}
+                      {entry.taxonCode === null ? (
+                        <Badge
+                          variant="warning"
+                          size="sm"
+                          title="Nicht automatisch zuordenbar – die Verpflegung prüft den Eintrag von Hand."
+                        >
+                          wird geprüft
+                        </Badge>
+                      ) : null}
                       {!entry.diagnosed ? (
                         <Badge variant="ghost" size="sm">
                           nicht abgeklärt
@@ -843,6 +862,23 @@ export function NutritionSection({
           const allergen = pendingDeleteAllergen;
           setPendingDeleteAllergen(null);
           if (allergen) void handleAllergyDelete(allergen);
+        }}
+      />
+      <ConfirmDialog
+        open={pendingSplit !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSplit(null);
+        }}
+        title={`${pendingSplit?.length ?? 0} Einträge anlegen?`}
+        description={`Getrennte Einträge lassen sich einzeln prüfen: ${(pendingSplit ?? []).join(" · ")}. Art, Schweregrad und Notizen gelten für alle.`}
+        confirmLabel="Getrennt anlegen"
+        cancelLabel="Zurück"
+        variant="default"
+        onCancel={() => setPendingSplit(null)}
+        onConfirm={() => {
+          const parts = pendingSplit ?? [];
+          setPendingSplit(null);
+          void saveAllergies(parts);
         }}
       />
     </div>

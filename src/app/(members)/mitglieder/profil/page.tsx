@@ -142,6 +142,7 @@ export default async function ProfilePage() {
         treatment: true,
         note: true,
         updatedAt: true,
+        taxonCode: true,
       },
     }),
     prisma.dietaryAversion.findMany({
@@ -238,6 +239,7 @@ export default async function ProfilePage() {
     treatment: allergy.treatment ?? null,
     note: allergy.note ?? null,
     updatedAt: allergy.updatedAt?.toISOString() ?? null,
+    taxonCode: allergy.taxonCode,
   }));
 
   const aversions = aversionsRaw.map((aversion) => ({

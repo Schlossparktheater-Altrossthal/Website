@@ -28,6 +28,7 @@ export type UpsertAllergyResult = {
     treatment: string | null;
     note: string | null;
     updatedAt: string | null;
+    taxonCode: string | null;
   };
 };
 
@@ -62,6 +63,7 @@ export async function upsertAllergyAction(
           treatment: typeof data?.treatment === "string" ? data.treatment : null,
           note: typeof data?.note === "string" ? data.note : null,
           updatedAt: typeof data?.updatedAt === "string" ? data.updatedAt : null,
+          taxonCode: typeof data?.taxonCode === "string" ? data.taxonCode : null,
         },
       },
     };

@@ -230,6 +230,8 @@ export type ProfileClientProps = {
     treatment: string | null;
     note: string | null;
     updatedAt: string | null;
+    /** Code der Lebensmittel-Taxonomie; `null` = ungeklärt („wird geprüft“). */
+    taxonCode?: string | null;
   }>;
   aversions: Array<{
     id: string;
