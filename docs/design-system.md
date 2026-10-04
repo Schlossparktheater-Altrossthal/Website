@@ -698,7 +698,7 @@ tracking-wide text-muted-foreground`. `Heading` und `Text` stehen bereit, sind i
    `space-y-4`.
 
 Die Produktionsseiten (`/mitglieder/produktionen`, Gewerke, Stück, Zuweisung, Rückmeldungen)
-teilen sich `ProductionHeader` (`components/production/production-header.tsx`): Titel, Status,
+teilen sich `ProductionHeader` (`src/components/production/production-header.tsx`): Titel, Status,
 Premiere mit Countdown und `SectionNav` als Tabs. Aktueller Bestand: die Detailseiten von
 Produktionen (`produktionen/[showId]`, `…/ensemble`), `datenportal`, `website`,
 `server-einstellungen` und das Onboarding-Dashboard rendern ein eigenes `<h1>` statt `PageHeader`
