@@ -77,8 +77,10 @@ test.describe("Kalender mobil", () => {
 
   async function touch(page: Page, points: { x: number; y: number }[], holdMs = 0) {
     const cdp = await page.context().newCDPSession(page);
-    const send = (type: string, point?: { x: number; y: number }) =>
-      cdp.send("Input.dispatchTouchEvent", { type, touchPoints: point ? [point] : [] });
+    const send = (
+      type: "touchStart" | "touchMove" | "touchEnd",
+      point?: { x: number; y: number },
+    ) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: point ? [point] : [] });
     await send("touchStart", points[0]);
     if (holdMs) await page.waitForTimeout(holdMs);
     for (const point of points.slice(1)) {
