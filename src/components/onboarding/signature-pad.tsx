@@ -111,6 +111,10 @@ function SignatureCanvas({
   const [usedPen, setUsedPen] = useState(false);
   /** Zuletzt selbst gemeldeter Wert – kommt er als `value` zurück, ist der Canvas schon aktuell. */
   const emittedRef = useRef<SignatureResult | null>(null);
+  const onChangeRef = useRef(onChange);
+  const buildPayloadRef = useRef<(width: number, height: number) => SignaturePayload | null>(
+    () => null,
+  );
 
   const initializeCanvas = useCallback(
     (result: SignatureResult | null) => {
@@ -118,7 +122,7 @@ function SignatureCanvas({
       const container = containerRef.current;
       if (!canvas || !container) return;
       const rect = (fill ? (canvas.parentElement ?? container) : container).getBoundingClientRect();
-      const width = Math.max(fill ? 200 : 320, Math.round(rect.width || 0));
+      const width = Math.max(200, Math.round(rect.width || 0));
       const height = fill
         ? Math.max(MIN_HEIGHT, Math.round(rect.height || 0))
         : Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(width * 0.4)));
@@ -146,12 +150,17 @@ function SignatureCanvas({
         if (sameSize) {
           drawStrokes(context, payload.strokes);
         } else {
-          // Seitenverhältnis erhalten und zentrieren, statt das Bild zu verzerren.
-          const scale = Math.min(width / payload.width, height / payload.height);
+          // Vorschau einer anders großen Erfassung (z. B. quer im Vollbild): auf die Striche
+          // zuschneiden statt die ganze, meist leere Fläche hineinzuquetschen – Seitenverhältnis bleibt.
+          const box = payload.boundingBox;
+          const pad = 12;
+          const boxWidth = Math.max(box.maxX - box.minX, 1) + pad * 2;
+          const boxHeight = Math.max(box.maxY - box.minY, 1) + pad * 2;
+          const scale = Math.min(width / boxWidth, height / boxHeight, 2);
           context.save();
           context.translate(
-            (width - payload.width * scale) / 2,
-            (height - payload.height * scale) / 2,
+            (width - boxWidth * scale) / 2 - (box.minX - pad) * scale,
+            (height - boxHeight * scale) / 2 - (box.minY - pad) * scale,
           );
           context.scale(scale, scale);
           drawStrokes(context, payload.strokes);
@@ -182,17 +191,68 @@ function SignatureCanvas({
     // Nicht neu aufbauen, wenn nur die eigene Eingabe zurückkommt: das würde die Schrift neu
     // zeichnen und – falls sich das Layout minimal verschiebt – das Weiterschreiben sperren.
     if (!value || value !== emittedRef.current) initializeCanvas(value);
-    // Mobil feuert schon das Ein-/Ausblenden der Adressleiste „resize“. Mit Strichen auf dem
-    // Canvas bleibt die Größe daher stehen, sonst würde die Unterschrift neu skaliert und gesperrt.
-    const handleResize = () => {
-      if (strokesRef.current.length) return;
-      initializeCanvas(null);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
   }, [initializeCanvas, value]);
+
+  // Größenänderungen (Drehen, Adressleiste) per ResizeObserver: der meldet erst nach dem Layout,
+  // „resize“/„orientationchange“ kommen auf Mobilgeräten teils noch mit den alten Maßen.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const target = fill ? canvas?.parentElement : containerRef.current;
+    if (!canvas || !target || typeof ResizeObserver === "undefined") return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const rect = target.getBoundingClientRect();
+        const width = Math.max(200, Math.round(rect.width));
+        const height = fill
+          ? Math.max(MIN_HEIGHT, Math.round(rect.height))
+          : Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(width * 0.4)));
+        if (Math.abs(width - canvas.width) <= 1 && Math.abs(height - canvas.height) <= 1) return;
+        if (drawingRef.current) return;
+        if (!strokesRef.current.length) {
+          initializeCanvas(null);
+          return;
+        }
+        // Bereits gezeichnete Striche mitnehmen: gleichmäßig skalieren und zentrieren, damit man
+        // nach dem Drehen einfach weiterschreiben kann.
+        const scale = Math.min(width / canvas.width, height / canvas.height);
+        const offsetX = (width - canvas.width * scale) / 2;
+        const offsetY = (height - canvas.height * scale) / 2;
+        strokesRef.current = strokesRef.current.map((stroke) => ({
+          ...stroke,
+          points: stroke.points.map((point) => ({
+            ...point,
+            x: point.x * scale + offsetX,
+            y: point.y * scale + offsetY,
+          })),
+        }));
+        canvas.width = width;
+        canvas.height = height;
+        setCanvasSize({ width, height });
+        setLocked(false);
+        const context = canvas.getContext("2d");
+        if (!context) return;
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.strokeStyle = INK;
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, width, height);
+        drawStrokes(context, strokesRef.current);
+        const payload = buildPayloadRef.current(width, height);
+        if (payload) {
+          const result = { dataUrl: canvas.toDataURL("image/png"), payload };
+          emittedRef.current = result;
+          onChangeRef.current(result);
+        }
+      });
+    });
+    observer.observe(target);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [fill, initializeCanvas]);
 
   const recordPoint = useCallback((event: PointerEvent): SignaturePoint => {
     const canvas = canvasRef.current;
@@ -258,6 +318,11 @@ function SignatureCanvas({
       })),
     };
   }, []);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    buildPayloadRef.current = buildPayload;
+  }, [buildPayload, onChange]);
 
   const stopDrawing = useCallback(
     (event: React.PointerEvent<HTMLCanvasElement>) => {
