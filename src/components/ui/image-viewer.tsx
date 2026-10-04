@@ -173,11 +173,12 @@ export function ImageViewer({
             {onSaveRotation && pendingRotation !== 0 ? (
               <Button
                 size="sm"
-                className="mx-1"
+                className="mx-1 whitespace-nowrap"
+                aria-label="Drehung speichern"
                 disabled={saving}
                 onClick={() => void saveRotation()}
               >
-                {saving ? "Speichert …" : "Drehung speichern"}
+                {saving ? "Speichert …" : "Speichern"}
               </Button>
             ) : null}
             {downloadHref ? (
