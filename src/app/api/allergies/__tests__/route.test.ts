@@ -5,9 +5,13 @@ const mocks = vi.hoisted(() => ({
   findMany: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
+  resolveTaxon: vi.fn(),
 }));
 
 vi.mock("@/lib/rbac", () => ({ requireAuth: mocks.requireAuth }));
+vi.mock("@/lib/food/restriction-store", () => ({
+  resolveRestrictionTaxonCode: mocks.resolveTaxon,
+}));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     dietaryRestriction: {
@@ -38,6 +42,7 @@ describe("POST /api/allergies", () => {
     mocks.findMany.mockResolvedValue([]);
     mocks.create.mockResolvedValue({ id: "allergy-1" });
     mocks.update.mockResolvedValue({ id: "allergy-1" });
+    mocks.resolveTaxon.mockResolvedValue("en:peanuts");
   });
 
   it("weist einen unbekannten Schweregrad mit 400 ab und schreibt nichts", async () => {
@@ -80,8 +85,10 @@ describe("POST /api/allergies", () => {
         treatment: null,
         note: null,
         isActive: true,
+        taxonCode: "en:peanuts",
       },
     });
+    expect(mocks.resolveTaxon).toHaveBeenCalledWith("Erdnüsse");
   });
 
   it("aktualisiert einen Eintrag, der sich nur in der Schreibweise unterscheidet", async () => {

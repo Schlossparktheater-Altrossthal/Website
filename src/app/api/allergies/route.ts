@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { normalizeDietaryLabel } from "@/data/allergens";
+import { resolveRestrictionTaxonCode } from "@/lib/food/restriction-store";
 import { allergyInputSchema, firstIssueMessage } from "@/lib/profil/dietary-validation";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
       treatment: input.treatment,
       note: input.note,
       isActive: true,
+      taxonCode: await resolveRestrictionTaxonCode(input.allergen),
     };
 
     const existing = await findExistingAllergy(userId, input.allergen);

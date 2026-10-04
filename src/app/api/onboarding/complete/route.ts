@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { legacyBackgroundFromPayload } from "@/lib/education/schools";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { linkOpenRestrictions } from "@/lib/food/restriction-store";
 
 import { prisma } from "@/lib/prisma";
 import { buildProfileSnapshot } from "@/lib/onboarding/production-onboarding";
@@ -601,6 +602,8 @@ export async function POST(request: NextRequest) {
 
     // ÜBERGANGSPHASE: Passwort direkt nach Authentik übertragen.
     await migratePasswordToAuthentik(result.userId, password, "password-set");
+    // Allergie-Freitexte mit der Lebensmittel-Taxonomie verknüpfen (nie blockierend).
+    await linkOpenRestrictions(result.userId);
 
     return NextResponse.json({ ok: true, user: result });
   } catch (error) {

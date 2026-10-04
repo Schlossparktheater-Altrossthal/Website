@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { linkOpenRestrictions } from "@/lib/food/restriction-store";
 
 import { auth } from "@/auth";
 import { ALLERGEN_KIND_VALUES } from "@/data/allergens";
@@ -523,6 +524,8 @@ export async function POST(request: NextRequest) {
     if (reactivate) {
       requestServiceGroupSync();
     }
+    // Allergie-Freitexte mit der Lebensmittel-Taxonomie verknüpfen (nie blockierend).
+    await linkOpenRestrictions(userId);
 
     const response = NextResponse.json({ success: true, reactivated: reactivate }, { status: 200 });
     // Die gemerkte Einladung ist verbraucht (siehe /api/auth/onboarding-token).
