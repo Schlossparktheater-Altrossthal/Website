@@ -75,35 +75,51 @@ export function blsValueColumnCode(header: string): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * Liest die Lebensmittel zeilenweise (Stream): Die Datei hat über 7.000 Zeilen × 418 Spalten, das
+ * komplette Arbeitsblatt im Speicher sprengt kleine Pods.
+ */
 export async function readBlsFoods(path: string): Promise<BlsFood[]> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(path);
-  const sheet = workbook.worksheets[0];
-  const valueColumns: { column: number; code: string }[] = [];
-  sheet.getRow(1).eachCell((cell, column) => {
-    const code = blsValueColumnCode(text(cell.value));
-    if (code) valueColumns.push({ column, code });
+  const reader = new ExcelJS.stream.xlsx.WorkbookReader(path, {
+    sharedStrings: "cache",
+    hyperlinks: "ignore",
+    styles: "ignore",
+    worksheets: "emit",
   });
-  if (valueColumns.length < 10) {
-    throw new Error(`BLS-Datei hat unerwartete Spalten (${valueColumns.length} Nährstoffspalten).`);
-  }
-
   const foods: BlsFood[] = [];
-  sheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return;
-    const code = text(row.getCell(1).value);
-    if (!code) return;
-    const nutrients: Record<string, number> = {};
-    for (const { column, code: nutrient } of valueColumns) {
-      const value = numeric(row.getCell(column).value);
-      if (value !== null) nutrients[nutrient] = value;
+  let valueColumns: { column: number; code: string }[] | null = null;
+
+  for await (const worksheet of reader) {
+    for await (const row of worksheet) {
+      if (valueColumns === null) {
+        const columns: { column: number; code: string }[] = [];
+        row.eachCell((cell, column) => {
+          const code = blsValueColumnCode(text(cell.value));
+          if (code) columns.push({ column, code });
+        });
+        if (columns.length < 10) {
+          throw new Error(
+            `BLS-Datei hat unerwartete Spalten (${columns.length} Nährstoffspalten).`,
+          );
+        }
+        valueColumns = columns;
+        continue;
+      }
+      const code = text(row.getCell(1).value);
+      if (!code) continue;
+      const nutrients: Record<string, number> = {};
+      for (const { column, code: nutrient } of valueColumns) {
+        const value = numeric(row.getCell(column).value);
+        if (value !== null) nutrients[nutrient] = value;
+      }
+      foods.push({
+        code,
+        nameDe: text(row.getCell(2).value),
+        nameEn: text(row.getCell(3).value) || null,
+        nutrients,
+      });
     }
-    foods.push({
-      code,
-      nameDe: text(row.getCell(2).value),
-      nameEn: text(row.getCell(3).value) || null,
-      nutrients,
-    });
-  });
+    break; // nur das erste Arbeitsblatt
+  }
   return foods;
 }
