@@ -9,7 +9,7 @@ import { parseIngredientLine } from "@/lib/food/recipes/ingredient-line";
 import { extractJsonLd, isoDurationMinutes, parseRecipeJsonLd } from "@/lib/food/recipes/json-ld";
 import { isBlockedAddress } from "@/lib/food/recipes/safe-fetch";
 import { pickFoodItem } from "@/lib/food/recipes/service";
-import { linkRestrictionText } from "@/lib/food/restriction-link";
+import { linkRestrictionText, stripQualifiers } from "@/lib/food/restriction-link";
 import { parseOffSynonyms } from "@/lib/food/taxonomy/off-parse";
 
 import { fixtureIndex } from "./fixture";
@@ -327,5 +327,21 @@ describe("Lebensmittel zu einer Zutat wählen", () => {
       item("Weizenmehl Type 405", ["en:wheat-flour"]),
     ];
     expect(pickFoodItem(index, "Weizenmehl", "en:wheat-flour", candidates)).not.toBeNull();
+  });
+});
+
+describe("Zusätze in Allergie-Texten", () => {
+  it.each([
+    ["Knoblauch-Unverträglichkeit", "Knoblauch"],
+    ["Roher Apfel", "Apfel"],
+    ["Linsen (unverarbeitete Hülsenfrüchte)", "Linsen"],
+    ["Tomatenallergie", "Tomaten"],
+  ])("%s → %s", (input, expected) => expect(stripQualifiers(input)).toBe(expected));
+
+  it("erkennt Texte mit Zusatz sicher", () => {
+    expect(linkRestrictionText(index, "Tomaten-Allergie")).toMatchObject({
+      kind: "sure",
+      taxonCode: "en:tomato",
+    });
   });
 });

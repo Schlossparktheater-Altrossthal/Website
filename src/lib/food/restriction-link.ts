@@ -26,9 +26,25 @@ export function linkRestrictionText(index: TaxonIndex, text: string): Restrictio
   ) {
     return { kind: "sure", taxonCode: usableCatalog, via: "catalog" };
   }
-  const exact = index.matchExact(text);
+  const exact = index.matchExact(text) ?? index.matchExact(stripQualifiers(text));
   if (exact) return { kind: "sure", taxonCode: exact.code, via: "name" };
   if (usableCatalog) return { kind: "sure", taxonCode: usableCatalog, via: "catalog" };
   const partial = index.matchText(text).map((match) => match.code);
   return partial.length > 0 ? { kind: "suggestion", taxonCodes: partial } : { kind: "none" };
+}
+
+/**
+ * Entfernt Zusätze, die nur die Art beschreiben: „Knoblauch-Unverträglichkeit“ → „Knoblauch“,
+ * „Roher Apfel“ → „Apfel“, „Linsen (unverarbeitet)“ → „Linsen“.
+ */
+export function stripQualifiers(text: string): string {
+  return text
+    .replace(/\([^)]*\)/g, " ")
+    .replace(
+      /[-\s]*(?:intoleranz|intolleranz|unverträglichkeit|unvertraeglichkeit|allergie)\b/giu,
+      " ",
+    )
+    .replace(/^\s*(?:rohe[rsn]?|roh|frische[rsn]?|gekochte[rsn]?)\s+/iu, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
