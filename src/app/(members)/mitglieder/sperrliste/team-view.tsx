@@ -2,7 +2,12 @@
 
 import { Fragment, useCallback, useMemo, useState } from "react";
 
-import { CalendarPlusIcon, SearchIcon } from "@/components/ui/action-icons";
+import {
+  CalendarPlusIcon,
+  Maximize2Icon,
+  Minimize2Icon,
+  SearchIcon,
+} from "@/components/ui/action-icons";
 import { AvailabilityBar } from "@/components/ui/availability-bar";
 import {
   AVAILABILITY_STATUS,
@@ -14,6 +19,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DateBadge } from "@/components/ui/date-badge";
+import { FullscreenOverlay } from "@/components/ui/fullscreen-overlay";
 import { Input } from "@/components/ui/input";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -71,6 +77,8 @@ export function TeamView({
   const [mode, setMode] = useState<"days" | "people">("days");
   const [query, setQuery] = useState("");
   const [openDayKey, setOpenDayKey] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const closeFullscreen = useCallback(() => setFullscreen(false), []);
 
   const visibleMembers = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("de-DE");
@@ -165,14 +173,70 @@ export function TeamView({
               canPlan={canPlan}
             />
           ) : (
-            <TeamMatrix
-              days={days}
-              model={model}
-              members={visibleMembers}
-              entriesFor={entriesFor}
-              canPlan={canPlan}
-              onOpenDay={setOpenDayKey}
-            />
+            <>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="-my-1 h-8 gap-1.5 text-xs"
+                  onClick={() => setFullscreen(true)}
+                >
+                  <Maximize2Icon className="size-3.5" />
+                  Vollbild
+                </Button>
+              </div>
+              {fullscreen ? null : (
+                <TeamMatrix
+                  days={days}
+                  model={model}
+                  members={visibleMembers}
+                  entriesFor={entriesFor}
+                  canPlan={canPlan}
+                  onOpenDay={setOpenDayKey}
+                />
+              )}
+              <FullscreenOverlay
+                open={fullscreen}
+                onClose={closeFullscreen}
+                label="Sperrliste Personen im Vollbild"
+              >
+                <div className="flex items-center gap-2 border-b border-border px-2 py-1.5">
+                  <div className="min-w-0 flex-1">
+                    <MonthSwitcher
+                      month={month}
+                      isCurrentMonth={isCurrentMonth}
+                      onPrevious={() =>
+                        onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+                      }
+                      onNext={() =>
+                        onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))
+                      }
+                      onToday={() => onMonthChange(new Date(now.getFullYear(), now.getMonth(), 1))}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-9 shrink-0"
+                    aria-label="Vollbild schließen"
+                    onClick={closeFullscreen}
+                  >
+                    <Minimize2Icon className="size-4" />
+                  </Button>
+                </div>
+                <TeamMatrix
+                  days={days}
+                  model={model}
+                  members={visibleMembers}
+                  entriesFor={entriesFor}
+                  canPlan={canPlan}
+                  onOpenDay={setOpenDayKey}
+                  className="mx-0 max-h-none min-h-0 flex-1 border-0 sm:mx-0 sm:rounded-none sm:border-0"
+                />
+              </FullscreenOverlay>
+            </>
           )}
         </>
       )}
@@ -304,13 +368,22 @@ type MatrixProps = {
   entriesFor: (key: string) => TeamEntry[];
   canPlan: boolean;
   onOpenDay: (key: string) => void;
+  className?: string;
 };
 
 /**
  * Personen × Tage. Kompakte Kacheln, damit Kern- und Ausnahmetage eines Monats auch mobil ohne
  * Querscrollen passen. Leer = frei, nur Ausnahmen sind eingefärbt.
  */
-function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: MatrixProps) {
+function TeamMatrix({
+  days,
+  model,
+  members,
+  entriesFor,
+  canPlan,
+  onOpenDay,
+  className,
+}: MatrixProps) {
   const statusByMemberDay = useMemo(() => {
     const map = new Map<string, TeamEntry>();
     for (const day of days) {
@@ -331,7 +404,12 @@ function TeamMatrix({ days, model, members, entriesFor, canPlan, onOpenDay }: Ma
   }
 
   return (
-    <div className="-mx-3 max-h-[calc(100dvh-12rem)] overflow-auto border-y border-border sm:mx-0 sm:rounded-lg sm:border">
+    <div
+      className={cn(
+        "-mx-3 max-h-[calc(100dvh-12rem)] overflow-auto border-y border-border sm:mx-0 sm:rounded-lg sm:border",
+        className,
+      )}
+    >
       <table
         className="w-full table-fixed border-separate border-spacing-0 text-sm"
         style={{ minWidth: `calc(5.5rem + ${days.length} * 1.25rem)` }}

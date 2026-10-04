@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Maximize2Icon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
+import { FullscreenOverlay } from "@/components/ui/fullscreen-overlay";
 import { cn } from "@/lib/utils";
-import type { SignaturePayload, SignatureStroke } from "@/types/signature";
+import type { SignaturePayload, SignaturePoint, SignatureStroke } from "@/types/signature";
 
 export type SignatureResult = {
   dataUrl: string;
@@ -19,69 +21,160 @@ interface SignaturePadProps {
 
 const MIN_HEIGHT = 160;
 const MAX_HEIGHT = 260;
+const INK = "#111827";
+const BASE_WIDTH = 2;
 
-export function SignaturePad({ value, onChange, className }: SignaturePadProps) {
+/** Strichbreite: mit Stiftdruck variabel (0,8–3,6 px), sonst fest. */
+function lineWidthFor(point: SignaturePoint): number {
+  if (point.pressure === undefined) return BASE_WIDTH;
+  return BASE_WIDTH * (0.4 + point.pressure * 1.4);
+}
+
+function drawSegment(context: CanvasRenderingContext2D, from: SignaturePoint, to: SignaturePoint) {
+  context.lineWidth = (lineWidthFor(from) + lineWidthFor(to)) / 2;
+  context.beginPath();
+  context.moveTo(from.x, from.y);
+  // Ein einzelner Punkt braucht eine Mini-Strecke, sonst zeichnet der Canvas nichts.
+  context.lineTo(to.x === from.x && to.y === from.y ? to.x + 0.01 : to.x, to.y);
+  context.stroke();
+}
+
+function drawStrokes(context: CanvasRenderingContext2D, strokes: SignatureStroke[]) {
+  for (const stroke of strokes) {
+    const [first, ...rest] = stroke.points;
+    if (!first) continue;
+    drawSegment(context, first, first);
+    let previous = first;
+    for (const point of rest) {
+      drawSegment(context, previous, point);
+      previous = point;
+    }
+  }
+}
+
+/**
+ * Liest Druck und Neigung aus, aber nur bei echten Stiften: Maus meldet pauschal 0,5 und
+ * Touch meist 0 oder 1 – das wären keine Messwerte.
+ */
+function penData(event: PointerEvent): Partial<SignaturePoint> {
+  if (event.pointerType !== "pen") return {};
+  const data: Partial<SignaturePoint> = {};
+  if (Number.isFinite(event.pressure)) data.pressure = Math.min(1, Math.max(0, event.pressure));
+  if (event.tiltX || event.tiltY) {
+    data.tiltX = event.tiltX;
+    data.tiltY = event.tiltY;
+  }
+  if (event.twist) data.twist = event.twist;
+  // altitudeAngle/azimuthAngle gibt es (noch) nicht in allen TS-DOM-Typen.
+  const angles = event as PointerEvent & { altitudeAngle?: number; azimuthAngle?: number };
+  if (typeof angles.altitudeAngle === "number" && Number.isFinite(angles.altitudeAngle)) {
+    data.altitudeAngle = angles.altitudeAngle;
+  }
+  if (typeof angles.azimuthAngle === "number" && Number.isFinite(angles.azimuthAngle)) {
+    data.azimuthAngle = angles.azimuthAngle;
+  }
+  return data;
+}
+
+interface SignatureCanvasProps {
+  value: SignatureResult | null;
+  onChange: (value: SignatureResult | null) => void;
+  /** Füllt den Container in Breite und Höhe (Vollbild), statt die Höhe aus der Breite abzuleiten. */
+  fill?: boolean;
+  className?: string;
+  canvasClassName?: string;
+  /** Inhalt neben dem Zurücksetzen-Knopf, z. B. Vollbild/Übernehmen. */
+  actions?: React.ReactNode;
+}
+
+function SignatureCanvas({
+  value,
+  onChange,
+  fill = false,
+  className,
+  canvasClassName,
+  actions,
+}: SignatureCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const drawingRef = useRef(false);
-  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const lastPointRef = useRef<SignaturePoint | null>(null);
   const strokesRef = useRef<SignatureStroke[]>([]);
   const currentStrokeRef = useRef<SignatureStroke | null>(null);
   const startHighResRef = useRef<number | null>(null);
   const startEpochRef = useRef<number | null>(null);
   const timeOffsetRef = useRef(0);
   const [isEmpty, setIsEmpty] = useState(!value);
-  const [canvasHeight, setCanvasHeight] = useState(200);
+  /** Unterschrift wurde in anderer Größe (z. B. im Vollbild) erfasst – nur Vorschau. */
+  const [locked, setLocked] = useState(false);
+  const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
+  const [usedPen, setUsedPen] = useState(false);
 
-  const initializeCanvas = useCallback((result: SignatureResult | null) => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-    const rect = container.getBoundingClientRect();
-    const rawWidth = Math.round(rect.width || 0);
-    const width = Math.max(320, rawWidth);
-    const height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(width * 0.4)));
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    setCanvasHeight(height);
+  const initializeCanvas = useCallback(
+    (result: SignatureResult | null) => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
+      const rect = (fill ? (canvas.parentElement ?? container) : container).getBoundingClientRect();
+      const width = Math.max(fill ? 200 : 320, Math.round(rect.width || 0));
+      const height = fill
+        ? Math.max(MIN_HEIGHT, Math.round(rect.height || 0))
+        : Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, Math.round(width * 0.4)));
+      canvas.width = width;
+      canvas.height = height;
+      setCanvasSize({ width, height });
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
+      const context = canvas.getContext("2d");
+      if (!context) return;
 
-    context.lineCap = "round";
-    context.lineJoin = "round";
-    context.lineWidth = 2;
-    context.strokeStyle = "#111827";
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, width, height);
+      context.lineCap = "round";
+      context.lineJoin = "round";
+      context.lineWidth = BASE_WIDTH;
+      context.strokeStyle = INK;
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
 
-    if (result?.dataUrl) {
-      const image = new Image();
-      image.onload = () => {
-        context.drawImage(image, 0, 0, width, height);
+      const payload = result?.payload;
+      if (result && payload) {
+        const sameSize =
+          Math.abs(payload.width - width) <= 1 && Math.abs(payload.height - height) <= 1;
+        setLocked(!sameSize);
         setIsEmpty(false);
-      };
-      image.src = result.dataUrl;
-      if (result.payload) {
-        const payloadStrokes = result.payload.strokes ?? [];
-        strokesRef.current = payloadStrokes.map((stroke) => ({
+        setUsedPen(payload.strokes.some((stroke) => stroke.pointerType === "pen"));
+        if (sameSize) {
+          drawStrokes(context, payload.strokes);
+        } else {
+          // Seitenverhältnis erhalten und zentrieren, statt das Bild zu verzerren.
+          const scale = Math.min(width / payload.width, height / payload.height);
+          context.save();
+          context.translate(
+            (width - payload.width * scale) / 2,
+            (height - payload.height * scale) / 2,
+          );
+          context.scale(scale, scale);
+          drawStrokes(context, payload.strokes);
+          context.restore();
+        }
+        strokesRef.current = payload.strokes.map((stroke) => ({
+          ...stroke,
           points: stroke.points.map((point) => ({ ...point })),
         }));
-        const startedAt = Date.parse(result.payload.startedAt);
+        const startedAt = Date.parse(payload.startedAt);
         startEpochRef.current = Number.isFinite(startedAt) ? startedAt : null;
-        timeOffsetRef.current = result.payload.duration ?? 0;
+        timeOffsetRef.current = payload.duration ?? 0;
+      } else {
+        setIsEmpty(true);
+        setLocked(false);
+        setUsedPen(false);
+        strokesRef.current = [];
+        timeOffsetRef.current = 0;
+        startEpochRef.current = null;
       }
-    } else {
-      setIsEmpty(true);
-      strokesRef.current = [];
-      timeOffsetRef.current = 0;
-      startEpochRef.current = null;
-    }
-    currentStrokeRef.current = null;
-    startHighResRef.current = null;
-  }, []);
+      currentStrokeRef.current = null;
+      startHighResRef.current = null;
+    },
+    [fill],
+  );
 
   useEffect(() => {
     initializeCanvas(value);
@@ -92,33 +185,20 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
     };
   }, [initializeCanvas, value]);
 
-  const getPoint = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+  const recordPoint = useCallback((event: PointerEvent): SignaturePoint => {
     const canvas = canvasRef.current;
-    if (!canvas) {
-      return { x: 0, y: 0 };
-    }
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
-  }, []);
-
-  const recordPoint = useCallback((x: number, y: number) => {
+    const rect = canvas?.getBoundingClientRect();
+    const x = rect ? event.clientX - rect.left : 0;
+    const y = rect ? event.clientY - rect.top : 0;
     const now = performance.now();
     if (startHighResRef.current === null) {
       startHighResRef.current = now;
       startEpochRef.current = Date.now();
     }
-    const base = startHighResRef.current ?? now;
-    const time = now - base + timeOffsetRef.current;
-    const stroke = currentStrokeRef.current;
-    if (!stroke) {
-      return { x, y, time };
-    }
-    const point = { x, y, time };
-    stroke.points.push(point);
-    lastPointRef.current = { x, y };
+    const time = now - startHighResRef.current + timeOffsetRef.current;
+    const point: SignaturePoint = { x, y, time, ...penData(event) };
+    currentStrokeRef.current?.points.push(point);
+    lastPointRef.current = point;
     return point;
   }, []);
 
@@ -162,13 +242,9 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
       duration,
       startedAt,
       endedAt,
-      boundingBox: {
-        minX,
-        minY,
-        maxX,
-        maxY,
-      },
+      boundingBox: { minX, minY, maxX, maxY },
       strokes: strokes.map((stroke) => ({
+        ...stroke,
         points: stroke.points.map((point) => ({ ...point })),
       })),
     };
@@ -185,13 +261,10 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
       } catch {
         // ignore capture errors
       }
-      const { x, y } = getPoint(event);
-      const lastPoint = lastPointRef.current;
-      if (!lastPoint || lastPoint.x !== x || lastPoint.y !== y) {
-        recordPoint(x, y);
-      } else {
-        recordPoint(lastPoint.x, lastPoint.y);
-      }
+      const last = lastPointRef.current;
+      const point = recordPoint(event.nativeEvent);
+      // Abheben meldet beim Stift Druck 0 – den letzten echten Wert behalten.
+      if (last?.pressure !== undefined) point.pressure = last.pressure;
       drawingRef.current = false;
       lastPointRef.current = null;
       currentStrokeRef.current = null;
@@ -203,62 +276,59 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
       timeOffsetRef.current = payload.duration;
       const parsedStart = Date.parse(payload.startedAt);
       startEpochRef.current = Number.isFinite(parsedStart) ? parsedStart : startEpochRef.current;
-      const dataUrl = canvas.toDataURL("image/png");
-      onChange({ dataUrl, payload });
+      onChange({ dataUrl: canvas.toDataURL("image/png"), payload });
     },
-    [buildPayload, getPoint, onChange, recordPoint],
+    [buildPayload, onChange, recordPoint],
   );
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLCanvasElement>) => {
       event.preventDefault();
+      if (locked) return;
       const canvas = canvasRef.current;
       const context = canvas?.getContext("2d");
       if (!canvas || !context) return;
       canvas.setPointerCapture(event.pointerId);
-      const { x, y } = getPoint(event);
       drawingRef.current = true;
-      const stroke: SignatureStroke = { points: [] };
+      const stroke: SignatureStroke = { points: [], pointerType: event.pointerType || undefined };
       currentStrokeRef.current = stroke;
       strokesRef.current.push(stroke);
-      context.beginPath();
-      context.moveTo(x, y);
-      context.lineTo(x + 0.01, y + 0.01);
-      context.stroke();
-      recordPoint(x, y);
+      const point = recordPoint(event.nativeEvent);
+      drawSegment(context, point, point);
+      if (event.pointerType === "pen") setUsedPen(true);
       setIsEmpty(false);
     },
-    [getPoint, recordPoint],
+    [locked, recordPoint],
   );
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLCanvasElement>) => {
       if (!drawingRef.current) return;
       event.preventDefault();
-      const canvas = canvasRef.current;
-      const context = canvas?.getContext("2d");
-      if (!canvas || !context) return;
-      const { x, y } = getPoint(event);
-      const lastPoint = lastPointRef.current ?? { x, y };
-      context.beginPath();
-      context.moveTo(lastPoint.x, lastPoint.y);
-      context.lineTo(x, y);
-      context.stroke();
-      recordPoint(x, y);
+      const context = canvasRef.current?.getContext("2d");
+      if (!context) return;
+      // Zwischenpunkte, die der Browser zu einem Event zusammenfasst – v. a. bei Stiften (240 Hz).
+      const native = event.nativeEvent;
+      const samples =
+        typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : [];
+      for (const sample of samples.length ? samples : [native]) {
+        const previous = lastPointRef.current;
+        const point = recordPoint(sample);
+        drawSegment(context, previous ?? point, point);
+      }
     },
-    [getPoint, recordPoint],
+    [recordPoint],
   );
 
   const handleClear = useCallback(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
-    context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.strokeStyle = "#111827";
-    context.lineWidth = 2;
     setIsEmpty(true);
+    setLocked(false);
+    setUsedPen(false);
     strokesRef.current = [];
     currentStrokeRef.current = null;
     startHighResRef.current = null;
@@ -267,30 +337,114 @@ export function SignaturePad({ value, onChange, className }: SignaturePadProps) 
     onChange(null);
   }, [onChange]);
 
+  const hint = locked
+    ? "Zum Ändern zurücksetzen und neu unterschreiben."
+    : isEmpty
+      ? "Signiere mit Finger, Stift oder Maus."
+      : usedPen
+        ? "Mit Stift erfasst (inkl. Druck/Neigung, falls vom Gerät geliefert)."
+        : "Zufrieden? Du kannst deine Unterschrift bei Bedarf zurücksetzen.";
+
   return (
-    <div ref={containerRef} className={cn("space-y-2", className)}>
-      <canvas
-        ref={canvasRef}
-        className="w-full touch-none rounded-lg border border-border bg-card shadow-inner"
-        style={{ height: `${canvasHeight}px` }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={stopDrawing}
-        onPointerLeave={stopDrawing}
-        onPointerCancel={stopDrawing}
-        aria-label="Unterschrift zeichnen"
-        role="img"
-      />
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>
-          {isEmpty
-            ? "Signiere mit Finger, Stift oder Maus."
-            : "Zufrieden? Du kannst deine Unterschrift bei Bedarf zurücksetzen."}
-        </span>
-        <Button type="button" variant="ghost" size="sm" onClick={handleClear} disabled={isEmpty}>
-          Zurücksetzen
-        </Button>
+    <div ref={containerRef} className={cn("space-y-2", fill && "flex min-h-0 flex-col", className)}>
+      <div className={cn(fill && "relative min-h-0 flex-1")}>
+        <canvas
+          ref={canvasRef}
+          className={cn(
+            "w-full touch-none rounded-lg border border-border bg-card shadow-inner",
+            fill && "absolute inset-0 h-full",
+            locked && "cursor-not-allowed",
+            canvasClassName,
+          )}
+          style={fill || !canvasSize ? undefined : { height: `${canvasSize.height}px` }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={stopDrawing}
+          onPointerLeave={stopDrawing}
+          onPointerCancel={stopDrawing}
+          aria-label="Unterschrift zeichnen"
+          role="img"
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span className="min-w-0">{hint}</span>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button type="button" variant="ghost" size="sm" onClick={handleClear} disabled={isEmpty}>
+            Zurücksetzen
+          </Button>
+          {actions}
+        </div>
       </div>
     </div>
+  );
+}
+
+export function SignaturePad({ value, onChange, className }: SignaturePadProps) {
+  const [fullscreen, setFullscreen] = useState(false);
+  /** Entwurf im Vollbild – erst „Übernehmen“ gibt ihn nach außen. */
+  const [draft, setDraft] = useState<SignatureResult | null>(null);
+
+  const openFullscreen = useCallback(() => {
+    setDraft(null);
+    setFullscreen(true);
+  }, []);
+  const closeFullscreen = useCallback(() => setFullscreen(false), []);
+
+  return (
+    <>
+      <SignatureCanvas
+        value={value}
+        onChange={onChange}
+        className={className}
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 lg:hidden"
+            onClick={openFullscreen}
+          >
+            <Maximize2Icon className="size-3.5" />
+            Großes Feld
+          </Button>
+        }
+      />
+      <FullscreenOverlay
+        open={fullscreen}
+        onClose={closeFullscreen}
+        label="Unterschrift im Vollbild"
+      >
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+          <p className="text-sm font-medium">Unterschreiben</p>
+          <p className="hidden text-xs text-muted-foreground portrait:block">
+            Tipp: Gerät quer halten
+          </p>
+        </div>
+        <SignatureCanvas
+          value={draft}
+          onChange={setDraft}
+          fill
+          className="min-h-0 flex-1 p-3"
+          actions={
+            <>
+              <Button type="button" variant="ghost" size="sm" onClick={closeFullscreen}>
+                Abbrechen
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!draft}
+                onClick={() => {
+                  onChange(draft);
+                  setFullscreen(false);
+                }}
+              >
+                Übernehmen
+              </Button>
+            </>
+          }
+        />
+      </FullscreenOverlay>
+    </>
   );
 }

@@ -84,6 +84,7 @@ import {
   MailCheck,
   MapPin,
   Maximize2,
+  Minimize2,
   Megaphone,
   MessageCircle,
   Minus,
@@ -1125,4 +1126,11 @@ export function ZoomInIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <ZoomIn className={className} aria-hidden {...props} />;
+}
+
+export function Minimize2Icon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Minimize2 className={className} aria-hidden {...props} />;
 }

@@ -4,10 +4,27 @@ export const signaturePointSchema = z.object({
   x: z.number().finite(),
   y: z.number().finite(),
   time: z.number().nonnegative().finite(),
+  /** Stiftdaten, nur erfasst wenn das Gerät sie liefert (Pointer Events, `pointerType: "pen"`). */
+  pressure: z.number().min(0).max(1).optional(),
+  tiltX: z.number().min(-90).max(90).optional(),
+  tiltY: z.number().min(-90).max(90).optional(),
+  twist: z.number().min(0).max(360).optional(),
+  altitudeAngle: z
+    .number()
+    .min(0)
+    .max(Math.PI / 2 + 0.001)
+    .optional(),
+  azimuthAngle: z
+    .number()
+    .min(0)
+    .max(Math.PI * 2 + 0.001)
+    .optional(),
 });
 
 export const signatureStrokeSchema = z.object({
   points: z.array(signaturePointSchema).min(1),
+  /** Eingabegerät des Strichs: "pen", "touch" oder "mouse". */
+  pointerType: z.string().max(16).optional(),
 });
 
 export const signatureBoundingBoxSchema = z.object({
