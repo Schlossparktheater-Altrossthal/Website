@@ -130,10 +130,11 @@ export function computeRecipe(
     components.push(codes);
     ingredient.foodItem?.tracesCodes.forEach((code) => traces.add(code));
 
-    const status =
-      ingredient.foodItem && ingredient.status !== "MANUAL"
-        ? ingredient.foodItem.matchStatus
-        : ingredient.status;
+    // Die Zuordnung der Zeile (Service) entscheidet über die Sicherheit der Inhaltsstoffe; der
+    // Stand des Lebensmittels zählt nur, wenn die Zeile selbst nichts Sicheres weiß.
+    const lineSure = ingredient.status === "MATCHED" || ingredient.status === "MANUAL";
+    const status: FoodMatchStatus =
+      lineSure || !ingredient.foodItem ? ingredient.status : ingredient.foodItem.matchStatus;
     const effective: FoodMatchStatus = codes.length === 0 ? "UNCLEAR" : status;
     if (STATUS_RANK[effective] > STATUS_RANK[worst]) worst = effective;
     if (effective === "UNCLEAR") unclear.push(ingredient.name);

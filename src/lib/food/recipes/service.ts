@@ -135,9 +135,11 @@ export async function matchIngredient(index: TaxonIndex, name: string): Promise<
     exact.code,
     found.flatMap((items, stage) => items.map((item) => ({ ...item, stagePenalty: stage * 6 }))),
   );
-  return foodItem
-    ? { foodItem, taxonCodes: [], status: "MATCHED" }
-    : { foodItem: null, taxonCodes: codes, status: "PARTIAL" };
+  // Genau erkannte Zutat ohne passendes Lebensmittel: Inhaltsstoffe sind sicher (MATCHED), es
+  // fehlen nur die Nährwerte. PARTIAL bleibt den Wortteil-Treffern vorbehalten.
+  // Die erkannten Taxa bleiben an der Zeile: Sie beschreiben die Zutat genauer als ein
+  // Lebensmittel, das nur als Nährwertquelle dient.
+  return { foodItem, taxonCodes: codes, status: "MATCHED" };
 }
 
 async function buildIngredientRows(index: TaxonIndex, input: RecipeInput) {
@@ -179,7 +181,33 @@ function computedJson(computed: RecipeComputed): Prisma.InputJsonObject {
   return computed;
 }
 
-async function writeRecipe(recipeId: string | null, input: RecipeInput, userId: string | null) {
+type RecipeWithLines = Prisma.RecipeGetPayload<{ include: { ingredients: true } }>;
+
+/** Stand eines Rezepts in Eingabeform – so wird er in der Historie gesichert und wiederhergestellt. */
+export function recipeToInput(recipe: RecipeWithLines): RecipeInput {
+  return {
+    title: recipe.title,
+    description: recipe.description,
+    servings: recipe.servings,
+    steps: Array.isArray(recipe.steps)
+      ? recipe.steps.filter((step): step is string => typeof step === "string")
+      : [],
+    tags: recipe.tags,
+    sourceUrl: recipe.sourceUrl,
+    sourceName: recipe.sourceName,
+    prepMinutes: recipe.prepMinutes,
+    cookMinutes: recipe.cookMinutes,
+    ingredients: [...recipe.ingredients]
+      .sort((a, b) => a.position - b.position)
+      .map((line) => ({
+        rawText: line.rawText,
+        // Nur manuelle Zuordnungen gehören zum Stand; automatische werden neu ermittelt.
+        foodItemId: line.status === "MANUAL" ? line.foodItemId : null,
+      })),
+  };
+}
+
+async function writeRecipe(recipeId: string | null, input: RecipeInput, userId: string) {
   const index = await loadTaxonIndex();
   const rows = await buildIngredientRows(index, input);
   const computed = computeRecipe(index, {
@@ -198,6 +226,7 @@ async function writeRecipe(recipeId: string | null, input: RecipeInput, userId: 
     cookMinutes: input.cookMinutes ?? null,
     computed: computedJson(computed),
     computedAt: new Date(),
+    updatedById: userId,
   };
   const ingredientRows = rows.map(({ row }) => row);
 
@@ -207,10 +236,23 @@ async function writeRecipe(recipeId: string | null, input: RecipeInput, userId: 
     });
   }
   return prisma.$transaction(async (tx) => {
+    const previous = await tx.recipe.findUniqueOrThrow({
+      where: { id: recipeId },
+      include: { ingredients: true },
+    });
+    await tx.recipeRevision.create({
+      data: {
+        recipeId,
+        version: previous.version,
+        snapshot: recipeToInput(previous),
+        editedById: previous.updatedById ?? previous.createdById,
+        createdAt: previous.updatedAt,
+      },
+    });
     await tx.recipeIngredient.deleteMany({ where: { recipeId } });
     return tx.recipe.update({
       where: { id: recipeId },
-      data: { ...data, ingredients: { create: ingredientRows } },
+      data: { ...data, version: previous.version + 1, ingredients: { create: ingredientRows } },
     });
   });
 }
@@ -219,8 +261,28 @@ export function createRecipe(input: RecipeInput, userId: string) {
   return writeRecipe(null, recipeInputSchema.parse(input), userId);
 }
 
-export function updateRecipe(recipeId: string, input: RecipeInput) {
-  return writeRecipe(recipeId, recipeInputSchema.parse(input), null);
+/** Ändern (Wiki-Prinzip): der vorherige Stand wird als Revision gesichert. */
+export function updateRecipe(recipeId: string, input: RecipeInput, userId: string) {
+  return writeRecipe(recipeId, recipeInputSchema.parse(input), userId);
+}
+
+/** Stellt einen früheren Stand wieder her – selbst wieder als neue Version, nichts geht verloren. */
+export async function restoreRecipeRevision(recipeId: string, version: number, userId: string) {
+  const revision = await prisma.recipeRevision.findUniqueOrThrow({
+    where: { recipeId_version: { recipeId, version } },
+  });
+  const snapshot = recipeInputSchema.parse(revision.snapshot);
+  return writeRecipe(recipeId, snapshot, userId);
+}
+
+/** Ordnet eine Zutat von Hand einem Lebensmittel zu (wird für gleichnamige Zutaten gelernt). */
+export async function assignIngredientFood(ingredientId: string, foodItemId: string) {
+  const ingredient = await prisma.recipeIngredient.update({
+    where: { id: ingredientId },
+    data: { foodItemId, status: "MANUAL", taxonCodes: [] },
+  });
+  await recomputeRecipe(ingredient.recipeId);
+  return ingredient;
 }
 
 /** Neu auswerten, z. B. nach einem Taxonomie- oder BLS-Update. */

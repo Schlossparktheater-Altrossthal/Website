@@ -321,6 +321,8 @@ model User {
   foodTaxonAliases                FoodTaxonAlias[]
   foodItemsCreated                FoodItem[]                 @relation("FoodItemCreatedBy")
   recipesCreated                  Recipe[]                   @relation("RecipeCreatedBy")
+  recipesUpdated                  Recipe[]                   @relation("RecipeUpdatedBy")
+  recipeRevisions                 RecipeRevision[]           @relation("RecipeRevisionEditedBy")
   recipeRatings                   RecipeRating[]
   recipeComments                  RecipeComment[]
   measurements                    MemberMeasurement[]
@@ -1184,11 +1186,34 @@ model Recipe {
   updatedAt   DateTime  @updatedAt
   createdBy   User?     @relation("RecipeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
+  /// Wird bei jeder Änderung erhöht; der vorherige Stand liegt in RecipeRevision.
+  version     Int     @default(1)
+  updatedById String?
+  updatedBy   User?   @relation("RecipeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
   ingredients RecipeIngredient[]
   ratings     RecipeRating[]
   comments    RecipeComment[]
+  revisions   RecipeRevision[]
 
   @@index([title])
+}
+
+/// Änderungshistorie (Wiki-Prinzip): Stand eines Rezepts vor einer Änderung.
+model RecipeRevision {
+  id         String   @id @default(cuid())
+  recipeId   String
+  /// Versionsnummer des gesicherten Stands.
+  version    Int
+  /// Titel, Beschreibung, Portionen, Schritte, Tags, Quelle, Zeiten und Zutatenzeilen.
+  snapshot   Json
+  /// Wer den gesicherten Stand erstellt hatte.
+  editedById String?
+  createdAt  DateTime @default(now())
+  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  editedBy   User?    @relation("RecipeRevisionEditedBy", fields: [editedById], references: [id], onDelete: SetNull)
+
+  @@unique([recipeId, version])
 }
 
 model RecipeIngredient {
