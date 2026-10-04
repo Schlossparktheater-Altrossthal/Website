@@ -389,11 +389,7 @@ export function NutritionSection({
     <div className="space-y-4">
       <Card variant="plain" size="md">
         <form className="space-y-4" onSubmit={handleDietarySubmit}>
-          <SectionHeader
-            title="Ernährungsstil"
-            as="h3"
-            description="Damit die Verpflegung bei Proben und Aufführungen für alle passt."
-          />
+          <SectionHeader title="Ernährungsstil" as="h3" />
           <div className="grid gap-4 sm:grid-cols-2">
             <ProfileField label="Stil" htmlFor="dietary-style">
               <Select
@@ -486,6 +482,11 @@ export function NutritionSection({
           {dietaryError ? <p className="text-sm text-destructive">{dietaryError}</p> : null}
           <FormSaveBar
             dirty={dietaryDirty}
+            dirtyLabel={
+              onboarding?.dietaryPreference
+                ? undefined
+                : "Noch nicht gespeichert – bitte bestätigen"
+            }
             submitting={dietarySubmitting}
             onReset={() => {
               setDietaryState(initialDietary);
