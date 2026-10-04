@@ -1,6 +1,6 @@
 # Plan: Kalender – Gesten, Mehrfachauswahl und Tastatur
 
-Stand: 2026-10-04. Entschieden (E1–E5), Phase 1 umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-04. Entschieden (E1–E5), Phase 1–6 und 8 (E2E) umgesetzt; offen Test auf echtem Android/iPhone. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -90,10 +90,11 @@ Kleiner Hinweis „Tipp: Halten zum Mehrfachauswählen“ bzw. „Shift/Strg fü
 ## Checkliste
 
 - [x] Phase 1 Aufräumen + Tastatur (B8 war ein Artefakt der Ganzseiten-Screenshots: die fixe Leiste wird mitten ins Bild gedruckt, die Shell hat bereits `pb-[var(--members-bottom-nav)]`)
-- [ ] Phase 2 Wischen
-- [ ] Phase 3 Auswahlmodell
-- [ ] Phase 4 Desktop-Mehrfachauswahl
-- [ ] Phase 5 Mobil Halten + Malen
-- [ ] Phase 6 Sperrliste-Feinschliff
+- [x] Phase 2 Wischen
+- [x] Phase 3 Auswahlmodell (`multiSelect`-Prop, `src/lib/calendar/day-selection.ts`)
+- [x] Phase 4 Desktop-Mehrfachauswahl
+- [x] Phase 5 Mobil Halten + Malen (B7 war schon erfüllt: Auswahl ist über Monate sichtbar)
+- [x] Phase 6 Sperrliste-Feinschliff (Schnellauswahl Wochenenden = Sa/So, Kerntage = bevorzugte Wochentage)
 - [x] Phase 7 entfällt (E1)
-- [ ] Phase 8 E2E, Screenshots, Gerätetest
+- [x] Phase 8 E2E (`e2e/kalender-gesten.spec.ts`, Touch per CDP) und Screenshots
+- [ ] Gerätetest Android/iPhone (Halten vs. Kontextmenü, Scroll-Sperre beim Ziehen)

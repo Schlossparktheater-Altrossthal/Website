@@ -94,7 +94,7 @@ Hintergrund und Entscheidungen: `docs/Plan/sperrliste-redesign-plan.md`.
 ## Stand 2026-09 (Runde 3)
 
 - „Probentag“ heißt jetzt „Kerntag“ – ein Tag wird erst durch eine angesetzte Probe zum Probentag.
-- Mehrfachauswahl: im Tagesdetail „Mehrere Tage auswählen“, dann Tage antippen und Status für alle setzen (Bulk-Route, Sperrfrist wird übersprungen).
+- Mehrfachauswahl: mobil Tag halten und ziehen (fortlaufender Zeitraum, am Rand verweilen wechselt den Monat), am Desktop Maus ziehen, Shift-/Strg-Klick oder Shift+Pfeile, Esc beendet; weiterhin auch „Mehrere Tage auswählen“ im Tagesdetail. Leiste mit Schnellauswahl „Wochenenden“/„Kerntage“ im Monat; Status für alle setzen (Bulk-Route, Sperrfrist wird übersprungen), danach „Rückgängig“ im Toast (löscht nur neu angelegte Tage). Gesten und Tastatur stecken in `MonthGrid` (`multiSelect`, `onMonthChange`); Wischen wechselt den Monat.
 - Mobile Blätter (`src/components/ui/bottom-sheet.tsx`) sind auf `90dvh` begrenzt, scrollen innen und lassen sich am Griff nach unten wegwischen.
 - Team „Personen“: kompakte Kachelmatrix, die mobil ohne Querscrollen passt.
 - Terminplanung zeigt je Termin „Können nicht“, „Eingeschränkt“ (mit Gründen) und „Können“; mehrtägige Termine werten den ungünstigsten Tag.
