@@ -98,6 +98,7 @@ export function MyEventsCalendar({ items, todayKey }: { items: MyEventItem[]; to
         month={month}
         selectedKey={isDesktop ? selectedKey : null}
         onSelect={selectDay}
+        onMonthChange={setMonth}
         getDayState={getDayState}
         renderDetails={(key) => {
           const dayItems = byDay.get(key);

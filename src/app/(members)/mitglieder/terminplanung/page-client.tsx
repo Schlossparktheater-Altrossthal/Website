@@ -333,6 +333,7 @@ export function EventPlanningClient({
               selectedKey={isDesktop || sheetOpen ? selectedKey : null}
               emphasizedWeekdays={model.preferredWeekdaySet}
               onSelect={openDay}
+              onMonthChange={changeMonth}
               getDayState={(key) =>
                 getBaseDayState(model.dayMap.get(key), model.entriesByDay.get(key))
               }

@@ -1,6 +1,6 @@
 # Plan: Kalender – Gesten, Mehrfachauswahl und Tastatur
 
-Stand: 2026-10-04. Entschieden (E1–E5), nichts umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-04. Entschieden (E1–E5), Phase 1 umgesetzt. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -89,7 +89,7 @@ Kleiner Hinweis „Tipp: Halten zum Mehrfachauswählen“ bzw. „Shift/Strg fü
 
 ## Checkliste
 
-- [ ] Phase 1 Aufräumen + Tastatur
+- [x] Phase 1 Aufräumen + Tastatur (B8 war ein Artefakt der Ganzseiten-Screenshots: die fixe Leiste wird mitten ins Bild gedruckt, die Shell hat bereits `pb-[var(--members-bottom-nav)]`)
 - [ ] Phase 2 Wischen
 - [ ] Phase 3 Auswahlmodell
 - [ ] Phase 4 Desktop-Mehrfachauswahl

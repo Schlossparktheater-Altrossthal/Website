@@ -162,6 +162,7 @@ export function MyCalendar(props: MyCalendarProps) {
           selectedKeys={multi ?? undefined}
           emphasizedWeekdays={model.preferredWeekdaySet}
           onSelect={selectDay}
+          onMonthChange={onMonthChange}
           getDayState={(key) => {
             const entry = entryByDate.get(key);
             return {

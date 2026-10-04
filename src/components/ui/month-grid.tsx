@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import {
+  addDays,
+  addMonths,
+  addYears,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -11,6 +14,8 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
+
+import { toDayKey } from "@/lib/sperrliste/day-tiers";
 
 import { AVAILABILITY_STATUS, type AvailabilityStatus } from "@/components/ui/availability-status";
 import { cn } from "@/lib/utils";
@@ -54,6 +59,11 @@ type MonthGridProps = {
   /** Mehrfachauswahl, z. B. mehrere Tage auf einmal sperren. */
   selectedKeys?: ReadonlySet<string>;
   onSelect?: (key: string, date: Date) => void;
+  /**
+   * Monatswechsel per Tastatur (Bild↑/↓ oder Pfeil über den Monatsrand). Ohne diese Prop
+   * bleibt der Fokus im angezeigten Raster.
+   */
+  onMonthChange?: (month: Date) => void;
   /** Wochentage, deren Spaltenkopf betont wird (z. B. Kerntage). */
   emphasizedWeekdays?: ReadonlySet<number>;
   /** Kalenderwochen als erste Spalte. */
@@ -83,11 +93,16 @@ export function MonthGrid({
   selectedKey,
   selectedKeys,
   onSelect,
+  onMonthChange,
   emphasizedWeekdays,
   showWeekNumbers = false,
   renderDetails,
   className,
 }: MonthGridProps) {
+  const gridRef = React.useRef<HTMLDivElement>(null);
+  const [focusKey, setFocusKey] = React.useState<string | null>(null);
+  /** Nach einem Monatswechsel per Tastatur den Fokus auf den neuen Tag setzen. */
+  const pendingFocus = React.useRef<string | null>(null);
   const weeks = React.useMemo(() => {
     const days = eachDayOfInterval({
       start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
@@ -100,12 +115,96 @@ export function MonthGrid({
     return result;
   }, [month]);
 
+  // Ein einziger Tab-Stopp (roving tabindex): gewählter Tag, sonst heute, sonst der 1.
+  const visibleKeys = React.useMemo(
+    () => new Set(weeks.flat().map((date) => toDayKey(date))),
+    [weeks],
+  );
+  const monthKeyPrefix = format(month, "yyyy-MM");
+  const todayKey = toDayKey(new Date());
+  const tabKey =
+    focusKey && visibleKeys.has(focusKey)
+      ? focusKey
+      : selectedKey && selectedKey.startsWith(monthKeyPrefix)
+        ? selectedKey
+        : todayKey.startsWith(monthKeyPrefix)
+          ? todayKey
+          : `${monthKeyPrefix}-01`;
+
+  React.useEffect(() => {
+    const key = pendingFocus.current;
+    if (!key) return;
+    const cell = gridRef.current?.querySelector<HTMLElement>(`[data-date="${key}"]`);
+    if (cell) {
+      cell.focus();
+      pendingFocus.current = null;
+    }
+  });
+
+  const moveFocus = (target: Date) => {
+    const key = toDayKey(target);
+    if (!isSameMonth(target, month)) {
+      if (onMonthChange) onMonthChange(startOfMonth(target));
+      else if (!visibleKeys.has(key)) return;
+    }
+    setFocusKey(key);
+    pendingFocus.current = key;
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const cell = (event.target as HTMLElement).closest<HTMLElement>("[data-date]");
+    if (!cell?.dataset.date || event.altKey || event.ctrlKey || event.metaKey) return;
+    const current = new Date(`${cell.dataset.date}T12:00:00`);
+    const weekday = (current.getDay() + 6) % 7; // Mo = 0
+    let target: Date | null = null;
+    switch (event.key) {
+      case "ArrowLeft":
+        target = addDays(current, -1);
+        break;
+      case "ArrowRight":
+        target = addDays(current, 1);
+        break;
+      case "ArrowUp":
+        target = addDays(current, -7);
+        break;
+      case "ArrowDown":
+        target = addDays(current, 7);
+        break;
+      case "Home":
+        target = addDays(current, -weekday);
+        break;
+      case "End":
+        target = addDays(current, 6 - weekday);
+        break;
+      case "PageUp":
+        target = event.shiftKey ? addYears(current, -1) : addMonths(current, -1);
+        break;
+      case "PageDown":
+        target = event.shiftKey ? addYears(current, 1) : addMonths(current, 1);
+        break;
+      case "t":
+      case "T":
+        target = new Date();
+        break;
+    }
+    if (!target) return;
+    event.preventDefault();
+    moveFocus(target);
+  };
+
   const columns = showWeekNumbers
     ? "grid-cols-[1.75rem_repeat(7,minmax(0,1fr))] lg:grid-cols-[2.5rem_repeat(7,minmax(0,1fr))]"
     : "grid-cols-7";
 
   return (
-    <div className={cn("w-full", className)} role="grid" aria-label={ARIA_MONTH.format(month)}>
+    <div
+      ref={gridRef}
+      className={cn("w-full", className)}
+      role="grid"
+      aria-label={ARIA_MONTH.format(month)}
+      aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home End PageUp PageDown T"
+      onKeyDown={onSelect ? onKeyDown : undefined}
+    >
       <div className={cn("grid gap-1 pb-1.5 sm:gap-1.5", columns)} role="row">
         {showWeekNumbers ? (
           <span
@@ -155,6 +254,8 @@ export function MonthGrid({
                   Boolean(selectedKeys?.has(format(date, "yyyy-MM-dd")))
                 }
                 onSelect={onSelect}
+                tabbable={toDayKey(date) === tabKey}
+                onFocus={() => setFocusKey(toDayKey(date))}
                 details={renderDetails?.(format(date, "yyyy-MM-dd"), date)}
               />
             ))}
@@ -171,6 +272,8 @@ function DayCell({
   state,
   selected,
   onSelect,
+  tabbable,
+  onFocus,
   details,
 }: {
   date: Date;
@@ -178,8 +281,12 @@ function DayCell({
   state: MonthGridDayState;
   selected: boolean;
   onSelect?: (key: string, date: Date) => void;
+  tabbable: boolean;
+  onFocus: () => void;
   details?: React.ReactNode;
 }) {
+  // Gesperrte Tage bleiben fokussierbar, damit die Pfeiltasten nicht hängen bleiben.
+  const inactive = !onSelect || state.disabled;
   const key = format(date, "yyyy-MM-dd");
   const status = state.status && state.status !== "free" ? state.status : null;
   const label = [
@@ -197,11 +304,17 @@ function DayCell({
       aria-selected={selected}
       aria-label={label}
       aria-current={state.isToday ? "date" : undefined}
-      disabled={!onSelect || state.disabled}
-      onClick={() => onSelect?.(key, date)}
+      data-date={key}
+      disabled={!onSelect}
+      aria-disabled={inactive || undefined}
+      tabIndex={tabbable ? 0 : -1}
+      onFocus={onFocus}
+      onClick={() => {
+        if (!inactive) onSelect?.(key, date);
+      }}
       className={cn(
         // Mobil: mind. 52 px hohe Tipp-Fläche; Desktop: hohe Zelle mit Details.
-        "relative flex h-13 min-w-0 flex-col items-center overflow-hidden rounded-lg border pt-1.5 text-sm transition-[color,background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] disabled:cursor-default lg:h-24 lg:items-stretch lg:px-2 lg:pt-1.5 lg:active:scale-100",
+        "relative flex h-13 min-w-0 flex-col items-center overflow-hidden rounded-lg border pt-1.5 text-sm transition-[color,background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] disabled:cursor-default aria-disabled:cursor-default aria-disabled:active:scale-100 lg:h-24 lg:items-stretch lg:px-2 lg:pt-1.5 lg:active:scale-100",
         status
           ? cn(AVAILABILITY_STATUS[status].surface, "border-transparent")
           : state.emphasis === "strong"
@@ -210,7 +323,7 @@ function DayCell({
               ? "border-border/40 bg-transparent"
               : "border-border/70 bg-card",
         selected && "border-primary ring-2 ring-primary/40",
-        onSelect && !state.disabled && !selected && "hover:border-foreground/30",
+        !inactive && !selected && "hover:border-foreground/30",
         !inMonth && "opacity-40",
       )}
     >

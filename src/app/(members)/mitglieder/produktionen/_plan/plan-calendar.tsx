@@ -61,6 +61,7 @@ export function PlanCalendar({
       <MonthGrid
         month={month}
         selectedKey={selectedKey}
+        onMonthChange={setMonth}
         onSelect={(key) => {
           const entries = milestonesByDay.get(key) ?? [];
           if (entries.length === 1) onSelect(entries[0].id);
