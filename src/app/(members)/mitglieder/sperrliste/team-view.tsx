@@ -619,7 +619,7 @@ function MatrixCell({ entry, canPlan }: { entry: TeamEntry | undefined; canPlan:
     <span
       title={label}
       className={cn(
-        "flex h-6 items-center justify-center rounded-[3px]",
+        "relative flex h-6 items-center justify-center rounded-[3px]",
         entry.status === "blocked"
           ? "bg-destructive"
           : entry.status === "limited"
