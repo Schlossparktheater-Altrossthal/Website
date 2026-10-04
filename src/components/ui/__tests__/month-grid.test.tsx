@@ -8,6 +8,22 @@ import { describe, expect, it, vi } from "vitest";
 
 import { MonthGrid } from "../month-grid";
 
+function MultiHarness({ onSelect = vi.fn() }: { onSelect?: (key: string) => void }) {
+  const [keys, setKeys] = React.useState<Set<string> | null>(null);
+  return (
+    <>
+      <output data-testid="keys">{keys ? [...keys].sort().join(",") : "aus"}</output>
+      <MonthGrid
+        month={new Date(2026, 9, 1)}
+        selectedKey="2026-10-14"
+        onSelect={onSelect}
+        multiSelect={{ keys, onChange: setKeys, isSelectable: (key) => key >= "2026-10-05" }}
+        getDayState={() => ({})}
+      />
+    </>
+  );
+}
+
 function Harness({ onSelect = vi.fn() }: { onSelect?: (key: string) => void }) {
   const [month, setMonth] = React.useState(new Date(2026, 9, 1));
   return (
@@ -66,5 +82,42 @@ describe("MonthGrid Tastatur", () => {
     expect(onSelect).toHaveBeenCalledWith("2026-10-14", expect.any(Date));
     await user.keyboard("{ArrowRight}{Enter}");
     expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("MonthGrid Mehrfachauswahl", () => {
+  const keys = () => screen.getByTestId("keys").textContent;
+
+  it("startet mit Strg-Klick inklusive des gewählten Tages und schaltet dann per Klick um", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(<MultiHarness onSelect={onSelect} />);
+    await user.keyboard("{Control>}");
+    await user.click(cell("2026-10-16"));
+    await user.keyboard("{/Control}");
+    expect(keys()).toBe("2026-10-14,2026-10-16");
+    await user.click(cell("2026-10-14"));
+    expect(keys()).toBe("2026-10-16");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("wählt mit Shift-Klick einen Zeitraum ohne nicht wählbare Tage", async () => {
+    const user = userEvent.setup();
+    render(<MultiHarness />);
+    await user.click(cell("2026-10-06"));
+    await user.keyboard("{Shift>}");
+    await user.click(cell("2026-10-03"));
+    await user.keyboard("{/Shift}");
+    expect(keys()).toBe("2026-10-05,2026-10-06");
+  });
+
+  it("erweitert mit Shift+Pfeil und beendet mit Esc", async () => {
+    const user = userEvent.setup();
+    render(<MultiHarness />);
+    cell("2026-10-14").focus();
+    await user.keyboard("{Shift>}{ArrowRight}{ArrowRight}{/Shift}");
+    expect(keys()).toBe("2026-10-14,2026-10-15,2026-10-16");
+    await user.keyboard("{Escape}");
+    expect(keys()).toBe("aus");
   });
 });
