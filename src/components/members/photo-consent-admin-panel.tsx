@@ -185,10 +185,12 @@ function EntryDetail({
   entry,
   processing,
   onSetLevel,
+  onRotate,
 }: {
   entry: PhotoConsentAdminEntry;
   processing: boolean;
   onSetLevel: (level: PhotoConsentLevelValue) => void;
+  onRotate: (degrees: number) => Promise<boolean>;
 }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   return (
@@ -200,6 +202,7 @@ function EntryDetail({
           src={entry.documentPreviewUrl}
           alt={entry.documentName ?? "Nachweis"}
           downloadHref={entry.documentUrl}
+          onSaveRotation={onRotate}
         />
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
@@ -746,6 +749,12 @@ export function PhotoConsentAdminPanel() {
                   Freigeben
                 </AsyncButton>
               ) : null}
+              {detail.status === "approved" ? (
+                <span className="inline-flex min-h-11 flex-1 items-center gap-1.5 text-sm font-medium text-success sm:flex-none">
+                  <CheckIcon className="size-4" aria-hidden />
+                  Bereits freigegeben
+                </span>
+              ) : null}
               {detail.status !== "rejected" && detail.status !== "noPhotos" ? (
                 <Button
                   type="button"
@@ -777,6 +786,9 @@ export function PhotoConsentAdminPanel() {
           <EntryDetail
             entry={detail}
             processing={processing}
+            onRotate={(degrees) =>
+              runAction({ id: detail.id, action: "rotate", degrees }, "Drehung gespeichert")
+            }
             onSetLevel={(level) =>
               void runAction(
                 { id: detail.id, action: "setLevel", level },

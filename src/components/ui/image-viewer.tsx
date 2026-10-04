@@ -21,13 +21,23 @@ interface ImageViewerProps {
   alt: string;
   /** Optionaler Download-Link (Originaldatei). */
   downloadHref?: string | null;
+  /** Wenn gesetzt, lässt sich eine Drehung dauerhaft speichern (Grad im Uhrzeigersinn). */
+  onSaveRotation?: (degrees: number) => Promise<boolean>;
 }
 
 /**
  * Bildbetrachter im Vollbild (eigener Radix-Dialog, funktioniert daher auch aus Blättern heraus): Zoomen (Buttons, Mausrad, Doppelklick, Zwei-Finger-Pinch),
  * Verschieben per Ziehen und Drehen in 90°-Schritten.
  */
-export function ImageViewer({ open, onClose, src, alt, downloadHref }: ImageViewerProps) {
+export function ImageViewer({
+  open,
+  onClose,
+  src,
+  alt,
+  downloadHref,
+  onSaveRotation,
+}: ImageViewerProps) {
+  const [saving, setSaving] = useState(false);
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -91,6 +101,19 @@ export function ImageViewer({ open, onClose, src, alt, downloadHref }: ImageView
     pinchDistance.current = null;
   };
 
+  const pendingRotation = ((rotation % 360) + 360) % 360;
+
+  const saveRotation = async () => {
+    if (!onSaveRotation || pendingRotation === 0) return;
+    setSaving(true);
+    const ok = await onSaveRotation(pendingRotation);
+    setSaving(false);
+    if (ok) {
+      setRotation(0);
+      reset();
+    }
+  };
+
   const sideways = Math.abs(rotation / 90) % 2 === 1;
 
   return (
@@ -147,6 +170,16 @@ export function ImageViewer({ open, onClose, src, alt, downloadHref }: ImageView
             >
               <RotateCw className="size-5" aria-hidden />
             </Button>
+            {onSaveRotation && pendingRotation !== 0 ? (
+              <Button
+                size="sm"
+                className="mx-1"
+                disabled={saving}
+                onClick={() => void saveRotation()}
+              >
+                {saving ? "Speichert …" : "Drehung speichern"}
+              </Button>
+            ) : null}
             {downloadHref ? (
               <Button
                 asChild

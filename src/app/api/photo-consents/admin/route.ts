@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -78,7 +79,7 @@ function mapConsent(consent: ConsentWithUser): PhotoConsentAdminEntry {
     : null;
   const documentPreviewUrl =
     consent.documentUploadedAt && consent.documentMime?.toLowerCase().startsWith("image/")
-      ? `/api/photo-consents/${consent.id}/document?mode=inline`
+      ? `/api/photo-consents/${consent.id}/document?mode=inline&v=${consent.updatedAt.getTime()}`
       : null;
   const signaturePayload = parseSignaturePayload(consent.signaturePayload);
   const signatureVersion = consent.signatureVersion ?? null;
@@ -254,6 +255,31 @@ function parseIds(body: Record<string, unknown>): string[] {
   return Array.from(ids);
 }
 
+/** Dreht ein hochgeladenes Nachweisbild dauerhaft (EXIF-Ausrichtung wird dabei eingebrannt). */
+async function rotateDocument(ids: string[], degrees: unknown) {
+  if (ids.length !== 1 || typeof degrees !== "number" || ![90, 180, 270].includes(degrees)) {
+    return NextResponse.json({ error: "Ungültige Drehung" }, { status: 400 });
+  }
+  const consent = await prisma.photoConsent.findUnique({
+    where: { id: ids[0] },
+    select: { documentData: true, documentMime: true },
+  });
+  if (!consent?.documentData || !consent.documentMime?.toLowerCase().startsWith("image/")) {
+    return NextResponse.json({ error: "Kein drehbares Bild vorhanden" }, { status: 400 });
+  }
+  const rotated = await sharp(Buffer.from(consent.documentData))
+    .autoOrient()
+    .toBuffer()
+    .then((upright) => sharp(upright).rotate(degrees).toBuffer());
+  const updated = await prisma.photoConsent.update({
+    where: { id: ids[0] },
+    data: { documentData: new Uint8Array(rotated), documentSize: rotated.byteLength },
+    include: CONSENT_INCLUDE,
+  });
+  const entry = mapConsent(updated);
+  return NextResponse.json({ ok: true, entry, entries: [entry] });
+}
+
 /**
  * Aktionen der Verwaltung: freigeben (auch mehrere über `ids`), ablehnen, zurücksetzen und die
  * Stufe nachtragen (Altbestand, abgelesen vom Papierformular).
@@ -275,6 +301,9 @@ export async function PATCH(request: NextRequest) {
 
   if (ids.length === 0) {
     return NextResponse.json({ error: "Fehlende ID" }, { status: 400 });
+  }
+  if (action === "rotate") {
+    return rotateDocument(ids, body.degrees);
   }
   if (!isAdminAction(action)) {
     return NextResponse.json({ error: "Unbekannte Aktion" }, { status: 400 });
@@ -376,6 +405,13 @@ export async function PATCH(request: NextRequest) {
             updateData.status = "noPhotos";
           } else if (consent.status === "noPhotos") {
             updateData.status = "pending";
+          }
+          // Wer die Stufe einer bestehenden Freigabe ändert, bestätigt sie damit neu.
+          if (consent.status === "approved" && level !== "none" && level !== consent.level) {
+            updateData.approvedAt = now;
+            updateData.approvedBy = session.user?.id
+              ? { connect: { id: session.user.id } }
+              : { disconnect: true };
           }
         } else {
           // Zurücksetzen leert den eingereichten Nachweis, damit neu eingereicht werden kann.
