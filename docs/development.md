@@ -286,3 +286,28 @@ theater -d theater_staging`):
 2. `DELETE FROM "_prisma_migrations" WHERE migration_name = '<name>';`
 3. Pod neu starten (`kubectl delete pod …` oder `rollout restart deploy/website`).
    Der Init-Container wendet die Migration dann sauber von vorn an.
+
+## Lebensmittel-Daten importieren
+
+Allergene, Ernährungsformen und Rezepte beruhen auf importierten Stammdaten
+(`docs/Plan/lebensmittel-standard-plan.md`). Beide Importe sind wiederholbar (Upsert) und laufen
+gegen die DB aus `DATABASE_URL`:
+
+```bash
+# 1. Taxonomie von Open Food Facts (ODbL) + eigene Ergänzungen aus src/lib/food/taxonomy/custom.ts
+pnpm food:import taxonomy                 # lädt herunter
+pnpm food:import taxonomy --dir <ordner>  # oder lokal: ingredients.json, allergens.json,
+                                          # ingredients.txt, allergens.txt
+
+# 2. Bundeslebensmittelschlüssel BLS 4.0 (CC BY 4.0): ZIP von https://www.blsdb.de/download
+#    entpacken (Download-Link enthält ein Token, daher nicht automatisiert)
+pnpm food:import bls <ordner mit BLS_4_0_*.xlsx>
+
+# 3. Allergie-Freitexte ohne Code verknüpfen: erst Bericht, dann sichere Treffer setzen
+pnpm food:import link-restrictions --csv /tmp/allergien.csv
+pnpm food:import link-restrictions --apply
+```
+
+Reihenfolge einhalten: Der BLS-Import ordnet Lebensmittel über die Taxonomie zu. Nach Änderungen
+an `custom.ts` oder `src/lib/food/bls/map.ts` beide Importe erneut ausführen. Quellenangaben
+(Pflicht bei CC BY/ODbL) stehen in `BLS_ATTRIBUTION` und `OFF_ATTRIBUTION`.
