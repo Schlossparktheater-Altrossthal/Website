@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-09-30, 100 Modelle, 51 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-10-04, 136 Modelle, 71 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -21,6 +21,7 @@ flowchart LR
     User((User)) --- PM[ProductionMembership] --- Show((Show))
     User --- Auth[Account / Session / Rollen]
     User --- Pers[Maße, Größen, Allergien, Abneigungen, Interessen]
+    Pers --- Food[FoodTaxon / FoodItem / Recipe]
     User --- Avail[Verfügbarkeit / Sperrliste]
     Show --- Stueck[Character, Scene, Casting]
     Show --- Proben[CalendarEvent, EventParticipant, Duty]
@@ -284,6 +285,12 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | Feld                              | Typ                            | Attribute / Beschreibung                                                                 |
 | --------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------- |
 | `id`                              | `String`                       | @id @default(cuid())                                                                     |
+| `inventoryEvents`                 | → `InventoryEvent[]`           |                                                                                          |
+| `inventoryDefects`                | → `InventoryDefect[]`          | @relation("InventoryDefectReporter")                                                     |
+| `inventoryInspections`            | → `InventoryInspection[]`      |                                                                                          |
+| `inventoryCheckouts`              | → `InventoryCheckout[]`        | @relation("InventoryCheckoutBorrower")                                                   |
+| `inventoryProjectsLed`            | → `InventoryProject[]`         | @relation("InventoryProjectLead")                                                        |
+| `inventoryScans`                  | → `InventoryStocktakeScan[]`   |                                                                                          |
 | `firstName`                       | `String?`                      |                                                                                          |
 | `lastName`                        | `String?`                      |                                                                                          |
 | `name`                            | `String?`                      |                                                                                          |
@@ -313,12 +320,19 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `eventParticipations`             | → `EventParticipant[]`         |                                                                                          |
 | `availability`                    | → `Availability[]`             |                                                                                          |
 | `tasks`                           | → `Task[]`                     | @relation("TaskAssignee")                                                                |
+| `eventNotesWritten`               | → `EventNote[]`                | @relation("EventNoteAuthor")                                                             |
+| `eventTasksAssigned`              | → `EventNote[]`                | @relation("EventNoteAssignee")                                                           |
 | `availabilityDays`                | → `AvailabilityDay[]`          | New availability relations                                                               |
 | `availabilityTemplates`           | → `AvailabilityTemplate[]`     |                                                                                          |
 | `attendanceLogsAuthored`          | → `EventResponseLog[]`         | @relation("AttendanceLogAuthor")                                                         |
 | `attendanceLogsTarget`            | → `EventResponseLog[]`         | @relation("AttendanceLogTarget")                                                         |
 | `dietaryRestrictions`             | → `DietaryRestriction[]`       |                                                                                          |
 | `dietaryAversions`                | → `DietaryAversion[]`          |                                                                                          |
+| `foodTaxonAliases`                | → `FoodTaxonAlias[]`           |                                                                                          |
+| `foodItemsCreated`                | → `FoodItem[]`                 | @relation("FoodItemCreatedBy")                                                           |
+| `recipesCreated`                  | → `Recipe[]`                   | @relation("RecipeCreatedBy")                                                             |
+| `recipeRatings`                   | → `RecipeRating[]`             |                                                                                          |
+| `recipeComments`                  | → `RecipeComment[]`            |                                                                                          |
 | `measurements`                    | → `MemberMeasurement[]`        |                                                                                          |
 | `sizes`                           | → `MemberSize[]`               |                                                                                          |
 | `roles`                           | → `UserRole[]`                 |                                                                                          |
@@ -337,6 +351,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `departmentMemberships`           | → `DepartmentMembership[]`     |                                                                                          |
 | `departmentTaskAssignments`       | → `DepartmentTaskAssignment[]` |                                                                                          |
 | `departmentTasksCreated`          | → `DepartmentTask[]`           | @relation("DepartmentTaskCreator")                                                       |
+| `milestonesDone`                  | → `ShowMilestone[]`            | @relation("ShowMilestoneDoneBy")                                                         |
+| `planTemplates`                   | → `PlanTemplate[]`             | @relation("PlanTemplateCreatedBy")                                                       |
 | `departmentMembershipsAssigned`   | → `DepartmentMembership[]`     | @relation("DepartmentMembershipAssignedBy")                                              |
 | `departmentTaskComments`          | → `DepartmentTaskComment[]`    | @relation("DepartmentTaskCommentAuthor")                                                 |
 | `calendarEventsCreated`           | → `CalendarEvent[]`            |                                                                                          |
@@ -451,6 +467,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `description`      | `String?`                  |                          |
 | `grants`           | → `AppRolePermission[]`    |                          |
 | `departmentGrants` | → `DepartmentPermission[]` |                          |
+| `templateGrants`   | → `TemplatePermission[]`   |                          |
 
 ### `AppRolePermission`
 
@@ -480,36 +497,40 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `Show`
 
-| Feld                      | Typ                           | Attribute / Beschreibung |
-| ------------------------- | ----------------------------- | ------------------------ |
-| `id`                      | `String`                      | @id @default(cuid())     |
-| `year`                    | `Int`                         |                          |
-| `title`                   | `String?`                     |                          |
-| `synopsis`                | `String?`                     |                          |
-| `dates`                   | `Json`                        |                          |
-| `posterUrl`               | `String?`                     |                          |
-| `revealedAt`              | `DateTime?`                   |                          |
-| `finalRehearsalWeekStart` | `DateTime?`                   |                          |
-| `finalRehearsalWeekEnd`   | `DateTime?`                   |                          |
-| `meta`                    | `Json?`                       |                          |
-| `status`                  | `ProductionStatus` (enum)     | @default(planning)       |
-| `statusChangedAt`         | `DateTime?`                   |                          |
-| `archivedAt`              | `DateTime?`                   |                          |
-| `finance`                 | → `FinanceEntry[]`            |                          |
-| `budgets`                 | → `FinanceBudget[]`           |                          |
-| `characters`              | → `Character[]`               |                          |
-| `scenes`                  | → `Scene[]`                   |                          |
-| `acts`                    | → `ShowAct[]`                 |                          |
-| `finalRehearsalDuties`    | → `FinalRehearsalDuty[]`      |                          |
-| `memberships`             | → `ProductionMembership[]`    |                          |
-| `photoConsents`           | → `PhotoConsent[]`            |                          |
-| `photoConsentPurposes`    | → `PhotoConsentPurpose[]`     |                          |
-| `productionOnboardings`   | → `ProductionOnboarding[]`    |                          |
-| `calendarEvents`          | → `CalendarEvent[]`           |                          |
-| `memberRolePreferences`   | → `MemberRolePreference[]`    |                          |
-| `departments`             | → `Department[]`              |                          |
-| `onboardingProfiles`      | → `MemberOnboardingProfile[]` |                          |
-| `invites`                 | → `MemberInvite[]`            |                          |
+| Feld                      | Typ                           | Attribute / Beschreibung                                             |
+| ------------------------- | ----------------------------- | -------------------------------------------------------------------- |
+| `id`                      | `String`                      | @id @default(cuid())                                                 |
+| `inventoryCheckouts`      | → `InventoryCheckout[]`       |                                                                      |
+| `inventoryProjects`       | → `InventoryProject[]`        |                                                                      |
+| `year`                    | `Int`                         |                                                                      |
+| `title`                   | `String?`                     |                                                                      |
+| `synopsis`                | `String?`                     |                                                                      |
+| `dates`                   | `Json`                        |                                                                      |
+| `posterUrl`               | `String?`                     |                                                                      |
+| `revealedAt`              | `DateTime?`                   |                                                                      |
+| `finalRehearsalWeekStart` | `DateTime?`                   |                                                                      |
+| `finalRehearsalWeekEnd`   | `DateTime?`                   |                                                                      |
+| `premiereAt`              | `DateTime?`                   | T−0-Anker der Produktionsplanung (docs/Plan/projektplanung-plan.md). |
+| `meta`                    | `Json?`                       |                                                                      |
+| `status`                  | `ProductionStatus` (enum)     | @default(planning)                                                   |
+| `statusChangedAt`         | `DateTime?`                   |                                                                      |
+| `archivedAt`              | `DateTime?`                   |                                                                      |
+| `finance`                 | → `FinanceEntry[]`            |                                                                      |
+| `budgets`                 | → `FinanceBudget[]`           |                                                                      |
+| `characters`              | → `Character[]`               |                                                                      |
+| `scenes`                  | → `Scene[]`                   |                                                                      |
+| `acts`                    | → `ShowAct[]`                 |                                                                      |
+| `finalRehearsalDuties`    | → `FinalRehearsalDuty[]`      |                                                                      |
+| `memberships`             | → `ProductionMembership[]`    |                                                                      |
+| `photoConsents`           | → `PhotoConsent[]`            |                                                                      |
+| `photoConsentPurposes`    | → `PhotoConsentPurpose[]`     |                                                                      |
+| `productionOnboardings`   | → `ProductionOnboarding[]`    |                                                                      |
+| `calendarEvents`          | → `CalendarEvent[]`           |                                                                      |
+| `memberRolePreferences`   | → `MemberRolePreference[]`    |                                                                      |
+| `departments`             | → `Department[]`              |                                                                      |
+| `onboardingProfiles`      | → `MemberOnboardingProfile[]` |                                                                      |
+| `invites`                 | → `MemberInvite[]`            |                                                                      |
+| `milestones`              | → `ShowMilestone[]`           |                                                                      |
 
 ### `ProductionMembership`
 
@@ -650,6 +671,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `showId`              | `String`                    |                                                                             |
 | `revokedAt`           | `DateTime?`                 |                                                                             |
 | `status`              | `PhotoConsentStatus` (enum) | @default(pending)                                                           |
+| `level`               | `PhotoConsentLevel?` (enum) | null = Altbestand ohne erfasste Stufe („Stufe unbekannt“)                   |
 | `createdAt`           | `DateTime`                  | @default(now())                                                             |
 | `updatedAt`           | `DateTime`                  | @updatedAt                                                                  |
 | `approvedAt`          | `DateTime?`                 |                                                                             |
@@ -722,6 +744,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `consentId`           | `String`                    |                                                                                      |
 | `version`             | `Int`                       |                                                                                      |
 | `status`              | `PhotoConsentStatus` (enum) |                                                                                      |
+| `level`               | `PhotoConsentLevel?` (enum) |                                                                                      |
 | `purposesSnapshot`    | `Json?`                     |                                                                                      |
 | `exclusionNote`       | `String?`                   | @db.Text                                                                             |
 | `documentName`        | `String?`                   |                                                                                      |
@@ -761,6 +784,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `show`               | → `Show`               | @relation(fields: [showId], references: [id], onDelete: Cascade) |
 | `castings`           | → `CharacterCasting[]` |                                                                  |
 | `sceneAppearances`   | → `SceneCharacter[]`   |                                                                  |
+| `eventTasks`         | → `EventNote[]`        |                                                                  |
 
 - `@@index([showId, order])`
 
@@ -849,31 +873,33 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Gewerk einer Produktion.
 
-| Feld                   | Typ                         | Attribute / Beschreibung                                             |
-| ---------------------- | --------------------------- | -------------------------------------------------------------------- |
-| `id`                   | `String`                    | @id @default(cuid())                                                 |
-| `showId`               | `String`                    |                                                                      |
-| `templateId`           | `String?`                   |                                                                      |
-| `slug`                 | `String`                    |                                                                      |
-| `name`                 | `String`                    |                                                                      |
-| `description`          | `String?`                   |                                                                      |
-| `color`                | `String?`                   |                                                                      |
-| `isCore`               | `Boolean`                   | @default(true)                                                       |
-| `requiresJoinApproval` | `Boolean`                   | @default(false)                                                      |
-| `sortOrder`            | `Int`                       | @default(0)                                                          |
-| `archivedAt`           | `DateTime?`                 |                                                                      |
-| `createdAt`            | `DateTime`                  | @default(now())                                                      |
-| `updatedAt`            | `DateTime`                  | @updatedAt                                                           |
-| `show`                 | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Cascade)     |
-| `template`             | → `DepartmentTemplate?`     | @relation(fields: [templateId], references: [id], onDelete: SetNull) |
-| `memberships`          | → `DepartmentMembership[]`  |                                                                      |
-| `breakdownItems`       | → `SceneBreakdownItem[]`    |                                                                      |
-| `tasks`                | → `DepartmentTask[]`        |                                                                      |
-| `boardColumns`         | → `DepartmentBoardColumn[]` |                                                                      |
-| `permissions`          | → `DepartmentPermission[]`  |                                                                      |
-| `events`               | → `CalendarEvent[]`         |                                                                      |
-| `eventBlocks`          | → `EventBlock[]`            |                                                                      |
-| `documents`            | → `DepartmentDocument[]`    |                                                                      |
+| Feld                   | Typ                         | Attribute / Beschreibung                                              |
+| ---------------------- | --------------------------- | --------------------------------------------------------------------- |
+| `id`                   | `String`                    | @id @default(cuid())                                                  |
+| `showId`               | `String`                    |                                                                       |
+| `templateId`           | `String`                    |                                                                       |
+| `slug`                 | `String`                    |                                                                       |
+| `name`                 | `String`                    |                                                                       |
+| `description`          | `String?`                   |                                                                       |
+| `color`                | `String?`                   |                                                                       |
+| `isCore`               | `Boolean`                   | @default(true)                                                        |
+| `requiresJoinApproval` | `Boolean`                   | @default(false)                                                       |
+| `sortOrder`            | `Int`                       | @default(0)                                                           |
+| `archivedAt`           | `DateTime?`                 |                                                                       |
+| `createdAt`            | `DateTime`                  | @default(now())                                                       |
+| `updatedAt`            | `DateTime`                  | @updatedAt                                                            |
+| `show`                 | → `Show`                    | @relation(fields: [showId], references: [id], onDelete: Cascade)      |
+| `template`             | → `DepartmentTemplate`      | @relation(fields: [templateId], references: [id], onDelete: Restrict) |
+| `memberships`          | → `DepartmentMembership[]`  |                                                                       |
+| `breakdownItems`       | → `SceneBreakdownItem[]`    |                                                                       |
+| `tasks`                | → `DepartmentTask[]`        |                                                                       |
+| `boardColumns`         | → `DepartmentBoardColumn[]` |                                                                       |
+| `permissions`          | → `DepartmentPermission[]`  |                                                                       |
+| `events`               | → `CalendarEvent[]`         |                                                                       |
+| `eventBlocks`          | → `EventBlock[]`            |                                                                       |
+| `eventTasks`           | → `EventNote[]`             |                                                                       |
+| `documents`            | → `DepartmentDocument[]`    |                                                                       |
+| `milestones`           | → `ShowMilestone[]`         |                                                                       |
 
 - `@@unique([showId, slug], name: "showId_slug")`
 - `@@index([templateId])`
@@ -914,16 +940,20 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `description`  | `String?`                      |                                                                                                 |
 | `status`       | `TaskStatus` (enum)            | @default(todo)                                                                                  |
 | `dueAt`        | `DateTime?`                    |                                                                                                 |
+| `milestoneId`  | `String?`                      | Zugehöriger Meilenstein im Produktionsplan; ohne eigene Frist gilt dessen Fälligkeit.           |
 | `createdById`  | `String`                       |                                                                                                 |
 | `createdAt`    | `DateTime`                     | @default(now())                                                                                 |
 | `updatedAt`    | `DateTime`                     | @updatedAt                                                                                      |
 | `department`   | → `Department`                 | @relation(fields: [departmentId], references: [id], onDelete: Cascade)                          |
+| `milestone`    | → `ShowMilestone?`             | @relation(fields: [milestoneId], references: [id], onDelete: SetNull)                           |
 | `column`       | → `DepartmentBoardColumn?`     | @relation(fields: [columnId], references: [id], onDelete: SetNull)                              |
 | `creator`      | → `User`                       | @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict) |
 | `assignments`  | → `DepartmentTaskAssignment[]` |                                                                                                 |
 | `comments`     | → `DepartmentTaskComment[]`    |                                                                                                 |
+| `eventNote`    | → `EventNote?`                 |                                                                                                 |
 
 - `@@index([departmentId, status])`
+- `@@index([milestoneId])`
 - `@@index([columnId, position])`
 - `@@index([createdAt])`
 
@@ -943,13 +973,16 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ### `DepartmentPermission`
 
-| Feld           | Typ            | Attribute / Beschreibung                                               |
-| -------------- | -------------- | ---------------------------------------------------------------------- |
-| `id`           | `String`       | @id @default(cuid())                                                   |
-| `departmentId` | `String`       |                                                                        |
-| `permissionId` | `String`       |                                                                        |
-| `department`   | → `Department` | @relation(fields: [departmentId], references: [id], onDelete: Cascade) |
-| `permission`   | → `Permission` | @relation(fields: [permissionId], references: [id], onDelete: Cascade) |
+> Abweichung eines Gewerks von seiner Blaupause; gilt für alle Mitglieder des Gewerks.
+
+| Feld           | Typ                               | Attribute / Beschreibung                                               |
+| -------------- | --------------------------------- | ---------------------------------------------------------------------- |
+| `id`           | `String`                          | @id @default(cuid())                                                   |
+| `departmentId` | `String`                          |                                                                        |
+| `permissionId` | `String`                          |                                                                        |
+| `mode`         | `DepartmentPermissionMode` (enum) | @default(grant)                                                        |
+| `department`   | → `Department`                    | @relation(fields: [departmentId], references: [id], onDelete: Cascade) |
+| `permission`   | → `Permission`                    | @relation(fields: [permissionId], references: [id], onDelete: Cascade) |
 
 - `@@unique([departmentId, permissionId])`
 
@@ -1003,10 +1036,14 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `responseLogs`       | → `EventResponseLog[]`      |                                                                                       |
 | `notifications`      | → `Notification[]`          |                                                                                       |
 | `guests`             | → `EventGuest[]`            |                                                                                       |
+| `notes`              | → `EventNote[]`             |                                                                                       |
 | `actualStart`        | `DateTime?`                 | Probenmodus: tatsächlicher Beginn und tatsächliches Ende.                             |
 | `actualEnd`          | `DateTime?`                 |                                                                                       |
+| `protocolSummary`    | `String?`                   | Protokoll: freie Zusammenfassung und wann es an die Teilnehmenden ging.               |
+| `protocolSentAt`     | `DateTime?`                 |                                                                                       |
 | `blockedDays`        | → `BlockedDay[]`            |                                                                                       |
 | `reminderDispatches` | → `EventReminderDispatch[]` |                                                                                       |
+| `milestone`          | → `ShowMilestone?`          |                                                                                       |
 
 - `@@index([start])`
 - `@@index([departmentId, start])`
@@ -1306,23 +1343,26 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Allergien und Unverträglichkeiten
 
-| Feld        | Typ                      | Attribute / Beschreibung                                                                 |
-| ----------- | ------------------------ | ---------------------------------------------------------------------------------------- |
-| `id`        | `String`                 | @id @default(cuid())                                                                     |
-| `userId`    | `String`                 |                                                                                          |
-| `allergen`  | `String`                 | Was die Allergie/Unverträglichkeit auslöst                                               |
-| `kind`      | `RestrictionKind` (enum) | @default(ALLERGY)                                                                        |
-| `level`     | `AllergyLevel` (enum)    |                                                                                          |
-| `tracesOk`  | `Boolean?`               | Ist der Kontakt mit Spuren unproblematisch? `null` = nicht angegeben (strikt behandeln). |
-| `diagnosed` | `Boolean`                | @default(false) Ärztlich abgeklärt?                                                      |
-| `symptoms`  | `String?`                | Beschreibung der Symptome                                                                |
-| `treatment` | `String?`                | Notfallbehandlung                                                                        |
-| `note`      | `String?`                |                                                                                          |
-| `isActive`  | `Boolean`                | @default(true)                                                                           |
-| `updatedAt` | `DateTime`               | @updatedAt                                                                               |
-| `user`      | → `User`                 | @relation(fields: [userId], references: [id], onDelete: Cascade)                         |
+| Feld        | Typ                      | Attribute / Beschreibung                                                                         |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------------------------ |
+| `id`        | `String`                 | @id @default(cuid())                                                                             |
+| `userId`    | `String`                 |                                                                                                  |
+| `allergen`  | `String`                 | Was die Allergie/Unverträglichkeit auslöst (Anzeige/Freitext)                                    |
+| `taxonCode` | `String?`                | Code aus der Lebensmittel-Taxonomie (docs/Plan/lebensmittel-standard-plan.md); null = ungeklärt. |
+| `kind`      | `RestrictionKind` (enum) | @default(ALLERGY)                                                                                |
+| `level`     | `AllergyLevel` (enum)    |                                                                                                  |
+| `tracesOk`  | `Boolean?`               | Ist der Kontakt mit Spuren unproblematisch? `null` = nicht angegeben (strikt behandeln).         |
+| `diagnosed` | `Boolean`                | @default(false) Ärztlich abgeklärt?                                                              |
+| `symptoms`  | `String?`                | Beschreibung der Symptome                                                                        |
+| `treatment` | `String?`                | Notfallbehandlung                                                                                |
+| `note`      | `String?`                |                                                                                                  |
+| `isActive`  | `Boolean`                | @default(true)                                                                                   |
+| `updatedAt` | `DateTime`               | @updatedAt                                                                                       |
+| `user`      | → `User`                 | @relation(fields: [userId], references: [id], onDelete: Cascade)                                 |
+| `taxon`     | → `FoodTaxon?`           | @relation(fields: [taxonCode], references: [code], onDelete: SetNull)                            |
 
 - `@@unique([userId, allergen])`
+- `@@index([taxonCode])`
 
 ### `DietaryAversion`
 
@@ -1383,6 +1423,187 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 - `@@unique([userId, showId, code])`
 - `@@index([showId])`
+
+## Lebensmittel & Rezepte
+
+### `FoodTaxon`
+
+| Feld            | Typ                      | Attribute / Beschreibung                                                           |
+| --------------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| `code`          | `String`                 | @id z. B. "en:hazelnut", eigene Codes "x:alpha-gal"                                |
+| `kind`          | `FoodTaxonKind` (enum)   |                                                                                    |
+| `source`        | `FoodTaxonSource` (enum) |                                                                                    |
+| `nameDe`        | `String?`                |                                                                                    |
+| `nameEn`        | `String?`                |                                                                                    |
+| `synonymsDe`    | `String[]`               |                                                                                    |
+| `synonymsEn`    | `String[]`               |                                                                                    |
+| `parentCodes`   | `String[]`               |                                                                                    |
+| `allergenCodes` | `String[]`               | Direkt zugeordnete Allergen-Codes (vererbt sich über parentCodes).                 |
+| `impliesCodes`  | `String[]`               | Weitere Codes, die dieses Taxon auslöst (eigene Ergänzung, z. B. Hafer → Gluten).  |
+| `vegan`         | `String?`                | yes \| no \| maybe (OFF-Eigenschaft, vererbt)                                      |
+| `vegetarian`    | `String?`                | yes \| no \| maybe                                                                 |
+| `lmiv`          | `Boolean`                | @default(false) Eines der 14 kennzeichnungspflichtigen Allergene (LMIV Anhang II). |
+| `sourceVersion` | `String?`                |                                                                                    |
+| `updatedAt`     | `DateTime`               | @updatedAt                                                                         |
+| `aliases`       | → `FoodTaxonAlias[]`     |                                                                                    |
+| `restrictions`  | → `DietaryRestriction[]` |                                                                                    |
+
+- `@@index([kind])`
+- `@@index([nameDe])`
+
+### `FoodTaxonAlias`
+
+> Gelernte Zuordnung Freitext → Taxon; normalisierter Text ist eindeutig.
+
+| Feld          | Typ                           | Attribute / Beschreibung                                              |
+| ------------- | ----------------------------- | --------------------------------------------------------------------- |
+| `id`          | `String`                      | @id @default(cuid())                                                  |
+| `text`        | `String`                      | @unique                                                               |
+| `taxonCode`   | `String`                      |                                                                       |
+| `source`      | `FoodTaxonAliasSource` (enum) | @default(CONFIRMED)                                                   |
+| `createdById` | `String?`                     |                                                                       |
+| `createdAt`   | `DateTime`                    | @default(now())                                                       |
+| `taxon`       | → `FoodTaxon`                 | @relation(fields: [taxonCode], references: [code], onDelete: Cascade) |
+| `createdBy`   | → `User?`                     | @relation(fields: [createdById], references: [id], onDelete: SetNull) |
+
+- `@@index([taxonCode])`
+
+### `FoodItem`
+
+> Ein konkretes Lebensmittel mit Nährwerten je 100 g (BLS), ein Produkt (OFF, Barcode) oder eigen.
+
+| Feld                | Typ                      | Attribute / Beschreibung                                                                   |
+| ------------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
+| `id`                | `String`                 | @id @default(cuid())                                                                       |
+| `source`            | `FoodItemSource` (enum)  |                                                                                            |
+| `sourceId`          | `String`                 | BLS-Code, Barcode oder eigene Kennung                                                      |
+| `nameDe`            | `String`                 |                                                                                            |
+| `nameEn`            | `String?`                |                                                                                            |
+| `groupCode`         | `String?`                | Hauptgruppe der Quelle (BLS: Buchstabe des Codes).                                         |
+| `nutrients`         | `Json`                   | Nährwerte je 100 g: { [Nährstoffcode]: Zahl } – Codes wie FoodNutrient.code.               |
+| `taxonCodes`        | `String[]`               |                                                                                            |
+| `tracesCodes`       | `String[]`               |                                                                                            |
+| `matchStatus`       | `FoodMatchStatus` (enum) | @default(UNCLEAR)                                                                          |
+| `pieceWeightG`      | `Float?`                 | Gewicht eines Stücks in g (für Mengen wie „2 Eier“), falls bekannt.                        |
+| `densityGPerMl`     | `Float?`                 | Dichte g/ml für Volumenangaben, falls bekannt.                                             |
+| `sourceVersion`     | `String?`                |                                                                                            |
+| `createdById`       | `String?`                |                                                                                            |
+| `createdAt`         | `DateTime`               | @default(now())                                                                            |
+| `updatedAt`         | `DateTime`               | @updatedAt                                                                                 |
+| `createdBy`         | → `User?`                | @relation("FoodItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull) |
+| `recipeIngredients` | → `RecipeIngredient[]`   |                                                                                            |
+
+- `@@unique([source, sourceId])`
+- `@@index([nameDe])`
+
+### `FoodNutrient`
+
+> Nährstoffkatalog (BLS-Komponenten): Code, Bezeichnung, Einheit.
+
+| Feld        | Typ       | Attribute / Beschreibung      |
+| ----------- | --------- | ----------------------------- |
+| `code`      | `String`  | @id z. B. "ENERCC", "PROT625" |
+| `nameDe`    | `String`  |                               |
+| `nameEn`    | `String`  |                               |
+| `unit`      | `String`  |                               |
+| `groupDe`   | `String?` |                               |
+| `sortOrder` | `Int`     | @default(0)                   |
+
+### `FoodDataImport`
+
+> Protokoll der Datenimporte (Quelle, Version, Umfang).
+
+| Feld         | Typ        | Attribute / Beschreibung |
+| ------------ | ---------- | ------------------------ |
+| `id`         | `String`   | @id @default(cuid())     |
+| `source`     | `String`   | off-taxonomy \| bls \| … |
+| `version`    | `String`   |                          |
+| `itemCount`  | `Int`      |                          |
+| `note`       | `String?`  |                          |
+| `importedAt` | `DateTime` | @default(now())          |
+
+- `@@index([source, importedAt])`
+
+### `Recipe`
+
+> --------------------------------------------------------------------------------------------- Rezepte (docs/Plan/rezepte-plan.md) ---------------------------------------------------------------------------------------------
+
+| Feld          | Typ                    | Attribute / Beschreibung                                                                                                                |
+| ------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | `String`               | @id @default(cuid())                                                                                                                    |
+| `title`       | `String`               |                                                                                                                                         |
+| `description` | `String?`              |                                                                                                                                         |
+| `servings`    | `Int`                  | @default(4)                                                                                                                             |
+| `steps`       | `Json`                 | @default("[]") Arbeitsschritte als Liste von Texten.                                                                                    |
+| `tags`        | `String[]`             |                                                                                                                                         |
+| `sourceUrl`   | `String?`              |                                                                                                                                         |
+| `sourceName`  | `String?`              |                                                                                                                                         |
+| `prepMinutes` | `Int?`                 |                                                                                                                                         |
+| `cookMinutes` | `Int?`                 |                                                                                                                                         |
+| `computed`    | `Json?`                | Zwischengespeicherte Auswertung (Allergene, Ernährungsformen, Nährwerte je Portion), wird bei jeder Änderung der Zutaten neu berechnet. |
+| `computedAt`  | `DateTime?`            |                                                                                                                                         |
+| `archivedAt`  | `DateTime?`            |                                                                                                                                         |
+| `createdById` | `String?`              |                                                                                                                                         |
+| `createdAt`   | `DateTime`             | @default(now())                                                                                                                         |
+| `updatedAt`   | `DateTime`             | @updatedAt                                                                                                                              |
+| `createdBy`   | → `User?`              | @relation("RecipeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)                                                |
+| `ingredients` | → `RecipeIngredient[]` |                                                                                                                                         |
+| `ratings`     | → `RecipeRating[]`     |                                                                                                                                         |
+| `comments`    | → `RecipeComment[]`    |                                                                                                                                         |
+
+- `@@index([title])`
+
+### `RecipeIngredient`
+
+| Feld         | Typ                      | Attribute / Beschreibung                                             |
+| ------------ | ------------------------ | -------------------------------------------------------------------- |
+| `id`         | `String`                 | @id @default(cuid())                                                 |
+| `recipeId`   | `String`                 |                                                                      |
+| `position`   | `Int`                    |                                                                      |
+| `rawText`    | `String`                 |                                                                      |
+| `amount`     | `Float?`                 |                                                                      |
+| `unit`       | `String?`                | normalisiert: g, kg, ml, l, tl, el, prise, stueck, …                 |
+| `name`       | `String`                 |                                                                      |
+| `note`       | `String?`                |                                                                      |
+| `optional`   | `Boolean`                | @default(false)                                                      |
+| `foodItemId` | `String?`                |                                                                      |
+| `taxonCodes` | `String[]`               | Taxa direkt an der Zeile (falls ohne FoodItem zugeordnet).           |
+| `status`     | `FoodMatchStatus` (enum) | @default(UNCLEAR)                                                    |
+| `recipe`     | → `Recipe`               | @relation(fields: [recipeId], references: [id], onDelete: Cascade)   |
+| `foodItem`   | → `FoodItem?`            | @relation(fields: [foodItemId], references: [id], onDelete: SetNull) |
+
+- `@@index([recipeId, position])`
+- `@@index([foodItemId])`
+
+### `RecipeRating`
+
+| Feld        | Typ        | Attribute / Beschreibung                                           |
+| ----------- | ---------- | ------------------------------------------------------------------ |
+| `id`        | `String`   | @id @default(cuid())                                               |
+| `recipeId`  | `String`   |                                                                    |
+| `userId`    | `String`   |                                                                    |
+| `stars`     | `Int`      |                                                                    |
+| `createdAt` | `DateTime` | @default(now())                                                    |
+| `updatedAt` | `DateTime` | @updatedAt                                                         |
+| `recipe`    | → `Recipe` | @relation(fields: [recipeId], references: [id], onDelete: Cascade) |
+| `user`      | → `User`   | @relation(fields: [userId], references: [id], onDelete: Cascade)   |
+
+- `@@unique([recipeId, userId])`
+
+### `RecipeComment`
+
+| Feld        | Typ        | Attribute / Beschreibung                                           |
+| ----------- | ---------- | ------------------------------------------------------------------ |
+| `id`        | `String`   | @id @default(cuid())                                               |
+| `recipeId`  | `String`   |                                                                    |
+| `userId`    | `String`   |                                                                    |
+| `body`      | `String`   |                                                                    |
+| `createdAt` | `DateTime` | @default(now())                                                    |
+| `updatedAt` | `DateTime` | @updatedAt                                                         |
+| `recipe`    | → `Recipe` | @relation(fields: [recipeId], references: [id], onDelete: Cascade) |
+| `user`      | → `User`   | @relation(fields: [userId], references: [id], onDelete: Cascade)   |
+
+- `@@index([recipeId, createdAt])`
 
 ## Finanzen
 
@@ -1603,29 +1824,6 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ## Inventar, Tickets & Offline-Sync
 
-### `InventoryItem`
-
-| Feld              | Typ                            | Attribute / Beschreibung |
-| ----------------- | ------------------------------ | ------------------------ |
-| `id`              | `String`                       | @id @default(cuid())     |
-| `sku`             | `String`                       | @unique @default(cuid()) |
-| `name`            | `String`                       |                          |
-| `manufacturer`    | `String?`                      |                          |
-| `itemType`        | `String?`                      |                          |
-| `qty`             | `Int`                          |                          |
-| `location`        | `String?`                      |                          |
-| `owner`           | `String?`                      |                          |
-| `condition`       | `String?`                      |                          |
-| `acquisitionCost` | `Float?`                       |                          |
-| `totalValue`      | `Float?`                       |                          |
-| `purchaseDate`    | `DateTime?`                    |                          |
-| `category`        | `InventoryItemCategory` (enum) | @default(accessories)    |
-| `details`         | `String?`                      |                          |
-| `lastUsedAt`      | `DateTime?`                    |                          |
-| `lastInventoryAt` | `DateTime?`                    |                          |
-| `createdAt`       | `DateTime`                     | @default(now())          |
-| `updatedAt`       | `DateTime`                     | @updatedAt               |
-
 ### `Ticket`
 
 | Feld         | Typ                   | Attribute / Beschreibung |
@@ -1704,23 +1902,126 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 ## Website & Einstellungen (Singletons)
 
+### `ShowMilestone`
+
+> Frist im Produktionsplan, relativ zu Premiere, Endprobenwoche oder einem anderen Meilenstein.
+
+| Feld                | Typ                             | Attribute / Beschreibung                                                                          |
+| ------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `id`                | `String`                        | @id @default(cuid())                                                                              |
+| `showId`            | `String`                        |                                                                                                   |
+| `departmentId`      | `String?`                       | Verantwortliches Gewerk.                                                                          |
+| `title`             | `String`                        |                                                                                                   |
+| `description`       | `String?`                       |                                                                                                   |
+| `kind`              | `MilestoneKind` (enum)          | @default(milestone)                                                                               |
+| `anchorType`        | `MilestoneAnchor` (enum)        | @default(premiere)                                                                                |
+| `anchorMilestoneId` | `String?`                       |                                                                                                   |
+| `offsetDays`        | `Int`                           | @default(0)                                                                                       |
+| `fixedDate`         | `DateTime?`                     |                                                                                                   |
+| `dueAt`             | `DateTime?`                     | Aus Anker + Offset berechnet und gespeichert.                                                     |
+| `doneAt`            | `DateTime?`                     |                                                                                                   |
+| `doneById`          | `String?`                       |                                                                                                   |
+| `calendarEventId`   | `String?`                       | @unique                                                                                           |
+| `position`          | `Int`                           | @default(0)                                                                                       |
+| `createdAt`         | `DateTime`                      | @default(now())                                                                                   |
+| `updatedAt`         | `DateTime`                      | @updatedAt                                                                                        |
+| `show`              | → `Show`                        | @relation(fields: [showId], references: [id], onDelete: Cascade)                                  |
+| `department`        | → `Department?`                 | @relation(fields: [departmentId], references: [id], onDelete: SetNull)                            |
+| `anchorMilestone`   | → `ShowMilestone?`              | @relation("MilestoneAnchorRef", fields: [anchorMilestoneId], references: [id], onDelete: SetNull) |
+| `anchoredBy`        | → `ShowMilestone[]`             | @relation("MilestoneAnchorRef")                                                                   |
+| `doneBy`            | → `User?`                       | @relation("ShowMilestoneDoneBy", fields: [doneById], references: [id], onDelete: SetNull)         |
+| `calendarEvent`     | → `CalendarEvent?`              | @relation(fields: [calendarEventId], references: [id], onDelete: SetNull)                         |
+| `successors`        | → `MilestoneDependency[]`       | @relation("MilestoneDependencyFrom")                                                              |
+| `predecessors`      | → `MilestoneDependency[]`       | @relation("MilestoneDependencyTo")                                                                |
+| `tasks`             | → `DepartmentTask[]`            |                                                                                                   |
+| `reminders`         | → `MilestoneReminderDispatch[]` |                                                                                                   |
+
+- `@@index([showId, dueAt])`
+- `@@index([departmentId])`
+
+### `PlanTemplate`
+
+> Produktionsübergreifende Vorlage eines Plans (Jahresvorlage). `items` siehe `src/lib/planning/templates.ts`.
+
+| Feld          | Typ        | Attribute / Beschreibung                                                                       |
+| ------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| `id`          | `String`   | @id @default(cuid())                                                                           |
+| `name`        | `String`   |                                                                                                |
+| `items`       | `Json`     |                                                                                                |
+| `createdById` | `String?`  |                                                                                                |
+| `createdAt`   | `DateTime` | @default(now())                                                                                |
+| `updatedAt`   | `DateTime` | @updatedAt                                                                                     |
+| `createdBy`   | → `User?`  | @relation("PlanTemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull) |
+
+### `MilestoneReminderDispatch`
+
+> Bereits verschickte Fristerinnerung je Meilenstein und Stufe (`d7`, `d2`, `overdue`, `critical`).
+
+| Feld          | Typ               | Attribute / Beschreibung                                              |
+| ------------- | ----------------- | --------------------------------------------------------------------- |
+| `id`          | `String`          | @id @default(cuid())                                                  |
+| `milestoneId` | `String`          |                                                                       |
+| `stage`       | `String`          |                                                                       |
+| `sentAt`      | `DateTime`        | @default(now())                                                       |
+| `milestone`   | → `ShowMilestone` | @relation(fields: [milestoneId], references: [id], onDelete: Cascade) |
+
+- `@@unique([milestoneId, stage])`
+
+### `MilestoneDependency`
+
+> „from“ fertig + lagDays ≤ „to“ fällig.
+
+| Feld      | Typ               | Attribute / Beschreibung                                                                    |
+| --------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| `id`      | `String`          | @id @default(cuid())                                                                        |
+| `fromId`  | `String`          |                                                                                             |
+| `toId`    | `String`          |                                                                                             |
+| `lagDays` | `Int`             | @default(0)                                                                                 |
+| `from`    | → `ShowMilestone` | @relation("MilestoneDependencyFrom", fields: [fromId], references: [id], onDelete: Cascade) |
+| `to`      | → `ShowMilestone` | @relation("MilestoneDependencyTo", fields: [toId], references: [id], onDelete: Cascade)     |
+
+- `@@unique([fromId, toId])`
+- `@@index([toId])`
+
 ### `DepartmentTemplate`
 
 > Globale Vorlage für Gewerke. Pro Produktion werden daraus `Department`-Einträge erzeugt.
 
-| Feld                   | Typ              | Attribute / Beschreibung                                                                  |
-| ---------------------- | ---------------- | ----------------------------------------------------------------------------------------- |
-| `id`                   | `String`         | @id @default(cuid())                                                                      |
-| `slug`                 | `String`         | @unique                                                                                   |
-| `name`                 | `String`         |                                                                                           |
-| `description`          | `String?`        |                                                                                           |
-| `color`                | `String?`        |                                                                                           |
-| `preferenceCodes`      | `String[]`       | @default([]) Onboarding-Wunsch-Codes (z. B. `crew_costume`), die zu diesem Gewerk führen. |
-| `requiresJoinApproval` | `Boolean`        | @default(false)                                                                           |
-| `sortOrder`            | `Int`            | @default(0)                                                                               |
-| `createdAt`            | `DateTime`       | @default(now())                                                                           |
-| `updatedAt`            | `DateTime`       | @updatedAt                                                                                |
-| `departments`          | → `Department[]` |                                                                                           |
+| Feld                    | Typ                      | Attribute / Beschreibung                                                                                                         |
+| ----------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                    | `String`                 | @id @default(cuid())                                                                                                             |
+| `slug`                  | `String`                 | @unique                                                                                                                          |
+| `name`                  | `String`                 |                                                                                                                                  |
+| `description`           | `String?`                |                                                                                                                                  |
+| `color`                 | `String?`                |                                                                                                                                  |
+| `preferenceCodes`       | `String[]`               | @default([]) Onboarding-Wunsch-Codes (z. B. `crew_costume`), die zu diesem Gewerk führen.                                        |
+| `onboardingVisible`     | `Boolean`                | @default(true) Im Onboarding, Rückkehrer-Wizard und Profil als Gewerks-Wunsch anbieten.                                          |
+| `onboardingDescription` | `String?`                | Kurztext für das Onboarding (was macht man hier); sonst `description`.                                                           |
+| `requiresJoinApproval`  | `Boolean`                | @default(false)                                                                                                                  |
+| `modules`               | `String[]`               | @default(["board", "events", "files"]) Bausteine des Portals: board \| events \| files \| requirements \| budget \| measurements |
+| `icon`                  | `String?`                |                                                                                                                                  |
+| `sortOrder`             | `Int`                    | @default(0)                                                                                                                      |
+| `archivedAt`            | `DateTime?`              |                                                                                                                                  |
+| `createdAt`             | `DateTime`               | @default(now())                                                                                                                  |
+| `updatedAt`             | `DateTime`               | @updatedAt                                                                                                                       |
+| `departments`           | → `Department[]`         |                                                                                                                                  |
+| `permissions`           | → `TemplatePermission[]` |                                                                                                                                  |
+
+### `TemplatePermission`
+
+> Standardrecht einer Blaupause für eine Rolle im Gewerk; Gewerke erben es.
+
+| Feld           | Typ                               | Attribute / Beschreibung                                               |
+| -------------- | --------------------------------- | ---------------------------------------------------------------------- |
+| `id`           | `String`                          | @id @default(cuid())                                                   |
+| `templateId`   | `String`                          |                                                                        |
+| `permissionId` | `String`                          |                                                                        |
+| `role`         | `DepartmentMembershipRole` (enum) |                                                                        |
+| `template`     | → `DepartmentTemplate`            | @relation(fields: [templateId], references: [id], onDelete: Cascade)   |
+| `permission`   | → `Permission`                    | @relation(fields: [permissionId], references: [id], onDelete: Cascade) |
+
+- `@@unique([templateId, permissionId, role])`
+- `@@index([permissionId])`
 
 ### `DepartmentBoardColumn`
 
@@ -1851,6 +2152,38 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `createdAt`      | `DateTime` | @default(now())          |
 | `updatedAt`      | `DateTime` | @updatedAt               |
 
+### `EventNote`
+
+> Eintrag im Probenprotokoll: Notiz, Entscheidung oder Aufgabe (für Person, Figur oder Gewerk).
+
+| Feld               | Typ                    | Attribute / Beschreibung                                                                      |
+| ------------------ | ---------------------- | --------------------------------------------------------------------------------------------- |
+| `id`               | `String`               | @id @default(cuid())                                                                          |
+| `eventId`          | `String`               |                                                                                               |
+| `blockId`          | `String?`              |                                                                                               |
+| `type`             | `EventNoteType` (enum) | @default(NOTE)                                                                                |
+| `text`             | `String`               |                                                                                               |
+| `authorId`         | `String?`              |                                                                                               |
+| `assigneeUserId`   | `String?`              | Aufgabe: zuständig ist genau eins von Person, Figur (deren Besetzung) oder Gewerk.            |
+| `characterId`      | `String?`              |                                                                                               |
+| `departmentId`     | `String?`              |                                                                                               |
+| `departmentTaskId` | `String?`              | @unique Gewerk-Aufgaben liegen zusätzlich als Karte im Gewerk-Board.                          |
+| `dueAt`            | `DateTime?`            |                                                                                               |
+| `doneAt`           | `DateTime?`            |                                                                                               |
+| `createdAt`        | `DateTime`             | @default(now())                                                                               |
+| `updatedAt`        | `DateTime`             | @updatedAt                                                                                    |
+| `event`            | → `CalendarEvent`      | @relation(fields: [eventId], references: [id], onDelete: Cascade)                             |
+| `block`            | → `EventBlock?`        | @relation(fields: [blockId], references: [id], onDelete: SetNull)                             |
+| `author`           | → `User?`              | @relation("EventNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)         |
+| `assigneeUser`     | → `User?`              | @relation("EventNoteAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull) |
+| `character`        | → `Character?`         | @relation(fields: [characterId], references: [id], onDelete: SetNull)                         |
+| `department`       | → `Department?`        | @relation(fields: [departmentId], references: [id], onDelete: SetNull)                        |
+| `departmentTask`   | → `DepartmentTask?`    | @relation(fields: [departmentTaskId], references: [id], onDelete: SetNull)                    |
+
+- `@@index([eventId, createdAt])`
+- `@@index([assigneeUserId, doneAt])`
+- `@@index([characterId, doneAt])`
+
 ### `EventGuest`
 
 > Gast ohne Konto, der bei einer Probe dabei war.
@@ -1891,6 +2224,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `event`        | → `CalendarEvent`               | @relation(fields: [eventId], references: [id], onDelete: Cascade)                               |
 | `scene`        | → `Scene?`                      | @relation(fields: [sceneId], references: [id], onDelete: Cascade)                               |
 | `department`   | → `Department?`                 | @relation(fields: [departmentId], references: [id], onDelete: Cascade)                          |
+| `notes`        | → `EventNote[]`                 |                                                                                                 |
 
 - `@@unique([eventId, sceneId])`
 - `@@index([sceneId])`
@@ -1909,6 +2243,461 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `event`     | → `CalendarEvent`           | @relation(fields: [eventId], references: [id], onDelete: Cascade) |
 
 - `@@index([eventId])`
+
+### `InventoryArea`
+
+> Lagerbereich (Technik, Kostüm, …) mit eigenem Code-Präfix.
+
+| Feld                | Typ                      | Attribute / Beschreibung                                                                        |
+| ------------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
+| `id`                | `String`                 | @id @default(cuid())                                                                            |
+| `name`              | `String`                 |                                                                                                 |
+| `prefix`            | `String`                 | @unique                                                                                         |
+| `description`       | `String?`                |                                                                                                 |
+| `sortOrder`         | `Int`                    | @default(0)                                                                                     |
+| `nextNumber`        | `Int`                    | @default(1)                                                                                     |
+| `inspectionDefault` | `Boolean`                | @default(false) Neue Objekte dieses Bereichs sind standardmäßig prüfpflichtig (Elektroprüfung). |
+| `createdAt`         | `DateTime`               | @default(now())                                                                                 |
+| `updatedAt`         | `DateTime`               | @updatedAt                                                                                      |
+| `categories`        | → `InventoryCategory[]`  |                                                                                                 |
+| `fields`            | → `InventoryFieldDef[]`  |                                                                                                 |
+| `products`          | → `InventoryProduct[]`   |                                                                                                 |
+| `assets`            | → `InventoryAsset[]`     |                                                                                                 |
+| `stocktakes`        | → `InventoryStocktake[]` |                                                                                                 |
+
+### `InventoryCategory`
+
+> Kategorie als Baum je Bereich, z. B. Ton › Mikrofone › Kondensator.
+
+| Feld        | Typ                     | Attribute / Beschreibung                                                                     |
+| ----------- | ----------------------- | -------------------------------------------------------------------------------------------- |
+| `id`        | `String`                | @id @default(cuid())                                                                         |
+| `areaId`    | `String`                |                                                                                              |
+| `parentId`  | `String?`               |                                                                                              |
+| `name`      | `String`                |                                                                                              |
+| `sortOrder` | `Int`                   | @default(0)                                                                                  |
+| `area`      | → `InventoryArea`       | @relation(fields: [areaId], references: [id], onDelete: Cascade)                             |
+| `parent`    | → `InventoryCategory?`  | @relation("InventoryCategoryTree", fields: [parentId], references: [id], onDelete: Restrict) |
+| `children`  | → `InventoryCategory[]` | @relation("InventoryCategoryTree")                                                           |
+| `fields`    | → `InventoryFieldDef[]` |                                                                                              |
+| `products`  | → `InventoryProduct[]`  |                                                                                              |
+
+- `@@unique([areaId, parentId, name])`
+- `@@index([parentId])`
+
+### `InventoryFieldDef`
+
+> Merkmal eines Bereichs (gilt für alle Artikel darin) oder einer Kategorie (gilt auch für alle Unterkategorien). Genau eins von `areaId`/`categoryId` ist gesetzt. Werte stehen in `InventoryProduct.specs`.
+
+| Feld          | Typ                         | Attribute / Beschreibung                                             |
+| ------------- | --------------------------- | -------------------------------------------------------------------- |
+| `id`          | `String`                    | @id @default(cuid())                                                 |
+| `areaId`      | `String?`                   |                                                                      |
+| `categoryId`  | `String?`                   |                                                                      |
+| `key`         | `String`                    | Stabiler Schlüssel in `specs`, z. B. „power“.                        |
+| `label`       | `String`                    |                                                                      |
+| `type`        | `InventoryFieldType` (enum) | @default(text)                                                       |
+| `unit`        | `String?`                   |                                                                      |
+| `options`     | `String[]`                  | @default([]) Auswahlwerte bei `select`.                              |
+| `placeholder` | `String?`                   |                                                                      |
+| `required`    | `Boolean`                   | @default(false)                                                      |
+| `sortOrder`   | `Int`                       | @default(0)                                                          |
+| `area`        | → `InventoryArea?`          | @relation(fields: [areaId], references: [id], onDelete: Cascade)     |
+| `category`    | → `InventoryCategory?`      | @relation(fields: [categoryId], references: [id], onDelete: Cascade) |
+
+- `@@unique([areaId, key])`
+- `@@unique([categoryId, key])`
+
+### `InventoryProduct`
+
+> Artikeltyp: Stammdaten und Merkmale, die für alle Exemplare gleich sind.
+
+| Feld                       | Typ                             | Attribute / Beschreibung                                                               |
+| -------------------------- | ------------------------------- | -------------------------------------------------------------------------------------- |
+| `id`                       | `String`                        | @id @default(cuid())                                                                   |
+| `publicId`                 | `String`                        | @unique Zufällige, nicht erratbare Kennung für URLs.                                   |
+| `areaId`                   | `String`                        |                                                                                        |
+| `categoryId`               | `String?`                       |                                                                                        |
+| `kind`                     | `InventoryAssetKind` (enum)     | @default(unique) Einzelstück, Mengenartikel oder Kiste/Case – gilt für alle Exemplare. |
+| `name`                     | `String`                        |                                                                                        |
+| `manufacturer`             | `String?`                       |                                                                                        |
+| `model`                    | `String?`                       |                                                                                        |
+| `description`              | `String?`                       |                                                                                        |
+| `publicNote`               | `String?`                       | Öffentlich sichtbarer Hinweis auf der Scan-Seite.                                      |
+| `specs`                    | `Json`                          | @default("{}") Merkmalswerte nach `InventoryFieldDef.key`.                             |
+| `unit`                     | `String?`                       |                                                                                        |
+| `minQuantity`              | `Int?`                          |                                                                                        |
+| `inspectionRequired`       | `Boolean`                       | @default(false)                                                                        |
+| `inspectionIntervalMonths` | `Int?`                          |                                                                                        |
+| `createdAt`                | `DateTime`                      | @default(now())                                                                        |
+| `updatedAt`                | `DateTime`                      | @updatedAt                                                                             |
+| `area`                     | → `InventoryArea`               | @relation(fields: [areaId], references: [id], onDelete: Restrict)                      |
+| `category`                 | → `InventoryCategory?`          | @relation(fields: [categoryId], references: [id], onDelete: SetNull)                   |
+| `assets`                   | → `InventoryAsset[]`            |                                                                                        |
+| `photos`                   | → `InventoryPhoto[]`            |                                                                                        |
+| `projectLines`             | → `InventoryProjectLine[]`      |                                                                                        |
+| `components`               | → `InventoryProductComponent[]` | @relation("InventorySetComponents")                                                    |
+| `usedInSets`               | → `InventoryProductComponent[]` | @relation("InventorySetUsage")                                                         |
+
+- `@@index([areaId])`
+- `@@index([categoryId])`
+- `@@index([name])`
+
+### `InventoryLocation`
+
+> Fester Lagerort als Baum: Lager → Raum/Regal → Fach.
+
+| Feld          | Typ                          | Attribute / Beschreibung                                                                     |
+| ------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
+| `id`          | `String`                     | @id @default(cuid())                                                                         |
+| `code`        | `String`                     | @unique Label-Code des Lagerplatzes, z. B. „L-0007“ – zum Scannen beim Einlagern.            |
+| `publicId`    | `String`                     | @unique Zufällige Kennung für QR-Code und URL.                                               |
+| `name`        | `String`                     |                                                                                              |
+| `description` | `String?`                    |                                                                                              |
+| `parentId`    | `String?`                    |                                                                                              |
+| `sortOrder`   | `Int`                        | @default(0)                                                                                  |
+| `createdAt`   | `DateTime`                   | @default(now())                                                                              |
+| `updatedAt`   | `DateTime`                   | @updatedAt                                                                                   |
+| `parent`      | → `InventoryLocation?`       | @relation("InventoryLocationTree", fields: [parentId], references: [id], onDelete: Restrict) |
+| `children`    | → `InventoryLocation[]`      | @relation("InventoryLocationTree")                                                           |
+| `assets`      | → `InventoryAsset[]`         |                                                                                              |
+| `stocks`      | → `InventoryStock[]`         |                                                                                              |
+| `stocktakes`  | → `InventoryStocktake[]`     |                                                                                              |
+| `scans`       | → `InventoryStocktakeScan[]` |                                                                                              |
+
+- `@@index([parentId])`
+
+### `InventoryAsset`
+
+> Exemplar eines Artikeltyps mit eigenem Label, Ort und Zustand. Mengenartikel haben genau ein Exemplar, das die Bestände je Lagerplatz trägt.
+
+| Feld               | Typ                           | Attribute / Beschreibung                                                                      |
+| ------------------ | ----------------------------- | --------------------------------------------------------------------------------------------- |
+| `id`               | `String`                      | @id @default(cuid())                                                                          |
+| `code`             | `String`                      | @unique Unveränderlicher Label-Code, z. B. „T-0042“ – lesbar, nur mit Login auflösbar.        |
+| `publicId`         | `String`                      | @unique Zufällige, nicht erratbare Kennung für QR-Code und URL.                               |
+| `productId`        | `String`                      |                                                                                               |
+| `areaId`           | `String`                      | Aus dem Artikeltyp übernommen (unveränderlich) – bestimmt Code-Präfix und Abfragen.           |
+| `kind`             | `InventoryAssetKind` (enum)   | @default(unique) Aus dem Artikeltyp übernommen (unveränderlich).                              |
+| `status`           | `InventoryAssetStatus` (enum) | @default(available)                                                                           |
+| `condition`        | `InventoryCondition` (enum)   | @default(good)                                                                                |
+| `label`            | `String?`                     | Zusatz zum Typnamen, z. B. „Kiste 3“ oder „links“.                                            |
+| `serialNumber`     | `String?`                     |                                                                                               |
+| `internalNote`     | `String?`                     |                                                                                               |
+| `locationId`       | `String?`                     |                                                                                               |
+| `containerId`      | `String?`                     |                                                                                               |
+| `quantity`         | `Int`                         | @default(1) Gesamtmenge (Mengenartikel: Summe der Bestände).                                  |
+| `acquisitionCost`  | `Decimal?`                    | @db.Decimal(10, 2)                                                                            |
+| `purchaseDate`     | `DateTime?`                   |                                                                                               |
+| `supplier`         | `String?`                     |                                                                                               |
+| `ownership`        | `String?`                     |                                                                                               |
+| `lastInspectionAt` | `DateTime?`                   |                                                                                               |
+| `nextInspectionAt` | `DateTime?`                   |                                                                                               |
+| `lastSeenAt`       | `DateTime?`                   |                                                                                               |
+| `labelPrintedAt`   | `DateTime?`                   |                                                                                               |
+| `createdAt`        | `DateTime`                    | @default(now())                                                                               |
+| `updatedAt`        | `DateTime`                    | @updatedAt                                                                                    |
+| `product`          | → `InventoryProduct`          | @relation(fields: [productId], references: [id], onDelete: Restrict)                          |
+| `area`             | → `InventoryArea`             | @relation(fields: [areaId], references: [id], onDelete: Restrict)                             |
+| `location`         | → `InventoryLocation?`        | @relation(fields: [locationId], references: [id], onDelete: SetNull)                          |
+| `container`        | → `InventoryAsset?`           | @relation("InventoryContainment", fields: [containerId], references: [id], onDelete: SetNull) |
+| `contents`         | → `InventoryAsset[]`          | @relation("InventoryContainment")                                                             |
+| `stocks`           | → `InventoryStock[]`          | @relation("InventoryStockAsset")                                                              |
+| `storedStocks`     | → `InventoryStock[]`          | @relation("InventoryStockContainer")                                                          |
+| `photos`           | → `InventoryPhoto[]`          |                                                                                               |
+| `defects`          | → `InventoryDefect[]`         |                                                                                               |
+| `inspections`      | → `InventoryInspection[]`     |                                                                                               |
+| `events`           | → `InventoryEvent[]`          |                                                                                               |
+| `checkoutLines`    | → `InventoryCheckoutLine[]`   |                                                                                               |
+| `scans`            | → `InventoryStocktakeScan[]`  | @relation("InventoryScanAsset")                                                               |
+| `containerScans`   | → `InventoryStocktakeScan[]`  | @relation("InventoryScanContainer")                                                           |
+
+- `@@index([productId])`
+- `@@index([areaId])`
+- `@@index([locationId])`
+- `@@index([containerId])`
+- `@@index([nextInspectionAt])`
+
+### `InventoryStock`
+
+> Bestand eines Mengenartikels an einem Ort oder in einer Kiste.
+
+| Feld          | Typ                    | Attribute / Beschreibung                                                                         |
+| ------------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
+| `id`          | `String`               | @id @default(cuid())                                                                             |
+| `assetId`     | `String`               |                                                                                                  |
+| `locationId`  | `String?`              |                                                                                                  |
+| `containerId` | `String?`              |                                                                                                  |
+| `quantity`    | `Int`                  | @default(0)                                                                                      |
+| `updatedAt`   | `DateTime`             | @updatedAt                                                                                       |
+| `asset`       | → `InventoryAsset`     | @relation("InventoryStockAsset", fields: [assetId], references: [id], onDelete: Cascade)         |
+| `location`    | → `InventoryLocation?` | @relation(fields: [locationId], references: [id], onDelete: SetNull)                             |
+| `container`   | → `InventoryAsset?`    | @relation("InventoryStockContainer", fields: [containerId], references: [id], onDelete: SetNull) |
+
+- `@@index([assetId])`
+- `@@index([containerId])`
+
+### `InventoryPhoto`
+
+| Feld        | Typ                   | Attribute / Beschreibung                                            |
+| ----------- | --------------------- | ------------------------------------------------------------------- |
+| `id`        | `String`              | @id @default(cuid())                                                |
+| `productId` | `String?`             |                                                                     |
+| `assetId`   | `String?`             |                                                                     |
+| `defectId`  | `String?`             |                                                                     |
+| `data`      | `Bytes`               |                                                                     |
+| `mimeType`  | `String`              |                                                                     |
+| `sortOrder` | `Int`                 | @default(0)                                                         |
+| `createdAt` | `DateTime`            | @default(now())                                                     |
+| `product`   | → `InventoryProduct?` | @relation(fields: [productId], references: [id], onDelete: Cascade) |
+| `asset`     | → `InventoryAsset?`   | @relation(fields: [assetId], references: [id], onDelete: Cascade)   |
+| `defect`    | → `InventoryDefect?`  | @relation(fields: [defectId], references: [id], onDelete: Cascade)  |
+
+- `@@index([productId])`
+- `@@index([assetId])`
+- `@@index([defectId])`
+
+### `InventoryDefect`
+
+| Feld             | Typ                              | Attribute / Beschreibung                                                                          |
+| ---------------- | -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `id`             | `String`                         | @id @default(cuid())                                                                              |
+| `assetId`        | `String`                         |                                                                                                   |
+| `title`          | `String`                         |                                                                                                   |
+| `description`    | `String?`                        |                                                                                                   |
+| `severity`       | `InventoryDefectSeverity` (enum) | @default(limited)                                                                                 |
+| `status`         | `InventoryDefectStatus` (enum)   | @default(open)                                                                                    |
+| `reportedById`   | `String?`                        |                                                                                                   |
+| `resolutionNote` | `String?`                        |                                                                                                   |
+| `resolvedAt`     | `DateTime?`                      |                                                                                                   |
+| `createdAt`      | `DateTime`                       | @default(now())                                                                                   |
+| `updatedAt`      | `DateTime`                       | @updatedAt                                                                                        |
+| `asset`          | → `InventoryAsset`               | @relation(fields: [assetId], references: [id], onDelete: Cascade)                                 |
+| `reportedBy`     | → `User?`                        | @relation("InventoryDefectReporter", fields: [reportedById], references: [id], onDelete: SetNull) |
+| `photos`         | → `InventoryPhoto[]`             |                                                                                                   |
+
+- `@@index([assetId, status])`
+
+### `InventoryInspection`
+
+> Prüfung, z. B. Elektroprüfung nach DGUV V3.
+
+| Feld            | Typ                                | Attribute / Beschreibung                                              |
+| --------------- | ---------------------------------- | --------------------------------------------------------------------- |
+| `id`            | `String`                           | @id @default(cuid())                                                  |
+| `assetId`       | `String`                           |                                                                       |
+| `kind`          | `String`                           | @default("DGUV V3")                                                   |
+| `result`        | `InventoryInspectionResult` (enum) |                                                                       |
+| `inspectedAt`   | `DateTime`                         |                                                                       |
+| `nextDueAt`     | `DateTime?`                        |                                                                       |
+| `inspectorId`   | `String?`                          |                                                                       |
+| `inspectorName` | `String?`                          |                                                                       |
+| `note`          | `String?`                          |                                                                       |
+| `documentData`  | `Bytes?`                           |                                                                       |
+| `documentName`  | `String?`                          |                                                                       |
+| `documentMime`  | `String?`                          |                                                                       |
+| `createdAt`     | `DateTime`                         | @default(now())                                                       |
+| `asset`         | → `InventoryAsset`                 | @relation(fields: [assetId], references: [id], onDelete: Cascade)     |
+| `inspector`     | → `User?`                          | @relation(fields: [inspectorId], references: [id], onDelete: SetNull) |
+
+- `@@index([assetId, inspectedAt])`
+
+### `InventoryEvent`
+
+> Verlauf je Objekt (nur anhängen).
+
+| Feld        | Typ                | Attribute / Beschreibung                                          |
+| ----------- | ------------------ | ----------------------------------------------------------------- |
+| `id`        | `String`           | @id @default(cuid())                                              |
+| `assetId`   | `String`           |                                                                   |
+| `type`      | `String`           |                                                                   |
+| `message`   | `String?`          |                                                                   |
+| `data`      | `Json?`            |                                                                   |
+| `userId`    | `String?`          |                                                                   |
+| `createdAt` | `DateTime`         | @default(now())                                                   |
+| `asset`     | → `InventoryAsset` | @relation(fields: [assetId], references: [id], onDelete: Cascade) |
+| `user`      | → `User?`          | @relation(fields: [userId], references: [id], onDelete: SetNull)  |
+
+- `@@index([assetId, createdAt])`
+
+### `InventoryProductComponent`
+
+> Bestandteil eines Sets, z. B. „1 × Taschensender“ in „Funkstrecke“.
+
+| Feld          | Typ                  | Attribute / Beschreibung                                                                    |
+| ------------- | -------------------- | ------------------------------------------------------------------------------------------- |
+| `id`          | `String`             | @id @default(cuid())                                                                        |
+| `setId`       | `String`             |                                                                                             |
+| `componentId` | `String`             |                                                                                             |
+| `quantity`    | `Int`                | @default(1)                                                                                 |
+| `sortOrder`   | `Int`                | @default(0)                                                                                 |
+| `set`         | → `InventoryProduct` | @relation("InventorySetComponents", fields: [setId], references: [id], onDelete: Cascade)   |
+| `component`   | → `InventoryProduct` | @relation("InventorySetUsage", fields: [componentId], references: [id], onDelete: Restrict) |
+
+- `@@unique([setId, componentId])`
+- `@@index([componentId])`
+
+### `InventoryContact`
+
+> Kunde/Veranstalter für Lager-Projekte.
+
+| Feld            | Typ                    | Attribute / Beschreibung |
+| --------------- | ---------------------- | ------------------------ |
+| `id`            | `String`               | @id @default(cuid())     |
+| `name`          | `String`               |                          |
+| `contactPerson` | `String?`              |                          |
+| `email`         | `String?`              |                          |
+| `phone`         | `String?`              |                          |
+| `note`          | `String?`              |                          |
+| `createdAt`     | `DateTime`             | @default(now())          |
+| `updatedAt`     | `DateTime`             | @updatedAt               |
+| `projects`      | → `InventoryProject[]` |                          |
+
+- `@@index([name])`
+
+### `InventoryProject`
+
+> Einsatz mit Material aus dem Lager: Veranstaltung, Verleih oder eigene Produktion.
+
+| Feld         | Typ                             | Attribute / Beschreibung                                                                                                                       |
+| ------------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`         | `String`                        | @id @default(cuid())                                                                                                                           |
+| `publicId`   | `String`                        | @unique Zufällige Kennung für URLs.                                                                                                            |
+| `title`      | `String`                        |                                                                                                                                                |
+| `status`     | `InventoryProjectStatus` (enum) | @default(request)                                                                                                                              |
+| `contactId`  | `String?`                       |                                                                                                                                                |
+| `venue`      | `String?`                       |                                                                                                                                                |
+| `leadUserId` | `String?`                       |                                                                                                                                                |
+| `leadName`   | `String?`                       | Projektleitung ohne Mitgliedskonto.                                                                                                            |
+| `showId`     | `String?`                       |                                                                                                                                                |
+| `note`       | `String?`                       |                                                                                                                                                |
+| `startsOn`   | `DateTime?`                     | @db.Date Belegungszeitraum (frühester Phasenbeginn bis spätestes Phasenende) – aus den Phasen berechnet, für schnelle Überschneidungsabfragen. |
+| `endsOn`     | `DateTime?`                     | @db.Date                                                                                                                                       |
+| `createdAt`  | `DateTime`                      | @default(now())                                                                                                                                |
+| `updatedAt`  | `DateTime`                      | @updatedAt                                                                                                                                     |
+| `contact`    | → `InventoryContact?`           | @relation(fields: [contactId], references: [id], onDelete: SetNull)                                                                            |
+| `lead`       | → `User?`                       | @relation("InventoryProjectLead", fields: [leadUserId], references: [id], onDelete: SetNull)                                                   |
+| `show`       | → `Show?`                       | @relation(fields: [showId], references: [id], onDelete: SetNull)                                                                               |
+| `phases`     | → `InventoryProjectPhase[]`     |                                                                                                                                                |
+| `lines`      | → `InventoryProjectLine[]`      |                                                                                                                                                |
+| `checkouts`  | → `InventoryCheckout[]`         |                                                                                                                                                |
+
+- `@@index([startsOn, endsOn])`
+- `@@index([status])`
+
+### `InventoryProjectPhase`
+
+| Feld        | Typ                                | Attribute / Beschreibung                                            |
+| ----------- | ---------------------------------- | ------------------------------------------------------------------- |
+| `id`        | `String`                           | @id @default(cuid())                                                |
+| `projectId` | `String`                           |                                                                     |
+| `kind`      | `InventoryProjectPhaseKind` (enum) | @default(event)                                                     |
+| `label`     | `String?`                          |                                                                     |
+| `startsOn`  | `DateTime`                         | @db.Date                                                            |
+| `endsOn`    | `DateTime`                         | @db.Date                                                            |
+| `project`   | → `InventoryProject`               | @relation(fields: [projectId], references: [id], onDelete: Cascade) |
+
+- `@@index([projectId])`
+
+### `InventoryProjectLine`
+
+> Bedarf eines Projekts auf Typ-Ebene, z. B. „12 × Source Four“.
+
+| Feld        | Typ                  | Attribute / Beschreibung                                             |
+| ----------- | -------------------- | -------------------------------------------------------------------- |
+| `id`        | `String`             | @id @default(cuid())                                                 |
+| `projectId` | `String`             |                                                                      |
+| `productId` | `String`             |                                                                      |
+| `quantity`  | `Int`                | @default(1)                                                          |
+| `note`      | `String?`            |                                                                      |
+| `sortOrder` | `Int`                | @default(0)                                                          |
+| `project`   | → `InventoryProject` | @relation(fields: [projectId], references: [id], onDelete: Cascade)  |
+| `product`   | → `InventoryProduct` | @relation(fields: [productId], references: [id], onDelete: Restrict) |
+
+- `@@unique([projectId, productId])`
+- `@@index([productId])`
+
+### `InventoryCheckout`
+
+> Ausgabe an Produktion, Person oder extern – mit Packliste.
+
+| Feld           | Typ                              | Attribute / Beschreibung                                                                          |
+| -------------- | -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `id`           | `String`                         | @id @default(cuid())                                                                              |
+| `title`        | `String`                         |                                                                                                   |
+| `projectId`    | `String?`                        | Ausgabe für ein Projekt – die Packliste prüft gegen dessen Bedarf.                                |
+| `showId`       | `String?`                        |                                                                                                   |
+| `borrowerId`   | `String?`                        |                                                                                                   |
+| `borrowerName` | `String?`                        |                                                                                                   |
+| `status`       | `InventoryCheckoutStatus` (enum) | @default(open)                                                                                    |
+| `dueAt`        | `DateTime?`                      |                                                                                                   |
+| `note`         | `String?`                        |                                                                                                   |
+| `createdAt`    | `DateTime`                       | @default(now())                                                                                   |
+| `closedAt`     | `DateTime?`                      |                                                                                                   |
+| `project`      | → `InventoryProject?`            | @relation(fields: [projectId], references: [id], onDelete: SetNull)                               |
+| `show`         | → `Show?`                        | @relation(fields: [showId], references: [id], onDelete: SetNull)                                  |
+| `borrower`     | → `User?`                        | @relation("InventoryCheckoutBorrower", fields: [borrowerId], references: [id], onDelete: SetNull) |
+| `lines`        | → `InventoryCheckoutLine[]`      |                                                                                                   |
+
+- `@@index([projectId])`
+- `@@index([status])`
+
+### `InventoryCheckoutLine`
+
+| Feld               | Typ                   | Attribute / Beschreibung                                             |
+| ------------------ | --------------------- | -------------------------------------------------------------------- |
+| `id`               | `String`              | @id @default(cuid())                                                 |
+| `checkoutId`       | `String`              |                                                                      |
+| `assetId`          | `String`              |                                                                      |
+| `quantity`         | `Int`                 | @default(1)                                                          |
+| `returnedQuantity` | `Int`                 | @default(0)                                                          |
+| `checkedOutAt`     | `DateTime`            | @default(now())                                                      |
+| `returnedAt`       | `DateTime?`           |                                                                      |
+| `checkout`         | → `InventoryCheckout` | @relation(fields: [checkoutId], references: [id], onDelete: Cascade) |
+| `asset`            | → `InventoryAsset`    | @relation(fields: [assetId], references: [id], onDelete: Cascade)    |
+
+- `@@unique([checkoutId, assetId])`
+
+### `InventoryStocktake`
+
+> Inventur – mehrere Personen scannen parallel, Abgleich am Ende.
+
+| Feld         | Typ                               | Attribute / Beschreibung                                             |
+| ------------ | --------------------------------- | -------------------------------------------------------------------- |
+| `id`         | `String`                          | @id @default(cuid())                                                 |
+| `title`      | `String`                          |                                                                      |
+| `status`     | `InventoryStocktakeStatus` (enum) | @default(open)                                                       |
+| `areaId`     | `String?`                         |                                                                      |
+| `locationId` | `String?`                         |                                                                      |
+| `note`       | `String?`                         |                                                                      |
+| `createdAt`  | `DateTime`                        | @default(now())                                                      |
+| `closedAt`   | `DateTime?`                       |                                                                      |
+| `area`       | → `InventoryArea?`                | @relation(fields: [areaId], references: [id], onDelete: SetNull)     |
+| `location`   | → `InventoryLocation?`            | @relation(fields: [locationId], references: [id], onDelete: SetNull) |
+| `scans`      | → `InventoryStocktakeScan[]`      |                                                                      |
+
+### `InventoryStocktakeScan`
+
+| Feld           | Typ                    | Attribute / Beschreibung                                                                        |
+| -------------- | ---------------------- | ----------------------------------------------------------------------------------------------- |
+| `id`           | `String`               | @id @default(cuid())                                                                            |
+| `stocktakeId`  | `String`               |                                                                                                 |
+| `clientScanId` | `String`               | @unique Vom Gerät erzeugt – offline gepufferte Scans werden so nicht doppelt gezählt.           |
+| `code`         | `String`               |                                                                                                 |
+| `assetId`      | `String?`              |                                                                                                 |
+| `quantity`     | `Int?`                 |                                                                                                 |
+| `locationId`   | `String?`              |                                                                                                 |
+| `containerId`  | `String?`              |                                                                                                 |
+| `userId`       | `String?`              |                                                                                                 |
+| `scannedAt`    | `DateTime`             |                                                                                                 |
+| `createdAt`    | `DateTime`             | @default(now())                                                                                 |
+| `stocktake`    | → `InventoryStocktake` | @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)                           |
+| `asset`        | → `InventoryAsset?`    | @relation("InventoryScanAsset", fields: [assetId], references: [id], onDelete: SetNull)         |
+| `container`    | → `InventoryAsset?`    | @relation("InventoryScanContainer", fields: [containerId], references: [id], onDelete: SetNull) |
+| `location`     | → `InventoryLocation?` | @relation(fields: [locationId], references: [id], onDelete: SetNull)                            |
+| `user`         | → `User?`              | @relation(fields: [userId], references: [id], onDelete: SetNull)                                |
+
+- `@@index([stocktakeId, scannedAt])`
 
 ### `UserNoticeDismissal`
 
@@ -2066,6 +2855,58 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 - `@@index([deviceHint])`
 - `@@index([createdAt])`
 - `@@index([analyticsSessionId])`
+
+### `AnalyticsPerformanceSample`
+
+> Echte Ladezeiten aus dem Browser (Erstaufruf und Seitenwechsel), eine Zeile pro Messung.
+
+| Feld                 | Typ        | Attribute / Beschreibung                                                             |
+| -------------------- | ---------- | ------------------------------------------------------------------------------------ |
+| `id`                 | `String`   | @id @default(cuid())                                                                 |
+| `createdAt`          | `DateTime` | @default(now())                                                                      |
+| `route`              | `String`   | Route mit Platzhaltern statt IDs, z. B. /mitglieder/mitgliederverwaltung/[id]        |
+| `kind`               | `String`   | "load" = Erstaufruf/Reload, "navigation" = Seitenwechsel innerhalb der App           |
+| `durationMs`         | `Int`      | Zeit bis die Seite inhaltlich fertig angezeigt wird                                  |
+| `feedbackMs`         | `Int?`     | Seitenwechsel: Zeit bis zur ersten sichtbaren Reaktion (Ladeskelett/URL-Wechsel)     |
+| `serverMs`           | `Int?`     | Seitenwechsel: Dauer der Server-Anfrage (RSC) inkl. Netz, Rest ist Browser-Rendering |
+| `requestCount`       | `Int?`     | Seitenwechsel: Anzahl der Server-Anfragen (inkl. Vorab-Laden) während des Wechsels   |
+| `ttfbMs`             | `Int?`     |                                                                                      |
+| `fcpMs`              | `Int?`     |                                                                                      |
+| `lcpMs`              | `Int?`     |                                                                                      |
+| `inpMs`              | `Int?`     |                                                                                      |
+| `cls`                | `Float?`   |                                                                                      |
+| `deviceType`         | `String`   |                                                                                      |
+| `browser`            | `String`   |                                                                                      |
+| `browserVersion`     | `String?`  |                                                                                      |
+| `os`                 | `String`   |                                                                                      |
+| `userAgent`          | `String?`  |                                                                                      |
+| `effectiveType`      | `String?`  |                                                                                      |
+| `standalone`         | `Boolean`  | @default(false)                                                                      |
+| `analyticsSessionId` | `String?`  |                                                                                      |
+
+- `@@index([createdAt])`
+- `@@index([route, kind])`
+- `@@map("analytics_performance_samples")`
+
+### `AnalyticsErrorEvent`
+
+> Fehler aus Server-Rendering (onRequestError) und Browser (JS-Fehler), eine Zeile pro Vorkommen.
+
+| Feld        | Typ        | Attribute / Beschreibung                                        |
+| ----------- | ---------- | --------------------------------------------------------------- |
+| `id`        | `String`   | @id @default(cuid())                                            |
+| `createdAt` | `DateTime` | @default(now())                                                 |
+| `source`    | `String`   | "server" oder "client"                                          |
+| `route`     | `String`   |                                                                 |
+| `message`   | `String`   |                                                                 |
+| `detail`    | `String?`  | Kurzer Stack-Ausschnitt bzw. Next.js-Digest zur Wiedererkennung |
+| `browser`   | `String?`  |                                                                 |
+| `os`        | `String?`  |                                                                 |
+| `userId`    | `String?`  |                                                                 |
+
+- `@@index([createdAt])`
+- `@@index([route])`
+- `@@map("analytics_error_events")`
 
 ### `AnalyticsDeviceSnapshot`
 
@@ -2279,9 +3120,9 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `ProductionStatus`            | `planning`, `active`, `finished`, `archived`                                                                                                                                                                                                                                                                  |
 | `ProductionMembershipStatus`  | `invited`, `onboarding`, `active`, `left`                                                                                                                                                                                                                                                                     |
 | `PayoutMethod`                | `BANK_TRANSFER`, `PAYPAL`, `OTHER`                                                                                                                                                                                                                                                                            |
-| `SyncScope`                   | `inventory`, `tickets`                                                                                                                                                                                                                                                                                        |
-| `InventoryItemCategory`       | `light`, `sound`, `network`, `video`, `instruments`, `cables`, `cases`, `accessories`                                                                                                                                                                                                                         |
+| `SyncScope`                   | `tickets`                                                                                                                                                                                                                                                                                                     |
 | `TicketStatus`                | `unused`, `checked_in`, `invalid`                                                                                                                                                                                                                                                                             |
+| `DepartmentPermissionMode`    | `grant`, `revoke`                                                                                                                                                                                                                                                                                             |
 | `DepartmentMembershipRole`    | `lead`, `member`, `deputy`, `guest`                                                                                                                                                                                                                                                                           |
 | `DepartmentMembershipStatus`  | `requested`, `active`, `left`                                                                                                                                                                                                                                                                                 |
 | `DepartmentAssignmentSource`  | `wish` (aus dem Onboarding-Wunsch übernommen), `self` (von der Person selbst angefragt), `assigned` (von Regie/Leitung zugewiesen)                                                                                                                                                                            |
@@ -2310,7 +3151,14 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `IssueStatus`                 | `open`, `in_progress`, `resolved`, `closed`                                                                                                                                                                                                                                                                   |
 | `IssuePriority`               | `low`, `medium`, `high`, `urgent`                                                                                                                                                                                                                                                                             |
 | `IssueVisibility`             | `public`, `private`                                                                                                                                                                                                                                                                                           |
+| `MilestoneKind`               | `milestone`, `deadline`, `handover`, `review`                                                                                                                                                                                                                                                                 |
+| `MilestoneAnchor`             | `premiere`, `finalRehearsalStart`, `milestone`, `fixed`                                                                                                                                                                                                                                                       |
 | `TaskPriority`                | `low`, `normal`, `high`                                                                                                                                                                                                                                                                                       |
+| `FoodTaxonKind`               | `INGREDIENT` (Zutat/Lebensmittel (Baum aus OFF ingredients)), `ALLERGEN` (Allergen (OFF allergens + LMIV)), `SENSITIVITY` (Auslöser ohne eigenes Lebensmittel, z. B. Histamin, Alpha-Gal (eigene Codes))                                                                                                      |
+| `FoodTaxonSource`             | `OFF`, `CUSTOM`                                                                                                                                                                                                                                                                                               |
+| `FoodTaxonAliasSource`        | `AUTO` (aus Namen/Synonymen erkannt), `CONFIRMED` (von Hand bestätigt), `MIGRATION` (aus der Bestandsdaten-Migration)                                                                                                                                                                                         |
+| `FoodItemSource`              | `BLS`, `OFF`, `CUSTOM`                                                                                                                                                                                                                                                                                        |
+| `FoodMatchStatus`             | `MATCHED` (Taxa automatisch sicher zugeordnet), `PARTIAL` (teilweise zugeordnet, Allergene evtl. unvollständig), `UNCLEAR` (keine Zuordnung – gilt als „manuell prüfen“), `MANUAL` (von Hand gesetzt)                                                                                                         |
 | `CalendarEventKind`           | `REHEARSAL`, `PERFORMANCE`, `MEETING`, `WORK_DAY`, `SOCIAL`, `OTHER`                                                                                                                                                                                                                                          |
 | `FeedScope`                   | `MINE`, `PRODUCTIONS`                                                                                                                                                                                                                                                                                         |
 | `EventStatus`                 | `DRAFT`, `TENTATIVE`, `SCHEDULED`, `CANCELLED`                                                                                                                                                                                                                                                                |
@@ -2318,10 +3166,23 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `AudienceRuleType`            | `PRODUCTION_ALL`, `ALL_CAST`, `ALL_CREW`, `DEPARTMENT`, `CHARACTER`, `SCENE`, `USER`                                                                                                                                                                                                                          |
 | `EventScheduleMode`           | `TOGETHER`, `STAGGERED`                                                                                                                                                                                                                                                                                       |
 | `AttendanceMark`              | `PRESENT`, `LATE`, `LEFT_EARLY`, `ABSENT`, `EXCUSED`                                                                                                                                                                                                                                                          |
+| `EventNoteType`               | `NOTE`, `DECISION`, `TASK`                                                                                                                                                                                                                                                                                    |
 | `SceneRehearsalOutcome`       | `DONE`, `PARTIAL`, `SKIPPED`                                                                                                                                                                                                                                                                                  |
 | `EventBlockType`              | `SCENE`, `DEPARTMENT`, `CUSTOM`                                                                                                                                                                                                                                                                               |
 | `ParticipantOverride`         | `INCLUDED`, `EXCLUDED`                                                                                                                                                                                                                                                                                        |
+| `InventoryAssetKind`          | `unique`, `bulk`, `container`, `set`                                                                                                                                                                                                                                                                          |
+| `InventoryAssetStatus`        | `available`, `checked_out`, `repair`, `locked`, `missing`, `retired`                                                                                                                                                                                                                                          |
+| `InventoryCondition`          | `new`, `good`, `used`, `worn`, `damaged`                                                                                                                                                                                                                                                                      |
+| `InventoryDefectSeverity`     | `cosmetic`, `limited`, `locked`                                                                                                                                                                                                                                                                               |
+| `InventoryDefectStatus`       | `open`, `repair`, `done`                                                                                                                                                                                                                                                                                      |
+| `InventoryInspectionResult`   | `passed`, `failed`                                                                                                                                                                                                                                                                                            |
+| `InventoryCheckoutStatus`     | `open`, `closed`                                                                                                                                                                                                                                                                                              |
+| `InventoryStocktakeStatus`    | `open`, `closed`                                                                                                                                                                                                                                                                                              |
+| `InventoryFieldType`          | `text`, `number`, `select`, `boolean`                                                                                                                                                                                                                                                                         |
+| `InventoryProjectStatus`      | `request`, `confirmed`, `done`, `cancelled`                                                                                                                                                                                                                                                                   |
+| `InventoryProjectPhaseKind`   | `setup`, `event`, `teardown`, `other`                                                                                                                                                                                                                                                                         |
 | `PhotoConsentStatus`          | `pending`, `approved`, `rejected`, `noPhotos`                                                                                                                                                                                                                                                                 |
+| `PhotoConsentLevel`           | `all`, `promoOnRequest`, `internal`, `none`                                                                                                                                                                                                                                                                   |
 | `PhotoConsentPurposeAudience` | `adult`, `minor`, `both`                                                                                                                                                                                                                                                                                      |
 | `AnalyticsRequestArea`        | `public`, `members`, `api`, `unknown`                                                                                                                                                                                                                                                                         |
 | `AnalyticsServerLogSeverity`  | `info`, `warning`, `error`                                                                                                                                                                                                                                                                                    |

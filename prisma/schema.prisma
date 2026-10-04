@@ -318,6 +318,11 @@ model User {
   attendanceLogsTarget            EventResponseLog[]         @relation("AttendanceLogTarget")
   dietaryRestrictions             DietaryRestriction[]
   dietaryAversions                DietaryAversion[]
+  foodTaxonAliases                FoodTaxonAlias[]
+  foodItemsCreated                FoodItem[]                 @relation("FoodItemCreatedBy")
+  recipesCreated                  Recipe[]                   @relation("RecipeCreatedBy")
+  recipeRatings                   RecipeRating[]
+  recipeComments                  RecipeComment[]
   measurements                    MemberMeasurement[]
   sizes                           MemberSize[]
   roles                           UserRole[]
@@ -1003,7 +1008,9 @@ model MemberSize {
 model DietaryRestriction {
   id        String          @id @default(cuid())
   userId    String
-  allergen  String // Was die Allergie/Unverträglichkeit auslöst
+  allergen  String // Was die Allergie/Unverträglichkeit auslöst (Anzeige/Freitext)
+  /// Code aus der Lebensmittel-Taxonomie (docs/Plan/lebensmittel-standard-plan.md); null = ungeklärt.
+  taxonCode String?
   kind      RestrictionKind @default(ALLERGY)
   level     AllergyLevel
   /// Ist der Kontakt mit Spuren unproblematisch? `null` = nicht angegeben (strikt behandeln).
@@ -1016,8 +1023,219 @@ model DietaryRestriction {
   isActive  Boolean         @default(true)
   updatedAt DateTime        @updatedAt
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taxon     FoodTaxon?      @relation(fields: [taxonCode], references: [code], onDelete: SetNull)
 
   @@unique([userId, allergen])
+  @@index([taxonCode])
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lebensmittel-Standard (docs/Plan/lebensmittel-standard-plan.md)
+// Taxonomie aus Open Food Facts (ODbL, nur intern genutzt) plus eigene Ergänzungen (Präfix "x:"),
+// Lebensmittel mit Nährwerten aus dem BLS 4.0 (CC BY 4.0, Max Rubner-Institut) und OFF-Produkten.
+// ---------------------------------------------------------------------------------------------
+
+enum FoodTaxonKind {
+  INGREDIENT // Zutat/Lebensmittel (Baum aus OFF ingredients)
+  ALLERGEN // Allergen (OFF allergens + LMIV)
+  SENSITIVITY // Auslöser ohne eigenes Lebensmittel, z. B. Histamin, Alpha-Gal (eigene Codes)
+}
+
+enum FoodTaxonSource {
+  OFF
+  CUSTOM
+}
+
+model FoodTaxon {
+  code          String          @id // z. B. "en:hazelnut", eigene Codes "x:alpha-gal"
+  kind          FoodTaxonKind
+  source        FoodTaxonSource
+  nameDe        String?
+  nameEn        String?
+  synonymsDe    String[]
+  synonymsEn    String[]
+  parentCodes   String[]
+  /// Direkt zugeordnete Allergen-Codes (vererbt sich über parentCodes).
+  allergenCodes String[]
+  /// Weitere Codes, die dieses Taxon auslöst (eigene Ergänzung, z. B. Hafer → Gluten).
+  impliesCodes  String[]
+  vegan         String? // yes | no | maybe (OFF-Eigenschaft, vererbt)
+  vegetarian    String? // yes | no | maybe
+  /// Eines der 14 kennzeichnungspflichtigen Allergene (LMIV Anhang II).
+  lmiv          Boolean         @default(false)
+  sourceVersion String?
+  updatedAt     DateTime        @updatedAt
+
+  aliases      FoodTaxonAlias[]
+  restrictions DietaryRestriction[]
+
+  @@index([kind])
+  @@index([nameDe])
+}
+
+enum FoodTaxonAliasSource {
+  AUTO // aus Namen/Synonymen erkannt
+  CONFIRMED // von Hand bestätigt
+  MIGRATION // aus der Bestandsdaten-Migration
+}
+
+/// Gelernte Zuordnung Freitext → Taxon; normalisierter Text ist eindeutig.
+model FoodTaxonAlias {
+  id          String               @id @default(cuid())
+  text        String               @unique
+  taxonCode   String
+  source      FoodTaxonAliasSource @default(CONFIRMED)
+  createdById String?
+  createdAt   DateTime             @default(now())
+  taxon       FoodTaxon            @relation(fields: [taxonCode], references: [code], onDelete: Cascade)
+  createdBy   User?                @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([taxonCode])
+}
+
+enum FoodItemSource {
+  BLS
+  OFF
+  CUSTOM
+}
+
+enum FoodMatchStatus {
+  MATCHED // Taxa automatisch sicher zugeordnet
+  PARTIAL // teilweise zugeordnet, Allergene evtl. unvollständig
+  UNCLEAR // keine Zuordnung – gilt als „manuell prüfen“
+  MANUAL // von Hand gesetzt
+}
+
+/// Ein konkretes Lebensmittel mit Nährwerten je 100 g (BLS), ein Produkt (OFF, Barcode) oder eigen.
+model FoodItem {
+  id            String          @id @default(cuid())
+  source        FoodItemSource
+  sourceId      String // BLS-Code, Barcode oder eigene Kennung
+  nameDe        String
+  nameEn        String?
+  /// Hauptgruppe der Quelle (BLS: Buchstabe des Codes).
+  groupCode     String?
+  /// Nährwerte je 100 g: { [Nährstoffcode]: Zahl } – Codes wie FoodNutrient.code.
+  nutrients     Json
+  taxonCodes    String[]
+  tracesCodes   String[]
+  matchStatus   FoodMatchStatus @default(UNCLEAR)
+  /// Gewicht eines Stücks in g (für Mengen wie „2 Eier“), falls bekannt.
+  pieceWeightG  Float?
+  /// Dichte g/ml für Volumenangaben, falls bekannt.
+  densityGPerMl Float?
+  sourceVersion String?
+  createdById   String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  createdBy     User?           @relation("FoodItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  recipeIngredients RecipeIngredient[]
+
+  @@unique([source, sourceId])
+  @@index([nameDe])
+}
+
+/// Nährstoffkatalog (BLS-Komponenten): Code, Bezeichnung, Einheit.
+model FoodNutrient {
+  code      String  @id // z. B. "ENERCC", "PROT625"
+  nameDe    String
+  nameEn    String
+  unit      String
+  groupDe   String?
+  sortOrder Int     @default(0)
+}
+
+/// Protokoll der Datenimporte (Quelle, Version, Umfang).
+model FoodDataImport {
+  id         String   @id @default(cuid())
+  source     String // off-taxonomy | bls | …
+  version    String
+  itemCount  Int
+  note       String?
+  importedAt DateTime @default(now())
+
+  @@index([source, importedAt])
+}
+
+// ---------------------------------------------------------------------------------------------
+// Rezepte (docs/Plan/rezepte-plan.md)
+// ---------------------------------------------------------------------------------------------
+
+model Recipe {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  servings    Int       @default(4)
+  /// Arbeitsschritte als Liste von Texten.
+  steps       Json      @default("[]")
+  tags        String[]
+  sourceUrl   String?
+  sourceName  String?
+  prepMinutes Int?
+  cookMinutes Int?
+  /// Zwischengespeicherte Auswertung (Allergene, Ernährungsformen, Nährwerte je Portion),
+  /// wird bei jeder Änderung der Zutaten neu berechnet.
+  computed    Json?
+  computedAt  DateTime?
+  archivedAt  DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   User?     @relation("RecipeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  ingredients RecipeIngredient[]
+  ratings     RecipeRating[]
+  comments    RecipeComment[]
+
+  @@index([title])
+}
+
+model RecipeIngredient {
+  id         String          @id @default(cuid())
+  recipeId   String
+  position   Int
+  rawText    String
+  amount     Float?
+  unit       String? // normalisiert: g, kg, ml, l, tl, el, prise, stueck, …
+  name       String
+  note       String?
+  optional   Boolean         @default(false)
+  foodItemId String?
+  /// Taxa direkt an der Zeile (falls ohne FoodItem zugeordnet).
+  taxonCodes String[]
+  status     FoodMatchStatus @default(UNCLEAR)
+  recipe     Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  foodItem   FoodItem?       @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+
+  @@index([recipeId, position])
+  @@index([foodItemId])
+}
+
+model RecipeRating {
+  id        String   @id @default(cuid())
+  recipeId  String
+  userId    String
+  stars     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId])
+}
+
+model RecipeComment {
+  id        String   @id @default(cuid())
+  recipeId  String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId, createdAt])
 }
 
 // Abneigungen und Besonderheiten (nicht medizinisch), z. B. „keine Pilze"
