@@ -1,6 +1,6 @@
 # Plan: Oberfläche Ernährung, Allergene & Rezepte
 
-Stand: 2026-10-05. Konzept, wartet auf Entscheidungen E1–E4. Baut auf
+Stand: 2026-10-05. Entscheidungen getroffen, Umsetzung läuft. Baut auf
 [`docs/Plan/lebensmittel-standard-plan.md`](lebensmittel-standard-plan.md) und
 [`docs/Plan/rezepte-plan.md`](rezepte-plan.md) auf (Datenschicht fertig).
 
@@ -77,12 +77,16 @@ Stand: 2026-10-05. Konzept, wartet auf Entscheidungen E1–E4. Baut auf
 5. Anlegen/Bearbeiten + manuelle Zuordnung + Import.
 6. Quellenangabe, Doku `docs/seiten/`, E2E, Screenshots, Release.
 
-## Offene Entscheidungen
+## Entscheidungen (2026-10-05)
 
-- E1: Wo stehen Rezepte in der Navigation – eigene Gruppe „Verpflegung“ oder unter „Allgemeines“?
-- E2: Dürfen alle Mitglieder Rezepte anderer bearbeiten (Wiki) oder nur eigene + Verwaltung?
-- E3: Wer pflegt ungeklärte Angaben – nur Vorstand/Admin oder auch die Verpflegungs-Leitung?
-- E4: Sollen „Keine“/„Nichts“-Einträge bei der Migration gelöscht werden?
+- E1: Rezepte stehen in einer eigenen Navigationsgruppe „Verpflegung“.
+- E2: Alle Mitglieder dürfen alle Rezepte bearbeiten (Wiki) – mit Änderungshistorie
+  (`RecipeRevision`: Stand vor jeder Änderung, wer, wann; Wiederherstellen möglich).
+- E3: Ungeklärte Angaben pflegt, wer das Recht `PRIVATE.FOOD.TAXONOMY.MANAGE` hat – vergeben
+  z. B. über das Gewerk, das die Essensplanung macht (`DepartmentPermission`), sonst Vorstand/Admin.
+- E4: Migration wie vorgeschlagen: Sammeltexte aufteilen, Fructose-Einträge auf
+  Fruktose-Malabsorption, „Keine“/„Nichts“ löschen. Ablauf über eine geprüfte Zuordnungsdatei mit
+  Probelauf (`pnpm food:import migrate-restrictions`).
 
 ## Checkliste
 
