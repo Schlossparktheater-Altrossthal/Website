@@ -972,7 +972,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         rowFill: "#f3f4f6",
         columnFill: "#e5e7eb",
         textColor: "#374151",
-        columnLabel: "–",
+        columnLabel: "Offen",
       },
     };
 
