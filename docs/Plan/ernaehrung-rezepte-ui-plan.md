@@ -1,6 +1,6 @@
 # Plan: Oberfläche Ernährung, Allergene & Rezepte
 
-Stand: 2026-10-05. Entscheidungen getroffen, Umsetzung läuft. Baut auf
+Stand: 2026-10-05. Phase 1–5 umgesetzt und auf Staging sichtgeprüft (mobil/Desktop, hell/dunkel); offen Phase 6 (E2E, Release, Prod-Import und Migration). Baut auf
 [`docs/Plan/lebensmittel-standard-plan.md`](lebensmittel-standard-plan.md) und
 [`docs/Plan/rezepte-plan.md`](rezepte-plan.md) auf (Datenschicht fertig).
 
@@ -90,9 +90,9 @@ Stand: 2026-10-05. Entscheidungen getroffen, Umsetzung läuft. Baut auf
 
 ## Checkliste
 
-- [ ] Phase 1 Profil-Befunde
-- [ ] Phase 2 Allergie-Dialog
-- [ ] Phase 3 Pflegeliste
-- [ ] Phase 4 Rezeptliste + Detail
-- [ ] Phase 5 Anlegen/Import
-- [ ] Phase 6 Quellen, Doku, E2E, Release
+- [x] Phase 1 Profil-Befunde
+- [x] Phase 2 Allergie-Dialog
+- [x] Phase 3 Pflegeliste (`/mitglieder/verpflegung/zuordnung`)
+- [x] Phase 4 Rezeptliste + Detail
+- [x] Phase 5 Anlegen/Import + Verlauf (`RecipeRevision`)
+- [ ] Phase 6 Quellen ✓, Doku ✓ (`docs/seiten/verpflegung.md`), E2E, Release, Prod-Import, Migration

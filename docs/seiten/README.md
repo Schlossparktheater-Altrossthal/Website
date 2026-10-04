@@ -23,6 +23,7 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 | Login              | [login.md](login.md)                           | Anmeldung über das Theater-Konto (Authentik)                  |
 | Website            | [website.md](website.md)                       | Theme-/Branding-Einstellungen, Sichtbarkeit Mitglieder-Seiten |
 | Server             | [server.md](server.md)                         | Server-Einstellungen und Server-Analytics                     |
+| Verpflegung        | [verpflegung.md](verpflegung.md)               | Rezepte (Wiki mit Verlauf), Allergie-Zuordnung                |
 
 ## Konventionen
 
