@@ -27,6 +27,7 @@ import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ImageViewer } from "@/components/ui/image-viewer";
 import { Input } from "@/components/ui/input";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -189,8 +190,18 @@ function EntryDetail({
   processing: boolean;
   onSetLevel: (level: PhotoConsentLevelValue) => void;
 }) {
+  const [viewerOpen, setViewerOpen] = useState(false);
   return (
     <div className="space-y-5 text-sm">
+      {entry.documentPreviewUrl ? (
+        <ImageViewer
+          open={viewerOpen}
+          onClose={() => setViewerOpen(false)}
+          src={entry.documentPreviewUrl}
+          alt={entry.documentName ?? "Nachweis"}
+          downloadHref={entry.documentUrl}
+        />
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={STATUS_VARIANTS[entry.status]} size="sm">
           {STATUS_LABELS[entry.status]}
@@ -249,11 +260,11 @@ function EntryDetail({
         {entry.signaturePayload ? (
           <SignatureView payload={entry.signaturePayload} />
         ) : entry.documentPreviewUrl ? (
-          <a
-            href={entry.documentUrl ?? entry.documentPreviewUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="relative block h-56 w-full overflow-hidden rounded-lg border border-border bg-muted"
+          <button
+            type="button"
+            onClick={() => setViewerOpen(true)}
+            aria-label="Nachweis groß ansehen"
+            className="relative block h-56 w-full cursor-zoom-in overflow-hidden rounded-lg border border-border bg-muted"
           >
             <Image
               src={entry.documentPreviewUrl}
@@ -263,7 +274,7 @@ function EntryDetail({
               className="object-contain"
               unoptimized
             />
-          </a>
+          </button>
         ) : entry.documentUrl ? (
           <a
             href={entry.documentUrl}
