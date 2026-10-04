@@ -1,8 +1,10 @@
 # Plan: Baustein Verpflegung (Essensplanung)
 
-Stand: 2026-10-04. Konzept. Setzt `docs/Plan/lebensmittel-standard-plan.md`,
-`docs/Plan/rezepte-plan.md` und `docs/Plan/produktionsphasen-vorstellungen-plan.md` (Phase 1)
-voraus; erzeugt Einkaufslisten über `docs/Plan/einkauf-belege-plan.md`.
+Stand: 2026-10-04. Konzept. Setzt [`docs/Plan/lebensmittel-standard-plan.md`](lebensmittel-standard-plan.md),
+[`docs/Plan/rezepte-plan.md`](rezepte-plan.md) und [`docs/Plan/produktionsphasen-vorstellungen-plan.md`](produktionsphasen-vorstellungen-plan.md) (Phase 1)
+voraus; erzeugt Einkaufslisten über [`docs/Plan/einkauf-belege-plan.md`](einkauf-belege-plan.md).
+
+**Planfamilie:** [Lebensmittel-Standard](lebensmittel-standard-plan.md) · [Rezepte](rezepte-plan.md) · [Phasen & Vorstellungen](produktionsphasen-vorstellungen-plan.md) · **Verpflegung** · [Einkauf & Belege](einkauf-belege-plan.md) · [Dienstplan](dienstplan-plan.md) · [Index](README.md)
 
 ## Ziel
 

@@ -1,8 +1,10 @@
 # Plan: Baustein Einkauf & Belege
 
 Stand: 2026-10-04. Konzept. Allgemeiner Einkauf (nicht nur Essen). Bekommt Positionen aus
-`docs/Plan/verpflegung-plan.md`, verzahnt mit dem Budget aus `docs/Plan/gewerke-plan.md` (Phase 12)
-und dem Lager (`docs/Plan/lager-typen-projekte-plan.md`).
+[`docs/Plan/verpflegung-plan.md`](verpflegung-plan.md), verzahnt mit dem Budget aus [`docs/Plan/gewerke-plan.md`](gewerke-plan.md) (Phase 12)
+und dem Lager ([`docs/Plan/lager-typen-projekte-plan.md`](lager-typen-projekte-plan.md)).
+
+**Planfamilie:** [Lebensmittel-Standard](lebensmittel-standard-plan.md) · [Rezepte](rezepte-plan.md) · [Phasen & Vorstellungen](produktionsphasen-vorstellungen-plan.md) · [Verpflegung](verpflegung-plan.md) · **Einkauf & Belege** · [Dienstplan](dienstplan-plan.md) · [Index](README.md)
 
 ## Ziel
 

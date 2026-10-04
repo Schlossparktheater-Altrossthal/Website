@@ -1,7 +1,9 @@
 # Plan: Lebensmittel-Standard – Allergene, Ernährungsformen, Lebensmittel, Nährwerte
 
-Stand: 2026-10-04. Konzept. Grundlage für `docs/Plan/rezepte-plan.md` und
-`docs/Plan/verpflegung-plan.md`. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-04. Konzept. Grundlage für [`docs/Plan/rezepte-plan.md`](rezepte-plan.md) und
+[`docs/Plan/verpflegung-plan.md`](verpflegung-plan.md). Checkliste am Ende wird gepflegt.
+
+**Planfamilie:** **Lebensmittel-Standard** · [Rezepte](rezepte-plan.md) · [Phasen & Vorstellungen](produktionsphasen-vorstellungen-plan.md) · [Verpflegung](verpflegung-plan.md) · [Einkauf & Belege](einkauf-belege-plan.md) · [Dienstplan](dienstplan-plan.md) · [Index](README.md)
 
 ## Ziel
 

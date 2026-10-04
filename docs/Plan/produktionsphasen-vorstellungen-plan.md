@@ -1,7 +1,9 @@
 # Plan: Produktionsphasen & Vorstellungen
 
-Stand: 2026-10-04. Konzept. Grundlage für `docs/Plan/verpflegung-plan.md`,
-`docs/Plan/dienstplan-plan.md` und `docs/Plan/einkauf-belege-plan.md`.
+Stand: 2026-10-04. Konzept. Grundlage für [`docs/Plan/verpflegung-plan.md`](verpflegung-plan.md),
+[`docs/Plan/dienstplan-plan.md`](dienstplan-plan.md) und [`docs/Plan/einkauf-belege-plan.md`](einkauf-belege-plan.md).
+
+**Planfamilie:** [Lebensmittel-Standard](lebensmittel-standard-plan.md) · [Rezepte](rezepte-plan.md) · **Phasen & Vorstellungen** · [Verpflegung](verpflegung-plan.md) · [Einkauf & Belege](einkauf-belege-plan.md) · [Dienstplan](dienstplan-plan.md) · [Index](README.md)
 
 ## Ziel
 
@@ -34,7 +36,7 @@ PerformanceReport  performanceId, audience (aus Zähler/Scans), donationsCents, 
 1. Modelle + Migration aus `finalRehearsalWeek*` und `Show.dates`, Leser umstellen.
 2. Oberfläche Produktion: Reiter Endprobenwoche/Vorstellungen.
 3. Zuschauerzähler (offline, live).
-4. Spenden je Vorstellung, Kassensturz (setzt Cent-Beträge aus `docs/Plan/einkauf-belege-plan.md` Phase 1 voraus).
+4. Spenden je Vorstellung, Kassensturz (setzt Cent-Beträge aus [`docs/Plan/einkauf-belege-plan.md`](einkauf-belege-plan.md) Phase 1 voraus).
 5. Vorstellungsbericht.
 6. Doku, E2E, Release.
 

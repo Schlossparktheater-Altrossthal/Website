@@ -1,7 +1,9 @@
 # Plan: Globale Rezeptdatenbank
 
-Stand: 2026-10-04. Konzept. Setzt `docs/Plan/lebensmittel-standard-plan.md` (Phase 1–4) voraus;
-wird von `docs/Plan/verpflegung-plan.md` genutzt.
+Stand: 2026-10-04. Konzept. Setzt [`docs/Plan/lebensmittel-standard-plan.md`](lebensmittel-standard-plan.md) (Phase 1–4) voraus;
+wird von [`docs/Plan/verpflegung-plan.md`](verpflegung-plan.md) genutzt.
+
+**Planfamilie:** [Lebensmittel-Standard](lebensmittel-standard-plan.md) · **Rezepte** · [Phasen & Vorstellungen](produktionsphasen-vorstellungen-plan.md) · [Verpflegung](verpflegung-plan.md) · [Einkauf & Belege](einkauf-belege-plan.md) · [Dienstplan](dienstplan-plan.md) · [Index](README.md)
 
 ## Ziel
 

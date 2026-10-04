@@ -1,6 +1,8 @@
 # Plan: Baustein Dienstplan
 
-Stand: 2026-10-04. Konzept. Setzt `docs/Plan/produktionsphasen-vorstellungen-plan.md` (Phase 1) voraus.
+Stand: 2026-10-04. Konzept. Setzt [`docs/Plan/produktionsphasen-vorstellungen-plan.md`](produktionsphasen-vorstellungen-plan.md) (Phase 1) voraus.
+
+**Planfamilie:** [Lebensmittel-Standard](lebensmittel-standard-plan.md) · [Rezepte](rezepte-plan.md) · [Phasen & Vorstellungen](produktionsphasen-vorstellungen-plan.md) · [Verpflegung](verpflegung-plan.md) · [Einkauf & Belege](einkauf-belege-plan.md) · **Dienstplan** · [Index](README.md)
 
 ## Ziel
 
