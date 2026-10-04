@@ -26,12 +26,15 @@ groups=[
 ('Benachrichtigungen & Erinnerungen',['Notification','NotificationRecipient','NotificationPreference','NotificationSettings','PushSubscription','EventReminderDispatch']),
 ('Verfügbarkeit & Sperrliste',['AvailabilityDay','AvailabilityTemplate','BlockedDay','Availability']),
 ('Persönliche Mitgliedsdaten',['MemberMeasurement','MemberSize','DietaryRestriction','DietaryAversion','Interest','UserInterest','MemberRolePreference']),
+('Lebensmittel & Rezepte',['FoodTaxon','FoodTaxonAlias','FoodItem','FoodNutrient','FoodDataImport','Recipe','RecipeIngredient','RecipeRating','RecipeComment']),
 ('Finanzen',['FinanceBudget','FinanceEntry','FinanceAttachment','FinanceLog']),
 ('Dateien, Issues, Aufgaben',['FileLibraryFolder','FileLibraryItem','FileLibraryFolderAccess','Issue','IssueComment','Task','Announcement']),
 ('Inventar, Tickets & Offline-Sync',['InventoryItem','Ticket','TicketScanEvent','SyncEvent','SyncMutation']),
 ('Website & Einstellungen (Singletons)',[]),
 ('Analytics',[]),
 ]
+# Entfernte Modelle aus der Gruppenliste fallen still heraus, statt den Lauf abzubrechen.
+groups=[(title,[n for n in ns if n in models]) for title,ns in groups]
 used={n for _,ns in groups for n in ns}
 rest=[n for n in models if n not in used]
 groups[-2]=(groups[-2][0],[n for n in rest if not n.startswith('Analytics')])
