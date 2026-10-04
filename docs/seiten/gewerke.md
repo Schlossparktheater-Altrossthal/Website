@@ -2,7 +2,7 @@
 
 ## Zweck
 
-Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offene Todos.
+Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben).
 
 ## Routen
 
@@ -18,18 +18,21 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben) und offen
 
 ## Wichtige Komponenten
 
-- `src/app/(members)/mitglieder/meine-gewerke/` – Seiten des Bereichs
-- `src/app/(members)/mitglieder/meine-gewerke/department-select.tsx` – Abteilungsauswahl
+- `src/app/(members)/mitglieder/meine-gewerke/page.tsx` – Übersicht „Meine Teams“ (Team-Karten,
+  Rollen-Kacheln, Beitritts-Liste)
+- `src/app/(members)/mitglieder/meine-gewerke/team-ui.tsx` – `ViewSwitcher` (Portal-Ansichten),
+  Farb-/Format-Helfer
 
 ## Datenfluss
 
 - Prisma-Modell: `DepartmentMembership`
-- Status der Todos folgt den Statuswerten des Task-Modells.
+- Aufgaben (`DepartmentTask`) folgen den Statuswerten des Task-Modells; die Spalten des
+  Aufgaben-Boards setzen den Status über „zählt als“ (siehe unten).
 
 ## Besonderheiten
 
-- Enthält einen „todo"-Status, der in der Navigation neben der Gewerke-Übersicht angezeigt wird
-  (siehe `members-navigation.test.ts`).
+- Offene Aufgaben stehen im Portal-Reiter „Aufgaben“ (`?ansicht=aufgaben`), nicht mehr in der
+  Navigation: die frühere Seite `meine-gewerke/todos` ist entfallen.
 
 ## Teams & Zuweisung (Produktion)
 

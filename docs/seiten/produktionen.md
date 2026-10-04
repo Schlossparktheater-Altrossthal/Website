@@ -22,7 +22,9 @@ Auswertung der Rückmeldungen.
 
 ## Wichtige Komponenten
 
-- `src/app/(members)/mitglieder/produktionen/actions.ts` – Server Actions
+- `src/app/(members)/mitglieder/produktionen/actions/` – Server Actions (u. a. `production.ts`,
+  `assignments.ts`, `roles-scenes.ts`, `department-settings.ts`, `ensemble.ts`, `status.ts`,
+  `plan.ts`, `plan-templates.ts`, `reminders.ts`)
 - `src/app/(members)/mitglieder/produktionen/production-forms-client.tsx` – Formulare
 - `src/components/production/production-header.tsx` – gemeinsamer Kopf mit Tabs
 - `src/app/(members)/mitglieder/produktionen/_plan/` – Plan (Zeitleiste, Agenda, Kalender, Formular); Actions in `actions/plan.ts`, `actions/plan-templates.ts`
@@ -48,7 +50,8 @@ Auswertung der Rückmeldungen.
 
 ## Besonderheiten / Altlasten
 
-- `produktionen/actions.ts` ist mit 1200+ Zeilen die größte Actions-Datei (Aufteilung in P5).
+- Die Server Actions der Produktionen liegen domänenweise in `produktionen/actions/*.ts` (die
+  frühere Sammeldatei `actions.ts` ist aufgeteilt).
 - Stück (nur Regie/Board):
   - Ablauf: Szenen nach Akten (`Scene.act`, Akte mit Titel in `ShowAct`, bleiben auch leer bestehen), Spielzeit je Akt und gesamt. Umsortieren per Ziehen (Desktop) bzw. Pfeilen (mobil, am Aktrand in den Nachbarakt); Nummern `Akt.Position` und `sequence` werden dabei neu vergeben.
   - Rollen: unbesetzte oben, je Rolle Besetzung, Szenen, Bühnenzeit, Rollengröße (Onboarding-Code `acting_*`) und Auftrittsbereich.

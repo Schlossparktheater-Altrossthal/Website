@@ -48,7 +48,9 @@ Hintergrund und Entscheidungen: `docs/Plan/sperrliste-redesign-plan.md`.
 - `calendar-feed-dialog.tsx` – Kalender-Abo: Link erzeugen/erneuern/abschalten, eigene Sperren ein/aus
 - `my-calendar.tsx`, `range-dialog.tsx` – eigener Kalender
 - `team-view.tsx` – Team-Matrix, mobile Tagesliste, Tagesdetails
-- `event-dialog.tsx` – Termine anlegen/bearbeiten/löschen
+- Termine werden **nicht** in einem eigenen Dialog angelegt: „Termin" in `page-client.tsx` legt
+  einen Entwurf im Editor der Terminplanung an (`/mitglieder/terminplanung/[eventId]`), Bearbeiten
+  öffnet denselben Editor.
 - `use-calendar-model.ts`, `use-my-entries.ts` – Tagesmodell und Speichern
 - `settings-manager.tsx` – Einstellungen
 
@@ -84,7 +86,7 @@ Hintergrund und Entscheidungen: `docs/Plan/sperrliste-redesign-plan.md`.
   Zeitraum 60 Tage zurück bis ca. 18 Monate voraus; deaktivierte Personen erhalten 404.
   `src/lib/calendar/ics.ts` erzeugt das iCalendar-Format.
 - Feiertage werden über `src/lib/holidays.ts` aus externen ICS-Quellen geladen (konfigurierbar,
-  mit statischen Fallbacks in `src/data/saxony-*.ts`); der Prüfstatus wird in
+  mit statischen Fallbacks in `src/data/saxony-school-holidays.ts`); der Prüfstatus wird in
   `SperrlisteSettings` persistiert.
 
 ## Besonderheiten / Altlasten

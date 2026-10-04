@@ -8,7 +8,6 @@ Probenplaner verwalten den Gesamtplan.
 ## Routen
 
 - `/mitglieder/terminplanung` – Gesamtplanung für Proben und Termine (Kalender mit Tagesblatt, Liste, Entwürfe, Szenen-Stand); `/mitglieder/probenplanung` leitet auf `?art=proben` um
-- `/mitglieder/terminplanung` – organisationsweite Termine (für Planer; Liste nach Monaten)
 - `/mitglieder/terminplanung/[eventId]` – gemeinsamer Editor für Proben und Termine (alte Adresse `/mitglieder/probenplanung/proben/[id]` leitet um). „Gehört zu“ (Produktion oder keiner) ist bei jeder Art wählbar und liefert Szenen und Gewerke für den Ablauf; „Wer ist dabei“ (Alle bzw. Alle der Produktion, oder bestimmte Personen) steuert Sichtbarkeit, Antworten und Erinnerungen. Die Art ist nur Etikett (`docs/Plan/terminplanung-plan.md`, Phase 7).
 - `/mitglieder/termine/[eventId]` – Terminseite für alle Beteiligten (Proben, Termine, Gewerk-Termine): Kopf mit eigener Zeit und Absage, Ablauf als Zeitleiste (parallele Punkte, „nur meine“, Jetzt-Linie), Leute gruppiert. Sehen dürfen Planung, Eingeladene, alle der Produktion bzw. des Gewerks, bei Terminen ohne Produktion und Zielgruppe alle. Daten aus `src/lib/calendar/event-view-server.ts` (`readEventView`), Zeitleiste aus `event-timeline.ts`. Alte Adresse `/mitglieder/proben/[id]` leitet um, ebenso der Editor für Personen ohne Planungsrecht.
 - `/mitglieder/termine/[eventId]/probe` – Probenmodus (ab 1 h vor Beginn auf der Terminseite verlinkt, Recht `PRIVATE.REHEARSAL.PROTOCOL.EDIT` oder Planung, beides produktionsbezogen): Probe beginnen/beenden, Ablauf mit „Starten“ und Ergebnis (geschafft/teilweise/nicht), tatsächliche Zeiten, Notiz je Punkt, Reihenfolge ändern, spontane Punkte; Anwesenheit (da, verspätet, früher weg, fehlt, entschuldigt), Dazugekommene und Gäste. Jede Eingabe ist eine Operation (`src/lib/calendar/protocol.ts`), liegt sofort in `localStorage` (`mb-probe-queue:<id>`) und wird per Server Action nachgesendet (`use-protocol-sync.ts`); der Service Worker hält die Seite offline vor (`probe-pages`). Nach dem Speichern meldet `rehearsal_updated` mit `changes.protocol` allen offenen Geräten und Terminseiten, neu zu laden (`useEventLiveRefresh`). Die frühere Nachbereitung im Editor ist entfallen. Reiter „Notizen“: Notiz, Entscheidung oder Aufgabe (zuständig Person, Figur = deren Besetzung, oder Gewerk; optional Frist und Bezug zu einem Punkt). Gewerk-Aufgaben legen zusätzlich eine Karte in der ersten Spalte des Gewerk-Boards an (`EventNote.departmentTaskId`), Zuständige bekommen `rehearsal-task` (Gewerk: Leitung und Stellvertretung). „Probe beenden“ fragt eine Zusammenfassung ab und verschickt das Protokoll (`sendProtocolAction`, Typ `rehearsal-protocol`) an Eingeladene und Anwesende – erst wenn alle Offline-Änderungen übertragen sind.
@@ -38,8 +37,9 @@ Probenplaner verwalten den Gesamtplan.
 
 ## Besonderheiten / Altlasten
 
-- `probenplanung/actions.ts` ist sehr groß (700+ Zeilen) – aufgeteilt in Aufgabe „Actions-Dateien
-  aufteilen" (P5).
+- Die Server Actions der Terminplanung liegen in `terminplanung/actions/` (`drafts.ts`, `finder.ts`,
+  `rehearsals.ts`); die frühere große Datei `probenplanung/actions.ts` ist entfallen, gemeinsame
+  Helfer liegen in `src/lib/probenplanung/actions-helpers.ts`.
 - Die Gesamtplanung bietet zwei Ansichten (Kalenderansicht / Wochenend-Fokus) über ein
   `SegmentedControl` (`src/components/ui/segmented-control.tsx`).
 - Zeitlogik läuft über `DEFAULT_TIME_ZONE` aus `src/lib/date-time.ts`.

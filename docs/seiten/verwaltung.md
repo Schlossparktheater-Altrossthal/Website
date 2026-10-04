@@ -10,7 +10,7 @@ Berechtigungen konfigurieren.
 - `/mitglieder/mitgliederverwaltung` – Mitgliederliste
 - `/mitglieder/mitgliederverwaltung/[userId]` – einzelnes Mitglied
 - `/mitglieder/mitgliederverwaltung/aufbewahrung` – Aufbewahrung & Löschfristen
-- `/mitglieder/rollenverwaltung` – Rollen
+- `/mitglieder/rollenverwaltung` – Redirect auf `/mitglieder/mitgliederverwaltung`
 - `/mitglieder/rechte` – Berechtigungen (Permission-Workbench)
 - `/mitglieder/fotoerlaubnisse` – Fotoerlaubnisse prüfen und Fotoliste
 
@@ -45,7 +45,8 @@ Berechtigungen konfigurieren.
 
 - `src/app/(members)/mitglieder/mitgliederverwaltung/` – Mitgliederseiten
 - `src/components/members/member-invite-manager.tsx` – Einladungen
-- `src/components/members/season-reset-settings-panel.tsx` – geschützte Rollen beim Jahreswechsel
+- `src/components/members/season-wizard.tsx` – Saisonwechsel: geschützte Rollen beim
+  Jahreswechsel (Tab „Saisonwechsel“ der Mitgliederverwaltung, `initialProtectedRoles`)
 - `src/components/members/role-manager.tsx` – Profil- und Rolleneditor im Mitglieder-Panel
 - `src/components/members/role-picker.tsx` – Rollenauswahl als Popover
 - `src/components/members/permissions/` – Berechtigungs-Workbench

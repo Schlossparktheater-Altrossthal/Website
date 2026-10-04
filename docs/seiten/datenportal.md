@@ -55,7 +55,7 @@ Die Rechte sind produktionsbezogen und greifen nur bei Mitgliedschaft in der jew
 
 ## Datenfluss
 
-- Seite: `src/app/(members)/mitglieder/datenportal/{page.tsx,data-portal-client.tsx}`
+- Seite: `src/app/(members)/mitglieder/datenportal/page.tsx` und `…/datenportal/data-portal-client.tsx`
 - Logik: `src/lib/datenportal/` – `fields.ts` (Katalog, Schema), `access.ts` (Rechte, Protokoll),
   `run.ts` (Zeilen laden, filtern, sortieren, gruppieren), `execute.ts` (Abfrage + Spaltenmeta),
   `csv.ts`/`xlsx.ts` (Export), `src/lib/pdf/engine.ts` (PDF)

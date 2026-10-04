@@ -140,13 +140,14 @@ Der Mitgliederbereich nutzt ein spezialisiertes Container-System, das in `global
 </>
 ```
 
-**Status Quo (Stand: September 2026):**
-Von 32 `page.tsx` im Mitgliederbereich nutzen zwei Stellen explizit `<MembersContentLayout>`:
+**Status Quo (Stand: Oktober 2026):**
+Zwei Stellen nutzen explizit `<MembersContentLayout>`:
 
 - `mitglieder/koerpermasse/layout.tsx`: `width="full"`
 - `members-dashboard.tsx` (Dashboard unter `/mitglieder`): `width="2xl" spacing="comfortable" gap="lg"`
 
-Die übrigen Seiten verwenden korrekt nur `<div className="space-y-6">` ohne eigene Container/Padding-Definitionen.
+Die übrigen Seiten verwenden nur `<div className="space-y-6">` ohne eigene
+Container-/Padding-Definitionen.
 
 ## Breakpoints & Responsive
 

@@ -47,5 +47,7 @@ Der öffentliche Auftritt läuft auf Drupal. Die frühere Steuerung öffentliche
   Sichtbarkeit öffentlicher Seiten. `sitemap.ts` liefert bewusst eine leere Sitemap,
   `robots.ts` setzt `Disallow: /`.
 - Branded Types erfordern gelegentlich gezielte Konvertierungen (siehe `theme-settings-manager.tsx`).
-- Der Theme-Editor arbeitet mit OKLCH-Parametern; Tokens werden über
-  `pnpm design-system:tokens` gebaut.
+- Der Theme-Editor arbeitet mit OKLCH-Parametern. Es gibt keinen eigenen Token-Build-Schritt:
+  Farben, Radius und Schatten kommen aus `src/lib/theme/` (tweakcn-Format) und werden vom
+  `ThemeStyleRegistry` im Root-Layout als CSS-Variablen ausgegeben. Die Doku-Swatches erzeugt
+  `pnpm swatches:gen`.

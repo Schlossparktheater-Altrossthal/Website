@@ -35,7 +35,8 @@ APIs: `/api/lager/photos/[id]`, `/api/lager/labels` (PDF), `/api/lager/inspectio
 
 `src/components/inventory/` – u. a. `qr-scanner.tsx` (BarcodeDetector, sonst jsQR),
 `scan-workbench.tsx`, `stocktake-counter.tsx` (Offline-Puffer), `label-designer.tsx`,
-`asset-form.tsx`, `spreadsheet-grid.tsx` (Tabelle mit Tastatur, Einfügen aus Excel) und
+`product-form.tsx`/`exemplar-form.tsx` (Produkt bzw. Exemplar anlegen/bearbeiten),
+`spreadsheet-grid.tsx` (Tabelle mit Tastatur, Einfügen aus Excel) und
 `bulk-capture.tsx` (Sammelerfassung). Logik in `src/lib/inventory/`, Server-Aktionen in
 `src/app/(members)/mitglieder/lager/actions/`.
 

@@ -14,15 +14,18 @@ Fotoerlaubnis-Signaturen.
 ## Permissions
 
 - `PRIVATE.PROFILE.OWN.VIEW` – eigenes Profil
-- `PRIVATE.PROFILE.MEASUREMENTS.MANAGE` – Körpermaße verwalten
-- `PRIVATE.PROFILE.SIZES.MANAGE` – Größen verwalten
+- `PRIVATE.PROFILE.MEASUREMENTS.MANAGE` – Maße & Größen verwalten (Bereich `masse`, Seite
+  `/mitglieder/koerpermasse`)
 - `PRIVATE.PROFILE.DIETARY.MANAGE` – Allergien/Ernährung verwalten
 - `PRIVATE.ADMIN.PHOTOCONSENT.MANAGE` – Fotoerlaubnisse verwalten
 
 ## Aufbau
 
-- Bereiche über `?bereich=<id>` (`stammdaten`, `zahlungen`, `ernaehrung`, `freigaben`,
-  `interessen`, `produktion`; alte Links `onboarding`/`rollen` führen zu `produktion`).
+- Bereiche über `?bereich=<id>`; Quelle ist `PROFILE_SECTIONS` in
+  `src/app/(members)/mitglieder/profil/profile-sections.ts` mit den IDs `stammdaten`, `zahlungen`,
+  `ernaehrung`, `masse`, `freigaben`, `interessen` (Gruppe „Über mich“), `produktion`
+  (Gruppe „Produktion“) und `benachrichtigungen` (Gruppe „Einstellungen“). Alte Links
+  `onboarding`/`rollen` führen zu `produktion`.
 - Mobil (< `lg`): Profilkopf + gruppierte Bereichsliste mit „Fehlt: …“-Hinweisen; Tippen öffnet
   den Bereich, „‹ Profil“ bzw. Browser-Zurück führt zur Liste.
 - Desktop (≥ `lg`): Bereichsliste als linke Navigation, Inhalt rechts (ohne `bereich` →

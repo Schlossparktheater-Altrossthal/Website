@@ -2,7 +2,7 @@
 
 ## Überblick
 
-- Mitglieder mit der Berechtigung `mitglieder.website.settings` können mehrere Website-Themes parallel verwalten.
+- Mitglieder mit der Berechtigung `PRIVATE.SETTINGS.THEME.MANAGE` können mehrere Website-Themes parallel verwalten.
 - Themes lassen sich neu anlegen, aus bestehenden Varianten duplizieren, umbenennen und gezielt aktivieren.
 - Die Website-Einstellungen akzeptieren weiterhin den bisherigen Payload, unterstützen jetzt aber optional das direkte Speichern eines Themes samt Aktivierung.
 
@@ -105,7 +105,8 @@ Die Antwort enthält stets die aktuellen Website-Einstellungen (`settings`) und 
 
 ## Berechtigungen & Sicherheit
 
-Alle oben genannten Endpunkte verlangen eine angemeldete Sitzung mit der Berechtigung `mitglieder.website.settings`. Ohne gültige Datenbankverbindung antworten die Routen mit `500`.
+Alle oben genannten Endpunkte verlangen eine angemeldete Sitzung mit der Berechtigung
+`PRIVATE.SETTINGS.THEME.MANAGE`. Ohne gültige Datenbankverbindung antworten die Routen mit `500`.
 
 ## Zusätzliche Hinweise
 

@@ -73,8 +73,9 @@ Legende: ✅ ok · ⚠️ funktioniert, aber mit Einschränkung · ❓ unklar ·
 2. **Rechte / Server-Analytics:** schalten erst bei `md` (768px) auf Tabellen um; Tablet liegt
    genau auf der Grenze – gezielt bei 768px prüfen.
 3. **Dynamische Routen systematisch:** alle ID-Routen per Screenshot (Handy/Tablet/Desktop,
-   hell/dunkel) nachziehen; der Kalender der Probenplanung scrollt bewusst innerhalb seiner Karte
-   (`min-w-[540px] sm:min-w-[640px] lg:min-w-[720px]`, `month-calendar.tsx`).
+   hell/dunkel) nachziehen. Der Kalender der Probenplanung ist entfallen (`/mitglieder/probenplanung`
+   leitet auf die Terminplanung um); dessen Kalender ist responsiv (`MonthGrid`, kein inneres
+   `min-w`).
 
 > Hinweis: Der frühere Tablet-Skip für `/mitglieder/sperrliste` (`TABLET_OVERFLOW_KNOWN`) ist am
 > 2026-09-29 entfallen – die Seite scrollt seit dem Redesign nicht mehr horizontal. Der WebKit-Lauf
