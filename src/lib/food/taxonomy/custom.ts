@@ -173,6 +173,10 @@ export const TAXON_IMPLIES: Readonly<Record<string, readonly string[]>> = {
   "en:oat": ["en:gluten"],
   "en:barley": ["en:gluten"],
   "en:rye": ["en:gluten"],
+  // Nudeln ohne Zusatz sind Weizen-/Hartweizennudeln; OFF hängt sie nur an en:dough. Lieber eine
+  // Warnung zu viel – glutenfreie Nudeln lassen sich von Hand zuordnen.
+  "en:pasta": ["en:gluten", "en:wheat"],
+  "en:noodle": ["en:gluten", "en:wheat"],
   // Milch und Milchprodukte enthalten Laktose (laktosefreie Produkte kommen über Nährwerte/OFF).
   "en:dairy": ["en:lactose", "en:milk"],
   "en:milk": ["en:lactose"],
@@ -252,6 +256,12 @@ export const CUSTOM_ALIASES: Readonly<Record<string, string>> = {
   Krebstiere: "en:crustaceans",
   Meeresfrüchte: "en:shellfish",
   Alkohol: "en:alcohol",
+  // In deutschen Rezepten ist „Mehl“ ohne Zusatz Weizenmehl – OFF führt en:flour ohne Getreide,
+  // dann fehlte Gluten.
+  Mehl: "en:wheat-flour",
+  Spätzlemehl: "en:wheat-flour",
+  Romadur: "en:soft-cheese",
+  Weißlacker: "en:soft-cheese",
 };
 
 /**

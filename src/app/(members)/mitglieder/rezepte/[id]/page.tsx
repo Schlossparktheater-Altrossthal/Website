@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { FoodDataAttribution } from "@/components/food/food-data-attribution";
 import { RecipeComments, RecipeRating } from "@/components/food/recipes/recipe-feedback";
+import { RecipeImages } from "@/components/food/recipes/recipe-images";
 import { RecipeIngredients } from "@/components/food/recipes/recipe-ingredients";
 import { PageHeader } from "@/components/members/page-header";
 import { EditIcon, ExternalLinkIcon, HistoryIcon } from "@/components/ui/action-icons";
@@ -20,7 +21,7 @@ import {
   verdictTone,
   type DietKey,
 } from "@/lib/food/recipes/format";
-import { getRecipeDetail } from "@/lib/food/recipes/queries";
+import { getRecipeDetail, isFoodDataReady } from "@/lib/food/recipes/queries";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,10 @@ const DATE = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeZone: D
 export default async function RecipeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAuth();
   const { id } = await params;
-  const recipe = await getRecipeDetail(id, session.user?.id ?? "");
+  const [recipe, foodDataReady] = await Promise.all([
+    getRecipeDetail(id, session.user?.id ?? ""),
+    isFoodDataReady(),
+  ]);
   if (!recipe) notFound();
 
   const computed = recipe.computed;
@@ -65,6 +69,19 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
             </Button>
           </div>
         }
+      />
+
+      {!foodDataReady ? (
+        <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-foreground">
+          Die Lebensmitteldaten sind auf diesem System nicht importiert – Zutaten können deshalb
+          nicht zugeordnet werden. Nach dem Import werden alle Rezepte automatisch neu zugeordnet.
+        </div>
+      ) : null}
+
+      <RecipeImages
+        recipeId={recipe.id}
+        images={recipe.images}
+        defaultCredit={session.user?.name ?? ""}
       />
 
       {meta.length > 0 || recipe.tags.length > 0 ? (

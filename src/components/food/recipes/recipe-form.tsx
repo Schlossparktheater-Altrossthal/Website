@@ -4,14 +4,26 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { saveRecipeAction, importRecipeAction } from "@/app/(members)/mitglieder/rezepte/actions";
+import {
+  importRecipeAction,
+  previewRecipeImageAction,
+  saveRecipeAction,
+} from "@/app/(members)/mitglieder/rezepte/actions";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { ImportedRecipeImage } from "@/lib/food/recipes/json-ld";
 import type { RecipeInput } from "@/lib/food/recipes/service";
+
+type ImportImageState = ImportedRecipeImage & {
+  take: boolean;
+  /** data-URL der Vorschau, `null` solange sie lädt, `false` wenn sie nicht lädt. */
+  preview: string | null | false;
+};
 
 type FormState = {
   title: string;
@@ -69,6 +81,7 @@ export function RecipeForm({
   const [importUrl, setImportUrl] = useState("");
   const [importing, startImport] = useTransition();
   const [saving, startSave] = useTransition();
+  const [importImage, setImportImage] = useState<ImportImageState | null>(null);
 
   const manualFoodByLine = useMemo(
     () =>
@@ -103,6 +116,19 @@ export function RecipeForm({
         sourceUrl: recipe.sourceUrl,
         sourceName: recipe.sourceName ?? "",
       });
+      if (recipe.image) {
+        const image = recipe.image;
+        setImportImage({ ...image, take: true, preview: null });
+        void previewRecipeImageAction(image.url).then((preview) =>
+          setImportImage((current) =>
+            current?.url === image.url
+              ? { ...current, preview: preview.ok ? preview.data : false }
+              : current,
+          ),
+        );
+      } else {
+        setImportImage(null);
+      }
       toast.success("Rezept übernommen – bitte prüfen und speichern.", { duration: 3000 });
     });
 
@@ -127,12 +153,27 @@ export function RecipeForm({
       })),
     };
     startSave(async () => {
-      const result = await saveRecipeAction(recipeId, input);
+      const image =
+        importImage?.take && importImage.credit.trim().length >= 2
+          ? {
+              url: importImage.url,
+              credit: importImage.credit.trim(),
+              sourceUrl: input.sourceUrl,
+              license: importImage.license,
+            }
+          : null;
+      const result = await saveRecipeAction(recipeId, input, image);
       if (!result.ok) {
         toast.error("Nicht gespeichert", { description: result.error, duration: 5000 });
         return;
       }
       toast.success("Rezept gespeichert", { duration: 3000 });
+      if (result.data.imageError) {
+        toast.warning("Bild nicht übernommen", {
+          description: result.data.imageError,
+          duration: 6000,
+        });
+      }
       router.push(`/mitglieder/rezepte/${result.data.id}`);
     });
   };
@@ -144,8 +185,8 @@ export function RecipeForm({
           <div className="space-y-1">
             <h2 className="text-sm font-semibold text-foreground">Von Webseite importieren</h2>
             <p className="text-xs text-muted-foreground">
-              Fast alle Rezeptseiten liefern das Rezept maschinenlesbar mit. Bilder werden nicht
-              übernommen, die Quelle bleibt verlinkt.
+              Fast alle Rezeptseiten liefern das Rezept maschinenlesbar mit. Das Bild kann mit
+              Quellenangabe übernommen werden, die Quelle bleibt verlinkt.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -168,6 +209,53 @@ export function RecipeForm({
               Importieren
             </AsyncButton>
           </div>
+          {importImage ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row">
+              <div className="flex aspect-[4/3] w-full shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted sm:w-40">
+                {importImage.preview ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- data-URL-Vorschau
+                  <img src={importImage.preview} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {importImage.preview === false ? "Keine Vorschau" : "Lädt…"}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <Checkbox
+                    checked={importImage.take}
+                    onCheckedChange={(checked) =>
+                      setImportImage((current) =>
+                        current ? { ...current, take: checked === true } : current,
+                      )
+                    }
+                  />
+                  Bild übernehmen
+                </label>
+                <div className="space-y-1">
+                  <Label htmlFor="import-image-credit" className="text-xs">
+                    Foto von (Quellenangabe)
+                  </Label>
+                  <Input
+                    id="import-image-credit"
+                    value={importImage.credit}
+                    disabled={!importImage.take}
+                    onChange={(event) =>
+                      setImportImage((current) =>
+                        current ? { ...current, credit: event.target.value } : current,
+                      )
+                    }
+                    className="h-9"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Nur für den internen Gebrauch; Bild und Quelle werden am Rezept angezeigt.
+                  {importImage.license ? ` Lizenz laut Seite: ${importImage.license}.` : ""}
+                </p>
+              </div>
+            </div>
+          ) : null}
         </Card>
       ) : null}
 

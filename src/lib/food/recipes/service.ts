@@ -300,6 +300,46 @@ export async function recomputeRecipe(recipeId: string): Promise<RecipeComputed>
   return computed;
 }
 
+/**
+ * Ordnet die automatisch zugeordneten Zutaten aller Rezepte neu zu und wertet sie neu aus –
+ * nach jedem Taxonomie- oder BLS-Import. Manuelle Zuordnungen bleiben, eine neue Version
+ * entsteht nicht (der Text ändert sich nicht, nur die Datengrundlage).
+ */
+export async function rematchRecipes(): Promise<{ recipes: number; changed: number }> {
+  const index = await loadTaxonIndex({ fresh: true });
+  const recipes = await prisma.recipe.findMany({
+    where: { archivedAt: null },
+    select: { id: true, ingredients: { where: { status: { not: "MANUAL" } } } },
+  });
+  let changed = 0;
+  for (const recipe of recipes) {
+    for (const line of recipe.ingredients) {
+      const parsed = parseIngredientLine(line.rawText);
+      const match = await matchIngredient(index, parsed.name);
+      const data = {
+        amount: parsed.amountMax ?? parsed.amount,
+        unit: parsed.unit,
+        name: parsed.name,
+        note: parsed.note,
+        optional: parsed.optional,
+        foodItemId: match.foodItem?.id ?? null,
+        taxonCodes: match.taxonCodes,
+        status: match.status,
+      };
+      const same =
+        line.foodItemId === data.foodItemId &&
+        line.status === data.status &&
+        line.name === data.name &&
+        line.taxonCodes.join() === data.taxonCodes.join();
+      if (same) continue;
+      changed += 1;
+      await prisma.recipeIngredient.update({ where: { id: line.id }, data });
+    }
+    await recomputeRecipe(recipe.id);
+  }
+  return { recipes: recipes.length, changed };
+}
+
 export async function rateRecipe(recipeId: string, userId: string, stars: number) {
   const value = z.number().int().min(1).max(5).parse(stars);
   return prisma.recipeRating.upsert({

@@ -4,9 +4,16 @@ import { safeFetchText } from "@/lib/food/recipes/safe-fetch";
 
 /**
  * Liest ein Rezept aus schema.org/Recipe (JSON-LD), wie es fast alle Rezeptseiten einbetten
- * (docs/Plan/rezepte-plan.md). Übernommen wird nur die Struktur; Bilder werden nicht kopiert,
- * die Quelle bleibt verlinkt.
+ * (docs/Plan/rezepte-plan.md). Das Bild wird nur als Vorschlag mit Quellenangabe gemeldet;
+ * kopiert wird es erst, wenn das Mitglied es beim Speichern übernimmt.
  */
+
+export type ImportedRecipeImage = {
+  url: string;
+  /** Urheber laut Seite, sonst Autor oder Seite des Rezepts. */
+  credit: string;
+  license: string | null;
+};
 
 export type ImportedRecipe = {
   title: string;
@@ -19,6 +26,7 @@ export type ImportedRecipe = {
   tags: string[];
   sourceUrl: string;
   sourceName: string | null;
+  image: ImportedRecipeImage | null;
 };
 
 const textish = z.union([z.string(), z.number()]).transform(String);
@@ -93,6 +101,55 @@ function servingsOf(value: unknown): number | null {
   return null;
 }
 
+function nameOf(value: unknown): string | null {
+  const first = asArray(value as unknown[])[0];
+  if (typeof first === "string") return decodeEntities(first) || null;
+  if (first && typeof first === "object") {
+    const name = (first as Record<string, unknown>).name;
+    if (typeof name === "string") return decodeEntities(name) || null;
+  }
+  return null;
+}
+
+/** Größtes angegebenes Bild (schema.org `image`: Text, ImageObject oder Liste davon). */
+function imageOf(
+  value: unknown,
+  sourceUrl: string,
+  fallbackCredit: string,
+): ImportedRecipeImage | null {
+  type Candidate = ImportedRecipeImage & { pixels: number };
+  const candidates: Candidate[] = [];
+  for (const item of asArray(value as unknown[])) {
+    if (typeof item === "string") {
+      candidates.push({ url: item, credit: fallbackCredit, license: null, pixels: 0 });
+    } else if (item && typeof item === "object") {
+      const record = item as Record<string, unknown>;
+      const url = [record.contentUrl, record.url].find((entry) => typeof entry === "string");
+      if (typeof url !== "string") continue;
+      const credit =
+        (typeof record.creditText === "string" ? decodeEntities(record.creditText) : null) ||
+        nameOf(record.author) ||
+        nameOf(record.copyrightHolder) ||
+        fallbackCredit;
+      candidates.push({
+        url,
+        credit,
+        license: typeof record.license === "string" ? record.license : null,
+        pixels: (Number(record.width) || 0) * (Number(record.height) || 0),
+      });
+    }
+  }
+  const best = candidates.sort((a, b) => b.pixels - a.pixels)[0];
+  if (!best) return null;
+  try {
+    const url = new URL(best.url, sourceUrl);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return { url: url.toString(), credit: best.credit.slice(0, 200), license: best.license };
+  } catch {
+    return null;
+  }
+}
+
 /** Extrahiert JSON-LD-Blöcke aus HTML. */
 export function extractJsonLd(html: string): unknown[] {
   const blocks: unknown[] = [];
@@ -151,6 +208,11 @@ export function parseRecipeJsonLd(blocks: unknown[], sourceUrl: string): Importe
     tags: [...new Set(tags)].slice(0, 15),
     sourceUrl,
     sourceName,
+    image: imageOf(
+      recipe.image,
+      sourceUrl,
+      nameOf(recipe.author) ?? sourceName ?? new URL(sourceUrl).hostname,
+    ),
   };
 }
 

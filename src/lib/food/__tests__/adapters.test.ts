@@ -196,6 +196,44 @@ describe("Rezept aus JSON-LD", () => {
     expect(recipe?.title).toContain("& Brot");
   });
 
+  it("meldet das größte Bild mit Urheber, sonst mit Autor als Quelle", () => {
+    const withImages = parseRecipeJsonLd(
+      [
+        {
+          "@type": "Recipe",
+          name: "Suppe",
+          author: { name: "Erika" },
+          image: [
+            "/klein.jpg",
+            {
+              "@type": "ImageObject",
+              url: "https://cdn.example.org/gross.jpg",
+              width: 1200,
+              height: 800,
+              creditText: "Max Muster",
+              license: "https://creativecommons.org/licenses/by/4.0/",
+            },
+          ],
+        },
+      ],
+      "https://example.org/suppe",
+    );
+    expect(withImages?.image).toEqual({
+      url: "https://cdn.example.org/gross.jpg",
+      credit: "Max Muster",
+      license: "https://creativecommons.org/licenses/by/4.0/",
+    });
+    const plain = parseRecipeJsonLd(
+      [{ "@type": "Recipe", name: "Suppe", author: "Erika", image: "/bild.jpg" }],
+      "https://example.org/suppe",
+    );
+    expect(plain?.image).toEqual({
+      url: "https://example.org/bild.jpg",
+      credit: "Erika",
+      license: null,
+    });
+  });
+
   it("liest ISO-Dauern", () => {
     expect(isoDurationMinutes("PT1H30M")).toBe(90);
     expect(isoDurationMinutes("P1DT2H")).toBe(1560);

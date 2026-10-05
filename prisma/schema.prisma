@@ -323,6 +323,7 @@ model User {
   recipesCreated                  Recipe[]                   @relation("RecipeCreatedBy")
   recipesUpdated                  Recipe[]                   @relation("RecipeUpdatedBy")
   recipeRevisions                 RecipeRevision[]           @relation("RecipeRevisionEditedBy")
+  recipeImages                    RecipeImage[]              @relation("RecipeImageUploadedBy")
   recipeRatings                   RecipeRating[]
   recipeComments                  RecipeComment[]
   measurements                    MemberMeasurement[]
@@ -1192,6 +1193,7 @@ model Recipe {
   updatedBy   User?   @relation("RecipeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   ingredients RecipeIngredient[]
+  images      RecipeImage[]
   ratings     RecipeRating[]
   comments    RecipeComment[]
   revisions   RecipeRevision[]
@@ -1214,6 +1216,30 @@ model RecipeRevision {
   editedBy   User?    @relation("RecipeRevisionEditedBy", fields: [editedById], references: [id], onDelete: SetNull)
 
   @@unique([recipeId, version])
+}
+
+/// Bild zu einem Rezept – übernommen von der Quellseite oder selbst hochgeladen, immer mit
+/// Quellenangabe. Das erste Bild (sortOrder) ist das Titelbild.
+model RecipeImage {
+  id           String   @id @default(cuid())
+  recipeId     String
+  data         Bytes
+  mimeType     String
+  width        Int
+  height       Int
+  sortOrder    Int      @default(0)
+  /// Urheber bzw. Rechteinhaber („Foto: …“), Pflicht.
+  credit       String
+  /// Seite, von der das Bild stammt (bei Import die Rezeptseite).
+  sourceUrl    String?
+  /// Lizenz, falls bekannt (z. B. „CC BY 4.0“).
+  license      String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  recipe       Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  uploadedBy   User?    @relation("RecipeImageUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([recipeId, sortOrder])
 }
 
 model RecipeIngredient {
@@ -1674,14 +1700,14 @@ model InventoryArea {
 
 /// Kategorie als Baum je Bereich, z. B. Ton › Mikrofone › Kondensator.
 model InventoryCategory {
-  id        String              @id @default(cuid())
+  id        String                           @id @default(cuid())
   areaId    String
   parentId  String?
   name      String
-  sortOrder Int                 @default(0)
-  area      InventoryArea       @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  parent    InventoryCategory?  @relation("InventoryCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children  InventoryCategory[] @relation("InventoryCategoryTree")
+  sortOrder Int                              @default(0)
+  area      InventoryArea                    @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  parent    InventoryCategory?               @relation("InventoryCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  InventoryCategory[]              @relation("InventoryCategoryTree")
   fields    InventoryFieldDef[]
   overrides InventoryCategoryFieldOverride[]
   products  InventoryProduct[]

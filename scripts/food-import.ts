@@ -11,12 +11,16 @@
 //   DATABASE_URL=… pnpm food:import link-restrictions [--apply] [--csv <datei>]
 //       Verknüpft Allergie-Freitexte ohne Code mit der Taxonomie. Ohne --apply nur Bericht.
 //       Sichere Treffer werden mit --apply gesetzt, Vorschläge nur berichtet (Migration von Hand).
+//
+//   DATABASE_URL=… pnpm food:import rematch-recipes
+//       Ordnet automatisch zugeordnete Rezeptzutaten neu zu. Läuft nach taxonomy und bls von selbst.
 
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { saveBlsComponents, saveBlsFoods } from "@/lib/food/items";
 import { BLS_VERSION, readBlsComponents, readBlsFoods } from "@/lib/food/bls/parse";
+import { rematchRecipes } from "@/lib/food/recipes/service";
 import { linkRestrictionText } from "@/lib/food/restriction-link";
 import { importOffTaxonomy } from "@/lib/food/taxonomy/import";
 import { loadTaxonIndex } from "@/lib/food/taxonomy/store";
@@ -55,6 +59,13 @@ async function bls(args: string[]) {
   process.stdout.write(
     `BLS ${BLS_VERSION}: ${components.length} Nährstoffe, ${foods.length} Lebensmittel ` +
       `(sicher ${stats.MATCHED}, teilweise ${stats.PARTIAL}, ungeklärt ${stats.UNCLEAR}).\n`,
+  );
+}
+
+async function rematch() {
+  const result = await rematchRecipes();
+  process.stdout.write(
+    `Rezepte neu zugeordnet: ${result.recipes} Rezepte, ${result.changed} Zutaten geändert.\n`,
   );
 }
 
@@ -97,14 +108,18 @@ async function main() {
   const [command, ...args] = process.argv.slice(2);
   switch (command) {
     case "taxonomy":
-      return taxonomy(args);
+      await taxonomy(args);
+      return rematch();
     case "bls":
-      return bls(args);
+      await bls(args);
+      return rematch();
+    case "rematch-recipes":
+      return rematch();
     case "link-restrictions":
       return linkRestrictions(args);
     default:
       throw new Error(
-        "Befehl: taxonomy | bls <ordner> | link-restrictions [--apply] [--csv <datei>]",
+        "Befehl: taxonomy | bls <ordner> | rematch-recipes | link-restrictions [--apply] [--csv <datei>]",
       );
   }
 }

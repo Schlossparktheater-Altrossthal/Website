@@ -26,7 +26,26 @@ export type RecipeListItem = {
   ratingCount: number;
   totalMinutes: number | null;
   updatedAt: string;
+  /** Titelbild (Adresse der Bild-Route) oder `null`. */
+  coverUrl: string | null;
 };
+
+export type RecipeImageInfo = {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  credit: string;
+  sourceUrl: string | null;
+  license: string | null;
+};
+
+export const recipeImageUrl = (id: string) => `/api/rezepte/bilder/${id}`;
+
+/** Ohne Taxonomie kann keine Zutat zugeordnet werden – Seiten weisen dann darauf hin. */
+export async function isFoodDataReady(): Promise<boolean> {
+  return (await prisma.foodTaxon.count({ take: 1 })) > 0;
+}
 
 /** Gespeicherte Auswertung lesen; ältere oder fehlende Auswertungen ergeben `null`. */
 export function readComputed(value: unknown): RecipeComputed | null {
@@ -64,6 +83,7 @@ export async function listRecipes(): Promise<RecipeListItem[]> {
         cookMinutes: true,
         updatedAt: true,
         ratings: { select: { stars: true } },
+        images: { orderBy: { sortOrder: "asc" }, take: 1, select: { id: true } },
       },
     }),
     loadTaxonIndex(),
@@ -83,6 +103,7 @@ export async function listRecipes(): Promise<RecipeListItem[]> {
       ratingCount: recipe.ratings.length,
       totalMinutes: minutes > 0 ? minutes : null,
       updatedAt: recipe.updatedAt.toISOString(),
+      coverUrl: recipe.images[0] ? recipeImageUrl(recipe.images[0].id) : null,
     };
   });
 }
@@ -129,6 +150,17 @@ export async function getRecipeDetail(recipeId: string, userId: string) {
           orderBy: { createdAt: "asc" },
           include: { user: { select: PERSON_SELECT } },
         },
+        images: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            width: true,
+            height: true,
+            credit: true,
+            sourceUrl: true,
+            license: true,
+          },
+        },
         _count: { select: { revisions: true } },
       },
     }),
@@ -152,6 +184,10 @@ export async function getRecipeDetail(recipeId: string, userId: string) {
     cookMinutes: recipe.cookMinutes,
     version: recipe.version,
     revisionCount: recipe._count.revisions,
+    images: recipe.images.map((image): RecipeImageInfo => ({
+      ...image,
+      url: recipeImageUrl(image.id),
+    })),
     createdBy: person(recipe.createdBy),
     updatedBy: person(recipe.updatedBy),
     updatedAt: recipe.updatedAt.toISOString(),

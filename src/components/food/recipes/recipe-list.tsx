@@ -137,9 +137,19 @@ export function RecipeList({ recipes }: { recipes: RecipeListItem[] }) {
               key={recipe.id}
               href={`/mitglieder/rezepte/${recipe.id}`}
               leading={
-                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                  <ChefHatIcon className="h-5 w-5" />
-                </span>
+                recipe.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- geschützte Bild-Route
+                  <img
+                    src={recipe.coverUrl}
+                    alt=""
+                    loading="lazy"
+                    className="h-10 w-10 rounded-md object-cover"
+                  />
+                ) : (
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                    <ChefHatIcon className="h-5 w-5" />
+                  </span>
+                )
               }
               title={<span className="break-words">{recipe.title}</span>}
               description={

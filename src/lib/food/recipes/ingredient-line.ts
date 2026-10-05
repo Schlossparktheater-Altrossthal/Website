@@ -111,6 +111,27 @@ const FRACTIONS: Readonly<Record<string, number>> = {
 const OPTIONAL_PATTERN =
   /\b(?:optional|nach belieben|nach geschmack|n\.\s?b\.|evtl\.?|eventuell)\b/i;
 
+/** Ungefähre Mengen ohne Zahl („etwas Salz“) – gehören nicht zum Namen. */
+const VAGUE_AMOUNT_PATTERN = /^(?:etwas|einige|ein paar|wenig|viel|reichlich|ca\.?|circa|etwa)\s+/i;
+
+/** Größe und Zustand vor dem Namen („3 große Zwiebeln“, „frischer Basilikum“) → Notiz. */
+const DESCRIPTOR_PATTERN =
+  /^(?:sehr\s+)?(?:groß|klein|mittelgroß|mittel|frisch|reif|getrocknet|gehackt|gerieben|tiefgekühlt|tk|gekocht|weich|kalt|warm|lauwarm|zimmerwarm)(?:e|er|es|en|em)?\s+/i;
+
+/** Zusätze am Ende („nach Bedarf“, „zum Servieren“) → Notiz. */
+const TRAILING_NOTE_PATTERN =
+  /\s+((?:nach bedarf|zum\s+\p{L}+|zur\s+\p{L}+|für\s+(?:die|den|das)\s+\p{L}+|aus der dose)\b.*)$/iu;
+
+function stripDescriptors(text: string, notes: string[]): string {
+  let rest = text;
+  for (;;) {
+    const match = DESCRIPTOR_PATTERN.exec(rest);
+    if (!match) return rest;
+    notes.push(match[0].trim());
+    rest = rest.slice(match[0].length);
+  }
+}
+
 function parseNumber(token: string): number | null {
   const trimmed = token.trim();
   if (trimmed in FRACTIONS) return FRACTIONS[trimmed];
@@ -129,6 +150,7 @@ const AMOUNT_PATTERN = new RegExp(String.raw`^(${NUMBER})(?:\s*(?:-|–|bis)\s*(
 
 export function parseIngredientLine(rawText: string): ParsedIngredientLine {
   let rest = rawText.replace(/\s+/g, " ").trim();
+  const notes: string[] = [];
   const optional = OPTIONAL_PATTERN.test(rest);
 
   let amount: number | null = null;
@@ -138,7 +160,10 @@ export function parseIngredientLine(rawText: string): ParsedIngredientLine {
     amount = parseNumber(amountMatch[1]);
     amountMax = amountMatch[2] ? parseNumber(amountMatch[2]) : null;
     rest = rest.slice(amountMatch[0].length);
+  } else {
+    rest = rest.replace(VAGUE_AMOUNT_PATTERN, "");
   }
+  rest = stripDescriptors(rest, notes);
 
   let unit: IngredientUnit | null = null;
   // Einheit direkt an der Zahl („200g“) oder als eigenes Wort, optional mit Punkt.
@@ -150,8 +175,9 @@ export function parseIngredientLine(rawText: string): ParsedIngredientLine {
       rest = rest.slice(unitMatch[0].length).trim();
     }
   }
-
-  const notes: string[] = [];
+  rest = stripDescriptors(rest, notes);
+  // Pluralendungen („Zwiebel(n)“, „Ei(er)“) fallen weg, andere Klammern werden zur Notiz.
+  rest = rest.replace(/(?<=\p{L})\((?:n|en|e|er|s|nen)\)/gu, "");
   rest = rest.replace(/\(([^)]*)\)/g, (_, inner: string) => {
     if (inner.trim()) notes.push(inner.trim());
     return " ";
@@ -162,8 +188,15 @@ export function parseIngredientLine(rawText: string): ParsedIngredientLine {
     if (after) notes.push(after);
     rest = rest.slice(0, commaIndex);
   }
+  rest = rest.replace(/\s+/g, " ").trim();
+  const trailing = TRAILING_NOTE_PATTERN.exec(rest);
+  if (trailing) {
+    notes.push(trailing[1]);
+    rest = rest.slice(0, trailing.index);
+  }
   const name = rest
     .replace(OPTIONAL_PATTERN, " ")
+    .replace(/^bio-?\s*/i, "")
     .replace(/\s+/g, " ")
     .replace(/^(?:von|vom|der|die|das)\s+/i, "")
     .trim();

@@ -55,10 +55,10 @@ async function assertPublicHost(url: URL): Promise<void> {
   }
 }
 
-export async function safeFetchText(
+async function safeFetch(
   input: string,
-  options: { accept: string; maxBytes: number; timeoutMs: number },
-): Promise<{ url: string; text: string }> {
+  options: { accept: string; timeoutMs: number },
+): Promise<{ url: string; response: Response }> {
   let url = new URL(input);
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     await assertPublicHost(url);
@@ -76,8 +76,47 @@ export async function safeFetchText(
       continue;
     }
     if (!response.ok) throw new Error(`Seite antwortet mit ${response.status}.`);
-    const text = await response.text();
-    return { url: url.toString(), text: text.slice(0, options.maxBytes) };
+    return { url: url.toString(), response };
   }
   throw new Error("Zu viele Weiterleitungen.");
+}
+
+export async function safeFetchText(
+  input: string,
+  options: { accept: string; maxBytes: number; timeoutMs: number },
+): Promise<{ url: string; text: string }> {
+  const { url, response } = await safeFetch(input, options);
+  const text = await response.text();
+  return { url, text: text.slice(0, options.maxBytes) };
+}
+
+/** Lädt eine Datei (z. B. ein Rezeptbild) und bricht ab, sobald sie größer als `maxBytes` wird. */
+export async function safeFetchBytes(
+  input: string,
+  options: { accept: string; maxBytes: number; timeoutMs: number },
+): Promise<{ url: string; data: Uint8Array; contentType: string | null }> {
+  const { url, response } = await safeFetch(input, options);
+  const declared = Number(response.headers.get("content-length") ?? 0);
+  if (declared > options.maxBytes) throw new Error("Datei zu groß.");
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("Leere Antwort.");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > options.maxBytes) {
+      await reader.cancel();
+      throw new Error("Datei zu groß.");
+    }
+    chunks.push(value);
+  }
+  const data = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { url, data, contentType: response.headers.get("content-type") };
 }

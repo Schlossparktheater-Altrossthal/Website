@@ -319,8 +319,11 @@ kubectl -n <ns> exec <pod> -c website -- sh -c \
   'cd /app && node food-import.tmp.mjs taxonomy --dir /tmp/food && node --max-old-space-size=512 food-import.tmp.mjs bls /tmp/food/bls'
 ```
 
-Staging wird nachts aus Prod neu aufgesetzt (db-sync): Ein Import nur auf Staging ist am nächsten
-Morgen weg. Sobald Prod importiert ist, kommen die Daten mit dem Sync automatisch nach Staging.
+Nach `taxonomy` und `bls` werden alle Rezepte automatisch neu zugeordnet (manuelle Zuordnungen
+bleiben); einzeln: `pnpm food:import rematch-recipes`.
+
+Staging wird nachts aus Prod neu aufgesetzt (db-sync). Solange Prod keine Lebensmitteldaten hat,
+sichert der Sync die Food-Tabellen von Staging vorher und spielt sie nach der Migration zurück.
 
 Reihenfolge einhalten: Der BLS-Import ordnet Lebensmittel über die Taxonomie zu. Nach Änderungen
 an `custom.ts` oder `src/lib/food/bls/map.ts` beide Importe erneut ausführen. Quellenangaben
