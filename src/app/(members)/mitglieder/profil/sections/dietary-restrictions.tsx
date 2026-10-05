@@ -600,16 +600,32 @@ function RestrictionForm({
 
       <div className="space-y-1.5">
         <p className="text-sm font-medium text-foreground">Wie stark?</p>
-        <SegmentedControl
+        <div
+          role="radiogroup"
           aria-label="Stufe"
-          fullWidth
-          size="md"
-          value={form.stage}
-          onValueChange={(stage) => set({ stage })}
-          options={STAGES.map((stage) => ({ value: stage.value, label: stage.label }))}
-          activeClassName={(value) => STAGE_ACTIVE[value]}
-          className="[&>button]:flex-1"
-        />
+          className="grid grid-cols-4 gap-1 rounded-lg bg-muted/70 p-1"
+        >
+          {STAGES.map((stage) => {
+            const active = stage.value === form.stage;
+            return (
+              <button
+                key={stage.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => set({ stage: stage.value })}
+                className={cn(
+                  "min-h-11 rounded-md px-1 py-1.5 text-center text-xs font-medium leading-tight transition sm:text-sm",
+                  active
+                    ? cn(STAGE_ACTIVE[stage.value], "shadow-sm")
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {stage.label}
+              </button>
+            );
+          })}
+        </div>
         <p className="text-xs text-muted-foreground">{stageInfo?.hint}</p>
       </div>
 
@@ -649,12 +665,13 @@ function RestrictionForm({
               type="button"
               onClick={() => setDetailsOpen((value) => !value)}
               aria-expanded={showDetails}
-              className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1 text-left text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               <ChevronDownIcon
-                className={cn("h-4 w-4 transition-transform", showDetails && "rotate-180")}
+                className={cn("h-4 w-4 shrink-0 transition-transform", showDetails && "rotate-180")}
               />
-              Mehr Angaben (Symptome, Notfall, ärztlich abgeklärt)
+              Mehr Angaben
+              <span className="font-normal">· Symptome, Notfall</span>
             </button>
           ) : null}
           {showDetails ? (

@@ -421,7 +421,9 @@ function PendingDetail({
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Suchen</p>
         <TaxonPicker
           key={group.key}
-          initialQuery={group.category === "split" ? "" : (group.parts[0] ?? group.text)}
+          initialQuery={
+            group.category === "split" ? "" : group.text.replace(/\([^)]*\)/g, " ").trim()
+          }
           disabled={disabled}
           onPick={onAssign}
         />
