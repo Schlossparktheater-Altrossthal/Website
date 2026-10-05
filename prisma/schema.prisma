@@ -1335,6 +1335,8 @@ model CalendarFeed {
   includeBlockedDays Boolean   @default(false)
   /// Eigener Kalendername in der Kalender-App; leer = Standardname.
   name               String?
+  /// Symbol vor jedem Termintitel; null = 🎭, leer = ohne.
+  prefix             String?
   lastAccessedAt     DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt

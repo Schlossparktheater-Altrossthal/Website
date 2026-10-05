@@ -24,7 +24,9 @@ const FUTURE_DAYS = 550;
 const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000;
 /** Abrufzeitpunkt nur gelegentlich schreiben – Kalender pollen oft. */
 const ACCESS_WRITE_INTERVAL_MS = 15 * 60 * 1000;
-const PREFIX = "🎭 ";
+/** Wählbare Symbole vor Termintiteln; "" = ohne. */
+export const FEED_PREFIXES = ["🎭", "🎬", "⭐", "📅", ""] as const;
+export const DEFAULT_FEED_PREFIX = "🎭";
 export const DEFAULT_FEED_NAME = "Theater – Meine Termine";
 
 const BLOCKED_DAY_LABELS: Record<BlockedDayKind, string> = {
@@ -117,12 +119,17 @@ function uidHost() {
  */
 export async function collectFeedEvents(
   userId: string,
-  { includeBlockedDays, scope = "MINE" }: { includeBlockedDays: boolean; scope?: FeedScope },
+  {
+    includeBlockedDays,
+    scope = "MINE",
+    prefix = DEFAULT_FEED_PREFIX,
+  }: { includeBlockedDays: boolean; scope?: FeedScope; prefix?: string },
   now: Date = new Date(),
 ): Promise<IcsEvent[]> {
   const from = new Date(now.getTime() - PAST_DAYS * 86_400_000);
   const to = new Date(now.getTime() + FUTURE_DAYS * 86_400_000);
   const host = uidHost();
+  const PREFIX = prefix ? `${prefix} ` : "";
 
   const [rehearsals, calendarEvents, departmentEvents, blockedDays] = await Promise.all([
     prisma.calendarEvent.findMany({
@@ -312,7 +319,11 @@ export async function renderCalendarFeed(token: string, now: Date = new Date()) 
 
   const events = await collectFeedEvents(
     feed.userId,
-    { includeBlockedDays: feed.includeBlockedDays, scope: feed.scope },
+    {
+      includeBlockedDays: feed.includeBlockedDays,
+      scope: feed.scope,
+      prefix: feed.prefix ?? DEFAULT_FEED_PREFIX,
+    },
     now,
   );
 

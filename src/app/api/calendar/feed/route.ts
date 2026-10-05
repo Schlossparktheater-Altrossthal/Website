@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { FeedScope } from "@prisma/client";
 
-import { buildFeedUrl, generateFeedToken } from "@/lib/calendar/feed";
+import {
+  buildFeedUrl,
+  DEFAULT_FEED_PREFIX,
+  generateFeedToken,
+  FEED_PREFIXES,
+} from "@/lib/calendar/feed";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 
@@ -11,6 +16,7 @@ type FeedRecord = {
   scope: FeedScope;
   includeBlockedDays: boolean;
   name: string | null;
+  prefix: string | null;
   lastAccessedAt: Date | null;
 };
 
@@ -22,6 +28,7 @@ function toResponse(feed: FeedRecord | null) {
           scope: feed.scope,
           includeBlockedDays: feed.includeBlockedDays,
           name: feed.name,
+          prefix: feed.prefix ?? DEFAULT_FEED_PREFIX,
           lastAccessedAt: feed.lastAccessedAt?.toISOString() ?? null,
         }
       : null,
@@ -59,6 +66,8 @@ const patchSchema = z
   .object({
     includeBlockedDays: z.boolean(),
     scope: z.enum(["MINE", "PRODUCTIONS"]),
+    // Leer = ohne Symbol.
+    prefix: z.enum(FEED_PREFIXES),
     // Leer = Standardname.
     name: z
       .string()

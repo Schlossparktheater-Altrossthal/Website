@@ -30,6 +30,7 @@ type Feed = {
   scope: FeedScope;
   includeBlockedDays: boolean;
   name: string | null;
+  prefix: string;
   lastAccessedAt: string | null;
 };
 
@@ -40,6 +41,14 @@ const SCOPE_OPTIONS: { value: FeedScope; label: string }[] = [
 
 /** Wie `DEFAULT_FEED_NAME` im Feed (dort serverseitig). */
 const DEFAULT_NAME = "Theater – Meine Termine";
+
+const PREFIX_OPTIONS = [
+  { value: "🎭", label: "🎭" },
+  { value: "🎬", label: "🎬" },
+  { value: "⭐", label: "⭐" },
+  { value: "📅", label: "📅" },
+  { value: "", label: "Ohne" },
+];
 
 const TITLE = "Kalender abonnieren";
 const DESCRIPTION =
@@ -265,6 +274,29 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
               "Name konnte nicht gespeichert werden.",
             );
           }}
+        />
+      </div>
+
+      <div className="space-y-2 rounded-lg border border-border/60 p-3">
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium">Symbol vor Terminen</p>
+          <p className="text-xs text-muted-foreground">
+            Macht Theatertermine in deinem Kalender auf einen Blick erkennbar.
+          </p>
+        </div>
+        <SegmentedControl
+          value={feed.prefix}
+          onValueChange={(prefix) =>
+            void run(
+              "PATCH",
+              { prefix },
+              "Symbol gespeichert",
+              "Einstellung konnte nicht gespeichert werden.",
+            )
+          }
+          options={PREFIX_OPTIONS.map((option) => ({ ...option, disabled: busy }))}
+          fullWidth
+          aria-label="Symbol vor Terminen"
         />
       </div>
 
