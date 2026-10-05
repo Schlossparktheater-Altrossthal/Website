@@ -1,6 +1,7 @@
 # Plan: Lager 3 – Kategorien, Merkmal-Ausnahmen, Maße, Tags, Codes mit Unternummer
 
-Stand: 2026-10-05. Konzept abgestimmt, noch nichts umgesetzt. Baut auf
+Stand: 2026-10-05. Phase 1–7 umgesetzt (main), lokal getestet (Unit, Integration, E2E). Offen:
+Staging-Prüfung und Prod-Release. Baut auf
 `docs/Plan/lager-typen-projekte-plan.md` auf (dessen Prod-Release ist ebenfalls offen – beide
 können zusammen ausgeliefert werden).
 
@@ -125,12 +126,36 @@ options String[]?, unit String?)`, `@@unique([categoryId, fieldDefId])`, Cascade
 - Screenshots mobil+desktop auf Staging (Picker-Sheet, Katalog-Editor, Typ-Formular).
 - Release zusammen mit Lager 2 (Migration leert Lagerdaten – gewollt).
 
+## Umsetzung und Abweichungen (2026-10-05)
+
+- Migrationen `20261005120000_inventory_codes_tags_overrides` (Schema, Codes neu vergeben statt
+  Daten leeren – Typ-/Exemplarnummern in Anlagereihenfolge, Lagerorte `L-7`) und
+  `20261005120100_inventory_catalog_templates` (Leistung → Messwert, Epoche/Farbe in Kostüm →
+  Tags, Maße in Bühnenbau/Requisite, Gewicht in Technik). Getrennt, weil neue Enum-Werte erst
+  nach dem Commit nutzbar sind.
+- Ausnahmen beziehen sich auf den Merkmalschlüssel (je Bereich eindeutig) und können
+  **ausblenden** und **Pflicht ändern**. Auswahlwerte/Einheit überschreiben ist nicht umgesetzt –
+  dafür lieber ein eigenes Merkmal in der Unterkategorie.
+- Typwechsel eines Exemplars gibt es in der App nicht – die geplante Sperre nach dem
+  Etikettendruck ist damit hinfällig. Der Bereich eines Typs bleibt wie bisher fest.
+- Kategorie-Auswahl ist am Desktop wie mobil dasselbe Panel (Dialog bzw. Bottom-Sheet) mit Suche,
+  Bereichs-Chips, Durchklicken, „Zuletzt verwendet“ (localStorage) und Vorschlag aus dem Namen
+  (erstes Wort zählt doppelt). In Filtern dient sie als Kategorie-Filter.
+- Filter in der Bestandsübersicht: Button „Filter“ (Kategorie, Tags, Merkmale von–bis/Auswahl/
+  Ja-Nein, „passt in“) und aktive Filter als Chips; Parameter `kategorie`, `tag`, `m.<schlüssel>`,
+  `passt`. Datum- und Maß-Merkmale haben keinen eigenen Bereichsfilter, Maße laufen über „passt in“.
+- Tags: jeder mit Lagerzugriff legt beim Speichern an; ungenutzte Tags verschwinden automatisch.
+  Umbenennen/Zusammenführen in den Einstellungen ist **nicht** umgesetzt (bisher kein Bedarf).
+  Die Freitextsuche findet Typen auch über Tags.
+- Nicht umgesetzt: Tags-Spalte in der Sammelerfassung (Tabelle), Freitextsuche nach Maßen.
+
 ## Checkliste
 
-- [ ] Phase 1 Datenmodell
-- [ ] Phase 2 Codes mit Unternummer
-- [ ] Phase 3 Merkmal-Ausnahmen
-- [ ] Phase 4 Kategorie-Auswahl
-- [ ] Phase 5 Maße/Einheiten
-- [ ] Phase 6 Tags
-- [ ] Phase 7 Seed, Tests, Staging, Release
+- [x] Phase 1 Datenmodell
+- [x] Phase 2 Codes mit Unternummer
+- [x] Phase 3 Merkmal-Ausnahmen
+- [x] Phase 4 Kategorie-Auswahl
+- [x] Phase 5 Maße/Einheiten
+- [x] Phase 6 Tags
+- [x] Phase 7 Seed, Tests
+- [ ] Staging-Screenshots, Prod-Release

@@ -58,7 +58,9 @@ export function CheckoutPacklist({
   const visible = (view === "missing" ? outstanding : lines)
     .slice()
     .sort(
-      (a, b) => (a.place ?? "").localeCompare(b.place ?? "", "de") || a.code.localeCompare(b.code),
+      (a, b) =>
+        (a.place ?? "").localeCompare(b.place ?? "", "de") ||
+        a.code.localeCompare(b.code, "de", { numeric: true }),
     );
 
   const run = async (

@@ -23,7 +23,18 @@ import {
   PRODUCT_KINDS,
   type ProductKind,
 } from "@/lib/inventory/constants";
-import { catalogFields, categoryPath, type FieldDef } from "@/lib/inventory/specs";
+import { CategoryPicker, shortPath } from "@/components/inventory/category-picker";
+import { TagInput } from "@/components/inventory/tag-input";
+import {
+  catalogFields,
+  categoryPath,
+  dimensionUnit,
+  formatLength,
+  parseDimensions,
+  parseMeasure,
+  formatMeasure,
+  type FieldDef,
+} from "@/lib/inventory/specs";
 import { cn } from "@/lib/utils";
 
 const NONE = "__none__";
@@ -34,18 +45,6 @@ const SHORT_KIND_LABELS: Record<ProductKind, string> = {
   container: "Kiste",
   set: "Set",
 };
-
-export function categoryOptions(area: AssetFormArea | undefined) {
-  const categories = area?.categories ?? [];
-  return categories
-    .map((category) => ({
-      id: category.id,
-      label: categoryPath(categories, category.id)
-        .map((entry) => entry.name)
-        .join(" › "),
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label, "de"));
-}
 
 /**
  * Stammdaten eines Artikeltyps – gemeinsam für Erfassen (neuer Typ) und „Typ bearbeiten“.
@@ -58,16 +57,18 @@ export function ProductFields({
   areas,
   mode,
   nameRef,
+  canCreateCategory = false,
 }: {
   values: ProductFormValues;
   onChange: (values: ProductFormValues) => void;
   areas: AssetFormArea[];
   mode: "create" | "edit";
   nameRef?: React.Ref<HTMLInputElement>;
+  /** Darf neue Kategorien direkt aus der Auswahl anlegen (Katalog-Recht). */
+  canCreateCategory?: boolean;
 }) {
   const area = areas.find((entry) => entry.id === values.areaId);
   const fields = catalogFields(area, values.categoryId);
-  const options = categoryOptions(area);
   const [moreOpen, setMoreOpen] = React.useState(Boolean(values.description || values.publicNote));
   const set = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) =>
     onChange({ ...values, [key]: value });
@@ -75,55 +76,36 @@ export function ProductFields({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label>Bereich</Label>
-          <Select
-            value={values.areaId}
-            disabled={mode === "edit"}
-            onValueChange={(areaId) => {
-              const next = areas.find((entry) => entry.id === areaId);
-              onChange({
-                ...values,
-                areaId,
-                categoryId: null,
-                specs: {},
-                inspectionRequired:
-                  values.kind === "unique" ? (next?.inspectionDefault ?? false) : false,
-              });
-            }}
-          >
-            <SelectTrigger aria-label="Bereich">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {areas.map((entry) => (
-                <SelectItem key={entry.id} value={entry.id}>
-                  {entry.prefix} · {entry.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Kategorie</Label>
-          <Select
-            value={values.categoryId ?? NONE}
-            onValueChange={(id) => set("categoryId", id === NONE ? null : id)}
-          >
-            <SelectTrigger aria-label="Kategorie">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>Ohne Kategorie</SelectItem>
-              {options.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-1.5">
+        <Label>Kategorie</Label>
+        <CategoryPicker
+          areas={areas}
+          value={{ areaId: values.areaId, categoryId: values.categoryId }}
+          lockedAreaId={mode === "edit" ? values.areaId : null}
+          nameHint={values.name}
+          canCreate={canCreateCategory}
+          onChange={({ areaId, categoryId }) => {
+            const next = areas.find((entry) => entry.id === areaId);
+            const areaChanged = areaId !== values.areaId;
+            onChange({
+              ...values,
+              areaId,
+              categoryId,
+              ...(areaChanged
+                ? {
+                    specs: {},
+                    inspectionRequired:
+                      values.kind === "unique" ? (next?.inspectionDefault ?? false) : false,
+                  }
+                : {}),
+            });
+          }}
+        />
+        {mode === "edit" ? (
+          <p className="text-xs text-muted-foreground">
+            Der Bereich ({area?.name}) bestimmt die Codes und bleibt fest.
+          </p>
+        ) : null}
       </div>
 
       {mode === "create" ? (
@@ -221,7 +203,7 @@ export function ProductFields({
           <legend className="px-1 text-xs font-medium text-muted-foreground">
             Merkmale{" "}
             {values.categoryId
-              ? `· ${options.find((option) => option.id === values.categoryId)?.label ?? ""}`
+              ? `· ${shortPath(categoryPath(area?.categories ?? [], values.categoryId).map((entry) => entry.name))}`
               : area
                 ? `· ${area.name}`
                 : ""}
@@ -238,6 +220,14 @@ export function ProductFields({
           </div>
         </fieldset>
       ) : null}
+
+      <div className="space-y-1.5">
+        <Label htmlFor="product-tags">Tags</Label>
+        <TagInput value={values.tags} onChange={(tags) => set("tags", tags)} />
+        <p className="text-xs text-muted-foreground">
+          Für Querliegendes wie Epoche, Farbe oder Anschluss – mit Komma oder Enter trennen.
+        </p>
+      </div>
 
       {!bulk && values.kind !== "set" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
@@ -322,6 +312,113 @@ export function SpecField({
         <span className="text-sm text-foreground">{label}</span>
         <Switch checked={value === true} onCheckedChange={onChange} aria-label={field.label} />
       </label>
+    );
+  }
+  if (field.type === "multiselect") {
+    const chosen = new Set(
+      (typeof value === "string" ? value : "")
+        .split(";")
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    );
+    return (
+      <div className="space-y-1.5 sm:col-span-2">
+        <span className="text-sm leading-none font-medium">{label}</span>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={field.label}>
+          {field.options.map((option) => {
+            const on = chosen.has(option);
+            return (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  const next = new Set(chosen);
+                  if (on) next.delete(option);
+                  else next.add(option);
+                  onChange(field.options.filter((entry) => next.has(entry)).join("; "));
+                }}
+                className={cn(
+                  "h-8 rounded-full border px-3 text-xs font-medium",
+                  on
+                    ? "border-primary bg-primary/15 text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  if (field.type === "date") {
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <Input
+          id={id}
+          type="date"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    );
+  }
+  if (field.type === "dimensions" || field.type === "measure") {
+    const text = typeof value === "string" ? value : "";
+    let hint: string | null = null;
+    let invalid = false;
+    if (text.trim()) {
+      if (field.type === "dimensions") {
+        const dims = parseDimensions(text, field.unit);
+        invalid = !dims;
+        hint = dims
+          ? `L ${formatLength(dims.l, field.unit)} · B ${formatLength(dims.w, field.unit)}${
+              dims.h !== null ? ` · H ${formatLength(dims.h, field.unit)}` : ""
+            } ${dimensionUnit(field.unit)}`
+          : "Bitte als L × B × H eingeben, z. B. 120x80x40";
+      } else {
+        const base = parseMeasure(text, field.unit);
+        invalid = base === null;
+        hint =
+          base === null
+            ? `Zahl in ${field.unit ?? "der Einheit"}`
+            : `= ${formatMeasure(base, field.unit)}`;
+      }
+    }
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>
+          {field.label}
+          {field.type === "dimensions"
+            ? ` (L × B × H, ${field.unit ?? "cm"})`
+            : field.unit
+              ? ` (${field.unit})`
+              : ""}
+          {field.required ? " *" : ""}
+        </Label>
+        <Input
+          id={id}
+          value={text}
+          placeholder={
+            field.placeholder ?? (field.type === "dimensions" ? "z. B. 120x80x40" : undefined)
+          }
+          inputMode={field.type === "measure" ? "decimal" : "text"}
+          aria-invalid={invalid || undefined}
+          aria-describedby={hint ? `${id}-hint` : undefined}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {hint ? (
+          <p
+            id={`${id}-hint`}
+            className={cn("text-xs", invalid ? "text-destructive" : "text-muted-foreground")}
+          >
+            {hint}
+          </p>
+        ) : null}
+      </div>
     );
   }
   if (field.type === "select") {

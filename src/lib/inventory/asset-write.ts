@@ -14,6 +14,7 @@ import { createPublicId } from "@/lib/inventory/public-id";
 import { parseSpecs } from "@/lib/inventory/specs";
 import {
   allocateAssetCode,
+  allocateProductNumber,
   placeAsset,
   recordEvent,
   refreshAssetStatus,
@@ -64,6 +65,8 @@ export const productSchema = z.object({
   minQuantity: z.coerce.number().int().min(0).optional().nullable(),
   inspectionRequired: z.boolean().default(false),
   inspectionIntervalMonths: z.coerce.number().int().min(1).max(120).optional().nullable(),
+  /** Schlagworte – unbekannte werden angelegt. */
+  tags: z.array(z.string().trim().min(1).max(40)).max(20).default([]),
 });
 
 export type ProductInput = z.infer<typeof productSchema>;
@@ -130,6 +133,40 @@ export function costData(
   };
 }
 
+/** Schreibweise eines Tags vereinheitlichen: Leerraum zusammenfassen. */
+export function normalizeTagName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").slice(0, 40);
+}
+
+/**
+ * Tag-Verknüpfung für Anlegen/Ändern: vorhandene Tags werden unabhängig von Groß-/Klein-
+ * schreibung wiederverwendet, neue angelegt.
+ */
+export async function tagsData(tx: Prisma.TransactionClient, names: readonly string[]) {
+  const wanted = [
+    ...new Map(
+      names
+        .map(normalizeTagName)
+        .filter(Boolean)
+        .map((name) => [name.toLowerCase(), name]),
+    ).values(),
+  ];
+  const existing = wanted.length
+    ? await tx.inventoryTag.findMany({
+        where: {
+          OR: wanted.map((name) => ({ name: { equals: name, mode: "insensitive" as const } })),
+        },
+        select: { name: true },
+      })
+    : [];
+  const canonical = wanted.map(
+    (name) => existing.find((tag) => tag.name.toLowerCase() === name.toLowerCase())?.name ?? name,
+  );
+  return {
+    connectOrCreate: canonical.map((name) => ({ where: { name }, create: { name } })),
+  };
+}
+
 /** Stammdaten für Anlegen/Ändern eines Typs inklusive geprüfter Merkmale. */
 export async function productData(tx: Prisma.TransactionClient, input: ProductInput) {
   await assertCategory(tx, input.areaId, input.categoryId);
@@ -160,8 +197,10 @@ export async function createProductInTx(tx: Prisma.TransactionClient, input: Pro
     data: {
       publicId: createPublicId(),
       areaId: input.areaId,
+      number: await allocateProductNumber(tx, input.areaId),
       kind: input.kind,
       ...(await productData(tx, input)),
+      tags: await tagsData(tx, input.tags),
     },
     select: { id: true, areaId: true, kind: true, inspectionRequired: true },
   });
@@ -221,10 +260,11 @@ export async function createAssetInTx(
   const codes: string[] = [];
   const { userId } = options;
   for (let index = 0; index < count; index += 1) {
-    const code = await allocateAssetCode(tx, product.areaId);
+    const { code, unitNumber } = await allocateAssetCode(tx, product.id);
     const asset = await tx.inventoryAsset.create({
       data: {
         code,
+        unitNumber,
         publicId: createPublicId(),
         productId: product.id,
         areaId: product.areaId,

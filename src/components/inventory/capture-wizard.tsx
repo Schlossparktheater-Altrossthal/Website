@@ -69,6 +69,7 @@ export function CaptureWizard({
   initialPlacement,
   initialProduct,
   defaultAreaId,
+  canCatalog = false,
 }: {
   areas: AssetFormArea[];
   placementOptions: PlacementOptions;
@@ -76,6 +77,7 @@ export function CaptureWizard({
   initialPlacement: PlacementTarget;
   initialProduct: ProductSearchHit | null;
   defaultAreaId: string | null;
+  canCatalog?: boolean;
 }) {
   const router = useRouter();
   const defaultArea = areas.find((area) => area.id === defaultAreaId) ?? areas[0];
@@ -229,7 +231,13 @@ export function CaptureWizard({
             </Button>
           </div>
           {draft.kind !== "set" ? <PhotoInput photo={photo} onChange={setPhoto} /> : null}
-          <ProductFields values={draft} onChange={setDraft} areas={areas} mode="create" />
+          <ProductFields
+            values={draft}
+            onChange={setDraft}
+            areas={areas}
+            mode="create"
+            canCreateCategory={canCatalog}
+          />
         </section>
       ) : null}
 

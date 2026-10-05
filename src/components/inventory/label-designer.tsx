@@ -200,7 +200,7 @@ export function LabelDesigner({
           <Input
             value={manual}
             onChange={(event) => setManual(event.target.value)}
-            placeholder="Codes eingeben, z. B. T-0001 T-0002"
+            placeholder="Codes eingeben, z. B. T-1-1 T-1-2"
             aria-label="Codes hinzufügen"
             className="min-w-0 flex-1"
           />

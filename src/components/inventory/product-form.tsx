@@ -20,12 +20,14 @@ export function ProductForm({
   initialValues,
   areas,
   exemplarCount,
+  canCatalog = false,
 }: {
   productId: string;
   returnHref: string;
   initialValues: ProductFormValues;
   areas: AssetFormArea[];
   exemplarCount: number;
+  canCatalog?: boolean;
 }) {
   const router = useRouter();
   const [values, setValues] = React.useState(initialValues);
@@ -59,7 +61,13 @@ export function ProductForm({
             Änderungen gelten für alle {exemplarCount} Exemplare dieses Typs.
           </p>
         ) : null}
-        <ProductFields values={values} onChange={setValues} areas={areas} mode="edit" />
+        <ProductFields
+          values={values}
+          onChange={setValues}
+          areas={areas}
+          mode="edit"
+          canCreateCategory={canCatalog}
+        />
       </section>
       <div className="sticky bottom-[var(--members-bottom-nav,0px)] z-10 -mx-1 flex gap-2 bg-background/95 px-1 py-3 backdrop-blur">
         <Button type="submit" size="lg" disabled={saving} className="flex-1 sm:flex-none">

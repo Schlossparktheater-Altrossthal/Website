@@ -24,7 +24,7 @@ async function createLocation(page: Page, name: string) {
   await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
   const link = page.getByRole("link", { name: new RegExp(name) });
   await expect(link).toBeVisible();
-  const code = (await link.textContent())?.match(/L-\d{4,}/)?.[0];
+  const code = (await link.textContent())?.match(/L-\d+/)?.[0];
   expect(code).toBeTruthy();
   return code!;
 }
@@ -104,7 +104,7 @@ test.describe("als admin", () => {
     await page.getByRole("button", { name: /5 anlegen/ }).click();
     await expect(page.getByText(/^5 Objekte angelegt$/)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: /1 unvollständig/ })).toBeVisible();
-    const codes = await grid.getByRole("link", { name: /^T-\d{4,}$/ }).allTextContents();
+    const codes = await grid.getByRole("link", { name: /^T-\d+(-\d+)?$/ }).allTextContents();
     expect(codes).toHaveLength(5);
     expect(new Set(codes).size).toBe(5);
 
@@ -112,7 +112,7 @@ test.describe("als admin", () => {
     await page.reload();
     await expect(grid.getByRole("link", { name: codes[0]! })).toBeVisible();
     await page.getByRole("button", { name: "Angelegte ausblenden" }).click();
-    await expect(grid.getByRole("link", { name: /^T-\d{4,}$/ })).toHaveCount(0);
+    await expect(grid.getByRole("link", { name: /^T-\d+(-\d+)?$/ })).toHaveCount(0);
     await page.getByRole("button", { name: "Zeile löschen" }).click();
     await page.evaluate(() => localStorage.removeItem("lager:sammelerfassung:v1"));
 
@@ -126,7 +126,7 @@ test.describe("als admin", () => {
       `/mitglieder/lager?darstellung=tabelle&sortierung=name&q=${encodeURIComponent(stamp)}`,
     );
     const table = page.getByRole("table");
-    await expect(table.getByRole("link", { name: /^T-\d{4,}$/ })).toHaveCount(5);
+    await expect(table.getByRole("link", { name: /^T-\d+(-\d+)?$/ })).toHaveCount(5);
 
     // Name direkt in der Zelle ändern.
     await clickUntil(table.getByRole("button", { name: `E2E Kabel ${stamp}` }), () =>

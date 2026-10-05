@@ -4,7 +4,13 @@ import {
   type Condition,
 } from "@/lib/inventory/constants";
 import type { PlacementTarget } from "@/lib/inventory/service-types";
-import type { CategoryNode, FieldDef, Specs } from "@/lib/inventory/specs";
+import {
+  specToInput,
+  type CategoryNode,
+  type FieldDef,
+  type FieldLevel,
+  type Specs,
+} from "@/lib/inventory/specs";
 
 /**
  * Formularwerte für Artikeltyp und Exemplar – ohne "use client", damit Seiten sie vorbelegen
@@ -17,7 +23,7 @@ export type AssetFormArea = {
   prefix: string;
   inspectionDefault: boolean;
   fields: FieldDef[];
-  categories: (CategoryNode & { fields: FieldDef[] })[];
+  categories: (CategoryNode & FieldLevel)[];
 };
 
 export type SpecFormValues = Record<string, string | boolean>;
@@ -36,6 +42,7 @@ export type ProductFormValues = {
   minQuantity: string;
   inspectionRequired: boolean;
   inspectionIntervalMonths: string;
+  tags: string[];
 };
 
 export type ExemplarFormValues = {
@@ -71,6 +78,7 @@ export function emptyProductValues(area: AssetFormArea | undefined): ProductForm
     minQuantity: "",
     inspectionRequired: area?.inspectionDefault ?? false,
     inspectionIntervalMonths: String(DEFAULT_INSPECTION_INTERVAL_MONTHS),
+    tags: [],
   };
 }
 
@@ -92,12 +100,13 @@ export function emptyCaptureValues(placement: PlacementTarget): CaptureFormValue
   return { ...emptyExemplarValues(), count: "1", quantity: "", placement };
 }
 
-export function specsToFormValues(specs: Specs): SpecFormValues {
+/** Gespeicherte Merkmale als Formularwerte – Messwerte und Maße in der Einheit des Merkmals. */
+export function specsToFormValues(specs: Specs, fields: readonly FieldDef[]): SpecFormValues {
   return Object.fromEntries(
-    Object.entries(specs).map(([key, value]) => [
-      key,
-      typeof value === "boolean" ? value : String(value),
-    ]),
+    Object.entries(specs).map(([key, value]) => {
+      const field = fields.find((entry) => entry.key === key);
+      return [key, specToInput(field ?? { type: "text", unit: null }, value)];
+    }),
   );
 }
 

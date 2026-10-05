@@ -1,6 +1,6 @@
 # Datenmodell Mitgliederbereich
 
-Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-10-04, 136 Modelle, 71 Enums.
+Quelle: `prisma/schema.prisma` (PostgreSQL, Prisma). Stand: 2026-10-05, 139 Modelle, 71 Enums.
 Die Feld-Referenz ab Abschnitt „Modelle im Detail“ wird aus dem Schema generiert. Bei Schemaänderungen neu erzeugen, nicht von Hand pflegen (siehe [Aktualisierung](#aktualisierung)).
 
 > **Begriffe:** Eine _Produktion_ heißt im Code `Show`. _Gewerke_ sind `Department`.
@@ -331,6 +331,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `foodTaxonAliases`                | → `FoodTaxonAlias[]`           |                                                                                          |
 | `foodItemsCreated`                | → `FoodItem[]`                 | @relation("FoodItemCreatedBy")                                                           |
 | `recipesCreated`                  | → `Recipe[]`                   | @relation("RecipeCreatedBy")                                                             |
+| `recipesUpdated`                  | → `Recipe[]`                   | @relation("RecipeUpdatedBy")                                                             |
+| `recipeRevisions`                 | → `RecipeRevision[]`           | @relation("RecipeRevisionEditedBy")                                                      |
 | `recipeRatings`                   | → `RecipeRating[]`             |                                                                                          |
 | `recipeComments`                  | → `RecipeComment[]`            |                                                                                          |
 | `measurements`                    | → `MemberMeasurement[]`        |                                                                                          |
@@ -1547,9 +1549,13 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `createdAt`   | `DateTime`             | @default(now())                                                                                                                         |
 | `updatedAt`   | `DateTime`             | @updatedAt                                                                                                                              |
 | `createdBy`   | → `User?`              | @relation("RecipeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)                                                |
+| `version`     | `Int`                  | @default(1) Wird bei jeder Änderung erhöht; der vorherige Stand liegt in RecipeRevision.                                                |
+| `updatedById` | `String?`              |                                                                                                                                         |
+| `updatedBy`   | → `User?`              | @relation("RecipeUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)                                                |
 | `ingredients` | → `RecipeIngredient[]` |                                                                                                                                         |
 | `ratings`     | → `RecipeRating[]`     |                                                                                                                                         |
 | `comments`    | → `RecipeComment[]`    |                                                                                                                                         |
+| `revisions`   | → `RecipeRevision[]`   |                                                                                                                                         |
 
 - `@@index([title])`
 
@@ -2152,6 +2158,23 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `createdAt`      | `DateTime` | @default(now())          |
 | `updatedAt`      | `DateTime` | @updatedAt               |
 
+### `RecipeRevision`
+
+> Änderungshistorie (Wiki-Prinzip): Stand eines Rezepts vor einer Änderung.
+
+| Feld         | Typ        | Attribute / Beschreibung                                                                       |
+| ------------ | ---------- | ---------------------------------------------------------------------------------------------- |
+| `id`         | `String`   | @id @default(cuid())                                                                           |
+| `recipeId`   | `String`   |                                                                                                |
+| `version`    | `Int`      | Versionsnummer des gesicherten Stands.                                                         |
+| `snapshot`   | `Json`     | Titel, Beschreibung, Portionen, Schritte, Tags, Quelle, Zeiten und Zutatenzeilen.              |
+| `editedById` | `String?`  | Wer den gesicherten Stand erstellt hatte.                                                      |
+| `createdAt`  | `DateTime` | @default(now())                                                                                |
+| `recipe`     | → `Recipe` | @relation(fields: [recipeId], references: [id], onDelete: Cascade)                             |
+| `editedBy`   | → `User?`  | @relation("RecipeRevisionEditedBy", fields: [editedById], references: [id], onDelete: SetNull) |
+
+- `@@unique([recipeId, version])`
+
 ### `EventNote`
 
 > Eintrag im Probenprotokoll: Notiz, Entscheidung oder Aufgabe (für Person, Figur oder Gewerk).
@@ -2255,7 +2278,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `prefix`            | `String`                 | @unique                                                                                         |
 | `description`       | `String?`                |                                                                                                 |
 | `sortOrder`         | `Int`                    | @default(0)                                                                                     |
-| `nextNumber`        | `Int`                    | @default(1)                                                                                     |
+| `nextNumber`        | `Int`                    | @default(1) Nächste Typnummer (Code `T-42-3`: Bereich-Typ-Exemplar).                            |
 | `inspectionDefault` | `Boolean`                | @default(false) Neue Objekte dieses Bereichs sind standardmäßig prüfpflichtig (Elektroprüfung). |
 | `createdAt`         | `DateTime`               | @default(now())                                                                                 |
 | `updatedAt`         | `DateTime`               | @updatedAt                                                                                      |
@@ -2269,21 +2292,49 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Kategorie als Baum je Bereich, z. B. Ton › Mikrofone › Kondensator.
 
-| Feld        | Typ                     | Attribute / Beschreibung                                                                     |
-| ----------- | ----------------------- | -------------------------------------------------------------------------------------------- |
-| `id`        | `String`                | @id @default(cuid())                                                                         |
-| `areaId`    | `String`                |                                                                                              |
-| `parentId`  | `String?`               |                                                                                              |
-| `name`      | `String`                |                                                                                              |
-| `sortOrder` | `Int`                   | @default(0)                                                                                  |
-| `area`      | → `InventoryArea`       | @relation(fields: [areaId], references: [id], onDelete: Cascade)                             |
-| `parent`    | → `InventoryCategory?`  | @relation("InventoryCategoryTree", fields: [parentId], references: [id], onDelete: Restrict) |
-| `children`  | → `InventoryCategory[]` | @relation("InventoryCategoryTree")                                                           |
-| `fields`    | → `InventoryFieldDef[]` |                                                                                              |
-| `products`  | → `InventoryProduct[]`  |                                                                                              |
+| Feld        | Typ                                  | Attribute / Beschreibung                                                                     |
+| ----------- | ------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `id`        | `String`                             | @id @default(cuid())                                                                         |
+| `areaId`    | `String`                             |                                                                                              |
+| `parentId`  | `String?`                            |                                                                                              |
+| `name`      | `String`                             |                                                                                              |
+| `sortOrder` | `Int`                                | @default(0)                                                                                  |
+| `area`      | → `InventoryArea`                    | @relation(fields: [areaId], references: [id], onDelete: Cascade)                             |
+| `parent`    | → `InventoryCategory?`               | @relation("InventoryCategoryTree", fields: [parentId], references: [id], onDelete: Restrict) |
+| `children`  | → `InventoryCategory[]`              | @relation("InventoryCategoryTree")                                                           |
+| `fields`    | → `InventoryFieldDef[]`              |                                                                                              |
+| `overrides` | → `InventoryCategoryFieldOverride[]` |                                                                                              |
+| `products`  | → `InventoryProduct[]`               |                                                                                              |
 
 - `@@unique([areaId, parentId, name])`
 - `@@index([parentId])`
+
+### `InventoryCategoryFieldOverride`
+
+> Abweichung eines geerbten Merkmals ab einer Kategorie (gilt auch für Unterkategorien): ausblenden oder Pflicht ändern. Bezieht sich auf den Merkmalschlüssel (je Bereich eindeutig).
+
+| Feld         | Typ                   | Attribute / Beschreibung                                             |
+| ------------ | --------------------- | -------------------------------------------------------------------- |
+| `id`         | `String`              | @id @default(cuid())                                                 |
+| `categoryId` | `String`              |                                                                      |
+| `key`        | `String`              |                                                                      |
+| `hidden`     | `Boolean`             | @default(false)                                                      |
+| `required`   | `Boolean?`            |                                                                      |
+| `category`   | → `InventoryCategory` | @relation(fields: [categoryId], references: [id], onDelete: Cascade) |
+
+- `@@unique([categoryId, key])`
+
+### `InventoryTag`
+
+> Freie Schlagworte an Artikeltypen für Querliegendes (Epoche, Farbe, „DMX“).
+
+| Feld        | Typ                    | Attribute / Beschreibung |
+| ----------- | ---------------------- | ------------------------ |
+| `id`        | `String`               | @id @default(cuid())     |
+| `name`      | `String`               | @unique                  |
+| `color`     | `String?`              |                          |
+| `createdAt` | `DateTime`             | @default(now())          |
+| `products`  | → `InventoryProduct[]` |                          |
 
 ### `InventoryFieldDef`
 
@@ -2317,6 +2368,8 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `id`                       | `String`                        | @id @default(cuid())                                                                   |
 | `publicId`                 | `String`                        | @unique Zufällige, nicht erratbare Kennung für URLs.                                   |
 | `areaId`                   | `String`                        |                                                                                        |
+| `number`                   | `Int`                           | Typnummer im Bereich – mittlerer Teil des Codes `T-42-3`.                              |
+| `nextUnitNumber`           | `Int`                           | @default(1) Nächste Exemplarnummer (letzter Teil des Codes).                           |
 | `categoryId`               | `String?`                       |                                                                                        |
 | `kind`                     | `InventoryAssetKind` (enum)     | @default(unique) Einzelstück, Mengenartikel oder Kiste/Case – gilt für alle Exemplare. |
 | `name`                     | `String`                        |                                                                                        |
@@ -2338,7 +2391,9 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `projectLines`             | → `InventoryProjectLine[]`      |                                                                                        |
 | `components`               | → `InventoryProductComponent[]` | @relation("InventorySetComponents")                                                    |
 | `usedInSets`               | → `InventoryProductComponent[]` | @relation("InventorySetUsage")                                                         |
+| `tags`                     | → `InventoryTag[]`              |                                                                                        |
 
+- `@@unique([areaId, number])`
 - `@@index([areaId])`
 - `@@index([categoryId])`
 - `@@index([name])`
@@ -2371,46 +2426,47 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 
 > Exemplar eines Artikeltyps mit eigenem Label, Ort und Zustand. Mengenartikel haben genau ein Exemplar, das die Bestände je Lagerplatz trägt.
 
-| Feld               | Typ                           | Attribute / Beschreibung                                                                      |
-| ------------------ | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| `id`               | `String`                      | @id @default(cuid())                                                                          |
-| `code`             | `String`                      | @unique Unveränderlicher Label-Code, z. B. „T-0042“ – lesbar, nur mit Login auflösbar.        |
-| `publicId`         | `String`                      | @unique Zufällige, nicht erratbare Kennung für QR-Code und URL.                               |
-| `productId`        | `String`                      |                                                                                               |
-| `areaId`           | `String`                      | Aus dem Artikeltyp übernommen (unveränderlich) – bestimmt Code-Präfix und Abfragen.           |
-| `kind`             | `InventoryAssetKind` (enum)   | @default(unique) Aus dem Artikeltyp übernommen (unveränderlich).                              |
-| `status`           | `InventoryAssetStatus` (enum) | @default(available)                                                                           |
-| `condition`        | `InventoryCondition` (enum)   | @default(good)                                                                                |
-| `label`            | `String?`                     | Zusatz zum Typnamen, z. B. „Kiste 3“ oder „links“.                                            |
-| `serialNumber`     | `String?`                     |                                                                                               |
-| `internalNote`     | `String?`                     |                                                                                               |
-| `locationId`       | `String?`                     |                                                                                               |
-| `containerId`      | `String?`                     |                                                                                               |
-| `quantity`         | `Int`                         | @default(1) Gesamtmenge (Mengenartikel: Summe der Bestände).                                  |
-| `acquisitionCost`  | `Decimal?`                    | @db.Decimal(10, 2)                                                                            |
-| `purchaseDate`     | `DateTime?`                   |                                                                                               |
-| `supplier`         | `String?`                     |                                                                                               |
-| `ownership`        | `String?`                     |                                                                                               |
-| `lastInspectionAt` | `DateTime?`                   |                                                                                               |
-| `nextInspectionAt` | `DateTime?`                   |                                                                                               |
-| `lastSeenAt`       | `DateTime?`                   |                                                                                               |
-| `labelPrintedAt`   | `DateTime?`                   |                                                                                               |
-| `createdAt`        | `DateTime`                    | @default(now())                                                                               |
-| `updatedAt`        | `DateTime`                    | @updatedAt                                                                                    |
-| `product`          | → `InventoryProduct`          | @relation(fields: [productId], references: [id], onDelete: Restrict)                          |
-| `area`             | → `InventoryArea`             | @relation(fields: [areaId], references: [id], onDelete: Restrict)                             |
-| `location`         | → `InventoryLocation?`        | @relation(fields: [locationId], references: [id], onDelete: SetNull)                          |
-| `container`        | → `InventoryAsset?`           | @relation("InventoryContainment", fields: [containerId], references: [id], onDelete: SetNull) |
-| `contents`         | → `InventoryAsset[]`          | @relation("InventoryContainment")                                                             |
-| `stocks`           | → `InventoryStock[]`          | @relation("InventoryStockAsset")                                                              |
-| `storedStocks`     | → `InventoryStock[]`          | @relation("InventoryStockContainer")                                                          |
-| `photos`           | → `InventoryPhoto[]`          |                                                                                               |
-| `defects`          | → `InventoryDefect[]`         |                                                                                               |
-| `inspections`      | → `InventoryInspection[]`     |                                                                                               |
-| `events`           | → `InventoryEvent[]`          |                                                                                               |
-| `checkoutLines`    | → `InventoryCheckoutLine[]`   |                                                                                               |
-| `scans`            | → `InventoryStocktakeScan[]`  | @relation("InventoryScanAsset")                                                               |
-| `containerScans`   | → `InventoryStocktakeScan[]`  | @relation("InventoryScanContainer")                                                           |
+| Feld               | Typ                           | Attribute / Beschreibung                                                                                                            |
+| ------------------ | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `id`               | `String`                      | @id @default(cuid())                                                                                                                |
+| `code`             | `String`                      | @unique Unveränderlicher Label-Code, z. B. „T-42-3“ (Bereich-Typ-Exemplar, Mengenartikel „T-42“) – lesbar, nur mit Login auflösbar. |
+| `unitNumber`       | `Int?`                        | Exemplarnummer im Typ (bei Mengenartikeln leer).                                                                                    |
+| `publicId`         | `String`                      | @unique Zufällige, nicht erratbare Kennung für QR-Code und URL.                                                                     |
+| `productId`        | `String`                      |                                                                                                                                     |
+| `areaId`           | `String`                      | Aus dem Artikeltyp übernommen (unveränderlich) – bestimmt Code-Präfix und Abfragen.                                                 |
+| `kind`             | `InventoryAssetKind` (enum)   | @default(unique) Aus dem Artikeltyp übernommen (unveränderlich).                                                                    |
+| `status`           | `InventoryAssetStatus` (enum) | @default(available)                                                                                                                 |
+| `condition`        | `InventoryCondition` (enum)   | @default(good)                                                                                                                      |
+| `label`            | `String?`                     | Zusatz zum Typnamen, z. B. „Kiste 3“ oder „links“.                                                                                  |
+| `serialNumber`     | `String?`                     |                                                                                                                                     |
+| `internalNote`     | `String?`                     |                                                                                                                                     |
+| `locationId`       | `String?`                     |                                                                                                                                     |
+| `containerId`      | `String?`                     |                                                                                                                                     |
+| `quantity`         | `Int`                         | @default(1) Gesamtmenge (Mengenartikel: Summe der Bestände).                                                                        |
+| `acquisitionCost`  | `Decimal?`                    | @db.Decimal(10, 2)                                                                                                                  |
+| `purchaseDate`     | `DateTime?`                   |                                                                                                                                     |
+| `supplier`         | `String?`                     |                                                                                                                                     |
+| `ownership`        | `String?`                     |                                                                                                                                     |
+| `lastInspectionAt` | `DateTime?`                   |                                                                                                                                     |
+| `nextInspectionAt` | `DateTime?`                   |                                                                                                                                     |
+| `lastSeenAt`       | `DateTime?`                   |                                                                                                                                     |
+| `labelPrintedAt`   | `DateTime?`                   |                                                                                                                                     |
+| `createdAt`        | `DateTime`                    | @default(now())                                                                                                                     |
+| `updatedAt`        | `DateTime`                    | @updatedAt                                                                                                                          |
+| `product`          | → `InventoryProduct`          | @relation(fields: [productId], references: [id], onDelete: Restrict)                                                                |
+| `area`             | → `InventoryArea`             | @relation(fields: [areaId], references: [id], onDelete: Restrict)                                                                   |
+| `location`         | → `InventoryLocation?`        | @relation(fields: [locationId], references: [id], onDelete: SetNull)                                                                |
+| `container`        | → `InventoryAsset?`           | @relation("InventoryContainment", fields: [containerId], references: [id], onDelete: SetNull)                                       |
+| `contents`         | → `InventoryAsset[]`          | @relation("InventoryContainment")                                                                                                   |
+| `stocks`           | → `InventoryStock[]`          | @relation("InventoryStockAsset")                                                                                                    |
+| `storedStocks`     | → `InventoryStock[]`          | @relation("InventoryStockContainer")                                                                                                |
+| `photos`           | → `InventoryPhoto[]`          |                                                                                                                                     |
+| `defects`          | → `InventoryDefect[]`         |                                                                                                                                     |
+| `inspections`      | → `InventoryInspection[]`     |                                                                                                                                     |
+| `events`           | → `InventoryEvent[]`          |                                                                                                                                     |
+| `checkoutLines`    | → `InventoryCheckoutLine[]`   |                                                                                                                                     |
+| `scans`            | → `InventoryStocktakeScan[]`  | @relation("InventoryScanAsset")                                                                                                     |
+| `containerScans`   | → `InventoryStocktakeScan[]`  | @relation("InventoryScanContainer")                                                                                                 |
 
 - `@@index([productId])`
 - `@@index([areaId])`
@@ -3178,7 +3234,7 @@ python3 scripts/gen-datamodel-doc.py > /tmp/ref.md
 | `InventoryInspectionResult`   | `passed`, `failed`                                                                                                                                                                                                                                                                                            |
 | `InventoryCheckoutStatus`     | `open`, `closed`                                                                                                                                                                                                                                                                                              |
 | `InventoryStocktakeStatus`    | `open`, `closed`                                                                                                                                                                                                                                                                                              |
-| `InventoryFieldType`          | `text`, `number`, `select`, `boolean`                                                                                                                                                                                                                                                                         |
+| `InventoryFieldType`          | `text`, `number`, `select`, `boolean`, `dimensions`, `measure`, `multiselect`, `date`                                                                                                                                                                                                                         |
 | `InventoryProjectStatus`      | `request`, `confirmed`, `done`, `cancelled`                                                                                                                                                                                                                                                                   |
 | `InventoryProjectPhaseKind`   | `setup`, `event`, `teardown`, `other`                                                                                                                                                                                                                                                                         |
 | `PhotoConsentStatus`          | `pending`, `approved`, `rejected`, `noPhotos`                                                                                                                                                                                                                                                                 |

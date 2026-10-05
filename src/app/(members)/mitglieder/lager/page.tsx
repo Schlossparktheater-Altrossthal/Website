@@ -40,7 +40,16 @@ import {
   parseInventorySort,
   type InventoryListFilter,
 } from "@/lib/inventory/queries";
+import { loadInventoryCatalog } from "@/lib/inventory/catalog";
 import { getInventoryAccess } from "@/lib/inventory/service";
+import {
+  FITS_PARAM,
+  parseFitsFilter,
+  parseSpecFilters,
+  parseTagFilter,
+  scopeFilterFields,
+  TAG_PARAM,
+} from "@/lib/inventory/spec-filters";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
 
@@ -82,9 +91,23 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
         ? "tabelle"
         : "liste";
   const table = display === "tabelle";
+  const catalog = await loadInventoryCatalog();
+  const categoryId = first(params.kategorie) ?? null;
+  const categoryArea = categoryId
+    ? catalog.find((area) => area.categories.some((category) => category.id === categoryId))
+    : undefined;
+  const areaId = categoryArea?.id ?? first(params.bereich);
+  const specFields = scopeFilterFields(catalog, areaId, categoryArea ? categoryId : null);
+  const flatParams = Object.fromEntries(
+    Object.entries(params).map(([key, value]) => [key, first(value)]),
+  );
   const filter: InventoryListFilter = {
     query: first(params.q),
-    areaId: first(params.bereich),
+    areaId,
+    categoryId: categoryArea ? (categoryId ?? undefined) : undefined,
+    tags: parseTagFilter(first(params[TAG_PARAM])),
+    specs: parseSpecFilters(specFields, flatParams),
+    fits: parseFitsFilter(first(params[FITS_PARAM])),
     locationId: first(params.ort),
     view: isView(view) ? view : "all",
     page: Number(first(params.seite)) || 1,
@@ -266,6 +289,7 @@ export default async function LagerPage({ searchParams }: { searchParams: Search
         </div>
         <AssetFilters
           areas={areas.map((area) => ({ id: area.id, name: area.name }))}
+          catalog={catalog}
           locations={locations.map((location) => ({ id: location.id, path: location.path }))}
         />
         {list.kind === "products" ? (

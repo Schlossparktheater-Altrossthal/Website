@@ -20,6 +20,8 @@ const FIELD_SELECT = {
   required: true,
 } as const;
 
+const OVERRIDE_SELECT = { key: true, hidden: true, required: true } as const;
+
 function toFieldDef(row: {
   key: string;
   label: string;
@@ -52,18 +54,26 @@ export async function loadEffectiveFields(
       : Promise.resolve([]),
   ]);
   const path = categoryPath(categories, categoryId);
-  const pathFields = path.length
-    ? await db.inventoryFieldDef.findMany({
-        where: { categoryId: { in: path.map((category) => category.id) } },
-        orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
-        select: { ...FIELD_SELECT, categoryId: true },
-      })
-    : [];
+  const pathIds = path.map((category) => category.id);
+  const [pathFields, overrides] = path.length
+    ? await Promise.all([
+        db.inventoryFieldDef.findMany({
+          where: { categoryId: { in: pathIds } },
+          orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+          select: { ...FIELD_SELECT, categoryId: true },
+        }),
+        db.inventoryCategoryFieldOverride.findMany({
+          where: { categoryId: { in: pathIds } },
+          select: { ...OVERRIDE_SELECT, categoryId: true },
+        }),
+      ])
+    : [[], []];
   return effectiveFields(
     areaFields.map(toFieldDef),
-    path.map((category) =>
-      pathFields.filter((field) => field.categoryId === category.id).map(toFieldDef),
-    ),
+    path.map((category) => ({
+      fields: pathFields.filter((field) => field.categoryId === category.id).map(toFieldDef),
+      overrides: overrides.filter((override) => override.categoryId === category.id),
+    })),
   );
 }
 
@@ -87,6 +97,7 @@ export async function loadInventoryCatalog(db: Db = prisma) {
           parentId: true,
           name: true,
           fields: { orderBy: [{ sortOrder: "asc" }, { label: "asc" }], select: FIELD_SELECT },
+          overrides: { select: OVERRIDE_SELECT },
         },
       },
     },
@@ -126,6 +137,7 @@ export async function loadCatalogForEditing(db: Db = prisma) {
             orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
             select: { id: true, ...FIELD_SELECT },
           },
+          overrides: { select: OVERRIDE_SELECT },
           _count: { select: { products: true } },
         },
       },
@@ -142,6 +154,7 @@ export async function loadCatalogForEditing(db: Db = prisma) {
       name: category.name,
       productCount: category._count.products,
       fields: category.fields.map((field) => ({ ...toFieldDef(field), id: field.id })),
+      overrides: category.overrides,
     })),
   }));
 }

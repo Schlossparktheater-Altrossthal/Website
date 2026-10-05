@@ -6,7 +6,7 @@ import {
   INVENTORY_BASE_PATH,
   parseInventoryCode,
 } from "@/lib/inventory/constants";
-import { ASSET_NAME_SELECT } from "@/lib/inventory/selects";
+import { ASSET_CODE_ORDER, ASSET_NAME_SELECT } from "@/lib/inventory/selects";
 import { getInventoryAccess, loadLocationLabeler } from "@/lib/inventory/service";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { prisma } from "@/lib/prisma";
@@ -29,13 +29,13 @@ export default async function LabelsPage({ searchParams }: { searchParams: Searc
   const [unlabeled, containers, labeler, requestedAssets] = await Promise.all([
     prisma.inventoryAsset.findMany({
       where: { labelPrintedAt: null, status: { not: "retired" } },
-      orderBy: { code: "asc" },
+      orderBy: [...ASSET_CODE_ORDER],
       take: 1000,
       select: { code: true, ...ASSET_NAME_SELECT },
     }),
     prisma.inventoryAsset.findMany({
       where: { kind: "container", status: { not: "retired" } },
-      orderBy: { code: "asc" },
+      orderBy: [...ASSET_CODE_ORDER],
       select: { code: true, ...ASSET_NAME_SELECT },
     }),
     loadLocationLabeler(),
@@ -56,7 +56,7 @@ export default async function LabelsPage({ searchParams }: { searchParams: Searc
   });
   const locations: LabelCandidate[] = labeler.locations
     .map((location) => ({ code: location.code, name: labeler.label(location.id) ?? location.name }))
-    .sort((a, b) => a.code.localeCompare(b.code));
+    .sort((a, b) => a.code.localeCompare(b.code, "de", { numeric: true }));
 
   const names = new Map<string, string>([
     ...requestedAssets.map((asset) => [asset.code, assetDisplayName(asset)] as const),

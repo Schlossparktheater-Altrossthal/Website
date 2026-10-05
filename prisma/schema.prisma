@@ -1659,6 +1659,7 @@ model InventoryArea {
   prefix            String               @unique
   description       String?
   sortOrder         Int                  @default(0)
+  /// Nächste Typnummer (Code `T-42-3`: Bereich-Typ-Exemplar).
   nextNumber        Int                  @default(1)
   /// Neue Objekte dieses Bereichs sind standardmäßig prüfpflichtig (Elektroprüfung).
   inspectionDefault Boolean              @default(false)
@@ -1682,6 +1683,7 @@ model InventoryCategory {
   parent    InventoryCategory?  @relation("InventoryCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
   children  InventoryCategory[] @relation("InventoryCategoryTree")
   fields    InventoryFieldDef[]
+  overrides InventoryCategoryFieldOverride[]
   products  InventoryProduct[]
 
   @@unique([areaId, parentId, name])
@@ -1693,6 +1695,34 @@ enum InventoryFieldType {
   number
   select
   boolean
+  /// Maße L×B×H in einem Feld, gespeichert als `{ l, w, h }` in mm.
+  dimensions
+  /// Zahl mit umrechenbarer Einheit (Länge, Gewicht, Leistung), gespeichert in der Basiseinheit.
+  measure
+  multiselect
+  date
+}
+
+/// Abweichung eines geerbten Merkmals ab einer Kategorie (gilt auch für Unterkategorien):
+/// ausblenden oder Pflicht ändern. Bezieht sich auf den Merkmalschlüssel (je Bereich eindeutig).
+model InventoryCategoryFieldOverride {
+  id         String            @id @default(cuid())
+  categoryId String
+  key        String
+  hidden     Boolean           @default(false)
+  required   Boolean?
+  category   InventoryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, key])
+}
+
+/// Freie Schlagworte an Artikeltypen für Querliegendes (Epoche, Farbe, „DMX“).
+model InventoryTag {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  color     String?
+  createdAt DateTime           @default(now())
+  products  InventoryProduct[]
 }
 
 /// Merkmal eines Bereichs (gilt für alle Artikel darin) oder einer Kategorie (gilt auch für alle
@@ -1725,6 +1755,10 @@ model InventoryProduct {
   /// Zufällige, nicht erratbare Kennung für URLs.
   publicId                 String                      @unique
   areaId                   String
+  /// Typnummer im Bereich – mittlerer Teil des Codes `T-42-3`.
+  number                   Int
+  /// Nächste Exemplarnummer (letzter Teil des Codes).
+  nextUnitNumber           Int                         @default(1)
   categoryId               String?
   /// Einzelstück, Mengenartikel oder Kiste/Case – gilt für alle Exemplare.
   kind                     InventoryAssetKind          @default(unique)
@@ -1749,7 +1783,9 @@ model InventoryProduct {
   projectLines             InventoryProjectLine[]
   components               InventoryProductComponent[] @relation("InventorySetComponents")
   usedInSets               InventoryProductComponent[] @relation("InventorySetUsage")
+  tags                     InventoryTag[]
 
+  @@unique([areaId, number])
   @@index([areaId])
   @@index([categoryId])
   @@index([name])
@@ -1782,8 +1818,11 @@ model InventoryLocation {
 /// ein Exemplar, das die Bestände je Lagerplatz trägt.
 model InventoryAsset {
   id               String                   @id @default(cuid())
-  /// Unveränderlicher Label-Code, z. B. „T-0042“ – lesbar, nur mit Login auflösbar.
+  /// Unveränderlicher Label-Code, z. B. „T-42-3“ (Bereich-Typ-Exemplar, Mengenartikel „T-42“) –
+  /// lesbar, nur mit Login auflösbar.
   code             String                   @unique
+  /// Exemplarnummer im Typ (bei Mengenartikeln leer).
+  unitNumber       Int?
   /// Zufällige, nicht erratbare Kennung für QR-Code und URL.
   publicId         String                   @unique
   productId        String

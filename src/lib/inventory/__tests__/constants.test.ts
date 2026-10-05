@@ -8,24 +8,36 @@ import {
   parseInventoryCode,
 } from "@/lib/inventory/constants";
 
+describe("formatInventoryCode", () => {
+  it("schreibt Codes ohne führende Nullen", () => {
+    expect(formatInventoryCode("T", 42, 3)).toBe("T-42-3");
+    expect(formatInventoryCode("T", 42)).toBe("T-42");
+    expect(formatInventoryCode("L", 7, null)).toBe("L-7");
+  });
+});
+
 describe("parseInventoryCode", () => {
   it("liest Codes aus QR-URLs und Eingaben", () => {
-    expect(parseInventoryCode("https://mitglieder.example.org/i/T-0042")).toBe("T-0042");
-    expect(parseInventoryCode("https://x.de/i/K-0007?utm=1")).toBe("K-0007");
-    expect(parseInventoryCode("t42")).toBe("T-0042");
-    expect(parseInventoryCode(" l-3 ")).toBe("L-0003");
-    expect(parseInventoryCode("T-123456")).toBe("T-123456");
+    expect(parseInventoryCode("https://mitglieder.example.org/i/T-42-3")).toBe("T-42-3");
+    expect(parseInventoryCode("https://x.de/i/K-7?utm=1")).toBe("K-7");
+    expect(parseInventoryCode("t42")).toBe("T-42");
+    expect(parseInventoryCode("t042-03")).toBe("T-42-3");
+    expect(parseInventoryCode("T42.3")).toBe("T-42-3");
+    expect(parseInventoryCode(" l-0003 ")).toBe("L-3");
+    expect(parseInventoryCode("T-123456-12345")).toBe("T-123456-12345");
   });
 
   it("verwirft Unsinn", () => {
     expect(parseInventoryCode("")).toBeNull();
     expect(parseInventoryCode("hallo welt")).toBeNull();
     expect(parseInventoryCode("https://example.org/foo")).toBeNull();
+    expect(parseInventoryCode("T-0")).toBeNull();
+    expect(parseInventoryCode("T-4-0")).toBeNull();
   });
 
   it("erkennt Lagerort-Codes", () => {
     expect(isLocationCode(formatInventoryCode("L", 5))).toBe(true);
-    expect(isLocationCode("T-0005")).toBe(false);
+    expect(isLocationCode("T-5-1")).toBe(false);
   });
 });
 

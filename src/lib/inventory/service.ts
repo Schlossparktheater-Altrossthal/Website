@@ -55,17 +55,49 @@ export async function requireInventoryAccess(level: "use" | "manage" | "catalog"
   return { session, access, userId: session.user?.id ?? null };
 }
 
-/** Vergibt den nächsten freien Code eines Bereichs (zählt atomar hoch). */
-export async function allocateAssetCode(db: Db, areaId: string): Promise<string> {
+/** Vergibt die nächste Typnummer eines Bereichs (zählt atomar hoch). */
+export async function allocateProductNumber(db: Db, areaId: string): Promise<number> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const area = await db.inventoryArea.update({
       where: { id: areaId },
       data: { nextNumber: { increment: 1 } },
-      select: { prefix: true, nextNumber: true },
+      select: { nextNumber: true },
     });
-    const code = formatInventoryCode(area.prefix, area.nextNumber - 1);
+    const number = area.nextNumber - 1;
+    const taken = await db.inventoryProduct.findUnique({
+      where: { areaId_number: { areaId, number } },
+      select: { id: true },
+    });
+    if (!taken) return number;
+  }
+  throw new Error("Keine freie Typnummer gefunden.");
+}
+
+/**
+ * Vergibt den nächsten Code eines Typs: `T-42-3`, bei Mengenartikeln `T-42` ohne Exemplarnummer.
+ * Nummern werden nie wiederverwendet – auch nicht nach dem Ausmustern.
+ */
+export async function allocateAssetCode(
+  db: Db,
+  productId: string,
+): Promise<{ code: string; unitNumber: number | null }> {
+  const product = await db.inventoryProduct.findUniqueOrThrow({
+    where: { id: productId },
+    select: { kind: true, number: true, area: { select: { prefix: true } } },
+  });
+  if (product.kind === "bulk") {
+    return { code: formatInventoryCode(product.area.prefix, product.number), unitNumber: null };
+  }
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const { nextUnitNumber } = await db.inventoryProduct.update({
+      where: { id: productId },
+      data: { nextUnitNumber: { increment: 1 } },
+      select: { nextUnitNumber: true },
+    });
+    const unitNumber = nextUnitNumber - 1;
+    const code = formatInventoryCode(product.area.prefix, product.number, unitNumber);
     const taken = await db.inventoryAsset.findUnique({ where: { code }, select: { id: true } });
-    if (!taken) return code;
+    if (!taken) return { code, unitNumber };
   }
   throw new Error("Kein freier Code gefunden.");
 }

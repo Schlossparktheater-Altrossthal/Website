@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 /**
  * Ziel der QR-Codes auf den Etiketten: `/i/<publicId>` mit zufälliger, nicht erratbarer Kennung.
  * Mitglieder mit Lagerzugriff landen direkt in der Lageransicht, alle anderen sehen eine
- * öffentliche Kurzinfo – ohne Preise, Notizen oder Personen. Lesbare Codes (`/i/T-0042`) lösen
+ * öffentliche Kurzinfo – ohne Preise, Notizen oder Personen. Lesbare Codes (`/i/T-42-3`) lösen
  * nur mit Lagerzugriff auf, damit sich der Bestand von außen nicht durchprobieren lässt.
  */
 export default async function PublicInventoryPage({

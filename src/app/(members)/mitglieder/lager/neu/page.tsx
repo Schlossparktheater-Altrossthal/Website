@@ -71,6 +71,7 @@ export default async function NewAssetPage({ searchParams }: { searchParams: Sea
           <CaptureWizard
             areas={areas}
             canManage={access.canManage}
+            canCatalog={access.canCatalog}
             placementOptions={{ locations, containers }}
             initialPlacement={placement}
             initialProduct={initialProduct}

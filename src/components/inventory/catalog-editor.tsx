@@ -10,6 +10,7 @@ import {
   moveFieldAction,
   saveCategoryAction,
   saveFieldAction,
+  setFieldOverrideAction,
   type FieldTarget,
 } from "@/app/(members)/mitglieder/lager/actions/catalog";
 import {
@@ -34,9 +35,15 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   categoryPath,
+  DIMENSION_UNITS,
   FIELD_TYPE_LABELS,
   FIELD_TYPES,
+  hasOptions,
+  inheritedFields,
+  MAX_CATEGORY_DEPTH,
+  MEASURE_UNITS,
   type FieldDef,
+  type FieldOverride,
   type FieldType,
 } from "@/lib/inventory/specs";
 import { cn } from "@/lib/utils";
@@ -47,6 +54,7 @@ export type CatalogCategory = {
   parentId: string | null;
   name: string;
   fields: CatalogField[];
+  overrides: FieldOverride[];
   productCount: number;
 };
 export type CatalogArea = {
@@ -134,7 +142,8 @@ export function CatalogEditor({ areas }: { areas: CatalogArea[] }) {
         <div>
           <h2 className="font-semibold text-foreground">Kategorien</h2>
           <p className="text-xs text-muted-foreground">
-            Antippen zum Bearbeiten. Unterkategorien erben die Merkmale ihrer Oberkategorie.
+            Antippen zum Bearbeiten. Unterkategorien erben die Merkmale ihrer Oberkategorie –
+            einzelne lassen sich dort abwählen. Höchstens {MAX_CATEGORY_DEPTH} Ebenen.
           </p>
         </div>
         <ul className="space-y-1" role="tree" aria-label={`Kategorien in ${area.name}`}>
@@ -188,7 +197,6 @@ export function CatalogEditor({ areas }: { areas: CatalogArea[] }) {
             key={`area-${area.id}`}
             target={{ type: "area", id: area.id }}
             fields={area.fields}
-            inherited={[]}
             run={run}
           />
         ) : open ? (
@@ -248,6 +256,7 @@ function CategoryNode({
               category.fields.length
                 ? `${category.fields.length} ${category.fields.length === 1 ? "Merkmal" : "Merkmale"}`
                 : null,
+              hiddenCount(category) ? `${hiddenCount(category)} abgewählt` : null,
               category.productCount ? `${category.productCount} Artikel` : null,
             ]
               .filter(Boolean)
@@ -272,6 +281,23 @@ function CategoryNode({
   );
 }
 
+function hiddenCount(category: CatalogCategory) {
+  return category.overrides.filter((override) => override.hidden).length;
+}
+
+/** Höhe des Unterbaums (nur die Kategorie selbst = 1). */
+function subtreeHeight(categories: CatalogCategory[], id: string): number {
+  return (
+    1 +
+    Math.max(
+      0,
+      ...categories
+        .filter((entry) => entry.parentId === id)
+        .map((entry) => subtreeHeight(categories, entry.id)),
+    )
+  );
+}
+
 function CategoryPanel({
   area,
   category,
@@ -289,12 +315,8 @@ function CategoryPanel({
   const [parentId, setParentId] = React.useState(category.parentId ?? ROOT);
   const [child, setChild] = React.useState("");
   const path = categoryPath(area.categories, category.id);
-  const inherited = [
-    ...area.fields.map((field) => ({ field, from: area.name })),
-    ...path
-      .slice(0, -1)
-      .flatMap((entry) => entry.fields.map((field) => ({ field, from: entry.name }))),
-  ];
+  const inherited = inheritedFields(area, path);
+  const height = subtreeHeight(area.categories, category.id);
   // Mögliche Oberkategorien: alle außer sich selbst und den eigenen Unterkategorien.
   const descendants = new Set<string>([category.id]);
   for (let changed = true; changed;) {
@@ -307,7 +329,11 @@ function CategoryPanel({
     }
   }
   const parents = area.categories
-    .filter((entry) => !descendants.has(entry.id))
+    .filter(
+      (entry) =>
+        !descendants.has(entry.id) &&
+        categoryPath(area.categories, entry.id).length + height <= MAX_CATEGORY_DEPTH,
+    )
     .map((entry) => ({
       id: entry.id,
       label: categoryPath(area.categories, entry.id)
@@ -365,39 +391,48 @@ function CategoryPanel({
       <FieldList
         target={{ type: "category", id: category.id }}
         fields={category.fields}
-        inherited={inherited}
         run={run}
       />
 
-      <div className="space-y-2 border-t border-border pt-4">
-        <Label htmlFor="category-child">Unterkategorie anlegen</Label>
-        <form
-          className="flex gap-2"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const result = await saveCategoryAction(area.id, null, {
-              name: child,
-              parentId: category.id,
-            });
-            if (await run(Promise.resolve(result))) {
-              setChild("");
-              if (result.ok && result.data) onOpen(result.data.id);
-            }
-          }}
-        >
-          <Input
-            id="category-child"
-            value={child}
-            onChange={(event) => setChild(event.target.value)}
-            placeholder={`z. B. unter ${category.name}`}
-            className="h-9 min-w-0 flex-1"
-          />
-          <Button type="submit" size="sm" variant="outline" disabled={!child.trim()}>
-            <PlusIcon className="mr-1.5 h-4 w-4" />
-            Anlegen
-          </Button>
-        </form>
-      </div>
+      {inherited.length ? (
+        <InheritedFields categoryId={category.id} rows={inherited} run={run} />
+      ) : null}
+
+      {path.length >= MAX_CATEGORY_DEPTH ? (
+        <p className="border-t border-border pt-4 text-xs text-muted-foreground">
+          Unterkategorien gehen hier nicht mehr – höchstens {MAX_CATEGORY_DEPTH} Ebenen.
+        </p>
+      ) : (
+        <div className="space-y-2 border-t border-border pt-4">
+          <Label htmlFor="category-child">Unterkategorie anlegen</Label>
+          <form
+            className="flex gap-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const result = await saveCategoryAction(area.id, null, {
+                name: child,
+                parentId: category.id,
+              });
+              if (await run(Promise.resolve(result))) {
+                setChild("");
+                if (result.ok && result.data) onOpen(result.data.id);
+              }
+            }}
+          >
+            <Input
+              id="category-child"
+              value={child}
+              onChange={(event) => setChild(event.target.value)}
+              placeholder={`z. B. unter ${category.name}`}
+              className="h-9 min-w-0 flex-1"
+            />
+            <Button type="submit" size="sm" variant="outline" disabled={!child.trim()}>
+              <PlusIcon className="mr-1.5 h-4 w-4" />
+              Anlegen
+            </Button>
+          </form>
+        </div>
+      )}
 
       <div className="border-t border-border pt-4">
         <Button
@@ -463,12 +498,10 @@ const emptyDraft: FieldDraft = {
 function FieldList({
   target,
   fields,
-  inherited,
   run,
 }: {
   target: FieldTarget;
   fields: CatalogField[];
-  inherited: { field: FieldDef; from: string }[];
   run: (promise: Promise<Result>) => Promise<boolean>;
 }) {
   const [draft, setDraft] = React.useState<FieldDraft | null>(null);
@@ -529,7 +562,7 @@ function FieldList({
               </SelectContent>
             </Select>
           </div>
-          {draft.type === "select" ? (
+          {hasOptions(draft.type) ? (
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="field-options">Auswahlwerte</Label>
               <Input
@@ -539,6 +572,31 @@ function FieldList({
                 onChange={(event) => setDraft({ ...draft, options: event.target.value })}
               />
               <p className="text-xs text-muted-foreground">Mit Komma getrennt.</p>
+            </div>
+          ) : null}
+          {draft.type === "measure" || draft.type === "dimensions" ? (
+            <div className="space-y-1.5">
+              <Label>Einheit</Label>
+              <Select
+                value={draft.unit || (draft.type === "dimensions" ? "cm" : "")}
+                onValueChange={(unit) => setDraft({ ...draft, unit })}
+              >
+                <SelectTrigger aria-label="Einheit">
+                  <SelectValue placeholder="Einheit wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(draft.type === "dimensions" ? DIMENSION_UNITS : MEASURE_UNITS).map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {draft.type === "dimensions"
+                  ? "Eingabe in einem Feld, z. B. 120x80x40 – filterbar nach Größe."
+                  : "Andere Einheiten derselben Art werden umgerechnet (500 g → 0,5 kg)."}
+              </p>
             </div>
           ) : null}
           {draft.type === "number" || draft.type === "text" ? (
@@ -552,7 +610,7 @@ function FieldList({
               />
             </div>
           ) : null}
-          {draft.type !== "boolean" && draft.type !== "select" ? (
+          {draft.type !== "boolean" && !hasOptions(draft.type) && draft.type !== "date" ? (
             <div className="space-y-1.5">
               <Label htmlFor="field-placeholder">Beispiel</Label>
               <Input
@@ -672,21 +730,89 @@ function FieldList({
       ) : (
         <p className="text-sm text-muted-foreground">Noch keine eigenen Merkmale.</p>
       )}
-      {inherited.length ? (
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Geerbt</p>
-          <div className="flex flex-wrap gap-1.5">
-            {inherited.map(({ field, from }) => (
-              <span
-                key={`${from}-${field.key}`}
-                className="rounded-full border border-dashed border-border px-3 py-1 text-xs text-muted-foreground"
-              >
-                {field.label} · aus {from}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
+    </div>
+  );
+}
+
+const REQUIRED_INHERIT = "inherit";
+
+/** Geerbte Merkmale einer Kategorie: abwählen oder Pflicht anpassen (gilt auch darunter). */
+function InheritedFields({
+  categoryId,
+  rows,
+  run,
+}: {
+  categoryId: string;
+  rows: ReturnType<typeof inheritedFields>;
+  run: (promise: Promise<Result>) => Promise<boolean>;
+}) {
+  return (
+    <div className="space-y-2">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">Geerbte Merkmale</h3>
+        <p className="text-xs text-muted-foreground">
+          Abgewählte Merkmale fehlen hier und in allen Unterkategorien.
+        </p>
+      </div>
+      <ul className="divide-y divide-border rounded-lg border border-border">
+        {rows.map(({ field, origin, override, hiddenAbove }) => {
+          const hidden = override ? override.hidden : hiddenAbove;
+          const required = override?.required ?? null;
+          const save = (next: { hidden: boolean; required: boolean | null }) =>
+            run(setFieldOverrideAction(categoryId, field.key, next));
+          return (
+            <li key={field.key} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2">
+              <div className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
+                <p
+                  className={cn(
+                    "truncate text-sm font-medium",
+                    hidden ? "text-muted-foreground line-through" : "text-foreground",
+                  )}
+                >
+                  {field.label}
+                  {field.unit ? ` (${field.unit})` : ""}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  aus {origin} · {FIELD_TYPE_LABELS[field.type]}
+                </p>
+              </div>
+              {!hidden && field.type !== "boolean" ? (
+                <Select
+                  value={required === null ? REQUIRED_INHERIT : required ? "yes" : "no"}
+                  onValueChange={(value) =>
+                    save({
+                      hidden: false,
+                      required: value === REQUIRED_INHERIT ? null : value === "yes",
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    className="h-8 w-auto gap-2 text-xs"
+                    aria-label={`${field.label}: Pflicht`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={REQUIRED_INHERIT}>
+                      {field.required ? "Pflicht (geerbt)" : "Optional (geerbt)"}
+                    </SelectItem>
+                    <SelectItem value="yes">Pflicht</SelectItem>
+                    <SelectItem value="no">Optional</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : null}
+              <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                verwenden
+                <Switch
+                  checked={!hidden}
+                  onCheckedChange={(checked) => save({ hidden: !checked, required: null })}
+                  aria-label={`${field.label} hier verwenden`}
+                />
+              </label>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

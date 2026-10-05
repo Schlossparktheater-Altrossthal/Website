@@ -10,6 +10,7 @@ import {
 import { setAssetRetiredInTx } from "@/lib/inventory/asset-write";
 import { CONDITION_LABELS, CONDITIONS, inventoryAssetPath } from "@/lib/inventory/constants";
 import { placeAsset, recordEvent, requireInventoryAccess } from "@/lib/inventory/service";
+import { ASSET_CODE_ORDER } from "@/lib/inventory/selects";
 import { prisma } from "@/lib/prisma";
 
 /** Bestand als Tabelle: Bearbeiten in der Zelle und Aktionen für mehrere Objekte. */
@@ -198,7 +199,7 @@ export async function bulkMoveAssetsAction(
     const assets = await prisma.inventoryAsset.findMany({
       where: { id: { in: ids } },
       select: { id: true, code: true, kind: true, status: true },
-      orderBy: { code: "asc" },
+      orderBy: [...ASSET_CODE_ORDER],
     });
     const outcome: BulkOutcome = { done: 0, skipped: [] };
     for (const asset of assets) {

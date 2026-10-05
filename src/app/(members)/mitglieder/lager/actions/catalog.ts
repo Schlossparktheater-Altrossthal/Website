@@ -10,7 +10,14 @@ import {
 } from "@/lib/inventory/actions-helpers";
 import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
 import { requireInventoryAccess } from "@/lib/inventory/service";
-import { FIELD_TYPES, fieldKeyFromLabel } from "@/lib/inventory/specs";
+import {
+  DIMENSION_UNITS,
+  FIELD_TYPES,
+  fieldKeyFromLabel,
+  hasOptions,
+  MAX_CATEGORY_DEPTH,
+  MEASURE_UNITS,
+} from "@/lib/inventory/specs";
 import { prisma } from "@/lib/prisma";
 
 /** Katalogpflege: Kategorienbaum und Merkmale (docs/Plan/lager-typen-projekte-plan.md, Phase 5). */
@@ -36,6 +43,26 @@ async function assertNoCategoryCycle(id: string, parentId: string | null) {
     });
     current = parent?.parentId ?? null;
   }
+}
+
+/** Ebene einer Kategorie (Hauptkategorie = 1) und Tiefe ihres Unterbaums (nur sie = 1). */
+async function categoryDepths(areaId: string, id: string | null, parentId: string | null) {
+  const categories = await prisma.inventoryCategory.findMany({
+    where: { areaId },
+    select: { id: true, parentId: true },
+  });
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  let parentLevel = 0;
+  for (let current = parentId; current && parentLevel <= MAX_CATEGORY_DEPTH; parentLevel += 1) {
+    current = byId.get(current)?.parentId ?? null;
+  }
+  const height = (nodeId: string): number =>
+    1 +
+    Math.max(
+      0,
+      ...categories.filter((entry) => entry.parentId === nodeId).map((entry) => height(entry.id)),
+    );
+  return parentLevel + (id ? height(id) : 1);
 }
 
 export async function saveCategoryAction(
@@ -66,10 +93,13 @@ export async function saveCategoryAction(
       select: { id: true },
     });
     if (sibling) throw new Error(`„${data.name}“ gibt es auf dieser Ebene schon.`);
+    if (id) await assertNoCategoryCycle(id, data.parentId);
+    if ((await categoryDepths(areaId, id, data.parentId)) > MAX_CATEGORY_DEPTH) {
+      throw new Error(`Kategorien können höchstens ${MAX_CATEGORY_DEPTH} Ebenen tief sein.`);
+    }
 
     let category;
     if (id) {
-      await assertNoCategoryCycle(id, data.parentId);
       category = await prisma.inventoryCategory.update({
         where: { id },
         data,
@@ -126,10 +156,25 @@ const fieldSchema = z
     required: z.boolean().default(false),
     options: z.array(z.string().trim().min(1).max(60)).max(40).default([]),
   })
-  .refine((field) => field.type !== "select" || field.options.length >= 2, {
+  .refine((field) => !hasOptions(field.type) || field.options.length >= 2, {
     message: "Eine Auswahl braucht mindestens zwei Werte.",
     path: ["options"],
-  });
+  })
+  .refine(
+    (field) =>
+      field.type !== "measure" || (MEASURE_UNITS as readonly string[]).includes(field.unit ?? ""),
+    { message: "Bitte eine Einheit für den Messwert wählen.", path: ["unit"] },
+  )
+  .transform((field) =>
+    field.type === "dimensions"
+      ? {
+          ...field,
+          unit: (DIMENSION_UNITS as readonly string[]).includes(field.unit ?? "")
+            ? field.unit
+            : "cm",
+        }
+      : field,
+  );
 
 export type FieldTarget = { type: "area"; id: string } | { type: "category"; id: string };
 
@@ -159,7 +204,7 @@ export async function saveFieldAction(
   try {
     await requireInventoryAccess("catalog");
     const data = fieldSchema.parse(input);
-    const options = data.type === "select" ? [...new Set(data.options)] : [];
+    const options = hasOptions(data.type) ? [...new Set(data.options)] : [];
     if (id) {
       // Der Schlüssel bleibt fest – gespeicherte Werte hängen daran.
       await prisma.inventoryFieldDef.update({
@@ -236,4 +281,76 @@ export async function moveFieldAction(
     console.error("moveFieldAction", error);
     return failure(error, "Reihenfolge konnte nicht geändert werden.");
   }
+}
+
+const overrideSchema = z.object({
+  hidden: z.boolean(),
+  required: z.boolean().nullable(),
+});
+
+/**
+ * Ausnahme für ein geerbtes Merkmal ab einer Kategorie setzen (ausblenden, Pflicht ändern).
+ * Ohne Abweichung wird die Ausnahme entfernt.
+ */
+export async function setFieldOverrideAction(
+  categoryId: string,
+  key: string,
+  input: z.input<typeof overrideSchema>,
+): Promise<InventoryActionResult> {
+  try {
+    await requireInventoryAccess("catalog");
+    const data = overrideSchema.parse(input);
+    const category = await prisma.inventoryCategory.findUniqueOrThrow({
+      where: { id: categoryId },
+      select: { areaId: true, parentId: true },
+    });
+    const field = await prisma.inventoryFieldDef.findFirst({
+      where: { key, OR: [{ areaId: category.areaId }, { category: { areaId: category.areaId } }] },
+      select: { id: true },
+    });
+    if (!field) throw new Error("Merkmal nicht gefunden.");
+    // Ausblenden ist der Normalfall der Ausnahme; „sichtbar“ ohne Pflichtänderung braucht es nur,
+    // wenn eine Oberkategorie das Merkmal ausgeblendet hat.
+    const hiddenAbove = category.parentId ? await isHiddenAbove(category.parentId, key) : false;
+    if (data.hidden === hiddenAbove && data.required === null) {
+      await prisma.inventoryCategoryFieldOverride.deleteMany({ where: { categoryId, key } });
+    } else {
+      await prisma.inventoryCategoryFieldOverride.upsert({
+        where: { categoryId_key: { categoryId, key } },
+        create: { categoryId, key, ...data },
+        update: data,
+      });
+    }
+    revalidateInventory(CATALOG_PATH);
+    return {
+      ok: true,
+      message: data.hidden ? "Merkmal hier ausgeblendet." : "Merkmal angepasst.",
+    };
+  } catch (error) {
+    console.error("setFieldOverrideAction", error);
+    return failure(error, "Ausnahme konnte nicht gespeichert werden.");
+  }
+}
+
+/** Ob ein Merkmal in einer Kategorie (über ihre eigenen Ausnahmen und Eltern) ausgeblendet ist. */
+async function isHiddenAbove(categoryId: string, key: string): Promise<boolean> {
+  for (let current: string | null = categoryId, depth = 0; current && depth < 10; depth += 1) {
+    const category: {
+      parentId: string | null;
+      overrides: { hidden: boolean }[];
+      fields: { id: string }[];
+    } | null = await prisma.inventoryCategory.findUnique({
+      where: { id: current },
+      select: {
+        parentId: true,
+        overrides: { where: { key }, select: { hidden: true } },
+        fields: { where: { key }, select: { id: true } },
+      },
+    });
+    if (!category) return false;
+    if (category.overrides[0]) return category.overrides[0].hidden;
+    if (category.fields.length) return false;
+    current = category.parentId;
+  }
+  return false;
 }

@@ -16,6 +16,7 @@ import {
   productData,
   productSchema,
   setAssetRetiredInTx,
+  tagsData,
 } from "@/lib/inventory/asset-write";
 import {
   addMonths,
@@ -144,6 +145,84 @@ export async function searchProductsAction(
   }
 }
 
+/** Tags ohne Artikel räumen sich selbst weg – sonst wüchse die Vorschlagsliste endlos. */
+async function deleteUnusedTags(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) {
+  await tx.inventoryTag.deleteMany({ where: { products: { none: {} } } });
+}
+
+/** Tag-Vorschläge beim Tippen: häufig genutzte zuerst. */
+export async function searchTagsAction(
+  query: string,
+): Promise<InventoryActionResult<{ name: string; count: number }[]>> {
+  try {
+    await requireInventoryAccess("use");
+    const text = z
+      .string()
+      .max(40)
+      .parse(query ?? "")
+      .trim();
+    const tags = await prisma.inventoryTag.findMany({
+      where: text ? { name: { contains: text, mode: "insensitive" } } : {},
+      select: { name: true, _count: { select: { products: true } } },
+      orderBy: { products: { _count: "desc" } },
+      take: 12,
+    });
+    return {
+      ok: true,
+      data: tags.map((tag) => ({ name: tag.name, count: tag._count.products })),
+    };
+  } catch (error) {
+    return failure(error, "Tags konnten nicht geladen werden.");
+  }
+}
+
+/**
+ * Kategorie-Vorschläge aus dem Typnamen: Typen mit ähnlichen Wörtern im Namen → deren häufigste
+ * Kategorien (höchstens drei).
+ */
+export async function suggestCategoriesAction(
+  name: string,
+): Promise<InventoryActionResult<string[]>> {
+  try {
+    await requireInventoryAccess("use");
+    const words = z
+      .string()
+      .max(120)
+      .parse(name ?? "")
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((word) => word.length >= 3 && !/^\d+$/.test(word))
+      .slice(0, 6);
+    if (!words.length) return { ok: true, data: [] };
+    const products = await prisma.inventoryProduct.findMany({
+      where: {
+        categoryId: { not: null },
+        OR: words.map((word) => ({ name: { contains: word, mode: "insensitive" as const } })),
+      },
+      select: { name: true, categoryId: true },
+      take: 200,
+    });
+    // Das erste Wort ist meist die Art („PAR 64 schwarz“) und zählt doppelt; Treffer nur über
+    // Farbe o. Ä. sollen keine Kategorie vorschlagen, wenn es bessere gibt.
+    const scores = new Map<string, number>();
+    for (const product of products) {
+      const lower = product.name.toLowerCase();
+      const score = words.reduce(
+        (sum, word, index) => sum + (lower.includes(word.toLowerCase()) ? (index ? 1 : 2) : 0),
+        0,
+      );
+      scores.set(product.categoryId!, Math.max(scores.get(product.categoryId!) ?? 0, score));
+    }
+    const best = Math.max(0, ...scores.values());
+    const data = [...scores.entries()]
+      .filter(([, score]) => score === best)
+      .slice(0, 3)
+      .map(([id]) => id);
+    return { ok: true, data };
+  } catch (error) {
+    return failure(error, "Vorschläge fehlgeschlagen.");
+  }
+}
+
 const productUpdateSchema = productSchema.omit({ kind: true });
 
 /** Stammdaten eines Artikeltyps ändern – gilt für alle Exemplare. */
@@ -171,7 +250,11 @@ export async function updateProductAction(
 
     await prisma.$transaction(async (tx) => {
       const data = await productData(tx, { ...input, kind: existing.kind });
-      await tx.inventoryProduct.update({ where: { id: productId }, data });
+      await tx.inventoryProduct.update({
+        where: { id: productId },
+        data: { ...data, tags: { set: [], ...(await tagsData(tx, input.tags)) } },
+      });
+      await deleteUnusedTags(tx);
       // Prüftermine nachziehen: ohne Prüfpflicht keine, sonst aus der letzten Prüfung.
       for (const asset of existing.assets) {
         let nextInspectionAt: Date | null = null;

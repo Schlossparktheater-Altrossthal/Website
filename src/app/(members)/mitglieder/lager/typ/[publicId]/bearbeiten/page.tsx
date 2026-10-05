@@ -4,6 +4,7 @@ import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { ProductForm } from "@/components/inventory/product-form";
 import { PageHeader } from "@/components/members/page-header";
 import { specsToFormValues } from "@/lib/inventory/asset-form-values";
+import { catalogFields } from "@/lib/inventory/specs";
 import { loadInventoryCatalog } from "@/lib/inventory/catalog";
 import { INVENTORY_BASE_PATH, inventoryProductPath } from "@/lib/inventory/constants";
 import { getInventoryProductDetail } from "@/lib/inventory/queries";
@@ -52,12 +53,20 @@ export default async function EditProductPage({
             model: product.model ?? "",
             description: product.description ?? "",
             publicNote: product.publicNote ?? "",
-            specs: specsToFormValues(product.specs),
+            specs: specsToFormValues(
+              product.specs,
+              catalogFields(
+                areas.find((area) => area.id === product.area.id),
+                product.categoryId,
+              ),
+            ),
             unit: product.unit ?? "",
             minQuantity: product.minQuantity?.toString() ?? "",
             inspectionRequired: product.inspectionRequired,
             inspectionIntervalMonths: product.inspectionIntervalMonths?.toString() ?? "12",
+            tags: product.tags,
           }}
+          canCatalog={access.canCatalog}
         />
       </div>
     </div>

@@ -37,15 +37,11 @@ async function createAsset(
   await page.getByRole("button", { name: /anlegen$|^Anlegen$/ }).click();
   const range = page.locator("p.text-sm .font-mono").first();
   await expect(range).toBeVisible({ timeout: 20_000 });
-  const ends = (await range.textContent())?.match(/T-\d{4,}/g) ?? [];
+  const ends = (await range.textContent())?.match(/T-\d+-\d+/g) ?? [];
   expect(ends).toHaveLength(count > 1 ? 2 : 1);
-  // „T-0002 … T-0004“ – die Codes dazwischen sind fortlaufend.
-  const from = Number(ends[0]!.slice(2));
-  const width = ends[0]!.length - 2;
-  return Array.from(
-    { length: count },
-    (_, index) => `T-${String(from + index).padStart(width, "0")}`,
-  );
+  // „T-12-1 … T-12-3“ – Typnummer fest, Exemplarnummern fortlaufend.
+  const [, type, first] = ends[0]!.match(/^T-(\d+)-(\d+)$/)!;
+  return Array.from({ length: count }, (_, index) => `T-${type}-${Number(first) + index}`);
 }
 
 test.describe("als admin", () => {
@@ -71,7 +67,7 @@ test.describe("als admin", () => {
     await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
     const locationLink = page.getByRole("link", { name: new RegExp(locationName) });
     await expect(locationLink).toBeVisible();
-    const locationCode = (await locationLink.textContent())?.match(/L-\d{4,}/)?.[0];
+    const locationCode = (await locationLink.textContent())?.match(/L-\d+/)?.[0];
     expect(locationCode).toBeTruthy();
 
     // Kiste und Gerät erfassen.

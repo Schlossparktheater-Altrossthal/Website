@@ -16,7 +16,7 @@ import { resetItState, signInAsAdmin } from "./harness";
 describe("Lager: Sammelerfassung", () => {
   beforeEach(resetItState);
 
-  it("legt gültige Zeilen mit fortlaufenden Codes an und meldet fehlerhafte einzeln", async () => {
+  it("legt gültige Zeilen mit Typ-Codes an und meldet fehlerhafte einzeln", async () => {
     await signInAsAdmin();
     const technik = await prisma.inventoryArea.findUniqueOrThrow({ where: { prefix: "T" } });
     const kostuem = await prisma.inventoryArea.findUniqueOrThrow({ where: { prefix: "K" } });
@@ -57,10 +57,8 @@ describe("Lager: Sammelerfassung", () => {
     expect(results.map((entry) => entry.ok)).toEqual([true, false, true, false]);
     expect(result.message).toBe("2 von 4 angelegt.");
     const codes = results.flatMap((entry) => (entry.ok ? entry.codes : []));
-    expect(codes).toEqual([
-      `T-${String(start).padStart(4, "0")}`,
-      `T-${String(start + 1).padStart(4, "0")}`,
-    ]);
+    // Jede Zeile ist ein neuer Typ: Einzelstück „T-<Typ>-1“, Mengenartikel „T-<Typ>“.
+    expect(codes).toEqual([`T-${start}-1`, `T-${start + 1}`]);
 
     const par = await prisma.inventoryAsset.findUniqueOrThrow({ where: { code: codes[0] } });
     expect(par.locationId).toBe(ort.id);

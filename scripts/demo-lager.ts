@@ -11,7 +11,11 @@
 import { createAssetInTx, type AssetInput } from "@/lib/inventory/asset-write";
 import { addMonths } from "@/lib/inventory/constants";
 import { createPublicId } from "@/lib/inventory/public-id";
-import { allocateLocationCode, refreshAssetStatus } from "@/lib/inventory/service";
+import {
+  allocateLocationCode,
+  allocateProductNumber,
+  refreshAssetStatus,
+} from "@/lib/inventory/service";
 import { prisma } from "@/lib/prisma";
 
 const ROOT = "Demo-Lager";
@@ -34,6 +38,7 @@ async function remove() {
   // Sets zuerst – ihre Bestandteile dürfen erst danach weg.
   await prisma.inventoryProduct.deleteMany({ where: { id: { in: productIds }, kind: "set" } });
   await prisma.inventoryProduct.deleteMany({ where: { id: { in: productIds } } });
+  await prisma.inventoryTag.deleteMany({ where: { products: { none: {} } } });
   const root = await prisma.inventoryLocation.findFirst({ where: { name: ROOT, parentId: null } });
   if (root) {
     await prisma.inventoryLocation.deleteMany({ where: { parentId: root.id } });
@@ -73,6 +78,7 @@ async function capture(draft: Draft) {
     minQuantity: null,
     inspectionRequired: false,
     inspectionIntervalMonths: null,
+    tags: [],
     label: null,
     serialNumber: null,
     internalNote: null,
@@ -103,6 +109,7 @@ async function main() {
 
   const technik = await area("T");
   const kostuem = await area("K");
+  const buehnenbau = await area("B");
   const category = (entry: Awaited<ReturnType<typeof area>>, name: string) =>
     entry.categories.find((item) => item.name === name)?.id ?? null;
 
@@ -129,7 +136,8 @@ async function main() {
     name: "Demo LED-PAR 64 RGBW",
     manufacturer: "Eurolite",
     model: "LED PAR-64 RGBW",
-    specs: { power: "180", connector: "Schuko", dmxChannels: "8" },
+    specs: { power: "180", connector: "Schuko", dmxChannels: "8", weight: "3,2" },
+    tags: ["LED", "DMX"],
     inspectionRequired: true,
     inspectionIntervalMonths: 12,
     count: 6,
@@ -161,7 +169,8 @@ async function main() {
     name: "Demo Profilscheinwerfer 750 W",
     manufacturer: "ETC",
     model: "Source Four",
-    specs: { power: "750", lamp: "HPL 750", beamAngle: "26" },
+    specs: { power: "750", lamp: "HPL 750", beamAngle: "26", weight: "8500 g" },
+    tags: ["DMX"],
     inspectionRequired: true,
     count: 3,
     nextInspectionAt: addMonths(now, -1),
@@ -216,7 +225,8 @@ async function main() {
     areaId: kostuem.id,
     categoryId: category(kostuem, "Kostüm"),
     name: "Demo Gehrock dunkelblau",
-    specs: { size: "52", era: "1880er", color: "dunkelblau", material: "Wolle", gender: "Herren" },
+    specs: { size: "52", material: "Wolle", gender: "Herren" },
+    tags: ["1880er", "dunkelblau"],
     publicNote: "Bitte nur mit Kleiderhülle transportieren.",
     placement: { type: "location", id: fundus.id },
   });
@@ -225,9 +235,24 @@ async function main() {
     categoryId: category(kostuem, "Hüte & Perücken"),
     name: "Demo Zylinder schwarz",
     specs: { size: "58" },
+    tags: ["1880er"],
     count: 2,
     placement: { type: "location", id: fundus.id },
   });
+  for (const [name, dims, count] of [
+    ["Demo Podest 2 × 1 m", "200x100x40", 6],
+    ["Demo Treppe 3 Stufen", "100x60x60", 2],
+    ["Demo Kulissenwand", "300 x 20 x 250 cm", 4],
+  ] as const) {
+    await capture({
+      areaId: buehnenbau.id,
+      name,
+      specs: { dimensions: dims },
+      tags: name.includes("Podest") ? ["Holz", "Podesterie"] : ["Holz"],
+      count,
+      placement: { type: "location", id: buehne.id },
+    });
+  }
   // Funkstrecke als Set aus Sender und Empfänger.
   const funk = category(technik, "Funkstrecken");
   await capture({
@@ -257,6 +282,7 @@ async function main() {
     data: {
       publicId: createPublicId(),
       areaId: technik.id,
+      number: await allocateProductNumber(prisma, technik.id),
       categoryId: funk,
       kind: "set",
       name: "Demo Funkstrecke",

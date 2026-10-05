@@ -8,6 +8,7 @@ import {
   formatInventoryDate,
 } from "@/lib/inventory/constants";
 import { getInventoryAccess, loadLocationLabeler } from "@/lib/inventory/service";
+import { ASSET_CODE_ORDER } from "@/lib/inventory/selects";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/rbac";
 
@@ -30,7 +31,7 @@ export async function GET() {
   const [assets, labeler] = await Promise.all([
     prisma.inventoryAsset.findMany({
       where: { status: { not: "retired" } },
-      orderBy: { code: "asc" },
+      orderBy: [...ASSET_CODE_ORDER],
       select: {
         code: true,
         label: true,

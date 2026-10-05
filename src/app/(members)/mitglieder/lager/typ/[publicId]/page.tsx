@@ -267,6 +267,19 @@ export default async function ProductDetailPage({
                 </div>
               ))}
             </dl>
+            {product.tags.length ? (
+              <div className="flex flex-wrap gap-1.5" aria-label="Tags">
+                {product.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`${INVENTORY_BASE_PATH}?tag=${encodeURIComponent(tag)}`}
+                    className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-foreground hover:border-primary"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
             {product.description ? (
               <p className="text-sm whitespace-pre-line text-foreground">{product.description}</p>
             ) : null}

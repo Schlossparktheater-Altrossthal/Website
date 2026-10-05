@@ -59,6 +59,9 @@ function ProductSummary({ item }: { item: InventoryProductListItem }) {
       </span>
       {item.categoryPath ? <span className="hidden sm:inline"> · {item.categoryPath}</span> : null}
       {` · ${placesText(item.places)}`}
+      {item.tags.length ? (
+        <span className="hidden sm:inline"> · {item.tags.join(", ")}</span>
+      ) : null}
     </>
   );
 }

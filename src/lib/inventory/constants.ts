@@ -157,16 +157,20 @@ export function addMonths(date: Date, months: number): Date {
 /** Präfix für Lagerort-Labels. Bereiche dürfen dieses Präfix nicht verwenden. */
 export const LOCATION_CODE_PREFIX = "L";
 
-export function formatInventoryCode(prefix: string, number: number): string {
-  const digits = number < 10_000 ? 4 : String(number).length;
-  return `${prefix}-${String(number).padStart(digits, "0")}`;
+/**
+ * Lesbarer Code ohne führende Nullen: `T-42-3` (Bereich-Typ-Exemplar), Mengenartikel `T-42`,
+ * Lagerorte `L-7`.
+ */
+export function formatInventoryCode(prefix: string, number: number, unit?: number | null): string {
+  return unit ? `${prefix}-${number}-${unit}` : `${prefix}-${number}`;
 }
 
-const CODE_PATTERN = /^([A-Z]{1,3})-?(\d{1,7})$/;
+const CODE_PATTERN = /^([A-Z]{1,3})-?0*(\d{1,6})(?:[-.]0*(\d{1,5}))?$/;
 
 /**
- * Liest einen Code aus einem Scan oder einer Eingabe: akzeptiert die QR-URL (`…/i/T-0042`),
- * den reinen Code und Varianten ohne Bindestrich oder führende Nullen („t42“).
+ * Liest einen Code aus einem Scan oder einer Eingabe: akzeptiert die QR-URL (`…/i/T-42-3`), den
+ * reinen Code und Varianten mit führenden Nullen, Kleinschreibung oder ohne ersten Strich
+ * („t042-03“, „T42.3“).
  */
 export function parseInventoryCode(raw: string): string | null {
   const trimmed = raw.trim();
@@ -178,13 +182,16 @@ export function parseInventoryCode(raw: string): string | null {
   }
   const match = candidate.toUpperCase().replace(/\s+/g, "").match(CODE_PATTERN);
   if (!match) return null;
-  return formatInventoryCode(match[1]!, Number(match[2]));
+  const number = Number(match[2]);
+  const unit = match[3] === undefined ? null : Number(match[3]);
+  if (!number || unit === 0) return null;
+  return formatInventoryCode(match[1]!, number, unit);
 }
 
 /**
  * Liest einen Scan: QR-URL mit zufälliger Kennung (`…/i/<publicId>`) oder eine nackte
  * Kennung ergibt die `publicId`, sonst der normalisierte lesbare Code. Der Server löst beides mit
- * `resolveScanToken` auf. Kennungen (12 Zeichen) und Codes (höchstens 11) überschneiden sich nicht.
+ * `resolveScanToken` auf. Kennungen (Base58) enthalten keinen Bindestrich, Codes immer – sie überschneiden sich nicht.
  */
 export function parseScanToken(raw: string): string | null {
   const trimmed = raw.trim();

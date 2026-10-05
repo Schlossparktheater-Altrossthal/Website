@@ -57,10 +57,10 @@ const ctx: BulkContext = {
   ],
   placement: {
     locations: [
-      { id: "l1", code: "L-0003", path: "Lager › Regal A" },
-      { id: "l2", code: "L-0004", path: "Lager › Regal B" },
+      { id: "l1", code: "L-3", path: "Lager › Regal A" },
+      { id: "l2", code: "L-4", path: "Lager › Regal B" },
     ],
-    containers: [{ id: "k1", code: "T-0100", name: "Kabelkiste", path: "Lager" }],
+    containers: [{ id: "k1", code: "T-100", name: "Kabelkiste", path: "Lager" }],
   },
   canManage: false,
   mixed: false,
@@ -101,7 +101,7 @@ describe("Spalten", () => {
   it("löst Ort per Code, Scan-URL und Kiste auf", () => {
     const placement = column("placement");
     expect(commitCellValue(placement, row({}), "l3")).toBe("location:l1");
-    expect(commitCellValue(placement, row({}), "https://x.de/i/T-0100")).toBe("container:k1");
+    expect(commitCellValue(placement, row({}), "https://x.de/i/T-100")).toBe("container:k1");
     expect(commitCellValue(placement, row({}), "regal b")).toBe("location:l2");
     expect(cellDisplay(placement, row({ placement: "irgendwo" }))).toEqual({
       text: "irgendwo",
@@ -113,7 +113,7 @@ describe("Spalten", () => {
 describe("validateRow", () => {
   it("baut die Eingabe für ein Einzelstück mit Bereichsvorgaben", () => {
     const result = validateRow(
-      row({ name: " PAR 64 ", category: "licht", placement: "L-0003", "attr.power": "575 W" }),
+      row({ name: " PAR 64 ", category: "licht", placement: "L-3", "attr.power": "575 W" }),
       ctx,
     );
     expect(result.errors).toEqual({});
@@ -133,7 +133,7 @@ describe("validateRow", () => {
 
   it("Mengenartikel: Menge, Einheit, keine Prüfpflicht", () => {
     const result = validateRow(
-      row({ name: "Schuko", kind: "menge", quantity: "24", placement: "L-0003" }),
+      row({ name: "Schuko", kind: "menge", quantity: "24", placement: "L-3" }),
       ctx,
     );
     expect(result.input).toMatchObject({

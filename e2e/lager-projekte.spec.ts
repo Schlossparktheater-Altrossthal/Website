@@ -55,7 +55,7 @@ test.describe("als admin", () => {
     await page.getByRole("button", { name: "2 anlegen" }).click();
     await expect(page.getByText("2 Exemplare angelegt")).toBeVisible({ timeout: 20_000 });
     const range = (await page.locator("p.text-sm .font-mono").first().textContent()) ?? "";
-    const [first] = range.match(/T-\d{4,}/g) ?? [];
+    const [first] = range.match(/T-\d+(?:-\d+)?/g) ?? [];
     expect(first).toBeTruthy();
 
     // Set aus zwei Lampen: aus dem Bestand lässt sich genau eines zusammenstellen.
@@ -95,8 +95,9 @@ test.describe("als admin", () => {
       await page.getByRole("button", { name: "Löschen" }).click();
       await expect(page).toHaveURL(/\/lager\/projekte$/);
     }
-    const from = Number(first!.slice(2));
-    for (const code of [first!, `T-${String(from + 1).padStart(first!.length - 2, "0")}`]) {
+    // „T-12-1“ → zweites Exemplar „T-12-2“.
+    const [, type, unit] = first!.match(/^T-(\d+)-(\d+)$/)!;
+    for (const code of [first!, `T-${type}-${Number(unit) + 1}`]) {
       await page.goto(`/mitglieder/lager/objekt/${code}`);
       await clickUntil(page.getByRole("button", { name: "Weitere Aktionen" }), () =>
         expect(page.getByRole("menuitem", { name: "Ausmustern" })).toBeVisible(),
