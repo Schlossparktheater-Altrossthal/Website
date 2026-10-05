@@ -5,27 +5,42 @@ import { toast } from "sonner";
 
 import {
   assignIngredientFoodAction,
-  searchFoodItemsAction,
-  type FoodItemOption,
+  assignIngredientTaxaAction,
+  confirmIngredientAction,
+  ingredientOptionsAction,
+  searchFoodOptionsAction,
 } from "@/app/(members)/mitglieder/rezepte/actions";
-import { Badge } from "@/components/ui/badge";
+import { CheckIcon, SearchIcon } from "@/components/ui/action-icons";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { formatAmount } from "@/lib/food/recipes/format";
+import type { FoodOption, IngredientOptions } from "@/lib/food/recipes/ingredient-options";
 import type { RecipeDetail } from "@/lib/food/recipes/queries";
+import type { TaxonSuggestion } from "@/lib/food/taxon-suggestions";
+import { cn } from "@/lib/utils";
 
 type Ingredient = RecipeDetail["ingredients"][number];
 
 const SEARCH_DELAY_MS = 250;
 
-/** Zutatenliste mit Portionen-Umschalter und Zuordnung von Hand (wird gelernt). */
+type LineState = "unclear" | "check" | "noNutrients" | "ok";
+
+function lineState(ingredient: Ingredient): LineState {
+  if (ingredient.status === "UNCLEAR") return "unclear";
+  if (ingredient.status === "PARTIAL") return "check";
+  if (!ingredient.foodName) return "noNutrients";
+  return "ok";
+}
+
+const STATE_LABEL: Record<LineState, string> = {
+  unclear: "zuordnen",
+  check: "prüfen",
+  noNutrients: "ohne Nährwerte",
+  ok: "",
+};
+
+/** Zutatenliste mit Portionen-Umschalter; Antippen einer Zeile öffnet die Zuordnung. */
 export function RecipeIngredients({
   recipeId,
   servings,
@@ -38,11 +53,19 @@ export function RecipeIngredients({
   const [portions, setPortions] = useState(servings);
   const [mapping, setMapping] = useState<Ingredient | null>(null);
   const factor = portions / servings;
+  const open = ingredients.filter((item) => item.status === "UNCLEAR" || item.status === "PARTIAL");
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">Zutaten</h2>
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Zutaten</h2>
+          {open.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {open.length === 1 ? "1 Zutat prüfen" : `${open.length} Zutaten prüfen`} – antippen
+            </p>
+          ) : null}
+        </div>
         <div className="flex items-center gap-1" aria-label="Portionen">
           <Button
             type="button"
@@ -70,73 +93,133 @@ export function RecipeIngredients({
           </Button>
         </div>
       </div>
-      <ul className="divide-y divide-border">
+      <ul className="-mx-2 divide-y divide-border">
         {ingredients.map((ingredient) => {
-          const unresolved = ingredient.status === "UNCLEAR" || ingredient.status === "PARTIAL";
-          const withoutNutrients = !ingredient.foodName;
+          const state = lineState(ingredient);
+          const mappedTo =
+            ingredient.foodName ??
+            (ingredient.taxonNames.length > 0 ? ingredient.taxonNames.join(", ") : null);
           return (
-            <li key={ingredient.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2">
-              <span className="w-16 shrink-0 text-sm tabular-nums text-muted-foreground sm:w-24">
-                {formatAmount(ingredient.amount, ingredient.unit, factor)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="break-words text-sm text-foreground">
-                  {ingredient.name}
+            <li key={ingredient.id}>
+              <button
+                type="button"
+                onClick={() => setMapping(ingredient)}
+                className="flex w-full items-start gap-3 rounded-md px-2 py-2 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="w-16 shrink-0 pt-px text-sm tabular-nums text-muted-foreground sm:w-20">
+                  {formatAmount(ingredient.amount, ingredient.unit, factor)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words text-sm text-foreground">
+                    {ingredient.name}
+                    {ingredient.optional ? (
+                      <span className="text-muted-foreground"> (optional)</span>
+                    ) : null}
+                  </span>
                   {ingredient.note ? (
-                    <span className="text-muted-foreground">, {ingredient.note}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {ingredient.note}
+                    </span>
                   ) : null}
-                  {ingredient.optional ? (
-                    <span className="text-muted-foreground"> (optional)</span>
+                  {mappedTo && state !== "unclear" ? (
+                    <span className="block truncate text-xs text-muted-foreground/80">
+                      → {mappedTo}
+                    </span>
                   ) : null}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {ingredient.foodName ??
-                    (ingredient.taxonNames.length > 0
-                      ? ingredient.taxonNames.join(", ")
-                      : "nicht zugeordnet")}
-                </p>
-              </div>
-              {unresolved ? (
-                <button
-                  type="button"
-                  onClick={() => setMapping(ingredient)}
-                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Badge variant="warning" size="sm">
-                    {ingredient.status === "UNCLEAR" ? "zuordnen" : "unsicher – prüfen"}
-                  </Badge>
-                </button>
-              ) : withoutNutrients ? (
-                <button
-                  type="button"
-                  onClick={() => setMapping(ingredient)}
-                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Badge variant="muted" size="sm">
-                    ohne Nährwerte
-                  </Badge>
-                </button>
-              ) : (
-                <Button
-                  type="button"
-                  size="xs"
-                  variant="ghost"
-                  className="text-muted-foreground"
-                  onClick={() => setMapping(ingredient)}
-                >
-                  ändern
-                </Button>
-              )}
+                </span>
+                {state === "ok" ? (
+                  <CheckIcon
+                    className="mt-0.5 h-4 w-4 shrink-0 text-success"
+                    aria-label="zugeordnet"
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+                      state === "noNutrients"
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-warning/15 text-foreground",
+                    )}
+                  >
+                    {STATE_LABEL[state]}
+                  </span>
+                )}
+              </button>
             </li>
           );
         })}
       </ul>
-      <FoodItemDialog recipeId={recipeId} ingredient={mapping} onClose={() => setMapping(null)} />
+      <IngredientSheet recipeId={recipeId} ingredient={mapping} onClose={() => setMapping(null)} />
     </div>
   );
 }
 
-function FoodItemDialog({
+function AllergenChips({ allergens }: { allergens: string[] }) {
+  if (allergens.length === 0) {
+    return <span className="text-xs text-muted-foreground">keine Hauptallergene</span>;
+  }
+  return (
+    <span className="flex flex-wrap gap-1">
+      {allergens.map((name) => (
+        <span
+          key={name}
+          className="rounded-full bg-warning/15 px-1.5 py-px text-[11px] font-medium text-foreground"
+        >
+          {name}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function OptionButton({
+  title,
+  subtitle,
+  allergens,
+  disabled,
+  onClick,
+}: {
+  title: string;
+  subtitle?: string | null;
+  /** `null`: unbekannt (Suchtreffer), dann keine Angabe statt „keine Hauptallergene“. */
+  allergens: string[] | null;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-lg border border-border px-3 py-2 text-left hover:bg-muted/50 disabled:opacity-50"
+    >
+      <span className="min-w-0 flex-1 space-y-1">
+        <span className="block break-words text-sm font-medium text-foreground">{title}</span>
+        {subtitle ? <span className="block text-xs text-muted-foreground">{subtitle}</span> : null}
+        {allergens ? <AllergenChips allergens={allergens} /> : null}
+      </span>
+      <CheckIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
+function SectionLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {children}
+      </p>
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * Zuordnung einer Zutat: oben der jetzige Stand mit Allergenen („Passt so“), darunter
+ * Lebensmittel (bringen Nährwerte) und reine Inhaltsstoffe, dazu eine Suche. Jede Wahl gilt
+ * künftig auch für gleichnamige Zutaten.
+ */
+function IngredientSheet({
   recipeId,
   ingredient,
   onClose,
@@ -145,88 +228,183 @@ function FoodItemDialog({
   ingredient: Ingredient | null;
   onClose: () => void;
 }) {
+  const [options, setOptions] = useState<IngredientOptions | null>(null);
   const [query, setQuery] = useState("");
-  const [options, setOptions] = useState<FoodItemOption[]>([]);
+  const [foodResults, setFoodResults] = useState<FoodOption[]>([]);
+  const [taxonResults, setTaxonResults] = useState<(TaxonSuggestion & { allergens: null })[]>([]);
   const [saving, startSave] = useTransition();
 
   useEffect(() => {
-    if (ingredient) setQuery(ingredient.name);
-  }, [ingredient]);
-
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!ingredient || trimmed.length < 2) {
-      setOptions([]);
-      return;
-    }
+    if (!ingredient) return;
     let cancelled = false;
-    const timer = setTimeout(() => {
-      searchFoodItemsAction(trimmed)
-        .then((items) => {
-          if (!cancelled) setOptions(items);
-        })
-        .catch((error: unknown) =>
-          console.warn("[recipe] Lebensmittelsuche fehlgeschlagen", error),
-        );
-    }, SEARCH_DELAY_MS);
+    ingredientOptionsAction(recipeId, ingredient.id)
+      .then((result) => {
+        if (!cancelled && result.ok) setOptions(result.data);
+      })
+      .catch((error: unknown) => console.warn("[recipe] Vorschläge fehlgeschlagen", error));
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      setOptions(null);
+      setQuery("");
     };
-  }, [query, ingredient]);
+  }, [recipeId, ingredient]);
 
-  const pick = (option: FoodItemOption) => {
-    if (!ingredient) return;
+  const searching = query.trim().length >= 2;
+  useEffect(() => {
+    if (!searching) return;
+    const trimmed = query.trim();
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      searchFoodOptionsAction(trimmed)
+        .then((items) => !controller.signal.aborted && setFoodResults(items))
+        .catch(() => undefined);
+      fetch(`/api/food/taxa?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal })
+        .then((response) => (response.ok ? response.json() : { items: [] }))
+        .then((data: { items?: TaxonSuggestion[] }) =>
+          setTaxonResults(
+            (data.items ?? []).slice(0, 5).map((item) => ({ ...item, allergens: null })),
+          ),
+        )
+        .catch(() => undefined);
+    }, SEARCH_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, searching]);
+
+  const done = (message: string) => {
+    toast.success(message, {
+      description: "Gleichnamige Zutaten werden künftig genauso zugeordnet.",
+      duration: 3000,
+    });
+    onClose();
+  };
+
+  const run = (action: () => Promise<{ ok: boolean; error?: string }>, message: string) =>
     startSave(async () => {
-      const result = await assignIngredientFoodAction(recipeId, ingredient.id, option.id);
+      const result = await action();
       if (!result.ok) {
         toast.error("Nicht gespeichert", { description: result.error, duration: 5000 });
         return;
       }
-      toast.success(`„${ingredient.name}“ → ${option.name}`, {
-        description: "Gleichnamige Zutaten werden künftig genauso zugeordnet.",
-        duration: 3000,
-      });
-      onClose();
+      done(message);
     });
-  };
+
+  if (!ingredient) return null;
+  const name = ingredient.name;
+  const foods = searching ? foodResults : (options?.foods ?? []);
+  const taxa: (TaxonSuggestion & { allergens: string[] | null })[] = searching
+    ? taxonResults
+    : (options?.taxa ?? []);
+  const current = options?.current;
+  const currentLabel =
+    current?.foodName ?? (current && current.taxa.length > 0 ? current.taxa.join(", ") : null);
 
   return (
-    <Dialog open={ingredient !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>„{ingredient?.name}“ zuordnen</DialogTitle>
-          <DialogDescription>
-            Wähle das passende Lebensmittel. Daraus kommen Allergene und Nährwerte.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
+    <BottomSheet
+      open
+      onOpenChange={(open) => !open && onClose()}
+      title={name}
+      description="Zutat einem Lebensmittel zuordnen"
+      className="sm:max-w-lg"
+    >
+      <div className="space-y-5">
+        <p className="text-xs text-muted-foreground">„{ingredient.rawText}“</p>
+
+        <div className="space-y-2 rounded-lg bg-muted/50 p-3">
+          <SectionLabel>Jetzt</SectionLabel>
+          {current ? (
+            <>
+              <p className="text-sm font-medium text-foreground">
+                {currentLabel ?? "Nicht erkannt"}
+                {current.foodName === null && currentLabel ? (
+                  <span className="font-normal text-muted-foreground"> · ohne Nährwerte</span>
+                ) : null}
+              </p>
+              {currentLabel ? <AllergenChips allergens={current.allergens} /> : null}
+              {currentLabel && current.status !== "MANUAL" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() =>
+                    run(() => confirmIngredientAction(recipeId, ingredient.id), "Bestätigt")
+                  }
+                >
+                  <CheckIcon />
+                  Passt so
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Lädt…</p>
+          )}
+        </div>
+
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            placeholder="Anderes suchen, z. B. Kürbis"
             aria-label="Lebensmittel suchen"
+            className="pl-9"
           />
-          <ul className="max-h-72 space-y-1 overflow-y-auto">
-            {options.map((option) => (
-              <li key={option.id}>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={() => pick(option)}
-                  className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted focus-visible:bg-muted focus-visible:outline-none disabled:opacity-50"
-                >
-                  <span className="min-w-0 break-words">{option.name}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">{option.source}</span>
-                </button>
-              </li>
-            ))}
-            {query.trim().length >= 2 && options.length === 0 ? (
-              <li className="py-6 text-center text-sm text-muted-foreground">Nichts gefunden.</li>
-            ) : null}
-          </ul>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        <div className="space-y-2">
+          <SectionLabel hint="mit Nährwerten">Lebensmittel</SectionLabel>
+          {foods.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {options || searching ? "Nichts Passendes gefunden." : "Lädt…"}
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {foods.map((food) => (
+                <li key={food.id}>
+                  <OptionButton
+                    title={food.name}
+                    subtitle={food.kcal !== null ? `${food.kcal} kcal / 100 g` : null}
+                    allergens={food.allergens}
+                    disabled={saving}
+                    onClick={() =>
+                      run(
+                        () => assignIngredientFoodAction(recipeId, ingredient.id, food.id),
+                        `„${name}“ → ${food.name}`,
+                      )
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {taxa.length > 0 ? (
+          <div className="space-y-2">
+            <SectionLabel hint="nur Allergene, keine Nährwerte">Inhaltsstoff</SectionLabel>
+            <ul className="space-y-1.5">
+              {taxa.map((taxon) => (
+                <li key={taxon.code}>
+                  <OptionButton
+                    title={taxon.name}
+                    subtitle={taxon.path.length > 0 ? taxon.path.join(" › ") : null}
+                    allergens={taxon.allergens}
+                    disabled={saving}
+                    onClick={() =>
+                      run(
+                        () => assignIngredientTaxaAction(recipeId, ingredient.id, [taxon.code]),
+                        `„${name}“ → ${taxon.name}`,
+                      )
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </BottomSheet>
   );
 }

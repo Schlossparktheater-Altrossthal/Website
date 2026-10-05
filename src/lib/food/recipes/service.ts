@@ -107,6 +107,17 @@ export async function matchIngredient(index: TaxonIndex, name: string): Promise<
     include: { foodItem: true },
   });
   if (learned?.foodItem) return { foodItem: learned.foodItem, taxonCodes: [], status: "MANUAL" };
+  // Von Hand nur Inhaltsstoffe gewählt (ohne Lebensmittel): ebenfalls lernen.
+  const learnedTaxa = await prisma.recipeIngredient.findFirst({
+    where: {
+      name: { equals: name, mode: "insensitive" },
+      status: "MANUAL",
+      foodItemId: null,
+      taxonCodes: { isEmpty: false },
+    },
+    orderBy: { recipe: { updatedAt: "desc" } },
+  });
+  if (learnedTaxa) return { foodItem: null, taxonCodes: learnedTaxa.taxonCodes, status: "MANUAL" };
 
   const exact = index.matchExact(name);
   const codes = exact ? [exact.code] : index.matchText(name).map((match) => match.code);
@@ -280,6 +291,29 @@ export async function assignIngredientFood(ingredientId: string, foodItemId: str
   const ingredient = await prisma.recipeIngredient.update({
     where: { id: ingredientId },
     data: { foodItemId, status: "MANUAL", taxonCodes: [] },
+  });
+  await recomputeRecipe(ingredient.recipeId);
+  return ingredient;
+}
+
+/** Ordnet einer Zutat nur Inhaltsstoffe zu (ohne Lebensmittel, also ohne Nährwerte). */
+export async function assignIngredientTaxa(ingredientId: string, taxonCodes: string[]) {
+  const index = await loadTaxonIndex();
+  const codes = taxonCodes.filter((code) => index.has(code));
+  if (codes.length === 0) throw new Error("Unbekannter Eintrag.");
+  const ingredient = await prisma.recipeIngredient.update({
+    where: { id: ingredientId },
+    data: { foodItemId: null, taxonCodes: codes, status: "MANUAL" },
+  });
+  await recomputeRecipe(ingredient.recipeId);
+  return ingredient;
+}
+
+/** Bestätigt die automatische Zuordnung („passt so“) – sie gilt dann als sicher und gelernt. */
+export async function confirmIngredient(ingredientId: string) {
+  const ingredient = await prisma.recipeIngredient.update({
+    where: { id: ingredientId },
+    data: { status: "MANUAL" },
   });
   await recomputeRecipe(ingredient.recipeId);
   return ingredient;

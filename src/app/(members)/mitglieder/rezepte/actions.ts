@@ -14,9 +14,17 @@ import {
   updateRecipeImageMeta,
   type RecipeImageMeta,
 } from "@/lib/food/recipes/images";
+import {
+  getIngredientOptions,
+  searchFoodOptions,
+  type FoodOption,
+  type IngredientOptions,
+} from "@/lib/food/recipes/ingredient-options";
 import { fetchRecipeFromUrl, type ImportedRecipe } from "@/lib/food/recipes/json-ld";
 import {
   assignIngredientFood,
+  assignIngredientTaxa,
+  confirmIngredient,
   commentRecipe,
   createRecipe,
   rateRecipe,
@@ -283,5 +291,64 @@ export async function previewRecipeImageAction(url: string): Promise<Result<stri
   } catch (error) {
     logger.warn("Rezeptbild-Vorschau fehlgeschlagen", { url, error });
     return { ok: false, error: "Bild konnte nicht geladen werden." };
+  }
+}
+
+async function ingredientOf(recipeId: string, ingredientId: string) {
+  const ingredient = await prisma.recipeIngredient.findUnique({ where: { id: ingredientId } });
+  return ingredient && ingredient.recipeId === recipeId ? ingredient : null;
+}
+
+export async function ingredientOptionsAction(
+  recipeId: string,
+  ingredientId: string,
+): Promise<Result<IngredientOptions>> {
+  await currentUserId();
+  if (!(await ingredientOf(recipeId, ingredientId))) {
+    return { ok: false, error: "Zutat nicht gefunden." };
+  }
+  return { ok: true, data: await getIngredientOptions(ingredientId) };
+}
+
+export async function searchFoodOptionsAction(query: string): Promise<FoodOption[]> {
+  await currentUserId();
+  return searchFoodOptions(query.slice(0, 80));
+}
+
+export async function assignIngredientTaxaAction(
+  recipeId: string,
+  ingredientId: string,
+  taxonCodes: string[],
+): Promise<Result> {
+  await currentUserId();
+  if (!(await ingredientOf(recipeId, ingredientId))) {
+    return { ok: false, error: "Zutat nicht gefunden." };
+  }
+  if (!z.array(z.string().min(3).max(120)).min(1).max(10).safeParse(taxonCodes).success) {
+    return { ok: false, error: "Ungültige Auswahl." };
+  }
+  try {
+    await assignIngredientTaxa(ingredientId, taxonCodes);
+    revalidatePath(`${BASE}/${recipeId}`);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return failure("zuordnen", error, "Zuordnung konnte nicht gespeichert werden.");
+  }
+}
+
+export async function confirmIngredientAction(
+  recipeId: string,
+  ingredientId: string,
+): Promise<Result> {
+  await currentUserId();
+  if (!(await ingredientOf(recipeId, ingredientId))) {
+    return { ok: false, error: "Zutat nicht gefunden." };
+  }
+  try {
+    await confirmIngredient(ingredientId);
+    revalidatePath(`${BASE}/${recipeId}`);
+    return { ok: true, data: undefined };
+  } catch (error) {
+    return failure("bestätigen", error, "Bestätigung konnte nicht gespeichert werden.");
   }
 }

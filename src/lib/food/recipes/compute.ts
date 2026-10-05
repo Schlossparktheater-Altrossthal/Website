@@ -82,7 +82,7 @@ const STATUS_RANK: Record<FoodMatchStatus, number> = {
   UNCLEAR: 2,
 };
 
-function nutrientsOf(value: unknown): Record<string, number> {
+export function nutrientsOf(value: unknown): Record<string, number> {
   if (!value || typeof value !== "object") return {};
   const result: Record<string, number> = {};
   for (const [key, number] of Object.entries(value)) {
