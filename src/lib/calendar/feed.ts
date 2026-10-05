@@ -25,6 +25,7 @@ const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000;
 /** Abrufzeitpunkt nur gelegentlich schreiben – Kalender pollen oft. */
 const ACCESS_WRITE_INTERVAL_MS = 15 * 60 * 1000;
 const PREFIX = "🎭 ";
+export const DEFAULT_FEED_NAME = "Theater – Meine Termine";
 
 const BLOCKED_DAY_LABELS: Record<BlockedDayKind, string> = {
   BLOCKED: "Gesperrt",
@@ -325,7 +326,7 @@ export async function renderCalendarFeed(token: string, now: Date = new Date()) 
   }
 
   return buildIcsCalendar({
-    name: "Theater – Meine Termine",
+    name: feed.name?.trim() || DEFAULT_FEED_NAME,
     description: "Proben und Termine aus dem Mitgliederbereich",
     events,
     now,

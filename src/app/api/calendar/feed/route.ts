@@ -10,6 +10,7 @@ type FeedRecord = {
   token: string;
   scope: FeedScope;
   includeBlockedDays: boolean;
+  name: string | null;
   lastAccessedAt: Date | null;
 };
 
@@ -20,6 +21,7 @@ function toResponse(feed: FeedRecord | null) {
           url: buildFeedUrl(feed.token),
           scope: feed.scope,
           includeBlockedDays: feed.includeBlockedDays,
+          name: feed.name,
           lastAccessedAt: feed.lastAccessedAt?.toISOString() ?? null,
         }
       : null,
@@ -54,7 +56,17 @@ export async function POST() {
 }
 
 const patchSchema = z
-  .object({ includeBlockedDays: z.boolean(), scope: z.enum(["MINE", "PRODUCTIONS"]) })
+  .object({
+    includeBlockedDays: z.boolean(),
+    scope: z.enum(["MINE", "PRODUCTIONS"]),
+    // Leer = Standardname.
+    name: z
+      .string()
+      .trim()
+      .max(60)
+      .transform((value) => value || null)
+      .nullable(),
+  })
   .partial();
 
 export async function PATCH(request: Request) {

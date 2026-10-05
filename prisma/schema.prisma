@@ -1333,6 +1333,8 @@ model CalendarFeed {
   /// MINE: nur eigene Termine; PRODUCTIONS: zusätzlich alle Proben der eigenen Produktionen.
   scope              FeedScope @default(MINE)
   includeBlockedDays Boolean   @default(false)
+  /// Eigener Kalendername in der Kalender-App; leer = Standardname.
+  name               String?
   lastAccessedAt     DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt

@@ -17,6 +17,7 @@ import { AsyncButton } from "@/components/ui/async-button";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +29,7 @@ type Feed = {
   url: string;
   scope: FeedScope;
   includeBlockedDays: boolean;
+  name: string | null;
   lastAccessedAt: string | null;
 };
 
@@ -35,6 +37,9 @@ const SCOPE_OPTIONS: { value: FeedScope; label: string }[] = [
   { value: "MINE", label: "Nur meine Termine" },
   { value: "PRODUCTIONS", label: "Alle Proben" },
 ];
+
+/** Wie `DEFAULT_FEED_NAME` im Feed (dort serverseitig). */
+const DEFAULT_NAME = "Theater – Meine Termine";
 
 const TITLE = "Kalender abonnieren";
 const DESCRIPTION =
@@ -63,6 +68,7 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<"renew" | "disable" | null>(null);
   const [qr, setQr] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState("");
   const [isAndroid] = useState(
     () => typeof navigator !== "undefined" && /android/i.test(navigator.userAgent),
   );
@@ -70,7 +76,11 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
   useEffect(() => {
     let active = true;
     request("GET")
-      .then((result) => active && setFeed(result))
+      .then((result) => {
+        if (!active) return;
+        setFeed(result);
+        setNameDraft(result?.name ?? "");
+      })
       .catch(() => {
         if (!active) return;
         setFeed(null);
@@ -100,7 +110,9 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
   ) => {
     setBusy(true);
     try {
-      setFeed(await request(method, body));
+      const result = await request(method, body);
+      setFeed(result);
+      setNameDraft(result?.name ?? "");
       toast.success(success);
     } catch {
       toast.error(failure);
@@ -222,6 +234,39 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
           </p>
         </div>
       ) : null}
+
+      <div className="space-y-2 rounded-lg border border-border/60 p-3">
+        <div className="space-y-0.5">
+          <label htmlFor="calendar-feed-name" className="text-sm font-medium">
+            Kalendername
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Gilt beim nächsten Abonnieren. Bereits abonnierte Kalender benennst du in der
+            Kalender-App selbst um.
+          </p>
+        </div>
+        <Input
+          id="calendar-feed-name"
+          value={nameDraft}
+          placeholder={DEFAULT_NAME}
+          maxLength={60}
+          disabled={busy}
+          onChange={(event) => setNameDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
+          onBlur={() => {
+            const name = nameDraft.trim();
+            if (name === (feed.name ?? "")) return;
+            void run(
+              "PATCH",
+              { name },
+              "Kalendername gespeichert",
+              "Name konnte nicht gespeichert werden.",
+            );
+          }}
+        />
+      </div>
 
       <div className="space-y-2 rounded-lg border border-border/60 p-3">
         <div className="space-y-0.5">
