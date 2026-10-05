@@ -7,6 +7,7 @@ import {
   assignPendingRestriction,
   deletePendingRestriction,
   splitPendingRestriction,
+  unassignPendingRestriction,
 } from "@/lib/food/pending";
 import { createLogger } from "@/lib/logger";
 import { FOOD_PERMISSION_KEYS, hasPermission } from "@/lib/permissions";
@@ -58,4 +59,57 @@ export async function splitPendingAction(key: string): Promise<Result> {
 
 export async function deletePendingAction(key: string): Promise<Result> {
   return run("löschen", key, () => deletePendingRestriction(key));
+}
+
+const itemsSchema = z
+  .array(z.object({ key: keySchema, taxonCode: z.string().min(3).max(120) }))
+  .min(1)
+  .max(200);
+
+/** Mehrere eindeutige Treffer auf einmal bestätigen. */
+export async function assignManyPendingAction(
+  items: { key: string; taxonCode: string }[],
+): Promise<Result> {
+  const userId = await authorize();
+  if (!userId) return { ok: false, error: "Keine Berechtigung." };
+  const parsed = itemsSchema.safeParse(items);
+  if (!parsed.success) return { ok: false, error: "Ungültige Auswahl." };
+  try {
+    let count = 0;
+    for (const item of parsed.data) {
+      count += await assignPendingRestriction(item.key, item.taxonCode, userId);
+    }
+    logger.info("Allergie-Zuordnung: alle eindeutigen", {
+      userId,
+      items: parsed.data.length,
+      count,
+    });
+    revalidatePath(PATH);
+    return { ok: true, count };
+  } catch (error) {
+    logger.error("Allergie-Zuordnung fehlgeschlagen: alle eindeutigen", { userId, error });
+    return { ok: false, error: "Änderung fehlgeschlagen." };
+  }
+}
+
+/** Rückgängig für einzelne oder gesammelte Zuordnungen. */
+export async function unassignManyPendingAction(
+  items: { key: string; taxonCode: string }[],
+): Promise<Result> {
+  const userId = await authorize();
+  if (!userId) return { ok: false, error: "Keine Berechtigung." };
+  const parsed = itemsSchema.safeParse(items);
+  if (!parsed.success) return { ok: false, error: "Ungültige Auswahl." };
+  try {
+    let count = 0;
+    for (const item of parsed.data) {
+      count += await unassignPendingRestriction(item.key, item.taxonCode);
+    }
+    logger.info("Allergie-Zuordnung: rückgängig", { userId, items: parsed.data.length, count });
+    revalidatePath(PATH);
+    return { ok: true, count };
+  } catch (error) {
+    logger.error("Allergie-Zuordnung fehlgeschlagen: rückgängig", { userId, error });
+    return { ok: false, error: "Rückgängig fehlgeschlagen." };
+  }
 }

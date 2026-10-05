@@ -281,7 +281,11 @@ export class TaxonIndex {
       if (score < 0) continue;
       const entry = this.entries.get(code);
       if (!entry) continue;
-      const total = score * 10 + kindRank(entry.kind) + (entry.nameDe ? 0 : 5);
+      // Passt der deutsche Name selbst, geht der Eintrag einem Synonym-Treffer vor („Hasel“ →
+      // Haselnuss vor Schalenfrüchte, das „Haselnüsse“ nur als Synonym führt).
+      const ownName = entry.nameDe ? normalizeFoodText(entry.nameDe) : "";
+      const nameBonus = ownName === needle ? -6 : ownName.startsWith(needle) ? -4 : 0;
+      const total = score * 10 + kindRank(entry.kind) + (entry.nameDe ? 0 : 5) + nameBonus;
       scored.set(code, Math.min(scored.get(code) ?? Infinity, total));
     }
     return [...scored.entries()]

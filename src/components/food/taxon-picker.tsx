@@ -70,7 +70,10 @@ export function TaxonPicker({
             >
               <span className="font-medium text-foreground">{taxon.name}</span>
               <span className="text-xs text-muted-foreground">
-                {[taxon.parentName, taxon.lmiv ? "kennzeichnungspflichtig" : null, taxon.code]
+                {[
+                  taxon.path?.length ? taxon.path.join(" › ") : taxon.parentName,
+                  taxon.lmiv ? "kennzeichnungspflichtig" : null,
+                ]
                   .filter(Boolean)
                   .join(" · ")}
               </span>

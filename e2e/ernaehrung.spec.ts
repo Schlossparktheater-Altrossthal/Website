@@ -55,58 +55,59 @@ test.describe("Ernährung & Allergien", () => {
     await expect(page.locator("#dietary-style")).toHaveText(original);
   });
 
-  test("legt eine Besonderheit an und entfernt sie wieder", async ({ page }) => {
-    const label = `E2E-Testbesonderheit ${Date.now()}`;
-    await page.goto(AREA);
-
-    await clickUntil(page.getByRole("button", { name: "Besonderheit", exact: true }), async () => {
-      await expect(page.locator("#aversion-label")).toBeVisible({ timeout: 1_500 });
+  async function openAdd(page: Page) {
+    await clickUntil(page.getByRole("button", { name: "Hinzufügen", exact: true }), async () => {
+      await expect(page.locator("#restriction-text")).toBeVisible({ timeout: 1_500 });
     });
-    await page.locator("#aversion-label").fill(label);
-    await page.locator("#aversion-note").fill("von der Prüfung angelegt");
+  }
+
+  async function removeChip(page: Page, label: string) {
+    await page.getByRole("button", { name: new RegExp(label) }).click();
+    await page.getByRole("button", { name: "Entfernen", exact: true }).first().click();
+    await page.getByRole("button", { name: "Entfernen", exact: true }).last().click();
+    await expectSaved(page, "Entfernt");
+    await expect(page.getByRole("button", { name: new RegExp(label) })).toHaveCount(0);
+  }
+
+  test("legt eine Abneigung an und entfernt sie wieder", async ({ page }) => {
+    const label = `E2E-Testabneigung ${Date.now()}`;
+    await page.goto(AREA);
+    await openAdd(page);
+    await page.locator("#restriction-text").fill(label);
+    await page.getByRole("radio", { name: "Mag ich nicht" }).click();
+    await page.locator("#restriction-note").fill("von der Prüfung angelegt");
     await page.getByRole("button", { name: "Speichern", exact: true }).click();
 
-    await expectSaved(page, "Besonderheit gespeichert");
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
-
-    await page.getByRole("button", { name: `${label} entfernen` }).click();
-    await page.getByRole("button", { name: "Entfernen", exact: true }).click();
-
-    await expectSaved(page, "Besonderheit entfernt");
-    await expect(page.getByText(label, { exact: true })).toHaveCount(0);
+    await expectSaved(page, "Gespeichert");
+    await expect(
+      page.getByRole("button", { name: new RegExp(`${label}.*Mag nicht`) }),
+    ).toBeVisible();
+    await removeChip(page, label);
   });
 
-  test("legt eine Allergie über den Vorschlag an und entfernt sie wieder", async ({ page }) => {
+  test("legt eine schwere Allergie an und entfernt sie wieder", async ({ page }) => {
     const allergen = `E2E-Testallergen ${Date.now()}`;
     await page.goto(AREA);
+    await openAdd(page);
 
-    await clickUntil(page.getByRole("button", { name: "Allergie", exact: true }), async () => {
-      await expect(page.locator("#allergen")).toBeVisible({ timeout: 1_500 });
-    });
+    // Schnellauswahl belegt Text und Stufe vor: Laktose ist eine Unverträglichkeit.
+    await page.getByRole("button", { name: "Laktose", exact: true }).click();
+    await expect(page.locator("#restriction-text")).toHaveValue("Laktose");
+    await expect(page.getByRole("radio", { name: "Verträgt nicht" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
 
-    // Vorschlag aus dem Katalog: „Lakt" schlägt die Laktose-Intoleranz vor und belegt die Art vor.
-    await page.locator("#allergen").fill("Lakt");
-    const suggestion = page.getByRole("option", { name: /Laktose/ }).first();
-    await expect(suggestion).toBeVisible();
-    await suggestion.click();
-    await expect(page.locator("#allergy-kind")).toHaveText("Unverträglichkeit");
-
-    await page.locator("#allergen").fill(allergen);
-    await selectOption(page, page.locator("#allergy-level"), "Schwer");
-    await selectOption(page, page.locator("#allergy-traces"), "Spuren sind gefährlich");
+    await page.locator("#restriction-text").fill(allergen);
+    await page.getByRole("radio", { name: "Schwer" }).click();
+    await page.getByRole("radio", { name: "Gefährlich" }).click();
     await page.getByRole("switch", { name: "Ärztlich abgeklärt" }).click();
     await page.getByRole("button", { name: "Speichern", exact: true }).click();
 
-    await expectSaved(page, "Allergie gespeichert");
-    // Die Zeile trägt Allergen, Art, Schweregrad und Spuren-Angabe; die Art stammt aus dem Vorschlag.
-    const row = page.getByText(allergen).first();
-    await expect(row).toBeVisible();
-    await expect(row).toHaveText(/Unverträglichkeit\s+Schwer\s+Keine Spuren/);
-
-    await page.getByRole("button", { name: `${allergen} entfernen` }).click();
-    await page.getByRole("button", { name: "Entfernen", exact: true }).click();
-
-    await expectSaved(page, "Allergie entfernt");
-    await expect(page.getByText(allergen)).toHaveCount(0);
+    await expectSaved(page, "Gespeichert");
+    await expect(
+      page.getByRole("button", { name: new RegExp(`${allergen}.*Schwer`) }),
+    ).toBeVisible();
+    await removeChip(page, allergen);
   });
 });

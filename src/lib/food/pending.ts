@@ -3,7 +3,7 @@ import { normalizeFoodText } from "@/lib/food/normalize";
 import { linkRestrictionText } from "@/lib/food/restriction-link";
 import { resolveRestrictionTaxonCode } from "@/lib/food/restriction-store";
 import { splitAllergenList } from "@/lib/food/split-list";
-import { suggestTaxa, type TaxonSuggestion } from "@/lib/food/taxon-suggestions";
+import { describeTaxon, suggestTaxa, type TaxonSuggestion } from "@/lib/food/taxon-suggestions";
 import { invalidateTaxonIndex, loadTaxonIndex } from "@/lib/food/taxonomy/store";
 import { prisma } from "@/lib/prisma";
 
@@ -18,8 +18,17 @@ export type PendingRestrictionGroup = {
   key: string;
   text: string;
   count: number;
+  /**
+   * `sure`: eindeutiger Treffer (ein Haken bestätigt), `split`: Sammeleintrag mit Vorschau der
+   * Teile, `unclear`: braucht eine Auswahl.
+   */
+  category: "sure" | "split" | "unclear";
+  /** Eindeutiger Treffer (nur bei `sure`). */
+  match: TaxonSuggestion | null;
   /** Sammeleintrag, der sich aufteilen lässt. */
   parts: string[];
+  /** Vorschau der Teile mit dem Treffer, den das Aufteilen automatisch setzen würde. */
+  partMatches: { text: string; match: TaxonSuggestion | null }[];
   suggestions: TaxonSuggestion[];
 };
 
@@ -51,11 +60,28 @@ export async function listPendingRestrictions(): Promise<PendingRestrictionGroup
       const suggestions = [
         ...new Map([...fromLink, ...fromSearch].map((s) => [s.code, s])).values(),
       ];
+      const parts = splitAllergenList(text);
+      const partMatches =
+        parts.length > 1
+          ? parts.map((part) => {
+              const partLink = linkRestrictionText(index, part);
+              return {
+                text: part,
+                match: partLink.kind === "sure" ? describeTaxon(index, partLink.taxonCode) : null,
+              };
+            })
+          : [];
+      const match = link.kind === "sure" ? describeTaxon(index, link.taxonCode) : null;
+      const category: PendingRestrictionGroup["category"] =
+        parts.length > 1 ? "split" : match ? "sure" : "unclear";
       return {
         key,
         text,
         count,
-        parts: splitAllergenList(text),
+        category,
+        match: category === "sure" ? match : null,
+        parts,
+        partMatches,
         suggestions: suggestions.slice(0, 5),
       };
     })
@@ -91,6 +117,24 @@ export async function assignPendingRestriction(
       create: { text: aliasText, taxonCode, source: "CONFIRMED", createdById: userId },
       update: { taxonCode, source: "CONFIRMED", createdById: userId },
     }),
+  ]);
+  invalidateTaxonIndex();
+  return rows.length;
+}
+
+/** Nimmt eine Zuordnung zurück (Rückgängig direkt nach dem Bestätigen). */
+export async function unassignPendingRestriction(key: string, taxonCode: string): Promise<number> {
+  const rows = (
+    await prisma.dietaryRestriction.findMany({ where: { taxonCode, isActive: true } })
+  ).filter((row) => normalizeDietaryLabel(row.allergen) === key);
+  if (rows.length === 0) return 0;
+  const aliasText = normalizeFoodText(rows[0].allergen);
+  await prisma.$transaction([
+    prisma.dietaryRestriction.updateMany({
+      where: { id: { in: rows.map((row) => row.id) } },
+      data: { taxonCode: null },
+    }),
+    prisma.foodTaxonAlias.deleteMany({ where: { text: aliasText, taxonCode } }),
   ]);
   invalidateTaxonIndex();
   return rows.length;
