@@ -1,7 +1,7 @@
 # Plan: Lager 3 – Kategorien, Merkmal-Ausnahmen, Maße, Tags, Codes mit Unternummer
 
-Stand: 2026-10-05. Phase 1–7 umgesetzt (main), lokal getestet (Unit, Integration, E2E). Offen:
-Staging-Prüfung und Prod-Release. Baut auf
+Stand: 2026-10-05. Phase 1–7 umgesetzt (main), lokal getestet (Unit, Integration, E2E). Auf Staging geprüft (6d9bf763).
+Offen: Prod-Release. Baut auf
 `docs/Plan/lager-typen-projekte-plan.md` auf (dessen Prod-Release ist ebenfalls offen – beide
 können zusammen ausgeliefert werden).
 
@@ -147,6 +147,8 @@ options String[]?, unit String?)`, `@@unique([categoryId, fieldDefId])`, Cascade
 - Tags: jeder mit Lagerzugriff legt beim Speichern an; ungenutzte Tags verschwinden automatisch.
   Umbenennen/Zusammenführen in den Einstellungen ist **nicht** umgesetzt (bisher kein Bedarf).
   Die Freitextsuche findet Typen auch über Tags.
+- Korrektur-Migration `20261005120200_inventory_template_duplicates`: Vorlagen-Merkmal entfällt,
+  wenn es im Bereich schon eines mit derselben Bezeichnung gibt (Staging hatte „Gewicht“).
 - Nicht umgesetzt: Tags-Spalte in der Sammelerfassung (Tabelle), Freitextsuche nach Maßen.
 
 ## Checkliste
@@ -158,4 +160,5 @@ options String[]?, unit String?)`, `@@unique([categoryId, fieldDefId])`, Cascade
 - [x] Phase 5 Maße/Einheiten
 - [x] Phase 6 Tags
 - [x] Phase 7 Seed, Tests
-- [ ] Staging-Screenshots, Prod-Release
+- [x] Staging: Migrationen, E2E (lager*, lager-kategorien) grün, Screenshots mobil/Desktop
+- [ ] Prod-Release (zusammen mit Lager 2)
