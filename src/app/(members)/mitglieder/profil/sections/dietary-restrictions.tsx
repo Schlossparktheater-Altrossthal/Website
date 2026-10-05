@@ -355,8 +355,8 @@ export function DietaryRestrictions({
           onClick={openNew}
           className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground hover:bg-muted/40"
         >
-          <PlusIcon className="h-4 w-4" aria-hidden />
-          Nichts eingetragen – Allergie oder Abneigung hinzufügen
+          <PlusIcon className="h-4 w-4 shrink-0" aria-hidden />
+          Noch nichts eingetragen
         </button>
       ) : (
         <>

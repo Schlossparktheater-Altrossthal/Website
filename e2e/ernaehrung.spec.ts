@@ -30,6 +30,8 @@ test.describe("Ernährung & Allergien", () => {
     await page.goto(AREA);
     const styleTrigger = page.locator("#dietary-style");
     await expect(styleTrigger).toBeVisible();
+    // Der Wert erscheint erst nach der Hydration.
+    await expect(styleTrigger).toHaveText(/\S/);
 
     const original = (await styleTrigger.textContent())?.trim() ?? "";
     expect(original).not.toBe("");
