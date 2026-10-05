@@ -155,9 +155,7 @@ export function RecipeIngredients({
 }
 
 function AllergenChips({ allergens }: { allergens: string[] }) {
-  if (allergens.length === 0) {
-    return <span className="text-xs text-muted-foreground">keine Hauptallergene</span>;
-  }
+  if (allergens.length === 0) return null;
   return (
     <span className="flex flex-wrap gap-1">
       {allergens.map((name) => (
@@ -191,12 +189,14 @@ function OptionButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-lg border border-border px-3 py-2 text-left hover:bg-muted/50 disabled:opacity-50"
+      className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-border px-3 py-1.5 text-left hover:bg-muted/50 disabled:opacity-50"
     >
-      <span className="min-w-0 flex-1 space-y-1">
+      <span className="min-w-0 flex-1">
         <span className="block break-words text-sm font-medium text-foreground">{title}</span>
-        {subtitle ? <span className="block text-xs text-muted-foreground">{subtitle}</span> : null}
-        {allergens ? <AllergenChips allergens={allergens} /> : null}
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {subtitle ? <span className="text-xs text-muted-foreground">{subtitle}</span> : null}
+          {allergens ? <AllergenChips allergens={allergens} /> : null}
+        </span>
       </span>
       <CheckIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
     </button>
@@ -322,7 +322,15 @@ function IngredientSheet({
                   <span className="font-normal text-muted-foreground"> · ohne Nährwerte</span>
                 ) : null}
               </p>
-              {currentLabel ? <AllergenChips allergens={current.allergens} /> : null}
+              {currentLabel ? (
+                current.allergens.length > 0 ? (
+                  <div>
+                    <AllergenChips allergens={current.allergens} />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Keine Hauptallergene</p>
+                )
+              ) : null}
               {currentLabel && current.status !== "MANUAL" ? (
                 <Button
                   size="sm"

@@ -201,7 +201,9 @@ export async function getRecipeDetail(recipeId: string, userId: string) {
       optional: line.optional,
       status: line.status,
       foodName: line.foodItem?.nameDe ?? null,
-      taxonNames: line.taxonCodes.map((code) => index.get(code)?.nameDe ?? code),
+      taxonNames: line.taxonCodes.map(
+        (code) => index.get(code)?.nameDe ?? index.get(code)?.nameEn ?? code.replace(/^\w+:/, ""),
+      ),
     })),
     computed: computed
       ? {

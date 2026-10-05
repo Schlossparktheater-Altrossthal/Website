@@ -163,7 +163,9 @@ export async function getIngredientOptions(ingredientId: string): Promise<Ingred
   return {
     current: {
       foodName: line.foodItem?.nameDe ?? null,
-      taxa: line.taxonCodes.map((code) => index.get(code)?.nameDe ?? code),
+      taxa: line.taxonCodes.map(
+        (code) => index.get(code)?.nameDe ?? index.get(code)?.nameEn ?? code.replace(/^\w+:/, ""),
+      ),
       allergens: lmivAllergens(index, codes),
       status: line.status,
     },
