@@ -96,7 +96,40 @@ export function pickFoodItem<
  * Ordnet eine Zutat zu: frühere manuelle Zuordnung desselben Namens → Taxon (Name, Synonym,
  * Alias) → passendes BLS-Lebensmittel. Ohne Lebensmittel bleiben die Taxa an der Zeile.
  */
-export async function matchIngredient(index: TaxonIndex, name: string): Promise<IngredientMatch> {
+export async function matchIngredient(
+  index: TaxonIndex,
+  name: string,
+  rawText = name,
+): Promise<IngredientMatch> {
+  const match = await matchIngredientByName(index, name);
+  return match.status === "MANUAL" ? match : veganAware(index, rawText, match);
+}
+
+const VEGAN_HINT = /\b(vegan\w*|pflanzlich\w*)\b/i;
+
+/**
+ * „veganer Parmesan“, „Joghurt (vegan)“: Der Name trifft das tierische Original. Tierische
+ * Inhaltsstoffe und ein tierisches Lebensmittel werden verworfen, die Zeile bleibt zur Prüfung
+ * offen (PARTIAL) – woraus das Ersatzprodukt besteht, hängt von der Marke ab.
+ */
+export function veganAware(
+  index: TaxonIndex,
+  rawText: string,
+  match: IngredientMatch,
+): IngredientMatch {
+  if (!VEGAN_HINT.test(rawText)) return match;
+  const isVegan = (code: string) => index.dietProperty(code, "vegan") !== "no";
+  const taxonCodes = match.taxonCodes.filter(isVegan);
+  const foodItem = match.foodItem?.taxonCodes.every(isVegan) ? match.foodItem : null;
+  if (taxonCodes.length === match.taxonCodes.length && foodItem === match.foodItem) return match;
+  return {
+    foodItem,
+    taxonCodes,
+    status: taxonCodes.length > 0 || foodItem ? "PARTIAL" : "UNCLEAR",
+  };
+}
+
+async function matchIngredientByName(index: TaxonIndex, name: string): Promise<IngredientMatch> {
   const learned = await prisma.recipeIngredient.findFirst({
     where: {
       name: { equals: name, mode: "insensitive" },
@@ -168,7 +201,7 @@ async function buildIngredientRows(index: TaxonIndex, input: RecipeInput) {
       const manual = line.foodItemId ? manualItems.get(line.foodItemId) : undefined;
       const match: IngredientMatch = manual
         ? { foodItem: manual, taxonCodes: [], status: "MANUAL" }
-        : await matchIngredient(index, parsed.name);
+        : await matchIngredient(index, parsed.name, parsed.rawText);
       return {
         row: {
           position,
@@ -349,7 +382,7 @@ export async function rematchRecipes(): Promise<{ recipes: number; changed: numb
   for (const recipe of recipes) {
     for (const line of recipe.ingredients) {
       const parsed = parseIngredientLine(line.rawText);
-      const match = await matchIngredient(index, parsed.name);
+      const match = await matchIngredient(index, parsed.name, parsed.rawText);
       const data = {
         amount: parsed.amountMax ?? parsed.amount,
         unit: parsed.unit,

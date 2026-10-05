@@ -260,6 +260,10 @@ export const CUSTOM_ALIASES: Readonly<Record<string, string>> = {
   // dann fehlte Gluten.
   Mehl: "en:wheat-flour",
   Spätzlemehl: "en:wheat-flour",
+  // Sonst greift der Wortanfang „Torte“ (Tortellini → Kuchen).
+  Tortellini: "en:pasta",
+  Tortelloni: "en:pasta",
+  Ravioli: "en:pasta",
   Romadur: "en:soft-cheese",
   Weißlacker: "en:soft-cheese",
 };
