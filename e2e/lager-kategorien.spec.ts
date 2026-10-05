@@ -5,8 +5,8 @@ import { clickUntil } from "./helpers";
 
 // Lager 3 (docs/Plan/lager-kategorien-plan.md): geerbtes Merkmal abwählen, Kategorie-Auswahl mit
 // Suche, Maße in einem Feld, Tags, Filter „passt in“ und Codes mit Unternummer (B-12-1).
-// Setzt die Vorlagen der Migration voraus (Technik › Ton › Mikrofone › Kondensator,
-// Merkmal „Gewicht“ in Technik, „Maße“ in Bühnenbau). Alle Daten tragen das Präfix „E2E“.
+// Setzt die Vorlagen der Migration voraus (Merkmale „Gewicht“/„Leistung“ in Technik, „Maße“ in
+// Bühnenbau). Alle Daten tragen das Präfix „E2E“; die Testkategorie wird wieder gelöscht.
 
 const stamp = Date.now().toString(36);
 
@@ -16,24 +16,14 @@ async function collectErrors(page: Page) {
   return errors;
 }
 
-async function openKondensator(page: Page) {
+const category = `E2E Kat ${stamp}`;
+
+async function openCategory(page: Page) {
   await page.goto("/mitglieder/lager/katalog");
   await page.getByRole("tab", { name: /Technik/ }).click();
-  const kondensator = page.getByRole("button", { name: /^Kondensator/ });
-  if (!(await kondensator.isVisible())) {
-    await page.getByRole("button", { name: "Mikrofone aufklappen" }).click();
-  }
-  await clickUntil(kondensator, () => expect(page.getByRole("dialog")).toBeVisible());
-}
-
-async function setGewicht(page: Page, on: boolean) {
-  await openKondensator(page);
-  const toggle = page.getByRole("switch", { name: "Gewicht hier verwenden" });
-  if ((await toggle.getAttribute("aria-checked")) !== String(on)) {
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-checked", String(on));
-  }
-  await page.keyboard.press("Escape");
+  await clickUntil(page.getByRole("button", { name: new RegExp(`^${category}`) }), () =>
+    expect(page.getByRole("dialog")).toBeVisible(),
+  );
 }
 
 test.describe("als admin", () => {
@@ -41,33 +31,45 @@ test.describe("als admin", () => {
   test.describe.configure({ mode: "serial" });
 
   test("Kategorien: Merkmal abwählen und Auswahl per Suche", async ({ page }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(150_000);
     const errors = await collectErrors(page);
-    await setGewicht(page, false);
+    // Eigene Hauptkategorie in Technik – erbt „Gewicht“ aus dem Bereich.
+    await page.goto("/mitglieder/lager/katalog");
+    await page.getByRole("tab", { name: /Technik/ }).click();
+    await page.getByLabel("Neue Hauptkategorie in Technik").fill(category);
+    await page.getByRole("button", { name: "Hinzufügen" }).click();
+    await expect(page.getByRole("button", { name: new RegExp(`^${category}`) })).toBeVisible();
     try {
+      await openCategory(page);
+      const toggle = page.getByRole("switch", { name: "Gewicht hier verwenden" });
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-checked", "false");
+      await page.keyboard.press("Escape");
+      await expect(
+        page.getByRole("button", { name: new RegExp(`^${category}.*1 abgewählt`) }),
+      ).toBeVisible();
+
       await page.goto("/mitglieder/lager/neu");
-      await page.getByLabel("Was möchtest du erfassen?").fill(`E2E Mikro ${stamp}`);
+      await page.getByLabel("Was möchtest du erfassen?").fill(`E2E Gerät ${stamp}`);
       await clickUntil(page.getByRole("button", { name: /^Neuer Artikeltyp/ }), () =>
         expect(page.getByText("Neuer Artikeltyp", { exact: true })).toBeVisible(),
       );
-      // Technik ist vorbelegt: Gewicht steht da, bis Kondensator gewählt ist.
+      // Technik ist vorbelegt: Gewicht steht da, bis die eigene Kategorie gewählt ist.
       await expect(page.getByLabel(/^Gewicht/)).toBeVisible();
       await page.getByRole("button", { name: "Kategorie" }).click();
-      await page.getByPlaceholder(/Suchen, z\. B\./).fill("kondens");
+      await page.getByPlaceholder(/Suchen, z\. B\./).fill(`kat ${stamp}`);
       await page
         .getByRole("dialog")
-        .getByRole("button", { name: /Kondensator/ })
+        .getByRole("button", { name: new RegExp(category) })
         .click();
-      await expect(page.getByRole("button", { name: "Kategorie" })).toContainText("Kondensator");
-      await expect(
-        page
-          .getByLabel(/^Richtcharakteristik/)
-          .or(page.getByText("Richtcharakteristik"))
-          .first(),
-      ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Kategorie" })).toContainText(category);
+      await expect(page.getByLabel(/^Leistung/)).toBeVisible();
       await expect(page.getByLabel(/^Gewicht/)).toHaveCount(0);
     } finally {
-      await setGewicht(page, true);
+      await openCategory(page);
+      page.once("dialog", (dialog) => dialog.accept());
+      await page.getByRole("button", { name: "Kategorie löschen" }).click();
+      await expect(page.getByRole("button", { name: new RegExp(`^${category}`) })).toHaveCount(0);
     }
     expect(errors).toEqual([]);
   });
