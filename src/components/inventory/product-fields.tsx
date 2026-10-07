@@ -33,6 +33,7 @@ import {
   parseDimensions,
   parseMeasure,
   formatMeasure,
+  SCALE_MAX,
   type FieldDef,
 } from "@/lib/inventory/specs";
 import { cn } from "@/lib/utils";
@@ -363,6 +364,162 @@ export function SpecField({
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
         />
+      </div>
+    );
+  }
+  if (field.type === "daterange") {
+    const [from = "", to = ""] = (typeof value === "string" ? value : "").split("~");
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id={id}
+            type="date"
+            value={from}
+            aria-label={`${field.label} von`}
+            onChange={(event) => onChange(`${event.target.value}~${to}`)}
+          />
+          <span className="text-muted-foreground">–</span>
+          <Input
+            type="date"
+            value={to}
+            aria-label={`${field.label} bis`}
+            onChange={(event) => onChange(`${from}~${event.target.value}`)}
+          />
+        </div>
+      </div>
+    );
+  }
+  if (field.type === "range") {
+    const [from = "", to = ""] = (typeof value === "string" ? value : "").split("~");
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>
+          {field.label}
+          {field.unit ? ` (${field.unit})` : ""}
+          {field.required ? " *" : ""}
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id={id}
+            value={from}
+            inputMode="decimal"
+            placeholder="von"
+            aria-label={`${field.label} von`}
+            onChange={(event) => onChange(`${event.target.value}~${to}`)}
+          />
+          <span className="text-muted-foreground">–</span>
+          <Input
+            value={to}
+            inputMode="decimal"
+            placeholder="bis"
+            aria-label={`${field.label} bis`}
+            onChange={(event) => onChange(`${from}~${event.target.value}`)}
+          />
+        </div>
+      </div>
+    );
+  }
+  if (field.type === "scale") {
+    const current = typeof value === "string" && value ? Number(value) : null;
+    return (
+      <div className="space-y-1.5">
+        <span className="text-sm leading-none font-medium">{label}</span>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={field.label}>
+          {Array.from({ length: SCALE_MAX }, (_, index) => index + 1).map((step) => {
+            const on = current === step;
+            return (
+              <button
+                key={step}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange(on ? "" : String(step))}
+                className={cn(
+                  "h-9 w-9 rounded-full border text-sm font-medium",
+                  on
+                    ? "border-primary bg-primary/15 text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {step}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  if (field.type === "color") {
+    const text = typeof value === "string" ? value : "";
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            aria-label={`${field.label} – Farbe wählen`}
+            value={/^#[0-9a-f]{6}$/i.test(text) ? text : "#000000"}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-10 w-12 shrink-0 rounded-md border border-border bg-background"
+          />
+          <Input
+            id={id}
+            value={text}
+            placeholder={field.placeholder ?? "#1e40af"}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </div>
+      </div>
+    );
+  }
+  if (field.type === "url") {
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <Input
+          id={id}
+          type="url"
+          inputMode="url"
+          value={typeof value === "string" ? value : ""}
+          placeholder={field.placeholder ?? "z. B. example.org/datenblatt"}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    );
+  }
+  if (field.type === "note") {
+    return (
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor={id}>{label}</Label>
+        <Textarea
+          id={id}
+          rows={3}
+          value={typeof value === "string" ? value : ""}
+          placeholder={field.placeholder ?? undefined}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    );
+  }
+  if (field.type === "combo") {
+    return (
+      <div className="space-y-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <Input
+          id={id}
+          list={field.options.length ? `${id}-options` : undefined}
+          value={typeof value === "string" ? value : ""}
+          placeholder={field.placeholder ?? undefined}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {field.options.length ? (
+          <datalist id={`${id}-options`}>
+            {field.options.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        ) : null}
       </div>
     );
   }

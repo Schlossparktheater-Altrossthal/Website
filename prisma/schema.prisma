@@ -1996,6 +1996,20 @@ enum InventoryFieldType {
   measure
   multiselect
   date
+  /// Zahlbereich von–bis, gespeichert als `{ from, to }` (eine Seite darf null sein).
+  range
+  /// Bewertung 1–5.
+  scale
+  /// Farbwert als `#rrggbb`.
+  color
+  /// Link, als Text gespeichert.
+  url
+  /// Mehrzeiliger Text.
+  note
+  /// Auswahl mit Freitext (Vorschläge, eigener Wert erlaubt).
+  combo
+  /// Datumsbereich von–bis, gespeichert als `{ from, to }` (ISO, eine Seite darf null sein).
+  daterange
 }
 
 /// Abweichung eines geerbten Merkmals ab einer Kategorie (gilt auch für Unterkategorien):

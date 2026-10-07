@@ -338,7 +338,12 @@ function SpecFilterField({
 }) {
   const id = `filter-${field.key}`;
   const label = `${field.label}${field.unit ? ` (${field.unit})` : ""}`;
-  if (field.type === "number" || field.type === "measure") {
+  if (
+    field.type === "number" ||
+    field.type === "measure" ||
+    field.type === "range" ||
+    field.type === "scale"
+  ) {
     const [from = "", to = ""] = value.split("~");
     return (
       <div className="space-y-1.5">

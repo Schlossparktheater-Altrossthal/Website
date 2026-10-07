@@ -11,6 +11,7 @@ import {
 import { INVENTORY_BASE_PATH } from "@/lib/inventory/constants";
 import { requireInventoryAccess } from "@/lib/inventory/service";
 import {
+  allowsOptions,
   DIMENSION_UNITS,
   FIELD_TYPES,
   fieldKeyFromLabel,
@@ -204,7 +205,7 @@ export async function saveFieldAction(
   try {
     await requireInventoryAccess("catalog");
     const data = fieldSchema.parse(input);
-    const options = hasOptions(data.type) ? [...new Set(data.options)] : [];
+    const options = allowsOptions(data.type) ? [...new Set(data.options)] : [];
     if (id) {
       // Der Schlüssel bleibt fest – gespeicherte Werte hängen daran.
       await prisma.inventoryFieldDef.update({

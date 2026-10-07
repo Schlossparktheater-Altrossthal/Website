@@ -1,7 +1,8 @@
 # Lager (`/mitglieder/lager`)
 
 Inventar für Technik, Kostüm, Requisite, Bühnenbau und Werkzeug. Plan und Entscheidungen:
-`docs/Plan/inventar-plan.md`, Desktop-Tabellen: `docs/Plan/lager-tabelle-plan.md`.
+`docs/Plan/inventar-plan.md`, Desktop-Tabellen: `docs/Plan/lager-tabelle-plan.md`, Katalog und
+Merkmale: `docs/Plan/lager-kategorien-plan.md`, `docs/Plan/lager-merkmal-typen-plan.md`.
 
 ## Routen
 
@@ -30,6 +31,31 @@ APIs: `/api/lager/photos/[id]`, `/api/lager/labels` (PDF), `/api/lager/inspectio
   Mängel, Prüfungen, Inventur mitzählen, Etiketten.
 - `PRIVATE.INVENTORY.MANAGE` – zusätzlich Bereiche, Orte, Preise, Ausmustern, CSV, Inventur
   starten und abschließen. Bekommt die monatliche Prüf-Erinnerung und Mangel-Meldungen.
+
+## Merkmale (Specs)
+
+Merkmale hängen am Bereich und am Kategorienpfad (werden vererbt, Ausnahmen je Kategorie) und
+stehen als JSON in `InventoryProduct.specs`. Gepflegt werden sie unter
+`/mitglieder/lager/einstellungen`; Typen und Parser liegen in `src/lib/inventory/specs.ts`.
+
+| Typ                     | Inhalt                            | Wert in `specs`                         |
+| ----------------------- | --------------------------------- | --------------------------------------- |
+| `text`, `note`          | Text, ein- bzw. mehrzeilig        | `string`                                |
+| `number`                | Zahl ohne Umrechnung              | `number`                                |
+| `measure`               | Zahl mit umrechenbarer Einheit    | `number` (Basiseinheit)                 |
+| `range`                 | Zahlbereich von–bis               | `{ from, to }` (eine Seite darf `null`) |
+| `scale`                 | Bewertung 1–5                     | `number`                                |
+| `dimensions`            | Maße L × B × H                    | `{ l, w, h, min, mid, max }` (mm)       |
+| `select`, `multiselect` | feste Auswahl, einfach/mehrfach   | `string` bzw. `string[]`                |
+| `combo`                 | Auswahl mit Freitext              | `string`                                |
+| `boolean`               | Ja/Nein                           | `true`                                  |
+| `date`, `daterange`     | Datum bzw. Zeitraum von–bis (ISO) | `string` bzw. `{ from, to }`            |
+| `color`                 | Farbe                             | `#rrggbb`                               |
+| `url`                   | Link                              | `string`                                |
+
+Im Bestand filtert `m.<schlüssel>` je Merkmal (Zahl/Messwert/Bewertung von–bis, Bereich
+überlappend, Auswahl/Text gleich bzw. enthält, Ja/Nein); Maße laufen über `passt`. In der
+Sammelerfassung stehen die Merkmale als Textspalten, Bereich/Zeitraum als `von~bis`.
 
 ## Komponenten
 

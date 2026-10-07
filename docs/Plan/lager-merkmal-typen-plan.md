@@ -1,6 +1,7 @@
 # Plan: Lager – Merkmalstyp „Bereich“ (von–bis) und weitere Typen
 
-Stand: 2026-10-05. Entwurf, nichts umgesetzt. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-07. Umgesetzt (Phase 1, Phase 2 außer „Anhang/Datei“, Doku und Tests). Auf Staging
+noch nicht geprüft; Release offen. Checkliste am Ende wird gepflegt.
 Baut auf `docs/Plan/lager-kategorien-plan.md` auf – dort sind in Phase 5 „Feste Datentypen“
 `measure`, `dimensions`, `multiselect` und `date` bereits umgesetzt.
 
@@ -29,7 +30,7 @@ Baut auf `docs/Plan/lager-kategorien-plan.md` auf – dort sind in Phase 5 „Fe
 ### Datenmodell
 
 - Neuer Wert `range` im Enum `InventoryFieldType` (`src/lib/inventory/specs.ts` + Prisma-Schema).
-- `RangeValue = { min: number; max: number }` mit `min ≤ max`; **einseitig** erlaubt (nur „ab“
+- `RangeValue = { from: number | null; to: number | null }`; **einseitig** erlaubt (nur „ab“
   oder nur „bis“), die fehlende Seite ist `null`.
 - `SpecValue` um `RangeValue` erweitern; dazu `parseRange`, Prüfer `isRange` und `formatRange`
   analog zu `parseDimensions`/`dimensionsValue`/`formatDimensions`.
@@ -89,8 +90,33 @@ Nach Nutzen fürs Lager sortiert; jeder Typ läuft durch dieselben Stellen wie P
 - Prüfstufen nach `AGENTS.md`: `lint`, `format:check`, `test`, `build`, Screenshots mobil/Desktop.
 - Abnahme auf Staging, Release zusammen mit Lager 2 und 3.
 
+## Umsetzung und Abweichungen (2026-10-07)
+
+- **`range`** ist als Objekt `{ from, to }` umgesetzt (nicht `{ min, max }` – E1 korrigiert).
+  Passt zur Konvention „von–bis“ und erlaubt einseitige Werte direkt. Akzeptiert beim Lesen auch
+  den Text `4~16` (Formular, Filter, Sammelerfassung).
+- **Zusätzliche Typen** umgesetzt: `scale` (1–5), `color`, `url`, `note`, `combo`, `daterange`.
+  `measure`, `dimensions`, `multiselect` und `date` gab es bereits (Lager 3).
+- **Migration** `prisma/migrations/20261007120000_inventory_spec_types/migration.sql` hängt die
+  neuen Enum-Werte per `ALTER TYPE … ADD VALUE` an – als eigene Migration, weil neue Enum-Werte
+  erst nach dem Commit nutzbar sind.
+- **Filter:** `range` filtert Überlappung über die Grenzen `from`/`to`. Einseitig gespeicherte
+  Bereiche werden über die jeweils vorhandene Grenze erfasst; das offene Gegenstück bleibt dabei
+  unberücksichtigt (bei der Datenmenge unkritisch). `daterange` ist bewusst nicht filterbar (wie
+  `date`); `scale` filtert wie eine Zahl von–bis.
+- **Anzeige:** neues `SpecValueDisplay` zeigt `color` als Farbfeld, `url` als Verweis; dafür liefert
+  `describeSpecs` jetzt auch den `type`. Eingebunden in Typ-, Objekt- und öffentlicher Scan-Seite.
+- **Katalog-Editor:** „Auswahlwerte“ auch bei `combo` (als Vorschläge), Einheit auch bei `range`;
+  Beispiel-Platzhalter über `hasPlaceholder` gesteuert.
+- **Nicht umgesetzt** (bewusste Abgrenzung auf Wunsch): Typ „Anhang/Datei“.
+- **Prüfstufen:** `lint` (nur die vorbestehende `treeitem`-Warnung), `typecheck`, `test` – die 6
+  Fehler in `nutrition-section.test.tsx` sind vorbestehend und ohne Bezug zum Lager. `build` lief
+  (siehe Commit).
+
 ## Checkliste
 
-- [ ] Phase 1 Typ „Bereich“ (von–bis)
-- [ ] Phase 2 weitere Typen (nur bei Bedarf, Auswahl offen)
-- [ ] Phase 3 Doku, Tests, Screenshots, Staging-Abnahme, Release
+- [x] Phase 1 Typ „Bereich“ (von–bis)
+- [x] Phase 2 weitere Typen – Link, Bewertung, mehrzeiliger Text, Farbe, Auswahl mit Freitext,
+      Datums-Zeitraum (Anhang/Datei bewusst offen)
+- [x] Phase 3 Doku (`docs/seiten/lager.md`) und Unit-Tests
+- [ ] Screenshots mobil/Desktop, Staging-Abnahme und Release zusammen mit Lager 2 und 3

@@ -7,9 +7,11 @@ import {
   describeSpecs,
   formatDimensions,
   formatMeasure,
+  formatRange,
   inheritedFields,
   parseDimensions,
   parseMeasure,
+  parseRange,
   parseSpecs,
   readSpecs,
   specToInput,
@@ -88,7 +90,7 @@ describe("Merkmale", () => {
 
   it("beschreibt Werte mit Einheit", () => {
     expect(describeSpecs(area.fields, { power: 750 })).toEqual([
-      { key: "power", label: "power", value: "750 W" },
+      { key: "power", label: "power", value: "750 W", type: "number" },
     ]);
   });
 });
@@ -187,5 +189,66 @@ describe("Messwerte und Maße", () => {
     expect(() => parseSpecs(fields, { colors: "grün" })).toThrow(/nicht vorgesehen/);
     expect(() => parseSpecs(fields, { size: "groß" })).toThrow(/L × B × H/);
     expect(() => parseSpecs(fields, { bought: "31.2.2026" })).toThrow(/Datum/);
+  });
+});
+
+describe("Bereich, Bewertung, Farbe, Link, Text und Zeitraum", () => {
+  const fields = [
+    field("zoom", { type: "range", unit: "mm" }),
+    field("saal", { type: "daterange" }),
+    field("rating", { type: "scale" }),
+    field("farbe", { type: "color" }),
+    field("blatt", { type: "url" }),
+    field("notiz", { type: "note" }),
+    field("motiv", { type: "combo", options: ["rot", "blau"] }),
+  ];
+
+  it("prüft und normalisiert einen Zahlbereich", () => {
+    expect(parseSpecs(fields, { zoom: "4~16" })).toEqual({ zoom: { from: 4, to: 16 } });
+    expect(parseSpecs(fields, { zoom: "4" })).toEqual({ zoom: { from: 4, to: 4 } });
+    expect(parseSpecs(fields, { zoom: "~16" })).toEqual({ zoom: { from: null, to: 16 } });
+    expect(() => parseSpecs(fields, { zoom: "16~4" })).toThrow(/bitte als/);
+    expect(() => parseSpecs(fields, { zoom: "viel" })).toThrow(/bitte als/);
+    expect(parseRange("abc")).toBeNull();
+    expect(formatRange({ from: 4, to: 16 }, "mm")).toBe("4 – 16 mm");
+    expect(formatRange({ from: 4, to: null }, "mm")).toBe("ab 4 mm");
+    expect(formatRange({ from: null, to: 16 }, "mm")).toBe("bis 16 mm");
+    expect(specToInput(fields[0]!, { from: 4, to: 16 })).toBe("4~16");
+    expect(() => parseSpecs([field("zoom", { type: "range", required: true })], {})).toThrow(
+      /zoom/,
+    );
+  });
+
+  it("prüft Bewertung, Farbe, Link und Freitext-Auswahl", () => {
+    expect(parseSpecs(fields, { rating: 3, farbe: "#ABC", blatt: "example.org/x" })).toMatchObject({
+      rating: 3,
+      farbe: "#aabbcc",
+      blatt: "example.org/x",
+    });
+    expect(() => parseSpecs(fields, { rating: 9 })).toThrow(/1 bis 5/);
+    expect(() => parseSpecs(fields, { farbe: "blau" })).toThrow(/Farbwert/);
+    expect(() => parseSpecs(fields, { blatt: "kein link" })).toThrow(/Link/);
+    // Auswahl mit Freitext: auch ein nicht gelisteter Wert ist erlaubt.
+    expect(parseSpecs(fields, { motiv: "grün" })).toEqual({ motiv: "grün" });
+  });
+
+  it("liest einen Datums-Zeitraum und zeigt Werte typtreu an", () => {
+    const specs = parseSpecs(fields, {
+      zoom: "4~16",
+      saal: "2026-01-01~2026-03-31",
+      notiz: "Zeile 1",
+      farbe: "#1e40af",
+    });
+    const rows = describeSpecs(fields, readSpecs(specs));
+    expect(rows.map((row) => row.value)).toEqual([
+      "4 – 16 mm",
+      "01.01.2026 – 31.03.2026",
+      "#1e40af",
+      "Zeile 1",
+    ]);
+    expect(rows[2]!.type).toBe("color");
+    expect(specToInput(fields[1]!, { from: "2026-01-01", to: "2026-03-31" })).toBe(
+      "2026-01-01~2026-03-31",
+    );
   });
 });

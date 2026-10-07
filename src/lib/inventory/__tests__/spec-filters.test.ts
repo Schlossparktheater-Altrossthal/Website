@@ -27,6 +27,9 @@ describe("Merkmal-Filter", () => {
     field("dmx", { type: "boolean" }),
     field("colors", { type: "multiselect", options: ["rot", "blau"] }),
     field("size", { type: "dimensions", unit: "cm" }),
+    field("zoom", { type: "range", unit: "mm" }),
+    field("rating", { type: "scale" }),
+    field("saal", { type: "daterange" }),
   ];
 
   it("liest Bereiche in Basiseinheiten und Werte", () => {
@@ -38,6 +41,9 @@ describe("Merkmal-Filter", () => {
         "m.dmx": "ja",
         "m.colors": "rot",
         "m.size": "100x50x20",
+        "m.zoom": "4~16",
+        "m.rating": "3",
+        "m.saal": "2026-01-01~2026-02-01",
       }),
     ).toEqual([
       { key: "weight", op: "lte", value: 10_000 },
@@ -46,7 +52,16 @@ describe("Merkmal-Filter", () => {
       { key: "pattern", op: "equals", value: "Niere" },
       { key: "dmx", op: "equals", value: true },
       { key: "colors", op: "has", value: "rot" },
+      { key: "zoom", op: "range", from: 4, to: 16 },
+      { key: "rating", op: "gte", value: 3 },
+      { key: "rating", op: "lte", value: 3 },
     ]);
+  });
+
+  it("lässt Zeiträume außen vor", () => {
+    expect(parseSpecFilters([field("saal", { type: "daterange" })], { "m.saal": "~2026" })).toEqual(
+      [],
+    );
   });
 
   it("liest „passt in“ sortiert und ohne Höhe als Grundfläche", () => {

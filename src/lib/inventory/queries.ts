@@ -84,6 +84,41 @@ function productConditions(
       case "has":
         and.push({ specs: { path, array_contains: [condition.value] } });
         break;
+      case "range": {
+        // Überlappung: der gespeicherte Bereich [from, to] berührt den Filterbereich [a, b].
+        const { from, to } = condition;
+        const or: Prisma.InventoryProductWhereInput[] = [];
+        if (from !== null && to !== null) {
+          or.push({
+            OR: [
+              {
+                AND: [
+                  { specs: { path: [...path, "from"], gte: from } },
+                  { specs: { path: [...path, "from"], lte: to } },
+                ],
+              },
+              {
+                AND: [
+                  { specs: { path: [...path, "to"], gte: from } },
+                  { specs: { path: [...path, "to"], lte: to } },
+                ],
+              },
+              {
+                AND: [
+                  { specs: { path: [...path, "from"], lte: from } },
+                  { specs: { path: [...path, "to"], gte: to } },
+                ],
+              },
+            ],
+          });
+        } else if (from !== null) {
+          or.push({ specs: { path: [...path, "to"], gte: from } });
+        } else if (to !== null) {
+          or.push({ specs: { path: [...path, "from"], lte: to } });
+        }
+        and.push({ OR: or.length ? or : [{ id: "__kein-bereich__" }] });
+        break;
+      }
     }
   }
   if (filter.fits) {

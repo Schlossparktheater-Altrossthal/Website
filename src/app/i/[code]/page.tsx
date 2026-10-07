@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { SpecValueDisplay } from "@/components/inventory/spec-value";
 import { ToneBadge } from "@/components/inventory/tone-badge";
 import { AlertTriangleIcon, ShieldCheckIcon } from "@/components/ui/action-icons";
 import {
@@ -146,7 +147,9 @@ export default async function PublicInventoryPage({
           {attributes.map((entry) => (
             <div key={entry.label}>
               <dt className="text-muted-foreground">{entry.label}</dt>
-              <dd className="text-foreground">{entry.value}</dd>
+              <dd className="text-foreground">
+                <SpecValueDisplay type={entry.type} value={entry.value} />
+              </dd>
             </div>
           ))}
         </dl>

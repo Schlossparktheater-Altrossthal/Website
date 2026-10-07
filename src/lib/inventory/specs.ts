@@ -6,33 +6,83 @@
 
 export const FIELD_TYPES = [
   "text",
+  "note",
   "number",
   "measure",
+  "range",
+  "scale",
   "dimensions",
   "select",
   "multiselect",
+  "combo",
   "boolean",
   "date",
+  "daterange",
+  "color",
+  "url",
 ] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: "Text",
+  note: "Mehrzeiliger Text",
   number: "Zahl",
   measure: "Messwert mit Einheit",
+  range: "Bereich (von–bis)",
+  scale: "Bewertung (1–5)",
   dimensions: "Maße (L × B × H)",
   select: "Auswahl",
   multiselect: "Mehrfachauswahl",
+  combo: "Auswahl mit Freitext",
   boolean: "Ja/Nein",
   date: "Datum",
+  daterange: "Zeitraum (von–bis)",
+  color: "Farbe",
+  url: "Link",
 };
 
 /** Kategorien dürfen höchstens so viele Ebenen tief sein. */
 export const MAX_CATEGORY_DEPTH = 5;
 
-/** Merkmaltypen mit festen Auswahlwerten. */
+/** Obergrenze der Bewertungsskala (`scale`). */
+export const SCALE_MAX = 5;
+
+/** Größte Länge eines mehrzeiligen Textes (`note`). */
+export const NOTE_MAX_LENGTH = 2000;
+
+/** Merkmaltypen mit fester Auswahlliste (mindestens zwei Werte nötig). */
 export function hasOptions(type: FieldType): boolean {
   return type === "select" || type === "multiselect";
+}
+
+/** Merkmaltypen, die die Liste „Auswahlwerte“ zeigen – bei `combo` als Vorschläge. */
+export function allowsOptions(type: FieldType): boolean {
+  return hasOptions(type) || type === "combo";
+}
+
+/** Merkmaltypen mit frei eingegebener Einheiten-Beschriftung (keine Umrechnung). */
+export function hasFreeUnit(type: FieldType): boolean {
+  return type === "number" || type === "text" || type === "range";
+}
+
+/** Merkmaltypen mit Einheit aus der Einheiten-Familie (umrechenbar). */
+export function hasUnitFamily(type: FieldType): boolean {
+  return type === "measure" || type === "dimensions";
+}
+
+/** Merkmaltypen mit Beispiel-Platzhalter im Formular. */
+export function hasPlaceholder(type: FieldType): boolean {
+  return (
+    type === "text" ||
+    type === "note" ||
+    type === "number" ||
+    type === "measure" ||
+    type === "dimensions" ||
+    type === "range" ||
+    type === "combo" ||
+    type === "color" ||
+    type === "url"
+  );
 }
 
 export type FieldDef = {
@@ -59,7 +109,17 @@ export type DimensionsValue = {
   max: number;
 };
 
-export type SpecValue = string | number | boolean | string[] | DimensionsValue;
+/**
+ * Zahlbereich (von–bis). Eine Seite darf fehlen (`null`), dann gilt der Bereich als offen –
+ * z. B. „ab 4“, „bis 16“. Ist beides gesetzt, gilt `from ≤ to`.
+ */
+export type RangeValue = { from: number | null; to: number | null };
+
+/** Datumsbereich (von–bis), ISO `YYYY-MM-DD`; eine Seite darf `null` sein. */
+export type DateRangeValue = { from: string | null; to: string | null };
+
+export type SpecValue =
+  string | number | boolean | string[] | DimensionsValue | RangeValue | DateRangeValue;
 export type Specs = Record<string, SpecValue>;
 
 export type CategoryNode = { id: string; parentId: string | null; name: string };
@@ -322,6 +382,135 @@ function splitList(value: unknown): string[] {
   return [...new Set(list.map((entry) => entry.trim()).filter(Boolean))];
 }
 
+function isRange(value: unknown): value is RangeValue {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const entry = value as Record<string, unknown>;
+  const bound = (item: unknown) => item === null || item === undefined || typeof item === "number";
+  return ("from" in entry || "to" in entry) && bound(entry.from) && bound(entry.to);
+}
+
+function isDateRange(value: unknown): value is DateRangeValue {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const entry = value as Record<string, unknown>;
+  const bound = (item: unknown) => item === null || item === undefined || typeof item === "string";
+  return ("from" in entry || "to" in entry) && bound(entry.from) && bound(entry.to);
+}
+
+/** Ein Wert ist leer, wenn er nicht gesetzt oder ein beidseitig leerer Bereich ist. */
+function isEmptyValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === "") return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (isRange(value)) return (value.from ?? null) === null && (value.to ?? null) === null;
+  if (isDateRange(value)) return !value.from && !value.to;
+  return false;
+}
+
+function splitBounds(text: string): [string, string] {
+  return text.includes("~") ? [text.split("~")[0] ?? "", text.split("~")[1] ?? ""] : [text, text];
+}
+
+/**
+ * Zahlbereich lesen: Objekt `{ from, to }` oder Text „4~16“, „4“, „~16“. Eine Seite darf fehlen
+ * (`null`); sind beide gesetzt, muss `from ≤ to` gelten. Leer oder widersprüchlich → `null`.
+ */
+export function parseRange(input: unknown): RangeValue | null {
+  if (isRange(input)) {
+    const from = input.from ?? null;
+    const to = input.to ?? null;
+    if (from === null && to === null) return null;
+    if (from !== null && to !== null && from > to) return null;
+    return { from, to };
+  }
+  const text = String(input).trim();
+  if (!text) return null;
+  const [fromRaw, toRaw] = splitBounds(text);
+  const from = fromRaw.trim() ? parseNumber(fromRaw) : null;
+  const to = toRaw.trim() ? parseNumber(toRaw) : null;
+  if ((fromRaw.trim() && from === null) || (toRaw.trim() && to === null)) return null;
+  if (from === null && to === null) return null;
+  if (from !== null && to !== null && from > to) return null;
+  return { from, to };
+}
+
+/** Datumsbereich lesen: Objekt oder Text „2026-01-01~2026-03-31“, „...“, „~2026-12-31“. */
+export function parseDateRange(input: unknown): DateRangeValue | null {
+  const normalize = (value: string | null): string | null => {
+    if (!value) return null;
+    const date = parseDate(value);
+    if (date) return date;
+    throw new Error("invalid");
+  };
+  if (isDateRange(input)) {
+    try {
+      const from = normalize(input.from);
+      const to = normalize(input.to);
+      if (from === null && to === null) return null;
+      if (from !== null && to !== null && from > to) return null;
+      return { from, to };
+    } catch {
+      return null;
+    }
+  }
+  const text = String(input).trim();
+  if (!text) return null;
+  const [fromRaw, toRaw] = splitBounds(text);
+  try {
+    const from = fromRaw.trim() ? parseDate(fromRaw) : null;
+    const to = toRaw.trim() ? parseDate(toRaw) : null;
+    if ((fromRaw.trim() && from === null) || (toRaw.trim() && to === null)) return null;
+    if (from === null && to === null) return null;
+    if (from !== null && to !== null && from > to) return null;
+    return { from, to };
+  } catch {
+    return null;
+  }
+}
+
+export function formatRange(value: RangeValue, unit: string | null): string {
+  const suffix = unit ? ` ${unit}` : "";
+  const from = value.from !== null ? formatNumber(value.from) : null;
+  const to = value.to !== null ? formatNumber(value.to) : null;
+  if (from !== null && to !== null) return `${from} – ${to}${suffix}`;
+  if (from !== null) return `ab ${from}${suffix}`;
+  if (to !== null) return `bis ${to}${suffix}`;
+  return "";
+}
+
+function formatDateRange(value: DateRangeValue): string {
+  const show = (iso: string) => iso.split("-").reverse().join(".");
+  const from = value.from ? show(value.from) : null;
+  const to = value.to ? show(value.to) : null;
+  if (from && to) return `${from} – ${to}`;
+  if (from) return `ab ${from}`;
+  if (to) return `bis ${to}`;
+  return "";
+}
+
+/** Farbwert normalisieren: „#abc“ und „1e40af“ werden zu „#aabbcc“/„#1e40af“. */
+export function normalizeColor(input: string): string | null {
+  const match = input
+    .trim()
+    .toLowerCase()
+    .match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/);
+  if (!match) return null;
+  const hex = match[1]!;
+  const full = hex.length === 3 ? [...hex].map((char) => char + char).join("") : hex;
+  return `#${full}`;
+}
+
+/** Link normalisieren: gibt den (getrimmten) Text zurück, wenn er ein gültiger Link ist. */
+export function normalizeUrl(input: string): string | null {
+  const text = input.trim();
+  if (!text) return null;
+  const candidate = /^https?:\/\//i.test(text) ? text : `https://${text}`;
+  try {
+    const url = new URL(candidate);
+    return url.hostname.includes(".") ? text.slice(0, 300) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Prüft und normalisiert Merkmalswerte. Unbekannte Schlüssel werden verworfen, leere Werte
  * weggelassen. Wirft bei Pflichtfeldern ohne Wert oder ungültigen Werten.
@@ -333,8 +522,7 @@ export function parseSpecs(fields: readonly FieldDef[], raw: unknown): Specs {
   for (const field of fields) {
     const value = input[field.key];
     const text = typeof value === "string" ? value.trim() : value;
-    const empty = Array.isArray(text) ? text.length === 0 : text === "";
-    if (text === undefined || text === null || empty) {
+    if (isEmptyValue(text)) {
       if (field.required && field.type !== "boolean") {
         throw new Error(`Bitte „${field.label}“ angeben.`);
       }
@@ -370,6 +558,45 @@ export function parseSpecs(fields: readonly FieldDef[], raw: unknown): Specs {
         result[field.key] = dims;
         break;
       }
+      case "range": {
+        const range = parseRange(text);
+        if (!range) {
+          throw new Error(`„${field.label}“ bitte als von–bis angeben, z. B. 4~16.`);
+        }
+        result[field.key] = range;
+        break;
+      }
+      case "scale": {
+        const number = typeof text === "number" ? text : parseNumber(String(text));
+        if (number === null || !Number.isInteger(number) || number < 1 || number > SCALE_MAX) {
+          throw new Error(`„${field.label}“ muss eine ganze Zahl von 1 bis ${SCALE_MAX} sein.`);
+        }
+        result[field.key] = number;
+        break;
+      }
+      case "color": {
+        const color = normalizeColor(String(text));
+        if (!color) throw new Error(`„${field.label}“ muss ein Farbwert sein, z. B. #1e40af.`);
+        result[field.key] = color;
+        break;
+      }
+      case "url": {
+        const url = normalizeUrl(String(text));
+        if (!url) {
+          throw new Error(`„${field.label}“ muss ein Link sein, z. B. example.org/datenblatt.`);
+        }
+        result[field.key] = url;
+        break;
+      }
+      case "note": {
+        const string = String(text).trim().slice(0, NOTE_MAX_LENGTH);
+        if (string) result[field.key] = string;
+        break;
+      }
+      case "combo": {
+        result[field.key] = String(text).slice(0, 60);
+        break;
+      }
       case "boolean": {
         const flag = text === true || text === "true" || text === "ja" || text === "1";
         if (flag) result[field.key] = true;
@@ -398,6 +625,12 @@ export function parseSpecs(fields: readonly FieldDef[], raw: unknown): Specs {
         result[field.key] = date;
         break;
       }
+      case "daterange": {
+        const range = parseDateRange(text);
+        if (!range) throw new Error(`„${field.label}“ bitte als Zeitraum angeben (von–bis).`);
+        result[field.key] = range;
+        break;
+      }
       default: {
         const string = String(text).slice(0, 200);
         result[field.key] = string;
@@ -418,6 +651,10 @@ export function readSpecs(value: unknown): Specs {
       if (entry.length) result[key] = entry as string[];
     } else if (isDimensions(entry)) {
       result[key] = dimensionsValue(entry.l, entry.w, entry.h);
+    } else if (isRange(entry)) {
+      if (entry.from !== null || entry.to !== null) result[key] = entry;
+    } else if (isDateRange(entry)) {
+      if (entry.from !== null || entry.to !== null) result[key] = entry;
     }
   }
   return result;
@@ -425,10 +662,14 @@ export function readSpecs(value: unknown): Specs {
 
 export function formatSpecValue(field: Pick<FieldDef, "type" | "unit">, value: SpecValue): string {
   if (field.type === "boolean") return value ? "Ja" : "Nein";
+  if (field.type === "range" && isRange(value)) return formatRange(value, field.unit);
+  if (field.type === "daterange" && isDateRange(value)) return formatDateRange(value);
   if (isDimensions(value)) return formatDimensions(value, field.unit);
   if (Array.isArray(value)) return value.join(", ");
   if (field.type === "measure" && typeof value === "number")
     return formatMeasure(value, field.unit);
+  if (field.type === "scale" && typeof value === "number")
+    return `${formatNumber(value)} / ${SCALE_MAX}`;
   if (field.type === "date" && typeof value === "string") {
     const date = parseDate(value);
     return date ? date.split("-").reverse().join(".") : value;
@@ -443,6 +684,8 @@ export function specToInput(
   value: SpecValue,
 ): string | boolean {
   if (typeof value === "boolean") return value;
+  if (isRange(value)) return `${value.from ?? ""}~${value.to ?? ""}`;
+  if (isDateRange(value)) return `${value.from ?? ""}~${value.to ?? ""}`;
   if (isDimensions(value)) return formatDimensions(value, field.unit);
   if (Array.isArray(value)) return value.join("; ");
   if (field.type === "measure" && typeof value === "number") {
@@ -458,12 +701,13 @@ export function specToInput(
 export function describeSpecs(
   fields: readonly FieldDef[],
   specs: Specs,
-): { key: string; label: string; value: string }[] {
+): { key: string; label: string; value: string; type: FieldType }[] {
   return fields
     .filter((field) => specs[field.key] !== undefined)
     .map((field) => ({
       key: field.key,
       label: field.label,
       value: formatSpecValue(field, specs[field.key]!),
+      type: field.type,
     }));
 }

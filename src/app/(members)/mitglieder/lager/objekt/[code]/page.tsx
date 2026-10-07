@@ -6,6 +6,7 @@ import { AssetThumb } from "@/components/inventory/asset-thumb";
 import { DefectList } from "@/components/inventory/defect-list";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PhotoStrip } from "@/components/inventory/photo-strip";
+import { SpecValueDisplay } from "@/components/inventory/spec-value";
 import { ToneBadge } from "@/components/inventory/tone-badge";
 import { PageHeader } from "@/components/members/page-header";
 import { AlertTriangleIcon, FileIcon, MapPinIcon, PackageIcon } from "@/components/ui/action-icons";
@@ -34,6 +35,7 @@ import {
 } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
 import type { PlacementTarget } from "@/lib/inventory/service-types";
+import type { FieldType } from "@/lib/inventory/specs";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
 
@@ -66,7 +68,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
       ? { type: "location", id: asset.locationId }
       : { type: "none" };
   const locked = asset.status === "locked";
-  const details: { label: string; value: string }[] = [
+  const details: { label: string; value: string; type?: FieldType }[] = [
     { label: "Art", value: ASSET_KIND_LABELS[asset.kind] },
     { label: "Zustand", value: CONDITION_LABELS[asset.condition] },
     ...(asset.product.manufacturer
@@ -410,7 +412,9 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ co
               {details.map((entry) => (
                 <div key={entry.label} className="min-w-0">
                   <dt className="text-xs text-muted-foreground">{entry.label}</dt>
-                  <dd className="break-words text-foreground">{entry.value}</dd>
+                  <dd className="break-words text-foreground">
+                    <SpecValueDisplay type={entry.type} value={entry.value} />
+                  </dd>
                 </div>
               ))}
             </dl>

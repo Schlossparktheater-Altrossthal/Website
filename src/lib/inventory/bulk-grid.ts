@@ -297,7 +297,9 @@ export function bulkColumns(ctx: BulkContext): GridColumn[] {
       width: 120,
       type: "text",
       inactive: (row) => !rowFields(row, ctx).some((entry) => entry.key === field.key),
-      placeholder: () => field.placeholder ?? "",
+      placeholder: () =>
+        field.placeholder ??
+        (field.type === "range" || field.type === "daterange" ? "von~bis" : ""),
       hideable: true,
       defaultVisible: true,
     })),

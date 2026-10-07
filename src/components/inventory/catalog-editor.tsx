@@ -34,11 +34,14 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
+  allowsOptions,
   categoryPath,
   DIMENSION_UNITS,
   FIELD_TYPE_LABELS,
   FIELD_TYPES,
-  hasOptions,
+  hasFreeUnit,
+  hasPlaceholder,
+  hasUnitFamily,
   inheritedFields,
   MAX_CATEGORY_DEPTH,
   MEASURE_UNITS,
@@ -562,7 +565,7 @@ function FieldList({
               </SelectContent>
             </Select>
           </div>
-          {hasOptions(draft.type) ? (
+          {allowsOptions(draft.type) ? (
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="field-options">Auswahlwerte</Label>
               <Input
@@ -571,10 +574,14 @@ function FieldList({
                 placeholder="Niere, Superniere, Kugel"
                 onChange={(event) => setDraft({ ...draft, options: event.target.value })}
               />
-              <p className="text-xs text-muted-foreground">Mit Komma getrennt.</p>
+              <p className="text-xs text-muted-foreground">
+                {draft.type === "combo"
+                  ? "Mit Komma getrennt – dienen als Vorschläge, ein eigener Wert bleibt möglich."
+                  : "Mit Komma getrennt."}
+              </p>
             </div>
           ) : null}
-          {draft.type === "measure" || draft.type === "dimensions" ? (
+          {hasUnitFamily(draft.type) ? (
             <div className="space-y-1.5">
               <Label>Einheit</Label>
               <Select
@@ -599,7 +606,7 @@ function FieldList({
               </p>
             </div>
           ) : null}
-          {draft.type === "number" || draft.type === "text" ? (
+          {hasFreeUnit(draft.type) ? (
             <div className="space-y-1.5">
               <Label htmlFor="field-unit">Einheit</Label>
               <Input
@@ -610,7 +617,7 @@ function FieldList({
               />
             </div>
           ) : null}
-          {draft.type !== "boolean" && !hasOptions(draft.type) && draft.type !== "date" ? (
+          {hasPlaceholder(draft.type) ? (
             <div className="space-y-1.5">
               <Label htmlFor="field-placeholder">Beispiel</Label>
               <Input

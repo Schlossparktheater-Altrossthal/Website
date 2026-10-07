@@ -5,6 +5,7 @@ import { AssetThumb } from "@/components/inventory/asset-thumb";
 import { NoInventoryAccess } from "@/components/inventory/no-access";
 import { PhotoStrip } from "@/components/inventory/photo-strip";
 import { SetComponentsEditor } from "@/components/inventory/set-components-editor";
+import { SpecValueDisplay } from "@/components/inventory/spec-value";
 import { ToneBadge } from "@/components/inventory/tone-badge";
 import { PageHeader } from "@/components/members/page-header";
 import { EditIcon, PlusIcon, PrinterIcon } from "@/components/ui/action-icons";
@@ -24,6 +25,7 @@ import {
 } from "@/lib/inventory/constants";
 import { getInventoryProductDetail } from "@/lib/inventory/queries";
 import { getInventoryAccess } from "@/lib/inventory/service";
+import type { FieldType } from "@/lib/inventory/specs";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
 
@@ -47,7 +49,7 @@ export default async function ProductDetailPage({
   const bulk = product.kind === "bulk";
   const isSet = product.kind === "set";
   const unit = product.unit ?? "Stk.";
-  const details = [
+  const details: { label: string; value: string; type?: FieldType }[] = [
     { label: "Art", value: ASSET_KIND_LABELS[product.kind] },
     ...(product.manufacturer ? [{ label: "Hersteller", value: product.manufacturer }] : []),
     ...(product.model ? [{ label: "Modell", value: product.model }] : []),
@@ -263,7 +265,9 @@ export default async function ProductDetailPage({
               {details.map((entry) => (
                 <div key={entry.label} className="min-w-0">
                   <dt className="text-xs text-muted-foreground">{entry.label}</dt>
-                  <dd className="break-words text-foreground">{entry.value}</dd>
+                  <dd className="break-words text-foreground">
+                    <SpecValueDisplay type={entry.type} value={entry.value} />
+                  </dd>
                 </div>
               ))}
             </dl>

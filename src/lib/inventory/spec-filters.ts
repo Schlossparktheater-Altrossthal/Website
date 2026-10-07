@@ -3,6 +3,7 @@
  * Server-Abhängigkeiten. In der URL stehen sie lesbar in der Einheit des Merkmals:
  *
  *   m.gewicht=~10         höchstens 10 (kg)      m.leistung=500~   mindestens 500 (W)
+ *   m.bereich=4~16        Zahlbereich überlappt [4, 16]
  *   m.farbe=rot           Auswahl/Text/Mehrfach  m.dmx=ja          Ja/Nein
  *   passt=120x80x40       Maße passen hinein (Drehen erlaubt)
  *   tag=Barock,rot        alle Tags
@@ -26,14 +27,17 @@ export type SpecCondition =
   | { key: string; op: "gte" | "lte"; value: number }
   | { key: string; op: "equals"; value: string | boolean }
   | { key: string; op: "contains"; value: string }
-  | { key: string; op: "has"; value: string };
+  | { key: string; op: "has"; value: string }
+  | { key: string; op: "range"; from: number | null; to: number | null };
 
 /** Größte zulässige Maße (mm, aufsteigend) für „passt in“. */
 export type FitsFilter = { min: number; mid: number; max: number };
 
-/** Merkmale, nach denen sich filtern lässt (Maße laufen über „passt in“). */
+/** Merkmale, nach denen sich filtern lässt (Maße laufen über „passt in“, Zeiträume nicht). */
 export function filterableFields(fields: readonly FieldDef[]): FieldDef[] {
-  return fields.filter((field) => field.type !== "dimensions" && field.type !== "date");
+  return fields.filter(
+    (field) => field.type !== "dimensions" && field.type !== "date" && field.type !== "daterange",
+  );
 }
 
 type CatalogScopeArea = {
@@ -78,12 +82,22 @@ export function parseSpecFilters(
     if (!raw) continue;
     switch (field.type) {
       case "number":
-      case "measure": {
+      case "measure":
+      case "scale": {
         const [from = "", to = ""] = raw.includes("~") ? raw.split("~") : [raw, raw];
         const min = parseBound(field, from);
         const max = parseBound(field, to);
         if (min !== null) conditions.push({ key: field.key, op: "gte", value: min });
         if (max !== null) conditions.push({ key: field.key, op: "lte", value: max });
+        break;
+      }
+      case "range": {
+        const [fromRaw = "", toRaw = ""] = raw.includes("~") ? raw.split("~") : [raw, raw];
+        const from = parseBound(field, fromRaw);
+        const to = parseBound(field, toRaw);
+        if (from !== null || to !== null) {
+          conditions.push({ key: field.key, op: "range", from, to });
+        }
         break;
       }
       case "boolean":
