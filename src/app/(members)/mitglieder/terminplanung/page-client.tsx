@@ -7,6 +7,7 @@ import type { CalendarEventKind } from "@prisma/client";
 import {
   CalendarCheckIcon,
   DramaIcon,
+  UsersIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ListIcon,
@@ -39,6 +40,7 @@ import { CalendarLegend, DayCellDetails, DayChips, formatLongDate } from "../spe
 import type { TeamEntry } from "../sperrliste/types";
 import { getBaseDayState, useCalendarModel } from "../sperrliste/use-calendar-model";
 import { NewEventButton, NewEventButtons, useCreateDraft } from "./new-event";
+import { PeopleWeekView } from "./people-week-view";
 import { ScenePlanView, type ScenePlanData } from "./scene-plan-view";
 import { ReadinessSummary, SceneReadinessList } from "@/components/calendar/scene-readiness-list";
 import type { AudienceContext } from "@/lib/calendar/audience";
@@ -75,7 +77,7 @@ export type PlanningDraft = {
 };
 
 type Filter = "all" | "rehearsals" | "events";
-type View = "calendar" | "list" | "scenes";
+type View = "calendar" | "list" | "scenes" | "people";
 type Answer = "blocked" | "limited" | "available";
 
 type Attendance = {
@@ -174,6 +176,7 @@ export function EventPlanningClient({
     const params = new URLSearchParams();
     if (view === "list") params.set("ansicht", "liste");
     if (view === "scenes") params.set("ansicht", "szenen");
+    if (view === "people") params.set("ansicht", "personen");
     if (filter !== "all") params.set("art", filter === "rehearsals" ? "proben" : "termine");
     if (selectedKey !== todayKey) params.set("tag", selectedKey);
     const search = params.toString();
@@ -352,6 +355,16 @@ export function EventPlanningClient({
                   },
                 ]
               : []),
+            {
+              value: "people",
+              label: (
+                <>
+                  <UsersIcon className="h-4 w-4" aria-hidden />
+                  <span className="hidden sm:inline">Personen</span>
+                </>
+              ),
+              ariaLabel: "Personen",
+            },
           ]}
         />
         <SegmentedControl
@@ -427,6 +440,14 @@ export function EventPlanningClient({
             </Card>
           ) : null}
         </div>
+      ) : view === "people" ? (
+        <PeopleWeekView
+          members={members}
+          availability={availability}
+          events={events}
+          initialDay={selectedKey}
+          onOpenDay={showDayInCalendar}
+        />
       ) : view === "scenes" && scenePlan ? (
         <ScenePlanView data={scenePlan} todayKey={todayKey} onOpenDay={showDayInCalendar} />
       ) : (

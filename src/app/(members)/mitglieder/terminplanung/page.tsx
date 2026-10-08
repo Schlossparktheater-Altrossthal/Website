@@ -188,7 +188,15 @@ export default async function EventPlanningPage({
         preferredWeekdays={settings.preferredWeekdays}
         exceptionWeekdays={settings.exceptionWeekdays}
         initialFilter={art === "proben" ? "rehearsals" : art === "termine" ? "events" : "all"}
-        initialView={ansicht === "liste" ? "list" : ansicht === "szenen" ? "scenes" : "calendar"}
+        initialView={
+          ansicht === "liste"
+            ? "list"
+            : ansicht === "szenen"
+              ? "scenes"
+              : ansicht === "personen"
+                ? "people"
+                : "calendar"
+        }
         initialDay={tag && /^\d{4}-\d{2}-\d{2}$/.test(tag) ? tag : null}
         sceneContext={
           sceneContext?.scenes.length
