@@ -1,6 +1,6 @@
 # Plan: Planungshilfen in der Terminplanung (probbare Szenen, Belastung, Übersichten)
 
-Stand: 2026-10-08 – Konzept, Umsetzung beginnt direkt
+Stand: 2026-10-08 – Phase 1–6 umgesetzt (main), offen: Staging-Abnahme, Prod-Release
 
 ## Ziel
 
@@ -95,4 +95,4 @@ Rollen ohne Besetzung zählen nicht als fehlend (sonst wäre jede Szene rot), we
 - [x] Phase 3 Szenen-Plan (2026-10-08): Ansicht `?ansicht=szenen`, `scene-plan.ts`, Karte Szenen-Stand entfernt
 - [x] Phase 4 Personen-Woche (2026-10-08): Ansicht `?ansicht=personen`, mobil Tag-Auswahl
 - [x] Phase 5 Kalender am Desktop (2026-10-08): Uhrzeit + gekürzter Titel zweizeilig, Verfügbarkeitsbalken; Seitenleiste bleibt 22rem (breiter würde die Tagesfelder zu schmal machen)
-- [ ] Phase 6 Demo/E2E
+- [x] Phase 6 Demo/E2E (2026-10-08): Demo-Seed deckt vollständig/fehlt jemand ab, `e2e/planungshilfen.spec.ts` (nur lesend)
