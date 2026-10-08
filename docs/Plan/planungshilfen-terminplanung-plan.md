@@ -94,5 +94,5 @@ Rollen ohne Besetzung zählen nicht als fehlend (sonst wäre jede Szene rot), we
 - [x] Phase 2 Belastung (2026-10-08): `week-load.ts`, Kennzeichen + Bündel-Hinweis im Editor, „Diese Woche eingeladen“ im Tagesfeld
 - [x] Phase 3 Szenen-Plan (2026-10-08): Ansicht `?ansicht=szenen`, `scene-plan.ts`, Karte Szenen-Stand entfernt
 - [x] Phase 4 Personen-Woche (2026-10-08): Ansicht `?ansicht=personen`, mobil Tag-Auswahl
-- [ ] Phase 5 Kalender am Desktop
+- [x] Phase 5 Kalender am Desktop (2026-10-08): Uhrzeit + gekürzter Titel zweizeilig, Verfügbarkeitsbalken; Seitenleiste bleibt 22rem (breiter würde die Tagesfelder zu schmal machen)
 - [ ] Phase 6 Demo/E2E

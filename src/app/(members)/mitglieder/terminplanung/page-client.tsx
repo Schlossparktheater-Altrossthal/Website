@@ -411,15 +411,24 @@ export function EventPlanningClient({
               getDayState={(key) =>
                 getBaseDayState(model.dayMap.get(key), model.entriesByDay.get(key))
               }
-              renderDetails={(key) => (
-                <>
-                  <DayCellDetails
+              renderDetails={(key) =>
+                isDesktop ? (
+                  <PlanningCellDetails
                     day={model.dayMap.get(key)}
-                    entries={model.entriesByDay.get(key)}
+                    entries={(model.entriesByDay.get(key) ?? []) as PlanningEvent[]}
+                    counts={model.countsByDay.get(key)}
+                    total={members.length}
                   />
-                  <DayCellCounts counts={model.countsByDay.get(key)} />
-                </>
-              )}
+                ) : (
+                  <>
+                    <DayCellDetails
+                      day={model.dayMap.get(key)}
+                      entries={model.entriesByDay.get(key)}
+                    />
+                    <DayCellCounts counts={model.countsByDay.get(key)} />
+                  </>
+                )
+              }
             />
             <p className="text-center text-xs text-muted-foreground lg:hidden">
               Tippe auf einen Tag: Termine, wer kann, neu anlegen.
@@ -466,6 +475,69 @@ export function EventPlanningClient({
         </BottomSheet>
       ) : null}
     </div>
+  );
+}
+
+/** „Szenenprobe 2.5, 2.6, 2.7“ → „Sz. 2.5, 2.6, 2.7“ – mehr Platz im Tagesfeld. */
+function shortTitle(title: string) {
+  return title.replace(/^Szenenprobe\s*/i, "Sz. ");
+}
+
+/**
+ * Tagesfeld am Desktop: Uhrzeit und (gekürzter) Titel zweizeilig statt abgeschnitten, darunter
+ * ein Balken, wie viele laut Sperrliste können.
+ */
+function PlanningCellDetails({
+  day,
+  entries,
+  counts,
+  total,
+}: {
+  day: ReturnType<ReturnType<typeof useCalendarModel>["dayMap"]["get"]>;
+  entries: PlanningEvent[];
+  counts: { blocked: number; limited: number } | undefined;
+  total: number;
+}) {
+  const holiday = day?.holidays.find((entry) => entry.category === "publicHoliday");
+  return (
+    <span className="flex min-w-0 flex-col gap-0.5">
+      {entries.slice(0, 2).map((entry) => (
+        <span
+          key={entry.id}
+          className={cn(
+            "min-w-0 rounded border-l-2 px-1 py-0.5 text-[0.6875rem] leading-tight",
+            entry.source === "rehearsal"
+              ? "border-info bg-info/10"
+              : "border-primary bg-primary/10",
+            entry.status === "TENTATIVE" && "border-dashed",
+          )}
+        >
+          {!entry.allDay ? (
+            <span className="block tabular-nums text-muted-foreground">
+              {formatIsoTimeInTimeZone(entry.start)}
+            </span>
+          ) : null}
+          <span className="line-clamp-2 break-words font-medium">{shortTitle(entry.title)}</span>
+        </span>
+      ))}
+      {entries.length > 2 ? (
+        <span className="px-1 text-[0.6875rem] text-muted-foreground">
+          +{entries.length - 2} weitere
+        </span>
+      ) : null}
+      {holiday ? (
+        <span className="truncate px-1 text-[0.6875rem] text-warning">{holiday.title}</span>
+      ) : null}
+      {counts && (counts.blocked || counts.limited) ? (
+        <AvailabilityBar
+          total={total}
+          blocked={counts.blocked}
+          limited={counts.limited}
+          showCount={false}
+          className="mt-auto px-1 pt-1"
+        />
+      ) : null}
+    </span>
   );
 }
 
