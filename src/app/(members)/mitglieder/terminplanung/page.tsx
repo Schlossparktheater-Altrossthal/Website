@@ -5,6 +5,7 @@ import { addMonths, format, startOfMonth } from "date-fns";
 import { PageHeader } from "@/components/members/page-header";
 import { getActiveProduction } from "@/lib/active-production";
 import { loadAudienceContext } from "@/lib/calendar/audience-server";
+import { loadScenePlanEntries } from "@/lib/calendar/scene-schedule-server";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
@@ -24,7 +25,6 @@ import {
   type PlanningEvent,
   type PlanningMember,
 } from "./page-client";
-import { SceneOverview } from "./scene-overview";
 
 export default async function EventPlanningPage({
   searchParams,
@@ -56,54 +56,61 @@ export default async function EventPlanningPage({
   };
 
   const settings = resolveBlocklistSettings(await readSperrlisteSettings());
-  const [events, drafts, users, holidays, show, sceneContext] = await Promise.all([
-    prisma.calendarEvent.findMany({
-      where: {
-        ...scope,
-        status: { in: ["TENTATIVE", "SCHEDULED"] },
-        start: { lte: to },
-        AND: [{ OR: [{ start: { gte: from } }, { end: { gte: from } }] }],
-      },
-      orderBy: { start: "asc" },
-      include: {
-        participants: { where: { invited: true }, select: { userId: true, response: true } },
-        _count: { select: { audienceRules: true } },
-      },
-    }),
-    prisma.calendarEvent.findMany({
-      where: { ...scope, status: "DRAFT" },
-      orderBy: { start: "asc" },
-      select: { id: true, title: true, kind: true, start: true, allDay: true },
-    }),
-    prisma.user.findMany({
-      where: {
-        deactivatedAt: null,
-        ...(showId
-          ? { productionMemberships: { some: { showId, ...currentMembershipWhere() } } }
-          : {}),
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        name: true,
-        email: true,
-        blockedDays: {
-          where: { date: { gte: from, lt: to } },
-          select: { date: true, kind: true, reason: true },
+  const [events, drafts, users, holidays, show, sceneContext, scenePlanEntries] = await Promise.all(
+    [
+      prisma.calendarEvent.findMany({
+        where: {
+          ...scope,
+          status: { in: ["TENTATIVE", "SCHEDULED"] },
+          start: { lte: to },
+          AND: [{ OR: [{ start: { gte: from } }, { end: { gte: from } }] }],
         },
-      },
-    }),
-    getSaxonySchoolHolidayRanges(settings.cacheKey),
-    showId
-      ? prisma.show.findUnique({
-          where: { id: showId },
-          select: { finalRehearsalWeekStart: true, finalRehearsalWeekEnd: true },
-        })
-      : null,
-    // Szenen und Besetzung für „Was ist probbar?“ im Tagesfeld.
-    showId ? loadAudienceContext(showId) : null,
-  ]);
+        orderBy: { start: "asc" },
+        include: {
+          participants: { where: { invited: true }, select: { userId: true, response: true } },
+          _count: { select: { audienceRules: true } },
+        },
+      }),
+      prisma.calendarEvent.findMany({
+        where: { ...scope, status: "DRAFT" },
+        orderBy: { start: "asc" },
+        select: { id: true, title: true, kind: true, start: true, allDay: true },
+      }),
+      prisma.user.findMany({
+        where: {
+          deactivatedAt: null,
+          ...(showId
+            ? { productionMemberships: { some: { showId, ...currentMembershipWhere() } } }
+            : {}),
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          name: true,
+          email: true,
+          blockedDays: {
+            where: { date: { gte: from, lt: to } },
+            select: { date: true, kind: true, reason: true },
+          },
+        },
+      }),
+      getSaxonySchoolHolidayRanges(settings.cacheKey),
+      showId
+        ? prisma.show.findUnique({
+            where: { id: showId },
+            select: {
+              finalRehearsalWeekStart: true,
+              finalRehearsalWeekEnd: true,
+              premiereAt: true,
+            },
+          })
+        : null,
+      // Szenen und Besetzung für „Was ist probbar?“ im Tagesfeld.
+      showId ? loadAudienceContext(showId) : null,
+      showId ? loadScenePlanEntries(showId) : [],
+    ],
+  );
 
   const planningEvents: PlanningEvent[] = events.map((event) => {
     const targeted = event._count.audienceRules > 0 || event.participants.length > 0;
@@ -181,7 +188,7 @@ export default async function EventPlanningPage({
         preferredWeekdays={settings.preferredWeekdays}
         exceptionWeekdays={settings.exceptionWeekdays}
         initialFilter={art === "proben" ? "rehearsals" : art === "termine" ? "events" : "all"}
-        initialView={ansicht === "liste" ? "list" : "calendar"}
+        initialView={ansicht === "liste" ? "list" : ansicht === "szenen" ? "scenes" : "calendar"}
         initialDay={tag && /^\d{4}-\d{2}-\d{2}$/.test(tag) ? tag : null}
         sceneContext={
           sceneContext?.scenes.length
@@ -193,7 +200,17 @@ export default async function EventPlanningPage({
               }
             : null
         }
-        sceneOverview={showId ? <SceneOverview showId={showId} /> : null}
+        scenePlan={
+          sceneContext?.scenes.length
+            ? {
+                scenes: sceneContext.scenes.map(({ id, label }) => ({ id, label })),
+                entries: scenePlanEntries,
+                premiereKey: show?.premiereAt
+                  ? formatIsoDateInTimeZone(show.premiereAt.toISOString())
+                  : null,
+              }
+            : null
+        }
       />
     </div>
   );

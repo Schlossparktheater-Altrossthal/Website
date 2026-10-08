@@ -6,6 +6,7 @@ import type { CalendarEventKind } from "@prisma/client";
 
 import {
   CalendarCheckIcon,
+  DramaIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ListIcon,
@@ -38,6 +39,7 @@ import { CalendarLegend, DayCellDetails, DayChips, formatLongDate } from "../spe
 import type { TeamEntry } from "../sperrliste/types";
 import { getBaseDayState, useCalendarModel } from "../sperrliste/use-calendar-model";
 import { NewEventButton, NewEventButtons, useCreateDraft } from "./new-event";
+import { ScenePlanView, type ScenePlanData } from "./scene-plan-view";
 import { ReadinessSummary, SceneReadinessList } from "@/components/calendar/scene-readiness-list";
 import type { AudienceContext } from "@/lib/calendar/audience";
 import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
@@ -73,7 +75,7 @@ export type PlanningDraft = {
 };
 
 type Filter = "all" | "rehearsals" | "events";
-type View = "calendar" | "list";
+type View = "calendar" | "list" | "scenes";
 type Answer = "blocked" | "limited" | "available";
 
 type Attendance = {
@@ -135,8 +137,8 @@ type EventPlanningProps = {
   initialView: View;
   /** Gewählter Tag (YYYY-MM-DD) aus der URL, sonst heute. */
   initialDay: string | null;
-  /** Szenen-Stand der Produktion (Server-Komponente). */
-  sceneOverview: React.ReactNode;
+  /** Szenen-Plan der Produktion; null ohne Szenen. */
+  scenePlan: ScenePlanData | null;
   /** Szenen und Besetzung der Produktion; null ohne Szenen. */
   sceneContext: PlanningSceneContext | null;
 };
@@ -153,7 +155,7 @@ export function EventPlanningClient({
   initialFilter,
   initialView,
   initialDay,
-  sceneOverview,
+  scenePlan,
   sceneContext,
 }: EventPlanningProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -171,6 +173,7 @@ export function EventPlanningClient({
   useEffect(() => {
     const params = new URLSearchParams();
     if (view === "list") params.set("ansicht", "liste");
+    if (view === "scenes") params.set("ansicht", "szenen");
     if (filter !== "all") params.set("art", filter === "rehearsals" ? "proben" : "termine");
     if (selectedKey !== todayKey) params.set("tag", selectedKey);
     const search = params.toString();
@@ -278,6 +281,14 @@ export function EventPlanningClient({
     );
   };
 
+  // Aus dem Szenen-Plan in den Kalender springen.
+  const showDayInCalendar = (key: string) => {
+    const [year, monthIndex] = key.split("-").map(Number);
+    setMonth(new Date(year, monthIndex - 1, 1));
+    setView("calendar");
+    openDay(key);
+  };
+
   const openDay = (key: string) => {
     setSelectedKey(key);
     // Mobil öffnet ein Tipp sofort das Blatt – wie in der Sperrliste.
@@ -327,6 +338,20 @@ export function EventPlanningClient({
               ),
               ariaLabel: "Liste",
             },
+            ...(scenePlan
+              ? [
+                  {
+                    value: "scenes" as const,
+                    label: (
+                      <>
+                        <DramaIcon className="h-4 w-4" aria-hidden />
+                        <span className="hidden sm:inline">Szenen</span>
+                      </>
+                    ),
+                    ariaLabel: "Szenen",
+                  },
+                ]
+              : []),
           ]}
         />
         <SegmentedControl
@@ -402,11 +427,11 @@ export function EventPlanningClient({
             </Card>
           ) : null}
         </div>
+      ) : view === "scenes" && scenePlan ? (
+        <ScenePlanView data={scenePlan} todayKey={todayKey} onOpenDay={showDayInCalendar} />
       ) : (
         <EventList events={visibleEvents} todayKey={todayKey} attendanceFor={attendanceFor} />
       )}
-
-      {sceneOverview}
 
       {!isDesktop ? (
         <BottomSheet

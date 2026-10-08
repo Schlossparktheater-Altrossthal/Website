@@ -10,9 +10,11 @@ import {
 } from "@/lib/calendar/scene-schedule";
 import {
   DEFAULT_TIME_ZONE,
+  formatIsoDateInTimeZone,
   formatIsoTimeInTimeZone,
   parseDateTimeInTimeZone,
 } from "@/lib/date-time";
+import type { ScenePlanEntry } from "@/lib/calendar/scene-plan";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 
@@ -268,4 +270,31 @@ export async function loadSceneStats(showId: string | null, now = new Date()): P
     }
   }
   return stats;
+}
+
+/** Szenen-Einträge aller Proben einer Produktion – für den Szenen-Plan (Szene × Woche). */
+export async function loadScenePlanEntries(
+  showId: string,
+  now = new Date(),
+): Promise<ScenePlanEntry[]> {
+  const entries = await prisma.eventBlock.findMany({
+    where: {
+      scene: { showId },
+      event: { kind: "REHEARSAL", status: visibleEventStatus },
+    },
+    select: { sceneId: true, outcome: true, event: { select: { id: true, start: true } } },
+  });
+  return entries.flatMap((entry) =>
+    entry.sceneId && entry.outcome !== "SKIPPED"
+      ? [
+          {
+            sceneId: entry.sceneId,
+            eventId: entry.event.id,
+            dayKey: formatIsoDateInTimeZone(entry.event.start.toISOString(), DEFAULT_TIME_ZONE),
+            // Ohne Nachbereitung gilt eine vergangene Szene als geprobt.
+            done: entry.event.start <= now,
+          },
+        ]
+      : [],
+  );
 }
