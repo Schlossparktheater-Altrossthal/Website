@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { AudienceInput } from "@/lib/calendar/audience-server";
 import { cn } from "@/lib/utils";
 
 import { createRehearsalDraftAction } from "./actions/drafts";
@@ -21,11 +22,18 @@ import { createRehearsalDraftAction } from "./actions/drafts";
 export function useCreateDraft() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const create = (kind: CalendarEventKind, date: string) =>
+  const create = (
+    kind: CalendarEventKind,
+    date: string,
+    options?: { title?: string; audience?: AudienceInput },
+  ) =>
     startTransition(async () => {
-      const result = await createRehearsalDraftAction({ kind, date, time: "19:00" }).catch(
-        () => null,
-      );
+      const result = await createRehearsalDraftAction({
+        kind,
+        date,
+        time: "19:00",
+        ...options,
+      }).catch(() => null);
       if (result && "success" in result && result.id) {
         router.push(`/mitglieder/terminplanung/${result.id}`);
       } else {

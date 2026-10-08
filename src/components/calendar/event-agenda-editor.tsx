@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   ChevronDownIcon,
@@ -20,7 +20,13 @@ import { ChoiceMenu } from "@/components/ui/choice-menu";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TimeInput } from "@/components/ui/time-input";
+import {
+  ReadinessHint,
+  ReadinessSummary,
+  SceneReadinessList,
+} from "@/components/calendar/scene-readiness-list";
 import type { AudienceContext } from "@/lib/calendar/audience";
+import { READINESS_LABEL, type SceneReadiness } from "@/lib/calendar/scene-readiness";
 import { scenesByPerson } from "@/lib/calendar/scene-schedule";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
@@ -51,6 +57,13 @@ export type EventBlockValue = {
   timesChanged: boolean;
 };
 
+const DAY_LABEL = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "numeric",
+  month: "numeric",
+  timeZone: DEFAULT_TIME_ZONE,
+});
+
 const SHORT_DATE = new Intl.DateTimeFormat("de-DE", {
   day: "2-digit",
   month: "2-digit",
@@ -64,6 +77,14 @@ function describeSceneStats(stats: SceneStatsView[string] | undefined) {
     parts.push(`zuletzt ${SHORT_DATE.format(new Date(stats.lastRehearsedAt))}`);
   if (stats.planned) parts.push(`${stats.planned}× angesetzt`);
   return parts.join(" · ");
+}
+
+function describeSceneOption(
+  readiness: SceneReadiness | undefined,
+  stats: SceneStatsView[string] | undefined,
+) {
+  const statsText = describeSceneStats(stats);
+  return readiness ? `${READINESS_LABEL[readiness.status]} · ${statsText}` : statsText;
 }
 
 function toMinutes(time: string) {
@@ -201,6 +222,8 @@ export function EventAgendaEditor({
   onBlocksChange,
   eventStartTime,
   invitedIds,
+  readiness,
+  dateKey,
 }: {
   context: AudienceContext;
   sceneIds: string[];
@@ -214,7 +237,18 @@ export function EventAgendaEditor({
   eventStartTime: string;
   /** Nur diese Personen erscheinen in „Wer kommt wann?“. */
   invitedIds: ReadonlySet<string>;
+  /** Probbarkeit aller Szenen am Termintag. */
+  readiness: readonly SceneReadiness[];
+  /** Termintag (yyyy-MM-dd). */
+  dateKey: string;
 }) {
+  const readinessById = useMemo(
+    () => new Map(readiness.map((entry) => [entry.sceneId, entry])),
+    [readiness],
+  );
+  // Ohne Szenen gleich aufgeklappt: dann ist „was geht heute?“ die erste Frage.
+  const [readinessOpen, setReadinessOpen] = useState(sceneIds.length === 0);
+  const dayLabel = dateKey ? DAY_LABEL.format(new Date(`${dateKey}T12:00:00Z`)) : "diesem Tag";
   const scenes = sceneIds.flatMap((id) => context.scenes.find((scene) => scene.id === id) ?? []);
   const availableScenes = context.scenes.filter((scene) => !sceneIds.includes(scene.id));
   const staggered = schedule.mode === "STAGGERED";
@@ -293,7 +327,7 @@ export function EventAgendaEditor({
                 items: availableScenes.map((scene) => ({
                   id: scene.id,
                   label: scene.label,
-                  hint: describeSceneStats(stats[scene.id]),
+                  hint: describeSceneOption(readinessById.get(scene.id), stats[scene.id]),
                 })),
                 onSelect: (id?: string) => {
                   if (id) onScenesChange([...sceneIds, id]);
@@ -360,6 +394,7 @@ export function EventAgendaEditor({
                     <p className="truncate text-xs text-muted-foreground">
                       Szene · {describeSceneStats(stats[scene.id])}
                     </p>
+                    <ReadinessHint entry={readinessById.get(scene.id)} />
                   </div>
                   {staggered ? (
                     <div className="hidden items-center gap-2 md:flex">
@@ -486,6 +521,31 @@ export function EventAgendaEditor({
             );
           })}
         </ul>
+      ) : null}
+
+      {readiness.length ? (
+        <details
+          open={readinessOpen}
+          onToggle={(event) => setReadinessOpen(event.currentTarget.open)}
+          className="group rounded-lg bg-muted px-3 py-2 text-sm"
+        >
+          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 [&::-webkit-details-marker]:hidden">
+            <span className="font-medium">Am {dayLabel} probbar:</span>
+            <span className="text-xs text-muted-foreground">
+              <ReadinessSummary entries={readiness} />
+            </span>
+            <ChevronDownIcon
+              aria-hidden
+              className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
+            />
+          </summary>
+          <SceneReadinessList
+            className="mt-3"
+            entries={readiness}
+            selectedIds={sceneIds}
+            onAdd={(id) => onScenesChange([...sceneIds, id])}
+          />
+        </details>
       ) : null}
 
       {staggered && scenes.length ? (

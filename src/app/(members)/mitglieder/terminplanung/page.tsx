@@ -4,6 +4,7 @@ import { addMonths, format, startOfMonth } from "date-fns";
 
 import { PageHeader } from "@/components/members/page-header";
 import { getActiveProduction } from "@/lib/active-production";
+import { loadAudienceContext } from "@/lib/calendar/audience-server";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
@@ -55,7 +56,7 @@ export default async function EventPlanningPage({
   };
 
   const settings = resolveBlocklistSettings(await readSperrlisteSettings());
-  const [events, drafts, users, holidays, show] = await Promise.all([
+  const [events, drafts, users, holidays, show, sceneContext] = await Promise.all([
     prisma.calendarEvent.findMany({
       where: {
         ...scope,
@@ -100,6 +101,8 @@ export default async function EventPlanningPage({
           select: { finalRehearsalWeekStart: true, finalRehearsalWeekEnd: true },
         })
       : null,
+    // Szenen und Besetzung für „Was ist probbar?“ im Tagesfeld.
+    showId ? loadAudienceContext(showId) : null,
   ]);
 
   const planningEvents: PlanningEvent[] = events.map((event) => {
@@ -180,6 +183,16 @@ export default async function EventPlanningPage({
         initialFilter={art === "proben" ? "rehearsals" : art === "termine" ? "events" : "all"}
         initialView={ansicht === "liste" ? "list" : "calendar"}
         initialDay={tag && /^\d{4}-\d{2}-\d{2}$/.test(tag) ? tag : null}
+        sceneContext={
+          sceneContext?.scenes.length
+            ? {
+                scenes: sceneContext.scenes,
+                castings: sceneContext.castings,
+                characters: sceneContext.characters,
+                members: sceneContext.members,
+              }
+            : null
+        }
         sceneOverview={showId ? <SceneOverview showId={showId} /> : null}
       />
     </div>

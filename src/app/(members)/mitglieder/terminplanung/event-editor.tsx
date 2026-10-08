@@ -40,6 +40,7 @@ import {
   type AudienceContext,
 } from "@/lib/calendar/audience";
 import type { DayAvailability } from "@/lib/calendar/day-availability";
+import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
 import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
@@ -189,6 +190,22 @@ export function EventEditor({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isPublishing, startPublish] = useTransition();
   const [isDiscarding, startDiscard] = useTransition();
+
+  // Wer an dem Tag fehlt: Sperrliste, Absage, anderer Termin – Grundlage für „probbar“.
+  const sceneReadiness = useMemo(() => {
+    const absences: Partial<Record<string, Absence>> = {};
+    for (const [userId, kind] of Object.entries(availability)) {
+      if (kind) absences[userId] = { kind };
+    }
+    for (const [userId, title] of Object.entries(conflicts)) {
+      if (title && absences[userId]?.kind !== "blocked")
+        absences[userId] = { kind: "parallel", reason: title };
+    }
+    for (const [userId, reason] of Object.entries(declined)) {
+      absences[userId] = { kind: "declined", reason };
+    }
+    return computeSceneReadiness(context, absences);
+  }, [availability, conflicts, declined, context]);
 
   const sceneIds = useMemo(
     () =>
@@ -698,6 +715,8 @@ export function EventEditor({
                 onBlocksChange={changeBlocks}
                 eventStartTime={time}
                 invitedIds={invitedIds}
+                readiness={sceneReadiness}
+                dateKey={date}
               />
             ) : null}
             {showBlocks && scope === "all" ? (

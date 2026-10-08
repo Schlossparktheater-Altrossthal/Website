@@ -37,7 +37,15 @@ import type { HolidayRange } from "@/types/holidays";
 import { CalendarLegend, DayCellDetails, DayChips, formatLongDate } from "../sperrliste/day-parts";
 import type { TeamEntry } from "../sperrliste/types";
 import { getBaseDayState, useCalendarModel } from "../sperrliste/use-calendar-model";
-import { NewEventButton, NewEventButtons } from "./new-event";
+import { NewEventButton, NewEventButtons, useCreateDraft } from "./new-event";
+import { ReadinessSummary, SceneReadinessList } from "@/components/calendar/scene-readiness-list";
+import type { AudienceContext } from "@/lib/calendar/audience";
+import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
+
+export type PlanningSceneContext = Pick<
+  AudienceContext,
+  "scenes" | "castings" | "characters" | "members"
+>;
 
 export type PlanningMember = { id: string; name: string };
 
@@ -128,6 +136,8 @@ type EventPlanningProps = {
   initialDay: string | null;
   /** Szenen-Stand der Produktion (Server-Komponente). */
   sceneOverview: React.ReactNode;
+  /** Szenen und Besetzung der Produktion; null ohne Szenen. */
+  sceneContext: PlanningSceneContext | null;
 };
 
 export function EventPlanningClient({
@@ -143,6 +153,7 @@ export function EventPlanningClient({
   initialView,
   initialDay,
   sceneOverview,
+  sceneContext,
 }: EventPlanningProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const todayKey = toDayKey(new Date());
@@ -259,6 +270,7 @@ export function EventPlanningClient({
       memberById={memberById}
       attendanceFor={attendanceFor}
       showHeader={isDesktop}
+      sceneContext={sceneContext}
     />
   ) : null;
 
@@ -509,6 +521,7 @@ type DayPanelProps = {
   memberById: Map<string, PlanningMember>;
   attendanceFor: (event: PlanningEvent) => Attendance[];
   showHeader: boolean;
+  sceneContext: PlanningSceneContext | null;
 };
 
 /** Ein Tag: Termine mit Zusagelage und wer laut Sperrliste fehlt – rechts bzw. im Blatt. */
@@ -520,6 +533,7 @@ function DayPanel({
   memberById,
   attendanceFor,
   showHeader,
+  sceneContext,
 }: DayPanelProps) {
   const day = model.dayMap.get(dayKey);
   if (!day) return null;
@@ -589,7 +603,80 @@ function DayPanel({
         )}
         <StatusLegend statuses={["preferred", "limited", "blocked"]} />
       </section>
+
+      {sceneContext ? (
+        <PlayableScenes key={dayKey} dayKey={dayKey} team={team} context={sceneContext} />
+      ) : null}
     </div>
+  );
+}
+
+/** Szenennummer aus dem Label („Sz. 2.5 Titel“ → „2.5“). */
+function sceneNumber(label: string) {
+  return label.split(" ")[1] ?? label;
+}
+
+/** Welche Szenen an dem Tag laut Sperrliste spielbar sind – und daraus direkt eine Probe. */
+function PlayableScenes({
+  dayKey,
+  team,
+  context,
+}: {
+  dayKey: string;
+  team: TeamEntry[];
+  context: PlanningSceneContext;
+}) {
+  const { create, pending } = useCreateDraft();
+  const [selected, setSelected] = useState<string[]>([]);
+  const readiness = useMemo(() => {
+    const absences: Partial<Record<string, Absence>> = {};
+    for (const entry of team) {
+      if (entry.status === "blocked" || entry.status === "limited")
+        absences[entry.userId] = { kind: entry.status, reason: entry.reason };
+    }
+    return computeSceneReadiness(context, absences);
+  }, [team, context]);
+
+  const createWithScenes = () => {
+    const labels = context.scenes
+      .filter((scene) => selected.includes(scene.id))
+      .map((scene) => sceneNumber(scene.label));
+    create("REHEARSAL", dayKey, {
+      title: `Szenenprobe ${labels.join(", ")}`,
+      audience: {
+        rules: selected.map((id) => ({ type: "SCENE", targetId: id, level: "REQUIRED" })),
+        overrides: [],
+      },
+    });
+  };
+
+  return (
+    <section className="space-y-2 border-t border-border pt-4">
+      <div className="space-y-1">
+        <h3 className="text-xs font-medium text-muted-foreground">Was ist probbar?</h3>
+        <p className="text-xs text-muted-foreground">
+          <ReadinessSummary entries={readiness} />
+        </p>
+      </div>
+      <SceneReadinessList
+        className="pt-2"
+        entries={readiness}
+        selectedIds={selected}
+        onAdd={(id) => setSelected((current) => [...current, id])}
+        onRemove={(id) => setSelected((current) => current.filter((entry) => entry !== id))}
+      />
+      {selected.length ? (
+        <Button type="button" className="h-11 w-full" disabled={pending} onClick={createWithScenes}>
+          {pending
+            ? "Legt an …"
+            : `Probe mit ${selected.length} ${selected.length === 1 ? "Szene" : "Szenen"} anlegen`}
+        </Button>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Szenen mit + auswählen, um daraus eine Probe anzulegen.
+        </p>
+      )}
+    </section>
   );
 }
 
