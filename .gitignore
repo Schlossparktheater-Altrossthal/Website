@@ -63,3 +63,4 @@ test-results/
 
 # Gebündelte Hilfsskripte (pnpm food:bundle)
 /dist
+/scripts/demo/dist

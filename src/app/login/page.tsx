@@ -10,6 +10,7 @@ import {
   isLegacyPasswordLoginActive,
 } from "@/lib/authentik/config";
 
+import { DEMO_PERSONAS, isDemoMode } from "@/lib/demo-mode";
 import { getSession } from "@/lib/rbac";
 
 import { LoginPageClient } from "./login-client";
@@ -66,10 +67,20 @@ export default async function LoginPage({
   }
   const authentikEnabled = isAuthentikLoginEnabled();
   const authentikProvisioning = isAuthentikProvisioningEnabled();
-  const legacyLoginActive = isLegacyPasswordLoginActive();
+  // Demo: nur Rollen-Buttons, die Demo-Personen haben kein Passwort.
+  const legacyLoginActive = !isDemoMode() && isLegacyPasswordLoginActive();
   const legacyLoginDeadline = authentikProvisioning
     ? (getLegacyPasswordLoginDeadline()?.toISOString() ?? null)
     : null;
+
+  const demoPersonas = isDemoMode()
+    ? DEMO_PERSONAS.map(({ email, name, label, description }) => ({
+        email,
+        name,
+        label,
+        description,
+      }))
+    : [];
 
   return (
     <main id="main" className="min-h-svh px-4 py-16">
@@ -79,6 +90,7 @@ export default async function LoginPage({
           authentikProvisioning={authentikProvisioning}
           legacyLoginActive={legacyLoginActive}
           legacyLoginDeadline={legacyLoginDeadline}
+          demoPersonas={demoPersonas}
         />
       </Suspense>
     </main>

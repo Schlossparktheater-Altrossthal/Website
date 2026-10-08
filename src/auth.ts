@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { sortRoles, ROLES } from "@/lib/roles";
 import { DEV_TEST_USER_EMAILS, DEV_TEST_USER_ROLE_MAP } from "@/lib/auth-dev-test-users";
 import { verifyPassword } from "@/lib/password";
+import { findDemoPersona, isDemoMode } from "@/lib/demo-mode";
 import { combineNameParts } from "@/lib/names";
 import {
   canSignInAsReturnee,
@@ -236,6 +237,9 @@ if (process.env.NODE_ENV !== "production") {
   credentialInputs.dev = { label: "Dev", type: "text" };
 }
 
+// Demo-Umgebung: Rollen-Buttons melden ohne Passwort an (src/lib/demo-mode.ts).
+credentialInputs.demo = { label: "Demo", type: "text" };
+
 /**
  * Authentik-Login nur für bestehende Mitglieder. Zuordnung in dieser
  * Reihenfolge:
@@ -316,6 +320,33 @@ const credentialsProvider = Credentials({
         avatarSource: profile.avatarSource,
         avatarUpdatedAt: profile.avatarImageUpdatedAt
           ? profile.avatarImageUpdatedAt.toISOString()
+          : null,
+      };
+    }
+
+    if (credentials?.demo === "1") {
+      // Nur mit DEMO_MODE und nur für die fiktiven Demo-Personen aus dem Demo-Seed.
+      if (!isDemoMode() || !findDemoPersona(email)) throw new CredentialsSignin();
+      const demoUser = await prisma.user.findUnique({
+        where: { email },
+        include: { roles: true },
+      });
+      if (!demoUser || demoUser.deactivatedAt) throw new CredentialsSignin();
+      const demoRoles = sortRoles([
+        demoUser.role as Role,
+        ...demoUser.roles.map((r) => r.role as Role),
+      ]);
+      return {
+        id: demoUser.id,
+        email: demoUser.email!,
+        firstName: demoUser.firstName ?? null,
+        lastName: demoUser.lastName ?? null,
+        name: combineNameParts(demoUser.firstName, demoUser.lastName) ?? demoUser.name ?? null,
+        role: demoRoles[demoRoles.length - 1],
+        roles: demoRoles,
+        avatarSource: demoUser.avatarSource,
+        avatarUpdatedAt: demoUser.avatarImageUpdatedAt
+          ? demoUser.avatarImageUpdatedAt.toISOString()
           : null,
       };
     }

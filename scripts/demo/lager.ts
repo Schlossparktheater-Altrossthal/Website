@@ -1,0 +1,353 @@
+// Demo-Lager für lokales Testen und Screenshots (docs/Plan/lager-typen-projekte-plan.md).
+//
+//   DATABASE_URL=… pnpm demo:lager          # anlegen bzw. neu anlegen
+//   DATABASE_URL=… pnpm demo:lager --remove # wieder entfernen
+//
+// Legt den Lagerort „Demo-Lager“ mit Regalen an, darin eine Kiste, Artikeltypen mit mehreren
+// Exemplaren an verschiedenen Orten (einer davon gesperrt), einen Mengenartikel unter
+// Mindestbestand, überfällige Prüfungen und Kostüme. Alle Typnamen beginnen mit „Demo“.
+// Auch Teil des Demo-Seeds (scripts/demo/seed.ts).
+
+import { createAssetInTx, type AssetInput } from "@/lib/inventory/asset-write";
+import { addMonths } from "@/lib/inventory/constants";
+import { createPublicId } from "@/lib/inventory/public-id";
+import {
+  allocateLocationCode,
+  allocateProductNumber,
+  refreshAssetStatus,
+} from "@/lib/inventory/service";
+import { prisma } from "@/lib/prisma";
+
+const ROOT = "Demo-Lager";
+
+export async function removeDemoLager() {
+  const products = await prisma.inventoryProduct.findMany({
+    where: { name: { startsWith: "Demo" } },
+    select: { id: true },
+  });
+  const productIds = products.map((product) => product.id);
+  await prisma.inventoryCheckout.deleteMany({ where: { title: { startsWith: "Demo" } } });
+  await prisma.inventoryProject.deleteMany({ where: { title: { startsWith: "Demo" } } });
+  await prisma.inventoryContact.deleteMany({ where: { name: { startsWith: "Demo" } } });
+  await prisma.inventoryAsset.updateMany({
+    where: { productId: { in: productIds } },
+    data: { containerId: null },
+  });
+  await prisma.inventoryAsset.deleteMany({ where: { productId: { in: productIds } } });
+  await prisma.inventoryProductComponent.deleteMany({ where: { setId: { in: productIds } } });
+  // Sets zuerst – ihre Bestandteile dürfen erst danach weg.
+  await prisma.inventoryProduct.deleteMany({ where: { id: { in: productIds }, kind: "set" } });
+  await prisma.inventoryProduct.deleteMany({ where: { id: { in: productIds } } });
+  await prisma.inventoryTag.deleteMany({ where: { products: { none: {} } } });
+  const root = await prisma.inventoryLocation.findFirst({ where: { name: ROOT, parentId: null } });
+  if (root) {
+    await prisma.inventoryLocation.deleteMany({ where: { parentId: root.id } });
+    await prisma.inventoryLocation.delete({ where: { id: root.id } });
+  }
+  return productIds.length;
+}
+
+async function area(prefix: string) {
+  return prisma.inventoryArea.findUniqueOrThrow({
+    where: { prefix },
+    select: { id: true, categories: { select: { id: true, name: true } } },
+  });
+}
+
+async function location(name: string, parentId: string | null) {
+  const code = await allocateLocationCode(prisma);
+  return prisma.inventoryLocation.create({
+    data: { name, parentId, code, publicId: createPublicId() },
+    select: { id: true },
+  });
+}
+
+type Draft = Partial<AssetInput> & Pick<AssetInput, "areaId" | "name">;
+
+async function capture(draft: Draft) {
+  const input: AssetInput = {
+    kind: "unique",
+    categoryId: null,
+    productId: null,
+    manufacturer: null,
+    model: null,
+    description: null,
+    publicNote: null,
+    specs: {},
+    unit: null,
+    minQuantity: null,
+    inspectionRequired: false,
+    inspectionIntervalMonths: null,
+    tags: [],
+    label: null,
+    serialNumber: null,
+    internalNote: null,
+    condition: "good",
+    quantity: null,
+    count: 1,
+    placement: { type: "none" },
+    nextInspectionAt: null,
+    acquisitionCost: null,
+    purchaseDate: null,
+    supplier: null,
+    ownership: null,
+    ...draft,
+  };
+  return prisma.$transaction((tx) => createAssetInTx(tx, input, { userId: null, canManage: true }));
+}
+
+/** Legt das Demo-Lager an (vorher removeDemoLager aufrufen). */
+export async function seedDemoLager() {
+  const technik = await area("T");
+  const kostuem = await area("K");
+  const buehnenbau = await area("B");
+  const category = (entry: Awaited<ReturnType<typeof area>>, name: string) =>
+    entry.categories.find((item) => item.name === name)?.id ?? null;
+
+  const root = await location(ROOT, null);
+  const regalA = await location("Regal A", root.id);
+  const regalB = await location("Regal B", root.id);
+  const buehne = await location("Bühne Zug 3", root.id);
+  const fundus = await location("Kostümstange 1", root.id);
+
+  const now = new Date();
+  const { codes: boxCodes } = await capture({
+    areaId: technik.id,
+    kind: "container",
+    name: "Demo Kabelkiste",
+    label: "1",
+    placement: { type: "location", id: regalA.id },
+  });
+  const box = await prisma.inventoryAsset.findUniqueOrThrow({ where: { code: boxCodes[0] } });
+
+  // Ein Typ, viele Exemplare an verschiedenen Orten – einer davon defekt.
+  const par = await capture({
+    areaId: technik.id,
+    categoryId: category(technik, "PAR / LED-PAR"),
+    name: "Demo LED-PAR 64 RGBW",
+    manufacturer: "Eurolite",
+    model: "LED PAR-64 RGBW",
+    specs: { power: "180", connector: "Schuko", dmxChannels: "8", weight: "3,2" },
+    tags: ["LED", "DMX"],
+    inspectionRequired: true,
+    inspectionIntervalMonths: 12,
+    count: 6,
+    nextInspectionAt: addMonths(now, 2),
+    acquisitionCost: 89.9,
+    placement: { type: "location", id: regalA.id },
+  });
+  const parAssets = await prisma.inventoryAsset.findMany({
+    where: { code: { in: par.codes } },
+    orderBy: { code: "asc" },
+  });
+  await prisma.inventoryAsset.updateMany({
+    where: { id: { in: parAssets.slice(0, 4).map((asset) => asset.id) } },
+    data: { locationId: buehne.id },
+  });
+  await prisma.inventoryDefect.create({
+    data: {
+      assetId: parAssets[5]!.id,
+      title: "Lüfter klappert",
+      severity: "limited",
+      status: "repair",
+    },
+  });
+  await refreshAssetStatus(prisma, parAssets[5]!.id);
+
+  const profiler = await capture({
+    areaId: technik.id,
+    categoryId: category(technik, "Profilscheinwerfer"),
+    name: "Demo Profilscheinwerfer 750 W",
+    manufacturer: "ETC",
+    model: "Source Four",
+    specs: { power: "750", lamp: "HPL 750", beamAngle: "26", weight: "8500 g" },
+    tags: ["DMX"],
+    inspectionRequired: true,
+    count: 3,
+    nextInspectionAt: addMonths(now, -1),
+    placement: { type: "location", id: regalB.id },
+  });
+  const locked = await prisma.inventoryAsset.findUniqueOrThrow({
+    where: { code: profiler.codes[0] },
+  });
+  await prisma.inventoryDefect.create({
+    data: { assetId: locked.id, title: "Kabel am Stecker gebrochen", severity: "locked" },
+  });
+  await refreshAssetStatus(prisma, locked.id);
+
+  await capture({
+    areaId: technik.id,
+    categoryId: category(technik, "Kondensator"),
+    name: "Demo Kondensatormikrofon",
+    manufacturer: "Rode",
+    model: "NT5",
+    specs: { pattern: "Niere", phantom: true },
+    count: 2,
+    placement: { type: "container", id: box.id },
+  });
+  await capture({
+    areaId: technik.id,
+    categoryId: category(technik, "Endstufen"),
+    name: "Demo Endstufe 2×700 W",
+    manufacturer: "the t.amp",
+    model: "TSA 4-700",
+    specs: { channels: "2", power4ohm: "700" },
+    inspectionRequired: true,
+    placement: { type: "location", id: regalB.id },
+  });
+  await capture({
+    areaId: technik.id,
+    categoryId: category(technik, "Kabel"),
+    kind: "bulk",
+    name: "Demo XLR-Kabel 10 m",
+    unit: "Stk.",
+    minQuantity: 15,
+    quantity: 8,
+    placement: { type: "container", id: box.id },
+  });
+  await capture({
+    areaId: technik.id,
+    categoryId: category(technik, "Strom"),
+    name: "Demo Kabeltrommel 50 m",
+    inspectionRequired: true,
+    placement: { type: "location", id: regalB.id },
+  });
+  await capture({
+    areaId: kostuem.id,
+    categoryId: category(kostuem, "Kostüm"),
+    name: "Demo Gehrock dunkelblau",
+    specs: { size: "52", material: "Wolle", gender: "Herren" },
+    tags: ["1880er", "dunkelblau"],
+    publicNote: "Bitte nur mit Kleiderhülle transportieren.",
+    placement: { type: "location", id: fundus.id },
+  });
+  await capture({
+    areaId: kostuem.id,
+    categoryId: category(kostuem, "Hüte & Perücken"),
+    name: "Demo Zylinder schwarz",
+    specs: { size: "58" },
+    tags: ["1880er"],
+    count: 2,
+    placement: { type: "location", id: fundus.id },
+  });
+  for (const [name, dims, count] of [
+    ["Demo Podest 2 × 1 m", "200x100x40", 6],
+    ["Demo Treppe 3 Stufen", "100x60x60", 2],
+    ["Demo Kulissenwand", "300 x 20 x 250 cm", 4],
+  ] as const) {
+    await capture({
+      areaId: buehnenbau.id,
+      name,
+      specs: { dimensions: dims },
+      tags: name.includes("Podest") ? ["Holz", "Podesterie"] : ["Holz"],
+      count,
+      placement: { type: "location", id: buehne.id },
+    });
+  }
+  // Funkstrecke als Set aus Sender und Empfänger.
+  const funk = category(technik, "Funkstrecken");
+  await capture({
+    areaId: technik.id,
+    categoryId: funk,
+    name: "Demo Taschensender",
+    manufacturer: "Sennheiser",
+    model: "SK 100 G4",
+    count: 4,
+    placement: { type: "container", id: box.id },
+  });
+  await capture({
+    areaId: technik.id,
+    categoryId: funk,
+    name: "Demo Funk-Empfänger",
+    manufacturer: "Sennheiser",
+    model: "EM 100 G4",
+    count: 3,
+    placement: { type: "location", id: regalB.id },
+  });
+  const [sender, receiver] = await Promise.all(
+    ["Demo Taschensender", "Demo Funk-Empfänger"].map((name) =>
+      prisma.inventoryProduct.findFirstOrThrow({ where: { name } }),
+    ),
+  );
+  const funkSet = await prisma.inventoryProduct.create({
+    data: {
+      publicId: createPublicId(),
+      areaId: technik.id,
+      number: await allocateProductNumber(prisma, technik.id),
+      categoryId: funk,
+      kind: "set",
+      name: "Demo Funkstrecke",
+      components: {
+        create: [
+          { componentId: sender!.id, quantity: 1, sortOrder: 0 },
+          { componentId: receiver!.id, quantity: 1, sortOrder: 1 },
+        ],
+      },
+    },
+  });
+
+  // Zwei Projekte im selben Zeitraum: das zweite bekommt nicht genug LED-PARs.
+  const parProduct = await prisma.inventoryProduct.findFirstOrThrow({
+    where: { name: "Demo LED-PAR 64 RGBW" },
+  });
+  const profilerProduct = await prisma.inventoryProduct.findFirstOrThrow({
+    where: { name: "Demo Profilscheinwerfer 750 W" },
+  });
+  const cableProduct = await prisma.inventoryProduct.findFirstOrThrow({
+    where: { name: "Demo XLR-Kabel 10 m" },
+  });
+  const contact = await prisma.inventoryContact.create({
+    data: { name: "Demo Muster GmbH", contactPerson: "Erika Muster", phone: "030 123456" },
+  });
+  const day = (offset: number) => {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    date.setUTCDate(date.getUTCDate() + offset);
+    return date;
+  };
+  await prisma.inventoryProject.create({
+    data: {
+      publicId: createPublicId(),
+      title: "Demo Stadtfest Berlin",
+      status: "confirmed",
+      contactId: contact.id,
+      venue: "Berlin",
+      leadName: "Max Mustermann",
+      startsOn: day(20),
+      endsOn: day(22),
+      phases: {
+        create: [
+          { kind: "setup", startsOn: day(20), endsOn: day(20) },
+          { kind: "event", startsOn: day(21), endsOn: day(21) },
+          { kind: "teardown", startsOn: day(22), endsOn: day(22) },
+        ],
+      },
+      lines: {
+        create: [
+          { productId: parProduct.id, quantity: 4, sortOrder: 0 },
+          { productId: profilerProduct.id, quantity: 2, sortOrder: 1 },
+          { productId: cableProduct.id, quantity: 6, sortOrder: 2 },
+          { productId: funkSet.id, quantity: 2, sortOrder: 3 },
+        ],
+      },
+    },
+  });
+  await prisma.inventoryProject.create({
+    data: {
+      publicId: createPublicId(),
+      title: "Demo Firmenfeier",
+      status: "request",
+      contactId: contact.id,
+      venue: "Dresden",
+      startsOn: day(21),
+      endsOn: day(21),
+      phases: { create: [{ kind: "event", startsOn: day(21), endsOn: day(21) }] },
+      lines: {
+        create: [
+          { productId: parProduct.id, quantity: 2, sortOrder: 0 },
+          { productId: funkSet.id, quantity: 2, sortOrder: 1 },
+        ],
+      },
+    },
+  });
+  console.log("Demo-Lager angelegt.");
+}

@@ -120,6 +120,13 @@ nächsten Login neu angelegt. Das alte Passwortformular bleibt auf Staging ohne 
 Gehört ein Authentik-Konto mit derselben Adresse zu einem Profil, das es nicht mehr gibt, übernimmt
 das neue Profil das Konto (inklusive Passwort-Übernahme beim alten Login).
 
+## Demo-Modus
+
+Mit `DEMO_MODE=true` (nur demo.sommertheater-altrossthal.de) zeigt die Seite statt Passwortmaske
+Buttons für die fiktiven Demo-Personen (`src/lib/demo-mode.ts`). Der Klick meldet über den
+Credentials-Provider mit `demo: "1"` ohne Passwort an; der Provider akzeptiert das nur mit
+gesetztem `DEMO_MODE` und nur für diese Adressen. Details: `docs/demo.md`.
+
 ## Bekannte Baustellen
 
 - Abmelden beendet die Authentik-Session, aber nicht die Sitzungen anderer Dienste, die sich

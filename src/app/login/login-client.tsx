@@ -100,6 +100,15 @@ export type LoginPageClientProps = {
   legacyLoginActive: boolean;
   /** ÜBERGANGSPHASE: Stichtag für das alte Formular (ISO-String) oder null. */
   legacyLoginDeadline: string | null;
+  /** Demo-Umgebung: Personen für die Rollen-Buttons, sonst leer. */
+  demoPersonas?: DemoPersonaOption[];
+};
+
+export type DemoPersonaOption = {
+  email: string;
+  name: string;
+  label: string;
+  description: string;
 };
 
 function formatDeadline(iso: string | null): string | null {
@@ -132,6 +141,7 @@ export function LoginPageClient({
   authentikProvisioning,
   legacyLoginActive,
   legacyLoginDeadline,
+  demoPersonas = [],
 }: LoginPageClientProps) {
   // Use only NEXT_PUBLIC_ var to keep SSR/CSR consistent and avoid hydration mismatches
   const devNoDb = process.env.NEXT_PUBLIC_AUTH_DEV_NO_DB === "1";
@@ -291,6 +301,27 @@ export function LoginPageClient({
     }
   }
 
+  async function demoLogin(persona: DemoPersonaOption) {
+    setLoading(true);
+    try {
+      const res: SignInResponse | undefined = await signIn("credentials", {
+        email: persona.email,
+        demo: "1",
+        redirect: false,
+        callbackUrl,
+      });
+      if (res?.error) {
+        toast.error("Demo-Login fehlgeschlagen. Die Demo-Daten werden evtl. gerade zurückgesetzt.");
+      } else {
+        router.push(res?.url ?? callbackUrl);
+      }
+    } catch {
+      toast.error("Demo-Login fehlgeschlagen");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const handleOpenReset = () => {
     const emailFromPassword = passwordForm.getValues("email");
     if (emailFromPassword) {
@@ -302,6 +333,33 @@ export function LoginPageClient({
     <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
       <div className="max-w-sm mx-auto space-y-6">
         <h1 className="font-serif text-3xl">Login</h1>
+
+        {demoPersonas.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Das ist eine Demo des Mitgliederbereichs mit einem erfundenen Ensemble. Wähle, aus
+              wessen Sicht du dich umsehen willst. Alles darf ausprobiert werden – die Daten werden
+              jede Nacht zurückgesetzt, es werden keine E-Mails verschickt.
+            </p>
+            <div className="grid gap-2">
+              {demoPersonas.map((persona) => (
+                <button
+                  key={persona.email}
+                  type="button"
+                  onClick={() => demoLogin(persona)}
+                  disabled={loading}
+                  className="min-h-11 rounded-lg border border-border/60 bg-card p-3 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                >
+                  <span className="block text-sm font-semibold">
+                    {persona.label}
+                    <span className="font-normal text-muted-foreground"> · {persona.name}</span>
+                  </span>
+                  <span className="block text-sm text-muted-foreground">{persona.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {authentikEnabled && !devNoDb && (
           <div className="space-y-3">

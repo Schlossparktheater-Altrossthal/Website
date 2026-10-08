@@ -71,6 +71,10 @@ jobs:
           NEXT_PUBLIC_REALTIME_INIT_PATH: /api/socket
           REALTIME_SERVER_EVENT_PATH: /realtime/events
 
+      # Demo-Seed ohne tsx im Image (docs/demo.md)
+      - name: Bundle demo seed
+        run: pnpm demo:bundle
+
       - name: Prune dev dependencies
         run: pnpm prune --prod --ignore-scripts
 
@@ -101,15 +105,18 @@ jobs:
           token: ${{ secrets.K8S_INFRA_TOKEN }}
           path: k8s-infra
 
-      - name: Update staging image tag
+      - name: Update staging and demo image tag
         run: |
           sed -i "s|image: ${IMAGE}:.*|image: ${IMAGE}:${{ github.sha }}-staging|g" \
             k8s-infra/applications/website-staging/deployment.yaml
+          # Demo (docs/demo.md) läuft mit dem Staging-Image; Tag steht in der Kustomization.
+          sed -i "s|newTag: .*|newTag: ${{ github.sha }}-staging|" \
+            k8s-infra/applications/website-demo/kustomization.yaml
           cd k8s-infra
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add applications/website-staging/deployment.yaml
-          git commit -m "chore(website): deploy ${{ github.sha }} to staging"
+          git add applications/website-staging/deployment.yaml applications/website-demo/kustomization.yaml
+          git commit -m "chore(website): deploy ${{ github.sha }} to staging and demo"
           git push
         env:
           IMAGE: ${{ env.IMAGE }}

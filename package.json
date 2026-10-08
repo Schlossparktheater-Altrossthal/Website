@@ -64,6 +64,8 @@
     "db:seed": "node prisma/seed.mjs",
     "demo:bausteine": "tsx --tsconfig tsconfig.json scripts/demo-bausteine.ts",
     "demo:lager": "tsx --tsconfig tsconfig.json scripts/demo-lager.ts",
+    "demo:seed": "tsx --tsconfig tsconfig.json scripts/demo/seed.ts",
+    "demo:bundle": "node scripts/demo/bundle.mjs",
     "demo:rezepte": "tsx --tsconfig tsconfig.json scripts/demo-rezepte.ts",
     "food:import": "tsx --tsconfig tsconfig.json scripts/food-import.ts",
     "food:bundle": "esbuild scripts/food-import.ts --bundle --platform=node --format=esm --target=node22 --tsconfig=tsconfig.json --packages=external --outfile=dist/food-import.mjs --log-level=warning",
