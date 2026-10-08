@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { readDayAvailability, readParallelRehearsals } from "@/lib/calendar/day-availability";
+import {
+  readDayAvailability,
+  readParallelRehearsals,
+  readWeekLoad,
+} from "@/lib/calendar/day-availability";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
@@ -31,13 +35,15 @@ export async function GET(request: NextRequest) {
   const withConflicts =
     eventId && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start;
 
-  const [availability, conflicts] = await Promise.all([
+  const [availability, conflicts, weekLoad] = await Promise.all([
     readDayAvailability(date),
     withConflicts ? readParallelRehearsals({ start, end, excludeEventId: eventId }) : {},
+    readWeekLoad(date, eventId ?? undefined),
   ]);
   return NextResponse.json({
     availability,
     conflicts,
+    weekLoad,
     userIds: Object.keys(availability).filter((userId) => availability[userId] === "blocked"),
   });
 }

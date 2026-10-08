@@ -26,6 +26,7 @@ import {
   type ResolvedParticipant,
 } from "@/lib/calendar/audience";
 import type { DayAvailability } from "@/lib/calendar/day-availability";
+import { describeLoad, weekdayShort, type PersonLoad } from "@/lib/calendar/week-load";
 import { cn } from "@/lib/utils";
 
 export type AudienceValue = { rules: AudienceRule[]; overrides: AudienceOverride[] };
@@ -66,6 +67,8 @@ export function AudienceBuilder({
   declined = {},
   hideSceneRules = false,
   blocks = NO_BLOCKS,
+  weekLoad,
+  dayKey,
 }: {
   context: AudienceContext;
   value: AudienceValue;
@@ -80,6 +83,10 @@ export function AudienceBuilder({
   hideSceneRules?: boolean;
   /** Gewerk-Bausteine des Termins, die ihr Gewerk einladen. */
   blocks?: readonly AudienceBlock[];
+  /** Termine pro Person in der Woche des Termins (ohne diesen). */
+  weekLoad?: Record<string, PersonLoad>;
+  /** Termintag (yyyy-MM-dd) für „auch Sa“. */
+  dayKey?: string;
 }) {
   const [query, setQuery] = useState("");
   const resolved = useMemo(
@@ -96,6 +103,16 @@ export function AudienceBuilder({
   ).length;
   const conflictCount = invited.filter((entry) => conflicts[entry.userId]).length;
   const declinedCount = invited.filter((entry) => entry.userId in declined).length;
+  const loadOf = (userId: string) =>
+    weekLoad && dayKey ? describeLoad(weekLoad[userId], dayKey) : null;
+  // Am Vor- oder Folgetag auch eingeladen: Kandidaten, um Proben auf einen Tag zu bündeln.
+  const neighbours = invited.flatMap((entry) => {
+    const load = loadOf(entry.userId);
+    return load?.neighbors.length
+      ? [`${entry.name.split(" ")[0]} (${load.neighbors.map(weekdayShort).join(" + ")})`]
+      : [];
+  });
+  const heavyCount = invited.filter((entry) => loadOf(entry.userId)?.heavy).length;
 
   const addRule = (rule: AudienceRule) => {
     if (value.rules.some((entry) => sameRule(entry, rule))) return;
@@ -166,7 +183,14 @@ export function AudienceBuilder({
         {blockedCount ? ` · ${blockedCount} gesperrt` : ""}
         {declinedCount ? ` · ${declinedCount} abgesagt` : ""}
         {conflictCount ? ` · ${conflictCount} mit Terminüberschneidung` : ""}
+        {heavyCount ? ` · ${heavyCount} diese Woche schon oft da` : ""}
       </p>
+      {neighbours.length ? (
+        <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
+          <span className="font-medium">Auch am Tag davor oder danach eingeladen:</span>{" "}
+          {neighbours.join(", ")}. Lässt sich das auf einen Tag bündeln?
+        </p>
+      ) : null}
 
       <div className="space-y-2">
         <ChoiceMenu
@@ -300,6 +324,7 @@ export function AudienceBuilder({
               const status: AvailabilityStatus | null = availability
                 ? (availability[entry.userId] ?? "free")
                 : null;
+              const load = entry.excluded ? null : loadOf(entry.userId);
               return (
                 <li
                   key={entry.userId}
@@ -346,6 +371,16 @@ export function AudienceBuilder({
                       {entry.userId in declined && !entry.excluded ? (
                         <span className="block text-xs text-destructive">
                           Abgesagt{declined[entry.userId] ? `: „${declined[entry.userId]}“` : ""}
+                        </span>
+                      ) : null}
+                      {load ? (
+                        <span
+                          className={cn(
+                            "block text-xs",
+                            load.heavy ? "text-warning" : "text-muted-foreground",
+                          )}
+                        >
+                          {load.text}
                         </span>
                       ) : null}
                       {conflicts[entry.userId] && !entry.excluded ? (

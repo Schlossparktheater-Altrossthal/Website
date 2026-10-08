@@ -13,7 +13,7 @@ import { EventEditor } from "../event-editor";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
 import { loadAudienceContext, readEventAudience } from "@/lib/calendar/audience-server";
-import { readDayAvailability } from "@/lib/calendar/day-availability";
+import { readDayAvailability, readWeekLoad } from "@/lib/calendar/day-availability";
 import { loadSceneStats, readEventSchedule } from "@/lib/calendar/scene-schedule-server";
 
 export default async function EventEditorPage({
@@ -56,14 +56,16 @@ export default async function EventEditorPage({
   // Drafts use updateRehearsalDraftAction, published use updateRehearsalAction
 
   const dateKey = formatIsoDateInTimeZone(rehearsal.start.toISOString(), DEFAULT_TIME_ZONE);
-  const [context, audience, availability, schedule, sceneStats, production] = await Promise.all([
-    loadAudienceContext(rehearsal.showId),
-    readEventAudience(rehearsal.id),
-    readDayAvailability(dateKey),
-    readEventSchedule(rehearsal.id),
-    loadSceneStats(rehearsal.showId),
-    getActiveProduction(session.user?.id),
-  ]);
+  const [context, audience, availability, schedule, sceneStats, production, weekLoad] =
+    await Promise.all([
+      loadAudienceContext(rehearsal.showId),
+      readEventAudience(rehearsal.id),
+      readDayAvailability(dateKey),
+      readEventSchedule(rehearsal.id),
+      loadSceneStats(rehearsal.showId),
+      getActiveProduction(session.user?.id),
+      readWeekLoad(dateKey, rehearsal.id),
+    ]);
   // Für den Wechsel „gilt für“: Zielgruppe der anderen Seite (alle bzw. Produktion).
   const otherShowId = rehearsal.showId ? null : (production?.id ?? null);
   const otherContext =
@@ -125,6 +127,7 @@ export default async function EventEditorPage({
         audience={{ rules: audience.rules, overrides: audience.overrides }}
         invited={audience.invited}
         initialAvailability={availability}
+        initialWeekLoad={weekLoad}
         declined={audience.declined}
         schedule={schedule}
         sceneStats={sceneStats}

@@ -41,6 +41,7 @@ import { NewEventButton, NewEventButtons, useCreateDraft } from "./new-event";
 import { ReadinessSummary, SceneReadinessList } from "@/components/calendar/scene-readiness-list";
 import type { AudienceContext } from "@/lib/calendar/audience";
 import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
+import { computeWeekLoad, HEAVY_WEEK_COUNT, type PersonLoad } from "@/lib/calendar/week-load";
 
 export type PlanningSceneContext = Pick<
   AudienceContext,
@@ -239,6 +240,28 @@ export function EventPlanningClient({
     });
   };
 
+  // Ganze Kalenderwoche des gewählten Tags – unabhängig vom Filter Proben/Termine.
+  const weekLoad = useMemo(
+    () =>
+      computeWeekLoad(
+        events.flatMap((event) =>
+          event.invitedIds
+            ? [
+                {
+                  id: event.id,
+                  dayKey: event.dayKey,
+                  start: event.start,
+                  end: event.end,
+                  userIds: event.invitedIds.filter((id) => !event.declinedIds.includes(id)),
+                },
+              ]
+            : [],
+        ),
+        selectedKey,
+      ),
+    [events, selectedKey],
+  );
+
   const now = new Date();
   const isCurrentMonth =
     month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
@@ -271,6 +294,7 @@ export function EventPlanningClient({
       attendanceFor={attendanceFor}
       showHeader={isDesktop}
       sceneContext={sceneContext}
+      weekLoad={weekLoad}
     />
   ) : null;
 
@@ -522,6 +546,7 @@ type DayPanelProps = {
   attendanceFor: (event: PlanningEvent) => Attendance[];
   showHeader: boolean;
   sceneContext: PlanningSceneContext | null;
+  weekLoad: Record<string, PersonLoad>;
 };
 
 /** Ein Tag: Termine mit Zusagelage und wer laut Sperrliste fehlt – rechts bzw. im Blatt. */
@@ -534,6 +559,7 @@ function DayPanel({
   attendanceFor,
   showHeader,
   sceneContext,
+  weekLoad,
 }: DayPanelProps) {
   const day = model.dayMap.get(dayKey);
   if (!day) return null;
@@ -604,10 +630,53 @@ function DayPanel({
         <StatusLegend statuses={["preferred", "limited", "blocked"]} />
       </section>
 
+      <WeekLoadSection weekLoad={weekLoad} memberById={memberById} />
+
       {sceneContext ? (
         <PlayableScenes key={dayKey} dayKey={dayKey} team={team} context={sceneContext} />
       ) : null}
     </div>
+  );
+}
+
+/** Wer in der Woche schon wie oft eingeladen ist – damit niemand jeden Tag kommen muss. */
+function WeekLoadSection({
+  weekLoad,
+  memberById,
+}: {
+  weekLoad: Record<string, PersonLoad>;
+  memberById: Map<string, PlanningMember>;
+}) {
+  const rows = Object.entries(weekLoad)
+    .flatMap(([userId, load]) => {
+      const member = memberById.get(userId);
+      return member ? [{ ...load, userId, name: member.name }] : [];
+    })
+    .sort((a, b) => b.count - a.count || b.minutes - a.minutes || a.name.localeCompare(b.name));
+  if (!rows.length) return null;
+  return (
+    <section className="space-y-2 border-t border-border pt-4">
+      <h3 className="text-xs font-medium text-muted-foreground">
+        Diese Woche eingeladen ({rows.length})
+      </h3>
+      <ul className="flex flex-wrap gap-1.5">
+        {rows.map((row) => (
+          <li
+            key={row.userId}
+            className={cn(
+              "rounded-full px-2.5 py-1 text-xs tabular-nums",
+              row.count >= HEAVY_WEEK_COUNT
+                ? "bg-warning/15 text-warning"
+                : "bg-muted text-muted-foreground",
+            )}
+            title={`${row.name}: ${row.count} Termine, ${Math.round(row.minutes / 60)} h`}
+          >
+            <span className="font-medium text-foreground">{row.name.split(" ")[0]}</span>{" "}
+            {row.count}×
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

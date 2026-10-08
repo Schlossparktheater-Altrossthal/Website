@@ -41,6 +41,7 @@ import {
 } from "@/lib/calendar/audience";
 import type { DayAvailability } from "@/lib/calendar/day-availability";
 import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
+import type { PersonLoad } from "@/lib/calendar/week-load";
 import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
@@ -78,6 +79,7 @@ type EventEditorProps = {
   /** Aktuell Eingeladene (für den Hinweis auf geänderte Besetzung). */
   invited: { userId: string; name: string; level: "REQUIRED" | "OPTIONAL" }[];
   initialAvailability: DayAvailability;
+  initialWeekLoad: Record<string, PersonLoad>;
   declined: Record<string, string | null>;
   schedule: SceneScheduleValue & { blocks: EventBlockValue[] };
   sceneStats: SceneStatsView;
@@ -106,6 +108,7 @@ export function EventEditor({
   audience: initialAudience,
   invited,
   initialAvailability,
+  initialWeekLoad,
   declined,
   schedule: initialSchedule,
   sceneStats,
@@ -184,6 +187,7 @@ export function EventEditor({
     }),
     [schedule, blocks],
   );
+  const [weekLoad, setWeekLoad] = useState<Record<string, PersonLoad>>(initialWeekLoad);
   const [conflicts, setConflicts] = useState<Partial<Record<string, string>>>({});
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -331,9 +335,11 @@ export function EventEditor({
         const data = (await response.json()) as {
           availability?: DayAvailability;
           conflicts?: Partial<Record<string, string>>;
+          weekLoad?: Record<string, PersonLoad>;
         };
         setAvailability(data.availability ?? {});
         setConflicts(data.conflicts ?? {});
+        setWeekLoad(data.weekLoad ?? {});
       } catch (error) {
         console.error("Failed to load blocked members", error);
         toast.error("Sperrtermine konnten nicht geladen werden.");
@@ -803,6 +809,8 @@ export function EventEditor({
               availability={availability}
               conflicts={conflicts}
               declined={declined}
+              weekLoad={weekLoad}
+              dayKey={date}
               blocks={currentBlocks}
               hideSceneRules={showBlocks && context.scenes.length > 0}
             />

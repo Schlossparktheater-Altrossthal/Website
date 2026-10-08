@@ -91,7 +91,7 @@ Rollen ohne Besetzung zählen nicht als fehlend (sonst wäre jede Szene rot), we
 ## Checkliste
 
 - [x] Phase 1 Probbare Szenen (2026-10-08): `scene-readiness.ts`, Ablauf im Editor, Tagesfeld „Was ist probbar?“ mit „Probe mit N Szenen anlegen“
-- [ ] Phase 2 Belastung
+- [x] Phase 2 Belastung (2026-10-08): `week-load.ts`, Kennzeichen + Bündel-Hinweis im Editor, „Diese Woche eingeladen“ im Tagesfeld
 - [ ] Phase 3 Szenen-Plan
 - [ ] Phase 4 Personen-Woche
 - [ ] Phase 5 Kalender am Desktop
