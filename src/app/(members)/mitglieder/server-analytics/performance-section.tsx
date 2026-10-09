@@ -52,6 +52,8 @@ const GROUP_LABEL: Record<PerformanceGrouping, string> = {
   targets: "Seite · Element",
 };
 
+const ROW_LIMIT = 15;
+
 const KIND_LABEL: Record<PerformanceSampleKind, string> = {
   navigation: "Seitenwechsel",
   load: "Erstaufruf",
@@ -80,6 +82,7 @@ function inpTone(ms: number | null) {
 export function PerformanceSection({ summary }: { summary: PerformanceSummary }) {
   const [kind, setKind] = useState<PerformanceSampleKind>("navigation");
   const [grouping, setGrouping] = useState<PerformanceGrouping>("routes");
+  const [showAll, setShowAll] = useState(false);
 
   const effectiveGrouping: PerformanceGrouping =
     grouping === "targets" && kind !== "interaction" ? "routes" : grouping;
@@ -138,129 +141,6 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
           tone={inpTone(load.inpP75)}
         />
       </div>
-
-      <Card className="border border-border/70">
-        <CardHeader className="space-y-3 pb-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <SegmentedControl
-              aria-label="Art der Messung"
-              value={kind}
-              onValueChange={setKind}
-              options={(Object.keys(KIND_LABEL) as PerformanceSampleKind[]).map((value) => ({
-                value,
-                label: KIND_LABEL[value],
-              }))}
-            />
-            <Select
-              value={effectiveGrouping}
-              onValueChange={(value) => setGrouping(value as PerformanceGrouping)}
-            >
-              <SelectTrigger className="h-9 w-auto min-w-[11rem]" aria-label="Gruppierung">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {groupingOptions.map((key) => (
-                  <SelectItem key={key} value={key}>
-                    nach {GROUP_LABEL[key]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {kind === "interaction"
-              ? "Einzelne Klicks/Eingaben, bei denen die Seite länger als 200 ms nicht reagiert hat (Dauer bis zum nächsten Bild)."
-              : "Gemessen bis der Inhalt steht (kein Ladeskelett mehr)."}{" "}
-            75 % / 95 %: so schnell waren drei Viertel bzw. fast alle.
-            {isNavigation
-              ? " Server = Anfrage der Zielseite inkl. Netz, der Rest entfällt auf das Gerät. Vorab = ohne eigene Anfrage (vorab geladen/zwischengespeichert)."
-              : ""}
-            {["viewports", "aspects"].includes(effectiveGrouping) &&
-            summary.withDeviceInfo < summary.total
-              ? ` Bildschirmdaten gibt es erst für ${numberFormat.format(summary.withDeviceInfo)} von ${numberFormat.format(summary.total)} Messungen.`
-              : ""}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {rows.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">
-              Keine Messungen dieser Art.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="text-xs text-muted-foreground">
-                  <tr className="border-b border-border">
-                    <th className="py-2 pr-3 text-left font-medium">
-                      {GROUP_LABEL[effectiveGrouping]}
-                    </th>
-                    <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">
-                      Anzahl
-                    </th>
-                    <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">
-                      Median
-                    </th>
-                    <th className="px-2 py-2 text-right font-medium">75 %</th>
-                    <th className="hidden px-2 py-2 text-right font-medium md:table-cell">95 %</th>
-                    {isNavigation ? (
-                      <>
-                        <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">
-                          Server
-                        </th>
-                        <th className="hidden px-2 py-2 text-right font-medium lg:table-cell">
-                          Vorab
-                        </th>
-                      </>
-                    ) : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.key} className="border-b border-border/50 last:border-0">
-                      <td className="max-w-[13rem] py-2 pr-3 sm:max-w-none">
-                        <span className="block truncate font-medium">
-                          {effectiveGrouping === "routes" ? shortRoute(row.key) : row.key}
-                        </span>
-                        <span className="block text-xs text-muted-foreground sm:hidden">
-                          {numberFormat.format(row.count)}× · Median {formatMs(row.p50)}
-                          {isNavigation ? ` · Server ${formatMs(row.serverP75)}` : ""}
-                        </span>
-                      </td>
-                      <td className="hidden px-2 py-2 text-right tabular-nums sm:table-cell">
-                        {numberFormat.format(row.count)}
-                      </td>
-                      <td className="hidden px-2 py-2 text-right tabular-nums sm:table-cell">
-                        {formatMs(row.p50)}
-                      </td>
-                      <td
-                        className={cn(
-                          "px-2 py-2 text-right font-semibold tabular-nums",
-                          TONE_TEXT[loadTone(row.p75, kind)],
-                        )}
-                      >
-                        {formatMs(row.p75)}
-                      </td>
-                      <td className="hidden px-2 py-2 text-right tabular-nums md:table-cell">
-                        {formatMs(row.p95)}
-                      </td>
-                      {isNavigation ? (
-                        <>
-                          <td className="hidden px-2 py-2 text-right tabular-nums sm:table-cell">
-                            {formatMs(row.serverP75)}
-                          </td>
-                          <td className="hidden px-2 py-2 text-right tabular-nums lg:table-cell">
-                            {row.cachedShare === null ? "–" : percentFormat.format(row.cachedShare)}
-                          </td>
-                        </>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border border-border/70">
@@ -374,6 +254,140 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border border-border/70">
+        <CardHeader className="space-y-3 pb-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SegmentedControl
+              aria-label="Art der Messung"
+              value={kind}
+              onValueChange={setKind}
+              options={(Object.keys(KIND_LABEL) as PerformanceSampleKind[]).map((value) => ({
+                value,
+                label: KIND_LABEL[value],
+              }))}
+            />
+            <Select
+              value={effectiveGrouping}
+              onValueChange={(value) => setGrouping(value as PerformanceGrouping)}
+            >
+              <SelectTrigger className="h-9 w-auto min-w-[11rem]" aria-label="Gruppierung">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {groupingOptions.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    nach {GROUP_LABEL[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {kind === "interaction"
+              ? "Einzelne Klicks/Eingaben, bei denen die Seite länger als 200 ms nicht reagiert hat (Dauer bis zum nächsten Bild)."
+              : "Gemessen bis der Inhalt steht (kein Ladeskelett mehr)."}{" "}
+            75 % / 95 %: so schnell waren drei Viertel bzw. fast alle.
+            {isNavigation
+              ? " Server = Anfrage der Zielseite inkl. Netz, der Rest entfällt auf das Gerät. Vorab = ohne eigene Anfrage (vorab geladen/zwischengespeichert)."
+              : ""}
+            {["viewports", "aspects"].includes(effectiveGrouping) &&
+            summary.withDeviceInfo < summary.total
+              ? ` Bildschirmdaten gibt es erst für ${numberFormat.format(summary.withDeviceInfo)} von ${numberFormat.format(summary.total)} Messungen.`
+              : ""}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {rows.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              Keine Messungen dieser Art.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="text-xs text-muted-foreground">
+                  <tr className="border-b border-border">
+                    <th className="py-2 pr-3 text-left font-medium">
+                      {GROUP_LABEL[effectiveGrouping]}
+                    </th>
+                    <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">
+                      Anzahl
+                    </th>
+                    <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">
+                      Median
+                    </th>
+                    <th className="px-2 py-2 text-right font-medium">75 %</th>
+                    <th className="hidden px-2 py-2 text-right font-medium md:table-cell">95 %</th>
+                    {isNavigation ? (
+                      <>
+                        <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">
+                          Server
+                        </th>
+                        <th className="hidden px-2 py-2 text-right font-medium lg:table-cell">
+                          Vorab
+                        </th>
+                      </>
+                    ) : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showAll ? rows : rows.slice(0, ROW_LIMIT)).map((row) => (
+                    <tr key={row.key} className="border-b border-border/50 last:border-0">
+                      <td className="max-w-[13rem] py-2 pr-3 sm:max-w-none">
+                        <span className="block truncate font-medium">
+                          {effectiveGrouping === "routes" ? shortRoute(row.key) : row.key}
+                        </span>
+                        <span className="block text-xs text-muted-foreground sm:hidden">
+                          {numberFormat.format(row.count)}× · Median {formatMs(row.p50)}
+                          {isNavigation ? ` · Server ${formatMs(row.serverP75)}` : ""}
+                        </span>
+                      </td>
+                      <td className="hidden px-2 py-2 text-right tabular-nums sm:table-cell">
+                        {numberFormat.format(row.count)}
+                      </td>
+                      <td className="hidden px-2 py-2 text-right tabular-nums sm:table-cell">
+                        {formatMs(row.p50)}
+                      </td>
+                      <td
+                        className={cn(
+                          "px-2 py-2 text-right font-semibold tabular-nums",
+                          TONE_TEXT[loadTone(row.p75, kind)],
+                        )}
+                      >
+                        {formatMs(row.p75)}
+                      </td>
+                      <td className="hidden px-2 py-2 text-right tabular-nums md:table-cell">
+                        {formatMs(row.p95)}
+                      </td>
+                      {isNavigation ? (
+                        <>
+                          <td className="hidden px-2 py-2 text-right tabular-nums sm:table-cell">
+                            {formatMs(row.serverP75)}
+                          </td>
+                          <td className="hidden px-2 py-2 text-right tabular-nums lg:table-cell">
+                            {row.cachedShare === null ? "–" : percentFormat.format(row.cachedShare)}
+                          </td>
+                        </>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {rows.length > ROW_LIMIT ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAll((value) => !value)}
+                  className="mt-3 text-sm font-medium text-primary hover:underline"
+                >
+                  {showAll
+                    ? "Weniger anzeigen"
+                    : `Alle ${numberFormat.format(rows.length)} anzeigen`}
+                </button>
+              ) : null}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

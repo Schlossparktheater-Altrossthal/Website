@@ -53,6 +53,15 @@ describe("normalizePerformanceRoute", () => {
     ).toBe("/mitglieder/mitgliederverwaltung/[id]");
     expect(normalizePerformanceRoute("/mitglieder/lager/123?tab=x")).toBe("/mitglieder/lager/[id]");
     expect(normalizePerformanceRoute("/mitglieder/sperrliste/")).toBe("/mitglieder/sperrliste");
+    expect(normalizePerformanceRoute("/mitglieder/lager/objekt/T-0003")).toBe(
+      "/mitglieder/lager/objekt/[id]",
+    );
+    expect(normalizePerformanceRoute("/mitglieder/lager/typ/pMjEoWiDSvZp/bearbeiten")).toBe(
+      "/mitglieder/lager/typ/[id]/bearbeiten",
+    );
+    expect(normalizePerformanceRoute("/mitglieder/lager/katalog")).toBe(
+      "/mitglieder/lager/katalog",
+    );
   });
 });
 

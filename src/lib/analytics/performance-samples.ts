@@ -60,6 +60,8 @@ const ID_SEGMENT_PATTERNS = [
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, // uuid
   /^\d+$/,
   /^[A-Za-z0-9_-]{24,}$/, // lange Tokens/Slugs mit IDs
+  /^[A-Z]{1,3}-\d+(-\d+)*$/, // Lager-Codes wie T-0003 oder T-42-3
+  /^(?=.*[a-z])(?=.*[A-Z])[A-Za-z0-9]{8,}$/, // publicId wie pMjEoWiDSvZp
 ];
 
 /** Ersetzt IDs in Pfaden durch `[id]`, damit Detailseiten zusammengefasst ausgewertet werden. */
@@ -463,7 +465,8 @@ export function summarizePerformanceSamples(
     },
     interaction: stats(interactions.map((row) => row.durationMs)),
     groups: {
-      routes: groupBy(rows, (row) => row.route),
+      // Ältere Messungen enthalten noch Codes im Pfad – beim Auswerten erneut zusammenfassen.
+      routes: groupBy(rows, (row) => normalizePerformanceRoute(row.route)),
       devices: groupBy(rows, deviceLabel),
       browsers: groupBy(rows, browserLabel),
       viewports: groupBy(rows, (row) => viewportClass(row.viewportWidth)),
