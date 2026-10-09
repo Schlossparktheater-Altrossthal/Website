@@ -6,6 +6,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { LinkPendingIndicator } from "@/components/link-pending-indicator";
 import {
   SidebarContent,
   SidebarGroup,
@@ -255,6 +256,9 @@ function renderItem(pathname: string, isCollapsed: boolean, item: MembersNavItem
               <span className="break-words text-sidebar-foreground leading-5">{item.label}</span>
             </div>
           ) : null}
+          <LinkPendingIndicator
+            className={cn("self-center", isCollapsed && "absolute right-1 top-1")}
+          />
           {showBadge ? (
             isPrimitiveBadge ? (
               <SidebarMenuBadge className="border border-sidebar-border/60 bg-sidebar/50 text-eyebrow text-sidebar-foreground/70">

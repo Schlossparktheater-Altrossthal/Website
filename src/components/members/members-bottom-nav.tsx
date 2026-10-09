@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { LinkPendingIndicator } from "@/components/link-pending-indicator";
 import { MenuIcon } from "@/components/ui/action-icons";
 import { useSidebar } from "@/components/ui/sidebar";
 import {
@@ -23,7 +24,7 @@ const BOTTOM_NAV_TARGETS: ReadonlyArray<{ href: string; label: string }> = [
 ];
 
 const itemClassName =
-  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-1 text-[11px] font-medium leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-md px-1 text-[11px] font-medium leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /**
  * Feste Leiste unten auf Handy und Tablet (unter `lg`): die wichtigsten Seiten plus „Menü“,
@@ -79,6 +80,7 @@ export function MembersBottomNav(data: MembersNavData) {
             >
               <Icon className="size-5 shrink-0" />
               <span className="max-w-full truncate">{item.label}</span>
+              <LinkPendingIndicator className="absolute top-1 right-1/4" />
             </Link>
           );
         })}

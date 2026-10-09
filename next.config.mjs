@@ -59,6 +59,15 @@ const nextConfig = {
       },
     ];
   },
+  experimental: {
+    // Client-Router: besuchte/vorab geladene Seiten 30 s wiederverwenden – Zurück und
+    // Hin-und-her-Wechsel kommen dann ohne Server-Anfrage. Server Actions mit
+    // revalidatePath und router.refresh() leeren den Cache weiterhin sofort.
+    staleTimes: { dynamic: 30, static: 180 },
+    // Beim Überfahren/Antippen eines Links die komplette Zielseite vorab laden, nicht nur bis
+    // zum Ladeskelett. Bringt am Desktop meist 100–300 ms Vorsprung vor dem Klick.
+    dynamicOnHover: true,
+  },
   turbopack: {
     root: process.cwd(),
   },
