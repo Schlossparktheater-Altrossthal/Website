@@ -84,6 +84,8 @@ type MonthGridProps = {
    * darunter bleiben Punkte, damit das Raster mobil ohne Scrollen passt.
    */
   renderDetails?: (key: string, date: Date) => React.ReactNode;
+  /** Kurzer Zusatz rechts neben der Tageszahl (z. B. Zähler), nur ab `lg`. */
+  renderHeaderAside?: (key: string, date: Date) => React.ReactNode;
   className?: string;
 };
 
@@ -137,6 +139,7 @@ export function MonthGrid({
   emphasizedWeekdays,
   showWeekNumbers = false,
   renderDetails,
+  renderHeaderAside,
   className,
 }: MonthGridProps) {
   const gridRef = React.useRef<HTMLDivElement>(null);
@@ -583,6 +586,7 @@ export function MonthGrid({
                     tabbable={key === tabKey}
                     onFocus={() => setFocusKey(key)}
                     details={renderDetails?.(key, date)}
+                    headerAside={renderHeaderAside?.(key, date)}
                   />
                 );
               })}
@@ -603,6 +607,7 @@ function DayCell({
   tabbable,
   onFocus,
   details,
+  headerAside,
 }: {
   date: Date;
   inMonth: boolean;
@@ -612,6 +617,7 @@ function DayCell({
   tabbable: boolean;
   onFocus: () => void;
   details?: React.ReactNode;
+  headerAside?: React.ReactNode;
 }) {
   // Gesperrte Tage bleiben fokussierbar, damit die Pfeiltasten nicht hängen bleiben.
   const inactive = !onActivate || state.disabled;
@@ -656,7 +662,7 @@ function DayCell({
         !inMonth && "opacity-40",
       )}
     >
-      <span className="flex items-center justify-center lg:justify-start">
+      <span className="flex items-center justify-center gap-1 lg:justify-between">
         <span
           className={cn(
             "flex h-7 min-w-7 items-center justify-center rounded-full px-1 tabular-nums leading-none lg:h-6 lg:min-w-6",
@@ -669,6 +675,7 @@ function DayCell({
         >
           {date.getDate()}
         </span>
+        {headerAside ? <span className="hidden min-w-0 lg:flex">{headerAside}</span> : null}
       </span>
       {details ? (
         <span className="mt-1 hidden min-h-0 flex-1 flex-col gap-0.5 overflow-hidden text-left lg:flex">

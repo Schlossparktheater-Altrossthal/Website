@@ -422,18 +422,15 @@ export function EventPlanningClient({
                   <PlanningCellDetails
                     day={model.dayMap.get(key)}
                     entries={(model.entriesByDay.get(key) ?? []) as PlanningEvent[]}
-                    counts={model.countsByDay.get(key)}
                   />
                 ) : (
-                  <>
-                    <DayCellDetails
-                      day={model.dayMap.get(key)}
-                      entries={model.entriesByDay.get(key)}
-                    />
-                    <DayCellCounts counts={model.countsByDay.get(key)} />
-                  </>
+                  <DayCellDetails
+                    day={model.dayMap.get(key)}
+                    entries={model.entriesByDay.get(key)}
+                  />
                 )
               }
+              renderHeaderAside={(key) => <DayCellCounts counts={model.countsByDay.get(key)} />}
             />
             <p className="text-center text-xs text-muted-foreground lg:hidden">
               Tippe auf einen Tag: Termine, wer kann, neu anlegen.
@@ -495,11 +492,9 @@ function shortTitle(title: string) {
 function PlanningCellDetails({
   day,
   entries,
-  counts,
 }: {
   day: ReturnType<ReturnType<typeof useCalendarModel>["dayMap"]["get"]>;
   entries: PlanningEvent[];
-  counts: { blocked: number; limited: number } | undefined;
 }) {
   const holiday = day?.holidays.find((entry) => entry.category === "publicHoliday");
   return (
@@ -533,9 +528,6 @@ function PlanningCellDetails({
       {holiday ? (
         <span className="truncate px-1 text-[0.6875rem] text-warning">{holiday.title}</span>
       ) : null}
-      <span className="mt-auto pt-1">
-        <DayCellCounts counts={counts} />
-      </span>
     </span>
   );
 }
@@ -544,7 +536,7 @@ function PlanningCellDetails({
 function DayCellCounts({ counts }: { counts: { blocked: number; limited: number } | undefined }) {
   if (!counts || (!counts.blocked && !counts.limited)) return null;
   return (
-    <span className="flex gap-1.5 px-1 text-[0.6875rem] tabular-nums text-muted-foreground">
+    <span className="flex gap-1.5 text-[0.6875rem] tabular-nums text-muted-foreground">
       {counts.blocked ? (
         <span className="inline-flex items-center gap-0.5">
           <StatusDot status="blocked" /> {counts.blocked}
