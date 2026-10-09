@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   buildScenePlan,
-  LONG_AGO_REHEARSALS,
+  LONG_AGO_BLOCKS,
   type ScenePlanCell,
   type ScenePlanEntry,
   type ScenePlanRow,
@@ -39,9 +39,9 @@ function sceneTitle(label: string) {
 function describeSince(row: ScenePlanRow) {
   if (!row.lastDone) return "noch nie";
   const when =
-    row.rehearsalsSince === 0
-      ? "in der letzten Probe"
-      : `vor ${row.rehearsalsSince} ${row.rehearsalsSince === 1 ? "Probe" : "Proben"}`;
+    row.blocksSince === 0
+      ? "in der letzten Probenwoche"
+      : `vor ${row.blocksSince} ${row.blocksSince === 1 ? "Probenwoche" : "Probenwochen"}`;
   const days = row.daysSince === 1 ? "1 Tag" : `${row.daysSince} Tage`;
   return `zuletzt ${when} (${formatKey(row.lastDone)}, vor ${days})`;
 }
@@ -110,7 +110,8 @@ export function ScenePlanView({
       <Card variant="plain" size="flush" className="border-border p-4">
         <p className="text-sm">
           <span className="font-medium">
-            Bisher {summary.rehearsals} {summary.rehearsals === 1 ? "Szenenprobe" : "Szenenproben"}
+            Bisher {summary.rehearsals} {summary.rehearsals === 1 ? "Szenenprobe" : "Szenenproben"}{" "}
+            in {summary.weeks} {summary.weeks === 1 ? "Probenwoche" : "Probenwochen"}
           </span>
           <span className="text-muted-foreground">
             {" "}
@@ -139,9 +140,9 @@ export function ScenePlanView({
           <p className="mt-1 text-sm text-muted-foreground">Keine Szene hinkt hinterher.</p>
         )}
         <p className="mt-2 text-xs text-muted-foreground">
-          Gemessen an euren Proben, nicht an Kalendertagen: „lange nicht dran“ = seit{" "}
-          {LONG_AGO_REHEARSALS} Szenenproben nicht geprobt und nichts angesetzt, „selten“ = weniger
-          als halb so oft wie der Schnitt.
+          Gemessen an euren Probenwochen (ein Wochenende mit mehreren Kerntagen zählt einmal), nicht
+          an Kalendertagen: „lange nicht dran“ = seit {LONG_AGO_BLOCKS} Probenwochen nicht geprobt
+          und nichts angesetzt, „selten“ = weniger als halb so oft wie der Schnitt.
         </p>
         <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">

@@ -88,9 +88,11 @@ Rollen ohne Besetzung zählen nicht als fehlend (sonst wäre jede Szene rot), we
 - E3: Woche = Kalenderwoche Mo–So (Europe/Berlin); gezählt werden angesetzte und vorgemerkte Termine.
 - E4: Keine Migration nötig; alle Daten existieren.
 - E5 (2026-10-09, User): Keine festen 14 Tage – viele Produktionen proben nur alle ein bis zwei
-  Wochen. „Lange nicht dran“ = seit 3 Szenenproben der Produktion nicht geprobt und nichts
+  Wochen, gebündelt an den Kerntagen (Sperrliste-Einstellungen, derzeit Fr–So). Maßeinheit ist
+  daher die **Probenwoche** (Woche mit mindestens einer Szenenprobe), nicht die einzelne Probe –
+  ein Wochenende zählt einmal. „Lange nicht dran“ = seit 2 Probenwochen nicht geprobt und nichts
   angesetzt; „selten“ = weniger als halb so oft geprobt wie der Schnitt aller Szenen. Pro Szene:
-  „zuletzt vor N Proben (Datum, vor X Tagen)“.
+  „zuletzt vor N Probenwochen (Datum, vor X Tagen)“.
 
 ## Checkliste
 

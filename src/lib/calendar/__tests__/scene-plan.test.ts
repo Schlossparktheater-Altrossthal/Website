@@ -27,8 +27,8 @@ describe("buildScenePlan", () => {
     const [a, b] = plan.rows;
     expect(a?.cells[3]).toEqual({ done: 1, planned: 0, dayKeys: ["2026-10-01"] });
     expect(a).toMatchObject({ done: 1, planned: 1, nextPlanned: "2026-10-15", behind: [] });
-    expect(b).toMatchObject({ lastDone: "2026-09-10", rehearsalsSince: 1, daysSince: 28 });
-    expect(plan.summary.rehearsals).toBe(2);
+    expect(b).toMatchObject({ lastDone: "2026-09-10", blocksSince: 1, daysSince: 28 });
+    expect(plan.summary).toMatchObject({ rehearsals: 2, weeks: 2 });
   });
 
   it("measures 'behind' by the production's rhythm, not by days", () => {
@@ -53,7 +53,28 @@ describe("buildScenePlan", () => {
     const [a, b, c] = sparse.rows;
     expect(a?.behind).toEqual(["long", "rare"]);
     // Vor fünf Tagen zuletzt – trotz seltener Proben nicht „lange her“.
-    expect(b).toMatchObject({ rehearsalsSince: 0, behind: [] });
+    expect(b).toMatchObject({ blocksSince: 0, behind: [] });
     expect(c?.behind).toEqual([]);
+  });
+
+  it("counts a weekend of core days as one block", () => {
+    // Fr/Sa/So geprobt, Szene b nur am Freitag: noch dieselbe Probenwoche, nicht „3 Proben her“.
+    const weekend = buildScenePlan({
+      scenes: [
+        { id: "a", label: "Sz. 1" },
+        { id: "b", label: "Sz. 2" },
+      ],
+      entries: [
+        { sceneId: "a", eventId: "fr", dayKey: "2026-10-02", done: true },
+        { sceneId: "b", eventId: "fr", dayKey: "2026-10-02", done: true },
+        { sceneId: "a", eventId: "sa", dayKey: "2026-10-03", done: true },
+        { sceneId: "a", eventId: "so", dayKey: "2026-10-04", done: true },
+      ],
+      todayKey: "2026-10-08",
+      premiereKey: null,
+    });
+    expect(weekend.summary).toMatchObject({ rehearsals: 3, weeks: 1 });
+    expect(weekend.rows[1]).toMatchObject({ blocksSince: 0 });
+    expect(weekend.rows[1]?.behind).not.toContain("long");
   });
 });

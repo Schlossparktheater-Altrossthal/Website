@@ -27,19 +27,23 @@ export type ScenePlanRow = {
   planned: number;
   lastDone: string | null;
   nextPlanned: string | null;
-  /** Szenenproben der Produktion seit dem letzten Mal (nie geprobt: alle bisherigen). */
-  rehearsalsSince: number;
+  /**
+   * Probenwochen der Produktion seit dem letzten Mal (nie geprobt: alle bisherigen). Eine Woche
+   * mit Proben ist ein Probenblock – bei Kerntagen Fr–So zählt ein Wochenende einmal, nicht
+   * dreimal.
+   */
+  blocksSince: number;
   /** Tage seit dem letzten Mal, null wenn nie geprobt. */
   daysSince: number | null;
   /**
    * Hinkt hinterher – gemessen am Probenrhythmus der Produktion, nicht an festen Tagen:
-   * `long` = seit {@link LONG_AGO_REHEARSALS} Szenenproben nicht dran und nichts angesetzt,
+   * `long` = seit {@link LONG_AGO_BLOCKS} Probenwochen nicht dran und nichts angesetzt,
    * `rare` = weniger als halb so oft geprobt wie der Schnitt.
    */
   behind: ("long" | "rare")[];
 };
 
-export const LONG_AGO_REHEARSALS = 3;
+export const LONG_AGO_BLOCKS = 2;
 const WEEKS_BEFORE = 4;
 const DEFAULT_WEEKS_AFTER = 8;
 const MAX_WEEKS = 20;
@@ -97,10 +101,10 @@ export function buildScenePlan({
   });
   const weekIndex = new Map(weeks.map((week, index) => [week.from, index]));
 
-  // Bisherige Szenenproben der Produktion (Tage), Maßstab für „lange her“.
-  const pastRehearsals = [
-    ...new Map(entries.filter((entry) => entry.done).map((e) => [e.eventId, e.dayKey])).values(),
-  ];
+  // Bisherige Szenenproben und Probenwochen der Produktion – Maßstab für „lange her“.
+  const past = entries.filter((entry) => entry.done);
+  const pastRehearsals = new Set(past.map((entry) => entry.eventId)).size;
+  const pastWeeks = [...new Set(past.map((entry) => weekBounds(entry.dayKey).from))];
   const rows: ScenePlanRow[] = scenes.map((scene) => {
     const own = entries.filter((entry) => entry.sceneId === scene.id);
     const cells: ScenePlanCell[] = weeks.map(() => ({ done: 0, planned: 0, dayKeys: [] }));
@@ -123,7 +127,7 @@ export function buildScenePlan({
       planned: plannedKeys.length,
       lastDone,
       nextPlanned,
-      rehearsalsSince: pastRehearsals.filter((key) => !lastDone || key > lastDone).length,
+      blocksSince: pastWeeks.filter((week) => !lastDone || week > weekBounds(lastDone).from).length,
       daysSince: lastDone ? daysBetween(lastDone, todayKey) : null,
       behind: [],
     };
@@ -131,12 +135,12 @@ export function buildScenePlan({
 
   const averageDone = rows.length ? rows.reduce((sum, row) => sum + row.done, 0) / rows.length : 0;
   for (const row of rows) {
-    if (!row.nextPlanned && row.rehearsalsSince >= LONG_AGO_REHEARSALS) row.behind.push("long");
+    if (!row.nextPlanned && row.blocksSince >= LONG_AGO_BLOCKS) row.behind.push("long");
     if (averageDone >= 2 && row.done < averageDone / 2) row.behind.push("rare");
   }
   return {
     weeks,
     rows,
-    summary: { rehearsals: pastRehearsals.length, averageDone },
+    summary: { rehearsals: pastRehearsals, weeks: pastWeeks.length, averageDone },
   };
 }
