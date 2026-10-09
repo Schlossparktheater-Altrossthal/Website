@@ -30,6 +30,7 @@ import { ensurePermissionDefinitions } from "@/lib/permissions";
 import { recalculateShowPlan } from "@/lib/planning/plan-service";
 import { prisma } from "@/lib/prisma";
 
+import { applyAusstattungDefaults, seedDemoAusstattung } from "./ausstattung";
 import { seedDemoLager } from "./lager";
 
 const SHOW_ID = "demo-show-sommernachtstraum";
@@ -879,8 +880,6 @@ const TASKS: Record<
 > = {
   buehnenbau: [
     ["Podeste für die Lichtung bauen", "4 Podeste 2×1 m, trittschallgedämmt", "doing", "high", 12],
-    ["Laube für Titania", "Weidenruten vom Gärtner abholen", "todo", "normal", 25],
-    ["Mauer-Kostüm für Schnauz", "Leichte Pappwand mit Loch, tragbar", "todo", "low", 30],
     ["Holz bestellen", null, "done", "normal", -10],
     ["Bühnenboden ausbessern", "Bretter an der Rampe tauschen", "doing", "normal", 18],
     ["Sitzplan Tribüne prüfen", null, "todo", "normal", 35],
@@ -894,7 +893,6 @@ const TASKS: Record<
   kostueme: [
     ["Elfenflügel nähen", "4 Paar, Kinder-Größen – Maße im Portal", "doing", "high", 22],
     ["Anprobe Liebespaare", null, "todo", "normal", 15],
-    ["Eselskopf für Zettel", "Leicht, gut belüftet, Sicht nach unten!", "doing", "high", 30],
     ["Fundus nach Toga-Stoffen durchsuchen", null, "done", "normal", -12],
   ],
   essensplanung: [
@@ -1856,9 +1854,11 @@ async function main() {
   await resetDatabase();
   await importStammdaten();
   await ensurePermissionDefinitions();
+  await applyAusstattungDefaults();
   await seedPeople();
-  const { premiere, finalStart, sceneIds } = await seedProductions();
+  const { premiere, finalStart, sceneIds, characterIds } = await seedProductions();
   const departments = await seedDepartments(premiere, finalStart);
+  await seedDemoAusstattung(SHOW_ID, characterIds, sceneIds, uid);
   const blocked = await seedBlockedDays(premiere);
   await seedEvents(premiere, finalStart, sceneIds, departments, blocked);
   await seedFinalWeek(premiere, finalStart);

@@ -6,11 +6,11 @@ import { UserAvatar } from "@/components/user-avatar";
 import { CalendarIcon, EditIcon, MapPinIcon } from "@/components/ui/action-icons";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import {
-  BREAKDOWN_STATUS_LABELS,
-  canViewRole,
-  CASTING_TYPE_LABELS,
-  loadRolePortal,
-} from "@/lib/departments/roles";
+  OBJECT_KIND_LABELS,
+  OBJECT_STATUS_LABELS,
+  OBJECT_STATUS_TONE,
+} from "@/lib/ausstattung/constants";
+import { canViewRole, CASTING_TYPE_LABELS, loadRolePortal } from "@/lib/departments/roles";
 import { cn } from "@/lib/utils";
 
 import { ColorDot, formatEventDate, tint, ViewSwitcher } from "../../team-ui";
@@ -34,7 +34,7 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
 
   const view: View = ansicht === "szenen" || ansicht === "ausstattung" ? ansicht : "uebersicht";
   const basePath = `/mitglieder/meine-gewerke/rolle/${encodeURIComponent(role.id)}`;
-  const openItems = role.breakdown.filter((item) => item.status !== "done").length;
+  const openItems = role.objects.filter((item) => item.status !== "ready").length;
 
   return (
     <div className="space-y-6">
@@ -221,35 +221,46 @@ export default async function RollenPortalPage({ params, searchParams }: PagePro
       ) : null}
 
       {view === "ausstattung" ? (
-        role.breakdown.length ? (
+        role.objects.length ? (
           <ul className="divide-y divide-border rounded-xl border border-border bg-card">
-            {role.breakdown.map((item) => (
-              <li key={item.id} className="flex min-h-12 items-center gap-3 px-3 py-2">
-                <ColorDot color={item.department.color} />
+            {role.objects.map((item) => (
+              <li key={item.id} className="flex min-h-14 items-center gap-3 px-3 py-2">
+                {item.photoId ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/ausstattung/fotos/${item.photoId}`}
+                    alt=""
+                    loading="lazy"
+                    className="h-11 w-11 shrink-0 rounded-lg bg-muted object-cover"
+                  />
+                ) : (
+                  <ColorDot color={item.department.color} className="mx-1" />
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{item.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {item.department.name} · {item.scene}
-                    {item.note ? ` · ${item.note}` : ""}
+                    {OBJECT_KIND_LABELS[item.kind]} · {item.department.name}
+                    {item.scenes.length ? ` · Sz. ${item.scenes.join(", ")}` : ""}
                   </span>
+                  {item.parts.length ? (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {item.parts.join(" · ")}
+                    </span>
+                  ) : null}
                 </span>
                 <span
                   className={cn(
                     "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                    item.status === "done" || item.status === "ready"
-                      ? "bg-success/15 text-success"
-                      : item.status === "blocked"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-muted text-muted-foreground",
+                    OBJECT_STATUS_TONE[item.status],
                   )}
                 >
-                  {BREAKDOWN_STATUS_LABELS[item.status]}
+                  {OBJECT_STATUS_LABELS[item.status]}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <Empty>Für die Szenen der Rolle ist noch keine Ausstattung geplant.</Empty>
+          <Empty>Für die Rolle sind noch keine Kostüme oder Requisiten geplant.</Empty>
         )
       ) : null}
     </div>

@@ -19,6 +19,7 @@ import { de } from "date-fns/locale/de";
 
 import { PlusIcon, SettingsIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
+import { OBJECT_KIND_LABELS } from "@/lib/ausstattung/constants";
 import type { BoardColumn, BoardData, BoardTask } from "@/lib/departments/board";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,8 @@ type Props = {
   initialTaskId?: string | null;
   /** Aus dem Plan: neue Karte für diesen Meilenstein anlegen (`?neu=1&meilenstein=`). */
   newForMilestoneId?: string | null;
+  /** Portal-Pfad für Links zu Ausstattungsstücken (`…/objekt/:id`). */
+  basePath?: string;
 };
 
 const ALL = "__all";
@@ -60,6 +63,7 @@ export function DepartmentBoard({
   canManage,
   initialTaskId,
   newForMilestoneId,
+  basePath,
 }: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -371,7 +375,12 @@ export function DepartmentBoard({
         initialMilestoneId={newForMilestoneId ?? null}
         initialColumnId={openTask?.columnId ?? columns[0]?.id ?? ""}
         canEdit={canEdit}
-        canDelete={canManage || (canEdit && liveTask?.createdById === viewerId)}
+        canDelete={
+          !liveTask?.object && (canManage || (canEdit && liveTask?.createdById === viewerId))
+        }
+        objectHref={
+          liveTask?.object && basePath ? `${basePath}/objekt/${liveTask.object.id}` : null
+        }
         onSave={saveTask}
         onDelete={() =>
           liveTask
@@ -520,7 +529,29 @@ function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lif
             {task.comments.length} Kommentar{task.comments.length === 1 ? "" : "e"}
           </span>
         ) : null}
+        {task.checklist.total ? (
+          <span className={cn(task.checklist.done === task.checklist.total && "text-success")}>
+            ☑ {task.checklist.done}/{task.checklist.total}
+          </span>
+        ) : null}
       </span>
+      {task.object ? (
+        <span className="flex flex-wrap items-center gap-1 text-xs">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+            {OBJECT_KIND_LABELS[task.object.kind]}
+          </span>
+          {task.object.scenes.length ? (
+            <span className="rounded-full bg-muted px-2 py-0.5 tabular-nums text-muted-foreground">
+              Sz. {task.object.scenes.join(" · ")}
+            </span>
+          ) : null}
+          {!dueIso && task.object.nextRehearsal ? (
+            <span className="text-muted-foreground">
+              Probe {format(new Date(task.object.nextRehearsal), "d. MMM", { locale: de })}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
     </span>
   );
 }

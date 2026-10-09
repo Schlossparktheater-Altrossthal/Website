@@ -1,6 +1,6 @@
 # Plan: Ausstattung – Requisiten, Kostüm, Bühnenbild
 
-Stand: 2026-10-09. Konzept, nichts umgesetzt. Ersetzt Phase 11 aus `docs/Plan/gewerke-plan.md`
+Stand: 2026-10-09. Phase 1–6 umgesetzt (lokal mit Demo-Daten geprüft), offen Phase 7 (E2E, Staging-Abnahme, Release). Ersetzt Phase 11 aus `docs/Plan/gewerke-plan.md`
 (Szenenbedarf) und nimmt die Objektkosten aus Phase 12 mit.
 
 ## Ziel
@@ -153,10 +153,10 @@ Vor dem Entwurf: Staging-Screenshots von Stück-Seite, Gewerk-Portal, Board, Lag
 
 ## Checkliste
 
-- [ ] Phase 1 Grundmodell + Migration
-- [ ] Phase 2 Anfordern + Eingang
-- [ ] Phase 3 Requisiten
-- [ ] Phase 4 Kostüm
-- [ ] Phase 5 Bühnenbild
-- [ ] Phase 6 Lager + Kosten
+- [x] Phase 1 Grundmodell + Migration (2026-10-09: Migration `production_objects` übernimmt `SceneBreakdownItem` als Objekt + Szene + Karte, am Prod-Dump vom 05.10. getestet; Bausteine `props`/`costumes`/`set` + `requirements` für `requisite`, `kostuem(e)`, `buehnenbild`/`buehnenbau` – Bühnenbau bekommt Requisiten und Bühnenbild)
+- [x] Phase 2 Anfordern + Eingang (Recht `PRIVATE.PRODUCTION.REQUIREMENT.CREATE` für Rollen mit Produktion verwalten, Produktionsplan oder Probenplanung; wer nur anfordern darf, sieht das Stück als Szenenliste mit „Bedarf anfordern“; Eingang als Kasten über dem Board statt fester Spalte; Benachrichtigungen an Leitung/Vertretung, an Anfordernde bei Entscheidung und „fertig“)
+- [x] Phase 3 Requisiten (Liste, Je Szene druckbar, Vorstellungs-Check; Zusammenführen-Ansicht für migrierte Doppel nicht gebaut – Prod hat keine Breakdown-Einträge)
+- [x] Phase 4 Kostüm (Teile/Zusammenstellung, Kostümplot Desktop-Matrix/Mobil-Liste, Umzugswarnungen, Rollenseite. Vereinfacht: Kostüm hängt an Rolle, nicht an einzelner Besetzung)
+- [x] Phase 5 Bühnenbild (Je Szene, Umbauten raus/rein/bleibt aus den Szenen abgeleitet, ohne zuständige Person)
+- [x] Phase 6 Lager + Kosten (Fundus-Typ/Exemplar verknüpfen, Vormerkung im Lager-Projekt der Produktion, ±1 je Objekt; geschätzte Kosten + `FinanceEntry.objectId` angezeigt, Buchen aus dem Objekt heraus noch nicht)
 - [ ] Phase 7 E2E/Release, `SceneBreakdownItem` entfernen

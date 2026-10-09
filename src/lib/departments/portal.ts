@@ -23,6 +23,8 @@ export type TeamCard = {
   /** Nächste offene Frist des Gewerks im Produktionsplan. */
   nextDeadline: { title: string; dueAt: Date } | null;
   requestCount: number;
+  /** Offene Anforderungen aus Szenen im Eingang. */
+  inboxCount: number;
 };
 
 /** Gewerke der Produktion, in denen die Person aktiv ist (oder alle, für Regie/Board). */
@@ -59,6 +61,7 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
         take: 1,
         select: { title: true, dueAt: true },
       },
+      _count: { select: { sceneRequirements: { where: { status: "open" } } } },
     },
   });
 
@@ -107,6 +110,7 @@ export async function loadMyTeams(userId: string, showId: string, includeAll: bo
         ? { title: department.milestones[0].title, dueAt: department.milestones[0].dueAt }
         : null,
       requestCount: department.memberships.length - active.length,
+      inboxCount: department._count.sceneRequirements,
     };
   });
 }

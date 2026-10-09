@@ -1,5 +1,12 @@
-import type { DepartmentMembershipRole, Prisma, TaskPriority, TaskStatus } from "@prisma/client";
+import type {
+  DepartmentMembershipRole,
+  Prisma,
+  ProductionObjectKind,
+  TaskPriority,
+  TaskStatus,
+} from "@prisma/client";
 
+import { earliestFor, nextRehearsalByScene } from "@/lib/ausstattung/rehearsals";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -67,6 +74,18 @@ export type BoardTask = {
   assignees: BoardPerson[];
   createdById: string;
   comments: { id: string; body: string; author: string; createdAt: string }[];
+  /** Karte eines Ausstattungsstücks (docs/Plan/ausstattung-plan.md). */
+  object: BoardObject | null;
+  checklist: { done: number; total: number };
+};
+
+export type BoardObject = {
+  id: string;
+  kind: ProductionObjectKind;
+  /** Szenennummern, z. B. „1.3“. */
+  scenes: string[];
+  /** Abgeleitete Frist: nächste Probe einer der Szenen. */
+  nextRehearsal: string | null;
 };
 
 export type BoardMilestone = {
@@ -140,6 +159,14 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
           orderBy: { createdAt: "asc" },
           select: { id: true, body: true, createdAt: true, author: { select: USER_SELECT } },
         },
+        checklist: { select: { doneAt: true } },
+        object: {
+          select: {
+            id: true,
+            kind: true,
+            scenes: { select: { sceneId: true, scene: { select: { identifier: true } } } },
+          },
+        },
       },
     }),
     prisma.departmentMembership.findMany({
@@ -161,6 +188,9 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
       : Promise.resolve([]),
   ]);
 
+  const rehearsals = await nextRehearsalByScene(
+    tasks.flatMap((task) => task.object?.scenes.map((entry) => entry.sceneId) ?? []),
+  );
   const columnIds = new Set(columns.map((column) => column.id));
   // Aufgaben ohne (gültige) Spalte landen in der ersten Spalte mit passendem Status.
   const fallback = (status: TaskStatus) =>
@@ -195,6 +225,28 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
         author: comment.author ? getUserDisplayName(comment.author) : "Gelöschtes Konto",
         createdAt: comment.createdAt.toISOString(),
       })),
+      object: task.object
+        ? {
+            id: task.object.id,
+            kind: task.object.kind,
+            scenes: task.object.scenes
+              .map((entry) => entry.scene.identifier)
+              .filter((value): value is string => Boolean(value))
+              .sort((a, b) => a.localeCompare(b, "de", { numeric: true })),
+            // Fertige Karten brauchen keine Frist mehr.
+            nextRehearsal:
+              task.status === "done"
+                ? null
+                : (earliestFor(
+                    task.object.scenes.map((entry) => entry.sceneId),
+                    rehearsals,
+                  )?.toISOString() ?? null),
+          }
+        : null,
+      checklist: {
+        done: task.checklist.filter((item) => item.doneAt).length,
+        total: task.checklist.length,
+      },
     });
   }
 

@@ -47,7 +47,11 @@ export function ViewSwitcher<T extends string>({
   return (
     <nav
       aria-label="Ansicht"
-      className="flex w-full gap-0.5 rounded-lg bg-muted/70 p-0.5 sm:inline-flex sm:w-auto"
+      className={cn(
+        "flex w-full gap-0.5 rounded-lg bg-muted/70 p-0.5 sm:inline-flex sm:w-auto",
+        // Viele Reiter (Bausteine): mobil seitlich wischen statt quetschen.
+        options.length > 4 && "overflow-x-auto [scrollbar-width:none]",
+      )}
     >
       {options.map((option, index) => {
         const active = option.value === current;
@@ -59,6 +63,7 @@ export function ViewSwitcher<T extends string>({
             scroll={false}
             className={cn(
               "inline-flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-md px-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none sm:px-3",
+              options.length > 4 && "flex-none px-3",
               active
                 ? "bg-background text-foreground shadow-sm ring-1 ring-border"
                 : "text-muted-foreground hover:text-foreground",

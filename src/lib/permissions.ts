@@ -186,6 +186,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "pages",
   },
   {
+    key: "PRIVATE.PRODUCTION.REQUIREMENT.CREATE",
+    label: "Ausstattung anfordern",
+    description:
+      "In einer Szene Requisiten, Kostüme oder Bühnenbild anfordern; das zuständige Gewerk entscheidet im Eingang.",
+    category: "pages",
+  },
+  {
     key: "PRIVATE.PRODUCTION.PLAN.MANAGE",
     label: "Produktionsplan pflegen",
     description:

@@ -142,11 +142,21 @@ function TeamGrid({ teams, extra }: { teams: TeamCard[]; extra?: React.ReactNode
               >
                 {team.name.slice(0, 1)}
               </span>
-              {team.requestCount && team.role === "lead" ? (
-                <span className="rounded-full bg-warning px-1.5 py-0.5 text-[11px] font-semibold text-warning-foreground">
-                  {team.requestCount} neu
-                </span>
-              ) : null}
+              <span className="flex flex-wrap justify-end gap-1">
+                {team.inboxCount ? (
+                  <span
+                    className="rounded-full bg-info px-1.5 py-0.5 text-[11px] font-semibold text-info-foreground"
+                    title="Anforderungen im Eingang"
+                  >
+                    {team.inboxCount} Eingang
+                  </span>
+                ) : null}
+                {team.requestCount && team.role === "lead" ? (
+                  <span className="rounded-full bg-warning px-1.5 py-0.5 text-[11px] font-semibold text-warning-foreground">
+                    {team.requestCount} neu
+                  </span>
+                ) : null}
+              </span>
             </span>
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold leading-tight">

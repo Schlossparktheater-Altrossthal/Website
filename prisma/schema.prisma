@@ -374,6 +374,10 @@ model User {
   fileLibraryItemsUploaded        FileLibraryItem[]          @relation("FileLibraryItemsUploaded")
   parentalConsentTemplatesUpdated ServerSettings[]           @relation("ServerSettingsParentalConsentUploader")
   dataPortalAuditLogs             DataPortalAuditLog[]
+  createdProductionObjects        ProductionObject[]         @relation("ProductionObjectCreator")
+  checkedProductionObjects        ProductionObject[]         @relation("ProductionObjectChecker")
+  requestedSceneRequirements      SceneRequirement[]         @relation("SceneRequirementRequester")
+  decidedSceneRequirements        SceneRequirement[]         @relation("SceneRequirementDecider")
 }
 
 model Account {
@@ -452,6 +456,8 @@ model Show {
   onboardingProfiles      MemberOnboardingProfile[]
   invites                 MemberInvite[]
   milestones              ShowMilestone[]
+  productionObjects       ProductionObject[]
+  sceneRequirements       SceneRequirement[]
 }
 
 enum MilestoneKind {
@@ -625,6 +631,8 @@ model Department {
   eventTasks           EventNote[]
   documents            DepartmentDocument[]
   milestones           ShowMilestone[]
+  productionObjects    ProductionObject[]
+  sceneRequirements    SceneRequirement[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([templateId])
@@ -695,6 +703,9 @@ model DepartmentTask {
   assignments  DepartmentTaskAssignment[]
   comments     DepartmentTaskComment[]
   eventNote    EventNote?
+  object       ProductionObject?          @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  objectId     String?                    @unique
+  checklist    TaskChecklistItem[]
 
   @@index([departmentId, status])
   @@index([milestoneId])
@@ -769,6 +780,8 @@ model Character {
   castings           CharacterCasting[]
   sceneAppearances   SceneCharacter[]
   eventTasks         EventNote[]
+  objectCharacters   ObjectCharacter[]
+  requirements       SceneRequirement[]
 
   @@index([showId, order])
 }
@@ -807,6 +820,8 @@ model Scene {
   characters      SceneCharacter[]
   breakdownItems  SceneBreakdownItem[]
   rehearsals      EventBlock[]
+  objectScenes    ObjectScene[]
+  requirements    SceneRequirement[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([showId, sequence])
@@ -1818,6 +1833,7 @@ model InventoryProduct {
   components               InventoryProductComponent[] @relation("InventorySetComponents")
   usedInSets               InventoryProductComponent[] @relation("InventorySetUsage")
   tags                     InventoryTag[]
+  productionObjects        ProductionObject[]
 
   @@unique([areaId, number])
   @@index([areaId])
@@ -1851,53 +1867,54 @@ model InventoryLocation {
 /// Exemplar eines Artikeltyps mit eigenem Label, Ort und Zustand. Mengenartikel haben genau
 /// ein Exemplar, das die Bestände je Lagerplatz trägt.
 model InventoryAsset {
-  id               String                   @id @default(cuid())
+  id                String                   @id @default(cuid())
   /// Unveränderlicher Label-Code, z. B. „T-42-3“ (Bereich-Typ-Exemplar, Mengenartikel „T-42“) –
   /// lesbar, nur mit Login auflösbar.
-  code             String                   @unique
+  code              String                   @unique
   /// Exemplarnummer im Typ (bei Mengenartikeln leer).
-  unitNumber       Int?
+  unitNumber        Int?
   /// Zufällige, nicht erratbare Kennung für QR-Code und URL.
-  publicId         String                   @unique
-  productId        String
+  publicId          String                   @unique
+  productId         String
   /// Aus dem Artikeltyp übernommen (unveränderlich) – bestimmt Code-Präfix und Abfragen.
-  areaId           String
+  areaId            String
   /// Aus dem Artikeltyp übernommen (unveränderlich).
-  kind             InventoryAssetKind       @default(unique)
-  status           InventoryAssetStatus     @default(available)
-  condition        InventoryCondition       @default(good)
+  kind              InventoryAssetKind       @default(unique)
+  status            InventoryAssetStatus     @default(available)
+  condition         InventoryCondition       @default(good)
   /// Zusatz zum Typnamen, z. B. „Kiste 3“ oder „links“.
-  label            String?
-  serialNumber     String?
-  internalNote     String?
-  locationId       String?
-  containerId      String?
+  label             String?
+  serialNumber      String?
+  internalNote      String?
+  locationId        String?
+  containerId       String?
   /// Gesamtmenge (Mengenartikel: Summe der Bestände).
-  quantity         Int                      @default(1)
-  acquisitionCost  Decimal?                 @db.Decimal(10, 2)
-  purchaseDate     DateTime?
-  supplier         String?
-  ownership        String?
-  lastInspectionAt DateTime?
-  nextInspectionAt DateTime?
-  lastSeenAt       DateTime?
-  labelPrintedAt   DateTime?
-  createdAt        DateTime                 @default(now())
-  updatedAt        DateTime                 @updatedAt
-  product          InventoryProduct         @relation(fields: [productId], references: [id], onDelete: Restrict)
-  area             InventoryArea            @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  location         InventoryLocation?       @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  container        InventoryAsset?          @relation("InventoryContainment", fields: [containerId], references: [id], onDelete: SetNull)
-  contents         InventoryAsset[]         @relation("InventoryContainment")
-  stocks           InventoryStock[]         @relation("InventoryStockAsset")
-  storedStocks     InventoryStock[]         @relation("InventoryStockContainer")
-  photos           InventoryPhoto[]
-  defects          InventoryDefect[]
-  inspections      InventoryInspection[]
-  events           InventoryEvent[]
-  checkoutLines    InventoryCheckoutLine[]
-  scans            InventoryStocktakeScan[] @relation("InventoryScanAsset")
-  containerScans   InventoryStocktakeScan[] @relation("InventoryScanContainer")
+  quantity          Int                      @default(1)
+  acquisitionCost   Decimal?                 @db.Decimal(10, 2)
+  purchaseDate      DateTime?
+  supplier          String?
+  ownership         String?
+  lastInspectionAt  DateTime?
+  nextInspectionAt  DateTime?
+  lastSeenAt        DateTime?
+  labelPrintedAt    DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  product           InventoryProduct         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  area              InventoryArea            @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  location          InventoryLocation?       @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  container         InventoryAsset?          @relation("InventoryContainment", fields: [containerId], references: [id], onDelete: SetNull)
+  contents          InventoryAsset[]         @relation("InventoryContainment")
+  stocks            InventoryStock[]         @relation("InventoryStockAsset")
+  storedStocks      InventoryStock[]         @relation("InventoryStockContainer")
+  photos            InventoryPhoto[]
+  defects           InventoryDefect[]
+  inspections       InventoryInspection[]
+  events            InventoryEvent[]
+  checkoutLines     InventoryCheckoutLine[]
+  scans             InventoryStocktakeScan[] @relation("InventoryScanAsset")
+  containerScans    InventoryStocktakeScan[] @relation("InventoryScanContainer")
+  productionObjects ProductionObject[]
 
   @@index([productId])
   @@index([areaId])
@@ -2240,6 +2257,8 @@ model FinanceEntry {
   memberPaidBy User?               @relation("FinanceEntryMemberPaidBy", fields: [memberPaidById], references: [id], onDelete: SetNull)
   attachments  FinanceAttachment[]
   logs         FinanceLog[]
+  objectId     String?
+  object       ProductionObject?   @relation(fields: [objectId], references: [id], onDelete: SetNull)
 
   @@index([showId, status])
   @@index([budgetId])
@@ -3204,4 +3223,178 @@ model DataPortalAuditLog {
 
   @@index([createdAt])
   @@index([userId, createdAt])
+}
+
+/// Art eines Ausstattungsstücks (docs/Plan/ausstattung-plan.md).
+enum ProductionObjectKind {
+  prop
+  set_piece
+  costume
+  costume_part
+  other
+}
+
+/// Woher ein Ausstattungsstück kommt.
+enum ProductionObjectSource {
+  undecided
+  stock
+  build
+  buy
+  borrow
+}
+
+enum ProductionObjectStatus {
+  planned
+  in_progress
+  ready
+}
+
+enum SceneRequirementStatus {
+  open
+  assigned
+  declined
+}
+
+/// Ausstattungsstück einer Produktion: Requisite, Bühnenbild-Element, Kostüm oder Kostümteil.
+/// Ein Objekt hängt an beliebig vielen Szenen und hat genau eine Karte im Board des zuständigen Gewerks.
+model ProductionObject {
+  id                 String                  @id @default(cuid())
+  showId             String
+  departmentId       String
+  kind               ProductionObjectKind    @default(prop)
+  title              String
+  /// Ausführliche Beschreibung (Markdown).
+  description        String?
+  source             ProductionObjectSource  @default(undecided)
+  status             ProductionObjectStatus  @default(planned)
+  dimensions         String?
+  material           String?
+  /// Geschätzte Kosten; tatsächliche Ausgaben über `FinanceEntry.objectId`.
+  costCents          Int?
+  note               String?
+  /// Bei Herkunft Fundus: Lager-Typ oder -Exemplar.
+  inventoryProductId String?
+  inventoryAssetId   String?
+  /// Vorstellungs-Check (Requisiten): zuletzt abgehakt.
+  checkedAt          DateTime?
+  checkedById        String?
+  archivedAt         DateTime?
+  createdById        String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  show               Show                    @relation(fields: [showId], references: [id], onDelete: Cascade)
+  department         Department              @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  inventoryProduct   InventoryProduct?       @relation(fields: [inventoryProductId], references: [id], onDelete: SetNull)
+  inventoryAsset     InventoryAsset?         @relation(fields: [inventoryAssetId], references: [id], onDelete: SetNull)
+  createdBy          User?                   @relation("ProductionObjectCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  checkedBy          User?                   @relation("ProductionObjectChecker", fields: [checkedById], references: [id], onDelete: SetNull)
+  photos             ProductionObjectPhoto[]
+  scenes             ObjectScene[]
+  characters         ObjectCharacter[]
+  /// Kostüm: zugehörige Teile.
+  parts              CostumePart[]           @relation("CostumeParts")
+  /// Kostümteil: Kostüme, in denen es vorkommt.
+  partOf             CostumePart[]           @relation("CostumePartOf")
+  task               DepartmentTask?
+  requirements       SceneRequirement[]
+  financeEntries     FinanceEntry[]
+
+  @@index([showId, kind])
+  @@index([departmentId])
+}
+
+model ProductionObjectPhoto {
+  id        String           @id @default(cuid())
+  objectId  String
+  data      Bytes
+  mimeType  String
+  /// `reference` = Vorbild/Skizze, `actual` = wie es wirklich aussieht.
+  kind      String           @default("reference")
+  caption   String?
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+  object    ProductionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
+  @@index([objectId])
+}
+
+/// Objekt in einer Szene; `note` z. B. Position („Tisch links“) oder „bleibt stehen“.
+model ObjectScene {
+  id       String           @id @default(cuid())
+  objectId String
+  sceneId  String
+  note     String?
+  object   ProductionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  scene    Scene            @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@unique([objectId, sceneId])
+  @@index([sceneId])
+}
+
+/// Objekt einer Rolle (Requisite in der Hand, Kostüm der Rolle).
+model ObjectCharacter {
+  id          String           @id @default(cuid())
+  objectId    String
+  characterId String
+  object      ProductionObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  character   Character        @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([objectId, characterId])
+  @@index([characterId])
+}
+
+/// Kostüm = Zusammenstellung aus Teilen; ein Teil kann in mehreren Kostümen vorkommen.
+model CostumePart {
+  id        String           @id @default(cuid())
+  costumeId String
+  partId    String
+  position  Int              @default(0)
+  costume   ProductionObject @relation("CostumeParts", fields: [costumeId], references: [id], onDelete: Cascade)
+  part      ProductionObject @relation("CostumePartOf", fields: [partId], references: [id], onDelete: Cascade)
+
+  @@unique([costumeId, partId])
+  @@index([partId])
+}
+
+/// Anforderung aus einer Szene (Regie/Planung); das Gewerk entscheidet im Eingang.
+model SceneRequirement {
+  id            String                 @id @default(cuid())
+  showId        String
+  sceneId       String
+  departmentId  String
+  kind          ProductionObjectKind   @default(prop)
+  characterId   String?
+  text          String
+  photo         Bytes?
+  photoMimeType String?
+  status        SceneRequirementStatus @default(open)
+  declineReason String?
+  objectId      String?
+  requestedById String?
+  decidedById   String?
+  decidedAt     DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  show          Show                   @relation(fields: [showId], references: [id], onDelete: Cascade)
+  scene         Scene                  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  department    Department             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  character     Character?             @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  object        ProductionObject?      @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  requestedBy   User?                  @relation("SceneRequirementRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  decidedBy     User?                  @relation("SceneRequirementDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, status])
+  @@index([sceneId])
+}
+
+/// Checkliste einer Karte (Fertigungsschritte).
+model TaskChecklistItem {
+  id       String         @id @default(cuid())
+  taskId   String
+  text     String
+  doneAt   DateTime?
+  position Int            @default(0)
+  task     DepartmentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, position])
 }

@@ -52,7 +52,7 @@ export default async function ProduktionDetailPage({
       where: { id: showId },
       include: { _count: { select: { characters: true, scenes: true } } },
     }),
-    prisma.sceneBreakdownItem.count({ where: { scene: { showId } } }),
+    prisma.productionObject.count({ where: { showId, archivedAt: null } }),
   ]);
 
   if (!show) {
@@ -140,7 +140,7 @@ export default async function ProduktionDetailPage({
             </div>
             <div className="rounded-lg border border-border/60 bg-background/70 p-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Breakdowns
+                Ausstattung
               </div>
               <div className="mt-2 text-2xl font-semibold text-foreground">{breakdownCount}</div>
             </div>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import type { BreakdownStatus, CharacterCastingType } from "@prisma/client";
+import type { CharacterCastingType } from "@prisma/client";
 import { toast } from "sonner";
 
 import { ChevronRightIcon, MapPinIcon, StarIcon } from "@/components/ui/action-icons";
@@ -16,30 +16,6 @@ export const CAST_LABELS: Record<CharacterCastingType, string> = {
   alternate: "Zweit",
   cover: "Cover",
   cameo: "Cameo",
-};
-
-export const STATUS_LABELS: Record<BreakdownStatus, string> = {
-  planned: "Geplant",
-  in_progress: "In Arbeit",
-  blocked: "Blockiert",
-  ready: "Bereit",
-  done: "Erledigt",
-};
-
-export const BREAKDOWN_STATUSES: BreakdownStatus[] = [
-  "planned",
-  "in_progress",
-  "blocked",
-  "ready",
-  "done",
-];
-
-export const STATUS_TONE: Record<BreakdownStatus, string> = {
-  planned: "bg-muted text-muted-foreground",
-  in_progress: "bg-info/15 text-info",
-  blocked: "bg-destructive/10 text-destructive",
-  ready: "bg-success/15 text-success",
-  done: "bg-success/15 text-success",
 };
 
 export const inputClass =
@@ -151,8 +127,8 @@ export function SceneRow({
     const role = data.roles.find((item) => item.id === entry.characterId);
     return role ? [{ role, featured: entry.featured }] : [];
   });
-  const blocked = scene.breakdown.filter((item) => item.status === "blocked").length;
-  const open = scene.breakdown.filter((item) => item.status !== "done" && item.status !== "ready");
+  const notReady = scene.objects.filter((item) => item.status !== "ready").length;
+  const requested = scene.requirements.filter((item) => item.status === "open").length;
   return (
     <div className="flex min-w-0 items-stretch rounded-xl border border-border bg-card">
       {dragHandle}
@@ -200,12 +176,10 @@ export function SceneRow({
               <span className="text-xs text-muted-foreground">Keine Rollen</span>
             )}
           </span>
-          {scene.breakdown.length ? (
+          {scene.objects.length || requested ? (
             <span className="block text-xs text-muted-foreground">
-              Ausstattung: {open.length} offen
-              {blocked ? (
-                <span className="font-medium text-destructive"> · {blocked} blockiert</span>
-              ) : null}
+              Ausstattung: {scene.objects.length - notReady}/{scene.objects.length} fertig
+              {requested ? <span className="text-info"> · {requested} angefordert</span> : null}
             </span>
           ) : null}
         </span>

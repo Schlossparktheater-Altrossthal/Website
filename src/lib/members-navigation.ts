@@ -119,7 +119,10 @@ export function filterMembersNavigationByPermissions(
         if (item.requiresBoardRole && !isBoard) return false;
         if (item.requiresDepartmentLead && !isDepartmentLead) return false;
         if (!item.permissionKey || !permissionSet) return true;
-        return permissionSet.has(item.permissionKey);
+        return (
+          permissionSet.has(item.permissionKey) ||
+          Boolean(item.alsoPermissionKeys?.some((key) => permissionSet.has(key)))
+        );
       });
       return { ...group, items, subgroups: cloneSubgroups(group.subgroups) };
     })

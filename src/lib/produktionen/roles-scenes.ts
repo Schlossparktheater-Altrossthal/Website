@@ -1,4 +1,9 @@
-import type { BreakdownStatus, CharacterCastingType } from "@prisma/client";
+import type {
+  CharacterCastingType,
+  ProductionObjectKind,
+  ProductionObjectStatus,
+  SceneRequirementStatus,
+} from "@prisma/client";
 
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
@@ -18,12 +23,30 @@ export type RsRole = {
   sceneIds: string[];
 };
 
-export type RsBreakdownItem = {
+/** Ausstattungsstück in einer Szene (docs/Plan/ausstattung-plan.md). */
+export type RsSceneObject = {
   id: string;
-  departmentId: string;
+  kind: ProductionObjectKind;
   title: string;
-  status: BreakdownStatus;
+  status: ProductionObjectStatus;
+  departmentId: string;
+  characterIds: string[];
+  /** Szenen-Notiz, z. B. Position. */
   note: string | null;
+  photoId: string | null;
+};
+
+export type RsRequirement = {
+  id: string;
+  kind: ProductionObjectKind;
+  text: string;
+  status: SceneRequirementStatus;
+  declineReason: string | null;
+  departmentId: string;
+  characterId: string | null;
+  hasPhoto: boolean;
+  requestedBy: string | null;
+  objectId: string | null;
 };
 
 export type RsScene = {
@@ -36,7 +59,8 @@ export type RsScene = {
   durationMinutes: number | null;
   summary: string | null;
   roles: { characterId: string; featured: boolean }[];
-  breakdown: RsBreakdownItem[];
+  objects: RsSceneObject[];
+  requirements: RsRequirement[];
 };
 
 export type RsAct = { number: number; title: string | null };
@@ -47,7 +71,15 @@ export type RolesScenesData = {
   acts: RsAct[];
   roles: RsRole[];
   scenes: RsScene[];
-  departments: { id: string; name: string; color: string | null }[];
+  departments: {
+    id: string;
+    name: string;
+    color: string | null;
+    slug: string;
+    modules: string[];
+  }[];
+  /** Darf in Szenen Ausstattung anfordern (Regie/Planung). */
+  canRequest: boolean;
   /** Aktive Mitglieder der Produktion, für die Besetzung. */
   people: RsPerson[];
 };
@@ -76,7 +108,10 @@ export function compareSceneIdentifiers(a: string | null, b: string | null) {
 }
 
 /** Rollen, Szenen, Ausstattung und Personen einer Produktion für die Verwaltung. */
-export async function loadRolesAndScenes(showId: string): Promise<RolesScenesData> {
+export async function loadRolesAndScenes(
+  showId: string,
+  options: { canRequest?: boolean } = {},
+): Promise<RolesScenesData> {
   const now = new Date();
   const [characters, scenes, departments, members, acts] = await Promise.all([
     prisma.character.findMany({
@@ -112,16 +147,51 @@ export async function loadRolesAndScenes(showId: string): Promise<RolesScenesDat
           orderBy: { order: "asc" },
           select: { characterId: true, isFeatured: true },
         },
-        breakdownItems: {
+        objectScenes: {
+          where: { object: { archivedAt: null } },
+          select: {
+            note: true,
+            object: {
+              select: {
+                id: true,
+                kind: true,
+                title: true,
+                status: true,
+                departmentId: true,
+                characters: { select: { characterId: true } },
+                photos: { take: 1, orderBy: { sortOrder: "asc" }, select: { id: true } },
+              },
+            },
+          },
+        },
+        requirements: {
+          where: { status: { not: "assigned" } },
           orderBy: { createdAt: "asc" },
-          select: { id: true, departmentId: true, title: true, status: true, note: true },
+          select: {
+            id: true,
+            kind: true,
+            text: true,
+            status: true,
+            declineReason: true,
+            departmentId: true,
+            characterId: true,
+            photoMimeType: true,
+            objectId: true,
+            requestedBy: { select: userSelect },
+          },
         },
       },
     }),
     prisma.department.findMany({
       where: { showId, archivedAt: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, color: true },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        slug: true,
+        template: { select: { modules: true } },
+      },
     }),
     prisma.user.findMany({
       where: {
@@ -185,9 +255,39 @@ export async function loadRolesAndScenes(showId: string): Promise<RolesScenesDat
           characterId: entry.characterId,
           featured: entry.isFeatured,
         })),
-        breakdown: scene.breakdownItems,
+        objects: scene.objectScenes
+          .map((entry) => ({
+            id: entry.object.id,
+            kind: entry.object.kind,
+            title: entry.object.title,
+            status: entry.object.status,
+            departmentId: entry.object.departmentId,
+            characterIds: entry.object.characters.map((item) => item.characterId),
+            note: entry.note,
+            photoId: entry.object.photos[0]?.id ?? null,
+          }))
+          .sort((a, b) => a.title.localeCompare(b.title, "de")),
+        requirements: scene.requirements.map((entry) => ({
+          id: entry.id,
+          kind: entry.kind,
+          text: entry.text,
+          status: entry.status,
+          declineReason: entry.declineReason,
+          departmentId: entry.departmentId,
+          characterId: entry.characterId,
+          hasPhoto: Boolean(entry.photoMimeType),
+          requestedBy: entry.requestedBy ? getUserDisplayName(entry.requestedBy) : null,
+          objectId: entry.objectId,
+        })),
       })),
-    departments,
+    departments: departments.map((department) => ({
+      id: department.id,
+      name: department.name,
+      color: department.color,
+      slug: department.slug,
+      modules: department.template.modules,
+    })),
+    canRequest: options.canRequest ?? false,
     people: members.map(toPerson),
   };
 }

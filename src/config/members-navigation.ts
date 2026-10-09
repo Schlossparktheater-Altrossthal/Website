@@ -42,6 +42,8 @@ export interface MembersNavItem {
   label: string;
   icon?: MembersNavIcon;
   permissionKey?: string;
+  /** Sichtbar auch mit einem dieser Rechte (z. B. Stück für „Ausstattung anfordern“). */
+  alsoPermissionKeys?: readonly string[];
   requiresBoardRole?: boolean;
   requiresDepartmentLead?: boolean;
   /** Zusätzlich zur Berechtigung für Gewerk-Leitungen sichtbar (z. B. „Teams & Zuweisung“). */
@@ -118,6 +120,7 @@ export const membersNavigation = [
         href: "/mitglieder/produktionen/stueck",
         label: "Stück",
         permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
+        alsoPermissionKeys: ["PRIVATE.PRODUCTION.REQUIREMENT.CREATE"],
         icon: BookOpenTextIcon,
       },
       {

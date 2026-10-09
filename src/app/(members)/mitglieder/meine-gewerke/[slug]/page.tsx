@@ -12,6 +12,13 @@ import {
   ChevronRightIcon,
   ListTodoIcon,
 } from "@/components/ui/action-icons";
+import { KINDS_FOR_MODULE } from "@/lib/ausstattung/constants";
+import {
+  loadDepartmentObjects,
+  loadInbox,
+  loadShowObjects,
+  loadStage,
+} from "@/lib/ausstattung/objects";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { loadBoard } from "@/lib/departments/board";
 import { loadTeamEvents } from "@/lib/departments/events";
@@ -19,21 +26,48 @@ import { loadDepartmentPortal, type PortalMember } from "@/lib/departments/porta
 import { castOfShow, loadMeasurementMembers } from "@/lib/measurements/members";
 import { cn } from "@/lib/utils";
 
+import { CostumePlot } from "../ausstattung/costume-views";
+import { RequirementInbox } from "../ausstattung/inbox";
+import { ObjectListView } from "../ausstattung/object-list";
+import { PropsCheck, PropsRunsheet } from "../ausstattung/props-views";
+import { SetByScene, SetChangeovers } from "../ausstattung/set-views";
+import { SubViews } from "../ausstattung/shared";
 import { DepartmentBoard } from "../board/board";
 import { DepartmentSettingsButton } from "../department-settings-panel";
 import { TeamEvents } from "../events/team-events";
 import { TeamFiles } from "../files/team-files";
 import { formatDue, formatEventDate, TEAM_ROLE_LABELS, tint, ViewSwitcher } from "../team-ui";
 
-type View = "uebersicht" | "aufgaben" | "termine" | "masse" | "team";
+type View =
+  | "uebersicht"
+  | "aufgaben"
+  | "requisiten"
+  | "kostueme"
+  | "buehnenbild"
+  | "termine"
+  | "masse"
+  | "team";
+
+/** Verwaltungsseiten der Ausstattung je Baustein (docs/Plan/ausstattung-plan.md). */
+const OBJECT_VIEWS = [
+  { view: "requisiten", module: "props", label: "Requisiten" },
+  { view: "kostueme", module: "costumes", label: "Kostüme" },
+  { view: "buehnenbild", module: "set", label: "Bühnenbild" },
+] as const;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ ansicht?: string; karte?: string; neu?: string; meilenstein?: string }>;
+  searchParams: Promise<{
+    ansicht?: string;
+    teil?: string;
+    karte?: string;
+    neu?: string;
+    meilenstein?: string;
+  }>;
 };
 
 export default async function GewerkPortalPage({ params, searchParams }: PageProps) {
-  const [{ slug }, { ansicht, karte, neu, meilenstein }] = await Promise.all([
+  const [{ slug }, { ansicht, teil, karte, neu, meilenstein }] = await Promise.all([
     params,
     searchParams,
   ]);
@@ -45,11 +79,15 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
   if (!portal || (!portal.viewerRole && !isManager)) notFound();
 
   const hasMeasurements = portal.modules.includes("measurements");
-  const view: View =
-    ansicht === "aufgaben" ||
-    ansicht === "termine" ||
-    ansicht === "team" ||
-    (ansicht === "masse" && hasMeasurements)
+  const objectViews = OBJECT_VIEWS.filter((entry) => portal.modules.includes(entry.module));
+  const hasInbox = portal.modules.includes("requirements");
+  const objectView = objectViews.find((entry) => entry.view === ansicht)?.view;
+  const view: View = objectView
+    ? objectView
+    : ansicht === "aufgaben" ||
+        ansicht === "termine" ||
+        ansicht === "team" ||
+        (ansicht === "masse" && hasMeasurements)
       ? ansicht
       : "uebersicht";
   const basePath = `/mitglieder/meine-gewerke/${encodeURIComponent(portal.slug)}`;
@@ -171,6 +209,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         options={[
           { value: "uebersicht", label: "Nächstes" },
           { value: "aufgaben", label: `Aufgaben ${portal.openTasks.length}` },
+          ...objectViews.map((entry) => ({ value: entry.view as View, label: entry.label })),
           { value: "termine", label: `Termine ${portal.events.length}` },
           ...(hasMeasurements ? [{ value: "masse" as const, label: "Maße" }] : []),
           { value: "team", label: `Team ${portal.members.length}` },
@@ -260,6 +299,25 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         </section>
       ) : null}
 
+      {view === "aufgaben" && hasInbox ? (
+        <InboxSection
+          departmentId={portal.id}
+          basePath={basePath}
+          canEdit={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
+        />
+      ) : null}
+
+      {objectViews.some((entry) => entry.view === view) ? (
+        <ObjectSection
+          view={view as (typeof OBJECT_VIEWS)[number]["view"]}
+          part={teil ?? null}
+          showId={production.id}
+          departmentId={portal.id}
+          basePath={basePath}
+          canEdit={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
+        />
+      ) : null}
+
       {view === "aufgaben" ? (
         <DepartmentBoard
           data={await loadBoard(portal.id)}
@@ -268,6 +326,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           canManage={isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"}
           initialTaskId={karte ?? null}
           newForMilestoneId={neu === "1" ? (meilenstein ?? null) : null}
+          basePath={basePath}
         />
       ) : null}
 
@@ -331,6 +390,153 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           </Section>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+async function InboxSection({
+  departmentId,
+  basePath,
+  canEdit,
+}: {
+  departmentId: string;
+  basePath: string;
+  canEdit: boolean;
+}) {
+  const [items, objects] = await Promise.all([
+    loadInbox(departmentId),
+    loadDepartmentObjects(departmentId),
+  ]);
+  return (
+    <RequirementInbox
+      items={items}
+      objects={objects.map((object) => ({ id: object.id, title: object.title, kind: object.kind }))}
+      basePath={basePath}
+      canEdit={canEdit}
+    />
+  );
+}
+
+async function ObjectSection({
+  view,
+  part,
+  showId,
+  departmentId,
+  basePath,
+  canEdit,
+}: {
+  view: (typeof OBJECT_VIEWS)[number]["view"];
+  part: string | null;
+  showId: string;
+  departmentId: string;
+  basePath: string;
+  canEdit: boolean;
+}) {
+  const moduleKey = OBJECT_VIEWS.find((entry) => entry.view === view)!.module;
+  const kinds = KINDS_FOR_MODULE[moduleKey] ?? [];
+  const [objects, stage] = await Promise.all([
+    loadDepartmentObjects(departmentId, kinds),
+    loadStage(showId),
+  ]);
+
+  if (view === "requisiten") {
+    const current = part === "ablauf" || part === "check" ? part : "liste";
+    return (
+      <div className="space-y-3">
+        <SubViews
+          basePath={basePath}
+          view={view}
+          current={current}
+          options={[
+            { value: "liste", label: `Liste ${objects.length}` },
+            { value: "ablauf", label: "Je Szene" },
+            { value: "check", label: "Vorstellungs-Check" },
+          ]}
+        />
+        {current === "liste" ? (
+          <ObjectListView
+            objects={objects}
+            stage={stage}
+            departmentId={departmentId}
+            basePath={basePath}
+            kinds={kinds}
+            canEdit={canEdit}
+            emptyText="Noch keine Requisiten. Lege sie hier an oder übernimm Anforderungen aus dem Eingang."
+          />
+        ) : current === "ablauf" ? (
+          <PropsRunsheet objects={objects} stage={stage} basePath={basePath} />
+        ) : (
+          <PropsCheck
+            objects={objects}
+            stage={stage}
+            departmentId={departmentId}
+            canEdit={canEdit}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (view === "kostueme") {
+    const current = part === "plot" ? part : "liste";
+    // Der Plot zeigt alle Kostüme der Produktion, auch aus anderen Gewerken.
+    const costumes = current === "plot" ? await loadShowObjects(showId, ["costume"]) : [];
+    return (
+      <div className="space-y-3">
+        <SubViews
+          basePath={basePath}
+          view={view}
+          current={current}
+          options={[
+            { value: "liste", label: `Kostüme & Teile ${objects.length}` },
+            { value: "plot", label: "Kostümplot" },
+          ]}
+        />
+        {current === "liste" ? (
+          <ObjectListView
+            objects={objects}
+            stage={stage}
+            departmentId={departmentId}
+            basePath={basePath}
+            kinds={kinds}
+            canEdit={canEdit}
+            emptyText="Noch keine Kostüme. Ein Kostüm stellst du aus Teilen zusammen."
+          />
+        ) : (
+          <CostumePlot costumes={costumes} stage={stage} basePath={basePath} />
+        )}
+      </div>
+    );
+  }
+
+  const current = part === "szenen" || part === "umbauten" ? part : "liste";
+  return (
+    <div className="space-y-3">
+      <SubViews
+        basePath={basePath}
+        view={view}
+        current={current}
+        options={[
+          { value: "liste", label: `Elemente ${objects.length}` },
+          { value: "szenen", label: "Je Szene" },
+          { value: "umbauten", label: "Umbauten" },
+        ]}
+      />
+      {current === "liste" ? (
+        <ObjectListView
+          objects={objects}
+          stage={stage}
+          departmentId={departmentId}
+          basePath={basePath}
+          kinds={kinds}
+          canEdit={canEdit}
+          emptyText="Noch keine Bühnenbild-Elemente."
+        />
+      ) : current === "szenen" ? (
+        <SetByScene objects={objects} stage={stage} basePath={basePath} />
+      ) : (
+        <SetChangeovers objects={objects} stage={stage} basePath={basePath} />
+      )}
     </div>
   );
 }

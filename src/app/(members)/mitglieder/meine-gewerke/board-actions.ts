@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
+import { syncObjectFromTask } from "@/lib/ausstattung/service";
 import { requireBoardAccess } from "@/lib/departments/board";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
@@ -20,7 +22,14 @@ function revalidateBoard() {
 async function loadTask(taskId: string) {
   const task = await prisma.departmentTask.findUnique({
     where: { id: taskId },
-    select: { id: true, departmentId: true, createdById: true, title: true },
+    select: {
+      id: true,
+      departmentId: true,
+      createdById: true,
+      title: true,
+      objectId: true,
+      status: true,
+    },
   });
   if (!task) throw new Error("Aufgabe wurde nicht gefunden.");
   return task;
@@ -152,6 +161,15 @@ export async function updateBoardTaskAction(
           priority: data.priority ?? "normal",
         },
       }),
+      // Karte eines Ausstattungsstücks: Titel gilt auch fürs Objekt.
+      ...(task.objectId
+        ? [
+            prisma.productionObject.update({
+              where: { id: task.objectId },
+              data: { title: data.title },
+            }),
+          ]
+        : []),
       prisma.departmentTaskAssignment.deleteMany({ where: { taskId: task.id } }),
       prisma.departmentTaskAssignment.createMany({
         data: assignees.map((userId) => ({ taskId: task.id, userId })),
@@ -197,7 +215,11 @@ export async function moveBoardTaskAction(
       for (const [position, id] of ordered.entries()) {
         await tx.departmentTask.update({ where: { id }, data: { position } });
       }
+      await syncObjectFromTask(tx, task.id);
     });
+    if (task.objectId && column.status === "done" && task.status !== "done") {
+      await notifyRequestersIfReady(task.objectId, "ready", access.userId);
+    }
     revalidateBoard();
     return actionSuccess();
   } catch (error) {
@@ -213,6 +235,9 @@ export async function deleteBoardTaskAction(input: {
     const access = await requireBoardAccess(task.departmentId);
     if (!access.canManage && !(access.canEdit && task.createdById === access.userId)) {
       throw new Error("Löschen dürfen Leitung und wer die Aufgabe angelegt hat.");
+    }
+    if (task.objectId) {
+      throw new Error("Die Karte gehört zu einem Ausstattungsstück – bitte dort archivieren.");
     }
     await prisma.departmentTask.delete({ where: { id: task.id } });
     revalidateBoard();

@@ -16,9 +16,27 @@ export const DEPARTMENT_MODULES = [
   },
   {
     key: "requirements",
-    label: "Szenenbedarf",
+    label: "Eingang",
     description: "Anforderungen aus den Szenen landen im Eingang des Boards.",
-    ready: false,
+    ready: true,
+  },
+  {
+    key: "props",
+    label: "Requisiten",
+    description: "Requisitenliste, Ablauf je Szene und Check vor der Vorstellung.",
+    ready: true,
+  },
+  {
+    key: "costumes",
+    label: "Kostüme",
+    description: "Kostüme aus Teilen, Kostümplot je Rolle und Umzüge.",
+    ready: true,
+  },
+  {
+    key: "set",
+    label: "Bühnenbild",
+    description: "Bühnenbild-Elemente je Szene und Umbauten.",
+    ready: true,
   },
   {
     key: "budget",

@@ -1,4 +1,4 @@
-import type { BreakdownStatus, CharacterCastingType } from "@prisma/client";
+import type { CharacterCastingType } from "@prisma/client";
 
 import { getUserDisplayName } from "@/lib/names";
 import { visibleEventStatus } from "@/lib/calendar/status";
@@ -10,14 +10,6 @@ export const CASTING_TYPE_LABELS: Record<CharacterCastingType, string> = {
   alternate: "Zweitbesetzung",
   cover: "Cover",
   cameo: "Cameo",
-};
-
-export const BREAKDOWN_STATUS_LABELS: Record<BreakdownStatus, string> = {
-  planned: "Geplant",
-  in_progress: "In Arbeit",
-  blocked: "Blockiert",
-  ready: "Bereit",
-  done: "Erledigt",
 };
 
 const CASTING_ORDER: CharacterCastingType[] = ["primary", "alternate", "cover", "cameo"];
@@ -79,7 +71,7 @@ export async function canViewRole(userId: string, showId: string, isManager: boo
   return casting + membership > 0;
 }
 
-/** Eine Rolle mit Besetzung, Szenen, Ausstattung aus dem Breakdown und Proben der Besetzung. */
+/** Eine Rolle mit Besetzung, Szenen, Ausstattung (Kostüme, Requisiten) und Proben der Besetzung. */
 export async function loadRolePortal(showId: string, characterId: string, userId: string) {
   const now = new Date();
   const character = await prisma.character.findFirst({
@@ -94,6 +86,26 @@ export async function loadRolePortal(showId: string, characterId: string, userId
       castings: {
         where: { user: { deactivatedAt: null } },
         select: { type: true, notes: true, user: { select: userSelect } },
+      },
+      objectCharacters: {
+        where: { object: { archivedAt: null } },
+        select: {
+          object: {
+            select: {
+              id: true,
+              title: true,
+              kind: true,
+              status: true,
+              department: { select: { name: true, color: true } },
+              scenes: { select: { scene: { select: { identifier: true, sequence: true } } } },
+              photos: { take: 1, orderBy: { sortOrder: "asc" }, select: { id: true } },
+              parts: {
+                orderBy: { position: "asc" },
+                select: { part: { select: { title: true } } },
+              },
+            },
+          },
+        },
       },
       sceneAppearances: {
         orderBy: { scene: { sequence: "asc" } },
@@ -113,16 +125,6 @@ export async function loadRolePortal(showId: string, characterId: string, userId
                 where: { characterId: { not: characterId } },
                 orderBy: { order: "asc" },
                 select: { character: { select: { name: true } } },
-              },
-              breakdownItems: {
-                orderBy: { createdAt: "asc" },
-                select: {
-                  id: true,
-                  title: true,
-                  status: true,
-                  note: true,
-                  department: { select: { name: true, color: true, slug: true } },
-                },
               },
             },
           },
@@ -183,12 +185,21 @@ export async function loadRolePortal(showId: string, characterId: string, userId
     partners: entry.scene.characters.map((other) => other.character.name),
   }));
 
-  const breakdown = character.sceneAppearances.flatMap((entry) =>
-    entry.scene.breakdownItems.map((item) => ({
-      ...item,
-      scene: entry.scene.identifier || `Szene ${entry.scene.sequence}`,
-    })),
-  );
+  // Ausstattung der Rolle: Kostüme (mit Teilen) und Requisiten (docs/Plan/ausstattung-plan.md).
+  const objects = character.objectCharacters
+    .map(({ object }) => ({
+      id: object.id,
+      title: object.title,
+      kind: object.kind,
+      status: object.status,
+      department: object.department,
+      photoId: object.photos[0]?.id ?? null,
+      parts: object.parts.map((entry) => entry.part.title),
+      scenes: object.scenes
+        .map((entry) => entry.scene.identifier || `Szene ${entry.scene.sequence}`)
+        .sort((a, b) => a.localeCompare(b, "de", { numeric: true })),
+    }))
+    .sort((a, b) => a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title, "de"));
 
   return {
     id: character.id,
@@ -200,7 +211,7 @@ export async function loadRolePortal(showId: string, characterId: string, userId
     cast,
     myCasting: cast.find((person) => person.id === userId)?.type ?? null,
     scenes,
-    breakdown,
+    objects,
     rehearsals: rehearsals.map((rehearsal) => ({
       id: rehearsal.id,
       title: rehearsal.title,

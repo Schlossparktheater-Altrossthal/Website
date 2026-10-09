@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 import type { TaskPriority } from "@prisma/client";
@@ -43,6 +44,7 @@ export function TaskPanel({
   onSave,
   onDelete,
   onComment,
+  objectHref,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,6 +61,8 @@ export function TaskPanel({
   onSave: (draft: TaskDraft) => Promise<boolean>;
   onDelete: () => Promise<boolean>;
   onComment: (body: string) => Promise<boolean>;
+  /** Karte eines Ausstattungsstücks: Link zur Objekt-Seite. */
+  objectHref?: string | null;
 }) {
   const [draft, setDraft] = React.useState<TaskDraft>(() =>
     fromTask(task, initialColumnId, initialMilestoneId),
@@ -128,6 +132,15 @@ export function TaskPanel({
           ) : undefined
         }
       >
+        {objectHref ? (
+          <Link
+            href={objectHref}
+            className="mb-4 flex min-h-11 items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 text-sm font-medium text-primary hover:bg-primary/10"
+          >
+            Ausstattungsstück öffnen – Fotos, Szenen, Arbeitsschritte
+            <span aria-hidden>→</span>
+          </Link>
+        ) : null}
         <fieldset disabled={!canEdit} className="space-y-4">
           <label className="block space-y-1">
             <span className="text-xs font-medium text-muted-foreground">Titel</span>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import type { BreakdownStatus, CharacterCastingType } from "@prisma/client";
+import type { CharacterCastingType } from "@prisma/client";
 import { toast } from "sonner";
 
 import {
@@ -18,37 +18,20 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ROLE_COLOR_OPTIONS } from "@/config/category-colors";
-import type {
-  RolesScenesData,
-  RsBreakdownItem,
-  RsRole,
-  RsScene,
-} from "@/lib/produktionen/roles-scenes";
+import type { RolesScenesData, RsRole, RsScene } from "@/lib/produktionen/roles-scenes";
 import { ROLE_SIZE_OPTIONS } from "@/lib/produktionen/role-sizes";
 import { cn } from "@/lib/utils";
 
 import { setCharacterCastingAction } from "../actions/assignments";
+import { SceneAusstattung } from "./ausstattung";
 import {
-  deleteBreakdownItemAction,
   deleteRoleAction,
   deleteSceneAction,
-  saveBreakdownItemAction,
   saveRoleAction,
   saveSceneAction,
   setRoleScenesAction,
 } from "../actions/roles-scenes";
-import {
-  BREAKDOWN_STATUSES,
-  CAST_LABELS,
-  Field,
-  inputClass,
-  PanelSection,
-  sceneLabel,
-  STATUS_LABELS,
-  STATUS_TONE,
-  ToggleChip,
-  useRun,
-} from "./ui";
+import { CAST_LABELS, Field, inputClass, PanelSection, sceneLabel, ToggleChip, useRun } from "./ui";
 
 export function RolePanel({
   open,
@@ -584,8 +567,10 @@ export function ScenePanel({
           </PanelSection>
 
           {scene ? (
-            <PanelSection title={`Ausstattung (${scene.breakdown.length})`}>
-              <BreakdownEditor scene={scene} data={data} run={run} />
+            <PanelSection
+              title={`Ausstattung (${scene.objects.length + scene.requirements.filter((entry) => entry.status === "open").length})`}
+            >
+              <SceneAusstattung scene={scene} data={data} run={run} />
             </PanelSection>
           ) : (
             <p className="text-xs text-muted-foreground">Ausstattung planst du nach dem Anlegen.</p>
@@ -609,133 +594,5 @@ export function ScenePanel({
         }}
       />
     </>
-  );
-}
-
-function BreakdownEditor({
-  scene,
-  data,
-  run,
-}: {
-  scene: RsScene;
-  data: RolesScenesData;
-  run: ReturnType<typeof useRun>;
-}) {
-  const [title, setTitle] = React.useState("");
-  const [departmentId, setDepartmentId] = React.useState(data.departments[0]?.id ?? "");
-  const [adding, setAdding] = React.useState(false);
-  const department = (id: string) => data.departments.find((entry) => entry.id === id);
-
-  const setStatus = (item: RsBreakdownItem, status: BreakdownStatus) =>
-    run(() =>
-      saveBreakdownItemAction({
-        sceneId: scene.id,
-        id: item.id,
-        departmentId: item.departmentId,
-        title: item.title,
-        status,
-        note: item.note,
-      }),
-    );
-
-  return (
-    <div className="space-y-2">
-      {scene.breakdown.length ? (
-        <ul className="divide-y divide-border rounded-lg bg-muted">
-          {scene.breakdown.map((item) => (
-            <li key={item.id} className="flex min-h-12 items-center gap-2 px-2 py-1.5">
-              <span
-                aria-hidden
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{
-                  backgroundColor:
-                    department(item.departmentId)?.color ?? "var(--muted-foreground)",
-                }}
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm">{item.title}</span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {department(item.departmentId)?.name ?? "Gewerk"}
-                </span>
-              </span>
-              <select
-                aria-label={`Status ${item.title}`}
-                value={item.status}
-                onChange={(event) => {
-                  const status = BREAKDOWN_STATUSES.find((entry) => entry === event.target.value);
-                  if (status) void setStatus(item, status);
-                }}
-                className={cn(
-                  "h-9 shrink-0 rounded-full border-0 px-2 text-xs font-medium",
-                  STATUS_TONE[item.status],
-                )}
-              >
-                {BREAKDOWN_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                aria-label={`${item.title} löschen`}
-                onClick={() => void run(() => deleteBreakdownItemAction({ id: item.id }))}
-              >
-                <XIcon className="h-4 w-4" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {data.departments.length ? (
-        <div className="grid grid-cols-[minmax(0,8rem)_1fr_auto] gap-2">
-          <select
-            aria-label="Gewerk"
-            className={cn(inputClass, "px-2")}
-            value={departmentId}
-            onChange={(event) => setDepartmentId(event.target.value)}
-          >
-            {data.departments.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-          <input
-            className={inputClass}
-            value={title}
-            maxLength={160}
-            placeholder="Was wird gebraucht?"
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          <AsyncButton
-            type="button"
-            size="icon"
-            className="h-11 w-11"
-            aria-label="Ausstattung hinzufügen"
-            isLoading={adding}
-            disabled={!title.trim() || !departmentId}
-            onClick={async () => {
-              setAdding(true);
-              const ok = await run(() =>
-                saveBreakdownItemAction({
-                  sceneId: scene.id,
-                  departmentId,
-                  title,
-                  status: "planned",
-                }),
-              );
-              setAdding(false);
-              if (ok) setTitle("");
-            }}
-          >
-            <PlusIcon className="h-4 w-4" />
-          </AsyncButton>
-        </div>
-      ) : null}
-    </div>
   );
 }
