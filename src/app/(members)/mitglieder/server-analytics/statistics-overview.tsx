@@ -59,7 +59,7 @@ export function StatisticsOverview({ statistics }: { statistics: MemberStatistic
 
   const pages = useMemo(() => {
     const loadByRoute = new Map(
-      performance.routes
+      performance.groups.routes
         .filter((group) => group.kind === "navigation")
         .map((group) => [group.key, group.p75]),
     );
@@ -83,7 +83,7 @@ export function StatisticsOverview({ statistics }: { statistics: MemberStatistic
       }
     };
     return rows.sort((a, b) => value(b) - value(a));
-  }, [usage.pages, performance.routes, errors.byRoute, sortKey]);
+  }, [usage.pages, performance.groups.routes, errors.byRoute, sortKey]);
 
   const maxViews = Math.max(1, ...usage.pages.map((page) => page.views));
   const visiblePages = showAll ? pages : pages.slice(0, 10);
@@ -206,11 +206,11 @@ export function StatisticsOverview({ statistics }: { statistics: MemberStatistic
                 </div>
               ))
             )}
-            {performance.devices.length ? (
+            {performance.groups.devices.length ? (
               <div className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
                 <p className="mb-1 font-medium text-foreground">Seitenwechsel (75 %)</p>
                 <ul className="space-y-0.5">
-                  {performance.devices
+                  {performance.groups.devices
                     .filter((group) => group.kind === "navigation")
                     .slice(0, 4)
                     .map((group) => (

@@ -2,25 +2,74 @@
 
 import { useMemo, useState } from "react";
 import { Gauge, MousePointerClick, Server, Timer } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatTile } from "@/components/ui/stat-tile";
 import type {
+  PerformanceGrouping,
   PerformanceSampleKind,
   PerformanceSummary,
 } from "@/lib/analytics/performance-samples";
 import { cn } from "@/lib/utils";
 
-import { formatMs, loadTone, numberFormat, shortRoute, TONE_TEXT } from "./statistics-format";
+import {
+  formatMs,
+  formatWeekday,
+  loadTone,
+  numberFormat,
+  percentFormat,
+  shortRoute,
+  TONE_TEXT,
+} from "./statistics-format";
 
-type Grouping = "routes" | "devices" | "browsers";
-
-const GROUP_LABEL: Record<Grouping, string> = {
+const GROUP_LABEL: Record<PerformanceGrouping, string> = {
   routes: "Seite",
   devices: "Gerät",
-  browsers: "Browser",
+  browsers: "Browser + Version",
+  viewports: "Fensterbreite",
+  aspects: "Seitenverhältnis",
+  releases: "Version (Build)",
+  targets: "Seite · Element",
 };
+
+const KIND_LABEL: Record<PerformanceSampleKind, string> = {
+  navigation: "Seitenwechsel",
+  load: "Erstaufruf",
+  interaction: "Eingaben",
+};
+
+const tooltipStyle = {
+  backgroundColor: "var(--popover)",
+  color: "var(--popover-foreground)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  fontSize: 12,
+};
+
+function formatDay(date: string) {
+  const [, month, day] = date.split("-");
+  return `${day}.${month}.`;
+}
 
 function inpTone(ms: number | null) {
   if (ms === null) return "neutral" as const;
@@ -30,14 +79,19 @@ function inpTone(ms: number | null) {
 
 export function PerformanceSection({ summary }: { summary: PerformanceSummary }) {
   const [kind, setKind] = useState<PerformanceSampleKind>("navigation");
-  const [grouping, setGrouping] = useState<Grouping>("routes");
+  const [grouping, setGrouping] = useState<PerformanceGrouping>("routes");
 
+  const effectiveGrouping: PerformanceGrouping =
+    grouping === "targets" && kind !== "interaction" ? "routes" : grouping;
   const rows = useMemo(
-    () => summary[grouping].filter((group) => group.kind === kind),
-    [summary, grouping, kind],
+    () => summary.groups[effectiveGrouping].filter((group) => group.kind === kind),
+    [summary, effectiveGrouping, kind],
   );
   const isNavigation = kind === "navigation";
-  const { navigation, load } = summary;
+  const { navigation, load, interaction } = summary;
+  const groupingOptions = (Object.keys(GROUP_LABEL) as PerformanceGrouping[]).filter(
+    (key) => key !== "targets" || kind === "interaction",
+  );
 
   if (summary.total === 0) {
     return (
@@ -79,7 +133,7 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
         <StatTile
           label="Reaktion auf Eingaben"
           value={formatMs(load.inpP75)}
-          hint="INP, 75 % der Besuche"
+          hint={`INP, 75 % · ${numberFormat.format(interaction.count)} langsame Eingaben`}
           icon={<Gauge />}
           tone={inpTone(load.inpP75)}
         />
@@ -92,27 +146,38 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
               aria-label="Art der Messung"
               value={kind}
               onValueChange={setKind}
-              options={[
-                { value: "navigation", label: "Seitenwechsel" },
-                { value: "load", label: "Erstaufruf" },
-              ]}
+              options={(Object.keys(KIND_LABEL) as PerformanceSampleKind[]).map((value) => ({
+                value,
+                label: KIND_LABEL[value],
+              }))}
             />
-            <SegmentedControl
-              aria-label="Gruppierung"
-              value={grouping}
-              onValueChange={setGrouping}
-              options={[
-                { value: "routes", label: "Seiten" },
-                { value: "devices", label: "Geräte" },
-                { value: "browsers", label: "Browser" },
-              ]}
-            />
+            <Select
+              value={effectiveGrouping}
+              onValueChange={(value) => setGrouping(value as PerformanceGrouping)}
+            >
+              <SelectTrigger className="h-9 w-auto min-w-[11rem]" aria-label="Gruppierung">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {groupingOptions.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    nach {GROUP_LABEL[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <p className="text-xs text-muted-foreground">
-            Gemessen bis der Inhalt steht (kein Ladeskelett mehr). 75 % / 95 %: so schnell waren
-            drei Viertel bzw. fast alle Aufrufe.
+            {kind === "interaction"
+              ? "Einzelne Klicks/Eingaben, bei denen die Seite länger als 200 ms nicht reagiert hat (Dauer bis zum nächsten Bild)."
+              : "Gemessen bis der Inhalt steht (kein Ladeskelett mehr)."}{" "}
+            75 % / 95 %: so schnell waren drei Viertel bzw. fast alle.
             {isNavigation
-              ? " Server = Anfrage der Zielseite inkl. Netz, der Rest entfällt auf das Gerät."
+              ? " Server = Anfrage der Zielseite inkl. Netz, der Rest entfällt auf das Gerät. Vorab = ohne eigene Anfrage (vorab geladen/zwischengespeichert)."
+              : ""}
+            {["viewports", "aspects"].includes(effectiveGrouping) &&
+            summary.withDeviceInfo < summary.total
+              ? ` Bildschirmdaten gibt es erst für ${numberFormat.format(summary.withDeviceInfo)} von ${numberFormat.format(summary.total)} Messungen.`
               : ""}
           </p>
         </CardHeader>
@@ -126,7 +191,9 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
               <table className="min-w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
                   <tr className="border-b border-border">
-                    <th className="py-2 pr-3 text-left font-medium">{GROUP_LABEL[grouping]}</th>
+                    <th className="py-2 pr-3 text-left font-medium">
+                      {GROUP_LABEL[effectiveGrouping]}
+                    </th>
                     <th className="hidden px-2 py-2 text-right font-medium sm:table-cell">
                       Anzahl
                     </th>
@@ -141,7 +208,7 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
                           Server
                         </th>
                         <th className="hidden px-2 py-2 text-right font-medium lg:table-cell">
-                          Anfragen
+                          Vorab
                         </th>
                       </>
                     ) : null}
@@ -152,7 +219,7 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
                     <tr key={row.key} className="border-b border-border/50 last:border-0">
                       <td className="max-w-[13rem] py-2 pr-3 sm:max-w-none">
                         <span className="block truncate font-medium">
-                          {grouping === "routes" ? shortRoute(row.key) : row.key}
+                          {effectiveGrouping === "routes" ? shortRoute(row.key) : row.key}
                         </span>
                         <span className="block text-xs text-muted-foreground sm:hidden">
                           {numberFormat.format(row.count)}× · Median {formatMs(row.p50)}
@@ -182,7 +249,7 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
                             {formatMs(row.serverP75)}
                           </td>
                           <td className="hidden px-2 py-2 text-right tabular-nums lg:table-cell">
-                            {row.requestsMedian ?? "–"}
+                            {row.cachedShare === null ? "–" : percentFormat.format(row.cachedShare)}
                           </td>
                         </>
                       ) : null}
@@ -194,6 +261,119 @@ export function PerformanceSection({ summary }: { summary: PerformanceSummary })
           )}
         </CardContent>
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="border border-border/70">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Verteilung · {KIND_LABEL[kind]}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-48 w-full" role="img" aria-label={`Verteilung ${KIND_LABEL[kind]}`}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={summary.histograms[kind]}
+                  margin={{ top: 4, right: 4, bottom: 0, left: -24 }}
+                >
+                  <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
+                  <XAxis
+                    dataKey="label"
+                    stroke="var(--muted-foreground)"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    stroke="var(--muted-foreground)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    cursor={{ fill: "var(--muted)", opacity: 0.5 }}
+                    formatter={(value) => [numberFormat.format(Number(value)), "Messungen"]}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="var(--chart-1)"
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/70">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Verlauf · 75 % je Tag</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-48 w-full" role="img" aria-label="Ladezeiten je Tag">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={summary.daily} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
+                  <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
+                  <XAxis
+                    dataKey="day"
+                    tickFormatter={formatDay}
+                    stroke="var(--muted-foreground)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={16}
+                  />
+                  <YAxis
+                    stroke="var(--muted-foreground)"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => formatMs(Number(value))}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    labelFormatter={(label) => formatWeekday(String(label))}
+                    formatter={(value, name) => [
+                      formatMs(value == null ? null : Number(value)),
+                      KIND_LABEL[name as PerformanceSampleKind] ?? String(name),
+                    ]}
+                  />
+                  <Legend
+                    formatter={(value) => KIND_LABEL[value as PerformanceSampleKind] ?? value}
+                    wrapperStyle={{ fontSize: 12 }}
+                  />
+                  <Line
+                    dataKey="navigation"
+                    stroke="var(--chart-1)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    dataKey="load"
+                    stroke="var(--chart-2)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    dataKey="interaction"
+                    stroke="var(--chart-3)"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                    isAnimationActive={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

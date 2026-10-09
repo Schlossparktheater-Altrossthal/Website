@@ -59,9 +59,13 @@ export { routeLabel as shortRoute } from "@/lib/analytics/route-labels";
 
 // Grenzen angelehnt an die Web-Vitals-Empfehlungen (LCP gut < 2,5 s); Seitenwechsel sollen
 // sich unter einer Sekunde anfühlen.
-export function loadTone(ms: number | null, kind: "load" | "navigation"): StatTileTone {
+export function loadTone(
+  ms: number | null,
+  kind: "load" | "navigation" | "interaction",
+): StatTileTone {
   if (ms === null) return "neutral";
-  const [good, poor] = kind === "load" ? [2500, 4000] : [1000, 2500];
+  const [good, poor] =
+    kind === "load" ? [2500, 4000] : kind === "interaction" ? [200, 500] : [1000, 2500];
   if (ms <= good) return "success";
   if (ms <= poor) return "warning";
   return "destructive";

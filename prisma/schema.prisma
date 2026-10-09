@@ -3028,6 +3028,22 @@ model AnalyticsPerformanceSample {
   effectiveType      String?
   standalone         Boolean  @default(false)
   analyticsSessionId String?
+  /// Fenstergröße (CSS-Pixel) beim Messen
+  viewportWidth      Int?
+  viewportHeight     Int?
+  /// Bildschirmgröße (CSS-Pixel)
+  screenWidth        Int?
+  screenHeight       Int?
+  pixelRatio         Float?
+  /// "portrait" oder "landscape"
+  orientation        String?
+  /// Gerät hat einen Touchscreen als Haupteingabe (pointer: coarse)
+  touch              Boolean?
+  /// Kurzer Commit-Hash des laufenden Builds – für Vorher/Nachher je Release
+  buildId            String?
+  /// kind "interaction": Art des Ereignisses (click, keydown, …) und angeklicktes Element
+  interactionType    String?
+  interactionTarget  String?
 
   @@index([createdAt])
   @@index([route, kind])

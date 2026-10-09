@@ -4,6 +4,9 @@ import {
   buildPerformanceRows,
   normalizePerformanceRoute,
   parseUserAgent,
+  refineDevice,
+  viewportClass,
+  aspectClass,
   percentile,
   performancePayloadSchema,
   summarizePerformanceSamples,
@@ -111,8 +114,57 @@ describe("summarizePerformanceSamples", () => {
     expect(summary.navigation).toMatchObject({ count: 3, p50: 300, p95: 900 });
     expect(summary.load).toMatchObject({ count: 1, p75: 2000, ttfbP75: 300 });
     expect(
-      summary.routes.find((g) => g.key === "/mitglieder/dashboard" && g.kind === "navigation"),
+      summary.groups.routes.find(
+        (g) => g.key === "/mitglieder/dashboard" && g.kind === "navigation",
+      ),
     ).toMatchObject({ count: 2, p50: 100, p75: 300 });
-    expect(summary.devices.map((g) => g.key)).toContain("Desktop · Windows");
+    expect(summary.groups.devices.map((g) => g.key)).toContain("Desktop · Windows");
+  });
+});
+
+const MAC_SAFARI =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Safari/605.1.15";
+const ANDROID_TABLET =
+  "Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36";
+
+describe("refineDevice", () => {
+  it("erkennt iPads, die sich als Mac ausgeben, am Touchscreen", () => {
+    const refined = refineDevice(parseUserAgent(MAC_SAFARI), {
+      maxTouchPoints: 5,
+      touch: true,
+      screenWidth: 1024,
+      screenHeight: 1366,
+    });
+    expect(refined).toMatchObject({ os: "iPadOS", deviceType: "tablet" });
+  });
+
+  it("lässt echte Macs ohne Touch als Desktop", () => {
+    expect(
+      refineDevice(parseUserAgent(MAC_SAFARI), { maxTouchPoints: 0, touch: false }),
+    ).toMatchObject({
+      os: "macOS",
+      deviceType: "desktop",
+    });
+  });
+
+  it("stuft Android-Tablets mit „Mobile“ im User-Agent über die Bildschirmgröße ein", () => {
+    expect(
+      refineDevice(parseUserAgent(ANDROID_TABLET), {
+        touch: true,
+        screenWidth: 800,
+        screenHeight: 1280,
+      }).deviceType,
+    ).toBe("tablet");
+  });
+});
+
+describe("viewportClass/aspectClass", () => {
+  it("ordnet Fenstergrößen den Breakpoints und Formaten zu", () => {
+    expect(viewportClass(390)).toBe("< 640 px");
+    expect(viewportClass(820)).toBe("768–1023 px");
+    expect(viewportClass(1920)).toBe("≥ 1280 px");
+    expect(aspectClass(390, 844)).toBe("Hochformat schmal (< 3:5)");
+    expect(aspectClass(1920, 1080)).toBe("Breitbild (≥ 16:9)");
+    expect(aspectClass(null, 800)).toBeNull();
   });
 });

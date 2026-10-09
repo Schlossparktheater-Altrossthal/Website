@@ -11,7 +11,7 @@ import { useReportWebVitals } from "next/web-vitals";
 
 type Sample = {
   path: string;
-  kind: "load" | "navigation";
+  kind: "load" | "navigation" | "interaction";
   durationMs: number;
   feedbackMs?: number | null;
   serverMs?: number | null;
@@ -21,6 +21,8 @@ type Sample = {
   lcpMs?: number | null;
   inpMs?: number | null;
   cls?: number | null;
+  interactionType?: string | null;
+  interactionTarget?: string | null;
 };
 
 type PendingNavigation = { start: number; fromPath: string };
@@ -45,6 +47,54 @@ function isStandalone(): boolean {
   } catch {
     return false;
   }
+}
+
+/** Bildschirm, Fenster und Eingabeart – unterscheidet Handy/Tablet/Desktop besser als der User-Agent. */
+function readDeviceInfo() {
+  const safe = (value: number) => (Number.isFinite(value) && value > 0 ? Math.round(value) : null);
+  let touch: boolean | null = null;
+  try {
+    touch = window.matchMedia("(pointer: coarse)").matches;
+  } catch {
+    // ältere Browser
+  }
+  const viewportWidth = safe(window.innerWidth);
+  const viewportHeight = safe(window.innerHeight);
+  return {
+    viewportWidth,
+    viewportHeight,
+    screenWidth: safe(window.screen?.width ?? 0),
+    screenHeight: safe(window.screen?.height ?? 0),
+    pixelRatio: Number.isFinite(window.devicePixelRatio) ? window.devicePixelRatio : null,
+    orientation:
+      viewportWidth && viewportHeight
+        ? viewportWidth >= viewportHeight
+          ? "landscape"
+          : "portrait"
+        : null,
+    touch,
+    maxTouchPoints: navigator.maxTouchPoints ?? null,
+  };
+}
+
+const SLOW_INTERACTION_MS = 200;
+const MAX_INTERACTIONS_PER_PAGE = 30;
+
+/** Kurze, datenschutzfreundliche Beschreibung des bedienten Elements (keine Texte/Inhalte). */
+function describeTarget(node: Node | null | undefined): string | null {
+  const element = node instanceof Element ? node : node?.parentElement;
+  if (!element) return null;
+  const control =
+    element.closest(
+      "button, a, input, select, textarea, label, summary, [role], [data-slot], [data-testid]",
+    ) ?? element;
+  const tag = control.tagName.toLowerCase();
+  const hint =
+    control.getAttribute("data-testid") ??
+    control.getAttribute("data-slot") ??
+    control.getAttribute("role") ??
+    (control instanceof HTMLInputElement ? control.type : null);
+  return (hint ? `${tag}[${hint}]` : tag).slice(0, 120);
 }
 
 /** Wartet, bis kein Ladeskelett mehr angezeigt wird, und liefert den Zeitpunkt nach dem Zeichnen. */
@@ -119,6 +169,7 @@ function flush(includeLoad: boolean) {
     analyticsSessionId: state.analyticsSessionId,
     effectiveType: readEffectiveType(),
     standalone: isStandalone(),
+    device: readDeviceInfo(),
     samples,
   });
   try {
@@ -186,6 +237,42 @@ export function PerformanceReporter({
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Einzelne langsame Interaktionen (wie INP, aber jede für sich und mit Seite + Element)
+  useEffect(() => {
+    if (typeof PerformanceObserver === "undefined") return;
+    let reported = 0;
+    const seen = new Set<number>();
+    let observer: PerformanceObserver;
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as Array<
+          PerformanceEntry & { interactionId?: number; target?: Node | null }
+        >) {
+          const id = entry.interactionId;
+          if (!id || seen.has(id) || entry.duration < SLOW_INTERACTION_MS) continue;
+          if (reported >= MAX_INTERACTIONS_PER_PAGE) return;
+          seen.add(id);
+          reported += 1;
+          state.queue.push({
+            path: window.location.pathname,
+            kind: "interaction",
+            durationMs: Math.round(entry.duration),
+            interactionType: entry.name,
+            interactionTarget: describeTarget(entry.target),
+          });
+        }
+      });
+      observer.observe({
+        type: "event",
+        durationThreshold: SLOW_INTERACTION_MS,
+        buffered: true,
+      } as PerformanceObserverInit);
+    } catch {
+      return;
+    }
+    return () => observer.disconnect();
   }, []);
 
   // Klicks auf interne Links und Zurück/Vor als Start eines Seitenwechsels merken
