@@ -44,6 +44,9 @@ nicht per DB-Trigger. Kommentare bleiben in `DepartmentTaskComment` und werden i
 
 - U1: Push bei Übergabe **stellt das Gewerk ein** (keine / Leitung / alle).
 - U2: „Neu“ wird **pro Person seit dem letzten Besuch** berechnet (`DepartmentVisit`).
+- U4: Verlauf, Hinweise und Übergaben hängen am Gewerk (pro Produktion) und werden **mit dem Gewerk
+  archiviert** (`Department.archivedAt`), kein eigenes Aufräumen.
+- U5: „Ich bin dran“ wird nach **12 h automatisch freigegeben** (beim Lesen ausgewertet, kein Cron).
 - U3: Hinweise und Achtung setzen/erledigen: **alle im Gewerk**, pro Gewerk auf Leitung einschränkbar.
 
 ## Oberflächen
@@ -71,11 +74,6 @@ Vor dem Entwurf: Staging-Screenshots von Board, Karte und Gewerk-Portal (mobil +
 3. **Gewerk-Startseite**: `DepartmentVisit`, „Seit deinem letzten Besuch“, `DepartmentNotice`, Einstellungen.
 4. **Übergabe**: `DepartmentHandover`, Sheet, Push nach Einstellung, Benachrichtigung in der Glocke.
 5. **E2E, Screenshots mobil/Desktop, Staging, Release.**
-
-## Offene Fragen
-
-- Verlauf aufräumen (z. B. nach Produktionsende archivieren) oder dauerhaft behalten?
-- „Ich bin dran“ automatisch nach z. B. 12 h freigeben?
 
 ## Checkliste
 
