@@ -6,6 +6,7 @@ import { z } from "zod";
 import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
 import { syncObjectFromTask } from "@/lib/ausstattung/service";
 import { requireBoardAccess } from "@/lib/departments/board";
+import { STEP_LIMIT } from "@/lib/departments/activity-format";
 import { logTaskActivity } from "@/lib/departments/handover";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
@@ -85,6 +86,9 @@ const taskFields = z.object({
   assigneeIds: z.array(z.string()).max(30).optional(),
 });
 
+/** Neue Karte: gleich Schritte mitgeben (eine Zeile je Schritt). */
+const stepTexts = z.array(z.string().trim().min(1).max(STEP_LIMIT)).max(50).optional();
+
 /** Nur Meilensteine derselben Produktion dürfen an einer Karte hängen. */
 async function validMilestone(departmentId: string, milestoneId: string | null | undefined) {
   if (!milestoneId) return null;
@@ -96,7 +100,11 @@ async function validMilestone(departmentId: string, milestoneId: string | null |
   return found.id;
 }
 
-const createSchema = taskFields.extend({ departmentId: z.string(), columnId: z.string() });
+const createSchema = taskFields.extend({
+  departmentId: z.string(),
+  columnId: z.string(),
+  steps: stepTexts,
+});
 
 export async function createBoardTaskAction(
   input: z.input<typeof createSchema>,
@@ -125,6 +133,7 @@ export async function createBoardTaskAction(
         priority: data.priority ?? "normal",
         createdById: access.userId,
         assignments: { create: assignees.map((userId) => ({ userId })) },
+        checklist: { create: (data.steps ?? []).map((text, position) => ({ text, position })) },
       },
       select: { id: true },
     });

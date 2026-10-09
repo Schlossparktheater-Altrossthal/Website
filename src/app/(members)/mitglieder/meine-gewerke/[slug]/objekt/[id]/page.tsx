@@ -7,7 +7,7 @@ import { REQUIREMENT_CREATE_PERMISSION } from "@/lib/ausstattung/service";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
-import { loadHandoverSettings, loadTaskHandover } from "@/lib/departments/handover";
+import { loadHandoverSettings, loadWorkState } from "@/lib/departments/handover";
 import { loadDepartmentPortal } from "@/lib/departments/portal";
 import { prisma } from "@/lib/prisma";
 
@@ -42,7 +42,7 @@ export default async function ObjektPage({ params }: PageProps) {
     object.inventoryProductId
       ? loadInventory(object.inventoryProductId, object.inventoryAssetId)
       : null,
-    object.taskId ? loadTaskHandover(object.taskId) : null,
+    object.taskId ? loadWorkState(object.taskId) : null,
     loadHandoverSettings(portal.id),
   ]);
 
@@ -89,12 +89,17 @@ export default async function ObjektPage({ params }: PageProps) {
         }))}
         inventory={inventory}
         canOpenTeam={Boolean(portal.viewerRole) || isManager}
-        handover={
+        work={
           handover && (portal.viewerRole || isManager)
             ? {
                 state: handover,
-                viewerId: userId,
-                canEditCaution: settings.noteEditors === "leads" ? canManage : canEdit,
+                perms: {
+                  viewerId: userId,
+                  canEdit,
+                  canManage,
+                  canEditCaution: settings.noteEditors === "leads" ? canManage : canEdit,
+                  stepUndo: settings.stepUndo,
+                },
               }
             : null
         }

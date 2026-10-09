@@ -20,9 +20,10 @@ import {
   loadStage,
 } from "@/lib/ausstattung/objects";
 import { resolveTeamsViewer } from "@/lib/departments/access";
-import { loadBoard } from "@/lib/departments/board";
+import { loadBoard, type BoardTask } from "@/lib/departments/board";
 import {
   canEditNotes,
+  type HandoverSettings,
   loadHandoverSettings,
   loadNotices,
   loadSinceLastVisit,
@@ -41,7 +42,8 @@ import { SetByScene, SetChangeovers } from "../ausstattung/set-views";
 import { SubViews } from "../ausstattung/shared";
 import { DepartmentBoard } from "../board/board";
 import { DepartmentSettingsButton } from "../department-settings-panel";
-import { HandoverOverview } from "../handover/overview";
+import { VorOrt, type WorkItem } from "../handover/overview";
+import type { WorkPermissions } from "../handover/task-work";
 import { TeamEvents } from "../events/team-events";
 import { TeamFiles } from "../files/team-files";
 import { formatDue, formatEventDate, TEAM_ROLE_LABELS, tint, ViewSwitcher } from "../team-ui";
@@ -226,7 +228,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         basePath={basePath}
         current={view}
         options={[
-          { value: "uebersicht", label: "Nächstes" },
+          { value: "uebersicht", label: "Vor Ort" },
           { value: "aufgaben", label: `Aufgaben ${portal.openTasks.length}` },
           ...objectViews.map((entry) => ({ value: entry.view as View, label: entry.label })),
           { value: "termine", label: `Termine ${portal.events.length}` },
@@ -236,15 +238,19 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
       />
 
       {view === "uebersicht" ? (
-        <HandoverOverview
+        <VorOrtSection
           departmentId={portal.id}
           basePath={basePath}
-          notices={await loadNotices(portal.id)}
-          news={await loadSinceLastVisit(portal.id, userId, since)}
+          viewerId={userId}
+          since={since}
           settings={handoverSettings}
-          canEdit={boardEdit}
-          canEditNotes={notesEditable}
-          canManage={boardManage}
+          perms={{
+            viewerId: userId,
+            canEdit: boardEdit,
+            canManage: boardManage,
+            canEditCaution: notesEditable,
+            stepUndo: handoverSettings.stepUndo,
+          }}
         />
       ) : null}
 
@@ -252,7 +258,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         <section className="space-y-2" aria-labelledby="next-heading">
           <div className="flex items-center justify-between">
             <h2 id="next-heading" className="text-sm font-semibold">
-              Als Nächstes
+              Deine Termine & Aufgaben
             </h2>
             <span className="text-xs text-muted-foreground">
               {portal.taskCounts.todo + portal.taskCounts.doing} offen · {portal.taskCounts.done}{" "}
@@ -356,6 +362,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
             viewerId: userId,
             since,
             canEditNotes: notesEditable,
+            stepUndo: handoverSettings.stepUndo,
           })}
           viewerId={userId}
           canEdit={boardEdit}
@@ -427,6 +434,67 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** „Gerade dran“: in Arbeit, jemand ist dran, Achtung oder neu – das Eigene zuerst. */
+async function VorOrtSection({
+  departmentId,
+  basePath,
+  viewerId,
+  since,
+  settings,
+  perms,
+}: {
+  departmentId: string;
+  basePath: string;
+  viewerId: string;
+  since: Date | null;
+  settings: HandoverSettings;
+  perms: WorkPermissions;
+}) {
+  const [board, notices, news] = await Promise.all([
+    loadBoard(departmentId, { viewerId, since }),
+    loadNotices(departmentId),
+    loadSinceLastVisit(departmentId, viewerId, since),
+  ]);
+  const rank = (task: BoardTask) =>
+    task.handover.claim?.userId === viewerId
+      ? 0
+      : task.handover.claim
+        ? 1
+        : task.handover.caution
+          ? 2
+          : task.work.status === "doing"
+            ? 3
+            : 4;
+  const items: WorkItem[] = board.columns
+    .flatMap((column) => column.tasks)
+    .filter(
+      (task) =>
+        task.work.status !== "done" &&
+        (task.work.status === "doing" ||
+          task.handover.claim ||
+          task.handover.caution ||
+          task.hasNews),
+    )
+    .sort((a, b) => rank(a) - rank(b))
+    .slice(0, 12)
+    .map((task) => ({ id: task.id, title: task.title, work: task.work, hasNews: task.hasNews }));
+  return (
+    <VorOrt
+      departmentId={departmentId}
+      basePath={basePath}
+      firstColumnId={
+        board.columns.find((column) => column.status === "todo")?.id ?? board.columns[0]?.id ?? null
+      }
+      notices={notices}
+      news={news}
+      settings={settings}
+      items={items}
+      perms={perms}
+      canEditNotes={perms.canEditCaution}
+    />
   );
 }
 

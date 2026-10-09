@@ -1,6 +1,6 @@
 # Plan: Übergabe im Gewerk – Verlauf, Stand, „Seit deinem letzten Besuch“
 
-Stand: 2026-10-09. Phase 1–4 umgesetzt (lokal mit Demo-Daten geprüft), offen Phase 5.
+Stand: 2026-10-09. Phase 1–4 und Teil 2 umgesetzt (lokal mit Demo-Daten geprüft), offen Phase 5.
 
 ## Ziel
 
@@ -82,3 +82,30 @@ Vor dem Entwurf: Staging-Screenshots von Board, Karte und Gewerk-Portal (mobil +
 - [x] Phase 3 Gewerk-Startseite (Besuch = 30 min Pause; erster Besuch zeigt die letzte Woche; Einstellungen für Leitung/Vertretung; ein Schalter `noteEditors` für Hinweise und Achtung)
 - [x] Phase 4 Übergabe (Zusammenfassung seit Tagesbeginn bzw. letzter eigener Übergabe; gibt eigene „dran“-Karten frei; Benachrichtigungstyp `department-handover`)
 - [ ] Phase 5 E2E/Release
+
+## Teil 2: Arbeiten zuerst, Details später (2026-10-09)
+
+Befund nach Staging-Screenshots (mobil): Die Karte öffnet als Formular (Titel, Spalte, Frist, Priorität,
+Meilenstein, Zuständig, Speichern). Schritte gibt es nur bei Ausstattungsstücken und dort unter dem großen
+Formular. „Nächster Schritt“ als Freitext ist doppelte Pflege. Vom Board aus geht nichts direkt.
+
+Entscheidungen:
+
+- U6: „Nächster Schritt“ = erster offener Schritt; Freitextfeld entfällt in der Oberfläche (Spalte bleibt).
+- U7: Reiter „Vor Ort“ ersetzt „Nächstes“; eigene Termine/Aufgaben stehen darunter.
+- U8: Status auf der Karte fest Offen / In Arbeit / Fertig → erste Board-Spalte mit diesem Status.
+- U9: Abgehakte Schritte zurücknehmen dürfen alle; pro Gewerk einschränkbar auf „wer abgehakt hat + Leitung“
+  (`Department.stepUndo`).
+
+Umsetzung:
+
+1. **Karte**: oben Arbeitsblock (Status, Ich bin dran, Achtung, Schritte mit „Als Nächstes“, Schritt-Eingabe:
+   Enter = nächster, mehrere Zeilen einfügen = mehrere Schritte, Notizen & Verlauf in einem Feed), alles sofort
+   gespeichert. Fällig/Zuständig/Meilenstein/Beschreibung unter „Details“ (zu). Schritte für alle Karten.
+   Neue Aufgabe: Titel + optional Schritte, Rest unter „Details“.
+2. **Board-Kachel**: Fortschritt und nächster offener Schritt mit Haken zum direkten Abhaken.
+3. **Vor Ort**: Hinweise, letzte Übergabe, Karten in Arbeit / bei denen ich dran bin / neue, je mit offenen
+   Schritten zum Abhaken; „+ Aufgabe“ und „Feierabend“ oben; „Seit deinem letzten Besuch“ einklappbar.
+4. **Objektseite**: derselbe Arbeitsblock oben; Beschreibung/Herkunft/Maße/Kosten als „Details bearbeiten“.
+
+- [x] Teil 2 Schritt 1–4 (2026-10-09, lokal mit Demo-Daten durchgeklickt; Objektseite ohne Karte behält alte Checkliste)

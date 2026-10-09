@@ -8,15 +8,23 @@ import { de } from "date-fns/locale/de";
 import {
   AlertTriangleIcon,
   CheckIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   MoonStarIcon,
   PlusIcon,
   SettingsIcon,
+  WrenchIcon,
 } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { NOTE_LIMIT } from "@/lib/departments/activity-format";
+import {
+  NOTE_LIMIT,
+  WORK_STATUS_LABELS,
+  splitSteps,
+  type WorkState,
+} from "@/lib/departments/activity-format";
 import type {
   HandoverSettings,
   HandoverSummary,
@@ -33,75 +41,78 @@ import {
   saveHandoverAction,
   updateHandoverSettingsAction,
 } from "../handover-actions";
-import { ago } from "./task-handover";
+import { createBoardTaskAction } from "../board-actions";
+import { StepList, ago, type WorkPermissions } from "./task-work";
+
+export type WorkItem = {
+  id: string;
+  title: string;
+  work: WorkState;
+  hasNews: boolean;
+};
 
 /**
- * Kopf der Gewerk-Startseite: angepinnte Hinweise, Übergaben und Änderungen seit dem
- * letzten Besuch (docs/Plan/uebergabe-plan.md).
+ * Reiter „Vor Ort“ (docs/Plan/uebergabe-plan.md, Teil 2): Hinweise, letzte Übergabe,
+ * was gerade läuft – mit Schritten zum direkten Abhaken – und was sich seit dem letzten
+ * Besuch geändert hat.
  */
-export function HandoverOverview({
+export function VorOrt({
   departmentId,
   basePath,
+  firstColumnId,
   notices,
   news,
   settings,
-  canEdit,
+  items,
+  perms,
   canEditNotes,
-  canManage,
 }: {
   departmentId: string;
   basePath: string;
+  /** Spalte für neue Aufgaben. */
+  firstColumnId: string | null;
   notices: NoticeView[];
   news: SinceLastVisit;
   settings: HandoverSettings;
-  canEdit: boolean;
+  items: WorkItem[];
+  perms: WorkPermissions;
   canEditNotes: boolean;
-  canManage: boolean;
 }) {
   const [handoverOpen, setHandoverOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [newsOpen, setNewsOpen] = React.useState(false);
+  const cardHref = (id: string) => `${basePath}?ansicht=aufgaben&karte=${id}`;
 
   return (
-    <section className="space-y-3" aria-labelledby="handover-heading">
-      <div className="flex items-center justify-between gap-2">
-        <h2 id="handover-heading" className="text-sm font-semibold">
-          {news.since
-            ? `Seit deinem letzten Besuch · ${format(new Date(news.since), "EEE d. MMM, HH:mm", { locale: de })}`
-            : "Was zuletzt passiert ist"}
-        </h2>
-        <div className="flex shrink-0 items-center gap-1">
-          {canManage ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10"
-              aria-label="Übergabe einstellen"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <SettingsIcon />
-            </Button>
-          ) : null}
-          {canEdit ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => setHandoverOpen(true)}
-            >
-              <MoonStarIcon className="h-4 w-4" /> Feierabend
-            </Button>
-          ) : null}
+    <div className="space-y-4">
+      {perms.canEdit ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            className="h-11"
+            disabled={!firstColumnId}
+            onClick={() => setCreateOpen(true)}
+          >
+            <PlusIcon className="h-4 w-4" /> Aufgabe
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11"
+            onClick={() => setHandoverOpen(true)}
+          >
+            <MoonStarIcon className="h-4 w-4" /> Feierabend
+          </Button>
         </div>
-      </div>
+      ) : null}
 
       <Notices departmentId={departmentId} notices={notices} canEdit={canEditNotes} />
 
-      {news.handovers.map((handover) => (
+      {news.handovers.slice(0, 1).map((handover) => (
         <article
           key={handover.id}
-          className="space-y-1 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5"
+          className="space-y-1 rounded-lg border border-border bg-card px-3 py-2.5"
         >
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">{handover.author ?? "Jemand"}</span> hat
@@ -109,7 +120,7 @@ export function HandoverOverview({
           </p>
           {handover.note ? <p className="whitespace-pre-wrap text-sm">{handover.note}</p> : null}
           {handover.summary.length ? (
-            <ul className="space-y-0.5 text-sm">
+            <ul className="space-y-0.5 text-xs">
               {handover.summary.map((group, index) => (
                 <li key={`${group.taskId}-${index}`}>
                   <span className="font-medium">{group.title}:</span>{" "}
@@ -121,57 +132,120 @@ export function HandoverOverview({
         </article>
       ))}
 
-      {news.tasks.length ? (
-        <ul className="space-y-2">
-          {news.tasks.map((task) => {
-            const href = task.taskId
-              ? `${basePath}?ansicht=aufgaben&karte=${task.taskId}`
-              : task.objectId
-                ? `${basePath}/objekt/${task.objectId}`
-                : basePath;
-            return (
-              <li key={task.taskId ?? task.objectId ?? task.title}>
+      <section className="space-y-2" aria-labelledby="work-heading">
+        <h2 id="work-heading" className="text-sm font-semibold">
+          Gerade dran
+        </h2>
+        {items.length ? (
+          <ul className="space-y-2">
+            {items.map((item) => (
+              <li key={item.id} className="rounded-lg border border-border bg-card px-2 py-2">
                 <Link
-                  href={href}
-                  className="block space-y-1 rounded-xl border border-border bg-card px-3 py-2.5 transition-colors hover:bg-muted/40"
+                  href={cardHref(item.id)}
+                  className="flex min-h-10 items-center gap-2 rounded-md px-1 hover:bg-muted/50"
                 >
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="truncate text-sm font-medium">{task.title}</span>
-                    {task.handover?.claim ? (
-                      <span className="shrink-0 text-xs font-medium text-info">
-                        {task.handover.claim.name.split(" ")[0]} dran
-                      </span>
-                    ) : null}
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                    {item.title}
                   </span>
-                  {task.handover?.caution ? (
-                    <span className="flex items-start gap-1 rounded-md bg-warning/15 px-2 py-1 text-xs text-warning-foreground">
-                      <AlertTriangleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                      {task.handover.caution.text}
+                  {item.hasNews ? (
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="neu" />
+                  ) : null}
+                  {item.work.handover.claim ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-info">
+                      <WrenchIcon className="h-3 w-3" />
+                      {item.work.handover.claim.name.split(" ")[0]}
                     </span>
                   ) : null}
-                  {task.handover?.nextStep ? (
-                    <span className="block text-xs">
-                      <span className="font-medium">Weiter:</span> {task.handover.nextStep.text}
-                    </span>
-                  ) : null}
-                  <ul className="space-y-0.5">
-                    {task.entries.map((entry) => (
-                      <li key={entry.id} className="truncate text-xs text-muted-foreground">
-                        {entry.actor?.split(" ")[0] ?? "Jemand"} {entry.text} · {ago(entry.at)}
-                      </li>
-                    ))}
-                  </ul>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {WORK_STATUS_LABELS[item.work.status]}
+                  </span>
+                  <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </Link>
+                {item.work.handover.caution ? (
+                  <p className="mx-1 mt-1 flex items-start gap-1 rounded-md bg-warning/15 px-2 py-1 text-xs text-warning-foreground">
+                    <AlertTriangleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    {item.work.handover.caution.text}
+                  </p>
+                ) : null}
+                {item.work.steps.some((step) => !step.done) ? (
+                  <StepList
+                    taskId={item.id}
+                    steps={item.work.steps}
+                    perms={perms}
+                    limit={3}
+                    hideDone
+                    hideAdd
+                  />
+                ) : null}
               </li>
-            );
-          })}
-        </ul>
-      ) : !news.handovers.length ? (
-        <p className="rounded-xl border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-          {news.since
-            ? "Seit deinem letzten Besuch hat niemand etwas geändert."
-            : "In der letzten Woche hat niemand etwas geändert."}
-        </p>
+            ))}
+          </ul>
+        ) : (
+          <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+            Gerade ist nichts in Arbeit. Im Board unter „Aufgaben“ findest du alles Offene.
+          </p>
+        )}
+      </section>
+
+      {news.tasks.length ? (
+        <section className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setNewsOpen((value) => !value)}
+            aria-expanded={newsOpen}
+            className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-semibold"
+          >
+            {news.since
+              ? `Seit deinem letzten Besuch (${news.tasks.length})`
+              : `Letzte Woche (${news.tasks.length})`}
+            {news.since ? (
+              <span className="truncate text-xs font-normal text-muted-foreground">
+                {format(new Date(news.since), "EEE d. MMM, HH:mm", { locale: de })}
+              </span>
+            ) : null}
+            <ChevronDownIcon
+              className={cn(
+                "ml-auto h-4 w-4 shrink-0 transition-transform",
+                newsOpen && "rotate-180",
+              )}
+            />
+          </button>
+          {newsOpen ? (
+            <ul className="space-y-2">
+              {news.tasks.map((task) => (
+                <li key={task.taskId ?? task.objectId ?? task.title}>
+                  <Link
+                    href={
+                      task.taskId
+                        ? cardHref(task.taskId)
+                        : task.objectId
+                          ? `${basePath}/objekt/${task.objectId}`
+                          : basePath
+                    }
+                    className="block space-y-0.5 rounded-lg border border-border bg-card px-3 py-2 transition-colors hover:bg-muted/40"
+                  >
+                    <span className="block truncate text-sm font-medium">{task.title}</span>
+                    {task.entries.map((entry) => (
+                      <span key={entry.id} className="block truncate text-xs text-muted-foreground">
+                        {entry.actor?.split(" ")[0] ?? "Jemand"} {entry.text} · {ago(entry.at)}
+                      </span>
+                    ))}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ) : null}
+
+      {perms.canManage ? (
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          className="flex h-10 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <SettingsIcon className="h-3.5 w-3.5" /> Übergabe einstellen
+        </button>
       ) : null}
 
       <HandoverPanel
@@ -180,7 +254,15 @@ export function HandoverOverview({
         departmentId={departmentId}
         push={settings.handoverPush}
       />
-      {canManage ? (
+      {firstColumnId ? (
+        <QuickTaskPanel
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          departmentId={departmentId}
+          columnId={firstColumnId}
+        />
+      ) : null}
+      {perms.canManage ? (
         <SettingsPanel
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
@@ -188,7 +270,92 @@ export function HandoverOverview({
           settings={settings}
         />
       ) : null}
-    </section>
+    </div>
+  );
+}
+
+/** Neue Aufgabe in zwei Feldern: Titel und (optional) Schritte. */
+function QuickTaskPanel({
+  open,
+  onOpenChange,
+  departmentId,
+  columnId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  departmentId: string;
+  columnId: string;
+}) {
+  const run = useAction();
+  const [title, setTitle] = React.useState("");
+  const [steps, setSteps] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
+  const inputClass =
+    "w-full rounded-md border border-border bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm";
+  return (
+    <ResponsivePanel
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Neue Aufgabe"
+      description="Titel und Schritte"
+      footer={
+        <AsyncButton
+          type="button"
+          className="h-11 w-full"
+          isLoading={saving}
+          disabled={!title.trim()}
+          onClick={async () => {
+            setSaving(true);
+            const ok = await run(
+              () =>
+                createBoardTaskAction({
+                  departmentId,
+                  columnId,
+                  title,
+                  steps: splitSteps(steps),
+                }),
+              "Aufgabe angelegt",
+            );
+            setSaving(false);
+            if (ok) {
+              setTitle("");
+              setSteps("");
+              onOpenChange(false);
+            }
+          }}
+        >
+          Anlegen
+        </AsyncButton>
+      }
+    >
+      <div className="space-y-3">
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">Was ist zu tun?</span>
+          <input
+            className={cn(inputClass, "h-11")}
+            value={title}
+            maxLength={160}
+            autoFocus
+            placeholder="z. B. Laterne bauen"
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            Schritte (optional, einer pro Zeile)
+          </span>
+          <textarea
+            className={cn(inputClass, "min-h-32 py-2")}
+            value={steps}
+            placeholder={"Material besorgen\nzuschneiden\nbemalen"}
+            onChange={(event) => setSteps(event.target.value)}
+          />
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Frist, Zuständige und Beschreibung kannst du später in der Karte unter „Details“ ergänzen.
+        </p>
+      </div>
+    </ResponsivePanel>
   );
 }
 
@@ -456,8 +623,26 @@ function SettingsPanel({
               { value: "leads", label: "Leitung", ariaLabel: "Nur Leitung und Vertretung" },
             ]}
           />
-          <p className={cn("text-xs text-muted-foreground")}>
-            „Nächster Schritt“ und „Ich bin dran“ können immer alle im Gewerk setzen.
+        </div>
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium">Abgehakte Schritte wieder öffnen</span>
+          <SegmentedControl<HandoverSettings["stepUndo"]>
+            aria-label="Abgehakte Schritte wieder öffnen"
+            size="md"
+            fullWidth
+            value={draft.stepUndo}
+            onValueChange={(value) => setDraft((current) => ({ ...current, stepUndo: value }))}
+            options={[
+              { value: "all", label: "Alle", ariaLabel: "Alle im Gewerk" },
+              {
+                value: "own",
+                label: "Wer abgehakt hat",
+                ariaLabel: "Wer abgehakt hat und Leitung",
+              },
+            ]}
+          />
+          <p className="text-xs text-muted-foreground">
+            Die Leitung darf immer. „Ich bin dran“ und neue Schritte können alle setzen.
           </p>
         </div>
       </div>

@@ -3,15 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { claimActive, NOTE_LIMIT, type ActivityEntry } from "@/lib/departments/activity-format";
-import { requireBoardAccess } from "@/lib/departments/board";
+import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
+import { syncObjectFromTask } from "@/lib/ausstattung/service";
+import {
+  claimActive,
+  NOTE_LIMIT,
+  STEP_LIMIT,
+  WORK_STATUS_LABELS,
+  type ActivityEntry,
+} from "@/lib/departments/activity-format";
+import { ensureBoardColumns, requireBoardAccess } from "@/lib/departments/board";
 import {
   buildHandoverSummary,
   canEditNotes,
   handoverRecipients,
   loadHandoverSettings,
   loadTaskActivity,
+  loadTaskFeed,
   logTaskActivity,
+  type FeedEntry,
   type HandoverSummary,
 } from "@/lib/departments/handover";
 import { notify } from "@/lib/notifications/notify";
@@ -32,7 +42,14 @@ function revalidateTeams() {
 async function loadTask(taskId: string) {
   const task = await prisma.departmentTask.findUnique({
     where: { id: z.string().parse(taskId) },
-    select: { id: true, departmentId: true, claimedById: true, claimedAt: true },
+    select: {
+      id: true,
+      departmentId: true,
+      claimedById: true,
+      claimedAt: true,
+      status: true,
+      objectId: true,
+    },
   });
   if (!task) throw new Error("Karte wurde nicht gefunden.");
   return task;
@@ -118,6 +135,171 @@ export async function loadTaskActivityAction(input: {
     return { ...actionSuccess(), data: await loadTaskActivity(task.id) };
   } catch (error) {
     return actionFailure(error, "Verlauf konnte nicht geladen werden.");
+  }
+}
+
+export async function loadTaskFeedAction(input: { taskId: string }): Promise<Result<FeedEntry[]>> {
+  try {
+    const task = await loadTask(input.taskId);
+    await requireBoardAccess(task.departmentId);
+    return { ...actionSuccess(), data: await loadTaskFeed(task.id) };
+  } catch (error) {
+    return actionFailure(error, "Verlauf konnte nicht geladen werden.");
+  }
+}
+
+/** Status Offen / In Arbeit / Fertig: Karte in die erste Spalte mit diesem Status. */
+export async function setTaskStatusAction(input: {
+  taskId: string;
+  status: "todo" | "doing" | "done";
+}): Promise<Result> {
+  try {
+    const status = z.enum(["todo", "doing", "done"]).parse(input.status);
+    const task = await loadTask(input.taskId);
+    const access = await requireBoardAccess(task.departmentId);
+    if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
+    if (task.status === status) return actionSuccess();
+    await ensureBoardColumns(task.departmentId);
+    await prisma.$transaction(async (tx) => {
+      const column = await tx.departmentBoardColumn.findFirst({
+        where: { departmentId: task.departmentId, status },
+        orderBy: { position: "asc" },
+        select: { id: true },
+      });
+      const last = column
+        ? await tx.departmentTask.aggregate({
+            where: { columnId: column.id },
+            _max: { position: true },
+          })
+        : null;
+      await tx.departmentTask.update({
+        where: { id: task.id },
+        data: {
+          status,
+          ...(column ? { columnId: column.id, position: (last?._max.position ?? -1) + 1 } : {}),
+        },
+      });
+      await syncObjectFromTask(tx, task.id);
+      await logTaskActivity(tx, task.id, access.userId, "status", {
+        to: WORK_STATUS_LABELS[status],
+      });
+    });
+    if (task.objectId && status === "done") {
+      await notifyRequestersIfReady(task.objectId, "ready", access.userId);
+    }
+    revalidateTeams();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Status konnte nicht geändert werden.");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Schritte (Checkliste) einer Karte
+
+const stepsSchema = z.object({
+  taskId: z.string(),
+  texts: z.array(z.string().trim().min(1).max(STEP_LIMIT)).min(1).max(50),
+});
+
+/** Einen oder mehrere Schritte anhängen. */
+export async function addStepsAction(input: z.input<typeof stepsSchema>): Promise<Result> {
+  try {
+    const data = stepsSchema.parse(input);
+    const task = await loadTask(data.taskId);
+    const access = await requireBoardAccess(task.departmentId);
+    if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
+    await prisma.$transaction(async (tx) => {
+      const last = await tx.taskChecklistItem.aggregate({
+        where: { taskId: task.id },
+        _max: { position: true },
+      });
+      const start = (last._max.position ?? -1) + 1;
+      await tx.taskChecklistItem.createMany({
+        data: data.texts.map((text, index) => ({ taskId: task.id, text, position: start + index })),
+      });
+      for (const text of data.texts) {
+        await logTaskActivity(tx, task.id, access.userId, "checklist_added", { text });
+      }
+    });
+    revalidateTeams();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Schritt konnte nicht angelegt werden.");
+  }
+}
+
+async function loadStep(itemId: string) {
+  const item = await prisma.taskChecklistItem.findUnique({
+    where: { id: z.string().parse(itemId) },
+    select: {
+      id: true,
+      text: true,
+      doneAt: true,
+      doneById: true,
+      taskId: true,
+      task: { select: { departmentId: true } },
+    },
+  });
+  if (!item) throw new Error("Schritt wurde nicht gefunden.");
+  const access = await requireBoardAccess(item.task.departmentId);
+  if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
+  return { item, access };
+}
+
+export async function toggleStepAction(input: { itemId: string; done: boolean }): Promise<Result> {
+  try {
+    const done = z.boolean().parse(input.done);
+    const { item, access } = await loadStep(input.itemId);
+    if (Boolean(item.doneAt) === done) return actionSuccess();
+    if (!done && item.doneById && item.doneById !== access.userId && !access.canManage) {
+      const settings = await loadHandoverSettings(item.task.departmentId);
+      if (settings.stepUndo === "own") {
+        throw new Error("Wieder öffnen darf hier nur, wer abgehakt hat, oder die Leitung.");
+      }
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.taskChecklistItem.update({
+        where: { id: item.id },
+        data: done
+          ? { doneAt: new Date(), doneById: access.userId }
+          : { doneAt: null, doneById: null },
+      });
+      await logTaskActivity(
+        tx,
+        item.taskId,
+        access.userId,
+        done ? "checklist_done" : "checklist_undone",
+        { text: item.text },
+      );
+    });
+    revalidateTeams();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Schritt konnte nicht geändert werden.");
+  }
+}
+
+export async function renameStepAction(input: { itemId: string; text: string }): Promise<Result> {
+  try {
+    const text = z.string().trim().min(1).max(STEP_LIMIT).parse(input.text);
+    const { item } = await loadStep(input.itemId);
+    await prisma.taskChecklistItem.update({ where: { id: item.id }, data: { text } });
+    revalidateTeams();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Schritt konnte nicht geändert werden.");
+  }
+}
+
+export async function deleteStepAction(input: { itemId: string }): Promise<Result> {
+  try {
+    const { item } = await loadStep(input.itemId);
+    await prisma.taskChecklistItem.delete({ where: { id: item.id } });
+    revalidateTeams();
+    return actionSuccess();
+  } catch (error) {
+    return actionFailure(error, "Schritt konnte nicht gelöscht werden.");
   }
 }
 
@@ -251,6 +433,7 @@ const settingsSchema = z.object({
   departmentId: z.string(),
   handoverPush: z.enum(["none", "leads", "all"]),
   noteEditors: z.enum(["all", "leads"]),
+  stepUndo: z.enum(["all", "own"]),
 });
 
 export async function updateHandoverSettingsAction(
@@ -262,7 +445,11 @@ export async function updateHandoverSettingsAction(
     if (!access.canManage) throw new Error("Einstellen dürfen Leitung und Vertretung.");
     await prisma.department.update({
       where: { id: data.departmentId },
-      data: { handoverPush: data.handoverPush, noteEditors: data.noteEditors },
+      data: {
+        handoverPush: data.handoverPush,
+        noteEditors: data.noteEditors,
+        stepUndo: data.stepUndo,
+      },
     });
     revalidateTeams();
     return actionSuccess("Gespeichert");

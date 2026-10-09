@@ -1,4 +1,4 @@
-import type { TaskActivityType } from "@prisma/client";
+import type { TaskActivityType, TaskStatus } from "@prisma/client";
 
 /** „Ich bin dran“ gilt so lange, danach ist die Karte wieder frei. */
 export const CLAIM_HOURS = 12;
@@ -21,6 +21,45 @@ export type HandoverState = {
   caution: NoteState | null;
   claim: ClaimState | null;
 };
+
+export type WorkStep = {
+  id: string;
+  text: string;
+  done: boolean;
+  doneById: string | null;
+  doneBy: string | null;
+  doneAt: string | null;
+};
+
+/** Arbeitsblock einer Karte: Status, Schritte und Stand für die Übergabe. */
+export type WorkState = {
+  taskId: string;
+  status: TaskStatus;
+  steps: WorkStep[];
+  handover: HandoverState;
+};
+
+export const WORK_STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: "Offen",
+  doing: "In Arbeit",
+  done: "Fertig",
+};
+
+/** Mehrere Zeilen einfügen = mehrere Schritte; Aufzählungszeichen fallen weg. */
+export function splitSteps(text: string) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[-–•*]|\d+[.)]|\[[ xX]?\])\s*/, "").trim())
+    .filter(Boolean)
+    .map((line) => line.slice(0, STEP_LIMIT));
+}
+
+export const STEP_LIMIT = 200;
+
+/** Offene Schritte zuerst (in Reihenfolge), erledigte danach. */
+export function orderSteps<T extends { done: boolean }>(steps: T[]) {
+  return [...steps.filter((step) => !step.done), ...steps.filter((step) => step.done)];
+}
 
 export type ActivityEntry = {
   id: string;
@@ -55,7 +94,7 @@ export function describeActivity(type: TaskActivityType, data: Data): string {
     case "checklist_undone":
       return `„${text ?? ""}“ wieder offen`;
     case "comment":
-      return `Kommentar: ${text ?? ""}`;
+      return `💬 ${text ?? ""}`;
     case "next_step":
       return text ? `Nächster Schritt: ${text}` : "Nächster Schritt entfernt";
     case "caution":

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { claimActive, describeActivity } from "../activity-format";
+import { claimActive, describeActivity, orderSteps, splitSteps } from "../activity-format";
 
 describe("claimActive", () => {
   const now = new Date("2026-10-09T20:00:00Z");
@@ -28,5 +28,25 @@ describe("describeActivity", () => {
       "hat sie nach „In Arbeit“ geschoben",
     );
     expect(describeActivity("claim", { on: false })).toBe("hat die Karte freigegeben");
+  });
+});
+
+describe("splitSteps / orderSteps", () => {
+  it("macht aus einer eingefügten Liste einzelne Schritte", () => {
+    expect(splitSteps("- Tisch aufstellen\n2) Abkleben\n\n[ ] Beschriften\r\n• Fertig")).toEqual([
+      "Tisch aufstellen",
+      "Abkleben",
+      "Beschriften",
+      "Fertig",
+    ]);
+  });
+
+  it("stellt offene Schritte vor erledigte, Reihenfolge bleibt", () => {
+    const steps = [
+      { id: "a", done: true },
+      { id: "b", done: false },
+      { id: "c", done: false },
+    ];
+    expect(orderSteps(steps).map((step) => step.id)).toEqual(["b", "c", "a"]);
   });
 });

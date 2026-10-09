@@ -218,6 +218,11 @@ enum DepartmentEditorScope {
   leads
 }
 
+enum StepUndoScope {
+  all
+  own
+}
+
 enum TaskActivityType {
   created
   column
@@ -655,6 +660,8 @@ model Department {
   handoverPush         HandoverPushScope       @default(leads)
   /// Wer Hinweise und „Achtung“ setzen/erledigen darf.
   noteEditors          DepartmentEditorScope   @default(all)
+  /// Wer abgehakte Schritte wieder öffnen darf.
+  stepUndo             StepUndoScope           @default(all)
   archivedAt           DateTime?
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt

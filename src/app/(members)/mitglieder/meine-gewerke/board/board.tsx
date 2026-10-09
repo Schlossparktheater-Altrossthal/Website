@@ -25,12 +25,12 @@ import {
 } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { OBJECT_KIND_LABELS } from "@/lib/ausstattung/constants";
+import { orderSteps, splitSteps } from "@/lib/departments/activity-format";
 import type { BoardColumn, BoardData, BoardTask } from "@/lib/departments/board";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 import {
-  addBoardTaskCommentAction,
   createBoardColumnAction,
   createBoardTaskAction,
   deleteBoardColumnAction,
@@ -40,6 +40,7 @@ import {
   updateBoardColumnAction,
   updateBoardTaskAction,
 } from "../board-actions";
+import { toggleStepAction } from "../handover-actions";
 import { ColumnsPanel } from "./columns-panel";
 import type { ActionResult } from "./shared";
 import { toDateInput } from "./shared";
@@ -139,6 +140,36 @@ export function DepartmentBoard({
     });
   };
 
+  /** Nächsten Schritt direkt auf der Kachel abhaken (sofort sichtbar). */
+  const checkStep = (taskId: string, stepId: string) => {
+    setColumns((current) =>
+      current.map((column) => ({
+        ...column,
+        tasks: column.tasks.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                work: {
+                  ...task.work,
+                  steps: task.work.steps.map((step) =>
+                    step.id === stepId
+                      ? {
+                          ...step,
+                          done: true,
+                          doneById: viewerId,
+                          doneAt: new Date().toISOString(),
+                        }
+                      : step,
+                  ),
+                },
+              }
+            : task,
+        ),
+      })),
+    );
+    void run(() => toggleStepAction({ itemId: stepId, done: true }));
+  };
+
   const moveTask = (taskId: string, columnId: string, index: number) => {
     moveLocal(taskId, columnId, index);
     void run(() => moveBoardTaskAction({ taskId, columnId, index }));
@@ -181,6 +212,7 @@ export function DepartmentBoard({
           createBoardTaskAction({
             departmentId: data.departmentId,
             columnId: draft.columnId,
+            steps: splitSteps(draft.steps),
             ...fields,
           }),
         "Aufgabe angelegt",
@@ -296,6 +328,7 @@ export function DepartmentBoard({
                       today={data.today}
                       draggable={canEdit}
                       onOpen={() => setOpenTask({ task, columnId: column.id })}
+                      onCheck={canEdit ? (stepId) => checkStep(task.id, stepId) : undefined}
                     />
                   ))}
                   {canEdit ? (
@@ -351,13 +384,21 @@ export function DepartmentBoard({
             <ul className="space-y-2" aria-label={activeColumn.name}>
               {visibleTasks(activeColumn).map((task) => (
                 <li key={task.id}>
-                  <button
-                    type="button"
-                    className="block w-full text-left"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="block w-full cursor-pointer text-left"
                     onClick={() => setOpenTask({ task, columnId: activeColumn.id })}
+                    onKeyDown={(event) =>
+                      event.key === "Enter" && setOpenTask({ task, columnId: activeColumn.id })
+                    }
                   >
-                    <TaskCard task={task} today={data.today} />
-                  </button>
+                    <TaskCard
+                      task={task}
+                      today={data.today}
+                      onCheck={canEdit ? (stepId) => checkStep(task.id, stepId) : undefined}
+                    />
+                  </div>
                 </li>
               ))}
               {visibleTasks(activeColumn).length === 0 ? (
@@ -386,17 +427,17 @@ export function DepartmentBoard({
         objectHref={
           liveTask?.object && basePath ? `${basePath}/objekt/${liveTask.object.id}` : null
         }
-        viewerId={viewerId}
-        canEditCaution={data.canEditNotes}
+        perms={{
+          viewerId,
+          canEdit,
+          canManage,
+          canEditCaution: data.canEditNotes,
+          stepUndo: data.stepUndo,
+        }}
         onSave={saveTask}
         onDelete={() =>
           liveTask
             ? run(() => deleteBoardTaskAction({ taskId: liveTask.id }), "Aufgabe gelöscht")
-            : Promise.resolve(false)
-        }
-        onComment={(body) =>
-          liveTask
-            ? run(() => addBoardTaskCommentAction({ taskId: liveTask.id, body }))
             : Promise.resolve(false)
         }
       />
@@ -459,11 +500,13 @@ function DraggableCard({
   today,
   draggable,
   onOpen,
+  onCheck,
 }: {
   task: BoardTask;
   today: string;
   draggable: boolean;
   onOpen: () => void;
+  onCheck?: (stepId: string) => void;
 }) {
   const drag = useDraggable({ id: task.id, disabled: !draggable });
   const drop = useDroppable({ id: task.id });
@@ -478,20 +521,35 @@ function DraggableCard({
         drop.isOver && !drag.isDragging && "border-t-2 border-primary pt-1",
       )}
     >
-      <button
-        type="button"
+      <div
         {...drag.listeners}
         {...drag.attributes}
+        role="button"
+        tabIndex={0}
         onClick={onOpen}
+        onKeyDown={(event) => event.key === "Enter" && onOpen()}
         className="block w-full cursor-grab text-left active:cursor-grabbing"
       >
-        <TaskCard task={task} today={today} />
-      </button>
+        <TaskCard task={task} today={today} onCheck={onCheck} />
+      </div>
     </div>
   );
 }
 
-function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lifted?: boolean }) {
+function TaskCard({
+  task,
+  today,
+  lifted,
+  onCheck,
+}: {
+  task: BoardTask;
+  today: string;
+  lifted?: boolean;
+  onCheck?: (stepId: string) => void;
+}) {
+  const steps = task.work.steps;
+  const nextStep = orderSteps(steps).find((step) => !step.done);
+  const doneCount = steps.filter((step) => step.done).length;
   // Ohne eigene Frist erbt die Karte die Frist ihres Meilensteins (Kettensymbol).
   const inherited = !task.dueAt && Boolean(task.milestone?.dueAt);
   const dueIso = task.dueAt ?? task.milestone?.dueAt ?? null;
@@ -521,9 +579,43 @@ function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lif
           <span className="line-clamp-2">{task.handover.caution.text}</span>
         </span>
       ) : null}
-      {task.handover.nextStep ? (
-        <span className="line-clamp-2 block text-xs text-muted-foreground">
-          → {task.handover.nextStep.text}
+      {nextStep ? (
+        <span className="flex items-center gap-1.5">
+          {onCheck ? (
+            <button
+              type="button"
+              aria-label={`„${nextStep.text}“ abhaken`}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onCheck(nextStep.id);
+              }}
+              className="-my-1 -ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-primary/10"
+            >
+              <span className="h-5 w-5 rounded-full border-2 border-primary" />
+            </button>
+          ) : (
+            <span className="h-4 w-4 shrink-0 rounded-full border-2 border-muted-foreground/50" />
+          )}
+          <span className="line-clamp-2 min-w-0 flex-1 text-xs">{nextStep.text}</span>
+        </span>
+      ) : null}
+      {steps.length ? (
+        <span className="flex items-center gap-2">
+          <span className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+            <span
+              className="block h-full rounded-full bg-success"
+              style={{ width: `${(doneCount / steps.length) * 100}%` }}
+            />
+          </span>
+          <span
+            className={cn(
+              "text-[11px] tabular-nums text-muted-foreground",
+              doneCount === steps.length && "text-success",
+            )}
+          >
+            {doneCount}/{steps.length}
+          </span>
         </span>
       ) : null}
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -560,11 +652,6 @@ function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lif
         {task.comments.length ? (
           <span>
             {task.comments.length} Kommentar{task.comments.length === 1 ? "" : "e"}
-          </span>
-        ) : null}
-        {task.checklist.total ? (
-          <span className={cn(task.checklist.done === task.checklist.total && "text-success")}>
-            ☑ {task.checklist.done}/{task.checklist.total}
           </span>
         ) : null}
       </span>

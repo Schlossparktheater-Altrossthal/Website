@@ -2,13 +2,14 @@ import type {
   DepartmentMembershipRole,
   Prisma,
   ProductionObjectKind,
+  StepUndoScope,
   TaskPriority,
   TaskStatus,
 } from "@prisma/client";
 
 import { earliestFor, nextRehearsalByScene } from "@/lib/ausstattung/rehearsals";
-import type { HandoverState } from "@/lib/departments/activity-format";
-import { HANDOVER_TASK_SELECT, toHandoverState } from "@/lib/departments/handover";
+import type { HandoverState, WorkState } from "@/lib/departments/activity-format";
+import { WORK_TASK_SELECT, toHandoverState, toWorkState } from "@/lib/departments/handover";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -81,6 +82,8 @@ export type BoardTask = {
   checklist: { done: number; total: number };
   /** Stand für die Übergabe: Nächster Schritt, Achtung, „Ich bin dran“. */
   handover: HandoverState;
+  /** Arbeitsblock: Status und Schritte. */
+  work: WorkState;
   /** Andere haben seit dem letzten Besuch etwas geändert. */
   hasNews: boolean;
 };
@@ -109,6 +112,8 @@ export type BoardData = {
   departmentId: string;
   /** Hinweise und „Achtung“ darf die angemeldete Person pflegen. */
   canEditNotes: boolean;
+  /** Wer abgehakte Schritte wieder öffnen darf. */
+  stepUndo: StepUndoScope;
   /** Heute als `YYYY-MM-DD` (Europe/Berlin), für „überfällig“. */
   today: string;
   columns: BoardColumn[];
@@ -139,7 +144,12 @@ const USER_SELECT = {
 
 export async function loadBoard(
   departmentId: string,
-  options: { viewerId?: string; since?: Date | null; canEditNotes?: boolean } = {},
+  options: {
+    viewerId?: string;
+    since?: Date | null;
+    canEditNotes?: boolean;
+    stepUndo?: StepUndoScope;
+  } = {},
 ): Promise<BoardData> {
   await ensureBoardColumns(departmentId);
   const department = await prisma.department.findUnique({
@@ -156,7 +166,7 @@ export async function loadBoard(
       where: { departmentId },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       select: {
-        id: true,
+        ...WORK_TASK_SELECT,
         columnId: true,
         status: true,
         title: true,
@@ -170,8 +180,6 @@ export async function loadBoard(
           orderBy: { createdAt: "asc" },
           select: { id: true, body: true, createdAt: true, author: { select: USER_SELECT } },
         },
-        checklist: { select: { doneAt: true } },
-        ...HANDOVER_TASK_SELECT,
         object: {
           select: {
             id: true,
@@ -273,6 +281,7 @@ export async function loadBoard(
         total: task.checklist.length,
       },
       handover: toHandoverState(task),
+      work: toWorkState(task),
       hasNews: newsIds.has(task.id),
     });
   }
@@ -280,6 +289,7 @@ export async function loadBoard(
   return {
     departmentId,
     canEditNotes: options.canEditNotes ?? false,
+    stepUndo: options.stepUndo ?? "all",
     today: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
     columns: board,
     members: memberships

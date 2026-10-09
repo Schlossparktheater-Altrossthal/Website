@@ -2,6 +2,7 @@ import type {
   DepartmentEditorScope,
   HandoverPushScope,
   Prisma,
+  StepUndoScope,
   TaskActivityType,
 } from "@prisma/client";
 
@@ -10,6 +11,7 @@ import {
   describeActivity,
   type ActivityEntry,
   type HandoverState,
+  type WorkState,
 } from "@/lib/departments/activity-format";
 import type { BoardAccess } from "@/lib/departments/board";
 import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
@@ -164,6 +166,71 @@ export function toHandoverState(row: HandoverRow): HandoverState {
   };
 }
 
+export const WORK_TASK_SELECT = {
+  id: true,
+  status: true,
+  ...HANDOVER_TASK_SELECT,
+  checklist: {
+    orderBy: { position: "asc" },
+    select: { id: true, text: true, doneAt: true, doneById: true, doneBy: { select: USER_SELECT } },
+  },
+} as const;
+
+type WorkRow = Prisma.DepartmentTaskGetPayload<{ select: typeof WORK_TASK_SELECT }>;
+
+export function toWorkState(row: WorkRow): WorkState {
+  return {
+    taskId: row.id,
+    status: row.status,
+    handover: toHandoverState(row),
+    steps: row.checklist.map((item) => ({
+      id: item.id,
+      text: item.text,
+      done: Boolean(item.doneAt),
+      doneById: item.doneById,
+      doneBy: personName(item.doneBy),
+      doneAt: item.doneAt?.toISOString() ?? null,
+    })),
+  };
+}
+
+export async function loadWorkState(taskId: string): Promise<WorkState | null> {
+  const row = await prisma.departmentTask.findUnique({
+    where: { id: taskId },
+    select: WORK_TASK_SELECT,
+  });
+  return row ? toWorkState(row) : null;
+}
+
+export type FeedEntry = ActivityEntry & { comment: boolean };
+
+/** Notizen (Kommentare) und Verlauf einer Karte in einer Zeitleiste, neueste zuerst. */
+export async function loadTaskFeed(taskId: string): Promise<FeedEntry[]> {
+  const [activity, comments] = await Promise.all([
+    loadTaskActivity(taskId, 60),
+    prisma.departmentTaskComment.findMany({
+      where: { taskId },
+      orderBy: { createdAt: "desc" },
+      take: 60,
+      select: { id: true, body: true, createdAt: true, author: { select: USER_SELECT } },
+    }),
+  ]);
+  return [
+    // Kommentare stehen mit vollem Text im Feed, nicht als gekürzter Verlaufseintrag.
+    ...activity
+      .filter((entry) => entry.type !== "comment")
+      .map((entry) => ({ ...entry, comment: false })),
+    ...comments.map((comment) => ({
+      id: comment.id,
+      type: "comment" as const,
+      actor: personName(comment.author),
+      text: comment.body,
+      at: comment.createdAt.toISOString(),
+      comment: true,
+    })),
+  ].sort((a, b) => b.at.localeCompare(a.at));
+}
+
 export async function loadTaskHandover(taskId: string): Promise<HandoverState | null> {
   const row = await prisma.departmentTask.findUnique({
     where: { id: taskId },
@@ -178,16 +245,18 @@ export async function loadTaskHandover(taskId: string): Promise<HandoverState | 
 export type HandoverSettings = {
   handoverPush: HandoverPushScope;
   noteEditors: DepartmentEditorScope;
+  stepUndo: StepUndoScope;
 };
 
 export async function loadHandoverSettings(departmentId: string): Promise<HandoverSettings> {
   const department = await prisma.department.findUnique({
     where: { id: departmentId },
-    select: { handoverPush: true, noteEditors: true },
+    select: { handoverPush: true, noteEditors: true, stepUndo: true },
   });
   return {
     handoverPush: department?.handoverPush ?? "leads",
     noteEditors: department?.noteEditors ?? "all",
+    stepUndo: department?.stepUndo ?? "all",
   };
 }
 

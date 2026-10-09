@@ -39,10 +39,10 @@ import {
 } from "@/lib/ausstattung/constants";
 import type { ObjectDetail, ObjectListItem, StageData } from "@/lib/ausstattung/objects";
 import { resizeImageFile } from "@/lib/inventory/photo-client";
-import type { HandoverState } from "@/lib/departments/activity-format";
+import type { WorkState } from "@/lib/departments/activity-format";
 import { cn } from "@/lib/utils";
 
-import { TaskHandover } from "../handover/task-handover";
+import { TaskWork, type WorkPermissions } from "../handover/task-work";
 import {
   addChecklistItemAction,
   addObjectPhotoAction,
@@ -80,7 +80,7 @@ type Props = {
   /** Board und Maße des Gewerks öffnen (Mitglieder, Regie/Board). */
   canOpenTeam: boolean;
   /** Stand der Karte für die Übergabe (Nächster Schritt, Achtung, „Ich bin dran“). */
-  handover?: { state: HandoverState; viewerId: string; canEditCaution: boolean } | null;
+  work?: { state: WorkState; perms: WorkPermissions } | null;
 };
 
 export function ObjectEditor({
@@ -92,8 +92,9 @@ export function ObjectEditor({
   showObjects,
   inventory,
   canOpenTeam,
-  handover,
+  work,
 }: Props) {
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
   const run = useAction();
   const router = useRouter();
   const [confirm, setConfirm] = React.useState<"delete" | null>(null);
@@ -118,21 +119,23 @@ export function ObjectEditor({
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <SegmentedControl<ProductionObjectStatus>
-          aria-label="Status"
-          size="md"
-          value={object.status}
-          onValueChange={(status) =>
-            canEdit
-              ? void run(() => setObjectStatusAction({ objectId: object.id, status }))
-              : undefined
-          }
-          options={OBJECT_STATUSES.map((value) => ({
-            value,
-            label: OBJECT_STATUS_LABELS[value],
-            disabled: !canEdit,
-          }))}
-        />
+        {work ? null : (
+          <SegmentedControl<ProductionObjectStatus>
+            aria-label="Status"
+            size="md"
+            value={object.status}
+            onValueChange={(status) =>
+              canEdit
+                ? void run(() => setObjectStatusAction({ objectId: object.id, status }))
+                : undefined
+            }
+            options={OBJECT_STATUSES.map((value) => ({
+              value,
+              label: OBJECT_STATUS_LABELS[value],
+              disabled: !canEdit,
+            }))}
+          />
+        )}
         {object.taskId && canOpenTeam ? (
           <Link
             href={`${basePath}?ansicht=aufgaben&karte=${object.taskId}`}
@@ -143,19 +146,37 @@ export function ObjectEditor({
         ) : null}
       </div>
 
-      {handover && object.taskId ? (
-        <TaskHandover
-          taskId={object.taskId}
-          state={handover.state}
-          viewerId={handover.viewerId}
-          canEdit={canEdit}
-          canEditCaution={handover.canEditCaution}
-        />
+      {work ? (
+        <section className="rounded-lg border border-border bg-card px-3 py-3 sm:px-4">
+          <TaskWork work={work.state} perms={work.perms} />
+        </section>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="space-y-4">
-          <DetailsForm object={object} canEdit={canEdit} />
+          {detailsOpen || !work ? (
+            <DetailsForm object={object} canEdit={canEdit} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(true)}
+              className="block w-full space-y-1 rounded-lg border border-border bg-card px-3 py-3 text-left hover:bg-muted/40 sm:px-4"
+            >
+              <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                Beschreibung & Details
+                <span className="text-xs font-normal text-primary">
+                  {canEdit ? "Bearbeiten" : "Anzeigen"}
+                </span>
+              </span>
+              <span className="line-clamp-3 block whitespace-pre-wrap text-sm text-muted-foreground">
+                {object.description ||
+                  [OBJECT_SOURCE_LABELS[object.source], object.dimensions, object.material]
+                    .filter(Boolean)
+                    .join(" · ") ||
+                  "Noch keine Beschreibung."}
+              </span>
+            </button>
+          )}
           <ScenesSection object={object} stage={stage} canEdit={canEdit} />
           {object.kind === "costume" ? (
             <PartsSection
@@ -195,7 +216,7 @@ export function ObjectEditor({
         </div>
         <div className="space-y-4">
           <PhotosSection object={object} canEdit={canEdit} />
-          <ChecklistSection object={object} canEdit={canEdit} />
+          {work ? null : <ChecklistSection object={object} canEdit={canEdit} />}
           {object.kind === "costume" || object.kind === "prop" ? (
             <RolesSection object={object} stage={stage} canEdit={canEdit} basePath={basePath} />
           ) : null}

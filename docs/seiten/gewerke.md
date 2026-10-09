@@ -8,7 +8,7 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben).
 
 - `/mitglieder/meine-gewerke` – „Meine Teams“: Karten der eigenen Gewerke der aktiven Produktion (Regie/Board sehen zusätzlich alle weiteren)
 - `/mitglieder/blaupausen` – Blaupausen-Verwaltung (Liste links, Editor rechts; mobil Liste → Sheet): Allgemein, Bausteine, Rechte je Rolle, Onboarding
-- `/mitglieder/meine-gewerke/[slug]` – Gewerk-Portal mit `?ansicht=` Übersicht (Als Nächstes) / aufgaben / termine / team; sichtbar für aktive Mitglieder des Gewerks und Regie/Board
+- `/mitglieder/meine-gewerke/[slug]` – Gewerk-Portal mit `?ansicht=` Vor Ort (Standard) / aufgaben / termine / team; sichtbar für aktive Mitglieder des Gewerks und Regie/Board
 
 ## Permissions
 
@@ -44,6 +44,14 @@ Zeigt den Mitgliedern ihre zugeordneten Gewerke (Abteilungen/Aufgaben).
 - Leitungen: Wer ein Gewerk leitet, sieht „Teams & Zuweisung“ im Menü (auch ohne Produktionsrecht), startet in der Gewerke-Ansicht und sieht nur die eigenen Gewerke. Eine Person kann in einem Gewerk Leitung und in anderen Mitglied sein. Die Leitung ernennen nur Regie/Board.
 - Keine automatische Zuteilung aus Wünschen: Wünsche sind nur Vorschläge, Zugehörigkeit entsteht ausschließlich durch Zuweisung oder angenommene Anfrage. Wer aktiv in einem Gewerk ist, erhält die Gewerkeplanung (`PRIVATE.DEPARTMENT.OWN.VIEW`) direkt aus der Zugehörigkeit.
 - Aufgaben-Board (`?ansicht=aufgaben`): Spalten pro Gewerk (Standard Offen/In Arbeit/Review/Erledigt, anpassbar), jede Spalte „zählt als“ offen/in Arbeit/erledigt und setzt damit `DepartmentTask.status`. Mitglieder legen an, bearbeiten, verschieben und kommentieren; Gäste lesen nur; Leitung, Vertretung und Regie verwalten Spalten und löschen fremde Aufgaben. Zuständige werden benachrichtigt. Code: `src/lib/departments/board.ts`, `meine-gewerke/board-actions.ts`, `meine-gewerke/board/`.
+
+## Vor Ort und Übergabe (`docs/Plan/uebergabe-plan.md`)
+
+- Startreiter „Vor Ort“: „+ Aufgabe“ (Titel + Schritte, eine Zeile je Schritt) und „Feierabend“, angepinnte Hinweise, letzte Übergabe, „Gerade dran“ (in Arbeit, jemand ist dran, Achtung oder neu – mit offenen Schritten zum Abhaken), einklappbar „Seit deinem letzten Besuch“, darunter eigene Termine und Aufgaben.
+- Karte (Board und Ausstattungsstück): Arbeitsblock oben – Status Offen/In Arbeit/Fertig (erste Spalte mit diesem Status), „Ich bin dran“ (12 h), „Achtung“, Schritte (erster offener = „Als Nächstes“, Liste einfügen = mehrere Schritte), Notizen & Verlauf. Frist, Zuständige, Meilenstein, Beschreibung unter „Details“. Board-Kachel hakt den nächsten Schritt direkt ab.
+- „Seit deinem letzten Besuch“: neuer Besuch nach 30 min Pause (`DepartmentVisit`); Verlauf in `TaskActivity`, mitgeschrieben in allen Karten-/Objekt-Aktionen (`logTaskActivity`/`logObjectActivity`).
+- Einstellungen (Leitung/Vertretung): Push bei Feierabend (niemand/Leitung/alle), wer Hinweise und Achtung pflegt, wer abgehakte Schritte wieder öffnen darf.
+- Code: `src/lib/departments/handover.ts`, `activity-format.ts`, `meine-gewerke/handover-actions.ts`, `meine-gewerke/handover/`.
 
 ## Termine (`?ansicht=termine`)
 
