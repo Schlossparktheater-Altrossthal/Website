@@ -27,11 +27,19 @@ export type ScenePlanRow = {
   planned: number;
   lastDone: string | null;
   nextPlanned: string | null;
-  /** Länger als {@link STALE_DAYS} Tage nicht geprobt und nichts angesetzt. */
-  stale: boolean;
+  /** Szenenproben der Produktion seit dem letzten Mal (nie geprobt: alle bisherigen). */
+  rehearsalsSince: number;
+  /** Tage seit dem letzten Mal, null wenn nie geprobt. */
+  daysSince: number | null;
+  /**
+   * Hinkt hinterher – gemessen am Probenrhythmus der Produktion, nicht an festen Tagen:
+   * `long` = seit {@link LONG_AGO_REHEARSALS} Szenenproben nicht dran und nichts angesetzt,
+   * `rare` = weniger als halb so oft geprobt wie der Schnitt.
+   */
+  behind: ("long" | "rare")[];
 };
 
-export const STALE_DAYS = 14;
+export const LONG_AGO_REHEARSALS = 3;
 const WEEKS_BEFORE = 4;
 const DEFAULT_WEEKS_AFTER = 8;
 const MAX_WEEKS = 20;
@@ -89,6 +97,10 @@ export function buildScenePlan({
   });
   const weekIndex = new Map(weeks.map((week, index) => [week.from, index]));
 
+  // Bisherige Szenenproben der Produktion (Tage), Maßstab für „lange her“.
+  const pastRehearsals = [
+    ...new Map(entries.filter((entry) => entry.done).map((e) => [e.eventId, e.dayKey])).values(),
+  ];
   const rows: ScenePlanRow[] = scenes.map((scene) => {
     const own = entries.filter((entry) => entry.sceneId === scene.id);
     const cells: ScenePlanCell[] = weeks.map(() => ({ done: 0, planned: 0, dayKeys: [] }));
@@ -111,8 +123,20 @@ export function buildScenePlan({
       planned: plannedKeys.length,
       lastDone,
       nextPlanned,
-      stale: !nextPlanned && (!lastDone || daysBetween(lastDone, todayKey) > STALE_DAYS),
+      rehearsalsSince: pastRehearsals.filter((key) => !lastDone || key > lastDone).length,
+      daysSince: lastDone ? daysBetween(lastDone, todayKey) : null,
+      behind: [],
     };
   });
-  return { weeks, rows };
+
+  const averageDone = rows.length ? rows.reduce((sum, row) => sum + row.done, 0) / rows.length : 0;
+  for (const row of rows) {
+    if (!row.nextPlanned && row.rehearsalsSince >= LONG_AGO_REHEARSALS) row.behind.push("long");
+    if (averageDone >= 2 && row.done < averageDone / 2) row.behind.push("rare");
+  }
+  return {
+    weeks,
+    rows,
+    summary: { rehearsals: pastRehearsals.length, averageDone },
+  };
 }

@@ -62,7 +62,7 @@ Rollen ohne Besetzung zählen nicht als fehlend (sonst wäre jede Szene rot), we
 
 - **Szenen-Plan** (neue Ansicht „Szenen“ neben Kalender/Liste): Szenen als Zeilen, Wochen bis zur
   Premiere als Spalten; Zelle = geprobt (✓ Anzahl) / angesetzt / leer, Spalte „zuletzt“ und
-  Warnung „seit 14 Tagen nicht“. Klick auf eine Zelle springt in den Kalender der Woche. Mobil: Liste
+  Warnung „hinkt hinterher“ – gemessen am Probenrhythmus (E5). Klick auf eine Zelle springt in den Kalender der Woche. Mobil: Liste
   pro Szene mit Mini-Zeitleiste. Ersetzt die zugeklappte Karte „Szenen-Stand“.
 - **Personen-Woche** (Ansicht „Personen“): Personen als Zeilen, Tage einer Woche als Spalten;
   Zelle = Probe (eingeladen/abgesagt), Sperre, eingeschränkt, frei; Summe pro Person rechts. Mobil:
@@ -87,6 +87,10 @@ Rollen ohne Besetzung zählen nicht als fehlend (sonst wäre jede Szene rot), we
 - E2: Zweitbesetzung/Cover macht eine Szene „mit Zweitbesetzung“, nicht „vollständig“.
 - E3: Woche = Kalenderwoche Mo–So (Europe/Berlin); gezählt werden angesetzte und vorgemerkte Termine.
 - E4: Keine Migration nötig; alle Daten existieren.
+- E5 (2026-10-09, User): Keine festen 14 Tage – viele Produktionen proben nur alle ein bis zwei
+  Wochen. „Lange nicht dran“ = seit 3 Szenenproben der Produktion nicht geprobt und nichts
+  angesetzt; „selten“ = weniger als halb so oft geprobt wie der Schnitt aller Szenen. Pro Szene:
+  „zuletzt vor N Proben (Datum, vor X Tagen)“.
 
 ## Checkliste
 

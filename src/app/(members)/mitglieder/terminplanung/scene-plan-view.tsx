@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   buildScenePlan,
-  STALE_DAYS,
+  LONG_AGO_REHEARSALS,
   type ScenePlanCell,
   type ScenePlanEntry,
   type ScenePlanRow,
@@ -36,12 +36,23 @@ function sceneTitle(label: string) {
   return label.split(" ").slice(2).join(" ");
 }
 
+function describeSince(row: ScenePlanRow) {
+  if (!row.lastDone) return "noch nie";
+  const when =
+    row.rehearsalsSince === 0
+      ? "in der letzten Probe"
+      : `vor ${row.rehearsalsSince} ${row.rehearsalsSince === 1 ? "Probe" : "Proben"}`;
+  const days = row.daysSince === 1 ? "1 Tag" : `${row.daysSince} Tage`;
+  return `zuletzt ${when} (${formatKey(row.lastDone)}, vor ${days})`;
+}
+
 function describeRow(row: ScenePlanRow) {
-  const parts = [`${row.done}× geprobt`];
-  if (row.lastDone) parts.push(`zuletzt ${formatKey(row.lastDone)}`);
+  const parts = [`${row.done}× geprobt`, describeSince(row)];
   if (row.nextPlanned) parts.push(`nächste ${formatKey(row.nextPlanned)}`);
   return parts.join(" · ");
 }
+
+const BEHIND_LABEL = { long: "lange nicht dran", rare: "selten geprobt" } as const;
 
 function Cell({
   cell,
@@ -88,24 +99,49 @@ export function ScenePlanView({
   todayKey: string;
   onOpenDay: (dayKey: string) => void;
 }) {
-  const { weeks, rows } = useMemo(() => buildScenePlan({ ...data, todayKey }), [data, todayKey]);
-  const stale = rows.filter((row) => row.stale);
+  const { weeks, rows, summary } = useMemo(
+    () => buildScenePlan({ ...data, todayKey }),
+    [data, todayKey],
+  );
+  const behind = rows.filter((row) => row.behind.length);
 
   return (
     <div className="space-y-4">
       <Card variant="plain" size="flush" className="border-border p-4">
-        <p className="text-sm text-muted-foreground">
-          {stale.length ? (
-            <>
-              <span className="font-medium text-warning">
-                {stale.length} {stale.length === 1 ? "Szene" : "Szenen"} seit über {STALE_DAYS}{" "}
-                Tagen nicht geprobt und nicht angesetzt:
-              </span>{" "}
-              {stale.map((row) => sceneNumber(row.label)).join(", ")}
-            </>
-          ) : (
-            "Alle Szenen sind in den letzten zwei Wochen geprobt oder angesetzt."
-          )}
+        <p className="text-sm">
+          <span className="font-medium">
+            Bisher {summary.rehearsals} {summary.rehearsals === 1 ? "Szenenprobe" : "Szenenproben"}
+          </span>
+          <span className="text-muted-foreground">
+            {" "}
+            · jede Szene im Schnitt{" "}
+            {summary.averageDone.toLocaleString("de-DE", {
+              maximumFractionDigits: 1,
+            })}
+            × geprobt
+          </span>
+        </p>
+        {behind.length ? (
+          <ul className="mt-2 space-y-1 text-sm">
+            {behind.map((row) => (
+              <li key={row.sceneId} className="flex flex-wrap gap-x-2">
+                <span className="font-medium text-warning">
+                  {sceneNumber(row.label)} {sceneTitle(row.label)}
+                </span>
+                <span className="text-muted-foreground">
+                  {row.behind.map((reason) => BEHIND_LABEL[reason]).join(", ")} · {row.done}× ·{" "}
+                  {describeSince(row)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">Keine Szene hinkt hinterher.</p>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Gemessen an euren Proben, nicht an Kalendertagen: „lange nicht dran“ = seit{" "}
+          {LONG_AGO_REHEARSALS} Szenenproben nicht geprobt und nichts angesetzt, „selten“ = weniger
+          als halb so oft wie der Schnitt.
         </p>
         <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
@@ -160,7 +196,7 @@ export function ScenePlanView({
                     <span
                       className={cn(
                         "block text-xs",
-                        row.stale ? "text-warning" : "text-muted-foreground",
+                        row.behind.length ? "text-warning" : "text-muted-foreground",
                       )}
                     >
                       {describeRow(row)}
@@ -191,7 +227,12 @@ export function ScenePlanView({
             <li key={row.sceneId} className="space-y-2 p-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{row.label}</p>
-                <p className={cn("text-xs", row.stale ? "text-warning" : "text-muted-foreground")}>
+                <p
+                  className={cn(
+                    "text-xs",
+                    row.behind.length ? "text-warning" : "text-muted-foreground",
+                  )}
+                >
                   {describeRow(row)}
                 </p>
               </div>

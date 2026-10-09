@@ -16,9 +16,7 @@ test.describe("als admin", () => {
     test.skip((await scenes.count()) === 0, "Aktive Produktion ohne Szenen");
 
     await clickUntil(scenes, () => expect(page).toHaveURL(/ansicht=szenen/, { timeout: 2_000 }));
-    await expect(
-      page.getByText(/geprobt oder angesetzt|nicht geprobt und nicht angesetzt/),
-    ).toBeVisible();
+    await expect(page.getByText(/Bisher \d+ Szenenprobe/)).toBeVisible();
 
     await page.getByRole("radio", { name: "Personen" }).click();
     await expect(page).toHaveURL(/ansicht=personen/);
