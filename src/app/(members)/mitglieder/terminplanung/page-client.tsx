@@ -423,7 +423,6 @@ export function EventPlanningClient({
                     day={model.dayMap.get(key)}
                     entries={(model.entriesByDay.get(key) ?? []) as PlanningEvent[]}
                     counts={model.countsByDay.get(key)}
-                    total={members.length}
                   />
                 ) : (
                   <>
@@ -491,18 +490,16 @@ function shortTitle(title: string) {
 
 /**
  * Tagesfeld am Desktop: Uhrzeit und (gekürzter) Titel zweizeilig statt abgeschnitten, darunter
- * ein Balken, wie viele laut Sperrliste können.
+ * Punkte mit der Zahl, wie viele laut Sperrliste nicht bzw. eingeschränkt können.
  */
 function PlanningCellDetails({
   day,
   entries,
   counts,
-  total,
 }: {
   day: ReturnType<ReturnType<typeof useCalendarModel>["dayMap"]["get"]>;
   entries: PlanningEvent[];
   counts: { blocked: number; limited: number } | undefined;
-  total: number;
 }) {
   const holiday = day?.holidays.find((entry) => entry.category === "publicHoliday");
   return (
@@ -536,20 +533,14 @@ function PlanningCellDetails({
       {holiday ? (
         <span className="truncate px-1 text-[0.6875rem] text-warning">{holiday.title}</span>
       ) : null}
-      {counts && (counts.blocked || counts.limited) ? (
-        <AvailabilityBar
-          total={total}
-          blocked={counts.blocked}
-          limited={counts.limited}
-          showCount={false}
-          className="mt-auto px-1 pt-1"
-        />
-      ) : null}
+      <span className="mt-auto pt-1">
+        <DayCellCounts counts={counts} />
+      </span>
     </span>
   );
 }
 
-/** Kurzform am Desktop: wie viele an dem Tag nicht bzw. eingeschränkt können. */
+/** Kurzform in der Tageszelle: wie viele an dem Tag nicht bzw. eingeschränkt können. */
 function DayCellCounts({ counts }: { counts: { blocked: number; limited: number } | undefined }) {
   if (!counts || (!counts.blocked && !counts.limited)) return null;
   return (
