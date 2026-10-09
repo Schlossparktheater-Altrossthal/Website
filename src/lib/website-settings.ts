@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { randomUUID } from "crypto";
 
 import { prisma } from "@/lib/prisma";
@@ -332,6 +333,9 @@ export async function readWebsiteSettings() {
     include: { theme: true },
   });
 }
+
+/** Für Layouts: Root- und Mitglieder-Layout lesen die Einstellungen nur einmal pro Request. */
+export const readWebsiteSettingsCached = cache(readWebsiteSettings);
 
 export async function ensureWebsiteTheme(preferredId?: string | null) {
   if (preferredId) {

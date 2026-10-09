@@ -7,6 +7,17 @@ const globalForPrisma = globalThis as typeof globalThis & {
   pgPool?: Pool;
 };
 
+function createQueryLoggingClient(adapter: PrismaPg): PrismaClient {
+  const client = new PrismaClient({
+    adapter,
+    log: [{ emit: "event", level: "query" }, "error", "warn"],
+  });
+  client.$on("query", (event) => {
+    console.debug(`[prisma] ${event.duration}ms ${event.query.replace(/\s+/g, " ").slice(0, 160)}`);
+  });
+  return client;
+}
+
 function getPrismaClient(): PrismaClient {
   if (!globalForPrisma.prisma) {
     if (!process.env.DATABASE_URL) {
@@ -18,10 +29,11 @@ function getPrismaClient(): PrismaClient {
     }
 
     const adapter = new PrismaPg(globalForPrisma.pgPool);
-    globalForPrisma.prisma = new PrismaClient({
-      adapter,
-      log: ["error", "warn"],
-    });
+    // PRISMA_QUERY_LOG=1: jede Abfrage mit Dauer loggen (zum Profilieren langsamer Seiten)
+    globalForPrisma.prisma =
+      process.env.PRISMA_QUERY_LOG === "1"
+        ? createQueryLoggingClient(adapter)
+        : new PrismaClient({ adapter, log: ["error", "warn"] });
   }
 
   return globalForPrisma.prisma;

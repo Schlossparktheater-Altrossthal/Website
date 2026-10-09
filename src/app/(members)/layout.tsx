@@ -17,7 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { getUserPermissionKeys } from "@/lib/permissions";
 import { hasRole, requireAuth } from "@/lib/rbac";
-import { readWebsiteSettings, resolveWebsiteSettings } from "@/lib/website-settings";
+import { readWebsiteSettingsCached, resolveWebsiteSettings } from "@/lib/website-settings";
 import {
   isMemberPageHidden,
   PAGE_VISIBILITY_BYPASS_PERMISSION,
@@ -94,26 +94,39 @@ export default async function MembersLayout({ children }: { children: React.Reac
   );
 
   const session = await requireAuth();
-  const [permissions, activeProduction, websiteSettingsRecord] = await Promise.all([
-    getUserPermissionKeys(session.user),
-    getActiveProduction(session.user?.id),
-    process.env.DATABASE_URL ? readWebsiteSettings() : Promise.resolve(null),
-  ]);
+  const userId = session.user?.id;
+  // Alles Unabhängige gleichzeitig laden – jede Abfrage kostet eine Runde zur Datenbank.
+  const [permissions, activeProduction, websiteSettingsRecord, assignmentCounts] =
+    await Promise.all([
+      getUserPermissionKeys(session.user),
+      getActiveProduction(session.user?.id),
+      process.env.DATABASE_URL
+        ? readWebsiteSettingsCached().catch((error) => {
+            console.error("Failed to load website settings", error);
+            return null;
+          })
+        : Promise.resolve(null),
+      userId
+        ? Promise.all([
+            prisma.eventParticipant.count({
+              where: {
+                userId,
+                response: { not: null },
+                event: { kind: "REHEARSAL", status: { not: "DRAFT" } },
+              },
+            }),
+            prisma.departmentMembership.count({
+              where: { userId, ...currentDepartmentMembershipWhere() },
+            }),
+            prisma.departmentMembership.count({
+              where: { userId, role: "lead", ...currentDepartmentMembershipWhere() },
+            }),
+          ])
+        : Promise.resolve([0, 0, 0] as const),
+    ]);
   const isBoard = hasRole(session.user, "board");
 
-  let resolvedSettings = resolveWebsiteSettings(null);
-
-  if (process.env.DATABASE_URL) {
-    try {
-      const record = websiteSettingsRecord;
-      if (record) {
-        resolvedSettings = resolveWebsiteSettings(record);
-      }
-    } catch (error) {
-      console.error("Failed to load website settings", error);
-    }
-  }
-
+  const resolvedSettings = resolveWebsiteSettings(websiteSettingsRecord ?? null);
   const siteTitle = resolvedSettings.siteTitle;
 
   // In der Seitensteuerung ausgeblendete Seiten sind nur mit dem Pages-Recht erreichbar.
@@ -127,37 +140,15 @@ export default async function MembersLayout({ children }: { children: React.Reac
     redirect("/mitglieder");
   }
 
+  const [rehearsalAssignments, departmentAssignmentCount, leadAssignments] = assignmentCounts;
+  const isDepartmentLead = leadAssignments > 0;
   let assignmentFocus: AssignmentFocus = "none";
-  const userId = session.user?.id;
-  let departmentAssignmentCount = 0;
-  let isDepartmentLead = false;
-  if (userId) {
-    const [rehearsalAssignments, departmentAssignments, leadAssignments] = await Promise.all([
-      prisma.eventParticipant.count({
-        where: {
-          userId,
-          response: { not: null },
-          event: { kind: "REHEARSAL", status: { not: "DRAFT" } },
-        },
-      }),
-      prisma.departmentMembership.count({
-        where: { userId, ...currentDepartmentMembershipWhere() },
-      }),
-      prisma.departmentMembership.count({
-        where: { userId, role: "lead", ...currentDepartmentMembershipWhere() },
-      }),
-    ]);
-
-    departmentAssignmentCount = departmentAssignments;
-    isDepartmentLead = leadAssignments > 0;
-
-    if (rehearsalAssignments > 0 && departmentAssignments > 0) {
-      assignmentFocus = "both";
-    } else if (departmentAssignments > 0) {
-      assignmentFocus = "departments";
-    } else if (rehearsalAssignments > 0) {
-      assignmentFocus = "rehearsals";
-    }
+  if (rehearsalAssignments > 0 && departmentAssignmentCount > 0) {
+    assignmentFocus = "both";
+  } else if (departmentAssignmentCount > 0) {
+    assignmentFocus = "departments";
+  } else if (rehearsalAssignments > 0) {
+    assignmentFocus = "rehearsals";
   }
 
   const hasDepartmentMemberships = departmentAssignmentCount > 0;

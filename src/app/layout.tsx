@@ -9,7 +9,7 @@ import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
 import { geistSans, geistMono } from "./fonts";
 import {
   DEFAULT_SITE_TITLE,
-  readWebsiteSettings,
+  readWebsiteSettingsCached,
   resolveWebsiteSettings,
 } from "@/lib/website-settings";
 import { cn } from "@/lib/utils";
@@ -81,6 +81,13 @@ export const viewport: Viewport = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Einstellungen parallel zur Session laden statt danach.
+  const settingsPromise = process.env.DATABASE_URL
+    ? readWebsiteSettingsCached().catch((error) => {
+        console.error("Failed to load website settings", error);
+        return null;
+      })
+    : Promise.resolve(null);
   let session: Session | null = null;
   try {
     session = await getSession();
@@ -105,13 +112,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   if (process.env.DATABASE_URL) {
-    try {
-      const record = await readWebsiteSettings();
-      if (record) {
-        resolvedSettings = resolveWebsiteSettings(record);
-      }
-    } catch (error) {
-      console.error("Failed to load website settings", error);
+    const record = await settingsPromise;
+    if (record) {
+      resolvedSettings = resolveWebsiteSettings(record);
     }
   }
 

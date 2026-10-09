@@ -78,6 +78,31 @@ async function resolveActiveSessionId(identifier: SessionIdentifier) {
   return null;
 }
 
+const SESSION_ACTIVITY_INTERVAL_MS = 60_000;
+const MAX_TRACKED_SESSIONS = 5_000;
+const lastSessionActivity = new Map<string, number>();
+
+/**
+ * Höchstens einmal pro Minute und Sitzung (je Pod) die Analytics-Sitzung fortschreiben.
+ * Reicht für Besuchsdauer/„zuletzt gesehen“ und spart einen Schreibzugriff pro Anfrage.
+ */
+export function shouldRecordSessionActivity(
+  analyticsSessionId: string | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  if (typeof analyticsSessionId !== "string" || analyticsSessionId.length < 6) return false;
+  const last = lastSessionActivity.get(analyticsSessionId);
+  if (last !== undefined && now - last < SESSION_ACTIVITY_INTERVAL_MS) return false;
+  if (lastSessionActivity.size >= MAX_TRACKED_SESSIONS) {
+    for (const [id, seen] of lastSessionActivity) {
+      if (now - seen >= SESSION_ACTIVITY_INTERVAL_MS) lastSessionActivity.delete(id);
+    }
+    if (lastSessionActivity.size >= MAX_TRACKED_SESSIONS) lastSessionActivity.clear();
+  }
+  lastSessionActivity.set(analyticsSessionId, now);
+  return true;
+}
+
 export async function recordSessionStart({
   analyticsSessionId,
   userId,

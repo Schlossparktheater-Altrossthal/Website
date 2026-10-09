@@ -19,7 +19,11 @@ import {
   resolveActiveInvite,
 } from "@/lib/onboarding/returnee";
 import { ensureDevTestUser } from "@/lib/dev-auth";
-import { recordSessionEnd, recordSessionStart } from "@/lib/auth/session";
+import {
+  recordSessionEnd,
+  recordSessionStart,
+  shouldRecordSessionActivity,
+} from "@/lib/auth/session";
 import { getAuthSecret } from "@/lib/auth-secret";
 import {
   AUTHENTIK_PROVIDER_ID,
@@ -595,8 +599,12 @@ const authConfig = {
         ? (mutableToken.roles.filter((role): role is Role => typeof role === "string") as Role[])
         : undefined;
 
-      await recordSessionStart({
-        analyticsSessionId: mutableToken.analyticsSessionId ?? null,
+      // Läuft bei jedem auth()-Aufruf – also mehrmals pro Seitenaufruf. Darum gedrosselt und
+      // ohne auf die Datenbank zu warten, sonst bremst die Statistik jede Seite aus.
+      const analyticsSessionId = mutableToken.analyticsSessionId ?? null;
+      if (!shouldRecordSessionActivity(analyticsSessionId)) return;
+      void recordSessionStart({
+        analyticsSessionId,
         userId: typeof mutableToken.id === "string" ? mutableToken.id : null,
         roles,
       });

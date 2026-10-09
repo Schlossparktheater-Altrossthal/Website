@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // Verknüpfte Daten (include/select) per JOIN in einer Abfrage statt einer Runde je Relation
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {

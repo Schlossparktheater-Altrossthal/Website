@@ -645,6 +645,12 @@ export async function hasPermission(
   if (!isKnownPermissionKey(permissionKey)) return false;
 
   const scopedShowId = isProductionScopedPermission(permissionKey) ? options?.showId : null;
+  // Ohne Produktionsbezug: alle Rechte einmal pro Request laden statt je Prüfung eine Abfrage –
+  // Layout und Seiten prüfen oft fünf und mehr Rechte.
+  if (!scopedShowId) {
+    return (await getUserPermissionKeySetCached(user.id)).has(permissionKey);
+  }
+
   const { systemRoles, customRoleIds, departmentIds, hasCasting } = await resolveRoleContext(
     user,
     scopedShowId,
@@ -746,8 +752,21 @@ export async function findUserIdsWithPermission(
   return users.map((user) => user.id);
 }
 
+const getUserPermissionKeySetCached = cache(
+  async (userId: string): Promise<Set<string>> =>
+    new Set(await getUserPermissionKeysCached(userId)),
+);
+
 export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   if (!user?.id) return [];
+  return getUserPermissionKeysCached(user.id);
+}
+
+// Pro Request einmal je Nutzer – die Rechte hängen nur an der Nutzer-ID (Rollen aus der DB).
+const getUserPermissionKeysCached = cache(async function getUserPermissionKeysUncached(
+  userId: string,
+): Promise<string[]> {
+  const user = { id: userId };
 
   const { systemRoles, customRoleIds, departmentIds, hasCasting } = await resolveRoleContext(user);
   const owned = new Set(systemRoles);
@@ -786,7 +805,7 @@ export async function getUserPermissionKeys(user: UserLike): Promise<string[]> {
   }
 
   return DEFAULT_PERMISSION_KEYS.filter((key) => granted.has(key));
-}
+});
 
 export type PermissionSource =
   | { kind: "baseline" }
