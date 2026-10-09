@@ -77,13 +77,13 @@ async function createOpenEvent(page: Page, title: string, day: string) {
   await page.getByLabel("Titel").fill(title);
   await page.locator("#event-date").fill(day);
 
-  // „Gilt für: Alle Produktionen" (sonst gilt der Termin nur der aktiven Produktion) und
+  // „Gehört zu: Keiner Produktion" (sonst gilt der Termin nur der aktiven Produktion) und
   // „Wer ist eingeladen? Alle" – beides ist nötig, damit ihn alle sehen.
-  const scope = page.getByRole("radiogroup", { name: "Gilt für" });
+  const scope = page.getByRole("radiogroup", { name: "Gehört zu" });
   if (await scope.count()) {
-    const everyProduction = scope.getByRole("radio", { name: "Alle Produktionen" });
-    await clickUntil(everyProduction, () =>
-      expect(everyProduction).toHaveAttribute("aria-checked", "true"),
+    const noProduction = scope.getByRole("radio", { name: "Keiner Produktion" });
+    await clickUntil(noProduction, () =>
+      expect(noProduction).toHaveAttribute("aria-checked", "true"),
     );
   }
   const audience = page.getByRole("radiogroup", { name: "Wer ist eingeladen?" });
@@ -319,8 +319,8 @@ test.describe("Meine Termine", () => {
 
       // Mitglieder sehen den Termin weiter – als Ausfall mit Grund, ohne eigene Absage.
       await goto(page, `/mitglieder/termine/${eventId}`);
-      await expect(page.getByText("Dieser Termin fällt aus.")).toBeVisible();
-      await expect(page.getByText(`Grund: ${reason}`)).toBeVisible();
+      await expect(page.getByText("Dieser Termin fällt aus.").first()).toBeVisible();
+      await expect(page.getByText(`Grund: ${reason}`).first()).toBeVisible();
       await expect(page.getByRole("button", { name: "Absagen" })).toHaveCount(0);
       await goto(page, "/mitglieder/meine-proben");
       await expect(rowOf(page, title).first()).toContainText("fällt aus");
@@ -332,7 +332,7 @@ test.describe("Meine Termine", () => {
       );
       await goto(page, `/mitglieder/termine/${eventId}`);
       await expect(page.getByText("Dieser Termin fällt aus.")).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Absagen" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Absagen" }).first()).toBeVisible();
     } finally {
       await cleanup(page, title, eventId);
     }
