@@ -7,6 +7,7 @@ import type {
 
 import { OBJECT_STATUS_FOR_TASK, TASK_STATUS_FOR_OBJECT } from "@/lib/ausstattung/constants";
 import { ensureBoardColumns, requireBoardAccess } from "@/lib/departments/board";
+import { logTaskActivity } from "@/lib/departments/handover";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
@@ -90,7 +91,8 @@ export async function createObjectWithCard(db: Db, input: NewObjectInput) {
     },
     select: { id: true, title: true, departmentId: true },
   });
-  await ensureObjectCard(db, object.id, input.createdById);
+  const taskId = await ensureObjectCard(db, object.id, input.createdById);
+  if (taskId) await logTaskActivity(db, taskId, input.createdById, "created");
   return object;
 }
 

@@ -17,7 +17,12 @@ import {
 import { format } from "date-fns";
 import { de } from "date-fns/locale/de";
 
-import { PlusIcon, SettingsIcon } from "@/components/ui/action-icons";
+import {
+  AlertTriangleIcon,
+  PlusIcon,
+  SettingsIcon,
+  WrenchIcon,
+} from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { OBJECT_KIND_LABELS } from "@/lib/ausstattung/constants";
 import type { BoardColumn, BoardData, BoardTask } from "@/lib/departments/board";
@@ -381,6 +386,8 @@ export function DepartmentBoard({
         objectHref={
           liveTask?.object && basePath ? `${basePath}/objekt/${liveTask.object.id}` : null
         }
+        viewerId={viewerId}
+        canEditCaution={data.canEditNotes}
         onSave={saveTask}
         onDelete={() =>
           liveTask
@@ -498,7 +505,27 @@ function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lif
         lifted && "rotate-1 shadow-lg",
       )}
     >
-      <span className="block text-sm font-medium leading-snug">{task.title}</span>
+      <span className="flex items-start gap-1.5">
+        <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{task.title}</span>
+        {task.hasNews ? (
+          <span
+            className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"
+            title="Neu seit deinem letzten Besuch"
+            aria-label="neu"
+          />
+        ) : null}
+      </span>
+      {task.handover.caution ? (
+        <span className="flex items-start gap-1 rounded-md bg-warning/15 px-2 py-1 text-xs text-warning-foreground">
+          <AlertTriangleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="line-clamp-2">{task.handover.caution.text}</span>
+        </span>
+      ) : null}
+      {task.handover.nextStep ? (
+        <span className="line-clamp-2 block text-xs text-muted-foreground">
+          → {task.handover.nextStep.text}
+        </span>
+      ) : null}
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
         {dueIso ? (
           <span
@@ -519,6 +546,12 @@ function TaskCard({ task, today, lifted }: { task: BoardTask; today: string; lif
           </span>
         ) : null}
         {task.priority === "high" ? <span className="text-destructive">Hoch</span> : null}
+        {task.handover.claim ? (
+          <span className="inline-flex items-center gap-1 font-medium text-info">
+            <WrenchIcon className="h-3 w-3" />
+            {task.handover.claim.name.split(" ")[0]} dran
+          </span>
+        ) : null}
         {task.assignees.length ? (
           <span className="truncate">
             {task.assignees.map((person) => person.name.split(" ")[0]).join(", ")}

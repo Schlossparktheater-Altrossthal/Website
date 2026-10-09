@@ -7,6 +7,7 @@ import { REQUIREMENT_CREATE_PERMISSION } from "@/lib/ausstattung/service";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { loadHandoverSettings, loadTaskHandover } from "@/lib/departments/handover";
 import { loadDepartmentPortal } from "@/lib/departments/portal";
 import { prisma } from "@/lib/prisma";
 
@@ -33,7 +34,7 @@ export default async function ObjektPage({ params }: PageProps) {
   const object = await loadObjectDetail(id);
   if (!object || object.departmentId !== portal.id) notFound();
 
-  const [stage, showObjects, inventory] = await Promise.all([
+  const [stage, showObjects, inventory, handover, settings] = await Promise.all([
     loadStage(object.showId),
     object.kind === "costume" || object.kind === "costume_part"
       ? loadShowObjects(object.showId, ["costume", "costume_part"])
@@ -41,6 +42,8 @@ export default async function ObjektPage({ params }: PageProps) {
     object.inventoryProductId
       ? loadInventory(object.inventoryProductId, object.inventoryAssetId)
       : null,
+    object.taskId ? loadTaskHandover(object.taskId) : null,
+    loadHandoverSettings(portal.id),
   ]);
 
   const basePath = `/mitglieder/meine-gewerke/${encodeURIComponent(portal.slug)}`;
@@ -86,6 +89,15 @@ export default async function ObjektPage({ params }: PageProps) {
         }))}
         inventory={inventory}
         canOpenTeam={Boolean(portal.viewerRole) || isManager}
+        handover={
+          handover && (portal.viewerRole || isManager)
+            ? {
+                state: handover,
+                viewerId: userId,
+                canEditCaution: settings.noteEditors === "leads" ? canManage : canEdit,
+              }
+            : null
+        }
       />
     </div>
   );

@@ -7,6 +7,8 @@ import type {
 } from "@prisma/client";
 
 import { earliestFor, nextRehearsalByScene } from "@/lib/ausstattung/rehearsals";
+import type { HandoverState } from "@/lib/departments/activity-format";
+import { HANDOVER_TASK_SELECT, toHandoverState } from "@/lib/departments/handover";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -77,6 +79,10 @@ export type BoardTask = {
   /** Karte eines Ausstattungsstücks (docs/Plan/ausstattung-plan.md). */
   object: BoardObject | null;
   checklist: { done: number; total: number };
+  /** Stand für die Übergabe: Nächster Schritt, Achtung, „Ich bin dran“. */
+  handover: HandoverState;
+  /** Andere haben seit dem letzten Besuch etwas geändert. */
+  hasNews: boolean;
 };
 
 export type BoardObject = {
@@ -101,6 +107,8 @@ export type BoardColumn = { id: string; name: string; status: TaskStatus; tasks:
 
 export type BoardData = {
   departmentId: string;
+  /** Hinweise und „Achtung“ darf die angemeldete Person pflegen. */
+  canEditNotes: boolean;
   /** Heute als `YYYY-MM-DD` (Europe/Berlin), für „überfällig“. */
   today: string;
   columns: BoardColumn[];
@@ -129,13 +137,16 @@ const USER_SELECT = {
   email: true,
 } as const;
 
-export async function loadBoard(departmentId: string): Promise<BoardData> {
+export async function loadBoard(
+  departmentId: string,
+  options: { viewerId?: string; since?: Date | null; canEditNotes?: boolean } = {},
+): Promise<BoardData> {
   await ensureBoardColumns(departmentId);
   const department = await prisma.department.findUnique({
     where: { id: departmentId },
     select: { showId: true },
   });
-  const [columns, tasks, memberships, milestones] = await Promise.all([
+  const [columns, tasks, memberships, milestones, news] = await Promise.all([
     prisma.departmentBoardColumn.findMany({
       where: { departmentId },
       orderBy: { position: "asc" },
@@ -160,6 +171,7 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
           select: { id: true, body: true, createdAt: true, author: { select: USER_SELECT } },
         },
         checklist: { select: { doneAt: true } },
+        ...HANDOVER_TASK_SELECT,
         object: {
           select: {
             id: true,
@@ -186,7 +198,20 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
           },
         })
       : Promise.resolve([]),
+    options.since && options.viewerId
+      ? prisma.taskActivity.findMany({
+          where: {
+            departmentId,
+            taskId: { not: null },
+            createdAt: { gt: options.since },
+            NOT: { actorId: options.viewerId },
+          },
+          distinct: ["taskId"],
+          select: { taskId: true },
+        })
+      : Promise.resolve([]),
   ]);
+  const newsIds = new Set(news.map((entry) => entry.taskId));
 
   const rehearsals = await nextRehearsalByScene(
     tasks.flatMap((task) => task.object?.scenes.map((entry) => entry.sceneId) ?? []),
@@ -247,11 +272,14 @@ export async function loadBoard(departmentId: string): Promise<BoardData> {
         done: task.checklist.filter((item) => item.doneAt).length,
         total: task.checklist.length,
       },
+      handover: toHandoverState(task),
+      hasNews: newsIds.has(task.id),
     });
   }
 
   return {
     departmentId,
+    canEditNotes: options.canEditNotes ?? false,
     today: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
     columns: board,
     members: memberships

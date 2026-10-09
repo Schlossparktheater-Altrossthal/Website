@@ -36,6 +36,7 @@ export const NOTIFICATION_TYPES = {
   DEPARTMENT_REQUEST: "department-request",
   DEPARTMENT_EVENT: "department-event",
   DEPARTMENT_TASK: "department-task",
+  DEPARTMENT_HANDOVER: "department-handover",
   SCENE_REQUIREMENT: "scene-requirement",
   PLAN_DEADLINE: "plan-deadline",
   CASTING: "casting",
@@ -92,6 +93,12 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   },
   "department-event": { category: "gewerke", kind: "info", priority: "normal", severity: "info" },
   "department-task": { category: "gewerke", kind: "info", priority: "normal", severity: "info" },
+  "department-handover": {
+    category: "gewerke",
+    kind: "info",
+    priority: "normal",
+    severity: "info",
+  },
   "scene-requirement": {
     category: "gewerke",
     kind: "action",

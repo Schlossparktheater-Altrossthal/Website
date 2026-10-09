@@ -30,7 +30,7 @@ import { ensurePermissionDefinitions } from "@/lib/permissions";
 import { recalculateShowPlan } from "@/lib/planning/plan-service";
 import { prisma } from "@/lib/prisma";
 
-import { applyAusstattungDefaults, seedDemoAusstattung } from "./ausstattung";
+import { applyAusstattungDefaults, seedDemoAusstattung, seedDemoUebergabe } from "./ausstattung";
 import { seedDemoLager } from "./lager";
 
 const SHOW_ID = "demo-show-sommernachtstraum";
@@ -1859,6 +1859,7 @@ async function main() {
   const { premiere, finalStart, sceneIds, characterIds } = await seedProductions();
   const departments = await seedDepartments(premiere, finalStart);
   await seedDemoAusstattung(SHOW_ID, characterIds, sceneIds, uid);
+  await seedDemoUebergabe(SHOW_ID, uid);
   const blocked = await seedBlockedDays(premiere);
   await seedEvents(premiere, finalStart, sceneIds, departments, blocked);
   await seedFinalWeek(premiere, finalStart);

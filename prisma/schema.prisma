@@ -207,6 +207,32 @@ model AvailabilityTemplate {
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum HandoverPushScope {
+  none
+  leads
+  all
+}
+
+enum DepartmentEditorScope {
+  all
+  leads
+}
+
+enum TaskActivityType {
+  created
+  column
+  status
+  checklist_added
+  checklist_done
+  checklist_undone
+  comment
+  next_step
+  caution
+  claim
+  photo
+  source
+}
+
 enum TaskStatus {
   todo
   doing
@@ -376,6 +402,15 @@ model User {
   dataPortalAuditLogs             DataPortalAuditLog[]
   createdProductionObjects        ProductionObject[]         @relation("ProductionObjectCreator")
   checkedProductionObjects        ProductionObject[]         @relation("ProductionObjectChecker")
+  taskActivities                  TaskActivity[]             @relation("TaskActivityActor")
+  checklistItemsDone              TaskChecklistItem[]        @relation("ChecklistItemDoneBy")
+  taskNextSteps                   DepartmentTask[]           @relation("DepartmentTaskNextStepBy")
+  taskCautions                    DepartmentTask[]           @relation("DepartmentTaskCautionBy")
+  taskClaims                      DepartmentTask[]           @relation("DepartmentTaskClaimedBy")
+  departmentNotices               DepartmentNotice[]         @relation("DepartmentNoticeAuthor")
+  departmentNoticesResolved       DepartmentNotice[]         @relation("DepartmentNoticeResolver")
+  departmentHandovers             DepartmentHandover[]
+  departmentVisits                DepartmentVisit[]
   requestedSceneRequirements      SceneRequirement[]         @relation("SceneRequirementRequester")
   decidedSceneRequirements        SceneRequirement[]         @relation("SceneRequirementDecider")
 }
@@ -616,11 +651,19 @@ model Department {
   isCore               Boolean                 @default(true)
   requiresJoinApproval Boolean                 @default(false)
   sortOrder            Int                     @default(0)
+  /// Übergabe (docs/Plan/uebergabe-plan.md): wer bei „Feierabend“ eine Push-Nachricht bekommt.
+  handoverPush         HandoverPushScope       @default(leads)
+  /// Wer Hinweise und „Achtung“ setzen/erledigen darf.
+  noteEditors          DepartmentEditorScope   @default(all)
   archivedAt           DateTime?
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
   show                 Show                    @relation(fields: [showId], references: [id], onDelete: Cascade)
   template             DepartmentTemplate      @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  activities           TaskActivity[]
+  notices              DepartmentNotice[]
+  handovers            DepartmentHandover[]
+  visits               DepartmentVisit[]
   memberships          DepartmentMembership[]
   breakdownItems       SceneBreakdownItem[]
   tasks                DepartmentTask[]
@@ -693,9 +736,23 @@ model DepartmentTask {
   dueAt        DateTime?
   /// Zugehöriger Meilenstein im Produktionsplan; ohne eigene Frist gilt dessen Fälligkeit.
   milestoneId  String?
+  /// Stand für die Übergabe: was als Nächstes zu tun ist und worauf zu achten ist.
+  nextStep     String?
+  nextStepById String?
+  nextStepAt   DateTime?
+  caution      String?
+  cautionById  String?
+  cautionAt    DateTime?
+  /// „Ich bin dran“; gilt 12 Stunden.
+  claimedById  String?
+  claimedAt    DateTime?
   createdById  String
   createdAt    DateTime                   @default(now())
   updatedAt    DateTime                   @updatedAt
+  nextStepBy   User?                      @relation("DepartmentTaskNextStepBy", fields: [nextStepById], references: [id], onDelete: SetNull)
+  cautionBy    User?                      @relation("DepartmentTaskCautionBy", fields: [cautionById], references: [id], onDelete: SetNull)
+  claimedBy    User?                      @relation("DepartmentTaskClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)
+  activities   TaskActivity[]
   department   Department                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   milestone    ShowMilestone?             @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   column       DepartmentBoardColumn?     @relation(fields: [columnId], references: [id], onDelete: SetNull)
@@ -3296,6 +3353,7 @@ model ProductionObject {
   /// Kostümteil: Kostüme, in denen es vorkommt.
   partOf             CostumePart[]           @relation("CostumePartOf")
   task               DepartmentTask?
+  activities         TaskActivity[]
   requirements       SceneRequirement[]
   financeEntries     FinanceEntry[]
 
@@ -3393,8 +3451,77 @@ model TaskChecklistItem {
   taskId   String
   text     String
   doneAt   DateTime?
+  doneById String?
   position Int            @default(0)
   task     DepartmentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  doneBy   User?          @relation("ChecklistItemDoneBy", fields: [doneById], references: [id], onDelete: SetNull)
 
   @@index([taskId, position])
+}
+
+/// Verlauf einer Karte bzw. eines Ausstattungsstücks (docs/Plan/uebergabe-plan.md).
+model TaskActivity {
+  id           String            @id @default(cuid())
+  departmentId String
+  taskId       String?
+  objectId     String?
+  actorId      String?
+  type         TaskActivityType
+  /// Typabhängig, z. B. `{ text }`, `{ from, to }`.
+  data         Json?
+  createdAt    DateTime          @default(now())
+  department   Department        @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  task         DepartmentTask?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  object       ProductionObject? @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  actor        User?             @relation("TaskActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([objectId, createdAt])
+}
+
+/// Angepinnter Hinweis für das ganze Gewerk, bis jemand ihn erledigt.
+model DepartmentNotice {
+  id           String     @id @default(cuid())
+  departmentId String
+  body         String
+  authorId     String?
+  createdAt    DateTime   @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  author       User?      @relation("DepartmentNoticeAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  resolvedBy   User?      @relation("DepartmentNoticeResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, resolvedAt])
+}
+
+/// „Feierabend“: Zusammenfassung der eigenen Arbeit für die Nächsten.
+model DepartmentHandover {
+  id           String     @id @default(cuid())
+  departmentId String
+  authorId     String?
+  /// Automatisch: `{ taskId, title, lines[] }[]`.
+  summary      Json
+  note         String?
+  createdAt    DateTime   @default(now())
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  author       User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, createdAt])
+}
+
+/// Letzter Besuch einer Person im Gewerk, für „Seit deinem letzten Besuch“.
+model DepartmentVisit {
+  id           String     @id @default(cuid())
+  departmentId String
+  userId       String
+  /// Zuletzt gesehen (laufender Besuch).
+  lastSeenAt   DateTime
+  /// Bezugspunkt für „neu“: Ende des vorigen Besuchs.
+  previousAt   DateTime?
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([departmentId, userId])
 }

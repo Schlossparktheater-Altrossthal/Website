@@ -338,3 +338,105 @@ export async function seedDemoAusstattung(
     });
   }
 }
+
+/** Übergabe-Beispiel (docs/Plan/uebergabe-plan.md): Ole hat gestern an der Laube gearbeitet. */
+export async function seedDemoUebergabe(showId: string, uid: (key: string) => string) {
+  const department = await prisma.department.findFirst({
+    where: { showId, slug: "buehnenbau" },
+    select: { id: true },
+  });
+  const task = await prisma.departmentTask.findFirst({
+    where: { departmentId: department?.id, object: { title: "Laube für Titania" } },
+    select: {
+      id: true,
+      objectId: true,
+      checklist: { select: { id: true, text: true, doneAt: true } },
+    },
+  });
+  if (!department || !task) return;
+  // Angelegt wurden die Stücke beim Seed; im Verlauf sollen sie nicht als „heute“ erscheinen.
+  await prisma.taskActivity.updateMany({
+    where: { department: { showId }, type: "created" },
+    data: { createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
+  });
+  const ole = uid("ole");
+  const evening = new Date();
+  evening.setDate(evening.getDate() - 1);
+  evening.setHours(18, 40, 0, 0);
+  const at = (minutes: number) => new Date(evening.getTime() - minutes * 60_000);
+
+  const done = task.checklist.filter((item) => item.doneAt);
+  await prisma.taskChecklistItem.updateMany({
+    where: { id: { in: done.map((item) => item.id) } },
+    data: { doneById: ole },
+  });
+  await prisma.departmentTask.update({
+    where: { id: task.id },
+    data: {
+      nextStep: "Ruten flechten: rechte Seite ist halb fertig, links neu anfangen.",
+      nextStepById: ole,
+      nextStepAt: at(5),
+      caution:
+        "Rostschutz am Gestell trocknet bis morgen Mittag – nicht anfassen, nichts anlehnen!",
+      cautionById: ole,
+      cautionAt: at(4),
+    },
+  });
+  const base = {
+    departmentId: department.id,
+    taskId: task.id,
+    objectId: task.objectId,
+    actorId: ole,
+  };
+  await prisma.taskActivity.createMany({
+    data: [
+      ...done.slice(-2).map((item, index) => ({
+        ...base,
+        type: "checklist_done" as const,
+        data: { text: item.text },
+        createdAt: at(120 - index * 30),
+      })),
+      { ...base, type: "photo" as const, createdAt: at(20) },
+      {
+        ...base,
+        type: "next_step" as const,
+        data: { text: "Ruten flechten: rechte Seite ist halb fertig, links neu anfangen." },
+        createdAt: at(5),
+      },
+      {
+        ...base,
+        type: "caution" as const,
+        data: {
+          text: "Rostschutz am Gestell trocknet bis morgen Mittag – nicht anfassen, nichts anlehnen!",
+        },
+        createdAt: at(4),
+      },
+    ],
+  });
+  await prisma.departmentHandover.create({
+    data: {
+      departmentId: department.id,
+      authorId: ole,
+      createdAt: evening,
+      note: "Pinsel liegen eingeweicht im blauen Eimer. Tacker braucht neue Klammern.",
+      summary: [
+        {
+          taskId: task.id,
+          title: "Laube für Titania",
+          lines: [
+            ...done.slice(-2).map((item) => `hat „${item.text}“ abgehakt`),
+            "Nächster Schritt: Ruten flechten: rechte Seite ist halb fertig, links neu anfangen.",
+          ],
+        },
+      ],
+    },
+  });
+  await prisma.departmentNotice.create({
+    data: {
+      departmentId: department.id,
+      authorId: uid("jonas"),
+      body: "Werkstattschlüssel liegt ab sofort im Schlüsselkasten am Hintereingang (Code beim Leitungsteam).",
+      createdAt: at(60 * 24),
+    },
+  });
+}

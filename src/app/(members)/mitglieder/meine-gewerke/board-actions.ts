@@ -6,6 +6,7 @@ import { z } from "zod";
 import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
 import { syncObjectFromTask } from "@/lib/ausstattung/service";
 import { requireBoardAccess } from "@/lib/departments/board";
+import { logTaskActivity } from "@/lib/departments/handover";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
@@ -38,7 +39,7 @@ async function loadTask(taskId: string) {
 async function assertColumn(departmentId: string, columnId: string) {
   const column = await prisma.departmentBoardColumn.findFirst({
     where: { id: columnId, departmentId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, name: true },
   });
   if (!column) throw new Error("Spalte wurde nicht gefunden.");
   return column;
@@ -111,7 +112,7 @@ export async function createBoardTaskAction(
       where: { columnId: column.id },
       _max: { position: true },
     });
-    await prisma.departmentTask.create({
+    const created = await prisma.departmentTask.create({
       data: {
         departmentId: data.departmentId,
         columnId: column.id,
@@ -125,7 +126,9 @@ export async function createBoardTaskAction(
         createdById: access.userId,
         assignments: { create: assignees.map((userId) => ({ userId })) },
       },
+      select: { id: true },
     });
+    await logTaskActivity(prisma, created.id, access.userId, "created");
     await notifyAssignees(assignees, access.userId, data.title, data.departmentId);
     revalidateBoard();
     return actionSuccess();
@@ -200,6 +203,10 @@ export async function moveBoardTaskAction(
     const access = await requireBoardAccess(task.departmentId);
     if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
     const column = await assertColumn(task.departmentId, data.columnId);
+    const before = await prisma.departmentTask.findUnique({
+      where: { id: task.id },
+      select: { columnId: true },
+    });
     await prisma.$transaction(async (tx) => {
       const siblings = await tx.departmentTask.findMany({
         where: { columnId: column.id, id: { not: task.id } },
@@ -216,6 +223,9 @@ export async function moveBoardTaskAction(
         await tx.departmentTask.update({ where: { id }, data: { position } });
       }
       await syncObjectFromTask(tx, task.id);
+      if (before?.columnId !== column.id) {
+        await logTaskActivity(tx, task.id, access.userId, "column", { to: column.name });
+      }
     });
     if (task.objectId && column.status === "done" && task.status !== "done") {
       await notifyRequestersIfReady(task.objectId, "ready", access.userId);
@@ -258,6 +268,9 @@ export async function addBoardTaskCommentAction(input: {
     if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
     await prisma.departmentTaskComment.create({
       data: { taskId: task.id, authorId: access.userId, body },
+    });
+    await logTaskActivity(prisma, task.id, access.userId, "comment", {
+      text: body.length > 200 ? `${body.slice(0, 199)}…` : body,
     });
     revalidateBoard();
     return actionSuccess();

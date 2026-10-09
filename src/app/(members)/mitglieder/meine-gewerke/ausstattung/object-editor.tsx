@@ -39,8 +39,10 @@ import {
 } from "@/lib/ausstattung/constants";
 import type { ObjectDetail, ObjectListItem, StageData } from "@/lib/ausstattung/objects";
 import { resizeImageFile } from "@/lib/inventory/photo-client";
+import type { HandoverState } from "@/lib/departments/activity-format";
 import { cn } from "@/lib/utils";
 
+import { TaskHandover } from "../handover/task-handover";
 import {
   addChecklistItemAction,
   addObjectPhotoAction,
@@ -77,6 +79,8 @@ type Props = {
   inventory: InventoryLinkProps["initial"];
   /** Board und Maße des Gewerks öffnen (Mitglieder, Regie/Board). */
   canOpenTeam: boolean;
+  /** Stand der Karte für die Übergabe (Nächster Schritt, Achtung, „Ich bin dran“). */
+  handover?: { state: HandoverState; viewerId: string; canEditCaution: boolean } | null;
 };
 
 export function ObjectEditor({
@@ -88,6 +92,7 @@ export function ObjectEditor({
   showObjects,
   inventory,
   canOpenTeam,
+  handover,
 }: Props) {
   const run = useAction();
   const router = useRouter();
@@ -137,6 +142,16 @@ export function ObjectEditor({
           </Link>
         ) : null}
       </div>
+
+      {handover && object.taskId ? (
+        <TaskHandover
+          taskId={object.taskId}
+          state={handover.state}
+          viewerId={handover.viewerId}
+          canEdit={canEdit}
+          canEditCaution={handover.canEditCaution}
+        />
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="space-y-4">

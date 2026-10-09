@@ -15,6 +15,7 @@ import type { BoardColumn, BoardMilestone, BoardPerson, BoardTask } from "@/lib/
 import { cn } from "@/lib/utils";
 
 import { ResponsivePanel } from "@/components/ui/responsive-panel";
+import { TaskHandover } from "../handover/task-handover";
 import { PRIORITY_LABELS, toDateInput } from "./shared";
 
 export type TaskDraft = {
@@ -45,6 +46,8 @@ export function TaskPanel({
   onDelete,
   onComment,
   objectHref,
+  viewerId,
+  canEditCaution,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,6 +66,9 @@ export function TaskPanel({
   onComment: (body: string) => Promise<boolean>;
   /** Karte eines Ausstattungsstücks: Link zur Objekt-Seite. */
   objectHref?: string | null;
+  viewerId: string;
+  /** „Achtung“ darf je nach Gewerk-Einstellung nur die Leitung setzen. */
+  canEditCaution: boolean;
 }) {
   const [draft, setDraft] = React.useState<TaskDraft>(() =>
     fromTask(task, initialColumnId, initialMilestoneId),
@@ -140,6 +146,17 @@ export function TaskPanel({
             Ausstattungsstück öffnen – Fotos, Szenen, Arbeitsschritte
             <span aria-hidden>→</span>
           </Link>
+        ) : null}
+        {task ? (
+          <div className="mb-5 border-b border-border pb-4">
+            <TaskHandover
+              taskId={task.id}
+              state={task.handover}
+              viewerId={viewerId}
+              canEdit={canEdit}
+              canEditCaution={canEditCaution}
+            />
+          </div>
         ) : null}
         <fieldset disabled={!canEdit} className="space-y-4">
           <label className="block space-y-1">

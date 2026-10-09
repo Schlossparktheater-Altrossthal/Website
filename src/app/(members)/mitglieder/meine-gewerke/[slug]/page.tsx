@@ -21,6 +21,13 @@ import {
 } from "@/lib/ausstattung/objects";
 import { resolveTeamsViewer } from "@/lib/departments/access";
 import { loadBoard } from "@/lib/departments/board";
+import {
+  canEditNotes,
+  loadHandoverSettings,
+  loadNotices,
+  loadSinceLastVisit,
+  touchDepartmentVisit,
+} from "@/lib/departments/handover";
 import { loadTeamEvents } from "@/lib/departments/events";
 import { loadDepartmentPortal, type PortalMember } from "@/lib/departments/portal";
 import { castOfShow, loadMeasurementMembers } from "@/lib/measurements/members";
@@ -34,6 +41,7 @@ import { SetByScene, SetChangeovers } from "../ausstattung/set-views";
 import { SubViews } from "../ausstattung/shared";
 import { DepartmentBoard } from "../board/board";
 import { DepartmentSettingsButton } from "../department-settings-panel";
+import { HandoverOverview } from "../handover/overview";
 import { TeamEvents } from "../events/team-events";
 import { TeamFiles } from "../files/team-files";
 import { formatDue, formatEventDate, TEAM_ROLE_LABELS, tint, ViewSwitcher } from "../team-ui";
@@ -92,6 +100,17 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
       : "uebersicht";
   const basePath = `/mitglieder/meine-gewerke/${encodeURIComponent(portal.slug)}`;
   const canManage = isManager || portal.viewerRole === "lead";
+  const boardEdit = isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest");
+  const boardManage = isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy";
+  // Übergabe (docs/Plan/uebergabe-plan.md): Besuch merken, Bezugspunkt für „neu“.
+  const [since, handoverSettings] = await Promise.all([
+    portal.viewerRole ? touchDepartmentVisit(portal.id, userId) : Promise.resolve(null),
+    loadHandoverSettings(portal.id),
+  ]);
+  const notesEditable = canEditNotes(
+    { canEdit: boardEdit, canManage: boardManage },
+    handoverSettings.noteEditors,
+  );
   const leads = portal.members.filter((member) => member.role === "lead");
 
   // Eigene offene Aufgaben und Termine in einer Zeitleiste: Überfälliges zuerst, ohne Frist ans Ende.
@@ -217,6 +236,19 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
       />
 
       {view === "uebersicht" ? (
+        <HandoverOverview
+          departmentId={portal.id}
+          basePath={basePath}
+          notices={await loadNotices(portal.id)}
+          news={await loadSinceLastVisit(portal.id, userId, since)}
+          settings={handoverSettings}
+          canEdit={boardEdit}
+          canEditNotes={notesEditable}
+          canManage={boardManage}
+        />
+      ) : null}
+
+      {view === "uebersicht" ? (
         <section className="space-y-2" aria-labelledby="next-heading">
           <div className="flex items-center justify-between">
             <h2 id="next-heading" className="text-sm font-semibold">
@@ -320,10 +352,14 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
 
       {view === "aufgaben" ? (
         <DepartmentBoard
-          data={await loadBoard(portal.id)}
+          data={await loadBoard(portal.id, {
+            viewerId: userId,
+            since,
+            canEditNotes: notesEditable,
+          })}
           viewerId={userId}
-          canEdit={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
-          canManage={isManager || portal.viewerRole === "lead" || portal.viewerRole === "deputy"}
+          canEdit={boardEdit}
+          canManage={boardManage}
           initialTaskId={karte ?? null}
           newForMilestoneId={neu === "1" ? (meilenstein ?? null) : null}
           basePath={basePath}

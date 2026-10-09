@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { OBJECT_KIND_LABELS, OBJECT_TEXT_LIMITS } from "@/lib/ausstattung/constants";
+import {
+  OBJECT_KIND_LABELS,
+  OBJECT_SOURCE_LABELS,
+  OBJECT_STATUS_LABELS,
+  OBJECT_TEXT_LIMITS,
+} from "@/lib/ausstattung/constants";
 import { sceneLabel } from "@/lib/ausstattung/objects";
 import {
   createObjectWithCard,
@@ -16,6 +21,7 @@ import {
 } from "@/lib/ausstattung/service";
 import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
 import { requireBoardAccess } from "@/lib/departments/board";
+import { logObjectActivity, logTaskActivity } from "@/lib/departments/handover";
 import { readPhotoFile } from "@/lib/inventory/actions-helpers";
 import { createPublicId } from "@/lib/inventory/public-id";
 import { searchInventoryProducts } from "@/lib/inventory/queries";
@@ -108,8 +114,17 @@ const updateSchema = z.object({
 export async function updateObjectAction(input: z.input<typeof updateSchema>): Promise<Result> {
   try {
     const data = updateSchema.parse(input);
-    const { object } = await requireObjectAccess(data.objectId);
+    const { object, access } = await requireObjectAccess(data.objectId);
     await prisma.$transaction(async (tx) => {
+      const before = await tx.productionObject.findUniqueOrThrow({
+        where: { id: object.id },
+        select: { source: true },
+      });
+      if (before.source !== data.source) {
+        await logObjectActivity(tx, object.id, access.userId, "source", {
+          to: OBJECT_SOURCE_LABELS[data.source],
+        });
+      }
       await tx.productionObject.update({
         where: { id: object.id },
         data: {
@@ -144,7 +159,14 @@ export async function setObjectStatusAction(input: {
   try {
     const status = z.enum(["planned", "in_progress", "ready"]).parse(input.status);
     const { object, access } = await requireObjectAccess(z.string().parse(input.objectId));
-    await prisma.$transaction((tx) => setObjectStatus(tx, object.id, status));
+    await prisma.$transaction(async (tx) => {
+      await setObjectStatus(tx, object.id, status);
+      if (object.status !== status) {
+        await logObjectActivity(tx, object.id, access.userId, "status", {
+          to: OBJECT_STATUS_LABELS[status],
+        });
+      }
+    });
     if (object.status !== status) await notifyRequestersIfReady(object.id, status, access.userId);
     revalidateAusstattung();
     return actionSuccess();
@@ -273,7 +295,7 @@ export async function ensureObjectCardAction(input: { objectId: string }): Promi
 
 export async function addObjectPhotoAction(objectId: string, formData: FormData): Promise<Result> {
   try {
-    const { object } = await requireObjectAccess(z.string().parse(objectId));
+    const { object, access } = await requireObjectAccess(z.string().parse(objectId));
     const photo = await readPhotoFile(formData);
     if (!photo) throw new Error("Kein Foto ausgewählt.");
     const kind = formData.get("kind") === "actual" ? "actual" : "reference";
@@ -288,6 +310,7 @@ export async function addObjectPhotoAction(objectId: string, formData: FormData)
         sortOrder: count,
       },
     });
+    await logObjectActivity(prisma, object.id, access.userId, "photo");
     revalidateAusstattung();
     return actionSuccess("Foto gespeichert");
   } catch (error) {
@@ -318,7 +341,7 @@ async function checklistTask(objectId: string) {
   const { object, access } = await requireObjectAccess(objectId);
   const taskId = await ensureObjectCard(prisma, object.id, access.userId);
   if (!taskId) throw new Error("Karte fehlt.");
-  return taskId;
+  return { taskId, userId: access.userId };
 }
 
 export async function addChecklistItemAction(input: {
@@ -327,7 +350,7 @@ export async function addChecklistItemAction(input: {
 }): Promise<Result> {
   try {
     const text = z.string().trim().min(1).max(OBJECT_TEXT_LIMITS.short).parse(input.text);
-    const taskId = await checklistTask(z.string().parse(input.objectId));
+    const { taskId, userId } = await checklistTask(z.string().parse(input.objectId));
     const last = await prisma.taskChecklistItem.aggregate({
       where: { taskId },
       _max: { position: true },
@@ -335,6 +358,7 @@ export async function addChecklistItemAction(input: {
     await prisma.taskChecklistItem.create({
       data: { taskId, text, position: (last._max.position ?? -1) + 1 },
     });
+    await logTaskActivity(prisma, taskId, userId, "checklist_added", { text });
     revalidateAusstattung();
     return actionSuccess();
   } catch (error) {
@@ -345,12 +369,18 @@ export async function addChecklistItemAction(input: {
 async function loadChecklistItem(itemId: string) {
   const item = await prisma.taskChecklistItem.findUnique({
     where: { id: itemId },
-    select: { id: true, task: { select: { departmentId: true } } },
+    select: {
+      id: true,
+      text: true,
+      doneAt: true,
+      taskId: true,
+      task: { select: { departmentId: true } },
+    },
   });
   if (!item) throw new Error("Schritt wurde nicht gefunden.");
   const access = await requireBoardAccess(item.task.departmentId);
   if (!access.canEdit) throw new Error("Du kannst hier nur lesen.");
-  return item;
+  return { item, access };
 }
 
 export async function toggleChecklistItemAction(input: {
@@ -358,11 +388,24 @@ export async function toggleChecklistItemAction(input: {
   done: boolean;
 }): Promise<Result> {
   try {
-    const item = await loadChecklistItem(z.string().parse(input.itemId));
-    await prisma.taskChecklistItem.update({
-      where: { id: item.id },
-      data: { doneAt: input.done ? new Date() : null },
-    });
+    const { item, access } = await loadChecklistItem(z.string().parse(input.itemId));
+    if (Boolean(item.doneAt) !== input.done) {
+      await prisma.$transaction(async (tx) => {
+        await tx.taskChecklistItem.update({
+          where: { id: item.id },
+          data: input.done
+            ? { doneAt: new Date(), doneById: access.userId }
+            : { doneAt: null, doneById: null },
+        });
+        await logTaskActivity(
+          tx,
+          item.taskId,
+          access.userId,
+          input.done ? "checklist_done" : "checklist_undone",
+          { text: item.text },
+        );
+      });
+    }
     revalidateAusstattung();
     return actionSuccess();
   } catch (error) {
@@ -372,7 +415,7 @@ export async function toggleChecklistItemAction(input: {
 
 export async function deleteChecklistItemAction(input: { itemId: string }): Promise<Result> {
   try {
-    const item = await loadChecklistItem(z.string().parse(input.itemId));
+    const { item } = await loadChecklistItem(z.string().parse(input.itemId));
     await prisma.taskChecklistItem.delete({ where: { id: item.id } });
     revalidateAusstattung();
     return actionSuccess();

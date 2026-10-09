@@ -1,6 +1,6 @@
 # Plan: Übergabe im Gewerk – Verlauf, Stand, „Seit deinem letzten Besuch“
 
-Stand: 2026-10-09. Nichts umgesetzt.
+Stand: 2026-10-09. Phase 1–4 umgesetzt (lokal mit Demo-Daten geprüft), offen Phase 5.
 
 ## Ziel
 
@@ -77,8 +77,8 @@ Vor dem Entwurf: Staging-Screenshots von Board, Karte und Gewerk-Portal (mobil +
 
 ## Checkliste
 
-- [ ] Phase 1 Verlauf
-- [ ] Phase 2 Stand auf der Karte
-- [ ] Phase 3 Gewerk-Startseite
-- [ ] Phase 4 Übergabe
+- [x] Phase 1 Verlauf (`TaskActivity`, `doneById`; mitgeschrieben bei Anlegen, Spalte, Status, Checkliste, Kommentar, Foto, Herkunft, Notizen, „dran“)
+- [x] Phase 2 Stand auf der Karte (auch auf der Objektseite; leere Notizen als „+“-Chip, Antippen = ändern)
+- [x] Phase 3 Gewerk-Startseite (Besuch = 30 min Pause; erster Besuch zeigt die letzte Woche; Einstellungen für Leitung/Vertretung; ein Schalter `noteEditors` für Hinweise und Achtung)
+- [x] Phase 4 Übergabe (Zusammenfassung seit Tagesbeginn bzw. letzter eigener Übergabe; gibt eigene „dran“-Karten frei; Benachrichtigungstyp `department-handover`)
 - [ ] Phase 5 E2E/Release
