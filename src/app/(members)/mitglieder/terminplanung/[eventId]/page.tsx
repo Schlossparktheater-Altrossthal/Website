@@ -91,7 +91,9 @@ export default async function EventEditorPage({
         description={
           rehearsal.status === "DRAFT"
             ? "Entwurf – nur die Planung sieht ihn. Änderungen werden automatisch gespeichert."
-            : "Änderungen werden automatisch gespeichert; Eingeladene werden benachrichtigt."
+            : rehearsal.status === "CANCELLED"
+              ? "Abgesagt – Eingeladene sehen den Termin durchgestrichen."
+              : "Änderungen werden automatisch gespeichert; Eingeladene werden benachrichtigt."
         }
         breadcrumbs={breadcrumbs}
       />
@@ -108,6 +110,7 @@ export default async function EventEditorPage({
           end: rehearsal.end ? rehearsal.end.toISOString() : null,
           location: rehearsal.location ?? "",
           description: rehearsal.description,
+          cancelReason: rehearsal.cancelReason,
         }}
         production={
           rehearsal.showId

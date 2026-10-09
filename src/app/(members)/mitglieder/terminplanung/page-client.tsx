@@ -62,7 +62,8 @@ export type PlanningAvailability = {
 };
 
 export type PlanningEvent = CalendarEntry & {
-  status: "TENTATIVE" | "SCHEDULED";
+  /** Abgesagte bleiben durchgestrichen sichtbar, zählen aber nirgends mit. */
+  status: "TENTATIVE" | "SCHEDULED" | "CANCELLED";
   /** Eingeladene; null = Termin für alle. */
   invitedIds: string[] | null;
   declinedIds: string[];
@@ -186,6 +187,10 @@ export function EventPlanningClient({
   }, [view, filter, selectedKey, todayKey]);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  const activeEvents = useMemo(
+    () => events.filter((event) => event.status !== "CANCELLED"),
+    [events],
+  );
   const visibleEvents = useMemo(
     () => events.filter((event) => matchesFilter(event.kind, filter)),
     [events, filter],
@@ -212,6 +217,7 @@ export function EventPlanningClient({
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
   const attendanceFor = (event: PlanningEvent): Attendance[] => {
+    if (event.status === "CANCELLED") return [];
     const days = expandEntryDayKeys(event);
     const declined = new Set(event.declinedIds);
     const people = event.invitedIds
@@ -250,7 +256,7 @@ export function EventPlanningClient({
   const weekLoad = useMemo(
     () =>
       computeWeekLoad(
-        events.flatMap((event) =>
+        activeEvents.flatMap((event) =>
           event.invitedIds
             ? [
                 {
@@ -265,7 +271,7 @@ export function EventPlanningClient({
         ),
         selectedKey,
       ),
-    [events, selectedKey],
+    [activeEvents, selectedKey],
   );
 
   const now = new Date();
@@ -453,7 +459,7 @@ export function EventPlanningClient({
         <PeopleWeekView
           members={members}
           availability={availability}
-          events={events}
+          events={activeEvents}
           initialDay={selectedKey}
           onOpenDay={showDayInCalendar}
         />
@@ -510,6 +516,8 @@ function PlanningCellDetails({
               ? "border-info bg-info/10"
               : "border-primary bg-primary/10",
             entry.status === "TENTATIVE" && "border-dashed",
+            entry.status === "CANCELLED" &&
+              "border-muted-foreground bg-muted text-muted-foreground line-through",
           )}
         >
           {!entry.allDay ? (
@@ -901,6 +909,13 @@ function NameGroup({
 }
 
 function StatusChip({ event }: { event: PlanningEvent }) {
+  if (event.status === "CANCELLED") {
+    return (
+      <span className="shrink-0 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[0.625rem] font-medium text-destructive">
+        abgesagt
+      </span>
+    );
+  }
   if (event.status !== "TENTATIVE") return null;
   return (
     <span className="shrink-0 rounded-full bg-warning/20 px-1.5 py-0.5 text-[0.625rem] font-medium text-warning">
@@ -927,7 +942,14 @@ function EventSummary({ event, attendance }: { event: PlanningEvent; attendance:
       />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-medium">{event.title}</span>
+          <span
+            className={cn(
+              "truncate text-sm font-medium",
+              event.status === "CANCELLED" && "text-muted-foreground line-through",
+            )}
+          >
+            {event.title}
+          </span>
           <StatusChip event={event} />
         </span>
         <span className="block truncate text-xs text-muted-foreground">
@@ -936,9 +958,11 @@ function EventSummary({ event, attendance }: { event: PlanningEvent; attendance:
             .join(" · ")}
         </span>
       </span>
-      <span className="w-20 shrink-0">
-        <AvailabilityBar total={attendance.length} blocked={blocked} limited={limited} />
-      </span>
+      {event.status !== "CANCELLED" ? (
+        <span className="w-20 shrink-0">
+          <AvailabilityBar total={attendance.length} blocked={blocked} limited={limited} />
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -1027,7 +1051,10 @@ function EventRow({
           <span className="flex items-center gap-1.5">
             <Link
               href={event.href ?? "#"}
-              className="truncate text-sm font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn(
+                "truncate text-sm font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                event.status === "CANCELLED" && "text-muted-foreground line-through",
+              )}
             >
               {event.title}
             </Link>
@@ -1044,18 +1071,20 @@ function EventRow({
               .join(" · ")}
           </p>
         </div>
-        <div className="w-24 shrink-0 space-y-1 text-right sm:w-36">
-          <p className="text-sm">
-            <span className="font-semibold tabular-nums">{available.length}</span>
-            <span className="text-muted-foreground"> / {attendance.length} können</span>
-          </p>
-          <AvailabilityBar
-            total={attendance.length}
-            blocked={blocked.length}
-            limited={limited.length}
-            showCount={false}
-          />
-        </div>
+        {event.status !== "CANCELLED" ? (
+          <div className="w-24 shrink-0 space-y-1 text-right sm:w-36">
+            <p className="text-sm">
+              <span className="font-semibold tabular-nums">{available.length}</span>
+              <span className="text-muted-foreground"> / {attendance.length} können</span>
+            </p>
+            <AvailabilityBar
+              total={attendance.length}
+              blocked={blocked.length}
+              limited={limited.length}
+              showCount={false}
+            />
+          </div>
+        ) : null}
       </div>
 
       {blocked.length || limited.length || available.length ? (

@@ -61,7 +61,7 @@ export default async function EventPlanningPage({
       prisma.calendarEvent.findMany({
         where: {
           ...scope,
-          status: { in: ["TENTATIVE", "SCHEDULED"] },
+          status: { in: ["TENTATIVE", "SCHEDULED", "CANCELLED"] },
           start: { lte: to },
           AND: [{ OR: [{ start: { gte: from } }, { end: { gte: from } }] }],
         },
@@ -130,7 +130,8 @@ export default async function EventPlanningPage({
     };
     return {
       ...entry,
-      status: event.status === "TENTATIVE" ? "TENTATIVE" : "SCHEDULED",
+      status:
+        event.status === "TENTATIVE" || event.status === "CANCELLED" ? event.status : "SCHEDULED",
       // Ohne Zielgruppe gilt der Termin für alle.
       invitedIds: targeted ? event.participants.map((entry) => entry.userId) : null,
       declinedIds: event.participants

@@ -68,7 +68,9 @@ function AttendanceMark({ mark }: { mark: NonNullable<MyEventItem["attendance"]>
 function RowContent({ item }: { item: MyEventItem }) {
   const start = new Date(item.start);
   const declined = item.decline?.declined ?? false;
+  const cancelled = !!item.cancelled;
   const details = [
+    cancelled && item.cancelled?.reason ? `Grund: ${item.cancelled.reason}` : null,
     item.location ?? (item.locationOpen ? "Ort noch offen" : null),
     item.tone === "department" ? item.label : null,
     item.decline?.tentative ? "vorgemerkt" : null,
@@ -85,7 +87,13 @@ function RowContent({ item }: { item: MyEventItem }) {
         aria-label={TONE_LABELS[item.tone]}
       />
       <span className="min-w-0 flex-1">
-        <span className={cn("block truncate text-sm font-medium", declined && "line-through")}>
+        <span
+          className={cn(
+            "block truncate text-sm font-medium",
+            (declined || cancelled) && "line-through",
+            cancelled && "text-muted-foreground",
+          )}
+        >
           {item.title}
         </span>
         {details.length ? (
@@ -95,7 +103,9 @@ function RowContent({ item }: { item: MyEventItem }) {
         ) : null}
       </span>
       <span className="shrink-0 pt-0.5 text-xs">
-        {item.bucket === "past" && (item.attendance || item.hasProtocol) ? (
+        {cancelled ? (
+          <span className="font-medium text-destructive">fällt aus</span>
+        ) : item.bucket === "past" && (item.attendance || item.hasProtocol) ? (
           <span className="flex items-center gap-1.5">
             {item.attendance ? <AttendanceMark mark={item.attendance} /> : null}
             {item.hasProtocol ? (

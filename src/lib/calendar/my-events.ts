@@ -1,7 +1,7 @@
 import type { AttendanceMark } from "@prisma/client";
 import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { getCalendarEntryKindLabel } from "@/lib/calendar/event-kinds";
-import { visibleEventStatus } from "@/lib/calendar/status";
+import { listedEventStatus } from "@/lib/calendar/status";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
 import { blockDayKey, isWithinFreeze, readFreezeDays } from "@/lib/calendar/block-list-link";
 import { readDayAvailability } from "@/lib/calendar/day-availability";
@@ -49,6 +49,8 @@ export type MyEventItem = {
   reasons: string[];
   /** Gestaffelte Probe: Zeit der gesamten Probe, während `start`/`end` die eigene Zeit zeigen. */
   fullTime: { start: string; end: string | null } | null;
+  /** Von der Planung abgesagt (mit Grund); dann ist keine eigene Absage mehr nötig. */
+  cancelled: { reason: string | null } | null;
   /** Nur bei eigenen Proben: Absage möglich und ggf. schon abgesagt (mit Grund). */
   decline: {
     declined: boolean;
@@ -106,6 +108,10 @@ function readLocation(value: string | null) {
   return { location: text, locationOpen: false };
 }
 
+function readCancelled(event: { status: string; cancelReason: string | null }) {
+  return event.status === "CANCELLED" ? { reason: event.cancelReason } : null;
+}
+
 /** Termine einer Person: eigene Proben, Gewerk-Termine und allgemeine Termine. */
 export async function readMyUpcomingEvents(userId: string, options: MyEventsOptions = {}) {
   const { now = new Date(), past = false, search = "", limit = MY_EVENTS_PAGE_SIZE } = options;
@@ -132,7 +138,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         // Jede persönliche Einladung – Probe oder anderer Termin.
         event: {
           departmentId: null,
-          status: visibleEventStatus,
+          status: listedEventStatus,
           start: startWindow,
           ...searchWhere,
         },
@@ -157,6 +163,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
             allDay: true,
             location: true,
             status: true,
+            cancelReason: true,
             actualStart: true,
             protocolSentAt: true,
             _count: { select: { notes: true } },
@@ -167,7 +174,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
     prisma.calendarEvent.findMany({
       where: {
         start: startWindow,
-        status: visibleEventStatus,
+        status: listedEventStatus,
         department: { memberships: { some: { userId, ...currentDepartmentMembershipWhere() } } },
         // Mit Auswahl nur für die Eingeladenen.
         ...visibleGeneralEventWhere(userId),
@@ -181,6 +188,8 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         start: true,
         end: true,
         location: true,
+        status: true,
+        cancelReason: true,
         department: {
           select: {
             name: true,
@@ -193,7 +202,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
     prisma.calendarEvent.findMany({
       where: {
         ...GENERAL_EVENT_WHERE,
-        status: visibleEventStatus,
+        status: listedEventStatus,
         ...(past
           ? { start: startWindow }
           : { OR: [{ start: { gte: now } }, { end: { gte: now } }] }),
@@ -219,6 +228,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         allDay: true,
         location: true,
         status: true,
+        cancelReason: true,
         show: { select: { title: true, year: true } },
         participants: {
           where: { userId },
@@ -257,12 +267,16 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         href: `/mitglieder/termine/${event.id}`,
         group: level === "OPTIONAL" ? ("optional" as const) : ("required" as const),
         reasons: Array.isArray(reasons) ? reasons.filter((entry) => typeof entry === "string") : [],
-        decline: {
-          declined: response === "no" || response === "emergency",
-          note: responseNote,
-          tentative: event.status === "TENTATIVE",
-          emergency: response === "emergency",
-        },
+        cancelled: readCancelled(event),
+        decline:
+          event.status === "CANCELLED"
+            ? null
+            : {
+                declined: response === "no" || response === "emergency",
+                note: responseNote,
+                tentative: event.status === "TENTATIVE",
+                emergency: response === "emergency",
+              },
       }),
     ),
     ...departmentEvents.flatMap((event) => {
@@ -285,6 +299,7 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         fullTime: null,
         attendance: null,
         hasProtocol: false,
+        cancelled: readCancelled(event),
         decline: null,
       };
     }),
@@ -307,12 +322,16 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
         fullTime: null,
         attendance: null,
         hasProtocol: false,
-        decline: {
-          declined: response === "no" || response === "emergency",
-          note: own?.responseNote ?? null,
-          tentative: event.status === "TENTATIVE",
-          emergency: response === "emergency",
-        },
+        cancelled: readCancelled(event),
+        decline:
+          event.status === "CANCELLED"
+            ? null
+            : {
+                declined: response === "no" || response === "emergency",
+                note: own?.responseNote ?? null,
+                tentative: event.status === "TENTATIVE",
+                emergency: response === "emergency",
+              },
       };
     }),
   ];
@@ -329,7 +348,9 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
       ...item,
       bucket: resolveEventBucket(new Date(item.start), now),
       withinFreeze: isWithinFreeze(new Date(item.start), freezeDays, now),
-      conflict: availability.get(blockDayKey(new Date(item.start)))?.[userId] ?? null,
+      conflict: item.cancelled
+        ? null
+        : (availability.get(blockDayKey(new Date(item.start)))?.[userId] ?? null),
     }))
     .sort((a, b) => (past ? b.start.localeCompare(a.start) : a.start.localeCompare(b.start)));
 }
@@ -340,5 +361,5 @@ export async function readMyUpcomingEvents(userId: string, options: MyEventsOpti
  */
 export async function readNextEvent(userId: string, now = new Date()) {
   const items = await readMyUpcomingEvents(userId, { now });
-  return items[0] ?? null;
+  return items.find((item) => !item.cancelled) ?? null;
 }

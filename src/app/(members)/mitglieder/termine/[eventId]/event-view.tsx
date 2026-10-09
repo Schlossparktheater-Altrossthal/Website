@@ -301,6 +301,18 @@ export function EventView({
           ) : null}
         </div>
 
+        {event.status === "CANCELLED" ? (
+          <div
+            role="status"
+            className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
+          >
+            <p className="font-medium text-destructive">Dieser Termin fällt aus.</p>
+            {event.cancelReason ? (
+              <p className="mt-1 text-foreground/80">Grund: {event.cancelReason}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {me ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3 text-sm">
             <span className="font-medium">

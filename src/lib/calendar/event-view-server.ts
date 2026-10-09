@@ -40,6 +40,8 @@ export type EventViewProps = {
     kindLabel: string;
     production: string | null;
     status: EventStatus;
+    /** Grund, wenn die Planung den Termin abgesagt hat. */
+    cancelReason: string | null;
     start: string;
     end: string | null;
     allDay: boolean;
@@ -259,6 +261,7 @@ export async function readEventView(
         kindLabel,
         production,
         status: event.status,
+        cancelReason: event.status === "CANCELLED" ? event.cancelReason : null,
         start: event.start.toISOString(),
         end: event.end?.toISOString() ?? null,
         allDay: event.allDay,

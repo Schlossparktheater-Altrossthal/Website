@@ -1345,44 +1345,48 @@ model CalendarFeed {
 
 /// Termine der Organisation (Proben, Vorstellungen, Treffen, Arbeitseinsätze …), angelegt von Planern.
 model CalendarEvent {
-  id                 String                  @id @default(cuid())
-  title              String
-  kind               CalendarEventKind       @default(OTHER)
-  status             EventStatus             @default(SCHEDULED)
-  start              DateTime
-  end                DateTime?
-  allDay             Boolean                 @default(false)
-  location           String?
-  description        String?
+  id                  String                  @id @default(cuid())
+  title               String
+  kind                CalendarEventKind       @default(OTHER)
+  status              EventStatus             @default(SCHEDULED)
+  start               DateTime
+  end                 DateTime?
+  allDay              Boolean                 @default(false)
+  location            String?
+  description         String?
   /// Frist für Zu-/Absagen.
-  responseDeadline   DateTime?
+  responseDeadline    DateTime?
   /// Proben: alle zur Terminzeit oder gestaffelt mit Uhrzeit pro Szene.
-  scheduleMode       EventScheduleMode       @default(TOGETHER)
-  showId             String?
+  scheduleMode        EventScheduleMode       @default(TOGETHER)
+  showId              String?
   /// Termin eines Gewerks: nur dessen Mitglieder sehen ihn und sagen zu oder ab.
-  departmentId       String?
-  createdById        String?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  show               Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
-  department         Department?             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  createdBy          User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  participants       EventParticipant[]
-  audienceRules      EventAudienceRule[]
-  blocks             EventBlock[]
-  responseLogs       EventResponseLog[]
-  notifications      Notification[]
-  guests             EventGuest[]
-  notes              EventNote[]
+  departmentId        String?
+  createdById         String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  show                Show?                   @relation(fields: [showId], references: [id], onDelete: SetNull)
+  department          Department?             @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdBy           User?                   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  participants        EventParticipant[]
+  audienceRules       EventAudienceRule[]
+  blocks              EventBlock[]
+  responseLogs        EventResponseLog[]
+  notifications       Notification[]
+  guests              EventGuest[]
+  notes               EventNote[]
   /// Probenmodus: tatsächlicher Beginn und tatsächliches Ende.
-  actualStart        DateTime?
-  actualEnd          DateTime?
+  actualStart         DateTime?
+  actualEnd           DateTime?
   /// Protokoll: freie Zusammenfassung und wann es an die Teilnehmenden ging.
-  protocolSummary    String?
-  protocolSentAt     DateTime?
-  blockedDays        BlockedDay[]
-  reminderDispatches EventReminderDispatch[]
-  milestone          ShowMilestone?
+  protocolSummary     String?
+  protocolSentAt      DateTime?
+  /// Absage durch die Planung: wann, warum und welcher Status vorher galt (zum Zurücknehmen).
+  cancelledAt         DateTime?
+  cancelReason        String?
+  cancelledFromStatus EventStatus?
+  blockedDays         BlockedDay[]
+  reminderDispatches  EventReminderDispatch[]
+  milestone           ShowMilestone?
 
   @@index([start])
   @@index([departmentId, start])

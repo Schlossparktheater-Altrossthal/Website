@@ -13,6 +13,7 @@ import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { MyEventItem } from "@/lib/calendar/my-events";
 import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { cn } from "@/lib/utils";
 
 import { MyEventRow } from "./my-event-row";
 
@@ -61,7 +62,9 @@ export function MyEventsCalendar({ items, todayKey }: { items: MyEventItem[]; to
     const markers: MonthGridMarker[] = dayItems.some((item) => item.decline)
       ? ["rehearsal"]
       : ["event"];
-    const titles = dayItems.map((item) => item.title).join(", ");
+    const titles = dayItems
+      .map((item) => `${item.title}${item.cancelled ? " (fällt aus)" : ""}`)
+      .join(", ");
 
     return {
       isToday: key === todayKey,
@@ -104,7 +107,14 @@ export function MyEventsCalendar({ items, todayKey }: { items: MyEventItem[]; to
           const dayItems = byDay.get(key);
           if (!dayItems?.length) return null;
           return (
-            <span className="line-clamp-2 text-[0.65rem] leading-tight">{dayItems[0].title}</span>
+            <span
+              className={cn(
+                "line-clamp-2 text-[0.65rem] leading-tight",
+                dayItems[0].cancelled && "line-through opacity-70",
+              )}
+            >
+              {dayItems[0].title}
+            </span>
           );
         }}
       />

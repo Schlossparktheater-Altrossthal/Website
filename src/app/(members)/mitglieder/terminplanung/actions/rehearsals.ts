@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { CalendarEventKind, Prisma } from "@prisma/client";
+import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { broadcastRehearsalUpdated } from "@/lib/realtime/triggers";
@@ -89,6 +90,9 @@ export async function updateRehearsalAction(input: {
       });
       if (!existing) {
         throw new Error("not-found");
+      }
+      if (existing.status === "CANCELLED") {
+        throw new Error("cancelled");
       }
 
       const kind = resolveKind(parsed.data.kind, audience) ?? existing.kind;
@@ -281,6 +285,9 @@ export async function updateRehearsalAction(input: {
     if (error instanceof Error && error.message === "Ungültige Endzeit.") {
       return { error: error.message } as const;
     }
+    if (error instanceof Error && error.message === "cancelled") {
+      return { error: "Abgesagte Termine lassen sich nicht bearbeiten." } as const;
+    }
     console.error("Error updating rehearsal", error);
     return { error: "Der Termin konnte nicht aktualisiert werden." } as const;
   }
@@ -340,4 +347,172 @@ export async function deleteRehearsalAction(input: { id: string }) {
     console.error("Error deleting rehearsal", error);
     return { error: "Der Termin konnte nicht entfernt werden." } as const;
   }
+}
+
+const cancelSchema = z.object({
+  id: z.string().min(1),
+  reason: z.string().trim().max(500).optional(),
+});
+
+/** Wer von einer Absage oder ihrer Rücknahme erfahren soll: Eingeladene und alle mit Antwort. */
+async function readAffectedUserIds(eventId: string) {
+  const participants = await prisma.eventParticipant.findMany({
+    where: { eventId, OR: [{ invited: true }, { response: { not: null } }] },
+    select: { userId: true },
+  });
+  return [...new Set(participants.map((entry) => entry.userId))];
+}
+
+/**
+ * Sagt einen vorgemerkten oder angesetzten Termin ab. Er bleibt mit Teilnehmern, Antworten und
+ * Grund erhalten und für alle sichtbar; Betroffene werden benachrichtigt.
+ */
+export async function cancelEventAction(input: { id: string; reason?: string }) {
+  const auth = await ensurePlanner({ rehearsalId: input?.id });
+  if (!auth.ok) {
+    return { error: auth.error } as const;
+  }
+  const parsed = cancelSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: "Bitte Eingaben prüfen." } as const;
+  }
+  const { id } = parsed.data;
+  const reason = parsed.data.reason || null;
+
+  const existing = await prisma.calendarEvent.findFirst({
+    where: { id, departmentId: null },
+    select: { status: true, kind: true, start: true, title: true, showId: true },
+  });
+  if (!existing) {
+    return { error: "Der Termin wurde nicht gefunden." } as const;
+  }
+  if (existing.status !== "SCHEDULED" && existing.status !== "TENTATIVE") {
+    return {
+      error:
+        existing.status === "CANCELLED"
+          ? "Der Termin ist bereits abgesagt."
+          : "Entwürfe werden verworfen, nicht abgesagt.",
+    } as const;
+  }
+
+  const updated = await prisma.calendarEvent.updateMany({
+    where: { id, status: existing.status },
+    data: {
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+      cancelReason: reason,
+      cancelledFromStatus: existing.status,
+    },
+  });
+  if (!updated.count) {
+    return { error: "Der Termin wurde inzwischen geändert. Bitte neu laden." } as const;
+  }
+
+  const noun = eventNoun(existing.kind);
+  const formatter = new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: REHEARSAL_TIME_ZONE,
+  });
+  const recipients = await readAffectedUserIds(id);
+  // Vergangene Termine still absagen: nur für die Statistik, niemand muss mehr reagieren.
+  if (existing.start > new Date()) {
+    await notify({
+      type: NOTIFICATION_TYPES.EVENT_CANCELLED,
+      recipients,
+      title: `${noun} abgesagt: ${existing.title}`,
+      body: [`Fällt aus: ${formatter.format(existing.start)}`, reason ? `Grund: ${reason}` : null]
+        .filter(Boolean)
+        .join("\n"),
+      eventId: id,
+      showId: existing.showId,
+      category: categoryForEventKind(existing.kind),
+      groupKey: `event:${id}`,
+    });
+  }
+  if (recipients.length) {
+    await broadcastRehearsalUpdated({
+      rehearsalId: id,
+      changes: { status: "cancelled", title: existing.title },
+      targetUserIds: recipients,
+    });
+  }
+
+  revalidateEventPaths(id);
+  return { success: true as const };
+}
+
+/** Nimmt eine Absage zurück: der Termin gilt wieder wie vorher (vorgemerkt oder angesetzt). */
+export async function restoreEventAction(input: { id: string }) {
+  const auth = await ensurePlanner({ rehearsalId: input?.id });
+  if (!auth.ok) {
+    return { error: auth.error } as const;
+  }
+  const parsed = deleteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: "Ungültige Auswahl." } as const;
+  }
+  const { id } = parsed.data;
+
+  const existing = await prisma.calendarEvent.findFirst({
+    where: { id, departmentId: null },
+    select: {
+      status: true,
+      cancelledFromStatus: true,
+      kind: true,
+      start: true,
+      title: true,
+      showId: true,
+    },
+  });
+  if (!existing || existing.status !== "CANCELLED") {
+    return { error: "Der Termin ist nicht abgesagt." } as const;
+  }
+  const status = existing.cancelledFromStatus === "TENTATIVE" ? "TENTATIVE" : "SCHEDULED";
+
+  const updated = await prisma.calendarEvent.updateMany({
+    where: { id, status: "CANCELLED" },
+    data: { status, cancelledAt: null, cancelReason: null, cancelledFromStatus: null },
+  });
+  if (!updated.count) {
+    return { error: "Der Termin wurde inzwischen geändert. Bitte neu laden." } as const;
+  }
+
+  const noun = eventNoun(existing.kind);
+  const formatter = new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "full",
+    timeStyle: "short",
+    timeZone: REHEARSAL_TIME_ZONE,
+  });
+  const recipients = await readAffectedUserIds(id);
+  if (existing.start > new Date()) {
+    await notify({
+      type: NOTIFICATION_TYPES.REHEARSAL_UPDATE,
+      recipients,
+      title: `${noun} findet doch statt: ${existing.title}`,
+      body: `Die Absage wurde zurückgenommen. Am ${formatter.format(existing.start)}`,
+      eventId: id,
+      showId: existing.showId,
+      category: categoryForEventKind(existing.kind),
+      groupKey: `event:${id}`,
+    });
+  }
+  if (recipients.length) {
+    await broadcastRehearsalUpdated({
+      rehearsalId: id,
+      changes: { status: status.toLowerCase(), title: existing.title },
+      targetUserIds: recipients,
+    });
+  }
+
+  revalidateEventPaths(id);
+  return { success: true as const };
+}
+
+function revalidateEventPaths(id: string) {
+  revalidatePath("/mitglieder/terminplanung");
+  revalidatePath(`/mitglieder/terminplanung/${id}`);
+  revalidatePath("/mitglieder/sperrliste");
+  revalidatePath("/mitglieder/meine-proben");
+  revalidatePath(`/mitglieder/termine/${id}`);
 }

@@ -12,11 +12,19 @@ import {
   type SceneScheduleValue,
   type SceneStatsView,
 } from "@/components/calendar/event-agenda-editor";
-import { MapPinIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
+import { CalendarXIcon, MapPinIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DateInput } from "@/components/ui/date-input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -30,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { TimeInput } from "@/components/ui/time-input";
 import { CALENDAR_EVENT_KINDS, CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
 import { cn } from "@/lib/utils";
@@ -55,7 +64,12 @@ import {
   updateRehearsalDraftAction,
 } from "./actions/drafts";
 import { planningReturnHref } from "./return-href";
-import { deleteRehearsalAction, updateRehearsalAction } from "./actions/rehearsals";
+import {
+  cancelEventAction,
+  deleteRehearsalAction,
+  restoreEventAction,
+  updateRehearsalAction,
+} from "./actions/rehearsals";
 
 type EventEditorProps = {
   rehearsal: {
@@ -69,6 +83,8 @@ type EventEditorProps = {
     end: string | null;
     location: string;
     description: string | null;
+    /** Grund einer Absage durch die Planung. */
+    cancelReason?: string | null;
   };
   /** Produktion für „gilt für“ (die des Termins bzw. die gewählte). */
   production: { id: string; title: string } | null;
@@ -116,6 +132,7 @@ export function EventEditor({
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
   const isTentative = rehearsal.status === "TENTATIVE";
+  const isCancelled = rehearsal.status === "CANCELLED";
 
   const [title, setTitle] = useState(rehearsal.title);
   const [kind, setKind] = useState<CalendarEventKind>(rehearsal.kind);
@@ -398,7 +415,8 @@ export function EventEditor({
   const skipInitialSave = useRef(true);
 
   useEffect(() => {
-    if (skipInitialSave.current) {
+    // Abgesagte Termine bleiben, wie sie waren; erst nach der Rücknahme wieder bearbeiten.
+    if (skipInitialSave.current || isCancelled) {
       skipInitialSave.current = false;
       return;
     }
@@ -423,7 +441,7 @@ export function EventEditor({
     }, 800);
 
     return () => clearTimeout(handle);
-  }, [payload, audience, audienceTouched, openAudience, isDraft]);
+  }, [payload, audience, audienceTouched, openAudience, isDraft, isCancelled]);
 
   const handlePublish = (target: "TENTATIVE" | "SCHEDULED") => {
     startPublish(() => {
@@ -478,6 +496,41 @@ export function EventEditor({
     });
   };
 
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, startCancel] = useTransition();
+
+  const handleCancel = () => {
+    startCancel(() => {
+      void cancelEventAction({ id: rehearsal.id, reason: cancelReason.trim() || undefined })
+        .then((result) => {
+          if (result?.success) {
+            setCancelOpen(false);
+            toast.success(`${noun} abgesagt. Die Betroffenen wurden benachrichtigt.`);
+            router.refresh();
+          } else {
+            toast.error(result?.error ?? "Das hat nicht geklappt.");
+          }
+        })
+        .catch(() => toast.error("Das hat nicht geklappt."));
+    });
+  };
+
+  const handleRestore = () => {
+    startCancel(() => {
+      void restoreEventAction({ id: rehearsal.id })
+        .then((result) => {
+          if (result?.success) {
+            toast.success("Absage zurückgenommen. Die Betroffenen wurden benachrichtigt.");
+            router.refresh();
+          } else {
+            toast.error(result?.error ?? "Das hat nicht geklappt.");
+          }
+        })
+        .catch(() => toast.error("Das hat nicht geklappt."));
+    });
+  };
+
   const saveLabel = useMemo(() => {
     switch (saveStatus) {
       case "saving":
@@ -493,7 +546,13 @@ export function EventEditor({
     }
   }, [saveStatus, lastSavedAt]);
 
-  const statusLabel = isDraft ? "Entwurf" : isTentative ? "Vorgemerkt" : "Angesetzt";
+  const statusLabel = isDraft
+    ? "Entwurf"
+    : isTentative
+      ? "Vorgemerkt"
+      : isCancelled
+        ? "Abgesagt"
+        : "Angesetzt";
   const kindLocked = sceneIds.length > 0;
 
   const kindOptions = KIND_OPTIONS.map((value) => ({
@@ -514,15 +573,32 @@ export function EventEditor({
                     ? "bg-muted text-foreground/80"
                     : isTentative
                       ? "bg-warning/20 text-warning"
-                      : "bg-success/15 text-success",
+                      : isCancelled
+                        ? "bg-destructive/15 text-destructive"
+                        : "bg-success/15 text-success",
                 )}
               >
                 {statusLabel}
               </span>
-              <span className="text-muted-foreground" aria-live="polite">
-                {saveLabel}
-              </span>
+              {!isCancelled ? (
+                <span className="text-muted-foreground" aria-live="polite">
+                  {saveLabel}
+                </span>
+              ) : null}
             </div>
+            {isCancelled ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                <p className="font-medium text-destructive">
+                  {noun} ist abgesagt und bleibt für alle durchgestrichen sichtbar.
+                </p>
+                {rehearsal.cancelReason ? (
+                  <p className="mt-1 text-foreground/80">Grund: {rehearsal.cancelReason}</p>
+                ) : null}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Änderungen werden nicht gespeichert. Zum Bearbeiten erst die Absage zurücknehmen.
+                </p>
+              </div>
+            ) : null}
 
             <Input
               id="event-title"
@@ -836,8 +912,30 @@ export function EventEditor({
           <TrashIcon className="h-4 w-4" aria-hidden />
           <span className="hidden sm:inline">{isDraft ? "Verwerfen" : "Löschen"}</span>
         </Button>
+        {!isDraft && !isCancelled ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isCancelling}
+            aria-label="Absagen"
+            onClick={() => setCancelOpen(true)}
+          >
+            <CalendarXIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Absagen</span>
+          </Button>
+        ) : null}
         <div className="ml-auto flex flex-1 items-center justify-end gap-2 sm:flex-none">
-          {isDraft ? (
+          {isCancelled ? (
+            <Button
+              type="button"
+              className="flex-1 sm:flex-none"
+              onClick={handleRestore}
+              disabled={isCancelling}
+            >
+              {isCancelling ? "Speichert …" : "Absage zurücknehmen"}
+            </Button>
+          ) : isDraft ? (
             <>
               <Button
                 type="button"
@@ -896,12 +994,52 @@ export function EventEditor({
         description={
           confirm === "discard"
             ? "Der Entwurf wird endgültig gelöscht."
-            : `${noun} verschwindet für alle aus dem Kalender. Eingeladene werden informiert.`
+            : `${noun} wird endgültig gelöscht – mit allen Antworten und ohne Benachrichtigung. Fällt ${isRehearsal ? "sie" : "er"} aus, lieber „Absagen“ nutzen.`
         }
         confirmLabel={confirm === "discard" ? "Verwerfen" : "Löschen"}
         cancelLabel="Abbrechen"
         variant="destructive"
       />
+
+      <Dialog open={cancelOpen} onOpenChange={(value) => !isCancelling && setCancelOpen(value)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{noun} absagen?</DialogTitle>
+            <DialogDescription>
+              Alle Eingeladenen und alle, die schon geantwortet haben, werden benachrichtigt. {noun}{" "}
+              bleibt durchgestrichen im Kalender; die Absage lässt sich zurücknehmen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="cancel-reason">Grund (optional)</Label>
+            <Textarea
+              id="cancel-reason"
+              value={cancelReason}
+              maxLength={500}
+              placeholder="z. B. Regie krank, Bühne nicht verfügbar"
+              onChange={(event) => setCancelReason(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCancelOpen(false)}
+              disabled={isCancelling}
+            >
+              Zurück
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={isCancelling}
+            >
+              {isCancelling ? "Sagt ab …" : `${noun} absagen`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

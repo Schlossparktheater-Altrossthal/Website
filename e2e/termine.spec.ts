@@ -297,4 +297,44 @@ test.describe("Meine Termine", () => {
       await cleanup(page, title, eventId);
     }
   });
+
+  test("Planung sagt einen Termin ab und nimmt die Absage zurück", async ({ page }) => {
+    const day = berlinDay(10);
+    const title = `E2E Ausfall ${Date.now().toString(36)}`;
+    const reason = "E2E: Bühne nicht verfügbar";
+    const eventId = await createOpenEvent(page, title, day);
+
+    try {
+      await goto(page, `/mitglieder/terminplanung/${eventId}`);
+      const actions = page.getByRole("region", { name: "Aktionen" });
+      await clickUntil(actions.getByRole("button", { name: "Absagen" }), () =>
+        expect(page.getByRole("dialog")).toBeVisible({ timeout: 2_000 }),
+      );
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel("Grund (optional)").fill(reason);
+      await dialog.getByRole("button", { name: "Termin absagen" }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.getByText(`Grund: ${reason}`)).toBeVisible();
+      await expect(actions.getByRole("button", { name: "Absage zurücknehmen" })).toBeVisible();
+
+      // Mitglieder sehen den Termin weiter – als Ausfall mit Grund, ohne eigene Absage.
+      await goto(page, `/mitglieder/termine/${eventId}`);
+      await expect(page.getByText("Dieser Termin fällt aus.")).toBeVisible();
+      await expect(page.getByText(`Grund: ${reason}`)).toBeVisible();
+      await expect(page.getByRole("button", { name: "Absagen" })).toHaveCount(0);
+      await goto(page, "/mitglieder/meine-proben");
+      await expect(rowOf(page, title).first()).toContainText("fällt aus");
+
+      // Rücknahme: der Termin gilt wieder wie vorher.
+      await goto(page, `/mitglieder/terminplanung/${eventId}`);
+      await clickUntil(actions.getByRole("button", { name: "Absage zurücknehmen" }), () =>
+        expect(actions.getByRole("button", { name: "Absagen" })).toBeVisible({ timeout: 2_000 }),
+      );
+      await goto(page, `/mitglieder/termine/${eventId}`);
+      await expect(page.getByText("Dieser Termin fällt aus.")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Absagen" })).toBeVisible();
+    } finally {
+      await cleanup(page, title, eventId);
+    }
+  });
 });

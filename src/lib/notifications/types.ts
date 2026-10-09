@@ -26,6 +26,7 @@ export const NOTIFICATION_TYPES = {
   REHEARSAL: "rehearsal",
   CALENDAR_EVENT: "calendar-event",
   REHEARSAL_UPDATE: "rehearsal-update",
+  EVENT_CANCELLED: "event-cancelled",
   REHEARSAL_EMERGENCY: "rehearsal-emergency",
   REHEARSAL_ATTENDANCE: "rehearsal-attendance",
   REHEARSAL_TASK: "rehearsal-task",
@@ -60,6 +61,7 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
   rehearsal: { category: "proben", kind: "info", priority: "normal", severity: "info" },
   "calendar-event": { category: "termine", kind: "info", priority: "normal", severity: "info" },
   "rehearsal-update": { category: "proben", kind: "info", priority: "normal", severity: "info" },
+  "event-cancelled": { category: "proben", kind: "info", priority: "normal", severity: "warning" },
   "rehearsal-emergency": {
     category: "proben",
     kind: "action",

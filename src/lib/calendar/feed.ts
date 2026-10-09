@@ -11,6 +11,7 @@ import {
   OPEN_EVENT_WHERE,
   visibleGeneralEventWhere,
 } from "@/lib/calendar/entries";
+import { listedEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,
@@ -161,6 +162,7 @@ export async function collectFeedEvents(
         location: true,
         description: true,
         status: true,
+        cancelReason: true,
         updatedAt: true,
         show: { select: { title: true } },
         participants: {
@@ -185,6 +187,8 @@ export async function collectFeedEvents(
       where: {
         start: { lte: to },
         ...GENERAL_EVENT_WHERE,
+        // Abgesagte bleiben drin, damit Kalender-Apps sie als abgesagt markieren.
+        status: listedEventStatus,
         AND: [
           { OR: [{ start: { gte: from } }, { end: { gte: from } }] },
           {
@@ -227,7 +231,7 @@ export async function collectFeedEvents(
       rehearsal.location && rehearsal.location !== "Noch offen" ? rehearsal.location : null;
     events.push({
       uid: `rehearsal-${rehearsal.id}@${host}`,
-      summary: `${PREFIX}${rehearsal.title}`,
+      summary: `${PREFIX}${cancelledPrefix(rehearsal.status)}${rehearsal.title}`,
       // Gestaffelte Probe: im Kalender steht die eigene Zeit laut Szenenplan.
       start: { kind: "dateTime", value: own?.personalStart ?? rehearsal.start },
       end: {
@@ -237,6 +241,7 @@ export async function collectFeedEvents(
       location,
       description: withLink(
         [
+          cancelNote(rehearsal),
           rehearsal.show?.title,
           describeParticipation(rehearsal.participants),
           describeScenes(rehearsal.blocks, own?.personalStart ? rehearsal : null),
@@ -256,9 +261,13 @@ export async function collectFeedEvents(
   for (const event of calendarEvents) {
     const base = {
       uid: `event-${event.id}@${host}`,
-      summary: `${PREFIX}${event.title}`,
+      summary: `${PREFIX}${cancelledPrefix(event.status)}${event.title}`,
       location: event.location,
-      description: withLink(event.description, "/mitglieder/sperrliste"),
+      description: withLink(
+        [cancelNote(event), event.description].filter(Boolean).join("\n\n") || null,
+        "/mitglieder/sperrliste",
+      ),
+      cancelled: event.status === "CANCELLED",
       lastModified: event.updatedAt,
     };
     if (event.allDay) {
@@ -342,4 +351,14 @@ export async function renderCalendarFeed(token: string, now: Date = new Date()) 
     events,
     now,
   });
+}
+
+/** Viele Kalender-Apps zeigen STATUS:CANCELLED nicht an – darum steht es auch im Titel. */
+function cancelledPrefix(status: string) {
+  return status === "CANCELLED" ? "Abgesagt: " : "";
+}
+
+function cancelNote(event: { status: string; cancelReason: string | null }) {
+  if (event.status !== "CANCELLED") return null;
+  return event.cancelReason ? `Abgesagt – ${event.cancelReason}` : "Abgesagt";
 }
