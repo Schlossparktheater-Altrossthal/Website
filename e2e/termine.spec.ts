@@ -81,6 +81,7 @@ async function createOpenEvent(page: Page, title: string, day: string) {
   );
   await page.locator("#event-date").fill(day);
   await page.getByRole("dialog").getByRole("button", { name: "Fertig" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
 
   // „Gehört zu: Keiner Produktion" (sonst gilt der Termin nur der aktiven Produktion) und
   // „Wer ist eingeladen? Alle" – beides ist nötig, damit ihn alle sehen.

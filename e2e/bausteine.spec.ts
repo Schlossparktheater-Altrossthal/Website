@@ -74,7 +74,7 @@ test.describe("als admin", () => {
     await expect(page.getByText(/^Gespeichert/)).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: "Vormerken" }).click();
-    await expect(page).toHaveURL(/\/mitglieder\/proben\/[^/]+$/);
+    await expect(page).toHaveURL(/\/mitglieder\/termine\/[^/]+$/);
     await expect(page.getByText(`E2E Baustein (Gewerk ${department})`)).toBeVisible();
 
     // Gewerk-Leitung (admin darf als Regie jedes Gewerk verwalten)
