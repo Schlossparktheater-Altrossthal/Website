@@ -36,8 +36,11 @@ test.describe("als admin", () => {
     await expect(row).toHaveCount(0);
 
     await page.goto("/mitglieder/benachrichtigungen");
-    await page.getByRole("radio", { name: "Archiv" }).click();
-    await expect(page.getByText("Testbenachrichtigung", { exact: true }).first()).toBeVisible();
+    await clickUntil(page.getByRole("radio", { name: "Archiv" }), () =>
+      expect(page.getByText("Testbenachrichtigung", { exact: true }).first()).toBeVisible({
+        timeout: 2_000,
+      }),
+    );
 
     expect(errors).toEqual([]);
   });

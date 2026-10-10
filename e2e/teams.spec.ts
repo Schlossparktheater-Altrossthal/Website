@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { authFile } from "./env";
+import { clickUntil } from "./helpers";
 
 // Gewerke-Portal und Stück (docs/seiten/gewerke.md, docs/seiten/produktionen.md).
 // Die Tests legen eigene Daten mit Präfix „E2E“ an und räumen sie am Ende wieder ab.
@@ -45,7 +46,9 @@ test.describe("als admin", () => {
     await page.goto("/mitglieder/meine-gewerke");
     await requireProduction(page);
     // Gewerke entstehen nur aus Blaupausen; fehlt eine, wird sie miterstellt (gewerke-plan.md E7).
-    await page.getByRole("button", { name: "Gewerk anlegen" }).first().click();
+    await clickUntil(page.getByRole("button", { name: "Gewerk anlegen" }).first(), () =>
+      expect(page.getByRole("radio", { name: "Neue Blaupause" })).toBeVisible({ timeout: 2_000 }),
+    );
     await page.getByRole("radio", { name: "Neue Blaupause" }).click();
     await page.getByPlaceholder("z. B. Pyrotechnik").fill(name);
     await page.getByRole("button", { name: "Blaupause + Gewerk anlegen" }).click();
@@ -113,7 +116,9 @@ test.describe("als admin", () => {
 
     await page.goto("/mitglieder/produktionen/stueck?ansicht=rollen");
     await requireProduction(page);
-    await page.getByRole("button", { name: "Rolle", exact: true }).click();
+    await clickUntil(page.getByRole("button", { name: "Rolle", exact: true }), () =>
+      expect(page.getByPlaceholder("z. B. Atréju")).toBeVisible({ timeout: 2_000 }),
+    );
     await page.getByPlaceholder("z. B. Atréju").fill(role);
     await page.getByRole("button", { name: "Anlegen", exact: true }).click();
     await expect(page).toHaveURL(/rolle=/);
