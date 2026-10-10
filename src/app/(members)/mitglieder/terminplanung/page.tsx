@@ -180,6 +180,7 @@ export default async function EventPlanningPage({
         breadcrumbs={[membersNavigationBreadcrumb("/mitglieder/terminplanung")]}
       />
       <EventPlanningClient
+        productionTitle={productionTitle}
         events={planningEvents}
         drafts={planningDrafts}
         members={members}

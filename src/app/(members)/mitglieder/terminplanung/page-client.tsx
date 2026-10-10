@@ -11,6 +11,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ListIcon,
+  PrinterIcon,
   SearchIcon,
 } from "@/components/ui/action-icons";
 import { AvailabilityBar } from "@/components/ui/availability-bar";
@@ -18,7 +19,6 @@ import { StatusDot, StatusLegend } from "@/components/ui/availability-status";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DateBadge } from "@/components/ui/date-badge";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { PLANNING_PATH, rememberPlanningHref } from "./return-href";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
@@ -144,6 +144,8 @@ type EventPlanningProps = {
   scenePlan: ScenePlanData | null;
   /** Szenen und Besetzung der Produktion; null ohne Szenen. */
   sceneContext: PlanningSceneContext | null;
+  /** Titel der Produktion für den Kopf der Druckansicht. */
+  productionTitle: string | null;
 };
 
 export function EventPlanningClient({
@@ -160,6 +162,7 @@ export function EventPlanningClient({
   initialDay,
   scenePlan,
   sceneContext,
+  productionTitle,
 }: EventPlanningProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const todayKey = toDayKey(new Date());
@@ -462,7 +465,12 @@ export function EventPlanningClient({
       ) : view === "scenes" && scenePlan ? (
         <ScenePlanView data={scenePlan} todayKey={todayKey} onOpenDay={showDayInCalendar} />
       ) : (
-        <EventList events={visibleEvents} todayKey={todayKey} attendanceFor={attendanceFor} />
+        <EventList
+          events={visibleEvents}
+          todayKey={todayKey}
+          attendanceFor={attendanceFor}
+          productionTitle={productionTitle}
+        />
       )}
 
       {!isDesktop ? (
@@ -950,203 +958,249 @@ function EventSummary({ event, attendance }: { event: PlanningEvent; attendance:
   );
 }
 
+const LIST_DAY = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "numeric",
+  month: "numeric",
+  timeZone: "Europe/Berlin",
+});
+
+/** Montag der Kalenderwoche als Schlüssel – trennt die Liste nach Wochen wie im Probenplan. */
+function weekKeyOf(dayKey: string) {
+  const date = new Date(`${dayKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+  return date.toISOString().slice(0, 10);
+}
+
+function listDate(event: PlanningEvent) {
+  const days = expandEntryDayKeys(event);
+  const first = LIST_DAY.format(new Date(`${days[0]}T12:00:00Z`)).replace(".,", ",");
+  if (days.length < 2) return first;
+  const last = LIST_DAY.format(new Date(`${days.at(-1)}T12:00:00Z`)).replace(".,", ",");
+  return `${first} – ${last}`;
+}
+
+function listTime(event: PlanningEvent) {
+  if (event.allDay) return "";
+  const start = formatIsoTimeInTimeZone(event.start).replace(/:00$/, "");
+  if (!event.end) return start;
+  return `${start}–${formatIsoTimeInTimeZone(event.end).replace(/:00$/, "")}`;
+}
+
+/** Erste Zeile der Beschreibung – wie die Zusätze im gedruckten Probenplan. */
+function firstLine(text: string | null) {
+  return (
+    text
+      ?.split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? ""
+  );
+}
+
+/**
+ * Kompakte Terminliste: eine Zeile pro Termin, Wochen durch Abstand getrennt,
+ * wer fehlt steht als Namen dahinter. Druckbar als PDF.
+ */
 function EventList({
   events,
   todayKey,
   attendanceFor,
+  productionTitle,
 }: {
   events: PlanningEvent[];
   todayKey: string;
   attendanceFor: (event: PlanningEvent) => Attendance[];
+  productionTitle: string | null;
 }) {
   const [showPast, setShowPast] = useState(false);
+  const [showAbsences, setShowAbsences] = useState(true);
   const groups = useMemo(() => {
-    const byMonth = new Map<string, PlanningEvent[]>();
+    const byMonth = new Map<string, PlanningEvent[][]>();
+    let lastWeek = "";
     for (const event of events) {
       if (!showPast && lastDayOf(event) < todayKey) continue;
       const label = MONTH.format(new Date(event.start));
-      const list = byMonth.get(label) ?? [];
-      list.push(event);
-      byMonth.set(label, list);
+      const weeks = byMonth.get(label) ?? [];
+      const week = weekKeyOf(event.dayKey);
+      if (!weeks.length || week !== lastWeek) weeks.push([]);
+      weeks.at(-1)!.push(event);
+      lastWeek = week;
+      byMonth.set(label, weeks);
     }
     return [...byMonth.entries()];
   }, [events, showPast, todayKey]);
 
   return (
-    <div className="space-y-4">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="-ml-2"
-        onClick={() => setShowPast((value) => !value)}
-      >
-        {showPast ? "Vergangene ausblenden" : "Vergangene zeigen"}
-      </Button>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <Button type="button" variant="ghost" size="sm" onClick={() => setShowPast((v) => !v)}>
+          {showPast ? "Vergangene ausblenden" : "Vergangene zeigen"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-pressed={showAbsences}
+          onClick={() => setShowAbsences((v) => !v)}
+        >
+          {showAbsences ? "Abwesenheiten ausblenden" : "Abwesenheiten zeigen"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="ml-auto h-10"
+          onClick={() => window.print()}
+        >
+          <PrinterIcon className="h-4 w-4" aria-hidden /> PDF / Drucken
+        </Button>
+      </div>
       {groups.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
           Keine anstehenden Termine.
         </p>
       ) : (
-        groups.map(([month, list]) => (
-          <section key={month} className="space-y-2">
-            <h2 className="text-sm font-semibold text-muted-foreground">{month}</h2>
-            <Card variant="plain" size="flush" className="divide-y divide-border border-border">
-              {list.map((event) => (
-                <EventRow
-                  key={event.id}
-                  event={event}
-                  attendance={attendanceFor(event)}
-                  past={lastDayOf(event) < todayKey}
-                />
-              ))}
-            </Card>
-          </section>
-        ))
+        <Card
+          variant="plain"
+          size="flush"
+          className="print-area border-border px-3 py-2 sm:px-4 print:border-0 print:bg-white print:text-black"
+        >
+          <header className="hidden pb-3 print:block">
+            <p className="text-base font-semibold">
+              Termine{productionTitle ? ` – ${productionTitle}` : ""}
+            </p>
+            <p className="text-xs">Stand {formatLongDate(new Date())}</p>
+          </header>
+          {groups.map(([month, weeks]) => (
+            <section key={month} className="break-inside-avoid-page pb-2">
+              <h2 className="sticky top-0 z-10 bg-card py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground print:static print:text-black">
+                {month}
+              </h2>
+              <div className="space-y-2">
+                {weeks.map((week) => (
+                  <ul key={week[0].id} className="break-inside-avoid">
+                    {week.map((event) => (
+                      <EventRow
+                        key={event.id}
+                        event={event}
+                        attendance={attendanceFor(event)}
+                        past={lastDayOf(event) < todayKey}
+                        showAbsences={showAbsences}
+                      />
+                    ))}
+                  </ul>
+                ))}
+              </div>
+            </section>
+          ))}
+        </Card>
       )}
     </div>
   );
 }
 
-const AVAILABLE_PREVIEW = 8;
+function absenceText(entries: Attendance[]) {
+  return entries
+    .map((entry) =>
+      entry.days.length ? `${entry.name} (${entry.days.map(weekdayOf).join(", ")})` : entry.name,
+    )
+    .join(", ");
+}
 
 function EventRow({
   event,
   attendance,
   past,
+  showAbsences,
 }: {
   event: PlanningEvent;
   attendance: Attendance[];
   past: boolean;
+  showAbsences: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const cancelled = event.status === "CANCELLED";
   const blocked = attendance.filter((entry) => entry.answer === "blocked");
   const limited = attendance.filter((entry) => entry.answer === "limited");
-  const available = attendance
-    .filter((entry) => entry.answer === "available")
-    .sort((a, b) => Number(b.preferred) - Number(a.preferred));
+  const available = attendance.length - blocked.length;
+  const note = firstLine(event.description);
+  const reasons = [...blocked, ...limited]
+    .flatMap((entry) => entry.reasons.map((reason) => `${entry.name}: ${reason}`))
+    .join("\n");
 
   return (
-    <div className={cn("space-y-2 p-3 sm:p-4", past && "opacity-60")}>
-      <div className="flex items-start gap-3">
-        <DateBadge date={new Date(event.start)} tone="primary" />
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <span className="flex items-center gap-1.5">
-            <Link
-              href={event.href ?? "#"}
+    <li className={cn(past && "opacity-60 print:opacity-100")}>
+      <Link
+        href={event.href ?? "#"}
+        className="grid grid-cols-[5.5rem_1fr_auto] items-baseline gap-x-2 rounded px-1 py-0.5 text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:grid-cols-[6.5rem_4.5rem_1fr_auto] print:grid-cols-[6rem_4.5rem_1fr] print:text-[10pt]"
+      >
+        <span className="font-semibold tabular-nums">{listDate(event)}</span>
+        <span className="col-start-1 row-start-2 text-xs tabular-nums text-muted-foreground sm:col-start-auto sm:row-start-auto sm:text-sm sm:font-semibold sm:text-foreground print:col-start-auto print:row-start-auto print:text-black">
+          {listTime(event) || (event.allDay ? "ganztägig" : "")}
+        </span>
+        <span className="col-start-2 row-span-2 row-start-1 min-w-0 sm:col-start-auto sm:row-span-1 sm:row-start-auto print:col-start-auto print:row-span-1 print:row-start-auto">
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span
+              aria-hidden
               className={cn(
-                "truncate text-sm font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                event.status === "CANCELLED" && "text-muted-foreground line-through",
+                "inline-block h-2 w-2 shrink-0 translate-y-[-1px] rounded-full print:hidden",
+                event.kind === "REHEARSAL" ? "bg-info" : "bg-primary",
+              )}
+            />
+            <span
+              className={cn(
+                "min-w-0",
+                event.kind !== "REHEARSAL" && "font-semibold",
+                cancelled && "text-muted-foreground line-through",
               )}
             >
               {event.title}
-            </Link>
+              {note ? (
+                <span className="font-normal text-muted-foreground print:text-black">
+                  {" "}
+                  – {note}
+                </span>
+              ) : null}
+              {event.location ? (
+                <span className="font-normal text-muted-foreground print:text-black">
+                  {" "}
+                  · {event.location}
+                </span>
+              ) : null}
+            </span>
             <StatusChip event={event} />
           </span>
-          <p className="truncate text-xs text-muted-foreground">
-            {[
-              getCalendarEntryKindLabel(event.kind),
-              formatWhen(event),
-              event.location,
-              event.invitedIds ? `${event.invitedIds.length} eingeladen` : "für alle",
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-        </div>
-        {event.status !== "CANCELLED" ? (
-          <div className="w-24 shrink-0 space-y-1 text-right sm:w-36">
-            <p className="text-sm">
-              <span className="font-semibold tabular-nums">{available.length}</span>
-              <span className="text-muted-foreground"> / {attendance.length} können</span>
-            </p>
-            <AvailabilityBar
-              total={attendance.length}
-              blocked={blocked.length}
-              limited={limited.length}
-              showCount={false}
-            />
-          </div>
-        ) : null}
-      </div>
-
-      {blocked.length || limited.length || available.length ? (
-        <div className="space-y-2 sm:pl-14">
-          <AttendanceGroup status="blocked" title="Können nicht" entries={blocked} />
-          <AttendanceGroup status="limited" title="Eingeschränkt" entries={limited} />
-          {expanded ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex w-full items-center gap-1.5 text-xs font-medium text-muted-foreground sm:w-auto">
-                <StatusDot status="preferred" /> Können · {available.length}
-              </span>
-              {available.map((entry) => (
-                <span
-                  key={entry.memberId}
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-xs",
-                    entry.preferred ? "bg-success/15 text-success" : "bg-muted text-foreground/80",
-                  )}
-                >
-                  {entry.name}
+          {showAbsences && !cancelled && (blocked.length || limited.length) ? (
+            <span className="block text-xs leading-snug" title={reasons || undefined}>
+              {blocked.length ? (
+                <span className="text-destructive print:text-black">
+                  fehlen: {absenceText(blocked)}
                 </span>
-              ))}
-            </div>
-          ) : null}
-          {available.length ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="-ml-2"
-              onClick={() => setExpanded((value) => !value)}
-            >
-              {expanded
-                ? "Weniger"
-                : available.length > AVAILABLE_PREVIEW
-                  ? `${available.length} können – anzeigen`
-                  : `Wer kann (${available.length})`}
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function AttendanceGroup({
-  status,
-  title,
-  entries,
-}: {
-  status: "blocked" | "limited";
-  title: string;
-  entries: Attendance[];
-}) {
-  if (!entries.length) return null;
-  return (
-    <div className="flex flex-wrap items-start gap-1.5">
-      <span className="inline-flex w-full items-center gap-1.5 pt-0.5 text-xs font-medium text-muted-foreground sm:w-auto">
-        <StatusDot status={status} /> {title} · {entries.length}
-      </span>
-      {entries.map((entry) => (
-        <span
-          key={entry.memberId}
-          className={cn(
-            "rounded-md px-2 py-0.5 text-xs",
-            status === "blocked"
-              ? "bg-destructive/15 text-destructive"
-              : "bg-warning/20 text-warning",
-          )}
-        >
-          <span className="font-medium">{entry.name}</span>
-          {entry.days.length ? (
-            <span className="opacity-80"> ({entry.days.map(weekdayOf).join(", ")})</span>
-          ) : null}
-          {entry.reasons.length ? (
-            <span className="text-foreground/70"> – {entry.reasons.join("; ")}</span>
+              ) : null}
+              {blocked.length && limited.length ? (
+                <span className="text-muted-foreground"> · </span>
+              ) : null}
+              {limited.length ? (
+                <span className="text-warning print:text-black">
+                  eingeschränkt: {absenceText(limited)}
+                </span>
+              ) : null}
+            </span>
           ) : null}
         </span>
-      ))}
-    </div>
+        {cancelled ? (
+          <span />
+        ) : (
+          <span
+            className={cn(
+              "row-span-2 text-right text-xs tabular-nums sm:row-span-1 print:hidden",
+              blocked.length ? "text-destructive" : "text-muted-foreground",
+            )}
+            title={`${available} von ${attendance.length} können`}
+          >
+            {available}/{attendance.length}
+          </span>
+        )}
+      </Link>
+    </li>
   );
 }
