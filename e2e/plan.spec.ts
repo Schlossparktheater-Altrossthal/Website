@@ -112,7 +112,11 @@ test.describe("als admin", () => {
     await expect(page.getByText(card)).toHaveCount(0);
 
     await openPlanAgenda(page);
-    await page.getByRole("button", { name: /erledigt anzeigen/ }).click();
+    await clickUntil(page.getByRole("button", { name: /erledigt anzeigen/ }), () =>
+      expect(page.getByRole("button", { name: new RegExp(title) }).first()).toBeVisible({
+        timeout: 2_000,
+      }),
+    );
     await openMilestone(page, title);
     await page.getByRole("button", { name: "Löschen", exact: true }).first().click();
     await page.getByRole("dialog").getByRole("button", { name: "Löschen", exact: true }).click();

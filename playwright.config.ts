@@ -9,6 +9,8 @@ const startCommand = process.env.SCAN_E2E_START_COMMAND;
 export default defineConfig({
   testDir: "./e2e",
   timeout: 120_000,
+  // CI-Runner hydratisieren langsamer; einzelne Ausreißer als „flaky“ melden statt abzubrechen.
+  retries: process.env.CI ? 2 : 0,
   expect: {
     timeout: 10_000,
   },

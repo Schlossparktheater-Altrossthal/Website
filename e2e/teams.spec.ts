@@ -123,9 +123,13 @@ test.describe("als admin", () => {
     await page.getByRole("button", { name: "Anlegen", exact: true }).click();
     await expect(page).toHaveURL(/rolle=/);
     await page.keyboard.press("Escape");
+    // Liste lädt nach dem Anlegen neu – abwarten, bevor die Seite gewechselt wird.
+    await expect(page.getByText(role).first()).toBeVisible();
 
     await page.goto("/mitglieder/produktionen/stueck");
-    await page.getByRole("button", { name: "Szene", exact: true }).click();
+    await clickUntil(page.getByRole("button", { name: "Szene", exact: true }), () =>
+      expect(page.getByPlaceholder("z. B. Der Buchladen")).toBeVisible({ timeout: 2_000 }),
+    );
     await page.getByPlaceholder("z. B. Der Buchladen").fill(scene);
     await page.getByRole("button", { name: role }).click();
     await page.getByRole("button", { name: "Anlegen", exact: true }).click();
