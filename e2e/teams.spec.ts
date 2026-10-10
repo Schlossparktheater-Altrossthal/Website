@@ -145,13 +145,17 @@ test.describe("als admin", () => {
 
     // Aufräumen
     await page.goto("/mitglieder/produktionen/stueck");
-    await page.getByText(scene).click();
+    await clickUntil(page.getByText(scene).first(), () =>
+      expect(page.getByRole("button", { name: "Szene löschen" })).toBeVisible({ timeout: 2_000 }),
+    );
     await page.getByRole("button", { name: "Szene löschen" }).click();
     await page.getByRole("button", { name: "Löschen", exact: true }).click();
     await expect(page.getByText(scene)).toHaveCount(0);
 
     await page.goto("/mitglieder/produktionen/stueck?ansicht=rollen");
-    await page.getByText(role).click();
+    await clickUntil(page.getByText(role).first(), () =>
+      expect(page.getByRole("button", { name: "Rolle löschen" })).toBeVisible({ timeout: 2_000 }),
+    );
     await page.getByRole("button", { name: "Rolle löschen" }).click();
     await page.getByRole("button", { name: "Löschen", exact: true }).click();
     await expect(page.getByText(role)).toHaveCount(0);
