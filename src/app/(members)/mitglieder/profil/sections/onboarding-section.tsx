@@ -18,7 +18,7 @@ import {
 } from "@/lib/education/schools";
 import { deriveOnboardingFocusFromPreferences } from "@/lib/onboarding/role-preference-utils";
 import { cn } from "@/lib/utils";
-import { type OnboardingFocus } from "@prisma/client";
+import type { OnboardingFocus } from "@prisma/client";
 import { saveOnboardingAction } from "../actions/onboarding";
 import {
   CURRENT_YEAR,

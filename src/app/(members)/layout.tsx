@@ -3,7 +3,6 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { execSync } from "node:child_process";
 
-import { MysticBackground } from "@/components/mystic-background";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import type { AssignmentFocus } from "@/components/members-nav";
@@ -159,7 +158,6 @@ export default async function MembersLayout({ children }: { children: React.Reac
 
   return (
     <div className="app-shell bg-background">
-      <MysticBackground />
       <SiteHeader siteTitle={siteTitle} activeProduction={activeProduction} membersMenu />
       <main className="relative z-10 flex min-h-0 min-w-0 flex-col pt-[var(--header-height)]">
         <SidebarProvider

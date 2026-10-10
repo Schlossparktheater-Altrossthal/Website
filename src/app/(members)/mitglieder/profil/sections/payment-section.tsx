@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { FormSaveBar } from "@/components/ui/form-save-bar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { type PayoutMethod } from "@prisma/client";
+import type { PayoutMethod } from "@prisma/client";
 import { updateProfileBasicsAction } from "../actions/basics";
 import {
   PAYOUT_METHOD_OPTIONS,

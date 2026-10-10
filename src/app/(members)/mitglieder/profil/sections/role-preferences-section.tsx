@@ -16,7 +16,7 @@ import {
   normalizeRolePreferenceWeight,
 } from "@/lib/onboarding/role-preference-utils";
 import { cn } from "@/lib/utils";
-import { type OnboardingFocus } from "@prisma/client";
+import type { OnboardingFocus } from "@prisma/client";
 import { saveRolePreferencesAction, type SaveRolePreferencesInput } from "../actions/onboarding";
 import {
   ONBOARDING_FOCUS_LABELS,

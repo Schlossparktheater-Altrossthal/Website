@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale/de";
-import QRCode from "qrcode";
 import { toast } from "sonner";
 
 import {
@@ -103,7 +102,11 @@ function FeedPanel({ showQr }: { showQr: boolean }) {
   useEffect(() => {
     if (!showQr || !feed) return;
     let active = true;
-    QRCode.toDataURL(webcalUrl(feed.url), { margin: 1, width: 176 })
+    // qrcode erst laden, wenn der QR-Code gebraucht wird – spart Ladezeit der Sperrliste
+    import("qrcode")
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(webcalUrl(feed.url), { margin: 1, width: 176 }),
+      )
       .then((data) => active && setQr(data))
       .catch(() => active && setQr(null));
     return () => {

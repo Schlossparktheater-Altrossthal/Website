@@ -12,7 +12,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { AllergyLevel, type RestrictionKind, type Role } from "@prisma/client";
+import type { AllergyLevel, RestrictionKind, Role } from "@prisma/client";
 import { toast } from "sonner";
 
 import {

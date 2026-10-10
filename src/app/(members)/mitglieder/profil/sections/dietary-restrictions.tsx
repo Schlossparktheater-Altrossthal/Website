@@ -1,6 +1,6 @@
 "use client";
 
-import { AllergyLevel, RestrictionKind } from "@prisma/client";
+import type { AllergyLevel, RestrictionKind } from "@prisma/client";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -113,13 +113,13 @@ function kindAndLevel(
   switch (stage) {
     case "severe":
       return {
-        kind: RestrictionKind.ALLERGY,
-        level: lethal ? AllergyLevel.LETHAL : AllergyLevel.SEVERE,
+        kind: "ALLERGY",
+        level: lethal ? "LETHAL" : "SEVERE",
       };
     case "allergy":
-      return { kind: RestrictionKind.ALLERGY, level: AllergyLevel.MODERATE };
+      return { kind: "ALLERGY", level: "MODERATE" };
     default:
-      return { kind: RestrictionKind.INTOLERANCE, level: AllergyLevel.MILD };
+      return { kind: "INTOLERANCE", level: "MILD" };
   }
 }
 

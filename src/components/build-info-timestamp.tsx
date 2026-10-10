@@ -25,7 +25,10 @@ export function BuildInfoTimestamp({ formattedTimestamp, isoTimestamp }: BuildIn
 
     updateRelativeTime();
 
-    const interval = window.setInterval(updateRelativeTime, 1000);
+    // Nur in der ersten Minute sekündlich („vor 46 Sekunden“), danach minütlich – sonst
+    // rendert die Fußzeile auf jeder Seite dauerhaft jede Sekunde neu.
+    const ageMs = Date.now() - buildDate.getTime();
+    const interval = window.setInterval(updateRelativeTime, ageMs < 60_000 ? 1000 : 60_000);
 
     return () => {
       window.clearInterval(interval);
