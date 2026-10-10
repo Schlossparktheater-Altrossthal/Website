@@ -77,8 +77,10 @@ test.describe("als admin", () => {
     await page.getByRole("link", { name: "+ Karte" }).click();
     await expect(page).toHaveURL(/ansicht=aufgaben.*meilenstein=/);
     const taskDialog = page.getByRole("dialog");
+    // Der Meilenstein steckt im eingeklappten Bereich „Details“.
+    await taskDialog.getByRole("button", { name: /^Details/ }).click();
     await expect(taskDialog.getByLabel("Gehört zu Meilenstein")).toHaveValue(/.+/);
-    await taskDialog.getByPlaceholder("Was ist zu tun?").fill(card);
+    await taskDialog.getByLabel("Was ist zu tun?").fill(card);
     await taskDialog.getByRole("button", { name: "Anlegen", exact: true }).click();
     await expect(page.getByText(card).first()).toBeVisible();
     // Chip des Meilensteins auf der Karte.
@@ -100,6 +102,11 @@ test.describe("als admin", () => {
     // Aufräumen: Karte aus dem Panel heraus öffnen und löschen, dann den Meilenstein.
     await page.getByRole("link", { name: new RegExp(card) }).click();
     await expect(page).toHaveURL(/karte=/);
+    // Löschen sitzt im Fuß, der erst mit „Details“ erscheint.
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^Details/ })
+      .click();
     await page.getByRole("button", { name: "Aufgabe löschen" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Löschen", exact: true }).click();
     await expect(page.getByText(card)).toHaveCount(0);

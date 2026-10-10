@@ -118,8 +118,9 @@ test.describe("als admin", () => {
 
     // Typ-Seite zeigt Maße und Tag; Code-Suche ohne Nullen/Striche findet das Exemplar.
     await page.goto(`/mitglieder/lager?q=${encodeURIComponent(name)}`);
-    await page.getByText(name).first().click();
-    await expect(page.getByText("120 × 80 × 40 cm")).toBeVisible();
+    await clickUntil(page.getByText(name).first(), () =>
+      expect(page.getByText("120 × 80 × 40 cm")).toBeVisible(),
+    );
     await expect(page.getByRole("link", { name: tag })).toBeVisible();
 
     // Aufräumen.

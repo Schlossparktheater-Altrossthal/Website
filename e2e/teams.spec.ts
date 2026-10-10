@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { authFile } from "./env";
+import { clickUntil } from "./helpers";
 
 // Gewerke-Portal und Stück (docs/seiten/gewerke.md, docs/seiten/produktionen.md).
 // Die Tests legen eigene Daten mit Präfix „E2E“ an und räumen sie am Ende wieder ab.
@@ -53,8 +54,10 @@ test.describe("als admin", () => {
 
     // Aufgabe im Board
     await page.getByRole("link", { name: /^Aufgaben/ }).click();
-    await page.getByRole("button", { name: "Aufgabe", exact: true }).first().click();
-    await page.getByPlaceholder("Was ist zu tun?").fill("E2E Aufgabe");
+    await clickUntil(page.getByRole("button", { name: "Aufgabe", exact: true }).first(), () =>
+      expect(page.getByLabel("Was ist zu tun?")).toBeVisible(),
+    );
+    await page.getByLabel("Was ist zu tun?").fill("E2E Aufgabe");
     await page.getByRole("button", { name: "Anlegen", exact: true }).click();
     await expect(page.getByText("E2E Aufgabe").first()).toBeVisible();
 
@@ -79,7 +82,8 @@ test.describe("als admin", () => {
     await page.getByRole("button", { name: "Archivieren" }).click();
     await page.getByRole("button", { name: "Archivieren" }).last().click();
     await expect(page).toHaveURL(/\/mitglieder\/meine-gewerke$/);
-    await expect(page.getByText(name)).toHaveCount(0);
+    // Nur im Seiteninhalt suchen: der Routen-Ansager (role=alert) nennt den alten Titel.
+    await expect(page.locator("main").first().getByText(name)).toHaveCount(0);
 
     // Aufräumen: Test-Blaupause archivieren (Blaupausen-Verwaltung)
     // Über die Navigation statt page.goto: ein harter Seitenwechsel bricht laufende Anfragen ab.

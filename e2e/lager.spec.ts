@@ -77,8 +77,9 @@ test.describe("als admin", () => {
 
     // Typ-Seite: drei Exemplare desselben Typs am Ort.
     await page.goto(`/mitglieder/lager/objekt/${itemCode}`);
-    await page.getByRole("link", { name: "Alle 3 Exemplare dieses Typs" }).click();
-    await expect(page).toHaveURL(/\/lager\/typ\//);
+    await clickUntil(page.getByRole("link", { name: "Alle 3 Exemplare dieses Typs" }), () =>
+      expect(page).toHaveURL(/\/lager\/typ\//),
+    );
     await expect(page.getByRole("heading", { level: 1, name: itemName })).toBeVisible();
     await expect(page.getByText("3 Exemplare", { exact: true }).first()).toBeVisible();
 

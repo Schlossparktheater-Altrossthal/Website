@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { authFile } from "./env";
+import { clickUntil } from "./helpers";
 
 // Kalender-Gesten (docs/Plan/kalender-gesten-plan.md): Wischen wechselt den Monat, Halten + Ziehen
 // und Strg/Shift-Klick wählen mehrere Tage in der Sperrliste. Die Tests speichern nichts.
@@ -29,8 +30,9 @@ const selectedKeys = (page: Page) =>
 async function openNextMonth(page: Page) {
   await page.goto("/mitglieder/sperrliste");
   await expect(grid(page)).toBeVisible();
-  await page.getByRole("button", { name: "Nächster Monat" }).click();
-  await expect(grid(page)).toHaveAttribute("aria-label", nextMonthLabel());
+  await clickUntil(page.getByRole("button", { name: "Nächster Monat" }), () =>
+    expect(grid(page)).toHaveAttribute("aria-label", nextMonthLabel()),
+  );
 }
 
 test.describe("Kalender am Desktop", () => {

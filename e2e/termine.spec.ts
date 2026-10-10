@@ -241,8 +241,9 @@ test.describe("Meine Termine", () => {
     await expect(page.getByLabel("Termin suchen")).toBeVisible();
 
     // Kalender als Umschalter: der Zustand steht in der URL, Deep-Links und Zurück funktionieren.
-    await page.getByRole("link", { name: "Kalender", exact: true }).click();
-    await expect(page).toHaveURL(/ansicht=kalender/);
+    await clickUntil(page.getByRole("link", { name: "Kalender", exact: true }), () =>
+      expect(page).toHaveURL(/ansicht=kalender/),
+    );
     await expect(page.getByRole("grid").first()).toBeVisible();
     await expect(page.getByLabel("Termin suchen")).toHaveCount(0);
 
