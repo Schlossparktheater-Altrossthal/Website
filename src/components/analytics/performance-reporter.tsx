@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useReportWebVitals } from "next/web-vitals";
+import { reloadOnVersionSkew } from "@/lib/analytics/version-skew";
 
 // Misst echte Ladezeiten im Browser und schickt sie gesammelt an /api/analytics/performance:
 // - "load": Erstaufruf/Reload bis die Seite ohne Ladeskelett dasteht (+ TTFB/FCP/LCP/INP/CLS)
@@ -303,6 +304,7 @@ export function PerformanceReporter({
       // Fehler aus fremden Skripten/Erweiterungen liefern nur "Script error." ohne Details.
       if (!event.message || event.message === "Script error.") return;
       reportClientError(event.message, event.error?.stack?.slice(0, 600) ?? null);
+      reloadOnVersionSkew(event.message);
     };
     const onRejection = (event: PromiseRejectionEvent) => {
       const reason = event.reason;
@@ -311,6 +313,7 @@ export function PerformanceReporter({
         `Unbehandelt: ${message}`,
         reason instanceof Error ? (reason.stack?.slice(0, 600) ?? null) : null,
       );
+      reloadOnVersionSkew(message);
     };
 
     document.addEventListener("click", onClick, true);
