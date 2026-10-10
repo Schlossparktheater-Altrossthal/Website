@@ -408,3 +408,42 @@ export function scheduleFromAgenda(
   }
   return { mode, times, rooms, blocks, sceneMeta, order: items.map((item) => item.id) };
 }
+
+/** Platz eines Punkts im Zeitraster paralleler Spuren (Zeilen 0-basiert, Ende exklusiv). */
+export type GridPlacement = { column: number; rowStart: number; rowEnd: number };
+
+/**
+ * Parallele Spuren nebeneinander nach Uhrzeit ausrichten: Jeder Beginn und jedes Ende ist eine
+ * Zeilengrenze, ein Punkt überspannt die Zeilen seiner Zeit. So stehen gleichzeitige Punkte auf
+ * einer Höhe, auch wenn die Dauern der Spuren verschieden sind.
+ */
+export function layoutParallelTracks(
+  tracks: readonly { track: number; items: readonly AgendaItem[] }[],
+  times: Record<string, ItemTiming>,
+): { rows: number[]; placements: Record<string, GridPlacement> } {
+  const bounds = new Set<number>();
+  for (const track of tracks) {
+    for (const item of track.items) {
+      const time = times[item.id];
+      if (!time) continue;
+      bounds.add(time.start);
+      bounds.add(Math.max(time.end, time.start + 1));
+    }
+  }
+  const rows = [...bounds].sort((a, b) => a - b);
+  const placements: Record<string, GridPlacement> = {};
+  tracks.forEach((track, column) => {
+    let previousEnd = 0;
+    for (const item of track.items) {
+      const time = times[item.id];
+      // Ohne Zeit oder bei Überlappung (angeheftet zu früh): direkt hinter den Vorgänger.
+      let rowStart = time ? rows.indexOf(time.start) : previousEnd;
+      if (rowStart < previousEnd) rowStart = previousEnd;
+      let rowEnd = time ? rows.indexOf(Math.max(time.end, time.start + 1)) : rowStart + 1;
+      if (rowEnd <= rowStart) rowEnd = rowStart + 1;
+      placements[item.id] = { column, rowStart, rowEnd };
+      previousEnd = rowEnd;
+    }
+  });
+  return { rows, placements };
+}

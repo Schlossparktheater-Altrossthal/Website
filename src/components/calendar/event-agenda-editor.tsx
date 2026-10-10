@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useId, useMemo, useState } from "react";
+import { Fragment, useId, useMemo, useState, type CSSProperties } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -34,6 +34,7 @@ import {
   findParallelConflicts,
   formatDuration,
   itemPeople,
+  layoutParallelTracks,
   segmentAgenda,
   summarizeSchedules,
   toMinutes,
@@ -77,7 +78,10 @@ function describeSceneStats(stats: SceneStatsView[string] | undefined) {
   return parts.join(" · ");
 }
 
-function SortableRow(props: Omit<Parameters<typeof AgendaRow>[0], "handle" | "style">) {
+function SortableRow({
+  gridStyle,
+  ...props
+}: Omit<Parameters<typeof AgendaRow>[0], "handle" | "style"> & { gridStyle?: CSSProperties }) {
   const sortable = useSortable({ id: props.item.id });
   return (
     <AgendaRow
@@ -85,6 +89,7 @@ function SortableRow(props: Omit<Parameters<typeof AgendaRow>[0], "handle" | "st
       setNodeRef={sortable.setNodeRef}
       dragging={sortable.isDragging}
       style={{
+        ...gridStyle,
         transform: CSS.Translate.toString(sortable.transform),
         transition: sortable.transition,
       }}
@@ -96,6 +101,9 @@ function SortableRow(props: Omit<Parameters<typeof AgendaRow>[0], "handle" | "st
     />
   );
 }
+
+/** Höhe je Minute im Zeitraster paralleler Spuren (eine Stunde ≈ eine zweizeilige Karte). */
+const ROW_PX_PER_MINUTE = 1.1;
 
 /** Dezentes „+“ zwischen zwei Punkten. */
 function InsertLine({ onClick, label }: { onClick: () => void; label: string }) {
@@ -449,8 +457,8 @@ export function EventAgendaEditor({
     return index;
   };
 
-  const inlineAdd = (index: number) => (
-    <li className="p-2">
+  const inlineAdd = (index: number, className?: string) => (
+    <li className={cn("p-2", className)}>
       <AgendaQuickAdd
         context={context}
         scenes={quickScenes}
@@ -513,36 +521,65 @@ export function EventAgendaEditor({
                 if (segment.kind === "shared") return renderRow(segment.item);
                 if (segment.tracks.length === 1) return segment.tracks[0]?.items.map(renderRow);
                 const key = segment.tracks.map((track) => track.items[0]?.id).join();
+                const grid = layoutParallelTracks(segment.tracks, timing.times);
+                const segmentIndexes = segment.tracks.flatMap((track) =>
+                  track.items.map((item) => items.indexOf(item)),
+                );
+                const addHere =
+                  insertAt !== null && insertAt > 0 && segmentIndexes.includes(insertAt);
                 return (
                   <li key={key} className="bg-muted/40 p-2">
                     <p className="px-1 pb-1.5 text-xs font-medium text-muted-foreground">
                       Parallel
                     </p>
-                    <div
-                      className={cn(
-                        "grid gap-2",
-                        segment.tracks.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3",
-                      )}
+                    {/* Ab md ein Zeitraster: Zeile 1 Spurnamen, danach eine Zeile je Zeitgrenze. */}
+                    <ul
+                      className="grid gap-x-2 md:[grid-template-columns:repeat(var(--tracks),minmax(0,1fr))] md:[grid-template-rows:var(--rows)]"
+                      style={
+                        {
+                          ["--tracks" as string]: segment.tracks.length,
+                          // Zeilenhöhe wächst mit der Dauer, damit lange Punkte auch lang aussehen.
+                          ["--rows" as string]: `auto ${grid.rows
+                            .slice(1)
+                            .map(
+                              (bound, row) =>
+                                `minmax(${Math.round((bound - (grid.rows[row] ?? bound)) * ROW_PX_PER_MINUTE)}px,auto)`,
+                            )
+                            .join(" ")}`,
+                        } as CSSProperties
+                      }
                     >
-                      {segment.tracks.map((track) => (
-                        <div key={track.track} className="min-w-0">
-                          <p className="px-1 pb-1 text-xs text-muted-foreground">
+                      {segment.tracks.map((track, column) => (
+                        <Fragment key={track.track}>
+                          <li
+                            className="px-1 pb-1 pt-2 text-xs text-muted-foreground first:pt-0 md:pt-0 md:[grid-column:var(--col)] md:[grid-row:1]"
+                            style={{ ["--col" as string]: column + 1 } as CSSProperties}
+                          >
                             {trackNames[track.track] ??
                               (track.track === 0 ? "Hauptspur" : `Parallel ${track.track}`)}
-                          </p>
-                          <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
-                            {track.items.map((item) => (
-                              <Fragment key={item.id}>
-                                {insertAt === items.indexOf(item) && items.indexOf(item) > 0
-                                  ? inlineAdd(items.indexOf(item))
-                                  : null}
-                                <SortableRow {...rowProps(item)} />
-                              </Fragment>
-                            ))}
-                          </ul>
-                        </div>
+                          </li>
+                          {track.items.map((item) => {
+                            const place = grid.placements[item.id];
+                            return (
+                              <SortableRow
+                                key={item.id}
+                                {...rowProps(item)}
+                                compact
+                                className="mb-1 rounded-md border border-border md:[grid-column:var(--col)] md:[grid-row-end:var(--re)] md:[grid-row-start:var(--rs)]"
+                                gridStyle={
+                                  {
+                                    ["--col" as string]: column + 1,
+                                    ["--rs" as string]: (place?.rowStart ?? 0) + 2,
+                                    ["--re" as string]: (place?.rowEnd ?? 1) + 2,
+                                  } as CSSProperties
+                                }
+                              />
+                            );
+                          })}
+                        </Fragment>
                       ))}
-                    </div>
+                      {addHere ? inlineAdd(insertAt, "px-0 md:col-span-full") : null}
+                    </ul>
                   </li>
                 );
               })}

@@ -67,6 +67,8 @@ export function AgendaRow({
   setNodeRef,
   dragging,
   trackNames,
+  className,
+  compact = false,
 }: {
   item: AgendaItem;
   label: string;
@@ -88,6 +90,9 @@ export function AgendaRow({
   setNodeRef?: (element: HTMLElement | null) => void;
   dragging?: boolean;
   trackNames: string[];
+  className?: string;
+  /** Schmale Spalte (parallele Spuren ab md): Uhrzeit über dem Titel, Titel zweizeilig. */
+  compact?: boolean;
 }) {
   const stripe = item.forEveryone ? STRIPE.everyone : STRIPE[item.type];
   const isScene = item.type === "SCENE";
@@ -103,6 +108,7 @@ export function AgendaRow({
       style={style}
       className={cn(
         "bg-card",
+        className,
         dragging && "relative z-20 rounded-md shadow-lg ring-1 ring-primary/40",
       )}
     >
@@ -126,7 +132,10 @@ export function AgendaRow({
             {...handle.attributes}
             {...handle.listeners}
             aria-label={`${label} verschieben`}
-            className="flex w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            className={cn(
+              "flex w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-sm text-muted-foreground hover:text-foreground active:cursor-grabbing",
+              compact && "md:w-4",
+            )}
           >
             <GripVerticalIcon className="h-4 w-4" />
           </button>
@@ -134,6 +143,7 @@ export function AgendaRow({
         <span
           className={cn(
             "w-10 shrink-0 self-center text-sm tabular-nums sm:w-11",
+            compact && "md:hidden",
             item.fixedStart ? "font-semibold text-foreground" : "text-muted-foreground",
           )}
           title={item.fixedStart ? "Uhrzeit angeheftet" : "berechnet aus der Reihenfolge"}
@@ -148,8 +158,27 @@ export function AgendaRow({
           aria-expanded={expanded}
           className="min-w-0 flex-1 rounded-sm text-left"
         >
+          {compact ? (
+            <span
+              className={cn(
+                "hidden text-xs tabular-nums md:block",
+                item.fixedStart ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {startLabel}
+              {timing ? `–${toTime(timing.end)}` : ""}
+              {item.fixedStart ? " · fest" : ""}
+            </span>
+          ) : null}
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-medium">{label}</span>
+            <span
+              className={cn(
+                "truncate text-sm font-medium",
+                compact && "md:line-clamp-2 md:whitespace-normal md:break-words",
+              )}
+            >
+              {label}
+            </span>
             {item.forEveryone ? (
               <UsersIcon className="h-3.5 w-3.5 shrink-0 text-success" aria-label="für alle" />
             ) : null}

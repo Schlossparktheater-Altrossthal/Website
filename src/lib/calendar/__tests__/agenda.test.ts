@@ -4,6 +4,7 @@ import {
   computeAgendaTiming,
   computePersonSchedules,
   findParallelConflicts,
+  layoutParallelTracks,
   segmentAgenda,
   summarizeSchedules,
   toTime,
@@ -150,5 +151,36 @@ describe("segmentAgenda", () => {
     expect(segments).toHaveLength(2);
     const tracks = segments[1];
     expect(tracks?.kind === "tracks" && tracks.tracks.map((t) => t.items.length)).toEqual([2, 1]);
+  });
+});
+
+describe("layoutParallelTracks", () => {
+  it("richtet Punkte verschiedener Spuren nach der Uhrzeit aus", () => {
+    const items = [
+      item("a", { durationMinutes: 30 }),
+      item("b", { durationMinutes: 60 }),
+      item("c", { durationMinutes: 90, track: 1 }),
+    ];
+    const timing = computeAgendaTiming(items, "18:00");
+    const [segment] = segmentAgenda(items);
+    if (segment?.kind !== "tracks") throw new Error("keine Spuren");
+    const { rows, placements } = layoutParallelTracks(segment.tracks, timing.times);
+    expect(rows.map(toTime)).toEqual(["18:00", "18:30", "19:30"]);
+    expect(placements.a).toEqual({ column: 0, rowStart: 0, rowEnd: 1 });
+    expect(placements.b).toEqual({ column: 0, rowStart: 1, rowEnd: 2 });
+    // 18:00–19:30 überspannt beide Punkte der Hauptspur.
+    expect(placements.c).toEqual({ column: 1, rowStart: 0, rowEnd: 2 });
+  });
+
+  it("lässt Lücken vor angehefteten Punkten frei", () => {
+    const items = [
+      item("a", { durationMinutes: 60 }),
+      item("b", { durationMinutes: 30, track: 1, fixedStart: "18:30" }),
+    ];
+    const timing = computeAgendaTiming(items, "18:00");
+    const [segment] = segmentAgenda(items);
+    if (segment?.kind !== "tracks") throw new Error("keine Spuren");
+    const { placements } = layoutParallelTracks(segment.tracks, timing.times);
+    expect(placements.b).toEqual({ column: 1, rowStart: 1, rowEnd: 2 });
   });
 });
