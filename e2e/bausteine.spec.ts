@@ -52,7 +52,8 @@ test.describe("als admin", () => {
       expect(page.getByRole("menuitem", { name: "Probe" })).toBeVisible({ timeout: 2_000 }),
     );
     await page.getByRole("menuitem", { name: "Probe" }).click();
-    await expect(page).toHaveURL(/\/mitglieder\/terminplanung\/[^/]+$/);
+    // Legt erst den Entwurf an und springt dann in den Editor – in CI dauert das länger.
+    await expect(page).toHaveURL(/\/mitglieder\/terminplanung\/[^/]+$/, { timeout: 30_000 });
     editorUrl = new URL(page.url()).pathname;
 
     await page.getByLabel("Titel", { exact: true }).fill(title);

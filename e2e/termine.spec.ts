@@ -118,8 +118,14 @@ async function deleteEvent(page: Page, eventId: string) {
 /** Der Tag im Monatsraster der Sperrliste – ggf. einen Monat weiterblättern. */
 async function blocklistDay(page: Page, day: string) {
   const cell = page.getByRole("gridcell", { name: LONG_DAY.format(atNoon(day)) }).first();
+  // Erst das Raster abwarten – solange das Ladeskelett steht, gibt es noch keine Zellen.
+  const grid = page.getByRole("grid").first();
+  await expect(grid).toBeVisible();
   for (let attempt = 0; attempt < 3 && !(await cell.count()); attempt += 1) {
-    await page.getByRole("button", { name: "Nächster Monat" }).click();
+    const month = await grid.getAttribute("aria-label");
+    await clickUntil(page.getByRole("button", { name: "Nächster Monat" }), () =>
+      expect(grid).not.toHaveAttribute("aria-label", month ?? ""),
+    );
   }
   await expect(cell).toBeVisible();
   return cell;

@@ -5,7 +5,6 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { authFile } from "./env";
-import { clickUntil } from "./helpers";
 
 // Gewerke-Portal und Stück (docs/seiten/gewerke.md, docs/seiten/produktionen.md).
 // Die Tests legen eigene Daten mit Präfix „E2E“ an und räumen sie am Ende wieder ab.
@@ -54,12 +53,20 @@ test.describe("als admin", () => {
 
     // Aufgabe im Board
     await page.getByRole("link", { name: /^Aufgaben/ }).click();
-    await clickUntil(page.getByRole("button", { name: "Aufgabe", exact: true }).first(), () =>
-      expect(page.getByLabel("Was ist zu tun?")).toBeVisible(),
-    );
-    await page.getByLabel("Was ist zu tun?").fill("E2E Aufgabe");
-    await page.getByRole("button", { name: "Anlegen", exact: true }).click();
-    await expect(page.getByText("E2E Aufgabe").first()).toBeVisible();
+    // Das Panel kann direkt nach dem Öffnen noch einmal neu eingehängt werden (Hydration,
+    // Wechsel Sheet/Dialog) – dann den ganzen Schritt wiederholen.
+    const taskField = page.getByLabel("Was ist zu tun?");
+    await expect(async () => {
+      if (!(await taskField.isVisible())) {
+        await page
+          .getByRole("button", { name: "Aufgabe", exact: true })
+          .first()
+          .click({ timeout: 2_000 });
+      }
+      await taskField.fill("E2E Aufgabe", { timeout: 2_000 });
+      await page.getByRole("button", { name: "Anlegen", exact: true }).click({ timeout: 2_000 });
+      await expect(page.getByText("E2E Aufgabe").first()).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
 
     // Termin mit Zusage
     await page.getByRole("link", { name: /^Termine/ }).click();
