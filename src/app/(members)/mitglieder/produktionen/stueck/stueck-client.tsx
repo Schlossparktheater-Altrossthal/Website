@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AlertTriangleIcon, PlusIcon, SearchIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
     { kind: "role" } | { kind: "scene"; act: number } | null
   >(null);
 
+  const router = useRouter();
   const roleId = searchParams.get("rolle");
   const sceneId = searchParams.get("szene");
   const openRole = data.roles.find((role) => role.id === roleId) ?? null;
@@ -161,7 +162,11 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
           setCreating(null);
           if (roleId) navigate({});
         }}
-        onCreated={(id) => navigate({ rolle: id })}
+        onCreated={(id) => {
+          navigate({ rolle: id });
+          // Nach dem Umschreiben der Adresse neu laden, sonst zeigt die Liste den alten Stand.
+          router.refresh();
+        }}
       />
       <ScenePanel
         key={`scene-${creating?.kind === "scene" ? `new-${creating.act}` : (openScene?.id ?? "closed")}`}
@@ -173,7 +178,10 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
           setCreating(null);
           if (sceneId) navigate({});
         }}
-        onCreated={(id) => navigate({ szene: id })}
+        onCreated={(id) => {
+          navigate({ szene: id });
+          router.refresh();
+        }}
       />
     </div>
   );
