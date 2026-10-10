@@ -1063,17 +1063,19 @@ function EventList({
         <Card
           variant="plain"
           size="flush"
-          className="print-area border-border px-3 py-2 sm:px-4 print:border-0 print:bg-white print:text-black"
+          className="print-area border-border px-3 py-2 sm:px-4 print:rounded-none print:border-0 print:bg-white print:text-black print:shadow-none"
         >
           <header className="hidden pb-3 print:block">
             <p className="text-base font-semibold">
               Termine{productionTitle ? ` – ${productionTitle}` : ""}
             </p>
-            <p className="text-xs">Stand {formatLongDate(new Date())}</p>
+            <p className="text-xs" suppressHydrationWarning>
+              Stand {formatLongDate(new Date())}
+            </p>
           </header>
           {groups.map(([month, weeks]) => (
-            <section key={month} className="break-inside-avoid-page pb-2">
-              <h2 className="sticky top-0 z-10 bg-card py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground print:static print:text-black">
+            <section key={month} className="pb-2">
+              <h2 className="sticky top-0 z-10 break-after-avoid bg-card py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground print:static print:text-black">
                 {month}
               </h2>
               <div className="space-y-2">
