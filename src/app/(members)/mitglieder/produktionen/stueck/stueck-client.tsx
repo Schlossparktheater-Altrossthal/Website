@@ -161,6 +161,9 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
         onClose={() => {
           setCreating(null);
           if (roleId) navigate({});
+          // Ein Neuladen direkt nach dem Anlegen kann vom Umschreiben der Adresse verworfen
+          // werden – beim Schließen deshalb noch einmal den Serverstand holen.
+          router.refresh();
         }}
         onCreated={(id) => {
           navigate({ rolle: id });
@@ -177,6 +180,9 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
         onClose={() => {
           setCreating(null);
           if (sceneId) navigate({});
+          // Ein Neuladen direkt nach dem Anlegen kann vom Umschreiben der Adresse verworfen
+          // werden – beim Schließen deshalb noch einmal den Serverstand holen.
+          router.refresh();
         }}
         onCreated={(id) => {
           navigate({ szene: id });
