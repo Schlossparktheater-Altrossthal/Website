@@ -89,18 +89,12 @@ beforeEach(() => {
 });
 
 describe("NutritionSection", () => {
-  it("zeigt die drei Karten mit ihren Leerzuständen", () => {
+  it("zeigt Ernährungsstil und die gemeinsame Liste mit Leerzustand", () => {
     renderSection();
 
     expect(screen.getByRole("heading", { name: "Ernährungsstil" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Abneigungen & Besonderheiten" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Allergien & Unverträglichkeiten" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Keine Besonderheiten hinterlegt.")).toBeInTheDocument();
-    expect(screen.getByText("Keine Allergien hinterlegt.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Allergien & Abneigungen" })).toBeInTheDocument();
+    expect(screen.getByText("Noch nichts eingetragen")).toBeInTheDocument();
   });
 
   it("zeigt die Unterform nur bei vegetarischem Stil", () => {
@@ -115,18 +109,18 @@ describe("NutritionSection", () => {
     expect(screen.queryByText("Unterform")).not.toBeInTheDocument();
   });
 
-  it("listet Besonderheiten mit Notiz auf", () => {
+  it("listet Abneigungen als Chip mit Stufe auf", () => {
     renderSection({
       aversions: [
         { id: "av-1", label: "Keine Pilze", note: "auch keine Trüffel", updatedAt: null },
       ],
     });
 
-    expect(screen.getByText("Keine Pilze")).toBeInTheDocument();
-    expect(screen.getByText("auch keine Trüffel")).toBeInTheDocument();
+    const chip = screen.getByRole("button", { name: /Keine Pilze/ });
+    expect(within(chip).getByText("Mag nicht")).toBeInTheDocument();
   });
 
-  it("listet Allergien mit Art, Schweregrad und Spuren-Hinweis auf", () => {
+  it("markiert lebensbedrohliche Allergien als Notfall", () => {
     renderSection({
       allergies: [
         {
@@ -144,59 +138,43 @@ describe("NutritionSection", () => {
       ],
     });
 
-    const entry = screen.getByText("Erdnüsse").closest("li");
-    expect(entry).not.toBeNull();
-    const badges = within(entry as HTMLElement);
-    expect(badges.getByText("Allergie")).toBeInTheDocument();
-    expect(badges.getByText("Lebensbedrohlich")).toBeInTheDocument();
-    expect(badges.getByText("Keine Spuren")).toBeInTheDocument();
+    const chip = screen.getByRole("button", { name: /Erdnüsse/ });
+    expect(within(chip).getByText("Notfall")).toBeInTheDocument();
   });
 
-  it("verlangt ein Allergen, bevor gespeichert wird", async () => {
+  it("verlangt eine Bezeichnung, bevor gespeichert wird", async () => {
     renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: /Allergie/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Noch nichts eingetragen" }));
     const dialog = await screen.findByRole("dialog");
-    // Regression: mit `PopoverTrigger` bekam das Feld `type="button"` und war nicht beschreibbar.
-    expect(dialog.querySelector("#allergen")?.getAttribute("type")).not.toBe("button");
-    fireEvent.submit(dialog.querySelector("form")!);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
-    expect(await screen.findByText("Bitte gib ein Allergen an.")).toBeInTheDocument();
+    expect(await within(dialog).findByText("Bitte angeben, worum es geht.")).toBeInTheDocument();
     expect(mocks.upsertAllergy).not.toHaveBeenCalled();
+    expect(mocks.upsertAversion).not.toHaveBeenCalled();
   });
 
-  it("legt eine Besonderheit an und meldet sie nach oben", async () => {
+  it("legt eine Abneigung an und meldet sie nach oben", async () => {
     mocks.upsertAversion.mockResolvedValue({
       ok: true,
       data: { aversion: { id: "av-1", label: "Keine Pilze", note: null, updatedAt: null } },
     });
     const { onAversionsChange } = renderSection();
 
-    fireEvent.click(screen.getByRole("button", { name: /Besonderheit/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Noch nichts eingetragen" }));
     const dialog = await screen.findByRole("dialog");
-    const labelField = dialog.querySelector<HTMLInputElement>("#aversion-label")!;
-    fireEvent.change(labelField, { target: { value: "  Keine Pilze  " } });
-    fireEvent.submit(dialog.querySelector("form")!);
+    fireEvent.change(dialog.querySelector<HTMLInputElement>("#restriction-text")!, {
+      target: { value: "Keine Pilze" },
+    });
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Mag ich nicht" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(mocks.upsertAversion).toHaveBeenCalledWith({ label: "Keine Pilze", note: null }),
+      expect(mocks.upsertAversion).toHaveBeenCalledWith({ label: "Keine Pilze", note: undefined }),
     );
     expect(onAversionsChange).toHaveBeenCalledWith([
       { id: "av-1", label: "Keine Pilze", note: null, updatedAt: null },
     ]);
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Besonderheit gespeichert");
-  });
-
-  it("weist eine zu kurze Besonderheit ab", async () => {
-    renderSection();
-
-    fireEvent.click(screen.getByRole("button", { name: /Besonderheit/ }));
-    const dialog = await screen.findByRole("dialog");
-    const labelField = dialog.querySelector<HTMLInputElement>("#aversion-label")!;
-    fireEvent.change(labelField, { target: { value: "x" } });
-    fireEvent.submit(dialog.querySelector("form")!);
-
-    expect(await screen.findByText("Bitte gib eine Besonderheit an.")).toBeInTheDocument();
-    expect(mocks.upsertAversion).not.toHaveBeenCalled();
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Gespeichert");
   });
 });

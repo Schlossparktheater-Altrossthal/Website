@@ -17,6 +17,9 @@ const eslintConfig = [
       // Playwright-Berichte und Artefakte (gebündeltes JS, nicht versioniert).
       "playwright-report/**",
       "test-results/**",
+      // Lokal gebündelte Skripte (nicht versioniert).
+      "dist/**",
+      "scripts/demo/dist/**",
     ],
   },
   {
