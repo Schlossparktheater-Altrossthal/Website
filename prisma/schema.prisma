@@ -1581,28 +1581,36 @@ enum EventBlockType {
 /// Baustein eines Termins in Reihenfolge, optional mit Uhrzeit und Raum (auch parallel);
 /// nach dem Termin mit Ergebnis.
 model EventBlock {
-  id           String                 @id @default(cuid())
-  eventId      String
-  type         EventBlockType         @default(SCENE)
-  sceneId      String?
-  departmentId String?
-  title        String?
-  description  String?
-  location     String?
-  order        Int                    @default(0)
-  startsAt     DateTime?
-  endsAt       DateTime?
-  outcome      SceneRehearsalOutcome?
-  note         String?
+  id              String                 @id @default(cuid())
+  eventId         String
+  type            EventBlockType         @default(SCENE)
+  sceneId         String?
+  departmentId    String?
+  title           String?
+  description     String?
+  location        String?
+  order           Int                    @default(0)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  /// Geplante Dauer; die Uhrzeiten berechnet der Editor aus Reihenfolge und Dauer.
+  durationMinutes Int?
+  /// Uhrzeit angeheftet (`startsAt` gilt fest), sonst folgt der Punkt auf den vorherigen.
+  fixedStart      Boolean                @default(false)
+  /// Spur für parallele Punkte (0 = Hauptspur).
+  track           Int                    @default(0)
+  /// Gilt für alle Eingeladenen (Aufwärmen, Auswertung) und wartet auf alle Spuren.
+  forEveryone     Boolean                @default(false)
+  outcome         SceneRehearsalOutcome?
+  note            String?
   /// Probenmodus: tatsächliche Zeiten und Reihenfolge; spontan hinzugefügte Punkte sind `unplanned`.
-  actualStart  DateTime?
-  actualEnd    DateTime?
-  actualOrder  Int?
-  unplanned    Boolean                @default(false)
-  event        CalendarEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  scene        Scene?                 @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  department   Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  notes        EventNote[]
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  actualOrder     Int?
+  unplanned       Boolean                @default(false)
+  event           CalendarEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scene           Scene?                 @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  department      Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  notes           EventNote[]
 
   @@unique([eventId, sceneId])
   @@index([sceneId])

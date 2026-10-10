@@ -269,6 +269,7 @@ export async function syncEventBlocks(
   await saveEventBlocks(tx, {
     eventId,
     blocks: schedule.blocks,
+    order: schedule.order,
     dateKey: formatIsoDateInTimeZone(start.toISOString(), REHEARSAL_TIME_ZONE),
     eventStart: start,
   });

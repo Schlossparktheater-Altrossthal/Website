@@ -35,6 +35,10 @@ export const blockInputSchema = z
     description: z.string().trim().max(2000).default(""),
     /** Zeiten von der Planung geändert; sonst gelten bei Gewerk-Bausteinen die gespeicherten. */
     timesChanged: z.boolean().default(false),
+    durationMinutes: z.number().int().min(0).max(720).nullable().default(null),
+    fixedStart: z.boolean().default(false),
+    track: z.number().int().min(0).max(2).default(0),
+    forEveryone: z.boolean().default(false),
   })
   .refine((block) => block.type !== "DEPARTMENT" || block.departmentId, {
     message: "Gewerk fehlt",
@@ -51,6 +55,19 @@ export const scheduleInputSchema = z.object({
   /** Raum pro Szene, wenn parallel geprobt wird. */
   rooms: z.record(z.string(), z.string().trim().max(120)).default({}),
   blocks: z.array(blockInputSchema).max(30).default([]),
+  /** Dauer, Anheften und Spur pro Szene. */
+  sceneMeta: z
+    .record(
+      z.string(),
+      z.object({
+        durationMinutes: z.number().int().min(0).max(720).nullable(),
+        fixedStart: z.boolean(),
+        track: z.number().int().min(0).max(2),
+      }),
+    )
+    .default({}),
+  /** Gemeinsame Reihenfolge: Szenen als `scene:<id>`, sonst die ID des Programmpunkts. */
+  order: z.array(z.string().max(60)).max(80).default([]),
 });
 
 export type ScheduleInput = z.infer<typeof scheduleInputSchema>;
@@ -83,7 +100,14 @@ export async function saveEventBlocks(
     blocks,
     dateKey,
     eventStart,
-  }: { eventId: string; blocks: readonly BlockInput[]; dateKey: string; eventStart: Date },
+    order = [],
+  }: {
+    eventId: string;
+    blocks: readonly BlockInput[];
+    dateKey: string;
+    eventStart: Date;
+    order?: readonly string[];
+  },
 ) {
   await tx.eventBlock.deleteMany({
     where: { eventId, type: { not: "SCENE" }, id: { notIn: blocks.map((block) => block.id) } },
@@ -93,23 +117,33 @@ export async function saveEventBlocks(
       type: block.type,
       title: block.title || null,
       departmentId: block.type === "DEPARTMENT" ? block.departmentId : null,
-      order: 1000 + index,
+      order: order.includes(block.id) ? order.indexOf(block.id) : 1000 + index,
+      track: block.track,
+      forEveryone: block.type === "CUSTOM" && block.forEveryone,
     };
+    const timing = { durationMinutes: block.durationMinutes, fixedStart: block.fixedStart };
     const range = toRange(dateKey, block.start, block.end, eventStart);
     // Gewerk-Bausteine: Raum und Beschreibung pflegt die Gewerk-Leitung, die Zeiten auch –
     // außer die Planung hat sie gerade selbst geändert.
     const own =
       block.type === "CUSTOM"
-        ? { ...range, location: block.location || null, description: block.description || null }
+        ? {
+            ...range,
+            ...timing,
+            location: block.location || null,
+            description: block.description || null,
+          }
         : block.timesChanged
-          ? range
+          ? { ...range, ...timing }
           : {};
     const updated = await tx.eventBlock.updateMany({
       where: { id: block.id, eventId, type: { not: "SCENE" } },
       data: { ...common, ...own },
     });
     if (!updated.count) {
-      await tx.eventBlock.create({ data: { id: block.id, eventId, ...common, ...range, ...own } });
+      await tx.eventBlock.create({
+        data: { id: block.id, eventId, ...common, ...range, ...timing, ...own },
+      });
     }
   }
 }
@@ -148,8 +182,9 @@ export async function saveEventSchedule(
   },
 ) {
   const staggered = schedule.mode === "STAGGERED";
+  // Uhrzeiten gelten immer für den Ablauf; persönliche Fenster nur bei „eigene Zeiten“.
   const scenes: ScheduledScene[] = sceneIds.map((sceneId) => {
-    const time = staggered ? schedule.times[sceneId] : undefined;
+    const time = schedule.times[sceneId];
     return { sceneId, ...toRange(dateKey, time?.start ?? "", time?.end ?? "", eventStart) };
   });
 
@@ -157,12 +192,24 @@ export async function saveEventSchedule(
   await tx.eventBlock.deleteMany({
     where: { eventId, type: "SCENE", sceneId: { notIn: [...sceneIds] } },
   });
-  for (const [order, scene] of scenes.entries()) {
+  for (const [index, scene] of scenes.entries()) {
+    const key = `scene:${scene.sceneId}`;
+    const order = schedule.order.includes(key) ? schedule.order.indexOf(key) : index;
     const location = schedule.rooms[scene.sceneId] || null;
+    const meta = schedule.sceneMeta[scene.sceneId];
+    const data = {
+      order,
+      startsAt: scene.startsAt,
+      endsAt: scene.endsAt,
+      location,
+      durationMinutes: meta?.durationMinutes ?? null,
+      fixedStart: meta?.fixedStart ?? false,
+      track: meta?.track ?? 0,
+    };
     await tx.eventBlock.upsert({
       where: { eventId_sceneId: { eventId, sceneId: scene.sceneId } },
-      update: { order, startsAt: scene.startsAt, endsAt: scene.endsAt, location },
-      create: { eventId, order, location, ...scene },
+      update: data,
+      create: { eventId, sceneId: scene.sceneId, ...data },
     });
   }
 
@@ -171,6 +218,20 @@ export async function saveEventSchedule(
   const windows = computePersonalWindows(staggered ? scenes : [], context, departmentBlocks);
   if (!staggered) {
     for (const userId of scenesByPerson(sceneIds, context).keys()) windows.delete(userId);
+  } else {
+    // Punkte „für alle“ (Aufwärmen, Auswertung) gehören zu jedem persönlichen Fenster.
+    const shared = await tx.eventBlock.findMany({
+      where: { eventId, forEveryone: true, startsAt: { not: null }, endsAt: { not: null } },
+      select: { startsAt: true, endsAt: true },
+    });
+    for (const [userId, window] of windows) {
+      let { start, end } = window;
+      for (const block of shared) {
+        if (block.startsAt && block.startsAt < start) start = block.startsAt;
+        if (block.endsAt && block.endsAt > end) end = block.endsAt;
+      }
+      windows.set(userId, { start, end });
+    }
   }
   await tx.eventParticipant.updateMany({
     where: { eventId },
@@ -193,6 +254,8 @@ export async function readEventSchedule(eventId: string): Promise<{
   times: ScheduleInput["times"];
   rooms: ScheduleInput["rooms"];
   blocks: BlockInput[];
+  sceneMeta: ScheduleInput["sceneMeta"];
+  order: string[];
 }> {
   const event = await prisma.calendarEvent.findUnique({
     where: { id: eventId },
@@ -210,16 +273,28 @@ export async function readEventSchedule(eventId: string): Promise<{
           location: true,
           startsAt: true,
           endsAt: true,
+          durationMinutes: true,
+          fixedStart: true,
+          track: true,
+          forEveryone: true,
         },
       },
     },
   });
+  const order: string[] = [];
+  const sceneMeta: ScheduleInput["sceneMeta"] = {};
   const times: ScheduleInput["times"] = {};
   const rooms: ScheduleInput["rooms"] = {};
   const blocks: BlockInput[] = [];
   for (const block of event?.blocks ?? []) {
     if (block.type === "SCENE") {
       if (!block.sceneId) continue;
+      order.push(`scene:${block.sceneId}`);
+      sceneMeta[block.sceneId] = {
+        durationMinutes: block.durationMinutes,
+        fixedStart: block.fixedStart,
+        track: block.track,
+      };
       if (block.startsAt && block.endsAt) {
         times[block.sceneId] = { start: formatTime(block.startsAt), end: formatTime(block.endsAt) };
       }
@@ -236,9 +311,21 @@ export async function readEventSchedule(eventId: string): Promise<{
       location: block.location ?? "",
       description: block.description ?? "",
       timesChanged: false,
+      durationMinutes: block.durationMinutes,
+      fixedStart: block.fixedStart,
+      track: block.track,
+      forEveryone: block.forEveryone,
     });
+    order.push(block.id);
   }
-  return { mode: event?.scheduleMode ?? "TOGETHER", times, rooms, blocks };
+  return {
+    mode: event?.scheduleMode ?? "TOGETHER",
+    times,
+    rooms,
+    blocks,
+    sceneMeta,
+    order,
+  };
 }
 
 export type SceneStats = Record<

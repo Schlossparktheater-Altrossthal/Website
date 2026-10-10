@@ -1242,6 +1242,10 @@ async function seedEvents(
               location: "",
               description: "",
               timesChanged: true,
+              durationMinutes: null,
+              fixedStart: true,
+              track: 1,
+              forEveryone: false,
             },
           ],
         });
@@ -1274,6 +1278,13 @@ async function seedEvents(
               : {},
             rooms: {},
             blocks: [],
+            sceneMeta: Object.fromEntries(
+              scenes.map((sceneId) => [
+                sceneId,
+                { durationMinutes: 60, fixedStart: false, track: 0 },
+              ]),
+            ),
+            order: [],
           },
           dateKey,
           eventStart: start,

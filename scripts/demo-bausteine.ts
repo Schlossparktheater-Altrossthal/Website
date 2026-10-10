@@ -103,6 +103,10 @@ async function main() {
           location: "",
           description: "",
           timesChanged: true,
+          durationMinutes: 150,
+          fixedStart: true,
+          track: 1,
+          forEveryone: false,
         },
         {
           id: crypto.randomUUID(),
@@ -114,6 +118,10 @@ async function main() {
           location: "Foyer",
           description: "",
           timesChanged: true,
+          durationMinutes: 30,
+          fixedStart: false,
+          track: 0,
+          forEveryone: true,
         },
       ],
     });
@@ -141,6 +149,10 @@ async function main() {
         },
         rooms: first ? { [first.id]: "Bühne" } : {},
         blocks: [],
+        sceneMeta: Object.fromEntries(
+          scenes.map((scene) => [scene.id, { durationMinutes: 60, fixedStart: false, track: 0 }]),
+        ),
+        order: [],
       },
       dateKey,
       eventStart: start,
