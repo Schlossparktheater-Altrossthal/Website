@@ -8,15 +8,13 @@ import { toast } from "sonner";
 import { AudienceBuilder, type AudienceValue } from "@/components/calendar/audience-builder";
 import {
   EventAgendaEditor,
-  type EventBlockValue,
-  type SceneScheduleValue,
   type SceneStatsView,
+  type SceneUrgencyView,
 } from "@/components/calendar/event-agenda-editor";
-import { CalendarXIcon, MapPinIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
+import { CalendarXIcon, PlusIcon, TrashIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { DateInput } from "@/components/ui/date-input";
 import {
   Dialog,
   DialogContent,
@@ -25,22 +23,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { SectionHeader } from "@/components/ui/section-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { TimeInput } from "@/components/ui/time-input";
-import { CALENDAR_EVENT_KINDS, CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
+import {
+  agendaFromSchedule,
+  computeAgendaTiming,
+  scheduleFromAgenda,
+  toTime,
+  type AgendaItem,
+  type StoredSchedule,
+} from "@/lib/calendar/agenda";
+import { CALENDAR_EVENT_KINDS } from "@/lib/calendar/event-kinds";
 import { cn } from "@/lib/utils";
 import {
   computeAudienceDrift,
@@ -50,7 +46,7 @@ import {
 } from "@/lib/calendar/audience";
 import type { DayAvailability } from "@/lib/calendar/day-availability";
 import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
-import type { PersonLoad } from "@/lib/calendar/week-load";
+import { HEAVY_WEEK_COUNT, type PersonLoad } from "@/lib/calendar/week-load";
 import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
@@ -58,6 +54,7 @@ import {
   parseDateTimeInTimeZone,
 } from "@/lib/date-time";
 
+import { EventEditorHeader, type EventHeaderValue } from "./event-editor-header";
 import {
   discardRehearsalDraftAction,
   publishRehearsalAction,
@@ -97,21 +94,28 @@ type EventEditorProps = {
   initialAvailability: DayAvailability;
   initialWeekLoad: Record<string, PersonLoad>;
   declined: Record<string, string | null>;
-  schedule: SceneScheduleValue & { blocks: EventBlockValue[] };
+  schedule: StoredSchedule;
   sceneStats: SceneStatsView;
+  sceneUrgency: SceneUrgencyView;
 };
 
 const KIND_OPTIONS: CalendarEventKind[] = ["REHEARSAL", ...CALENDAR_EVENT_KINDS];
 /** Keine Vorauswahl: Wer eingeladen ist, wählt die Planung bewusst aus. */
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-/** Gewerk-Bausteine als Einladungsquelle (für Vorschau und Abweichungen). */
-function audienceBlocks(blocks: readonly EventBlockValue[]) {
+/** Gewerk-Programmpunkte als Einladungsquelle (für Vorschau und Abweichungen). */
+function audienceBlocks(
+  blocks: readonly { type: string; departmentId: string | null; title: string }[],
+) {
   return blocks.flatMap((block) =>
     block.type === "DEPARTMENT" && block.departmentId
       ? [{ departmentId: block.departmentId, title: block.title || null }]
       : [],
   );
+}
+
+function sceneRuleIds(rules: readonly { type: string; targetId: string | null }[]) {
+  return rules.flatMap((rule) => (rule.type === "SCENE" && rule.targetId ? [rule.targetId] : []));
 }
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
@@ -128,6 +132,7 @@ export function EventEditor({
   declined,
   schedule: initialSchedule,
   sceneStats,
+  sceneUrgency,
 }: EventEditorProps) {
   const router = useRouter();
   const isDraft = rehearsal.status === "DRAFT";
@@ -172,38 +177,21 @@ export function EventEditor({
   // Abweichungen übernommen hat – sonst keine stillen Einladungen.
   const [audienceTouched, setAudienceTouched] = useState(isDraft);
   const [availability, setAvailability] = useState<DayAvailability>(initialAvailability);
-  const [schedule, setSchedule] = useState<SceneScheduleValue>(initialSchedule);
-  const [blocks, setBlocks] = useState<EventBlockValue[]>(initialSchedule.blocks);
+  const [agendaState, setAgendaState] = useState<AgendaItem[]>(() =>
+    agendaFromSchedule(initialSchedule, sceneRuleIds(initialAudience.rules), initialContext),
+  );
+  // Ohne bisherigen Ablauf: jeder kommt erst zu seinem ersten Punkt (Entscheidung 2026-10-10).
+  const [mode, setMode] = useState<StoredSchedule["mode"]>(() =>
+    agendaState.length ? initialSchedule.mode : "STAGGERED",
+  );
   const [showBlocks, setShowBlocks] = useState(
-    rehearsal.kind === "REHEARSAL" || initialSchedule.blocks.length > 0,
+    rehearsal.kind === "REHEARSAL" || agendaState.length > 0,
+  );
+  const initialTimes = useMemo(
+    () => new Map(initialSchedule.blocks.map((block) => [block.id, `${block.start}-${block.end}`])),
+    [initialSchedule],
   );
   const initialBlocks = useMemo(() => audienceBlocks(initialSchedule.blocks), [initialSchedule]);
-  const currentBlocks = useMemo(() => audienceBlocks(blocks), [blocks]);
-  // Nur vollständige Uhrzeiten speichern; halb ausgefüllte Felder blockieren sonst das Speichern.
-  const scheduleToSave = useMemo(
-    () => ({
-      mode: schedule.mode,
-      times: Object.fromEntries(
-        Object.entries(schedule.times).filter(([, time]) =>
-          [time.start, time.end].every((value) => TIME_PATTERN.test(value)),
-        ),
-      ),
-      rooms: Object.fromEntries(
-        Object.entries(schedule.rooms)
-          .map(([sceneId, room]) => [sceneId, room.trim()] as const)
-          .filter(([, room]) => room),
-      ),
-      blocks: blocks.map((block) => {
-        const timed = TIME_PATTERN.test(block.start) && TIME_PATTERN.test(block.end);
-        return {
-          ...block,
-          start: timed ? block.start : "",
-          end: timed ? block.end : "",
-        };
-      }),
-    }),
-    [schedule, blocks],
-  );
   const [weekLoad, setWeekLoad] = useState<Record<string, PersonLoad>>(initialWeekLoad);
   const [conflicts, setConflicts] = useState<Partial<Record<string, string>>>({});
   const [isCheckingBlocks, setIsCheckingBlocks] = useState(false);
@@ -228,12 +216,27 @@ export function EventEditor({
     return computeSceneReadiness(context, absences);
   }, [availability, conflicts, declined, context]);
 
-  const sceneIds = useMemo(
-    () =>
-      audience.rules.flatMap((rule) =>
-        rule.type === "SCENE" && rule.targetId ? [rule.targetId] : [],
+  const sceneIds = useMemo(() => sceneRuleIds(audience.rules), [audience.rules]);
+  // Szenen kommen aus den Szenen-Regeln; der Ablauf ergänzt Reihenfolge, Dauer und Spur.
+  const agenda = useMemo(() => {
+    const kept = agendaState.filter((item) => !item.sceneId || sceneIds.includes(item.sceneId));
+    const missing = sceneIds.filter((id) => !kept.some((item) => item.sceneId === id));
+    if (!missing.length) return kept;
+    return [
+      ...kept,
+      ...agendaFromSchedule(
+        { mode, times: {}, rooms: {}, blocks: [], sceneMeta: {}, order: [] },
+        missing,
+        context,
       ),
-    [audience.rules],
+    ];
+  }, [agendaState, sceneIds, mode, context]);
+  const currentBlocks = useMemo(() => audienceBlocks(agenda), [agenda]);
+  const timing = useMemo(() => computeAgendaTiming(agenda, time), [agenda, time]);
+  const plannedEnd = agenda.length && !allDay ? toTime(timing.end) : null;
+  const scheduleToSave = useMemo(
+    () => scheduleFromAgenda(agenda, timing, mode, initialTimes),
+    [agenda, timing, mode, initialTimes],
   );
   // Mit Szenen ist es immer eine Probe.
   const effectiveKind: CalendarEventKind = sceneIds.length ? "REHEARSAL" : kind;
@@ -276,20 +279,6 @@ export function EventEditor({
     setAudienceTouched(true);
   }, []);
 
-  const changeBlocks = useCallback(
-    (next: EventBlockValue[]) => {
-      const departments = (list: EventBlockValue[]) =>
-        audienceBlocks(list)
-          .map((block) => block.departmentId)
-          .sort()
-          .join();
-      // Andere Gewerke → andere Eingeladene; wie eine Änderung der Zielgruppe behandeln.
-      if (departments(next) !== departments(blocks)) setAudienceTouched(true);
-      setBlocks(next);
-    },
-    [blocks],
-  );
-
   const changeScenes = useCallback(
     (nextSceneIds: string[]) => {
       const levels = new Map(
@@ -313,6 +302,22 @@ export function EventEditor({
     [audience, changeAudience],
   );
 
+  const changeAgenda = useCallback(
+    (next: AgendaItem[]) => {
+      const departments = (list: AgendaItem[]) =>
+        audienceBlocks(list)
+          .map((block) => block.departmentId)
+          .sort()
+          .join();
+      // Andere Gewerke → andere Eingeladene; wie eine Änderung der Zielgruppe behandeln.
+      if (departments(next) !== departments(agenda)) setAudienceTouched(true);
+      setAgendaState(next);
+      const nextScenes = next.flatMap((item) => (item.sceneId ? [item.sceneId] : []));
+      if (nextScenes.join() !== sceneIds.join()) changeScenes(nextScenes);
+    },
+    [agenda, sceneIds, changeScenes],
+  );
+
   const changeKind = (next: CalendarEventKind) => {
     setKind(next);
     if (next === "REHEARSAL") setShowBlocks(true);
@@ -326,7 +331,7 @@ export function EventEditor({
       rules: audience.rules.filter((rule) => rule.type === "USER"),
       overrides: audience.overrides.filter((entry) => entry.override === "INCLUDED"),
     });
-    changeBlocks(blocks.filter((block) => block.type !== "DEPARTMENT"));
+    setAgendaState(agenda.filter((item) => item.type !== "DEPARTMENT" && item.type !== "SCENE"));
   };
 
   const fetchDayChecks = useCallback(
@@ -369,16 +374,19 @@ export function EventEditor({
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      fetchDayChecks(date, allDay ? "00:00" : time, allDay ? "23:59" : endTime.trim()).catch(
-        () => null,
-      );
+      fetchDayChecks(
+        date,
+        allDay ? "00:00" : time,
+        allDay ? "23:59" : endTime.trim() || plannedEnd || "",
+      ).catch(() => null);
     }, 400);
     return () => clearTimeout(handle);
-  }, [date, time, endTime, allDay, fetchDayChecks]);
+  }, [date, time, endTime, plannedEnd, allDay, fetchDayChecks]);
 
   /** Gemeinsame Felder für Speichern und Ansetzen. */
   const payload = useMemo(() => {
-    const trimmedEndTime = endTime.trim();
+    // Ohne festes Ende gilt das Ende des Ablaufs.
+    const trimmedEndTime = endTime.trim() || plannedEnd || "";
     return {
       id: rehearsal.id,
       kind: effectiveKind,
@@ -410,16 +418,17 @@ export function EventEditor({
     location,
     description,
     scheduleToSave,
+    plannedEnd,
   ]);
 
-  const skipInitialSave = useRef(true);
+  // Nur speichern, was sich gegenüber dem zuletzt gespeicherten Stand geändert hat – beim Öffnen
+  // (auch bei doppelt laufenden Effekten) gibt es sonst stille Speicherungen samt Benachrichtigung.
+  const saveKey = JSON.stringify([payload, audienceTouched && !openAudience ? audience : null]);
+  const lastSavedKey = useRef(saveKey);
 
   useEffect(() => {
     // Abgesagte Termine bleiben, wie sie waren; erst nach der Rücknahme wieder bearbeiten.
-    if (skipInitialSave.current || isCancelled) {
-      skipInitialSave.current = false;
-      return;
-    }
+    if (saveKey === lastSavedKey.current || isCancelled) return;
 
     setSaveStatus("saving");
     const handle = setTimeout(() => {
@@ -427,6 +436,7 @@ export function EventEditor({
       updateAction({ ...payload, ...(audienceTouched && !openAudience ? { audience } : {}) })
         .then((result) => {
           if (result?.success) {
+            lastSavedKey.current = saveKey;
             setSaveStatus("saved");
             setLastSavedAt(new Date());
           } else {
@@ -441,7 +451,7 @@ export function EventEditor({
     }, 800);
 
     return () => clearTimeout(handle);
-  }, [payload, audience, audienceTouched, openAudience, isDraft, isCancelled]);
+  }, [saveKey, payload, audience, audienceTouched, openAudience, isDraft, isCancelled]);
 
   const handlePublish = (target: "TENTATIVE" | "SCHEDULED") => {
     startPublish(() => {
@@ -555,10 +565,47 @@ export function EventEditor({
         : "Angesetzt";
   const kindLocked = sceneIds.length > 0;
 
-  const kindOptions = KIND_OPTIONS.map((value) => ({
-    value,
-    label: CALENDAR_EVENT_KIND_LABELS[value],
-  }));
+  const headerValue: EventHeaderValue = {
+    title,
+    kind: effectiveKind,
+    date,
+    allDay,
+    multiDay,
+    endDate,
+    time,
+    endTime,
+    location,
+    scope,
+  };
+  const changeHeader = (patch: Partial<EventHeaderValue>) => {
+    if (patch.title !== undefined) setTitle(patch.title);
+    if (patch.kind !== undefined) changeKind(patch.kind);
+    if (patch.date !== undefined) setDate(patch.date);
+    if (patch.allDay !== undefined) setAllDay(patch.allDay);
+    if (patch.multiDay !== undefined) setMultiDay(patch.multiDay);
+    if (patch.endDate !== undefined) setEndDate(patch.endDate);
+    if (patch.time !== undefined) setTime(patch.time);
+    if (patch.endTime !== undefined) setEndTime(patch.endTime);
+    if (patch.location !== undefined) setLocation(patch.location);
+  };
+
+  // Statuszeile: wer eingeladen ist, wer fehlt, wer diese Woche schon oft da ist.
+  const missingCount = openAudience
+    ? 0
+    : [...invitedIds].filter(
+        (userId) => availability[userId] === "blocked" || conflicts[userId] || userId in declined,
+      ).length;
+  const heavyCount = openAudience
+    ? 0
+    : [...invitedIds].filter((userId) => (weekLoad[userId]?.count ?? 0) + 1 >= HEAVY_WEEK_COUNT)
+        .length;
+  const statusParts = openAudience
+    ? [scope === "production" ? "für alle der Produktion" : "für alle"]
+    : [
+        `${invitedCount} eingeladen`,
+        ...(missingCount ? [`${missingCount} können nicht`] : []),
+        ...(heavyCount ? [`${heavyCount} diese Woche schon ≥ ${HEAVY_WEEK_COUNT - 1}×`] : []),
+      ];
 
   return (
     <div className="space-y-4 pb-4">
@@ -600,130 +647,24 @@ export function EventEditor({
               </div>
             ) : null}
 
-            <Input
-              id="event-title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              minLength={3}
-              maxLength={120}
-              required
-              placeholder={`Titel ${isRehearsal ? "der Probe" : "des Termins"}`}
-              aria-label="Titel"
-              className="h-12 text-base font-semibold sm:text-lg"
+            <EventEditorHeader
+              value={headerValue}
+              onChange={changeHeader}
+              kindOptions={KIND_OPTIONS}
+              kindLocked={kindLocked}
+              production={production}
+              onScopeChange={changeScope}
+              isRehearsal={isRehearsal}
+              plannedEnd={plannedEnd}
+              showDescription={showDescription}
+              onShowDescription={() => setShowDescription(true)}
+              status={
+                <a href="#wer-ist-dabei" className="hover:text-foreground hover:underline">
+                  {statusParts.join(" · ")}
+                  {isCheckingBlocks ? " · prüft Sperrliste …" : ""}
+                </a>
+              }
             />
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="col-span-2 space-y-1 sm:col-span-1">
-                <Label htmlFor="event-kind" className="text-xs text-muted-foreground">
-                  Art
-                </Label>
-                <Select
-                  value={effectiveKind}
-                  disabled={kindLocked}
-                  onValueChange={(value) => {
-                    const next = KIND_OPTIONS.find((entry) => entry === value);
-                    if (next) changeKind(next);
-                  }}
-                >
-                  <SelectTrigger
-                    id="event-kind"
-                    className="h-10"
-                    title={kindLocked ? "Mit Szenen ist es immer eine Probe." : undefined}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {kindOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-2 space-y-1 sm:col-span-1">
-                <Label htmlFor="event-date" className="text-xs text-muted-foreground">
-                  {multiDay ? "Von" : "Datum"}
-                </Label>
-                <DateInput
-                  id="event-date"
-                  value={date}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setDate(value);
-                    if (endDate && endDate < value) setEndDate(value);
-                  }}
-                  required
-                />
-              </div>
-              {!allDay ? (
-                <>
-                  <div className="space-y-1">
-                    <Label htmlFor="event-time" className="text-xs text-muted-foreground">
-                      Beginn
-                    </Label>
-                    <TimeInput
-                      id="event-time"
-                      value={time}
-                      onChange={(event) => setTime(event.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="event-end" className="text-xs text-muted-foreground">
-                      Ende
-                    </Label>
-                    <TimeInput
-                      id="event-end"
-                      value={endTime}
-                      onChange={(event) => setEndTime(event.target.value)}
-                    />
-                  </div>
-                </>
-              ) : null}
-              {multiDay ? (
-                <div className="col-span-2 space-y-1 sm:col-span-1">
-                  <Label htmlFor="event-end-date" className="text-xs text-muted-foreground">
-                    Bis
-                  </Label>
-                  <DateInput
-                    id="event-end-date"
-                    value={endDate}
-                    min={date}
-                    onChange={(event) => setEndDate(event.target.value)}
-                  />
-                </div>
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-              <label className="flex min-h-10 items-center gap-2">
-                <Switch checked={allDay} onCheckedChange={setAllDay} />
-                Ganztägig
-              </label>
-              <label className="flex min-h-10 items-center gap-2">
-                <Switch
-                  checked={multiDay}
-                  onCheckedChange={(value) => {
-                    setMultiDay(value);
-                    if (value && !endDate) setEndDate(date);
-                  }}
-                />
-                Mehrtägig
-              </label>
-            </div>
-
-            <div className="relative">
-              <MapPinIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="event-location"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                placeholder={isRehearsal ? "Ort – leer lassen, wenn noch offen" : "Ort (optional)"}
-                aria-label="Ort"
-                className="h-10 pl-9"
-              />
-            </div>
 
             {showDescription ? (
               <RichTextEditor
@@ -731,34 +672,6 @@ export function EventEditor({
                 onChange={setDescription}
                 placeholder="Beschreibung: Ablauf, Ziele oder Materialien"
               />
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="-ml-2"
-                onClick={() => setShowDescription(true)}
-              >
-                <PlusIcon className="h-4 w-4" aria-hidden />
-                Beschreibung
-              </Button>
-            )}
-
-            {production ? (
-              <div className="flex flex-col gap-1.5 border-t border-border pt-3 sm:flex-row sm:items-center sm:gap-3">
-                <span className="shrink-0 text-xs text-muted-foreground">Gehört zu</span>
-                <SegmentedControl
-                  aria-label="Gehört zu"
-                  fullWidth
-                  size="md"
-                  value={scope}
-                  onValueChange={changeScope}
-                  options={[
-                    { value: "production", label: production.title },
-                    { value: "all", label: "Keiner Produktion" },
-                  ]}
-                />
-              </div>
             ) : null}
           </Card>
 
@@ -766,11 +679,6 @@ export function EventEditor({
             <SectionHeader
               title="Ablauf"
               size="sm"
-              description={
-                showBlocks
-                  ? "Szenen, Gewerk-Arbeit und sonstige Punkte – auch parallel in eigenen Räumen."
-                  : undefined
-              }
               action={
                 showBlocks ? null : (
                   <Button
@@ -788,16 +696,18 @@ export function EventEditor({
             {showBlocks ? (
               <EventAgendaEditor
                 context={context}
-                sceneIds={sceneIds}
-                onScenesChange={changeScenes}
-                schedule={schedule}
-                onScheduleChange={setSchedule}
+                items={agenda}
+                onItemsChange={changeAgenda}
+                startTime={TIME_PATTERN.test(time) ? time : "18:00"}
+                endTime={allDay ? "" : endTime.trim()}
+                onSetEnd={setEndTime}
+                mode={mode}
+                onModeChange={setMode}
                 stats={sceneStats}
-                blocks={blocks}
-                onBlocksChange={changeBlocks}
-                eventStartTime={time}
-                invitedIds={invitedIds}
+                urgency={sceneUrgency}
                 readiness={sceneReadiness}
+                invitedIds={invitedIds}
+                weekLoad={weekLoad}
                 dateKey={date}
               />
             ) : null}
@@ -822,9 +732,10 @@ export function EventEditor({
         </div>
 
         <Card
+          id="wer-ist-dabei"
           variant="plain"
           size="flush"
-          className="min-w-0 space-y-3 border-border p-4 lg:sticky lg:top-4"
+          className="min-w-0 scroll-mt-20 space-y-3 border-border p-4 lg:sticky lg:top-4"
         >
           <SectionHeader
             title="Wer ist dabei?"

@@ -57,15 +57,19 @@ test.describe("als admin", () => {
 
     await page.getByLabel("Titel", { exact: true }).fill(title);
 
-    // Programmpunkt „Gewerk arbeitet“: erstes Gewerk der Produktion
-    await page.getByRole("button", { name: "Programmpunkt" }).click();
-    const departmentMenu = page.getByRole("menuitem", { name: "Gewerk arbeitet" });
-    test.skip(!(await departmentMenu.count()), "Produktion ohne Gewerke");
-    await departmentMenu.click();
-    const option = page.getByRole("menu").last().getByRole("menuitem").first();
-    const department = (await option.innerText()).trim();
+    // Programmpunkt „Gewerk …“ über die Schnellanlage: erstes Gewerk der Produktion
+    await page.getByRole("combobox", { name: "Programmpunkt hinzufügen" }).fill("Gewerk");
+    const option = page
+      .getByRole("option")
+      .filter({ hasText: /^Gewerk / })
+      .first();
+    test.skip(!(await option.count()), "Produktion ohne Gewerke");
+    const department = (await option.locator("span.font-medium").innerText())
+      .replace(/^Gewerk /, "")
+      .trim();
     await option.click();
-    await page.getByPlaceholder("Was steht an? z. B. Podeste bauen").fill("E2E Baustein");
+    await page.getByRole("button", { name: `Details Gewerk ${department}`, exact: true }).click();
+    await page.getByLabel("Was steht an?").fill("E2E Baustein");
     await expect(page.getByText("Ablauf: E2E Baustein").first()).toBeVisible();
     await expect(page.getByText(/^Gespeichert/)).toBeVisible({ timeout: 15_000 });
 

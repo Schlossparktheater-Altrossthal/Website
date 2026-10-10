@@ -1,6 +1,6 @@
 # Plan: Termineditor kompakter, Ablauf mit Dauern, parallele Spuren, Probe vorschlagen
 
-Stand: 2026-10-10 – Konzept, nichts umgesetzt
+Stand: 2026-10-10 – Phase 1–7 umgesetzt (main → Staging), offen: Phase 8 (E2E auf Staging, Abnahme, Release)
 
 ## Ziel
 
@@ -130,8 +130,20 @@ Punkte zu **einer** Liste zusammenführen (`schedule.times`/`rooms` → Blöcke)
    mit Rahmen-Balken.
 8. **E2E + Screenshots** (Demo-Daten mit vollem Ablauf, mobil+desktop), Staging-Abnahme, Release.
 
+## Umsetzung (2026-10-10)
+
+- Logik: `src/lib/calendar/agenda.ts` (Zeiten aus Dauern, Spuren/Abschnitte, persönliche Fenster,
+  Auslastung, Konflikte, Umrechnung Speicherformat) und `rehearsal-suggest.ts` (Dringlichkeit,
+  Auswahl, wartezeitarme Reihenfolge), beide mit Tests.
+- Migration `20261010120000_event_block_durations`: bestehende Zeiten → Dauer + angeheftet.
+- UI: `event-editor-header.tsx` (Chips + Blätter), `components/calendar/agenda/*` (Zeile,
+  Schnellanlage, Vorschlags-Blatt), `event-agenda-editor.tsx` neu.
+- Entschieden: Gewerk-Leitung-Zeiten bleiben angeheftet (`fixedStart`). Ohne festes Ende gilt das
+  Ende des Ablaufs. Aufwärmen/Einsingen aus dem unteren Feld landen am Anfang.
+- Speichern nur bei echter Änderung gegenüber dem geöffneten Stand (vorher speicherte der Editor im
+  Dev-Modus schon beim Öffnen).
+
 ## Offen
 
-- Entscheidung 3 bei Umsetzung kurz bestätigen.
-- Gewerk-Leitung organisiert eigene Punkte (`timesChanged`): bei Dauer-Modell als „fest“ behandeln?
+- Entscheidung 3 (Abhakliste mit Zeitrahmen) vom User nach Ausprobieren bestätigen lassen.
 - Probenmodus (`actualStart/actualOrder`) soll Ablauf-Verschiebungen live übernehmen können.

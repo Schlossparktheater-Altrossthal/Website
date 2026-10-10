@@ -75,16 +75,24 @@ async function createOpenEvent(page: Page, title: string, day: string) {
   const eventId = page.url().split("/").pop() ?? "";
 
   await page.getByLabel("Titel").fill(title);
+  // Datum steckt hinter der Angabe „Wann“ (Blatt mit Datum und Uhrzeit).
+  await clickUntil(page.getByRole("button", { name: /^Wann:/ }), () =>
+    expect(page.locator("#event-date")).toBeVisible({ timeout: 2_000 }),
+  );
   await page.locator("#event-date").fill(day);
+  await page.getByRole("dialog").getByRole("button", { name: "Fertig" }).click();
 
   // „Gehört zu: Keiner Produktion" (sonst gilt der Termin nur der aktiven Produktion) und
   // „Wer ist eingeladen? Alle" – beides ist nötig, damit ihn alle sehen.
-  const scope = page.getByRole("radiogroup", { name: "Gehört zu" });
+  const scope = page.getByRole("button", { name: /^Gehört zu:/ });
   if (await scope.count()) {
-    const noProduction = scope.getByRole("radio", { name: "Keiner Produktion" });
-    await clickUntil(noProduction, () =>
-      expect(noProduction).toHaveAttribute("aria-checked", "true"),
+    await clickUntil(scope, () =>
+      expect(page.getByRole("menuitem", { name: "Keiner Produktion" })).toBeVisible({
+        timeout: 2_000,
+      }),
     );
+    await page.getByRole("menuitem", { name: "Keiner Produktion" }).click();
+    await expect(scope).toHaveAccessibleName(/keiner Produktion/);
   }
   const audience = page.getByRole("radiogroup", { name: "Wer ist eingeladen?" });
   const everyone = audience.getByRole("radio", { name: "Alle", exact: true });

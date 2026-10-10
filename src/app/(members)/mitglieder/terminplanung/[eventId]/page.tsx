@@ -14,7 +14,12 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
 import { loadAudienceContext, readEventAudience } from "@/lib/calendar/audience-server";
 import { readDayAvailability, readWeekLoad } from "@/lib/calendar/day-availability";
-import { loadSceneStats, readEventSchedule } from "@/lib/calendar/scene-schedule-server";
+import { buildScenePlan } from "@/lib/calendar/scene-plan";
+import {
+  loadScenePlanEntries,
+  loadSceneStats,
+  readEventSchedule,
+} from "@/lib/calendar/scene-schedule-server";
 
 export default async function EventEditorPage({
   params,
@@ -56,7 +61,7 @@ export default async function EventEditorPage({
   // Drafts use updateRehearsalDraftAction, published use updateRehearsalAction
 
   const dateKey = formatIsoDateInTimeZone(rehearsal.start.toISOString(), DEFAULT_TIME_ZONE);
-  const [context, audience, availability, schedule, sceneStats, production, weekLoad] =
+  const [context, audience, availability, schedule, sceneStats, production, weekLoad, planEntries] =
     await Promise.all([
       loadAudienceContext(rehearsal.showId),
       readEventAudience(rehearsal.id),
@@ -65,7 +70,18 @@ export default async function EventEditorPage({
       loadSceneStats(rehearsal.showId),
       getActiveProduction(session.user?.id),
       readWeekLoad(dateKey, rehearsal.id),
+      rehearsal.showId ? loadScenePlanEntries(rehearsal.showId) : Promise.resolve([]),
     ]);
+  // Rückstand je Szene in Probenwochen – Grundlage für „Probe vorschlagen“.
+  const todayKey = formatIsoDateInTimeZone(new Date().toISOString(), DEFAULT_TIME_ZONE);
+  const sceneUrgency = Object.fromEntries(
+    buildScenePlan({
+      scenes: context.scenes,
+      entries: planEntries,
+      todayKey,
+      premiereKey: null,
+    }).rows.map((row) => [row.sceneId, { blocksSince: row.blocksSince, behind: row.behind }]),
+  );
   // Für den Wechsel „gilt für“: Zielgruppe der anderen Seite (alle bzw. Produktion).
   const otherShowId = rehearsal.showId ? null : (production?.id ?? null);
   const otherContext =
@@ -134,6 +150,7 @@ export default async function EventEditorPage({
         declined={audience.declined}
         schedule={schedule}
         sceneStats={sceneStats}
+        sceneUrgency={sceneUrgency}
       />
 
       {protocolOpen ? (

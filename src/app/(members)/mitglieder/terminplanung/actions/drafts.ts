@@ -110,7 +110,14 @@ export async function createRehearsalDraftAction(input?: {
         eventId: rehearsal.id,
         start,
         audience,
-        storedSchedule: { mode: "TOGETHER", times: {}, rooms: {}, blocks: [] },
+        storedSchedule: {
+          mode: "TOGETHER",
+          times: {},
+          rooms: {},
+          blocks: [],
+          sceneMeta: {},
+          order: [],
+        },
         context,
       });
     }

@@ -448,6 +448,10 @@ export async function saveDepartmentBlockAction(
         data: {
           startsAt,
           endsAt,
+          // Zeiten der Gewerk-Leitung bleiben im Ablauf der Planung angeheftet.
+          fixedStart: Boolean(startsAt),
+          durationMinutes:
+            startsAt && endsAt ? Math.round((endsAt.getTime() - startsAt.getTime()) / 60000) : null,
           location: data.location || null,
           description: data.description || null,
         },

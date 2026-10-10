@@ -1,72 +1,70 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useId, useMemo, useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  MoreVerticalIcon,
-  PlusIcon,
-  TrashIcon,
-} from "@/components/ui/action-icons";
+import { AgendaQuickAdd, type QuickAddScene } from "@/components/calendar/agenda/agenda-quick-add";
+import { AgendaRow } from "@/components/calendar/agenda/agenda-row";
+import { RehearsalSuggestPanel } from "@/components/calendar/agenda/rehearsal-suggest-panel";
+import { ReadinessSummary } from "@/components/calendar/scene-readiness-list";
+import { PlusIcon, SparklesIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChoiceMenu } from "@/components/ui/choice-menu";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { TimeInput } from "@/components/ui/time-input";
 import {
-  ReadinessHint,
-  ReadinessSummary,
-  SceneReadinessList,
-} from "@/components/calendar/scene-readiness-list";
+  DEFAULT_DURATION,
+  computeAgendaTiming,
+  computePersonSchedules,
+  findParallelConflicts,
+  formatDuration,
+  itemPeople,
+  segmentAgenda,
+  summarizeSchedules,
+  toMinutes,
+  toTime,
+  type AgendaItem,
+} from "@/lib/calendar/agenda";
 import type { AudienceContext } from "@/lib/calendar/audience";
+import { optimizeOrder, rankScenes, type SceneCandidate } from "@/lib/calendar/rehearsal-suggest";
 import { READINESS_LABEL, type SceneReadiness } from "@/lib/calendar/scene-readiness";
-import { scenesByPerson } from "@/lib/calendar/scene-schedule";
+import { HEAVY_WEEK_COUNT, type PersonLoad } from "@/lib/calendar/week-load";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
-
-export type SceneScheduleValue = {
-  mode: "TOGETHER" | "STAGGERED";
-  times: Record<string, { start: string; end: string }>;
-  /** Raum pro Szene (bei parallelen Programmpunkten). */
-  rooms: Record<string, string>;
-};
 
 export type SceneStatsView = Record<
   string,
   { rehearsed: number; lastRehearsedAt: string | null; planned: number }
 >;
 
-/** Weiterer Programmpunkt (Datenmodell `EventBlock`): Gewerk-Arbeit oder Sonstiges. */
-export type EventBlockValue = {
-  id: string;
-  type: "DEPARTMENT" | "CUSTOM";
-  title: string;
-  departmentId: string | null;
-  start: string;
-  end: string;
-  location: string;
-  description: string;
-  /** Zeiten hier geändert (sonst behält Gewerk-Arbeit die Zeiten der Gewerk-Leitung). */
-  timesChanged: boolean;
-};
+/** Rückstand je Szene aus dem Szenen-Plan (Probenwochen, nicht feste Tage). */
+export type SceneUrgencyView = Record<string, { blocksSince: number; behind: ("long" | "rare")[] }>;
+
+const SHORT_DATE = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: DEFAULT_TIME_ZONE,
+});
 
 const DAY_LABEL = new Intl.DateTimeFormat("de-DE", {
   weekday: "short",
   day: "numeric",
   month: "numeric",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-
-const SHORT_DATE = new Intl.DateTimeFormat("de-DE", {
-  day: "2-digit",
-  month: "2-digit",
   timeZone: DEFAULT_TIME_ZONE,
 });
 
@@ -79,508 +77,606 @@ function describeSceneStats(stats: SceneStatsView[string] | undefined) {
   return parts.join(" · ");
 }
 
-function describeSceneOption(
-  readiness: SceneReadiness | undefined,
-  stats: SceneStatsView[string] | undefined,
-) {
-  const statsText = describeSceneStats(stats);
-  return readiness ? `${READINESS_LABEL[readiness.status]} · ${statsText}` : statsText;
-}
-
-function toMinutes(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return (hours ?? 0) * 60 + (minutes ?? 0);
-}
-
-function toTime(minutes: number) {
-  const value = ((minutes % 1440) + 1440) % 1440;
-  return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
-}
-
-/** Szenen nacheinander ab Beginn; Dauer aus dem Stück, sonst 30 Minuten. */
-function suggestSceneTimes(
-  scenes: readonly { id: string; durationMinutes?: number | null }[],
-  startTime: string,
-) {
-  let cursor = toMinutes(startTime);
-  const times: SceneScheduleValue["times"] = {};
-  for (const scene of scenes) {
-    const duration =
-      scene.durationMinutes && scene.durationMinutes > 0 ? scene.durationMinutes : 30;
-    times[scene.id] = { start: toTime(cursor), end: toTime(cursor + duration) };
-    cursor += duration;
-  }
-  return times;
-}
-
-function newBlock(type: EventBlockValue["type"], departmentId: string | null = null) {
-  return {
-    id: crypto.randomUUID(),
-    type,
-    title: "",
-    departmentId,
-    start: "",
-    end: "",
-    location: "",
-    description: "",
-    timesChanged: true,
-  } satisfies EventBlockValue;
-}
-
-/** Farbstreifen links: Szene, Gewerk, Sonstiges. */
-const STRIPE = {
-  scene: "bg-info",
-  department: "bg-primary",
-  custom: "bg-muted-foreground/50",
-} as const;
-
-type RowActionsProps = {
-  label: string;
-  onUp?: () => void;
-  onDown?: () => void;
-  onRemove: () => void;
-};
-
-/** Sortieren und Entfernen hinter einem Menü – spart pro Zeile zwei Knöpfe. */
-function RowActions({ label, onUp, onDown, onRemove }: RowActionsProps) {
+function SortableRow(props: Omit<Parameters<typeof AgendaRow>[0], "handle" | "style">) {
+  const sortable = useSortable({ id: props.item.id });
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-9 w-9 shrink-0 p-0"
-          aria-label={`Aktionen für ${label}`}
-        >
-          <MoreVerticalIcon className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {onUp ? (
-          <DropdownMenuItem onSelect={onUp}>
-            <ChevronUpIcon className="h-4 w-4" /> Nach oben
-          </DropdownMenuItem>
-        ) : null}
-        {onDown ? (
-          <DropdownMenuItem onSelect={onDown}>
-            <ChevronDownIcon className="h-4 w-4" /> Nach unten
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem onSelect={onRemove} className="text-destructive focus:text-destructive">
-          <TrashIcon className="h-4 w-4" /> Entfernen
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <AgendaRow
+      {...props}
+      setNodeRef={sortable.setNodeRef}
+      dragging={sortable.isDragging}
+      style={{
+        transform: CSS.Translate.toString(sortable.transform),
+        transition: sortable.transition,
+      }}
+      handle={{
+        attributes: sortable.attributes,
+        listeners: sortable.listeners,
+        setActivatorNodeRef: sortable.setActivatorNodeRef,
+      }}
+    />
   );
 }
 
-function TimeRange({
-  label,
-  start,
-  end,
-  onStart,
-  onEnd,
-}: {
-  label: string;
-  start: string;
-  end: string;
-  onStart: (value: string) => void;
-  onEnd: (value: string) => void;
-}) {
+/** Dezentes „+“ zwischen zwei Punkten. */
+function InsertLine({ onClick, label }: { onClick: () => void; label: string }) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none">
-      <TimeInput
-        value={start}
-        onChange={(event) => onStart(event.target.value)}
-        aria-label={`Beginn ${label}`}
-        className="h-9 min-w-0 flex-1 sm:w-28 sm:flex-none"
-      />
-      <span className="text-muted-foreground">–</span>
-      <TimeInput
-        value={end}
-        onChange={(event) => onEnd(event.target.value)}
-        aria-label={`Ende ${label}`}
-        className="h-9 min-w-0 flex-1 sm:w-28 sm:flex-none"
-      />
-    </div>
+    <li aria-hidden={false} className="group relative h-0">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className="absolute left-1/2 top-0 z-10 flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hidden opacity-0 shadow-sm transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 sm:flex"
+      >
+        <PlusIcon className="h-3.5 w-3.5" />
+      </button>
+    </li>
   );
 }
 
 /**
- * Ablauf eines Termins als eine Liste: Szenen, Gewerk-Arbeit und sonstige Programmpunkte.
- * Programmpunkte dürfen parallel in eigenen Räumen laufen.
+ * Ablauf eines Termins: Programmpunkte mit Dauer, Uhrzeiten berechnet ab Beginn. Punkte lassen
+ * sich anheften, verschieben, dazwischen einfügen und parallel in Spuren legen.
  */
 export function EventAgendaEditor({
   context,
-  sceneIds,
-  onScenesChange,
-  schedule,
-  onScheduleChange,
+  items,
+  onItemsChange,
+  startTime,
+  endTime,
+  onSetEnd,
+  mode,
+  onModeChange,
   stats,
-  blocks,
-  onBlocksChange,
-  eventStartTime,
-  invitedIds,
+  urgency,
   readiness,
+  invitedIds,
+  weekLoad,
   dateKey,
 }: {
   context: AudienceContext;
-  sceneIds: string[];
-  onScenesChange: (sceneIds: string[]) => void;
-  schedule: SceneScheduleValue;
-  onScheduleChange: (schedule: SceneScheduleValue) => void;
+  items: AgendaItem[];
+  onItemsChange: (items: AgendaItem[]) => void;
+  /** Beginn des Termins (HH:MM). */
+  startTime: string;
+  /** Ende des Termins (HH:MM) oder leer: dann ergibt es sich aus dem Ablauf. */
+  endTime: string;
+  onSetEnd: (time: string) => void;
+  mode: "TOGETHER" | "STAGGERED";
+  onModeChange: (mode: "TOGETHER" | "STAGGERED") => void;
   stats: SceneStatsView;
-  blocks: EventBlockValue[];
-  onBlocksChange: (blocks: EventBlockValue[]) => void;
-  /** Beginn des Termins (HH:MM) für den Zeitvorschlag. */
-  eventStartTime: string;
-  /** Nur diese Personen erscheinen in „Wer kommt wann?“. */
-  invitedIds: ReadonlySet<string>;
-  /** Probbarkeit aller Szenen am Termintag. */
+  urgency: SceneUrgencyView;
   readiness: readonly SceneReadiness[];
-  /** Termintag (yyyy-MM-dd). */
+  invitedIds: ReadonlySet<string>;
+  weekLoad: Record<string, PersonLoad>;
   dateKey: string;
 }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [insertAt, setInsertAt] = useState<number | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  // Feste ID: sonst weichen die Aria-IDs von dnd-kit zwischen Server und Browser ab.
+  const dndId = useId();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   const readinessById = useMemo(
     () => new Map(readiness.map((entry) => [entry.sceneId, entry])),
     [readiness],
   );
-  // Ohne Szenen gleich aufgeklappt: dann ist „was geht heute?“ die erste Frage.
-  const [readinessOpen, setReadinessOpen] = useState(sceneIds.length === 0);
-  const dayLabel = dateKey ? DAY_LABEL.format(new Date(`${dateKey}T12:00:00Z`)) : "diesem Tag";
-  const scenes = sceneIds.flatMap((id) => context.scenes.find((scene) => scene.id === id) ?? []);
-  const availableScenes = context.scenes.filter((scene) => !sceneIds.includes(scene.id));
-  const staggered = schedule.mode === "STAGGERED";
-  const departmentName = (id: string | null) =>
-    context.departments.find((entry) => entry.id === id)?.name ?? "Gewerk";
+  const names = useMemo(
+    () => new Map(context.members.map((member) => [member.id, member.name])),
+    [context.members],
+  );
+  const timing = useMemo(() => computeAgendaTiming(items, startTime), [items, startTime]);
+  const schedules = useMemo(
+    () => computePersonSchedules(items, timing, context, invitedIds),
+    [items, timing, context, invitedIds],
+  );
+  const summary = useMemo(() => summarizeSchedules(schedules), [schedules]);
+  const conflicts = useMemo(
+    () => findParallelConflicts(items, timing, context),
+    [items, timing, context],
+  );
+  const conflictText = (id: string) => {
+    const userIds = new Set(
+      conflicts.flatMap((entry) => (entry.a === id || entry.b === id ? entry.userIds : [])),
+    );
+    if (!userIds.size) return null;
+    return [...userIds].map((userId) => names.get(userId) ?? "jemand").join(", ");
+  };
 
-  const moveScene = (index: number, offset: number) => {
-    const next = [...sceneIds];
-    const [entry] = next.splice(index, 1);
-    if (!entry) return;
-    next.splice(index + offset, 0, entry);
-    onScenesChange(next);
+  const sceneIds = items.flatMap((item) => (item.sceneId ? [item.sceneId] : []));
+  const staggered = mode === "STAGGERED";
+  const dayLabel = dateKey ? DAY_LABEL.format(new Date(`${dateKey}T12:00:00Z`)) : "diesem Tag";
+
+  const sceneKey = sceneIds.join();
+  // Geplante Szenen zählen mit ihrer Dauer im Ablauf, nicht mit der aus dem Stück.
+  const durationKey = items
+    .flatMap((item) => (item.sceneId ? [`${item.sceneId}=${item.durationMinutes}`] : []))
+    .join();
+  const candidates = useMemo<SceneCandidate[]>(() => {
+    const planned = new Set(sceneKey.split(","));
+    const agendaDurations = new Map(
+      durationKey
+        .split(",")
+        .filter(Boolean)
+        .map((entry) => {
+          const [id, minutes] = entry.split("=");
+          return [id ?? "", Number(minutes)] as const;
+        }),
+    );
+    /** Wer aus der Besetzung diese Woche (mit diesem Termin) schon oft da ist. */
+    const heavy = (userId: string) => (weekLoad[userId]?.count ?? 0) + 1 >= HEAVY_WEEK_COUNT;
+    return context.scenes.map((scene) => {
+      const entry = readinessById.get(scene.id);
+      const primary = context.castings.filter(
+        (casting) => casting.type === "primary" && scene.characterIds.includes(casting.characterId),
+      );
+      const people = [...new Set(primary.map((casting) => casting.userId))];
+      return {
+        sceneId: scene.id,
+        label: scene.label,
+        durationMinutes:
+          agendaDurations.get(scene.id) ??
+          (scene.durationMinutes && scene.durationMinutes > 0
+            ? scene.durationMinutes
+            : DEFAULT_DURATION),
+        readiness: entry?.status ?? "ready",
+        people,
+        done: stats[scene.id]?.rehearsed ?? 0,
+        // Der aktuelle Termin zählt nicht als „schon angesetzt“.
+        planned: Math.max(0, (stats[scene.id]?.planned ?? 0) - (planned.has(scene.id) ? 1 : 0)),
+        blocksSince: urgency[scene.id]?.blocksSince ?? 0,
+        behind: urgency[scene.id]?.behind ?? [],
+        heavyPeople: people.filter(heavy).length,
+      };
+    });
+  }, [context, readinessById, stats, urgency, weekLoad, sceneKey, durationKey]);
+
+  const quickScenes = useMemo<QuickAddScene[]>(() => {
+    const ranked = rankScenes(candidates);
+    const order = new Map(ranked.map((entry, index) => [entry.sceneId, index]));
+    return candidates
+      .filter((entry) => !sceneIds.includes(entry.sceneId))
+      .sort(
+        (a, b) =>
+          (order.get(a.sceneId) ?? Number.MAX_SAFE_INTEGER) -
+          (order.get(b.sceneId) ?? Number.MAX_SAFE_INTEGER),
+      )
+      .map((entry) => ({
+        id: entry.sceneId,
+        label: entry.label,
+        durationMinutes: entry.durationMinutes,
+        status: readinessById.get(entry.sceneId)?.status ?? null,
+        hint: [
+          readinessById.get(entry.sceneId)
+            ? READINESS_LABEL[readinessById.get(entry.sceneId)!.status]
+            : null,
+          describeSceneStats(stats[entry.sceneId]),
+          formatDuration(entry.durationMinutes),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      }));
+  }, [candidates, sceneIds, readinessById, stats]);
+
+  const update = (id: string, patch: Partial<AgendaItem>) =>
+    onItemsChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  const remove = (id: string) => {
+    onItemsChange(items.filter((item) => item.id !== id));
+    if (expanded === id) setExpanded(null);
   };
-  const moveBlock = (index: number, offset: number) => {
-    const next = [...blocks];
-    const [entry] = next.splice(index, 1);
-    if (!entry) return;
-    next.splice(index + offset, 0, entry);
-    onBlocksChange(next);
+  const move = (id: string, offset: -1 | 1) => {
+    const index = items.findIndex((item) => item.id === id);
+    const target = index + offset;
+    if (index < 0 || target < 0 || target >= items.length) return;
+    onItemsChange(arrayMove(items, index, target));
   };
-  const setSceneTime = (sceneId: string, field: "start" | "end", value: string) => {
-    const current = schedule.times[sceneId] ?? { start: "", end: "" };
-    onScheduleChange({
-      ...schedule,
-      times: { ...schedule.times, [sceneId]: { ...current, [field]: value } },
+  const insert = (item: AgendaItem, index: number) => {
+    if (items.some((entry) => entry.id === item.id)) return;
+    // Hinter einem parallelen Punkt landet der neue in derselben Spur.
+    const before = items[index - 1];
+    const track = !item.forEveryone && before && !before.forEveryone ? before.track : 0;
+    const next = [...items];
+    next.splice(index, 0, { ...item, track });
+    onItemsChange(next);
+  };
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = items.findIndex((item) => item.id === active.id);
+    const to = items.findIndex((item) => item.id === over.id);
+    if (from < 0 || to < 0) return;
+    onItemsChange(arrayMove(items, from, to));
+  };
+
+  /** Hauptspur je Abschnitt so sortieren, dass möglichst wenig gewartet wird. */
+  const optimize = () => {
+    const before = summary.totalWait;
+    const next = [...items];
+    let index = 0;
+    for (const segment of segmentAgenda(items)) {
+      if (segment.kind === "shared") {
+        index += 1;
+        continue;
+      }
+      const size = segment.tracks.reduce((sum, track) => sum + track.items.length, 0);
+      const slice = next.slice(index, index + size);
+      const movable = slice.filter((item) => item.track === 0 && !item.fixedStart);
+      const ordered = optimizeOrder(
+        movable.map((item) => ({
+          ...item,
+          people: itemPeople(item, context).filter((id) => invitedIds.has(id)),
+        })),
+      );
+      let cursor = 0;
+      for (let offset = 0; offset < slice.length; offset += 1) {
+        const item = slice[offset];
+        if (item && item.track === 0 && !item.fixedStart) {
+          const replacement = movable.find((entry) => entry.id === ordered[cursor]?.id);
+          cursor += 1;
+          if (replacement) next[index + offset] = replacement;
+        }
+      }
+      index += size;
+    }
+    const after = summarizeSchedules(
+      computePersonSchedules(next, computeAgendaTiming(next, startTime), context, invitedIds),
+    ).totalWait;
+    if (after >= before) {
+      toast.info("Die Reihenfolge ist schon günstig.");
+      return;
+    }
+    const previous = items;
+    onItemsChange(next);
+    toast.success(`Wartezeit gesamt ${formatDuration(before)} → ${formatDuration(after)}`, {
+      action: { label: "Rückgängig", onClick: () => onItemsChange(previous) },
     });
   };
-  const updateBlock = (id: string, patch: Partial<EventBlockValue>) =>
-    onBlocksChange(blocks.map((block) => (block.id === id ? { ...block, ...patch } : block)));
 
-  const personalPreview = useMemo(() => {
-    if (!staggered) return [];
-    const names = new Map(context.members.map((member) => [member.id, member.name]));
-    const labels = new Map(context.scenes.map((scene) => [scene.id, scene.label]));
-    return Array.from(scenesByPerson(sceneIds, context), ([userId, ids]) => {
-      if (!invitedIds.has(userId)) return null;
-      const timed = ids.flatMap((id) => {
-        const time = schedule.times[id];
-        return time?.start && time.end ? [{ id, ...time }] : [];
-      });
-      if (!timed.length) return null;
-      const start = timed.map((entry) => entry.start).sort()[0];
-      const end = timed
-        .map((entry) => entry.end)
-        .sort()
-        .at(-1);
-      return {
-        userId,
-        name: names.get(userId) ?? "Unbekannt",
-        window: `${start}–${end}`,
-        scenes: timed.map((entry) => labels.get(entry.id)?.split(" ")[1] ?? "").join(", "),
-      };
-    })
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-      .sort((a, b) => a.window.localeCompare(b.window) || a.name.localeCompare(b.name, "de"));
-  }, [staggered, sceneIds, schedule.times, context, invitedIds]);
-
-  const isEmpty = !scenes.length && !blocks.length;
-
-  const addMenu = (
-    <ChoiceMenu
-      title="Programmpunkt hinzufügen"
-      trigger={
-        <Button type="button" variant="outline" size="sm" className="h-10 sm:h-9">
-          <PlusIcon className="h-4 w-4" aria-hidden />
-          Programmpunkt
-        </Button>
-      }
-      entries={[
-        ...(context.scenes.length
-          ? [
-              {
-                id: "scene",
-                label: "Szene proben",
-                hint: "Die Besetzung wird eingeladen",
-                items: availableScenes.map((scene) => ({
-                  id: scene.id,
-                  label: scene.label,
-                  hint: describeSceneOption(readinessById.get(scene.id), stats[scene.id]),
-                })),
-                onSelect: (id?: string) => {
-                  if (id) onScenesChange([...sceneIds, id]);
-                },
-              },
-            ]
-          : []),
-        ...(context.departments.length
-          ? [
-              {
-                id: "department",
-                label: "Gewerk arbeitet",
-                hint: "Das Gewerk wird eingeladen, die Leitung plant Details",
-                items: context.departments.map((department) => ({
-                  id: department.id,
-                  label: department.name,
-                })),
-                onSelect: (id?: string) => {
-                  if (id) onBlocksChange([...blocks, newBlock("DEPARTMENT", id)]);
-                },
-              },
-            ]
-          : []),
-        {
-          id: "custom",
-          label: "Sonstiges",
-          hint: "z. B. Einsingen, Besprechung",
-          onSelect: () => onBlocksChange([...blocks, newBlock("CUSTOM")]),
+  /** Szenen aus dem Vorschlag übernehmen: an die Stelle der bisherigen Szenen der Hauptspur. */
+  const applySuggestion = (ordered: string[]) => {
+    const existing = new Map(
+      items.flatMap((item) => (item.sceneId ? [[item.sceneId, item] as const] : [])),
+    );
+    const movable = (item: AgendaItem) =>
+      item.type === "SCENE" &&
+      ((item.track === 0 && !item.fixedStart) || ordered.includes(item.sceneId ?? ""));
+    const firstScene = items.findIndex(movable);
+    const rest = items.filter((item) => !movable(item));
+    let position: number;
+    if (firstScene >= 0) {
+      position = items.slice(0, firstScene).filter((item) => !movable(item)).length;
+    } else {
+      // Nach führenden Punkten „für alle“ (Aufwärmen); bestehen alle daraus, nach dem ersten.
+      position = 0;
+      while (rest[position]?.forEveryone) position += 1;
+      if (position === rest.length && position > 1) position = 1;
+    }
+    const sceneItems: AgendaItem[] = ordered.map(
+      (sceneId) =>
+        existing.get(sceneId) ?? {
+          id: `scene:${sceneId}`,
+          type: "SCENE",
+          sceneId,
+          departmentId: null,
+          title: "",
+          location: "",
+          description: "",
+          durationMinutes:
+            candidates.find((entry) => entry.sceneId === sceneId)?.durationMinutes ??
+            DEFAULT_DURATION,
+          fixedStart: "",
+          track: 0,
+          forEveryone: false,
+          timesChanged: true,
         },
-      ]}
-    />
+    );
+    const next = [...rest];
+    next.splice(position, 0, ...sceneItems);
+    onItemsChange(next);
+    setSuggestOpen(false);
+  };
+
+  const otherMinutes = items
+    .filter((item) => item.type !== "SCENE" && item.track === 0)
+    .reduce((sum, item) => sum + item.durationMinutes, 0);
+  const eventMinutes = endTime
+    ? (toMinutes(endTime) - toMinutes(startTime) + 1440) % 1440 || 1440
+    : 180;
+  const defaultBudget = Math.max(30, Math.round((eventMinutes - otherMinutes) / 15) * 15);
+
+  const trackNames = useMemo(() => {
+    const result: string[] = [];
+    for (const item of items) {
+      if (!item.forEveryone && item.location.trim() && !result[item.track])
+        result[item.track] = item.location.trim();
+    }
+    return result;
+  }, [items]);
+
+  const overEnd = endTime ? timing.end - (toMinutes(startTime) + eventMinutes) : 0;
+
+  const labelOf = (item: AgendaItem) => {
+    if (item.type === "SCENE")
+      return context.scenes.find((scene) => scene.id === item.sceneId)?.label ?? "Szene";
+    if (item.type === "DEPARTMENT") {
+      const name = context.departments.find((entry) => entry.id === item.departmentId)?.name;
+      return item.title || `Gewerk ${name ?? ""}`.trim();
+    }
+    return item.title || "Programmpunkt";
+  };
+  const subtitleOf = (item: AgendaItem) => {
+    const room = item.location.trim() ? ` · ${item.location.trim()}` : "";
+    if (item.type === "SCENE" && item.sceneId) {
+      const entry = readinessById.get(item.sceneId);
+      const status = entry && entry.status !== "ready" ? `${READINESS_LABEL[entry.status]} · ` : "";
+      return `${status}${describeSceneStats(stats[item.sceneId])}${room}`;
+    }
+    if (item.type === "DEPARTMENT") {
+      const name = context.departments.find((entry) => entry.id === item.departmentId)?.name;
+      return `${item.title ? `Gewerk ${name} · ` : ""}Details plant die Gewerk-Leitung`;
+    }
+    return `${item.forEveryone ? "für alle" : "Sonstiges"}${room}`;
+  };
+
+  const rowProps = (item: AgendaItem) => ({
+    item,
+    label: labelOf(item),
+    subtitle: subtitleOf(item),
+    timing: timing.times[item.id],
+    overlap: timing.overlaps[item.id],
+    conflict: conflictText(item.id),
+    expanded: expanded === item.id,
+    onToggle: () => setExpanded((current) => (current === item.id ? null : item.id)),
+    onChange: (patch: Partial<AgendaItem>) => update(item.id, patch),
+    onRemove: () => remove(item.id),
+    onMove: (offset: -1 | 1) => move(item.id, offset),
+    onInsertAfter: () => {
+      setExpanded(null);
+      setInsertAt(items.indexOf(item) + 1);
+    },
+    trackNames,
+  });
+
+  /** Aufwärmen/Einsingen gehören an den Anfang, hinter schon vorhandene Eröffnungspunkte. */
+  const opensRehearsal = (entry: AgendaItem) =>
+    entry.forEveryone && /^(aufwärmen|einsingen)/i.test(entry.title);
+  const leadingShared = () => {
+    let index = 0;
+    while (items[index] && opensRehearsal(items[index] as AgendaItem)) index += 1;
+    return index;
+  };
+
+  const inlineAdd = (index: number) => (
+    <li className="p-2">
+      <AgendaQuickAdd
+        context={context}
+        scenes={quickScenes}
+        autoFocus
+        onAdd={(entry) => {
+          insert(entry, index);
+          setInsertAt(index + 1);
+        }}
+        onClose={() => setInsertAt(null)}
+      />
+    </li>
   );
+
+  const renderRow = (item: AgendaItem) => {
+    const index = items.indexOf(item);
+    const gap = timing.gaps[item.id];
+    return (
+      <Fragment key={item.id}>
+        {insertAt === index ? (
+          inlineAdd(index)
+        ) : index > 0 ? (
+          <InsertLine label={`Vor ${labelOf(item)} einfügen`} onClick={() => setInsertAt(index)} />
+        ) : null}
+        {gap ? (
+          <li className="px-3 py-1 text-xs text-muted-foreground">{formatDuration(gap)} frei</li>
+        ) : null}
+        <SortableRow {...rowProps(item)} />
+      </Fragment>
+    );
+  };
+
+  const segments = segmentAgenda(items);
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {scenes.length ? (
-          <label className="flex min-h-10 items-center gap-2 text-sm">
-            <Switch
-              checked={staggered}
-              onCheckedChange={(value) =>
-                onScheduleChange({ ...schedule, mode: value ? "STAGGERED" : "TOGETHER" })
-              }
-            />
-            Szenen mit eigener Uhrzeit
-          </label>
-        ) : (
-          <span className="text-sm text-muted-foreground">
-            {isEmpty ? "Noch kein Ablauf." : null}
-          </span>
-        )}
-        {addMenu}
-      </div>
-
-      {!isEmpty ? (
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-          {scenes.map((scene, index) => (
-            <li key={scene.id} className="flex gap-3 py-2 pl-2 pr-1">
-              <span aria-hidden className={cn("w-1 shrink-0 rounded-full", STRIPE.scene)} />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex min-h-9 items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{scene.label}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      Szene · {describeSceneStats(stats[scene.id])}
-                    </p>
-                    <ReadinessHint entry={readinessById.get(scene.id)} />
-                  </div>
-                  {staggered ? (
-                    <div className="hidden items-center gap-2 md:flex">
-                      <TimeRange
-                        label={scene.label}
-                        start={schedule.times[scene.id]?.start ?? ""}
-                        end={schedule.times[scene.id]?.end ?? ""}
-                        onStart={(value) => setSceneTime(scene.id, "start", value)}
-                        onEnd={(value) => setSceneTime(scene.id, "end", value)}
-                      />
-                      <Input
-                        value={schedule.rooms[scene.id] ?? ""}
-                        onChange={(event) =>
-                          onScheduleChange({
-                            ...schedule,
-                            rooms: { ...schedule.rooms, [scene.id]: event.target.value },
-                          })
-                        }
-                        placeholder="Raum"
-                        maxLength={120}
-                        aria-label={`Raum ${scene.label}`}
-                        className="h-9 w-28"
-                      />
-                    </div>
-                  ) : null}
-                  <RowActions
-                    label={scene.label}
-                    onUp={index > 0 ? () => moveScene(index, -1) : undefined}
-                    onDown={index < scenes.length - 1 ? () => moveScene(index, 1) : undefined}
-                    onRemove={() => onScenesChange(sceneIds.filter((id) => id !== scene.id))}
-                  />
-                </div>
-                {staggered ? (
-                  <div className="flex items-center gap-2 pr-2 md:hidden">
-                    <TimeRange
-                      label={scene.label}
-                      start={schedule.times[scene.id]?.start ?? ""}
-                      end={schedule.times[scene.id]?.end ?? ""}
-                      onStart={(value) => setSceneTime(scene.id, "start", value)}
-                      onEnd={(value) => setSceneTime(scene.id, "end", value)}
-                    />
-                    <Input
-                      value={schedule.rooms[scene.id] ?? ""}
-                      onChange={(event) =>
-                        onScheduleChange({
-                          ...schedule,
-                          rooms: { ...schedule.rooms, [scene.id]: event.target.value },
-                        })
-                      }
-                      placeholder="Raum"
-                      maxLength={120}
-                      aria-label={`Raum ${scene.label} (mobil)`}
-                      className="h-9 w-20 shrink-0"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </li>
-          ))}
-          {blocks.map((block, index) => {
-            const isDepartment = block.type === "DEPARTMENT";
-            const kindLabel = isDepartment ? departmentName(block.departmentId) : "Sonstiges";
-            const label = block.title || kindLabel;
-            return (
-              <li key={block.id} className="flex gap-3 py-2 pl-2 pr-1">
-                <span
-                  aria-hidden
-                  className={cn(
-                    "w-1 shrink-0 rounded-full",
-                    isDepartment ? STRIPE.department : STRIPE.custom,
-                  )}
-                />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={block.title}
-                      onChange={(event) => updateBlock(block.id, { title: event.target.value })}
-                      placeholder={
-                        isDepartment ? "Was steht an? z. B. Podeste bauen" : "z. B. Einsingen"
-                      }
-                      maxLength={120}
-                      aria-label={`Titel ${kindLabel}`}
-                      className="h-9 min-w-0 flex-1"
-                    />
-                    <RowActions
-                      label={label}
-                      onUp={index > 0 ? () => moveBlock(index, -1) : undefined}
-                      onDown={index < blocks.length - 1 ? () => moveBlock(index, 1) : undefined}
-                      onRemove={() =>
-                        onBlocksChange(blocks.filter((entry) => entry.id !== block.id))
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 pr-2">
-                    <TimeRange
-                      label={label}
-                      start={block.start}
-                      end={block.end}
-                      onStart={(value) =>
-                        updateBlock(block.id, { start: value, timesChanged: true })
-                      }
-                      onEnd={(value) => updateBlock(block.id, { end: value, timesChanged: true })}
-                    />
-                    {isDepartment ? null : (
-                      <Input
-                        value={block.location}
-                        onChange={(event) =>
-                          updateBlock(block.id, { location: event.target.value })
-                        }
-                        placeholder="Raum"
-                        maxLength={120}
-                        aria-label={`Raum ${label}`}
-                        className="h-9 w-20 shrink-0 sm:w-32"
-                      />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {isDepartment
-                      ? `Gewerk ${kindLabel} ist eingeladen${block.location ? ` · Raum: ${block.location}` : ""} · Details plant die Gewerk-Leitung`
-                      : "Sonstiger Programmpunkt"}
-                  </p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-
-      {readiness.length ? (
-        <details
-          open={readinessOpen}
-          onToggle={(event) => setReadinessOpen(event.currentTarget.open)}
-          className="group rounded-lg bg-muted px-3 py-2 text-sm"
-        >
-          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 [&::-webkit-details-marker]:hidden">
-            <span className="font-medium">Am {dayLabel} probbar:</span>
-            <span className="text-xs text-muted-foreground">
-              <ReadinessSummary entries={readiness} />
-            </span>
-            <ChevronDownIcon
-              aria-hidden
-              className="ml-auto h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180"
-            />
-          </summary>
-          <SceneReadinessList
-            className="mt-3"
-            entries={readiness}
-            selectedIds={sceneIds}
-            onAdd={(id) => onScenesChange([...sceneIds, id])}
-          />
-        </details>
-      ) : null}
-
-      {staggered && scenes.length ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            className="-ml-2"
-            onClick={() =>
-              onScheduleChange({
-                ...schedule,
-                times: suggestSceneTimes(scenes, eventStartTime),
-              })
-            }
-          >
-            Zeiten ab {eventStartTime || "Beginn"} vorschlagen
+      {context.scenes.length ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setSuggestOpen(true)}>
+            <SparklesIcon className="h-4 w-4" aria-hidden />
+            Probe vorschlagen
           </Button>
-          <span>Wer in keiner Szene mit Uhrzeit spielt, kommt zur Terminzeit.</span>
+          {readiness.length ? (
+            <span className="text-xs text-muted-foreground">
+              Am {dayLabel} probbar: <ReadinessSummary entries={readiness} />
+            </span>
+          ) : null}
         </div>
       ) : null}
-      {staggered && personalPreview.length ? (
-        <details className="rounded-lg bg-muted px-3 py-2 text-sm">
-          <summary className="cursor-pointer font-medium">
-            Wer kommt wann? ({personalPreview.length})
-          </summary>
-          <ul className="mt-2 space-y-1 text-muted-foreground">
-            {personalPreview.map((entry) => (
-              <li key={entry.userId}>
-                <span className="font-medium text-foreground">{entry.name}:</span> {entry.window}{" "}
-                (Sz. {entry.scenes})
-              </li>
-            ))}
-          </ul>
-        </details>
+
+      {items.length ? (
+        <DndContext
+          id={dndId}
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={onDragEnd}
+        >
+          <SortableContext items={items.map((item) => item.id)} strategy={rectSortingStrategy}>
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {segments.map((segment) => {
+                if (segment.kind === "shared") return renderRow(segment.item);
+                if (segment.tracks.length === 1) return segment.tracks[0]?.items.map(renderRow);
+                const key = segment.tracks.map((track) => track.items[0]?.id).join();
+                return (
+                  <li key={key} className="bg-muted/40 p-2">
+                    <p className="px-1 pb-1.5 text-xs font-medium text-muted-foreground">
+                      Parallel
+                    </p>
+                    <div
+                      className={cn(
+                        "grid gap-2",
+                        segment.tracks.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3",
+                      )}
+                    >
+                      {segment.tracks.map((track) => (
+                        <div key={track.track} className="min-w-0">
+                          <p className="px-1 pb-1 text-xs text-muted-foreground">
+                            {trackNames[track.track] ??
+                              (track.track === 0 ? "Hauptspur" : `Parallel ${track.track}`)}
+                          </p>
+                          <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
+                            {track.items.map((item) => (
+                              <Fragment key={item.id}>
+                                {insertAt === items.indexOf(item) && items.indexOf(item) > 0
+                                  ? inlineAdd(items.indexOf(item))
+                                  : null}
+                                <SortableRow {...rowProps(item)} />
+                              </Fragment>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Noch kein Ablauf. Punkte bekommen eine Dauer, die Uhrzeiten ergeben sich ab Beginn.
+        </p>
+      )}
+
+      <AgendaQuickAdd
+        context={context}
+        scenes={quickScenes}
+        autoFocus={insertAt === items.length}
+        onClose={() => setInsertAt(null)}
+        onAdd={(entry) => insert(entry, opensRehearsal(entry) ? leadingShared() : items.length)}
+      />
+
+      {items.length ? (
+        <div className="space-y-2 text-sm">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>
+              Ende geplant <span className="font-semibold tabular-nums">{toTime(timing.end)}</span>
+            </span>
+            {overEnd > 0 ? (
+              <>
+                <span className="text-warning">· {formatDuration(overEnd)} über Terminende</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => onSetEnd(toTime(timing.end))}
+                >
+                  Ende auf {toTime(timing.end)} setzen
+                </Button>
+              </>
+            ) : overEnd < 0 ? (
+              <span className="text-muted-foreground">
+                · {formatDuration(-overEnd)} Puffer bis {endTime}
+              </span>
+            ) : !endTime ? (
+              <span className="text-muted-foreground">· gilt als Terminende</span>
+            ) : null}
+          </p>
+
+          {summary.people ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-muted px-3 py-2 text-xs">
+              <span>
+                <span className="font-semibold">{summary.people}</span>{" "}
+                {summary.people === 1 ? "Person" : "Leute"} in Punkten
+              </span>
+              <span>
+                Ø Auslastung{" "}
+                <span className="font-semibold">{Math.round(summary.utilization * 100)} %</span>
+              </span>
+              {summary.longestWait ? (
+                <span>
+                  längste Wartezeit: {names.get(summary.longestWait.userId) ?? "jemand"}{" "}
+                  <span className="font-semibold">
+                    {formatDuration(summary.longestWait.minutes)}
+                  </span>
+                </span>
+              ) : (
+                <span>keine Wartezeiten</span>
+              )}
+              {summary.totalWait > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="ml-auto"
+                  onClick={optimize}
+                >
+                  Reihenfolge optimieren
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          <label className="flex min-h-10 items-center gap-2">
+            <Switch
+              checked={staggered}
+              onCheckedChange={(value) => onModeChange(value ? "STAGGERED" : "TOGETHER")}
+            />
+            <span>
+              Jeder kommt erst zu seinem ersten Punkt
+              <span className="block text-xs text-muted-foreground">
+                Punkte „für alle“ zählen für jeden; wer in keinem Punkt steckt, kommt zum Beginn.
+              </span>
+            </span>
+          </label>
+
+          {staggered && schedules.length ? (
+            <details className="rounded-lg bg-muted px-3 py-2">
+              <summary className="cursor-pointer font-medium">
+                Wer kommt wann? ({schedules.length})
+              </summary>
+              <ul className="mt-2 space-y-1 text-muted-foreground">
+                {[...schedules]
+                  .sort(
+                    (a, b) =>
+                      a.window.start - b.window.start ||
+                      (names.get(a.userId) ?? "").localeCompare(names.get(b.userId) ?? "", "de"),
+                  )
+                  .map((entry) => (
+                    <li key={entry.userId}>
+                      <span className="font-medium text-foreground">
+                        {names.get(entry.userId) ?? "Unbekannt"}:
+                      </span>{" "}
+                      {toTime(entry.window.start)}–{toTime(entry.window.end)}
+                      {entry.wait ? ` · ${formatDuration(entry.wait)} Wartezeit` : ""}
+                      {weekLoad[entry.userId]?.count
+                        ? ` · diese Woche schon ${weekLoad[entry.userId]?.count}×`
+                        : ""}
+                    </li>
+                  ))}
+              </ul>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
+
+      {suggestOpen ? (
+        <RehearsalSuggestPanel
+          open
+          onOpenChange={setSuggestOpen}
+          candidates={candidates}
+          existingSceneIds={sceneIds}
+          defaultBudget={defaultBudget}
+          names={names}
+          onApply={applySuggestion}
+        />
       ) : null}
     </div>
   );
