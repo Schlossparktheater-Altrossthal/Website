@@ -105,3 +105,35 @@ export function recordOnboardingEmailCheck(
     retryAfterSeconds: Math.max(sessionResult.retryAfterSeconds, ipResult.retryAfterSeconds),
   };
 }
+
+const BOOKING_EMAIL_LIMIT = 5;
+const BOOKING_IP_LIMIT = 20;
+const bookingEmailAttempts = new Map<string, RateLimitBucket>();
+const bookingIpAttempts = new Map<string, RateLimitBucket>();
+
+/** Begrenzt öffentliche Kartenreservierungen auf 5 pro Adresse und 20 pro IP und Stunde. */
+export function recordTicketBookingAttempt(
+  email: string,
+  ip: string,
+  now = Date.now(),
+): RateLimitResult {
+  for (const map of [bookingEmailAttempts, bookingIpAttempts]) {
+    for (const [key, bucket] of map.entries()) {
+      if (bucket.resetAt <= now) map.delete(key);
+    }
+  }
+  const emailResult = incrementBucket(
+    bookingEmailAttempts,
+    `email:${email.trim().toLowerCase()}`,
+    BOOKING_EMAIL_LIMIT,
+    now,
+  );
+  const ipResult = incrementBucket(bookingIpAttempts, `ip:${ip}`, BOOKING_IP_LIMIT, now);
+  if (emailResult.allowed && ipResult.allowed) {
+    return { allowed: true };
+  }
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.max(emailResult.retryAfterSeconds, ipResult.retryAfterSeconds),
+  };
+}

@@ -147,6 +147,7 @@ import {
   ScanLine,
   Warehouse,
   QrCode,
+  Ticket,
   Boxes,
   Keyboard,
   ChefHat,
@@ -1110,6 +1111,13 @@ export function QrCodeIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <QrCode className={className} aria-hidden {...props} />;
+}
+
+export function TicketIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Ticket className={className} aria-hidden {...props} />;
 }
 
 export function BoxesIcon({ className = "w-4 h-4", ...props }: { className?: string } & IconProps) {

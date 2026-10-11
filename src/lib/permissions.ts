@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { currentCastingWhere, currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { ROLES, ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
+import { TICKET_PERMISSION_KEYS } from "@/lib/karten/constants";
 import { isProductionRole } from "@/lib/produktionen/production-role-keys";
 import {
   departmentMembershipWhereForPermission,
@@ -22,7 +23,8 @@ type PermissionCategoryKey =
   | "analytics"
   | "communication"
   | "services"
-  | "inventory";
+  | "inventory"
+  | "tickets";
 
 export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> = {
   base: "Allgemeines",
@@ -34,6 +36,7 @@ export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> =
   communication: "Kommunikation",
   services: "Dienste",
   inventory: "Lager",
+  tickets: "Kartenverkauf",
 };
 
 // Permission definition shape
@@ -77,6 +80,27 @@ export const FOOD_PERMISSION_KEYS = {
 } as const;
 
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
+  {
+    key: TICKET_PERMISSION_KEYS.manage,
+    label: "Kartenverkauf einrichten",
+    description:
+      "Kartenarten und Preise, Kapazitäten der Vorstellungen, Freikarten-Kontingente und Kartenbüro-Zugänge pflegen. Schließt Kartenbüro und Einlass ein.",
+    category: "tickets",
+  },
+  {
+    key: TICKET_PERMISSION_KEYS.office,
+    label: "Kartenbüro",
+    description:
+      "Reservierungen aller Zuschauer sehen, anlegen (z. B. telefonisch), ändern und stornieren. Enthält Namen, Telefonnummern und E-Mail-Adressen.",
+    category: "tickets",
+  },
+  {
+    key: TICKET_PERMISSION_KEYS.checkIn,
+    label: "Einlass & Abendkasse",
+    description:
+      "Am Vorstellungsabend Tickets scannen, Gäste nach Namen suchen und einlassen sowie Abendkassen-Verkäufe zählen.",
+    category: "tickets",
+  },
   {
     key: FOOD_PERMISSION_KEYS.taxonomyManage,
     label: "Verpflegung: ungeklärte Allergie-Angaben zuordnen",

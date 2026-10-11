@@ -21,6 +21,7 @@ import {
   RulerIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  TicketIcon,
   UserCogIcon,
   UserRoundIcon,
   UsersRoundIcon,
@@ -98,6 +99,12 @@ export const membersNavigation = [
         permissionKey: "PRIVATE.REHEARSAL.OWN.VIEW",
         icon: CalendarCheckIcon,
       },
+      {
+        href: "/mitglieder/freikarten",
+        label: "Freikarten",
+        permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
+        icon: TicketIcon,
+      },
     ],
   },
   {
@@ -115,6 +122,13 @@ export const membersNavigation = [
         label: "Terminplanung",
         permissionKey: "PRIVATE.REHEARSAL.PLANNING.MANAGE",
         icon: CalendarCogIcon,
+      },
+      {
+        href: "/mitglieder/karten",
+        label: "Kartenverkauf",
+        permissionKey: "PRIVATE.TICKETS.OFFICE",
+        alsoPermissionKeys: ["PRIVATE.TICKETS.MANAGE", "PRIVATE.TICKETS.CHECKIN"],
+        icon: TicketIcon,
       },
       {
         href: "/mitglieder/produktionen/stueck",

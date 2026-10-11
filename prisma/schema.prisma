@@ -304,38 +304,41 @@ enum IssueVisibility {
 }
 
 model User {
-  id                    String                   @id @default(cuid())
-  inventoryEvents       InventoryEvent[]
-  inventoryDefects      InventoryDefect[]        @relation("InventoryDefectReporter")
-  inventoryInspections  InventoryInspection[]
-  inventoryCheckouts    InventoryCheckout[]      @relation("InventoryCheckoutBorrower")
-  inventoryProjectsLed  InventoryProject[]       @relation("InventoryProjectLead")
-  inventoryScans        InventoryStocktakeScan[]
-  firstName             String?
-  lastName              String?
-  name                  String?
-  email                 String?                  @unique
-  emailVerified         DateTime?
-  role                  Role                     @default(member)
-  passwordHash          String?
-  createdAt             DateTime                 @default(now())
-  dateOfBirth           DateTime?
-  deactivatedAt         DateTime?
+  id                       String                   @id @default(cuid())
+  freeTicketReservations   Reservation[]            @relation("ReservationMember")
+  freeTicketAllowances     FreeTicketAllowance[]
+  boxOfficeAccessesCreated BoxOfficeAccess[]        @relation("BoxOfficeAccessCreatedBy")
+  inventoryEvents          InventoryEvent[]
+  inventoryDefects         InventoryDefect[]        @relation("InventoryDefectReporter")
+  inventoryInspections     InventoryInspection[]
+  inventoryCheckouts       InventoryCheckout[]      @relation("InventoryCheckoutBorrower")
+  inventoryProjectsLed     InventoryProject[]       @relation("InventoryProjectLead")
+  inventoryScans           InventoryStocktakeScan[]
+  firstName                String?
+  lastName                 String?
+  name                     String?
+  email                    String?                  @unique
+  emailVerified            DateTime?
+  role                     Role                     @default(member)
+  passwordHash             String?
+  createdAt                DateTime                 @default(now())
+  dateOfBirth              DateTime?
+  deactivatedAt            DateTime?
   /// Gesetzt, wenn personenbezogene Daten nach Ablauf der Aufbewahrungsfrist entfernt wurden.
-  anonymizedAt          DateTime?
-  sessionVersion        Int                      @default(0)
-  onboardingCompletedAt DateTime?
-  onboardingUpdatedAt   DateTime?
-  avatarSource          AvatarSource             @default(GRAVATAR)
-  avatarImage           Bytes?
-  avatarImageMime       String?
-  avatarImageUpdatedAt  DateTime?
-  payoutMethod          PayoutMethod             @default(BANK_TRANSFER)
-  payoutAccountHolder   String?
-  payoutIban            String?
-  payoutBankName        String?
-  payoutPaypalHandle    String?
-  payoutNote            String?
+  anonymizedAt             DateTime?
+  sessionVersion           Int                      @default(0)
+  onboardingCompletedAt    DateTime?
+  onboardingUpdatedAt      DateTime?
+  avatarSource             AvatarSource             @default(GRAVATAR)
+  avatarImage              Bytes?
+  avatarImageMime          String?
+  avatarImageUpdatedAt     DateTime?
+  payoutMethod             PayoutMethod             @default(BANK_TRANSFER)
+  payoutAccountHolder      String?
+  payoutIban               String?
+  payoutBankName           String?
+  payoutPaypalHandle       String?
+  payoutNote               String?
 
   accounts                        Account[]
   sessions                        Session[]
@@ -500,6 +503,11 @@ model Show {
   milestones              ShowMilestone[]
   productionObjects       ProductionObject[]
   sceneRequirements       SceneRequirement[]
+  ticketingSettings       TicketingSettings?
+  ticketCategories        TicketCategory[]
+  reservations            Reservation[]
+  freeTicketAllowances    FreeTicketAllowance[]
+  boxOfficeAccesses       BoxOfficeAccess[]
 }
 
 enum MilestoneKind {
@@ -1468,6 +1476,9 @@ model CalendarEvent {
   blockedDays         BlockedDay[]
   reminderDispatches  EventReminderDispatch[]
   milestone           ShowMilestone?
+  ticketing           PerformanceTicketing?
+  reservations        Reservation[]
+  waitlistEntries     WaitlistEntry[]
 
   @@index([start])
   @@index([departmentId, start])
@@ -3557,4 +3568,210 @@ model DepartmentVisit {
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([departmentId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Kartenbuchung (docs/Plan/kartenbuchung-plan.md)
+// ---------------------------------------------------------------------------
+
+enum ReservationSource {
+  online
+  phone
+  free_ticket
+  box_office
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  cancelled
+  expired
+}
+
+enum ReservationPaymentStatus {
+  open
+  paid
+  free
+}
+
+enum WaitlistStatus {
+  waiting
+  notified
+  done
+}
+
+/// Kartenverkauf einer Produktion: an/aus, Haltezeit unbestätigter Buchungen, Freikarten.
+model TicketingSettings {
+  id                   String    @id @default(cuid())
+  showId               String    @unique
+  enabled              Boolean   @default(false)
+  /// Wie lange eine unbestätigte Online-Buchung ihre Plätze hält.
+  holdMinutes          Int       @default(120)
+  maxSeatsPerBooking   Int       @default(10)
+  freeTicketsPerMember Int       @default(2)
+  freeTicketDeadline   DateTime?
+  /// Hinweis auf der Buchungsseite und in den Mails (Anfahrt, Abendkasse …).
+  infoText             String?
+  /// Gastdaten werden so viele Tage nach der Vorstellung anonymisiert.
+  retentionDays        Int       @default(90)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  show                 Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+}
+
+/// Kartenart einer Produktion (Erwachsene, Kinder …), frei bearbeitbar.
+model TicketCategory {
+  id             String            @id @default(cuid())
+  showId         String
+  name           String
+  description    String?
+  priceCents     Int               @default(0)
+  /// Belegt einen Platz (Kleinkind auf dem Schoß: nein).
+  needsSeat      Boolean           @default(true)
+  onlineBookable Boolean           @default(true)
+  isActive       Boolean           @default(true)
+  sortOrder      Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  show           Show              @relation(fields: [showId], references: [id], onDelete: Cascade)
+  items          ReservationItem[]
+
+  @@index([showId, sortOrder])
+}
+
+/// Kapazität und Kontingente einer Vorstellung (CalendarEvent mit kind PERFORMANCE).
+model PerformanceTicketing {
+  id               String        @id @default(cuid())
+  eventId          String        @unique
+  capacity         Int           @default(0)
+  /// Höchstens so viele Plätze online buchbar; null = bis zur Kapazität abzüglich Reserve.
+  onlineLimit      Int?
+  /// Plätze, die nur Kartenbüro und Abendkasse vergeben.
+  boxOfficeReserve Int           @default(0)
+  salesOpen        Boolean       @default(true)
+  /// Online-Buchung endet zu diesem Zeitpunkt; null = Vorstellungsbeginn.
+  salesEndAt       DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  event            CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+/// Eine Buchung auf einen Namen mit einem QR-Code für alle Karten.
+model Reservation {
+  id                  String                   @id @default(cuid())
+  /// Kurzer, lesbarer Code (QR-Inhalt, Telefon).
+  code                String                   @unique
+  /// Hash des Tokens im Mail-Link (Bestätigen, Ticket, Ändern).
+  tokenHash           String                   @unique
+  eventId             String
+  showId              String
+  source              ReservationSource
+  status              ReservationStatus        @default(pending)
+  name                String
+  email               String?
+  phone               String?
+  note                String?
+  internalNote        String?
+  /// Summe der Karten, die einen Platz belegen.
+  seats               Int                      @default(0)
+  totalCents          Int                      @default(0)
+  paymentStatus       ReservationPaymentStatus @default(open)
+  holdUntil           DateTime?
+  confirmedAt         DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  checkedInCount      Int                      @default(0)
+  /// Freikarte: angemeldet von diesem Mitwirkenden.
+  memberId            String?
+  createdByUserId     String?
+  createdByAccessId   String?
+  reminderSentAt      DateTime?
+  /// Mail „Vorstellung abgesagt“ verschickt.
+  eventCancelNoticeAt DateTime?
+  anonymizedAt        DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  event               CalendarEvent            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  show                Show                     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  member              User?                    @relation("ReservationMember", fields: [memberId], references: [id], onDelete: SetNull)
+  items               ReservationItem[]
+  checkIns            ReservationCheckIn[]
+
+  @@index([eventId, status])
+  @@index([showId, memberId])
+  @@index([status, holdUntil])
+}
+
+model ReservationItem {
+  id             String          @id @default(cuid())
+  reservationId  String
+  categoryId     String?
+  /// Name der Kategorie zum Buchungszeitpunkt.
+  label          String
+  quantity       Int
+  unitPriceCents Int             @default(0)
+  needsSeat      Boolean         @default(true)
+  reservation    Reservation     @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  category       TicketCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([reservationId])
+}
+
+/// Einlass-Protokoll; clientMutationId macht gepufferte Offline-Check-ins idempotent.
+model ReservationCheckIn {
+  id               String      @id @default(cuid())
+  reservationId    String
+  delta            Int
+  clientMutationId String      @unique
+  deviceLabel      String?
+  byUserId         String?
+  byAccessId       String?
+  occurredAt       DateTime
+  createdAt        DateTime    @default(now())
+  reservation      Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+}
+
+/// Abweichendes Freikarten-Kontingent einer Person.
+model FreeTicketAllowance {
+  id       String @id @default(cuid())
+  showId   String
+  userId   String
+  quantity Int
+  show     Show   @relation(fields: [showId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, userId])
+}
+
+/// Kartenbüro-Zugang ohne Konto (z. B. Sekretärin): persönlicher Link, befristet, sperrbar.
+model BoxOfficeAccess {
+  id          String    @id @default(cuid())
+  showId      String?
+  name        String
+  email       String
+  tokenHash   String    @unique
+  canCheckIn  Boolean   @default(false)
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  show        Show?     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  createdBy   User?     @relation("BoxOfficeAccessCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+model WaitlistEntry {
+  id         String         @id @default(cuid())
+  eventId    String
+  name       String
+  email      String
+  seats      Int
+  status     WaitlistStatus @default(waiting)
+  notifiedAt DateTime?
+  createdAt  DateTime       @default(now())
+  event      CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, status])
 }

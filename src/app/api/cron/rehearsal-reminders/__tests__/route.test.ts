@@ -11,6 +11,15 @@ vi.mock("@/lib/notifications/event-reminders", () => ({
 vi.mock("@/lib/notifications/milestone-reminders", () => ({
   dispatchMilestoneReminders: vi.fn().mockResolvedValue({ sent: 0, skipped: 0, failed: 0 }),
 }));
+vi.mock("@/lib/karten/maintenance", () => ({
+  runTicketMaintenance: vi.fn().mockResolvedValue({
+    expired: 0,
+    reminders: 0,
+    cancelNotices: 0,
+    waitlist: 0,
+    anonymized: 0,
+  }),
+}));
 vi.mock("@/lib/logger", () => ({ createLogger: () => mocks.logger }));
 
 import { GET, POST } from "../route";

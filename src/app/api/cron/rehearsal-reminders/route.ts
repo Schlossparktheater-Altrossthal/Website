@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { runTicketMaintenance } from "@/lib/karten/maintenance";
 import { createLogger } from "@/lib/logger";
 import { dispatchEventReminders } from "@/lib/notifications/event-reminders";
 import { dispatchInspectionReminders } from "@/lib/notifications/inspection-reminders";
@@ -40,6 +41,15 @@ async function handle(request: Request) {
       if (inspections.sent > 0) logger.info("Prüf-Erinnerung versendet", inspections);
     } catch (error) {
       console.error("[cron:termine-reminders] Prüf-Erinnerung fehlgeschlagen", error);
+    }
+    // Kartenbuchung: Verfall, Erinnerungen, Absagen, Warteliste, Löschfristen.
+    try {
+      const tickets = await runTicketMaintenance();
+      if (Object.values(tickets).some((count) => count > 0)) {
+        logger.info("Kartenbuchung gepflegt", tickets);
+      }
+    } catch (error) {
+      console.error("[cron:termine-reminders] Kartenbuchung fehlgeschlagen", error);
     }
     // Nur melden, wenn wirklich etwas passiert ist – der Lauf wiederholt sich alle paar Minuten.
     if (summary.sent > 0 || summary.failed > 0) {
