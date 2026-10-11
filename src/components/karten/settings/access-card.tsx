@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import {
   createBoxOfficeAccessAction,
+  createDoorAccessAction,
   resendBoxOfficeAccessAction,
   revokeBoxOfficeAccessAction,
 } from "@/app/(members)/mitglieder/karten/einstellungen/actions";
@@ -14,17 +15,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { CopyIcon, MailIcon, PlusIcon } from "@/components/ui/action-icons";
+import { CopyIcon, MailIcon, PlusIcon, QrCodeIcon } from "@/components/ui/action-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
 import { Switch } from "@/components/ui/switch";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 
+import { DoorQrDialog } from "./door-qr-dialog";
+
 export type AccessRow = {
   id: string;
   name: string;
   email: string;
+  /** false = reiner Einlass-Zugang per QR-Code. */
+  canOffice: boolean;
   canCheckIn: boolean;
   expiresAt: string;
   revokedAt: string | null;
@@ -46,16 +51,26 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
   const [draft, setDraft] = useState({ name: "", email: "", canCheckIn: true, days: 120 });
   const [revoking, setRevoking] = useState<AccessRow | null>(null);
   const [fallbackLink, setFallbackLink] = useState<string | null>(null);
+  const [creatingDoor, setCreatingDoor] = useState(false);
+  const [doorDraft, setDoorDraft] = useState({ name: "Einlass", days: 3 });
+  const [doorQr, setDoorQr] = useState<{ link: string; title: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const handleLink = (result: Awaited<ReturnType<typeof createBoxOfficeAccessAction>>) => {
+  const handleLink = (
+    result: Awaited<ReturnType<typeof resendBoxOfficeAccessAction>>,
+    title = "Einlass",
+  ) => {
     if (!result.ok) {
       toast.error(result.error);
       return false;
     }
     toast.success(result.message ?? "Erledigt.");
-    // Ohne Mailserver (lokal) den Link direkt anzeigen.
-    setFallbackLink(result.data.link);
+    if (result.data.door && result.data.link) {
+      setDoorQr({ link: result.data.link, title });
+    } else {
+      // Ohne Mailserver (lokal) den Link direkt anzeigen.
+      setFallbackLink(result.data.link);
+    }
     router.refresh();
     return true;
   };
@@ -68,19 +83,36 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
       }
     });
 
+  const createDoor = () =>
+    startTransition(async () => {
+      const result = await createDoorAccessAction(showId, doorDraft);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setCreatingDoor(false);
+      setDoorQr({ link: result.data.link, title: doorDraft.name });
+      router.refresh();
+    });
+
   return (
     <Card className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold">Kartenbüro-Zugänge</h2>
+          <h2 className="text-lg font-semibold">Zugänge ohne Konto</h2>
           <p className="text-sm text-muted-foreground">
-            Für Personen ohne Mitgliedskonto (z. B. Sekretariat): persönlicher Link per Mail, kein
-            Passwort. Sieht nur Reservierungen dieser Produktion.
+            Sekretariat: persönlicher Link per Mail, verwaltet Reservierungen. Einlass-Helfer:
+            QR-Code zum Ausdrucken, öffnet nur den Einlass. Beides gilt nur für diese Produktion.
           </p>
         </div>
-        <Button size="sm" onClick={() => setCreating(true)}>
-          <PlusIcon /> Zugang
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setCreatingDoor(true)}>
+            <QrCodeIcon /> Einlass-QR
+          </Button>
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <PlusIcon /> Kartenbüro-Zugang
+          </Button>
+        </div>
       </div>
 
       {fallbackLink ? (
@@ -117,14 +149,19 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
                     <Badge variant={active ? "success" : "muted"} size="sm">
                       {access.revokedAt ? "gesperrt" : active ? "aktiv" : "abgelaufen"}
                     </Badge>
-                    {access.canCheckIn ? (
+                    {!access.canOffice ? (
+                      <Badge variant="info" size="sm">
+                        Einlass-QR
+                      </Badge>
+                    ) : access.canCheckIn ? (
                       <Badge variant="muted" size="sm">
                         + Einlass
                       </Badge>
                     ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {access.email} · bis {dateFormat.format(new Date(access.expiresAt))}
+                    {access.email ? `${access.email} · ` : ""}bis{" "}
+                    {dateFormat.format(new Date(access.expiresAt))}
                     {access.lastUsedAt
                       ? ` · zuletzt ${dateFormat.format(new Date(access.lastUsedAt))}`
                       : " · noch nicht benutzt"}
@@ -136,11 +173,12 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
                   disabled={pending}
                   onClick={() =>
                     startTransition(async () => {
-                      handleLink(await resendBoxOfficeAccessAction(access.id));
+                      handleLink(await resendBoxOfficeAccessAction(access.id), access.name);
                     })
                   }
                 >
-                  <MailIcon /> Neuer Link
+                  {access.canOffice ? <MailIcon /> : <QrCodeIcon />}
+                  {access.canOffice ? "Neuer Link" : "Neuer QR"}
                 </Button>
                 {!access.revokedAt ? (
                   <Button size="xs" variant="ghost" onClick={() => setRevoking(access)}>
@@ -222,6 +260,63 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
           <button type="submit" hidden />
         </form>
       </ModalFormDialog>
+
+      <ModalFormDialog
+        title="Einlass-QR"
+        description="Für Helfer an der Tür ohne Mitgliedskonto. Der Code öffnet nur den Einlass dieser Produktion."
+        open={creatingDoor}
+        onOpenChange={setCreatingDoor}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setCreatingDoor(false)}>
+              Abbrechen
+            </Button>
+            <AsyncButton isLoading={pending} onClick={createDoor}>
+              QR erstellen
+            </AsyncButton>
+          </>
+        }
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            createDoor();
+          }}
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="door-name">Bezeichnung</Label>
+            <Input
+              id="door-name"
+              placeholder="z. B. Einlass Premierenwochenende"
+              value={doorDraft.name}
+              onChange={(event) => setDoorDraft({ ...doorDraft, name: event.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="door-days">Gültig (Tage)</Label>
+            <Input
+              id="door-days"
+              type="number"
+              min={1}
+              max={60}
+              className="w-32"
+              value={doorDraft.days}
+              onChange={(event) =>
+                setDoorDraft({ ...doorDraft, days: Number.parseInt(event.target.value, 10) || 3 })
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Kurz halten – z. B. bis zum Ende des Vorstellungswochenendes.
+            </p>
+          </div>
+          <button type="submit" hidden />
+        </form>
+      </ModalFormDialog>
+
+      {doorQr ? (
+        <DoorQrDialog link={doorQr.link} title={doorQr.title} onClose={() => setDoorQr(null)} />
+      ) : null}
 
       <ConfirmDialog
         open={revoking !== null}

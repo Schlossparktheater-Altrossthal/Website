@@ -231,6 +231,7 @@ export async function createBoxOfficeAccessAction(
       name: data.name,
       email: data.email,
       showId,
+      canOffice: true,
       canCheckIn: data.canCheckIn,
       expiresAt,
       createdById: actor.userId,
@@ -252,14 +253,59 @@ export async function createBoxOfficeAccessAction(
   }
 }
 
+const doorAccessSchema = z.object({
+  name: z.string().trim().min(1, "Bitte einen Namen angeben.").max(80),
+  days: z.number().int().min(1).max(60),
+});
+
+/**
+ * Einlass-Zugang für Helfer ohne Konto: kein Mailversand, sondern ein QR-Code, der an der Tür
+ * ausgedruckt wird. Wer ihn scannt, landet direkt im Einlass (ohne Kartenbüro).
+ */
+export async function createDoorAccessAction(
+  showId: string,
+  input: z.input<typeof doorAccessSchema>,
+): Promise<TicketActionResult<{ link: string; door: true }>> {
+  try {
+    const actor = await requireManager(showId);
+    const data = doorAccessSchema.parse(input);
+    const { token } = await createBoxOfficeAccess({
+      name: data.name,
+      email: "",
+      showId,
+      canOffice: false,
+      canCheckIn: true,
+      expiresAt: new Date(Date.now() + data.days * 86_400_000),
+      createdById: actor.userId,
+    });
+    revalidateTickets();
+    return {
+      ok: true,
+      message: "Einlass-QR erstellt.",
+      data: { link: boxOfficeAccessLink(token), door: true },
+    };
+  } catch (error) {
+    return ticketFailure(error, "Einlass-Zugang konnte nicht angelegt werden.");
+  }
+}
+
 /** Neuen Link senden (z. B. neues Gerät); der alte Link wird ungültig. */
 export async function resendBoxOfficeAccessAction(
   accessId: string,
-): Promise<TicketActionResult<{ link: string | null; mailed: boolean }>> {
+): Promise<TicketActionResult<{ link: string | null; mailed: boolean; door?: boolean }>> {
   try {
     const existing = await prisma.boxOfficeAccess.findUniqueOrThrow({ where: { id: accessId } });
     await requireManager(existing.showId);
     const { access, token } = await rotateBoxOfficeAccessToken(accessId);
+    if (!access.canOffice) {
+      // Einlass-QR: neuen Code anzeigen, der alte Ausdruck gilt nicht mehr.
+      revalidateTickets();
+      return {
+        ok: true,
+        message: "Neuer Einlass-QR erstellt – bitte neu ausdrucken.",
+        data: { link: boxOfficeAccessLink(token), mailed: false, door: true },
+      };
+    }
     const mailed = await sendBoxOfficeAccess({
       email: access.email,
       name: access.name,

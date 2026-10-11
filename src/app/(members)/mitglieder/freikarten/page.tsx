@@ -24,7 +24,7 @@ export default async function FreeTicketsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Freikarten"
-        description="Als Mitwirkende*r kannst du Freikarten für Familie und Freunde auf deren Namen anmelden."
+        description="Als Mitwirkender kannst du Freikarten für Familie und Freunde auf deren Namen anmelden."
         breadcrumbs={[membersNavigationBreadcrumb("/mitglieder/freikarten")]}
       />
       {panels.length === 0 ? (

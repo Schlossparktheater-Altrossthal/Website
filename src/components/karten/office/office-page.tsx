@@ -1,7 +1,8 @@
 import { TicketShowPicker } from "@/components/karten/show-picker";
 import { TicketsNav } from "@/components/karten/tickets-nav";
-import { PageHeader } from "@/components/members/page-header";
+import { TicketsPageHeader } from "@/components/karten/tickets-page-header";
 import type { TicketActor } from "@/lib/karten/access";
+import { BOX_OFFICE_PATH } from "@/lib/karten/constants";
 import { resolveTicketShow } from "@/lib/karten/context";
 import { loadOfficeData } from "@/lib/karten/office-data";
 import type { MembersBreadcrumbItem } from "@/lib/members-breadcrumbs";
@@ -25,7 +26,11 @@ export async function OfficePage({
   if (!selected) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Reservierungen" breadcrumbs={breadcrumbs} />
+        <TicketsPageHeader
+          standalone={basePath === BOX_OFFICE_PATH}
+          title="Reservierungen"
+          breadcrumbs={breadcrumbs}
+        />
         <p className="py-12 text-center text-sm text-muted-foreground">
           Für keine Produktion ist der Kartenverkauf eingerichtet.
         </p>
@@ -35,7 +40,8 @@ export async function OfficePage({
   const data = await loadOfficeData(selected.id, searchParams.vorstellung);
   return (
     <div className="space-y-4">
-      <PageHeader
+      <TicketsPageHeader
+        standalone={basePath === BOX_OFFICE_PATH}
         title="Reservierungen"
         description={`${selected.title} · Taste „n“ für neue Reservierung, „/“ zum Suchen`}
         breadcrumbs={breadcrumbs}

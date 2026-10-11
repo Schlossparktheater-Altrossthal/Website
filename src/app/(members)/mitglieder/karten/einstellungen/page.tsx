@@ -127,6 +127,7 @@ export default async function TicketSettingsPage({
           id: access.id,
           name: access.name,
           email: access.email,
+          canOffice: access.canOffice,
           canCheckIn: access.canCheckIn,
           expiresAt: access.expiresAt.toISOString(),
           revokedAt: access.revokedAt?.toISOString() ?? null,

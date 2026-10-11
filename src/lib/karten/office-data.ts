@@ -1,18 +1,19 @@
 import { loadPerformances, loadReservationsForEvent, loadTicketCategories } from "./queries";
 
-/** Daten für Kartenbüro und Einlass einer Produktion; Vorstellung aus `?vorstellung=` oder die nächste. */
+/** Ansicht über alle kommenden Vorstellungen (`?vorstellung=alle`, Standard im Kartenbüro). */
+export const ALL_PERFORMANCES = "alle";
+
+/** Daten fürs Kartenbüro; `?vorstellung=` wählt eine Vorstellung, sonst alle kommenden. */
 export async function loadOfficeData(showId: string, requestedEventId?: string | null) {
   const now = new Date();
   const [performances, categories] = await Promise.all([
     loadPerformances(showId, { now }),
     loadTicketCategories(showId, { activeOnly: true }),
   ]);
-  const selected =
-    performances.find((row) => row.eventId === requestedEventId) ??
-    performances.find((row) => row.configured && !row.cancelled) ??
-    performances[0] ??
-    null;
-  const reservations = selected ? await loadReservationsForEvent(selected.eventId) : [];
+  const selected = performances.find((row) => row.eventId === requestedEventId) ?? null;
+  const reservations = await loadReservationsForEvent(
+    selected ? selected.eventId : performances.map((row) => row.eventId),
+  );
   return {
     performances: performances.map((row) => ({
       eventId: row.eventId,
@@ -31,6 +32,7 @@ export async function loadOfficeData(showId: string, requestedEventId?: string |
       priceCents: category.priceCents,
       needsSeat: category.needsSeat,
     })),
+    /** null = alle Vorstellungen. */
     selectedEventId: selected?.eventId ?? null,
     reservations,
   };

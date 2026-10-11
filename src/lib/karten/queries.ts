@@ -133,9 +133,9 @@ export type ReservationListEntry = Prisma.ReservationGetPayload<{
   select: typeof reservationListSelect;
 }>;
 
-export async function loadReservationsForEvent(eventId: string) {
+export async function loadReservationsForEvent(eventId: string | string[]) {
   return prisma.reservation.findMany({
-    where: { eventId },
+    where: { eventId: Array.isArray(eventId) ? { in: eventId } : eventId },
     orderBy: [{ name: "asc" }, { createdAt: "asc" }],
     select: reservationListSelect,
   });

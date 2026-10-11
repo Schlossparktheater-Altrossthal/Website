@@ -11,6 +11,7 @@ import {
   type TicketActionResult,
 } from "@/lib/karten/actions-helpers";
 import {
+  BookingError,
   cancelReservation,
   createReservation,
   restoreReservation,
@@ -39,7 +40,6 @@ async function eventShowId(eventId: string) {
 }
 
 const createSchema = z.object({
-  eventId: z.string().min(1),
   name: z.string().trim().min(1, "Bitte einen Namen angeben.").max(120),
   phone: optionalTrimmed(40),
   email: z
@@ -52,41 +52,86 @@ const createSchema = z.object({
     .pipe(z.string().email("Ungültige E-Mail-Adresse.").nullable()),
   note: optionalTrimmed(500),
   internalNote: optionalTrimmed(500),
-  items: itemsSchema,
+  /** Eine Zeile je Vorstellung – am Telefon oft mehrere Termine in verschiedenen Besetzungen. */
+  lines: z
+    .array(z.object({ eventId: z.string().min(1), items: itemsSchema }))
+    .min(1, "Bitte eine Vorstellung wählen.")
+    .max(20),
   paid: z.boolean().default(false),
   allowOverbook: z.boolean().default(false),
   sendMail: z.boolean().default(true),
 });
 
+/**
+ * Telefonbuchung für eine oder mehrere Vorstellungen. Jede Vorstellung wird eine eigene Buchung
+ * (eigener Code, eigener Einlass). Scheitert eine Zeile, werden die schon angelegten wieder
+ * entfernt – entweder alles oder nichts.
+ */
 export async function officeCreateReservationAction(
   input: z.input<typeof createSchema>,
-): Promise<TicketActionResult<{ id: string; code: string; mailed: boolean }>> {
+): Promise<TicketActionResult<{ codes: string[]; mailed: number }>> {
+  const created: { id: string; token: string; code: string; email: string | null }[] = [];
   try {
     const data = createSchema.parse(input);
-    const actor = await requireTicketActor("office", await eventShowId(data.eventId));
-    const { reservation, token } = await createReservation({
-      eventId: data.eventId,
-      source: "phone",
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      note: data.note,
-      internalNote: data.internalNote,
-      items: data.items,
-      paymentStatus: data.paid ? "paid" : undefined,
-      allowOverbook: data.allowOverbook,
-      actor: actorRef(actor),
-    });
-    const mailed =
-      data.sendMail && reservation.email ? await sendTicket(reservation.id, token) : false;
+    const eventIds = new Set<string>();
+    for (const line of data.lines) {
+      if (eventIds.has(line.eventId)) {
+        throw new BookingError("Jede Vorstellung bitte nur einmal auswählen.", "INVALID");
+      }
+      eventIds.add(line.eventId);
+    }
+    const actors = await Promise.all(
+      [...eventIds].map(async (eventId) =>
+        requireTicketActor("office", await eventShowId(eventId)),
+      ),
+    );
+    const actor = actors[0];
+    for (const line of data.lines) {
+      const { reservation, token } = await createReservation({
+        eventId: line.eventId,
+        source: "phone",
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        note: data.note,
+        internalNote: data.internalNote,
+        items: line.items,
+        paymentStatus: data.paid ? "paid" : undefined,
+        allowOverbook: data.allowOverbook,
+        actor: actorRef(actor),
+      });
+      created.push({ id: reservation.id, token, code: reservation.code, email: reservation.email });
+    }
+    let mailed = 0;
+    if (data.sendMail) {
+      for (const entry of created) {
+        if (entry.email && (await sendTicket(entry.id, entry.token))) mailed += 1;
+      }
+    }
     revalidateTickets();
+    const codes = created.map((entry) => entry.code);
     return {
       ok: true,
-      message: `Reserviert für ${reservation.name} (${reservation.code}).`,
-      data: { id: reservation.id, code: reservation.code, mailed },
+      message:
+        codes.length === 1
+          ? `Reserviert für ${data.name} (${codes[0]}).`
+          : `${codes.length} Vorstellungen für ${data.name} reserviert (${codes.join(", ")}).`,
+      data: { codes, mailed },
     };
   } catch (error) {
-    return ticketFailure(error, "Reservierung konnte nicht angelegt werden.");
+    if (created.length > 0) {
+      await prisma.reservation.deleteMany({
+        where: { id: { in: created.map((entry) => entry.id) } },
+      });
+    }
+    const failure = ticketFailure(error, "Reservierung konnte nicht angelegt werden.");
+    if (error instanceof BookingError && created.length > 0) {
+      return {
+        ...failure,
+        error: `Vorstellung ${created.length + 1}: ${failure.error} Es wurde nichts gespeichert.`,
+      };
+    }
+    return failure;
   }
 }
 

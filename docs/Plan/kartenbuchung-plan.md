@@ -138,3 +138,19 @@ zwei gleichzeitige Buchungen die Kapazität nicht überschreiten.
 - Cron: läuft im bestehenden Termin-Cron (`/api/cron/rehearsal-reminders`) mit.
 - Drupal: SDC-Komponente `ticket-booking` („Kartenreservierung“) im Theme, z. B. auf `/vorstellungen`.
 - Rechte nach dem Release vergeben: `PRIVATE.TICKETS.*` (Kategorie „Kartenverkauf“).
+
+## Nachtrag 2026-10-11: Einlass-Helfer, Notfall-PDF, Kartenbüro über alle Tage
+
+- K14: **Einlass-Zugang ohne Konto per QR-Code** (`BoxOfficeAccess.canOffice = false`): in den
+  Einstellungen („Einlass-QR“, mehrere Tage gültig) oder vor Ort auf der Einlass-Seite
+  („Helfer-QR“, 1 Tag). Scannen öffnet direkt `/kartenbuero/einlass`; ein neuer QR macht den alten
+  ungültig. Der Code wird nur beim Erzeugen angezeigt (in der DB liegt nur der Hash).
+- K15: **Notfall-Einlassliste als PDF** (`/api/karten/einlass/pdf`): alphabetisch, ein Kästchen
+  je Karte (bereits eingelassene vorab angekreuzt), offene Beträge, Hinweise, Strichliste je
+  Kartenart für die Abendkasse. Im Einlass und im Kartenbüro (einzelne Vorstellung).
+- K16: Das Kartenbüro zeigt standardmäßig **alle Vorstellungen** (Datum an jeder Zeile); einzelne
+  Tage bleiben wählbar.
+- K17: **Telefonbuchung über mehrere Vorstellungen** mit eigenen Anzahlen je Vorstellung; jede
+  Vorstellung wird eine eigene Buchung (eigener Code). Scheitert eine, wird nichts gespeichert.
+- Fix: `/kartenbuero` nutzt einen eigenen Seitenkopf – `PageHeader` braucht die `MembersAppShell`
+  und brach dort für Zugänge ohne Konto ab.

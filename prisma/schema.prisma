@@ -3752,6 +3752,8 @@ model BoxOfficeAccess {
   name        String
   email       String
   tokenHash   String    @unique
+  /// Darf Reservierungen verwalten (Sekretariat); aus = reiner Einlass-Zugang.
+  canOffice   Boolean   @default(true)
   canCheckIn  Boolean   @default(false)
   expiresAt   DateTime
   revokedAt   DateTime?

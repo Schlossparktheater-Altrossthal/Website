@@ -33,7 +33,7 @@ export type TicketActor =
       name: string;
       showId: string | null;
       canManage: false;
-      canOffice: true;
+      canOffice: boolean;
       canCheckIn: boolean;
     };
 
@@ -97,7 +97,7 @@ async function loadAccessActor(): Promise<TicketActor | null> {
     name: access.name,
     showId: access.showId,
     canManage: false,
-    canOffice: true,
+    canOffice: access.canOffice,
     canCheckIn: access.canCheckIn,
   };
 }
@@ -128,6 +128,7 @@ export async function createBoxOfficeAccess(input: {
   name: string;
   email: string;
   showId: string | null;
+  canOffice: boolean;
   canCheckIn: boolean;
   expiresAt: Date;
   createdById: string;
@@ -138,6 +139,7 @@ export async function createBoxOfficeAccess(input: {
       name: input.name.trim(),
       email: input.email.trim().toLowerCase(),
       showId: input.showId,
+      canOffice: input.canOffice,
       canCheckIn: input.canCheckIn,
       expiresAt: input.expiresAt,
       createdById: input.createdById,

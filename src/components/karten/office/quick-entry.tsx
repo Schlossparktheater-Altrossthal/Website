@@ -1,38 +1,67 @@
 "use client";
 
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState, useTransition } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { officeCreateReservationAction } from "@/app/kartenbuero/actions";
 import { QuantityStepper } from "@/components/karten/quantity-stepper";
 import { AsyncButton } from "@/components/ui/async-button";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CloseIcon, PlusIcon } from "@/components/ui/action-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatPrice } from "@/lib/karten/constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatPerformanceDate, formatPrice } from "@/lib/karten/constants";
 
 import type { OfficeCategory, OfficePerformance } from "./types";
 
 export type QuickEntryHandle = { focus: () => void };
 
-const EMPTY = { name: "", phone: "", email: "", note: "", internalNote: "" };
+type Line = { key: number; eventId: string; quantities: Record<string, number> };
+
+const EMPTY = { name: "", phone: "", email: "", note: "" };
+
+function lineTotals(line: Line, categories: OfficeCategory[]) {
+  let seats = 0;
+  let tickets = 0;
+  let cents = 0;
+  for (const category of categories) {
+    const quantity = line.quantities[category.id] ?? 0;
+    tickets += quantity;
+    if (category.needsSeat) seats += quantity;
+    cents += quantity * category.priceCents;
+  }
+  return { seats, tickets, cents };
+}
 
 /**
- * Telefonbuchung in einem Zug: Name → Anzahlen → Telefon → Enter. Nach dem Speichern steht der
- * Cursor wieder im Namensfeld für den nächsten Anruf.
+ * Telefonbuchung in einem Zug: Name → Vorstellung(en) mit Anzahlen → Telefon → Enter. Wer mehrere
+ * Termine in unterschiedlicher Besetzung möchte, bekommt je Vorstellung eine Zeile. Nach dem
+ * Speichern steht der Cursor wieder im Namensfeld für den nächsten Anruf.
  */
 export const QuickEntry = forwardRef<
   QuickEntryHandle,
   {
-    performance: OfficePerformance;
+    performances: OfficePerformance[];
+    defaultEventId: string | null;
     categories: OfficeCategory[];
     onCreated: () => void;
   }
->(function QuickEntry({ performance, categories, onCreated }, ref) {
+>(function QuickEntry({ performances, defaultEventId, categories, onCreated }, ref) {
   const nameRef = useRef<HTMLInputElement>(null);
+  const nextKey = useRef(1);
+  const bookable = performances.filter((row) => row.configured && !row.cancelled);
+  const firstEvent = defaultEventId ?? bookable[0]?.eventId ?? "";
   const [fields, setFields] = useState(EMPTY);
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [lines, setLines] = useState<Line[]>([{ key: 0, eventId: firstEvent, quantities: {} }]);
   const [paid, setPaid] = useState(false);
   const [sendMail, setSendMail] = useState(true);
   const [overbook, setOverbook] = useState(false);
@@ -40,20 +69,29 @@ export const QuickEntry = forwardRef<
 
   useImperativeHandle(ref, () => ({ focus: () => nameRef.current?.focus() }), []);
 
-  const totals = useMemo(() => {
-    let seats = 0;
-    let tickets = 0;
-    let cents = 0;
-    for (const category of categories) {
-      const quantity = quantities[category.id] ?? 0;
-      tickets += quantity;
-      if (category.needsSeat) seats += quantity;
-      cents += quantity * category.priceCents;
-    }
-    return { seats, tickets, cents };
-  }, [categories, quantities]);
+  const byId = new Map(performances.map((row) => [row.eventId, row]));
+  const totals = lines.map((line) => lineTotals(line, categories));
+  const ticketSum = totals.reduce((sum, entry) => sum + entry.tickets, 0);
+  const centSum = totals.reduce((sum, entry) => sum + entry.cents, 0);
+  const exceeds = lines.some(
+    (line, index) => totals[index].seats > (byId.get(line.eventId)?.freeOffice ?? 0),
+  );
+  const usedEvents = new Set(lines.map((line) => line.eventId));
 
-  const exceeds = totals.seats > performance.freeOffice;
+  const updateLine = (key: number, patch: Partial<Line>) =>
+    setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+
+  const addLine = () => {
+    const next = bookable.find((row) => !usedEvents.has(row.eventId))?.eventId ?? "";
+    setLines((current) => [...current, { key: nextKey.current++, eventId: next, quantities: {} }]);
+  };
+
+  const reset = () => {
+    setFields(EMPTY);
+    setLines([{ key: nextKey.current++, eventId: firstEvent, quantities: {} }]);
+    setPaid(false);
+    setOverbook(false);
+  };
 
   const submit = () => {
     if (!fields.name.trim()) {
@@ -61,17 +99,20 @@ export const QuickEntry = forwardRef<
       toast.error("Bitte einen Namen angeben.");
       return;
     }
-    if (totals.tickets === 0) {
+    const filled = lines.filter((line, index) => line.eventId && totals[index].tickets > 0);
+    if (filled.length === 0) {
       toast.error("Bitte mindestens eine Karte angeben.");
       return;
     }
     startTransition(async () => {
       const result = await officeCreateReservationAction({
-        eventId: performance.eventId,
         ...fields,
-        items: Object.entries(quantities).map(([categoryId, quantity]) => ({
-          categoryId,
-          quantity,
+        lines: filled.map((line) => ({
+          eventId: line.eventId,
+          items: Object.entries(line.quantities).map(([categoryId, quantity]) => ({
+            categoryId,
+            quantity,
+          })),
         })),
         paid,
         allowOverbook: overbook,
@@ -79,17 +120,13 @@ export const QuickEntry = forwardRef<
       });
       if (result.ok) {
         toast.success(result.message ?? "Reserviert.", {
-          description: result.data.mailed ? "Ticket per Mail gesendet." : undefined,
+          description: result.data.mailed > 0 ? "Ticket per Mail gesendet." : undefined,
         });
-        setFields(EMPTY);
-        setQuantities({});
-        setPaid(false);
-        setOverbook(false);
+        reset();
         onCreated();
         nameRef.current?.focus();
       } else {
         toast.error(result.error);
-        if (result.code === "SOLD_OUT") setOverbook(false);
       }
     });
   };
@@ -117,25 +154,84 @@ export const QuickEntry = forwardRef<
             onChange={(event) => setFields({ ...fields, name: event.target.value })}
           />
         </div>
-        <div className="divide-y divide-border/60 rounded-md bg-muted/40 px-3">
-          {categories.map((category) => (
-            <div key={category.id} className="flex items-center justify-between gap-2 py-1.5">
-              <span className="text-sm">
-                {category.name}
-                {category.priceCents > 0 ? (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    {formatPrice(category.priceCents)}
-                  </span>
+
+        {lines.map((line, index) => {
+          const performance = byId.get(line.eventId);
+          const lineTotal = totals[index];
+          const over = performance ? lineTotal.seats > performance.freeOffice : false;
+          return (
+            <div key={line.key} className="space-y-1 rounded-md bg-muted/40 p-2">
+              <div className="flex items-center gap-1">
+                <Select
+                  value={line.eventId}
+                  onValueChange={(eventId) => updateLine(line.key, { eventId })}
+                >
+                  <SelectTrigger className="h-9 flex-1" aria-label={`Vorstellung ${index + 1}`}>
+                    <SelectValue placeholder="Vorstellung wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bookable.map((row) => (
+                      <SelectItem
+                        key={row.eventId}
+                        value={row.eventId}
+                        disabled={row.eventId !== line.eventId && usedEvents.has(row.eventId)}
+                      >
+                        {formatPerformanceDate(new Date(row.start))} · {row.freeOffice} frei
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {lines.length > 1 ? (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Vorstellung entfernen"
+                    onClick={() =>
+                      setLines((current) => current.filter((entry) => entry.key !== line.key))
+                    }
+                  >
+                    <CloseIcon />
+                  </Button>
                 ) : null}
-              </span>
-              <QuantityStepper
-                label={category.name}
-                value={quantities[category.id] ?? 0}
-                onChange={(value) => setQuantities({ ...quantities, [category.id]: value })}
-              />
+              </div>
+              <div className="divide-y divide-border/60 px-1">
+                {categories.map((category) => (
+                  <div key={category.id} className="flex items-center justify-between gap-2 py-1">
+                    <span className="text-sm">
+                      {category.name}
+                      {category.priceCents > 0 ? (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          {formatPrice(category.priceCents)}
+                        </span>
+                      ) : null}
+                    </span>
+                    <QuantityStepper
+                      label={`${category.name}, Vorstellung ${index + 1}`}
+                      value={line.quantities[category.id] ?? 0}
+                      onChange={(value) =>
+                        updateLine(line.key, {
+                          quantities: { ...line.quantities, [category.id]: value },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              {over && performance ? (
+                <p className="px-1 text-xs text-warning">
+                  Nur noch {performance.freeOffice} Plätze frei.
+                </p>
+              ) : null}
             </div>
-          ))}
-        </div>
+          );
+        })}
+        {bookable.length > lines.length ? (
+          <Button type="button" size="xs" variant="ghost" onClick={addLine}>
+            <PlusIcon /> Weitere Vorstellung
+          </Button>
+        ) : null}
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="office-phone">Telefon</Label>
@@ -188,9 +284,9 @@ export const QuickEntry = forwardRef<
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm tabular-nums text-muted-foreground">
-            {totals.tickets > 0
-              ? `${totals.tickets} Karten${totals.cents > 0 ? ` · ${formatPrice(totals.cents)}` : ""}`
-              : `${performance.freeOffice} Plätze frei`}
+            {ticketSum > 0
+              ? `${ticketSum} Karten${centSum > 0 ? ` · ${formatPrice(centSum)}` : ""}`
+              : ""}
           </span>
           <AsyncButton
             type="submit"
@@ -201,9 +297,6 @@ export const QuickEntry = forwardRef<
             Reservieren
           </AsyncButton>
         </div>
-        {exceeds ? (
-          <p className="text-sm text-warning">Nur noch {performance.freeOffice} Plätze frei.</p>
-        ) : null}
       </form>
     </Card>
   );

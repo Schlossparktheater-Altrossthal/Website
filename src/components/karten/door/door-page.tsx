@@ -1,12 +1,14 @@
 import { TicketShowPicker } from "@/components/karten/show-picker";
 import { TicketsNav } from "@/components/karten/tickets-nav";
-import { PageHeader } from "@/components/members/page-header";
+import { TicketsPageHeader } from "@/components/karten/tickets-page-header";
 import type { TicketActor } from "@/lib/karten/access";
+import { BOX_OFFICE_PATH } from "@/lib/karten/constants";
 import { loadDoorSnapshot } from "@/lib/karten/checkin";
 import { resolveTicketShow } from "@/lib/karten/context";
 import { loadPerformances, loadTicketCategories } from "@/lib/karten/queries";
 import type { MembersBreadcrumbItem } from "@/lib/members-breadcrumbs";
 
+import { DoorHelperQrButton } from "./door-helper-qr-button";
 import { DoorWorkbench } from "./door-workbench";
 
 /** Vorstellung am Abend: die heutige bzw. nächste, sonst die gewählte. */
@@ -43,11 +45,17 @@ export async function DoorPage({
   const performance = pickPerformance(performances, searchParams.vorstellung, now);
   const header = (
     <>
-      <PageHeader
+      <TicketsPageHeader
+        standalone={basePath === BOX_OFFICE_PATH}
         title="Einlass"
         description={selected?.title}
         breadcrumbs={breadcrumbs}
-        actions={<TicketShowPicker shows={shows} selectedId={selected?.id ?? null} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {actor.canManage && selected ? <DoorHelperQrButton showId={selected.id} /> : null}
+            <TicketShowPicker shows={shows} selectedId={selected?.id ?? null} />
+          </div>
+        }
       />
       <TicketsNav
         actor={actor}

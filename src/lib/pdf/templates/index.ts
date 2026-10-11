@@ -1,5 +1,6 @@
 import type { PdfTemplate } from "../types";
 import { dataPortalTableTemplate } from "./data-portal-table";
+import { doorChecklistTemplate } from "./door-checklist";
 import { onboardingInviteTemplate } from "./onboarding-invite";
 import { onboardingStatisticsTemplate } from "./onboarding-statistics";
 import { photoConsentListTemplate } from "./photo-consent-list";
@@ -8,6 +9,7 @@ import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
 
 const templates = [
   dataPortalTableTemplate,
+  doorChecklistTemplate,
   onboardingInviteTemplate,
   onboardingStatisticsTemplate,
   photoConsentListTemplate,

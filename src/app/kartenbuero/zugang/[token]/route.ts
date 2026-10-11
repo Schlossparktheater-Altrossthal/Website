@@ -18,6 +18,8 @@ export async function GET(
     target.searchParams.set("fehler", "link");
     return NextResponse.redirect(target);
   }
+  // Reiner Einlass-Zugang (QR-Code an der Tür): direkt zum Einlass.
+  if (!access.canOffice) target.pathname = `${BOX_OFFICE_PATH}/einlass`;
   const response = NextResponse.redirect(target);
   response.cookies.set(BOX_OFFICE_COOKIE, token, {
     httpOnly: true,

@@ -6,7 +6,8 @@ import { toast } from "sonner";
 
 import { officeSearchAction } from "@/app/kartenbuero/actions";
 import { Card } from "@/components/ui/card";
-import { SearchIcon } from "@/components/ui/action-icons";
+import { Button } from "@/components/ui/button";
+import { DownloadIcon, SearchIcon } from "@/components/ui/action-icons";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -55,9 +56,10 @@ export function OfficeWorkbench({
     [performances],
   );
 
-  const selectPerformance = (eventId: string) => {
+  const selectPerformance = (eventId: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("vorstellung", eventId);
+    if (eventId) params.set("vorstellung", eventId);
+    else params.delete("vorstellung");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -101,6 +103,18 @@ export function OfficeWorkbench({
     [reservations, filter],
   );
 
+  // Ohne gewählte Vorstellung: Summen über alle.
+  const summary = useMemo(() => {
+    if (selected) return selected;
+    const configured = performances.filter((row) => row.configured && !row.cancelled);
+    return {
+      taken: configured.reduce((sum, row) => sum + row.taken, 0),
+      capacity: configured.reduce((sum, row) => sum + row.capacity, 0),
+      freeOffice: configured.reduce((sum, row) => sum + row.freeOffice, 0),
+      freeOnline: configured.reduce((sum, row) => sum + row.freeOnline, 0),
+    };
+  }, [performances, selected]);
+
   const stats = useMemo(() => {
     let pending = 0;
     let unpaid = 0;
@@ -138,6 +152,23 @@ export function OfficeWorkbench({
         role="tablist"
         aria-label="Vorstellungen"
       >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={selectedEventId === null}
+          onClick={() => selectPerformance(null)}
+          className={cn(
+            "shrink-0 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+            selectedEventId === null
+              ? "border-primary bg-primary/10"
+              : "border-border/60 bg-card hover:border-primary/50",
+          )}
+        >
+          <span className="block font-medium">Alle Vorstellungen</span>
+          <span className="block text-xs tabular-nums text-muted-foreground">
+            {summary.freeOffice} frei · {summary.taken}/{summary.capacity}
+          </span>
+        </button>
         {performances.map((row) => {
           const active = row.eventId === selectedEventId;
           return (
@@ -170,41 +201,35 @@ export function OfficeWorkbench({
         })}
       </div>
 
-      {selected ? (
-        <div className="grid gap-3 sm:grid-cols-4">
-          <StatTile label="Belegt" value={`${selected.taken} / ${selected.capacity}`} />
-          <StatTile
-            label="Frei"
-            value={selected.freeOffice}
-            hint={`online ${selected.freeOnline}`}
-            tone={selected.freeOffice === 0 ? "destructive" : "success"}
-          />
-          <StatTile
-            label="Unbestätigt"
-            value={stats.pending}
-            hint="Plätze, online gehalten"
-            tone={stats.pending > 0 ? "warning" : "neutral"}
-          />
-          <StatTile label="Noch offen zu zahlen" value={stats.unpaid} hint="Buchungen" />
-        </div>
-      ) : null}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Belegt" value={`${summary.taken} / ${summary.capacity}`} />
+        <StatTile
+          label="Frei"
+          value={summary.freeOffice}
+          hint={`online ${summary.freeOnline}`}
+          tone={summary.freeOffice === 0 ? "destructive" : "success"}
+        />
+        <StatTile
+          label="Unbestätigt"
+          value={stats.pending}
+          hint="Plätze, online gehalten"
+          tone={stats.pending > 0 ? "warning" : "neutral"}
+        />
+        <StatTile label="Noch offen zu zahlen" value={stats.unpaid} hint="Buchungen" />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-[22rem_1fr]">
         <div className="lg:sticky lg:top-4 lg:self-start">
-          {selected && selected.configured && !selected.cancelled ? (
-            <QuickEntry
-              ref={entryRef}
-              performance={selected}
-              categories={categories}
-              onCreated={() => router.refresh()}
-            />
-          ) : (
-            <Card className="text-sm text-muted-foreground">
-              {selected?.cancelled
-                ? "Diese Vorstellung ist abgesagt."
-                : "Bitte zuerst eine eingerichtete Vorstellung wählen."}
-            </Card>
-          )}
+          <QuickEntry
+            key={selectedEventId ?? "alle"}
+            ref={entryRef}
+            performances={performances}
+            defaultEventId={
+              selected && selected.configured && !selected.cancelled ? selected.eventId : null
+            }
+            categories={categories}
+            onCreated={() => router.refresh()}
+          />
         </div>
 
         <Card size="flush" className="overflow-hidden">
@@ -229,6 +254,16 @@ export function OfficeWorkbench({
                 }}
               />
             </div>
+            {selectedEventId && globalResults === null ? (
+              <Button asChild size="sm" variant="outline">
+                <a
+                  href={`/api/karten/einlass/pdf?eventId=${encodeURIComponent(selectedEventId)}`}
+                  download
+                >
+                  <DownloadIcon /> Liste (PDF)
+                </a>
+              </Button>
+            ) : null}
             {globalResults === null ? (
               <SegmentedControl
                 value={filter}
@@ -257,7 +292,11 @@ export function OfficeWorkbench({
                 <ReservationRow
                   key={entry.id}
                   reservation={entry}
-                  performanceStart={globalResults !== null ? startByEvent.get(entry.eventId) : null}
+                  performanceStart={
+                    globalResults !== null || selectedEventId === null
+                      ? startByEvent.get(entry.eventId)
+                      : null
+                  }
                   onEdit={() => setEditing(entry)}
                   onChanged={refresh}
                 />

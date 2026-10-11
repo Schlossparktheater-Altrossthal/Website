@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   CloseIcon,
+  DownloadIcon,
   QrCodeIcon,
   SearchIcon,
   WifiIcon,
@@ -274,6 +275,11 @@ export function DoorWorkbench({
           {online ? <WifiIcon /> : <WifiOffIcon />}
           {online ? "online" : "offline – wird nachgereicht"}
         </Badge>
+        <Button asChild size="sm" variant="outline" className="ml-auto">
+          <a href={`/api/karten/einlass/pdf?eventId=${encodeURIComponent(eventId)}`} download>
+            <DownloadIcon /> Notfall-Liste (PDF)
+          </a>
+        </Button>
         {queue.length > 0 ? (
           <Badge variant="warning">{queue.length} nicht gesendet</Badge>
         ) : lastSync ? (
