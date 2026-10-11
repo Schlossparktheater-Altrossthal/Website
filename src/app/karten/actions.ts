@@ -40,15 +40,14 @@ async function requestIp() {
 const MAX_PERFORMANCES_PER_BOOKING = 10;
 
 const bookingSchema = z.object({
-  eventIds: z
-    .array(z.string().min(1))
+  bookings: z
+    .array(z.object({ eventId: z.string().min(1), items: itemsSchema }))
     .min(1, "Bitte eine Vorstellung wählen.")
     .max(MAX_PERFORMANCES_PER_BOOKING, "Bitte höchstens 10 Vorstellungen auf einmal buchen."),
   name: z.string().trim().min(2, "Bitte deinen Namen angeben.").max(120),
   email: z.string().trim().email("Bitte eine gültige E-Mail-Adresse angeben.").max(200),
   phone: optionalTrimmed(40),
   note: optionalTrimmed(500),
-  items: itemsSchema,
   privacy: z.literal(true, { message: "Bitte der Datenschutzerklärung zustimmen." }),
   /** Honeypot: Menschen sehen das Feld nicht. */
   website: z.string().max(0).optional(),
@@ -68,19 +67,18 @@ export async function bookTicketsAction(
       };
     }
     const starts = await prisma.calendarEvent.findMany({
-      where: { id: { in: data.eventIds } },
+      where: { id: { in: data.bookings.map((entry) => entry.eventId) } },
       select: { id: true, start: true },
     });
     const startById = new Map(starts.map((event) => [event.id, event.start]));
     const created = await createReservationGroup(
-      data.eventIds,
+      data.bookings,
       {
         source: "online",
         name: data.name,
         email: data.email,
         phone: data.phone,
         note: data.note,
-        items: data.items,
       },
       (eventId) => {
         const start = startById.get(eventId);

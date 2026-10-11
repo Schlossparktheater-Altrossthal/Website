@@ -352,24 +352,27 @@ export async function createReservation(
 }
 
 /**
- * Online-Buchung für mehrere Vorstellungen: je Vorstellung eine Reservierung (eigener QR-Code),
+ * Online-Buchung für mehrere Vorstellungen mit eigenen Anzahlen je Vorstellung: je Vorstellung eine
+ * Reservierung (eigener QR-Code),
  * verbunden über `groupId`. Klappt eine nicht (z. B. ausgebucht), werden die schon angelegten
  * wieder storniert, damit niemand halbe Buchungen bekommt.
  */
 export async function createReservationGroup(
-  eventIds: string[],
-  input: Omit<ReservationInput, "eventId" | "groupId">,
+  bookings: { eventId: string; items: ItemInput[] }[],
+  input: Omit<ReservationInput, "eventId" | "groupId" | "items">,
   describeEvent: (eventId: string) => string,
   now: Date = new Date(),
 ): Promise<CreatedReservation[]> {
-  const unique = [...new Set(eventIds)];
+  const unique = bookings.filter(
+    (entry, index) => bookings.findIndex((other) => other.eventId === entry.eventId) === index,
+  );
   if (unique.length === 0) throw new BookingError("Bitte eine Vorstellung wählen.", "INVALID");
-  if (unique.length === 1) return [await createReservation({ ...input, eventId: unique[0] }, now)];
+  if (unique.length === 1) return [await createReservation({ ...input, ...unique[0] }, now)];
   const groupId = randomUUID();
   const created: CreatedReservation[] = [];
   try {
-    for (const eventId of unique) {
-      created.push(await createReservation({ ...input, eventId, groupId }, now));
+    for (const entry of unique) {
+      created.push(await createReservation({ ...input, ...entry, groupId }, now));
     }
   } catch (error) {
     await prisma.reservation.updateMany({
@@ -377,7 +380,7 @@ export async function createReservationGroup(
       data: { status: "cancelled", cancelledAt: now, cancelReason: "Mehrfachbuchung abgebrochen" },
     });
     if (error instanceof BookingError) {
-      const failed = unique[created.length];
+      const failed = unique[created.length].eventId;
       throw new BookingError(`${describeEvent(failed)}: ${error.message}`, error.code);
     }
     throw error;

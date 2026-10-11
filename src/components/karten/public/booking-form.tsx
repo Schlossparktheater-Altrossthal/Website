@@ -124,7 +124,8 @@ export function BookingForm({
     );
     return initial ? [initial.eventId] : [];
   });
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  /** Anzahlen je Vorstellung und Kartenart: quantities[eventId][categoryId]. */
+  const [quantities, setQuantities] = useState<Record<string, Record<string, number>>>({});
   const [contact, setContact] = useState({ name: "", email: "", phone: "", note: "", website: "" });
   const [privacy, setPrivacy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,27 +140,44 @@ export function BookingForm({
     () => performances.filter((row) => eventIds.includes(row.eventId)),
     [performances, eventIds],
   );
+  const perEvent = useMemo(() => {
+    const result = new Map<string, { tickets: number; seats: number; cents: number }>();
+    for (const row of selected) {
+      const counts = quantities[row.eventId] ?? {};
+      let tickets = 0;
+      let seats = 0;
+      let cents = 0;
+      for (const category of categories) {
+        const quantity = counts[category.id] ?? 0;
+        tickets += quantity;
+        if (category.needsSeat) seats += quantity;
+        cents += quantity * category.priceCents;
+      }
+      result.set(row.eventId, { tickets, seats, cents });
+    }
+    return result;
+  }, [categories, quantities, selected]);
   const totals = useMemo(() => {
     let tickets = 0;
-    let seats = 0;
     let cents = 0;
-    for (const category of categories) {
-      const quantity = quantities[category.id] ?? 0;
-      tickets += quantity;
-      if (category.needsSeat) seats += quantity;
-      cents += quantity * category.priceCents;
+    for (const entry of perEvent.values()) {
+      tickets += entry.tickets;
+      cents += entry.cents;
     }
-    return { tickets, seats, cents };
-  }, [categories, quantities]);
+    return { tickets, cents };
+  }, [perEvent]);
 
   // Ausgebuchte Vorstellung: nur einzeln wählbar, dann Warteliste.
   const waitlistMode = selected.length === 1 && !selected[0].bookable;
-  const tightest = selected.reduce<PublicPerformance | null>(
-    (min, row) => (min === null || row.free < min.free ? row : min),
-    null,
+  const overfull = waitlistMode
+    ? []
+    : selected.filter((row) => (perEvent.get(row.eventId)?.seats ?? 0) > row.free);
+  const overLimit = selected.filter(
+    (row) => (perEvent.get(row.eventId)?.tickets ?? 0) > maxTickets,
   );
-  const tooMany = !waitlistMode && tightest !== null && totals.seats > tightest.free;
+  const emptyEvents = selected.filter((row) => (perEvent.get(row.eventId)?.tickets ?? 0) === 0);
   const ready = selected.length > 0 && totals.tickets > 0;
+  const blocked = overfull.length > 0 || overLimit.length > 0 || emptyEvents.length > 0;
 
   const toggle = (row: PublicPerformance) => {
     setError(null);
@@ -192,15 +210,17 @@ export function BookingForm({
         return;
       }
       const result = await bookTicketsAction({
-        eventIds: selected.map((row) => row.eventId),
+        bookings: selected.map((row) => ({
+          eventId: row.eventId,
+          items: Object.entries(quantities[row.eventId] ?? {}).map(([categoryId, quantity]) => ({
+            categoryId,
+            quantity,
+          })),
+        })),
         name: contact.name,
         email: contact.email,
         phone: contact.phone,
         note: contact.note,
-        items: Object.entries(quantities).map(([categoryId, quantity]) => ({
-          categoryId,
-          quantity,
-        })),
         privacy: privacy as true,
         website: contact.website,
       });
@@ -305,7 +325,7 @@ export function BookingForm({
               {waitlistMode ? "Wie viele Plätze brauchst du?" : "Wie viele Karten?"}
             </h2>
             {selected.length > 1 ? (
-              <p className="text-sm text-muted-foreground">je Vorstellung</p>
+              <p className="text-sm text-muted-foreground">für jede Vorstellung einzeln</p>
             ) : null}
           </div>
           {waitlistMode ? (
@@ -314,41 +334,78 @@ export function BookingForm({
               sobald Plätze frei werden.
             </p>
           ) : null}
-          <Card size="flush" className="divide-y divide-border/60">
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                className="flex items-center justify-between gap-3 px-4 py-2.5"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium">
-                    {category.name}{" "}
-                    <span className="font-normal text-muted-foreground">
-                      {category.priceCents > 0 ? formatPrice(category.priceCents) : "frei"}
-                    </span>
-                  </p>
-                  {category.description ? (
-                    <p className="truncate text-xs text-muted-foreground">{category.description}</p>
+          <div className="space-y-3">
+            {selected.map((row) => {
+              const counts = quantities[row.eventId] ?? {};
+              const sums = perEvent.get(row.eventId);
+              return (
+                <Card key={row.eventId} size="flush" className="divide-y divide-border/60">
+                  {selected.length > 1 ? (
+                    <div className="flex items-baseline justify-between gap-3 bg-muted/40 px-4 py-2">
+                      <p className="text-sm font-semibold">
+                        {formatPerformanceDateLong(new Date(row.start))}
+                      </p>
+                      <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {sums?.tickets ?? 0} {sums?.tickets === 1 ? "Karte" : "Karten"}
+                      </p>
+                    </div>
                   ) : null}
-                </div>
-                <QuantityStepper
-                  label={category.name}
-                  value={quantities[category.id] ?? 0}
-                  max={maxTickets}
-                  onChange={(value) => setQuantities({ ...quantities, [category.id]: value })}
-                />
-              </div>
-            ))}
-          </Card>
-          {tooMany && tightest ? (
+                  {categories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="flex items-center justify-between gap-3 px-4 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">
+                          {category.name}{" "}
+                          <span className="font-normal text-muted-foreground">
+                            {category.priceCents > 0 ? formatPrice(category.priceCents) : "frei"}
+                          </span>
+                        </p>
+                        {category.description ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {category.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <QuantityStepper
+                        label={`${category.name}${
+                          selected.length > 1
+                            ? ` am ${formatPerformanceDateLong(new Date(row.start))}`
+                            : ""
+                        }`}
+                        value={counts[category.id] ?? 0}
+                        max={maxTickets}
+                        onChange={(value) =>
+                          setQuantities({
+                            ...quantities,
+                            [row.eventId]: { ...counts, [category.id]: value },
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </Card>
+              );
+            })}
+          </div>
+          {overfull.map((row) => (
+            <p key={row.eventId} className="text-sm text-destructive">
+              Am {formatPerformanceDateLong(new Date(row.start))} sind nur noch {row.free} Plätze
+              frei.
+            </p>
+          ))}
+          {overLimit.length > 0 ? (
             <p className="text-sm text-destructive">
-              Am {formatPerformanceDateLong(new Date(tightest.start))} sind nur noch {tightest.free}{" "}
-              Plätze frei.
+              Online höchstens {maxTickets} Karten je Vorstellung. Für größere Gruppen ruf uns bitte
+              an.
             </p>
           ) : null}
-          {totals.tickets > maxTickets ? (
-            <p className="text-sm text-destructive">
-              Online höchstens {maxTickets} Karten. Für größere Gruppen ruf uns bitte an.
+          {ready && emptyEvents.length > 0 ? (
+            <p className="text-sm text-warning">
+              Für{" "}
+              {emptyEvents.map((row) => formatPerformanceDateLong(new Date(row.start))).join(", ")}{" "}
+              ist noch keine Karte gewählt – Anzahl eintragen oder den Termin oben abwählen.
             </p>
           ) : null}
         </section>
@@ -455,10 +512,8 @@ export function BookingForm({
                   ? `Warteliste · ${totals.tickets} ${totals.tickets === 1 ? "Platz" : "Plätze"}`
                   : [
                       selected.length > 1 ? `${selected.length} Termine` : null,
-                      `${selected.length > 1 ? "je " : ""}${totals.tickets} ${
-                        totals.tickets === 1 ? "Karte" : "Karten"
-                      }`,
-                      totals.cents > 0 ? formatPrice(totals.cents * selected.length) : null,
+                      `${totals.tickets} ${totals.tickets === 1 ? "Karte" : "Karten"}`,
+                      totals.cents > 0 ? formatPrice(totals.cents) : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -475,7 +530,7 @@ export function BookingForm({
               className="shrink-0"
               isLoading={pending}
               loadingText="Wird gesendet …"
-              disabled={!privacy || tooMany || totals.tickets > maxTickets}
+              disabled={!privacy || blocked}
             >
               {waitlistMode ? "Auf die Warteliste" : "Reservieren"}
             </AsyncButton>

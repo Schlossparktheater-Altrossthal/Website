@@ -167,7 +167,7 @@ zwei gleichzeitige Buchungen die Kapazität nicht überschreiten.
 ## Nachtrag 2026-10-11 (3): Rückmeldungen aus dem Test
 
 - K18: **Online-Buchung über mehrere Vorstellungen**: Termine als Kacheln mit Mehrfachauswahl,
-  gleiche Anzahl je Vorstellung. Je Vorstellung eine Reservierung (eigener QR-Code), verbunden über
+  eigene Anzahlen je Vorstellung. Je Vorstellung eine Reservierung (eigener QR-Code), verbunden über
   `Reservation.groupId`; ein Bestätigungslink bestätigt alle, danach eine Mail mit je einem
   Ticket-Link. Scheitert eine beim Anlegen, werden die anderen storniert. Höchstens 10 Termine.
 - Buchungsseite neu: kompakte Datumskacheln, schlanke Kartenzeilen, feste Leiste unten mit Summe und
