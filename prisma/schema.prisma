@@ -3683,6 +3683,8 @@ model Reservation {
   checkedInCount      Int                      @default(0)
   /// Freikarte: angemeldet von diesem Mitwirkenden.
   memberId            String?
+  /// Online für mehrere Vorstellungen auf einmal gebucht: gemeinsame Kennung, ein Bestätigungslink.
+  groupId             String?
   createdByUserId     String?
   createdByAccessId   String?
   reminderSentAt      DateTime?
@@ -3700,6 +3702,7 @@ model Reservation {
   @@index([eventId, status])
   @@index([showId, memberId])
   @@index([status, holdUntil])
+  @@index([groupId])
 }
 
 model ReservationItem {
@@ -3752,6 +3755,8 @@ model BoxOfficeAccess {
   name        String
   email       String
   tokenHash   String    @unique
+  /// Verschlüsselter Link-Token, damit Link und QR-Code später noch einmal angezeigt werden können.
+  tokenEnc    String?
   /// Darf Reservierungen verwalten (Sekretariat); aus = reiner Einlass-Zugang.
   canOffice   Boolean   @default(true)
   canCheckIn  Boolean   @default(false)

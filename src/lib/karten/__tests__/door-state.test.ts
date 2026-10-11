@@ -21,6 +21,7 @@ const snapshot: DoorSnapshot = {
       summary: "",
       note: null,
       openCents: 0,
+      via: null,
     },
     {
       id: "r2",
@@ -33,6 +34,7 @@ const snapshot: DoorSnapshot = {
       summary: "",
       note: null,
       openCents: 1600,
+      via: null,
     },
   ],
 };
@@ -66,6 +68,13 @@ describe("applyPending", () => {
     expect(next.boxOfficeTickets).toBe(5);
     expect(next.boxOfficeCents).toBe(4600);
     expect(snapshot.guests[0].checkedIn).toBe(1);
+  });
+
+  it("setzt offene Beträge nach dem Kassieren auf 0", () => {
+    const next = applyPending(snapshot, [
+      { id: "m4", type: "pay", reservationId: "r2", occurredAt: "" },
+    ]);
+    expect(next.guests.find((g) => g.id === "r2")?.openCents).toBe(0);
   });
 });
 

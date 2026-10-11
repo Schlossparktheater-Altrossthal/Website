@@ -163,3 +163,24 @@ zwei gleichzeitige Buchungen die Kapazität nicht überschreiten.
   mit Bestätigung; aktive Buchungen erst stornieren.
 - Fix: `/kartenbuero/zugang/*` und `/kartenbuero/abmelden` leiten auf `NEXTAUTH_URL` weiter statt auf
   die interne Adresse hinter dem Proxy (vorher `https://localhost:3001/kartenbuero`).
+
+## Nachtrag 2026-10-11 (3): Rückmeldungen aus dem Test
+
+- K18: **Online-Buchung über mehrere Vorstellungen**: Termine als Kacheln mit Mehrfachauswahl,
+  gleiche Anzahl je Vorstellung. Je Vorstellung eine Reservierung (eigener QR-Code), verbunden über
+  `Reservation.groupId`; ein Bestätigungslink bestätigt alle, danach eine Mail mit je einem
+  Ticket-Link. Scheitert eine beim Anlegen, werden die anderen storniert. Höchstens 10 Termine.
+- Buchungsseite neu: kompakte Datumskacheln, schlanke Kartenzeilen, feste Leiste unten mit Summe und
+  „Reservieren“.
+- Einlass: Statt „Einen austragen“ setzt der Dialog die Zahl **„Im Saal“** direkt (auch mehrere
+  austragen, „Niemand“/„Alle“). Offene Beträge lassen sich **kassieren** (`pay`-Aktion, offline
+  gepuffert, idempotent über eine Protokollzeile mit `delta = 0`). Optionaler **Wechselgeld-Rechner**
+  (nur Rechenhilfe) im Gast-Dialog und an der Abendkasse; Abendkasse mit **optionalem Namen**.
+- PDF: Seitenzahlen, Trennlinie mit Buchstabe bei neuem Anfangsbuchstaben, „Freikarte über …“. Im
+  Kartenbüro unter „Alle Vorstellungen“ eine PDF mit allen kommenden Vorstellungen (je eine neue
+  Seite) – vorher fehlte dort der Knopf, das Sekretariat konnte nichts drucken.
+- Zugänge: Link-Token wird zusätzlich AES-GCM-verschlüsselt gespeichert (`BoxOfficeAccess.tokenEnc`,
+  Schlüssel aus `AUTH_SECRET`), damit Link und QR-Code unter „Link & QR“ später wieder angezeigt
+  werden können. Ältere Zugänge nur über „Neuer Link/QR“.
+- Fix: Öffnet ein angemeldetes Mitglied einen Zugangslink (z. B. Einlass-QR), werden die Rechte von
+  Mitgliedskonto und Link zusammengeführt – vorher verdeckte das Mitgliedskonto die Rechte des Links.

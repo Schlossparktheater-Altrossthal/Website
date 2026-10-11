@@ -46,6 +46,13 @@ const mutationSchema = z.discriminatedUnion("type", [
       )
       .min(1)
       .max(30),
+    name: z.string().max(120).optional(),
+    occurredAt: z.string().max(40),
+  }),
+  z.object({
+    id: z.string().min(8).max(80),
+    type: z.literal("pay"),
+    reservationId: z.string().min(1),
     occurredAt: z.string().max(40),
   }),
 ]);

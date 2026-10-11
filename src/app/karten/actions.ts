@@ -15,11 +15,20 @@ import {
   BookingError,
   cancelReservation,
   confirmReservation,
-  createReservation,
+  confirmReservationById,
+  createReservationGroup,
   findReservationByToken,
+  loadGroupSiblings,
+  rotateReservationToken,
   updateReservation,
 } from "@/lib/karten/booking";
-import { sendCancellation, sendConfirmationRequest, sendTicket } from "@/lib/karten/mails";
+import { formatPerformanceDate } from "@/lib/karten/constants";
+import {
+  sendCancellation,
+  sendConfirmationRequest,
+  sendTicket,
+  sendTicketGroup,
+} from "@/lib/karten/mails";
 import { prisma } from "@/lib/prisma";
 
 async function requestIp() {
@@ -27,8 +36,14 @@ async function requestIp() {
   return getRequestIp(new Request("http://local", { headers: store }));
 }
 
+/** Höchstens so viele Vorstellungen in einer Online-Buchung. */
+const MAX_PERFORMANCES_PER_BOOKING = 10;
+
 const bookingSchema = z.object({
-  eventId: z.string().min(1),
+  eventIds: z
+    .array(z.string().min(1))
+    .min(1, "Bitte eine Vorstellung wählen.")
+    .max(MAX_PERFORMANCES_PER_BOOKING, "Bitte höchstens 10 Vorstellungen auf einmal buchen."),
   name: z.string().trim().min(2, "Bitte deinen Namen angeben.").max(120),
   email: z.string().trim().email("Bitte eine gültige E-Mail-Adresse angeben.").max(200),
   phone: optionalTrimmed(40),
@@ -52,16 +67,29 @@ export async function bookTicketsAction(
           "Zu viele Reservierungen in kurzer Zeit. Bitte später erneut versuchen oder anrufen.",
       };
     }
-    const { reservation, token } = await createReservation({
-      eventId: data.eventId,
-      source: "online",
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      note: data.note,
-      items: data.items,
+    const starts = await prisma.calendarEvent.findMany({
+      where: { id: { in: data.eventIds } },
+      select: { id: true, start: true },
     });
-    const mailed = await sendConfirmationRequest(reservation.id, token);
+    const startById = new Map(starts.map((event) => [event.id, event.start]));
+    const created = await createReservationGroup(
+      data.eventIds,
+      {
+        source: "online",
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        note: data.note,
+        items: data.items,
+      },
+      (eventId) => {
+        const start = startById.get(eventId);
+        return start ? formatPerformanceDate(start) : "Vorstellung";
+      },
+    );
+    // Ein Bestätigungslink für alle: der der ersten Reservierung.
+    const lead = created[0];
+    const mailed = await sendConfirmationRequest(lead.reservation.id, lead.token);
     revalidateTickets();
     return { ok: true, data: { mailed } };
   } catch (error) {
@@ -78,7 +106,36 @@ const tokenSchema = z.string().min(10).max(100);
 export async function confirmTicketsAction(token: string): Promise<TicketActionResult> {
   try {
     const reservation = await confirmReservation(tokenSchema.parse(token));
-    await sendTicket(reservation.id, token);
+    const siblings = await loadGroupSiblings(reservation);
+    if (siblings.length === 0) {
+      await sendTicket(reservation.id, token);
+    } else {
+      // Mehrfachbuchung: alle mitbestätigen, jede bekommt einen eigenen Ticket-Link.
+      const entries = [{ reservationId: reservation.id, token }];
+      const failed: string[] = [];
+      for (const sibling of siblings) {
+        if (sibling.status === "cancelled") continue;
+        try {
+          if (sibling.status !== "confirmed") await confirmReservationById(sibling.id);
+          entries.push({
+            reservationId: sibling.id,
+            token: await rotateReservationToken(sibling.id),
+          });
+        } catch (error) {
+          if (!(error instanceof BookingError)) throw error;
+          failed.push(`${formatPerformanceDate(sibling.event.start)}: ${error.message}`);
+        }
+      }
+      await sendTicketGroup(entries);
+      revalidateTickets();
+      if (failed.length) {
+        return {
+          ok: true,
+          message: `Bestätigt – aber nicht alle Vorstellungen: ${failed.join("; ")}`,
+        };
+      }
+      return { ok: true, message: `Alle ${entries.length} Vorstellungen bestätigt.` };
+    }
     revalidateTickets();
     return { ok: true };
   } catch (error) {

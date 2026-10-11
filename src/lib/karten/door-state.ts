@@ -45,6 +45,10 @@ export function applyPending(
     }
     const guest = guests.get(mutation.reservationId);
     if (!guest) continue;
+    if (mutation.type === "pay") {
+      guest.openCents = 0;
+      continue;
+    }
     guest.checkedIn = Math.max(0, Math.min(guest.tickets, guest.checkedIn + mutation.delta));
   }
   return { ...snapshot, guests: [...guests.values()], boxOfficeTickets, boxOfficeCents };

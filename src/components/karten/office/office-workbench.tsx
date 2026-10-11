@@ -254,13 +254,22 @@ export function OfficeWorkbench({
                 }}
               />
             </div>
-            {selectedEventId && globalResults === null ? (
+            {globalResults === null ? (
               <Button asChild size="sm" variant="outline">
                 <a
-                  href={`/api/karten/einlass/pdf?eventId=${encodeURIComponent(selectedEventId)}`}
+                  href={
+                    selectedEventId
+                      ? `/api/karten/einlass/pdf?eventId=${encodeURIComponent(selectedEventId)}`
+                      : `/api/karten/einlass/pdf?showId=${encodeURIComponent(showId)}`
+                  }
                   download
+                  title={
+                    selectedEventId
+                      ? "Einlassliste dieser Vorstellung"
+                      : "Einlasslisten aller kommenden Vorstellungen, je Vorstellung neue Seite"
+                  }
                 >
-                  <DownloadIcon /> Liste (PDF)
+                  <DownloadIcon /> {selectedEventId ? "Liste (PDF)" : "Listen (PDF)"}
                 </a>
               </Button>
             ) : null}

@@ -5,7 +5,7 @@ import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/rbac";
 
-import { generateSecretToken, hashSecretToken } from "./codes";
+import { encryptSecretToken, generateSecretToken, hashSecretToken } from "./codes";
 import { TICKET_PERMISSION_KEYS } from "./constants";
 
 export const BOX_OFFICE_COOKIE = "kartenbuero";
@@ -26,6 +26,8 @@ export type TicketActor =
       canManage: boolean;
       canOffice: boolean;
       canCheckIn: boolean;
+      /** Zusätzlich per Kartenbüro-Link angemeldet (Rechte werden zusammengeführt). */
+      accessId?: string;
     }
   | {
       kind: "access";
@@ -102,9 +104,22 @@ async function loadAccessActor(): Promise<TicketActor | null> {
   };
 }
 
-/** Mitglieder-Sitzung hat Vorrang; sonst Kartenbüro-Cookie. */
+/**
+ * Mitglieder-Sitzung hat Vorrang; sonst Kartenbüro-Cookie. Öffnet ein angemeldetes Mitglied einen
+ * Zugangslink (z. B. den Einlass-QR), gelten die Rechte aus beiden zusammen – sonst würde das
+ * Mitgliedskonto die Rechte des Links verdecken.
+ */
 export const getTicketActor = cache(async (): Promise<TicketActor | null> => {
-  return (await loadMemberActor()) ?? (await loadAccessActor());
+  const [member, access] = await Promise.all([loadMemberActor(), loadAccessActor()]);
+  if (member?.kind === "member" && access?.kind === "access") {
+    return {
+      ...member,
+      canOffice: member.canOffice || access.canOffice,
+      canCheckIn: member.canCheckIn || access.canCheckIn,
+      accessId: access.accessId,
+    };
+  }
+  return member ?? access;
 });
 
 export class TicketAccessError extends Error {
@@ -144,6 +159,7 @@ export async function createBoxOfficeAccess(input: {
       expiresAt: input.expiresAt,
       createdById: input.createdById,
       tokenHash: hashSecretToken(token),
+      tokenEnc: encryptSecretToken(token),
     },
   });
   return { access, token };
@@ -154,7 +170,11 @@ export async function rotateBoxOfficeAccessToken(accessId: string) {
   const token = generateSecretToken();
   const access = await prisma.boxOfficeAccess.update({
     where: { id: accessId },
-    data: { tokenHash: hashSecretToken(token), revokedAt: null },
+    data: {
+      tokenHash: hashSecretToken(token),
+      tokenEnc: encryptSecretToken(token),
+      revokedAt: null,
+    },
   });
   return { access, token };
 }

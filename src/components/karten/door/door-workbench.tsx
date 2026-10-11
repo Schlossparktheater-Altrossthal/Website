@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatTile } from "@/components/ui/stat-tile";
+import { Switch } from "@/components/ui/switch";
 import type { DoorGuest, DoorMutation, DoorSnapshot } from "@/lib/karten/checkin";
 import { normalizeReservationCode } from "@/lib/karten/codes";
 import {
@@ -38,6 +39,8 @@ import {
 import { applyPending, doorCounters, searchGuests } from "@/lib/karten/door-state";
 import type { ReservationSource } from "@prisma/client";
 import { cn } from "@/lib/utils";
+
+import { ChangeCalculator } from "./change-calculator";
 
 type Category = { id: string; name: string; priceCents: number };
 type Performance = { eventId: string; start: string; cancelled: boolean; configured: boolean };
@@ -95,7 +98,10 @@ export function DoorWorkbench({
   const [mode, setMode] = useState<"guests" | "kasse">("guests");
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<DoorGuest | null>(null);
-  const [admit, setAdmit] = useState(0);
+  /** Ziel: so viele Personen dieser Reservierung sind nach dem Speichern im Saal. */
+  const [present, setPresent] = useState(0);
+  const [collect, setCollect] = useState(false);
+  const [saleName, setSaleName] = useState("");
   const [scanning, setScanning] = useState(false);
   const [signal, setSignal] = useState<ScanSignal | null>(null);
   const [scanMessage, setScanMessage] = useState<{
@@ -195,18 +201,19 @@ export function DoorWorkbench({
 
   const openGuest = (guest: DoorGuest) => {
     setActive(guest);
-    setAdmit(Math.max(0, guest.tickets - guest.checkedIn));
+    // Noch jemand draußen: standardmäßig alle einlassen; sonst Stand zum Korrigieren zeigen.
+    setPresent(guest.checkedIn < guest.tickets ? guest.tickets : guest.checkedIn);
+    setCollect(false);
   };
 
-  const confirmAdmit = (guest: DoorGuest, count: number) => {
-    if (count !== 0) {
-      enqueue({
-        id: newId(),
-        type: "checkin",
-        reservationId: guest.id,
-        delta: count,
-        occurredAt: new Date().toISOString(),
-      });
+  const saveGuest = (guest: DoorGuest) => {
+    const occurredAt = new Date().toISOString();
+    if (collect && guest.openCents > 0) {
+      enqueue({ id: newId(), type: "pay", reservationId: guest.id, occurredAt });
+    }
+    const delta = present - guest.checkedIn;
+    if (delta !== 0) {
+      enqueue({ id: newId(), type: "checkin", reservationId: guest.id, delta, occurredAt });
     }
     setActive(null);
     setQuery("");
@@ -383,6 +390,7 @@ export function DoorWorkbench({
                             {guest.source !== "online" && guest.source !== "phone"
                               ? ` · ${RESERVATION_SOURCE_LABELS[guest.source as ReservationSource]}`
                               : ""}
+                            {guest.via ? ` über ${guest.via}` : ""}
                             {guest.note ? ` · ${guest.note}` : ""}
                           </p>
                         </div>
@@ -410,7 +418,7 @@ export function DoorWorkbench({
       ) : (
         <Card className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Verkauf vor Ort ohne Namen. Die Gäste zählen sofort als eingelassen.
+            Verkauf vor Ort. Die Gäste zählen sofort als eingelassen.
           </p>
           <div className="divide-y divide-border/60">
             {categories.map((category) => (
@@ -429,6 +437,13 @@ export function DoorWorkbench({
               </div>
             ))}
           </div>
+          <Input
+            placeholder="Name (optional)"
+            aria-label="Name des Gastes (optional)"
+            autoComplete="off"
+            value={saleName}
+            onChange={(event) => setSaleName(event.target.value)}
+          />
           <div className="flex items-center justify-between gap-3">
             <span className="text-lg font-semibold tabular-nums">
               {saleTotal.cents > 0 ? `${formatPrice(saleTotal.cents)} kassieren` : ""}
@@ -443,14 +458,17 @@ export function DoorWorkbench({
                   items: Object.entries(sale)
                     .filter(([, quantity]) => quantity > 0)
                     .map(([categoryId, quantity]) => ({ categoryId, quantity })),
+                  ...(saleName.trim() ? { name: saleName.trim() } : {}),
                   occurredAt: new Date().toISOString(),
                 });
                 setSale({});
+                setSaleName("");
               }}
             >
               {saleTotal.tickets} verkauft
             </Button>
           </div>
+          <ChangeCalculator key={saleTotal.cents} dueCents={saleTotal.cents} />
           {counters.free < saleTotal.tickets ? (
             <p className="text-sm text-warning">
               Laut Reservierungen sind nur {counters.free} Plätze frei – wer nicht kommt, gibt Platz
@@ -467,21 +485,22 @@ export function DoorWorkbench({
         footer={
           active ? (
             <>
-              {active.checkedIn > 0 ? (
-                <Button variant="ghost" onClick={() => confirmAdmit(active, -1)}>
-                  Einen austragen
-                </Button>
-              ) : null}
               <Button variant="outline" onClick={() => setActive(null)}>
                 Abbrechen
               </Button>
               <Button
                 size="lg"
-                variant="success"
-                disabled={admit === 0}
-                onClick={() => confirmAdmit(active, admit)}
+                variant={present < active.checkedIn ? "outline" : "success"}
+                disabled={present === active.checkedIn && !(collect && active.openCents > 0)}
+                onClick={() => saveGuest(active)}
               >
-                {admit} einlassen
+                {present > active.checkedIn
+                  ? `${present - active.checkedIn} einlassen`
+                  : present < active.checkedIn
+                    ? `${active.checkedIn - present} austragen`
+                    : collect && active.openCents > 0
+                      ? "Als bezahlt speichern"
+                      : "Keine Änderung"}
               </Button>
             </>
           ) : null
@@ -493,27 +512,63 @@ export function DoorWorkbench({
               <p className="text-sm text-muted-foreground">
                 {active.summary} · <span className="font-mono">{active.code}</span>
               </p>
+              {active.via ? (
+                <p className="text-sm text-muted-foreground">Freikarte über {active.via}</p>
+              ) : null}
               {active.note ? <p className="text-sm text-warning">„{active.note}“</p> : null}
               {active.status === "pending" ? (
                 <Badge variant="warning">nicht per Mail bestätigt</Badge>
               ) : null}
-              {active.openCents > 0 ? (
-                <p className="text-base font-semibold text-warning">
-                  {formatPrice(active.openCents)} kassieren
-                </p>
+            </div>
+            <div className="space-y-2 rounded-md bg-muted/40 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm">
+                  Im Saal
+                  <span className="block text-xs text-muted-foreground">
+                    {active.checkedIn > 0
+                      ? `bisher ${active.checkedIn} von ${active.tickets}`
+                      : `${active.tickets} ${active.tickets === 1 ? "Karte" : "Karten"}`}
+                  </span>
+                </span>
+                <QuantityStepper
+                  label="Personen im Saal"
+                  value={present}
+                  max={active.tickets}
+                  onChange={setPresent}
+                />
+              </div>
+              {active.tickets > 1 ? (
+                <div className="flex justify-end gap-2">
+                  <Button size="xs" variant="ghost" onClick={() => setPresent(0)}>
+                    Niemand
+                  </Button>
+                  <Button size="xs" variant="ghost" onClick={() => setPresent(active.tickets)}>
+                    Alle {active.tickets}
+                  </Button>
+                </div>
               ) : null}
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-md bg-muted/40 p-3">
-              <span className="text-sm">
-                {active.checkedIn > 0 ? `${active.checkedIn} schon da · ` : ""}jetzt einlassen
-              </span>
-              <QuantityStepper
-                label="Personen einlassen"
-                value={admit}
-                max={active.tickets - active.checkedIn}
-                onChange={setAdmit}
-              />
-            </div>
+            {active.openCents > 0 ? (
+              <div className="space-y-2 rounded-md border border-warning/40 p-3">
+                <label className="flex items-center justify-between gap-3">
+                  <span className="text-base font-semibold text-warning">
+                    {formatPrice(active.openCents)} offen
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      An der Abendkasse kassieren
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-2 text-sm">
+                    kassiert
+                    <Switch
+                      checked={collect}
+                      onCheckedChange={setCollect}
+                      aria-label="Betrag kassiert"
+                    />
+                  </span>
+                </label>
+                <ChangeCalculator dueCents={active.openCents} />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </ModalFormDialog>

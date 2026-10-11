@@ -9,13 +9,14 @@ import {
   createDoorAccessAction,
   resendBoxOfficeAccessAction,
   revokeBoxOfficeAccessAction,
+  showBoxOfficeAccessLinkAction,
 } from "@/app/(members)/mitglieder/karten/einstellungen/actions";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { CopyIcon, MailIcon, PlusIcon, QrCodeIcon } from "@/components/ui/action-icons";
+import { CopyIcon, EyeIcon, MailIcon, PlusIcon, QrCodeIcon } from "@/components/ui/action-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
@@ -36,6 +37,8 @@ export type AccessRow = {
   lastUsedAt: string | null;
   /** Vom Server berechnet (nicht gesperrt und nicht abgelaufen). */
   active: boolean;
+  /** Link liegt verschlüsselt vor und kann erneut angezeigt werden. */
+  linkStored: boolean;
 };
 
 const dateFormat = new Intl.DateTimeFormat("de-DE", {
@@ -53,7 +56,7 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
   const [fallbackLink, setFallbackLink] = useState<string | null>(null);
   const [creatingDoor, setCreatingDoor] = useState(false);
   const [doorDraft, setDoorDraft] = useState({ name: "Einlass", days: 3 });
-  const [doorQr, setDoorQr] = useState<{ link: string; title: string } | null>(null);
+  const [doorQr, setDoorQr] = useState<{ link: string; title: string; door: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const handleLink = (
@@ -66,7 +69,7 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
     }
     toast.success(result.message ?? "Erledigt.");
     if (result.data.door && result.data.link) {
-      setDoorQr({ link: result.data.link, title });
+      setDoorQr({ link: result.data.link, title, door: true });
     } else {
       // Ohne Mailserver (lokal) den Link direkt anzeigen.
       setFallbackLink(result.data.link);
@@ -91,7 +94,7 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
         return;
       }
       setCreatingDoor(false);
-      setDoorQr({ link: result.data.link, title: doorDraft.name });
+      setDoorQr({ link: result.data.link, title: doorDraft.name, door: true });
       router.refresh();
     });
 
@@ -118,8 +121,8 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
       {fallbackLink ? (
         <div className="space-y-2 rounded-lg border border-border bg-muted p-4 text-sm">
           <p>
-            Diesen Link persönlich weitergeben (z. B. per Messenger). Er wird nur jetzt angezeigt
-            und öffnet das Kartenbüro ohne Passwort.
+            Diesen Link persönlich weitergeben (z. B. per Messenger). Er öffnet das Kartenbüro ohne
+            Passwort; unter „Link & QR“ findest du ihn später wieder.
           </p>
           <div className="flex gap-2">
             <Input readOnly value={fallbackLink} onFocus={(event) => event.target.select()} />
@@ -170,9 +173,26 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
                       : " · noch nicht benutzt"}
                   </p>
                 </div>
+                {active && access.linkStored ? (
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() =>
+                      startTransition(async () => {
+                        const result = await showBoxOfficeAccessLinkAction(access.id);
+                        if (result.ok) {
+                          setDoorQr({ ...result.data, title: access.name });
+                        } else toast.error(result.error);
+                      })
+                    }
+                  >
+                    <EyeIcon /> {access.canOffice ? "Link & QR" : "QR anzeigen"}
+                  </Button>
+                ) : null}
                 <Button
                   size="xs"
-                  variant="outline"
+                  variant="ghost"
                   disabled={pending}
                   onClick={() =>
                     startTransition(async () => {
@@ -322,7 +342,12 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
       </ModalFormDialog>
 
       {doorQr ? (
-        <DoorQrDialog link={doorQr.link} title={doorQr.title} onClose={() => setDoorQr(null)} />
+        <DoorQrDialog
+          link={doorQr.link}
+          title={doorQr.title}
+          door={doorQr.door}
+          onClose={() => setDoorQr(null)}
+        />
       ) : null}
 
       <ConfirmDialog

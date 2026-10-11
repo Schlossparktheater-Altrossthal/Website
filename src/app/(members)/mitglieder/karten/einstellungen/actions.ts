@@ -8,6 +8,7 @@ import {
   requireTicketActor,
   rotateBoxOfficeAccessToken,
 } from "@/lib/karten/access";
+import { decryptSecretToken } from "@/lib/karten/codes";
 import {
   optionalTrimmed,
   revalidateTickets,
@@ -328,6 +329,26 @@ export async function resendBoxOfficeAccessAction(
     };
   } catch (error) {
     return ticketFailure(error, "Link konnte nicht erneuert werden.");
+  }
+}
+
+/** Bestehenden Link (und damit den QR-Code) noch einmal anzeigen, ohne ihn zu ändern. */
+export async function showBoxOfficeAccessLinkAction(
+  accessId: string,
+): Promise<TicketActionResult<{ link: string; door: boolean }>> {
+  try {
+    const access = await prisma.boxOfficeAccess.findUniqueOrThrow({ where: { id: accessId } });
+    await requireManager(access.showId);
+    const token = decryptSecretToken(access.tokenEnc);
+    if (!token) {
+      return {
+        ok: false,
+        error: "Dieser Link wurde vor dem Update erstellt und lässt sich nur neu erzeugen.",
+      };
+    }
+    return { ok: true, data: { link: boxOfficeAccessLink(token), door: !access.canOffice } };
+  } catch (error) {
+    return ticketFailure(error, "Link konnte nicht geladen werden.");
   }
 }
 

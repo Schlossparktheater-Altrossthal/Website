@@ -13,18 +13,22 @@ function escapeHtml(value: string) {
 }
 
 /**
- * QR-Code für den Einlass-Zugang. Er wird nur einmal angezeigt (in der DB liegt nur der Hash) –
- * deshalb gleich drucken; ein neuer Code macht den alten ungültig.
+ * QR-Code eines Zugangs (Einlass oder Kartenbüro). Lässt sich in den Einstellungen unter „Zugänge“
+ * jederzeit wieder anzeigen; „Neuer QR“ macht den alten Code ungültig.
  */
 export function DoorQrDialog({
   link,
   title,
+  door = true,
   onClose,
 }: {
   link: string;
   title: string;
+  /** false = Kartenbüro-Zugang (Sekretariat). */
+  door?: boolean;
   onClose: () => void;
 }) {
+  const heading = door ? "Einlass" : "Kartenbüro";
   const [svg, setSvg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,11 +51,11 @@ export function DoorQrDialog({
       return;
     }
     win.document
-      .write(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Einlass</title>
+      .write(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${heading}</title>
       <style>body{font-family:system-ui,sans-serif;text-align:center;padding:40px}svg{width:340px;height:340px}
       h1{font-size:28px;margin:0 0 8px}p{font-size:16px;color:#333;max-width:460px;margin:12px auto}</style></head>
-      <body><h1>Einlass – ${escapeHtml(title)}</h1>
-      <p>Mit dem Handy scannen, um den Einlass zu öffnen. Kein Konto nötig.</p>${svg}
+      <body><h1>${heading} – ${escapeHtml(title)}</h1>
+      <p>Mit dem Handy scannen, um ${door ? "den Einlass" : "das Kartenbüro"} zu öffnen. Kein Konto nötig.</p>${svg}
       <p>Bitte nicht öffentlich aushängen – der Code öffnet die Gästeliste.</p>
       <script>window.onload=()=>{window.print()}</script></body></html>`);
     win.document.close();
@@ -59,8 +63,12 @@ export function DoorQrDialog({
 
   return (
     <ModalFormDialog
-      title="Einlass-QR"
-      description="Die Einlasser scannen den Code mit dem Handy und landen direkt im Einlass."
+      title={door ? "Einlass-QR" : `Kartenbüro-Zugang: ${title}`}
+      description={
+        door
+          ? "Die Einlasser scannen den Code mit dem Handy und landen direkt im Einlass."
+          : "Link oder QR-Code öffnen das Kartenbüro auf dem Gerät – ohne Passwort."
+      }
       open
       onOpenChange={(open) => (!open ? onClose() : undefined)}
       footer={
@@ -90,9 +98,12 @@ export function DoorQrDialog({
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         ) : null}
+        <p className="break-all rounded-md bg-muted px-3 py-2 text-left font-mono text-xs">
+          {link}
+        </p>
         <p className="text-sm text-muted-foreground">
-          Der Code wird nur jetzt angezeigt. Bitte drucken oder auf die Geräte übertragen. Mit
-          „Neuer QR“ entsteht später ein neuer Code, der alte gilt dann nicht mehr.
+          Unter „Zugänge“ kannst du Link und Code jederzeit wieder anzeigen. „Neuer QR“ bzw. „Neuer
+          Link“ macht den alten ungültig.
         </p>
       </div>
     </ModalFormDialog>

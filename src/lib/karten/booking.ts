@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import {
   Prisma,
   type Reservation,
@@ -43,6 +45,8 @@ export type ReservationInput = {
   /** Kartenbüro darf bewusst überbuchen (z. B. Rollstuhlplatz, Zusatzstuhl). */
   allowOverbook?: boolean;
   actor?: BookingActor;
+  /** Gemeinsame Kennung, wenn eine Online-Buchung mehrere Vorstellungen umfasst. */
+  groupId?: string | null;
 };
 
 type BuiltItem = {
@@ -337,12 +341,57 @@ export async function createReservation(
         // Abendkasse: verkauft und eingelassen in einem Schritt.
         checkedInCount: input.source === "box_office" ? tickets : 0,
         memberId: input.memberId ?? null,
+        groupId: input.groupId ?? null,
         createdByUserId: input.actor?.userId ?? null,
         createdByAccessId: input.actor?.accessId ?? null,
         items: { create: items },
       },
     });
     return { reservation, token };
+  });
+}
+
+/**
+ * Online-Buchung für mehrere Vorstellungen: je Vorstellung eine Reservierung (eigener QR-Code),
+ * verbunden über `groupId`. Klappt eine nicht (z. B. ausgebucht), werden die schon angelegten
+ * wieder storniert, damit niemand halbe Buchungen bekommt.
+ */
+export async function createReservationGroup(
+  eventIds: string[],
+  input: Omit<ReservationInput, "eventId" | "groupId">,
+  describeEvent: (eventId: string) => string,
+  now: Date = new Date(),
+): Promise<CreatedReservation[]> {
+  const unique = [...new Set(eventIds)];
+  if (unique.length === 0) throw new BookingError("Bitte eine Vorstellung wählen.", "INVALID");
+  if (unique.length === 1) return [await createReservation({ ...input, eventId: unique[0] }, now)];
+  const groupId = randomUUID();
+  const created: CreatedReservation[] = [];
+  try {
+    for (const eventId of unique) {
+      created.push(await createReservation({ ...input, eventId, groupId }, now));
+    }
+  } catch (error) {
+    await prisma.reservation.updateMany({
+      where: { id: { in: created.map((entry) => entry.reservation.id) } },
+      data: { status: "cancelled", cancelledAt: now, cancelReason: "Mehrfachbuchung abgebrochen" },
+    });
+    if (error instanceof BookingError) {
+      const failed = unique[created.length];
+      throw new BookingError(`${describeEvent(failed)}: ${error.message}`, error.code);
+    }
+    throw error;
+  }
+  return created;
+}
+
+/** Weitere Reservierungen derselben Mehrfachbuchung (ohne die angegebene). */
+export async function loadGroupSiblings(reservation: { id: string; groupId: string | null }) {
+  if (!reservation.groupId) return [];
+  return prisma.reservation.findMany({
+    where: { groupId: reservation.groupId, id: { not: reservation.id } },
+    include: { event: { select: { start: true } } },
+    orderBy: { event: { start: "asc" } },
   });
 }
 
@@ -356,6 +405,15 @@ export async function confirmReservation(
 ): Promise<Reservation> {
   const tokenHash = hashSecretToken(token);
   const found = await prisma.reservation.findUnique({ where: { tokenHash } });
+  if (!found) throw new BookingError("Buchung nicht gefunden.", "NOT_FOUND");
+  return confirmReservationById(found.id, now);
+}
+
+export async function confirmReservationById(
+  reservationId: string,
+  now: Date = new Date(),
+): Promise<Reservation> {
+  const found = await prisma.reservation.findUnique({ where: { id: reservationId } });
   if (!found) throw new BookingError("Buchung nicht gefunden.", "NOT_FOUND");
   if (found.status === "confirmed") return found;
   if (found.status === "cancelled") {

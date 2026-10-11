@@ -8,7 +8,7 @@ import { ManageReservation } from "@/components/karten/public/manage-reservation
 import { PrintButton } from "@/components/karten/public/print-button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { findReservationByToken } from "@/lib/karten/booking";
+import { findReservationByToken, loadGroupSiblings } from "@/lib/karten/booking";
 import {
   describeItems,
   formatPerformanceDateLong,
@@ -85,6 +85,22 @@ export default async function ReservationPage({ params }: { params: Promise<{ to
     );
   }
 
+  const siblings = (await loadGroupSiblings(reservation)).filter(
+    (entry) => entry.status !== "cancelled" && entry.status !== "expired",
+  );
+  const siblingList = siblings.length ? (
+    <div className="space-y-1 text-sm">
+      <p className="text-muted-foreground">
+        Außerdem in dieser Buchung (jeweils mit eigenem Ticket):
+      </p>
+      <ul className="list-inside list-disc">
+        {siblings.map((entry) => (
+          <li key={entry.id}>{formatPerformanceDateLong(entry.event.start)}</li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
   if (reservation.status === "pending") {
     return (
       <div className="space-y-6">
@@ -92,7 +108,15 @@ export default async function ReservationPage({ params }: { params: Promise<{ to
         <Card className="space-y-4">
           <p>Bitte bestätige deine Reservierung – erst dann gelten die Karten.</p>
           {details}
-          <ConfirmReservationButton token={token} />
+          {siblingList}
+          <ConfirmReservationButton
+            token={token}
+            label={
+              siblings.length
+                ? `Alle ${siblings.length + 1} Vorstellungen bestätigen`
+                : "Reservierung bestätigen"
+            }
+          />
         </Card>
       </div>
     );
@@ -130,6 +154,14 @@ export default async function ReservationPage({ params }: { params: Promise<{ to
               Zeig den QR-Code am Einlass – auf dem Handy oder ausgedruckt. Deinen Namen zu nennen
               reicht auch.
             </p>
+            {siblings.length ? (
+              <div className="print:hidden">
+                {siblingList}
+                <p className="text-xs text-muted-foreground">
+                  Die Tickets dafür findest du in der Bestätigungsmail.
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="print:hidden">

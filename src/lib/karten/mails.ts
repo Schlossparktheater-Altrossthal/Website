@@ -82,10 +82,25 @@ async function send(to: string | null, subject: string, text: string): Promise<b
   }
 }
 
+/** Weitere Vorstellungen einer Mehrfachbuchung als Zeilen für die Mail. */
+async function groupLines(ctx: MailContext) {
+  if (!ctx.groupId) return [];
+  const siblings = await prisma.reservation.findMany({
+    where: { groupId: ctx.groupId, id: { not: ctx.id } },
+    include: { items: true, event: { select: { start: true } } },
+    orderBy: { event: { start: "asc" } },
+  });
+  return siblings.map(
+    (entry) =>
+      `- ${formatPerformanceDateLong(entry.event.start)}: ${describeItems(entry.items)} (Code ${entry.code})`,
+  );
+}
+
 /** Online-Buchung: Bitte bestätigen. */
 export async function sendConfirmationRequest(reservationId: string, token: string) {
   const ctx = await loadMailContext(reservationId);
   if (!ctx) return false;
+  const others = await groupLines(ctx);
   const hold = ctx.holdUntil
     ? new Intl.DateTimeFormat("de-DE", {
         timeZone: "Europe/Berlin",
@@ -98,13 +113,16 @@ export async function sendConfirmationRequest(reservationId: string, token: stri
   const text = [
     `Hallo ${ctx.name},`,
     "",
-    "vielen Dank für deine Reservierung! Bitte bestätige sie über diesen Link – erst dann gelten die Karten:",
+    others.length
+      ? `vielen Dank für deine Reservierung für ${others.length + 1} Vorstellungen! Ein Klick auf diesen Link bestätigt alle – erst dann gelten die Karten:`
+      : "vielen Dank für deine Reservierung! Bitte bestätige sie über diesen Link – erst dann gelten die Karten:",
     "",
     reservationLink(token),
     "",
     hold ? `Wir halten die Plätze bis ${hold} Uhr für dich frei.` : "",
     "",
     summary(ctx),
+    ...(others.length ? ["", "Außerdem gebucht:", ...others] : []),
     footer(ctx),
   ].join("\n");
   return send(ctx.email, `Bitte bestätigen: Reservierung ${showDisplayTitle(ctx.show)}`, text);
@@ -127,6 +145,41 @@ export async function sendTicket(reservationId: string, token: string) {
     footer(ctx),
   ].join("\n");
   return send(ctx.email, `Deine Karten: ${showDisplayTitle(ctx.show)}`, text);
+}
+
+/**
+ * Mehrfachbuchung bestätigt: eine Mail mit je einem Ticket-Link pro Vorstellung (jede hat ihren
+ * eigenen QR-Code).
+ */
+export async function sendTicketGroup(entries: { reservationId: string; token: string }[]) {
+  if (entries.length === 1) return sendTicket(entries[0].reservationId, entries[0].token);
+  const contexts = (
+    await Promise.all(
+      entries.map(async (entry) => ({
+        ctx: await loadMailContext(entry.reservationId),
+        token: entry.token,
+      })),
+    )
+  )
+    .filter((entry): entry is { ctx: MailContext; token: string } => entry.ctx !== null)
+    .sort((a, b) => a.ctx.event.start.getTime() - b.ctx.event.start.getTime());
+  const first = contexts[0]?.ctx;
+  if (!first) return false;
+  const blocks = contexts.flatMap(({ ctx, token }) => [
+    "",
+    summary(ctx),
+    `Ticket: ${reservationLink(token)}`,
+  ]);
+  const text = [
+    `Hallo ${first.name},`,
+    "",
+    `deine Reservierung für ${contexts.length} Vorstellungen ist bestätigt. Für jede Vorstellung gibt es ein eigenes Ticket mit QR-Code – zeig es am jeweiligen Abend auf dem Handy oder ausgedruckt. Den Namen nennen geht auch.`,
+    "",
+    "Über den jeweiligen Link kannst du die Vorstellung einzeln ändern oder stornieren.",
+    ...blocks,
+    footer(first),
+  ].join("\n");
+  return send(first.email, `Deine Karten: ${showDisplayTitle(first.show)}`, text);
 }
 
 export async function sendCancellation(reservationId: string, reason?: string | null) {

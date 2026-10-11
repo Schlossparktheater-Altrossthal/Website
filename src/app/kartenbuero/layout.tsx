@@ -34,12 +34,21 @@ export default async function BoxOfficeLayout({ children }: { children: ReactNod
               </Button>
             </form>
           ) : actor?.kind === "member" ? (
-            <Link
-              href={MEMBERS_TICKETS_PATH}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Zum Mitgliederbereich
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href={MEMBERS_TICKETS_PATH}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Zum Mitgliederbereich
+              </Link>
+              {actor.accessId ? (
+                <form action={`${BOX_OFFICE_PATH}/abmelden`} method="post">
+                  <Button type="submit" size="xs" variant="ghost">
+                    Zugang abmelden
+                  </Button>
+                </form>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </header>

@@ -133,6 +133,7 @@ export default async function TicketSettingsPage({
           revokedAt: access.revokedAt?.toISOString() ?? null,
           lastUsedAt: access.lastUsedAt?.toISOString() ?? null,
           active: !access.revokedAt && access.expiresAt > now,
+          linkStored: Boolean(access.tokenEnc),
         }))}
       />
     </div>

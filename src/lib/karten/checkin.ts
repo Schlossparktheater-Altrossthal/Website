@@ -16,6 +16,8 @@ export type DoorGuest = {
   summary: string;
   note: string | null;
   openCents: number;
+  /** Freikarte: über wen (mitwirkende Person). */
+  via: string | null;
 };
 
 export type DoorSnapshot = {
@@ -45,6 +47,7 @@ export async function loadDoorSnapshot(eventId: string): Promise<DoorSnapshot> {
         totalCents: true,
         paymentStatus: true,
         items: { select: { label: true, quantity: true } },
+        member: { select: { name: true, firstName: true, lastName: true } },
       },
     }),
   ]);
@@ -69,6 +72,7 @@ export async function loadDoorSnapshot(eventId: string): Promise<DoorSnapshot> {
       summary: reservation.items.map((item) => `${item.quantity} × ${item.label}`).join(", "),
       note: reservation.note,
       openCents: reservation.paymentStatus === "open" ? reservation.totalCents : 0,
+      via: reservation.member ? memberDisplayName(reservation.member) : null,
     });
   }
   return {
@@ -79,6 +83,15 @@ export async function loadDoorSnapshot(eventId: string): Promise<DoorSnapshot> {
     boxOfficeCents,
     serverTime: new Date().toISOString(),
   };
+}
+
+function memberDisplayName(member: {
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}) {
+  const full = [member.firstName, member.lastName].filter(Boolean).join(" ").trim();
+  return full || member.name?.trim() || "Mitwirkende Person";
 }
 
 export type DoorMutation =
@@ -93,6 +106,15 @@ export type DoorMutation =
       id: string;
       type: "sale";
       items: ItemInput[];
+      /** Optional: Name des Gastes an der Abendkasse. */
+      name?: string;
+      occurredAt: string;
+    }
+  | {
+      /** Offenen Betrag einer Reservierung an der Abendkasse kassiert. */
+      id: string;
+      type: "pay";
+      reservationId: string;
       occurredAt: string;
     };
 
@@ -128,7 +150,7 @@ export async function applyDoorMutations(
         const { reservation } = await createReservation({
           eventId,
           source: "box_office",
-          name: "",
+          name: mutation.name?.trim().slice(0, 120) ?? "",
           items: mutation.items,
           allowOverbook: true,
           actor: ref,
@@ -143,6 +165,38 @@ export async function applyDoorMutations(
             byAccessId: ref.accessId ?? null,
             occurredAt: at,
           },
+        });
+        results.push({ id: mutation.id, ok: true });
+        continue;
+      }
+
+      if (mutation.type === "pay") {
+        await prisma.$transaction(async (tx) => {
+          const reservation = await tx.reservation.findUnique({
+            where: { id: mutation.reservationId },
+            select: { id: true, eventId: true, status: true, paymentStatus: true },
+          });
+          if (!reservation || reservation.eventId !== eventId) {
+            throw new BookingError("Reservierung gehört nicht zu dieser Vorstellung.", "NOT_FOUND");
+          }
+          // Protokollzeile ohne Personen, damit doppelt gesendete Zahlungen erkannt werden.
+          await tx.reservationCheckIn.create({
+            data: {
+              reservationId: reservation.id,
+              delta: 0,
+              clientMutationId: mutation.id,
+              deviceLabel: deviceLabel ? `Zahlung · ${deviceLabel}`.slice(0, 120) : "Zahlung",
+              byUserId: ref.userId ?? null,
+              byAccessId: ref.accessId ?? null,
+              occurredAt: at,
+            },
+          });
+          if (reservation.paymentStatus === "open") {
+            await tx.reservation.update({
+              where: { id: reservation.id },
+              data: { paymentStatus: "paid" },
+            });
+          }
         });
         results.push({ id: mutation.id, ok: true });
         continue;
