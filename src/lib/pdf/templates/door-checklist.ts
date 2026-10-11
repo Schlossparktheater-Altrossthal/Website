@@ -66,7 +66,7 @@ export const doorChecklistTemplate: PdfTemplate<DoorChecklistData> = {
       slugify(data.sections.length === 1 ? data.sections[0].performance : data.showTitle) || "liste"
     }.pdf`,
   schema: doorChecklistSchema,
-  documentOptions: { size: "A4", layout: "portrait", margin: 36, bufferPages: true },
+  documentOptions: { size: "A4", layout: "portrait", margin: 28, bufferPages: true },
   render(doc, data) {
     const left = doc.page.margins.left;
     const width = doc.page.width - left - doc.page.margins.right;
@@ -76,22 +76,28 @@ export const doorChecklistTemplate: PdfTemplate<DoorChecklistData> = {
         ? `Einlassliste ${data.showTitle} – ${data.sections[0].performance}`
         : `Einlasslisten ${data.showTitle}`;
 
-    const columns = { check: 150, name: 150, details: 0, open: 60 };
+    // Kompakt für mehrere Hundert Gäste: eine Zeile pro Reservierung, Kästchen nebeneinander.
+    const box = 8;
+    const gap = 2.5;
+    const columns = { check: MAX_BOXES * (box + gap) + 6, name: 150, details: 0, open: 52 };
     columns.details = width - columns.check - columns.name - columns.open;
-    const box = 9;
-    const gap = 4;
+    const rowPad = 3;
+    const minRowHeight = 13;
 
     const header = () => {
       const top = doc.y;
-      doc.rect(left, top, width, 16).fill("#111827");
-      doc.font("Helvetica-Bold").fontSize(8).fillColor("#ffffff");
-      doc.text("Abhaken (je Person)", left + 4, top + 4, { width: columns.check - 8 });
-      doc.text("Name", left + columns.check + 4, top + 4, { width: columns.name - 8 });
-      doc.text("Karten / Hinweis", left + columns.check + columns.name + 4, top + 4, {
-        width: columns.details - 8,
+      doc.rect(left, top, width, 12).fill("#111827");
+      doc.font("Helvetica-Bold").fontSize(7).fillColor("#ffffff");
+      doc.text("Abhaken (je Person)", left + 3, top + 3, { width: columns.check - 6 });
+      doc.text("Name · Code", left + columns.check + 3, top + 3, { width: columns.name - 6 });
+      doc.text("Karten / Hinweis", left + columns.check + columns.name + 3, top + 3, {
+        width: columns.details - 6,
       });
-      doc.text("Zahlen", left + width - columns.open + 4, top + 4, { width: columns.open - 8 });
-      doc.y = top + 16;
+      doc.text("Zahlen", left + width - columns.open + 3, top + 3, {
+        width: columns.open - 6,
+        align: "right",
+      });
+      doc.y = top + 12;
     };
 
     data.sections.forEach((section, sectionIndex) => {
@@ -120,108 +126,129 @@ export const doorChecklistTemplate: PdfTemplate<DoorChecklistData> = {
 
     function renderSection(section: DoorChecklistData["sections"][number]) {
       const totalTickets = section.rows.reduce((sum, row) => sum + row.tickets, 0);
+      const titleTop = doc.page.margins.top;
       doc
         .font("Helvetica-Bold")
-        .fontSize(15)
+        .fontSize(12)
         .fillColor("#111827")
-        .text(`Einlass: ${data.showTitle}`, left, doc.page.margins.top);
-      doc.font("Helvetica").fontSize(11).fillColor("#374151").text(section.performance);
+        .text(`Einlass: ${data.showTitle} – ${section.performance}`, left, titleTop, { width });
       doc
-        .fontSize(8.5)
+        .font("Helvetica")
+        .fontSize(7.5)
         .fillColor("#6b7280")
         .text(
           `${section.rows.length} Reservierungen · ${totalTickets} Karten · ${section.capacity} Plätze · Stand ${data.generatedAt}`,
+          left,
         );
-      doc.moveDown(0.6);
+      doc.moveDown(0.3);
 
       header();
       let currentInitial: string | null = null;
-      section.rows.forEach((row, index) => {
+      let stripe = false;
+      section.rows.forEach((row) => {
         const detail = [row.summary, row.tag, row.note ? `„${row.note}“` : null]
           .filter(Boolean)
           .join(" · ");
-        doc.font("Helvetica").fontSize(8.5);
-        const detailHeight = doc.heightOfString(detail, { width: columns.details - 8 });
-        const boxRows = row.tickets > MAX_BOXES ? 1 : Math.ceil(row.tickets / 5) || 1;
-        const height = Math.max(28, detailHeight + 8, boxRows * (box + gap) + 8);
+        doc.font("Helvetica").fontSize(7.5);
+        const detailHeight = doc.heightOfString(detail, { width: columns.details - 6 });
+        const height = Math.max(minRowHeight, detailHeight + rowPad * 2 - 1);
         const letter = initial(row.name);
         const newLetter = letter !== currentInitial;
-        const dividerHeight = newLetter ? 14 : 0;
+        const dividerHeight = newLetter ? 10 : 0;
         if (doc.y + dividerHeight + height > bottom()) {
           doc.addPage();
           header();
         }
         if (newLetter) {
           // Trennlinie mit Buchstabe, wenn ein neuer Anfangsbuchstabe beginnt.
-          const lineY = doc.y + 7;
+          const dividerTop = doc.y;
+          const lineY = dividerTop + 5.5;
           doc
             .font("Helvetica-Bold")
-            .fontSize(9)
+            .fontSize(7.5)
             .fillColor("#111827")
-            .text(letter, left + 2, doc.y + 2, { width: 14, lineBreak: false });
+            .text(letter, left + 1, dividerTop + 2, { width: 10, lineBreak: false });
           doc
-            .moveTo(left + 16, lineY)
+            .moveTo(left + 11, lineY)
             .lineTo(left + width, lineY)
-            .lineWidth(1)
+            .lineWidth(0.6)
             .strokeColor("#111827")
             .stroke();
-          doc.y += dividerHeight;
+          doc.y = dividerTop + dividerHeight;
           currentInitial = letter;
+          stripe = false;
         }
         const top = doc.y;
-        if (index % 2 === 1) doc.rect(left, top, width, height).fill("#f3f4f6");
+        if (stripe) doc.rect(left, top, width, height).fill("#f3f4f6");
+        stripe = !stripe;
 
         // Kästchen
-        doc.lineWidth(0.8).strokeColor("#111827");
+        doc.lineWidth(0.6).strokeColor("#111827");
+        const boxTop = top + (minRowHeight - box) / 2;
         if (row.tickets > MAX_BOXES) {
-          doc.rect(left + 6, top + 5, 40, box + 2).stroke();
+          doc.rect(left + 3, boxTop - 0.5, 30, box + 1).stroke();
           doc
+            .font("Helvetica")
             .fillColor("#111827")
-            .fontSize(8)
-            .text(`von ${row.tickets}`, left + 50, top + 6);
+            .fontSize(7.5)
+            .text(`von ${row.tickets}`, left + 37, top + rowPad, { lineBreak: false });
         } else {
           for (let i = 0; i < row.tickets; i += 1) {
-            const x = left + 6 + (i % 5) * (box + gap);
-            const y = top + 5 + Math.floor(i / 5) * (box + gap);
-            doc.rect(x, y, box, box).stroke();
+            const x = left + 3 + i * (box + gap);
+            doc.rect(x, boxTop, box, box).stroke();
             // Schon digital eingelassen: vorab angekreuzt.
             if (i < row.checkedIn) {
               doc
-                .moveTo(x + 2, y + 2)
-                .lineTo(x + box - 2, y + box - 2)
-                .moveTo(x + box - 2, y + 2)
-                .lineTo(x + 2, y + box - 2)
+                .moveTo(x + 1.5, boxTop + 1.5)
+                .lineTo(x + box - 1.5, boxTop + box - 1.5)
+                .moveTo(x + box - 1.5, boxTop + 1.5)
+                .lineTo(x + 1.5, boxTop + box - 1.5)
                 .stroke();
             }
           }
         }
 
-        doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9.5);
-        doc.text(row.name, left + columns.check + 4, top + 5, {
-          width: columns.name - 8,
+        // Name fett, Code klein dahinter
+        const nameX = left + columns.check + 3;
+        const nameWidth = columns.name - 6;
+        doc.font("Helvetica").fontSize(6.5);
+        const codeWidth = doc.widthOfString(row.code);
+        doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#111827");
+        const nameMax = Math.max(20, nameWidth - codeWidth - 4);
+        doc.text(row.name, nameX, top + rowPad - 0.5, {
+          width: nameMax,
+          height: 10,
           ellipsis: true,
-          height: height - 6,
+          lineBreak: false,
         });
-        doc.font("Helvetica").fontSize(7).fillColor("#6b7280");
-        doc.text(row.code, left + columns.check + 4, top + 17, { width: columns.name - 8 });
-        doc.font("Helvetica").fontSize(8.5).fillColor("#374151");
-        doc.text(detail, left + columns.check + columns.name + 4, top + 5, {
-          width: columns.details - 8,
+        const nameUsed = Math.min(doc.widthOfString(row.name), nameMax);
+        doc
+          .font("Helvetica")
+          .fontSize(6.5)
+          .fillColor("#6b7280")
+          .text(row.code, nameX + nameUsed + 4, top + rowPad + 1, { lineBreak: false });
+
+        doc.font("Helvetica").fontSize(7.5).fillColor("#374151");
+        doc.text(detail, left + columns.check + columns.name + 3, top + rowPad, {
+          width: columns.details - 6,
         });
         if (row.open) {
           doc.font("Helvetica-Bold").fillColor("#111827");
-          doc.text(row.open, left + width - columns.open + 4, top + 5, { width: columns.open - 8 });
+          doc.text(row.open, left + width - columns.open + 3, top + rowPad, {
+            width: columns.open - 6,
+            align: "right",
+          });
         }
         doc.y = top + height;
       });
 
       // Abendkasse zum Mitzählen
       const labels = data.categories.length ? data.categories : ["Karten"];
-      if (doc.y + 40 + labels.length * 28 > bottom()) doc.addPage();
-      doc.moveDown(1.2);
+      if (doc.y + 30 + labels.length * 22 > bottom()) doc.addPage();
+      doc.moveDown(0.8);
       doc
         .font("Helvetica-Bold")
-        .fontSize(11)
+        .fontSize(9.5)
         .fillColor("#111827")
         .text("Abendkasse (Strichliste)", left);
       doc.moveDown(0.4);
@@ -231,13 +258,13 @@ export const doorChecklistTemplate: PdfTemplate<DoorChecklistData> = {
           .font("Helvetica")
           .fontSize(9)
           .fillColor("#111827")
-          .text(label, left, top + 6, { width: 90 });
+          .text(label, left, top + 5, { width: 90 });
         doc
-          .rect(left + 95, top, width - 95, 22)
+          .rect(left + 95, top, width - 95, 18)
           .lineWidth(0.6)
           .strokeColor("#9ca3af")
           .stroke();
-        doc.y = top + 28;
+        doc.y = top + 22;
       }
     }
   },
