@@ -154,3 +154,12 @@ zwei gleichzeitige Buchungen die Kapazität nicht überschreiten.
   Vorstellung wird eine eigene Buchung (eigener Code). Scheitert eine, wird nichts gespeichert.
 - Fix: `/kartenbuero` nutzt einen eigenen Seitenkopf – `PageHeader` braucht die `MembersAppShell`
   und brach dort für Zugänge ohne Konto ab.
+
+## Nachtrag 2026-10-11 (2): Zugang ohne Mail, Löschen, Weiterleitung
+
+- Kartenbüro-Zugänge gehen auch ohne E-Mail: Der Link wird einmalig angezeigt und selbst
+  weitergegeben.
+- Stornierte/verfallene Buchungen lassen sich **endgültig löschen** – nur aus Suchtreffern heraus,
+  mit Bestätigung; aktive Buchungen erst stornieren.
+- Fix: `/kartenbuero/zugang/*` und `/kartenbuero/abmelden` leiten auf `NEXTAUTH_URL` weiter statt auf
+  die interne Adresse hinter dem Proxy (vorher `https://localhost:3001/kartenbuero`).

@@ -223,6 +223,26 @@ export async function officeSetPaymentAction(
   }
 }
 
+/**
+ * Stornierte oder verfallene Buchung endgültig entfernen (z. B. Fehleingabe, Datenschutz-Wunsch).
+ * Aktive Buchungen müssen erst storniert werden; die Oberfläche bietet das nur in Suchtreffern an.
+ */
+export async function officeDeleteReservationAction(
+  reservationId: string,
+): Promise<TicketActionResult> {
+  try {
+    const { reservation } = await requireOfficeFor(reservationId);
+    if (reservation.status !== "cancelled" && reservation.status !== "expired") {
+      throw new BookingError("Nur stornierte Reservierungen lassen sich löschen.", "INVALID");
+    }
+    await prisma.reservation.delete({ where: { id: reservation.id } });
+    revalidateTickets();
+    return { ok: true, message: "Reservierung endgültig gelöscht." };
+  } catch (error) {
+    return ticketFailure(error, "Reservierung konnte nicht gelöscht werden.");
+  }
+}
+
 /** Neuer Ticket-Link per Mail (z. B. Mail nicht angekommen); der alte Link verfällt. */
 export async function officeResendTicketAction(reservationId: string): Promise<TicketActionResult> {
   try {

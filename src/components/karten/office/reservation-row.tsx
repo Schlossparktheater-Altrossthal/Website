@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   officeCancelReservationAction,
   officeConfirmReservationAction,
+  officeDeleteReservationAction,
   officeResendTicketAction,
   officeRestoreReservationAction,
   officeSetPaymentAction,
@@ -34,7 +35,12 @@ export function ReservationRow({
   performanceStart,
   onEdit,
   onChanged,
+  allowDelete = false,
+  onDeleted,
 }: {
+  onDeleted?: () => void;
+  /** Endgültiges Löschen nur in Suchtreffern – nicht im normalen Durchblättern. */
+  allowDelete?: boolean;
   reservation: OfficeReservation;
   /** Bei der Suche über alle Vorstellungen wird das Datum mit angezeigt. */
   performanceStart?: string | null;
@@ -43,6 +49,7 @@ export function ReservationRow({
 }) {
   const [open, setOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [pending, startTransition] = useTransition();
   const inactive = reservation.status === "cancelled" || reservation.status === "expired";
 
@@ -159,6 +166,11 @@ export function ReservationRow({
                 <MailIcon /> Ticket erneut senden
               </Button>
             ) : null}
+            {inactive && allowDelete ? (
+              <Button size="xs" variant="destructive" onClick={() => setDeleting(true)}>
+                <TrashIcon /> Endgültig löschen
+              </Button>
+            ) : null}
             {inactive ? (
               <Button
                 size="xs"
@@ -177,6 +189,27 @@ export function ReservationRow({
         </div>
       ) : null}
 
+      <ConfirmDialog
+        open={deleting}
+        onOpenChange={setDeleting}
+        title={`Reservierung von ${reservation.name} endgültig löschen?`}
+        description="Sie verschwindet komplett und lässt sich nicht wiederherstellen."
+        confirmLabel="Endgültig löschen"
+        cancelLabel="Abbrechen"
+        variant="destructive"
+        onCancel={() => setDeleting(false)}
+        onConfirm={() => {
+          setDeleting(false);
+          startTransition(async () => {
+            const result = await officeDeleteReservationAction(reservation.id);
+            if (result.ok) {
+              toast.success(result.message ?? "Gelöscht.");
+              onDeleted?.();
+              onChanged();
+            } else toast.error(result.error);
+          });
+        }}
+      />
       <ConfirmDialog
         open={cancelling}
         onOpenChange={setCancelling}

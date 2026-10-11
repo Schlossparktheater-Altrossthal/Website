@@ -297,6 +297,12 @@ export function OfficeWorkbench({
                       ? startByEvent.get(entry.eventId)
                       : null
                   }
+                  allowDelete={globalResults !== null}
+                  onDeleted={() =>
+                    setGlobalResults((current) =>
+                      current ? current.filter((item) => item.id !== entry.id) : current,
+                    )
+                  }
                   onEdit={() => setEditing(entry)}
                   onChanged={refresh}
                 />

@@ -214,7 +214,14 @@ export async function setFreeTicketAllowanceAction(
 
 const accessSchema = z.object({
   name: z.string().trim().min(1, "Bitte einen Namen angeben.").max(80),
-  email: z.string().trim().email("Bitte eine gültige E-Mail-Adresse angeben."),
+  /** Leer = keine Mail, der Link wird angezeigt und selbst weitergegeben. */
+  email: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((value) => value ?? "")
+    .pipe(z.union([z.literal(""), z.string().email("Bitte eine gültige E-Mail-Adresse angeben.")])),
   canCheckIn: z.boolean(),
   days: z.number().int().min(1).max(365).default(BOX_OFFICE_DEFAULT_DAYS),
 });
@@ -236,16 +243,15 @@ export async function createBoxOfficeAccessAction(
       expiresAt,
       createdById: actor.userId,
     });
-    const mailed = await sendBoxOfficeAccess({
-      email: access.email,
-      name: access.name,
-      token,
-      expiresAt,
-    });
+    const mailed = access.email
+      ? await sendBoxOfficeAccess({ email: access.email, name: access.name, token, expiresAt })
+      : false;
     revalidateTickets();
     return {
       ok: true,
-      message: mailed ? `Zugangslink an ${access.email} gesendet.` : "Zugang angelegt.",
+      message: mailed
+        ? `Zugangslink an ${access.email} gesendet.`
+        : "Zugang angelegt – Link bitte selbst weitergeben.",
       data: { link: mailed ? null : boxOfficeAccessLink(token), mailed },
     };
   } catch (error) {
@@ -306,12 +312,14 @@ export async function resendBoxOfficeAccessAction(
         data: { link: boxOfficeAccessLink(token), mailed: false, door: true },
       };
     }
-    const mailed = await sendBoxOfficeAccess({
-      email: access.email,
-      name: access.name,
-      token,
-      expiresAt: access.expiresAt,
-    });
+    const mailed = access.email
+      ? await sendBoxOfficeAccess({
+          email: access.email,
+          name: access.name,
+          token,
+          expiresAt: access.expiresAt,
+        })
+      : false;
     revalidateTickets();
     return {
       ok: true,

@@ -116,8 +116,11 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
       </div>
 
       {fallbackLink ? (
-        <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
-          <p>Die Mail konnte nicht gesendet werden. Diesen Link persönlich weitergeben:</p>
+        <div className="space-y-2 rounded-lg border border-border bg-muted p-4 text-sm">
+          <p>
+            Diesen Link persönlich weitergeben (z. B. per Messenger). Er wird nur jetzt angezeigt
+            und öffnet das Kartenbüro ohne Passwort.
+          </p>
           <div className="flex gap-2">
             <Input readOnly value={fallbackLink} onFocus={(event) => event.target.select()} />
             <Button
@@ -178,7 +181,11 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
                   }
                 >
                   {access.canOffice ? <MailIcon /> : <QrCodeIcon />}
-                  {access.canOffice ? "Neuer Link" : "Neuer QR"}
+                  {!access.canOffice
+                    ? "Neuer QR"
+                    : access.email
+                      ? "Neuer Link"
+                      : "Neuer Link anzeigen"}
                 </Button>
                 {!access.revokedAt ? (
                   <Button size="xs" variant="ghost" onClick={() => setRevoking(access)}>
@@ -193,7 +200,7 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
 
       <ModalFormDialog
         title="Kartenbüro-Zugang"
-        description="Die Person bekommt einen Link per Mail und ist damit auf ihrem Gerät angemeldet."
+        description="Mit E-Mail kommt der Link per Mail, ohne wird er hier angezeigt und du gibst ihn selbst weiter. Wer ihn öffnet, ist auf dem Gerät angemeldet."
         open={creating}
         onOpenChange={setCreating}
         footer={
@@ -202,7 +209,7 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
               Abbrechen
             </Button>
             <AsyncButton isLoading={pending} onClick={create}>
-              Link senden
+              {draft.email.trim() ? "Link senden" : "Link erstellen"}
             </AsyncButton>
           </>
         }
@@ -224,7 +231,7 @@ export function AccessCard({ showId, accesses }: { showId: string; accesses: Acc
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="access-email">E-Mail</Label>
+            <Label htmlFor="access-email">E-Mail (optional)</Label>
             <Input
               id="access-email"
               type="email"
