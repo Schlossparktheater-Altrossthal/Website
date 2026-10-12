@@ -3,8 +3,8 @@ import sharp from "sharp";
 
 import { getProtocolAccess } from "@/lib/calendar/protocol-server";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
-import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { toEventMediaItem } from "@/lib/media/event-media-item";
 import { slugify } from "@/lib/produktionen/actions-helpers";
 import { deleteObjects } from "@/lib/storage/s3";
 
@@ -140,34 +140,39 @@ export async function processImage(input: Uint8Array) {
   };
 }
 
-type PermissionUser = Parameters<typeof hasPermission>[0];
+type PermissionUser = Parameters<typeof getProtocolAccess>[0];
 
 export type EventMediaAccess = {
   /** Ansehen und Hochladen: Eingeladene, tatsächlich Anwesende und wer das Protokoll führt. */
   canUse: boolean;
-  /** Alle Medien löschen (Protokollführung); sonst nur die eigenen. */
+  /** Alle Medien löschen und an Ablaufpunkte hängen (Protokollführung); sonst nur eigene. */
   canManage: boolean;
 };
-
-const HERE = ["PRESENT", "LATE", "LEFT_EARLY"] as const;
 
 export async function getEventMediaAccess(
   user: PermissionUser,
   event: { id: string; showId: string | null },
 ): Promise<EventMediaAccess> {
-  if (!user?.id) return { canUse: false, canManage: false };
-  const [protocol, participant] = await Promise.all([
-    getProtocolAccess(user, event.showId),
-    prisma.eventParticipant.findFirst({
-      where: {
-        eventId: event.id,
-        userId: user.id,
-        OR: [{ invited: true }, { attendance: { in: [...HERE] } }],
-      },
-      select: { id: true },
-    }),
-  ]);
-  return { canUse: Boolean(protocol || participant), canManage: protocol === "full" };
+  const access = await getProtocolAccess(user, event.showId, event.id);
+  return { canUse: access !== null, canManage: access === "full" };
+}
+
+/**
+ * Eigene Uploads, die nie an einen Eintrag gehängt wurden (Eingabe abgebrochen), nach einem Tag
+ * entfernen.
+ */
+export async function deleteAbandonedMedia(userId: string, now = new Date()) {
+  const ids = await prisma.eventMedia.findMany({
+    where: {
+      uploadedById: userId,
+      noteId: null,
+      blockId: null,
+      gallery: false,
+      createdAt: { lt: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+    },
+    select: { id: true },
+  });
+  if (ids.length) await deleteEventMedia({ id: { in: ids.map((row) => row.id) } });
 }
 
 /** Löscht Medien samt Dateien im Speicher. */
@@ -205,68 +210,6 @@ export async function removeStoredObjects(objects: readonly { bucket: string; ke
   await deleteObjects(objects).catch((error) =>
     console.error("[media] Dateien gelöschter Termine nicht entfernt", error),
   );
-}
-
-/** Medien eines Termins für die Anzeige (ohne Speicherpfade). */
-export type EventMediaItem = {
-  id: string;
-  kind: EventMediaKind;
-  gallery: boolean;
-  blockId: string | null;
-  noteId: string | null;
-  fileName: string;
-  mimeType: string;
-  fileSize: number;
-  durationSec: number | null;
-  width: number | null;
-  height: number | null;
-  caption: string | null;
-  uploadedById: string | null;
-  createdAt: string;
-  url: string;
-  thumbUrl: string | null;
-};
-
-export function mediaUrl(eventId: string, mediaId: string, thumb = false) {
-  return `/api/termine/${eventId}/media/${mediaId}${thumb ? "?vorschau=1" : ""}`;
-}
-
-export function toEventMediaItem(row: {
-  id: string;
-  eventId: string;
-  kind: EventMediaKind;
-  gallery: boolean;
-  blockId: string | null;
-  noteId: string | null;
-  fileName: string;
-  mimeType: string;
-  fileSize: number;
-  durationSec: number | null;
-  width: number | null;
-  height: number | null;
-  caption: string | null;
-  uploadedById: string | null;
-  thumbKey: string | null;
-  createdAt: Date;
-}): EventMediaItem {
-  return {
-    id: row.id,
-    kind: row.kind,
-    gallery: row.gallery,
-    blockId: row.blockId,
-    noteId: row.noteId,
-    fileName: row.fileName,
-    mimeType: row.mimeType,
-    fileSize: row.fileSize,
-    durationSec: row.durationSec,
-    width: row.width,
-    height: row.height,
-    caption: row.caption,
-    uploadedById: row.uploadedById,
-    createdAt: row.createdAt.toISOString(),
-    url: mediaUrl(row.eventId, row.id),
-    thumbUrl: row.thumbKey ? mediaUrl(row.eventId, row.id, true) : null,
-  };
 }
 
 export async function readEventMedia(eventId: string) {

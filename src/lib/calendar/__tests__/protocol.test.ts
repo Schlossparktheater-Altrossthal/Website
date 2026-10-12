@@ -55,6 +55,7 @@ const base: ProtocolState = {
     },
   ],
   guests: [],
+  media: [],
 };
 
 describe("applyProtocolOp", () => {
@@ -184,6 +185,61 @@ describe("Notizen bearbeiten", () => {
     expect(
       protocolOpSchema.safeParse({ type: "note-edit", noteId: "n1", text: "neu" }).success,
     ).toBe(true);
+  });
+});
+
+describe("Anhänge", () => {
+  const upload = {
+    id: "m1",
+    kind: "AUDIO" as const,
+    gallery: false,
+    blockId: null,
+    noteId: null,
+    fileName: "memo.webm",
+    mimeType: "audio/webm",
+    fileSize: 10,
+    durationSec: 3,
+    width: null,
+    height: null,
+    caption: null,
+    uploadedById: "u1",
+    createdAt: "2026-10-12T10:00:00.000Z",
+    url: "/m1",
+    thumbUrl: null,
+  };
+
+  it("hängt hochgeladene Dateien an den neuen Eintrag", () => {
+    const next = applyProtocolOp(
+      { ...base, media: [upload] },
+      {
+        type: "note-add",
+        noteId: "n1",
+        noteType: "NOTE",
+        text: "Memo",
+        blockId: null,
+        dueAt: null,
+        mediaIds: ["m1"],
+      },
+    );
+    expect(next.media[0].noteId).toBe("n1");
+  });
+
+  it("hängt beim Bearbeiten weitere an, aber nicht schon vergebene um", () => {
+    const state = { ...base, media: [upload, { ...upload, id: "m2", noteId: "andere" }] };
+    const added = applyProtocolOp(state, {
+      type: "note-add",
+      noteId: "n1",
+      noteType: "NOTE",
+      text: "Memo",
+      blockId: null,
+      dueAt: null,
+    });
+    const edited = applyProtocolOp(added, {
+      type: "note-edit",
+      noteId: "n1",
+      mediaIds: ["m1", "m2"],
+    });
+    expect(edited.media.map((media) => media.noteId)).toEqual(["n1", "andere"]);
   });
 });
 

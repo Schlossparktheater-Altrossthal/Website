@@ -24,7 +24,9 @@ export default async function ProbePage({ params }: { params: Promise<{ eventId:
   if (event.status === "DRAFT" || event.status === "CANCELLED") {
     redirect(`/mitglieder/termine/${eventId}`);
   }
-  const access = event.departmentId ? null : await getProtocolAccess(session.user, event.showId);
+  const access = event.departmentId
+    ? null
+    : await getProtocolAccess(session.user, event.showId, event.id);
   if (!access) redirect(`/mitglieder/termine/${eventId}`);
   const preparing =
     !event.actualStart && event.start.getTime() - new Date().getTime() > PREPARE_UNTIL_MS;
@@ -33,7 +35,7 @@ export default async function ProbePage({ params }: { params: Promise<{ eventId:
     { id: event.id, label: event.title || "Termin", href: `/mitglieder/termine/${event.id}` },
     {
       id: `${event.id}-probe`,
-      label: access === "notes" ? "Hinweise" : "Probenmodus",
+      label: access === "full" ? "Probenmodus" : access === "notes" ? "Hinweise" : "Notizen",
       isCurrent: true,
     },
   ];
@@ -41,7 +43,13 @@ export default async function ProbePage({ params }: { params: Promise<{ eventId:
   return (
     <div className="space-y-4">
       <PageHeader
-        title={access === "notes" ? "Hinweise zur Probe" : "Probenmodus"}
+        title={
+          access === "full"
+            ? "Probenmodus"
+            : access === "notes"
+              ? "Hinweise zur Probe"
+              : "Notizen & Fotos zur Probe"
+        }
         breadcrumbs={breadcrumbs}
       />
       <ProbeMode

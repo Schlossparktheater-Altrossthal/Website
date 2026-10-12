@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CircleDashed, CircleSlash, Play, WifiOff } from "lucide-react";
 
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon } from "@/components/ui/action-icons";
+import { AttachButtons, MediaAttachments } from "@/components/media/media-attachments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +22,7 @@ import {
   resolveCurrentBlock,
   type OutcomeValue,
   type ProtocolBlock,
+  type ProtocolMedia,
   type ProtocolCandidate,
   type ProtocolOp,
   type ProtocolState,
@@ -101,10 +104,13 @@ function CurrentBlock({
   block,
   running,
   dispatch,
+  media,
 }: {
   block: ProtocolBlock;
   running: boolean;
   dispatch: Dispatch;
+  /** Anhänge des Punkts (Musik/Einspieler griffbereit). */
+  media: readonly ProtocolMedia[];
 }) {
   const planned = span(block.plannedStart, block.plannedEnd);
   return (
@@ -124,6 +130,7 @@ function CurrentBlock({
             .join(" · ")}
         </p>
       </div>
+      <MediaAttachments media={media} />
       {running ? (
         <div className="grid grid-cols-3 gap-2">
           {OUTCOME_OPTIONS.map((option) => (
@@ -178,13 +185,18 @@ function BlockRow({
   count,
   dispatch,
   onMove,
+  eventId,
+  media,
 }: {
   block: ProtocolBlock;
   index: number;
   count: number;
   dispatch: Dispatch;
   onMove: (from: number, to: number) => void;
+  eventId: string;
+  media: readonly ProtocolMedia[];
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState(block.note);
   const planned = span(block.plannedStart, block.plannedEnd);
@@ -206,6 +218,7 @@ function BlockRow({
               planned ? `geplant ${planned}` : block.unplanned ? "spontan" : null,
               actual ? `ist ${actual}` : null,
               block.note ? "Notiz" : null,
+              media.length ? `${media.length} ${media.length === 1 ? "Anhang" : "Anhänge"}` : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -243,6 +256,20 @@ function BlockRow({
               onBlur={() => {
                 if (note !== block.note) dispatch({ type: "block-note", blockId: block.id, note });
               }}
+            />
+          </div>
+          <div className="space-y-2">
+            <MediaAttachments
+              media={media}
+              canDelete={() => true}
+              onDeleted={() => router.refresh()}
+            />
+            <AttachButtons
+              eventId={eventId}
+              fields={{ blockId: block.id }}
+              voice={false}
+              fileLabel="Musik / PDF"
+              onUploaded={() => router.refresh()}
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -437,7 +464,7 @@ export function ProbeMode({
   assignees: AssigneeOption[];
   /** Wann das Protokoll zuletzt verschickt wurde. */
   sentAt: string | null;
-  /** `notes`: Gewerk-Leitung, nur Notizen und Aufgaben. */
+  /** `notes`: Gewerk-Leitung, nur Notizen und Aufgaben; `contribute`: nur Notizen. */
   access: ProtocolAccess;
   userId: string;
   /** Mehr als eine Stunde vor Beginn und noch nicht begonnen (Stand beim Laden). */
@@ -497,9 +524,11 @@ export function ProbeMode({
             <SyncBadge status={status} pending={pending} />
           </div>
           <p className="text-xs text-muted-foreground">
-            Geplant {span(plannedStart, plannedEnd)} Uhr · Hinweise und Aufgaben für die Probe
-            hinterlegen, z. B. was dein Gewerk braucht oder vorbereitet. Ändern kannst du nur deine
-            eigenen.
+            Geplant {span(plannedStart, plannedEnd)} Uhr ·{" "}
+            {access === "contribute"
+              ? "Notizen, Fotos und Sprachmemos zur Probe festhalten."
+              : "Hinweise und Aufgaben für die Probe hinterlegen, z. B. was dein Gewerk braucht oder vorbereitet."}{" "}
+            Ändern kannst du nur deine eigenen.
           </p>
         </div>
         <NotesPanel
@@ -509,6 +538,10 @@ export function ProbeMode({
           dispatch={dispatch}
           canChange={(note) => note.authorId === null || note.authorId === userId}
           preparing={preparing}
+          eventId={eventId}
+          userId={userId}
+          canManageMedia={false}
+          types={access === "contribute" ? ["NOTE"] : undefined}
         />
       </div>
     );
@@ -607,7 +640,12 @@ export function ProbeMode({
       {tab === "ablauf" ? (
         <div className="space-y-4">
           {preparing ? null : current ? (
-            <CurrentBlock block={current.block} running={current.running} dispatch={dispatch} />
+            <CurrentBlock
+              block={current.block}
+              running={current.running}
+              dispatch={dispatch}
+              media={state.media.filter((media) => media.blockId === current.block.id)}
+            />
           ) : state.blocks.length ? (
             <p className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
               Alle Punkte sind erledigt.
@@ -632,6 +670,8 @@ export function ProbeMode({
                     count={state.blocks.length}
                     dispatch={dispatch}
                     onMove={move}
+                    eventId={eventId}
+                    media={state.media.filter((media) => media.blockId === block.id)}
                   />
                 ))}
               </ol>
@@ -664,6 +704,9 @@ export function ProbeMode({
           dispatch={dispatch}
           canChange={() => true}
           preparing={preparing}
+          eventId={eventId}
+          userId={userId}
+          canManageMedia
         />
       )}
 

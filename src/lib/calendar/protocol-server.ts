@@ -25,6 +25,7 @@ import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { toEventMediaItem } from "@/lib/media/event-media-item";
 import { deleteObjects } from "@/lib/storage/s3";
 
 type PermissionUser = Parameters<typeof hasPermission>[0];
@@ -39,23 +40,41 @@ export async function canEditProtocol(user: PermissionUser, showId: string | nul
   return planner || protocol;
 }
 
-/** Siehe {@link ProtocolAccess}. */
+const HERE = ["PRESENT", "LATE", "LEFT_EARLY"] as const;
+
+/**
+ * Siehe {@link ProtocolAccess}. Ohne `eventId` nur `full`/`notes` (z. B. Dashboard-Schnellzugriff);
+ * mit `eventId` zusätzlich `contribute` für Eingeladene und Anwesende dieses Termins.
+ */
 export async function getProtocolAccess(
   user: PermissionUser,
   showId: string | null,
+  eventId?: string,
 ): Promise<ProtocolAccess | null> {
   if (await canEditProtocol(user, showId)) return "full";
-  if (!showId || !user?.id) return null;
-  const lead = await prisma.departmentMembership.findFirst({
+  if (!user?.id) return null;
+  const lead = showId
+    ? await prisma.departmentMembership.findFirst({
+        where: {
+          userId: user.id,
+          status: "active",
+          role: { in: ["lead", "deputy"] },
+          department: { showId },
+        },
+        select: { id: true },
+      })
+    : null;
+  if (lead) return "notes";
+  if (!eventId) return null;
+  const participant = await prisma.eventParticipant.findFirst({
     where: {
+      eventId,
       userId: user.id,
-      status: "active",
-      role: { in: ["lead", "deputy"] },
-      department: { showId },
+      OR: [{ invited: true }, { attendance: { in: [...HERE] } }],
     },
     select: { id: true },
   });
-  return lead ? "notes" : null;
+  return participant ? "contribute" : null;
 }
 
 const iso = (date: Date | null | undefined) => date?.toISOString() ?? null;
@@ -146,6 +165,7 @@ export async function readProtocol(eventId: string) {
           assignees: { select: ASSIGNEE_SELECT },
         },
       },
+      media: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!event) return null;
@@ -191,6 +211,7 @@ export async function readProtocol(eventId: string) {
       })
       .sort((a, b) => a.name.localeCompare(b.name, "de")),
     guests: event.guests,
+    media: event.media.map(toEventMediaItem),
   };
 
   const present = new Set(state.people.map((person) => person.userId));
@@ -308,12 +329,15 @@ export async function applyProtocolOpsToDb(
   const newNotes: string[] = [];
   for (const op of ops) {
     try {
-      if (access === "notes" && !NOTE_OPS.has(op.type)) {
+      if (access !== "full" && !NOTE_OPS.has(op.type)) {
         throw new Error("Nur Notizen erlaubt");
+      }
+      if (access === "contribute" && !contributeAllowed(op)) {
+        throw new Error("Nur Notizen ohne Zuständige erlaubt");
       }
       const orphans: StoredObject[] = [];
       const created = await prisma.$transaction((tx) =>
-        applyOne(tx, eventId, op, authorId, access === "notes", orphans),
+        applyOne(tx, eventId, op, authorId, access !== "full", orphans),
       );
       // Anhänge gelöschter Einträge auch aus dem Speicher entfernen (erst nach dem Commit).
       if (orphans.length) {
@@ -338,6 +362,37 @@ export async function applyProtocolOpsToDb(
 }
 
 const NOTE_OPS: ReadonlySet<ProtocolOp["type"]> = new Set(["note-add", "note-edit", "note-remove"]);
+
+/** `contribute`: nur einfache Notizen – keine Entscheidungen, Aufgaben oder Rundmails. */
+function contributeAllowed(op: ProtocolOp) {
+  if (op.type === "note-add") return op.noteType === "NOTE" && !op.notify;
+  if (op.type === "note-edit") {
+    return (op.noteType ?? "NOTE") === "NOTE" && !op.assignees?.length && !op.dueAt;
+  }
+  return op.type === "note-remove";
+}
+
+/** Eigene, noch freie Anhänge an einen Eintrag hängen. */
+async function linkNoteMedia(
+  tx: Prisma.TransactionClient,
+  eventId: string,
+  noteId: string,
+  authorId: string,
+  mediaIds: readonly string[] | undefined,
+) {
+  if (!mediaIds?.length) return;
+  await tx.eventMedia.updateMany({
+    where: {
+      id: { in: [...mediaIds] },
+      eventId,
+      uploadedById: authorId,
+      noteId: null,
+      blockId: null,
+      gallery: false,
+    },
+    data: { noteId },
+  });
+}
 
 /** Wer für eine Zuständigkeit handelt: die Person, die Besetzung der Figur oder die Gewerk-Leitung. */
 async function recipientsOf(row: AssigneeRow) {
@@ -609,6 +664,7 @@ async function applyOne(
       for (const assignee of noteAddAssignees(op)) {
         await createAssignee(tx, note, assignee, authorId);
       }
+      await linkNoteMedia(tx, eventId, op.noteId, authorId, op.mediaIds);
       // Ältere Geräte schicken kein `notify`: Aufgaben wie bisher melden, Notizen nicht.
       const notifyAbout = op.notify ?? task;
       if (!notifyAbout) return null;
@@ -674,6 +730,7 @@ async function applyOne(
           editedById: authorId,
         },
       });
+      await linkNoteMedia(tx, eventId, note.id, authorId, op.mediaIds);
       if (!rowIds.length || op.notify === false) return null;
       return { kind: "task", id: note.id, rowIds };
     }

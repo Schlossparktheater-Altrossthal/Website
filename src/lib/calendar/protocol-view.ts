@@ -4,6 +4,7 @@ import {
   ATTENDANCE_LABELS,
   ATTENDANCE_MARKS,
   type AttendanceMarkValue,
+  type ProtocolMedia,
 } from "@/lib/calendar/protocol";
 import {
   ASSIGNEE_SELECT,
@@ -15,6 +16,7 @@ import {
 import { blockLabel } from "@/lib/calendar/scene-schedule";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { getUserDisplayName } from "@/lib/names";
+import { toEventMediaItem } from "@/lib/media/event-media-item";
 import { prisma } from "@/lib/prisma";
 
 export type ProtocolView = {
@@ -33,9 +35,10 @@ export type ProtocolView = {
     actualEnd: string | null;
     note: string | null;
     unplanned: boolean;
+    media: ProtocolMedia[];
   }[];
-  decisions: { id: string; text: string; block: string | null }[];
-  notes: { id: string; text: string; block: string | null }[];
+  decisions: { id: string; text: string; block: string | null; media: ProtocolMedia[] }[];
+  notes: { id: string; text: string; block: string | null; media: ProtocolMedia[] }[];
   tasks: (MyTask & {
     /** Zuständige mit Erledigt-Stand. */
     assignees: { label: string; done: boolean }[];
@@ -84,6 +87,7 @@ export async function readProtocolView(
       },
       guests: { orderBy: { createdAt: "asc" }, select: { name: true } },
       notes: { orderBy: { createdAt: "asc" }, include: { assignees: { select: ASSIGNEE_SELECT } } },
+      media: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!event) return null;
@@ -92,6 +96,7 @@ export async function readProtocolView(
     event.protocolSummary ||
     event.participants.length ||
     event.notes.length ||
+    event.media.length ||
     event.blocks.some((block) => block.outcome || block.actualStart || block.note);
   if (!hasContent) return null;
 
@@ -106,6 +111,10 @@ export async function readProtocolView(
           ?.label ?? "unbekannt")
       : "unbekannt";
   };
+
+  const media = event.media.map(toEventMediaItem);
+  const mediaOf = (key: "noteId" | "blockId", id: string) =>
+    media.filter((item) => item[key] === id);
 
   const taskRows = event.notes.filter((note) => note.type === "TASK");
   const tasks = await Promise.all(
@@ -168,6 +177,7 @@ export async function readProtocolView(
         actualEnd: block.actualEnd?.toISOString() ?? null,
         note: block.note,
         unplanned: block.unplanned,
+        media: mediaOf("blockId", block.id),
       })),
     decisions: event.notes
       .filter((note) => note.type === "DECISION")
@@ -175,6 +185,7 @@ export async function readProtocolView(
         id: note.id,
         text: note.text,
         block: note.blockId ? (labels.get(note.blockId) ?? null) : null,
+        media: mediaOf("noteId", note.id),
       })),
     notes: event.notes
       .filter((note) => note.type === "NOTE")
@@ -182,6 +193,7 @@ export async function readProtocolView(
         id: note.id,
         text: note.text,
         block: note.blockId ? (labels.get(note.blockId) ?? null) : null,
+        media: mediaOf("noteId", note.id),
       })),
     tasks,
   };

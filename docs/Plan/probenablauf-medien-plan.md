@@ -126,7 +126,7 @@ Weitere sinnvolle Kleinigkeiten (optional, eigene Phase):
 2. **Mehrere Zuständige** – Migration `EventNoteAssignee`, Picker, erledigt je Zuständigem, Board-Karten je Gewerk, Meine Aufgaben, Benachrichtigungen.
 3. **Infrastruktur** – Buckets + Zugang in RustFS, Secrets über Vault, zweite Kopie (rclone-CronJob), Monitoring Belegung.
 4. **Medien-Grundlage** – **erledigt 2026-10-12** (1992156a): `EventMedia`, `src/lib/storage/s3.ts`, `src/lib/media/event-media.ts`, Routen `/api/termine/[eventId]/media[/id]` (GET Liste/Datei mit Range und `?vorschau=1`, POST Upload durch die App, DELETE). Löschen von Einträgen/Terminen räumt den Speicher auf (Ausnahme: Meilenstein-Spiegeltermin beim Abwählen). Stufe `contribute` für Notizen kommt mit Phase 4 (UI).
-5. **Anhänge an Notizen/Blöcken** – Foto + Sprachmemo im Notiz-Editor, Musik am Block, Player im Probenmodus und auf der Terminseite.
+5. **Anhänge an Notizen/Blöcken** – Foto + Sprachmemo im Notiz-Editor, Musik am Block, Player im Probenmodus und auf der Terminseite. – **erledigt 2026-10-12**: Foto/Sprachmemo/Datei im Notiz-Editor (Upload sofort, Verknüpfung über `mediaIds` in `note-add`/`note-edit`), Musik/PDF am Ablaufpunkt mit Player (auch beim aktuellen Punkt), Anhänge in der Protokoll-Ansicht; Stufe `contribute` (Eingeladene/Anwesende: nur Notizen, eigene); `Permissions-Policy` erlaubt jetzt `microphone=(self)`.
 6. **Probenfotos-Galerie** – Abschnitt Fotos, Mehrfach-Upload, Lightbox (Bild-Betrachter aus v1.14.0 wiederverwenden), Fotoerlaubnis-Hinweis.
 7. **Neue Bausteintypen** – Enum/Vorlagen, Editor-Auswahl, Icons, Durchlauf mit mehreren Szenen, Planungshilfen (probbare Szenen) berücksichtigen.
    6b. **Saisonende** – Medien der Produktion schreibgeschützt.

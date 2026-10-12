@@ -49,9 +49,30 @@ export function uniqueAssignees(assignees: readonly TaskAssignee[]): TaskAssigne
 /**
  * Wie weit jemand den Probenmodus nutzen darf: `full` führt das Protokoll, `notes` (Leitung oder
  * Stellvertretung eines Gewerks der Produktion) darf nur Notizen und Aufgaben hinterlegen – auch
- * schon zur Vorbereitung – und nur die eigenen ändern.
+ * schon zur Vorbereitung – und nur die eigenen ändern. `contribute` (Eingeladene und Anwesende)
+ * hinterlegt Notizen mit Fotos und Sprachmemos, nur eigene.
  */
-export type ProtocolAccess = "full" | "notes";
+export type ProtocolAccess = "full" | "notes" | "contribute";
+
+/** Datei zu einem Termin (Foto, Audio, PDF), wie die Oberfläche sie braucht. */
+export type ProtocolMedia = {
+  id: string;
+  kind: "IMAGE" | "AUDIO" | "FILE";
+  gallery: boolean;
+  blockId: string | null;
+  noteId: string | null;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  durationSec: number | null;
+  width: number | null;
+  height: number | null;
+  caption: string | null;
+  uploadedById: string | null;
+  createdAt: string;
+  url: string;
+  thumbUrl: string | null;
+};
 
 export const OUTCOMES = ["DONE", "PARTIAL", "SKIPPED"] as const;
 export type OutcomeValue = (typeof OUTCOMES)[number];
@@ -97,6 +118,8 @@ export const protocolOpSchema = z.discriminatedUnion("type", [
     dueAt: z.string().date().nullable(),
     /** Aufgabe: Zuständige benachrichtigen, Notiz/Entscheidung: alle Eingeladenen. */
     notify: z.boolean().optional(),
+    /** Vorher hochgeladene eigene Anhänge, die zu diesem Eintrag gehören. */
+    mediaIds: z.array(id).max(30).optional(),
   }),
   /** Ändert nur die angegebenen Felder. */
   z.object({
@@ -109,6 +132,8 @@ export const protocolOpSchema = z.discriminatedUnion("type", [
     dueAt: z.string().date().nullable().optional(),
     /** Neu hinzugekommene Zuständige benachrichtigen. */
     notify: z.boolean().optional(),
+    /** Zusätzliche, vorher hochgeladene eigene Anhänge. */
+    mediaIds: z.array(id).max(30).optional(),
   }),
   z.object({ type: z.literal("note-remove"), noteId: id }),
   z.object({ type: z.literal("summary"), text: z.string().max(8000) }),
@@ -186,6 +211,7 @@ export type ProtocolState = {
   blocks: ProtocolBlock[];
   people: ProtocolPerson[];
   guests: { id: string; name: string }[];
+  media: ProtocolMedia[];
 };
 
 /** Mitglied, das spontan dazukommen kann (für „+ Person“). */
@@ -276,35 +302,53 @@ export function applyProtocolOp(
       return { ...state, guests: state.guests.filter((guest) => guest.id !== op.guestId) };
     case "note-add":
       if (state.notes.some((note) => note.id === op.noteId)) return state;
-      return {
-        ...state,
-        notes: [
-          ...state.notes,
-          {
-            id: op.noteId,
-            authorId: null,
-            authorName: null,
-            type: op.noteType,
-            text: op.text,
-            blockId: op.blockId,
-            assignees: noteAddAssignees(op).map((assignee) => ({ ...assignee, doneAt: null })),
-            dueAt: op.noteType === "TASK" ? op.dueAt : null,
-            doneAt: null,
-            createdAt: new Date().toISOString(),
-            editedAt: null,
-          },
-        ],
-      };
+      return linkMedia(
+        {
+          ...state,
+          notes: [
+            ...state.notes,
+            {
+              id: op.noteId,
+              authorId: null,
+              authorName: null,
+              type: op.noteType,
+              text: op.text,
+              blockId: op.blockId,
+              assignees: noteAddAssignees(op).map((assignee) => ({ ...assignee, doneAt: null })),
+              dueAt: op.noteType === "TASK" ? op.dueAt : null,
+              doneAt: null,
+              createdAt: new Date().toISOString(),
+              editedAt: null,
+            },
+          ],
+        },
+        op.noteId,
+        op.mediaIds,
+      );
     case "note-edit":
-      return {
-        ...state,
-        notes: state.notes.map((note) => (note.id === op.noteId ? editNote(note, op) : note)),
-      };
+      return linkMedia(
+        {
+          ...state,
+          notes: state.notes.map((note) => (note.id === op.noteId ? editNote(note, op) : note)),
+        },
+        op.noteId,
+        op.mediaIds,
+      );
     case "note-remove":
       return { ...state, notes: state.notes.filter((note) => note.id !== op.noteId) };
     case "summary":
       return { ...state, summary: op.text };
   }
+}
+
+function linkMedia(state: ProtocolState, noteId: string, mediaIds: readonly string[] = []) {
+  if (!mediaIds.length) return state;
+  return {
+    ...state,
+    media: state.media.map((media) =>
+      mediaIds.includes(media.id) && !media.noteId ? { ...media, noteId } : media,
+    ),
+  };
 }
 
 /** Wendet eine Bearbeitung auf einen Eintrag an; wer Zuständiger bleibt, behält seinen Stand. */

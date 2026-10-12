@@ -41,7 +41,7 @@ export async function applyProtocolOpsAction(input: z.input<typeof inputSchema>)
   if (!event || event.status === "DRAFT" || event.status === "CANCELLED") {
     return { ok: false as const, error: "Für diesen Termin gibt es kein Protokoll.", retry: false };
   }
-  const access = await getProtocolAccess(session.user, event.showId);
+  const access = await getProtocolAccess(session.user, event.showId, eventId);
   if (!access) {
     return { ok: false as const, error: "Du darfst dieses Protokoll nicht führen.", retry: false };
   }

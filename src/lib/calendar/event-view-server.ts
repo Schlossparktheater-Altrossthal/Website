@@ -100,10 +100,11 @@ async function resolveProtocolLink(
   if (event.departmentId || (event.status !== "SCHEDULED" && event.status !== "TENTATIVE")) {
     return null;
   }
-  const access = await getProtocolAccess(user, event.showId);
+  const access = await getProtocolAccess(user, event.showId, event.id);
   if (!access) return null;
   const href = `/mitglieder/termine/${event.id}/probe`;
   if (access === "notes") return { href, label: "Hinweise zur Probe" };
+  if (access === "contribute") return { href, label: "Notizen & Fotos" };
   if ((event.end ?? event.start) < now) return { href, label: "Protokoll" };
   if (!event.actualStart && event.start.getTime() - now.getTime() > PREPARE_UNTIL_MS) {
     return { href, label: "Probe vorbereiten" };

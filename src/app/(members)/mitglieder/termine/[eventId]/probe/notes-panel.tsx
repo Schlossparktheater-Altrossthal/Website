@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { CloseIcon, EditIcon, TrashIcon } from "@/components/ui/action-icons";
+import { AttachButtons, MediaAttachments } from "@/components/media/media-attachments";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +20,7 @@ import {
   uniqueAssignees,
   type AssigneeOption,
   type NoteTypeValue,
+  type ProtocolMedia,
   type ProtocolNote,
   type ProtocolOp,
   type ProtocolState,
@@ -26,6 +29,8 @@ import {
 import { cn } from "@/lib/utils";
 
 type Dispatch = (op: ProtocolOp) => void;
+
+const NOTE_TYPES_ALL: readonly NoteTypeValue[] = ["NOTE", "DECISION", "TASK"];
 
 const TYPE_OPTIONS = (["NOTE", "DECISION", "TASK"] as const).map((value) => ({
   value,
@@ -147,6 +152,16 @@ type NoteDraft = {
   assignees: TaskAssignee[];
   dueAt: string;
   notify: boolean;
+  /** Neu hochgeladene Anhänge. */
+  mediaIds: string[];
+};
+
+/** Was der Eingabe-Bereich zum Anhängen braucht. */
+type MediaContext = {
+  eventId: string;
+  media: readonly ProtocolMedia[];
+  canDelete: (media: ProtocolMedia) => boolean;
+  onChanged: () => void;
 };
 
 /** Eingabe für einen Eintrag – zum Anlegen und zum Bearbeiten. */
@@ -159,12 +174,17 @@ function NoteForm({
   editing,
   onSubmit,
   onCancel,
+  types,
+  mediaContext,
 }: {
   state: ProtocolState;
   assignees: readonly AssigneeOption[];
   scenes: readonly SceneOption[];
   preparing: boolean;
-  initial?: Partial<NoteDraft>;
+  initial?: Partial<NoteDraft> & { id?: string };
+  /** Erlaubte Arten; nur „Notiz“ blendet Umschalter und Benachrichtigung aus. */
+  types: readonly NoteTypeValue[];
+  mediaContext: MediaContext;
   /** Bearbeiten: Benachrichtigung betrifft nur neu hinzugekommene Zuständige. */
   editing?: boolean;
   onSubmit: (draft: NoteDraft) => void;
@@ -177,7 +197,15 @@ function NoteForm({
   const [dueAt, setDueAt] = useState(initial?.dueAt ?? "");
   // Aufgaben melden die Zuständigen standardmäßig; Notizen gehen nur auf Wunsch an alle.
   const [notifyChoice, setNotifyChoice] = useState<boolean | null>(null);
-  const notify = notifyChoice ?? type === "TASK";
+  const [added, setAdded] = useState<ProtocolMedia[]>([]);
+  const notify = types.length > 1 && (notifyChoice ?? type === "TASK");
+  // Anhänge: beim Bearbeiten die vorhandenen des Eintrags plus neu hochgeladene.
+  const attached = [
+    ...mediaContext.media.filter((media) => initial?.id && media.noteId === initial.id),
+    ...added.filter(
+      (media) => !mediaContext.media.some((entry) => entry.id === media.id && entry.noteId),
+    ),
+  ];
   const running = state.blocks.find((block) => block.actualStart && !block.actualEnd);
   const effectiveBlock = state.blocks.find(
     (block) => block.id === (blockId || (editing ? "" : running?.id)),
@@ -189,8 +217,17 @@ function NoteForm({
 
   const submit = () => {
     if (!text.trim()) return;
-    onSubmit({ type, text: text.trim(), blockId, assignees: chosen, dueAt, notify });
+    onSubmit({
+      type,
+      text: text.trim(),
+      blockId,
+      assignees: chosen,
+      dueAt,
+      notify,
+      mediaIds: added.map((media) => media.id),
+    });
     if (editing) return;
+    setAdded([]);
     setText("");
     setNotifyChoice(null);
     setChosen([]);
@@ -205,16 +242,18 @@ function NoteForm({
         submit();
       }}
     >
-      <SegmentedControl
-        value={type}
-        onValueChange={(value) => {
-          setType(value);
-          setNotifyChoice(null);
-        }}
-        options={TYPE_OPTIONS}
-        fullWidth
-        aria-label="Art des Eintrags"
-      />
+      {types.length > 1 ? (
+        <SegmentedControl
+          value={type}
+          onValueChange={(value) => {
+            setType(value);
+            setNotifyChoice(null);
+          }}
+          options={TYPE_OPTIONS.filter((option) => types.includes(option.value))}
+          fullWidth
+          aria-label="Art des Eintrags"
+        />
+      ) : null}
       <Textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
@@ -248,7 +287,23 @@ function NoteForm({
           </div>
         </div>
       ) : null}
-      {editing && type !== "TASK" ? null : (
+      <MediaAttachments
+        media={attached}
+        canDelete={mediaContext.canDelete}
+        onDeleted={(media) => {
+          setAdded((current) => current.filter((entry) => entry.id !== media.id));
+          mediaContext.onChanged();
+        }}
+      />
+      <AttachButtons
+        eventId={mediaContext.eventId}
+        onUploaded={(media) => {
+          setAdded((current) => [...current, media]);
+          // Stand nachladen, damit der Anhang beim Speichern sofort am Eintrag erscheint.
+          mediaContext.onChanged();
+        }}
+      />
+      {types.length < 2 || (editing && type !== "TASK") ? null : (
         <label className="flex min-h-11 items-center gap-3 text-sm">
           <Checkbox checked={notify} onCheckedChange={(value) => setNotifyChoice(value === true)} />
           {type === "TASK"
@@ -307,11 +362,20 @@ export function NotesPanel({
   dispatch,
   canChange,
   preparing,
+  eventId,
+  userId,
+  canManageMedia,
+  types = NOTE_TYPES_ALL,
 }: {
   state: ProtocolState;
   assignees: readonly AssigneeOption[];
   scenes: readonly SceneOption[];
   dispatch: Dispatch;
+  eventId: string;
+  userId: string;
+  /** Alle Anhänge löschen dürfen (Protokollführung). */
+  canManageMedia: boolean;
+  types?: readonly NoteTypeValue[];
   /** Darf dieser Eintrag bearbeitet/gelöscht werden (Gewerk-Leitungen: nur eigene)? */
   canChange: (note: ProtocolNote) => boolean;
   /** Vor der Probe: Einträge sind Vorab-Hinweise. */
@@ -319,6 +383,13 @@ export function NotesPanel({
 }) {
   const [removing, setRemoving] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const router = useRouter();
+  const mediaContext: MediaContext = {
+    eventId,
+    media: state.media,
+    canDelete: (media) => canManageMedia || media.uploadedById === userId,
+    onChanged: () => router.refresh(),
+  };
   const running = state.blocks.find((block) => block.actualStart && !block.actualEnd);
 
   const blockLabel = (id: string | null) =>
@@ -343,6 +414,8 @@ export function NotesPanel({
         assignees={assignees}
         scenes={scenes}
         preparing={preparing}
+        types={types}
+        mediaContext={mediaContext}
         onSubmit={(draft) =>
           dispatch({
             type: "note-add",
@@ -353,6 +426,7 @@ export function NotesPanel({
             assignees: draft.type === "TASK" ? draft.assignees : [],
             dueAt: draft.type === "TASK" && draft.dueAt ? draft.dueAt : null,
             notify: draft.notify,
+            mediaIds: draft.mediaIds,
           })
         }
       />
@@ -367,8 +441,11 @@ export function NotesPanel({
                   assignees={assignees}
                   scenes={scenes}
                   preparing={preparing}
+                  types={types}
+                  mediaContext={mediaContext}
                   editing
                   initial={{
+                    id: note.id,
                     type: note.type,
                     text: note.text,
                     blockId: note.blockId ?? "",
@@ -387,13 +464,14 @@ export function NotesPanel({
                       assignees: task ? draft.assignees : [],
                       dueAt: task && draft.dueAt ? draft.dueAt : null,
                       notify: draft.notify,
+                      mediaIds: draft.mediaIds,
                     });
                     setEditingId(null);
                   }}
                 />
               </li>
             ) : (
-              <li key={note.id} className="flex items-start gap-3 px-3 py-2">
+              <li key={note.id} className="flex flex-wrap items-start gap-x-3 px-3 py-2">
                 <Badge variant="outline" className={cn("mt-0.5 shrink-0", TYPE_TONE[note.type])}>
                   {NOTE_TYPE_LABELS[note.type]}
                 </Badge>
@@ -443,6 +521,12 @@ export function NotesPanel({
                     </Button>
                   </div>
                 ) : null}
+                <MediaAttachments
+                  className="mt-2 basis-full"
+                  media={state.media.filter((media) => media.noteId === note.id)}
+                  canDelete={canChange(note) ? mediaContext.canDelete : undefined}
+                  onDeleted={mediaContext.onChanged}
+                />
               </li>
             ),
           )}

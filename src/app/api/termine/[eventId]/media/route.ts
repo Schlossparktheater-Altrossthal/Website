@@ -9,9 +9,10 @@ import {
   mediaKeys,
   mediaKindFor,
   processImage,
+  deleteAbandonedMedia,
   readEventMedia,
-  toEventMediaItem,
 } from "@/lib/media/event-media";
+import { toEventMediaItem } from "@/lib/media/event-media-item";
 import { loadMediaContext } from "@/lib/media/event-media-route";
 import { prisma } from "@/lib/prisma";
 import { broadcastRehearsalUpdated } from "@/lib/realtime/triggers";
@@ -85,12 +86,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
   }
   if (blockId) {
+    if (!access.canManage) return fail("Dateien am Ablauf hängt die Protokollführung an.", 403);
     const block = await prisma.eventBlock.findFirst({
       where: { id: blockId, eventId },
       select: { id: true },
     });
     if (!block) return fail("Ablaufpunkt nicht gefunden.", 404);
   }
+
+  await deleteAbandonedMedia(user.id).catch((error) =>
+    console.error("[media] Alte Uploads nicht aufgeräumt", error),
+  );
 
   const id = randomUUID();
   let data = new Uint8Array(await file.arrayBuffer());

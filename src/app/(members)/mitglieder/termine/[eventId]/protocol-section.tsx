@@ -3,6 +3,7 @@
 import { Check, CircleDashed, CircleSlash, CornerDownRight } from "lucide-react";
 
 import { EventTaskList } from "@/components/calendar/event-task-list";
+import { MediaAttachments } from "@/components/media/media-attachments";
 import type { ProtocolView } from "@/lib/calendar/protocol-view";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
@@ -84,7 +85,9 @@ export function ProtocolSection({ protocol }: { protocol: ProtocolView }) {
         </Section>
       ) : null}
 
-      {protocol.blocks.some((block) => block.outcome || block.actualStart || block.note) ? (
+      {protocol.blocks.some(
+        (block) => block.outcome || block.actualStart || block.note || block.media.length,
+      ) ? (
         <Section title="Ablauf">
           <ul className="divide-y divide-border">
             {protocol.blocks.map((block) => {
@@ -110,6 +113,7 @@ export function ProtocolSection({ protocol }: { protocol: ProtocolView }) {
                         {block.note}
                       </p>
                     ) : null}
+                    <MediaAttachments media={block.media} className="mt-1.5" />
                   </div>
                   {span ? (
                     <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
@@ -136,6 +140,7 @@ export function ProtocolSection({ protocol }: { protocol: ProtocolView }) {
                 {entry.block ? (
                   <span className="block text-xs text-muted-foreground">{entry.block}</span>
                 ) : null}
+                <MediaAttachments media={entry.media} className="mt-1.5" />
               </li>
             ))}
           </ul>
@@ -175,6 +180,7 @@ export function ProtocolSection({ protocol }: { protocol: ProtocolView }) {
                 {entry.block ? (
                   <span className="text-xs text-muted-foreground"> · {entry.block}</span>
                 ) : null}
+                <MediaAttachments media={entry.media} className="mt-1.5" />
               </li>
             ))}
           </ul>
