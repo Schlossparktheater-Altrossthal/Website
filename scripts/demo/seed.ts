@@ -1235,6 +1235,7 @@ async function seedEvents(
             {
               id: crypto.randomUUID(),
               type: "DEPARTMENT",
+              sceneIds: [],
               title: "Podeste und Laube bauen",
               departmentId: department.id,
               start: entry.start,

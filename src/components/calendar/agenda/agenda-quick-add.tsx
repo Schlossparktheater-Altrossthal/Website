@@ -5,7 +5,13 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { PlusIcon } from "@/components/ui/action-icons";
 import { Input } from "@/components/ui/input";
 import { ReadinessDot } from "@/components/calendar/scene-readiness-list";
-import { DEFAULT_DURATION, formatDuration, type AgendaItem } from "@/lib/calendar/agenda";
+import {
+  DEFAULT_DURATION,
+  formatDuration,
+  ITEM_TYPE_LABELS,
+  type AgendaItem,
+  type FreeItemType,
+} from "@/lib/calendar/agenda";
 import type { AudienceContext } from "@/lib/calendar/audience";
 import type { SceneReadinessStatus } from "@/lib/calendar/scene-readiness";
 import { cn } from "@/lib/utils";
@@ -13,14 +19,19 @@ import { cn } from "@/lib/utils";
 /** Vorlagen für häufige Programmpunkte. */
 export const AGENDA_PRESETS: {
   title: string;
+  type: FreeItemType;
   durationMinutes: number;
   forEveryone: boolean;
 }[] = [
-  { title: "Aufwärmen", durationMinutes: 20, forEveryone: true },
-  { title: "Einsingen", durationMinutes: 15, forEveryone: true },
-  { title: "Pause", durationMinutes: 15, forEveryone: false },
-  { title: "Durchlauf", durationMinutes: 60, forEveryone: true },
-  { title: "Auswertung / Notizen", durationMinutes: 20, forEveryone: true },
+  { title: "Aufwärmen", type: "CUSTOM", durationMinutes: 20, forEveryone: true },
+  { title: "Einsingen", type: "CUSTOM", durationMinutes: 15, forEveryone: true },
+  { title: "Pause", type: "BREAK", durationMinutes: 15, forEveryone: true },
+  { title: "Durchlauf", type: "RUN", durationMinutes: 60, forEveryone: true },
+  { title: "Musiknummer / Song", type: "MUSIC", durationMinutes: 20, forEveryone: false },
+  { title: "Technikprobe", type: "CUSTOM", durationMinutes: 45, forEveryone: false },
+  { title: "Kostüm- und Maskenprobe", type: "CUSTOM", durationMinutes: 45, forEveryone: true },
+  { title: "Besprechung", type: "CUSTOM", durationMinutes: 15, forEveryone: true },
+  { title: "Auswertung / Notizen", type: "CUSTOM", durationMinutes: 20, forEveryone: true },
 ];
 
 export type QuickAddScene = {
@@ -48,6 +59,7 @@ function blankItem(patch: Partial<AgendaItem>): AgendaItem {
     id: crypto.randomUUID(),
     type: "CUSTOM",
     sceneId: null,
+    sceneIds: [],
     departmentId: null,
     title: "",
     location: "",
@@ -113,7 +125,13 @@ export function AgendaQuickAdd({
           kind: "preset",
           key: `p-${preset.title}`,
           label: preset.title,
-          hint: `${formatDuration(preset.durationMinutes)}${preset.forEveryone ? " · für alle" : ""}`,
+          hint: [
+            preset.type !== "CUSTOM" ? ITEM_TYPE_LABELS[preset.type] : null,
+            formatDuration(preset.durationMinutes),
+            preset.forEveryone ? "für alle" : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
           preset,
         });
     }
@@ -160,7 +178,9 @@ export function AgendaQuickAdd({
       case "preset":
         onAdd(
           blankItem({
-            title: option.preset.title,
+            type: option.preset.type,
+            // Musiknummer: Titel ist der Songname – leer lassen, damit er eingetragen wird.
+            title: option.preset.type === "MUSIC" ? "" : option.preset.title,
             durationMinutes: option.preset.durationMinutes,
             forEveryone: option.preset.forEveryone,
           }),

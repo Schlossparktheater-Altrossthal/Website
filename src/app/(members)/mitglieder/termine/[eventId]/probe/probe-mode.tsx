@@ -131,7 +131,41 @@ function CurrentBlock({
         </p>
       </div>
       <MediaAttachments media={media} />
-      {running ? (
+      {block.kind === "BREAK" ? (
+        running ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() =>
+              dispatch({ type: "block-finish", blockId: block.id, at: nowIso(), outcome: "DONE" })
+            }
+          >
+            Pause vorbei
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="lg"
+              className="flex-1"
+              onClick={() => dispatch({ type: "block-start", blockId: block.id, at: nowIso() })}
+            >
+              Pause beginnen
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              onClick={() =>
+                dispatch({ type: "block-finish", blockId: block.id, at: null, outcome: "SKIPPED" })
+              }
+            >
+              Überspringen
+            </Button>
+          </div>
+        )
+      ) : running ? (
         <div className="grid grid-cols-3 gap-2">
           {OUTCOME_OPTIONS.map((option) => (
             <Button

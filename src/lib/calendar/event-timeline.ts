@@ -2,7 +2,7 @@
 export type TimelineBlock = {
   id: string;
   label: string;
-  kind: "SCENE" | "DEPARTMENT" | "CUSTOM";
+  kind: "SCENE" | "DEPARTMENT" | "CUSTOM" | "RUN" | "MUSIC" | "BREAK";
   startsAt: string | null;
   endsAt: string | null;
   location: string | null;

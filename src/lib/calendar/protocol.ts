@@ -144,7 +144,7 @@ export type ProtocolOp = z.infer<typeof protocolOpSchema>;
 export type ProtocolBlock = {
   id: string;
   label: string;
-  kind: "SCENE" | "DEPARTMENT" | "CUSTOM";
+  kind: "SCENE" | "DEPARTMENT" | "CUSTOM" | "RUN" | "MUSIC" | "BREAK";
   sceneId: string | null;
   plannedStart: string | null;
   plannedEnd: string | null;

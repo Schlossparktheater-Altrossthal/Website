@@ -72,7 +72,7 @@ export function computePersonalWindows(
 }
 
 export type BlockLabelSource = {
-  type: "SCENE" | "DEPARTMENT" | "CUSTOM";
+  type: "SCENE" | "DEPARTMENT" | "CUSTOM" | "RUN" | "MUSIC" | "BREAK";
   title: string | null;
   location?: string | null;
   scene: { identifier: string | null; sequence: number; title: string | null } | null;
@@ -90,5 +90,14 @@ export function blockLabel(block: BlockLabelSource) {
     const name = block.department?.name ?? "Gewerk";
     return `${block.title ? `${block.title} (Gewerk ${name})` : `Gewerk ${name}`}${room}`;
   }
-  return `${block.title || "Programmpunkt"}${room}`;
+  const fallback =
+    block.type === "RUN"
+      ? "Durchlauf"
+      : block.type === "MUSIC"
+        ? "Musiknummer"
+        : block.type === "BREAK"
+          ? "Pause"
+          : "Programmpunkt";
+  const prefix = block.type === "MUSIC" ? "♪ " : "";
+  return `${prefix}${block.title || fallback}${room}`;
 }

@@ -96,6 +96,7 @@ async function main() {
         {
           id: crypto.randomUUID(),
           type: "DEPARTMENT",
+          sceneIds: [],
           title: "Podeste bauen",
           departmentId: department.id,
           start: "18:30",
@@ -111,6 +112,7 @@ async function main() {
         {
           id: crypto.randomUUID(),
           type: "CUSTOM",
+          sceneIds: [],
           title: "Einsingen",
           departmentId: null,
           start: "18:00",

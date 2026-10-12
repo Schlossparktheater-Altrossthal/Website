@@ -26,7 +26,9 @@ const optionalTime = z.union([z.string().regex(TIME), z.literal("")]);
 export const blockInputSchema = z
   .object({
     id: z.string().regex(/^[\w-]{8,40}$/),
-    type: z.enum(["DEPARTMENT", "CUSTOM"]),
+    type: z.enum(["DEPARTMENT", "CUSTOM", "RUN", "MUSIC", "BREAK"]),
+    /** Durchlauf: abgedeckte Szenen. */
+    sceneIds: z.array(z.string().min(1).max(40)).max(80).default([]),
     title: z.string().trim().max(120).default(""),
     departmentId: z.string().min(1).nullable().default(null),
     start: optionalTime.default(""),
@@ -119,14 +121,14 @@ export async function saveEventBlocks(
       departmentId: block.type === "DEPARTMENT" ? block.departmentId : null,
       order: order.includes(block.id) ? order.indexOf(block.id) : 1000 + index,
       track: block.track,
-      forEveryone: block.type === "CUSTOM" && block.forEveryone,
+      forEveryone: block.type !== "DEPARTMENT" && block.forEveryone,
     };
     const timing = { durationMinutes: block.durationMinutes, fixedStart: block.fixedStart };
     const range = toRange(dateKey, block.start, block.end, eventStart);
     // Gewerk-Bausteine: Raum und Beschreibung pflegt die Gewerk-Leitung, die Zeiten auch –
     // außer die Planung hat sie gerade selbst geändert.
     const own =
-      block.type === "CUSTOM"
+      block.type !== "DEPARTMENT"
         ? {
             ...range,
             ...timing,
@@ -143,6 +145,13 @@ export async function saveEventBlocks(
     if (!updated.count) {
       await tx.eventBlock.create({
         data: { id: block.id, eventId, ...common, ...range, ...timing, ...own },
+      });
+    }
+    await tx.eventBlockScene.deleteMany({ where: { blockId: block.id } });
+    if (block.type === "RUN" && block.sceneIds.length) {
+      await tx.eventBlockScene.createMany({
+        data: [...new Set(block.sceneIds)].map((sceneId) => ({ blockId: block.id, sceneId })),
+        skipDuplicates: true,
       });
     }
   }
@@ -277,6 +286,7 @@ export async function readEventSchedule(eventId: string): Promise<{
           fixedStart: true,
           track: true,
           forEveryone: true,
+          runScenes: { select: { sceneId: true } },
         },
       },
     },
@@ -304,6 +314,7 @@ export async function readEventSchedule(eventId: string): Promise<{
     blocks.push({
       id: block.id,
       type: block.type,
+      sceneIds: block.runScenes.map((entry) => entry.sceneId),
       title: block.title ?? "",
       departmentId: block.departmentId,
       start: formatTime(block.startsAt),
@@ -328,6 +339,25 @@ export async function readEventSchedule(eventId: string): Promise<{
   };
 }
 
+/** Szenen aus Durchläufen – zählen für Statistik und Szenen-Plan wie eigene Szenen-Punkte. */
+async function loadRunEntries(showId: string) {
+  const rows = await prisma.eventBlockScene.findMany({
+    where: {
+      scene: { showId },
+      block: { type: "RUN", event: { kind: "REHEARSAL", status: visibleEventStatus } },
+    },
+    select: {
+      sceneId: true,
+      block: { select: { outcome: true, event: { select: { id: true, start: true } } } },
+    },
+  });
+  return rows.map((row) => ({
+    sceneId: row.sceneId as string | null,
+    outcome: row.block.outcome,
+    event: row.block.event,
+  }));
+}
+
 export type SceneStats = Record<
   string,
   { rehearsed: number; lastRehearsedAt: string | null; planned: number }
@@ -344,7 +374,7 @@ export async function loadSceneStats(showId: string | null, now = new Date()): P
     select: { sceneId: true, outcome: true, event: { select: { start: true } } },
   });
   const stats: SceneStats = {};
-  for (const entry of entries) {
+  for (const entry of [...entries, ...(await loadRunEntries(showId))]) {
     if (!entry.sceneId) continue;
     const current = (stats[entry.sceneId] ??= { rehearsed: 0, lastRehearsedAt: null, planned: 0 });
     if (entry.event.start > now) {
@@ -371,7 +401,7 @@ export async function loadScenePlanEntries(
     },
     select: { sceneId: true, outcome: true, event: { select: { id: true, start: true } } },
   });
-  return entries.flatMap((entry) =>
+  return [...entries, ...(await loadRunEntries(showId))].flatMap((entry) =>
     entry.sceneId && entry.outcome !== "SKIPPED"
       ? [
           {

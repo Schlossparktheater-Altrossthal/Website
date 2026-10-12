@@ -897,6 +897,7 @@ model Scene {
   characters      SceneCharacter[]
   breakdownItems  SceneBreakdownItem[]
   rehearsals      EventBlock[]
+  runBlocks       EventBlockScene[]
   objectScenes    ObjectScene[]
   requirements    SceneRequirement[]
 
@@ -1652,6 +1653,23 @@ enum EventBlockType {
   DEPARTMENT
   /// Freier Baustein (z. B. Einsingen)
   CUSTOM
+  /// Durchlauf mehrerer Szenen (Akt, ganzes Stück); die Szenen zählen danach als geprobt
+  RUN
+  /// Musiknummer/Song, Choreo; Einspieler hängt am Punkt
+  MUSIC
+  /// Pause: keine Teilnehmenden, kein Ergebnis
+  BREAK
+}
+
+/// Szenen, die ein Durchlauf abdeckt (ohne eigene Einladung – die regeln die Zielgruppen).
+model EventBlockScene {
+  blockId String
+  sceneId String
+  block   EventBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  scene   Scene      @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@id([blockId, sceneId])
+  @@index([sceneId])
 }
 
 /// Baustein eines Termins in Reihenfolge, optional mit Uhrzeit und Raum (auch parallel);
@@ -1688,6 +1706,7 @@ model EventBlock {
   department      Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   notes           EventNote[]
   media           EventMedia[]
+  runScenes       EventBlockScene[]
 
   @@unique([eventId, sceneId])
   @@index([sceneId])

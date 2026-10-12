@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   computeAgendaTiming,
   computePersonSchedules,
+  agendaFromSchedule,
   findParallelConflicts,
+  itemPeople,
   layoutParallelTracks,
+  scheduleFromAgenda,
   segmentAgenda,
   summarizeSchedules,
   toTime,
@@ -40,6 +43,7 @@ function item(id: string, patch: Partial<AgendaItem> = {}): AgendaItem {
     id,
     type: "CUSTOM",
     sceneId: null,
+    sceneIds: [],
     departmentId: null,
     title: id,
     location: "",
@@ -182,5 +186,34 @@ describe("layoutParallelTracks", () => {
     if (segment?.kind !== "tracks") throw new Error("keine Spuren");
     const { placements } = layoutParallelTracks(segment.tracks, timing.times);
     expect(placements.b).toEqual({ column: 1, rowStart: 1, rowEnd: 2 });
+  });
+});
+
+describe("weitere Bausteintypen", () => {
+  it("Durchlauf: Beteiligt ist die Besetzung der abgedeckten Szenen, Pause ist leer", () => {
+    expect(
+      itemPeople(item("run", { type: "RUN", sceneIds: ["s2", "s3"] }), context).sort(),
+    ).toEqual(["ben", "max"]);
+    expect(itemPeople(item("pause", { type: "BREAK" }), context)).toEqual([]);
+  });
+
+  it("speichert Szenen nur beim Durchlauf und „für alle“ bei allen freien Arten", () => {
+    const items = [
+      item("run", { type: "RUN", sceneIds: ["s1", "s3"], forEveryone: true }),
+      item("song", { type: "MUSIC", sceneIds: ["s1"] }),
+      item("pause", { type: "BREAK", forEveryone: true }),
+    ];
+    const stored = scheduleFromAgenda(items, computeAgendaTiming(items, "18:00"), "TOGETHER");
+    expect(stored.blocks.map((block) => [block.type, block.sceneIds, block.forEveryone])).toEqual([
+      ["RUN", ["s1", "s3"], true],
+      ["MUSIC", [], false],
+      ["BREAK", [], true],
+    ]);
+    const back = agendaFromSchedule(stored, [], context);
+    expect(back.map((entry) => [entry.type, entry.sceneIds])).toEqual([
+      ["RUN", ["s1", "s3"]],
+      ["MUSIC", []],
+      ["BREAK", []],
+    ]);
   });
 });

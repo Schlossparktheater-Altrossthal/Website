@@ -30,6 +30,7 @@ import {
   formatDuration,
   toTime,
   type AgendaItem,
+  type FreeItemType,
   type ItemTiming,
 } from "@/lib/calendar/agenda";
 import { cn } from "@/lib/utils";
@@ -39,8 +40,19 @@ const STRIPE = {
   SCENE: "bg-info",
   DEPARTMENT: "bg-primary",
   CUSTOM: "bg-muted-foreground/50",
+  RUN: "bg-info/60",
+  MUSIC: "bg-warning",
+  BREAK: "bg-muted-foreground/25",
   everyone: "bg-success",
 } as const;
+
+/** Art eines freien Punkts umschalten (Chips, umbrechend). */
+const FREE_TYPE_OPTIONS: { value: FreeItemType; label: string }[] = [
+  { value: "CUSTOM", label: "Programmpunkt" },
+  { value: "RUN", label: "Durchlauf" },
+  { value: "MUSIC", label: "Musiknummer" },
+  { value: "BREAK", label: "Pause" },
+];
 
 export type DragHandle = {
   attributes: DraggableAttributes;
@@ -69,7 +81,10 @@ export function AgendaRow({
   trackNames,
   className,
   compact = false,
+  scenes = [],
 }: {
+  /** Szenen der Produktion (Auswahl beim Durchlauf). */
+  scenes?: readonly { id: string; label: string }[];
   item: AgendaItem;
   label: string;
   subtitle: ReactNode;
@@ -94,7 +109,10 @@ export function AgendaRow({
   /** Schmale Spalte (parallele Spuren ab md): Uhrzeit über dem Titel, Titel zweizeilig. */
   compact?: boolean;
 }) {
-  const stripe = item.forEveryone ? STRIPE.everyone : STRIPE[item.type];
+  const stripe =
+    item.forEveryone && item.type !== "RUN" && item.type !== "BREAK"
+      ? STRIPE.everyone
+      : STRIPE[item.type];
   const isScene = item.type === "SCENE";
   const isDepartment = item.type === "DEPARTMENT";
   const startLabel = timing ? toTime(timing.start) : "–";
@@ -240,6 +258,87 @@ export function AgendaRow({
 
       {expanded ? (
         <div className="mb-2 ml-3 mr-2 grid gap-3 rounded-md bg-muted p-3 sm:grid-cols-2">
+          {!isScene && !isDepartment ? (
+            <div className="space-y-1 sm:col-span-2">
+              <span className="text-xs text-muted-foreground">Art</span>
+              <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={`Art ${label}`}>
+                {FREE_TYPE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={item.type === option.value}
+                    onClick={() =>
+                      onChange({
+                        type: option.value,
+                        ...(option.value === "RUN" ? { forEveryone: true, track: 0 } : {}),
+                      })
+                    }
+                    className={cn(
+                      "min-h-9 rounded-full border px-3 text-sm",
+                      item.type === option.value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {item.type === "RUN" && scenes.length ? (
+            <div className="space-y-1 sm:col-span-2">
+              <span className="text-xs text-muted-foreground">
+                Welche Szenen? Sie zählen danach als geprobt – eingeladen wird über die Zielgruppe.
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {scenes.map((scene) => {
+                  const on = item.sceneIds.includes(scene.id);
+                  return (
+                    <button
+                      key={scene.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        onChange({
+                          sceneIds: on
+                            ? item.sceneIds.filter((id) => id !== scene.id)
+                            : scenes
+                                .map((entry) => entry.id)
+                                .filter((id) => id === scene.id || item.sceneIds.includes(id)),
+                        })
+                      }
+                      className={cn(
+                        "min-h-8 rounded-full border px-2.5 text-xs",
+                        on
+                          ? "border-info bg-info/15 text-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      {scene.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      sceneIds:
+                        item.sceneIds.length === scenes.length
+                          ? []
+                          : scenes.map((scene) => scene.id),
+                    })
+                  }
+                  className="min-h-8 rounded-full px-2.5 text-xs font-medium text-primary hover:underline"
+                >
+                  {item.sceneIds.length === scenes.length ? "Keine" : "Alle"}
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {!isScene ? (
             <div className="space-y-1 sm:col-span-2">
               <Label htmlFor={`title-${item.id}`} className="text-xs text-muted-foreground">
@@ -249,7 +348,17 @@ export function AgendaRow({
                 id={`title-${item.id}`}
                 value={item.title}
                 maxLength={120}
-                placeholder={isDepartment ? "z. B. Podeste bauen" : "z. B. Einsingen"}
+                placeholder={
+                  isDepartment
+                    ? "z. B. Podeste bauen"
+                    : item.type === "RUN"
+                      ? "z. B. Durchlauf 1. Akt"
+                      : item.type === "MUSIC"
+                        ? "z. B. Song „Mondlicht“"
+                        : item.type === "BREAK"
+                          ? "Pause"
+                          : "z. B. Einsingen"
+                }
                 onChange={(event) => onChange({ title: event.target.value })}
                 className="h-10"
               />
@@ -323,7 +432,7 @@ export function AgendaRow({
             )}
           </div>
 
-          {item.type === "CUSTOM" ? (
+          {item.type !== "SCENE" && item.type !== "DEPARTMENT" ? (
             <label className="flex min-h-10 items-center gap-2 text-sm sm:col-span-2">
               <Switch
                 checked={item.forEveryone}

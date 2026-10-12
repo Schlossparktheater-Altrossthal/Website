@@ -130,6 +130,9 @@ export async function readEventView(
         include: {
           scene: { select: { id: true, identifier: true, sequence: true, title: true } },
           department: { select: { id: true, name: true } },
+          runScenes: {
+            select: { scene: { select: { id: true, identifier: true, sequence: true } } },
+          },
         },
       },
       participants: {
@@ -218,12 +221,16 @@ export async function readEventView(
     .filter((block) => block.type !== "SCENE" || block.scene)
     .map((block) => {
       const cast = block.sceneId ? castOfScene(block.sceneId) : [];
+      const runScenes = [...block.runScenes].sort((a, b) => a.scene.sequence - b.scene.sequence);
       const mine =
         block.type === "SCENE"
           ? cast.includes(userId)
-          : block.type === "DEPARTMENT"
-            ? !!block.departmentId && departmentIds.has(block.departmentId)
-            : false;
+          : block.type === "RUN"
+            ? block.forEveryone ||
+              runScenes.some((entry) => castOfScene(entry.scene.id).includes(userId))
+            : block.type === "DEPARTMENT"
+              ? !!block.departmentId && departmentIds.has(block.departmentId)
+              : false;
       return {
         id: block.id,
         label: blockLabel({ ...block, location: null }),
@@ -239,7 +246,9 @@ export async function readEventView(
                   .map((id) => (id === userId ? "du" : memberName.get(id)))
                   .filter((name): name is string => !!name),
               )
-            : null,
+            : block.type === "RUN" && runScenes.length
+              ? `Sz. ${runScenes.map((entry) => entry.scene.identifier || entry.scene.sequence).join(", ")}`
+              : null,
         mine,
         outcome: block.outcome,
       };

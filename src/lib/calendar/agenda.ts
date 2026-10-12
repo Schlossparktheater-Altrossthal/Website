@@ -6,13 +6,28 @@ import type { AudienceContext } from "@/lib/calendar/audience";
  * Reine Funktionen, damit Editor und Tests dasselbe rechnen.
  */
 
-export type AgendaItemType = "SCENE" | "DEPARTMENT" | "CUSTOM";
+export type AgendaItemType = "SCENE" | "DEPARTMENT" | "CUSTOM" | "RUN" | "MUSIC" | "BREAK";
+
+/** Programmpunkte ohne Szene/Gewerk (frei, Durchlauf, Musik, Pause). */
+export const FREE_ITEM_TYPES = ["CUSTOM", "RUN", "MUSIC", "BREAK"] as const;
+export type FreeItemType = (typeof FREE_ITEM_TYPES)[number];
+
+export const ITEM_TYPE_LABELS: Record<AgendaItemType, string> = {
+  SCENE: "Szene",
+  DEPARTMENT: "Gewerk",
+  CUSTOM: "Programmpunkt",
+  RUN: "Durchlauf",
+  MUSIC: "Musiknummer",
+  BREAK: "Pause",
+};
 
 export type AgendaItem = {
   /** Szenen: `scene:<sceneId>`, sonst die ID des Programmpunkts. */
   id: string;
   type: AgendaItemType;
   sceneId: string | null;
+  /** Durchlauf: abgedeckte Szenen (Einladung über die Zielgruppe, nicht über diese Liste). */
+  sceneIds: string[];
   departmentId: string | null;
   title: string;
   location: string;
@@ -119,6 +134,17 @@ export function itemPeople(item: AgendaItem, context: AudienceContext): string[]
   }
   if (item.type === "DEPARTMENT" && item.departmentId) {
     return context.departments.find((entry) => entry.id === item.departmentId)?.memberIds ?? [];
+  }
+  if (item.type === "RUN" && item.sceneIds.length) {
+    const scenes = context.scenes.filter((scene) => item.sceneIds.includes(scene.id));
+    const characters = new Set(scenes.flatMap((scene) => scene.characterIds));
+    return [
+      ...new Set(
+        context.castings
+          .filter((casting) => characters.has(casting.characterId))
+          .map((casting) => casting.userId),
+      ),
+    ];
   }
   return [];
 }
@@ -280,7 +306,9 @@ export function sceneItemId(sceneId: string) {
 /** Gespeicherter Ablauf, wie ihn Server und Editor austauschen (siehe `scheduleInputSchema`). */
 export type StoredBlock = {
   id: string;
-  type: "DEPARTMENT" | "CUSTOM";
+  type: Exclude<AgendaItemType, "SCENE">;
+  /** Durchlauf: abgedeckte Szenen. */
+  sceneIds: string[];
   title: string;
   departmentId: string | null;
   start: string;
@@ -323,6 +351,7 @@ export function agendaFromSchedule(
       id: sceneItemId(sceneId),
       type: "SCENE",
       sceneId,
+      sceneIds: [],
       departmentId: null,
       title: "",
       location: schedule.rooms[sceneId] ?? "",
@@ -341,6 +370,7 @@ export function agendaFromSchedule(
     id: block.id,
     type: block.type,
     sceneId: null,
+    sceneIds: block.sceneIds ?? [],
     departmentId: block.departmentId,
     title: block.title,
     location: block.location,
@@ -393,6 +423,7 @@ export function scheduleFromAgenda(
     blocks.push({
       id: item.id,
       type: item.type,
+      sceneIds: item.type === "RUN" ? item.sceneIds : [],
       title: item.title,
       departmentId: item.departmentId,
       start,
@@ -403,7 +434,7 @@ export function scheduleFromAgenda(
       durationMinutes: item.durationMinutes,
       fixedStart: Boolean(item.fixedStart),
       track: item.track,
-      forEveryone: item.type === "CUSTOM" && item.forEveryone,
+      forEveryone: item.type !== "DEPARTMENT" && item.forEveryone,
     });
   }
   return { mode, times, rooms, blocks, sceneMeta, order: items.map((item) => item.id) };

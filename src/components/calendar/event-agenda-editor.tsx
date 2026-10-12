@@ -39,6 +39,7 @@ import {
   summarizeSchedules,
   toMinutes,
   toTime,
+  ITEM_TYPE_LABELS,
   type AgendaItem,
 } from "@/lib/calendar/agenda";
 import type { AudienceContext } from "@/lib/calendar/audience";
@@ -368,6 +369,7 @@ export function EventAgendaEditor({
           id: `scene:${sceneId}`,
           type: "SCENE",
           sceneId,
+          sceneIds: [],
           departmentId: null,
           title: "",
           location: "",
@@ -413,7 +415,7 @@ export function EventAgendaEditor({
       const name = context.departments.find((entry) => entry.id === item.departmentId)?.name;
       return item.title || `Gewerk ${name ?? ""}`.trim();
     }
-    return item.title || "Programmpunkt";
+    return item.title || ITEM_TYPE_LABELS[item.type];
   };
   const subtitleOf = (item: AgendaItem) => {
     const room = item.location.trim() ? ` · ${item.location.trim()}` : "";
@@ -426,7 +428,15 @@ export function EventAgendaEditor({
       const name = context.departments.find((entry) => entry.id === item.departmentId)?.name;
       return `${item.title ? `Gewerk ${name} · ` : ""}Details plant die Gewerk-Leitung`;
     }
-    return `${item.forEveryone ? "für alle" : "Sonstiges"}${room}`;
+    const kind =
+      item.type === "RUN"
+        ? `Durchlauf${item.sceneIds.length ? ` · ${item.sceneIds.length} Szenen` : ""}`
+        : item.type === "MUSIC"
+          ? "Musiknummer"
+          : item.type === "BREAK"
+            ? "Pause"
+            : "Sonstiges";
+    return `${item.forEveryone ? `${kind} · für alle` : kind}${room}`;
   };
 
   const rowProps = (item: AgendaItem) => ({
@@ -446,6 +456,7 @@ export function EventAgendaEditor({
       setInsertAt(items.indexOf(item) + 1);
     },
     trackNames,
+    scenes: context.scenes,
   });
 
   /** Aufwärmen/Einsingen gehören an den Anfang, hinter schon vorhandene Eröffnungspunkte. */
