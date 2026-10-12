@@ -349,6 +349,7 @@ model User {
   eventTasksAssigned              EventNoteAssignee[]        @relation("EventNoteAssignee")
   eventNotesEdited                EventNote[]                @relation("EventNoteEditor")
   eventTasksCompleted             EventNoteAssignee[]        @relation("EventNoteAssigneeDoneBy")
+  eventMediaUploaded              EventMedia[]               @relation("EventMediaUploader")
   // New availability relations
   availabilityDays                AvailabilityDay[]
   availabilityTemplates           AvailabilityTemplate[]
@@ -1465,6 +1466,7 @@ model CalendarEvent {
   notifications       Notification[]
   guests              EventGuest[]
   notes               EventNote[]
+  media               EventMedia[]
   /// Probenmodus: tatsächlicher Beginn und tatsächliches Ende.
   actualStart         DateTime?
   actualEnd           DateTime?
@@ -1554,6 +1556,7 @@ model EventNote {
   author     User?               @relation("EventNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   editedBy   User?               @relation("EventNoteEditor", fields: [editedById], references: [id], onDelete: SetNull)
   assignees  EventNoteAssignee[]
+  media      EventMedia[]
 
   @@index([eventId, createdAt])
 }
@@ -1581,6 +1584,48 @@ model EventNoteAssignee {
   @@index([userId, doneAt])
   @@index([characterId, doneAt])
   @@index([departmentId])
+}
+
+enum EventMediaKind {
+  IMAGE
+  AUDIO
+  FILE
+}
+
+/// Datei zu einem Termin (Probenfoto, Sprachmemo, Musik, Dokument). Die Bytes liegen im
+/// Objektspeicher (S3/RustFS) unter `storageKey`, Plan docs/Plan/probenablauf-medien-plan.md.
+model EventMedia {
+  id           String         @id @default(cuid())
+  eventId      String
+  /// Am Ablaufpunkt (z. B. Musik zum Song).
+  blockId      String?
+  /// An einem Protokolleintrag (Sprachmemo, Skizze).
+  noteId       String?
+  kind         EventMediaKind
+  /// Probenfoto der Galerie (nicht an Punkt oder Eintrag gebunden).
+  gallery      Boolean        @default(false)
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  durationSec  Int?
+  width        Int?
+  height       Int?
+  caption      String?
+  /// Bucket beim Hochladen (Staging liest so auch Dateien aus der Prod-Kopie).
+  bucket       String
+  storageKey   String
+  /// Vorschaubild (Bilder).
+  thumbKey     String?
+  uploadedById String?
+  createdAt    DateTime       @default(now())
+  event        CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  block        EventBlock?    @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  note         EventNote?     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  uploadedBy   User?          @relation("EventMediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([eventId, createdAt])
+  @@index([blockId])
+  @@index([noteId])
 }
 
 /// Gast ohne Konto, der bei einer Probe dabei war.
@@ -1642,6 +1687,7 @@ model EventBlock {
   scene           Scene?                 @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   department      Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   notes           EventNote[]
+  media           EventMedia[]
 
   @@unique([eventId, sceneId])
   @@index([sceneId])

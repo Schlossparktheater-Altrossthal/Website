@@ -25,6 +25,7 @@ import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { deleteObjects } from "@/lib/storage/s3";
 
 type PermissionUser = Parameters<typeof hasPermission>[0];
 
@@ -310,9 +311,16 @@ export async function applyProtocolOpsToDb(
       if (access === "notes" && !NOTE_OPS.has(op.type)) {
         throw new Error("Nur Notizen erlaubt");
       }
+      const orphans: StoredObject[] = [];
       const created = await prisma.$transaction((tx) =>
-        applyOne(tx, eventId, op, authorId, access === "notes"),
+        applyOne(tx, eventId, op, authorId, access === "notes", orphans),
       );
+      // Anhänge gelöschter Einträge auch aus dem Speicher entfernen (erst nach dem Commit).
+      if (orphans.length) {
+        await deleteObjects(orphans).catch((error) =>
+          console.error("[protocol] Anhänge im Speicher nicht gelöscht", error),
+        );
+      }
       if (created?.kind === "task") newTasks.push({ id: created.id, rowIds: created.rowIds });
       if (created?.kind === "note") newNotes.push(created.id);
     } catch (error) {
@@ -436,6 +444,8 @@ async function firstBoardColumn(tx: Prisma.TransactionClient, departmentId: stri
   });
 }
 
+type StoredObject = { bucket: string; key: string };
+
 /** Aufgabe, über die benachrichtigt wird; `rowIds`: nur diese (neuen) Zuständigkeiten. */
 type TaskEntry = { id: string; rowIds?: string[] };
 
@@ -502,6 +512,7 @@ async function applyOne(
   op: ProtocolOp,
   authorId: string,
   ownNotesOnly: boolean,
+  orphans: StoredObject[],
 ): Promise<CreatedEntry> {
   const at = "at" in op && op.at ? new Date(op.at) : null;
   switch (op.type) {
@@ -669,9 +680,16 @@ async function applyOne(
     case "note-remove": {
       const note = await tx.eventNote.findFirst({
         where: { id: op.noteId, eventId, ...(ownNotesOnly ? { authorId } : {}) },
-        select: { assignees: { select: { departmentTaskId: true } } },
+        select: {
+          assignees: { select: { departmentTaskId: true } },
+          media: { select: { bucket: true, storageKey: true, thumbKey: true } },
+        },
       });
       if (!note) return null;
+      for (const media of note.media) {
+        orphans.push({ bucket: media.bucket, key: media.storageKey });
+        if (media.thumbKey) orphans.push({ bucket: media.bucket, key: media.thumbKey });
+      }
       await tx.eventNote.delete({ where: { id: op.noteId } });
       const cards = note.assignees.flatMap((row) => row.departmentTaskId ?? []);
       if (cards.length) await tx.departmentTask.deleteMany({ where: { id: { in: cards } } });

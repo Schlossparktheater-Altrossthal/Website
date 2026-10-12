@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
+import { removeStoredObjects, storedObjectsOfEvents } from "@/lib/media/event-media";
 import { prisma } from "@/lib/prisma";
 import { broadcastRehearsalCreated } from "@/lib/realtime/triggers";
 import { createNotification, dispatchNotification } from "@/lib/notifications/notify";
@@ -480,9 +481,11 @@ export async function discardRehearsalDraftAction(input: { id: string }) {
   }
 
   try {
+    const media = await storedObjectsOfEvents([input.id]);
     await prisma.calendarEvent.delete({
       where: { id: input.id, status: "DRAFT" },
     });
+    await removeStoredObjects(media);
     revalidatePath("/mitglieder/terminplanung");
     return { success: true as const };
   } catch (error) {

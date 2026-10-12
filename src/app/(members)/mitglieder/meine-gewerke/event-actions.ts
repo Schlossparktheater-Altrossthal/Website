@@ -20,6 +20,7 @@ import { requireBoardAccess } from "@/lib/departments/board";
 import { getUserDisplayName } from "@/lib/names";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/types";
+import { removeStoredObjects, storedObjectsOfEvents } from "@/lib/media/event-media";
 import { prisma } from "@/lib/prisma";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
 import { parseDateTimeInTimeZone, formatIsoDateInTimeZone } from "@/lib/date-time";
@@ -226,7 +227,9 @@ export async function deleteTeamEventAction(input: {
       where: { eventId: event.id, response: { in: ["yes", "maybe"] } },
       select: { userId: true },
     });
+    const media = await storedObjectsOfEvents([event.id]);
     await prisma.calendarEvent.delete({ where: { id: event.id } });
+    await removeStoredObjects(media);
     if (event.start > new Date()) {
       await notifyTeam(
         attending.map((entry) => entry.userId),

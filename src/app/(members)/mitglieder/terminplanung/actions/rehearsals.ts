@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { CalendarEventKind, Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { removeStoredObjects, storedObjectsOfEvents } from "@/lib/media/event-media";
 import { prisma } from "@/lib/prisma";
 import { broadcastRehearsalUpdated } from "@/lib/realtime/triggers";
 import { notify } from "@/lib/notifications/notify";
@@ -305,6 +306,7 @@ export async function deleteRehearsalAction(input: { id: string }) {
   }
 
   try {
+    const media = await storedObjectsOfEvents([parsed.data.id]);
     const rehearsal = await prisma.$transaction(async (tx) => {
       const existing = await tx.calendarEvent.findUnique({
         where: { id: parsed.data.id },
@@ -322,6 +324,7 @@ export async function deleteRehearsalAction(input: { id: string }) {
 
       return existing;
     });
+    await removeStoredObjects(media);
 
     const targetUserIds = new Set<string>();
     rehearsal.participants.forEach((invitee) => targetUserIds.add(invitee.userId));

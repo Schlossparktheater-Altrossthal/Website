@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { removeStoredObjects, storedObjectsOfEvents } from "@/lib/media/event-media";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import {
@@ -224,6 +225,9 @@ export async function deleteMilestoneAction(id: string): Promise<ProductionActio
       select: { showId: true, calendarEventId: true },
     });
     if (!milestone) throw new Error("Meilenstein nicht gefunden.");
+    const media = milestone.calendarEventId
+      ? await storedObjectsOfEvents([milestone.calendarEventId])
+      : [];
     await prisma.$transaction(async (tx) => {
       await tx.showMilestone.delete({ where: { id } });
       if (milestone.calendarEventId) {
@@ -231,6 +235,7 @@ export async function deleteMilestoneAction(id: string): Promise<ProductionActio
       }
       await recalculateShowPlan(milestone.showId, tx);
     });
+    await removeStoredObjects(media);
     revalidatePath(PLAN_PATH);
     return actionSuccess("Meilenstein gelöscht.");
   } catch (error) {
