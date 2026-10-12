@@ -11,7 +11,8 @@ import { ImageViewer } from "@/components/ui/image-viewer";
 import type { ProtocolMedia } from "@/lib/calendar/protocol";
 import { cn } from "@/lib/utils";
 
-import { deleteEventMedia, formatDuration, uploadEventMedia, type UploadFields } from "./upload";
+import { AudioPlayer } from "./audio-player";
+import { deleteEventMedia, uploadEventMedia, type UploadFields } from "./upload";
 import { VoiceRecorder } from "./voice-recorder";
 
 /** Anhänge anzeigen: Fotos als Vorschau (Tippen = groß), Audio mit Player, PDFs als Link. */
@@ -76,17 +77,14 @@ export function MediaAttachments({
       ) : null}
       {others.map((item) =>
         item.kind === "AUDIO" ? (
-          <div key={item.id} className="flex items-center gap-2">
-            <div className="min-w-0 flex-1 space-y-0.5">
-              <p className="truncate text-xs text-muted-foreground">
-                {[item.caption ?? item.fileName, formatDuration(item.durationSec)]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-              <audio controls preload="none" src={item.url} className="h-10 w-full" />
-            </div>
-            {removeButton(item)}
-          </div>
+          <AudioPlayer
+            key={item.id}
+            src={item.url}
+            title={(item.caption ?? item.fileName).replace(/\.[a-z0-9]+$/i, "")}
+            duration={item.durationSec}
+            kind={item.fileName.startsWith("Sprachmemo") ? "memo" : "music"}
+            action={removeButton(item)}
+          />
         ) : (
           <div key={item.id} className="flex items-center gap-2 text-sm">
             <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />

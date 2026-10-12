@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { deleteEventMedia } from "@/lib/media/event-media";
@@ -66,6 +67,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Nur eigene Dateien löschen." }, { status: 403 });
   }
   await deleteEventMedia({ id: { in: [mediaId] } });
+  revalidatePath(`/mitglieder/termine/${eventId}`, "layout");
   await broadcastRehearsalUpdated({
     rehearsalId: eventId,
     changes: { protocol: true },

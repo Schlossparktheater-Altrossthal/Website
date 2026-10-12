@@ -7,6 +7,7 @@ import { Check, ChevronDown, CircleSlash, MapPin, Clock, CircleDashed } from "lu
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { EventGallery } from "@/components/media/event-gallery";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
 import type { TimelineRow } from "@/lib/calendar/event-timeline";
@@ -237,6 +238,7 @@ export function EventView({
   rows,
   people,
   protocol,
+  gallery,
   layout = "page",
 }: EventViewProps & {
   /** `panel`: Vorschau neben einer Liste – Titel im Kopf, Ablauf und Leute immer umschaltbar. */
@@ -246,8 +248,12 @@ export function EventView({
   // Mit Protokoll immer Reiter (Protokoll zuerst), sonst am Desktop Ablauf und Leute nebeneinander.
   const panel = layout === "panel" || !!protocol;
   const requested = useSearchParams().get("ansicht");
-  const [tab, setTab] = useState<"protokoll" | "ablauf" | "leute">(
-    protocol && requested !== "ablauf" ? "protokoll" : "ablauf",
+  const [tab, setTab] = useState<"protokoll" | "ablauf" | "leute" | "fotos">(
+    requested === "fotos" && gallery
+      ? "fotos"
+      : protocol && requested !== "ablauf"
+        ? "protokoll"
+        : "ablauf",
   );
   const attending = people.filter((person) => person.group !== "declined").length;
   const statusBadge = STATUS_BADGE[event.status];
@@ -374,6 +380,9 @@ export function EventView({
           ...(protocol ? [{ value: "protokoll" as const, label: "Protokoll" }] : []),
           { value: "ablauf" as const, label: "Ablauf" },
           { value: "leute" as const, label: `Leute · ${attending}` },
+          ...(gallery
+            ? [{ value: "fotos" as const, label: `Fotos · ${gallery.photos.length}` }]
+            : []),
         ]}
         fullWidth
         className={cn(!panel && "lg:hidden")}
@@ -392,6 +401,12 @@ export function EventView({
         </section>
         {protocol && tab === "protokoll" ? <ProtocolSection protocol={protocol} /> : null}
       </div>
+      {gallery ? (
+        // Mobil als Reiter, am Desktop (ohne Reiter-Layout) unter Ablauf und Leute.
+        <div className={cn(tab === "fotos" ? "block" : "hidden", !panel && "lg:block")}>
+          <EventGallery eventId={event.id} gallery={gallery} />
+        </div>
+      ) : null}
     </div>
   );
 }

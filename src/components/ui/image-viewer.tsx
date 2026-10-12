@@ -2,7 +2,15 @@
 
 import { useCallback, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { RotateCcw, RotateCw, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  RotateCw,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+} from "lucide-react";
 
 import { CloseIcon, DownloadIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
@@ -23,6 +31,11 @@ interface ImageViewerProps {
   downloadHref?: string | null;
   /** Wenn gesetzt, lässt sich eine Drehung dauerhaft speichern (Grad im Uhrzeigersinn). */
   onSaveRotation?: (degrees: number) => Promise<boolean>;
+  /** Blättern in einer Bildfolge (Pfeile, Pfeiltasten, Wischen). */
+  onPrev?: () => void;
+  onNext?: () => void;
+  /** Unterzeile, z. B. „3 / 12 · Lena · 15.10.“ */
+  caption?: string | null;
 }
 
 /**
@@ -36,6 +49,9 @@ export function ImageViewer({
   alt,
   downloadHref,
   onSaveRotation,
+  onPrev,
+  onNext,
+  caption,
 }: ImageViewerProps) {
   const [saving, setSaving] = useState(false);
   const [scale, setScale] = useState(1);
@@ -43,6 +59,15 @@ export function ImageViewer({
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const pinchDistance = useRef<number | null>(null);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  // Neues Bild: Zoom und Drehung zurücksetzen (Zustand beim Wechsel der Quelle anpassen).
+  const [shownSrc, setShownSrc] = useState(src);
+  if (shownSrc !== src) {
+    setShownSrc(src);
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
+    setRotation(0);
+  }
 
   const reset = useCallback(() => {
     setScale(1);
@@ -71,6 +96,8 @@ export function ImageViewer({
     event.currentTarget.setPointerCapture(event.pointerId);
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     pinchDistance.current = null;
+    swipeStart.current =
+      pointers.current.size === 1 && scale <= 1 ? { x: event.clientX, y: event.clientY } : null;
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -90,6 +117,8 @@ export function ImageViewer({
       return;
     }
 
+    // Unvergrößert verschiebt Ziehen nicht, sondern blättert beim Loslassen.
+    if (swipeStart.current) return;
     setOffset((value) => ({
       x: value.x + current.x - previous.x,
       y: value.y + current.y - previous.y,
@@ -99,6 +128,15 @@ export function ImageViewer({
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
     pointers.current.delete(event.pointerId);
     pinchDistance.current = null;
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) onNext?.();
+      else onPrev?.();
+    }
   };
 
   const pendingRotation = ((rotation % 360) + 360) % 360;
@@ -122,6 +160,10 @@ export function ImageViewer({
         <DialogPrimitive.Content
           aria-describedby={undefined}
           className="fixed inset-0 z-[60] flex flex-col bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] focus:outline-none"
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft" && onPrev) onPrev();
+            if (event.key === "ArrowRight" && onNext) onNext();
+          }}
         >
           <DialogPrimitive.Title className="sr-only">{alt}</DialogPrimitive.Title>
           <div className="flex items-center justify-end gap-1 p-2 text-white">
@@ -225,7 +267,32 @@ export function ImageViewer({
                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale}) rotate(${rotation}deg)`,
               }}
             />
+            {onPrev ? (
+              <button
+                type="button"
+                aria-label="Vorheriges Bild"
+                onClick={onPrev}
+                onPointerDown={(event) => event.stopPropagation()}
+                className="absolute left-2 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+              >
+                <ChevronLeft className="size-6" aria-hidden />
+              </button>
+            ) : null}
+            {onNext ? (
+              <button
+                type="button"
+                aria-label="Nächstes Bild"
+                onClick={onNext}
+                onPointerDown={(event) => event.stopPropagation()}
+                className="absolute right-2 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+              >
+                <ChevronRight className="size-6" aria-hidden />
+              </button>
+            ) : null}
           </div>
+          {caption ? (
+            <p className="px-4 py-2 text-center text-sm text-white/80">{caption}</p>
+          ) : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

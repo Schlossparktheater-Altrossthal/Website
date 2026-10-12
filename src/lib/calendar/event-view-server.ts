@@ -16,6 +16,7 @@ import { blockLabel } from "@/lib/calendar/scene-schedule";
 import { getUserDisplayName } from "@/lib/names";
 import { getProtocolAccess } from "@/lib/calendar/protocol-server";
 import { readProtocolView, type ProtocolView } from "@/lib/calendar/protocol-view";
+import { readEventGallery, type EventGallery } from "@/lib/media/event-gallery";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
@@ -69,6 +70,8 @@ export type EventViewProps = {
   people: EventPerson[];
   /** Probenprotokoll, sobald etwas erfasst ist. */
   protocol: ProtocolView | null;
+  /** Probenfotos – nur für Eingeladene, Anwesende und Protokollführung. */
+  gallery: EventGallery | null;
 };
 
 type ViewUser = Parameters<typeof hasPermission>[0];
@@ -328,6 +331,10 @@ export async function readEventView(
       rows: buildTimeline(blocks),
       people,
       protocol: event.departmentId ? null : await readProtocolView(event.id, userId, context),
+      gallery:
+        event.departmentId || event.status === "DRAFT"
+          ? null
+          : await readEventGallery(user, { id: event.id, showId: event.showId }),
     },
   };
 }
