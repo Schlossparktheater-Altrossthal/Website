@@ -30,6 +30,13 @@ export const NOTE_TYPE_LABELS: Record<NoteTypeValue, string> = {
 /** Zuständig für eine Aufgabe: eine Person, eine Figur (deren Besetzung) oder ein Gewerk. */
 export type TaskAssignee = { kind: "user" | "character" | "department"; id: string };
 
+/**
+ * Wie weit jemand den Probenmodus nutzen darf: `full` führt das Protokoll, `notes` (Leitung oder
+ * Stellvertretung eines Gewerks der Produktion) darf nur Notizen und Aufgaben hinterlegen – auch
+ * schon zur Vorbereitung – und nur die eigenen ändern.
+ */
+export type ProtocolAccess = "full" | "notes";
+
 export const OUTCOMES = ["DONE", "PARTIAL", "SKIPPED"] as const;
 export type OutcomeValue = (typeof OUTCOMES)[number];
 
@@ -69,6 +76,8 @@ export const protocolOpSchema = z.discriminatedUnion("type", [
     blockId: id.nullable(),
     assignee: z.object({ kind: z.enum(["user", "character", "department"]), id }).nullable(),
     dueAt: z.string().date().nullable(),
+    /** Aufgabe: Zuständige benachrichtigen, Notiz/Entscheidung: alle Eingeladenen. */
+    notify: z.boolean().optional(),
   }),
   z.object({ type: z.literal("note-edit"), noteId: id, text: z.string().trim().min(1).max(4000) }),
   z.object({ type: z.literal("note-remove"), noteId: id }),
@@ -106,6 +115,8 @@ export type ProtocolPerson = {
 
 export type ProtocolNote = {
   id: string;
+  authorId: string | null;
+  authorName: string | null;
   type: NoteTypeValue;
   text: string;
   blockId: string | null;
@@ -222,6 +233,8 @@ export function applyProtocolOp(
           ...state.notes,
           {
             id: op.noteId,
+            authorId: null,
+            authorName: null,
             type: op.noteType,
             text: op.text,
             blockId: op.blockId,

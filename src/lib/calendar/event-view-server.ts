@@ -14,7 +14,7 @@ import {
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { blockLabel } from "@/lib/calendar/scene-schedule";
 import { getUserDisplayName } from "@/lib/names";
-import { canEditProtocol } from "@/lib/calendar/protocol-server";
+import { getProtocolAccess } from "@/lib/calendar/protocol-server";
 import { readProtocolView, type ProtocolView } from "@/lib/calendar/protocol-view";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -63,7 +63,8 @@ export type EventViewProps = {
   editHref: string | null;
   editLabel: string;
   /** Probenmodus, wenn die Person Protokoll führen darf und die Probe bald beginnt oder lief. */
-  protocolHref: string | null;
+  /** Einstieg in den Probenmodus samt passender Beschriftung. */
+  protocolLink: { href: string; label: string } | null;
   rows: TimelineRow[];
   people: EventPerson[];
   /** Probenprotokoll, sobald etwas erfasst ist. */
@@ -76,6 +77,40 @@ type ViewUser = Parameters<typeof hasPermission>[0];
  * Terminseite für eine Person: prüft, ob sie den Termin sehen darf (Planung, Eingeladene,
  * Produktion, Gewerk oder „für alle“), und bereitet Ablauf, Leute und eigene Rückmeldung auf.
  */
+/** Bis eine Stunde vor Beginn heißt der Probenmodus „vorbereiten“. */
+const PREPARE_UNTIL_MS = 60 * 60 * 1000;
+
+/**
+ * Probenmodus jederzeit erreichbar für alle, die ihn nutzen dürfen: vorab zum Vorbereiten,
+ * währenddessen zum Protokollieren, danach als Protokoll. Gewerk-Leitungen hinterlegen Hinweise.
+ */
+async function resolveProtocolLink(
+  user: ViewUser,
+  event: {
+    id: string;
+    status: string;
+    departmentId: string | null;
+    showId: string | null;
+    start: Date;
+    end: Date | null;
+    actualStart: Date | null;
+  },
+  now: Date,
+) {
+  if (event.departmentId || (event.status !== "SCHEDULED" && event.status !== "TENTATIVE")) {
+    return null;
+  }
+  const access = await getProtocolAccess(user, event.showId);
+  if (!access) return null;
+  const href = `/mitglieder/termine/${event.id}/probe`;
+  if (access === "notes") return { href, label: "Hinweise zur Probe" };
+  if ((event.end ?? event.start) < now) return { href, label: "Protokoll" };
+  if (!event.actualStart && event.start.getTime() - now.getTime() > PREPARE_UNTIL_MS) {
+    return { href, label: "Probe vorbereiten" };
+  }
+  return { href, label: "Probenmodus" };
+}
+
 export async function readEventView(
   eventId: string,
   user: ViewUser,
@@ -288,13 +323,7 @@ export async function readEventView(
           : null,
       editHref,
       editLabel: event.departmentId ? "Im Gewerk öffnen" : "Bearbeiten",
-      protocolHref:
-        !event.departmentId &&
-        (event.status === "SCHEDULED" || event.status === "TENTATIVE") &&
-        event.start.getTime() - now.getTime() <= 60 * 60 * 1000 &&
-        (await canEditProtocol(user, event.showId))
-          ? `/mitglieder/termine/${event.id}/probe`
-          : null,
+      protocolLink: await resolveProtocolLink(user, event, now),
       rows: buildTimeline(blocks),
       people,
       protocol: event.departmentId ? null : await readProtocolView(event.id, userId, context),

@@ -294,5 +294,6 @@ pro Feld gewinnt, Notizen werden nur ergänzt, nie überschrieben.
 - [x] Phase 1 (2026-09-28) – Terminseite `/mitglieder/termine/[id]` für alle Terminarten, Zeitzonen-Fix, alte URL leitet um
 - [x] Phase 2 (2026-09-28) – „Meine Termine“ kompakt mit Tagesgruppen und Desktop-Vorschau
 - [x] Phase 3 (2026-09-28) – Probenmodus mit Anwesenheit, Ist-Zeiten und Gästen (Migration `20260928170000_rehearsal_protocol`)
-- [ ] Phase 4 – Notizen, Entscheidungen und Aufgaben, Protokoll-Reiter, Anwesenheits-Symbole in „Meine Termine“
+- [x] Phase 4 (2026-10-01, in Prod seit v1.11.0) – Notizen, Entscheidungen und Aufgaben, Protokoll-Reiter, Anwesenheits-Symbole in „Meine Termine“
+- [x] Phase 4b (2026-10-12) – Anwesenheit ohne Springen (Stehenlassen, View Transition, Offen/Erfasst, Rückgängig), Probenmodus jederzeit erreichbar mit Vorbereitung, Vorab-Hinweise auch für Gewerk-Leitungen (nur eigene ändern), Benachrichtigung je Eintrag abschaltbar (`rehearsal-note`), Dashboard-Karte
 - [ ] Phase 5 – E2E (Playwright, Staging-Login), Screenshots mobil/desktop, Release mit Terminplanung Phase 6

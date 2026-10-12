@@ -9,6 +9,7 @@ import type {
   AssigneeOption,
   ProtocolCandidate,
   ProtocolNote,
+  ProtocolAccess,
   ProtocolOp,
   ProtocolState,
   TaskAssignee,
@@ -32,7 +33,84 @@ export async function canEditProtocol(user: PermissionUser, showId: string | nul
   return planner || protocol;
 }
 
+/** Siehe {@link ProtocolAccess}. */
+export async function getProtocolAccess(
+  user: PermissionUser,
+  showId: string | null,
+): Promise<ProtocolAccess | null> {
+  if (await canEditProtocol(user, showId)) return "full";
+  if (!showId || !user?.id) return null;
+  const lead = await prisma.departmentMembership.findFirst({
+    where: {
+      userId: user.id,
+      status: "active",
+      role: { in: ["lead", "deputy"] },
+      department: { showId },
+    },
+    select: { id: true },
+  });
+  return lead ? "notes" : null;
+}
+
 const iso = (date: Date | null | undefined) => date?.toISOString() ?? null;
+
+const HOUR_MS = 60 * 60 * 1000;
+
+export type ProtocolShortcut = {
+  id: string;
+  title: string;
+  start: string;
+  href: string;
+  /** `prepare` mehr als eine Stunde vorher, `run` kurz davor und währenddessen. */
+  phase: "prepare" | "run";
+  access: ProtocolAccess;
+};
+
+/**
+ * Proben der nächsten zwei Tage (und laufende), für die jemand den Probenmodus nutzen darf –
+ * für den Schnellzugriff im Dashboard.
+ */
+export async function readProtocolShortcuts(
+  user: PermissionUser,
+  now = new Date(),
+): Promise<ProtocolShortcut[]> {
+  if (!user?.id) return [];
+  const events = await prisma.calendarEvent.findMany({
+    where: {
+      kind: "REHEARSAL",
+      departmentId: null,
+      status: { in: ["SCHEDULED", "TENTATIVE"] },
+      actualEnd: null,
+      start: {
+        gte: new Date(now.getTime() - 8 * HOUR_MS),
+        lte: new Date(now.getTime() + 48 * HOUR_MS),
+      },
+      OR: [{ end: null }, { end: { gte: now } }],
+    },
+    orderBy: { start: "asc" },
+    take: 10,
+    select: { id: true, title: true, start: true, showId: true, actualStart: true },
+  });
+  const accessByShow = new Map<string | null, ProtocolAccess | null>();
+  const shortcuts: ProtocolShortcut[] = [];
+  for (const event of events) {
+    if (!accessByShow.has(event.showId)) {
+      accessByShow.set(event.showId, await getProtocolAccess(user, event.showId));
+    }
+    const access = accessByShow.get(event.showId);
+    if (!access) continue;
+    shortcuts.push({
+      id: event.id,
+      title: event.title,
+      start: event.start.toISOString(),
+      href: `/mitglieder/termine/${event.id}/probe`,
+      phase:
+        !event.actualStart && event.start.getTime() - now.getTime() > HOUR_MS ? "prepare" : "run",
+      access,
+    });
+  }
+  return shortcuts.slice(0, 3);
+}
 
 /** Aktueller Stand des Probenmodus eines Termins samt Auswahllisten. */
 export async function readProtocol(eventId: string) {
@@ -55,7 +133,12 @@ export async function readProtocol(eventId: string) {
         include: { user: { select: { firstName: true, lastName: true, name: true, email: true } } },
       },
       guests: { orderBy: { createdAt: "asc" }, select: { id: true, name: true } },
-      notes: { orderBy: { createdAt: "asc" } },
+      notes: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: { select: { firstName: true, lastName: true, name: true, email: true } },
+        },
+      },
     },
   });
   if (!event) return null;
@@ -116,6 +199,7 @@ export async function readProtocol(eventId: string) {
 
 type NoteRow = {
   id: string;
+  authorId: string | null;
   type: ProtocolNote["type"];
   text: string;
   blockId: string | null;
@@ -125,6 +209,7 @@ type NoteRow = {
   dueAt: Date | null;
   doneAt: Date | null;
   createdAt: Date;
+  author?: Parameters<typeof getUserDisplayName>[0] | null;
 };
 
 export function toProtocolNote(note: NoteRow): ProtocolNote {
@@ -137,6 +222,8 @@ export function toProtocolNote(note: NoteRow): ProtocolNote {
         : null;
   return {
     id: note.id,
+    authorId: note.authorId,
+    authorName: note.author ? getUserDisplayName(note.author) : null,
     type: note.type,
     text: note.text,
     blockId: note.blockId,
@@ -184,13 +271,21 @@ export async function applyProtocolOpsToDb(
   eventId: string,
   ops: readonly ProtocolOp[],
   authorId: string,
+  access: ProtocolAccess = "full",
 ) {
   let rejected = 0;
   const newTasks: string[] = [];
+  const newNotes: string[] = [];
   for (const op of ops) {
     try {
-      const created = await prisma.$transaction((tx) => applyOne(tx, eventId, op, authorId));
-      if (created) newTasks.push(created);
+      if (access === "notes" && !NOTE_OPS.has(op.type)) {
+        throw new Error("Nur Notizen erlaubt");
+      }
+      const created = await prisma.$transaction((tx) =>
+        applyOne(tx, eventId, op, authorId, access === "notes"),
+      );
+      if (created?.kind === "task") newTasks.push(created.id);
+      if (created?.kind === "note") newNotes.push(created.id);
     } catch (error) {
       rejected += 1;
       console.error("[protocol] Operation verworfen", op.type, error);
@@ -199,8 +294,13 @@ export async function applyProtocolOpsToDb(
   await notifyNewTasks(eventId, newTasks, authorId).catch((error) =>
     console.error("[protocol] Aufgaben-Benachrichtigung fehlgeschlagen", error),
   );
+  await notifyNewNotes(eventId, newNotes, authorId).catch((error) =>
+    console.error("[protocol] Hinweis-Benachrichtigung fehlgeschlagen", error),
+  );
   return { rejected };
 }
+
+const NOTE_OPS: ReadonlySet<ProtocolOp["type"]> = new Set(["note-add", "note-edit", "note-remove"]);
 
 /** Wer eine Aufgabe erledigen soll: die Person, die Besetzung der Figur oder die Gewerk-Leitung. */
 export async function resolveTaskRecipients(note: {
@@ -228,6 +328,36 @@ export async function resolveTaskRecipients(note: {
     return leads.map((lead) => lead.userId);
   }
   return [];
+}
+
+/** Hinweise (Notiz oder Entscheidung mit „benachrichtigen“) gehen an alle Eingeladenen. */
+async function notifyNewNotes(eventId: string, noteIds: string[], authorId: string) {
+  if (!noteIds.length) return;
+  const event = await prisma.calendarEvent.findUnique({
+    where: { id: eventId },
+    select: {
+      title: true,
+      showId: true,
+      participants: { where: { invited: true }, select: { userId: true } },
+    },
+  });
+  if (!event) return;
+  const notes = await prisma.eventNote.findMany({
+    where: { id: { in: noteIds } },
+    select: { text: true },
+  });
+  for (const note of notes) {
+    await notify({
+      type: NOTIFICATION_TYPES.REHEARSAL_NOTE,
+      recipients: event.participants.map((entry) => entry.userId),
+      actorId: authorId,
+      title: `Hinweis zur Probe „${event.title}“`,
+      body: note.text,
+      eventId,
+      showId: event.showId,
+      actionUrl: `/mitglieder/termine/${eventId}?ansicht=protokoll`,
+    });
+  }
 }
 
 async function notifyNewTasks(eventId: string, noteIds: string[], authorId: string) {
@@ -259,13 +389,20 @@ async function firstBoardColumn(tx: Prisma.TransactionClient, departmentId: stri
   });
 }
 
-/** Gibt die ID einer neu angelegten Aufgabe zurück (für die Benachrichtigung). */
+/** Neu angelegter Eintrag, über den benachrichtigt werden soll. */
+type CreatedEntry = { kind: "task" | "note"; id: string } | null;
+
+/**
+ * Wendet eine Operation an. `ownNotesOnly`: Notizen anderer dürfen weder geändert noch gelöscht
+ * werden (Gewerk-Leitungen ohne Protokoll-Recht).
+ */
 async function applyOne(
   tx: Prisma.TransactionClient,
   eventId: string,
   op: ProtocolOp,
   authorId: string,
-): Promise<string | null> {
+  ownNotesOnly: boolean,
+): Promise<CreatedEntry> {
   const at = "at" in op && op.at ? new Date(op.at) : null;
   switch (op.type) {
     case "event-time":
@@ -394,14 +531,20 @@ async function applyOne(
           dueAt,
         },
       });
-      return task ? op.noteId : null;
+      // Ältere Geräte schicken kein `notify`: Aufgaben wie bisher melden, Notizen nicht.
+      const notifyAbout = op.notify ?? task;
+      if (!notifyAbout) return null;
+      return { kind: task ? "task" : "note", id: op.noteId };
     }
     case "note-edit":
-      await tx.eventNote.updateMany({ where: { id: op.noteId, eventId }, data: { text: op.text } });
+      await tx.eventNote.updateMany({
+        where: { id: op.noteId, eventId, ...(ownNotesOnly ? { authorId } : {}) },
+        data: { text: op.text },
+      });
       return null;
     case "note-remove": {
       const note = await tx.eventNote.findFirst({
-        where: { id: op.noteId, eventId },
+        where: { id: op.noteId, eventId, ...(ownNotesOnly ? { authorId } : {}) },
         select: { departmentTaskId: true },
       });
       if (!note) return null;

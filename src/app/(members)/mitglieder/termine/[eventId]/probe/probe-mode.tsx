@@ -2,18 +2,11 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { CircleDashed, CircleSlash, MoreHorizontal, Play, WifiOff } from "lucide-react";
+import { CircleDashed, CircleSlash, Play, WifiOff } from "lucide-react";
 
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
@@ -23,33 +16,23 @@ import { AsyncButton } from "@/components/ui/async-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useEventLiveRefresh } from "@/hooks/useEventLiveRefresh";
 import {
-  ATTENDANCE_LABELS,
   countAttendance,
   resolveCurrentBlock,
-  type AttendanceMarkValue,
   type OutcomeValue,
   type ProtocolBlock,
   type ProtocolCandidate,
   type ProtocolOp,
-  type ProtocolPerson,
   type ProtocolState,
   type AssigneeOption,
+  type ProtocolAccess,
 } from "@/lib/calendar/protocol";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
 
 import { sendProtocolAction } from "./actions";
+import { AttendancePanel } from "./attendance-panel";
+import { newId, nowIso, span, time, TIME } from "./format";
 import { NotesPanel } from "./notes-panel";
 import { useProtocolSync, type SyncStatus } from "./use-protocol-sync";
-
-const TIME = new Intl.DateTimeFormat("de-DE", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-const time = (iso: string | null) => (iso ? TIME.format(new Date(iso)) : "–");
-const span = (start: string | null, end: string | null) =>
-  start ? `${time(start)}${end ? `–${time(end)}` : ""}` : null;
 
 function subscribeMinute(onChange: () => void) {
   const timer = setInterval(onChange, 30_000);
@@ -60,10 +43,10 @@ function useNow() {
   return useSyncExternalStore(subscribeMinute, minuteNow, () => null);
 }
 
-const nowIso = () => new Date().toISOString();
-const newId = () => crypto.randomUUID();
-
 type Dispatch = (op: ProtocolOp) => void;
+
+/** Bis eine Stunde vor Beginn gilt der Probenmodus als Vorbereitung. */
+const PREPARE_UNTIL_MS = 60 * 60 * 1000;
 
 const SYNC_LABELS: Record<SyncStatus, string> = {
   synced: "gespeichert",
@@ -376,223 +359,6 @@ function AddBlockDialog({
   );
 }
 
-const MARK_TONE: Record<AttendanceMarkValue, string> = {
-  PRESENT: "border-success bg-success/15 text-foreground",
-  LATE: "border-warning bg-warning/15 text-foreground",
-  LEFT_EARLY: "border-warning bg-warning/15 text-foreground",
-  ABSENT: "border-destructive bg-destructive/10 text-muted-foreground line-through",
-  EXCUSED: "border-border bg-muted text-muted-foreground",
-};
-
-function PersonChip({ person, dispatch }: { person: ProtocolPerson; dispatch: Dispatch }) {
-  const set = (mark: AttendanceMarkValue | null, withTime = false) =>
-    dispatch({ type: "attendance", userId: person.userId, mark, at: withTime ? nowIso() : null });
-  const here = person.mark === "PRESENT";
-  return (
-    <li
-      className={cn(
-        "flex min-h-12 items-stretch overflow-hidden rounded-lg border",
-        person.mark ? MARK_TONE[person.mark] : "border-border bg-card",
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => set(here ? null : "PRESENT")}
-        aria-pressed={here}
-        className="flex min-w-0 flex-1 flex-col justify-center px-3 py-1.5 text-left"
-      >
-        <span className="truncate text-sm font-medium">{person.name}</span>
-        <span className="truncate text-xs text-muted-foreground">
-          {person.mark
-            ? `${ATTENDANCE_LABELS[person.mark]}${person.at ? ` ${time(person.at)}` : ""}`
-            : person.declined
-              ? "hatte abgesagt"
-              : person.detail || "tippen = da"}
-        </span>
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="flex w-10 shrink-0 items-center justify-center border-l border-border/60 hover:bg-muted"
-            aria-label={`Anwesenheit ${person.name}`}
-          >
-            <MoreHorizontal className="size-4" aria-hidden />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => set("PRESENT")}>da</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => set("LATE", true)}>
-            kommt gerade (verspätet)
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => set("LEFT_EARLY", true)}>
-            geht jetzt (früher weg)
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => set("ABSENT")}>fehlt</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => set("EXCUSED")}>entschuldigt</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => set(null)}>zurücksetzen</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </li>
-  );
-}
-
-function AddPersonDialog({
-  open,
-  onOpenChange,
-  candidates,
-  dispatch,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  candidates: readonly ProtocolCandidate[];
-  dispatch: Dispatch;
-}) {
-  const [query, setQuery] = useState("");
-  const term = query.trim().toLocaleLowerCase("de");
-  const matches = term
-    ? candidates.filter((entry) => entry.name.toLocaleLowerCase("de").includes(term)).slice(0, 8)
-    : [];
-  const close = () => {
-    setQuery("");
-    onOpenChange(false);
-  };
-  return (
-    <ModalFormDialog
-      title="Person hinzufügen"
-      description="Wer nicht eingeladen war und trotzdem da ist – Mitglied oder Gast."
-      open={open}
-      onOpenChange={onOpenChange}
-    >
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <Label htmlFor="probe-add-person">Name</Label>
-          <Input
-            id="probe-add-person"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Name suchen oder Gast eintragen"
-            maxLength={120}
-            autoFocus
-          />
-        </div>
-        {matches.length ? (
-          <ul className="rounded-md border border-border">
-            {matches.map((entry) => (
-              <li key={entry.userId}>
-                <button
-                  type="button"
-                  className="min-h-11 w-full px-3 text-left text-sm hover:bg-muted"
-                  onClick={() => {
-                    dispatch({
-                      type: "attendance",
-                      userId: entry.userId,
-                      mark: "PRESENT",
-                      at: null,
-                    });
-                    close();
-                  }}
-                >
-                  {entry.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {query.trim() ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              dispatch({ type: "guest-add", guestId: newId(), name: query.trim() });
-              close();
-            }}
-          >
-            „{query.trim()}“ als Gast eintragen
-          </Button>
-        ) : null}
-      </div>
-    </ModalFormDialog>
-  );
-}
-
-function AttendancePanel({
-  state,
-  candidates,
-  dispatch,
-}: {
-  state: ProtocolState;
-  candidates: readonly ProtocolCandidate[];
-  dispatch: Dispatch;
-}) {
-  const [adding, setAdding] = useState(false);
-  // Noch nicht Erfasste zuerst, damit man sich von oben nach unten durcharbeitet.
-  const people = [...state.people].sort(
-    (a, b) => Number(a.mark !== null) - Number(b.mark !== null),
-  );
-  const open = state.people.filter((person) => person.mark === null);
-  const available = candidates.filter(
-    (entry) => !state.people.some((person) => person.userId === entry.userId),
-  );
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
-          <PlusIcon className="size-4" />
-          Person
-        </Button>
-        {open.length ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              open.forEach((person) =>
-                dispatch({ type: "attendance", userId: person.userId, mark: "PRESENT", at: null }),
-              )
-            }
-          >
-            Übrige {open.length} als da
-          </Button>
-        ) : null}
-      </div>
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {people.map((person) => (
-          <PersonChip key={person.userId} person={person} dispatch={dispatch} />
-        ))}
-        {state.guests.map((guest) => (
-          <li
-            key={guest.id}
-            className="flex min-h-12 items-center justify-between rounded-lg border border-success bg-success/15 px-3"
-          >
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">{guest.name}</span>
-              <span className="block text-xs text-muted-foreground">Gast</span>
-            </span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => dispatch({ type: "guest-remove", guestId: guest.id })}
-            >
-              Entfernen
-            </Button>
-          </li>
-        ))}
-      </ul>
-      <AddPersonDialog
-        open={adding}
-        onOpenChange={setAdding}
-        candidates={available}
-        dispatch={dispatch}
-      />
-    </div>
-  );
-}
-
 /** Abschluss: Zusammenfassung schreiben und das Protokoll verschicken. */
 function EndDialog({
   open,
@@ -657,6 +423,9 @@ export function ProbeMode({
   scenes,
   assignees,
   sentAt,
+  access,
+  userId,
+  initialPreparing,
 }: {
   eventId: string;
   title: string;
@@ -668,11 +437,24 @@ export function ProbeMode({
   assignees: AssigneeOption[];
   /** Wann das Protokoll zuletzt verschickt wurde. */
   sentAt: string | null;
+  /** `notes`: Gewerk-Leitung, nur Notizen und Aufgaben. */
+  access: ProtocolAccess;
+  userId: string;
+  /** Mehr als eine Stunde vor Beginn und noch nicht begonnen (Stand beim Laden). */
+  initialPreparing: boolean;
 }) {
   useEventLiveRefresh(eventId);
   const { state, dispatch, status, pending } = useProtocolSync(eventId, serverState, candidates);
   const now = useNow();
-  const [tab, setTab] = useState<"ablauf" | "leute" | "notizen">("ablauf");
+  const started = !!state.actualStart;
+  const ended = !!state.actualEnd;
+  const preparing =
+    !started &&
+    (now === null ? initialPreparing : Date.parse(plannedStart) - now > PREPARE_UNTIL_MS);
+  const full = access === "full";
+  const [tab, setTab] = useState<"ablauf" | "leute" | "notizen">(
+    initialPreparing || !full ? "notizen" : "ablauf",
+  );
   const [ending, setEnding] = useState(false);
   // Versand erst, wenn alle Änderungen beim Server sind (auch nach einer Offline-Phase).
   const [sendWhenSynced, setSendWhenSynced] = useState(false);
@@ -706,8 +488,30 @@ export function ProbeMode({
     dispatch({ type: "block-order", blockIds: ids });
   };
 
-  const started = !!state.actualStart;
-  const ended = !!state.actualEnd;
+  if (!full) {
+    return (
+      <div className="space-y-4">
+        <div className="space-y-1 rounded-lg border border-border bg-card p-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 truncate font-semibold">{title}</p>
+            <SyncBadge status={status} pending={pending} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Geplant {span(plannedStart, plannedEnd)} Uhr · Hinweise und Aufgaben für die Probe
+            hinterlegen, z. B. was dein Gewerk braucht oder vorbereitet. Ändern kannst du nur deine
+            eigenen.
+          </p>
+        </div>
+        <NotesPanel
+          state={state}
+          assignees={assignees}
+          dispatch={dispatch}
+          canChange={(note) => note.authorId === null || note.authorId === userId}
+          preparing={preparing}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -729,7 +533,13 @@ export function ProbeMode({
             <SyncBadge status={status} pending={pending} />
           </div>
         </div>
-        {!started ? (
+        {preparing ? (
+          <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Vorbereitung</span> – Notizen, Aufgaben
+            und der Ablauf lassen sich schon pflegen. Anwesenheit und Start ab{" "}
+            {time(new Date(Date.parse(plannedStart) - PREPARE_UNTIL_MS).toISOString())} Uhr.
+          </p>
+        ) : !started ? (
           <Button
             type="button"
             size="lg"
@@ -783,7 +593,9 @@ export function ProbeMode({
           { value: "ablauf" as const, label: "Ablauf" },
           {
             value: "leute" as const,
-            label: `Da ${attendance.here}/${attendance.expected}`,
+            label: preparing
+              ? `Eingeladen ${attendance.expected}`
+              : `Da ${attendance.here}/${attendance.expected}`,
           },
           { value: "notizen" as const, label: `Notizen ${state.notes.length}` },
         ]}
@@ -793,7 +605,7 @@ export function ProbeMode({
 
       {tab === "ablauf" ? (
         <div className="space-y-4">
-          {current ? (
+          {preparing ? null : current ? (
             <CurrentBlock block={current.block} running={current.running} dispatch={dispatch} />
           ) : state.blocks.length ? (
             <p className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
@@ -837,9 +649,20 @@ export function ProbeMode({
           />
         </div>
       ) : tab === "leute" ? (
-        <AttendancePanel state={state} candidates={candidates} dispatch={dispatch} />
+        <AttendancePanel
+          state={state}
+          candidates={candidates}
+          dispatch={dispatch}
+          readOnly={preparing}
+        />
       ) : (
-        <NotesPanel state={state} assignees={assignees} dispatch={dispatch} />
+        <NotesPanel
+          state={state}
+          assignees={assignees}
+          dispatch={dispatch}
+          canChange={() => true}
+          preparing={preparing}
+        />
       )}
 
       <EndDialog

@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { protocolOpSchema } from "@/lib/calendar/protocol";
-import { applyProtocolOpsToDb, canEditProtocol } from "@/lib/calendar/protocol-server";
+import {
+  applyProtocolOpsToDb,
+  canEditProtocol,
+  getProtocolAccess,
+} from "@/lib/calendar/protocol-server";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import { prisma } from "@/lib/prisma";
@@ -37,12 +41,13 @@ export async function applyProtocolOpsAction(input: z.input<typeof inputSchema>)
   if (!event || event.status === "DRAFT" || event.status === "CANCELLED") {
     return { ok: false as const, error: "Für diesen Termin gibt es kein Protokoll.", retry: false };
   }
-  if (!(await canEditProtocol(session.user, event.showId))) {
+  const access = await getProtocolAccess(session.user, event.showId);
+  if (!access) {
     return { ok: false as const, error: "Du darfst dieses Protokoll nicht führen.", retry: false };
   }
 
   try {
-    const { rejected } = await applyProtocolOpsToDb(eventId, ops, userId);
+    const { rejected } = await applyProtocolOpsToDb(eventId, ops, userId, access);
     revalidatePath(`/mitglieder/termine/${eventId}`);
     revalidatePath(`/mitglieder/termine/${eventId}/probe`);
     await broadcastRehearsalUpdated({

@@ -233,7 +233,7 @@ export function EventView({
   me,
   editHref,
   editLabel,
-  protocolHref,
+  protocolLink,
   rows,
   people,
   protocol,
@@ -285,11 +285,11 @@ export function EventView({
               </p>
             ) : null}
           </div>
-          {editHref || protocolHref ? (
+          {editHref || protocolLink ? (
             <div className="flex flex-wrap gap-2">
-              {protocolHref ? (
+              {protocolLink ? (
                 <Button asChild size="sm">
-                  <Link href={protocolHref}>{event.past ? "Protokoll" : "Probenmodus"}</Link>
+                  <Link href={protocolLink.href}>{protocolLink.label}</Link>
                 </Button>
               ) : null}
               {editHref ? (

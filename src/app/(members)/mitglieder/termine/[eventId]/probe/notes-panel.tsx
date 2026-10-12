@@ -5,6 +5,7 @@ import { useState } from "react";
 import { TrashIcon } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import {
   NOTE_TYPE_LABELS,
   type AssigneeOption,
   type NoteTypeValue,
+  type ProtocolNote,
   type ProtocolOp,
   type ProtocolState,
   type TaskAssignee,
@@ -102,10 +104,16 @@ export function NotesPanel({
   state,
   assignees,
   dispatch,
+  canChange,
+  preparing,
 }: {
   state: ProtocolState;
   assignees: readonly AssigneeOption[];
   dispatch: Dispatch;
+  /** Darf dieser Eintrag gelöscht werden (Gewerk-Leitungen: nur eigene)? */
+  canChange: (note: ProtocolNote) => boolean;
+  /** Vor der Probe: Einträge sind Vorab-Hinweise. */
+  preparing: boolean;
 }) {
   const [type, setType] = useState<NoteTypeValue>("NOTE");
   const [text, setText] = useState("");
@@ -113,6 +121,9 @@ export function NotesPanel({
   const [assignee, setAssignee] = useState<TaskAssignee | null>(null);
   const [dueAt, setDueAt] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
+  // Aufgaben melden die Zuständigen standardmäßig; Notizen gehen nur auf Wunsch an alle.
+  const [notifyChoice, setNotifyChoice] = useState<boolean | null>(null);
+  const notify = notifyChoice ?? type === "TASK";
   const running = state.blocks.find((block) => block.actualStart && !block.actualEnd);
 
   const submit = () => {
@@ -125,8 +136,10 @@ export function NotesPanel({
       blockId: blockId || running?.id || null,
       assignee: type === "TASK" ? assignee : null,
       dueAt: type === "TASK" && dueAt ? dueAt : null,
+      notify,
     });
     setText("");
+    setNotifyChoice(null);
     setAssignee(null);
     setDueAt("");
   };
@@ -134,6 +147,8 @@ export function NotesPanel({
   const blockLabel = (id: string | null) =>
     id ? (state.blocks.find((block) => block.id === id)?.label ?? null) : null;
   const notes = [...state.notes].reverse();
+  const isPrepared = (note: ProtocolNote) =>
+    state.actualStart ? note.createdAt < state.actualStart : preparing;
 
   return (
     <div className="space-y-4">
@@ -146,7 +161,10 @@ export function NotesPanel({
       >
         <SegmentedControl
           value={type}
-          onValueChange={setType}
+          onValueChange={(value) => {
+            setType(value);
+            setNotifyChoice(null);
+          }}
           options={TYPE_OPTIONS}
           fullWidth
           aria-label="Art des Eintrags"
@@ -161,7 +179,9 @@ export function NotesPanel({
               ? "z. B. Kostüm Sz. 3 wird rot"
               : type === "TASK"
                 ? "z. B. Koffer besorgen"
-                : "z. B. Auftritt links statt rechts"
+                : preparing
+                  ? "z. B. Bitte Degen mitbringen, Kampfszene zuerst"
+                  : "z. B. Auftritt links statt rechts"
           }
           aria-label="Text"
         />
@@ -181,6 +201,10 @@ export function NotesPanel({
             </div>
           </div>
         ) : null}
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <Checkbox checked={notify} onCheckedChange={(value) => setNotifyChoice(value === true)} />
+          {type === "TASK" ? "Zuständige benachrichtigen" : "Alle Eingeladenen benachrichtigen"}
+        </label>
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
             Zu
@@ -222,6 +246,8 @@ export function NotesPanel({
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {[
+                    isPrepared(note) ? "vorab" : null,
+                    note.authorName,
                     blockLabel(note.blockId),
                     assigneeLabel(note.assignee, assignees),
                     note.dueAt
@@ -232,15 +258,17 @@ export function NotesPanel({
                     .join(" · ")}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-label="Eintrag löschen"
-                onClick={() => setRemoving(note.id)}
-              >
-                <TrashIcon className="size-4" />
-              </Button>
+              {canChange(note) ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Eintrag löschen"
+                  onClick={() => setRemoving(note.id)}
+                >
+                  <TrashIcon className="size-4" />
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>

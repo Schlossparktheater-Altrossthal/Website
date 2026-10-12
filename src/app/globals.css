@@ -981,3 +981,9 @@
     padding: 0;
   }
 }
+
+/* Probenmodus: Anwesenheit sortiert sich nach einer Tipp-Pause mit View Transition neu. */
+::view-transition-group(*) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}

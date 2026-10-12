@@ -122,11 +122,10 @@ export default async function EventEditorPage({
     rehearsal.showId || otherShowId ? await loadAudienceContext(otherShowId) : null;
   const productionTitle = production ? (production.title ?? String(production.year)) : null;
 
-  // Ab einer Stunde vor Beginn: Probenmodus für Anwesenheit, Zeiten und Szenen.
-  const protocolOpen =
-    rehearsal.status === "SCHEDULED" || rehearsal.status === "TENTATIVE"
-      ? rehearsal.start.getTime() - new Date().getTime() <= 60 * 60 * 1000
-      : false;
+  // Probenmodus jederzeit: vorab Hinweise sammeln, ab einer Stunde vor Beginn protokollieren.
+  const protocolOpen = rehearsal.status === "SCHEDULED" || rehearsal.status === "TENTATIVE";
+  const preparing =
+    !rehearsal.actualStart && rehearsal.start.getTime() - new Date().getTime() > 60 * 60 * 1000;
 
   const breadcrumbs = [
     membersNavigationBreadcrumb("/mitglieder/terminplanung"),
@@ -197,11 +196,14 @@ export default async function EventEditorPage({
         {protocolOpen ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted p-4">
             <p className="text-sm text-muted-foreground">
-              Anwesenheit, tatsächliche Zeiten und geprobte Szenen erfasst der Probenmodus – auch
-              live auf mehreren Geräten.
+              {preparing
+                ? "Hinweise, Aufgaben und Ablauf schon vorab im Probenmodus hinterlegen – Anwesenheit und Zeiten ab einer Stunde vor Beginn."
+                : "Anwesenheit, tatsächliche Zeiten und geprobte Szenen erfasst der Probenmodus – auch live auf mehreren Geräten."}
             </p>
             <Button asChild variant="outline" size="sm">
-              <Link href={`/mitglieder/termine/${rehearsal.id}/probe`}>Probenmodus öffnen</Link>
+              <Link href={`/mitglieder/termine/${rehearsal.id}/probe`}>
+                {preparing ? "Probe vorbereiten" : "Probenmodus öffnen"}
+              </Link>
             </Button>
           </div>
         ) : null}
