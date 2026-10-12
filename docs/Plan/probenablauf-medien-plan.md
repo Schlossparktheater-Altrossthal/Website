@@ -66,8 +66,8 @@ model EventMedia {
 - **Fotos**: im Browser auf max. ~2000 px verkleinern und als WebP/JPEG speichern (spart DB), EXIF/GPS entfernen, Vorschaubild serverseitig (sharp ist vorhanden).
 - **Sprachmemo**: Aufnahme-Knopf im Notiz-Editor (MediaRecorder; Android liefert `audio/webm;opus`, iPhone `audio/mp4`/AAC – beide speichern, Abspielen klappt jeweils). Limit z. B. 10 min.
 - **Musik**: Upload mp3/m4a/wav/ogg, Limit z. B. 25 MB; am Ablaufpunkt abspielbar im Probenmodus (großer Play/Pause-Knopf, Sprung zurück ±10 s).
-- **Auslieferung**: Route prüft Rechte und leitet auf kurzlebige Presigned URL um (Range/Spulen auf iPhone übernimmt S3).
-- Upload per Presigned URL direkt in den Objektspeicher (kein Body-Limit von Next/Ingress); **nur online**, offline zeigt der Knopf „Upload wenn wieder online“ nicht – kein Blob in localStorage. Optional später IndexedDB-Queue.
+- **Auslieferung**: Route prüft Rechte und streamt aus S3; `Range` wird an S3 weitergereicht (Spulen auf dem iPhone).
+- Upload per `fetch` an eine API-Route, die als Stream nach S3 schreibt (Route Handler, kein Server-Action-Limit); **nur online**, offline zeigt der Knopf „Upload wenn wieder online“ nicht – kein Blob in localStorage. Optional später IndexedDB-Queue.
 
 ### 3. Probenfotos von Mitgliedern
 
@@ -141,7 +141,7 @@ Weitere sinnvolle Kleinigkeiten (optional, eigene Phase):
 
 ## Entscheidungen (2026-10-12)
 
-1. **Speicher (aktualisiert):** Im Cluster läuft bereits **RustFS** (S3, Namespace `rustfs`, 100 Gi local-path auf vmd179361, bisher nur Velero-Ziel). Vorschlag: RustFS mitnutzen statt Garage zusätzlich – eigener Bucket `mb-media` / `mb-media-staging`, eigener Zugangsschlüssel nur für diese Buckets. Achtung: Velero-Backups und Medien lägen auf demselben Node/Volume → Medien-Bucket braucht eine **zweite Kopie woanders** (z. B. nächtlich per rclone auf vmd116756 oder extern). App spricht nur S3 (`src/lib/storage/`), Upload/Download per Presigned URL.
+1. **Speicher (aktualisiert):** Im Cluster läuft bereits **RustFS** (S3, Namespace `rustfs`, 100 Gi local-path auf vmd179361, bisher nur Velero-Ziel). Vorschlag: RustFS mitnutzen statt Garage zusätzlich – eigener Bucket `mb-media` / `mb-media-staging`, eigener Zugangsschlüssel nur für diese Buckets. Achtung: Velero-Backups und Medien lägen auf demselben Node/Volume → Medien-Bucket braucht eine **zweite Kopie woanders** (z. B. nächtlich per rclone auf vmd116756 oder extern). App spricht nur S3 (`src/lib/storage/`), **Kein öffentlicher S3-Endpunkt** (RustFS hält auch die Velero-Backups): die App reicht Up-/Downloads durch (Stream, Range-Header an S3 weitergeben).
 2. **Fotos sehen/hochladen:** Eingeladene **und** tatsächlich Anwesende (auch spontan Dazugekommene) + Protokoll-Zugriff.
 3. **Memos/Notizen:** dieselben Personen dürfen auch Notizen und Sprachmemos anlegen (eigene bearbeiten/löschen). Damit wird `getProtocolAccess` um eine Stufe `contribute` erweitert: Notizen/Medien ja, Ablauf/Anwesenheit/Aufgaben-Zuweisung nein.
 4. **Erledigt:** je Zuständigem, zusätzlich Knopf „Für alle erledigt“ (setzt alle offenen Zuständigen, merkt `doneById`).
