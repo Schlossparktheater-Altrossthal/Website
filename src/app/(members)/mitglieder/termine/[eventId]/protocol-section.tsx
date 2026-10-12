@@ -146,10 +146,19 @@ export function ProtocolSection({ protocol }: { protocol: ProtocolView }) {
         <Section title="Aufgaben">
           <ul className="space-y-1 text-sm">
             {otherTasks.map((task) => (
-              <li key={task.id} className={cn(task.doneAt && "text-muted-foreground line-through")}>
-                {task.doneAt ? "☑" : "☐"} {task.text}
-                {task.assignee ? (
-                  <span className="text-xs text-muted-foreground"> · {task.assignee}</span>
+              <li key={task.id}>
+                <span className={cn(task.allDone && "text-muted-foreground line-through")}>
+                  {task.allDone ? "☑" : "☐"} {task.text}
+                </span>
+                {task.assignees.length ? (
+                  <span className="text-xs text-muted-foreground">
+                    {" · "}
+                    {task.assignees
+                      .map((entry) =>
+                        task.assignees.length > 1 && entry.done ? `${entry.label} ✓` : entry.label,
+                      )
+                      .join(", ")}
+                  </span>
                 ) : null}
               </li>
             ))}

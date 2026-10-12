@@ -296,7 +296,7 @@ function AddBlockDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  scenes: { id: string; label: string }[];
+  scenes: { id: string; label: string; characterIds: string[] }[];
   usedSceneIds: Set<string>;
   dispatch: Dispatch;
 }) {
@@ -433,7 +433,7 @@ export function ProbeMode({
   plannedEnd: string | null;
   serverState: ProtocolState;
   candidates: ProtocolCandidate[];
-  scenes: { id: string; label: string }[];
+  scenes: { id: string; label: string; characterIds: string[] }[];
   assignees: AssigneeOption[];
   /** Wann das Protokoll zuletzt verschickt wurde. */
   sentAt: string | null;
@@ -505,6 +505,7 @@ export function ProbeMode({
         <NotesPanel
           state={state}
           assignees={assignees}
+          scenes={scenes}
           dispatch={dispatch}
           canChange={(note) => note.authorId === null || note.authorId === userId}
           preparing={preparing}
@@ -659,6 +660,7 @@ export function ProbeMode({
         <NotesPanel
           state={state}
           assignees={assignees}
+          scenes={scenes}
           dispatch={dispatch}
           canChange={() => true}
           preparing={preparing}

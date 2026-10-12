@@ -6,9 +6,11 @@ import {
   type AttendanceMarkValue,
 } from "@/lib/calendar/protocol";
 import {
+  ASSIGNEE_SELECT,
   buildAssigneeOptions,
-  resolveTaskRecipients,
+  rowsForUser,
   toProtocolNote,
+  toTaskAssignee,
 } from "@/lib/calendar/protocol-server";
 import { blockLabel } from "@/lib/calendar/scene-schedule";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
@@ -34,7 +36,13 @@ export type ProtocolView = {
   }[];
   decisions: { id: string; text: string; block: string | null }[];
   notes: { id: string; text: string; block: string | null }[];
-  tasks: (MyTask & { assignee: string | null; mine: boolean })[];
+  tasks: (MyTask & {
+    /** Zuständige mit Erledigt-Stand. */
+    assignees: { label: string; done: boolean }[];
+    mine: boolean;
+    /** Ganze Aufgabe erledigt (alle Zuständigen). */
+    allDone: boolean;
+  })[];
 };
 
 const TIME = new Intl.DateTimeFormat("de-DE", {
@@ -75,7 +83,7 @@ export async function readProtocolView(
         include: { user: { select: { firstName: true, lastName: true, name: true, email: true } } },
       },
       guests: { orderBy: { createdAt: "asc" }, select: { name: true } },
-      notes: { orderBy: { createdAt: "asc" } },
+      notes: { orderBy: { createdAt: "asc" }, include: { assignees: { select: ASSIGNEE_SELECT } } },
     },
   });
   if (!event) return null;
@@ -91,18 +99,25 @@ export async function readProtocolView(
     event.blocks.map((block) => [block.id, blockLabel({ ...block, location: null })]),
   );
   const options = context ? buildAssigneeOptions(context) : [];
-  const assigneeLabel = (note: ReturnType<typeof toProtocolNote>) =>
-    note.assignee
-      ? (options.find(
-          (option) => option.kind === note.assignee?.kind && option.id === note.assignee?.id,
-        )?.label ?? null)
-      : null;
+  const labelOf = (row: Parameters<typeof toTaskAssignee>[0]) => {
+    const assignee = toTaskAssignee(row);
+    return assignee
+      ? (options.find((option) => option.kind === assignee.kind && option.id === assignee.id)
+          ?.label ?? "unbekannt")
+      : "unbekannt";
+  };
 
   const taskRows = event.notes.filter((note) => note.type === "TASK");
   const tasks = await Promise.all(
     taskRows.map(async (row) => {
       const note = toProtocolNote(row);
-      const mine = (await resolveTaskRecipients(row)).includes(userId);
+      const mineRows = await rowsForUser(row.assignees, userId);
+      const mineIds = new Set(mineRows.map((entry) => entry.id));
+      const others = row.assignees.filter((entry) => !mineIds.has(entry.id));
+      const myDone =
+        mineRows.length && mineRows.every((entry) => entry.doneAt)
+          ? (mineRows[0].doneAt?.toISOString() ?? null)
+          : null;
       return {
         id: note.id,
         text: note.text,
@@ -110,10 +125,13 @@ export async function readProtocolView(
         eventTitle: event.title,
         eventStart: event.start.toISOString(),
         dueAt: note.dueAt,
-        doneAt: note.doneAt,
+        doneAt: mineRows.length ? myDone : note.doneAt,
         via: null,
-        assignee: assigneeLabel(note),
-        mine,
+        others: others.length,
+        othersOpen: others.filter((entry) => !entry.doneAt).length,
+        assignees: row.assignees.map((entry) => ({ label: labelOf(entry), done: !!entry.doneAt })),
+        mine: mineRows.length > 0,
+        allDone: !!note.doneAt,
       };
     }),
   );

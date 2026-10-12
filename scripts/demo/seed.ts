@@ -1340,14 +1340,21 @@ async function seedEvents(
         data: { outcome: "DONE" },
       });
       for (const [type, text] of [pick(PROTOCOL_NOTES), pick(PROTOCOL_NOTES)]) {
+        const doneAt = type === "TASK" && chance(0.5) ? new Date(NOW - DAY) : null;
         await prisma.eventNote.create({
           data: {
             eventId: event.id,
             type,
             text,
             authorId: uid("miriam"),
-            assigneeUserId: type === "TASK" ? uid(pick(["bernd", "felix", "lena", "ute"])) : null,
-            doneAt: type === "TASK" && chance(0.5) ? new Date(NOW - DAY) : null,
+            doneAt,
+            ...(type === "TASK"
+              ? {
+                  assignees: {
+                    create: { userId: uid(pick(["bernd", "felix", "lena", "ute"])), doneAt },
+                  },
+                }
+              : {}),
           },
         });
       }

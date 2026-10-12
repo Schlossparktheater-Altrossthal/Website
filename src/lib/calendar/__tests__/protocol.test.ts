@@ -108,7 +108,11 @@ describe("Notizen", () => {
       assignee: { kind: "department", id: "d1" },
       dueAt: "2026-10-11",
     });
-    expect(added.notes[0]).toMatchObject({ assignee: { kind: "department" }, dueAt: "2026-10-11" });
+    // Älteres Format mit genau einer Zuständigkeit wird weiter verstanden.
+    expect(added.notes[0]).toMatchObject({
+      assignees: [{ kind: "department", id: "d1", doneAt: null }],
+      dueAt: "2026-10-11",
+    });
     const note = applyProtocolOp(base, {
       type: "note-add",
       noteId: "n2",
@@ -119,8 +123,67 @@ describe("Notizen", () => {
       dueAt: "2026-10-11",
     });
     // Nur Aufgaben haben Zuständige und Fristen.
-    expect(note.notes[0]).toMatchObject({ assignee: null, dueAt: null });
+    expect(note.notes[0]).toMatchObject({ assignees: [], dueAt: null });
     expect(applyProtocolOp(added, { type: "note-remove", noteId: "n1" }).notes).toHaveLength(0);
+  });
+});
+
+describe("Notizen bearbeiten", () => {
+  const withTask = applyProtocolOp(base, {
+    type: "note-add",
+    noteId: "n1",
+    noteType: "TASK",
+    text: "Koffer besorgen",
+    blockId: null,
+    assignees: [
+      { kind: "department", id: "d1" },
+      { kind: "user", id: "u1" },
+      { kind: "user", id: "u1" },
+    ],
+    dueAt: null,
+  });
+
+  it("legt mehrere Zuständige ohne Doppelte an", () => {
+    expect(withTask.notes[0].assignees.map((entry) => entry.id)).toEqual(["d1", "u1"]);
+  });
+
+  it("ändert nur angegebene Felder und behält den Stand bleibender Zuständiger", () => {
+    const done = {
+      ...withTask,
+      notes: withTask.notes.map((note) => ({
+        ...note,
+        assignees: note.assignees.map((entry) =>
+          entry.id === "u1" ? { ...entry, doneAt: "2026-10-12T10:00:00.000Z" } : entry,
+        ),
+      })),
+    };
+    const edited = applyProtocolOp(done, {
+      type: "note-edit",
+      noteId: "n1",
+      assignees: [{ kind: "user", id: "u1" }],
+    });
+    expect(edited.notes[0]).toMatchObject({
+      text: "Koffer besorgen",
+      assignees: [{ kind: "user", id: "u1", doneAt: "2026-10-12T10:00:00.000Z" }],
+      doneAt: "2026-10-12T10:00:00.000Z",
+    });
+    expect(edited.notes[0].editedAt).not.toBeNull();
+  });
+
+  it("entfernt Zuständige und Frist, wenn aus der Aufgabe eine Notiz wird", () => {
+    const edited = applyProtocolOp(withTask, {
+      type: "note-edit",
+      noteId: "n1",
+      noteType: "NOTE",
+      text: "Koffer fehlt",
+    });
+    expect(edited.notes[0]).toMatchObject({ type: "NOTE", text: "Koffer fehlt", assignees: [] });
+  });
+
+  it("versteht die alte Bearbeitung nur mit Text", () => {
+    expect(
+      protocolOpSchema.safeParse({ type: "note-edit", noteId: "n1", text: "neu" }).success,
+    ).toBe(true);
   });
 });
 

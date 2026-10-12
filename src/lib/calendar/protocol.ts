@@ -30,6 +30,22 @@ export const NOTE_TYPE_LABELS: Record<NoteTypeValue, string> = {
 /** Zuständig für eine Aufgabe: eine Person, eine Figur (deren Besetzung) oder ein Gewerk. */
 export type TaskAssignee = { kind: "user" | "character" | "department"; id: string };
 
+/** Zuständigkeit mit eigenem Erledigt-Stand. */
+export type ProtocolAssignee = TaskAssignee & { doneAt: string | null };
+
+export const assigneeKey = (assignee: TaskAssignee) => `${assignee.kind}:${assignee.id}`;
+
+/** Zuständige ohne Doppelte, in der gegebenen Reihenfolge. */
+export function uniqueAssignees(assignees: readonly TaskAssignee[]): TaskAssignee[] {
+  const seen = new Set<string>();
+  return assignees.flatMap((assignee) => {
+    const key = assigneeKey(assignee);
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ kind: assignee.kind, id: assignee.id }];
+  });
+}
+
 /**
  * Wie weit jemand den Probenmodus nutzen darf: `full` führt das Protokoll, `notes` (Leitung oder
  * Stellvertretung eines Gewerks der Produktion) darf nur Notizen und Aufgaben hinterlegen – auch
@@ -42,6 +58,7 @@ export type OutcomeValue = (typeof OUTCOMES)[number];
 
 const id = z.string().min(1).max(64);
 const iso = z.string().datetime();
+const assigneeSchema = z.object({ kind: z.enum(["user", "character", "department"]), id });
 
 export const protocolOpSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("event-time"), field: z.enum(["start", "end"]), at: iso.nullable() }),
@@ -74,12 +91,25 @@ export const protocolOpSchema = z.discriminatedUnion("type", [
     noteType: z.enum(NOTE_TYPES),
     text: z.string().trim().min(1).max(4000),
     blockId: id.nullable(),
-    assignee: z.object({ kind: z.enum(["user", "character", "department"]), id }).nullable(),
+    assignees: z.array(assigneeSchema).max(60).optional(),
+    /** Älterer Stand mit genau einer Zuständigkeit (Warteschlangen alter Geräte). */
+    assignee: assigneeSchema.nullable().optional(),
     dueAt: z.string().date().nullable(),
     /** Aufgabe: Zuständige benachrichtigen, Notiz/Entscheidung: alle Eingeladenen. */
     notify: z.boolean().optional(),
   }),
-  z.object({ type: z.literal("note-edit"), noteId: id, text: z.string().trim().min(1).max(4000) }),
+  /** Ändert nur die angegebenen Felder. */
+  z.object({
+    type: z.literal("note-edit"),
+    noteId: id,
+    text: z.string().trim().min(1).max(4000).optional(),
+    noteType: z.enum(NOTE_TYPES).optional(),
+    blockId: id.nullable().optional(),
+    assignees: z.array(assigneeSchema).max(60).optional(),
+    dueAt: z.string().date().nullable().optional(),
+    /** Neu hinzugekommene Zuständige benachrichtigen. */
+    notify: z.boolean().optional(),
+  }),
   z.object({ type: z.literal("note-remove"), noteId: id }),
   z.object({ type: z.literal("summary"), text: z.string().max(8000) }),
 ]);
@@ -120,11 +150,30 @@ export type ProtocolNote = {
   type: NoteTypeValue;
   text: string;
   blockId: string | null;
-  assignee: TaskAssignee | null;
+  assignees: ProtocolAssignee[];
   dueAt: string | null;
+  /** Erledigt, sobald alle Zuständigen erledigt haben. */
   doneAt: string | null;
   createdAt: string;
+  editedAt: string | null;
 };
+
+/** Zuständige einer `note-add`-Operation (neues und altes Format). */
+export function noteAddAssignees(op: Extract<ProtocolOp, { type: "note-add" }>) {
+  if (op.noteType !== "TASK") return [];
+  return uniqueAssignees(op.assignees ?? (op.assignee ? [op.assignee] : []));
+}
+
+/** Abgeleiteter Erledigt-Stand: der späteste, wenn alle erledigt haben. */
+export function allDoneAt(assignees: readonly { doneAt: string | null }[]) {
+  if (!assignees.length || assignees.some((entry) => !entry.doneAt)) return null;
+  return (
+    assignees
+      .map((entry) => entry.doneAt as string)
+      .sort()
+      .at(-1) ?? null
+  );
+}
 
 /** Auswahl für Zuständige einer Aufgabe. */
 export type AssigneeOption = TaskAssignee & { label: string };
@@ -238,25 +287,51 @@ export function applyProtocolOp(
             type: op.noteType,
             text: op.text,
             blockId: op.blockId,
-            assignee: op.noteType === "TASK" ? op.assignee : null,
+            assignees: noteAddAssignees(op).map((assignee) => ({ ...assignee, doneAt: null })),
             dueAt: op.noteType === "TASK" ? op.dueAt : null,
             doneAt: null,
             createdAt: new Date().toISOString(),
+            editedAt: null,
           },
         ],
       };
     case "note-edit":
       return {
         ...state,
-        notes: state.notes.map((note) =>
-          note.id === op.noteId ? { ...note, text: op.text } : note,
-        ),
+        notes: state.notes.map((note) => (note.id === op.noteId ? editNote(note, op) : note)),
       };
     case "note-remove":
       return { ...state, notes: state.notes.filter((note) => note.id !== op.noteId) };
     case "summary":
       return { ...state, summary: op.text };
   }
+}
+
+/** Wendet eine Bearbeitung auf einen Eintrag an; wer Zuständiger bleibt, behält seinen Stand. */
+export function editNote(
+  note: ProtocolNote,
+  op: Extract<ProtocolOp, { type: "note-edit" }>,
+): ProtocolNote {
+  const type = op.noteType ?? note.type;
+  const task = type === "TASK";
+  const previous = new Map(note.assignees.map((entry) => [assigneeKey(entry), entry]));
+  const assignees = !task
+    ? []
+    : op.assignees
+      ? uniqueAssignees(op.assignees).map(
+          (assignee) => previous.get(assigneeKey(assignee)) ?? { ...assignee, doneAt: null },
+        )
+      : note.assignees;
+  return {
+    ...note,
+    type,
+    text: op.text ?? note.text,
+    blockId: op.blockId === undefined ? note.blockId : op.blockId,
+    assignees,
+    dueAt: !task ? null : op.dueAt === undefined ? note.dueAt : op.dueAt,
+    doneAt: task ? allDoneAt(assignees) : null,
+    editedAt: new Date().toISOString(),
+  };
 }
 
 /** Der Punkt, der gerade läuft, sonst der nächste noch nicht begonnene. */

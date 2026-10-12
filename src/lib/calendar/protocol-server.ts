@@ -5,14 +5,19 @@ import {
   CALENDAR_PLANNER_PERMISSION,
   REHEARSAL_PROTOCOL_PERMISSION,
 } from "@/lib/calendar/permissions";
-import type {
-  AssigneeOption,
-  ProtocolCandidate,
-  ProtocolNote,
-  ProtocolAccess,
-  ProtocolOp,
-  ProtocolState,
-  TaskAssignee,
+import {
+  allDoneAt,
+  assigneeKey,
+  noteAddAssignees,
+  uniqueAssignees,
+  type AssigneeOption,
+  type ProtocolAssignee,
+  type ProtocolCandidate,
+  type ProtocolNote,
+  type ProtocolAccess,
+  type ProtocolOp,
+  type ProtocolState,
+  type TaskAssignee,
 } from "@/lib/calendar/protocol";
 import { blockLabel } from "@/lib/calendar/scene-schedule";
 import { getUserDisplayName } from "@/lib/names";
@@ -137,6 +142,7 @@ export async function readProtocol(eventId: string) {
         orderBy: { createdAt: "asc" },
         include: {
           author: { select: { firstName: true, lastName: true, name: true, email: true } },
+          assignees: { select: ASSIGNEE_SELECT },
         },
       },
     },
@@ -191,11 +197,31 @@ export async function readProtocol(eventId: string) {
     .filter((member) => !present.has(member.id))
     .map((member) => ({ userId: member.id, name: member.name }))
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
-  const scenes = context.scenes.map((scene) => ({ id: scene.id, label: scene.label }));
+  const scenes = context.scenes.map((scene) => ({
+    id: scene.id,
+    label: scene.label,
+    characterIds: scene.characterIds,
+  }));
   const assignees = buildAssigneeOptions(context);
 
   return { event, state, candidates, scenes, assignees };
 }
+
+export const ASSIGNEE_SELECT = {
+  id: true,
+  userId: true,
+  characterId: true,
+  departmentId: true,
+  departmentTaskId: true,
+  doneAt: true,
+} as const;
+
+type AssigneeRow = {
+  userId: string | null;
+  characterId: string | null;
+  departmentId: string | null;
+  doneAt?: Date | null;
+};
 
 type NoteRow = {
   id: string;
@@ -203,23 +229,22 @@ type NoteRow = {
   type: ProtocolNote["type"];
   text: string;
   blockId: string | null;
-  assigneeUserId: string | null;
-  characterId: string | null;
-  departmentId: string | null;
   dueAt: Date | null;
   doneAt: Date | null;
   createdAt: Date;
+  editedAt: Date | null;
+  assignees: AssigneeRow[];
   author?: Parameters<typeof getUserDisplayName>[0] | null;
 };
 
+export function toTaskAssignee(row: AssigneeRow): TaskAssignee | null {
+  if (row.userId) return { kind: "user", id: row.userId };
+  if (row.characterId) return { kind: "character", id: row.characterId };
+  if (row.departmentId) return { kind: "department", id: row.departmentId };
+  return null;
+}
+
 export function toProtocolNote(note: NoteRow): ProtocolNote {
-  const assignee: TaskAssignee | null = note.assigneeUserId
-    ? { kind: "user", id: note.assigneeUserId }
-    : note.characterId
-      ? { kind: "character", id: note.characterId }
-      : note.departmentId
-        ? { kind: "department", id: note.departmentId }
-        : null;
   return {
     id: note.id,
     authorId: note.authorId,
@@ -227,10 +252,14 @@ export function toProtocolNote(note: NoteRow): ProtocolNote {
     type: note.type,
     text: note.text,
     blockId: note.blockId,
-    assignee,
+    assignees: note.assignees.flatMap((row): ProtocolAssignee[] => {
+      const assignee = toTaskAssignee(row);
+      return assignee ? [{ ...assignee, doneAt: iso(row.doneAt ?? null) }] : [];
+    }),
     dueAt: note.dueAt ? note.dueAt.toISOString().slice(0, 10) : null,
     doneAt: iso(note.doneAt),
     createdAt: note.createdAt.toISOString(),
+    editedAt: iso(note.editedAt),
   };
 }
 
@@ -274,7 +303,7 @@ export async function applyProtocolOpsToDb(
   access: ProtocolAccess = "full",
 ) {
   let rejected = 0;
-  const newTasks: string[] = [];
+  const newTasks: TaskEntry[] = [];
   const newNotes: string[] = [];
   for (const op of ops) {
     try {
@@ -284,7 +313,7 @@ export async function applyProtocolOpsToDb(
       const created = await prisma.$transaction((tx) =>
         applyOne(tx, eventId, op, authorId, access === "notes"),
       );
-      if (created?.kind === "task") newTasks.push(created.id);
+      if (created?.kind === "task") newTasks.push({ id: created.id, rowIds: created.rowIds });
       if (created?.kind === "note") newNotes.push(created.id);
     } catch (error) {
       rejected += 1;
@@ -302,24 +331,20 @@ export async function applyProtocolOpsToDb(
 
 const NOTE_OPS: ReadonlySet<ProtocolOp["type"]> = new Set(["note-add", "note-edit", "note-remove"]);
 
-/** Wer eine Aufgabe erledigen soll: die Person, die Besetzung der Figur oder die Gewerk-Leitung. */
-export async function resolveTaskRecipients(note: {
-  assigneeUserId: string | null;
-  characterId: string | null;
-  departmentId: string | null;
-}) {
-  if (note.assigneeUserId) return [note.assigneeUserId];
-  if (note.characterId) {
+/** Wer für eine Zuständigkeit handelt: die Person, die Besetzung der Figur oder die Gewerk-Leitung. */
+async function recipientsOf(row: AssigneeRow) {
+  if (row.userId) return [row.userId];
+  if (row.characterId) {
     const castings = await prisma.characterCasting.findMany({
-      where: { characterId: note.characterId },
+      where: { characterId: row.characterId },
       select: { userId: true },
     });
     return castings.map((casting) => casting.userId);
   }
-  if (note.departmentId) {
+  if (row.departmentId) {
     const leads = await prisma.departmentMembership.findMany({
       where: {
-        departmentId: note.departmentId,
+        departmentId: row.departmentId,
         status: "active",
         role: { in: ["lead", "deputy"] },
       },
@@ -328,6 +353,20 @@ export async function resolveTaskRecipients(note: {
     return leads.map((lead) => lead.userId);
   }
   return [];
+}
+
+/** Wer eine Aufgabe erledigen soll, über alle (oder die angegebenen) Zuständigkeiten. */
+export async function resolveTaskRecipients(rows: readonly AssigneeRow[]) {
+  const lists = await Promise.all(rows.map(recipientsOf));
+  return [...new Set(lists.flat())];
+}
+
+/** Die Zuständigkeiten einer Aufgabe, für die diese Person handeln darf. */
+export async function rowsForUser<T extends AssigneeRow>(rows: readonly T[], userId: string) {
+  const mine = await Promise.all(
+    rows.map(async (row) => ((await recipientsOf(row)).includes(userId) ? row : null)),
+  );
+  return mine.filter((row): row is Awaited<T> => row !== null);
 }
 
 /** Hinweise (Notiz oder Entscheidung mit „benachrichtigen“) gehen an alle Eingeladenen. */
@@ -360,16 +399,24 @@ async function notifyNewNotes(eventId: string, noteIds: string[], authorId: stri
   }
 }
 
-async function notifyNewTasks(eventId: string, noteIds: string[], authorId: string) {
-  if (!noteIds.length) return;
+/** Neue Aufgaben (oder neu hinzugekommene Zuständige) an die Betroffenen melden. */
+async function notifyNewTasks(eventId: string, entries: TaskEntry[], authorId: string) {
+  if (!entries.length) return;
   const notes = await prisma.eventNote.findMany({
-    where: { id: { in: noteIds } },
-    include: { event: { select: { title: true, showId: true } } },
+    where: { id: { in: entries.map((entry) => entry.id) } },
+    include: {
+      event: { select: { title: true, showId: true } },
+      assignees: { select: ASSIGNEE_SELECT },
+    },
   });
   for (const note of notes) {
+    const rowIds = entries.find((entry) => entry.id === note.id)?.rowIds;
+    const rows = rowIds ? note.assignees.filter((row) => rowIds.includes(row.id)) : note.assignees;
+    const recipients = await resolveTaskRecipients(rows);
+    if (!recipients.length) continue;
     await notify({
       type: NOTIFICATION_TYPES.REHEARSAL_TASK,
-      recipients: await resolveTaskRecipients(note),
+      recipients,
       actorId: authorId,
       title: `Neue Aufgabe aus „${note.event.title}“`,
       body: note.text,
@@ -389,8 +436,61 @@ async function firstBoardColumn(tx: Prisma.TransactionClient, departmentId: stri
   });
 }
 
+/** Aufgabe, über die benachrichtigt wird; `rowIds`: nur diese (neuen) Zuständigkeiten. */
+type TaskEntry = { id: string; rowIds?: string[] };
+
 /** Neu angelegter Eintrag, über den benachrichtigt werden soll. */
-type CreatedEntry = { kind: "task" | "note"; id: string } | null;
+type CreatedEntry = ({ kind: "task" } & TaskEntry) | { kind: "note"; id: string } | null;
+
+/** Legt eine Zuständigkeit an; ein Gewerk bekommt zusätzlich eine Karte im Board. */
+async function createAssignee(
+  tx: Prisma.TransactionClient,
+  note: { id: string; eventId: string; text: string; dueAt: Date | null },
+  assignee: TaskAssignee,
+  authorId: string,
+) {
+  let departmentTaskId: string | null = null;
+  if (assignee.kind === "department") {
+    const column = await firstBoardColumn(tx, assignee.id);
+    const last = column
+      ? await tx.departmentTask.aggregate({
+          where: { columnId: column.id },
+          _max: { position: true },
+        })
+      : null;
+    const event = await tx.calendarEvent.findUnique({
+      where: { id: note.eventId },
+      select: { title: true },
+    });
+    const card = await tx.departmentTask.create({
+      data: {
+        departmentId: assignee.id,
+        columnId: column?.id ?? null,
+        status: column?.status ?? "todo",
+        position: (last?._max.position ?? -1) + 1,
+        title: note.text.slice(0, 160),
+        description: `Aus der Probe „${event?.title ?? "Probe"}“.`,
+        dueAt: note.dueAt,
+        createdById: authorId,
+      },
+      select: { id: true },
+    });
+    departmentTaskId = card.id;
+  }
+  const row = await tx.eventNoteAssignee.create({
+    data: {
+      noteId: note.id,
+      userId: assignee.kind === "user" ? assignee.id : null,
+      characterId: assignee.kind === "character" ? assignee.id : null,
+      departmentId: assignee.kind === "department" ? assignee.id : null,
+      departmentTaskId,
+    },
+    select: { id: true },
+  });
+  return row.id;
+}
+
+const dueDate = (value: string | null) => (value ? new Date(`${value}T12:00:00`) : null);
 
 /**
  * Wendet eine Operation an. `ownNotesOnly`: Notizen anderer dürfen weder geändert noch gelöscht
@@ -486,72 +586,95 @@ async function applyOne(
         return null;
       }
       const task = op.noteType === "TASK";
-      const assignee = task ? op.assignee : null;
-      const dueAt = task && op.dueAt ? new Date(`${op.dueAt}T12:00:00`) : null;
-      let departmentTaskId: string | null = null;
-      if (assignee?.kind === "department") {
-        const column = await firstBoardColumn(tx, assignee.id);
-        const last = column
-          ? await tx.departmentTask.aggregate({
-              where: { columnId: column.id },
-              _max: { position: true },
-            })
-          : null;
-        const event = await tx.calendarEvent.findUnique({
-          where: { id: eventId },
-          select: { title: true },
-        });
-        const card = await tx.departmentTask.create({
-          data: {
-            departmentId: assignee.id,
-            columnId: column?.id ?? null,
-            status: column?.status ?? "todo",
-            position: (last?._max.position ?? -1) + 1,
-            title: op.text.slice(0, 160),
-            description: `Aus der Probe „${event?.title ?? "Probe"}“.`,
-            dueAt,
-            createdById: authorId,
-          },
-          select: { id: true },
-        });
-        departmentTaskId = card.id;
-      }
+      const note = {
+        id: op.noteId,
+        eventId,
+        text: op.text,
+        dueAt: task ? dueDate(op.dueAt) : null,
+      };
       await tx.eventNote.create({
-        data: {
-          id: op.noteId,
-          eventId,
-          blockId: op.blockId,
-          type: op.noteType,
-          text: op.text,
-          authorId,
-          assigneeUserId: assignee?.kind === "user" ? assignee.id : null,
-          characterId: assignee?.kind === "character" ? assignee.id : null,
-          departmentId: assignee?.kind === "department" ? assignee.id : null,
-          departmentTaskId,
-          dueAt,
-        },
+        data: { ...note, blockId: op.blockId, type: op.noteType, authorId },
       });
+      for (const assignee of noteAddAssignees(op)) {
+        await createAssignee(tx, note, assignee, authorId);
+      }
       // Ältere Geräte schicken kein `notify`: Aufgaben wie bisher melden, Notizen nicht.
       const notifyAbout = op.notify ?? task;
       if (!notifyAbout) return null;
-      return { kind: task ? "task" : "note", id: op.noteId };
+      return task ? { kind: "task", id: op.noteId } : { kind: "note", id: op.noteId };
     }
-    case "note-edit":
-      await tx.eventNote.updateMany({
+    case "note-edit": {
+      const note = await tx.eventNote.findFirst({
         where: { id: op.noteId, eventId, ...(ownNotesOnly ? { authorId } : {}) },
-        data: { text: op.text },
+        include: { assignees: { select: ASSIGNEE_SELECT } },
       });
-      return null;
+      if (!note) return null;
+      const type = op.noteType ?? note.type;
+      const task = type === "TASK";
+      const text = op.text ?? note.text;
+      const dueAt = !task ? null : op.dueAt === undefined ? note.dueAt : dueDate(op.dueAt);
+
+      const current = note.assignees.flatMap((row) => {
+        const assignee = toTaskAssignee(row);
+        return assignee ? [{ row, key: assigneeKey(assignee) }] : [];
+      });
+      const target = !task
+        ? []
+        : op.assignees
+          ? uniqueAssignees(op.assignees)
+          : current.flatMap(({ row }) => toTaskAssignee(row) ?? []);
+      const targetKeys = new Set(target.map(assigneeKey));
+      const removed = current.filter(({ key }) => !targetKeys.has(key)).map(({ row }) => row);
+      if (removed.length) {
+        await tx.eventNoteAssignee.deleteMany({
+          where: { id: { in: removed.map((row) => row.id) } },
+        });
+        const cards = removed.flatMap((row) => row.departmentTaskId ?? []);
+        if (cards.length) await tx.departmentTask.deleteMany({ where: { id: { in: cards } } });
+      }
+      const currentKeys = new Set(current.map(({ key }) => key));
+      const rowIds: string[] = [];
+      for (const assignee of target.filter((entry) => !currentKeys.has(assigneeKey(entry)))) {
+        rowIds.push(
+          await createAssignee(tx, { id: note.id, eventId, text, dueAt }, assignee, authorId),
+        );
+      }
+      const kept = note.assignees.filter((row) => !removed.includes(row));
+      const cards = kept.flatMap((row) => row.departmentTaskId ?? []);
+      if (cards.length && (op.text !== undefined || op.dueAt !== undefined)) {
+        await tx.departmentTask.updateMany({
+          where: { id: { in: cards } },
+          data: { title: text.slice(0, 160), dueAt },
+        });
+      }
+      const doneAt = allDoneAt([
+        ...kept.map((row) => ({ doneAt: row.doneAt?.toISOString() ?? null })),
+        ...rowIds.map(() => ({ doneAt: null })),
+      ]);
+      await tx.eventNote.update({
+        where: { id: note.id },
+        data: {
+          type,
+          text,
+          dueAt,
+          ...(op.blockId === undefined ? {} : { blockId: op.blockId }),
+          doneAt: task && doneAt ? new Date(doneAt) : null,
+          editedAt: new Date(),
+          editedById: authorId,
+        },
+      });
+      if (!rowIds.length || op.notify === false) return null;
+      return { kind: "task", id: note.id, rowIds };
+    }
     case "note-remove": {
       const note = await tx.eventNote.findFirst({
         where: { id: op.noteId, eventId, ...(ownNotesOnly ? { authorId } : {}) },
-        select: { departmentTaskId: true },
+        select: { assignees: { select: { departmentTaskId: true } } },
       });
       if (!note) return null;
       await tx.eventNote.delete({ where: { id: op.noteId } });
-      if (note.departmentTaskId) {
-        await tx.departmentTask.deleteMany({ where: { id: note.departmentTaskId } });
-      }
+      const cards = note.assignees.flatMap((row) => row.departmentTaskId ?? []);
+      if (cards.length) await tx.departmentTask.deleteMany({ where: { id: { in: cards } } });
       return null;
     }
     case "summary":
