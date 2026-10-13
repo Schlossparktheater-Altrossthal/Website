@@ -162,6 +162,7 @@ test.describe("als admin", () => {
 
     await page.goto(`${SKRIPT}&fassung=${versionId}`);
     await discard(page);
+    await page.reload();
     await expect(page.getByText(label)).toHaveCount(0);
     expect(errors).toEqual([]);
   });
