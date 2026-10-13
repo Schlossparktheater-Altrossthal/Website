@@ -1,0 +1,101 @@
+import { describe, expect, it } from "vitest";
+
+import { renderPdfTemplate } from "@/lib/pdf/engine";
+
+import { extractLines } from "../extract";
+import { scriptPdfOptionsSchema } from "../pdf";
+import { BOLD_COLON_PROFILE } from "../profiles";
+import type { ScriptReaderData } from "../reader";
+
+const data: ScriptReaderData = {
+  version: {
+    id: "v1",
+    showId: "s1",
+    label: "Stand 15.6.",
+    status: "released",
+    versionDate: null,
+    showTitle: "Testgeschichte",
+  },
+  scenes: [{ id: "sc1", title: "Szene 1 – Wald", words: 9, minutes: 1 }],
+  roles: [
+    { id: "a", name: "Atreju", lines: 1, words: 3, sceneIds: ["sc1"] },
+    { id: "b", name: "Bastian", lines: 1, words: 6, sceneIds: ["sc1"] },
+  ],
+  ownRoleIds: [],
+  blocks: [
+    {
+      id: "1",
+      lineageId: "l1",
+      sceneId: "sc1",
+      kind: "direction",
+      speaker: null,
+      roleIds: [],
+      parts: [
+        { kind: "cue", category: "licht", text: "LICHT 1 Wald" },
+        { kind: "direction", text: "Nebel zieht auf." },
+      ],
+      words: 0,
+      page: 1,
+    },
+    {
+      id: "2",
+      lineageId: "l2",
+      sceneId: "sc1",
+      kind: "speech",
+      speaker: "Bastian",
+      roleIds: ["b"],
+      parts: [{ kind: "text", text: "Wo bin ich hier nur gelandet?" }],
+      words: 6,
+      page: 1,
+    },
+    {
+      id: "3",
+      lineageId: "l3",
+      sceneId: "sc1",
+      kind: "speech",
+      speaker: "Atreju",
+      roleIds: ["a"],
+      parts: [
+        { kind: "text", text: "In Phantásien." },
+        { kind: "cue", category: "ton", text: "TON 2 Donner" },
+      ],
+      words: 3,
+      page: 1,
+    },
+  ],
+};
+
+async function render(options: Partial<Record<string, unknown>>) {
+  const parsed = scriptPdfOptionsSchema.parse(options);
+  const result = await renderPdfTemplate("skript-fassung", {
+    title: "Testgeschichte",
+    data,
+    options: parsed,
+  });
+  const lines = await extractLines(new Uint8Array(result.buffer), BOLD_COLON_PROFILE);
+  return { result, text: lines.map((line) => line.spans.map((s) => s.text).join("")) };
+}
+
+describe("Skript-PDF", () => {
+  it("enthält Titel, Szene, Sprecher, Text und Hinweise", async () => {
+    const { result, text } = await render({});
+    expect(result.filename).toBe("skript-testgeschichte-stand-15-6.pdf");
+    const joined = text.join("\n");
+    expect(joined).toContain("Testgeschichte");
+    expect(joined).toContain("SZENE 1 – WALD");
+    expect(joined).toContain("BASTIAN");
+    expect(joined).toContain("In Phantásien.");
+    expect(joined).toContain("[LICHT 1 Wald]");
+    expect(joined).toContain("Nebel zieht auf.");
+    expect(joined).toContain("1 / 1");
+  });
+
+  it("lässt ausgeblendete Hinweise und Regie weg und nennt die Rolle im Kopf", async () => {
+    const { text } = await render({ hiddenCues: ["ton"], directions: "hide", roleIds: ["a"] });
+    const joined = text.join("\n");
+    expect(joined).not.toContain("TON 2 Donner");
+    expect(joined).not.toContain("Nebel zieht auf.");
+    expect(joined).toContain("[LICHT 1 Wald]");
+    expect(joined).toContain("Hervorgehoben: Atreju");
+  });
+});

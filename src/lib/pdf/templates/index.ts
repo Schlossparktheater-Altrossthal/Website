@@ -6,6 +6,7 @@ import { onboardingStatisticsTemplate } from "./onboarding-statistics";
 import { photoConsentListTemplate } from "./photo-consent-list";
 import { productionCastingTemplate } from "./production-casting";
 import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
+import { scriptReaderPdfTemplate } from "@/lib/skript/pdf";
 
 const templates = [
   dataPortalTableTemplate,
@@ -15,6 +16,7 @@ const templates = [
   photoConsentListTemplate,
   productionCastingTemplate,
   sperrlisteImportantDaysTemplate,
+  scriptReaderPdfTemplate,
 ] as const;
 
 const templateMap = new Map<string, PdfTemplate<unknown>>();

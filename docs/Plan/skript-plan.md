@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Phase 1–5 umgesetzt (Parser, Datenmodell, Import, Prüfschritt, Freigabe, Leser mit nächster Passage/Stichwort); als Nächstes Phase 6 PDF-Export.
+Stand: 2026-10-13. Phase 1–5 umgesetzt (Parser, Datenmodell, Import, Prüfschritt, Freigabe, Leser mit nächster Passage/Stichwort); Phase 6 PDF-Export umgesetzt; als Nächstes Phase 7 Fassungsvergleich.
 
 ## Ziel
 
@@ -231,7 +231,7 @@ Offen:
 - [x] Phase 3 Prüfschritt + Freigabe
 - [x] Phase 4 Leser Grundlage (Papier-Farbschema entfällt: Leser folgt hell/dunkel des Themes)
 - [x] Phase 5 Nächster Einsatz + Rollen-Übersicht (im Rollen-Blatt des Lesers, Szenendauer in der Szenenliste)
-- [ ] Phase 6 PDF-Export
+- [x] Phase 6 PDF-Export (`src/lib/skript/pdf.ts`, `/api/skript/[showId]/pdf`)
 - [ ] Phase 7 Fassungsvergleich
 - [ ] Phase 8 Kommentare, Markierungen, Textnotizen
 - [ ] Phase 9 Freihandnotizen

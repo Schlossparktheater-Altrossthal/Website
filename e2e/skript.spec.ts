@@ -130,6 +130,13 @@ test.describe("als admin", () => {
       expect(page.getByRole("dialog")).toBeVisible(),
     );
     if (shots) await page.screenshot({ path: `${shots}/skript-leser-ansicht-desktop.png` });
+    // PDF mit den Leser-Einstellungen
+    const pdfHref = await page.getByRole("link", { name: "PDF öffnen" }).getAttribute("href");
+    expect(pdfHref).toContain("rollen=");
+    const pdf = await page.request.get(pdfHref ?? "");
+    expect(pdf.status()).toBe(200);
+    expect(pdf.headers()["content-type"]).toBe("application/pdf");
+    expect((await pdf.body()).subarray(0, 4).toString()).toBe("%PDF");
     await page.keyboard.press("Escape");
 
     await page.goto(`${SKRIPT}&fassung=${versionId}`);

@@ -9,6 +9,8 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   CloseIcon,
+  DownloadIcon,
+  PrinterIcon,
   SearchIcon,
   SettingsIcon,
   UsersIcon,
@@ -438,6 +440,16 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
   const currentScene = scenes.find((scene) => scene.id === blocks[position.first]?.sceneId);
   const fontClass = FONT_SIZES[settings.fontSize] ?? FONT_SIZES[1];
 
+  const pdfUrl = (download: boolean) => {
+    const params = new URLSearchParams({ fassung: version.id, regie: settings.directions });
+    if (settings.roleIds.length) params.set("rollen", settings.roleIds.join(","));
+    if (settings.hiddenCues.length) params.set("ohne", settings.hiddenCues.join(","));
+    if (settings.dimOthers) params.set("abblenden", "1");
+    params.set("groesse", String(settings.fontSize));
+    if (download) params.set("download", "1");
+    return `/api/skript/${version.showId}/pdf?${params}`;
+  };
+
   const toggleCategory = (list: "hiddenCues" | "followedCues", category: CueCategory) => {
     const current = settings[list];
     update({
@@ -821,6 +833,23 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
               aria-label="Bildschirm anlassen"
             />
           </label>
+          <section className="space-y-2 border-t border-border/60 pt-4">
+            <h3 className="font-medium">PDF</h3>
+            <p className="text-xs text-muted-foreground">
+              Mit den aktuellen Einstellungen: gewählte Rollen, Regieanweisungen, sichtbare Hinweise
+              und Schriftgröße.
+            </p>
+            <Button asChild variant="outline">
+              <a href={pdfUrl(false)} target="_blank" rel="noopener">
+                <PrinterIcon aria-hidden /> PDF öffnen
+              </a>
+            </Button>{" "}
+            <Button asChild variant="ghost">
+              <a href={pdfUrl(true)}>
+                <DownloadIcon aria-hidden /> Herunterladen
+              </a>
+            </Button>
+          </section>
           {canManage ? (
             <Link
               href={`${SKRIPT_PATH}&fassung=${version.id}`}

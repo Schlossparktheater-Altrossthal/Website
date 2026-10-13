@@ -38,6 +38,8 @@ export type ScriptReaderData = {
     label: string;
     status: "draft" | "released";
     versionDate: string | null;
+    /** Titel des Stücks für Kopfzeilen und Dateinamen. */
+    showTitle: string;
   };
   scenes: ReaderScene[];
   blocks: ReaderBlock[];
@@ -62,6 +64,7 @@ export async function loadScriptReader(
       label: true,
       status: true,
       versionDate: true,
+      show: { select: { title: true, year: true } },
       scenes: { orderBy: { sequence: "asc" }, select: { id: true, title: true } },
       blocks: {
         orderBy: { sequence: "asc" },
@@ -169,6 +172,7 @@ export async function loadScriptReader(
       label: version.label,
       status: version.status,
       versionDate: version.versionDate?.toISOString() ?? null,
+      showTitle: version.show.title ?? `Produktion ${version.show.year}`,
     },
     scenes: version.scenes.map((scene) => {
       const words = sceneWords.get(scene.id) ?? 0;
