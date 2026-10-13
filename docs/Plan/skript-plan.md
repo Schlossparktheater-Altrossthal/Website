@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Phase 1–3 umgesetzt (Parser, Datenmodell, Import, Prüfschritt mit Rollen/unsicheren Hinweisen, Freigabe mit lineageId-Übernahme, Reiter „Skript“ im Stück); als Nächstes Phase 4 Leseansicht.
+Stand: 2026-10-13. Phase 1–3 umgesetzt (Parser, Datenmodell, Import, Prüfschritt mit Rollen/unsicheren Hinweisen, Freigabe mit lineageId-Übernahme, Reiter „Skript“ im Stück); als Nächstes Phase 4 Leser (Anforderungen 2026-10-13 siehe „Leser“).
 
 ## Ziel
 
@@ -109,6 +109,47 @@ nichts – ihre Kommentare erscheinen als „Absatz entfallen“.
 - **PDF**: Lesefassung, Rollenfassung (eigene Repliken hervorgehoben), Technikfassung (Hinweise
   eines Gewerks hervorgehoben, nummeriert).
 
+## Leser (Anforderungen 2026-10-13)
+
+Der Leser fühlt sich wie eine eigene App an: Vollbild ohne Mitgliederbereich-Rahmen, mobil zuerst,
+auf Tablet mit Stift nutzbar. Route `/mitglieder/skript/[fassung]` (eigenes Layout, nur Kopfzeile
+mit Zurück, Szenenwahl und Einstellungen).
+
+- **Lesen**: saubere Typografie (Sprecher als Kapitälchen-Zeile, Regie kursiv eingerückt, Hinweise
+  als farbige Marke mit Gewerk-Kürzel und Nummer), Szenen-Sprungliste, Suche, Schriftgröße,
+  hell/dunkel/Papier, Bildschirm bleibt an (Wake Lock), Leseposition je Fassung merken.
+- **Filter**: Regieanweisungen, Hinweise je Gewerk (Ton/Licht/Nebel/Effekt/Umbau), Kommentare,
+  eigene Notizen – jeweils zeigen/abblenden/ausblenden.
+- **Rollen wählen** (Mehrfachauswahl, aus Besetzung vorbelegt): eigene Passagen hervorgehoben,
+  fremde Repliken optional abgeblendet.
+- **Nächster Einsatz**: unten eine Leiste „Nächste Passage: ATRÉJU – „Wer bist du …“ · in
+  3 Repliken / ca. 40 s“; erreicht man die Stelle, verschwindet die Leiste und die Passage läuft
+  normal im Text mit (IntersectionObserver, keine Kopie). Antippen springt hin. Dasselbe für die
+  Technik: „Nächster Hinweis: LICHT 14“ für die gewählten Gewerke (Technik-Modus).
+- **Stichwort**: im Rollenmodus die letzten Worte vor der eigenen Passage betont.
+- **PDF-Export** mit den aktuellen Leser-Einstellungen (Rollen, Filter, optional Kommentare).
+- **Rollen-Übersicht**: Repliken, Wörter, Szenen je Rolle, geschätzte Sprechzeit.
+
+Später:
+
+- **Markieren und Notizen**: Textmarker und Textnotizen an einer Textstelle (Anker = `lineageId`
+  - Zeichenbereich + zitierter Text zum Wiederfinden).
+- **Freihandnotizen** mit Stift (Pointer Events: Druck, Neigung; Strichglättung z. B. mit
+  `perfect-freehand`, MIT). Jede Zeichnung hängt an einem Absatz oder einer Szene, Koordinaten
+  relativ dazu, damit sie bei anderer Schriftgröße/Breite mitwandert.
+- **Übernahme in neue Fassungen**: Absatz unverändert → still übernehmen; geändert → Notiz bleibt
+  mit Hinweis „Text hat sich geändert“ und zeigt den alten Wortlaut; gestrichen → Liste „Notizen
+  ohne Platz“ zum Zuordnen oder Verwerfen. Dasselbe gilt für Kommentare.
+- **Live-Mitlesen**: Souffleuse/Inspizienz führt (antippen der aktuellen Replik oder Autoscroll),
+  Technik und andere folgen live (Server-Sent Events über einen Kanal je Produktion); Folgen ist
+  jederzeit abschaltbar („Zurück zur Live-Stelle“). Technik sieht den nächsten Hinweis groß
+  (Standby/Los).
+- **Lernmodus**: eigene Repliken verdecken (ganz, nur Anfangsbuchstaben, aufdecken per Tipp),
+  Abfragen mit Stichwort; optional Vorlesen der fremden Repliken (Web Speech API).
+- **Offline**: freigegebene Fassung im PWA-Cache, damit der Leser auf der Bühne ohne Netz geht.
+- **„Was ist neu für mich“**: beim Öffnen einer neuen Fassung die Änderungen an den eigenen Rollen
+  bzw. Gewerk-Hinweisen zuerst.
+
 ## Integration
 
 - **Keine feste Kopplung**: Skript und Stück-Daten bleiben getrennt; das Stück kann auch ohne
@@ -131,15 +172,22 @@ nichts – ihre Kommentare erscheinen als „Absatz entfallen“.
    Action „importieren“ → Entwurf mit Import-Bericht.
 3. **Prüfschritt + Freigabe** – Schreibweisen zu Skript-Rollen zusammenfassen, Aliase speichern, unsichere Hinweise,
    `lineageId`-Übernahme aus der Vorfassung, Freigabe.
-4. **Leseansicht** – Reiter „Skript“, Rolle hervorheben, Gewerk-Filter, Rollen-Übersicht.
-5. **Fassungsvergleich** – Ansicht A ↔ B mit Wort-Diff und Szenenzählern.
-6. **Kommentare** – an Absatz/Textstelle, privat oder fürs Team, wandern über Fassungen.
-7. **PDF-Ausgabe** – Lese-, Rollen-, Technikfassung über `src/lib/pdf`.
-8. **Bearbeiten** – Absatz korrigieren (Rolle, Text, Teil als Hinweis/Regie umdeuten) im Entwurf;
-   freigegebene Fassung bleibt unverändert, Korrektur = neue Fassung „bearbeitet“.
-9. **Übernahme-Assistent** – Szenen, Rollen, Auftritte mit Vorschau ins Stück; später Cue-Listen
-   je Gewerk.
-10. **E2E + Release.**
+4. **Leser Grundlage** – Vollbild-Route, Typografie, Szenen-Navigation, Suche,
+   Anzeige-Einstellungen, Filter (Regie, Gewerke), Rollen wählen + hervorheben, Leseposition.
+5. **Nächster Einsatz** – Vorschau-Leiste für Rollen und Gewerk-Hinweise, Stichwort,
+   Rollen-Übersicht mit Wortzahlen und Sprechzeit.
+6. **PDF-Export** aus dem Leser mit den aktuellen Einstellungen (`src/lib/pdf`).
+7. **Fassungsvergleich** – Ansicht A ↔ B mit Wort-Diff, Szenenzählern, „nur meine Rolle“,
+   „Was ist neu für mich“.
+8. **Kommentare, Markierungen, Textnotizen** – privat, mit Urheber; Filter im Leser;
+   Übernahme in neue Fassungen mit Rückfrage.
+9. **Freihandnotizen** – Stift mit Druck/Neigung, an Absatz oder Szene, gleiche Übernahmeregeln.
+10. **Bearbeiten** – Absatz korrigieren (Rolle, Text, Teil als Hinweis/Regie umdeuten) im Entwurf;
+    freigegebene Fassung bleibt unverändert, Korrektur = neue Fassung „bearbeitet“.
+11. **Übernahme-Assistent** – Szenen, Rollen, Auftritte mit Vorschau ins Stück; später Cue-Listen
+    je Gewerk.
+12. **Live-Mitlesen, Lernmodus, Offline.**
+13. **E2E + Release.**
 
 ## Entscheidungen (2026-10-13)
 
@@ -167,10 +215,13 @@ Offen:
 - [x] Phase 1 Parser-Bibliothek
 - [x] Phase 2 Datenmodell + Import-Entwurf
 - [x] Phase 3 Prüfschritt + Freigabe
-- [ ] Phase 4 Leseansicht
-- [ ] Phase 5 Fassungsvergleich
-- [ ] Phase 6 Kommentare
-- [ ] Phase 7 PDF-Ausgabe
-- [ ] Phase 8 Bearbeiten
-- [ ] Phase 9 Übernahme-Assistent
-- [ ] Phase 10 E2E + Release
+- [ ] Phase 4 Leser Grundlage
+- [ ] Phase 5 Nächster Einsatz + Rollen-Übersicht
+- [ ] Phase 6 PDF-Export
+- [ ] Phase 7 Fassungsvergleich
+- [ ] Phase 8 Kommentare, Markierungen, Textnotizen
+- [ ] Phase 9 Freihandnotizen
+- [ ] Phase 10 Bearbeiten
+- [ ] Phase 11 Übernahme-Assistent
+- [ ] Phase 12 Live-Mitlesen, Lernmodus, Offline
+- [ ] Phase 13 E2E + Release
