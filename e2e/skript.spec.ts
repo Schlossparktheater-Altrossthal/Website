@@ -235,4 +235,116 @@ test.describe("als admin", () => {
     }
     expect(errors).toEqual([]);
   });
+
+  test("markieren, Notizen schreiben und in neuer Fassung zuordnen", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(SKRIPT);
+    test.skip(
+      await page
+        .getByText("Keine aktive Produktion ausgewählt")
+        .isVisible()
+        .catch(() => false),
+      "Testnutzer hat keine aktive Produktion",
+    );
+    const stamp = Date.now().toString(36);
+    const pdfOf = (lines: string[][]) =>
+      buildScriptPdf([
+        [
+          [{ text: "SZENE 1 – Notizen", style: "bold" }],
+          ...lines.map(([speaker, text]) => [
+            { text: `${speaker}:`, style: "bold" as const },
+            { text: ` ${text}` },
+          ]),
+        ],
+      ]);
+    const firstId = await upload(
+      page,
+      `E2E Skript Notiz A ${stamp}`,
+      await pdfOf([
+        ["E2E Alpha", "Guten Abend, verehrtes Publikum."],
+        ["E2E Beta", "Wie geht es dir heute?"],
+        ["E2E Alpha", "Diese Zeile verschwindet später."],
+      ]),
+    );
+    await page.goto(`/mitglieder/skript/${firstId}`);
+    await expect(page.getByText("verehrtes Publikum.")).toBeVisible();
+
+    // Textstelle markieren → Leiste unten → Gelb
+    await page.evaluate(() => {
+      const part = [...document.querySelectorAll("[data-part]")].find((el) =>
+        el.textContent?.includes("verehrtes Publikum"),
+      );
+      const node = part?.firstChild;
+      if (!node?.textContent) throw new Error("Text nicht gefunden");
+      const start = node.textContent.indexOf("verehrtes");
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, start + "verehrtes".length);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+    await expect(page.getByText("„verehrtes“")).toBeVisible();
+    await page.getByRole("button", { name: "Gelb markieren" }).click();
+    await expect(page.locator("mark[data-annotation]", { hasText: "verehrtes" })).toBeVisible();
+
+    // Absatz antippen → Notiz zum ganzen Absatz
+    await page.getByText("Wie geht es dir heute?").click();
+    await expect(page.getByText("Ganzer Absatz")).toBeVisible();
+    await page.getByRole("button", { name: "Notiz", exact: true }).click();
+    await page.getByRole("dialog").getByRole("textbox").fill("Hier kurze Pause machen.");
+    await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
+    await expect(page.getByRole("button", { name: /Hier kurze Pause machen/ })).toBeVisible();
+
+    // Notiz an der Zeile, die in Fassung B fehlt
+    await page.getByText("Diese Zeile verschwindet später.").click();
+    await page.getByRole("button", { name: "Notiz", exact: true }).click();
+    await page.getByRole("dialog").getByRole("textbox").fill("Auftritt von links.");
+    await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
+    await expect(page.getByRole("button", { name: /Auftritt von links/ })).toBeVisible();
+    await shoot(page, "skript-notizen");
+    if (shots) {
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.screenshot({ path: `${shots}/skript-notizen-breit.png` });
+      await page.setViewportSize({ width: 1280, height: 900 });
+    }
+
+    // Notiz bearbeiten
+    await page.getByRole("button", { name: /Hier kurze Pause machen/ }).click();
+    await expect(page.getByRole("dialog").getByText(/Angelegt/)).toBeVisible();
+    await page.getByRole("dialog").getByRole("textbox").fill("Hier lange Pause machen.");
+    await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
+    await expect(page.getByRole("button", { name: /Hier lange Pause machen/ })).toBeVisible();
+
+    // Fassung B: Entwürfe erben keine Absatz-Kennung → Notizen sind ohne Platz
+    const secondId = await upload(
+      page,
+      `E2E Skript Notiz B ${stamp}`,
+      await pdfOf([
+        ["E2E Alpha", "Guten Abend, verehrtes Publikum."],
+        ["E2E Beta", "Wie geht es dir heute?"],
+      ]),
+    );
+    await page.goto(`/mitglieder/skript/${secondId}`);
+    await expect(page.getByText(/Notizen hängen an geändertem/)).toBeVisible();
+    await page.getByRole("button", { name: "Prüfen" }).click();
+    await expect(page.getByRole("dialog").getByText("Auftritt von links.")).toBeVisible();
+    await shoot(page, "skript-notizen-pruefen");
+    const item = page
+      .getByRole("dialog")
+      .getByRole("listitem")
+      .filter({ hasText: "Auftritt von links." });
+    await item.getByRole("button", { name: "Anderen Absatz wählen" }).click();
+    await expect(page.getByText("Tippe auf den Absatz")).toBeVisible();
+    await page.getByText("Wie geht es dir heute?").click();
+    await page.getByRole("button", { name: "Hierhin" }).click();
+    await expect(page.getByRole("button", { name: /Auftritt von links/ })).toBeVisible();
+
+    for (const id of [secondId, firstId]) {
+      await page.goto(`${SKRIPT}&fassung=${id}`);
+      await discard(page);
+    }
+    expect(errors).toEqual([]);
+  });
 });

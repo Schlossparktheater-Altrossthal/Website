@@ -37,6 +37,7 @@ export type Settings = {
   dimOthers: boolean;
   keepAwake: boolean;
   pdfCover: boolean;
+  showNotes: boolean;
 };
 
 const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
@@ -47,6 +48,7 @@ const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
   dimOthers: false,
   keepAwake: true,
   pdfCover: true,
+  showNotes: true,
 };
 
 /** Einstellungen je Stück im Browser (nur Komfort, E: localStorage nur für Ansicht). */

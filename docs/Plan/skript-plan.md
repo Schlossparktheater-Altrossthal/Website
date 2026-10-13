@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Phase 1–5 umgesetzt (Parser, Datenmodell, Import, Prüfschritt, Freigabe, Leser mit nächster Passage/Stichwort); Phase 6 PDF-Export und Phase 7 Fassungsvergleich umgesetzt; als Nächstes Phase 8 Kommentare.
+Stand: 2026-10-13. Phase 1–5 umgesetzt (Parser, Datenmodell, Import, Prüfschritt, Freigabe, Leser mit nächster Passage/Stichwort); Phase 6–8 umgesetzt (PDF, Vergleich, Markierungen/Notizen); als Nächstes Phase 9 Freihandnotizen.
 
 ## Ziel
 
@@ -235,7 +235,9 @@ Offen:
       und Szenenverzeichnis; lange Rollennamen stehen über dem Text
 - [x] Phase 7 Fassungsvergleich (`/mitglieder/skript/[fassung]/vergleich?mit=…&nur=meine|hinweise`,
       `src/lib/skript/compare.ts`; Hinweis „Neue Fassung“ im Leser)
-- [ ] Phase 8 Kommentare, Markierungen, Textnotizen
+- [x] Phase 8 Markierungen und Textnotizen (`ScriptAnnotation`, `src/lib/skript/annotations.ts`; privat,
+      Urheber + Zeit; Wandern über `lineageId`, Rückfrage bei geändertem/gestrichenem Absatz).
+      Kommentare fürs Team folgen mit Phase 12 (Live-Zusammenarbeit)
 - [ ] Phase 9 Freihandnotizen
 - [ ] Phase 10 Bearbeiten
 - [ ] Phase 11 Übernahme-Assistent

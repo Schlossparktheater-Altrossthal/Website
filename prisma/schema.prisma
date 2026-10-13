@@ -429,6 +429,7 @@ model User {
   scriptVersionsCreated           ScriptVersion[]            @relation("ScriptVersionCreator")
   scriptVersionsReleased          ScriptVersion[]            @relation("ScriptVersionReleaser")
   scriptRolesCreated              ScriptRole[]               @relation("ScriptRoleCreator")
+  scriptAnnotations               ScriptAnnotation[]
 }
 
 model Account {
@@ -516,6 +517,7 @@ model Show {
   boxOfficeAccesses       BoxOfficeAccess[]
   scriptVersions          ScriptVersion[]
   scriptRoles             ScriptRole[]
+  scriptAnnotations       ScriptAnnotation[]
 }
 
 enum MilestoneKind {
@@ -3918,6 +3920,7 @@ model ScriptVersion {
   releasedBy   User?               @relation("ScriptVersionReleaser", fields: [releasedById], references: [id], onDelete: SetNull)
   scenes       ScriptScene[]
   blocks       ScriptBlock[]
+  annotations  ScriptAnnotation[]
 
   @@index([showId, createdAt])
 }
@@ -3952,22 +3955,23 @@ model ScriptRole {
 
 /// Absatz: Replik oder Anweisung. `lineageId` bleibt über Fassungen gleich (Kommentare hängen daran).
 model ScriptBlock {
-  id         String            @id @default(cuid())
-  versionId  String
-  sceneId    String
-  sequence   Int
-  lineageId  String
-  kind       ScriptBlockKind
+  id          String             @id @default(cuid())
+  versionId   String
+  sceneId     String
+  sequence    Int
+  lineageId   String
+  kind        ScriptBlockKind
   /// Sprecher wie im PDF und nach Zusammenführung der Schreibweisen.
-  speakerRaw String?
-  speaker    String?
+  speakerRaw  String?
+  speaker     String?
   /// [{ kind: "text" | "direction" | "cue", text, category?, auto? }]
-  parts      Json
-  page       Int?
-  wordCount  Int               @default(0)
-  version    ScriptVersion     @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  scene      ScriptScene       @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  roles      ScriptBlockRole[]
+  parts       Json
+  page        Int?
+  wordCount   Int                @default(0)
+  version     ScriptVersion      @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  scene       ScriptScene        @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  roles       ScriptBlockRole[]
+  annotations ScriptAnnotation[]
 
   @@index([versionId, sequence])
   @@index([lineageId])
@@ -3982,4 +3986,40 @@ model ScriptBlockRole {
 
   @@id([blockId, roleId])
   @@index([roleId])
+}
+
+enum ScriptAnnotationKind {
+  highlight
+  note
+}
+
+/// Markierung oder Notiz einer Person am Skript (zunächst privat, E8). Hängt an `lineageId`,
+/// damit sie in neue Fassungen mitwandert; `versionId`/`blockId` = zuletzt bestätigter Platz.
+model ScriptAnnotation {
+  id        String               @id @default(cuid())
+  showId    String
+  versionId String
+  blockId   String?
+  lineageId String
+  kind      ScriptAnnotationKind
+  /// Markerfarbe (highlight) – Schlüssel aus src/lib/skript/annotations.ts.
+  color     String?
+  body      String?
+  /// Textstelle: Teil des Absatzes und Zeichenbereich; ohne = ganzer Absatz.
+  partIndex Int?
+  start     Int?
+  end       Int?
+  quote     String?
+  /// Wortlaut des Absatzes beim Anlegen/Bestätigen – erkennt Änderungen in neuen Fassungen.
+  blockText String
+  authorId  String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  show      Show                 @relation(fields: [showId], references: [id], onDelete: Cascade)
+  version   ScriptVersion        @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  block     ScriptBlock?         @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  author    User                 @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([showId, authorId])
+  @@index([lineageId])
 }

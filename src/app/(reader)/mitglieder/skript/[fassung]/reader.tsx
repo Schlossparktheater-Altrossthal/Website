@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
+import { SCRIPT_MARKER_STYLES } from "@/config/category-colors";
+import type { ReaderAnnotation } from "@/lib/skript/annotation-types";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import {
   cueLineIndices,
@@ -46,6 +48,14 @@ import {
   useSettings,
   writeStored,
 } from "../shared";
+import {
+  AnnotationBar,
+  AnnotationEditor,
+  AnnotationReview,
+  PickBar,
+  useTextSelection,
+  type EditorState,
+} from "./annotations";
 
 /** Bildschirm bleibt an, solange der Leser offen ist (Screen Wake Lock API). */
 function useWakeLock(enabled: boolean) {
@@ -95,6 +105,81 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   return <>{pieces}</>;
 }
 
+type Range = { start: number; end: number; annotation: ReaderAnnotation };
+
+/** Text eines Absatz-Teils mit Suchtreffern, Markern und Notiz-Stellen. */
+function TextRun({
+  text,
+  offset,
+  ranges,
+  query,
+}: {
+  text: string;
+  /** Position von `text` innerhalb des Teils (für Marker-Bereiche). */
+  offset: number;
+  ranges: Range[];
+  query: string;
+}) {
+  const cuts = new Set([offset, offset + text.length]);
+  for (const range of ranges) {
+    if (range.end <= offset || range.start >= offset + text.length) continue;
+    cuts.add(Math.max(offset, range.start));
+    cuts.add(Math.min(offset + text.length, range.end));
+  }
+  const points = [...cuts].sort((a, b) => a - b);
+  return (
+    <>
+      {points.slice(0, -1).map((from, index) => {
+        const to = points[index + 1];
+        const piece = <Highlighted text={text.slice(from - offset, to - offset)} query={query} />;
+        const range = ranges.find((entry) => entry.start <= from && entry.end >= to);
+        if (!range) return <React.Fragment key={from}>{piece}</React.Fragment>;
+        const { annotation } = range;
+        return (
+          <mark
+            key={from}
+            data-annotation={annotation.id}
+            className={cn(
+              "cursor-pointer text-inherit",
+              annotation.kind === "highlight"
+                ? SCRIPT_MARKER_STYLES[annotation.color ?? "gelb"]
+                : "bg-transparent underline decoration-warning decoration-dotted decoration-2 underline-offset-4",
+            )}
+          >
+            {piece}
+          </mark>
+        );
+      })}
+    </>
+  );
+}
+
+function NoteCards({ notes, className }: { notes: ReaderAnnotation[]; className?: string }) {
+  if (!notes.length) return null;
+  return (
+    <div className={cn("space-y-1 not-italic", className)}>
+      {notes.map((note) => (
+        <button
+          key={note.id}
+          type="button"
+          data-annotation={note.id}
+          className="block w-full border-l-2 border-warning bg-warning/10 px-2 py-1 text-left text-[0.8em] leading-snug text-foreground hover:bg-warning/20"
+        >
+          {note.state === "changed" ? (
+            <span className="mb-0.5 block text-[0.85em] font-semibold text-warning-foreground">
+              Text geändert – bitte prüfen
+            </span>
+          ) : null}
+          {note.quote ? (
+            <span className="block truncate text-muted-foreground">„{note.quote}“</span>
+          ) : null}
+          <span className="block whitespace-pre-wrap break-words">{note.body}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 type BlockViewProps = {
   block: ReaderBlock;
   settings: Settings;
@@ -104,44 +189,92 @@ type BlockViewProps = {
   stacked: boolean;
   query: string;
   activeMatch: boolean;
+  /** Eigene Markierungen und Notizen an diesem Absatz (bereits nach Einstellung gefiltert). */
+  annotations: ReaderAnnotation[];
+  /** Absatz ist angetippt (Aktionsleiste offen) oder Ziel beim Neu-Zuordnen. */
+  selected: boolean;
 };
 
 const BlockView = React.memo(
   React.forwardRef<HTMLDivElement, BlockViewProps>(function BlockView(
-    { block, settings, mine, cueLine, stacked, query, activeMatch },
+    { block, settings, mine, cueLine, stacked, query, activeMatch, annotations, selected },
     ref,
   ) {
     const hiddenCues = new Set(settings.hiddenCues);
-    const parts = block.parts.filter((part) => {
-      if (part.kind === "cue") return !hiddenCues.has(part.category);
-      if (part.kind === "direction") return settings.directions !== "hide";
-      return true;
-    });
-    const lastText = cueLine ? parts.findLastIndex((part) => part.kind === "text") : -1;
+    // Ursprüngliche Indizes behalten – Markierungen verweisen auf sie.
+    const parts = block.parts
+      .map((part, index) => ({ part, index }))
+      .filter(({ part }) => {
+        if (part.kind === "cue") return !hiddenCues.has(part.category);
+        if (part.kind === "direction") return settings.directions !== "hide";
+        return true;
+      });
+    const lastText = cueLine
+      ? (parts.findLast(({ part }) => part.kind === "text")?.index ?? -1)
+      : -1;
+    const rangesOf = (index: number): Range[] =>
+      annotations.flatMap((annotation) =>
+        annotation.partIndex === index && annotation.start !== null && annotation.end !== null
+          ? [{ start: annotation.start, end: annotation.end, annotation }]
+          : [],
+      );
+    const blockMark = annotations.find(
+      (annotation) => annotation.kind === "highlight" && annotation.partIndex === null,
+    );
+    const notes = annotations.filter((annotation) => annotation.kind === "note");
+
+    const renderPart = ({ part, index }: (typeof parts)[number]) => {
+      if (part.kind === "cue") return <CueMark key={index} part={part} />;
+      const ranges = rangesOf(index);
+      const content =
+        index === lastText ? (
+          (() => {
+            const [head, tail] = splitTail(part.text);
+            return (
+              <>
+                <TextRun text={head} offset={0} ranges={ranges} query={query} />
+                <span className="font-semibold underline decoration-primary decoration-2 underline-offset-4">
+                  <TextRun text={tail} offset={head.length} ranges={ranges} query={query} />
+                </span>
+              </>
+            );
+          })()
+        ) : (
+          <TextRun text={part.text} offset={0} ranges={ranges} query={query} />
+        );
+      return (
+        <span
+          key={index}
+          data-part={index}
+          className={cn(
+            part.kind === "direction" && block.kind === "speech" && "italic text-muted-foreground",
+            part.kind === "direction" && settings.directions === "dim" && "opacity-50",
+          )}
+        >
+          {content}{" "}
+        </span>
+      );
+    };
 
     if (block.kind === "direction") {
       const visible =
-        parts.length > 0 && (settings.directions !== "hide" || parts.some((p) => p.kind === "cue"));
+        parts.length > 0 &&
+        (settings.directions !== "hide" || parts.some(({ part }) => part.kind === "cue"));
       return (
         <div
           ref={ref}
           data-block={block.id}
           className={cn(
             "scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground md:pl-[calc(var(--speaker-col)+1.25rem+3px)]",
-            !visible && "hidden",
+            !visible && !notes.length && "hidden",
             settings.directions === "dim" && "opacity-50",
+            blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
             activeMatch && "ring-2 ring-inset ring-ring",
+            selected && "outline outline-2 -outline-offset-2 outline-primary",
           )}
         >
-          {parts.map((part, index) =>
-            part.kind === "cue" ? (
-              <CueMark key={index} part={part} />
-            ) : (
-              <span key={index}>
-                <Highlighted text={part.text} query={query} />{" "}
-              </span>
-            ),
-          )}
+          {parts.map(renderPart)}
+          <NoteCards notes={notes} className="mt-1 xl:mr-[17rem]" />
         </div>
       );
     }
@@ -152,10 +285,12 @@ const BlockView = React.memo(
         ref={ref}
         data-block={block.id}
         className={cn(
-          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 md:mx-0 md:grid md:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem] md:gap-3 md:px-2",
+          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 md:mx-0 md:grid md:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem] md:gap-x-3 md:px-2 xl:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem_16rem]",
           mine && "border-primary bg-primary/10",
+          blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
           dimmed && "opacity-45",
           activeMatch && "ring-2 ring-inset ring-ring",
+          selected && "outline outline-2 -outline-offset-2 outline-primary",
         )}
       >
         <span
@@ -177,42 +312,15 @@ const BlockView = React.memo(
           >
             {block.speaker ?? "?"}
           </span>
-          {parts.map((part, index) => {
-            if (part.kind === "cue") return <CueMark key={index} part={part} />;
-            if (part.kind === "direction") {
-              return (
-                <span
-                  key={index}
-                  className={cn(
-                    "italic text-muted-foreground",
-                    settings.directions === "dim" && "opacity-50",
-                  )}
-                >
-                  <Highlighted text={part.text} query={query} />{" "}
-                </span>
-              );
-            }
-            if (index === lastText) {
-              const [head, tail] = splitTail(part.text);
-              return (
-                <span key={index}>
-                  <Highlighted text={head} query={query} />
-                  <span className="font-semibold underline decoration-primary decoration-2 underline-offset-4">
-                    <Highlighted text={tail} query={query} />
-                  </span>{" "}
-                </span>
-              );
-            }
-            return (
-              <span key={index}>
-                <Highlighted text={part.text} query={query} />{" "}
-              </span>
-            );
-          })}
+          {parts.map(renderPart)}
         </p>
         <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">
           {block.page ?? ""}
         </span>
+        <NoteCards
+          notes={notes}
+          className="mt-1 md:col-span-2 md:col-start-2 xl:col-span-1 xl:col-start-4 xl:row-span-2 xl:row-start-1 xl:mt-0"
+        />
       </div>
     );
   }),
@@ -224,11 +332,14 @@ export function ScriptReader({
   data,
   canManage,
   previous,
+  annotations,
 }: {
   data: ScriptReaderData;
   canManage: boolean;
   /** Vorfassung für den Vergleich, falls vorhanden. */
   previous: { id: string; label: string } | null;
+  /** Eigene Markierungen und Notizen mit Status für diese Fassung. */
+  annotations: ReaderAnnotation[];
 }) {
   const { version, scenes, blocks, roles } = data;
   const [settings, update] = useSettings(version.showId, data.ownRoleIds);
@@ -251,6 +362,56 @@ export function ScriptReader({
   // Leiste oben blendet sich beim Weiterlesen aus und beim Zurückscrollen wieder ein.
   const [chromeHidden, setChromeHidden] = React.useState(false);
   const refs = React.useRef<(HTMLDivElement | null)[]>([]);
+  const articleRef = React.useRef<HTMLElement>(null);
+
+  // Markierungen und Notizen (Phase 8)
+  const [selection, clearSelection] = useTextSelection(articleRef, blocks);
+  const [selectedBlock, setSelectedBlock] = React.useState<string | null>(null);
+  const [editor, setEditor] = React.useState<EditorState | null>(null);
+  const [reviewOpen, setReviewOpen] = React.useState(false);
+  const [pick, setPick] = React.useState<{ annotationId: string; blockId: string | null } | null>(
+    null,
+  );
+  const annotationById = React.useMemo(
+    () => new Map(annotations.map((annotation) => [annotation.id, annotation])),
+    [annotations],
+  );
+  const annotationsByBlock = React.useMemo(() => {
+    const map = new Map<string, ReaderAnnotation[]>();
+    for (const annotation of annotations) {
+      if (!annotation.blockId || annotation.state === "orphaned") continue;
+      map.set(annotation.blockId, [...(map.get(annotation.blockId) ?? []), annotation]);
+    }
+    return map;
+  }, [annotations]);
+  const toReview = annotations.filter((annotation) => annotation.state !== "ok");
+  const blockById = React.useMemo(() => new Map(blocks.map((b) => [b.id, b])), [blocks]);
+  const noAnnotations: ReaderAnnotation[] = React.useMemo(() => [], []);
+
+  /** Antippen im Text: Notiz öffnen, Absatz wählen oder beim Neu-Zuordnen das Ziel setzen. */
+  const onArticleClick = (event: React.MouseEvent) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    if (window.getSelection()?.isCollapsed === false) return;
+    if (target.closest("a,button:not([data-annotation])")) return;
+    const blockId = target.closest("[data-block]")?.getAttribute("data-block") ?? null;
+    if (pick) {
+      setPick({ ...pick, blockId });
+      return;
+    }
+    const annotationId = target.closest("[data-annotation]")?.getAttribute("data-annotation");
+    const annotation = annotationId ? annotationById.get(annotationId) : undefined;
+    if (annotation) {
+      setSelectedBlock(null);
+      setEditor({ mode: "edit", annotation });
+      return;
+    }
+    setSelectedBlock((current) => (current === blockId ? null : blockId));
+  };
+  const closeBar = () => {
+    clearSelection();
+    setSelectedBlock(null);
+  };
   const barRef = React.useRef<HTMLDivElement>(null);
   const toolbarRef = React.useRef<HTMLDivElement>(null);
 
@@ -539,6 +700,8 @@ export function ScriptReader({
           />
         </aside>
         <article
+          ref={articleRef}
+          onClick={onArticleClick}
           className={cn(
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,
@@ -562,6 +725,22 @@ export function ScriptReader({
                 onClick={() => setNewVersionHint(false)}
               >
                 Ausblenden
+              </button>
+            </div>
+          ) : null}
+          {toReview.length ? (
+            <div className="-mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-[3px] border-warning bg-warning/10 px-3 py-2 text-sm sm:-mx-4 sm:px-4 md:mx-0 md:px-3">
+              <span className="min-w-0 flex-1">
+                {toReview.length === 1
+                  ? "1 Notiz hängt an geändertem oder gestrichenem Text."
+                  : `${toReview.length} Notizen hängen an geändertem oder gestrichenem Text.`}
+              </span>
+              <button
+                type="button"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                onClick={() => setReviewOpen(true)}
+              >
+                Prüfen
               </button>
             </div>
           ) : null}
@@ -596,6 +775,14 @@ export function ScriptReader({
                   stacked={(block.speaker?.length ?? 0) > SPEAKER_MAX_CHARS}
                   query={trimmed.length >= 2 ? trimmed : ""}
                   activeMatch={index === activeMatch}
+                  annotations={
+                    settings.showNotes
+                      ? (annotationsByBlock.get(block.id) ?? noAnnotations)
+                      : noAnnotations
+                  }
+                  selected={
+                    (!selection && selectedBlock === block.id) || pick?.blockId === block.id
+                  }
                 />
               </React.Fragment>
             );
@@ -607,11 +794,31 @@ export function ScriptReader({
         ref={barRef}
         className={cn(
           "fixed inset-x-0 bottom-0 z-30 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur",
-          (nextCue || nextLine) && "border-t border-border",
+          (nextCue || nextLine || selection || selectedBlock || pick) && "border-t border-border",
         )}
       >
         <div className="mx-auto flex max-w-[1240px] flex-col divide-y divide-border/60 lg:pl-[calc(15rem+3rem)] lg:pr-4">
-          {nextCue ? (
+          {pick ? (
+            <PickBar
+              versionId={version.id}
+              annotationId={pick.annotationId}
+              blockId={pick.blockId}
+              onDone={() => setPick(null)}
+            />
+          ) : selection || selectedBlock ? (
+            <AnnotationBar
+              versionId={version.id}
+              selection={selection}
+              blockId={selectedBlock}
+              onNote={() => {
+                const blockId = selection?.blockId ?? selectedBlock;
+                if (blockId) setEditor({ mode: "create", blockId, selection });
+                closeBar();
+              }}
+              onDone={closeBar}
+            />
+          ) : null}
+          {!pick && !selection && !selectedBlock && nextCue ? (
             <NextBar
               label="Nächster Hinweis"
               title={cueParts(blocks[nextCue.index], followed)
@@ -621,7 +828,7 @@ export function ScriptReader({
               onClick={() => scrollToIndex(nextCue.index)}
             />
           ) : null}
-          {nextLine ? (
+          {!pick && !selection && !selectedBlock && nextLine ? (
             <NextBar
               label={`Nächste Passage · ${blocks[nextLine.index].speaker ?? ""}`}
               title={blockText(blocks[nextLine.index])}
@@ -789,6 +996,14 @@ export function ScriptReader({
             </section>
           ) : null}
           <label className="flex min-h-11 items-center justify-between gap-3">
+            <span>Meine Markierungen und Notizen</span>
+            <Switch
+              checked={settings.showNotes}
+              onCheckedChange={(showNotes) => update({ showNotes })}
+              aria-label="Markierungen und Notizen zeigen"
+            />
+          </label>
+          <label className="flex min-h-11 items-center justify-between gap-3">
             <span>Bildschirm anlassen</span>
             <Switch
               checked={settings.keepAwake}
@@ -845,6 +1060,23 @@ export function ScriptReader({
           </Link>
         </div>
       </BottomSheet>
+      <AnnotationEditor
+        key={editor?.mode === "edit" ? editor.annotation.id : (editor?.blockId ?? "neu")}
+        versionId={version.id}
+        state={editor}
+        onClose={() => setEditor(null)}
+      />
+      <AnnotationReview
+        versionId={version.id}
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        annotations={toReview}
+        blocks={blockById}
+        onPick={(annotationId) => {
+          setReviewOpen(false);
+          setPick({ annotationId, blockId: null });
+        }}
+      />
     </div>
   );
 }

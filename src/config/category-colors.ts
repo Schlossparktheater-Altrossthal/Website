@@ -90,3 +90,11 @@ export const SCRIPT_CUE_STYLES: Record<
   aus: "border-zinc-400 bg-zinc-300/40 dark:bg-zinc-500/25",
   technik: "border-orange-400 bg-orange-300/35 dark:bg-orange-400/20",
 };
+
+/** Textmarker-Farben im Skript-Leser (eigene Markierungen, docs/Plan/skript-plan.md Phase 8). */
+export const SCRIPT_MARKER_STYLES: Record<"gelb" | "gruen" | "blau" | "rosa", string> = {
+  gelb: "bg-yellow-200/80 dark:bg-yellow-400/30",
+  gruen: "bg-green-200/80 dark:bg-green-400/25",
+  blau: "bg-sky-200/80 dark:bg-sky-400/25",
+  rosa: "bg-pink-200/80 dark:bg-pink-400/25",
+};
