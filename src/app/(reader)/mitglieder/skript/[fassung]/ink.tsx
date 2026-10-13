@@ -32,6 +32,24 @@ const COLOR_LABEL: Record<InkColor, string> = {
   gruen: "Grün",
 };
 
+/**
+ * Bezugsrahmen der Striche eines Absatzes: x ab dem Textanfang der ersten Zeile (mobil steht
+ * der Sprecher davor in derselben Zeile), Breite bis zum rechten Rand, y ab Oberkante in em.
+ */
+export function inkFrame(container: Element) {
+  const box = container.getBoundingClientRect();
+  const text = container.querySelector("[data-ink-text]");
+  const first = text?.getClientRects()[0];
+  const left = first ? first.left : box.left;
+  return {
+    left,
+    top: box.top,
+    width: Math.max(1, box.right - left),
+    offset: left - box.left,
+    em: Number.parseFloat(window.getComputedStyle(container).fontSize) || 16,
+  };
+}
+
 /** Umriss eines Strichs als SVG-Pfad (perfect-freehand liefert ein Polygon). */
 function outline(points: number[][], size: number, pen: boolean) {
   const shape = getStroke(points, {
@@ -78,15 +96,14 @@ export function InkLayer({
   erased: ReadonlySet<string>;
 }) {
   const ref = React.useRef<SVGSVGElement>(null);
-  const [box, setBox] = React.useState<{ width: number; em: number } | null>(null);
+  const [box, setBox] = React.useState<{ width: number; offset: number; em: number } | null>(null);
   React.useEffect(() => {
     const parent = ref.current?.parentElement;
     if (!parent) return;
-    const measure = () =>
-      setBox({
-        width: parent.clientWidth,
-        em: Number.parseFloat(window.getComputedStyle(parent).fontSize) || 16,
-      });
+    const measure = () => {
+      const frame = inkFrame(parent);
+      setBox({ width: frame.width, offset: frame.offset, em: frame.em });
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(parent);
@@ -115,7 +132,11 @@ export function InkLayer({
               data-stroke={index >= 0 ? index : undefined}
               className={SCRIPT_INK_STYLES[stroke.color]}
               d={outline(
-                stroke.points.map(([x, y, pressure]) => [x * box.width, y * box.em, pressure]),
+                stroke.points.map(([x, y, pressure]) => [
+                  x * box.width + box.offset,
+                  y * box.em,
+                  pressure,
+                ]),
                 stroke.size * box.em * tiltFactor(stroke.points),
                 isPen(stroke.points),
               )}
@@ -273,12 +294,12 @@ export function usePen({
           if (!block || !blockId) return;
           // Verankert am Textbereich (bei Repliken ohne Sprecher-Spalte), damit Striche auf
           // Handy und Desktop über demselben Text liegen.
-          const anchor = block.querySelector("[data-ink-anchor]") ?? block;
+          const frame = inkFrame(block.querySelector("[data-ink-anchor]") ?? block);
           const start: Live = {
             pointerId: event.pointerId,
             blockId,
-            rect: anchor.getBoundingClientRect(),
-            em: Number.parseFloat(window.getComputedStyle(block).fontSize) || 16,
+            rect: new DOMRect(frame.left, frame.top, frame.width, 0),
+            em: frame.em,
             points: [],
             client: [],
           };

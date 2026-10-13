@@ -317,7 +317,7 @@ const BlockView = React.memo(
           >
             {block.speaker ?? "?"}
           </span>
-          {parts.map(renderPart)}
+          <span data-ink-text>{parts.map(renderPart)}</span>
           {ink ? <InkLayer {...ink} /> : null}
         </p>
         <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">
