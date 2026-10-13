@@ -27,8 +27,11 @@ async function resetRole(page: Page, roleName: string) {
   await page.getByRole("dialog").getByRole("button", { name: roleName, exact: true }).click();
   await page.getByRole("button", { name: "Zurücksetzen" }).click();
   await expect(page.getByText("Lernstand zurückgesetzt").first()).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Bestätigung und Einstellungen schließen (je ein Escape, bis kein Dialog mehr offen ist).
+  await expect(async () => {
+    if (await page.getByRole("dialog").count()) await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
 }
 
 test.describe("als admin", () => {
@@ -74,7 +77,7 @@ test.describe("als admin", () => {
     const group = page.getByRole("group", { name: "Wie gut saß es?" });
     await expect(group).toBeVisible();
     await shoot(page, "lernen-abfrage-bewerten");
-    await group.getByRole("button", { name: /Schwer/ }).click();
+    await group.getByRole("button", { name: /Schwer|Mit Hilfe gewusst/ }).click();
     await page.getByRole("button", { name: "Zurück zur Übersicht" }).click();
     await expect(page.getByTestId("lernen-heute")).toBeVisible();
 
