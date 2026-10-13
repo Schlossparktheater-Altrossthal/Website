@@ -543,7 +543,7 @@ export function ScriptReader({
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,
           )}
-          style={{ ["--speaker-col" as string]: `${(speakerChars * 0.62).toFixed(2)}em` }}
+          style={{ ["--speaker-col" as string]: `${(speakerChars * 0.78).toFixed(2)}em` }}
         >
           {newVersionHint && previous ? (
             <div className="-mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-[3px] border-primary bg-primary/10 px-3 py-2 text-sm sm:-mx-4 sm:px-4 md:mx-0 md:px-3">

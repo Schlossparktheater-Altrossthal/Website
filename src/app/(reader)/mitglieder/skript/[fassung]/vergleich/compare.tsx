@@ -70,13 +70,13 @@ function ChangedText({ entry }: { entry: CompareBlock }) {
         token.op === "equal" ? (
           <span key={index}>{token.text} </span>
         ) : token.op === "insert" ? (
-          <ins key={index} className="bg-success/25 no-underline">
-            {token.text}
-          </ins>
+          <React.Fragment key={index}>
+            <ins className="bg-success/25 no-underline">{token.text}</ins>{" "}
+          </React.Fragment>
         ) : (
-          <del key={index} className="bg-destructive/15 text-muted-foreground">
-            {token.text}
-          </del>
+          <React.Fragment key={index}>
+            <del className="bg-destructive/15 text-muted-foreground">{token.text}</del>{" "}
+          </React.Fragment>
         ),
       )}{" "}
       <Parts parts={after.filter((part) => part.kind !== "text")} />
@@ -208,7 +208,7 @@ function SceneSection({
   const isMine = (entry: CompareBlock) => entry.roleIds.some((id) => roleSet.has(id));
   const stackedOf = (entry: CompareBlock) => (entry.block.speaker?.length ?? 0) > SPEAKER_MAX_CHARS;
   return (
-    <section id={`szene-${scene.key}`} className="scroll-mt-28">
+    <section id={`szene-${scene.key}`} className="scroll-mt-28 sm:scroll-mt-24">
       <h2 className="mb-1 mt-8 flex flex-wrap items-baseline gap-x-3 border-b-2 border-foreground pb-1 text-[0.85em] font-bold uppercase tracking-wider">
         <span>{scene.title}</span>
         {scene.previousTitle ? (
@@ -323,7 +323,7 @@ export function ScriptCompare({
 
   return (
     <div>
-      <div className="fixed inset-x-0 top-0 z-30 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="sticky top-0 z-30 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex h-12 max-w-[1240px] items-center gap-0.5 px-1 lg:px-4">
           <Button asChild variant="ghost" size="icon" aria-label="Zurück zum Skript">
             <Link href={`/mitglieder/skript/${after.id}`}>
@@ -386,9 +386,9 @@ export function ScriptCompare({
           "mx-auto max-w-[1240px] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8 lg:px-4",
           FONT_SIZES[settings.fontSize] ?? FONT_SIZES[0],
         )}
-        style={{ ["--speaker-col" as string]: `${(speakerChars * 0.62).toFixed(2)}em` }}
+        style={{ ["--speaker-col" as string]: `${(speakerChars * 0.78).toFixed(2)}em` }}
       >
-        <aside className="sticky top-0 hidden max-h-dvh self-start overflow-y-auto pb-6 pt-28 text-sm lg:block">
+        <aside className="sticky hidden max-h-[calc(100dvh-6rem)] self-start overflow-y-auto pb-6 pt-4 text-sm lg:top-24 lg:block">
           <p className="px-2 pb-1 text-xs text-muted-foreground">Szenen mit Änderungen</p>
           <ul>
             {visibleScenes.map((scene) => {
@@ -411,7 +411,7 @@ export function ScriptCompare({
             })}
           </ul>
         </aside>
-        <article className="min-w-0 px-3 pb-24 pt-[calc(6.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0">
+        <article className="min-w-0 px-3 pb-24 pt-3 leading-normal sm:px-4 lg:px-0">
           <div className="-mx-3 mb-4 border-l-[3px] border-border bg-muted px-3 py-2 text-sm sm:-mx-4 sm:px-4 md:mx-0 md:px-3">
             <p className="font-medium">
               {total
