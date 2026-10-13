@@ -163,7 +163,7 @@ function CueMark({ part }: { part: Extract<ScriptPart, { kind: "cue" }> }) {
   return (
     <span
       className={cn(
-        "mx-0.5 inline rounded border-l-4 px-1.5 py-0.5 text-[0.85em] font-medium not-italic text-foreground [box-decoration-break:clone]",
+        "mx-0.5 inline border-l-2 px-1 text-[0.85em] font-medium not-italic text-foreground [box-decoration-break:clone]",
         style.className,
       )}
     >
@@ -203,10 +203,10 @@ const BlockView = React.memo(
           ref={ref}
           data-block={block.id}
           className={cn(
-            "scroll-mt-52 py-1.5 pl-6 italic text-muted-foreground sm:pl-10",
+            "scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground sm:pl-8",
             !visible && "hidden",
             settings.directions === "dim" && "opacity-50",
-            activeMatch && "rounded-md ring-2 ring-ring",
+            activeMatch && "ring-2 ring-inset ring-ring",
           )}
         >
           {parts.map((part, index) =>
@@ -228,21 +228,21 @@ const BlockView = React.memo(
         ref={ref}
         data-block={block.id}
         className={cn(
-          "scroll-mt-52 rounded-md border-l-4 border-transparent py-2 pl-3 pr-2",
+          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 sm:-mx-4 sm:px-4",
           mine && "border-primary bg-primary/10",
           dimmed && "opacity-45",
-          activeMatch && "ring-2 ring-ring",
+          activeMatch && "ring-2 ring-inset ring-ring",
         )}
       >
-        <p
-          className={cn(
-            "text-[0.75em] font-semibold uppercase tracking-wider",
-            mine ? "text-primary" : "text-muted-foreground",
-          )}
-        >
-          {block.speaker ?? "?"}
-        </p>
         <p className="break-words">
+          <span
+            className={cn(
+              "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide",
+              mine ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            {block.speaker ?? "?"}
+          </span>
           {parts.map((part, index) => {
             if (part.kind === "cue") return <CueMark key={index} part={part} />;
             if (part.kind === "direction") {
@@ -293,6 +293,8 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
   const [query, setQuery] = React.useState("");
   const [matchIndex, setMatchIndex] = React.useState(0);
   const [position, setPosition] = React.useState<Position>({ first: 0, last: 0 });
+  // Leiste oben blendet sich beim Weiterlesen aus und beim Zurückscrollen wieder ein.
+  const [chromeHidden, setChromeHidden] = React.useState(false);
   const refs = React.useRef<(HTMLDivElement | null)[]>([]);
   const barRef = React.useRef<HTMLDivElement>(null);
   const toolbarRef = React.useRef<HTMLDivElement>(null);
@@ -358,7 +360,13 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
         current.first === first && current.last === last ? current : { first, last },
       );
     };
+    let lastY = window.scrollY;
     const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - lastY) > 8) {
+        setChromeHidden(y > lastY && y > 80);
+        lastY = y;
+      }
       if (!frame) frame = window.requestAnimationFrame(measure);
     };
     measure();
@@ -418,12 +426,15 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
   };
 
   return (
-    <div className="-mt-2">
+    <div>
       <div
         ref={toolbarRef}
-        className="sticky top-[calc(var(--members-topbar-offset,0px)+4rem)] z-20 -mx-4 border-b border-border/60 bg-background/95 px-2 backdrop-blur sm:-mx-6 sm:px-4"
+        className={cn(
+          "fixed inset-x-0 top-0 z-30 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur transition-transform duration-200",
+          chromeHidden && !searchOpen && "-translate-y-full",
+        )}
       >
-        <div className="mx-auto flex h-12 max-w-3xl items-center gap-1">
+        <div className="mx-auto flex h-12 max-w-3xl items-center gap-0.5 px-1">
           <Button asChild variant="ghost" size="icon" aria-label="Zurück zu den Fassungen">
             <Link href={SKRIPT_PATH}>
               <ArrowLeftIcon aria-hidden />
@@ -432,7 +443,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
           <button
             type="button"
             onClick={() => setPanel("scenes")}
-            className="flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-md px-2 text-left hover:bg-muted"
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-1 px-1 text-left hover:bg-muted"
             aria-label="Szene wählen"
           >
             <span className="min-w-0 flex-1">
@@ -476,7 +487,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
           </Button>
         </div>
         {searchOpen ? (
-          <div className="mx-auto flex max-w-3xl items-center gap-1 pb-2">
+          <div className="mx-auto flex max-w-3xl items-center gap-1 px-2 pb-2">
             <input
               autoFocus
               value={query}
@@ -541,13 +552,17 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
         ) : null}
       </div>
 
-      {version.status === "draft" ? (
-        <p className="mx-auto mt-3 max-w-2xl rounded-md border border-warning bg-warning/15 px-3 py-2 text-sm">
-          Entwurf – das Ensemble sieht diese Fassung erst nach der Freigabe.
-        </p>
-      ) : null}
-
-      <article className={cn("mx-auto max-w-2xl space-y-1 pb-16 pt-4 leading-relaxed", fontClass)}>
+      <article
+        className={cn(
+          "mx-auto max-w-3xl px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4",
+          fontClass,
+        )}
+      >
+        {version.status === "draft" ? (
+          <p className="-mx-3 mb-2 border-l-[3px] border-warning bg-warning/15 px-3 py-1 text-sm sm:-mx-4 sm:px-4">
+            Entwurf – das Ensemble sieht diese Fassung erst nach der Freigabe.
+          </p>
+        ) : null}
         {blocks.map((block, index) => {
           const scene =
             sceneIndex.get(block.sceneId) === index
@@ -558,7 +573,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
               {scene ? (
                 <h2
                   id={`szene-${scene.id}`}
-                  className="!mt-8 border-b border-border pb-1 text-[0.8em] font-bold uppercase tracking-wide first:!mt-0"
+                  className="mb-1 mt-5 scroll-mt-14 border-b border-border pb-0.5 text-[0.75em] font-bold uppercase tracking-wider text-muted-foreground"
                 >
                   {scene.title}
                 </h2>
@@ -581,9 +596,12 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
 
       <div
         ref={barRef}
-        className="pointer-events-none sticky bottom-[calc(var(--members-bottom-nav)+0.75rem)] z-20"
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-30 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur",
+          (nextCue || nextLine) && "border-t border-border",
+        )}
       >
-        <div className="mx-auto flex max-w-2xl flex-col gap-2">
+        <div className="mx-auto flex max-w-3xl flex-col divide-y divide-border/60">
           {nextCue ? (
             <NextBar
               label="Nächster Hinweis"
@@ -757,7 +775,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
                   >
                     <span
                       className={cn(
-                        "min-w-24 flex-1 rounded border-l-4 px-2 py-0.5 font-medium",
+                        "min-w-24 flex-1 border-l-2 px-2 py-0.5 font-medium",
                         CUE_STYLE[category].className,
                       )}
                     >
@@ -800,6 +818,12 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
               <BookOpenTextIcon aria-hidden /> Fassung prüfen und verwalten
             </Link>
           ) : null}
+          <Link
+            href="/mitglieder/dashboard"
+            className="flex min-h-11 items-center gap-2 text-primary underline-offset-4 hover:underline"
+          >
+            <ArrowLeftIcon aria-hidden /> Zum Mitgliederbereich
+          </Link>
         </div>
       </BottomSheet>
     </div>
@@ -821,7 +845,7 @@ function NextBar({
     <button
       type="button"
       onClick={onClick}
-      className="pointer-events-auto flex w-full min-w-0 items-center gap-3 rounded-xl border border-border bg-card/95 px-3 py-2 text-left shadow-lg backdrop-blur"
+      className="flex min-h-11 w-full min-w-0 items-center gap-3 px-3 py-1.5 text-left hover:bg-muted sm:px-4"
     >
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-semibold uppercase tracking-wide text-primary">
@@ -829,7 +853,7 @@ function NextBar({
         </span>
         <span className="block truncate text-sm">{title}</span>
       </span>
-      <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
         {linesAway === 0 ? "gleich" : `in ${linesAway} ${linesAway === 1 ? "Replik" : "Repliken"}`}
       </span>
     </button>

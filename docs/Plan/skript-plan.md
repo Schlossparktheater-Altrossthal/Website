@@ -208,7 +208,9 @@ Später:
   nur über einen Assistenten mit Vorschau, der nie löscht.
 - E7 (früher O1): Freigegebene Fassungen dürfen alle lesen – `SCRIPT.READ` bekommt die Pflichtrolle
   `member`; `SCRIPT.MANAGE` bekommt jede Rolle mit `PRODUCTION.SHOW.MANAGE`.
-- E9: Leser unter `/mitglieder/skript/[fassung]` im Mitgliederbereich (Menü bleibt).
+- E9: Leser unter `/mitglieder/skript/[fassung]` als Vollbild-App (Route-Gruppe `(reader)`, ohne
+  Webseiten-Kopf und untere Leiste); Rückweg über Zurück-Pfeil und „Zum Mitgliederbereich“.
+  Passagen eckig und randlos, Sprecher in der Zeile, Leiste blendet sich beim Lesen aus.
 - E10: Rollen sind aus der eigenen Besetzung vorbelegt, frei änderbar (mehrere, auch fremde);
   fremde Repliken werden nicht standardmäßig abgeblendet.
 - E11: Live-Sitzung wird standardmäßig von Souffleuse bzw. Personen mit Recht geführt; „Scrollen
