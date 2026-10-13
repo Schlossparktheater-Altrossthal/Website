@@ -412,7 +412,11 @@ export function AnnotationReview({
                 >
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {annotation.state === "orphaned" ? "Absatz gestrichen" : "Absatz geändert"} ·{" "}
-                    {annotation.kind === "note" ? "Notiz" : "Markierung"}
+                    {annotation.kind === "note"
+                      ? "Notiz"
+                      : annotation.kind === "ink"
+                        ? "Zeichnung"
+                        : "Markierung"}
                   </p>
                   {annotation.body ? (
                     <p className="whitespace-pre-wrap break-words font-medium">{annotation.body}</p>

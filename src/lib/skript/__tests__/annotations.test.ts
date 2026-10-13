@@ -21,6 +21,7 @@ function stored(overrides: Partial<Parameters<typeof resolveAnnotations>[0][numb
     start: null,
     end: null,
     quote: null,
+    ink: null,
     blockText: "Ich muss den Nachtalp finden.",
     authorId: "u",
     createdAt: new Date("2026-10-13T10:00:00Z"),
@@ -97,6 +98,22 @@ describe("resolveAnnotations", () => {
       { id: "b7", lineageId: "neu", parts: [text("Ich muss den Nachtalp finden.")] },
     ]);
     expect(note).toMatchObject({ state: "ok", blockId: "b7" });
+  });
+
+  it("liest Freihand-Striche und verwirft ungültige", () => {
+    const stroke = { color: "rot", size: 0.15, points: [[0.1, 0.5, 0.6, 30]] };
+    const [ink] = resolveAnnotations(
+      [stored({ kind: "ink", body: null, ink: { strokes: [stroke] } })],
+      "v1",
+      [{ id: "b1", lineageId: "l1", parts: [text("Ich muss den Nachtalp finden.")] }],
+    );
+    expect(ink.strokes).toEqual([stroke]);
+    const [broken] = resolveAnnotations(
+      [stored({ kind: "ink", body: null, ink: { strokes: [{ color: "lila" }] } })],
+      "v1",
+      [],
+    );
+    expect(broken.strokes).toEqual([]);
   });
 
   it("plainBlockText normalisiert Leerraum", () => {

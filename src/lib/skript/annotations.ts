@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { readParts } from "./json";
 import {
   ANNOTATION_COLORS,
+  inkSchema,
+  inkStrokeSchema,
   ScriptAnnotationError,
+  type InkStroke,
   type AnnotationColor,
   type AnnotationState,
   type ReaderAnnotation,
@@ -88,6 +91,11 @@ async function loadOwnAnnotations(showId: string, authorId: string) {
   });
 }
 
+function readStrokes(value: unknown): InkStroke[] {
+  const parsed = inkSchema.safeParse(value);
+  return parsed.success ? parsed.data.strokes : [];
+}
+
 /** Status je Notiz für eine Fassung (reine Funktion, testbar). */
 export function resolveAnnotations(
   annotations: StoredAnnotation[],
@@ -131,6 +139,7 @@ export function resolveAnnotations(
     return {
       id: annotation.id,
       kind: annotation.kind,
+      strokes: readStrokes(annotation.ink),
       color: ANNOTATION_COLORS.find((color) => color === annotation.color) ?? null,
       body: annotation.body,
       ...anchor,
@@ -272,5 +281,65 @@ export async function scriptVersionScope(versionId: string) {
   return prisma.scriptVersion.findUnique({
     where: { id: versionId },
     select: { showId: true, status: true },
+  });
+}
+
+/**
+ * Freihand-Strich an einen Absatz hängen. Je Person und Absatz gibt es eine Zeichnung
+ * (Annotation `ink`), neue Striche werden angehängt.
+ */
+export async function addInkStroke(
+  authorId: string,
+  versionId: string,
+  blockId: string,
+  raw: unknown,
+) {
+  const stroke = inkStrokeSchema.parse(raw);
+  const block = await loadBlock(versionId, blockId);
+  const existing = await prisma.scriptAnnotation.findFirst({
+    where: { authorId, kind: "ink", versionId, blockId },
+    select: { id: true, ink: true },
+  });
+  if (existing) {
+    const strokes = [...readStrokes(existing.ink), stroke];
+    if (strokes.length > 500) throw new ScriptAnnotationError("Zu viele Striche an diesem Absatz.");
+    return prisma.scriptAnnotation.update({
+      where: { id: existing.id },
+      data: { ink: { strokes } },
+      select: { id: true },
+    });
+  }
+  return prisma.scriptAnnotation.create({
+    data: {
+      showId: block.version.showId,
+      versionId,
+      blockId: block.id,
+      lineageId: block.lineageId,
+      kind: "ink",
+      ink: { strokes: [stroke] },
+      blockText: plainBlockText(block.parts),
+      authorId,
+    },
+    select: { id: true },
+  });
+}
+
+/** Einzelne Striche entfernen (Radierer, Rückgängig); leere Zeichnungen werden gelöscht. */
+export async function removeInkStrokes(annotationId: string, authorId: string, indices: number[]) {
+  const annotation = await requireOwn(annotationId, authorId);
+  if (annotation.kind !== "ink") throw new ScriptAnnotationError("Keine Freihandnotiz.");
+  const current = await prisma.scriptAnnotation.findUniqueOrThrow({
+    where: { id: annotationId },
+    select: { ink: true },
+  });
+  const drop = new Set(indices);
+  const strokes = readStrokes(current.ink).filter((_, index) => !drop.has(index));
+  if (!strokes.length) {
+    await prisma.scriptAnnotation.delete({ where: { id: annotationId } });
+    return;
+  }
+  await prisma.scriptAnnotation.update({
+    where: { id: annotationId },
+    data: { ink: { strokes } },
   });
 }

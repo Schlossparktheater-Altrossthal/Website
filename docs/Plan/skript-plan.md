@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Phase 1–5 umgesetzt (Parser, Datenmodell, Import, Prüfschritt, Freigabe, Leser mit nächster Passage/Stichwort); Phase 6–8 umgesetzt (PDF, Vergleich, Markierungen/Notizen); als Nächstes Phase 9 Freihandnotizen.
+Stand: 2026-10-13. Phase 1–5 umgesetzt (Parser, Datenmodell, Import, Prüfschritt, Freigabe, Leser mit nächster Passage/Stichwort); Phase 6–9 umgesetzt (PDF, Vergleich, Markierungen/Notizen, Freihand); als Nächstes Phase 10 Bearbeiten.
 
 ## Ziel
 
@@ -238,7 +238,8 @@ Offen:
 - [x] Phase 8 Markierungen und Textnotizen (`ScriptAnnotation`, `src/lib/skript/annotations.ts`; privat,
       Urheber + Zeit; Wandern über `lineageId`, Rückfrage bei geändertem/gestrichenem Absatz).
       Kommentare fürs Team folgen mit Phase 12 (Live-Zusammenarbeit)
-- [ ] Phase 9 Freihandnotizen
+- [x] Phase 9 Freihandnotizen (`ink.tsx`, `perfect-freehand`; Stift zeichnet, Finger scrollt, Druck +
+      Neigung, Radierer je Strich, Rückgängig; Striche relativ zum Absatz in Breite/em)
 - [ ] Phase 10 Bearbeiten
 - [ ] Phase 11 Übernahme-Assistent
 - [ ] Phase 12 Live-Mitlesen + Live-Zusammenarbeit, Offline

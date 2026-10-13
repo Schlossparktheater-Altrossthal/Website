@@ -12,9 +12,11 @@ import { requireAuth } from "@/lib/rbac";
 import {
   ANNOTATION_COLORS,
   ScriptAnnotationError,
+  addInkStroke,
   anchorAnnotation,
   createAnnotation,
   deleteAnnotation,
+  removeInkStrokes,
   scriptVersionScope,
   updateAnnotation,
   type AnnotationInput,
@@ -89,4 +91,22 @@ export async function anchorAnnotationAction(
 
 export async function deleteAnnotationAction(versionId: string, annotationId: string) {
   return run(async () => deleteAnnotation(annotationId, await requireReader(versionId)));
+}
+
+export async function addInkStrokeAction(versionId: string, blockId: string, stroke: unknown) {
+  return run(async () => addInkStroke(await requireReader(versionId), versionId, blockId, stroke));
+}
+
+export async function removeInkStrokesAction(
+  versionId: string,
+  annotationId: string,
+  indices: number[],
+) {
+  return run(async () =>
+    removeInkStrokes(
+      annotationId,
+      await requireReader(versionId),
+      z.array(z.number().int().min(0)).parse(indices),
+    ),
+  );
 }

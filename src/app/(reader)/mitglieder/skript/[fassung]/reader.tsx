@@ -10,6 +10,7 @@ import {
   ChevronUpIcon,
   CloseIcon,
   DownloadIcon,
+  PenLineIcon,
   PrinterIcon,
   SearchIcon,
   SettingsIcon,
@@ -56,6 +57,7 @@ import {
   useTextSelection,
   type EditorState,
 } from "./annotations";
+import { InkLayer, PenBar, usePen, type PenSettings } from "./ink";
 
 /** Bildschirm bleibt an, solange der Leser offen ist (Screen Wake Lock API). */
 function useWakeLock(enabled: boolean) {
@@ -193,11 +195,13 @@ type BlockViewProps = {
   annotations: ReaderAnnotation[];
   /** Absatz ist angetippt (Aktionsleiste offen) oder Ziel beim Neu-Zuordnen. */
   selected: boolean;
+  /** Freihand-Zeichnung des Absatzes (gespeichert + vorläufig). */
+  ink: React.ComponentProps<typeof InkLayer> | null;
 };
 
 const BlockView = React.memo(
   React.forwardRef<HTMLDivElement, BlockViewProps>(function BlockView(
-    { block, settings, mine, cueLine, stacked, query, activeMatch, annotations, selected },
+    { block, settings, mine, cueLine, stacked, query, activeMatch, annotations, selected, ink },
     ref,
   ) {
     const hiddenCues = new Set(settings.hiddenCues);
@@ -265,7 +269,7 @@ const BlockView = React.memo(
           ref={ref}
           data-block={block.id}
           className={cn(
-            "scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground md:pl-[calc(var(--speaker-col)+1.25rem+3px)]",
+            "relative scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground md:pl-[calc(var(--speaker-col)+1.25rem+3px)]",
             !visible && !notes.length && "hidden",
             settings.directions === "dim" && "opacity-50",
             blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
@@ -275,6 +279,7 @@ const BlockView = React.memo(
         >
           {parts.map(renderPart)}
           <NoteCards notes={notes} className="mt-1 xl:mr-[17rem]" />
+          {ink ? <InkLayer {...ink} /> : null}
         </div>
       );
     }
@@ -285,7 +290,7 @@ const BlockView = React.memo(
         ref={ref}
         data-block={block.id}
         className={cn(
-          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 md:mx-0 md:grid md:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem] md:gap-x-3 md:px-2 xl:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem_16rem]",
+          "relative -mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 md:mx-0 md:grid md:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem] md:gap-x-3 md:px-2 xl:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem_16rem]",
           mine && "border-primary bg-primary/10",
           blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
           dimmed && "opacity-45",
@@ -321,6 +326,7 @@ const BlockView = React.memo(
           notes={notes}
           className="mt-1 md:col-span-2 md:col-start-2 xl:col-span-1 xl:col-start-4 xl:row-span-2 xl:row-start-1 xl:mt-0"
         />
+        {ink ? <InkLayer {...ink} /> : null}
       </div>
     );
   }),
@@ -384,12 +390,37 @@ export function ScriptReader({
     }
     return map;
   }, [annotations]);
+  // Freihandnotizen (Phase 9)
+  const [penMode, setPenMode] = React.useState(false);
+  const [penSettings, setPenSettings] = React.useState<PenSettings>({
+    tool: "pen",
+    color: "rot",
+    size: "mittel",
+    finger: false,
+  });
+  const inkByBlock = React.useMemo(() => {
+    const map = new Map<string, ReaderAnnotation>();
+    for (const annotation of annotations) {
+      if (annotation.kind === "ink" && annotation.blockId && annotation.state !== "orphaned") {
+        map.set(annotation.blockId, annotation);
+      }
+    }
+    return map;
+  }, [annotations]);
+  const pen = usePen({
+    enabled: penMode,
+    settings: penSettings,
+    versionId: version.id,
+    inkByBlock,
+  });
+  const noStrokes = React.useMemo(() => [], []);
   const toReview = annotations.filter((annotation) => annotation.state !== "ok");
   const blockById = React.useMemo(() => new Map(blocks.map((b) => [b.id, b])), [blocks]);
   const noAnnotations: ReaderAnnotation[] = React.useMemo(() => [], []);
 
   /** Antippen im Text: Notiz öffnen, Absatz wählen oder beim Neu-Zuordnen das Ziel setzen. */
   const onArticleClick = (event: React.MouseEvent) => {
+    if (penMode) return;
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     if (window.getSelection()?.isCollapsed === false) return;
@@ -567,7 +598,7 @@ export function ScriptReader({
         ref={toolbarRef}
         className={cn(
           "fixed inset-x-0 top-0 z-30 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur transition-transform duration-200",
-          chromeHidden && !searchOpen && "-translate-y-full",
+          chromeHidden && !searchOpen && !penMode && "-translate-y-full",
         )}
       >
         <div className="mx-auto flex h-12 max-w-[1240px] items-center gap-0.5 px-1 lg:px-4">
@@ -612,6 +643,19 @@ export function ScriptReader({
                 {settings.roleIds.length}
               </span>
             ) : null}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Stift"
+            aria-pressed={penMode}
+            className={cn(penMode && "bg-primary/15 text-primary")}
+            onClick={() => {
+              closeBar();
+              setPenMode((on) => !on);
+            }}
+          >
+            <PenLineIcon aria-hidden />
           </Button>
           <Button
             variant="ghost"
@@ -702,7 +746,9 @@ export function ScriptReader({
         <article
           ref={articleRef}
           onClick={onArticleClick}
+          {...pen.handlers}
           className={cn(
+            penMode && "cursor-crosshair touch-none select-none",
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,
           )}
@@ -783,6 +829,16 @@ export function ScriptReader({
                   selected={
                     (!selection && selectedBlock === block.id) || pick?.blockId === block.id
                   }
+                  ink={
+                    settings.showNotes && (inkByBlock.has(block.id) || pen.pending.has(block.id))
+                      ? {
+                          annotation: inkByBlock.get(block.id) ?? null,
+                          pending: pen.pending.get(block.id) ?? noStrokes,
+                          erasing: penMode && penSettings.tool === "eraser",
+                          erased: pen.erased,
+                        }
+                      : null
+                  }
                 />
               </React.Fragment>
             );
@@ -794,11 +850,19 @@ export function ScriptReader({
         ref={barRef}
         className={cn(
           "fixed inset-x-0 bottom-0 z-30 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur",
-          (nextCue || nextLine || selection || selectedBlock || pick) && "border-t border-border",
+          (nextCue || nextLine || selection || selectedBlock || pick || penMode) &&
+            "border-t border-border",
         )}
       >
         <div className="mx-auto flex max-w-[1240px] flex-col divide-y divide-border/60 lg:pl-[calc(15rem+3rem)] lg:pr-4">
-          {pick ? (
+          {penMode ? (
+            <PenBar
+              settings={penSettings}
+              onChange={(patch) => setPenSettings((current) => ({ ...current, ...patch }))}
+              onUndo={() => void pen.undo()}
+              onDone={() => setPenMode(false)}
+            />
+          ) : pick ? (
             <PickBar
               versionId={version.id}
               annotationId={pick.annotationId}
@@ -818,7 +882,7 @@ export function ScriptReader({
               onDone={closeBar}
             />
           ) : null}
-          {!pick && !selection && !selectedBlock && nextCue ? (
+          {!penMode && !pick && !selection && !selectedBlock && nextCue ? (
             <NextBar
               label="Nächster Hinweis"
               title={cueParts(blocks[nextCue.index], followed)
@@ -828,7 +892,7 @@ export function ScriptReader({
               onClick={() => scrollToIndex(nextCue.index)}
             />
           ) : null}
-          {!pick && !selection && !selectedBlock && nextLine ? (
+          {!penMode && !pick && !selection && !selectedBlock && nextLine ? (
             <NextBar
               label={`Nächste Passage · ${blocks[nextLine.index].speaker ?? ""}`}
               title={blockText(blocks[nextLine.index])}
@@ -1060,6 +1124,7 @@ export function ScriptReader({
           </Link>
         </div>
       </BottomSheet>
+      {pen.liveStroke}
       <AnnotationEditor
         key={editor?.mode === "edit" ? editor.annotation.id : (editor?.blockId ?? "neu")}
         versionId={version.id}

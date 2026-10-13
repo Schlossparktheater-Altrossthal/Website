@@ -98,3 +98,11 @@ export const SCRIPT_MARKER_STYLES: Record<"gelb" | "gruen" | "blau" | "rosa", st
   blau: "bg-sky-200/80 dark:bg-sky-400/25",
   rosa: "bg-pink-200/80 dark:bg-pink-400/25",
 };
+
+/** Stiftfarben der Freihandnotizen im Skript-Leser (SVG-Füllung). */
+export const SCRIPT_INK_STYLES: Record<"schwarz" | "rot" | "blau" | "gruen", string> = {
+  schwarz: "fill-foreground",
+  rot: "fill-red-600 dark:fill-red-400",
+  blau: "fill-blue-600 dark:fill-blue-400",
+  gruen: "fill-green-700 dark:fill-green-400",
+};

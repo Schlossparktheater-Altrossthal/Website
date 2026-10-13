@@ -95,6 +95,8 @@ import {
   Palette,
   PanelLeft,
   PawPrint,
+  Eraser,
+  PenLine,
   Pencil,
   PiggyBank,
   PlugZap,
@@ -1157,4 +1159,18 @@ export function WheatOffIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <WheatOff className={className} aria-hidden {...props} />;
+}
+
+export function PenLineIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <PenLine className={className} aria-hidden {...props} />;
+}
+
+export function EraserIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Eraser className={className} aria-hidden {...props} />;
 }

@@ -310,6 +310,23 @@ test.describe("als admin", () => {
       await page.setViewportSize({ width: 1280, height: 900 });
     }
 
+    // Freihand: Stiftmodus, Strich über „Wie geht es dir heute?“ ziehen
+    await page.getByRole("button", { name: "Stift", exact: true }).click();
+    const target = await page.getByText("Wie geht es dir heute?").boundingBox();
+    if (!target) throw new Error("Absatz nicht sichtbar");
+    await page.mouse.move(target.x + 4, target.y + target.height / 2);
+    await page.mouse.down();
+    for (let step = 1; step <= 12; step++) {
+      await page.mouse.move(
+        target.x + 4 + step * 12,
+        target.y + target.height / 2 + (step % 2) * 6,
+      );
+    }
+    await page.mouse.up();
+    await expect(page.locator("path[data-ink]")).toHaveCount(1);
+    await shoot(page, "skript-freihand");
+    await page.getByRole("button", { name: "Fertig" }).click();
+
     // Notiz bearbeiten
     await page.getByRole("button", { name: /Hier kurze Pause machen/ }).click();
     await expect(page.getByRole("dialog").getByText(/Angelegt/)).toBeVisible();
@@ -344,6 +361,18 @@ test.describe("als admin", () => {
     await page.getByText("Wie geht es dir heute?").click();
     await page.getByRole("button", { name: "Hierhin" }).click();
     await expect(page.getByRole("button", { name: /Auftritt von links/ })).toBeVisible();
+    // Zeichnung ist mit dem unveränderten Absatz mitgewandert; Radierer entfernt sie
+    await expect(page.locator("path[data-ink]")).toHaveCount(1);
+    await page.getByRole("button", { name: "Stift", exact: true }).click();
+    await page.getByRole("radio", { name: "Radierer" }).click();
+    const ink = await page.locator("path[data-ink]").boundingBox();
+    if (!ink) throw new Error("Strich nicht sichtbar");
+    await page.mouse.move(ink.x - 4, ink.y + ink.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(ink.x + ink.width + 4, ink.y + ink.height / 2, { steps: 20 });
+    await page.mouse.up();
+    await expect(page.locator("path[data-ink]")).toHaveCount(0);
+    await page.getByRole("button", { name: "Fertig" }).click();
 
     for (const id of [secondId, firstId]) {
       await page.goto(`${SKRIPT}&fassung=${id}`);

@@ -3991,6 +3991,7 @@ model ScriptBlockRole {
 enum ScriptAnnotationKind {
   highlight
   note
+  ink
 }
 
 /// Markierung oder Notiz einer Person am Skript (zunächst privat, E8). Hängt an `lineageId`,
@@ -4010,6 +4011,8 @@ model ScriptAnnotation {
   start     Int?
   end       Int?
   quote     String?
+  /// Freihand-Striche (kind = ink): Punkte relativ zum Absatz, siehe annotation-types.ts.
+  ink       Json?
   /// Wortlaut des Absatzes beim Anlegen/Bestätigen – erkennt Änderungen in neuen Fassungen.
   blockText String
   authorId  String
