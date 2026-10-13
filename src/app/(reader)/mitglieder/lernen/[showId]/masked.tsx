@@ -214,7 +214,7 @@ export function MaskedBlockText({
         if (isActive && progress) {
           if (progress.typed.has(token.index)) {
             return (
-              <span key={position} className="text-emerald-700 dark:text-emerald-400">
+              <span key={position} className="text-success">
                 {token.text}
               </span>
             );
@@ -226,8 +226,8 @@ export function MaskedBlockText({
                 className={cn(
                   "rounded-sm",
                   progress.wrong.has(token.index)
-                    ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                    : "bg-amber-400/25",
+                    ? "bg-destructive/15 text-destructive"
+                    : "bg-warning/20",
                 )}
               >
                 {token.text}

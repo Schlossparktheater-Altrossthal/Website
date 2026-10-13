@@ -116,10 +116,10 @@ export function usePractice(
 }
 
 export const RATING_STYLE: Record<LearnRating, string> = {
-  1: "text-red-700 dark:text-red-400",
-  2: "text-amber-700 dark:text-amber-400",
-  3: "text-emerald-700 dark:text-emerald-400",
-  4: "text-sky-700 dark:text-sky-400",
+  1: "text-destructive",
+  2: "text-warning",
+  3: "text-success",
+  4: "text-info",
 };
 
 /** Kurze Leiste nach dem Weiterblättern: vorgeschlagene Bewertung, antippen ändert sie. */

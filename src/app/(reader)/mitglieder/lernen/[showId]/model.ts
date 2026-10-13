@@ -173,30 +173,24 @@ export function useLearnStore(data: LearnPageData) {
 
   const flush = React.useCallback(async () => {
     if (sending.current) return;
-    const queue = (readStored<{ entries: ReviewEntry[] }>(OUTBOX_KEY(showId))?.entries ??
-      []) as ReviewEntry[];
-    setPending(queue.length);
-    if (!queue.length) return;
+    const read = () =>
+      (readStored<{ entries: ReviewEntry[] }>(OUTBOX_KEY(showId))?.entries ?? []) as ReviewEntry[];
     sending.current = true;
     try {
-      const result = await submitReviewsAction(showId, queue);
-      if (result.ok) {
-        const rest = (
-          (readStored<{ entries: ReviewEntry[] }>(OUTBOX_KEY(showId))?.entries ??
-            []) as ReviewEntry[]
-        ).slice(queue.length);
-        writeStored(OUTBOX_KEY(showId), { entries: rest });
-        setPending(rest.length);
+      // Während des Sendens neu dazugekommene Bewertungen gleich hinterherschicken.
+      for (let queue = read(); queue.length; queue = read()) {
+        setPending(queue.length);
+        const result = await submitReviewsAction(showId, queue);
+        // Abgelehnte Einträge (z. B. Rolle gestrichen) nicht endlos wiederholen.
+        if (!result.ok) console.warn("[lernen] Speichern abgelehnt", result.error);
+        writeStored(OUTBOX_KEY(showId), { entries: read().slice(queue.length) });
         setOffline(false);
-      } else {
-        console.warn("[lernen] Speichern abgelehnt", result.error);
-        // Ungültige Einträge (z. B. Rolle gestrichen) nicht endlos wiederholen.
-        writeStored(OUTBOX_KEY(showId), { entries: [] });
-        setPending(0);
       }
+      setPending(0);
     } catch (error) {
       console.warn("[lernen] Keine Verbindung, später erneut", error);
       setOffline(true);
+      setPending(read().length);
     } finally {
       sending.current = false;
     }

@@ -372,7 +372,7 @@ function Dashboard({
           <>
             <section className="bg-primary/10 px-4 py-5" data-testid="lernen-heute">
               {changedUnits.length ? (
-                <p className="mb-3 border-l-[3px] border-amber-500 bg-amber-400/15 px-3 py-2 text-sm">
+                <p className="mb-3 border-l-[3px] border-warning bg-warning/10 px-3 py-2 text-sm">
                   In der neuen Fassung haben sich{" "}
                   <strong>
                     {changedUnits.length} {changedUnits.length === 1 ? "Stelle" : "Stellen"}
@@ -551,8 +551,8 @@ function Dashboard({
                   Szenen
                 </h2>
                 <span className="text-xs text-muted-foreground">
-                  <Legend className="bg-emerald-500" /> sitzt <Legend className="bg-amber-500" />{" "}
-                  lernend <Legend className="bg-muted-foreground/25" /> neu
+                  <Legend className="bg-success" /> sitzt <Legend className="bg-warning" /> lernend{" "}
+                  <Legend className="bg-muted-foreground/25" /> neu
                 </span>
               </div>
               <ul className="divide-y divide-border/60 border-y border-border/60">
@@ -570,7 +570,7 @@ function Dashboard({
                         <span className="flex items-center gap-2">
                           <span className="min-w-0 flex-1 truncate text-sm">{scene.title}</span>
                           {entry.changed ? (
-                            <span className="shrink-0 rounded-sm bg-amber-400/25 px-1.5 text-[11px] text-amber-800 dark:text-amber-300">
+                            <span className="shrink-0 rounded-sm bg-warning/20 px-1.5 text-[11px] text-warning">
                               {entry.changed} geändert
                             </span>
                           ) : null}
@@ -582,7 +582,7 @@ function Dashboard({
                           ) : null}
                           {entry.solid === entry.total ? (
                             <TrophyIcon
-                              className="h-3.5 w-3.5 shrink-0 text-emerald-600"
+                              className="h-3.5 w-3.5 shrink-0 text-success"
                               aria-label="Sitzt"
                             />
                           ) : null}
@@ -592,11 +592,11 @@ function Dashboard({
                         </span>
                         <span className="mt-1.5 flex h-1.5 overflow-hidden bg-muted-foreground/15">
                           <span
-                            className="bg-emerald-500"
+                            className="bg-success"
                             style={{ width: `${(entry.solid / entry.total) * 100}%` }}
                           />
                           <span
-                            className="bg-amber-500"
+                            className="bg-warning"
                             style={{ width: `${(entry.learning / entry.total) * 100}%` }}
                           />
                         </span>

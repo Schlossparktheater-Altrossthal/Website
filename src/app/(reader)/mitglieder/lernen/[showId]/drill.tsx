@@ -267,7 +267,7 @@ export function Drill({
               <p className="text-[0.75em] font-semibold uppercase tracking-wider text-primary">
                 {unit.block.speaker}
                 {stageInfo.changed ? (
-                  <span className="ml-2 rounded-sm bg-amber-400/25 px-1 py-px normal-case tracking-normal text-amber-800 dark:text-amber-300">
+                  <span className="ml-2 rounded-sm bg-warning/20 px-1 py-px normal-case tracking-normal text-warning">
                     Text geändert
                   </span>
                 ) : null}

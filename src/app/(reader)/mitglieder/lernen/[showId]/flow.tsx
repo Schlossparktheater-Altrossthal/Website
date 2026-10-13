@@ -373,16 +373,16 @@ function FlowBlock({
         "border-l-[3px] pl-3 transition-colors",
         own ? "border-primary/50" : "border-transparent",
         current && "select-none border-primary bg-primary/5 py-2",
-        own && !current && worst === 1 && "border-red-500/70",
-        own && !current && worst === 2 && "border-amber-500/70",
-        own && !current && worst !== undefined && worst >= 3 && "border-emerald-500/70",
+        own && !current && worst === 1 && "border-destructive/70",
+        own && !current && worst === 2 && "border-warning/70",
+        own && !current && worst !== undefined && worst >= 3 && "border-success/70",
         !own && "text-foreground/85",
       )}
     >
       <p className="text-[0.75em] font-semibold uppercase tracking-wider text-muted-foreground">
         {block.speaker}
         {changed ? (
-          <span className="ml-2 rounded-sm bg-amber-400/25 px-1 py-px normal-case tracking-normal text-amber-800 dark:text-amber-300">
+          <span className="ml-2 rounded-sm bg-warning/20 px-1 py-px normal-case tracking-normal text-warning">
             Text geändert
           </span>
         ) : null}

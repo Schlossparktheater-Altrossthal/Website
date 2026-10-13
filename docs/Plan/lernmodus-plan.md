@@ -1,5 +1,7 @@
 # Plan: Lernmodus für Skripte
 
+Stand: 2026-10-13 – Phase 1–6 umgesetzt (Staging), offen Release und Gerätetest.
+
 Phase 13 aus `docs/Plan/skript-plan.md`. Vollbild-App wie der Leser (`src/app/(reader)/`), mobil
 und am Rechner gut bedienbar, Spielelemente nur sparsam.
 
