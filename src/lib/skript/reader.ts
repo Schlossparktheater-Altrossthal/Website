@@ -18,6 +18,7 @@ export type ReaderBlock = {
   roleIds: string[];
   parts: ScriptPart[];
   words: number;
+  page: number | null;
 };
 
 export type ReaderScene = { id: string; title: string; words: number; minutes: number };
@@ -72,6 +73,7 @@ export async function loadScriptReader(
           speaker: true,
           parts: true,
           wordCount: true,
+          page: true,
           roles: { select: { roleId: true } },
         },
       },
@@ -112,6 +114,7 @@ export async function loadScriptReader(
       roleIds,
       parts: readParts(block.parts),
       words: block.wordCount,
+      page: block.page,
     };
   });
 

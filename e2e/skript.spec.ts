@@ -121,6 +121,11 @@ test.describe("als admin", () => {
     if (shots) await page.screenshot({ path: `${shots}/skript-leser-passage-mobil.png` });
     await page.setViewportSize({ width: 1280, height: 900 });
     if (shots) await page.screenshot({ path: `${shots}/skript-leser-desktop.png` });
+    if (shots) {
+      await page.setViewportSize({ width: 1920, height: 1080 });
+      await page.screenshot({ path: `${shots}/skript-leser-breit.png` });
+      await page.setViewportSize({ width: 1280, height: 900 });
+    }
     await clickUntil(page.getByRole("button", { name: "Ansicht einstellen" }), () =>
       expect(page.getByRole("dialog")).toBeVisible(),
     );

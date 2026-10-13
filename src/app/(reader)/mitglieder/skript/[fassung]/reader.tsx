@@ -44,7 +44,7 @@ const CUE_STYLE: Record<CueCategory, { label: string; className: string }> = {
   technik: { label: "Technik", className: SCRIPT_CUE_STYLES.technik },
 };
 
-const FONT_SIZES = ["text-base", "text-lg", "text-xl", "text-2xl"] as const;
+const FONT_SIZES = ["text-[15px]", "text-base", "text-lg", "text-xl"] as const;
 
 type Visibility = "show" | "dim" | "hide";
 
@@ -59,7 +59,7 @@ type Settings = {
 };
 
 const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
-  fontSize: 1,
+  fontSize: 0,
   directions: "show",
   hiddenCues: [],
   followedCues: [],
@@ -163,11 +163,13 @@ function CueMark({ part }: { part: Extract<ScriptPart, { kind: "cue" }> }) {
   return (
     <span
       className={cn(
-        "mx-0.5 inline border-l-2 px-1 text-[0.85em] font-medium not-italic text-foreground [box-decoration-break:clone]",
+        "mx-0.5 inline border-l-[3px] px-1.5 py-px text-[0.87em] not-italic text-foreground [box-decoration-break:clone]",
         style.className,
       )}
     >
-      <span className="sr-only">{style.label}: </span>
+      <span className="mr-1 text-[0.7em] font-bold uppercase tracking-wider opacity-70">
+        {style.label}
+      </span>
       {part.text}
     </span>
   );
@@ -203,7 +205,7 @@ const BlockView = React.memo(
           ref={ref}
           data-block={block.id}
           className={cn(
-            "scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground sm:pl-8",
+            "scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground md:pl-[calc(8rem+1.25rem+3px)]",
             !visible && "hidden",
             settings.directions === "dim" && "opacity-50",
             activeMatch && "ring-2 ring-inset ring-ring",
@@ -228,16 +230,25 @@ const BlockView = React.memo(
         ref={ref}
         data-block={block.id}
         className={cn(
-          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 sm:-mx-4 sm:px-4",
+          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 md:mx-0 md:grid md:grid-cols-[8rem_minmax(0,1fr)_2.25rem] md:gap-3 md:px-2",
           mine && "border-primary bg-primary/10",
           dimmed && "opacity-45",
           activeMatch && "ring-2 ring-inset ring-ring",
         )}
       >
+        <span
+          aria-hidden
+          className={cn(
+            "hidden pt-[0.2em] text-[0.8em] font-bold uppercase tracking-wide md:block md:break-words",
+            mine && "text-primary",
+          )}
+        >
+          {block.speaker ?? "?"}
+        </span>
         <p className="break-words">
           <span
             className={cn(
-              "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide",
+              "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide md:sr-only",
               mine ? "text-primary" : "text-muted-foreground",
             )}
           >
@@ -276,6 +287,9 @@ const BlockView = React.memo(
             );
           })}
         </p>
+        <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">
+          {block.page ?? ""}
+        </span>
       </div>
     );
   }),
@@ -413,6 +427,10 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
         position.last,
       )
     : null;
+  const jumpToScene = (sceneId: string) => {
+    const index = sceneIndex.get(sceneId);
+    if (index !== undefined) scrollToIndex(index, false);
+  };
   const currentScene = scenes.find((scene) => scene.id === blocks[position.first]?.sceneId);
   const fontClass = FONT_SIZES[settings.fontSize] ?? FONT_SIZES[1];
 
@@ -434,7 +452,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
           chromeHidden && !searchOpen && "-translate-y-full",
         )}
       >
-        <div className="mx-auto flex h-12 max-w-3xl items-center gap-0.5 px-1">
+        <div className="mx-auto flex h-12 max-w-[1240px] items-center gap-0.5 px-1 lg:px-4">
           <Button asChild variant="ghost" size="icon" aria-label="Zurück zu den Fassungen">
             <Link href={SKRIPT_PATH}>
               <ArrowLeftIcon aria-hidden />
@@ -487,7 +505,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
           </Button>
         </div>
         {searchOpen ? (
-          <div className="mx-auto flex max-w-3xl items-center gap-1 px-2 pb-2">
+          <div className="mx-auto flex max-w-[1240px] items-center gap-1 px-2 pb-2 lg:px-4">
             <input
               autoFocus
               value={query}
@@ -552,47 +570,59 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
         ) : null}
       </div>
 
-      <article
-        className={cn(
-          "mx-auto max-w-3xl px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4",
-          fontClass,
-        )}
-      >
-        {version.status === "draft" ? (
-          <p className="-mx-3 mb-2 border-l-[3px] border-warning bg-warning/15 px-3 py-1 text-sm sm:-mx-4 sm:px-4">
-            Entwurf – das Ensemble sieht diese Fassung erst nach der Freigabe.
-          </p>
-        ) : null}
-        {blocks.map((block, index) => {
-          const scene =
-            sceneIndex.get(block.sceneId) === index
-              ? scenes.find((s) => s.id === block.sceneId)
-              : null;
-          return (
-            <React.Fragment key={block.id}>
-              {scene ? (
-                <h2
-                  id={`szene-${scene.id}`}
-                  className="mb-1 mt-5 scroll-mt-14 border-b border-border pb-0.5 text-[0.75em] font-bold uppercase tracking-wider text-muted-foreground"
-                >
-                  {scene.title}
-                </h2>
-              ) : null}
-              <BlockView
-                ref={(element) => {
-                  refs.current[index] = element;
-                }}
-                block={block}
-                settings={settings}
-                mine={isRoleBlock(block, roleSet)}
-                cueLine={cueLines.has(index)}
-                query={trimmed.length >= 2 ? trimmed : ""}
-                activeMatch={index === activeMatch}
-              />
-            </React.Fragment>
-          );
-        })}
-      </article>
+      <div className="mx-auto max-w-[1240px] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8 lg:px-4">
+        <aside className="sticky top-0 hidden max-h-dvh self-start overflow-y-auto pb-6 pt-16 text-sm lg:block">
+          <p className="px-2 pb-1 text-xs text-muted-foreground">Szenen</p>
+          <SceneList
+            compact
+            scenes={scenes}
+            currentId={currentScene?.id}
+            roleScenes={roleScenes}
+            onPick={jumpToScene}
+          />
+        </aside>
+        <article
+          className={cn(
+            "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
+            fontClass,
+          )}
+        >
+          {version.status === "draft" ? (
+            <p className="-mx-3 mb-2 border-l-[3px] border-warning bg-warning/15 px-3 py-1 text-sm sm:-mx-4 sm:px-4">
+              Entwurf – das Ensemble sieht diese Fassung erst nach der Freigabe.
+            </p>
+          ) : null}
+          {blocks.map((block, index) => {
+            const scene =
+              sceneIndex.get(block.sceneId) === index
+                ? scenes.find((s) => s.id === block.sceneId)
+                : null;
+            return (
+              <React.Fragment key={block.id}>
+                {scene ? (
+                  <h2
+                    id={`szene-${scene.id}`}
+                    className="mb-1 mt-8 scroll-mt-14 border-b-2 border-foreground pb-1 text-[0.85em] font-bold uppercase tracking-wider first:mt-2"
+                  >
+                    {scene.title}
+                  </h2>
+                ) : null}
+                <BlockView
+                  ref={(element) => {
+                    refs.current[index] = element;
+                  }}
+                  block={block}
+                  settings={settings}
+                  mine={isRoleBlock(block, roleSet)}
+                  cueLine={cueLines.has(index)}
+                  query={trimmed.length >= 2 ? trimmed : ""}
+                  activeMatch={index === activeMatch}
+                />
+              </React.Fragment>
+            );
+          })}
+        </article>
+      </div>
 
       <div
         ref={barRef}
@@ -601,7 +631,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
           (nextCue || nextLine) && "border-t border-border",
         )}
       >
-        <div className="mx-auto flex max-w-3xl flex-col divide-y divide-border/60">
+        <div className="mx-auto flex max-w-[1240px] flex-col divide-y divide-border/60 lg:pl-[calc(15rem+3rem)] lg:pr-4">
           {nextCue ? (
             <NextBar
               label="Nächster Hinweis"
@@ -629,38 +659,15 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
         title="Szenen"
         description="Zu einer Szene springen"
       >
-        <ul className="divide-y divide-border/60">
-          {scenes.map((scene) => (
-            <li key={scene.id}>
-              <button
-                type="button"
-                className={cn(
-                  "flex min-h-11 w-full items-center gap-3 py-2 text-left text-sm hover:bg-muted",
-                  scene.id === currentScene?.id && "font-semibold",
-                )}
-                onClick={() => {
-                  setPanel(null);
-                  const index = sceneIndex.get(scene.id);
-                  if (index !== undefined) window.setTimeout(() => scrollToIndex(index, false), 50);
-                }}
-              >
-                <span
-                  className={cn(
-                    "h-2 w-2 shrink-0 rounded-full",
-                    roleScenes.has(scene.id) ? "bg-primary" : "bg-transparent",
-                  )}
-                  aria-label={roleScenes.has(scene.id) ? "Gewählte Rolle spielt mit" : undefined}
-                />
-                <span className="min-w-0 flex-1 break-words">{scene.title}</span>
-                {scene.minutes ? (
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    ca. {scene.minutes} min
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <SceneList
+          scenes={scenes}
+          currentId={currentScene?.id}
+          roleScenes={roleScenes}
+          onPick={(id) => {
+            setPanel(null);
+            window.setTimeout(() => jumpToScene(id), 50);
+          }}
+        />
         <p className="pt-3 text-xs text-muted-foreground">
           Dauer geschätzt aus der Wortzahl. Punkt = eine gewählte Rolle spricht in der Szene.
         </p>
@@ -857,5 +864,51 @@ function NextBar({
         {linesAway === 0 ? "gleich" : `in ${linesAway} ${linesAway === 1 ? "Replik" : "Repliken"}`}
       </span>
     </button>
+  );
+}
+
+function SceneList({
+  scenes,
+  currentId,
+  roleScenes,
+  onPick,
+  compact = false,
+}: {
+  scenes: ScriptReaderData["scenes"];
+  currentId: string | undefined;
+  roleScenes: ReadonlySet<string>;
+  onPick: (sceneId: string) => void;
+  compact?: boolean;
+}) {
+  return (
+    <ul className={compact ? undefined : "divide-y divide-border/60"}>
+      {scenes.map((scene) => (
+        <li key={scene.id}>
+          <button
+            type="button"
+            className={cn(
+              "flex w-full items-center gap-2 text-left hover:bg-muted",
+              compact ? "min-h-8 px-2 py-1" : "min-h-11 gap-3 py-2 text-sm",
+              scene.id === currentId && "bg-muted font-semibold",
+            )}
+            onClick={() => onPick(scene.id)}
+          >
+            <span
+              className={cn(
+                "h-2 w-2 shrink-0",
+                roleScenes.has(scene.id) ? "bg-primary" : "bg-transparent",
+              )}
+              aria-label={roleScenes.has(scene.id) ? "Gewählte Rolle spielt mit" : undefined}
+            />
+            <span className="min-w-0 flex-1 break-words">{scene.title}</span>
+            {scene.minutes ? (
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                {compact ? `${scene.minutes}′` : `ca. ${scene.minutes} min`}
+              </span>
+            ) : null}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
