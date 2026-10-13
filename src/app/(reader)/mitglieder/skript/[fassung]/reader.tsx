@@ -308,7 +308,7 @@ const BlockView = React.memo(
         >
           {block.speaker ?? "?"}
         </span>
-        <p className={cn("break-words", stacked && "md:col-start-2")}>
+        <p data-ink-anchor className={cn("relative break-words", stacked && "md:col-start-2")}>
           <span
             className={cn(
               "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide md:sr-only",
@@ -318,6 +318,7 @@ const BlockView = React.memo(
             {block.speaker ?? "?"}
           </span>
           {parts.map(renderPart)}
+          {ink ? <InkLayer {...ink} /> : null}
         </p>
         <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">
           {block.page ?? ""}
@@ -326,7 +327,6 @@ const BlockView = React.memo(
           notes={notes}
           className="mt-1 md:col-span-2 md:col-start-2 xl:col-span-1 xl:col-start-4 xl:row-span-2 xl:row-start-1 xl:mt-0"
         />
-        {ink ? <InkLayer {...ink} /> : null}
       </div>
     );
   }),

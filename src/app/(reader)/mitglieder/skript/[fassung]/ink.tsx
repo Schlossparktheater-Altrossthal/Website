@@ -61,7 +61,10 @@ function isPen(points: InkStroke["points"]) {
   return points.some((point) => point[2] !== 0.5);
 }
 
-/** Gespeicherte Zeichnung eines Absatzes; misst Breite und Schriftgröße des Absatzes. */
+/**
+ * Gespeicherte Zeichnung eines Absatzes; liegt im Textbereich (`data-ink-anchor`) und misst
+ * dessen Breite und Schriftgröße.
+ */
 export function InkLayer({
   annotation,
   pending,
@@ -268,10 +271,13 @@ export function usePen({
           const block = blockAt(event.clientX, event.clientY);
           const blockId = block?.getAttribute("data-block");
           if (!block || !blockId) return;
+          // Verankert am Textbereich (bei Repliken ohne Sprecher-Spalte), damit Striche auf
+          // Handy und Desktop über demselben Text liegen.
+          const anchor = block.querySelector("[data-ink-anchor]") ?? block;
           const start: Live = {
             pointerId: event.pointerId,
             blockId,
-            rect: block.getBoundingClientRect(),
+            rect: anchor.getBoundingClientRect(),
             em: Number.parseFloat(window.getComputedStyle(block).fontSize) || 16,
             points: [],
             client: [],
