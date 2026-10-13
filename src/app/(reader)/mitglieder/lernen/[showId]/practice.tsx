@@ -107,8 +107,6 @@ export const RATING_STYLE: Record<LearnRating, string> = {
   4: "text-sky-700 dark:text-sky-400",
 };
 
-const RATING_EMOJI: Record<LearnRating, string> = { 1: "😬", 2: "🤔", 3: "🙂", 4: "😎" };
-
 /** Kurze Leiste nach dem Weiterblättern: vorgeschlagene Bewertung, antippen ändert sie. */
 export function CorrectionBar({
   last,
@@ -139,7 +137,6 @@ export function CorrectionBar({
               : "border-transparent text-muted-foreground hover:bg-muted",
           )}
         >
-          <span aria-hidden>{RATING_EMOJI[rating]}</span>
           {RATING_LABEL[rating]}
         </button>
       ))}

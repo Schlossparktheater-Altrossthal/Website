@@ -204,7 +204,8 @@ export function MaskedBlockText({
         if (token.kind === "direction") {
           return (
             <span key={position} className="italic text-muted-foreground">
-              {token.text}
+              {" "}
+              {token.text}{" "}
             </span>
           );
         }
