@@ -16,6 +16,8 @@ const nextConfig = {
   serverExternalPackages: [
     "bcryptjs",
     "pdfkit",
+    // pdfjs lädt seinen Worker (pdf.worker.mjs) zur Laufzeit relativ zu sich selbst – gebündelt fehlt er.
+    "pdfjs-dist",
     "qrcode",
     "node-ical",
     "sharp",
