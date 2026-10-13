@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { previousVersion } from "@/lib/skript/compare";
 import { loadScriptReader } from "@/lib/skript/reader";
 import { SCRIPT_MANAGE_PERMISSION, SCRIPT_READ_PERMISSION } from "@/lib/skript/service";
 
@@ -25,5 +26,6 @@ export default async function ScriptReaderPage({
   // Entwürfe sehen nur Verwalter (E7).
   if (!canManage && (!canRead || data.version.status !== "released")) notFound();
 
-  return <ScriptReader data={data} canManage={canManage} />;
+  const previous = await previousVersion(data.version.id);
+  return <ScriptReader data={data} canManage={canManage} previous={previous} />;
 }

@@ -13,6 +13,7 @@ Auswertung der Rückmeldungen.
 - `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte / skript (`&fassung=<id>` Prüfschritt bzw. Fassung; für alle mit `SCRIPT.READ` sichtbar, nur Freigegebenes); `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
 - `/mitglieder/produktionen/besetzung`, `/szenen` – leiten auf das Stück weiter
 - `/mitglieder/skript/[fassung]` – Skript-Leser als Vollbild (`src/app/(reader)/`, ohne Webseiten-Kopf; `reader.tsx`): Szenen, Suche, Rollen hervorheben mit Vorschau „Nächste Passage“ und Stichwort, Regie/Hinweise je Gewerk filtern, „Verfolgen“ = nächster Hinweis; Einstellungen und Leseposition im Browser; Entwürfe nur für Verwalter
+- `/mitglieder/skript/[fassung]/vergleich` – Fassungsvergleich (`?mit=<id>` ältere Fassung, Standard Vorfassung; `?nur=meine|hinweise`): geändert/neu/gestrichen mit Wort-Diff, Unverändertes zusammengeklappt
 - `/api/skript/[showId]/pdf?fassung=…` – Fassung als PDF mit den Leser-Einstellungen (`rollen`, `regie`, `ohne`, `abblenden`, `groesse`, `download=1`); Rechte wie der Leser
 - `/api/skript/[showId]` – Skript-Fassungen: `GET` Liste (Entwürfe nur mit Verwaltungsrecht), `POST` PDF hochladen → Entwurf (`docs/Plan/skript-plan.md`)
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung

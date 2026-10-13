@@ -64,11 +64,20 @@ export function ScriptReview({ data, canManage }: { data: ScriptReviewData; canM
             ) : (
               <Badge variant="success">Freigegeben</Badge>
             )}
-            <Button asChild size="sm" variant="outline" className="ml-auto">
-              <Link href={`/mitglieder/skript/${version.id}`}>
-                <BookOpenTextIcon aria-hidden /> Lesen
-              </Link>
-            </Button>
+            <span className="ml-auto flex flex-wrap gap-2">
+              {version.basedOnLabel ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/mitglieder/skript/${version.id}/vergleich`}>
+                    Vergleich mit {version.basedOnLabel}
+                  </Link>
+                </Button>
+              ) : null}
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/mitglieder/skript/${version.id}`}>
+                  <BookOpenTextIcon aria-hidden /> Lesen
+                </Link>
+              </Button>
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">

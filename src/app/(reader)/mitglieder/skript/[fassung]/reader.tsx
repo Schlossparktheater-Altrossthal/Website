@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
-import { SCRIPT_CUE_STYLES } from "@/config/category-colors";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import {
   cueLineIndices,
@@ -31,91 +30,22 @@ import {
   isRoleBlock,
   splitTail,
 } from "@/lib/skript/reader-logic";
-import type { CueCategory, ScriptPart } from "@/lib/skript/types";
+import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
-const SKRIPT_PATH = "/mitglieder/produktionen/stueck?ansicht=skript";
-
-const CUE_STYLE: Record<CueCategory, { label: string; className: string }> = {
-  ton: { label: "Ton", className: SCRIPT_CUE_STYLES.ton },
-  licht: { label: "Licht", className: SCRIPT_CUE_STYLES.licht },
-  nebel: { label: "Nebel", className: SCRIPT_CUE_STYLES.nebel },
-  effekt: { label: "Effekt", className: SCRIPT_CUE_STYLES.effekt },
-  umbau: { label: "Umbau", className: SCRIPT_CUE_STYLES.umbau },
-  aus: { label: "Aus dem Off", className: SCRIPT_CUE_STYLES.aus },
-  technik: { label: "Technik", className: SCRIPT_CUE_STYLES.technik },
-};
-
-/** Längster Name (Zeichen), der noch in die Sprecher-Spalte passt. */
-const SPEAKER_MAX_CHARS = 18;
-
-const FONT_SIZES = ["text-[15px]", "text-base", "text-lg", "text-xl"] as const;
-
-type Visibility = "show" | "dim" | "hide";
-
-type Settings = {
-  fontSize: number;
-  directions: Visibility;
-  hiddenCues: CueCategory[];
-  followedCues: CueCategory[];
-  roleIds: string[];
-  dimOthers: boolean;
-  keepAwake: boolean;
-  pdfCover: boolean;
-};
-
-const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
-  fontSize: 0,
-  directions: "show",
-  hiddenCues: [],
-  followedCues: [],
-  dimOthers: false,
-  keepAwake: true,
-  pdfCover: true,
-};
-
-/** Einstellungen je Stück im Browser (nur Komfort, E: localStorage nur für Ansicht). */
-function readStored<T>(key: string): Partial<T> | null {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Partial<T>) : null;
-  } catch (error) {
-    console.warn("Leser-Einstellungen nicht lesbar", error);
-    return null;
-  }
-}
-
-function writeStored(key: string, value: unknown) {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.warn("Leser-Einstellungen nicht speicherbar", error);
-  }
-}
-
-function useSettings(showId: string, ownRoleIds: string[]) {
-  const key = `skript-leser:${showId}`;
-  const [settings, setSettings] = React.useState<Settings>({
-    ...DEFAULT_SETTINGS,
-    roleIds: ownRoleIds,
-  });
-  const loaded = React.useRef(false);
-  React.useEffect(() => {
-    const stored = readStored<Settings>(key);
-    if (stored) setSettings((current) => ({ ...current, ...stored }));
-    loaded.current = true;
-  }, [key]);
-  const update = React.useCallback(
-    (patch: Partial<Settings>) =>
-      setSettings((current) => {
-        const next = { ...current, ...patch };
-        if (loaded.current) writeStored(key, next);
-        return next;
-      }),
-    [key],
-  );
-  return [settings, update] as const;
-}
+import {
+  CUE_STYLE,
+  CueMark,
+  FONT_SIZES,
+  SceneList,
+  SKRIPT_PATH,
+  SPEAKER_MAX_CHARS,
+  type Settings,
+  type Visibility,
+  readStored,
+  useSettings,
+  writeStored,
+} from "../shared";
 
 /** Bildschirm bleibt an, solange der Leser offen ist (Screen Wake Lock API). */
 function useWakeLock(enabled: boolean) {
@@ -163,27 +93,6 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   }
   pieces.push(text.slice(start));
   return <>{pieces}</>;
-}
-
-function CueMark({ part }: { part: Extract<ScriptPart, { kind: "cue" }> }) {
-  const style = CUE_STYLE[part.category];
-  return (
-    <span
-      className={cn(
-        "mx-0.5 inline border-l-[3px] px-1.5 py-px text-[0.87em] not-italic text-foreground [box-decoration-break:clone]",
-        style.className,
-      )}
-    >
-      {part.text.toLowerCase().startsWith(style.label.toLowerCase()) ? (
-        <span className="sr-only">{style.label}: </span>
-      ) : (
-        <span className="mr-1 text-[0.7em] font-bold uppercase tracking-wider opacity-70">
-          {style.label}
-        </span>
-      )}
-      {part.text}
-    </span>
-  );
 }
 
 type BlockViewProps = {
@@ -311,12 +220,30 @@ const BlockView = React.memo(
 
 type Position = { first: number; last: number };
 
-export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canManage: boolean }) {
+export function ScriptReader({
+  data,
+  canManage,
+  previous,
+}: {
+  data: ScriptReaderData;
+  canManage: boolean;
+  /** Vorfassung für den Vergleich, falls vorhanden. */
+  previous: { id: string; label: string } | null;
+}) {
   const { version, scenes, blocks, roles } = data;
   const [settings, update] = useSettings(version.showId, data.ownRoleIds);
   useWakeLock(settings.keepAwake);
 
   const [panel, setPanel] = React.useState<"scenes" | "roles" | "settings" | null>(null);
+  // „Was ist neu“: Hinweis, wenn zuletzt eine andere Fassung dieses Stücks gelesen wurde.
+  const [newVersionHint, setNewVersionHint] = React.useState(false);
+  React.useEffect(() => {
+    const key = `skript-gesehen:${version.showId}`;
+    const seen = readStored<{ versionId: string }>(key)?.versionId;
+    if (previous && seen && seen !== version.id) setNewVersionHint(true);
+    writeStored(key, { versionId: version.id });
+  }, [previous, version.id, version.showId]);
+  const compareHref = `/mitglieder/skript/${version.id}/vergleich`;
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [matchIndex, setMatchIndex] = React.useState(0);
@@ -618,6 +545,26 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
           )}
           style={{ ["--speaker-col" as string]: `${(speakerChars * 0.62).toFixed(2)}em` }}
         >
+          {newVersionHint && previous ? (
+            <div className="-mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-[3px] border-primary bg-primary/10 px-3 py-2 text-sm sm:-mx-4 sm:px-4 md:mx-0 md:px-3">
+              <span className="min-w-0 flex-1">
+                Neue Fassung seit „{previous.label}“. Was hat sich für dich geändert?
+              </span>
+              <Link
+                href={`${compareHref}?nur=${settings.roleIds.length ? "meine" : "alle"}`}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Änderungen ansehen
+              </Link>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setNewVersionHint(false)}
+              >
+                Ausblenden
+              </button>
+            </div>
+          ) : null}
           {version.status === "draft" ? (
             <p className="-mx-3 mb-2 border-l-[3px] border-warning bg-warning/15 px-3 py-1 text-sm sm:-mx-4 sm:px-4">
               Entwurf – das Ensemble sieht diese Fassung erst nach der Freigabe.
@@ -874,6 +821,14 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
               </a>
             </Button>
           </section>
+          {previous ? (
+            <Link
+              href={compareHref}
+              className="flex min-h-11 items-center gap-2 text-primary underline-offset-4 hover:underline"
+            >
+              <BookOpenTextIcon aria-hidden /> Änderungen seit „{previous.label}“
+            </Link>
+          ) : null}
           {canManage ? (
             <Link
               href={`${SKRIPT_PATH}&fassung=${version.id}`}
@@ -921,51 +876,5 @@ function NextBar({
         {linesAway === 0 ? "gleich" : `in ${linesAway} ${linesAway === 1 ? "Replik" : "Repliken"}`}
       </span>
     </button>
-  );
-}
-
-function SceneList({
-  scenes,
-  currentId,
-  roleScenes,
-  onPick,
-  compact = false,
-}: {
-  scenes: ScriptReaderData["scenes"];
-  currentId: string | undefined;
-  roleScenes: ReadonlySet<string>;
-  onPick: (sceneId: string) => void;
-  compact?: boolean;
-}) {
-  return (
-    <ul className={compact ? undefined : "divide-y divide-border/60"}>
-      {scenes.map((scene) => (
-        <li key={scene.id}>
-          <button
-            type="button"
-            className={cn(
-              "flex w-full items-center gap-2 text-left hover:bg-muted",
-              compact ? "min-h-8 px-2 py-1" : "min-h-11 gap-3 py-2 text-sm",
-              scene.id === currentId && "bg-muted font-semibold",
-            )}
-            onClick={() => onPick(scene.id)}
-          >
-            <span
-              className={cn(
-                "h-2 w-2 shrink-0",
-                roleScenes.has(scene.id) ? "bg-primary" : "bg-transparent",
-              )}
-              aria-label={roleScenes.has(scene.id) ? "Gewählte Rolle spielt mit" : undefined}
-            />
-            <span className="min-w-0 flex-1 break-words">{scene.title}</span>
-            {scene.minutes ? (
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                {compact ? `${scene.minutes}′` : `ca. ${scene.minutes} min`}
-              </span>
-            ) : null}
-          </button>
-        </li>
-      ))}
-    </ul>
   );
 }

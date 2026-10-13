@@ -1,6 +1,11 @@
-import type { ScriptBlock, ScriptPart, ScriptScene } from "./types";
+import type { ScriptBlock, ScriptPart } from "./types";
 
 /** Ebene 3: Fassungsvergleich auf Szenen- und Absatz-Ebene. */
+
+/** Was der Vergleich von einem Absatz braucht; weitere Felder (IDs, Rollen) reichen durch. */
+export type DiffBlock = Pick<ScriptBlock, "speaker" | "parts">;
+
+type DiffScene<B extends DiffBlock> = { title: string; blocks: B[] };
 
 /** Ähnlichkeit 0–1 über die längste gemeinsame Teilfolge der Wörter (wie difflib.ratio). */
 export function similarity(a: string, b: string): number {
@@ -23,7 +28,7 @@ function lcsLength<T>(a: T[], b: T[]): number {
   return prev[b.length];
 }
 
-export function blockText(block: ScriptBlock, kinds: ScriptPart["kind"][] = ["text"]): string {
+export function blockText(block: DiffBlock, kinds: ScriptPart["kind"][] = ["text"]): string {
   return block.parts
     .filter((p) => kinds.includes(p.kind))
     .map((p) => p.text)
@@ -31,7 +36,7 @@ export function blockText(block: ScriptBlock, kinds: ScriptPart["kind"][] = ["te
 }
 
 /** Ähnlichkeit zweier Absätze; verschiedene Rollen nur bei fast gleichem Text (Umbenennung). */
-export function blockSimilarity(a: ScriptBlock, b: ScriptBlock): number {
+export function blockSimilarity(a: DiffBlock, b: DiffBlock): number {
   const textA = blockText(a);
   const textB = blockText(b);
   if (a.speaker !== b.speaker) {
@@ -94,8 +99,8 @@ export function align<T>(
 }
 
 /** Aufeinanderfolgende Anweisungsabsätze zusammenfassen (Regie bricht je Fassung anders um). */
-export function mergeDirections(blocks: ScriptBlock[]): ScriptBlock[] {
-  const out: ScriptBlock[] = [];
+export function mergeDirections<B extends DiffBlock>(blocks: B[]): B[] {
+  const out: B[] = [];
   for (const block of blocks) {
     const last = out.at(-1);
     if (last && !last.speaker && !block.speaker) {
@@ -107,7 +112,7 @@ export function mergeDirections(blocks: ScriptBlock[]): ScriptBlock[] {
   return out;
 }
 
-export function sameBlock(a: ScriptBlock, b: ScriptBlock): boolean {
+export function sameBlock(a: DiffBlock, b: DiffBlock): boolean {
   return (
     a.speaker === b.speaker &&
     a.parts.length === b.parts.length &&
@@ -115,40 +120,43 @@ export function sameBlock(a: ScriptBlock, b: ScriptBlock): boolean {
   );
 }
 
-export type BlockChange =
-  | { type: "same"; before: ScriptBlock; after: ScriptBlock }
-  | { type: "changed"; before: ScriptBlock; after: ScriptBlock }
-  | { type: "added"; after: ScriptBlock }
-  | { type: "removed"; before: ScriptBlock };
+export type BlockChange<B extends DiffBlock = ScriptBlock> =
+  | { type: "same"; before: B; after: B }
+  | { type: "changed"; before: B; after: B }
+  | { type: "added"; after: B }
+  | { type: "removed"; before: B };
 
-export type SceneChange = {
+export type SceneChange<B extends DiffBlock = ScriptBlock> = {
   title: string;
   previousTitle?: string;
   type: "same" | "changed" | "added" | "removed";
-  blocks: BlockChange[];
+  blocks: BlockChange<B>[];
 };
 
-export type ScriptDiff = {
-  scenes: SceneChange[];
+export type ScriptDiff<B extends DiffBlock = ScriptBlock> = {
+  scenes: SceneChange<B>[];
   stats: { same: number; changed: number; added: number; removed: number };
 };
 
-export function diffScripts(before: ScriptScene[], after: ScriptScene[]): ScriptDiff {
+export function diffScripts<B extends DiffBlock = ScriptBlock>(
+  before: DiffScene<B>[],
+  after: DiffScene<B>[],
+): ScriptDiff<B> {
   const stats = { same: 0, changed: 0, added: 0, removed: 0 };
-  const scenes: SceneChange[] = [];
+  const scenes: SceneChange<B>[] = [];
   for (const [a, b] of align(before, after, (x, y) => similarity(x.title, y.title), 0.4)) {
     if (!a || !b) {
       const scene = (b ?? a)!;
       scenes.push({
         title: scene.title,
         type: b ? "added" : "removed",
-        blocks: scene.blocks.map((block) =>
+        blocks: scene.blocks.map((block): BlockChange<B> =>
           b ? { type: "added", after: block } : { type: "removed", before: block },
         ),
       });
       continue;
     }
-    const blocks: BlockChange[] = [];
+    const blocks: BlockChange<B>[] = [];
     for (const [x, y] of align(
       mergeDirections(a.blocks),
       mergeDirections(b.blocks),

@@ -24,6 +24,23 @@ async function shoot(page: Page, name: string) {
   await page.setViewportSize({ width: 1280, height: 900 });
 }
 
+/** PDF über die Upload-Karte einlesen; liefert die ID des Entwurfs. */
+async function upload(page: Page, label: string, pdf: Uint8Array) {
+  await page.goto(SKRIPT);
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "e2e-skript.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from(pdf),
+  });
+  await page.getByLabel("Bezeichnung").fill(label);
+  await clickUntil(
+    page.getByRole("button", { name: "Einlesen" }),
+    () => expect(page).toHaveURL(/fassung=/, { timeout: 2_000 }),
+    { timeout: 90_000 },
+  );
+  return new URL(page.url()).searchParams.get("fassung") ?? "";
+}
+
 async function discard(page: Page) {
   const button = page.getByRole("button", { name: "Verwerfen" });
   await clickUntil(button, () => expect(page.getByRole("dialog")).toBeVisible());
@@ -146,6 +163,75 @@ test.describe("als admin", () => {
     await page.goto(`${SKRIPT}&fassung=${versionId}`);
     await discard(page);
     await expect(page.getByText(label)).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
+  test("zwei Fassungen vergleichen", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(SKRIPT);
+    test.skip(
+      await page
+        .getByText("Keine aktive Produktion ausgewählt")
+        .isVisible()
+        .catch(() => false),
+      "Testnutzer hat keine aktive Produktion",
+    );
+    const stamp = Date.now().toString(36);
+    const scene = (lines: string[][]) =>
+      buildScriptPdf([
+        [
+          [{ text: "SZENE 1 – Vergleich", style: "bold" }],
+          ...lines.map(([speaker, text]) => [
+            { text: `${speaker}:`, style: "bold" as const },
+            { text: ` ${text}` },
+          ]),
+        ],
+      ]);
+    const oldId = await upload(
+      page,
+      `E2E Skript alt ${stamp}`,
+      await scene([
+        ["E2E Alpha", "Ich muss den Nachtalp finden."],
+        ["E2E Beta", "Wo bin ich hier nur gelandet?"],
+        ["E2E Alpha", "Diese Zeile wird in der neuen Fassung gestrichen."],
+      ]),
+    );
+    const newId = await upload(
+      page,
+      `E2E Skript neu ${stamp}`,
+      await scene([
+        ["E2E Alpha", "Ich muss den Nachtalp schnell finden."],
+        ["E2E Beta", "Wo bin ich hier nur gelandet?"],
+        ["E2E Beta", "Ein ganz neuer Satz für Beta."],
+      ]),
+    );
+
+    await page.goto(`/mitglieder/skript/${newId}/vergleich?mit=${oldId}`);
+    await expect(page.getByText(`Änderungen seit E2E Skript alt ${stamp}`)).toBeVisible();
+    await expect(page.getByText("1 Änderung · 1 neu · 1 gestrichen")).toBeVisible();
+    await expect(page.locator("ins", { hasText: "schnell" })).toBeVisible();
+    await expect(page.getByText("gestrichen", { exact: true })).toBeVisible();
+    await shoot(page, "skript-vergleich");
+
+    // Nur meine Rollen: Alpha hat eine Änderung und eine gestrichene Replik
+    await clickUntil(page.getByRole("button", { name: "Rollen wählen" }), () =>
+      expect(page.getByRole("dialog")).toBeVisible(),
+    );
+    const dialog = page.getByRole("dialog");
+    for (const box of await dialog.getByRole("checkbox").all()) {
+      if ((await box.getAttribute("aria-checked")) === "true") await box.click();
+    }
+    await dialog.getByText("E2E Alpha", { exact: true }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("radio", { name: "Meine Rollen" }).click();
+    await expect(page.getByText("Für deine Rollen: 1 Änderung · 1 gestrichen")).toBeVisible();
+    await shoot(page, "skript-vergleich-meine");
+
+    for (const id of [newId, oldId]) {
+      await page.goto(`${SKRIPT}&fassung=${id}`);
+      await discard(page);
+    }
     expect(errors).toEqual([]);
   });
 });
