@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { CheckIcon, TrashIcon } from "@/components/ui/action-icons";
+import { BookOpenTextIcon, CheckIcon, TrashIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,11 @@ export function ScriptReview({ data, canManage }: { data: ScriptReviewData; canM
             ) : (
               <Badge variant="success">Freigegeben</Badge>
             )}
+            <Button asChild size="sm" variant="outline" className="ml-auto">
+              <Link href={`/mitglieder/skript/${version.id}`}>
+                <BookOpenTextIcon aria-hidden /> Lesen
+              </Link>
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">

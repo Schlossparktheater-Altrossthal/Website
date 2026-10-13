@@ -73,3 +73,20 @@ export const ROLE_COLOR_OPTIONS = [
   "#c2255c",
   "#868e96",
 ] as const;
+
+/**
+ * Hinweise im Skript-Leser je Gewerk. Bewusst wie die Markierungen im Regie-PDF (gelb = Ton,
+ * cyan = Licht …), damit man sie wiedererkennt (docs/Plan/skript-plan.md, E3).
+ */
+export const SCRIPT_CUE_STYLES: Record<
+  "ton" | "licht" | "nebel" | "effekt" | "umbau" | "aus" | "technik",
+  string
+> = {
+  ton: "border-yellow-400 bg-yellow-300/40 dark:bg-yellow-400/25",
+  licht: "border-cyan-400 bg-cyan-300/35 dark:bg-cyan-400/20",
+  nebel: "border-green-500 bg-green-300/35 dark:bg-green-500/20",
+  effekt: "border-fuchsia-400 bg-fuchsia-300/35 dark:bg-fuchsia-400/20",
+  umbau: "border-red-400 bg-red-300/30 dark:bg-red-500/20",
+  aus: "border-zinc-400 bg-zinc-300/40 dark:bg-zinc-500/25",
+  technik: "border-orange-400 bg-orange-300/35 dark:bg-orange-400/20",
+};

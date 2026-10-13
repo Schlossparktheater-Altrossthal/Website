@@ -12,6 +12,7 @@ Auswertung der Rückmeldungen.
 - `/mitglieder/produktionen/[showId]` – Einstellungen einer Produktion (Premiere, Endprobenwoche, Onboarding)
 - `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte / skript (`&fassung=<id>` Prüfschritt bzw. Fassung; für alle mit `SCRIPT.READ` sichtbar, nur Freigegebenes); `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
 - `/mitglieder/produktionen/besetzung`, `/szenen` – leiten auf das Stück weiter
+- `/mitglieder/skript/[fassung]` – Skript-Leser (`reader.tsx`): Szenen, Suche, Rollen hervorheben mit Vorschau „Nächste Passage“ und Stichwort, Regie/Hinweise je Gewerk filtern, „Verfolgen“ = nächster Hinweis; Einstellungen und Leseposition im Browser; Entwürfe nur für Verwalter
 - `/api/skript/[showId]` – Skript-Fassungen: `GET` Liste (Entwürfe nur mit Verwaltungsrecht), `POST` PDF hochladen → Entwurf (`docs/Plan/skript-plan.md`)
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung
 

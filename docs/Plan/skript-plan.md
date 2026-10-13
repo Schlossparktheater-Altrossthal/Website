@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Phase 1–3 umgesetzt (Parser, Datenmodell, Import, Prüfschritt mit Rollen/unsicheren Hinweisen, Freigabe mit lineageId-Übernahme, Reiter „Skript“ im Stück); als Nächstes Phase 4 Leser (Anforderungen 2026-10-13 siehe „Leser“).
+Stand: 2026-10-13. Phase 1–5 umgesetzt (Parser, Datenmodell, Import, Prüfschritt, Freigabe, Leser mit nächster Passage/Stichwort); als Nächstes Phase 6 PDF-Export.
 
 ## Ziel
 
@@ -111,9 +111,10 @@ nichts – ihre Kommentare erscheinen als „Absatz entfallen“.
 
 ## Leser (Anforderungen 2026-10-13)
 
-Der Leser fühlt sich wie eine eigene App an: Vollbild ohne Mitgliederbereich-Rahmen, mobil zuerst,
-auf Tablet mit Stift nutzbar. Route `/mitglieder/skript/[fassung]` (eigenes Layout, nur Kopfzeile
-mit Zurück, Szenenwahl und Einstellungen).
+Der Leser fühlt sich wie eine eigene App an, bleibt aber im Mitgliederbereich: Route
+`/mitglieder/skript/[fassung]`, Menü des Mitgliederbereichs bleibt erreichbar, sonst nur eine
+schlanke Leser-Kopfzeile (Zurück, Szenenwahl, Einstellungen). Mobil zuerst, auf Tablet mit Stift
+nutzbar. Einstieg aus dem Reiter „Skript“.
 
 - **Lesen**: saubere Typografie (Sprecher als Kapitälchen-Zeile, Regie kursiv eingerückt, Hinweise
   als farbige Marke mit Gewerk-Kürzel und Nummer), Szenen-Sprungliste, Suche, Schriftgröße,
@@ -123,12 +124,13 @@ mit Zurück, Szenenwahl und Einstellungen).
 - **Rollen wählen** (Mehrfachauswahl, aus Besetzung vorbelegt): eigene Passagen hervorgehoben,
   fremde Repliken optional abgeblendet.
 - **Nächster Einsatz**: unten eine Leiste „Nächste Passage: ATRÉJU – „Wer bist du …“ · in
-  3 Repliken / ca. 40 s“; erreicht man die Stelle, verschwindet die Leiste und die Passage läuft
+  3 Repliken“; erreicht man die Stelle, verschwindet die Leiste und die Passage läuft
   normal im Text mit (IntersectionObserver, keine Kopie). Antippen springt hin. Dasselbe für die
   Technik: „Nächster Hinweis: LICHT 14“ für die gewählten Gewerke (Technik-Modus).
 - **Stichwort**: im Rollenmodus die letzten Worte vor der eigenen Passage betont.
 - **PDF-Export** mit den aktuellen Leser-Einstellungen (Rollen, Filter, optional Kommentare).
-- **Rollen-Übersicht**: Repliken, Wörter, Szenen je Rolle, geschätzte Sprechzeit.
+- **Rollen-Übersicht**: Repliken, Wörter, Szenen je Rolle; geschätzte Dauer je Szene (keine
+  Sprechzeit je Rolle).
 
 Später:
 
@@ -144,7 +146,9 @@ Später:
   Technik und andere folgen live (Server-Sent Events über einen Kanal je Produktion); Folgen ist
   jederzeit abschaltbar („Zurück zur Live-Stelle“). Technik sieht den nächsten Hinweis groß
   (Standby/Los).
-- **Lernmodus**: eigene Repliken verdecken (ganz, nur Anfangsbuchstaben, aufdecken per Tipp),
+- **Live-Zusammenarbeit**: Notizen, Markierungen und Kommentare der Sitzung erscheinen bei allen
+  Teilnehmenden sofort (gleicher Kanal wie Live-Mitlesen).
+- **Lernmodus** (eigene Phase): eigene Repliken verdecken (ganz, nur Anfangsbuchstaben, aufdecken per Tipp),
   Abfragen mit Stichwort; optional Vorlesen der fremden Repliken (Web Speech API).
 - **Offline**: freigegebene Fassung im PWA-Cache, damit der Leser auf der Bühne ohne Netz geht.
 - **„Was ist neu für mich“**: beim Öffnen einer neuen Fassung die Änderungen an den eigenen Rollen
@@ -186,8 +190,9 @@ Später:
     freigegebene Fassung bleibt unverändert, Korrektur = neue Fassung „bearbeitet“.
 11. **Übernahme-Assistent** – Szenen, Rollen, Auftritte mit Vorschau ins Stück; später Cue-Listen
     je Gewerk.
-12. **Live-Mitlesen, Lernmodus, Offline.**
-13. **E2E + Release.**
+12. **Live-Mitlesen + Live-Zusammenarbeit, Offline.**
+13. **Lernmodus** (verdecken, abfragen, vorlesen).
+14. **E2E + Release.**
 
 ## Entscheidungen (2026-10-13)
 
@@ -203,6 +208,13 @@ Später:
   nur über einen Assistenten mit Vorschau, der nie löscht.
 - E7 (früher O1): Freigegebene Fassungen dürfen alle lesen – `SCRIPT.READ` bekommt die Pflichtrolle
   `member`; `SCRIPT.MANAGE` bekommt jede Rolle mit `PRODUCTION.SHOW.MANAGE`.
+- E9: Leser unter `/mitglieder/skript/[fassung]` im Mitgliederbereich (Menü bleibt).
+- E10: Rollen sind aus der eigenen Besetzung vorbelegt, frei änderbar (mehrere, auch fremde);
+  fremde Repliken werden nicht standardmäßig abgeblendet.
+- E11: Live-Sitzung wird standardmäßig von Souffleuse bzw. Personen mit Recht geführt; „Scrollen
+  übernehmen“ gibt die Führung weiter.
+- E12: „Was ist neu / gestrichen“ hat hohe Priorität, auch als Hilfe beim manuellen Übertragen
+  von Notizen auf eine neue Fassung.
 - E8 (früher O2): Kommentare sind zunächst privat (später erweiterbar). Für Kommentare, Fassungen,
   Freigaben und Rollenzuordnungen wird immer festgehalten, wer es war und wann.
 
@@ -215,13 +227,14 @@ Offen:
 - [x] Phase 1 Parser-Bibliothek
 - [x] Phase 2 Datenmodell + Import-Entwurf
 - [x] Phase 3 Prüfschritt + Freigabe
-- [ ] Phase 4 Leser Grundlage
-- [ ] Phase 5 Nächster Einsatz + Rollen-Übersicht
+- [x] Phase 4 Leser Grundlage (Papier-Farbschema entfällt: Leser folgt hell/dunkel des Themes)
+- [x] Phase 5 Nächster Einsatz + Rollen-Übersicht (im Rollen-Blatt des Lesers, Szenendauer in der Szenenliste)
 - [ ] Phase 6 PDF-Export
 - [ ] Phase 7 Fassungsvergleich
 - [ ] Phase 8 Kommentare, Markierungen, Textnotizen
 - [ ] Phase 9 Freihandnotizen
 - [ ] Phase 10 Bearbeiten
 - [ ] Phase 11 Übernahme-Assistent
-- [ ] Phase 12 Live-Mitlesen, Lernmodus, Offline
-- [ ] Phase 13 E2E + Release
+- [ ] Phase 12 Live-Mitlesen + Live-Zusammenarbeit, Offline
+- [ ] Phase 13 Lernmodus
+- [ ] Phase 14 E2E + Release

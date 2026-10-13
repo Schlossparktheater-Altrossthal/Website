@@ -68,6 +68,12 @@ test.describe("als admin", () => {
         [{ text: "E2E Beta:", style: "bold" }, { text: " Hallo! Es ist anders – TON 2: Tür zu" }],
         [{ text: "E2E Alpha:", style: "bold" }, { text: " Wie geht es?" }],
         [{ text: "E2E Alfa:", style: "bold" }, { text: " Tschüss." }],
+        ...Array.from({ length: 14 }, (_, index) => [
+          { text: "E2E Beta:", style: "bold" as const },
+          { text: ` Ein längerer Satz Nummer ${index + 1}, damit der Leser scrollen muss.` },
+        ]),
+        [{ text: "LICHT 3 Blackout", highlight: "#00ffff" }],
+        [{ text: "E2E Alpha:", style: "bold" }, { text: " Das ist meine späte Passage." }],
       ],
     ]);
     await page.locator('input[type="file"]').setInputFiles({
@@ -90,6 +96,36 @@ test.describe("als admin", () => {
     await expect(page.getByRole("button", { name: "Freigeben" })).toBeDisabled();
     await shoot(page, "skript-pruefen");
 
+    // Leser: Verwalter sehen auch den Entwurf
+    const versionId = new URL(page.url()).searchParams.get("fassung");
+    await page.goto(`/mitglieder/skript/${versionId}`);
+    await expect(page.getByText("Entwurf – das Ensemble")).toBeVisible();
+    await expect(page.getByText("Guten Abend.")).toBeVisible();
+    await expect(page.getByText("LICHT 3 Blackout")).toBeVisible();
+    // Rolle wählen → unten erscheint die Vorschau auf die nächste Passage
+    await clickUntil(page.getByRole("button", { name: "Rollen wählen" }), () =>
+      expect(page.getByRole("dialog")).toBeVisible(),
+    );
+    await page.getByRole("dialog").getByText("E2E Alpha", { exact: true }).click();
+    await page.keyboard.press("Escape");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.getByText("Ein längerer Satz Nummer 1,").scrollIntoViewIfNeeded();
+    await expect(page.getByRole("button", { name: /Nächste Passage/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /meine späte Passage/ })).toBeVisible();
+    if (shots) await page.screenshot({ path: `${shots}/skript-leser-mobil.png` });
+    await page.getByRole("button", { name: /Nächste Passage/ }).click();
+    await expect(page.getByRole("button", { name: /Nächste Passage/ })).toHaveCount(0);
+    if (shots) await page.screenshot({ path: `${shots}/skript-leser-passage-mobil.png` });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    if (shots) await page.screenshot({ path: `${shots}/skript-leser-desktop.png` });
+    await clickUntil(page.getByRole("button", { name: "Ansicht einstellen" }), () =>
+      expect(page.getByRole("dialog")).toBeVisible(),
+    );
+    if (shots) await page.screenshot({ path: `${shots}/skript-leser-ansicht-desktop.png` });
+    await page.keyboard.press("Escape");
+
+    await page.goto(`${SKRIPT}&fassung=${versionId}`);
     await discard(page);
     await expect(page.getByText(label)).toHaveCount(0);
     expect(errors).toEqual([]);

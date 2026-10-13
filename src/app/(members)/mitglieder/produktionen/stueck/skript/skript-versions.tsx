@@ -47,7 +47,11 @@ export function ScriptVersions({
           {versions.map((version) => (
             <ListRow
               key={version.id}
-              href={`${BASE}&fassung=${version.id}`}
+              href={
+                version.status === "released"
+                  ? `/mitglieder/skript/${version.id}`
+                  : `${BASE}&fassung=${version.id}`
+              }
               leading={<FileIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
               title={
                 <span className="flex min-w-0 flex-wrap items-center gap-2">
