@@ -70,12 +70,63 @@ export function applyRating(state: CardState | null, rating: LearnRating, at: Da
   return fromCard(scheduler.next(toCard(state, at), at, rating as Grade).card);
 }
 
-/** Nächster Abstand je Bewertung (für die Knöpfe der Abfrage). */
-export function previewIntervals(state: CardState | null, now: Date) {
-  const preview = scheduler.repeat(toCard(state, now), now);
+/** Geänderter Wortlaut: alte Stabilität höchstens so viele Tage, nächste Abfrage spätestens morgen. */
+export const CHANGED_MAX_STABILITY = 2;
+const CHANGED_MAX_DUE_MS = 86_400_000;
+
+/**
+ * Mit Hilfe erinnert ist nicht frei erinnert: Lücken höchstens „Schwer“, Anfangsbuchstaben
+ * höchstens „Gut“. Ohne bekannte Stufe (alte Warteschlange) bleibt die Bewertung.
+ */
+export function capRating(rating: LearnRating, stage: Stage | null | undefined): LearnRating {
+  if (stage === "cloze") return Math.min(rating, 2) as LearnRating;
+  if (stage === "initials") return Math.min(rating, 3) as LearnRating;
+  return rating;
+}
+
+/**
+ * Eine Abfrage anwenden – gleich auf Client und Server. Bei geändertem Text zählt der alte
+ * Lernstand nur noch wenig (sonst wäre die neue Fassung nach einmal „Gut“ wochenlang weg).
+ */
+export function applyReview(
+  state: CardState | null,
+  rating: LearnRating,
+  at: Date,
+  options: { changed?: boolean; stage?: Stage | null } = {},
+): CardState {
+  const graded = capRating(rating, options.stage);
+  if (!options.changed || !state) return applyRating(state, graded, at);
+  const weakened: CardState =
+    state.state === State.Review
+      ? { ...state, stability: Math.min(state.stability, CHANGED_MAX_STABILITY) }
+      : state;
+  const next = applyRating(weakened, graded, at);
+  const latest = at.getTime() + CHANGED_MAX_DUE_MS;
+  if (new Date(next.due).getTime() <= latest) return next;
+  return {
+    ...next,
+    due: new Date(latest).toISOString(),
+    scheduledDays: 1,
+    stability: Math.min(next.stability, CHANGED_MAX_STABILITY),
+  };
+}
+
+/** Wahrscheinlichkeit (0–1), den Abschnitt zum Zeitpunkt `at` noch zu können; neu = 0. */
+export function retrievability(state: CardState | null, at: Date): number {
+  if (!state || state.state === State.New || !state.lastReview) return 0;
+  return scheduler.get_retrievability(toCard(state, at), at, false);
+}
+
+/** Nächster Abstand je Bewertung (für die Knöpfe der Abfrage), mit denselben Regeln wie beim Speichern. */
+export function previewIntervals(
+  state: CardState | null,
+  now: Date,
+  options: { changed?: boolean; stage?: Stage | null } = {},
+) {
   const result = {} as Record<LearnRating, number>;
   for (const rating of [Rating.Again, Rating.Hard, Rating.Good, Rating.Easy] as const) {
-    result[rating as LearnRating] = preview[rating].card.due.getTime() - now.getTime();
+    const next = applyReview(state, rating as LearnRating, now, options);
+    result[rating as LearnRating] = new Date(next.due).getTime() - now.getTime();
   }
   return result;
 }
@@ -109,8 +160,10 @@ export const STAGE_LABEL: Record<Stage, string> = {
   hidden: "Verdeckt",
 };
 
-/** Ab dieser Stabilität (Tage) gilt ein Abschnitt als „sitzt“. */
+/** Ab dieser Stabilität (Tage) gilt ein Abschnitt als „sitzt“ … */
 export const SOLID_DAYS = 7;
+/** … solange er mit dieser Wahrscheinlichkeit noch abrufbar ist (sonst „auffrischen“). */
+export const SOLID_RETRIEVABILITY = 0.9;
 
 /** Stufe im Automatik-Modus: neu → Lücken, < 3 Tage → Anfangsbuchstaben, sonst verdeckt. */
 export function autoStage(state: CardState | null, changed: boolean): Stage {
@@ -121,8 +174,10 @@ export function autoStage(state: CardState | null, changed: boolean): Stage {
 
 export type Progress = "new" | "learning" | "solid";
 
-export function progressOf(state: CardState | null, changed: boolean): Progress {
+export function progressOf(state: CardState | null, changed: boolean, now: Date): Progress {
   if (!state || state.state === State.New) return "new";
   if (changed || state.state !== State.Review || state.stability < SOLID_DAYS) return "learning";
+  // „Sitzt“ verfällt: lange nicht wiederholt → wieder lernend.
+  if (retrievability(state, now) < SOLID_RETRIEVABILITY) return "learning";
   return "solid";
 }

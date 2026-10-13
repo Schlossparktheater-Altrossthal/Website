@@ -14,7 +14,15 @@ import {
   type LearnItem,
   type StoredCard,
 } from "../learn/plan";
-import { applyRating, autoRating, autoStage, progressOf } from "../learn/schedule";
+import {
+  CHANGED_MAX_STABILITY,
+  applyRating,
+  applyReview,
+  autoRating,
+  autoStage,
+  capRating,
+  progressOf,
+} from "../learn/schedule";
 import type { ScriptPart } from "../types";
 
 const text = (value: string): ScriptPart => ({ kind: "text", text: value });
@@ -85,7 +93,35 @@ describe("Bewertung und Stufen", () => {
     }
     expect(autoStage(state, false)).toBe("hidden");
     expect(autoStage(state, true)).toBe("cloze");
-    expect(progressOf(state, false)).toBe("solid");
+    expect(progressOf(state, false, new Date(state.lastReview!))).toBe("solid");
+  });
+
+  it("„sitzt“ verfällt, wenn lange nicht wiederholt", () => {
+    const now = new Date("2026-10-13T10:00:00Z");
+    let state = applyRating(null, 3, now);
+    state = applyRating(state, 3, new Date(now.getTime() + 600_000));
+    state = applyRating(state, 3, new Date(state.due));
+    const last = new Date(state.lastReview!);
+    expect(progressOf(state, false, last)).toBe("solid");
+    expect(progressOf(state, false, new Date(last.getTime() + 90 * 86_400_000))).toBe("learning");
+  });
+
+  it("Hilfen deckeln die Bewertung", () => {
+    expect(capRating(3, "cloze")).toBe(2);
+    expect(capRating(4, "initials")).toBe(3);
+    expect(capRating(4, "hidden")).toBe(4);
+    expect(capRating(1, "cloze")).toBe(1);
+  });
+
+  it("geänderter Text: alter Lernstand zählt kaum, nächste Abfrage spätestens morgen", () => {
+    const now = new Date("2026-10-13T10:00:00Z");
+    let state = applyRating(null, 3, now);
+    for (let i = 0; i < 4; i++) state = applyRating(state, 3, new Date(state.due));
+    expect(state.stability).toBeGreaterThan(30);
+    const at = new Date(state.due);
+    const next = applyReview(state, 3, at, { changed: true, stage: "hidden" });
+    expect(new Date(next.due).getTime() - at.getTime()).toBeLessThanOrEqual(86_400_000);
+    expect(next.stability).toBeLessThanOrEqual(CHANGED_MAX_STABILITY);
   });
 });
 
@@ -163,6 +199,52 @@ describe("Warteschlange", () => {
     const [progress] = sceneProgress({ items, cards, rehearsals: new Map(), now });
     expect(progress).toMatchObject({ total: 2, solid: 1, new: 1 });
     expect(summarize({ items, cards, rehearsals: new Map(), now }).fresh).toHaveLength(1);
+  });
+
+  it("zählt gemeinsame Repliken mehrerer Rollen als eine Stelle (schwächste Karte)", () => {
+    const a = item("a", "s1", 1);
+    const b = { ...a, key: itemKey("r2", "a", 0), roleId: "r2" };
+    const sure = card("2026-11-01T00:00:00Z", {
+      stability: 20,
+      lastReview: "2026-10-12T00:00:00Z",
+    });
+    const both = new Map([
+      [a.key, sure],
+      [b.key, sure],
+    ]);
+    expect(
+      sceneProgress({ items: [a, b], cards: both, rehearsals: new Map(), now })[0],
+    ).toMatchObject({ total: 1, solid: 1 });
+    const one = new Map([[a.key, sure]]);
+    expect(
+      sceneProgress({ items: [a, b], cards: one, rehearsals: new Map(), now })[0],
+    ).toMatchObject({ total: 1, new: 1 });
+  });
+
+  it("frischt wacklige Stellen vor einer Probe auf", () => {
+    const items = [item("a", "s1", 1)];
+    const cards = new Map([
+      [
+        items[0].key,
+        card("2026-10-20T00:00:00Z", { stability: 5, lastReview: "2026-10-08T00:00:00Z" }),
+      ],
+    ]);
+    const without = summarize({ items, cards, rehearsals: new Map(), now });
+    expect(without.due).toHaveLength(0);
+    const before = summarize({
+      items,
+      cards,
+      rehearsals: new Map([["s1", "2026-10-14T18:00:00Z"]]),
+      now,
+    });
+    expect(before.due).toHaveLength(1);
+    const progress = sceneProgress({
+      items,
+      cards,
+      rehearsals: new Map([["s1", "2026-10-14T18:00:00Z"]]),
+      now,
+    });
+    expect(progress[0].due).toBe(1);
   });
 });
 

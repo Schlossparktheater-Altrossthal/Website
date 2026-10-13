@@ -273,14 +273,7 @@ function Dashboard({
   const today = React.useMemo(() => itemsToUnits(todayQueue(input), byId), [input, byId]);
   const progress = React.useMemo(() => sceneProgress(input), [input]);
   const progressByScene = new Map(progress.map((entry) => [entry.sceneId, entry]));
-  const totals = progress.reduce(
-    (sum, entry) => ({
-      total: sum.total + entry.total,
-      solid: sum.solid + entry.solid,
-      learning: sum.learning + entry.learning,
-    }),
-    { total: 0, solid: 0, learning: 0 },
-  );
+  const sureNow = React.useMemo(() => confidence(input), [input]);
   const scenesWithText = reader.scenes.filter((scene) => progressByScene.has(scene.id));
   const solidScenes = scenesWithText.filter((scene) => {
     const entry = progressByScene.get(scene.id);
@@ -512,8 +505,13 @@ function Dashboard({
                       const scene = reader.scenes.find(
                         (candidate) => candidate.id === entry.sceneId,
                       );
+                      // Prognose: wie sicher die Szene am Probentag sitzt, wenn bis dahin nichts geübt wird.
                       const sure = Math.round(
-                        confidence(progressByScene.get(entry.sceneId)!) * 100,
+                        confidence(
+                          input,
+                          new Date(Math.max(Date.parse(entry.start), input.now.getTime())),
+                          entry.sceneId,
+                        ) * 100,
                       );
                       return (
                         <li key={entry.sceneId}>
@@ -530,7 +528,17 @@ function Dashboard({
                               })}
                             </span>
                             <span className="min-w-0 flex-1 truncate text-sm">{scene?.title}</span>
-                            <span className="text-xs tabular-nums text-muted-foreground">
+                            <span
+                              className={cn(
+                                "text-xs tabular-nums",
+                                sure >= 90
+                                  ? "text-success"
+                                  : sure >= 60
+                                    ? "text-muted-foreground"
+                                    : "text-warning",
+                              )}
+                              title="Voraussichtliche Textsicherheit am Probentag"
+                            >
                               {sure} %
                             </span>
                             <ChevronRightIcon
@@ -587,7 +595,13 @@ function Dashboard({
                             />
                           ) : null}
                           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                            {entry.solid}/{entry.total}
+                            {entry.solid} von {entry.total} sitzen
+                            {entry.due ? (
+                              <span className="font-medium text-primary">
+                                {" "}
+                                · {entry.due} fällig
+                              </span>
+                            ) : null}
                           </span>
                         </span>
                         <span className="mt-1.5 flex h-1.5 overflow-hidden bg-muted-foreground/15">
@@ -615,10 +629,7 @@ function Dashboard({
                 Fortschritt
               </h2>
               <Milestone value={`${solidScenes}/${scenesWithText.length}`} label="Szenen sitzen" />
-              <Milestone
-                value={`${totals.total ? Math.round(((totals.solid + totals.learning / 2) / totals.total) * 100) : 0} %`}
-                label="Textsicherheit"
-              />
+              <Milestone value={`${Math.round(sureNow * 100)} %`} label="Textsicherheit" />
               <Milestone value={String(units.length)} label="Stellen gesamt" />
             </section>
           </>

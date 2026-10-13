@@ -1,6 +1,6 @@
 # Plan: Lernmodus für Skripte
 
-Stand: 2026-10-13 – Phase 1–6 umgesetzt (Staging), offen Release und Gerätetest.
+Stand: 2026-10-14 – Phase 1–6 umgesetzt (Staging), Runde 2 (Review) Schritt 1 umgesetzt, offen Release und Gerätetest.
 
 Phase 13 aus `docs/Plan/skript-plan.md`. Vollbild-App wie der Leser (`src/app/(reader)/`), mobil
 und am Rechner gut bedienbar, Spielelemente nur sparsam.
@@ -61,3 +61,44 @@ den nächsten 14 Tagen geprobt werden, ziehen ihre Abschnitte vor.
 - [x] Phase 5 Offline-Warteschlange, Wochenziel, Meilensteine
 - [x] Phase 6 E2E + Screenshots (e2e/lernen.spec.ts, Staging 2026-10-13)
 - [ ] Release (Prod) und Gerätetest (Halten, Wischen, Vorlesen auf iPhone/Android)
+
+## Runde 2: Review 2026-10-13
+
+### Schritt 1 Algorithmus und Fortschrittsanzeige (umgesetzt)
+
+- R1 Geänderter Text: alte Stabilität höchstens 2 Tage, nächste Abfrage spätestens nach 1 Tag
+  (`applyReview`, gleich auf Client und Server). Vorher war eine geänderte Stelle nach einmal
+  „Gut“ wochenlang weg.
+- R2 Szenenfluss bewertet nur neue, fällige und geänderte Stellen; der Rest ist Übung. Unter
+  1,5 s und nichts aufgedeckt/getippt = weitergeklickt, keine Bewertung.
+- R3 Hilfe deckelt die Bewertung: Lücken höchstens „Schwer“, Anfangsbuchstaben höchstens „Gut“
+  (`capRating`; Stufe wird mitgespeichert, Knöpfe darüber gesperrt).
+- R4 Abfrage behält Stellen im Lernschritt (neu, „Nochmal“, Korrektur auf „Nochmal“) in der
+  Runde, höchstens 3× je Stelle.
+- R5 Doppelte Einträge: Server wertet nur Abfragen neuer als die letzte, eindeutiger Index
+  `(cardId, reviewedAt)` (Migration 20261014090000).
+- R6 Vor einer Probe (≤ 2 Tage) gelten Stellen der Szene als fällig, wenn sie am Probentag
+  wahrscheinlich nicht mehr sitzen (Abrufwahrscheinlichkeit < 90 %).
+- R7 Fortschritt je Szene zählt Stellen (gemeinsame Repliken/mehrere Rollen einmal, schwächste
+  Karte); „sitzt“ = Stabilität ≥ 7 Tage **und** Abrufwahrscheinlichkeit ≥ 90 % (verfällt).
+  Anzeige „8 von 12 sitzen · 3 fällig“; Textsicherheit = mittlere Abrufwahrscheinlichkeit;
+  Probenliste zeigt die Prognose für den Probentag.
+
+### Schritt 2 Insights (offen)
+
+- Problemstellen (meiste „Nochmal“, höchste Schwierigkeit) mit „Nur die üben“.
+- Stichwort-Schwächen (im Fluss schlechter als in der Abfrage).
+- Lerntage-Heatmap, Minuten je Woche, Verlauf der Textsicherheit; Vergessens-Prognose.
+- Szene als Textkarte, Stellen farbig nach Sicherheit; Wort-Diff bei geändertem Text.
+
+### Schritt 3 Belohnung und Darstellung (offen, vorher Staging-Screenshots)
+
+- Rundenende mit Zusammenfassung (hochzählend: Stellen, neu gesessen, Sicherheit +x %).
+- Kurzes Aufleuchten/Häkchen bei „Gewusst“, Vibration (Android); Szene sitzt → Vorhang-Animation;
+  Meilensteine (erster Akt, ganze Rolle verdeckt, Wochenziel mehrfach). `prefers-reduced-motion`.
+- Dashboard: Ring „Textsicherheit“, nächste Probe mit Countdown.
+
+### Später
+
+- Endspurt: Abstände bis zur Premiere deckeln, Erinnerungsziel 0,95 in den letzten 2 Wochen.
+- Rückwärts lernen, Stichwort-Training, Audio-Modus, Partner-Abfrage, Push-Erinnerung (Opt-in).

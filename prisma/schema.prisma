@@ -4074,7 +4074,8 @@ model ScriptLearnReview {
   reviewedAt DateTime
   card       ScriptLearnCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
-  @@index([cardId, reviewedAt])
+  /// Doppelt gesendete Einträge (zwei Tabs, Warteschlange) nur einmal zählen.
+  @@unique([cardId, reviewedAt])
 }
 
 /// Persönliche Lern-Einstellungen, die geräteübergreifend gelten.

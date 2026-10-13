@@ -10,6 +10,7 @@ import {
   RATING_LABEL,
   autoRating,
   autoStage,
+  capRating,
   type LearnRating,
   type Stage,
 } from "@/lib/skript/learn/schedule";
@@ -97,10 +98,10 @@ export function usePractice(
     // Bezug ist die Zahl der verdeckten Wörter (bei Lücken nur ein Teil des Abschnitts).
     const base = masked.size || total;
     return {
-      rating: autoRating(revealed, base, progress.whole),
+      rating: capRating(autoRating(revealed, base, progress.whole), stage),
       revealed: base ? Math.min(1, revealed / base) : 0,
     };
-  }, [progress, masked, total]);
+  }, [progress, masked, total, stage]);
 
   return {
     progress,
@@ -139,22 +140,24 @@ export function CorrectionBar({
       data-testid="lernen-korrektur"
     >
       <span className="mr-1 text-muted-foreground">Eben:</span>
-      {([1, 2, 3, 4] as const).map((rating) => (
-        <button
-          key={rating}
-          type="button"
-          aria-pressed={last.rating === rating}
-          onClick={() => onChange(rating)}
-          className={cn(
-            "flex min-h-9 items-center gap-1 rounded-full border px-2.5",
-            last.rating === rating
-              ? cn("border-current bg-muted font-semibold", RATING_STYLE[rating])
-              : "border-transparent text-muted-foreground hover:bg-muted",
-          )}
-        >
-          {RATING_LABEL[rating]}
-        </button>
-      ))}
+      {([1, 2, 3, 4] as const)
+        .filter((rating) => capRating(rating, last.meta.stage) === rating)
+        .map((rating) => (
+          <button
+            key={rating}
+            type="button"
+            aria-pressed={last.rating === rating}
+            onClick={() => onChange(rating)}
+            className={cn(
+              "flex min-h-9 items-center gap-1 rounded-full border px-2.5",
+              last.rating === rating
+                ? cn("border-current bg-muted font-semibold", RATING_STYLE[rating])
+                : "border-transparent text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {RATING_LABEL[rating]}
+          </button>
+        ))}
     </div>
   );
 }

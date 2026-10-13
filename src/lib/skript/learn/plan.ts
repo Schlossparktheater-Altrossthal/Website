@@ -1,4 +1,10 @@
-import { progressOf, type CardState, type Progress } from "./schedule";
+import {
+  SOLID_RETRIEVABILITY,
+  progressOf,
+  retrievability,
+  type CardState,
+  type Progress,
+} from "./schedule";
 
 /** Auswahl und Reihenfolge der Abschnitte (docs/Plan/lernmodus-plan.md); reine Logik. */
 
@@ -6,6 +12,10 @@ import { progressOf, type CardState, type Progress } from "./schedule";
 export const NEW_PER_DAY = 20;
 /** Szenen, die in so vielen Tagen geprobt werden, werden vorgezogen. */
 export const REHEARSAL_HORIZON_DAYS = 14;
+/** So viele Tage vor einer Probe werden wacklige Abschnitte der Szene aufgefrischt. */
+export const REFRESH_BEFORE_DAYS = 2;
+/** Zuletzt vor weniger als so vielen Stunden geübt → nicht schon wieder auffrischen. */
+const REFRESH_MIN_GAP_HOURS = 12;
 /** Geschätzte Sekunden je Abschnitt für „ca. X min“. */
 export const SECONDS_PER_ITEM = 15;
 
@@ -45,6 +55,22 @@ function rehearsalRank(input: QueueInput, sceneId: string) {
   return next ? new Date(next).getTime() : Number.POSITIVE_INFINITY;
 }
 
+/**
+ * Vor einer Probe: Abschnitte der Szene, die am Probentag wahrscheinlich nicht mehr sitzen,
+ * gelten schon jetzt als fällig (statt erst nach der Probe).
+ */
+function needsRefresh(input: QueueInput, item: LearnItem, stored: StoredCard) {
+  const next = input.rehearsals.get(item.sceneId);
+  if (!next) return false;
+  const rehearsal = new Date(next);
+  const now = input.now.getTime();
+  if (rehearsal.getTime() - now > REFRESH_BEFORE_DAYS * 86_400_000) return false;
+  const last = stored.lastReview ? new Date(stored.lastReview).getTime() : 0;
+  if (now - last < REFRESH_MIN_GAP_HOURS * 3_600_000) return false;
+  const at = rehearsal.getTime() > now ? rehearsal : input.now;
+  return retrievability(stored, at) < SOLID_RETRIEVABILITY;
+}
+
 export type DueSummary = {
   changed: LearnItem[];
   due: LearnItem[];
@@ -69,7 +95,9 @@ export function summarize(input: QueueInput): DueSummary {
     }
     if (new Date(stored.createdAt).getTime() >= startOfDay.getTime()) newToday += 1;
     if (isChanged(item, stored)) changed.push(item);
-    else if (new Date(stored.due).getTime() <= now) due.push(item);
+    else if (new Date(stored.due).getTime() <= now || needsRefresh(input, item, stored)) {
+      due.push(item);
+    }
   }
   const byRehearsal = (a: LearnItem, b: LearnItem) =>
     rehearsalRank(input, a.sceneId) - rehearsalRank(input, b.sceneId) || a.order - b.order;
@@ -114,38 +142,78 @@ export function moreQueue(input: QueueInput, exclude: ReadonlySet<string>, count
 
 export type SceneProgress = {
   sceneId: string;
+  /** Stellen (gemeinsame Repliken und mehrere Rollen zählen einmal). */
   total: number;
   new: number;
   learning: number;
   solid: number;
   changed: number;
+  /** Heute fällig (inkl. geändert und Auffrischen vor der Probe). */
+  due: number;
 };
+
+type UnitState = { sceneId: string; card: StoredCard | null; changed: boolean; due: boolean };
+
+/** Je Stelle (Replik-Abschnitt) die schwächste Rollen-Karte – wie im Lernen selbst. */
+function unitStates(input: QueueInput): UnitState[] {
+  const { changed, due } = summarize(input);
+  const dueKeys = new Set([...changed, ...due].map((item) => item.key));
+  const groups = new Map<string, LearnItem[]>();
+  for (const item of input.items) {
+    const id = `${item.lineageId}|${item.chunk}`;
+    groups.set(id, [...(groups.get(id) ?? []), item]);
+  }
+  return [...groups.values()].map((items) => {
+    const cards = items.map((item) => input.cards.get(item.key));
+    // Fehlt einer Rolle die Karte, ist die Stelle für sie (und damit insgesamt) neu.
+    const card = cards.some((entry) => !entry)
+      ? null
+      : cards.reduce((weakest, entry) =>
+          entry!.stability < weakest!.stability ? entry : weakest,
+        )!;
+    return {
+      sceneId: items[0].sceneId,
+      card,
+      changed: items.some((item) => isChanged(item, input.cards.get(item.key))),
+      due: items.some((item) => dueKeys.has(item.key)),
+    };
+  });
+}
 
 export function sceneProgress(input: QueueInput): SceneProgress[] {
   const result = new Map<string, SceneProgress>();
-  for (const item of input.items) {
-    const entry = result.get(item.sceneId) ?? {
-      sceneId: item.sceneId,
+  for (const unit of unitStates(input)) {
+    const entry = result.get(unit.sceneId) ?? {
+      sceneId: unit.sceneId,
       total: 0,
       new: 0,
       learning: 0,
       solid: 0,
       changed: 0,
+      due: 0,
     };
-    const stored = input.cards.get(item.key);
-    const changed = isChanged(item, stored);
-    const progress: Progress = progressOf(stored ?? null, changed);
+    const progress: Progress = progressOf(unit.card, unit.changed, input.now);
     entry.total += 1;
     entry[progress] += 1;
-    if (changed) entry.changed += 1;
-    result.set(item.sceneId, entry);
+    if (unit.changed) entry.changed += 1;
+    if (unit.due) entry.due += 1;
+    result.set(unit.sceneId, entry);
   }
   return [...result.values()];
 }
 
-/** Anteil 0–1, der „sitzt“ (lernend zählt halb) – für „Sicherheit“ einer Szene. */
-export function confidence(progress: Pick<SceneProgress, "total" | "learning" | "solid">) {
-  return progress.total ? (progress.solid + progress.learning / 2) / progress.total : 0;
+/**
+ * Sicherheit 0–1: mittlere Wahrscheinlichkeit, die Stellen zum Zeitpunkt `at` zu können (neu = 0,
+ * geändert höchstens halb). Mit dem Probentermin als `at` = Prognose für die Probe.
+ */
+export function confidence(input: QueueInput, at: Date = input.now, sceneId?: string) {
+  const units = unitStates(input).filter((unit) => !sceneId || unit.sceneId === sceneId);
+  if (!units.length) return 0;
+  const sum = units.reduce((total, unit) => {
+    const value = retrievability(unit.card, at);
+    return total + (unit.changed ? Math.min(value, 0.5) : value);
+  }, 0);
+  return sum / units.length;
 }
 
 /** Montag 0:00 der Woche von `date` (Ortszeit). */

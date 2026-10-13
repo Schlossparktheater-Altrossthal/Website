@@ -17,7 +17,13 @@ import { cn } from "@/lib/utils";
 
 import { FONT_SIZES } from "../../skript/shared";
 import { MaskedBlockText, useHold } from "./masked";
-import { useDeferredReview, type LearnSettings, type ReviewMeta, type Unit } from "./model";
+import {
+  unitCard,
+  useDeferredReview,
+  type LearnSettings,
+  type ReviewMeta,
+  type Unit,
+} from "./model";
 import {
   BigButton,
   CorrectionBar,
@@ -31,6 +37,9 @@ import {
   useSwipeLeft,
   useWakeLock,
 } from "./practice";
+
+/** Kürzer angezeigt und nichts aufgedeckt = weitergeklickt, nicht abgefragt. */
+const MIN_ANSWER_MS = 1500;
 
 /**
  * Szenenfluss (docs/Plan/lernmodus-plan.md): Die Szene läuft wie im Leser, fremde Repliken
@@ -84,15 +93,30 @@ export function SceneFlow({
   const unit = sceneUnits[step] ?? null;
   const finished = step >= sceneUnits.length;
   // Stufe beim Erreichen des Abschnitts festhalten, damit sie nach der Bewertung nicht springt.
-  const stageRef = React.useRef(new Map<string, ReturnType<typeof unitStage>>());
+  // Bewertet werden nur neue, fällige und geänderte Stellen; der Rest ist Übung im Zusammenhang
+  // (sonst würde jedes Durchspielen nicht fällige Stellen vorzeitig „wiederholen“).
+  // Fällig = fällig beim Öffnen der Szene (stabil während des Durchspielens).
+  const [openedAt] = React.useState(() => Date.now());
+  const stageRef = React.useRef(
+    new Map<string, ReturnType<typeof unitStage> & { graded: boolean }>(),
+  );
   const stageInfo = React.useMemo(() => {
-    if (!unit) return { stage: "full" as const, seed: 0, changed: false };
+    if (!unit) return { stage: "full" as const, seed: 0, changed: false, graded: false };
     const known = stageRef.current.get(unit.id);
     if (known) return known;
-    const info = unitStage(unit, cards, settings.stage);
+    const { card } = unitCard(unit, cards);
+    const base = unitStage(unit, cards, settings.stage);
+    const info = {
+      ...base,
+      graded: !card || base.changed || new Date(card.due).getTime() <= openedAt,
+    };
     stageRef.current.set(unit.id, info);
     return info;
-  }, [unit, cards, settings.stage]);
+  }, [unit, cards, settings.stage, openedAt]);
+  const shownAt = React.useRef(0);
+  React.useEffect(() => {
+    shownAt.current = Date.now();
+  }, [step, only]);
   const unitTokens = unit ? tokenized.get(unit.block.id) : undefined;
   const practice = usePractice(unit, unitTokens, stageInfo.stage, stageInfo.seed);
 
@@ -130,15 +154,23 @@ export function SceneFlow({
     if (!unit) return;
     if (stageInfo.stage !== "full") {
       const outcome = practice.result();
-      deferred.propose(unit, outcome.rating, {
-        auto: true,
-        revealed: outcome.revealed,
-        mode: "flow",
-      });
+      // Blind weitergeklickt (kurz, nichts aufgedeckt oder getippt) ist keine Abfrage.
+      const tried =
+        Date.now() - shownAt.current >= MIN_ANSWER_MS ||
+        outcome.revealed > 0 ||
+        practice.progress.typed.size > 0;
+      if (stageInfo.graded && tried) {
+        deferred.propose(unit, outcome.rating, {
+          auto: true,
+          revealed: outcome.revealed,
+          mode: "flow",
+          stage: stageInfo.stage,
+        });
+      }
       setResults((current) => new Map(current).set(unit.id, outcome.rating));
     }
     setStep((current) => current + 1);
-  }, [speech, unit, stageInfo.stage, practice, deferred]);
+  }, [speech, unit, stageInfo, practice, deferred]);
 
   // Tippmodus: nach dem letzten Wort automatisch weiter.
   React.useEffect(() => {

@@ -5,7 +5,7 @@ import * as React from "react";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import { tokenizeBlock, type TokenizedBlock } from "@/lib/skript/learn/chunks";
 import { itemKey, type LearnItem, type StoredCard } from "@/lib/skript/learn/plan";
-import { applyRating, type LearnRating, type Stage } from "@/lib/skript/learn/schedule";
+import { applyReview, type LearnRating, type Stage } from "@/lib/skript/learn/schedule";
 import type { LearnPageData } from "@/lib/skript/learn/service";
 
 import { readStored, writeStored } from "../../skript/shared";
@@ -41,6 +41,7 @@ export type ReviewEntry = {
   auto: boolean;
   revealed: number;
   mode: "flow" | "drill";
+  stage?: Exclude<Stage, "full">;
   at: string;
 };
 
@@ -208,11 +209,7 @@ export function useLearnStore(data: LearnPageData) {
   }, [flush]);
 
   const review = React.useCallback(
-    (
-      unit: Unit,
-      rating: LearnRating,
-      meta: { auto: boolean; revealed: number; mode: "flow" | "drill" },
-    ) => {
+    (unit: Unit, rating: LearnRating, meta: ReviewMeta) => {
       const at = new Date();
       const entries: ReviewEntry[] = unit.items.map((item) => ({
         roleId: item.roleId,
@@ -227,7 +224,10 @@ export function useLearnStore(data: LearnPageData) {
         for (const item of unit.items) {
           const previous = current.get(item.key) ?? null;
           next.set(item.key, {
-            ...applyRating(previous, rating, at),
+            ...applyReview(previous, rating, at, {
+              changed: !!previous && previous.textHash !== item.hash,
+              stage: meta.stage,
+            }),
             textHash: item.hash,
             createdAt: previous?.createdAt ?? at.toISOString(),
           });
@@ -255,7 +255,12 @@ export function useLearnStore(data: LearnPageData) {
   return { cards, reviewTimes, pending, offline, review, resetRoleLocal };
 }
 
-export type ReviewMeta = { auto: boolean; revealed: number; mode: "flow" | "drill" };
+export type ReviewMeta = {
+  auto: boolean;
+  revealed: number;
+  mode: "flow" | "drill";
+  stage: Exclude<Stage, "full">;
+};
 
 /** So lange lässt sich die vorgeschlagene Bewertung noch ändern. */
 export const CORRECTION_MS = 4000;

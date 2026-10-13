@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
@@ -6,7 +7,7 @@ import { readParts } from "../json";
 import { loadScriptReader, type ScriptReaderData } from "../reader";
 import { tokenizeBlock } from "./chunks";
 import { REHEARSAL_HORIZON_DAYS, matchScenes, type StoredCard } from "./plan";
-import { applyRating, type CardState, type LearnRating } from "./schedule";
+import { applyReview, type CardState, type LearnRating } from "./schedule";
 
 /** Daten und Speichern des Lernmodus (docs/Plan/lernmodus-plan.md). */
 
@@ -121,6 +122,8 @@ export const reviewSchema = z.object({
   auto: z.boolean(),
   revealed: z.number().min(0).max(1),
   mode: z.enum(["flow", "drill"]),
+  /** Stufe beim Abfragen (fehlt bei alten Einträgen der Warteschlange). */
+  stage: z.enum(["cloze", "initials", "hidden"]).optional(),
   at: z.string().datetime(),
 });
 
@@ -174,9 +177,15 @@ export async function recordReviews(userId: string, showId: string, entries: Rev
           lastReview: existing.lastReview?.toISOString() ?? null,
         }
       : null;
-    // Älter als die letzte gespeicherte Abfrage (zweites Gerät) → nur protokollieren.
-    const stale = !!previous?.lastReview && previous.lastReview > at.toISOString();
-    const next = stale ? previous : applyRating(previous, entry.rating as LearnRating, at);
+    // Nicht neuer als die letzte gespeicherte Abfrage (zweites Gerät, doppelt gesendet) → nur
+    // protokollieren; derselbe Zeitpunkt zweimal wird unten am eindeutigen Index verworfen.
+    const stale = !!previous?.lastReview && previous.lastReview >= at.toISOString();
+    const next = stale
+      ? previous
+      : applyReview(previous, entry.rating as LearnRating, at, {
+          changed: !!existing && existing.textHash !== chunk.hash,
+          stage: entry.stage,
+        });
     const data = {
       textHash: chunk.hash,
       state: next!.state,
@@ -202,16 +211,21 @@ export async function recordReviews(userId: string, showId: string, entries: Rev
       update: data,
       select: { id: true },
     });
-    await prisma.scriptLearnReview.create({
-      data: {
-        cardId: card.id,
-        rating: entry.rating,
-        auto: entry.auto,
-        revealed: entry.revealed,
-        mode: entry.mode,
-        reviewedAt: at,
-      },
-    });
+    try {
+      await prisma.scriptLearnReview.create({
+        data: {
+          cardId: card.id,
+          rating: entry.rating,
+          auto: entry.auto,
+          revealed: entry.revealed,
+          mode: entry.mode,
+          reviewedAt: at,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
+      throw error;
+    }
     saved += 1;
   }
   return saved;

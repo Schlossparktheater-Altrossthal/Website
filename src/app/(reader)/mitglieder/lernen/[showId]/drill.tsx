@@ -8,10 +8,13 @@ import type { TokenizedBlock } from "@/lib/skript/learn/chunks";
 import type { StoredCard } from "@/lib/skript/learn/plan";
 import {
   RATING_LABEL,
+  applyReview,
+  capRating,
   formatInterval,
   previewIntervals,
   type LearnRating,
 } from "@/lib/skript/learn/schedule";
+import { State } from "ts-fsrs";
 import type { ScriptReaderData } from "@/lib/skript/reader";
 import { splitTail } from "@/lib/skript/reader-logic";
 import { cn } from "@/lib/utils";
@@ -38,8 +41,10 @@ import {
   useWakeLock,
 } from "./practice";
 
-/** Nach „Nochmal“ kommt der Abschnitt so viele Karten später wieder. */
+/** Nach „Nochmal“ (oder solange noch im Lernschritt) kommt der Abschnitt so viele Karten später wieder. */
 const AGAIN_GAP = 4;
+/** Höchstens so oft je Runde, damit eine schwierige Stelle die Runde nicht blockiert. */
+const MAX_SHOWINGS = 3;
 
 /**
  * Abfrage im Stil von Lernkarten: Stichwort groß, eigener Abschnitt verdeckt. „Gewusst“ bewertet
@@ -88,6 +93,8 @@ export function Drill({
   }, [unit, index, cards, settings.stage]);
   const tokens = unit ? tokenized.get(unit.block.id) : undefined;
   const practice = usePractice(unit, tokens, stageInfo.stage, stageInfo.seed);
+  // Die Abfrage verdeckt immer etwas (Volltext gilt hier als automatisch).
+  const stage = stageInfo.stage === "full" ? "hidden" : stageInfo.stage;
   const suggestion = practice.result();
 
   React.useEffect(() => setPhase("ask"), [index, unit?.id]);
@@ -97,19 +104,38 @@ export function Drill({
 
   const intervals = React.useMemo(() => {
     if (!unit) return null;
-    return previewIntervals(unitCard(unit, cards).card, new Date());
-  }, [unit, cards]);
+    return previewIntervals(unitCard(unit, cards).card, new Date(), {
+      changed: stageInfo.changed,
+      stage,
+    });
+  }, [unit, cards, stageInfo.changed, stage]);
+
+  // Noch im Lernschritt (neu, „Nochmal“) → in dieser Runde wiederholen statt erst beim nächsten Mal.
+  const requeue = (target: Unit, position: number) =>
+    setQueue((current) => {
+      if (current.filter((entry) => entry.id === target.id).length >= MAX_SHOWINGS) return current;
+      const next = [...current];
+      next.splice(Math.min(next.length, position + 1 + AGAIN_GAP), 0, target);
+      return next;
+    });
+  const stillLearning = (target: Unit, rating: LearnRating) => {
+    if (rating === 1) return true;
+    const { card, changed } = unitCard(target, cards);
+    return applyReview(card, rating, new Date(), { changed, stage }).state !== State.Review;
+  };
 
   const advance = (rating: LearnRating) => {
     if (!unit) return;
-    setQueue((current) => {
-      if (rating !== 1) return current;
-      const next = [...current];
-      next.splice(Math.min(next.length, index + 1 + AGAIN_GAP), 0, unit);
-      return next;
-    });
+    if (stillLearning(unit, rating)) requeue(unit, index);
     setIndex((current) => current + 1);
     setDone((count) => count + 1);
+  };
+
+  // Korrektur auf „Nochmal“ nach dem Weitergehen: Stelle trotzdem noch einmal bringen.
+  const correct = (rating: LearnRating) => {
+    const last = deferred.last;
+    deferred.change(rating);
+    if (last && rating === 1 && last.rating !== 1) requeue(last.unit, index - 1);
   };
 
   const knew = () => {
@@ -118,17 +144,20 @@ export function Drill({
       auto: true,
       revealed: suggestion.revealed,
       mode: "drill",
+      stage,
     });
     advance(suggestion.rating);
   };
 
-  const rate = (rating: LearnRating) => {
+  const rate = (wanted: LearnRating) => {
     if (!unit) return;
+    const rating = capRating(wanted, stage);
     deferred.settle();
     onCommit(unit, rating, {
       auto: rating === suggestion.rating,
       revealed: suggestion.revealed,
       mode: "drill",
+      stage,
     });
     advance(rating);
   };
@@ -294,7 +323,7 @@ export function Drill({
       {!finished ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto max-w-2xl space-y-1 px-3 py-2">
-            <CorrectionBar last={deferred.last} onChange={deferred.change} />
+            <CorrectionBar last={deferred.last} onChange={correct} />
             {phase === "ask" ? (
               <div className="flex gap-2">
                 <RevealButtons onNext={practice.revealNext} onAll={practice.revealAll} />
@@ -309,9 +338,16 @@ export function Drill({
                     key={rating}
                     type="button"
                     onClick={() => rate(rating)}
+                    disabled={capRating(rating, stage) !== rating}
+                    title={
+                      capRating(rating, stage) !== rating
+                        ? "Mit Hilfe gewusst zählt noch nicht als ganz frei"
+                        : undefined
+                    }
                     className={cn(
                       "flex min-h-14 flex-col items-center justify-center rounded-md border text-sm font-medium",
                       RATING_STYLE[rating],
+                      capRating(rating, stage) !== rating && "opacity-40",
                       rating === suggestion.rating
                         ? "border-current bg-muted ring-2 ring-current/30"
                         : "border-border hover:bg-muted",
