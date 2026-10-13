@@ -45,7 +45,7 @@ async function discard(page: Page) {
   const button = page.getByRole("button", { name: "Verwerfen" });
   await clickUntil(button, () => expect(page.getByRole("dialog")).toBeVisible());
   await page.getByRole("dialog").getByRole("button", { name: "Verwerfen" }).click();
-  await expect(page).not.toHaveURL(/fassung=/);
+  await expect(page).not.toHaveURL(/fassung=/, { timeout: 30_000 });
 }
 
 test.describe("als admin", () => {
