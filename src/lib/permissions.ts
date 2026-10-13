@@ -217,6 +217,19 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     category: "pages",
   },
   {
+    key: "PRIVATE.PRODUCTION.SCRIPT.READ",
+    label: "Skript lesen",
+    description: "Freigegebene Fassungen des Skripts lesen, vergleichen und privat kommentieren.",
+    category: "pages",
+  },
+  {
+    key: "PRIVATE.PRODUCTION.SCRIPT.MANAGE",
+    label: "Skript verwalten",
+    description:
+      "Skript-PDFs der Regie einlesen, Rollen zuordnen, Fassungen freigeben und ins Stück übernehmen.",
+    category: "pages",
+  },
+  {
     key: "PRIVATE.PRODUCTION.PLAN.MANAGE",
     label: "Produktionsplan pflegen",
     description:

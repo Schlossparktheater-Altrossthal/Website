@@ -12,11 +12,14 @@ Auswertung der Rückmeldungen.
 - `/mitglieder/produktionen/[showId]` – Einstellungen einer Produktion (Premiere, Endprobenwoche, Onboarding)
 - `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte; `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
 - `/mitglieder/produktionen/besetzung`, `/szenen` – leiten auf das Stück weiter
+- `/api/skript/[showId]` – Skript-Fassungen: `GET` Liste (Entwürfe nur mit Verwaltungsrecht), `POST` PDF hochladen → Entwurf (`docs/Plan/skript-plan.md`)
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung
 
 ## Permissions
 
 - `PRIVATE.PRODUCTION.SHOW.MANAGE` – Stücke verwalten (häufigster Key)
+- `PRIVATE.PRODUCTION.SCRIPT.READ` – freigegebene Skript-Fassungen lesen (Standard: Rolle `member`)
+- `PRIVATE.PRODUCTION.SCRIPT.MANAGE` – Skript einlesen, Rollen zuordnen, freigeben (Standard: wer `SHOW.MANAGE` hat)
 - `PRIVATE.PRODUCTION.PLAN.MANAGE` – Produktionsplan pflegen (Meilensteine, Abhängigkeiten, Vorlagen); lesen dürfen alle aktiven Produktionsmitglieder, abhaken auch die Gewerk-Leitung
 - `PRIVATE.DEPARTMENT.OWN.VIEW` – eigene Abteilungen
 

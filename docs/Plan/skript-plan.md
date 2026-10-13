@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Phase 1 (Parser-Bibliothek `src/lib/skript/`) umgesetzt, Ergebnis deckt sich mit dem Prototyp; als Nächstes Phase 2. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-13. Phase 1 und 2 umgesetzt (Parser, Datenmodell, Rechte, PDF-Import als Entwurf über `/api/skript/[showId]`); als Nächstes Phase 3.
 
 ## Ziel
 
@@ -153,18 +153,19 @@ nichts – ihre Kommentare erscheinen als „Absatz entfallen“.
 - E5: Fassungen sind unveränderlich nach Freigabe; Kommentare hängen an `lineageId`.
 - E6: Skript ist eigenständig, keine Fremdschlüssel auf `Scene`/`Character`; Übernahme ins Stück
   nur über einen Assistenten mit Vorschau, der nie löscht.
+- E7 (früher O1): Freigegebene Fassungen dürfen alle lesen – `SCRIPT.READ` bekommt die Pflichtrolle
+  `member`; `SCRIPT.MANAGE` bekommt jede Rolle mit `PRODUCTION.SHOW.MANAGE`.
+- E8 (früher O2): Kommentare sind zunächst privat (später erweiterbar). Für Kommentare, Fassungen,
+  Freigaben und Rollenzuordnungen wird immer festgehalten, wer es war und wann.
 
 Offen:
 
-- O1: Dürfen alle Produktionsmitglieder das ganze Skript lesen oder nur Besetzte/Gewerke?
-  (Vorschlag: alle mit `SCRIPT.READ`, Standard für Ensemble und Gewerke.)
-- O2: Sollen Kommentare standardmäßig privat oder fürs Team sichtbar sein? (Vorschlag: privat.)
 - O3: Word-Dateien (.docx) als zweite Quelle – lohnt sich, wenn die Regie sie liefern kann.
 
 ## Checkliste
 
 - [x] Phase 1 Parser-Bibliothek
-- [ ] Phase 2 Datenmodell + Import-Entwurf
+- [x] Phase 2 Datenmodell + Import-Entwurf
 - [ ] Phase 3 Prüfschritt + Freigabe
 - [ ] Phase 4 Leseansicht
 - [ ] Phase 5 Fassungsvergleich

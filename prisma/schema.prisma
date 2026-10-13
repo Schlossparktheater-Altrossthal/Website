@@ -426,6 +426,9 @@ model User {
   departmentVisits                DepartmentVisit[]
   requestedSceneRequirements      SceneRequirement[]         @relation("SceneRequirementRequester")
   decidedSceneRequirements        SceneRequirement[]         @relation("SceneRequirementDecider")
+  scriptVersionsCreated           ScriptVersion[]            @relation("ScriptVersionCreator")
+  scriptVersionsReleased          ScriptVersion[]            @relation("ScriptVersionReleaser")
+  scriptRolesCreated              ScriptRole[]               @relation("ScriptRoleCreator")
 }
 
 model Account {
@@ -511,6 +514,8 @@ model Show {
   reservations            Reservation[]
   freeTicketAllowances    FreeTicketAllowance[]
   boxOfficeAccesses       BoxOfficeAccess[]
+  scriptVersions          ScriptVersion[]
+  scriptRoles             ScriptRole[]
 }
 
 enum MilestoneKind {
@@ -3866,4 +3871,115 @@ model WaitlistEntry {
   event      CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Skript (docs/Plan/skript-plan.md): eigenständig, keine Fremdschlüssel auf Scene/Character.
+// Übernahme ins Stück nur über den Übernahme-Assistenten.
+// ---------------------------------------------------------------------------
+
+enum ScriptVersionStatus {
+  draft
+  released
+}
+
+enum ScriptBlockKind {
+  speech
+  direction
+}
+
+/// Eine Fassung des Skripts („Stand 15.6.26“), eingelesen aus dem PDF der Regie.
+model ScriptVersion {
+  id           String              @id @default(cuid())
+  showId       String
+  label        String
+  versionDate  DateTime?
+  status       ScriptVersionStatus @default(draft)
+  /// Original-PDF im S3-Speicher (nicht öffentlich).
+  sourceBucket String?
+  sourceKey    String?
+  sourceName   String
+  sourceSize   Int
+  /// Verwendetes Formatprofil (src/lib/skript/profiles.ts) und Erkennungsquote 0–1.
+  profileId    String
+  profileScore Float
+  /// Warnungen aus dem Import: zusammengeführte Rollen, Tippfehler-Verdacht, unsichere Hinweise.
+  importReport Json
+  basedOnId    String?
+  createdById  String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  releasedAt   DateTime?
+  releasedById String?
+  show         Show                @relation(fields: [showId], references: [id], onDelete: Cascade)
+  basedOn      ScriptVersion?      @relation("ScriptVersionBasedOn", fields: [basedOnId], references: [id], onDelete: SetNull)
+  derived      ScriptVersion[]     @relation("ScriptVersionBasedOn")
+  createdBy    User?               @relation("ScriptVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  releasedBy   User?               @relation("ScriptVersionReleaser", fields: [releasedById], references: [id], onDelete: SetNull)
+  scenes       ScriptScene[]
+  blocks       ScriptBlock[]
+
+  @@index([showId, createdAt])
+}
+
+/// Szene innerhalb einer Fassung (unabhängig von `Scene`).
+model ScriptScene {
+  id        String        @id @default(cuid())
+  versionId String
+  sequence  Int
+  title     String
+  version   ScriptVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  blocks    ScriptBlock[]
+
+  @@index([versionId, sequence])
+}
+
+/// Rolle im Skript eines Stücks; `aliases` sind bestätigte Schreibweisen (normalisiert).
+model ScriptRole {
+  id          String            @id @default(cuid())
+  showId      String
+  name        String
+  aliases     String[]          @default([])
+  createdById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  show        Show              @relation(fields: [showId], references: [id], onDelete: Cascade)
+  createdBy   User?             @relation("ScriptRoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  blocks      ScriptBlockRole[]
+
+  @@unique([showId, name])
+}
+
+/// Absatz: Replik oder Anweisung. `lineageId` bleibt über Fassungen gleich (Kommentare hängen daran).
+model ScriptBlock {
+  id         String            @id @default(cuid())
+  versionId  String
+  sceneId    String
+  sequence   Int
+  lineageId  String
+  kind       ScriptBlockKind
+  /// Sprecher wie im PDF und nach Zusammenführung der Schreibweisen.
+  speakerRaw String?
+  speaker    String?
+  /// [{ kind: "text" | "direction" | "cue", text, category?, auto? }]
+  parts      Json
+  page       Int?
+  wordCount  Int               @default(0)
+  version    ScriptVersion     @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  scene      ScriptScene       @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  roles      ScriptBlockRole[]
+
+  @@index([versionId, sequence])
+  @@index([lineageId])
+}
+
+/// Replik → Rolle(n); gemeinsame Repliken („Atreju/Bastian“) haben mehrere.
+model ScriptBlockRole {
+  blockId String
+  roleId  String
+  block   ScriptBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  role    ScriptRole  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([blockId, roleId])
+  @@index([roleId])
 }

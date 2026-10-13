@@ -43,3 +43,9 @@ export async function parseScriptPdf(
       .filter((p) => p.kind === "cue" && p.auto).length,
   };
 }
+
+export function isPdf(data: Uint8Array): boolean {
+  // „%PDF-“ am Anfang (Word/Acrobat), manche Werkzeuge setzen ein paar Bytes davor.
+  const head = new TextDecoder("latin1").decode(data.slice(0, 1024));
+  return head.includes("%PDF-");
+}

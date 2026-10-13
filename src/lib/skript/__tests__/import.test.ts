@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { extractLines } from "@/lib/skript/extract";
-import { parseScriptPdf } from "@/lib/skript/import";
+import { isPdf, parseScriptPdf } from "@/lib/skript/import";
 import { BOLD_COLON_PROFILE } from "@/lib/skript/profiles";
 
 import { buildScriptPdf, type FixtureLine } from "./fixture-pdf";
@@ -98,5 +98,13 @@ describe("Skript-Import aus PDF", () => {
     // rote Schrift = Umbau; fetter Name ohne Doppelpunkt nur, wenn die Rolle bekannt ist
     expect(second.blocks[0].parts[0]).toMatchObject({ kind: "cue", category: "umbau" });
     expect(second.blocks[1]).toMatchObject({ speaker: "Alle", kind: "speech" });
+  });
+});
+
+describe("PDF-Erkennung", () => {
+  it("erkennt PDFs am Kopf, auch mit Bytes davor", async () => {
+    expect(isPdf(await buildScriptPdf([[[R("x")]]]))).toBe(true);
+    expect(isPdf(new TextEncoder().encode("\n\n%PDF-1.7 …"))).toBe(true);
+    expect(isPdf(new TextEncoder().encode("PK\u0003\u0004 docx"))).toBe(false);
   });
 });
