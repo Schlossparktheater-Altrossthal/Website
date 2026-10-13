@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import type { TokenizedBlock } from "@/lib/skript/learn/chunks";
 import type { StoredCard } from "@/lib/skript/learn/plan";
 import {
-  RATING_LABEL,
   applyReview,
   capRating,
   formatInterval,
@@ -35,6 +34,7 @@ import {
   RATING_STYLE,
   RevealButtons,
   plainText,
+  ratingLabel,
   unitStage,
   usePractice,
   useLearnKeys,
@@ -85,7 +85,11 @@ export function Drill({
   const flash = useRatingFlash();
   // Für die Zusammenfassung am Ende.
   const [sureAtStart] = React.useState(sureNow);
-  const [tally, setTally] = React.useState({ knew: 0, fresh: new Set<string>() });
+  const [tally, setTally] = React.useState({
+    knew: 0,
+    seen: new Set<string>(),
+    fresh: new Set<string>(),
+  });
   const unit = queue[index] ?? null;
   const finished = !unit;
   // Am Ende die letzte (noch korrigierbare) Bewertung gleich speichern, damit der Zuwachs stimmt.
@@ -142,7 +146,8 @@ export function Drill({
     flash.show(rating);
     const isNew = !unitCard(unit, cards).card;
     setTally((current) => ({
-      knew: current.knew + (rating >= 3 ? 1 : 0),
+      knew: current.knew + (rating >= 2 ? 1 : 0),
+      seen: new Set(current.seen).add(unit.id),
       fresh: isNew ? new Set(current.fresh).add(unit.id) : current.fresh,
     }));
     if (stillLearning(unit, rating)) requeue(unit, index);
@@ -247,10 +252,10 @@ export function Drill({
           <SparklesIcon className="h-10 w-10 text-primary" aria-hidden />
           <h2 className="mt-3 text-xl font-semibold">Geschafft!</h2>
           <div className="mt-5 grid w-full grid-cols-3 gap-2" data-testid="lernen-zusammenfassung">
-            <SummaryValue label={done === 1 ? "Stelle geübt" : "Stellen geübt"}>
-              <CountUp value={done} />
+            <SummaryValue label={tally.seen.size === 1 ? "Stelle geübt" : "Stellen geübt"}>
+              <CountUp value={tally.seen.size} />
             </SummaryValue>
-            <SummaryValue label="gleich gewusst">
+            <SummaryValue label={`gewusst (${done} Abfragen)`}>
               <CountUp
                 value={done ? (tally.knew / done) * 100 : 0}
                 format={(value) => `${Math.round(value)} %`}
@@ -394,7 +399,7 @@ export function Drill({
                         : "border-border hover:bg-muted",
                     )}
                   >
-                    {RATING_LABEL[rating]}
+                    {ratingLabel(rating, stage)}
                     <span className="text-[11px] font-normal text-muted-foreground">
                       {intervals ? formatInterval(intervals[rating]) : ""}
                     </span>

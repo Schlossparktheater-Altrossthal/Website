@@ -39,7 +39,7 @@ export function CountUp({
 
 const FLASH_STYLE: Record<LearnRating, string> = {
   1: "bg-destructive text-destructive-foreground",
-  2: "bg-warning text-warning-foreground",
+  2: "bg-success text-success-foreground",
   3: "bg-success text-success-foreground",
   4: "bg-success text-success-foreground",
 };
@@ -68,7 +68,7 @@ export function RatingFlash({ token, rating }: { token: number; rating: LearnRat
               FLASH_STYLE[rating],
             )}
           >
-            {rating >= 3 ? (
+            {rating >= 2 ? (
               <CheckIcon className="h-6 w-6" />
             ) : (
               <span className="text-lg font-bold">↻</span>
@@ -96,7 +96,7 @@ export function useRatingFlash() {
   }, [state]);
   const show = React.useCallback((rating: LearnRating) => {
     setState((current) => ({ token: current.token + 1, rating }));
-    buzz(rating >= 3 ? 12 : [8, 40, 8]);
+    buzz(rating >= 2 ? 12 : [8, 40, 8]);
   }, []);
   return { ...state, show };
 }

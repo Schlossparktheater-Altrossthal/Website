@@ -155,11 +155,20 @@ export function CorrectionBar({
                 : "border-transparent text-muted-foreground hover:bg-muted",
             )}
           >
-            {RATING_LABEL[rating]}
+            {ratingLabel(rating, last.meta.stage)}
           </button>
         ))}
     </div>
   );
+}
+
+/**
+ * Auf der Lücken-Stufe ist „Schwer“ die beste Bewertung (Hilfe deckelt, R3) – dort heißt sie
+ * „Mit Hilfe gewusst“, damit Gewusstes nicht wie ein Fehler aussieht.
+ */
+export function ratingLabel(rating: LearnRating, stage: Stage | null | undefined) {
+  if (stage === "cloze" && rating === 2) return "Mit Hilfe gewusst";
+  return RATING_LABEL[rating];
 }
 
 /** Text einer Replik ohne Hinweise (Kontext, Stichwort). */
