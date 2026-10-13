@@ -133,10 +133,10 @@ test.describe("als admin", () => {
     // PDF mit den Leser-Einstellungen
     const pdfHref = await page.getByRole("link", { name: "PDF öffnen" }).getAttribute("href");
     expect(pdfHref).toContain("rollen=");
-    const pdf = await page.request.get(pdfHref ?? "");
-    expect(pdf.status()).toBe(200);
-    expect(pdf.headers()["content-type"]).toBe("application/pdf");
-    expect((await pdf.body()).subarray(0, 4).toString()).toBe("%PDF");
+    const pdfResponse = await page.request.get(pdfHref ?? "");
+    expect(pdfResponse.status()).toBe(200);
+    expect(pdfResponse.headers()["content-type"]).toBe("application/pdf");
+    expect((await pdfResponse.body()).subarray(0, 4).toString()).toBe("%PDF");
     await page.keyboard.press("Escape");
 
     await page.goto(`${SKRIPT}&fassung=${versionId}`);
