@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { FileIcon, UploadIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 
@@ -126,20 +127,29 @@ function ScriptUpload({ showId }: { showId: string }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="space-y-1 sm:col-span-2">
+          <div className="space-y-1 sm:col-span-2">
             <span className="text-sm font-medium">PDF der Regie</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+                <FileIcon aria-hidden /> PDF auswählen
+              </Button>
+              <span className="min-w-0 break-all text-sm text-muted-foreground">
+                {file ? file.name : "Noch keine Datei gewählt"}
+              </span>
+            </div>
             <input
               ref={inputRef}
               type="file"
               accept="application/pdf,.pdf"
-              className="block w-full min-w-0 text-sm file:mr-3 file:min-h-11 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:text-sm file:text-foreground"
+              aria-label="PDF der Regie"
+              className="sr-only"
               onChange={(event) => {
                 const next = event.target.files?.[0] ?? null;
                 setFile(next);
                 if (next && !label) setLabel(next.name.replace(/\.pdf$/i, "").replace(/_/g, " "));
               }}
             />
-          </label>
+          </div>
           <label className="space-y-1">
             <span className="text-sm font-medium">Bezeichnung</span>
             <input
