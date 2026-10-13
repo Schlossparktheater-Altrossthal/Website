@@ -21,6 +21,16 @@ async function shoot(page: Page, name: string) {
   await page.setViewportSize({ width: 1280, height: 900 });
 }
 
+/** Lernstand der Rolle über die Einstellungen zurücksetzen (Start und Ende des Tests). */
+async function resetRole(page: Page, roleName: string) {
+  await page.getByRole("button", { name: "Lern-Einstellungen" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: roleName, exact: true }).click();
+  await page.getByRole("button", { name: "Zurücksetzen" }).click();
+  await expect(page.getByText("Lernstand zurückgesetzt").first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
 test.describe("als admin", () => {
   test.use({ storageState: authFile("admin") });
 
@@ -31,8 +41,7 @@ test.describe("als admin", () => {
     await page.goto(SKRIPT);
     const entry = page.getByRole("link", { name: /Text lernen/ });
     test.skip(!(await entry.isVisible().catch(() => false)), "Keine freigegebene Fassung");
-    await entry.click();
-    await expect(page).toHaveURL(/\/mitglieder\/lernen\//);
+    await clickUntil(entry, () => expect(page).toHaveURL(/\/mitglieder\/lernen\//));
     await page.evaluate(() => window.localStorage.clear());
     await page.reload();
 
@@ -49,6 +58,8 @@ test.describe("als admin", () => {
       .trim();
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("lernen-heute")).toBeVisible();
+    // Reste abgebrochener Läufe entfernen, damit neue Stellen fällig sind.
+    await resetRole(page, roleName);
     await expect(page.getByTestId("lernen-szene").first()).toBeVisible();
     await shoot(page, "lernen-dashboard");
 
@@ -74,8 +85,15 @@ test.describe("als admin", () => {
     const masked = current.locator("[data-masked-word]").first();
     if (await masked.count()) await masked.click();
     await shoot(page, "lernen-fluss");
-    await page.getByRole("button", { name: /^Weiter/ }).click();
-    await expect(page.getByTestId("lernen-korrektur")).toBeVisible();
+    // Gerade in der Abfrage bewertete Stellen sind nicht fällig und werden im Fluss nur geübt;
+    // weiter bis zur ersten bewerteten Stelle (Korrekturleiste erscheint).
+    const correction = page.getByTestId("lernen-korrektur");
+    for (let i = 0; i < 6 && !(await correction.isVisible()); i++) {
+      const word = page.locator("[data-current] [data-masked-word]").first();
+      if (await word.count()) await word.click();
+      await page.getByRole("button", { name: /^Weiter/ }).click();
+    }
+    await expect(correction).toBeVisible();
     await page.keyboard.press("Space");
     await page.getByRole("button", { name: "Zurück zur Übersicht" }).click();
 
@@ -90,9 +108,8 @@ test.describe("als admin", () => {
     await expect(page.getByText(/\d+ offen/)).toHaveCount(0, { timeout: 30_000 });
     await page.getByRole("button", { name: "Lern-Einstellungen" }).click();
     await shoot(page, "lernen-einstellungen");
-    await page.getByRole("dialog").getByRole("button", { name: roleName, exact: true }).click();
-    await page.getByRole("button", { name: "Zurücksetzen" }).click();
-    await expect(page.getByText("Lernstand zurückgesetzt")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await resetRole(page, roleName);
     expect(errors).toEqual([]);
   });
 });

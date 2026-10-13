@@ -89,6 +89,12 @@ export function LearnStats({
           <p className="mt-0.5 text-xs text-muted-foreground">
             Textsicherheit, wenn du ab heute nicht mehr lernst
           </p>
+          {prognosis[0].value < 0.05 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Noch kaum etwas gelernt – nach ein paar Abfragen siehst du hier, wie lange dein Text
+              hält.
+            </p>
+          ) : null}
           <div className="mt-3 grid grid-cols-4 items-end gap-2" style={{ height: 120 }}>
             {prognosis.map((entry) => (
               <div key={entry.days} className="flex h-full flex-col justify-end gap-1 text-center">
@@ -122,10 +128,11 @@ export function LearnStats({
               Lerntage
             </h2>
             <span className="text-xs text-muted-foreground">
-              {studyDays} Tage in 12 Wochen · diese Woche {weekTotal} Abfragen
+              {studyDays} {studyDays === 1 ? "Tag" : "Tage"} in 12 Wochen · diese Woche {weekTotal}{" "}
+              Abfragen
             </span>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex max-w-md gap-2">
             <div className="grid grid-rows-7 gap-[3px] text-[9px] leading-none text-muted-foreground">
               {WEEKDAYS.map((day) => (
                 <span key={day} className="flex h-3.5 items-center">
