@@ -16,6 +16,7 @@ import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import { cn } from "@/lib/utils";
 
 import { FONT_SIZES } from "../../skript/shared";
+import { RatingFlash, useRatingFlash } from "./celebrate";
 import { MaskedBlockText, useHold } from "./masked";
 import {
   unitCard,
@@ -88,6 +89,7 @@ export function SceneFlow({
   const [step, setStep] = React.useState(0);
   const [results, setResults] = React.useState(() => new Map<string, LearnRating>());
   const deferred = useDeferredReview(onCommit);
+  const flash = useRatingFlash();
   const speech = useSpeech(settings.speak);
 
   const unit = sceneUnits[step] ?? null;
@@ -166,11 +168,12 @@ export function SceneFlow({
           mode: "flow",
           stage: stageInfo.stage,
         });
+        flash.show(outcome.rating);
       }
       setResults((current) => new Map(current).set(unit.id, outcome.rating));
     }
     setStep((current) => current + 1);
-  }, [speech, unit, stageInfo, practice, deferred]);
+  }, [speech, unit, stageInfo, practice, deferred, flash]);
 
   // Tippmodus: nach dem letzten Wort automatisch weiter.
   React.useEffect(() => {
@@ -321,6 +324,7 @@ export function SceneFlow({
         ) : null}
       </article>
 
+      <RatingFlash token={flash.token} rating={flash.rating} />
       {!finished ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto max-w-3xl space-y-1 px-3 py-2">

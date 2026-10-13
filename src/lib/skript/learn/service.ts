@@ -13,11 +13,18 @@ import { applyReview, type CardState, type LearnRating } from "./schedule";
 
 export class ScriptLearnError extends Error {}
 
+/** Wochen Verlauf für die Statistik. */
+export const HISTORY_WEEKS = 12;
+
+export type LearnHistoryEntry = { cardId: string; at: string; rating: number; mode: string };
+
 export type LearnRehearsal = { sceneId: string; start: string; title: string };
 
 export type LearnPageData = {
   reader: ScriptReaderData;
-  cards: (StoredCard & { roleId: string; lineageId: string; chunk: number })[];
+  cards: (StoredCard & { id: string; roleId: string; lineageId: string; chunk: number })[];
+  /** Abfragen dieses Stücks der letzten Wochen (Statistik). */
+  history: LearnHistoryEntry[];
   /** Zeitpunkte der Abfragen der letzten 8 Tage (Wochenziel in Ortszeit des Geräts). */
   recentReviews: string[];
   weeklyDays: number;
@@ -45,11 +52,17 @@ export async function loadLearnPage(
 
   const horizon = new Date(now.getTime() + REHEARSAL_HORIZON_DAYS * 86_400_000);
   const since = new Date(now.getTime() - 8 * 86_400_000);
-  const [cards, reviews, profile, stageScenes, blocks] = await Promise.all([
+  const historySince = new Date(now.getTime() - HISTORY_WEEKS * 7 * 86_400_000);
+  const [cards, reviews, history, profile, stageScenes, blocks] = await Promise.all([
     prisma.scriptLearnCard.findMany({ where: { userId, showId } }),
     prisma.scriptLearnReview.findMany({
       where: { card: { userId }, reviewedAt: { gte: since } },
       select: { reviewedAt: true },
+    }),
+    prisma.scriptLearnReview.findMany({
+      where: { card: { userId, showId }, reviewedAt: { gte: historySince } },
+      select: { cardId: true, reviewedAt: true, rating: true, mode: true },
+      orderBy: { reviewedAt: "asc" },
     }),
     prisma.scriptLearnProfile.findUnique({ where: { userId } }),
     prisma.scene.findMany({
@@ -93,6 +106,7 @@ export async function loadLearnPage(
   return {
     reader,
     cards: cards.map((card) => ({
+      id: card.id,
       roleId: card.roleId,
       lineageId: card.lineageId,
       chunk: card.chunk,
@@ -107,6 +121,12 @@ export async function loadLearnPage(
       reps: card.reps,
       lapses: card.lapses,
       lastReview: card.lastReview?.toISOString() ?? null,
+    })),
+    history: history.map((entry) => ({
+      cardId: entry.cardId,
+      at: entry.reviewedAt.toISOString(),
+      rating: entry.rating,
+      mode: entry.mode,
     })),
     recentReviews: reviews.map((review) => review.reviewedAt.toISOString()),
     weeklyDays: profile?.weeklyDays ?? 4,

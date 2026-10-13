@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  BarChart3Icon,
   BookOpenTextIcon,
   CalendarIcon,
   ChevronRightIcon,
@@ -20,6 +22,7 @@ import {
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
@@ -40,6 +43,7 @@ import { cn } from "@/lib/utils";
 
 import { SKRIPT_PATH } from "../../skript/shared";
 import { resetRoleAction, setWeeklyDaysAction } from "./actions";
+import { Celebration } from "./celebrate";
 import { Drill } from "./drill";
 import { SceneFlow } from "./flow";
 import {
@@ -51,11 +55,13 @@ import {
   type ReviewMeta,
   type Unit,
 } from "./model";
+import { LearnStats } from "./stats";
 
 type View =
   | { kind: "dashboard" }
   | { kind: "flow"; sceneId: string }
-  | { kind: "drill"; units: Unit[]; title: string };
+  | { kind: "drill"; units: Unit[]; title: string }
+  | { kind: "stats" };
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
@@ -108,7 +114,9 @@ export function LearnApp({ data }: { data: LearnPageData }) {
     else setViewState({ kind: "dashboard" });
   }, []);
 
-  // Meilenstein: Szene sitzt komplett.
+  // Meilenstein: Szene sitzt komplett → kurze Feier (Vorhang auf).
+  const [celebrate, setCelebrate] = React.useState<string | null>(null);
+  const endCelebration = React.useCallback(() => setCelebrate(null), []);
   const solidScenes = React.useRef<Set<string> | null>(null);
   const progress = React.useMemo(() => sceneProgress(input), [input]);
   React.useEffect(() => {
@@ -118,8 +126,7 @@ export function LearnApp({ data }: { data: LearnPageData }) {
     if (solidScenes.current) {
       for (const id of solid) {
         if (!solidScenes.current.has(id)) {
-          const title = reader.scenes.find((scene) => scene.id === id)?.title ?? "Szene";
-          toast.success(`${title} sitzt!`, { description: "Alle Stellen sind fest im Kopf. ✨" });
+          setCelebrate(reader.scenes.find((scene) => scene.id === id)?.title ?? "Szene");
         }
       }
     }
@@ -129,6 +136,20 @@ export function LearnApp({ data }: { data: LearnPageData }) {
   const commit = React.useCallback(
     (unit: Unit, rating: LearnRating, meta: ReviewMeta) => store.review(unit, rating, meta),
     [store],
+  );
+
+  const sureNow = React.useMemo(() => confidence(input), [input]);
+  const celebration = (
+    <AnimatePresence>
+      {celebrate ? (
+        <Celebration
+          key={celebrate}
+          title={`${celebrate} sitzt!`}
+          description="Alle deine Stellen sind fest im Kopf."
+          onDone={endCelebration}
+        />
+      ) : null}
+    </AnimatePresence>
   );
 
   const roleNames = reader.roles
@@ -143,46 +164,67 @@ export function LearnApp({ data }: { data: LearnPageData }) {
     const position = sceneIds.indexOf(view.sceneId);
     const nextScene = sceneIds[position + 1];
     return (
-      <SceneFlow
-        key={view.sceneId}
-        reader={reader}
-        tokenized={tokenized}
-        units={units}
-        sceneId={view.sceneId}
-        cards={store.cards}
-        settings={settings}
-        onCommit={commit}
-        onExit={exit}
-        onNextScene={
-          nextScene
-            ? () => {
-                window.scrollTo({ top: 0 });
-                setViewState({ kind: "flow", sceneId: nextScene });
-              }
-            : null
-        }
-      />
+      <>
+        <SceneFlow
+          key={view.sceneId}
+          reader={reader}
+          tokenized={tokenized}
+          units={units}
+          sceneId={view.sceneId}
+          cards={store.cards}
+          settings={settings}
+          onCommit={commit}
+          onExit={exit}
+          onNextScene={
+            nextScene
+              ? () => {
+                  window.scrollTo({ top: 0 });
+                  setViewState({ kind: "flow", sceneId: nextScene });
+                }
+              : null
+          }
+        />
+        {celebration}
+      </>
     );
   }
   if (view.kind === "drill") {
     return (
-      <Drill
+      <>
+        <Drill
+          reader={reader}
+          tokenized={tokenized}
+          initial={view.units}
+          cards={store.cards}
+          settings={settings}
+          title={view.title}
+          sureNow={sureNow}
+          onCommit={commit}
+          onExit={exit}
+          onMore={(seen) => {
+            const exclude = new Set(
+              items
+                .filter((item) => seen.has(`${item.lineageId}|${item.chunk}`))
+                .map((item) => item.key),
+            );
+            return itemsToUnits(moreQueue(input, exclude), byId);
+          }}
+        />
+        {celebration}
+      </>
+    );
+  }
+  if (view.kind === "stats") {
+    return (
+      <LearnStats
         reader={reader}
         tokenized={tokenized}
-        initial={view.units}
-        cards={store.cards}
-        settings={settings}
-        title={view.title}
-        onCommit={commit}
+        input={input}
+        history={store.history}
+        byId={byId}
         onExit={exit}
-        onMore={(seen) => {
-          const exclude = new Set(
-            items
-              .filter((item) => seen.has(`${item.lineageId}|${item.chunk}`))
-              .map((item) => item.key),
-          );
-          return itemsToUnits(moreQueue(input, exclude), byId);
-        }}
+        onDrill={(drillUnits, title) => setView({ kind: "drill", units: drillUnits, title })}
+        onFlow={(sceneId) => setView({ kind: "flow", sceneId })}
       />
     );
   }
@@ -208,7 +250,9 @@ export function LearnApp({ data }: { data: LearnPageData }) {
         onDrill={(drillUnits, title) => setView({ kind: "drill", units: drillUnits, title })}
         onRoles={() => setPanel("roles")}
         onSettings={() => setPanel("settings")}
+        onStats={() => setView({ kind: "stats" })}
       />
+      {celebration}
       <RolePicker
         open={panel === "roles"}
         onOpenChange={(open) => setPanel(open ? "roles" : null)}
@@ -251,6 +295,7 @@ function Dashboard({
   onDrill,
   onRoles,
   onSettings,
+  onStats,
 }: {
   data: LearnPageData;
   input: QueueInput;
@@ -267,6 +312,7 @@ function Dashboard({
   onDrill: (units: Unit[], title: string) => void;
   onRoles: () => void;
   onSettings: () => void;
+  onStats: () => void;
 }) {
   const { reader } = data;
   const summary = React.useMemo(() => summarize(input), [input]);
@@ -298,6 +344,19 @@ function Dashboard({
   const todayIndex = (input.now.getDay() + 6) % 7;
   const changedUnits = itemsToUnits(summary.changed, byId);
   const minutes = Math.max(1, Math.round((today.length * SECONDS_PER_ITEM) / 60));
+  const upcoming = data.rehearsals.find((entry) => progressByScene.has(entry.sceneId));
+  const nextRehearsal = upcoming
+    ? {
+        sceneId: upcoming.sceneId,
+        start: upcoming.start,
+        title: reader.scenes.find((scene) => scene.id === upcoming.sceneId)?.title ?? "",
+        sure: confidence(
+          input,
+          new Date(Math.max(Date.parse(upcoming.start), input.now.getTime())),
+          upcoming.sceneId,
+        ),
+      }
+    : null;
 
   return (
     <div className="min-h-dvh pb-12">
@@ -443,6 +502,16 @@ function Dashboard({
                 </>
               )}
             </section>
+
+            <Overview
+              sure={sureNow}
+              solidScenes={solidScenes}
+              scenes={scenesWithText.length}
+              next={nextRehearsal}
+              now={input.now}
+              onStats={onStats}
+              onFlow={onFlow}
+            />
 
             <section
               aria-labelledby="lernen-woche"
@@ -620,18 +689,6 @@ function Dashboard({
                 })}
               </ul>
             </section>
-
-            <section
-              aria-labelledby="lernen-meilensteine"
-              className="grid grid-cols-3 gap-2 text-center"
-            >
-              <h2 id="lernen-meilensteine" className="sr-only">
-                Fortschritt
-              </h2>
-              <Milestone value={`${solidScenes}/${scenesWithText.length}`} label="Szenen sitzen" />
-              <Milestone value={`${Math.round(sureNow * 100)} %`} label="Textsicherheit" />
-              <Milestone value={String(units.length)} label="Stellen gesamt" />
-            </section>
           </>
         )}
       </main>
@@ -643,12 +700,91 @@ function Legend({ className }: { className: string }) {
   return <span className={cn("ml-1.5 inline-block h-2 w-2 align-middle", className)} aria-hidden />;
 }
 
-function Milestone({ value, label }: { value: string; label: string }) {
+function daysUntil(start: string, now: Date) {
+  const day = (date: Date) => {
+    const copy = new Date(date);
+    copy.setHours(0, 0, 0, 0);
+    return copy.getTime();
+  };
+  const days = Math.round((day(new Date(start)) - day(now)) / 86_400_000);
+  if (days <= 0) return "heute";
+  if (days === 1) return "morgen";
+  return `in ${days} Tagen`;
+}
+
+/** Gesamtstand: Textsicherheit, Szenen, nächste Probe mit Prognose, Zugang zur Statistik. */
+function Overview({
+  sure,
+  solidScenes,
+  scenes,
+  next,
+  now,
+  onStats,
+  onFlow,
+}: {
+  sure: number;
+  solidScenes: number;
+  scenes: number;
+  next: { sceneId: string; start: string; title: string; sure: number } | null;
+  now: Date;
+  onStats: () => void;
+  onFlow: (sceneId: string) => void;
+}) {
+  const percent = Math.round(sure * 100);
+  const nextPercent = next ? Math.round(next.sure * 100) : 0;
   return (
-    <div className="border border-border px-2 py-3">
-      <p className="text-lg font-semibold tabular-nums">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
+    <section aria-label="Gesamtstand" className="flex flex-col gap-3 sm:flex-row">
+      <button
+        type="button"
+        onClick={onStats}
+        className="flex min-h-20 flex-1 items-center gap-3 border border-border px-3 py-2 text-left hover:bg-muted"
+        data-testid="lernen-ueberblick"
+      >
+        <ProgressRing
+          value={percent}
+          max={100}
+          size={56}
+          strokeWidth={5}
+          label={`${percent} %`}
+          className="text-sm"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">Textsicherheit</span>
+          <span className="block text-xs text-muted-foreground">
+            {solidScenes} von {scenes} Szenen sitzen
+          </span>
+        </span>
+        <span className="flex items-center gap-1 text-xs text-primary">
+          <BarChart3Icon className="h-4 w-4" /> Statistik
+        </span>
+      </button>
+      {next ? (
+        <button
+          type="button"
+          onClick={() => onFlow(next.sceneId)}
+          className="flex min-h-20 flex-1 items-center gap-3 border border-border px-3 py-2 text-left hover:bg-muted"
+        >
+          <CalendarIcon className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">Probe {daysUntil(next.start, now)}</span>
+            <span className="block truncate text-xs text-muted-foreground">{next.title}</span>
+          </span>
+          <span
+            className={cn(
+              "text-right text-xs",
+              nextPercent >= 90
+                ? "text-success"
+                : nextPercent >= 60
+                  ? "text-muted-foreground"
+                  : "text-warning",
+            )}
+          >
+            <span className="block text-base font-semibold tabular-nums">{nextPercent} %</span>
+            zur Probe
+          </span>
+        </button>
+      ) : null}
+    </section>
   );
 }
 

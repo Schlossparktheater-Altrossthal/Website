@@ -4,6 +4,7 @@ import * as React from "react";
 
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import { tokenizeBlock, type TokenizedBlock } from "@/lib/skript/learn/chunks";
+import type { HistoryEntry } from "@/lib/skript/learn/insights";
 import { itemKey, type LearnItem, type StoredCard } from "@/lib/skript/learn/plan";
 import { applyReview, type LearnRating, type Stage } from "@/lib/skript/learn/schedule";
 import type { LearnPageData } from "@/lib/skript/learn/service";
@@ -168,6 +169,15 @@ export function useLearnStore(data: LearnPageData) {
     return map;
   });
   const [reviewTimes, setReviewTimes] = React.useState<string[]>(data.recentReviews);
+  const [history, setHistory] = React.useState<HistoryEntry[]>(() => {
+    const keys = new Map(
+      data.cards.map((card) => [card.id, itemKey(card.roleId, card.lineageId, card.chunk)]),
+    );
+    return data.history.flatMap((entry) => {
+      const key = keys.get(entry.cardId);
+      return key ? [{ key, at: entry.at, rating: entry.rating, mode: entry.mode }] : [];
+    });
+  });
   const [pending, setPending] = React.useState(0);
   const [offline, setOffline] = React.useState(false);
   const sending = React.useRef(false);
@@ -235,6 +245,15 @@ export function useLearnStore(data: LearnPageData) {
         return next;
       });
       setReviewTimes((times) => [...times, at.toISOString()]);
+      setHistory((current) => [
+        ...current,
+        ...unit.items.map((item) => ({
+          key: item.key,
+          at: at.toISOString(),
+          rating,
+          mode: meta.mode,
+        })),
+      ]);
       const stored = (readStored<{ entries: ReviewEntry[] }>(OUTBOX_KEY(showId))?.entries ??
         []) as ReviewEntry[];
       writeStored(OUTBOX_KEY(showId), { entries: [...stored, ...entries] });
@@ -250,9 +269,10 @@ export function useLearnStore(data: LearnPageData) {
       for (const key of current.keys()) if (key.startsWith(`${roleId}|`)) next.delete(key);
       return next;
     });
+    setHistory((current) => current.filter((entry) => !entry.key.startsWith(`${roleId}|`)));
   }, []);
 
-  return { cards, reviewTimes, pending, offline, review, resetRoleLocal };
+  return { cards, reviewTimes, history, pending, offline, review, resetRoleLocal };
 }
 
 export type ReviewMeta = {

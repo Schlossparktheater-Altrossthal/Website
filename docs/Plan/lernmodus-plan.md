@@ -1,6 +1,6 @@
 # Plan: Lernmodus für Skripte
 
-Stand: 2026-10-14 – Phase 1–6 umgesetzt (Staging), Runde 2 (Review) Schritt 1 umgesetzt, offen Release und Gerätetest.
+Stand: 2026-10-14 – Phase 1–6 umgesetzt (Staging), Runde 2 (Review) Schritt 1–3 umgesetzt, offen Release und Gerätetest.
 
 Phase 13 aus `docs/Plan/skript-plan.md`. Vollbild-App wie der Leser (`src/app/(reader)/`), mobil
 und am Rechner gut bedienbar, Spielelemente nur sparsam.
@@ -84,19 +84,22 @@ den nächsten 14 Tagen geprobt werden, ziehen ihre Abschnitte vor.
   Anzeige „8 von 12 sitzen · 3 fällig“; Textsicherheit = mittlere Abrufwahrscheinlichkeit;
   Probenliste zeigt die Prognose für den Probentag.
 
-### Schritt 2 Insights (offen)
+### Schritt 2 Insights (umgesetzt, Ansicht „Dein Lernstand“)
 
 - Problemstellen (meiste „Nochmal“, höchste Schwierigkeit) mit „Nur die üben“.
 - Stichwort-Schwächen (im Fluss schlechter als in der Abfrage).
-- Lerntage-Heatmap, Minuten je Woche, Verlauf der Textsicherheit; Vergessens-Prognose.
-- Szene als Textkarte, Stellen farbig nach Sicherheit; Wort-Diff bei geändertem Text.
+- Lerntage der letzten 12 Wochen, Abfragen dieser Woche; Vergessens-Prognose (heute, 3, 7, 14 Tage).
+- Logik `src/lib/skript/learn/insights.ts`, Verlauf aus ScriptLearnReview (12 Wochen, dieses Stück).
+- Offen/später: Verlauf der Textsicherheit, Szene als Textkarte nach Sicherheit, Wort-Diff bei
+  geändertem Text (braucht den alten Wortlaut, bisher nur Prüfsumme).
 
-### Schritt 3 Belohnung und Darstellung (offen, vorher Staging-Screenshots)
+### Schritt 3 Belohnung und Darstellung (umgesetzt)
 
-- Rundenende mit Zusammenfassung (hochzählend: Stellen, neu gesessen, Sicherheit +x %).
-- Kurzes Aufleuchten/Häkchen bei „Gewusst“, Vibration (Android); Szene sitzt → Vorhang-Animation;
-  Meilensteine (erster Akt, ganze Rolle verdeckt, Wochenziel mehrfach). `prefers-reduced-motion`.
-- Dashboard: Ring „Textsicherheit“, nächste Probe mit Countdown.
+- Rundenende mit Zusammenfassung (hochzählend: Stellen, gleich gewusst, Sicherheit +x %, neue).
+- Häkchen/Symbol nach jeder Bewertung, Vibration (Android); Szene sitzt → Vorhang-Feier
+  (`celebrate.tsx`, framer-motion, `prefers-reduced-motion` nur Einblenden).
+- Dashboard: Überblick mit Ring „Textsicherheit“ (→ Statistik) und nächster Probe mit Prognose.
+- Offen: weitere Meilensteine (erster Akt, ganze Rolle verdeckt, Wochenziel mehrfach).
 
 ### Später
 

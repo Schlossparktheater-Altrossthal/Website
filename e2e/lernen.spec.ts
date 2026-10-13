@@ -79,6 +79,13 @@ test.describe("als admin", () => {
     await page.keyboard.press("Space");
     await page.getByRole("button", { name: "Zurück zur Übersicht" }).click();
 
+    // Gesamtstand und Statistik
+    await page.getByTestId("lernen-ueberblick").click();
+    await expect(page.getByTestId("lernen-statistik")).toBeVisible();
+    await shoot(page, "lernen-statistik");
+    await page.getByRole("button", { name: "Zurück zur Übersicht" }).click();
+    await expect(page.getByTestId("lernen-heute")).toBeVisible();
+
     // Aufräumen: erst alles gespeichert, dann Lernstand der Rolle zurücksetzen
     await expect(page.getByText(/\d+ offen/)).toHaveCount(0, { timeout: 30_000 });
     await page.getByRole("button", { name: "Lern-Einstellungen" }).click();

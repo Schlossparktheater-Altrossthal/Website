@@ -20,6 +20,7 @@ import { splitTail } from "@/lib/skript/reader-logic";
 import { cn } from "@/lib/utils";
 
 import { FONT_SIZES } from "../../skript/shared";
+import { CountUp, RatingFlash, useRatingFlash } from "./celebrate";
 import { MaskedBlockText, useHold } from "./masked";
 import {
   unitCard,
@@ -57,6 +58,7 @@ export function Drill({
   cards,
   settings,
   title,
+  sureNow,
   onCommit,
   onExit,
   onMore,
@@ -67,6 +69,8 @@ export function Drill({
   cards: ReadonlyMap<string, StoredCard>;
   settings: LearnSettings;
   title: string;
+  /** Aktuelle Textsicherheit (0–1), für den Zuwachs am Rundenende. */
+  sureNow: number;
   onCommit: (unit: Unit, rating: LearnRating, meta: ReviewMeta) => void;
   onExit: () => void;
   /** Weitere Abschnitte nach dem Ende („Mehr lernen“, L5); leer = nichts mehr da. */
@@ -78,8 +82,17 @@ export function Drill({
   const [phase, setPhase] = React.useState<"ask" | "rate">("ask");
   const [done, setDone] = React.useState(0);
   const deferred = useDeferredReview(onCommit);
+  const flash = useRatingFlash();
+  // Für die Zusammenfassung am Ende.
+  const [sureAtStart] = React.useState(sureNow);
+  const [tally, setTally] = React.useState({ knew: 0, fresh: new Set<string>() });
   const unit = queue[index] ?? null;
   const finished = !unit;
+  // Am Ende die letzte (noch korrigierbare) Bewertung gleich speichern, damit der Zuwachs stimmt.
+  const settle = deferred.settle;
+  React.useEffect(() => {
+    if (finished) settle();
+  }, [finished, settle]);
 
   const stageRef = React.useRef(new Map<string, ReturnType<typeof unitStage>>());
   const stageInfo = React.useMemo(() => {
@@ -126,6 +139,12 @@ export function Drill({
 
   const advance = (rating: LearnRating) => {
     if (!unit) return;
+    flash.show(rating);
+    const isNew = !unitCard(unit, cards).card;
+    setTally((current) => ({
+      knew: current.knew + (rating >= 3 ? 1 : 0),
+      fresh: isNew ? new Set(current.fresh).add(unit.id) : current.fresh,
+    }));
     if (stillLearning(unit, rating)) requeue(unit, index);
     setIndex((current) => current + 1);
     setDone((count) => count + 1);
@@ -227,9 +246,30 @@ export function Drill({
         >
           <SparklesIcon className="h-10 w-10 text-primary" aria-hidden />
           <h2 className="mt-3 text-xl font-semibold">Geschafft!</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {done} {done === 1 ? "Stelle" : "Stellen"} geübt. Lust auf mehr?
-          </p>
+          <div className="mt-5 grid w-full grid-cols-3 gap-2" data-testid="lernen-zusammenfassung">
+            <SummaryValue label={done === 1 ? "Stelle geübt" : "Stellen geübt"}>
+              <CountUp value={done} />
+            </SummaryValue>
+            <SummaryValue label="gleich gewusst">
+              <CountUp
+                value={done ? (tally.knew / done) * 100 : 0}
+                format={(value) => `${Math.round(value)} %`}
+              />
+            </SummaryValue>
+            <SummaryValue label="Textsicherheit">
+              <CountUp
+                value={Math.max(0, (sureNow - sureAtStart) * 100)}
+                format={(value) => `+${value < 10 ? value.toFixed(1) : Math.round(value)} %`}
+              />
+            </SummaryValue>
+          </div>
+          {tally.fresh.size ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {tally.fresh.size} {tally.fresh.size === 1 ? "neue Stelle" : "neue Stellen"}{" "}
+              angefangen.
+            </p>
+          ) : null}
+          <p className="mt-1 text-sm text-muted-foreground">Lust auf mehr?</p>
           <div className="mt-6 flex w-full flex-col gap-2">
             {!noMore ? (
               <Button
@@ -320,6 +360,7 @@ export function Drill({
         </main>
       )}
 
+      <RatingFlash token={flash.token} rating={flash.rating} />
       {!finished ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto max-w-2xl space-y-1 px-3 py-2">
@@ -369,6 +410,15 @@ export function Drill({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function SummaryValue({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="border border-border px-2 py-3">
+      <p className="text-xl font-semibold">{children}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
