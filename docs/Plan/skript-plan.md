@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Konzept nach Prototyp; Phase 1 läuft. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-13. Phase 1 (Parser-Bibliothek `src/lib/skript/`) umgesetzt, Ergebnis deckt sich mit dem Prototyp; als Nächstes Phase 2. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -163,7 +163,7 @@ Offen:
 
 ## Checkliste
 
-- [ ] Phase 1 Parser-Bibliothek
+- [x] Phase 1 Parser-Bibliothek
 - [ ] Phase 2 Datenmodell + Import-Entwurf
 - [ ] Phase 3 Prüfschritt + Freigabe
 - [ ] Phase 4 Leseansicht
