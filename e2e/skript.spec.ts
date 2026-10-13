@@ -24,6 +24,13 @@ async function shoot(page: Page, name: string) {
   await page.setViewportSize({ width: 1280, height: 900 });
 }
 
+async function discard(page: Page) {
+  const button = page.getByRole("button", { name: "Verwerfen" });
+  await clickUntil(button, () => expect(page.getByRole("dialog")).toBeVisible());
+  await page.getByRole("dialog").getByRole("button", { name: "Verwerfen" }).click();
+  await expect(page).not.toHaveURL(/fassung=/);
+}
+
 test.describe("als admin", () => {
   test.use({ storageState: authFile("admin") });
 
@@ -40,6 +47,12 @@ test.describe("als admin", () => {
       "Testnutzer hat keine aktive Produktion",
     );
     await expect(page.getByText("Neue Fassung einlesen")).toBeVisible();
+    // Reste abgebrochener Läufe aufräumen
+    const leftover = page.getByRole("link", { name: /E2E Skript/ });
+    while (await leftover.count()) {
+      await leftover.first().click();
+      await discard(page);
+    }
     await shoot(page, "skript-liste");
 
     const label = `E2E Skript ${Date.now().toString(36)}`;
@@ -53,6 +66,7 @@ test.describe("als admin", () => {
         ],
         [{ text: "E2E Alpha:", style: "bold" }, { text: " Guten Abend." }],
         [{ text: "E2E Beta:", style: "bold" }, { text: " Hallo! Es ist anders – TON 2: Tür zu" }],
+        [{ text: "E2E Alpha:", style: "bold" }, { text: " Wie geht es?" }],
         [{ text: "E2E Alfa:", style: "bold" }, { text: " Tschüss." }],
       ],
     ]);
@@ -71,12 +85,12 @@ test.describe("als admin", () => {
     await expect(page.getByText("Unsichere Hinweise").first()).toBeVisible();
     await expect(page.getByText("E2E Alpha", { exact: true })).toBeVisible();
     await expect(page.getByText(/Tippfehler\? ähnlich/)).toBeVisible();
+    // Tippfehler wird der ähnlichen Rolle dieser Fassung vorgeschlagen
+    await expect(page.getByLabel("Skript-Rolle für E2E Alfa")).toHaveValue("same:E2E Alpha");
     await expect(page.getByRole("button", { name: "Freigeben" })).toBeDisabled();
     await shoot(page, "skript-pruefen");
 
-    await page.getByRole("button", { name: "Verwerfen" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Verwerfen" }).click();
-    await expect(page).not.toHaveURL(/fassung=/);
+    await discard(page);
     await expect(page.getByText(label)).toHaveCount(0);
     expect(errors).toEqual([]);
   });

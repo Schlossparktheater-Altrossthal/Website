@@ -34,6 +34,10 @@ const CUE_LABEL: Record<string, string> = {
 };
 
 const NEW = "__new__";
+/** Gleiche Rolle wie ein anderer Eintrag dieser Fassung (Tippfehler zusammenlegen). */
+const SAME = "same:";
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 function report(result: ProductionActionResult, router: ReturnType<typeof useRouter>) {
   if (!result.ok) {
@@ -103,29 +107,35 @@ export function ScriptReview({ data, canManage }: { data: ScriptReviewData; canM
 function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boolean }) {
   const router = useRouter();
   const roleName = new Map(data.roles.map((r) => [r.id, r.name]));
-  const initial = React.useMemo(
-    () =>
-      Object.fromEntries(
-        data.entries.map((entry) => [
-          entry.name,
-          { choice: entry.roleId ?? entry.suggestedRoleId ?? NEW, newName: entry.name },
-        ]),
-      ),
-    [data.entries],
+  const typoFor = new Map(data.version.report.roleTypos.map((t) => [t.name, t.similarTo]));
+  const names = new Set(data.entries.map((e) => e.name));
+  const initial = Object.fromEntries(
+    data.entries.map((entry) => {
+      const typo = typoFor.get(entry.name);
+      const choice =
+        entry.roleId ?? entry.suggestedRoleId ?? (typo && names.has(typo) ? `${SAME}${typo}` : NEW);
+      return [entry.name, { choice, newName: entry.name }];
+    }),
   );
   // Nach dem Speichern liefert der Server neue Einträge; `key` am Aufrufer setzt den Zustand zurück.
   const [state, setState] = React.useState(initial);
   const [busy, setBusy] = React.useState(false);
 
   const unconfirmed = data.entries.filter((entry) => !entry.roleId).length;
-  const typoFor = new Map(data.version.report.roleTypos.map((t) => [t.name, t.similarTo]));
-
   const save = async () => {
     setBusy(true);
+    // „Gleiche Rolle wie …“ folgt dem Ziel des anderen Eintrags (höchstens eine Stufe tief).
+    const resolve = (name: string) => {
+      const value = state[name];
+      const target = value.choice.startsWith(SAME) ? value.choice.slice(SAME.length) : null;
+      return target && state[target] && !state[target].choice.startsWith(SAME)
+        ? { value: state[target], name: target }
+        : { value, name };
+    };
     const assignments = data.entries.map((entry) => {
-      const value = state[entry.name];
-      return value.choice === NEW
-        ? { name: entry.name, createName: value.newName.trim() || entry.name }
+      const { value, name } = resolve(entry.name);
+      return value.choice === NEW || value.choice.startsWith(SAME)
+        ? { name: entry.name, createName: value.newName.trim() || name }
         : { name: entry.name, roleId: value.choice };
     });
     report(await saveScriptRolesAction(data.version.id, assignments), router);
@@ -176,7 +186,8 @@ function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boo
                     ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {entry.lines} Repliken · {entry.words} Wörter
+                    {plural(entry.lines, "Replik", "Repliken")} ·{" "}
+                    {plural(entry.words, "Wort", "Wörter")}
                     {entry.spellings.filter((s) => s !== entry.name).length
                       ? ` · im PDF auch: ${entry.spellings.filter((s) => s !== entry.name).join(", ")}`
                       : ""}
@@ -196,6 +207,13 @@ function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boo
                       }
                     >
                       <option value={NEW}>Neue Rolle anlegen</option>
+                      {data.entries
+                        .filter((other) => other.name !== entry.name && !other.roleId)
+                        .map((other) => (
+                          <option key={other.name} value={`${SAME}${other.name}`}>
+                            Gleiche Rolle wie „{other.name}“
+                          </option>
+                        ))}
                       {data.roles.map((role) => (
                         <option key={role.id} value={role.id}>
                           {role.name}
@@ -312,7 +330,7 @@ function ReleaseBar({ data }: { data: ScriptReviewData }) {
   const blocked = data.blockers.length > 0;
   return (
     <Card>
-      <CardContent className="flex flex-wrap items-center gap-3 pt-6">
+      <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1 text-sm">
           {blocked ? (
             <span className="text-muted-foreground">
@@ -325,21 +343,23 @@ function ReleaseBar({ data }: { data: ScriptReviewData }) {
             </span>
           )}
         </div>
-        <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-          <TrashIcon aria-hidden /> Verwerfen
-        </Button>
-        <AsyncButton
-          isLoading={busy}
-          loadingText="Gibt frei …"
-          disabled={blocked}
-          onClick={async () => {
-            setBusy(true);
-            report(await releaseScriptAction(data.version.id), router);
-            setBusy(false);
-          }}
-        >
-          Freigeben
-        </AsyncButton>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
+            <TrashIcon aria-hidden /> Verwerfen
+          </Button>
+          <AsyncButton
+            isLoading={busy}
+            loadingText="Gibt frei …"
+            disabled={blocked}
+            onClick={async () => {
+              setBusy(true);
+              report(await releaseScriptAction(data.version.id), router);
+              setBusy(false);
+            }}
+          >
+            Freigeben
+          </AsyncButton>
+        </div>
       </CardContent>
       <ConfirmDialog
         open={confirmDelete}

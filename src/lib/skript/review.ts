@@ -152,8 +152,16 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
   }
 
   const blockers: string[] = [];
-  if (unassigned) blockers.push(`${unassigned} Repliken ohne bestätigte Rolle`);
-  if (cues.length) blockers.push(`${cues.length} unsichere Hinweise`);
+  if (unassigned) {
+    blockers.push(
+      `${unassigned} ${unassigned === 1 ? "Replik" : "Repliken"} ohne bestätigte Rolle`,
+    );
+  }
+  if (cues.length) {
+    blockers.push(
+      `${cues.length} ${cues.length === 1 ? "unsicherer Hinweis" : "unsichere Hinweise"}`,
+    );
+  }
 
   return {
     version: {
