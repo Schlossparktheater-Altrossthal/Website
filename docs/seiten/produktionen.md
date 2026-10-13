@@ -10,7 +10,7 @@ Auswertung der Rückmeldungen.
 - `/mitglieder/produktionen` – Tab „Plan“: Kennzahlen, Zeitleiste (ab `md`), Agenda, Kalender; `?verwalten=1` öffnet „Produktionen verwalten“ (Sheet, aus dem Wechsler der Seitenleiste)
 - `/mitglieder/produktionen/gewerke` – Tab „Gewerke“: alle Gewerke mit Kartenfortschritt und nächster Frist
 - `/mitglieder/produktionen/[showId]` – Einstellungen einer Produktion (Premiere, Endprobenwoche, Onboarding)
-- `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte; `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
+- `/mitglieder/produktionen/stueck` – Stück: `?ansicht=` Ablauf (Standard) / rollen / auftritte / skript (`&fassung=<id>` Prüfschritt bzw. Fassung; für alle mit `SCRIPT.READ` sichtbar, nur Freigegebenes); `?rolle=<id>` bzw. `?szene=<id>` öffnet das Panel
 - `/mitglieder/produktionen/besetzung`, `/szenen` – leiten auf das Stück weiter
 - `/api/skript/[showId]` – Skript-Fassungen: `GET` Liste (Entwürfe nur mit Verwaltungsrecht), `POST` PDF hochladen → Entwurf (`docs/Plan/skript-plan.md`)
 - `/mitglieder/produktionen/rueckmeldungen-auswertung` – Auswertung

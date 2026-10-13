@@ -15,7 +15,7 @@ import { AuftritteView } from "./auftritte";
 import { RolePanel, ScenePanel } from "./panels";
 import { formatMinutes, inputClass, RoleRow } from "./ui";
 
-export type StueckView = "ablauf" | "rollen" | "auftritte";
+export type StueckView = "ablauf" | "rollen" | "auftritte" | "skript";
 
 const BASE_PATH = "/mitglieder/produktionen/stueck";
 
@@ -23,7 +23,29 @@ const VIEW_LABELS: Record<StueckView, string> = {
   ablauf: "Ablauf",
   rollen: "Rollen",
   auftritte: "Auftritte",
+  skript: "Skript",
 };
+
+/** Ansichts-Leiste des Stücks; Zähler nur, wo die Daten geladen sind. */
+export function StueckNav({
+  view,
+  counts = {},
+}: {
+  view: StueckView;
+  counts?: Partial<Record<StueckView, number>>;
+}) {
+  return (
+    <SectionNav
+      ariaLabel="Ansicht"
+      activeId={view}
+      items={(Object.keys(VIEW_LABELS) as StueckView[]).map((key) => ({
+        id: key,
+        href: key === "ablauf" ? BASE_PATH : `${BASE_PATH}?ansicht=${key}`,
+        label: counts[key] === undefined ? VIEW_LABELS[key] : `${VIEW_LABELS[key]} ${counts[key]}`,
+      }))}
+    />
+  );
+}
 
 export function StueckClient({ data, view }: { data: RolesScenesData; view: StueckView }) {
   const searchParams = useSearchParams();
@@ -71,20 +93,7 @@ export function StueckClient({ data, view }: { data: RolesScenesData; view: Stue
 
   return (
     <div className="space-y-4">
-      <SectionNav
-        ariaLabel="Ansicht"
-        activeId={view}
-        items={(Object.keys(VIEW_LABELS) as StueckView[]).map((key) => ({
-          id: key,
-          href: key === "ablauf" ? BASE_PATH : `${BASE_PATH}?ansicht=${key}`,
-          label:
-            key === "ablauf"
-              ? `${VIEW_LABELS[key]} ${data.scenes.length}`
-              : key === "rollen"
-                ? `${VIEW_LABELS[key]} ${data.roles.length}`
-                : VIEW_LABELS[key],
-        }))}
-      />
+      <StueckNav view={view} counts={{ ablauf: data.scenes.length, rollen: data.roles.length }} />
 
       {view !== "auftritte" ? (
         <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 # Plan: Skript – Regie-PDF einlesen, Fassungen vergleichen, kommentieren
 
-Stand: 2026-10-13. Phase 1 und 2 umgesetzt (Parser, Datenmodell, Rechte, PDF-Import als Entwurf über `/api/skript/[showId]`); als Nächstes Phase 3.
+Stand: 2026-10-13. Phase 1–3 umgesetzt (Parser, Datenmodell, Import, Prüfschritt mit Rollen/unsicheren Hinweisen, Freigabe mit lineageId-Übernahme, Reiter „Skript“ im Stück); als Nächstes Phase 4 Leseansicht.
 
 ## Ziel
 
@@ -166,7 +166,7 @@ Offen:
 
 - [x] Phase 1 Parser-Bibliothek
 - [x] Phase 2 Datenmodell + Import-Entwurf
-- [ ] Phase 3 Prüfschritt + Freigabe
+- [x] Phase 3 Prüfschritt + Freigabe
 - [ ] Phase 4 Leseansicht
 - [ ] Phase 5 Fassungsvergleich
 - [ ] Phase 6 Kommentare
