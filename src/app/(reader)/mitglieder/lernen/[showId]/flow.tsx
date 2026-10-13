@@ -6,7 +6,6 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   AudioLinesIcon,
-  EyeIcon,
   KeyboardIcon,
 } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import {
   BigButton,
   CorrectionBar,
   RATING_STYLE,
+  RevealButtons,
   spokenText,
   unitStage,
   usePractice,
@@ -159,6 +159,7 @@ export function SceneFlow({
     enabled: !finished,
     onNext: next,
     onRevealAll: practice.revealAll,
+    onRevealNext: practice.revealNext,
     onLetter: settings.typing && stageInfo.stage !== "full" ? practice.typeKey : undefined,
   });
   const hold = useHold(practice.revealAll, !finished && stageInfo.stage !== "full");
@@ -294,21 +295,19 @@ export function SceneFlow({
             <CorrectionBar last={deferred.last} onChange={changeLast} />
             <div className="flex gap-2">
               {stageInfo.stage !== "full" ? (
-                <BigButton
-                  variant="outline"
-                  onClick={practice.revealAll}
-                  disabled={practice.progress.whole}
-                  title="Pfeil nach oben"
-                >
-                  <EyeIcon aria-hidden /> Aufdecken
-                </BigButton>
+                <RevealButtons
+                  onNext={practice.revealNext}
+                  onAll={practice.revealAll}
+                  disabled={practice.progress.whole || practice.target === null}
+                />
               ) : null}
               <BigButton onClick={next} title="Leertaste, Enter oder Pfeil nach rechts">
                 {speech.speaking ? "Überspringen" : "Weiter"} <ArrowRightIcon aria-hidden />
               </BigButton>
             </div>
             <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
-              Wort antippen deckt es auf · Text halten oder ↑ deckt alles auf · Leertaste weiter
+              Wort antippen oder ↓ deckt ein Wort auf · Text halten oder ↑ deckt alles auf ·
+              Leertaste weiter
               {settings.typing ? " · Anfangsbuchstaben tippen" : ""}
             </p>
           </div>

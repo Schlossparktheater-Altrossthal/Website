@@ -14,6 +14,7 @@ import {
   PrinterIcon,
   SearchIcon,
   SettingsIcon,
+  SparklesIcon,
   UsersIcon,
 } from "@/components/ui/action-icons";
 import { Badge } from "@/components/ui/badge";
@@ -644,6 +645,13 @@ export function ScriptReader({
               </span>
             ) : null}
           </Button>
+          {version.status === "released" ? (
+            <Button asChild variant="ghost" size="icon" aria-label="Text lernen">
+              <Link href={`/mitglieder/lernen/${version.showId}`}>
+                <SparklesIcon aria-hidden />
+              </Link>
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"

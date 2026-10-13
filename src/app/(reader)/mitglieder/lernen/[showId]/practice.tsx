@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { EyeIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import type { TokenizedBlock } from "@/lib/skript/learn/chunks";
 import type { StoredCard } from "@/lib/skript/learn/plan";
@@ -75,6 +76,10 @@ export function usePractice(
     () => setProgress((current) => ({ ...current, whole: true })),
     [],
   );
+  /** Nächstes noch verdecktes Wort aufdecken (Knopf „Wort“, Pfeil nach unten). */
+  const revealNext = React.useCallback(() => {
+    if (target !== null) revealWord(target);
+  }, [target, revealWord]);
   const typeKey = React.useCallback(
     (key: string) => {
       if (target === null) return false;
@@ -97,7 +102,17 @@ export function usePractice(
     };
   }, [progress, masked, total]);
 
-  return { progress, masked, target, solved, revealWord, revealAll, typeKey, result };
+  return {
+    progress,
+    masked,
+    target,
+    solved,
+    revealWord,
+    revealNext,
+    revealAll,
+    typeKey,
+    result,
+  };
 }
 
 export const RATING_STYLE: Record<LearnRating, string> = {
@@ -223,11 +238,12 @@ export function useSpeech(enabled: boolean) {
   return { supported, speaking, speak, stop };
 }
 
-/** Tastatur: Buchstaben für den Tippmodus, Leertaste/Enter/→ weiter, ↑ alles aufdecken. */
+/** Tastatur: Buchstaben für den Tippmodus, Leertaste/Enter/→ weiter, ↓ nächstes Wort, ↑ alles. */
 export function useLearnKeys(handlers: {
   onLetter?: (key: string) => boolean;
   onNext?: () => void;
   onRevealAll?: () => void;
+  onRevealNext?: () => void;
   onRate?: (rating: LearnRating) => void;
   enabled: boolean;
 }) {
@@ -244,6 +260,11 @@ export function useLearnKeys(handlers: {
         if (event.key === " " || event.key === "ArrowRight") event.preventDefault();
         if (event.key === "Enter" && target?.closest("button")) return;
         current.onNext?.();
+        return;
+      }
+      if (event.key === "ArrowDown" && current.onRevealNext) {
+        event.preventDefault();
+        current.onRevealNext();
         return;
       }
       if (event.key === "ArrowUp") {
@@ -311,4 +332,40 @@ export function useSwipeLeft(onSwipe: () => void) {
       if (dx < -70 && Math.abs(dy) < Math.abs(dx) * 0.6) onSwipe();
     },
   };
+}
+
+/** Aufdeck-Knöpfe: nächstes Wort (Hinweis) und ganze Stelle. */
+export function RevealButtons({
+  onNext,
+  onAll,
+  disabled,
+}: {
+  onNext: () => void;
+  onAll: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="lg"
+        className="h-12 shrink-0 px-3"
+        onClick={onNext}
+        disabled={disabled}
+        title="Nächstes Wort aufdecken (Pfeil nach unten)"
+      >
+        <EyeIcon aria-hidden /> Wort
+      </Button>
+      <Button
+        variant="outline"
+        size="lg"
+        className="h-12 shrink-0 px-3"
+        onClick={onAll}
+        disabled={disabled}
+        title="Ganze Stelle aufdecken (Pfeil nach oben oder Text halten)"
+      >
+        Alles
+      </Button>
+    </>
+  );
 }

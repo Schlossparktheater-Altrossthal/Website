@@ -58,7 +58,8 @@ test.describe("als admin", () => {
     await shoot(page, "lernen-abfrage");
     await page.getByRole("button", { name: "Gewusst" }).click();
     await expect(page.getByTestId("lernen-korrektur")).toBeVisible();
-    await page.getByRole("button", { name: "Aufdecken", exact: true }).click();
+    await page.getByRole("button", { name: "Wort", exact: true }).click();
+    await page.getByRole("button", { name: "Alles", exact: true }).click();
     const group = page.getByRole("group", { name: "Wie gut saß es?" });
     await expect(group).toBeVisible();
     await shoot(page, "lernen-abfrage-bewerten");

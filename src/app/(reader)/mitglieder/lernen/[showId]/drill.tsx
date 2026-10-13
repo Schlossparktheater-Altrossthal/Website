@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ArrowLeftIcon, CheckIcon, EyeIcon, SparklesIcon } from "@/components/ui/action-icons";
+import { ArrowLeftIcon, CheckIcon, SparklesIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import type { TokenizedBlock } from "@/lib/skript/learn/chunks";
 import type { StoredCard } from "@/lib/skript/learn/plan";
@@ -29,6 +29,7 @@ import {
   BigButton,
   CorrectionBar,
   RATING_STYLE,
+  RevealButtons,
   plainText,
   unitStage,
   usePractice,
@@ -145,6 +146,7 @@ export function Drill({
     enabled: !finished,
     onNext: phase === "ask" ? knew : () => rate(suggestion.rating),
     onRevealAll: practice.revealAll,
+    onRevealNext: practice.revealNext,
     onLetter: settings.typing && phase === "ask" ? practice.typeKey : undefined,
     onRate: phase === "rate" ? rate : undefined,
   });
@@ -295,9 +297,7 @@ export function Drill({
             <CorrectionBar last={deferred.last} onChange={deferred.change} />
             {phase === "ask" ? (
               <div className="flex gap-2">
-                <BigButton variant="outline" onClick={practice.revealAll} title="Pfeil nach oben">
-                  <EyeIcon aria-hidden /> Aufdecken
-                </BigButton>
+                <RevealButtons onNext={practice.revealNext} onAll={practice.revealAll} />
                 <BigButton onClick={knew} title="Leertaste">
                   <CheckIcon aria-hidden /> Gewusst
                 </BigButton>
@@ -327,7 +327,7 @@ export function Drill({
             )}
             <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
               {phase === "ask"
-                ? `Laut sprechen, dann Leertaste · Wort antippen oder ↑ deckt auf${settings.typing ? " · Anfangsbuchstaben tippen" : ""}`
+                ? `Laut sprechen, dann Leertaste · ↓ ein Wort, ↑ alles aufdecken${settings.typing ? " · Anfangsbuchstaben tippen" : ""}`
                 : "Tasten 1–4 · Enter übernimmt den Vorschlag"}
             </p>
           </div>
