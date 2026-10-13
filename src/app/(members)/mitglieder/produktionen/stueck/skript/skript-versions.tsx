@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { FileIcon, UploadIcon } from "@/components/ui/action-icons";
+import { ChevronRightIcon, FileIcon, SparklesIcon, UploadIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,21 @@ export function ScriptVersions({
 }) {
   return (
     <div className="space-y-4">
+      {versions.some((version) => version.status === "released") ? (
+        <Link
+          href={`/mitglieder/lernen/${showId}`}
+          className="flex min-h-14 items-center gap-3 rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 hover:bg-primary/15"
+        >
+          <SparklesIcon className="h-5 w-5 shrink-0 text-primary" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium">Text lernen</span>
+            <span className="block text-sm text-muted-foreground">
+              Szenen durchspielen und abfragen – mit Wiederholung zur richtigen Zeit
+            </span>
+          </span>
+          <ChevronRightIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        </Link>
+      ) : null}
       {canManage ? <ScriptUpload showId={showId} /> : null}
       {versions.length ? (
         <ListRowGroup>
