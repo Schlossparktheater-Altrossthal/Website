@@ -68,7 +68,7 @@ test.describe("als admin", () => {
         [{ text: "E2E Beta:", style: "bold" }, { text: " Hallo! Es ist anders – TON 2: Tür zu" }],
         [{ text: "E2E Alpha:", style: "bold" }, { text: " Wie geht es?" }],
         [{ text: "E2E Alfa:", style: "bold" }, { text: " Tschüss." }],
-        ...Array.from({ length: 14 }, (_, index) => [
+        ...Array.from({ length: 40 }, (_, index) => [
           { text: "E2E Beta:", style: "bold" as const },
           { text: ` Ein längerer Satz Nummer ${index + 1}, damit der Leser scrollen muss.` },
         ]),
@@ -111,7 +111,7 @@ test.describe("als admin", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => window.scrollTo(0, 0));
     await page
-      .getByText("Ein längerer Satz Nummer 8,")
+      .getByText("Ein längerer Satz Nummer 12,")
       .evaluate((el) => el.scrollIntoView({ block: "center" }));
     await expect(page.getByRole("button", { name: /Nächste Passage/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /meine späte Passage/ })).toBeVisible();

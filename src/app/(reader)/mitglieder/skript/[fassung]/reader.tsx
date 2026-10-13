@@ -167,9 +167,13 @@ function CueMark({ part }: { part: Extract<ScriptPart, { kind: "cue" }> }) {
         style.className,
       )}
     >
-      <span className="mr-1 text-[0.7em] font-bold uppercase tracking-wider opacity-70">
-        {style.label}
-      </span>
+      {part.text.toLowerCase().startsWith(style.label.toLowerCase()) ? (
+        <span className="sr-only">{style.label}: </span>
+      ) : (
+        <span className="mr-1 text-[0.7em] font-bold uppercase tracking-wider opacity-70">
+          {style.label}
+        </span>
+      )}
       {part.text}
     </span>
   );
