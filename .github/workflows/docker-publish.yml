@@ -9,7 +9,7 @@ on:
       - "Dockerfile.prod"
       - "package.json"
       - "pnpm-lock.yaml"
-      - "next.config.ts"
+      - "next.config.mjs"
       - "tsconfig.json"
       - "postcss.config.mjs"
       - "tailwind.config.js"
