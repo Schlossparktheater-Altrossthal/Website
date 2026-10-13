@@ -203,7 +203,7 @@ const BlockView = React.memo(
           ref={ref}
           data-block={block.id}
           className={cn(
-            "scroll-mt-36 py-1.5 pl-6 italic text-muted-foreground sm:pl-10",
+            "scroll-mt-52 py-1.5 pl-6 italic text-muted-foreground sm:pl-10",
             !visible && "hidden",
             settings.directions === "dim" && "opacity-50",
             activeMatch && "rounded-md ring-2 ring-ring",
@@ -228,7 +228,7 @@ const BlockView = React.memo(
         ref={ref}
         data-block={block.id}
         className={cn(
-          "scroll-mt-36 rounded-md border-l-4 border-transparent py-2 pl-3 pr-2",
+          "scroll-mt-52 rounded-md border-l-4 border-transparent py-2 pl-3 pr-2",
           mine && "border-primary bg-primary/10",
           dimmed && "opacity-45",
           activeMatch && "ring-2 ring-ring",
@@ -295,6 +295,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
   const [position, setPosition] = React.useState<Position>({ first: 0, last: 0 });
   const refs = React.useRef<(HTMLDivElement | null)[]>([]);
   const barRef = React.useRef<HTMLDivElement>(null);
+  const toolbarRef = React.useRef<HTMLDivElement>(null);
 
   const roleSet = React.useMemo(() => new Set(settings.roleIds), [settings.roleIds]);
   const followed = React.useMemo(() => new Set(settings.followedCues), [settings.followedCues]);
@@ -343,7 +344,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
       const bottoms = elements.map(
         (element) => element?.getBoundingClientRect().bottom ?? -Infinity,
       );
-      const top = 9 * 16;
+      const top = toolbarRef.current?.getBoundingClientRect().bottom ?? 0;
       const barTop = barRef.current?.getBoundingClientRect().top ?? window.innerHeight;
       const first = Math.min(firstVisibleIndex(bottoms, top), blocks.length - 1);
       let last = first;
@@ -418,7 +419,10 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
 
   return (
     <div className="-mt-2">
-      <div className="sticky top-16 z-20 -mx-4 border-b border-border/60 bg-background/95 px-2 backdrop-blur sm:-mx-6 sm:px-4">
+      <div
+        ref={toolbarRef}
+        className="sticky top-[calc(var(--members-topbar-offset,0px)+4rem)] z-20 -mx-4 border-b border-border/60 bg-background/95 px-2 backdrop-blur sm:-mx-6 sm:px-4"
+      >
         <div className="mx-auto flex h-12 max-w-3xl items-center gap-1">
           <Button asChild variant="ghost" size="icon" aria-label="Zurück zu den Fassungen">
             <Link href={SKRIPT_PATH}>

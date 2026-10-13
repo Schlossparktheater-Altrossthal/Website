@@ -110,7 +110,9 @@ test.describe("als admin", () => {
     await page.keyboard.press("Escape");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.getByText("Ein längerer Satz Nummer 1,").scrollIntoViewIfNeeded();
+    await page
+      .getByText("Ein längerer Satz Nummer 8,")
+      .evaluate((el) => el.scrollIntoView({ block: "center" }));
     await expect(page.getByRole("button", { name: /Nächste Passage/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /meine späte Passage/ })).toBeVisible();
     if (shots) await page.screenshot({ path: `${shots}/skript-leser-mobil.png` });
