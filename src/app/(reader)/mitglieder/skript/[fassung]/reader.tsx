@@ -710,7 +710,7 @@ export function ScriptReader({
         >
           {newVersionHint && previous ? (
             <div className="-mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-[3px] border-primary bg-primary/10 px-3 py-2 text-sm sm:-mx-4 sm:px-4 md:mx-0 md:px-3">
-              <span className="min-w-0 flex-1">
+              <span className="w-full min-w-0 sm:w-auto sm:flex-1">
                 Neue Fassung seit „{previous.label}“. Was hat sich für dich geändert?
               </span>
               <Link
@@ -730,7 +730,7 @@ export function ScriptReader({
           ) : null}
           {toReview.length ? (
             <div className="-mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-[3px] border-warning bg-warning/10 px-3 py-2 text-sm sm:-mx-4 sm:px-4 md:mx-0 md:px-3">
-              <span className="min-w-0 flex-1">
+              <span className="w-full min-w-0 sm:w-auto sm:flex-1">
                 {toReview.length === 1
                   ? "1 Notiz hängt an geändertem oder gestrichenem Text."
                   : `${toReview.length} Notizen hängen an geändertem oder gestrichenem Text.`}

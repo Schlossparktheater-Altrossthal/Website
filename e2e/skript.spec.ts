@@ -327,7 +327,11 @@ test.describe("als admin", () => {
       ]),
     );
     await page.goto(`/mitglieder/skript/${secondId}`);
-    await expect(page.getByText(/Notizen hängen an geändertem/)).toBeVisible();
+    // Unveränderte Absätze findet die Notiz über den Wortlaut, nur die gestrichene Zeile fehlt.
+    await expect(
+      page.getByText("1 Notiz hängt an geändertem oder gestrichenem Text."),
+    ).toBeVisible();
+    await expect(page.locator("mark[data-annotation]", { hasText: "verehrtes" })).toBeVisible();
     await page.getByRole("button", { name: "Prüfen" }).click();
     await expect(page.getByRole("dialog").getByText("Auftritt von links.")).toBeVisible();
     await shoot(page, "skript-notizen-pruefen");

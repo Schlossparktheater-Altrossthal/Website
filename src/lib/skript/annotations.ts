@@ -96,11 +96,19 @@ export function resolveAnnotations(
 ): ReaderAnnotation[] {
   const byId = new Map(blocks.map((block) => [block.id, block]));
   const byLineage = new Map(blocks.map((block) => [block.lineageId, block]));
+  // Rückfall ohne gemeinsame Kennung (z. B. Entwurf vor der Freigabe): identischer Wortlaut.
+  const byText = new Map<string, (typeof blocks)[number]>();
+  for (const block of blocks) {
+    const key = plainBlockText(block.parts);
+    if (!byText.has(key)) byText.set(key, block);
+  }
   return annotations.map((annotation) => {
     const block =
       (annotation.versionId === versionId && annotation.blockId
         ? byId.get(annotation.blockId)
-        : undefined) ?? byLineage.get(annotation.lineageId);
+        : undefined) ??
+      byLineage.get(annotation.lineageId) ??
+      byText.get(annotation.blockText);
     let state: AnnotationState = "orphaned";
     let anchor = {
       partIndex: annotation.partIndex,

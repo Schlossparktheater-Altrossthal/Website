@@ -92,6 +92,13 @@ describe("resolveAnnotations", () => {
     expect(note).toMatchObject({ state: "orphaned", blockId: null });
   });
 
+  it("findet ohne gemeinsame Kennung den Absatz mit gleichem Wortlaut", () => {
+    const [note] = resolveAnnotations([stored({})], "v2", [
+      { id: "b7", lineageId: "neu", parts: [text("Ich muss den Nachtalp finden.")] },
+    ]);
+    expect(note).toMatchObject({ state: "ok", blockId: "b7" });
+  });
+
   it("plainBlockText normalisiert Leerraum", () => {
     expect(plainBlockText([text(" Hallo  "), text("Welt ")])).toBe("Hallo Welt");
   });
