@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import type { PdfTemplate } from "@/lib/pdf/types";
 
 import type { ScriptReaderData } from "./reader";
@@ -19,6 +20,7 @@ export const scriptPdfOptionsSchema = z.object({
   hiddenCues: z.array(z.string()).default([]),
   dimOthers: z.boolean().default(false),
   fontSize: z.number().int().min(0).max(3).default(1),
+  cover: z.boolean().default(true),
 });
 
 export type ScriptPdfOptions = z.infer<typeof scriptPdfOptionsSchema>;
@@ -55,7 +57,9 @@ const MINE_BAR = "#d9480f";
 
 const FONT_SIZES = [9, 10, 11, 12.5];
 const MARGIN = 48;
-const SPEAKER_WIDTH = 92;
+/** Sprecher-Spalte: so breit wie der längste Name, aber in diesen Grenzen. */
+const SPEAKER_MIN = 64;
+const SPEAKER_MAX = 130;
 const GAP = 10;
 
 type Doc = PDFKit.PDFDocument;
@@ -145,29 +149,47 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
   const cueLines = cueLineIndices(data.blocks, roleSet);
   const left = MARGIN;
   const right = doc.page.width - MARGIN;
+  const speakerStyle = () => doc.font("Helvetica-Bold").fontSize(size * 0.85);
+  const speakerWidthOf = (name: string) =>
+    speakerStyle().widthOfString(name, { characterSpacing: 0.3 }) + 2;
+  const widest = Math.max(
+    0,
+    ...data.blocks.map((block) => speakerWidthOf((block.speaker ?? "").toUpperCase())),
+  );
+  const SPEAKER_WIDTH = Math.max(SPEAKER_MIN, Math.min(SPEAKER_MAX, widest));
   const textX = left + SPEAKER_WIDTH + GAP;
   const textWidth = right - textX;
   const bottom = () => doc.page.height - MARGIN;
   const selectedNames = data.roles.filter((role) => roleSet.has(role.id)).map((r) => r.name);
 
-  // Titelblock
-  doc.font("Helvetica-Bold").fontSize(18).fillColor(INK).text(title, left, MARGIN);
-  doc
-    .font("Helvetica")
-    .fontSize(10)
-    .fillColor(MUTED)
-    .text(
-      [
-        data.version.label,
-        data.version.status === "draft" ? "Entwurf" : null,
-        selectedNames.length ? `Hervorgehoben: ${selectedNames.join(", ")}` : null,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    );
-  doc.moveDown(0.8);
-
   const sceneTitles = new Map(data.scenes.map((scene) => [scene.id, scene.title]));
+  const scenePages = new Map<string, number>();
+  if (options.cover) {
+    renderCover(doc, input, selectedNames);
+    doc.addPage();
+  }
+  const coverPages = options.cover ? 1 : 0;
+
+  // Titelblock (mit Deckblatt überflüssig)
+  if (!options.cover) {
+    // Titelblock
+    doc.font("Helvetica-Bold").fontSize(18).fillColor(INK).text(title, left, MARGIN);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor(MUTED)
+      .text(
+        [
+          data.version.label,
+          data.version.status === "draft" ? "Entwurf" : null,
+          selectedNames.length ? `Hervorgehoben: ${selectedNames.join(", ")}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      );
+    doc.moveDown(0.8);
+  }
+
   let currentScene: string | null = null;
   doc.fontSize(size);
 
@@ -183,6 +205,7 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
       currentScene = block.sceneId;
       ensureSpace(size * 5);
       doc.moveDown(0.6);
+      scenePages.set(block.sceneId, doc.bufferedPageRange().count - coverPages);
       const y = doc.y;
       doc
         .font("Helvetica-Bold")
@@ -216,13 +239,14 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
     const dimmed = options.dimOthers && roleSet.size > 0 && !mine;
     const color = dimmed ? "#a8a29e" : INK;
     const runs = partRuns(parts, options, color, cueLines.has(index));
-    doc.font("Helvetica-Bold");
     const speaker = (block.speaker ?? "?").toUpperCase();
-    const speakerHeight = doc.fontSize(size * 0.85).heightOfString(speaker, {
-      width: SPEAKER_WIDTH,
-    });
+    // Zu lange Namen stehen in einer eigenen Zeile über dem Text statt umzubrechen.
+    const stacked = speakerWidthOf(speaker) > SPEAKER_WIDTH;
+    const speakerHeight = stacked
+      ? speakerStyle().heightOfString(speaker, { width: right - left }) + 1
+      : 0;
     doc.fontSize(size);
-    const height = Math.max(runsHeight(doc, runs, textWidth), speakerHeight);
+    const height = runsHeight(doc, runs, textWidth) + speakerHeight;
     ensureSpace(Math.min(height, bottom() - MARGIN));
     const y = doc.y;
     if (mine) {
@@ -236,15 +260,19 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
       .font("Helvetica-Bold")
       .fontSize(size * 0.85)
       .fillColor(mine ? MINE_BAR : dimmed ? "#a8a29e" : INK)
-      .text(speaker, left, y + size * 0.1, { width: SPEAKER_WIDTH, characterSpacing: 0.3 });
+      .text(speaker, left, y + size * 0.1, {
+        width: stacked ? right - left : SPEAKER_WIDTH,
+        characterSpacing: 0.3,
+      });
     doc.fontSize(size);
-    writeRuns(doc, runs, textX, y, textWidth);
+    writeRuns(doc, runs, textX, y + speakerHeight, textWidth);
     doc.y = Math.max(doc.y, y + height) + size * 0.35;
   });
 
   // Kopf- und Fußzeile auf jeder Seite
   const range = doc.bufferedPageRange();
-  for (let page = range.start; page < range.start + range.count; page++) {
+  if (options.cover) fillCoverContents(doc, input, scenePages);
+  for (let page = range.start + coverPages; page < range.start + range.count; page++) {
     doc.switchToPage(page);
     // Fußzeile liegt im unteren Rand – ohne das legt pdfkit eine neue Seite an.
     const bottomMargin = doc.page.margins.bottom;
@@ -258,12 +286,93 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
         width: right - left,
         lineBreak: false,
       })
-      .text(`${page - range.start + 1} / ${range.count}`, left, footerY, {
+      .text(`${page - range.start - coverPages + 1} / ${range.count - coverPages}`, left, footerY, {
         width: right - left,
         align: "right",
         lineBreak: false,
       });
     doc.page.margins.bottom = bottomMargin;
+  }
+}
+
+const DATE = new Intl.DateTimeFormat("de-DE", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: DEFAULT_TIME_ZONE,
+});
+
+/** Platz für das Szenenverzeichnis auf dem Deckblatt (wird nach dem Satz gefüllt). */
+const COVER_CONTENTS_Y = 0.46;
+
+function renderCover(doc: Doc, input: ScriptPdfInput, selectedNames: string[]) {
+  const { data, title } = input;
+  const left = MARGIN;
+  const width = doc.page.width - 2 * MARGIN;
+  const top = doc.page.height * 0.16;
+  doc.rect(left, top - 24, 40, 4).fill(MINE_BAR);
+  doc.font("Helvetica-Bold").fontSize(34).fillColor(INK).text(title, left, top, { width });
+  doc.moveDown(0.3);
+  doc
+    .font("Helvetica")
+    .fontSize(14)
+    .fillColor(MUTED)
+    .text(
+      [data.version.label, data.version.status === "draft" ? "Entwurf" : null]
+        .filter(Boolean)
+        .join(" · "),
+      { width },
+    );
+  if (data.version.versionDate) {
+    doc.text(`Stand vom ${DATE.format(new Date(data.version.versionDate))}`, { width });
+  }
+  if (selectedNames.length) {
+    doc.moveDown(1.2);
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED).text("FASSUNG FÜR", { width });
+    doc.font("Helvetica-Bold").fontSize(16).fillColor(MINE_BAR).text(selectedNames.join(", "), {
+      width,
+    });
+  }
+  const bottomMargin = doc.page.margins.bottom;
+  doc.page.margins.bottom = 0;
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor(MUTED)
+    .text(
+      `Erstellt am ${DATE.format(new Date())} · ${data.scenes.length} Szenen · nur für den internen Gebrauch`,
+      left,
+      doc.page.height - MARGIN,
+      { width, lineBreak: false },
+    );
+  doc.page.margins.bottom = bottomMargin;
+}
+
+function fillCoverContents(doc: Doc, input: ScriptPdfInput, scenePages: Map<string, number>) {
+  const range = doc.bufferedPageRange();
+  doc.switchToPage(range.start);
+  const left = MARGIN;
+  const width = doc.page.width - 2 * MARGIN;
+  let y = doc.page.height * COVER_CONTENTS_Y;
+  const limit = doc.page.height - MARGIN - 24;
+  const scenes = input.data.scenes.filter((scene) => scenePages.has(scene.id));
+  const lineHeight = Math.max(9, Math.min(15, (limit - y - 24) / Math.max(1, scenes.length)));
+  doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED).text("SZENEN", left, y, { width });
+  y += 18;
+  doc
+    .moveTo(left, y - 4)
+    .lineTo(left + width, y - 4)
+    .lineWidth(0.6)
+    .strokeColor(MUTED)
+    .stroke();
+  const fontSize = Math.min(10, lineHeight * 0.72);
+  for (const scene of scenes) {
+    if (y + lineHeight > limit) break;
+    const page = String(scenePages.get(scene.id) ?? "");
+    doc.font("Helvetica").fontSize(fontSize).fillColor(INK);
+    doc.text(scene.title, left, y, { width: width - 40, lineBreak: false, ellipsis: true });
+    doc.text(page, left, y, { width, align: "right", lineBreak: false });
+    y += lineHeight;
   }
 }
 

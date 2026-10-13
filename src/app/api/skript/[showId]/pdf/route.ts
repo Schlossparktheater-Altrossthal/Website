@@ -16,7 +16,7 @@ function list(value: string | null) {
 
 /**
  * Fassung als PDF mit den Leser-Einstellungen (docs/Plan/skript-plan.md, Phase 6).
- * `?fassung=<id>&rollen=a,b&regie=show|dim|hide&ohne=ton,licht&abblenden=1&groesse=0-3`
+ * `?fassung=<id>&rollen=a,b&regie=show|dim|hide&ohne=ton,licht&abblenden=1&groesse=0-3&deckblatt=0`
  */
 export async function GET(
   request: NextRequest,
@@ -48,6 +48,7 @@ export async function GET(
     directions: search.get("regie") ?? undefined,
     hiddenCues: list(search.get("ohne")),
     dimOthers: search.get("abblenden") === "1",
+    cover: search.get("deckblatt") !== "0",
     fontSize: search.has("groesse") ? Number(search.get("groesse")) : undefined,
   });
   if (!parsed.success) {

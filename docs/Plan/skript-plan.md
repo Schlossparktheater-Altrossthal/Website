@@ -231,7 +231,8 @@ Offen:
 - [x] Phase 3 Prüfschritt + Freigabe
 - [x] Phase 4 Leser Grundlage (Papier-Farbschema entfällt: Leser folgt hell/dunkel des Themes)
 - [x] Phase 5 Nächster Einsatz + Rollen-Übersicht (im Rollen-Blatt des Lesers, Szenendauer in der Szenenliste)
-- [x] Phase 6 PDF-Export (`src/lib/skript/pdf.ts`, `/api/skript/[showId]/pdf`)
+- [x] Phase 6 PDF-Export (`src/lib/skript/pdf.ts`, `/api/skript/[showId]/pdf`), optional mit Deckblatt
+      und Szenenverzeichnis; lange Rollennamen stehen über dem Text
 - [ ] Phase 7 Fassungsvergleich
 - [ ] Phase 8 Kommentare, Markierungen, Textnotizen
 - [ ] Phase 9 Freihandnotizen

@@ -46,6 +46,9 @@ const CUE_STYLE: Record<CueCategory, { label: string; className: string }> = {
   technik: { label: "Technik", className: SCRIPT_CUE_STYLES.technik },
 };
 
+/** Längster Name (Zeichen), der noch in die Sprecher-Spalte passt. */
+const SPEAKER_MAX_CHARS = 18;
+
 const FONT_SIZES = ["text-[15px]", "text-base", "text-lg", "text-xl"] as const;
 
 type Visibility = "show" | "dim" | "hide";
@@ -58,6 +61,7 @@ type Settings = {
   roleIds: string[];
   dimOthers: boolean;
   keepAwake: boolean;
+  pdfCover: boolean;
 };
 
 const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
@@ -67,6 +71,7 @@ const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
   followedCues: [],
   dimOthers: false,
   keepAwake: true,
+  pdfCover: true,
 };
 
 /** Einstellungen je Stück im Browser (nur Komfort, E: localStorage nur für Ansicht). */
@@ -186,13 +191,15 @@ type BlockViewProps = {
   settings: Settings;
   mine: boolean;
   cueLine: boolean;
+  /** Name zu lang für die Sprecher-Spalte: eigene Zeile über dem Text (Desktop). */
+  stacked: boolean;
   query: string;
   activeMatch: boolean;
 };
 
 const BlockView = React.memo(
   React.forwardRef<HTMLDivElement, BlockViewProps>(function BlockView(
-    { block, settings, mine, cueLine, query, activeMatch },
+    { block, settings, mine, cueLine, stacked, query, activeMatch },
     ref,
   ) {
     const hiddenCues = new Set(settings.hiddenCues);
@@ -211,7 +218,7 @@ const BlockView = React.memo(
           ref={ref}
           data-block={block.id}
           className={cn(
-            "scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground md:pl-[calc(8rem+1.25rem+3px)]",
+            "scroll-mt-14 py-0.5 pl-4 italic text-muted-foreground md:pl-[calc(var(--speaker-col)+1.25rem+3px)]",
             !visible && "hidden",
             settings.directions === "dim" && "opacity-50",
             activeMatch && "ring-2 ring-inset ring-ring",
@@ -236,7 +243,7 @@ const BlockView = React.memo(
         ref={ref}
         data-block={block.id}
         className={cn(
-          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 md:mx-0 md:grid md:grid-cols-[8rem_minmax(0,1fr)_2.25rem] md:gap-3 md:px-2",
+          "-mx-3 scroll-mt-14 border-l-[3px] border-transparent px-3 py-1 md:mx-0 md:grid md:grid-cols-[var(--speaker-col)_minmax(0,1fr)_2.25rem] md:gap-3 md:px-2",
           mine && "border-primary bg-primary/10",
           dimmed && "opacity-45",
           activeMatch && "ring-2 ring-inset ring-ring",
@@ -246,12 +253,13 @@ const BlockView = React.memo(
           aria-hidden
           className={cn(
             "hidden pt-[0.2em] text-[0.8em] font-bold uppercase tracking-wide md:block md:break-words",
+            stacked && "md:col-span-3",
             mine && "text-primary",
           )}
         >
           {block.speaker ?? "?"}
         </span>
-        <p className="break-words">
+        <p className={cn("break-words", stacked && "md:col-start-2")}>
           <span
             className={cn(
               "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide md:sr-only",
@@ -439,6 +447,11 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
   };
   const currentScene = scenes.find((scene) => scene.id === blocks[position.first]?.sceneId);
   const fontClass = FONT_SIZES[settings.fontSize] ?? FONT_SIZES[1];
+  // Sprecher-Spalte so breit wie der längste übliche Name; längere Namen stehen darüber.
+  const speakerChars = React.useMemo(() => {
+    const lengths = blocks.map((block) => block.speaker?.length ?? 0).filter((n) => n > 0);
+    return Math.min(SPEAKER_MAX_CHARS, Math.max(8, ...lengths));
+  }, [blocks]);
 
   const pdfUrl = (download: boolean) => {
     const params = new URLSearchParams({ fassung: version.id, regie: settings.directions });
@@ -446,6 +459,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
     if (settings.hiddenCues.length) params.set("ohne", settings.hiddenCues.join(","));
     if (settings.dimOthers) params.set("abblenden", "1");
     params.set("groesse", String(settings.fontSize));
+    if (!settings.pdfCover) params.set("deckblatt", "0");
     if (download) params.set("download", "1");
     return `/api/skript/${version.showId}/pdf?${params}`;
   };
@@ -602,6 +616,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,
           )}
+          style={{ ["--speaker-col" as string]: `${(speakerChars * 0.62).toFixed(2)}em` }}
         >
           {version.status === "draft" ? (
             <p className="-mx-3 mb-2 border-l-[3px] border-warning bg-warning/15 px-3 py-1 text-sm sm:-mx-4 sm:px-4">
@@ -631,6 +646,7 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
                   settings={settings}
                   mine={isRoleBlock(block, roleSet)}
                   cueLine={cueLines.has(index)}
+                  stacked={(block.speaker?.length ?? 0) > SPEAKER_MAX_CHARS}
                   query={trimmed.length >= 2 ? trimmed : ""}
                   activeMatch={index === activeMatch}
                 />
@@ -839,6 +855,14 @@ export function ScriptReader({ data, canManage }: { data: ScriptReaderData; canM
               Mit den aktuellen Einstellungen: gewählte Rollen, Regieanweisungen, sichtbare Hinweise
               und Schriftgröße.
             </p>
+            <label className="flex min-h-11 items-center justify-between gap-3">
+              <span>Mit Deckblatt und Szenenverzeichnis</span>
+              <Switch
+                checked={settings.pdfCover}
+                onCheckedChange={(pdfCover) => update({ pdfCover })}
+                aria-label="PDF mit Deckblatt"
+              />
+            </label>
             <Button asChild variant="outline">
               <a href={pdfUrl(false)} target="_blank" rel="noopener">
                 <PrinterIcon aria-hidden /> PDF öffnen

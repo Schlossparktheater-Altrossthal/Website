@@ -96,6 +96,22 @@ describe("Skript-PDF", () => {
     expect(joined).not.toContain("TON 2 Donner");
     expect(joined).not.toContain("Nebel zieht auf.");
     expect(joined).toContain("[LICHT 1 Wald]");
+    expect(joined).toContain("FASSUNG FÜR");
+    expect(joined).toContain("Atreju");
+  });
+
+  it("Deckblatt mit Szenenverzeichnis, Seitenzählung ohne Deckblatt", async () => {
+    const { text } = await render({});
+    const joined = text.join("\n");
+    expect(joined).toContain("SZENEN");
+    expect(joined).toMatch(/Szene 1 – Wald\s*1/);
+    expect(joined).toContain("1 / 1");
+  });
+
+  it("ohne Deckblatt steht der Titel über dem Text", async () => {
+    const { text } = await render({ cover: false, roleIds: ["a"] });
+    const joined = text.join("\n");
+    expect(joined).not.toContain("SZENEN");
     expect(joined).toContain("Hervorgehoben: Atreju");
   });
 });

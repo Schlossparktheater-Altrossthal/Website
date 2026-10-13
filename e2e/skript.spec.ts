@@ -68,6 +68,10 @@ test.describe("als admin", () => {
         [{ text: "E2E Beta:", style: "bold" }, { text: " Hallo! Es ist anders – TON 2: Tür zu" }],
         [{ text: "E2E Alpha:", style: "bold" }, { text: " Wie geht es?" }],
         [{ text: "E2E Alfa:", style: "bold" }, { text: " Tschüss." }],
+        [
+          { text: "E2E Der alte Antiquar vom Berg:", style: "bold" },
+          { text: " Ein Name, der nicht in die Sprecher-Spalte passt." },
+        ],
         ...Array.from({ length: 40 }, (_, index) => [
           { text: "E2E Beta:", style: "bold" as const },
           { text: ` Ein längerer Satz Nummer ${index + 1}, damit der Leser scrollen muss.` },
