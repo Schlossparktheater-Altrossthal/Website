@@ -57,4 +57,5 @@ den nächsten 14 Tagen geprobt werden, ziehen ihre Abschnitte vor.
 - [x] Phase 3 Dashboard und Abfrage, „Mehr lernen“
 - [x] Phase 4 Probenplan, Vorlesen, Tippmodus
 - [x] Phase 5 Offline-Warteschlange, Wochenziel, Meilensteine
-- [ ] Phase 6 E2E + Screenshots, Release
+- [x] Phase 6 E2E + Screenshots (e2e/lernen.spec.ts, Staging 2026-10-13)
+- [ ] Release (Prod) und Gerätetest (Halten, Wischen, Vorlesen auf iPhone/Android)
