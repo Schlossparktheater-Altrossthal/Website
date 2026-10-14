@@ -187,6 +187,15 @@ function NoteCards({ notes, className }: { notes: ReaderAnnotation[]; className?
   );
 }
 
+/**
+ * Ab Tablet-Breite stehen Hinweise im rechten Rand auf Höhe ihrer Zeile (wie Randnotizen im
+ * Regiebuch): Absatz reserviert rechts Platz, die Hinweiszeile schwebt per float hinein.
+ */
+const CUE_MARGIN_SPACE =
+  "md:group-data-[cue-margin]/reader:flow-root md:group-data-[cue-margin]/reader:pr-[10.5rem]";
+const CUE_MARGIN_ROW =
+  "md:group-data-[cue-margin]/reader:clear-right md:group-data-[cue-margin]/reader:float-right md:group-data-[cue-margin]/reader:-mr-[10.5rem] md:group-data-[cue-margin]/reader:w-[10rem] md:group-data-[cue-margin]/reader:flex-col md:group-data-[cue-margin]/reader:pl-3";
+
 type BlockViewProps = {
   block: ReaderBlock;
   settings: Settings;
@@ -280,6 +289,7 @@ const BlockView = React.memo(
     const followed = new Set(settings.followedCues);
     const cueRow = (entries: { entry: (typeof parts)[number]; number: number | null }[]) => (
       <CueRow
+        className={CUE_MARGIN_ROW}
         followed={followed}
         cues={entries.flatMap(({ entry, number }) =>
           entry.part.kind === "cue" ? [{ part: entry.part, number }] : [],
@@ -317,6 +327,7 @@ const BlockView = React.memo(
           data-block={block.id}
           className={cn(
             "relative scroll-mt-14 py-0.5 pl-4 text-[0.92em] italic leading-snug text-muted-foreground/80 md:pl-[calc(var(--speaker-col)/0.92+1.25rem+3px)]",
+            CUE_MARGIN_SPACE,
             !visible && !notes.length && "hidden",
             settings.directions === "dim" && "opacity-50",
             blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
@@ -355,7 +366,10 @@ const BlockView = React.memo(
         >
           {block.speaker ?? "?"}
         </span>
-        <p data-ink-anchor className={cn("relative break-words", stacked && "md:col-start-2")}>
+        <p
+          data-ink-anchor
+          className={cn("relative break-words", CUE_MARGIN_SPACE, stacked && "md:col-start-2")}
+        >
           <span
             className={cn(
               "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide md:sr-only",
@@ -502,6 +516,10 @@ export function ScriptReader({
       for (const part of block.parts) if (part.kind === "cue") found.add(part.category);
     return (Object.keys(CUE_STYLE) as CueCategory[]).filter((category) => found.has(category));
   }, [blocks]);
+  // Rand für Hinweise nur, wenn sie unter dem Satz stehen und überhaupt welche sichtbar sind.
+  const cueMargin =
+    settings.cueLayout === "below" &&
+    categories.some((category) => !settings.hiddenCues.includes(category));
   const sceneIndex = React.useMemo(() => {
     const first = new Map<string, number>();
     blocks.forEach((block, index) => {
@@ -799,9 +817,11 @@ export function ScriptReader({
         </aside>
         <article
           ref={articleRef}
+          data-cue-margin={cueMargin || undefined}
           onClick={onArticleClick}
           {...pen.handlers}
           className={cn(
+            "group/reader",
             penMode && "cursor-crosshair touch-none select-none",
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,

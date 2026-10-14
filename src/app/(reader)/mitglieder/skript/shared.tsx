@@ -159,13 +159,20 @@ export function CueMarker({ category, number }: { category: CueCategory; number:
 export function CueRow({
   cues,
   followed,
+  className,
 }: {
   cues: { part: Extract<ScriptPart, { kind: "cue" }>; number: number | null }[];
   followed: ReadonlySet<CueCategory>;
+  className?: string;
 }) {
   if (cues.length === 0) return null;
   return (
-    <span className="my-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.85em] not-italic leading-snug">
+    <span
+      className={cn(
+        "my-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.85em] not-italic leading-snug",
+        className,
+      )}
+    >
       {cues.map(({ part, number }, index) => {
         const style = CUE_STYLE[part.category];
         const labelled = part.text.toLowerCase().startsWith(style.label.toLowerCase());
