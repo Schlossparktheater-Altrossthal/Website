@@ -122,7 +122,8 @@ test.describe("als admin", () => {
     await page.goto(`/mitglieder/skript/${versionId}`);
     await expect(page.getByText("Entwurf – das Ensemble")).toBeVisible();
     await expect(page.getByText("Guten Abend.")).toBeVisible();
-    await expect(page.getByText("LICHT 3 Blackout")).toBeVisible();
+    // Hinweiszeile steht je nach Breite unter dem Satz oder im Rand – nur die sichtbare zählt.
+    await expect(page.getByText("LICHT 3 Blackout").locator("visible=true")).toBeVisible();
     // Rolle wählen → unten erscheint die Vorschau auf die nächste Passage
     await clickUntil(page.getByRole("button", { name: "Rollen wählen" }), () =>
       expect(page.getByRole("dialog")).toBeVisible(),
