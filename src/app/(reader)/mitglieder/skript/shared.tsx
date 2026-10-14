@@ -41,6 +41,8 @@ export type Settings = {
   roleIds: string[];
   dimOthers: boolean;
   keepAwake: boolean;
+  /** Probenmodus: Werte vor dem Einschalten, damit Ausschalten sie zurückholt (null = aus). */
+  rehearsalBackup: Pick<Settings, "fontSize" | "keepAwake" | "dimOthers"> | null;
   pdfCover: boolean;
   showNotes: boolean;
 };
@@ -53,6 +55,7 @@ const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
   followedCues: [],
   dimOthers: false,
   keepAwake: true,
+  rehearsalBackup: null,
   pdfCover: true,
   showNotes: true,
 };
@@ -242,7 +245,11 @@ export function SceneList({
               )}
               aria-label={roleScenes.has(scene.id) ? "Gewählte Rolle spielt mit" : undefined}
             />
-            <span className="min-w-0 flex-1 break-words">{scene.title}</span>
+            <span
+              className={cn("min-w-0 flex-1 break-words", compact && "text-[0.8rem] leading-snug")}
+            >
+              {scene.title}
+            </span>
             {scene.minutes ? (
               <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                 {compact ? `${scene.minutes}′` : `ca. ${scene.minutes} min`}

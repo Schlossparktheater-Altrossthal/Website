@@ -22,8 +22,10 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { SCRIPT_MARKER_STYLES } from "@/config/category-colors";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { ReaderAnnotation } from "@/lib/skript/annotation-types";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import {
@@ -206,6 +208,8 @@ type BlockViewProps = {
   cueLine: boolean;
   /** Name zu lang für die Sprecher-Spalte: eigene Zeile über dem Text (Desktop). */
   stacked: boolean;
+  /** Seitenzahl nur am ersten Absatz einer neuen Seite zeigen. */
+  showPage: boolean;
   query: string;
   activeMatch: boolean;
   /** Eigene Markierungen und Notizen an diesem Absatz (bereits nach Einstellung gefiltert). */
@@ -218,7 +222,19 @@ type BlockViewProps = {
 
 const BlockView = React.memo(
   React.forwardRef<HTMLDivElement, BlockViewProps>(function BlockView(
-    { block, settings, mine, cueLine, stacked, query, activeMatch, annotations, selected, ink },
+    {
+      block,
+      settings,
+      mine,
+      cueLine,
+      stacked,
+      showPage,
+      query,
+      activeMatch,
+      annotations,
+      selected,
+      ink,
+    },
     ref,
   ) {
     const hiddenCues = new Set(settings.hiddenCues);
@@ -391,7 +407,7 @@ const BlockView = React.memo(
           {ink ? <InkLayer {...ink} /> : null}
         </p>
         <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">
-          {block.page ?? ""}
+          {showPage ? (block.page ?? "") : ""}
         </span>
         <NoteCards
           notes={notes}
@@ -419,6 +435,21 @@ export function ScriptReader({
 }) {
   const { version, scenes, blocks, roles } = data;
   const [settings, update] = useSettings(version.showId, data.ownRoleIds);
+  // Tablet hochkant: Szenen als Seitenleiste von links statt von unten.
+  const sidePanel = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
+  const setRehearsal = (on: boolean) => {
+    if (on) {
+      const { fontSize, keepAwake, dimOthers } = settings;
+      update({
+        rehearsalBackup: { fontSize, keepAwake, dimOthers },
+        fontSize: Math.max(fontSize, 2),
+        keepAwake: true,
+        dimOthers: true,
+      });
+    } else {
+      update({ ...settings.rehearsalBackup, rehearsalBackup: null });
+    }
+  };
   useWakeLock(settings.keepAwake);
 
   const [panel, setPanel] = React.useState<"scenes" | "roles" | "settings" | null>(null);
@@ -825,7 +856,7 @@ export function ScriptReader({
         ) : null}
       </div>
 
-      <div className="mx-auto max-w-[1240px] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8 lg:px-4">
+      <div className="mx-auto max-w-[1240px] lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-8 lg:px-4">
         <aside className="sticky top-0 hidden max-h-dvh self-start overflow-y-auto pb-6 pt-16 text-sm lg:block">
           <p className="px-2 pb-1 text-xs text-muted-foreground">Szenen</p>
           <SceneList
@@ -847,7 +878,14 @@ export function ScriptReader({
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,
           )}
-          style={{ ["--speaker-col" as string]: `${(speakerChars * 0.78).toFixed(2)}em` }}
+          style={{
+            ["--speaker-col" as string]: `${(speakerChars * 0.78).toFixed(2)}em`,
+            // Szenenüberschrift klebt unter der Kopfleiste bzw. oben, wenn die Leiste weg ist.
+            ["--chrome-h" as string]:
+              chromeHidden && !searchOpen && !penMode
+                ? "0px"
+                : "calc(3rem + env(safe-area-inset-top))",
+          }}
         >
           {newVersionHint && previous ? (
             <div className="-mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-[3px] border-primary bg-primary/10 px-3 py-2 text-sm sm:-mx-4 sm:px-4 md:mx-0 md:px-3">
@@ -900,7 +938,7 @@ export function ScriptReader({
                 {scene ? (
                   <h2
                     id={`szene-${scene.id}`}
-                    className="mb-1 mt-8 scroll-mt-14 border-b-2 border-foreground pb-1 text-[0.85em] font-bold uppercase tracking-wider first:mt-2"
+                    className="sticky top-[var(--chrome-h)] z-10 mb-1 mt-8 scroll-mt-14 border-b-2 border-foreground bg-background/95 pb-1 pt-1 text-[0.85em] font-bold uppercase tracking-wider backdrop-blur transition-[top] duration-200 first:mt-2"
                   >
                     {scene.title}
                   </h2>
@@ -914,6 +952,7 @@ export function ScriptReader({
                   mine={isRoleBlock(block, roleSet)}
                   cueLine={cueLines.has(index)}
                   stacked={(block.speaker?.length ?? 0) > SPEAKER_MAX_CHARS}
+                  showPage={index === 0 || blocks[index - 1].page !== block.page}
                   query={trimmed.length >= 2 ? trimmed : ""}
                   activeMatch={index === activeMatch}
                   annotations={
@@ -949,7 +988,7 @@ export function ScriptReader({
             "border-t border-border",
         )}
       >
-        <div className="mx-auto flex max-w-[1240px] flex-col divide-y divide-border/60 lg:pl-[calc(15rem+3rem)] lg:pr-4">
+        <div className="mx-auto flex max-w-[1240px] flex-col divide-y divide-border/60 lg:pl-[calc(13rem+3rem)] lg:pr-4">
           {penMode ? (
             <PenBar
               settings={penSettings}
@@ -998,25 +1037,49 @@ export function ScriptReader({
         </div>
       </div>
 
-      <BottomSheet
-        open={panel === "scenes"}
-        onOpenChange={(open) => setPanel(open ? "scenes" : null)}
-        title="Szenen"
-        description="Zu einer Szene springen"
-      >
-        <SceneList
-          scenes={scenes}
-          currentId={currentScene?.id}
-          roleScenes={roleScenes}
-          onPick={(id) => {
-            setPanel(null);
-            window.setTimeout(() => jumpToScene(id), 50);
-          }}
-        />
-        <p className="pt-3 text-xs text-muted-foreground">
-          Dauer geschätzt aus der Wortzahl. Punkt = eine gewählte Rolle spricht in der Szene.
-        </p>
-      </BottomSheet>
+      {sidePanel ? (
+        <Sheet open={panel === "scenes"} onOpenChange={(open) => setPanel(open ? "scenes" : null)}>
+          <SheetContent
+            side="left"
+            className="w-80 overflow-y-auto p-4 pt-[calc(1rem+env(safe-area-inset-top))]"
+          >
+            <SheetTitle className="text-base">Szenen</SheetTitle>
+            <SheetDescription className="sr-only">Zu einer Szene springen</SheetDescription>
+            <SceneList
+              scenes={scenes}
+              currentId={currentScene?.id}
+              roleScenes={roleScenes}
+              onPick={(id) => {
+                setPanel(null);
+                window.setTimeout(() => jumpToScene(id), 50);
+              }}
+            />
+            <p className="pt-3 text-xs text-muted-foreground">
+              Dauer geschätzt aus der Wortzahl. Punkt = eine gewählte Rolle spricht in der Szene.
+            </p>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <BottomSheet
+          open={panel === "scenes"}
+          onOpenChange={(open) => setPanel(open ? "scenes" : null)}
+          title="Szenen"
+          description="Zu einer Szene springen"
+        >
+          <SceneList
+            scenes={scenes}
+            currentId={currentScene?.id}
+            roleScenes={roleScenes}
+            onPick={(id) => {
+              setPanel(null);
+              window.setTimeout(() => jumpToScene(id), 50);
+            }}
+          />
+          <p className="pt-3 text-xs text-muted-foreground">
+            Dauer geschätzt aus der Wortzahl. Punkt = eine gewählte Rolle spricht in der Szene.
+          </p>
+        </BottomSheet>
+      )}
 
       <BottomSheet
         open={panel === "roles"}
@@ -1109,6 +1172,19 @@ export function ScriptReader({
               Stift
             </Button>
           </section>
+          <label className="flex min-h-11 items-center justify-between gap-3">
+            <span>
+              <span className="block font-medium">Probenmodus</span>
+              <span className="block text-xs text-muted-foreground">
+                Größere Schrift, Bildschirm bleibt an, fremde Repliken abgeblendet
+              </span>
+            </span>
+            <Switch
+              checked={settings.rehearsalBackup !== null}
+              onCheckedChange={setRehearsal}
+              aria-label="Probenmodus"
+            />
+          </label>
           <section className="space-y-2">
             <h3 className="font-medium">Schriftgröße</h3>
             <SegmentedControl
