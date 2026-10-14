@@ -5,8 +5,8 @@ Ausgangslage: Screenshots Staging (390 / 834 / 1024 px), Fassung „Stand 15.6.2
 ## Schritte
 
 1. **Rollen-Spalte begrenzen** – `SPEAKER_MAX_CHARS` 18 → 11; längere Namen stehen über der Replik. ✅ 2026-10-14
-2. **Regie abstufen** – Regie immer komplett (Entscheidung 2026-10-14: keine Teil-Stufen wie „kurz“ oder „nur im Text“); bestehende Einstellung zeigen/abblenden/aus bleibt, nur die Darstellung bei „zeigen“ wird ruhiger (etwas kleiner, gedämpfte Farbe).
-3. **Eigene Rolle hervorheben** – eigene Replik mit Hintergrund + Rand, fremde standardmäßig abgeblendet, präsenter „Meine nächste Zeile“.
+2. **Regie abstufen** – Regie immer komplett (Entscheidung 2026-10-14: keine Teil-Stufen wie „kurz“ oder „nur im Text“); bestehende Einstellung zeigen/abblenden/aus bleibt, nur die Darstellung bei „zeigen“ wird ruhiger (etwas kleiner, gedämpfte Farbe). ✅ 2026-10-14
+3. **Eigene Rolle hervorheben** – gibt es schon (Hintergrund, Rand, Name farbig, Stichwort unterstrichen, Abblenden); auf Staging geprüft 2026-10-14, nichts zu tun.
 4. **Technik-Hinweise ohne Tippen** (Entscheidung: keine antippbaren Punkte – beim Lesen soll nichts bedient werden):
    - Hinweis nicht im Satz, sondern als schmale Zeile **unter dem Satz**, in dem er steht; im Text nur ein feiner Strich in Gewerksfarbe (nicht klickbar).
    - Mehrere Hinweise im selben Satz: hochgestellte Ziffern am Strich und in der Hinweiszeile.
