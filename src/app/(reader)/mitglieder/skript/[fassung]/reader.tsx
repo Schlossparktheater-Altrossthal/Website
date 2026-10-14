@@ -272,7 +272,7 @@ const BlockView = React.memo(
           ref={ref}
           data-block={block.id}
           className={cn(
-            "relative scroll-mt-14 py-0.5 pl-4 text-[0.92em] italic leading-snug text-muted-foreground/80 md:pl-[calc(var(--speaker-col)+1.25rem+3px)]",
+            "relative scroll-mt-14 py-0.5 pl-4 text-[0.92em] italic leading-snug text-muted-foreground/80 md:pl-[calc(var(--speaker-col)/0.92+1.25rem+3px)]",
             !visible && !notes.length && "hidden",
             settings.directions === "dim" && "opacity-50",
             blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
