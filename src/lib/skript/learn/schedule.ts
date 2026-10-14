@@ -35,6 +35,29 @@ export type CardState = {
 const scheduler = fsrs(
   generatorParameters({ request_retention: 0.9, maximum_interval: 365, enable_fuzz: true }),
 );
+/** Endspurt vor der Premiere: höheres Erinnerungsziel, also kürzere Abstände. */
+const finalScheduler = fsrs(
+  generatorParameters({ request_retention: 0.95, maximum_interval: 365, enable_fuzz: true }),
+);
+
+/** So viele Tage vor der Premiere beginnt der Endspurt. */
+export const FINAL_SPURT_DAYS = 14;
+/** Letzte Wiederholung spätestens so viele Stunden vor der Premiere. */
+const PREMIERE_MARGIN_MS = 12 * 3_600_000;
+
+export type ReviewOptions = {
+  changed?: boolean;
+  stage?: Stage | null;
+  /** Premiere des Stücks (ISO); Abstände enden davor, im Endspurt mit 95 % Ziel. */
+  premiere?: string | null;
+};
+
+/** Endspurt aktiv? (Premiere in der Zukunft und höchstens FINAL_SPURT_DAYS entfernt) */
+export function inFinalSpurt(premiere: string | null | undefined, at: Date) {
+  if (!premiere) return false;
+  const left = Date.parse(premiere) - at.getTime();
+  return left > 0 && left <= FINAL_SPURT_DAYS * 86_400_000;
+}
 
 function toCard(state: CardState | null, now: Date): Card {
   if (!state) return createEmptyCard(now);
@@ -66,8 +89,26 @@ function fromCard(card: Card): CardState {
   };
 }
 
-export function applyRating(state: CardState | null, rating: LearnRating, at: Date): CardState {
-  return fromCard(scheduler.next(toCard(state, at), at, rating as Grade).card);
+export function applyRating(
+  state: CardState | null,
+  rating: LearnRating,
+  at: Date,
+  final = false,
+): CardState {
+  const engine = final ? finalScheduler : scheduler;
+  return fromCard(engine.next(toCard(state, at), at, rating as Grade).card);
+}
+
+/** Nächste Abfrage nicht erst nach der Premiere (Stabilität bleibt, nur der Termin rückt vor). */
+function capToPremiere(next: CardState, at: Date, premiere: string | null | undefined): CardState {
+  if (!premiere) return next;
+  const latest = Date.parse(premiere) - PREMIERE_MARGIN_MS;
+  if (latest <= at.getTime() || Date.parse(next.due) <= latest) return next;
+  return {
+    ...next,
+    due: new Date(latest).toISOString(),
+    scheduledDays: Math.max(0, Math.round((latest - at.getTime()) / 86_400_000)),
+  };
 }
 
 /** Geänderter Wortlaut: alte Stabilität höchstens so viele Tage, nächste Abfrage spätestens morgen. */
@@ -92,23 +133,27 @@ export function applyReview(
   state: CardState | null,
   rating: LearnRating,
   at: Date,
-  options: { changed?: boolean; stage?: Stage | null } = {},
+  options: ReviewOptions = {},
 ): CardState {
   const graded = capRating(rating, options.stage);
-  if (!options.changed || !state) return applyRating(state, graded, at);
+  const final = inFinalSpurt(options.premiere, at);
+  if (!options.changed || !state) {
+    return capToPremiere(applyRating(state, graded, at, final), at, options.premiere);
+  }
   const weakened: CardState =
     state.state === State.Review
       ? { ...state, stability: Math.min(state.stability, CHANGED_MAX_STABILITY) }
       : state;
-  const next = applyRating(weakened, graded, at);
+  const next = applyRating(weakened, graded, at, final);
   const latest = at.getTime() + CHANGED_MAX_DUE_MS;
-  if (new Date(next.due).getTime() <= latest) return next;
-  return {
+  if (new Date(next.due).getTime() <= latest) return capToPremiere(next, at, options.premiere);
+  const capped = {
     ...next,
     due: new Date(latest).toISOString(),
     scheduledDays: 1,
     stability: Math.min(next.stability, CHANGED_MAX_STABILITY),
   };
+  return capToPremiere(capped, at, options.premiere);
 }
 
 /** Wahrscheinlichkeit (0–1), den Abschnitt zum Zeitpunkt `at` noch zu können; neu = 0. */
@@ -118,11 +163,7 @@ export function retrievability(state: CardState | null, at: Date): number {
 }
 
 /** Nächster Abstand je Bewertung (für die Knöpfe der Abfrage), mit denselben Regeln wie beim Speichern. */
-export function previewIntervals(
-  state: CardState | null,
-  now: Date,
-  options: { changed?: boolean; stage?: Stage | null } = {},
-) {
+export function previewIntervals(state: CardState | null, now: Date, options: ReviewOptions = {}) {
   const result = {} as Record<LearnRating, number>;
   for (const rating of [Rating.Again, Rating.Hard, Rating.Good, Rating.Easy] as const) {
     const next = applyReview(state, rating as LearnRating, now, options);

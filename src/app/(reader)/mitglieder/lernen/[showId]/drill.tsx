@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 import { FONT_SIZES } from "../../skript/shared";
 import { CountUp, RatingFlash, useRatingFlash } from "./celebrate";
+import { ChangeDiff } from "./change-diff";
 import { MaskedBlockText, useHold } from "./masked";
 import {
   unitCard,
@@ -59,6 +60,7 @@ export function Drill({
   settings,
   title,
   sureNow,
+  premiere,
   onCommit,
   onExit,
   onMore,
@@ -71,6 +73,8 @@ export function Drill({
   title: string;
   /** Aktuelle Textsicherheit (0–1), für den Zuwachs am Rundenende. */
   sureNow: number;
+  /** Premiere (ISO) – Endspurt-Regeln wie beim Speichern. */
+  premiere: string | null;
   onCommit: (unit: Unit, rating: LearnRating, meta: ReviewMeta) => void;
   onExit: () => void;
   /** Weitere Abschnitte nach dem Ende („Mehr lernen“, L5); leer = nichts mehr da. */
@@ -114,7 +118,11 @@ export function Drill({
   const stage = stageInfo.stage === "full" ? "hidden" : stageInfo.stage;
   const suggestion = practice.result();
 
-  React.useEffect(() => setPhase("ask"), [index, unit?.id]);
+  const [showDiff, setShowDiff] = React.useState(false);
+  React.useEffect(() => {
+    setPhase("ask");
+    setShowDiff(false);
+  }, [index, unit?.id]);
   React.useEffect(() => {
     if (practice.progress.whole || practice.solved) setPhase("rate");
   }, [practice.progress.whole, practice.solved]);
@@ -124,8 +132,9 @@ export function Drill({
     return previewIntervals(unitCard(unit, cards).card, new Date(), {
       changed: stageInfo.changed,
       stage,
+      premiere,
     });
-  }, [unit, cards, stageInfo.changed, stage]);
+  }, [unit, cards, stageInfo.changed, stage, premiere]);
 
   // Noch im Lernschritt (neu, „Nochmal“) → in dieser Runde wiederholen statt erst beim nächsten Mal.
   const requeue = (target: Unit, position: number) =>
@@ -138,7 +147,9 @@ export function Drill({
   const stillLearning = (target: Unit, rating: LearnRating) => {
     if (rating === 1) return true;
     const { card, changed } = unitCard(target, cards);
-    return applyReview(card, rating, new Date(), { changed, stage }).state !== State.Review;
+    return (
+      applyReview(card, rating, new Date(), { changed, stage, premiere }).state !== State.Review
+    );
   };
 
   const advance = (rating: LearnRating) => {
@@ -361,6 +372,17 @@ export function Drill({
                 />
               </p>
             </section>
+          ) : null}
+          {unit && stageInfo.changed ? (
+            <ChangeDiff
+              before={unitCard(unit, cards).card?.text}
+              after={unit.items[0]?.text ?? ""}
+              open={showDiff || phase === "rate"}
+              onOpen={() => {
+                practice.revealAll();
+                setShowDiff(true);
+              }}
+            />
           ) : null}
         </main>
       )}

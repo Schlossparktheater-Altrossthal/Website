@@ -1,4 +1,12 @@
-import { confidence, dayKey, type LearnItem, type QueueInput } from "./plan";
+import {
+  confidence,
+  dayKey,
+  sceneProgress,
+  weekStart,
+  type LearnItem,
+  type QueueInput,
+} from "./plan";
+import { applyRating, retrievability, type CardState, type LearnRating } from "./schedule";
 
 /** Auswertungen für die Lern-Statistik (docs/Plan/lernmodus-plan.md, Runde 2); reine Logik. */
 
@@ -99,4 +107,177 @@ export function cueWeaknesses(
     if (drill - flow >= 0.75) result.push({ unitId, sceneId: stat.sceneId, flow, drill });
   }
   return result.sort((a, b) => b.drill - b.flow - (a.drill - a.flow)).slice(0, limit);
+}
+
+export type ConfidencePoint = { day: string; value: number };
+
+/**
+ * Verlauf der Textsicherheit: Abfragen je Karte nachspielen und am Ende jedes Tages die mittlere
+ * Abrufwahrscheinlichkeit messen (wie `confidence`, ohne Sonderregeln für geänderten Text).
+ * Beginnt am ersten Lerntag innerhalb von `days` Tagen.
+ */
+export function confidenceHistory(
+  input: QueueInput,
+  history: readonly HistoryEntry[],
+  days = 56,
+): ConfidencePoint[] {
+  const units = new Map<string, string[]>();
+  for (const item of input.items) {
+    const id = unitOf(item);
+    units.set(id, [...(units.get(id) ?? []), item.key]);
+  }
+  if (!units.size) return [];
+  const byKey = new Map<string, HistoryEntry[]>();
+  for (const entry of [...history].sort((a, b) => a.at.localeCompare(b.at))) {
+    byKey.set(entry.key, [...(byKey.get(entry.key) ?? []), entry]);
+  }
+  const first = history.reduce<string | null>(
+    (min, entry) => (min === null || entry.at < min ? entry.at : min),
+    null,
+  );
+  if (!first) return [];
+  const start = new Date(
+    Math.max(Date.parse(first), input.now.getTime() - (days - 1) * 86_400_000),
+  );
+  start.setHours(0, 0, 0, 0);
+
+  const states = new Map<string, CardState | null>();
+  const cursor = new Map<string, number>();
+  const points: ConfidencePoint[] = [];
+  for (let day = new Date(start); day <= input.now; day.setDate(day.getDate() + 1)) {
+    const end = new Date(day);
+    end.setHours(23, 59, 59, 999);
+    const at = end > input.now ? input.now : end;
+    let sum = 0;
+    for (const keys of units.values()) {
+      let weakest = 1;
+      for (const key of keys) {
+        const entries = byKey.get(key) ?? [];
+        let index = cursor.get(key) ?? 0;
+        let state = states.get(key) ?? null;
+        while (index < entries.length && Date.parse(entries[index].at) <= at.getTime()) {
+          state = applyRating(
+            state,
+            entries[index].rating as LearnRating,
+            new Date(entries[index].at),
+          );
+          index++;
+        }
+        cursor.set(key, index);
+        states.set(key, state);
+        weakest = Math.min(weakest, retrievability(state, at));
+      }
+      sum += weakest;
+    }
+    points.push({ day: dayKey(day), value: sum / units.size });
+  }
+  return points;
+}
+
+export type Milestone = {
+  id: string;
+  label: string;
+  detail: string;
+  current: number;
+  target: number;
+  achieved: boolean;
+};
+
+/** Wochen (Mo–So) im Verlauf, in denen das Wochenziel (Lerntage) erreicht wurde. */
+export function goalWeeks(history: readonly HistoryEntry[], weeklyDays: number) {
+  const weeks = new Map<string, Set<string>>();
+  for (const entry of history) {
+    const date = new Date(entry.at);
+    const week = dayKey(weekStart(date));
+    weeks.set(week, (weeks.get(week) ?? new Set()).add(dayKey(date)));
+  }
+  return [...weeks.values()].filter((daysOfWeek) => daysOfWeek.size >= weeklyDays).length;
+}
+
+/** Meilensteine für Statistik und Feier; alle aus vorhandenen Daten berechnet. */
+export function milestones(
+  input: QueueInput,
+  history: readonly HistoryEntry[],
+  weeklyDays: number,
+): Milestone[] {
+  const progress = sceneProgress(input);
+  const units = progress.reduce((sum, entry) => sum + entry.total, 0);
+  const solid = progress.reduce((sum, entry) => sum + entry.solid, 0);
+  const started = progress.reduce((sum, entry) => sum + entry.total - entry.new, 0);
+  const scenes = progress.length;
+  const solidScenes = progress.filter((entry) => entry.total && entry.solid === entry.total).length;
+  const reviews = input.items.reduce(
+    (sum, item) => sum + (input.cards.get(item.key)?.reps ?? 0),
+    0,
+  );
+  const weeks = goalWeeks(history, weeklyDays);
+  const half = Math.max(1, Math.ceil(scenes / 2));
+  const list: Omit<Milestone, "achieved">[] = [
+    {
+      id: "erste-stelle",
+      label: "Erste Stelle sitzt",
+      detail: "Eine Stelle fest im Kopf",
+      current: Math.min(solid, 1),
+      target: 1,
+    },
+    {
+      id: "alles-angefangen",
+      label: "Alles angefangen",
+      detail: "Jede Stelle einmal gelernt",
+      current: started,
+      target: units,
+    },
+    {
+      id: "erste-szene",
+      label: "Erste Szene sitzt",
+      detail: "Alle Stellen einer Szene",
+      current: Math.min(solidScenes, 1),
+      target: 1,
+    },
+    {
+      id: "halbzeit",
+      label: "Halbzeit",
+      detail: `${half} von ${scenes} Szenen sitzen`,
+      current: Math.min(solidScenes, half),
+      target: half,
+    },
+    {
+      id: "ganze-rolle",
+      label: "Ganze Rolle sitzt",
+      detail: "Alle Szenen sitzen",
+      current: solidScenes,
+      target: scenes,
+    },
+    {
+      id: "abfragen-100",
+      label: "100 Abfragen",
+      detail: "Fleißig geübt",
+      current: Math.min(reviews, 100),
+      target: 100,
+    },
+    {
+      id: "abfragen-500",
+      label: "500 Abfragen",
+      detail: "Textprofi",
+      current: Math.min(reviews, 500),
+      target: 500,
+    },
+    {
+      id: "wochenziel",
+      label: "Wochenziel geschafft",
+      detail: `${weeklyDays} Lerntage in einer Woche`,
+      current: Math.min(weeks, 1),
+      target: 1,
+    },
+    {
+      id: "wochenziel-3",
+      label: "Dreimal Wochenziel",
+      detail: "In drei Wochen geschafft",
+      current: Math.min(weeks, 3),
+      target: 3,
+    },
+  ];
+  return list
+    .filter((entry) => entry.target > 0)
+    .map((entry) => ({ ...entry, achieved: entry.current >= entry.target }));
 }

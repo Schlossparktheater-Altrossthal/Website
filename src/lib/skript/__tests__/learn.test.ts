@@ -21,6 +21,7 @@ import {
   autoRating,
   autoStage,
   capRating,
+  inFinalSpurt,
   progressOf,
 } from "../learn/schedule";
 import type { ScriptPart } from "../types";
@@ -155,6 +156,36 @@ function card(due: string, overrides: Partial<StoredCard> = {}): StoredCard {
     ...overrides,
   };
 }
+
+describe("Endspurt vor der Premiere", () => {
+  const now = new Date("2026-10-13T10:00:00Z");
+
+  it("nächste Abfrage spätestens 12 h vor der Premiere", () => {
+    let state = applyRating(null, 3, now);
+    for (let i = 0; i < 4; i++) state = applyRating(state, 3, new Date(state.due));
+    const at = new Date(state.due);
+    const premiere = new Date(at.getTime() + 20 * 86_400_000).toISOString();
+    const next = applyReview(state, 3, at, { stage: "hidden", premiere });
+    expect(Date.parse(next.due)).toBeLessThanOrEqual(Date.parse(premiere) - 12 * 3_600_000);
+  });
+
+  it("im Endspurt kürzere Abstände, nach der Premiere normale", () => {
+    let state = applyRating(null, 3, now);
+    state = applyRating(state, 3, new Date(now.getTime() + 600_000));
+    const at = new Date(state.due);
+    const far = new Date(at.getTime() + 300 * 86_400_000).toISOString();
+    const soon = new Date(at.getTime() + 10 * 86_400_000).toISOString();
+    expect(inFinalSpurt(soon, at)).toBe(true);
+    expect(inFinalSpurt(far, at)).toBe(false);
+    const normal = applyReview(state, 3, at, { stage: "hidden", premiere: far });
+    const final = applyReview(state, 3, at, { stage: "hidden", premiere: soon });
+    expect(final.scheduledDays).toBeLessThan(normal.scheduledDays);
+    const past = new Date(at.getTime() - 86_400_000).toISOString();
+    expect(applyReview(state, 3, at, { stage: "hidden", premiere: past }).scheduledDays).toBe(
+      applyReview(state, 3, at, { stage: "hidden" }).scheduledDays,
+    );
+  });
+});
 
 describe("Warteschlange", () => {
   const now = new Date("2026-10-13T10:00:00Z");

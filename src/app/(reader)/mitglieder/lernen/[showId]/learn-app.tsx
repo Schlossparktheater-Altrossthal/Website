@@ -26,6 +26,7 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Switch } from "@/components/ui/switch";
+import { milestones } from "@/lib/skript/learn/insights";
 import {
   SECONDS_PER_ITEM,
   confidence,
@@ -37,11 +38,16 @@ import {
   weekDays,
   type QueueInput,
 } from "@/lib/skript/learn/plan";
-import { STAGE_LABEL, type LearnRating, type Stage } from "@/lib/skript/learn/schedule";
+import {
+  STAGE_LABEL,
+  inFinalSpurt,
+  type LearnRating,
+  type Stage,
+} from "@/lib/skript/learn/schedule";
 import type { LearnPageData } from "@/lib/skript/learn/service";
 import { cn } from "@/lib/utils";
 
-import { SKRIPT_PATH } from "../../skript/shared";
+import { SKRIPT_PATH, readStored, writeStored } from "../../skript/shared";
 import { resetRoleAction, setWeeklyDaysAction } from "./actions";
 import { Celebration } from "./celebrate";
 import { Drill } from "./drill";
@@ -98,6 +104,25 @@ export function LearnApp({ data }: { data: LearnPageData }) {
     [items, store.cards, rehearsals, now],
   );
 
+  // Offline: Seite beim Öffnen in den Cache des Service Workers legen (auch wenn sie per
+  // Client-Navigation geöffnet wurde) und den Titel für die Offline-Seite merken.
+  const [offlineReady, setOfflineReady] = React.useState(false);
+  React.useEffect(() => {
+    const path = window.location.pathname;
+    const titles = readStored<Record<string, string>>("lernen-offline-titel") ?? {};
+    writeStored("lernen-offline-titel", { ...titles, [path]: reader.version.showTitle });
+    if (!("caches" in window)) return;
+    if (!navigator.onLine) {
+      void caches.match(path, { cacheName: "lernen-pages" }).then((hit) => setOfflineReady(!!hit));
+      return;
+    }
+    caches
+      .open("lernen-pages")
+      .then((cache) => cache.add(new Request(path, { credentials: "same-origin" })))
+      .then(() => setOfflineReady(true))
+      .catch((error) => console.warn("[lernen] Offline-Kopie nicht gespeichert", error));
+  }, [reader.version.showTitle]);
+
   // Zurück-Taste des Telefons führt aus Fluss/Abfrage zum Dashboard.
   const setView = React.useCallback((next: View) => {
     if (next.kind !== "dashboard") window.history.pushState({ lernen: next.kind }, "");
@@ -115,7 +140,9 @@ export function LearnApp({ data }: { data: LearnPageData }) {
   }, []);
 
   // Meilenstein: Szene sitzt komplett → kurze Feier (Vorhang auf).
-  const [celebrate, setCelebrate] = React.useState<string | null>(null);
+  const [celebrate, setCelebrate] = React.useState<{ title: string; description: string } | null>(
+    null,
+  );
   const endCelebration = React.useCallback(() => setCelebrate(null), []);
   const solidScenes = React.useRef<Set<string> | null>(null);
   const progress = React.useMemo(() => sceneProgress(input), [input]);
@@ -126,7 +153,11 @@ export function LearnApp({ data }: { data: LearnPageData }) {
     if (solidScenes.current) {
       for (const id of solid) {
         if (!solidScenes.current.has(id)) {
-          setCelebrate(reader.scenes.find((scene) => scene.id === id)?.title ?? "Szene");
+          const title = reader.scenes.find((scene) => scene.id === id)?.title ?? "Szene";
+          setCelebrate({
+            title: `${title} sitzt!`,
+            description: "Alle deine Stellen sind fest im Kopf.",
+          });
         }
       }
     }
@@ -139,13 +170,31 @@ export function LearnApp({ data }: { data: LearnPageData }) {
   );
 
   const sureNow = React.useMemo(() => confidence(input), [input]);
+
+  // Neu erreichte Meilensteine feiern; beim allerersten Laden nur merken (keine Feier für Altes).
+  const badges = React.useMemo(
+    () => milestones(input, store.history, weeklyDays),
+    [input, store.history, weeklyDays],
+  );
+  React.useEffect(() => {
+    const key = `lernen-meilensteine:${showId}:${[...roleIds].sort().join(",")}`;
+    const known = readStored<string[]>(key);
+    const achieved = badges.filter((badge) => badge.achieved);
+    const fresh = known ? achieved.filter((badge) => !known.includes(badge.id)) : [];
+    if (!known || fresh.length) {
+      writeStored(key, [...new Set([...(known ?? []), ...achieved.map((badge) => badge.id)])]);
+    }
+    const latest = fresh.at(-1);
+    if (latest) setCelebrate({ title: latest.label, description: latest.detail });
+  }, [badges, showId, roleIds]);
+
   const celebration = (
     <AnimatePresence>
       {celebrate ? (
         <Celebration
-          key={celebrate}
-          title={`${celebrate} sitzt!`}
-          description="Alle deine Stellen sind fest im Kopf."
+          key={celebrate.title}
+          title={celebrate.title}
+          description={celebrate.description}
           onDone={endCelebration}
         />
       ) : null}
@@ -199,6 +248,7 @@ export function LearnApp({ data }: { data: LearnPageData }) {
           settings={settings}
           title={view.title}
           sureNow={sureNow}
+          premiere={data.premiereAt}
           onCommit={commit}
           onExit={exit}
           onMore={(seen) => {
@@ -222,6 +272,7 @@ export function LearnApp({ data }: { data: LearnPageData }) {
         input={input}
         history={store.history}
         byId={byId}
+        weeklyDays={weeklyDays}
         onExit={exit}
         onDrill={(drillUnits, title) => setView({ kind: "drill", units: drillUnits, title })}
         onFlow={(sceneId) => setView({ kind: "flow", sceneId })}
@@ -244,7 +295,12 @@ export function LearnApp({ data }: { data: LearnPageData }) {
         offline={store.offline}
         onWeeklyDays={(days) => {
           setWeeklyDays(days);
-          void setWeeklyDaysAction(showId, days);
+          // Ohne Netz später nachholen (einmal, mit dem zuletzt gewählten Wert).
+          const save = () =>
+            setWeeklyDaysAction(showId, days).catch(() =>
+              window.addEventListener("online", () => void save(), { once: true }),
+            );
+          void save();
         }}
         onFlow={(sceneId) => setView({ kind: "flow", sceneId })}
         onDrill={(drillUnits, title) => setView({ kind: "drill", units: drillUnits, title })}
@@ -267,8 +323,12 @@ export function LearnApp({ data }: { data: LearnPageData }) {
         settings={settings}
         onChange={updateSettings}
         roles={reader.roles.filter((role) => roleIds.includes(role.id))}
+        offlineReady={offlineReady}
         onReset={async (roleId) => {
-          const result = await resetRoleAction(showId, roleId);
+          const result = await resetRoleAction(showId, roleId).catch(() => ({
+            ok: false as const,
+            error: "Zurücksetzen geht nur mit Verbindung.",
+          }));
           if (result.ok) {
             store.resetRoleLocal(roleId);
             toast.success("Lernstand zurückgesetzt");
@@ -423,6 +483,15 @@ function Dashboard({
         ) : (
           <>
             <section className="bg-primary/10 px-4 py-5" data-testid="lernen-heute">
+              {inFinalSpurt(data.premiereAt, input.now) ? (
+                <p
+                  className="mb-3 border-l-[3px] border-primary bg-primary/10 px-3 py-2 text-sm"
+                  data-testid="lernen-endspurt"
+                >
+                  <strong>Endspurt:</strong> Premiere {daysUntil(data.premiereAt!, input.now)} –
+                  Wiederholungen kommen jetzt öfter, damit der Text am Abend sicher sitzt.
+                </p>
+              ) : null}
               {changedUnits.length ? (
                 <p className="mb-3 border-l-[3px] border-warning bg-warning/10 px-3 py-2 text-sm">
                   In der neuen Fassung haben sich{" "}
@@ -854,6 +923,7 @@ function LearnSettingsSheet({
   settings,
   onChange,
   roles,
+  offlineReady,
   onReset,
 }: {
   open: boolean;
@@ -861,6 +931,7 @@ function LearnSettingsSheet({
   settings: ReturnType<typeof useLearnSettings>[0];
   onChange: ReturnType<typeof useLearnSettings>[1];
   roles: LearnPageData["reader"]["roles"];
+  offlineReady: boolean;
   onReset: (roleId: string) => Promise<void>;
 }) {
   const [confirm, setConfirm] = React.useState<{ id: string; name: string } | null>(null);
@@ -928,6 +999,16 @@ function LearnSettingsSheet({
           </span>
           <Switch checked={settings.typing} onCheckedChange={(typing) => onChange({ typing })} />
         </label>
+        <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">
+          <p className="font-medium">
+            {offlineReady ? "Offline nutzbar ✓" : "Offline noch nicht bereit"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {offlineReady
+              ? "Diese Seite geht auch ohne Netz (z. B. im Zug). Bewertungen werden nachgereicht, sobald wieder Verbindung da ist."
+              : "Einmal mit Verbindung öffnen, dann geht Lernen auch ohne Netz."}
+          </p>
+        </div>
         {roles.length ? (
           <div className="space-y-2 border-t border-border pt-4">
             <p className="text-sm font-medium">Lernstand zurücksetzen</p>

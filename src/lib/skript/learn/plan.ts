@@ -28,11 +28,18 @@ export type LearnItem = {
   chunk: number;
   hash: string;
   words: number;
+  /** Wortlaut des Abschnitts (für „was hat sich geändert“). */
+  text?: string;
   /** Position im Skript (Absatz-Index), für die Reihenfolge. */
   order: number;
 };
 
-export type StoredCard = CardState & { textHash: string; createdAt: string };
+export type StoredCard = CardState & {
+  textHash: string;
+  createdAt: string;
+  /** Wortlaut beim letzten Abfragen (fehlt bei älteren Karten). */
+  text?: string | null;
+};
 
 export function itemKey(roleId: string, lineageId: string, chunk: number) {
   return `${roleId}|${lineageId}|${chunk}`;

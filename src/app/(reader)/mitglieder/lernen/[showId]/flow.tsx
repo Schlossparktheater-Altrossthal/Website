@@ -11,12 +11,18 @@ import {
 import { Button } from "@/components/ui/button";
 import type { TokenizedBlock } from "@/lib/skript/learn/chunks";
 import type { StoredCard } from "@/lib/skript/learn/plan";
-import { STAGE_LABEL, type LearnRating } from "@/lib/skript/learn/schedule";
+import {
+  SOLID_RETRIEVABILITY,
+  STAGE_LABEL,
+  retrievability,
+  type LearnRating,
+} from "@/lib/skript/learn/schedule";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import { cn } from "@/lib/utils";
 
 import { FONT_SIZES } from "../../skript/shared";
 import { RatingFlash, useRatingFlash } from "./celebrate";
+import { ChangeDiff } from "./change-diff";
 import { MaskedBlockText, useHold } from "./masked";
 import {
   unitCard,
@@ -115,9 +121,21 @@ export function SceneFlow({
     stageRef.current.set(unit.id, info);
     return info;
   }, [unit, cards, settings.stage, openedAt]);
+  // Sicherheit je eigener Replik beim Öffnen der Szene (schwächster Abschnitt).
+  const blockSure = (blockId: string) => {
+    const blockUnits = allUnits.filter((candidate) => candidate.block.id === blockId);
+    if (!blockUnits.length) return null;
+    return Math.min(
+      ...blockUnits.map((candidate) =>
+        retrievability(unitCard(candidate, cards).card, new Date(openedAt)),
+      ),
+    );
+  };
   const shownAt = React.useRef(0);
+  const [showDiff, setShowDiff] = React.useState(false);
   React.useEffect(() => {
     shownAt.current = Date.now();
+    setShowDiff(false);
   }, [step, only]);
   const unitTokens = unit ? tokenized.get(unit.block.id) : undefined;
   const practice = usePractice(unit, unitTokens, stageInfo.stage, stageInfo.seed);
@@ -282,6 +300,7 @@ export function SceneFlow({
                   .filter((candidate) => candidate.block.id === block.id)
                   .map((candidate) => results.get(candidate.id))}
                 changed={isCurrent && stageInfo.changed}
+                sure={own ? blockSure(block.id) : null}
               />
             );
           })}
@@ -329,6 +348,17 @@ export function SceneFlow({
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto max-w-3xl space-y-1 px-3 py-2">
             <CorrectionBar last={deferred.last} onChange={changeLast} />
+            {unit && stageInfo.changed ? (
+              <ChangeDiff
+                before={unitCard(unit, cards).card?.text}
+                after={unit.items[0]?.text ?? ""}
+                open={showDiff}
+                onOpen={() => {
+                  practice.revealAll();
+                  setShowDiff(true);
+                }}
+              />
+            ) : null}
             <div className="flex gap-2">
               {stageInfo.stage !== "full" ? (
                 <RevealButtons
@@ -368,6 +398,7 @@ function FlowBlock({
   onRevealWord,
   holdHandlers,
   ratings,
+  sure,
   changed,
 }: {
   block: ReaderBlock;
@@ -384,6 +415,8 @@ function FlowBlock({
   onRevealWord: (index: number) => void;
   holdHandlers?: Record<string, unknown>;
   ratings: (LearnRating | undefined)[];
+  /** Gespeicherte Sicherheit (0–1) der eigenen Replik, schwächster Abschnitt; null = fremd. */
+  sure?: number | null;
   changed: boolean;
 }) {
   if (block.kind === "direction") {
@@ -399,6 +432,8 @@ function FlowBlock({
     (min, rating) => (rating !== undefined && (min === undefined || rating < min) ? rating : min),
     undefined,
   );
+  // Ohne Bewertung in dieser Sitzung: Farbe nach gespeicherter Sicherheit (Szene als Textkarte).
+  const stored = worst === undefined && sure !== null && sure !== undefined && sure > 0;
   return (
     <div
       ref={containerRef}
@@ -412,6 +447,8 @@ function FlowBlock({
         own && !current && worst === 1 && "border-destructive/70",
         own && !current && worst === 2 && "border-warning/70",
         own && !current && worst !== undefined && worst >= 3 && "border-success/70",
+        own && !current && stored && sure! >= SOLID_RETRIEVABILITY && "border-success/50",
+        own && !current && stored && sure! < SOLID_RETRIEVABILITY && "border-warning/50",
         !own && "text-foreground/85",
       )}
     >

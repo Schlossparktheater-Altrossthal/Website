@@ -4042,6 +4042,8 @@ model ScriptLearnCard {
   chunk         Int
   /// Prüfsumme des Wortlauts beim letzten Abfragen – erkennt geänderten Text.
   textHash      String
+  /// Wortlaut beim letzten Abfragen – zeigt bei geändertem Text, was sich geändert hat.
+  text          String?
   state         Int                 @default(0)
   due           DateTime
   stability     Float               @default(0)

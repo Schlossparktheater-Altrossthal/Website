@@ -93,6 +93,14 @@ if (typeof workbox !== "undefined") {
     new strategies.NetworkFirst({ cacheName: "probe-pages", networkTimeoutSeconds: 4 }),
   );
 
+  // Lernmodus: Seite bleibt offline nutzbar (Lernen unterwegs); die Seite legt sich beim Öffnen
+  // selbst in diesen Cache und sammelt Bewertungen in einer eigenen Warteschlange.
+  routing.registerRoute(
+    ({ request, url }) =>
+      request.mode === "navigate" && /^\/mitglieder\/lernen\/[^/]+$/.test(url.pathname),
+    new strategies.NetworkFirst({ cacheName: "lernen-pages", networkTimeoutSeconds: 4 }),
+  );
+
   // Seitenaufrufe immer übers Netz; ohne Verbindung die Offline-Seite statt Browserfehler.
   routing.registerRoute(new routing.NavigationRoute(new strategies.NetworkOnly()));
   routing.setCatchHandler(async ({ request }) => {

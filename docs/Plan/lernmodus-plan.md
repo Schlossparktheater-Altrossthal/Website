@@ -1,6 +1,6 @@
 # Plan: Lernmodus für Skripte
 
-Stand: 2026-10-14 – Phase 1–6 umgesetzt (Staging), Runde 2 (Review) Schritt 1–3 umgesetzt, offen Release und Gerätetest.
+Stand: 2026-10-14 – Phase 1–6 umgesetzt (Staging), Runde 2 (Review) Schritt 1–5 umgesetzt, offen Release und Gerätetest.
 
 Phase 13 aus `docs/Plan/skript-plan.md`. Vollbild-App wie der Leser (`src/app/(reader)/`), mobil
 und am Rechner gut bedienbar, Spielelemente nur sparsam.
@@ -90,8 +90,7 @@ den nächsten 14 Tagen geprobt werden, ziehen ihre Abschnitte vor.
 - Stichwort-Schwächen (im Fluss schlechter als in der Abfrage).
 - Lerntage der letzten 12 Wochen, Abfragen dieser Woche; Vergessens-Prognose (heute, 3, 7, 14 Tage).
 - Logik `src/lib/skript/learn/insights.ts`, Verlauf aus ScriptLearnReview (12 Wochen, dieses Stück).
-- Offen/später: Verlauf der Textsicherheit, Szene als Textkarte nach Sicherheit, Wort-Diff bei
-  geändertem Text (braucht den alten Wortlaut, bisher nur Prüfsumme).
+- Verlauf der Textsicherheit, Szene als Textkarte und Wort-Diff siehe Schritt 4.
 
 ### Schritt 3 Belohnung und Darstellung (umgesetzt)
 
@@ -99,9 +98,31 @@ den nächsten 14 Tagen geprobt werden, ziehen ihre Abschnitte vor.
 - Häkchen/Symbol nach jeder Bewertung, Vibration (Android); Szene sitzt → Vorhang-Feier
   (`celebrate.tsx`, framer-motion, `prefers-reduced-motion` nur Einblenden).
 - Dashboard: Überblick mit Ring „Textsicherheit“ (→ Statistik) und nächster Probe mit Prognose.
-- Offen: weitere Meilensteine (erster Akt, ganze Rolle verdeckt, Wochenziel mehrfach).
+- Meilensteine siehe Schritt 4.
+
+### Schritt 4 Rest der Review-Runde (umgesetzt)
+
+- Endspurt: Abstände enden spätestens 12 h vor der Premiere (`Show.premiereAt`), in den letzten
+  14 Tagen Erinnerungsziel 0,95; Hinweis „Endspurt“ im Dashboard.
+- Geänderter Text: Karte speichert den Wortlaut (`ScriptLearnCard.text`, Migration
+  20261014120000); „Was hat sich geändert?“ zeigt den Wort-Diff (deckt die Stelle auf).
+- Meilensteine (Akte gibt es im Skript nicht): erste Stelle, alles angefangen, erste Szene,
+  Halbzeit, ganze Rolle, 100/500 Abfragen, Wochenziel 1×/3×; Feier beim ersten Erreichen
+  (gemerkt in localStorage, beim allerersten Laden keine Feier für Altes).
+- Verlauf der Textsicherheit (Abfragen nachgespielt, letzte 8 Wochen) in der Statistik.
+- Szene als Textkarte: eigene Repliken im Szenenfluss nach gespeicherter Sicherheit eingefärbt.
+
+### Schritt 5 Offline (umgesetzt)
+
+- Service Worker hält `/mitglieder/lernen/[showId]` vor (NetworkFirst, Cache `lernen-pages`); die
+  Seite legt sich beim Öffnen selbst in den Cache (auch nach Client-Navigation).
+- Lernstand zusätzlich im Gerät (`lernen-stand:<showId>`), beim Laden zusammengeführt
+  (`mergeSnapshot`: lokal zählt nur, was nach dem Erzeugen der Seite gelernt wurde).
+- Bewertungen weiter über `lernen-outbox:<showId>`; Wochenziel wird nachgereicht, Zurücksetzen
+  nur online. Status „Offline nutzbar“ in den Lern-Einstellungen.
+- Offline-Seite (`public/offline.html`) verlinkt vorgehaltene Lernseiten.
+- Nicht offline: Leser, Skript-Übersicht, andere Seiten (Skript-Phase 12).
 
 ### Später
 
-- Endspurt: Abstände bis zur Premiere deckeln, Erinnerungsziel 0,95 in den letzten 2 Wochen.
 - Rückwärts lernen, Stichwort-Training, Audio-Modus, Partner-Abfrage, Push-Erinnerung (Opt-in).

@@ -29,6 +29,10 @@ export type LearnPageData = {
   recentReviews: string[];
   weeklyDays: number;
   rehearsals: LearnRehearsal[];
+  /** Premiere des Stücks (Endspurt, Abstände enden davor). */
+  premiereAt: string | null;
+  /** Zeitpunkt der Erzeugung – offline gespeicherte Stände danach gelten als neuer. */
+  generatedAt: string;
 };
 
 /** Neueste freigegebene Fassung eines Stücks (L7). */
@@ -53,7 +57,7 @@ export async function loadLearnPage(
   const horizon = new Date(now.getTime() + REHEARSAL_HORIZON_DAYS * 86_400_000);
   const since = new Date(now.getTime() - 8 * 86_400_000);
   const historySince = new Date(now.getTime() - HISTORY_WEEKS * 7 * 86_400_000);
-  const [cards, reviews, history, profile, stageScenes, blocks] = await Promise.all([
+  const [cards, reviews, history, profile, stageScenes, blocks, show] = await Promise.all([
     prisma.scriptLearnCard.findMany({ where: { userId, showId } }),
     prisma.scriptLearnReview.findMany({
       where: { card: { userId }, reviewedAt: { gte: since } },
@@ -86,6 +90,7 @@ export async function loadLearnPage(
         event: { select: { start: true, title: true } },
       },
     }),
+    prisma.show.findUnique({ where: { id: showId }, select: { premiereAt: true } }),
   ]);
 
   const sceneMap = matchScenes(stageScenes, reader.scenes);
@@ -111,6 +116,7 @@ export async function loadLearnPage(
       lineageId: card.lineageId,
       chunk: card.chunk,
       textHash: card.textHash,
+      text: card.text,
       createdAt: card.createdAt.toISOString(),
       state: card.state,
       due: card.due.toISOString(),
@@ -131,6 +137,8 @@ export async function loadLearnPage(
     recentReviews: reviews.map((review) => review.reviewedAt.toISOString()),
     weeklyDays: profile?.weeklyDays ?? 4,
     rehearsals: [...next.values()].sort((a, b) => a.start.localeCompare(b.start)),
+    premiereAt: show?.premiereAt?.toISOString() ?? null,
+    generatedAt: now.toISOString(),
   };
 }
 
@@ -162,6 +170,11 @@ export async function recordReviews(userId: string, showId: string, entries: Rev
     select: { lineageId: true, parts: true, roles: { select: { roleId: true } } },
   });
   const byLineage = new Map(blocks.map((block) => [block.lineageId, block]));
+  const show = await prisma.show.findUnique({
+    where: { id: showId },
+    select: { premiereAt: true },
+  });
+  const premiere = show?.premiereAt?.toISOString() ?? null;
   const now = Date.now();
   let saved = 0;
 
@@ -205,9 +218,11 @@ export async function recordReviews(userId: string, showId: string, entries: Rev
       : applyReview(previous, entry.rating as LearnRating, at, {
           changed: !!existing && existing.textHash !== chunk.hash,
           stage: entry.stage,
+          premiere,
         });
     const data = {
       textHash: chunk.hash,
+      text: chunk.words.join(" "),
       state: next!.state,
       due: new Date(next!.due),
       stability: next!.stability,

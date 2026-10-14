@@ -31,6 +31,22 @@
         opacity: 0.75;
         line-height: 1.5;
       }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 1.25rem;
+      }
+      li a {
+        display: block;
+        padding: 0.7rem 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid currentColor;
+        color: inherit;
+        text-decoration: none;
+        min-height: 44px;
+        box-sizing: border-box;
+      }
       button {
         font: inherit;
         padding: 0.6rem 1.2rem;
@@ -46,10 +62,36 @@
     <main>
       <h1>Gerade keine Verbindung</h1>
       <p>Der Mitgliederbereich braucht Internet. Sobald du wieder online bist, geht es weiter.</p>
+      <section id="offline-lernen" hidden>
+        <p>Offline weiterlernen:</p>
+        <ul id="offline-lernen-liste"></ul>
+      </section>
       <button type="button" onclick="location.reload()">Erneut versuchen</button>
     </main>
     <script>
       window.addEventListener("online", () => location.reload());
+      // Vorgehaltene Lernseiten (Lernmodus legt sie im Cache „lernen-pages“ ab, Titel in localStorage).
+      (async () => {
+        try {
+          const cache = await caches.open("lernen-pages");
+          const keys = await cache.keys();
+          if (!keys.length) return;
+          const titles = JSON.parse(localStorage.getItem("lernen-offline-titel") || "{}");
+          const list = document.getElementById("offline-lernen-liste");
+          for (const request of keys) {
+            const path = new URL(request.url).pathname;
+            const link = document.createElement("a");
+            link.href = path;
+            link.textContent = "Text lernen: " + (titles[path] || "Stück");
+            const item = document.createElement("li");
+            item.appendChild(link);
+            list.appendChild(item);
+          }
+          document.getElementById("offline-lernen").hidden = false;
+        } catch (error) {
+          console.warn("[offline] Lernseiten nicht lesbar", error);
+        }
+      })();
     </script>
   </body>
 </html>

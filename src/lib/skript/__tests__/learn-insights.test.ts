@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { cueWeaknesses, dailyCounts, forecast, problemUnits } from "../learn/insights";
+import {
+  confidenceHistory,
+  cueWeaknesses,
+  dailyCounts,
+  forecast,
+  goalWeeks,
+  milestones,
+  problemUnits,
+} from "../learn/insights";
 import { itemKey, type LearnItem, type StoredCard } from "../learn/plan";
 
 const now = new Date("2026-10-14T10:00:00");
@@ -78,5 +86,41 @@ describe("Lern-Statistik", () => {
       { key: items[1].key, at, rating: 3, mode: "flow" },
     ];
     expect(cueWeaknesses(history, items).map((entry) => entry.unitId)).toEqual(["a|0"]);
+  });
+
+  it("Verlauf der Textsicherheit steigt am Lerntag und fällt danach", () => {
+    const items = [item("a")];
+    const history = [
+      { key: items[0].key, at: "2026-10-10T09:00:00", rating: 3, mode: "drill" },
+      { key: items[0].key, at: "2026-10-10T09:10:00", rating: 3, mode: "drill" },
+    ];
+    const points = confidenceHistory(
+      { items, cards: new Map(), rehearsals: new Map(), now },
+      history,
+    );
+    expect(points[0].day).toBe("2026-10-10");
+    expect(points).toHaveLength(5);
+    expect(points[0].value).toBeGreaterThan(0.9);
+    expect(points.at(-1)!.value).toBeLessThan(points[0].value);
+  });
+
+  it("Meilensteine und Wochenziel", () => {
+    const items = [item("a"), item("b", "s2")];
+    const cards = new Map([[items[0].key, card({ stability: 30 })]]);
+    const history = ["2026-10-12", "2026-10-13", "2026-10-14"].map((day) => ({
+      key: items[0].key,
+      at: `${day}T09:00:00`,
+      rating: 3,
+      mode: "drill",
+    }));
+    expect(goalWeeks(history, 3)).toBe(1);
+    expect(goalWeeks(history, 4)).toBe(0);
+    const result = milestones({ items, cards, rehearsals: new Map(), now }, history, 3);
+    const byId = Object.fromEntries(result.map((entry) => [entry.id, entry]));
+    expect(byId["erste-stelle"].achieved).toBe(true);
+    expect(byId["erste-szene"].achieved).toBe(true);
+    expect(byId["ganze-rolle"]).toMatchObject({ achieved: false, current: 1, target: 2 });
+    expect(byId["alles-angefangen"]).toMatchObject({ current: 1, target: 2 });
+    expect(byId["wochenziel"].achieved).toBe(true);
   });
 });

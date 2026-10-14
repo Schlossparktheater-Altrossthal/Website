@@ -2,12 +2,19 @@
 
 import * as React from "react";
 
-import { ArrowLeftIcon, ChevronRightIcon } from "@/components/ui/action-icons";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  TrophyIcon,
+} from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import type { TokenizedBlock } from "@/lib/skript/learn/chunks";
 import {
+  confidenceHistory,
   cueWeaknesses,
   dailyCounts,
+  milestones,
   forecast,
   problemUnits,
   type HistoryEntry,
@@ -17,6 +24,7 @@ import type { ScriptReaderData } from "@/lib/skript/reader";
 import { cn } from "@/lib/utils";
 
 import { CountUp } from "./celebrate";
+import { ConfidenceChart } from "./confidence-chart";
 import type { Unit } from "./model";
 
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -28,6 +36,7 @@ export function LearnStats({
   input,
   history,
   byId,
+  weeklyDays,
   onExit,
   onDrill,
   onFlow,
@@ -37,6 +46,7 @@ export function LearnStats({
   input: QueueInput;
   history: readonly HistoryEntry[];
   byId: ReadonlyMap<string, Unit>;
+  weeklyDays: number;
   onExit: () => void;
   onDrill: (units: Unit[], title: string) => void;
   onFlow: (sceneId: string) => void;
@@ -49,6 +59,11 @@ export function LearnStats({
   const days = React.useMemo(() => dailyCounts(ownHistory, input.now), [ownHistory, input.now]);
   const prognosis = React.useMemo(() => forecast(input), [input]);
   const problems = React.useMemo(() => problemUnits(input), [input]);
+  const trend = React.useMemo(() => confidenceHistory(input, ownHistory), [input, ownHistory]);
+  const badges = React.useMemo(
+    () => milestones(input, ownHistory, weeklyDays),
+    [input, ownHistory, weeklyDays],
+  );
   const cues = React.useMemo(
     () => cueWeaknesses(ownHistory, input.items),
     [ownHistory, input.items],
@@ -122,6 +137,13 @@ export function LearnStats({
           </div>
         </section>
 
+        <section aria-labelledby="stat-verlauf">
+          <h2 id="stat-verlauf" className="text-sm font-medium">
+            Textsicherheit im Verlauf
+          </h2>
+          <ConfidenceChart points={trend} />
+        </section>
+
         <section aria-labelledby="stat-tage">
           <div className="flex items-baseline justify-between gap-2">
             <h2 id="stat-tage" className="text-sm font-medium">
@@ -158,6 +180,55 @@ export function LearnStats({
               ))}
             </div>
           </div>
+        </section>
+
+        <section aria-labelledby="stat-meilensteine">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 id="stat-meilensteine" className="text-sm font-medium">
+              Meilensteine
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {badges.filter((badge) => badge.achieved).length} von {badges.length}
+            </span>
+          </div>
+          <ul
+            className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2"
+            data-testid="lernen-meilensteine"
+          >
+            {badges.map((badge) => (
+              <li
+                key={badge.id}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border px-3 py-2",
+                  badge.achieved ? "border-success/40 bg-success/10" : "border-border",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                    badge.achieved
+                      ? "bg-success text-success-foreground"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                  aria-hidden
+                >
+                  {badge.achieved ? (
+                    <CheckIcon className="h-5 w-5" />
+                  ) : (
+                    <TrophyIcon className="h-4 w-4" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{badge.label}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {badge.achieved
+                      ? badge.detail
+                      : `${badge.detail} · ${badge.current}/${badge.target}`}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section aria-labelledby="stat-problem">

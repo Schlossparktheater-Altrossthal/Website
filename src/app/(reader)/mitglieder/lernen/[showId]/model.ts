@@ -111,6 +111,7 @@ export function buildUnits(
         chunk: chunk.index,
         hash: chunk.hash,
         words: chunk.words.length,
+        text: chunk.words.join(" "),
         order: blockIndex * 1000 + chunk.index,
       }));
       items.push(...unitItems);
@@ -154,6 +155,33 @@ export function unitCard(unit: Unit, cards: ReadonlyMap<string, StoredCard>) {
 }
 
 const OUTBOX_KEY = (showId: string) => `lernen-outbox:${showId}`;
+const SNAPSHOT_KEY = (showId: string) => `lernen-stand:${showId}`;
+
+type Snapshot = { cards: Record<string, StoredCard>; history: HistoryEntry[] };
+
+/**
+ * Offline: der Lernstand liegt zusätzlich im Gerät. Beim Laden (auch aus dem Cache ohne Netz)
+ * zählen lokale Stände nur, wenn sie nach dem Erzeugen der Seite entstanden sind – so kommen
+ * offline Gelerntes zurück, ein Zurücksetzen auf einem anderen Gerät aber nicht.
+ */
+export function mergeSnapshot(
+  cards: ReadonlyMap<string, StoredCard>,
+  history: readonly HistoryEntry[],
+  snapshot: Partial<Snapshot> | null,
+  generatedAt: string,
+) {
+  const mergedCards = new Map(cards);
+  for (const [key, local] of Object.entries(snapshot?.cards ?? {})) {
+    if (!local?.lastReview || local.lastReview <= generatedAt) continue;
+    const server = cards.get(key);
+    if (!server?.lastReview || local.lastReview > server.lastReview) mergedCards.set(key, local);
+  }
+  const seen = new Set(history.map((entry) => `${entry.key}|${entry.at}`));
+  const extra = (snapshot?.history ?? []).filter(
+    (entry) => entry.at > generatedAt && !seen.has(`${entry.key}|${entry.at}`),
+  );
+  return { cards: mergedCards, history: extra.length ? [...history, ...extra] : [...history] };
+}
 
 /**
  * Lernstand mit sofortiger Berechnung im Browser und Warteschlange zum Server – funktioniert
@@ -168,6 +196,8 @@ export function useLearnStore(data: LearnPageData) {
     }
     return map;
   });
+  const cardsRef = React.useRef(cards);
+  cardsRef.current = cards;
   const [reviewTimes, setReviewTimes] = React.useState<string[]>(data.recentReviews);
   const [history, setHistory] = React.useState<HistoryEntry[]>(() => {
     const keys = new Map(
@@ -178,9 +208,34 @@ export function useLearnStore(data: LearnPageData) {
       return key ? [{ key, at: entry.at, rating: entry.rating, mode: entry.mode }] : [];
     });
   });
+  const historyRef = React.useRef(history);
+  historyRef.current = history;
   const [pending, setPending] = React.useState(0);
   const [offline, setOffline] = React.useState(false);
   const sending = React.useRef(false);
+
+  // Lokalen Stand nach dem Laden einmischen und danach bei jeder Änderung sichern.
+  const restored = React.useRef(false);
+  React.useEffect(() => {
+    const merged = mergeSnapshot(
+      cardsRef.current,
+      historyRef.current,
+      readStored<Snapshot>(SNAPSHOT_KEY(showId)),
+      data.generatedAt,
+    );
+    const extra = merged.history.slice(historyRef.current.length);
+    setCards(merged.cards);
+    setHistory(merged.history);
+    if (extra.length) setReviewTimes((times) => [...times, ...extra.map((entry) => entry.at)]);
+    restored.current = true;
+  }, [showId, data.generatedAt]);
+  React.useEffect(() => {
+    if (!restored.current) return;
+    writeStored(SNAPSHOT_KEY(showId), {
+      cards: Object.fromEntries(cards),
+      history: history.filter((entry) => entry.at > data.generatedAt),
+    });
+  }, [cards, history, showId, data.generatedAt]);
 
   const flush = React.useCallback(async () => {
     if (sending.current) return;
@@ -237,8 +292,10 @@ export function useLearnStore(data: LearnPageData) {
             ...applyReview(previous, rating, at, {
               changed: !!previous && previous.textHash !== item.hash,
               stage: meta.stage,
+              premiere: data.premiereAt,
             }),
             textHash: item.hash,
+            text: item.text ?? previous?.text ?? null,
             createdAt: previous?.createdAt ?? at.toISOString(),
           });
         }
@@ -260,7 +317,7 @@ export function useLearnStore(data: LearnPageData) {
       setPending(stored.length + entries.length);
       void flush();
     },
-    [flush, showId],
+    [flush, showId, data.premiereAt],
   );
 
   const resetRoleLocal = React.useCallback((roleId: string) => {
