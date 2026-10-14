@@ -195,6 +195,9 @@ const CUE_MARGIN_SPACE =
   "md:group-data-[cue-margin]/reader:flow-root md:group-data-[cue-margin]/reader:pr-[10.5rem]";
 const CUE_MARGIN_ROW =
   "md:group-data-[cue-margin]/reader:clear-right md:group-data-[cue-margin]/reader:float-right md:group-data-[cue-margin]/reader:-mr-[10.5rem] md:group-data-[cue-margin]/reader:w-[10rem] md:group-data-[cue-margin]/reader:flex-col md:group-data-[cue-margin]/reader:pl-3";
+/** Im Rand steht die Zeile am Satzanfang (auf Höhe des Satzes), schmal darunter am Satzende. */
+const CUE_ROW_MARGIN_ONLY = cn(CUE_MARGIN_ROW, "hidden md:group-data-[cue-margin]/reader:flex");
+const CUE_ROW_BELOW_ONLY = "md:group-data-[cue-margin]/reader:hidden";
 
 type BlockViewProps = {
   block: ReaderBlock;
@@ -287,9 +290,12 @@ const BlockView = React.memo(
 
     // Hinweise stehen als eigene Zeile unter dem Satz, im Text bleibt nur eine Marke.
     const followed = new Set(settings.followedCues);
-    const cueRow = (entries: { entry: (typeof parts)[number]; number: number | null }[]) => (
+    const cueRow = (
+      entries: { entry: (typeof parts)[number]; number: number | null }[],
+      className = CUE_MARGIN_ROW,
+    ) => (
       <CueRow
-        className={CUE_MARGIN_ROW}
+        className={className}
         followed={followed}
         cues={entries.flatMap(({ entry, number }) =>
           entry.part.kind === "cue" ? [{ part: entry.part, number }] : [],
@@ -302,6 +308,7 @@ const BlockView = React.memo(
         : cueSegments(parts).map((segment, segmentIndex) => (
             <React.Fragment key={segmentIndex}>
               {cueRow(segment.before.map((entry) => ({ entry, number: null })))}
+              {cueRow(segment.after, CUE_ROW_MARGIN_ONLY)}
               {segment.items.map((item) =>
                 item.type === "part" ? (
                   renderPart(item.slice)
@@ -313,7 +320,7 @@ const BlockView = React.memo(
                   />
                 ) : null,
               )}
-              {cueRow(segment.after)}
+              {cueRow(segment.after, CUE_ROW_BELOW_ONLY)}
             </React.Fragment>
           ));
 
