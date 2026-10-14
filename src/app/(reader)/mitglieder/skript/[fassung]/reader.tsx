@@ -28,6 +28,7 @@ import type { ReaderAnnotation } from "@/lib/skript/annotation-types";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import {
   cueLineIndices,
+  cueSegments,
   cueParts,
   findNextTarget,
   firstVisibleIndex,
@@ -40,6 +41,8 @@ import { cn } from "@/lib/utils";
 import {
   CUE_STYLE,
   CueMark,
+  CueMarker,
+  CueRow,
   FONT_SIZES,
   SceneList,
   SKRIPT_PATH,
@@ -263,6 +266,35 @@ const BlockView = React.memo(
       );
     };
 
+    // Hinweise stehen als eigene Zeile unter dem Satz, im Text bleibt nur eine Marke.
+    const followed = new Set(settings.followedCues);
+    const cueRow = (entries: { entry: (typeof parts)[number]; number: number | null }[]) => (
+      <CueRow
+        followed={followed}
+        cues={entries.flatMap(({ entry, number }) =>
+          entry.part.kind === "cue" ? [{ part: entry.part, number }] : [],
+        )}
+      />
+    );
+    const renderParts = () =>
+      cueSegments(parts).map((segment, segmentIndex) => (
+        <React.Fragment key={segmentIndex}>
+          {cueRow(segment.before.map((entry) => ({ entry, number: null })))}
+          {segment.items.map((item) =>
+            item.type === "part" ? (
+              renderPart(item.entry)
+            ) : item.entry.part.kind === "cue" ? (
+              <CueMarker
+                key={item.entry.index}
+                category={item.entry.part.category}
+                number={item.number}
+              />
+            ) : null,
+          )}
+          {cueRow(segment.after)}
+        </React.Fragment>
+      ));
+
     if (block.kind === "direction") {
       const visible =
         parts.length > 0 &&
@@ -280,7 +312,7 @@ const BlockView = React.memo(
             selected && "outline outline-2 -outline-offset-2 outline-primary",
           )}
         >
-          {parts.map(renderPart)}
+          {renderParts()}
           <NoteCards notes={notes} className="mt-1 xl:mr-[17rem]" />
           {ink ? <InkLayer {...ink} /> : null}
         </div>
@@ -320,7 +352,7 @@ const BlockView = React.memo(
           >
             {block.speaker ?? "?"}
           </span>
-          <span data-ink-text>{parts.map(renderPart)}</span>
+          <span data-ink-text>{renderParts()}</span>
           {ink ? <InkLayer {...ink} /> : null}
         </p>
         <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">

@@ -118,6 +118,80 @@ export function CueMark({ part }: { part: Extract<ScriptPart, { kind: "cue" }> }
   );
 }
 
+/** Farbe der Hinweismarke im Text (nur die Gewerksfarbe, kein Hintergrund). */
+const CUE_MARK_COLOR: Record<CueCategory, { bar: string; text: string }> = {
+  ton: { bar: "bg-yellow-400", text: "text-yellow-600 dark:text-yellow-400" },
+  licht: { bar: "bg-cyan-400", text: "text-cyan-600 dark:text-cyan-400" },
+  nebel: { bar: "bg-green-500", text: "text-green-600 dark:text-green-400" },
+  effekt: { bar: "bg-fuchsia-400", text: "text-fuchsia-600 dark:text-fuchsia-400" },
+  umbau: { bar: "bg-red-400", text: "text-red-600 dark:text-red-400" },
+  aus: { bar: "bg-zinc-400", text: "text-zinc-500 dark:text-zinc-400" },
+  technik: { bar: "bg-orange-400", text: "text-orange-600 dark:text-orange-400" },
+};
+
+/** Stelle eines Hinweises im Satz: feiner Strich, bei mehreren mit Ziffer. Nicht antippbar. */
+export function CueMarker({ category, number }: { category: CueCategory; number: number | null }) {
+  const color = CUE_MARK_COLOR[category];
+  return (
+    <span aria-hidden className="mx-px inline-flex select-none items-start">
+      <span className={cn("inline-block h-[0.95em] w-[2px] translate-y-[0.1em]", color.bar)} />
+      {number ? (
+        <sup className={cn("ml-px text-[0.62em] font-bold not-italic", color.text)}>{number}</sup>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Hinweiszeile unter (oder über) einem Satz. Ruhig mit Farbbalken; Gewerke, denen man folgt,
+ * behalten die volle Farbfläche.
+ */
+export function CueRow({
+  cues,
+  followed,
+}: {
+  cues: { part: Extract<ScriptPart, { kind: "cue" }>; number: number | null }[];
+  followed: ReadonlySet<CueCategory>;
+}) {
+  if (cues.length === 0) return null;
+  return (
+    <span className="my-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.85em] not-italic leading-snug">
+      {cues.map(({ part, number }, index) => {
+        const style = CUE_STYLE[part.category];
+        const labelled = part.text.toLowerCase().startsWith(style.label.toLowerCase());
+        return (
+          <span
+            key={index}
+            className={cn(
+              "border-l-[3px] pl-1.5 pr-1 text-foreground",
+              followed.has(part.category)
+                ? style.className
+                : cn(
+                    style.className.split(" ").find((c) => c.startsWith("border-")),
+                    "bg-transparent",
+                  ),
+            )}
+          >
+            {number ? (
+              <span className={cn("mr-1 font-bold", CUE_MARK_COLOR[part.category].text)}>
+                {number}
+              </span>
+            ) : null}
+            {labelled ? (
+              <span className="sr-only">{style.label}: </span>
+            ) : (
+              <span className="mr-1 text-[0.8em] font-bold uppercase tracking-wider opacity-60">
+                {style.label}
+              </span>
+            )}
+            {part.text}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export function SceneList({
   scenes,
   currentId,

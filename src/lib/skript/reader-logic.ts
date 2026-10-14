@@ -85,3 +85,60 @@ export function firstVisibleIndex(bottoms: readonly number[], offset: number) {
   }
   return lo;
 }
+
+/** Satzende am Schluss eines Teils (auch mit schließendem Anführungszeichen/Klammer). */
+const SENTENCE_END = /[.!?…:][\s"'“”„»«)]*$/;
+
+export type CueSegment<P> = {
+  /** Hinweise vor dem ersten Text des Abschnitts – stehen über dem Text, ohne Marke. */
+  before: P[];
+  /** Text- und Regieteile in Reihenfolge; `mark` ist eine Hinweismarke im Text. */
+  items: ({ type: "part"; entry: P } | { type: "mark"; entry: P; number: number | null })[];
+  /** Hinweise, die als eigene Zeile unter dem Abschnitt stehen. */
+  after: { entry: P; number: number | null }[];
+};
+
+/**
+ * Teilt einen Absatz für die Anzeige in Abschnitte bis zum nächsten Satzende, damit Hinweise
+ * nicht den Satz zerreißen, sondern als Zeile darunter stehen. Im Text bleibt nur eine Marke –
+ * nummeriert, sobald ein Abschnitt mehrere Hinweise mit Marke hat. Hinweise am Abschnittsende
+ * brauchen keine Marke, sie stehen ohnehin direkt darunter.
+ */
+export function cueSegments<P extends { part: ScriptPart }>(parts: readonly P[]): CueSegment<P>[] {
+  const raw: { before: P[]; items: { cue: boolean; entry: P }[] }[] = [];
+  let current: (typeof raw)[number] = { before: [], items: [] };
+  for (const entry of parts) {
+    if (entry.part.kind === "cue") {
+      if (current.items.length === 0) current.before.push(entry);
+      else current.items.push({ cue: true, entry });
+      continue;
+    }
+    current.items.push({ cue: false, entry });
+    if (current.items.some((item) => item.cue) && SENTENCE_END.test(entry.part.text)) {
+      raw.push(current);
+      current = { before: [], items: [] };
+    }
+  }
+  if (current.before.length || current.items.length) raw.push(current);
+
+  return raw.map(({ before, items }) => {
+    const lastText = items.findLastIndex((item) => !item.cue);
+    const cues = items.filter((item) => item.cue);
+    const marked = items.some((item, index) => item.cue && index < lastText);
+    const numbered = marked && cues.length > 1;
+    let counter = 0;
+    const segment: CueSegment<P> = { before, items: [], after: [] };
+    for (const [index, item] of items.entries()) {
+      if (!item.cue) {
+        segment.items.push({ type: "part", entry: item.entry });
+        continue;
+      }
+      const number = numbered ? ++counter : null;
+      if (marked && (numbered || index < lastText)) {
+        segment.items.push({ type: "mark", entry: item.entry, number });
+      }
+      segment.after.push({ entry: item.entry, number });
+    }
+    return segment;
+  });
+}
