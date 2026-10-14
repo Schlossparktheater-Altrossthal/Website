@@ -691,7 +691,9 @@ export function ScriptReader({
               <span className="block truncate text-sm font-medium">
                 {currentScene?.title ?? version.label}
               </span>
-              <span className="block truncate text-xs text-muted-foreground">{version.label}</span>
+              <span className="hidden truncate text-xs text-muted-foreground sm:block">
+                {version.label}
+              </span>
             </span>
             <ChevronDownIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           </button>
@@ -719,7 +721,13 @@ export function ScriptReader({
             ) : null}
           </Button>
           {version.status === "released" ? (
-            <Button asChild variant="ghost" size="icon" aria-label="Text lernen">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              aria-label="Text lernen"
+              className="hidden sm:inline-flex"
+            >
               <Link href={`/mitglieder/lernen/${version.showId}`}>
                 <SparklesIcon aria-hidden />
               </Link>
@@ -730,7 +738,11 @@ export function ScriptReader({
             size="icon"
             aria-label="Stift"
             aria-pressed={penMode}
-            className={cn(penMode && "bg-primary/15 text-primary")}
+            // Auf dem Handy im Ansicht-Menü, damit der Szenentitel Platz hat – außer im Stiftmodus.
+            className={cn(
+              "hidden sm:inline-flex",
+              penMode && "inline-flex bg-primary/15 text-primary",
+            )}
             onClick={() => {
               closeBar();
               setPenMode((on) => !on);
@@ -1071,9 +1083,32 @@ export function ScriptReader({
         open={panel === "settings"}
         onOpenChange={(open) => setPanel(open ? "settings" : null)}
         title="Ansicht"
-        description="Schriftgröße, Regieanweisungen und technische Hinweise einstellen"
+        description="Schriftgröße, Regieanweisungen und Hinweise einstellen"
       >
         <div className="space-y-5 text-sm">
+          {/* Handy: Lernen und Stift stehen hier statt in der Kopfleiste. */}
+          <section className="grid grid-cols-2 gap-2 sm:hidden">
+            {version.status === "released" ? (
+              <Button asChild variant="outline" className="min-h-11">
+                <Link href={`/mitglieder/lernen/${version.showId}`}>
+                  <SparklesIcon aria-hidden />
+                  Text lernen
+                </Link>
+              </Button>
+            ) : null}
+            <Button
+              variant="outline"
+              className="min-h-11"
+              onClick={() => {
+                setPanel(null);
+                closeBar();
+                setPenMode(true);
+              }}
+            >
+              <PenLineIcon aria-hidden />
+              Stift
+            </Button>
+          </section>
           <section className="space-y-2">
             <h3 className="font-medium">Schriftgröße</h3>
             <SegmentedControl
