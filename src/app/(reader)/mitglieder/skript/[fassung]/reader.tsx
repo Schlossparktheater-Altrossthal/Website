@@ -870,6 +870,8 @@ export function ScriptReader({
         <article
           ref={articleRef}
           data-cue-margin={cueMargin || undefined}
+          // Ist die Kopfleiste beim Lesen weggescrollt, klebt stattdessen die Szenenüberschrift oben.
+          data-chrome-hidden={(chromeHidden && !searchOpen && !penMode) || undefined}
           onClick={onArticleClick}
           {...pen.handlers}
           className={cn(
@@ -880,11 +882,6 @@ export function ScriptReader({
           )}
           style={{
             ["--speaker-col" as string]: `${(speakerChars * 0.78).toFixed(2)}em`,
-            // Szenenüberschrift klebt unter der Kopfleiste bzw. oben, wenn die Leiste weg ist.
-            ["--chrome-h" as string]:
-              chromeHidden && !searchOpen && !penMode
-                ? "0px"
-                : "calc(3rem + env(safe-area-inset-top))",
           }}
         >
           {newVersionHint && previous ? (
@@ -938,7 +935,7 @@ export function ScriptReader({
                 {scene ? (
                   <h2
                     id={`szene-${scene.id}`}
-                    className="sticky top-[var(--chrome-h)] z-10 mb-1 mt-8 scroll-mt-14 border-b-2 border-foreground bg-background/95 pb-1 pt-1 text-[0.85em] font-bold uppercase tracking-wider backdrop-blur transition-[top] duration-200 first:mt-2"
+                    className="top-[env(safe-area-inset-top)] z-10 mb-1 mt-8 scroll-mt-14 border-b-2 border-foreground bg-background/95 pb-1 pt-1 text-[0.85em] font-bold uppercase tracking-wider backdrop-blur first:mt-2 group-data-[chrome-hidden]/reader:sticky"
                   >
                     {scene.title}
                   </h2>
