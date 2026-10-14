@@ -109,32 +109,41 @@ export function LearnStats({
               Noch kaum etwas gelernt – nach ein paar Abfragen siehst du hier, wie lange dein Text
               hält.
             </p>
-          ) : null}
-          <div className="mt-3 grid grid-cols-4 items-end gap-2" style={{ height: 120 }}>
-            {prognosis.map((entry) => (
-              <div key={entry.days} className="flex h-full flex-col justify-end gap-1 text-center">
-                <span className="text-xs font-semibold">
-                  <CountUp value={entry.value * 100} format={(value) => `${Math.round(value)} %`} />
-                </span>
-                <span
-                  className={cn(
-                    "w-full origin-bottom rounded-t-sm transition-[height] duration-700",
-                    entry.value >= 0.9
-                      ? "bg-success"
-                      : entry.value >= 0.6
-                        ? "bg-primary"
-                        : "bg-warning",
-                  )}
-                  style={{ height: `${Math.max(3, entry.value * 80)}px` }}
-                />
+          ) : (
+            <>
+              <div className="mt-3 grid grid-cols-4 items-end gap-2" style={{ height: 120 }}>
+                {prognosis.map((entry) => (
+                  <div
+                    key={entry.days}
+                    className="flex h-full flex-col justify-end gap-1 text-center"
+                  >
+                    <span className="text-xs font-semibold">
+                      <CountUp
+                        value={entry.value * 100}
+                        format={(value) => `${Math.round(value)} %`}
+                      />
+                    </span>
+                    <span
+                      className={cn(
+                        "w-full origin-bottom rounded-t-sm transition-[height] duration-700",
+                        entry.value >= 0.9
+                          ? "bg-success"
+                          : entry.value >= 0.6
+                            ? "bg-primary"
+                            : "bg-warning",
+                      )}
+                      style={{ height: `${Math.max(3, entry.value * 80)}px` }}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="mt-1 grid grid-cols-4 gap-2 text-center text-[11px] text-muted-foreground">
-            {prognosis.map((entry) => (
-              <span key={entry.days}>{entry.days ? `in ${entry.days} Tagen` : "heute"}</span>
-            ))}
-          </div>
+              <div className="mt-1 grid grid-cols-4 gap-2 text-center text-[11px] text-muted-foreground">
+                {prognosis.map((entry) => (
+                  <span key={entry.days}>{entry.days ? `in ${entry.days} Tagen` : "heute"}</span>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
         <section aria-labelledby="stat-verlauf">
