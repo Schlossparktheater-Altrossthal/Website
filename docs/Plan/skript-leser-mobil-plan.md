@@ -15,6 +15,6 @@ Ausgangslage: Screenshots Staging (390 / 834 / 1024 px), Fassung „Stand 15.6.2
    - Ab Tablet-Breite: Hinweise im rechten Rand auf Höhe der Zeile (wie Regiebuch).
    - Standard je Person: Schauspiel kompakt, Technik eigenes Gewerk voll, Regie alles.
    - Vorher: Stellen mit den meisten Hinweisen pro Satz suchen und per Screenshot prüfen.
-5. **Kopfleiste Handy entschlacken** – Stift/Lernen ins „⋯“, nur Szenentitel.
+5. **Kopfleiste Handy entschlacken** – Lernen/Stift auf dem Handy oben im Ansicht-Menü (kein extra „⋯“), Stücktitel nur ab sm; Stift-Knopf erscheint im Stiftmodus. ✅ 2026-10-14
 6. **Tablet** – hochkant Szenen-Rand zum Ausklappen, quer schmalere Szenenliste ohne Versalien, Notizen-Randspalte ab ~1100 px.
 7. **Kleinigkeiten** – Seitenzahl nur beim Seitenwechsel, Szenenüberschrift sticky, „Probenmodus“-Schalter.
