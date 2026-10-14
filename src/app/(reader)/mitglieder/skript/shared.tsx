@@ -21,8 +21,11 @@ export const CUE_STYLE: Record<CueCategory, { label: string; className: string }
   technik: { label: "Technik", className: SCRIPT_CUE_STYLES.technik },
 };
 
-/** Längster Name (Zeichen), der noch in die Sprecher-Spalte passt. */
-export const SPEAKER_MAX_CHARS = 18;
+/**
+ * Längster Name (Zeichen), der noch in die Sprecher-Spalte passt. Längere Namen stehen über
+ * der Replik – sonst macht ein einziger langer Name die Spalte für das ganze Stück breit.
+ */
+export const SPEAKER_MAX_CHARS = 11;
 
 export const FONT_SIZES = ["text-[15px]", "text-base", "text-lg", "text-xl"] as const;
 
