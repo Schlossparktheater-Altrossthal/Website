@@ -34,6 +34,8 @@ export type Visibility = "show" | "dim" | "hide";
 export type Settings = {
   fontSize: number;
   directions: Visibility;
+  /** Hinweise als Zeile unter dem Satz (Standard) oder wie im PDF mitten im Text. */
+  cueLayout: "below" | "inline";
   hiddenCues: CueCategory[];
   followedCues: CueCategory[];
   roleIds: string[];
@@ -46,6 +48,7 @@ export type Settings = {
 const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
   fontSize: 0,
   directions: "show",
+  cueLayout: "below",
   hiddenCues: [],
   followedCues: [],
   dimOthers: false,

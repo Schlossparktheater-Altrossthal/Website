@@ -287,23 +287,25 @@ const BlockView = React.memo(
       />
     );
     const renderParts = () =>
-      cueSegments(parts).map((segment, segmentIndex) => (
-        <React.Fragment key={segmentIndex}>
-          {cueRow(segment.before.map((entry) => ({ entry, number: null })))}
-          {segment.items.map((item) =>
-            item.type === "part" ? (
-              renderPart(item.slice)
-            ) : item.entry.part.kind === "cue" ? (
-              <CueMarker
-                key={item.entry.index}
-                category={item.entry.part.category}
-                number={item.number}
-              />
-            ) : null,
-          )}
-          {cueRow(segment.after)}
-        </React.Fragment>
-      ));
+      settings.cueLayout === "inline"
+        ? parts.map((entry) => renderPart({ entry, from: 0, to: entry.part.text.length }))
+        : cueSegments(parts).map((segment, segmentIndex) => (
+            <React.Fragment key={segmentIndex}>
+              {cueRow(segment.before.map((entry) => ({ entry, number: null })))}
+              {segment.items.map((item) =>
+                item.type === "part" ? (
+                  renderPart(item.slice)
+                ) : item.entry.part.kind === "cue" ? (
+                  <CueMarker
+                    key={item.entry.index}
+                    category={item.entry.part.category}
+                    number={item.number}
+                  />
+                ) : null,
+              )}
+              {cueRow(segment.after)}
+            </React.Fragment>
+          ));
 
     if (block.kind === "direction") {
       const visible =
@@ -1070,6 +1072,21 @@ export function ScriptReader({
               ]}
             />
           </section>
+          {categories.length ? (
+            <section className="space-y-2">
+              <h3 className="font-medium">Hinweise anzeigen</h3>
+              <SegmentedControl<Settings["cueLayout"]>
+                aria-label="Hinweise anzeigen"
+                fullWidth
+                value={settings.cueLayout}
+                onValueChange={(cueLayout) => update({ cueLayout })}
+                options={[
+                  { value: "below", label: "Unter dem Satz" },
+                  { value: "inline", label: "Im Text" },
+                ]}
+              />
+            </section>
+          ) : null}
           {categories.length ? (
             <section className="space-y-1">
               <h3 className="font-medium">Technische Hinweise</h3>
