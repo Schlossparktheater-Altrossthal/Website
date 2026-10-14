@@ -56,13 +56,14 @@ const DATE_TIME = new Intl.DateTimeFormat("de-DE", {
 /** Zeichenposition eines DOM-Punkts innerhalb eines Absatz-Teils (`data-part`). */
 function offsetInPart(part: Element, node: Node, offset: number) {
   const walker = document.createTreeWalker(part, NodeFilter.SHOW_TEXT);
-  let total = 0;
+  // Ein Teil kann am Satzende geteilt sein (Hinweiszeile dazwischen): Ausschnitt beginnt hier.
+  let total = Number(part.getAttribute("data-part-offset") ?? 0);
   for (let current = walker.nextNode(); current; current = walker.nextNode()) {
     if (current === node) return total + offset;
     total += current.textContent?.length ?? 0;
   }
   // Punkt liegt auf einem Element statt einem Textknoten: Anfang bzw. Ende des Elements.
-  return node === part && offset === 0 ? 0 : total;
+  return node === part && offset === 0 ? Number(part.getAttribute("data-part-offset") ?? 0) : total;
 }
 
 function partOf(node: Node | null) {
@@ -99,8 +100,10 @@ export function useTextSelection(root: React.RefObject<HTMLElement | null>, bloc
       const start = offsetInPart(startPart, range.startContainer, range.startOffset);
       // Über den Teil hinaus markiert: bis zum Ende dieses Teils kürzen.
       const end =
-        endPart === startPart
-          ? offsetInPart(startPart, range.endContainer, range.endOffset)
+        endPart === startPart ||
+        (endPart?.closest("[data-block]") === blockElement &&
+          endPart?.getAttribute("data-part") === startPart.getAttribute("data-part"))
+          ? offsetInPart(endPart ?? startPart, range.endContainer, range.endOffset)
           : text.length;
       const from = Math.max(0, Math.min(start, text.length));
       const to = Math.max(from, Math.min(end, text.length));

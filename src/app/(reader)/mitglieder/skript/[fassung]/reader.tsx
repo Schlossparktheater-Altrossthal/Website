@@ -29,6 +29,7 @@ import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import {
   cueLineIndices,
   cueSegments,
+  type PartSlice,
   cueParts,
   findNextTarget,
   firstVisibleIndex,
@@ -231,29 +232,37 @@ const BlockView = React.memo(
     );
     const notes = annotations.filter((annotation) => annotation.kind === "note");
 
-    const renderPart = ({ part, index }: (typeof parts)[number]) => {
+    /** Ein Teil oder – wenn ein Hinweis den Satz trennt – ein Ausschnitt davon. */
+    const renderPart = ({
+      entry: { part, index },
+      from,
+      to,
+    }: PartSlice<(typeof parts)[number]>) => {
       if (part.kind === "cue") return <CueMark key={index} part={part} />;
       const ranges = rangesOf(index);
+      const text = part.text.slice(from, to);
+      const whole = to === part.text.length;
       const content =
-        index === lastText ? (
+        index === lastText && whole ? (
           (() => {
-            const [head, tail] = splitTail(part.text);
+            const [head, tail] = splitTail(text);
             return (
               <>
-                <TextRun text={head} offset={0} ranges={ranges} query={query} />
+                <TextRun text={head} offset={from} ranges={ranges} query={query} />
                 <span className="font-semibold underline decoration-primary decoration-2 underline-offset-4">
-                  <TextRun text={tail} offset={head.length} ranges={ranges} query={query} />
+                  <TextRun text={tail} offset={from + head.length} ranges={ranges} query={query} />
                 </span>
               </>
             );
           })()
         ) : (
-          <TextRun text={part.text} offset={0} ranges={ranges} query={query} />
+          <TextRun text={text} offset={from} ranges={ranges} query={query} />
         );
       return (
         <span
-          key={index}
+          key={`${index}:${from}`}
           data-part={index}
+          data-part-offset={from || undefined}
           className={cn(
             part.kind === "direction" &&
               block.kind === "speech" &&
@@ -261,7 +270,8 @@ const BlockView = React.memo(
             part.kind === "direction" && settings.directions === "dim" && "opacity-50",
           )}
         >
-          {content}{" "}
+          {content}
+          {whole ? " " : null}
         </span>
       );
     };
@@ -282,7 +292,7 @@ const BlockView = React.memo(
           {cueRow(segment.before.map((entry) => ({ entry, number: null })))}
           {segment.items.map((item) =>
             item.type === "part" ? (
-              renderPart(item.entry)
+              renderPart(item.slice)
             ) : item.entry.part.kind === "cue" ? (
               <CueMarker
                 key={item.entry.index}

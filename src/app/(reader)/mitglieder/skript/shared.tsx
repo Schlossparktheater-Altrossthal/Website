@@ -133,10 +133,17 @@ const CUE_MARK_COLOR: Record<CueCategory, { bar: string; text: string }> = {
 export function CueMarker({ category, number }: { category: CueCategory; number: number | null }) {
   const color = CUE_MARK_COLOR[category];
   return (
-    <span aria-hidden className="mx-px inline-flex select-none items-start">
-      <span className={cn("inline-block h-[0.95em] w-[2px] translate-y-[0.1em]", color.bar)} />
+    <span aria-hidden className="mx-0.5 select-none whitespace-nowrap">
+      <span className={cn("inline-block h-[0.9em] w-[2px] align-[-0.1em]", color.bar)} />
       {number ? (
-        <sup className={cn("ml-px text-[0.62em] font-bold not-italic", color.text)}>{number}</sup>
+        <span
+          className={cn(
+            "ml-px align-super text-[0.62em] font-bold not-italic leading-none",
+            color.text,
+          )}
+        >
+          {number}
+        </span>
       ) : null}
     </span>
   );

@@ -71,7 +71,9 @@ describe("cueSegments", () => {
     cueSegments(parts).map((segment) => ({
       before: segment.before.map((entry) => entry.part.text),
       items: segment.items.map((item) =>
-        item.type === "part" ? item.entry.part.text : `[${item.number ?? "|"}]`,
+        item.type === "part"
+          ? item.slice.entry.part.text.slice(item.slice.from, item.slice.to).trim()
+          : `[${item.number ?? "|"}]`,
       ),
       after: segment.after.map((item) => `${item.number ?? ""}${item.entry.part.text}`),
     }));
@@ -105,6 +107,15 @@ describe("cueSegments", () => {
         },
       ],
     );
+  });
+
+  it("teilt einen langen Teil am Satzende hinter dem Hinweis", () => {
+    expect(
+      shape([t("Ein Funken."), c("TON 4"), t("Er wird größer. Ein Turm. Noch mehr.")]),
+    ).toEqual([
+      { before: [], items: ["Ein Funken.", "[|]", "Er wird größer."], after: ["TON 4"] },
+      { before: [], items: ["Ein Turm. Noch mehr."], after: [] },
+    ]);
   });
 
   it("stellt Hinweise vor dem ersten Text darüber", () => {
