@@ -367,7 +367,7 @@ export function NoteBar({
   return (
     <div className="space-y-2 px-3 py-2 sm:px-4" data-note-bar>
       <div className="flex min-h-9 items-center gap-1">
-        <span className="min-w-0 flex-1 truncate text-sm">
+        <span className={cn("min-w-0 flex-1 text-sm", target && "truncate")}>
           {!target ? (
             <span className="text-muted-foreground">
               Tippe auf ein Wort – für mehrere Wörter dann aufs letzte.
