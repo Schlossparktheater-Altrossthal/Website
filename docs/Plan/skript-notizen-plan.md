@@ -1,6 +1,6 @@
 # Skript-Notizen überarbeiten
 
-Stand: 2026-10-15. Schritt 1–2 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
+Stand: 2026-10-15. Schritt 1–3 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
 
 ## Ausgangslage
 
@@ -43,8 +43,15 @@ nur Abkürzungen.
        beiden Enden der Auswahl (`selection-handles.tsx`, `touch-action: none`); Halten+Ziehen per
        Finger nur als Bonus (`use-word-drag.ts`) – Chrome bricht die Berührung nach dem Halten oft
        mit `pointercancel` ab.
-3. [ ] **Zeichen im Text** – Pause, Atmer, Betonung, Bogen, Tempo, Stimmung als neue Arten
+3. [x] **Zeichen im Text** – Pause, Atmer, Betonung, Bogen, Tempo, Stimmung als neue Arten
        (`ScriptAnnotation.kind`), Knöpfe mit Symbol + Wort, „?“-Zeichenerklärung.
+       Umgesetzt 2026-10-15: `kind = sign` + Spalte `sign` (Migration 20261015090000),
+       `SCRIPT_SIGNS` in `annotation-types.ts`, Werkzeugleiste `note-toolbox.tsx`. Stellen-Zeichen
+       (Pause, Lang, Atmer, Zäsur) antippen = hinter das gewählte Wort, oder aus der Leiste in den
+       Text ziehen (Vorschau über dem Finger, Einfügemarke). Bereichs-Zeichen auf die Auswahl:
+       Betonung (nochmal = stark, nochmal = weg), Bogen, lauter/leiser/schneller/langsamer
+       (deutsche Wörter statt cresc./accel.), Stimmung mit Vorschlägen + eigenen Begriffen.
+       Stellen-Zeichen merken sich den Text davor (`pointContext`) und wandern so in neue Fassungen.
 4. [ ] **Randnotiz** – Textfeld direkt unter dem Satz statt Bottom-Sheet (Diktieren über die
        Tastatur), Darstellung wie Technik-Hinweise (`CUE_MARGIN_*`).
 5. [ ] **Bessere Anker** – Wortlaut + etwas Text davor/danach speichern (W3C TextQuoteSelector),

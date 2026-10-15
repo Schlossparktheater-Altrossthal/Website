@@ -326,6 +326,16 @@ test.describe("als admin", () => {
     await page.mouse.up();
     await expect(page.getByText("„Abend, verehrtes Publikum“")).toBeVisible();
     await page.getByRole("button", { name: "Auswahl aufheben" }).click();
+    // Zeichen: Pause hinter „Guten“, Betonung auf „Abend“; Zeichen antippen → entfernen
+    await page.locator("[data-w]", { hasText: "Guten" }).click();
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await expect(page.locator("[data-sign-point]")).toHaveText("/");
+    await page.locator("[data-w]", { hasText: "Abend," }).click();
+    await page.getByRole("button", { name: "Betonung", exact: true }).click();
+    await expect(page.locator("mark.underline", { hasText: "Abend" })).toBeVisible();
+    await page.locator("[data-sign-point]").click();
+    await page.getByRole("button", { name: "Entfernen" }).click();
+    await expect(page.locator("[data-sign-point]")).toHaveCount(0);
     // Ganzer Absatz (Rollenname antippen) markieren und per Antippen wieder entfernen
     await page.locator("[data-block]", { hasText: "Wie geht es dir heute?" }).click({
       position: { x: 4, y: 4 },

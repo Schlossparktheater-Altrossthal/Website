@@ -27,7 +27,12 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { Switch } from "@/components/ui/switch";
 import { SCRIPT_MARKER_STYLES } from "@/config/category-colors";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import type { ReaderAnnotation } from "@/lib/skript/annotation-types";
+import {
+  isPointSign,
+  SCRIPT_SIGNS,
+  type ReaderAnnotation,
+  type ScriptSign,
+} from "@/lib/skript/annotation-types";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import {
   cueLineIndices,
@@ -63,7 +68,6 @@ import {
   AnnotationEditor,
   AnnotationReview,
   HighlightBar,
-  NoteBar,
   PickBar,
   useTextSelection,
   type EditorState,
@@ -71,6 +75,7 @@ import {
 } from "./annotations";
 import { InkLayer, PenBar, usePen, type PenSettings } from "./ink";
 import { useAnnotations } from "./use-annotations";
+import { NoteToolbox, TappedBar, toggleSign, type DropGap } from "./note-toolbox";
 import { SelectionHandles } from "./selection-handles";
 import { useWordDrag, type WordRef } from "./use-word-drag";
 
@@ -149,12 +154,60 @@ function Words({ text, start }: { text: string; start: number }) {
 }
 
 /** Text eines Absatz-Teils mit Suchtreffern, Markern und Notiz-Stellen. */
+/** Zeichen mit Wort-Etikett am Anfang (lauter, leiser … Stimmung) und gestrichelter Linie. */
+const LABELLED_SIGNS = new Set<ScriptSign>([
+  "lauter",
+  "leiser",
+  "schneller",
+  "langsamer",
+  "stimmung",
+]);
+
+/** Klassen eines Textstücks aus allen Markierungen und Zeichen, die es abdecken. */
+function segmentClasses(covering: Range[]) {
+  const annotations = covering.flatMap((range) => (range.annotation ? [range.annotation] : []));
+  const highlight = annotations.find((annotation) => annotation.kind === "highlight");
+  const signs = new Set(
+    annotations.flatMap((annotation) => (annotation.sign ? [annotation.sign] : [])),
+  );
+  const stressed = signs.has("betonung") || signs.has("betonung_stark");
+  return cn(
+    "text-inherit",
+    highlight ? SCRIPT_MARKER_STYLES[highlight.color ?? "gelb"] : "bg-transparent",
+    covering.some((range) => !range.annotation) && "bg-primary/25",
+    stressed && "underline decoration-foreground decoration-2 underline-offset-[0.22em]",
+    signs.has("betonung_stark") && "decoration-double",
+    !stressed &&
+      annotations.some((annotation) => annotation.kind === "note") &&
+      "underline decoration-warning decoration-dotted decoration-2 underline-offset-4",
+    signs.has("bogen") &&
+      "rounded-t-[1em] border-t-2 border-primary/70 pt-[0.1em] box-decoration-clone",
+    [...signs].some((sign) => LABELLED_SIGNS.has(sign)) &&
+      "border-b border-dashed border-primary/80 box-decoration-clone",
+  );
+}
+
+/** Stellen-Zeichen (Pause, Atmer …) zwischen den Wörtern. */
+function PointSign({ annotation }: { annotation: ReaderAnnotation }) {
+  return (
+    <span
+      data-annotation={annotation.id}
+      data-sign-point
+      aria-label={annotation.sign ? SCRIPT_SIGNS[annotation.sign].label : undefined}
+      className="mx-[0.12em] cursor-pointer font-bold not-italic text-primary"
+    >
+      {annotation.sign ? SCRIPT_SIGNS[annotation.sign].glyph : ""}
+    </span>
+  );
+}
+
 function TextRun({
   text,
   offset,
   ranges,
   query,
   words,
+  includeEnd,
 }: {
   text: string;
   /** Position von `text` innerhalb des Teils (für Marker-Bereiche). */
@@ -162,53 +215,83 @@ function TextRun({
   ranges: Range[];
   query: string;
   words: boolean;
+  /** Stellen-Zeichen genau am Ende mit ausgeben (nur beim letzten Stück eines Teils). */
+  includeEnd: boolean;
 }) {
-  const cuts = new Set([offset, offset + text.length]);
-  for (const range of ranges) {
-    if (range.end <= offset || range.start >= offset + text.length) continue;
+  const end = offset + text.length;
+  const isPoint = (range: Range) => isPointSign(range.annotation?.sign);
+  const spans = ranges.filter((range) => !isPoint(range));
+  const points = ranges.filter(
+    (range) =>
+      isPoint(range) &&
+      range.start >= offset &&
+      (range.start < end || (includeEnd && range.start === end)),
+  );
+  const cuts = new Set([offset, end]);
+  for (const range of spans) {
+    if (range.end <= offset || range.start >= end) continue;
     cuts.add(Math.max(offset, range.start));
-    cuts.add(Math.min(offset + text.length, range.end));
+    cuts.add(Math.min(end, range.end));
   }
-  const points = [...cuts].sort((a, b) => a - b);
+  for (const range of points) cuts.add(range.start);
+  const sorted = [...cuts].sort((a, b) => a - b);
+  const pointsAt = (at: number) =>
+    points
+      .filter((range) => range.start === at)
+      .map(
+        (range) =>
+          range.annotation && <PointSign key={range.annotation.id} annotation={range.annotation} />,
+      );
   return (
     <>
-      {points.slice(0, -1).map((from, index) => {
-        const to = points[index + 1];
+      {sorted.slice(0, -1).map((from, index) => {
+        const to = sorted[index + 1];
         const slice = text.slice(from - offset, to - offset);
         const piece = words ? (
           <Words text={slice} start={from} />
         ) : (
           <Highlighted text={slice} query={query} />
         );
-        const range = ranges.find((entry) => entry.start <= from && entry.end >= to);
-        if (!range) return <React.Fragment key={from}>{piece}</React.Fragment>;
-        const { annotation } = range;
-        if (!annotation) {
-          return (
-            <mark
-              key={from}
-              data-note-selection
-              className="bg-primary/25 text-inherit underline decoration-primary decoration-2 underline-offset-4"
-            >
-              {piece}
-            </mark>
-          );
-        }
+        const covering = spans.filter((entry) => entry.start <= from && entry.end >= to);
+        // Etiketten (lauter, Stimmung …) stehen am Anfang ihres Bereichs.
+        const labels = covering.flatMap((range) =>
+          range.annotation?.sign &&
+          LABELLED_SIGNS.has(range.annotation.sign) &&
+          range.start === from
+            ? [range.annotation]
+            : [],
+        );
+        const ids = covering.flatMap((range) => (range.annotation ? [range.annotation.id] : []));
         return (
-          <mark
-            key={from}
-            data-annotation={annotation.id}
-            className={cn(
-              "cursor-pointer text-inherit",
-              annotation.kind === "highlight"
-                ? SCRIPT_MARKER_STYLES[annotation.color ?? "gelb"]
-                : "bg-transparent underline decoration-warning decoration-dotted decoration-2 underline-offset-4",
+          <React.Fragment key={from}>
+            {pointsAt(from)}
+            {labels.map((annotation) => (
+              <span
+                key={annotation.id}
+                data-annotation={annotation.id}
+                className="mr-[0.2em] cursor-pointer align-[0.45em] text-[0.62em] font-medium not-italic text-primary"
+              >
+                {annotation.sign === "stimmung"
+                  ? annotation.body
+                  : SCRIPT_SIGNS[annotation.sign!].glyph}
+              </span>
+            ))}
+            {covering.length ? (
+              <mark
+                data-annotation={ids[0]}
+                data-annotations={ids.join(" ") || undefined}
+                data-note-selection={covering.some((range) => !range.annotation) || undefined}
+                className={cn(segmentClasses(covering), ids.length && "cursor-pointer")}
+              >
+                {piece}
+              </mark>
+            ) : (
+              piece
             )}
-          >
-            {piece}
-          </mark>
+          </React.Fragment>
         );
       })}
+      {includeEnd ? pointsAt(end) : null}
     </>
   );
 }
@@ -337,7 +420,14 @@ const BlockView = React.memo(
             const [head, tail] = splitTail(text);
             return (
               <>
-                <TextRun text={head} offset={from} ranges={ranges} query={query} words={words} />
+                <TextRun
+                  text={head}
+                  offset={from}
+                  ranges={ranges}
+                  query={query}
+                  words={words}
+                  includeEnd={false}
+                />
                 <span className="font-semibold underline decoration-primary decoration-2 underline-offset-4">
                   <TextRun
                     text={tail}
@@ -345,13 +435,21 @@ const BlockView = React.memo(
                     ranges={ranges}
                     query={query}
                     words={words}
+                    includeEnd
                   />
                 </span>
               </>
             );
           })()
         ) : (
-          <TextRun text={text} offset={from} ranges={ranges} query={query} words={words} />
+          <TextRun
+            text={text}
+            offset={from}
+            ranges={ranges}
+            query={query}
+            words={words}
+            includeEnd={whole}
+          />
         );
       return (
         <span
@@ -545,7 +643,8 @@ export function ScriptReader({
   // Notizmodus: Wörter antippen statt System-Textauswahl (kein „In Google suchen“ o. Ä.).
   const [noteMode, setNoteMode] = React.useState(false);
   const [noteTarget, setNoteTarget] = React.useState<NoteTarget | null>(null);
-  const [tappedHighlight, setTappedHighlight] = React.useState<string | null>(null);
+  /** Angetippte Einträge (Markierung, Zeichen …) – mehrere, wenn sie übereinander liegen. */
+  const [tapped, setTapped] = React.useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = React.useState<string | null>(null);
   const [editor, setEditor] = React.useState<EditorState | null>(null);
   const [reviewOpen, setReviewOpen] = React.useState(false);
@@ -605,16 +704,23 @@ export function ScriptReader({
       setPick({ ...pick, blockId });
       return;
     }
-    const annotationId = target.closest("[data-annotation]")?.getAttribute("data-annotation");
+    const hit = target.closest("[data-annotation]");
+    const annotationId = hit?.getAttribute("data-annotation");
     const annotation = annotationId ? annotationById.get(annotationId) : undefined;
-    if (noteMode && annotation?.kind !== "note") {
+    const hitIds = (hit?.getAttribute("data-annotations") ?? annotationId ?? "")
+      .split(" ")
+      .filter((id) => annotationById.has(id));
+    // Zeichen zwischen den Wörtern bzw. Etiketten (lauter …) antippen: entfernen anbieten.
+    const signTag = hit && hit.tagName !== "MARK" && annotation?.kind === "sign";
+    if (noteMode && !signTag && annotation?.kind !== "note") {
+      setTapped([]);
       onNoteTap(target, blockId);
       return;
     }
-    setTappedHighlight(null);
-    if (annotation?.kind === "highlight") {
+    setTapped([]);
+    if (annotation && (annotation.kind !== "note" || hitIds.length > 1)) {
       setSelectedBlock(null);
-      setTappedHighlight(annotation.id);
+      setTapped(hitIds);
       return;
     }
     if (annotation) {
@@ -630,7 +736,7 @@ export function ScriptReader({
       : undefined;
     if (blockMark && settings.showNotes) {
       setSelectedBlock(null);
-      setTappedHighlight(blockMark.id);
+      setTapped([blockMark.id]);
       return;
     }
     setSelectedBlock((current) => (current === blockId ? null : blockId));
@@ -705,7 +811,7 @@ export function ScriptReader({
   const setNoting = (on: boolean) => {
     clearSelection();
     setSelectedBlock(null);
-    setTappedHighlight(null);
+    setTapped([]);
     setNoteTarget(null);
     if (on) setPenMode(false);
     setNoteMode(on);
@@ -713,9 +819,29 @@ export function ScriptReader({
   const closeBar = () => {
     clearSelection();
     setSelectedBlock(null);
-    setTappedHighlight(null);
+    setTapped([]);
   };
-  const tappedAnnotation = tappedHighlight ? annotationById.get(tappedHighlight) : undefined;
+  const tappedAnnotations = tapped.flatMap((id) => annotationById.get(id) ?? []);
+  const tappedAnnotation =
+    tappedAnnotations.length === 1 && tappedAnnotations[0].kind === "highlight"
+      ? tappedAnnotations[0]
+      : undefined;
+  /** Gezogenes Stellen-Zeichen ablegen: vor einem Wort heißt hinter dem Wort davor. */
+  const dropPoint = React.useCallback(
+    (sign: ScriptSign, gap: DropGap) => {
+      const block = blockById.get(gap.blockId);
+      const text = block?.parts[gap.partIndex]?.text;
+      if (!block || text === undefined) return;
+      let at = gap.offset;
+      if (gap.before) while (at > 0 && /\s/.test(text[at - 1])) at -= 1;
+      void toggleSign(
+        store,
+        { blockId: block.id, partIndex: gap.partIndex, start: at, end: at, quote: "" },
+        sign,
+      );
+    },
+    [blockById, store],
+  );
   const barRef = React.useRef<HTMLDivElement>(null);
   const toolbarRef = React.useRef<HTMLDivElement>(null);
 
@@ -1178,7 +1304,7 @@ export function ScriptReader({
             pick ||
             penMode ||
             noteMode ||
-            tappedAnnotation) &&
+            tappedAnnotations.length) &&
             "border-t border-border",
         )}
       >
@@ -1191,32 +1317,64 @@ export function ScriptReader({
               onDone={() => setPenMode(false)}
             />
           ) : noteMode ? (
-            <NoteBar
-              store={store}
-              target={noteTarget}
-              onNudge={(direction) => changeNoteRange((text, span) => nudge(text, span, direction))}
-              onSentence={() => changeNoteRange(sentenceAround)}
-              onBlock={() =>
-                noteTarget && setNoteTarget({ blockId: noteTarget.blockId, range: null })
-              }
-              onNote={() => {
-                if (!noteTarget) return;
-                setEditor({
-                  mode: "create",
-                  blockId: noteTarget.blockId,
-                  selection: noteTarget.range,
-                });
-                setNoteTarget(null);
-              }}
-              onClear={() => setNoteTarget(null)}
-              onDone={() => setNoting(false)}
-            />
+            <>
+              {tappedAnnotations.length ? (
+                <TappedBar
+                  store={store}
+                  annotations={tappedAnnotations}
+                  onEdit={(annotation) => {
+                    setTapped([]);
+                    setEditor({ mode: "edit", annotation });
+                  }}
+                  onDone={() => setTapped([])}
+                />
+              ) : null}
+              <NoteToolbox
+                store={store}
+                target={noteTarget}
+                partText={
+                  noteTarget?.range
+                    ? (blockById.get(noteTarget.blockId)?.parts[noteTarget.range.partIndex]?.text ??
+                      null)
+                    : null
+                }
+                onNudge={(direction) =>
+                  changeNoteRange((text, span) => nudge(text, span, direction))
+                }
+                onSentence={() => changeNoteRange(sentenceAround)}
+                onBlock={() =>
+                  noteTarget && setNoteTarget({ blockId: noteTarget.blockId, range: null })
+                }
+                onNote={() => {
+                  if (!noteTarget) return;
+                  setEditor({
+                    mode: "create",
+                    blockId: noteTarget.blockId,
+                    selection: noteTarget.range,
+                  });
+                  setNoteTarget(null);
+                }}
+                onClear={() => setNoteTarget(null)}
+                onDone={() => setNoting(false)}
+                onDropPoint={dropPoint}
+              />
+            </>
           ) : pick ? (
             <PickBar
               versionId={version.id}
               annotationId={pick.annotationId}
               blockId={pick.blockId}
               onDone={() => setPick(null)}
+            />
+          ) : tappedAnnotations.length && !tappedAnnotation ? (
+            <TappedBar
+              store={store}
+              annotations={tappedAnnotations}
+              onEdit={(annotation) => {
+                setTapped([]);
+                setEditor({ mode: "edit", annotation });
+              }}
+              onDone={closeBar}
             />
           ) : tappedAnnotation ? (
             <HighlightBar

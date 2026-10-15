@@ -16,6 +16,7 @@ function stored(overrides: Partial<Parameters<typeof resolveAnnotations>[0][numb
     lineageId: "l1",
     kind: "note" as const,
     color: null,
+    sign: null,
     body: "Hier lauter",
     partIndex: null,
     start: null,
@@ -118,5 +119,24 @@ describe("resolveAnnotations", () => {
 
   it("plainBlockText normalisiert Leerraum", () => {
     expect(plainBlockText([text(" Hallo  "), text("Welt ")])).toBe("Hallo Welt");
+  });
+
+  it("Pause wandert mit, wenn Text davor dazukommt", () => {
+    const [pause] = resolveAnnotations(
+      [
+        stored({
+          kind: "sign",
+          sign: "pause",
+          partIndex: 0,
+          start: 12,
+          end: 12,
+          quote: "Guten Abend,",
+          blockText: "Guten Abend, Publikum.",
+        }),
+      ],
+      "v2",
+      [{ id: "b2", lineageId: "l1", parts: [text("Ach, Guten Abend, Publikum.")] }],
+    );
+    expect(pause).toMatchObject({ state: "ok", start: 17, end: 17, sign: "pause" });
   });
 });

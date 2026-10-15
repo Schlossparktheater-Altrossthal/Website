@@ -16,9 +16,48 @@ export type AnnotationState =
   /** Absatz gibt es in dieser Fassung nicht mehr – neu zuordnen oder löschen. */
   | "orphaned";
 
+/**
+ * Zeichen im Text (docs/Plan/skript-notizen-plan.md, Schritt 3). `point`: sitzt an einer Stelle
+ * zwischen Wörtern (Anfang = Ende), sonst gilt es für einen Bereich.
+ */
+export const SCRIPT_SIGNS = {
+  pause: { label: "Pause", short: "Pause", glyph: "/", point: true },
+  pause_lang: { label: "Lange Pause", short: "Lang", glyph: "//", point: true },
+  atem: { label: "Atmer", short: "Atmer", glyph: "'", point: true },
+  zaesur: { label: "Zäsur (Schnitt)", short: "Zäsur", glyph: "‖", point: true },
+  betonung: { label: "Betonung", short: "Betonung", glyph: "_", point: false },
+  betonung_stark: { label: "Starke Betonung", short: "Stark", glyph: "=", point: false },
+  bogen: { label: "Bogen (durchziehen)", short: "Bogen", glyph: "⌒", point: false },
+  lauter: { label: "Lauter werden", short: "lauter", glyph: "lauter", point: false },
+  leiser: { label: "Leiser werden", short: "leiser", glyph: "leiser", point: false },
+  schneller: { label: "Schneller werden", short: "schneller", glyph: "schneller", point: false },
+  langsamer: { label: "Langsamer werden", short: "langsamer", glyph: "langsamer", point: false },
+  stimmung: { label: "Stimmung", short: "Stimmung", glyph: "…", point: false },
+} as const;
+export type ScriptSign = keyof typeof SCRIPT_SIGNS;
+export const SCRIPT_SIGN_KEYS = Object.keys(SCRIPT_SIGNS) as ScriptSign[];
+export const isPointSign = (sign: ScriptSign | null | undefined) =>
+  !!sign && SCRIPT_SIGNS[sign].point;
+
+/** Vorschläge für Stimmungen; eigene Begriffe kommen dazu, zuletzt benutzte zuerst. */
+export const MOOD_SUGGESTIONS = [
+  "leise",
+  "flüsternd",
+  "laut",
+  "wütend",
+  "ironisch",
+  "zögernd",
+  "fröhlich",
+  "traurig",
+  "ängstlich",
+  "drohend",
+] as const;
+
 export type ReaderAnnotation = {
   id: string;
-  kind: "highlight" | "note" | "ink";
+  kind: "highlight" | "note" | "ink" | "sign";
+  /** Zeichen (nur kind = sign). */
+  sign: ScriptSign | null;
   /** Freihand-Striche (nur kind = ink). */
   strokes: InkStroke[];
   color: AnnotationColor | null;

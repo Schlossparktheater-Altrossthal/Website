@@ -3996,6 +3996,8 @@ enum ScriptAnnotationKind {
   highlight
   note
   ink
+  /// Zeichen im Text (Pause, Betonung, Bogen …), Schlüssel in `sign`.
+  sign
 }
 
 /// Markierung oder Notiz einer Person am Skript (zunächst privat, E8). Hängt an `lineageId`,
@@ -4009,6 +4011,8 @@ model ScriptAnnotation {
   kind      ScriptAnnotationKind
   /// Markerfarbe (highlight) – Schlüssel aus src/lib/skript/annotations.ts.
   color     String?
+  /// Zeichen (kind = sign) – Schlüssel aus src/lib/skript/annotation-types.ts (SCRIPT_SIGNS).
+  sign      String?
   body      String?
   /// Textstelle: Teil des Absatzes und Zeichenbereich; ohne = ganzer Absatz.
   partIndex Int?

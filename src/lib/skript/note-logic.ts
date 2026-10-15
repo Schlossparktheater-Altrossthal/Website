@@ -90,3 +90,28 @@ export function sentenceAround(text: string, current: Span): Span {
 export function overlaps(a: Span, b: Span) {
   return a.start < b.end && b.start < a.end;
 }
+
+/**
+ * Stelle hinter einem Wort für Zeichen wie Pause: nach anhängenden Satzzeichen („Abend,/“),
+ * vor dem Leerraum.
+ */
+export function gapAfter(text: string, end: number) {
+  let at = end;
+  while (at < text.length && !/\s/.test(text[at])) at += 1;
+  return at;
+}
+
+/** Kontext vor einer Stelle (zum Wiederfinden in neuen Fassungen). */
+export function pointContext(text: string, at: number, length = 24) {
+  return text.slice(Math.max(0, at - length), at);
+}
+
+/** Stelle über ihren Kontext wiederfinden: erst an alter Position, sonst erster Treffer. */
+export function locatePoint(text: string, at: number | null, context: string | null) {
+  if (!context) return at !== null && at <= text.length ? at : null;
+  if (at !== null && at >= context.length && text.slice(at - context.length, at) === context) {
+    return at;
+  }
+  const found = text.indexOf(context);
+  return found >= 0 ? found + context.length : null;
+}

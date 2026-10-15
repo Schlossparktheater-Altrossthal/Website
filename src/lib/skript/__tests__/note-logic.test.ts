@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { extendTo, nudge, overlaps, sentenceAround, wordAt, words } from "../note-logic";
+import {
+  extendTo,
+  gapAfter,
+  locatePoint,
+  nudge,
+  overlaps,
+  pointContext,
+  sentenceAround,
+  wordAt,
+  words,
+} from "../note-logic";
 
 const pick = (text: string, span: { start: number; end: number } | null) =>
   span ? text.slice(span.start, span.end) : null;
@@ -44,5 +54,21 @@ describe("Auswahl erweitern", () => {
     expect(words("a, b-c  d").map((w) => w.start)).toEqual([0, 3, 8]);
     expect(overlaps({ start: 0, end: 3 }, { start: 3, end: 5 })).toBe(false);
     expect(overlaps({ start: 0, end: 4 }, { start: 3, end: 5 })).toBe(true);
+  });
+});
+
+describe("Stellen-Zeichen", () => {
+  const text = "Guten Abend, verehrtes Publikum.";
+  it("setzt hinter Satzzeichen", () => {
+    expect(gapAfter(text, text.indexOf("Abend") + 5)).toBe(text.indexOf(",") + 1);
+    expect(gapAfter(text, text.length - 1)).toBe(text.length);
+  });
+  it("findet die Stelle über den Kontext wieder", () => {
+    const at = gapAfter(text, text.indexOf("Abend") + 5);
+    const context = pointContext(text, at);
+    expect(locatePoint(text, at, context)).toBe(at);
+    const changed = "Ach, " + text;
+    expect(locatePoint(changed, at, context)).toBe(at + 5);
+    expect(locatePoint("Ganz anders.", at, context)).toBeNull();
   });
 });

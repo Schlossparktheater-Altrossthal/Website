@@ -3,11 +3,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 import { readParts } from "./json";
+import { locatePoint, pointContext } from "./note-logic";
 import {
   ANNOTATION_COLORS,
   inkSchema,
   inkStrokeSchema,
+  isPointSign,
+  SCRIPT_SIGN_KEYS,
   ScriptAnnotationError,
+  type ScriptSign,
   type InkStroke,
   type AnnotationColor,
   type AnnotationState,
@@ -34,8 +38,12 @@ export const annotationInputSchema = z
     id: z.string().uuid().optional(),
     versionId: z.string().min(1),
     blockId: z.string().min(1),
-    kind: z.enum(["highlight", "note"]),
+    kind: z.enum(["highlight", "note", "sign"]),
     color: z.enum(ANNOTATION_COLORS).nullable().default(null),
+    sign: z
+      .enum(SCRIPT_SIGN_KEYS as [ScriptSign, ...ScriptSign[]])
+      .nullable()
+      .default(null),
     body: z.string().trim().max(4000).nullable().default(null),
     partIndex: z.number().int().min(0).nullable().default(null),
     start: z.number().int().min(0).nullable().default(null),
@@ -44,12 +52,24 @@ export const annotationInputSchema = z
   .refine((value) => value.kind !== "note" || !!value.body, {
     message: "Die Notiz ist leer.",
   })
+  .refine((value) => (value.kind === "sign") === !!value.sign, {
+    message: "Unbekanntes Zeichen.",
+  })
+  .refine((value) => value.sign !== "stimmung" || !!value.body, {
+    message: "Die Stimmung fehlt.",
+  })
   .refine(
     (value) =>
       value.partIndex === null ||
-      (value.start !== null && value.end !== null && value.end > value.start),
+      (value.start !== null &&
+        value.end !== null &&
+        // Stellen-Zeichen (Pause …) haben Anfang = Ende.
+        (isPointSign(value.sign) ? value.end === value.start : value.end > value.start)),
     { message: "Ungültige Textstelle." },
-  );
+  )
+  .refine((value) => value.kind !== "sign" || value.partIndex !== null, {
+    message: "Zeichen brauchen eine Textstelle.",
+  });
 
 export type AnnotationInput = z.input<typeof annotationInputSchema>;
 
@@ -80,6 +100,26 @@ export function locateQuote(
   for (const [index, part] of parts.entries()) {
     const found = part.text.indexOf(quote);
     if (found >= 0) return { partIndex: index, start: found, end: found + quote.length };
+  }
+  return null;
+}
+
+function signOf(value: string | null): ScriptSign | null {
+  return SCRIPT_SIGN_KEYS.find((key) => key === value) ?? null;
+}
+
+/** Stellen-Zeichen: `quote` hält den Text davor, die Stelle folgt direkt darauf. */
+function locateSignPoint(
+  parts: ScriptPart[],
+  anchor: { partIndex: number | null; start: number | null; quote: string | null },
+): { partIndex: number; start: number; end: number } | null {
+  if (anchor.partIndex === null) return null;
+  const same = parts[anchor.partIndex];
+  const at = same ? locatePoint(same.text, anchor.start, anchor.quote) : null;
+  if (at !== null) return { partIndex: anchor.partIndex, start: at, end: at };
+  for (const [index, part] of parts.entries()) {
+    const found = locatePoint(part.text, null, anchor.quote);
+    if (found !== null && anchor.quote) return { partIndex: index, start: found, end: found };
   }
   return null;
 }
@@ -128,12 +168,15 @@ export function resolveAnnotations(
     if (block) {
       const unchanged =
         annotation.versionId === versionId || plainBlockText(block.parts) === annotation.blockText;
-      const located = locateQuote(block.parts, annotation);
+      const sign = signOf(annotation.sign);
+      const located = isPointSign(sign)
+        ? locateSignPoint(block.parts, annotation)
+        : locateQuote(block.parts, annotation);
       if (annotation.partIndex !== null) {
         if (located) anchor = located;
         // Marker wandern mit, solange die Stelle noch da ist; Notizen fragen bei jeder
         // Änderung am Absatz nach, weil sich ihr Sinn ändern kann.
-        state = located && (unchanged || annotation.kind === "highlight") ? "ok" : "changed";
+        state = located && (unchanged || annotation.kind !== "note") ? "ok" : "changed";
       } else {
         state = unchanged ? "ok" : "changed";
       }
@@ -143,6 +186,7 @@ export function resolveAnnotations(
       kind: annotation.kind,
       strokes: readStrokes(annotation.ink),
       color: ANNOTATION_COLORS.find((color) => color === annotation.color) ?? null,
+      sign: signOf(annotation.sign),
       body: annotation.body,
       ...anchor,
       quote: annotation.quote,
@@ -187,8 +231,11 @@ export async function createAnnotation(authorId: string, raw: AnnotationInput) {
     if (!part || input.end > part.text.length) {
       throw new ScriptAnnotationError("Ungültige Textstelle.");
     }
-    quote = part.text.slice(input.start, input.end);
+    quote = isPointSign(input.sign)
+      ? pointContext(part.text, input.start)
+      : part.text.slice(input.start, input.end);
   }
+  const hasRange = quote !== null && (quote !== "" || isPointSign(input.sign));
   return prisma.scriptAnnotation.create({
     data: {
       ...(input.id ? { id: input.id } : {}),
@@ -198,10 +245,11 @@ export async function createAnnotation(authorId: string, raw: AnnotationInput) {
       lineageId: block.lineageId,
       kind: input.kind,
       color: input.kind === "highlight" ? (input.color ?? "gelb") : null,
+      sign: input.kind === "sign" ? input.sign : null,
       body: input.body || null,
-      partIndex: quote ? input.partIndex : null,
-      start: quote ? input.start : null,
-      end: quote ? input.end : null,
+      partIndex: hasRange ? input.partIndex : null,
+      start: hasRange ? input.start : null,
+      end: hasRange ? input.end : null,
       quote,
       blockText: plainBlockText(block.parts),
       authorId,
@@ -263,7 +311,14 @@ export async function anchorAnnotation(
   if (block.version.showId !== annotation.showId) {
     throw new ScriptAnnotationError("Absatz gehört zu einem anderen Stück.");
   }
-  const located = locateQuote(block.parts, annotation);
+  const point = isPointSign(signOf(annotation.sign));
+  const located = point
+    ? locateSignPoint(block.parts, annotation)
+    : locateQuote(block.parts, annotation);
+  // Zeichen ohne Stelle gibt es nicht – lieber nachfragen lassen als falsch platzieren.
+  if (annotation.kind === "sign" && !located) {
+    throw new ScriptAnnotationError("Die Stelle fehlt in diesem Absatz – bitte neu setzen.");
+  }
   return prisma.scriptAnnotation.update({
     where: { id: annotationId },
     data: {
@@ -274,7 +329,11 @@ export async function anchorAnnotation(
       partIndex: located?.partIndex ?? null,
       start: located?.start ?? null,
       end: located?.end ?? null,
-      quote: located ? annotation.quote : null,
+      quote: located
+        ? point
+          ? pointContext(block.parts[located.partIndex].text, located.start)
+          : annotation.quote
+        : null,
     },
     select: { id: true, showId: true },
   });

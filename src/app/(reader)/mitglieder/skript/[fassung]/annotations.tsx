@@ -4,14 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CloseIcon,
-  EditIcon,
-  TrashIcon,
-  Undo2Icon,
-} from "@/components/ui/action-icons";
+import { CloseIcon, EditIcon, TrashIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -151,7 +144,7 @@ function useActionRunner() {
   );
 }
 
-function ColorButtons({
+export function ColorButtons({
   value,
   onPick,
 }: {
@@ -214,7 +207,7 @@ export function highlightsAt(annotations: ReaderAnnotation[], target: NoteTarget
  * Farbe antippen: markiert die Stelle. Liegt dort schon eine Markierung in dieser Farbe, wird sie
  * entfernt (wie ein Marker an/aus), in anderer Farbe wird sie umgefärbt.
  */
-async function toggleColor(
+export async function toggleColor(
   store: AnnotationStore,
   target: NoteTarget,
   existing: ReaderAnnotation[],
@@ -336,122 +329,6 @@ export function HighlightBar({
       >
         <CloseIcon aria-hidden />
       </Button>
-    </div>
-  );
-}
-
-/**
- * Leiste im Notizmodus: Wort antippen wählt es aus, zweites Wort erweitert die Auswahl,
- * ◀ ▶ ändern sie um ein Wort. Alles speichert sofort; die Leiste bleibt für die nächste Notiz.
- */
-export function NoteBar({
-  store,
-  target,
-  onNudge,
-  onSentence,
-  onBlock,
-  onNote,
-  onClear,
-  onDone,
-}: {
-  store: AnnotationStore;
-  target: NoteTarget | null;
-  onNudge: (direction: -1 | 1) => void;
-  onSentence: () => void;
-  onBlock: () => void;
-  onNote: () => void;
-  onClear: () => void;
-  onDone: () => void;
-}) {
-  const existing = target ? highlightsAt(store.list, target) : [];
-  return (
-    <div className="space-y-2 px-3 py-2 sm:px-4" data-note-bar>
-      <div className="flex min-h-9 items-center gap-1">
-        <span className={cn("min-w-0 flex-1 text-sm", target && "truncate")}>
-          {!target ? (
-            <span className="text-muted-foreground">
-              Tippe auf ein Wort – für mehrere Wörter dann aufs letzte.
-            </span>
-          ) : target.range ? (
-            `„${target.range.quote}“`
-          ) : (
-            "Ganzer Absatz"
-          )}
-        </span>
-        {target?.range ? (
-          <>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Ein Wort weniger"
-              onClick={() => onNudge(-1)}
-            >
-              <ChevronLeftIcon aria-hidden />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Ein Wort mehr"
-              onClick={() => onNudge(1)}
-            >
-              <ChevronRightIcon aria-hidden />
-            </Button>
-            <Button variant="outline" onClick={onSentence}>
-              Satz
-            </Button>
-          </>
-        ) : null}
-        {target ? (
-          <>
-            <Button variant="outline" onClick={onBlock} className="hidden sm:inline-flex">
-              Absatz
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Auswahl aufheben" onClick={onClear}>
-              <CloseIcon aria-hidden />
-            </Button>
-          </>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {target ? (
-          <>
-            <ColorButtons
-              value={existing.length === 1 ? existing[0].color : null}
-              onPick={(color) => {
-                void toggleColor(store, target, existing, color);
-                onClear();
-              }}
-            />
-            <Button variant="outline" onClick={onNote}>
-              <EditIcon aria-hidden /> Notiz
-            </Button>
-            {existing.length ? (
-              <Button
-                variant="outline"
-                aria-label="Markierung entfernen"
-                onClick={() => {
-                  for (const annotation of existing) void store.removeWithUndo(annotation);
-                  onClear();
-                }}
-              >
-                <TrashIcon aria-hidden />
-              </Button>
-            ) : null}
-          </>
-        ) : null}
-        <div className="ml-auto flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Rückgängig"
-            disabled={!store.canUndo}
-            onClick={() => void store.undo()}
-          >
-            <Undo2Icon aria-hidden />
-          </Button>
-          <Button onClick={onDone}>Fertig</Button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { AnnotationColor, ReaderAnnotation } from "@/lib/skript/annotation-types";
+import type { AnnotationColor, ReaderAnnotation, ScriptSign } from "@/lib/skript/annotation-types";
 
 import { createAnnotationAction, deleteAnnotationAction, updateAnnotationAction } from "../actions";
 
@@ -15,8 +15,9 @@ import { createAnnotationAction, deleteAnnotationAction, updateAnnotationAction 
 
 export type AnnotationDraft = {
   blockId: string;
-  kind: "highlight" | "note";
+  kind: "highlight" | "note" | "sign";
   color?: AnnotationColor | null;
+  sign?: ScriptSign | null;
   body?: string | null;
   /** Textstelle im Absatz; ohne = ganzer Absatz. */
   range?: { partIndex: number; start: number; end: number; quote: string } | null;
@@ -35,6 +36,7 @@ function draftOf(annotation: ReaderAnnotation): AnnotationDraft | null {
     blockId: annotation.blockId,
     kind: annotation.kind,
     color: annotation.color,
+    sign: annotation.sign,
     body: annotation.body,
     range:
       annotation.partIndex !== null && annotation.start !== null && annotation.end !== null
@@ -86,6 +88,7 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
         kind: draft.kind,
         strokes: [],
         color: draft.kind === "highlight" ? (draft.color ?? "gelb") : null,
+        sign: draft.sign ?? null,
         body: draft.body ?? null,
         partIndex: draft.range?.partIndex ?? null,
         start: draft.range?.start ?? null,
@@ -105,6 +108,7 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
         blockId: draft.blockId,
         kind: draft.kind,
         color: draft.color ?? null,
+        sign: draft.sign ?? null,
         body: draft.body ?? null,
         ...(draft.range
           ? { partIndex: draft.range.partIndex, start: draft.range.start, end: draft.range.end }
