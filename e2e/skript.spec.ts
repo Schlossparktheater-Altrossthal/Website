@@ -290,6 +290,36 @@ test.describe("als admin", () => {
     await page.getByRole("button", { name: "Gelb markieren" }).click();
     await expect(page.locator("mark[data-annotation]", { hasText: "verehrtes" })).toBeVisible();
 
+    // Markierung antippen → Entfernen (ohne Rückfrage), Rückgängig holt sie zurück
+    await page.locator("mark[data-annotation]", { hasText: "verehrtes" }).click();
+    await page.getByRole("button", { name: "Entfernen" }).click();
+    await expect(page.locator("mark[data-annotation]", { hasText: "verehrtes" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Rückgängig" }).click();
+    await expect(page.locator("mark[data-annotation]", { hasText: "verehrtes" })).toBeVisible();
+
+    // Notizmodus: Wort antippen, zweites Wort erweitert, Farbe markiert, gleiche Farbe entfernt
+    await page.getByRole("button", { name: "Notieren" }).click();
+    await page.locator("[data-w]", { hasText: "Guten" }).click();
+    await page.locator("[data-w]", { hasText: "Abend," }).click();
+    await expect(page.getByText("„Guten Abend“")).toBeVisible();
+    await page.getByRole("button", { name: "Grün markieren" }).click();
+    const gruen = page.locator("mark[data-annotation]", { hasText: "Guten Abend" });
+    await expect(gruen).toBeVisible();
+    await page.locator("[data-w]", { hasText: "Guten" }).click();
+    await page.getByRole("button", { name: "Grün markieren" }).click();
+    await expect(gruen).toHaveCount(0);
+    // Ganzer Absatz (Rollenname antippen) markieren und per Antippen wieder entfernen
+    await page.locator("[data-block]", { hasText: "Wie geht es dir heute?" }).click({
+      position: { x: 4, y: 4 },
+    });
+    await expect(page.getByText("Ganzer Absatz")).toBeVisible();
+    await page.getByRole("button", { name: "Blau markieren" }).click();
+    await page.getByRole("button", { name: "Fertig" }).click();
+    await page.getByText("Wie geht es dir heute?").click();
+    await expect(page.getByText("Markierung: ganzer Absatz")).toBeVisible();
+    await page.getByRole("button", { name: "Entfernen" }).click();
+    await expect(page.getByText("Markierung: ganzer Absatz")).toHaveCount(0);
+
     // Absatz antippen → Notiz zum ganzen Absatz
     await page.getByText("Wie geht es dir heute?").click();
     await expect(page.getByText("Ganzer Absatz")).toBeVisible();

@@ -96,6 +96,7 @@ import {
   PanelLeft,
   PawPrint,
   Eraser,
+  Highlighter,
   PenLine,
   Pencil,
   PiggyBank,
@@ -1166,6 +1167,13 @@ export function PenLineIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <PenLine className={className} aria-hidden {...props} />;
+}
+
+export function HighlighterIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <Highlighter className={className} aria-hidden {...props} />;
 }
 
 export function EraserIcon({

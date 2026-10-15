@@ -203,8 +203,15 @@ export async function createAnnotation(authorId: string, raw: AnnotationInput) {
       blockText: plainBlockText(block.parts),
       authorId,
     },
-    select: { id: true, showId: true },
   });
+}
+
+/** Neue Notiz anlegen und so zurückgeben, wie der Leser sie anzeigt (ohne Neuladen). */
+export async function createReaderAnnotation(authorId: string, raw: AnnotationInput) {
+  const created = await createAnnotation(authorId, raw);
+  const block = await loadBlock(created.versionId, created.blockId ?? "");
+  const [annotation] = resolveAnnotations([created], created.versionId, [block]);
+  return annotation;
 }
 
 async function requireOwn(annotationId: string, authorId: string) {

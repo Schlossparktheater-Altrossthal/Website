@@ -14,12 +14,13 @@ import {
   ScriptAnnotationError,
   addInkStroke,
   anchorAnnotation,
-  createAnnotation,
+  createReaderAnnotation,
   deleteAnnotation,
   removeInkStrokes,
   scriptVersionScope,
   updateAnnotation,
   type AnnotationInput,
+  type ReaderAnnotation,
 } from "@/lib/skript/annotations";
 import { SCRIPT_MANAGE_PERMISSION, SCRIPT_READ_PERMISSION } from "@/lib/skript/service";
 
@@ -60,8 +61,20 @@ async function run(
   }
 }
 
-export async function createAnnotationAction(input: AnnotationInput) {
-  return run(async () => createAnnotation(await requireReader(input.versionId), input));
+export type CreateAnnotationResult =
+  { ok: true; annotation: ReaderAnnotation } | { ok: false; error: string };
+
+/** Gibt die Notiz zurück, damit der Leser sie ohne Neuladen der Seite einsetzen kann. */
+export async function createAnnotationAction(
+  input: AnnotationInput,
+): Promise<CreateAnnotationResult> {
+  let annotation: ReaderAnnotation | undefined;
+  const result = await run(async () => {
+    annotation = await createReaderAnnotation(await requireReader(input.versionId), input);
+  });
+  return result.ok && annotation
+    ? { ok: true, annotation }
+    : { ok: false, error: result.ok ? "Das hat nicht geklappt." : result.error };
 }
 
 const updateSchema = z.object({

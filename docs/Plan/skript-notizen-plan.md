@@ -1,0 +1,57 @@
+# Skript-Notizen überarbeiten
+
+Stand: 2026-10-15. Schritt 1–2 umgesetzt.
+
+## Ausgangslage
+
+- Färbung ließ sich nicht entfernen: Markierungen des ganzen Absatzes waren nicht antippbar,
+  Antippen bot nur neue Farben an. Teil-Markierungen: Antippen → Blatt → Löschen → Rückfrage.
+- Notiz anlegen dauerte zu lange: viele Schritte und nach jeder Aktion `router.refresh()` – der
+  Server lud das ganze Skript neu, React zeichnete den ganzen Leser neu.
+- Freihand liegt frei über dem Text (x relativ zur Breite, y in em). Bei anderer Schriftgröße,
+  Breite oder Fassung fließt der Text um, der Strich bleibt – grundsätzlich nicht lösbar.
+- Auf dem Handy öffnet Gedrückthalten die System-Textauswahl („In Google suchen“).
+
+## Grundsatz
+
+**Notizen hängen an Textstellen, nicht an Positionen.** Die App zeichnet sie selbst, also fließen
+sie mit dem Text und wandern in neue Fassungen mit. Alles geht mit einfachem Antippen; Gesten sind
+nur Abkürzungen.
+
+| Papier                      | Im Leser                                                                     | Anker            |
+| --------------------------- | ---------------------------------------------------------------------------- | ---------------- |
+| Pause `/` `//`, Atmer `'`   | Zeichen zwischen Wörtern                                                     | Zeichenposition  |
+| Betonung (unterstrichen)    | Unterstreichung einfach/doppelt                                              | Bereich          |
+| Bogen, Tempo, lauter/leiser | Bogen bzw. Symbol über dem Bereich                                           | Bereich          |
+| Stimmung (leise, wütend …)  | klein kursiv am Satz, eigene Begriffe, zuletzt benutzte vorne                | Bereich          |
+| Markieren                   | Farbe                                                                        | Bereich / Absatz |
+| Randnotiz                   | Text im Rand (Tablet) bzw. unter dem Satz (Handy), wie Technik-Hinweise      | Absatz / Satz    |
+| Skizze, Gang, Pfeil         | **Notizzettel**: feste Zeichenfläche (4:3), Symbol im Text, Vorschau im Rand | Stelle           |
+
+## Schritte
+
+1. [x] **Entfernen + Schnelligkeit** – Notizen im Client-Speicher (`[fassung]/use-annotations.ts`),
+       sofort sichtbar, Speichern im Hintergrund, kein `router.refresh()`; Aktion liefert die neue Notiz
+       (`createReaderAnnotation`). Antippen einer Markierung (auch ganzer Absatz) → Leiste mit Farben,
+       Notiz, Entfernen. Löschen ohne Rückfrage, „Rückgängig“ im Hinweis.
+2. [x] **Notizmodus** – Knopf „Notieren“ (Marker) in der Kopfleiste. Systemauswahl aus
+       (`select-none`, `-webkit-touch-callout: none`, kein Kontextmenü). Wörter als `data-w`-Spans,
+       Antippen wählt das Wort, zweites Wort erweitert, ◀ ▶ ein Wort weniger/mehr, „Satz“, Rollenname
+       antippen = ganzer Absatz. Farbe antippen = markieren, gleiche Farbe nochmal = entfernen.
+       Leiste bleibt offen, Rückgängig-Knopf. Logik: `src/lib/skript/note-logic.ts`.
+3. [ ] **Zeichen im Text** – Pause, Atmer, Betonung, Bogen, Tempo, Stimmung als neue Arten
+       (`ScriptAnnotation.kind`), Knöpfe mit Symbol + Wort, „?“-Zeichenerklärung.
+4. [ ] **Randnotiz** – Textfeld direkt unter dem Satz statt Bottom-Sheet (Diktieren über die
+       Tastatur), Darstellung wie Technik-Hinweise (`CUE_MARGIN_*`).
+5. [ ] **Bessere Anker** – Wortlaut + etwas Text davor/danach speichern (W3C TextQuoteSelector),
+       Übernahme über `diff.ts`: wandert still mit, solange die markierten Wörter da sind; Rückfrage
+       nur, wenn sie selbst geändert oder gestrichen wurden.
+6. [ ] **Notizzettel** – Freihand nur noch auf eigener Fläche, an einer Stelle verankert;
+       bisherige Freihand-Striche werden zu Zetteln am jeweiligen Absatz.
+7. [ ] **Offline + Probe** – Warteschlange ohne Netz, Einstieg aus dem Probenablauf direkt in die
+       Szene mit eingeschaltetem Notizmodus.
+
+## Offene Punkte
+
+- Zeichenliste mit dem Ensemble abstimmen (Tempo/Lautstärke-Zeichen?).
+- Gerätetest Android/iPhone: kein Systemmenü im Notizmodus, Tippziele groß genug.

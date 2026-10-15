@@ -10,6 +10,7 @@ import {
   ChevronUpIcon,
   CloseIcon,
   DownloadIcon,
+  HighlighterIcon,
   PenLineIcon,
   PrinterIcon,
   SearchIcon,
@@ -38,6 +39,7 @@ import {
   isRoleBlock,
   splitTail,
 } from "@/lib/skript/reader-logic";
+import { extendTo, nudge, sentenceAround, wordAt, type Span } from "@/lib/skript/note-logic";
 import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
@@ -60,11 +62,15 @@ import {
   AnnotationBar,
   AnnotationEditor,
   AnnotationReview,
+  HighlightBar,
+  NoteBar,
   PickBar,
   useTextSelection,
   type EditorState,
+  type NoteTarget,
 } from "./annotations";
 import { InkLayer, PenBar, usePen, type PenSettings } from "./ink";
+import { useAnnotations } from "./use-annotations";
 
 /** Bildschirm bleibt an, solange der Leser offen ist (Screen Wake Lock API). */
 function useWakeLock(enabled: boolean) {
@@ -114,7 +120,31 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   return <>{pieces}</>;
 }
 
-type Range = { start: number; end: number; annotation: ReaderAnnotation };
+/** Markierter Bereich; ohne `annotation` die aktuelle Auswahl im Notizmodus. */
+type Range = { start: number; end: number; annotation: ReaderAnnotation | null };
+
+/** Notizmodus: jedes Wort als antippbares Element mit Startposition im Teil (`data-w`). */
+function Words({ text, start }: { text: string; start: number }) {
+  const tokens: { token: string; from: number }[] = [];
+  for (let at = 0; at < text.length;) {
+    const token = /^\s+/.exec(text.slice(at))?.[0] ?? /^\S+/.exec(text.slice(at))![0];
+    tokens.push({ token, from: start + at });
+    at += token.length;
+  }
+  return (
+    <>
+      {tokens.map(({ token, from }) =>
+        /^\s/.test(token) ? (
+          token
+        ) : (
+          <span key={from} data-w={from}>
+            {token}
+          </span>
+        ),
+      )}
+    </>
+  );
+}
 
 /** Text eines Absatz-Teils mit Suchtreffern, Markern und Notiz-Stellen. */
 function TextRun({
@@ -122,12 +152,14 @@ function TextRun({
   offset,
   ranges,
   query,
+  words,
 }: {
   text: string;
   /** Position von `text` innerhalb des Teils (für Marker-Bereiche). */
   offset: number;
   ranges: Range[];
   query: string;
+  words: boolean;
 }) {
   const cuts = new Set([offset, offset + text.length]);
   for (const range of ranges) {
@@ -140,10 +172,26 @@ function TextRun({
     <>
       {points.slice(0, -1).map((from, index) => {
         const to = points[index + 1];
-        const piece = <Highlighted text={text.slice(from - offset, to - offset)} query={query} />;
+        const slice = text.slice(from - offset, to - offset);
+        const piece = words ? (
+          <Words text={slice} start={from} />
+        ) : (
+          <Highlighted text={slice} query={query} />
+        );
         const range = ranges.find((entry) => entry.start <= from && entry.end >= to);
         if (!range) return <React.Fragment key={from}>{piece}</React.Fragment>;
         const { annotation } = range;
+        if (!annotation) {
+          return (
+            <mark
+              key={from}
+              data-note-selection
+              className="bg-primary/25 text-inherit underline decoration-primary decoration-2 underline-offset-4"
+            >
+              {piece}
+            </mark>
+          );
+        }
         return (
           <mark
             key={from}
@@ -218,6 +266,10 @@ type BlockViewProps = {
   selected: boolean;
   /** Freihand-Zeichnung des Absatzes (gespeichert + vorläufig). */
   ink: React.ComponentProps<typeof InkLayer> | null;
+  /** Notizmodus: Wörter antippbar machen. */
+  words: boolean;
+  /** Auswahl im Notizmodus in diesem Absatz. */
+  noteRange: { partIndex: number; start: number; end: number } | null;
 };
 
 const BlockView = React.memo(
@@ -234,6 +286,8 @@ const BlockView = React.memo(
       annotations,
       selected,
       ink,
+      words,
+      noteRange,
     },
     ref,
   ) {
@@ -249,12 +303,17 @@ const BlockView = React.memo(
     const lastText = cueLine
       ? (parts.findLast(({ part }) => part.kind === "text")?.index ?? -1)
       : -1;
-    const rangesOf = (index: number): Range[] =>
-      annotations.flatMap((annotation) =>
+    const rangesOf = (index: number): Range[] => [
+      // Auswahl zuerst: sie liegt sichtbar über vorhandenen Markierungen.
+      ...(noteRange?.partIndex === index
+        ? [{ start: noteRange.start, end: noteRange.end, annotation: null }]
+        : []),
+      ...annotations.flatMap((annotation) =>
         annotation.partIndex === index && annotation.start !== null && annotation.end !== null
           ? [{ start: annotation.start, end: annotation.end, annotation }]
           : [],
-      );
+      ),
+    ];
     const blockMark = annotations.find(
       (annotation) => annotation.kind === "highlight" && annotation.partIndex === null,
     );
@@ -276,15 +335,21 @@ const BlockView = React.memo(
             const [head, tail] = splitTail(text);
             return (
               <>
-                <TextRun text={head} offset={from} ranges={ranges} query={query} />
+                <TextRun text={head} offset={from} ranges={ranges} query={query} words={words} />
                 <span className="font-semibold underline decoration-primary decoration-2 underline-offset-4">
-                  <TextRun text={tail} offset={from + head.length} ranges={ranges} query={query} />
+                  <TextRun
+                    text={tail}
+                    offset={from + head.length}
+                    ranges={ranges}
+                    query={query}
+                    words={words}
+                  />
                 </span>
               </>
             );
           })()
         ) : (
-          <TextRun text={text} offset={from} ranges={ranges} query={query} />
+          <TextRun text={text} offset={from} ranges={ranges} query={query} words={words} />
         );
       return (
         <span
@@ -424,7 +489,7 @@ export function ScriptReader({
   data,
   canManage,
   previous,
-  annotations,
+  annotations: initialAnnotations,
 }: {
   data: ScriptReaderData;
   canManage: boolean;
@@ -471,8 +536,14 @@ export function ScriptReader({
   const refs = React.useRef<(HTMLDivElement | null)[]>([]);
   const articleRef = React.useRef<HTMLElement>(null);
 
-  // Markierungen und Notizen (Phase 8)
+  // Markierungen und Notizen (Phase 8; sofort sichtbar: docs/Plan/skript-notizen-plan.md)
+  const store = useAnnotations(version.id, initialAnnotations);
+  const annotations = store.list;
   const [selection, clearSelection] = useTextSelection(articleRef, blocks);
+  // Notizmodus: Wörter antippen statt System-Textauswahl (kein „In Google suchen“ o. Ä.).
+  const [noteMode, setNoteMode] = React.useState(false);
+  const [noteTarget, setNoteTarget] = React.useState<NoteTarget | null>(null);
+  const [tappedHighlight, setTappedHighlight] = React.useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = React.useState<string | null>(null);
   const [editor, setEditor] = React.useState<EditorState | null>(null);
   const [reviewOpen, setReviewOpen] = React.useState(false);
@@ -524,7 +595,7 @@ export function ScriptReader({
     if (penMode) return;
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
-    if (window.getSelection()?.isCollapsed === false) return;
+    if (!noteMode && window.getSelection()?.isCollapsed === false) return;
     if (target.closest("a,button:not([data-annotation])")) return;
     const blockId = target.closest("[data-block]")?.getAttribute("data-block") ?? null;
     if (pick) {
@@ -533,17 +604,93 @@ export function ScriptReader({
     }
     const annotationId = target.closest("[data-annotation]")?.getAttribute("data-annotation");
     const annotation = annotationId ? annotationById.get(annotationId) : undefined;
+    if (noteMode && annotation?.kind !== "note") {
+      onNoteTap(target, blockId);
+      return;
+    }
+    setTappedHighlight(null);
+    if (annotation?.kind === "highlight") {
+      setSelectedBlock(null);
+      setTappedHighlight(annotation.id);
+      return;
+    }
     if (annotation) {
       setSelectedBlock(null);
       setEditor({ mode: "edit", annotation });
       return;
     }
+    // Ganzer Absatz markiert: Antippen öffnet die Markierung (umfärben, entfernen).
+    const blockMark = blockId
+      ? annotationsByBlock
+          .get(blockId)
+          ?.find((entry) => entry.kind === "highlight" && entry.partIndex === null)
+      : undefined;
+    if (blockMark && settings.showNotes) {
+      setSelectedBlock(null);
+      setTappedHighlight(blockMark.id);
+      return;
+    }
     setSelectedBlock((current) => (current === blockId ? null : blockId));
+  };
+
+  /** Notizmodus: Wort wählen; zweites Wort im selben Satzteil erweitert bis dorthin. */
+  const onNoteTap = (target: Element, blockId: string | null) => {
+    const block = blockId ? blockById.get(blockId) : undefined;
+    if (!block) return;
+    const word = target.closest("[data-w]");
+    const partIndex = Number(target.closest("[data-part]")?.getAttribute("data-part"));
+    const text = block.parts[partIndex]?.text;
+    if (!word || text === undefined) {
+      // Rollenname oder Rand angetippt: ganzer Absatz.
+      setNoteTarget((current) =>
+        current?.blockId === block.id && !current.range ? null : { blockId: block.id, range: null },
+      );
+      return;
+    }
+    const tapped = wordAt(text, Number(word.getAttribute("data-w")));
+    if (!tapped) return;
+    setNoteTarget((current) => {
+      const range = current?.range;
+      if (range && current.blockId === block.id && range.partIndex === partIndex) {
+        const single = wordAt(text, range.start);
+        const isSingle = single?.start === range.start && single.end === range.end;
+        if (isSingle && tapped.start === range.start) return null;
+        if (isSingle) return noteTargetOf(block, partIndex, extendTo(range, tapped));
+      }
+      return noteTargetOf(block, partIndex, tapped);
+    });
+  };
+  const noteTargetOf = (block: ReaderBlock, partIndex: number, span: Span): NoteTarget => ({
+    blockId: block.id,
+    range: {
+      blockId: block.id,
+      partIndex,
+      start: span.start,
+      end: span.end,
+      quote: block.parts[partIndex].text.slice(span.start, span.end),
+    },
+  });
+  const changeNoteRange = (change: (text: string, span: Span) => Span) => {
+    const range = noteTarget?.range;
+    const block = noteTarget ? blockById.get(noteTarget.blockId) : undefined;
+    if (!range || !block) return;
+    const text = block.parts[range.partIndex].text;
+    setNoteTarget(noteTargetOf(block, range.partIndex, change(text, range)));
+  };
+  const setNoting = (on: boolean) => {
+    clearSelection();
+    setSelectedBlock(null);
+    setTappedHighlight(null);
+    setNoteTarget(null);
+    if (on) setPenMode(false);
+    setNoteMode(on);
   };
   const closeBar = () => {
     clearSelection();
     setSelectedBlock(null);
+    setTappedHighlight(null);
   };
+  const tappedAnnotation = tappedHighlight ? annotationById.get(tappedHighlight) : undefined;
   const barRef = React.useRef<HTMLDivElement>(null);
   const toolbarRef = React.useRef<HTMLDivElement>(null);
 
@@ -703,7 +850,7 @@ export function ScriptReader({
         ref={toolbarRef}
         className={cn(
           "fixed inset-x-0 top-0 z-30 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur transition-transform duration-200",
-          chromeHidden && !searchOpen && !penMode && "-translate-y-full",
+          chromeHidden && !searchOpen && !penMode && !noteMode && "-translate-y-full",
         )}
       >
         <div className="mx-auto flex h-12 max-w-[1240px] items-center gap-0.5 px-1 lg:px-4">
@@ -767,6 +914,16 @@ export function ScriptReader({
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Notieren"
+            aria-pressed={noteMode}
+            className={cn(noteMode && "bg-primary/15 text-primary")}
+            onClick={() => setNoting(!noteMode)}
+          >
+            <HighlighterIcon aria-hidden />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label="Stift"
             aria-pressed={penMode}
             // Auf dem Handy im Ansicht-Menü, damit der Szenentitel Platz hat – außer im Stiftmodus.
@@ -776,6 +933,7 @@ export function ScriptReader({
             )}
             onClick={() => {
               closeBar();
+              setNoting(false);
               setPenMode((on) => !on);
             }}
           >
@@ -871,12 +1029,15 @@ export function ScriptReader({
           ref={articleRef}
           data-cue-margin={cueMargin || undefined}
           // Ist die Kopfleiste beim Lesen weggescrollt, klebt stattdessen die Szenenüberschrift oben.
-          data-chrome-hidden={(chromeHidden && !searchOpen && !penMode) || undefined}
+          data-chrome-hidden={(chromeHidden && !searchOpen && !penMode && !noteMode) || undefined}
           onClick={onArticleClick}
+          // Notizmodus: kein Kontextmenü/„In Google suchen“ beim Gedrückthalten.
+          onContextMenu={noteMode ? (event) => event.preventDefault() : undefined}
           {...pen.handlers}
           className={cn(
             "group/reader",
             penMode && "cursor-crosshair touch-none select-none",
+            noteMode && "cursor-pointer select-none [-webkit-touch-callout:none]",
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,
           )}
@@ -958,8 +1119,12 @@ export function ScriptReader({
                       : noAnnotations
                   }
                   selected={
-                    (!selection && selectedBlock === block.id) || pick?.blockId === block.id
+                    (!selection && selectedBlock === block.id) ||
+                    pick?.blockId === block.id ||
+                    (noteTarget?.blockId === block.id && !noteTarget.range)
                   }
+                  words={noteMode}
+                  noteRange={noteTarget?.blockId === block.id ? noteTarget.range : null}
                   ink={
                     settings.showNotes && (inkByBlock.has(block.id) || pen.pending.has(block.id))
                       ? {
@@ -981,7 +1146,14 @@ export function ScriptReader({
         ref={barRef}
         className={cn(
           "fixed inset-x-0 bottom-0 z-30 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur",
-          (nextCue || nextLine || selection || selectedBlock || pick || penMode) &&
+          (nextCue ||
+            nextLine ||
+            selection ||
+            selectedBlock ||
+            pick ||
+            penMode ||
+            noteMode ||
+            tappedAnnotation) &&
             "border-t border-border",
         )}
       >
@@ -993,6 +1165,27 @@ export function ScriptReader({
               onUndo={() => void pen.undo()}
               onDone={() => setPenMode(false)}
             />
+          ) : noteMode ? (
+            <NoteBar
+              store={store}
+              target={noteTarget}
+              onNudge={(direction) => changeNoteRange((text, span) => nudge(text, span, direction))}
+              onSentence={() => changeNoteRange(sentenceAround)}
+              onBlock={() =>
+                noteTarget && setNoteTarget({ blockId: noteTarget.blockId, range: null })
+              }
+              onNote={() => {
+                if (!noteTarget) return;
+                setEditor({
+                  mode: "create",
+                  blockId: noteTarget.blockId,
+                  selection: noteTarget.range,
+                });
+                setNoteTarget(null);
+              }}
+              onClear={() => setNoteTarget(null)}
+              onDone={() => setNoting(false)}
+            />
           ) : pick ? (
             <PickBar
               versionId={version.id}
@@ -1000,9 +1193,36 @@ export function ScriptReader({
               blockId={pick.blockId}
               onDone={() => setPick(null)}
             />
+          ) : tappedAnnotation ? (
+            <HighlightBar
+              store={store}
+              annotation={tappedAnnotation}
+              onNote={() => {
+                if (tappedAnnotation.blockId) {
+                  setEditor({
+                    mode: "create",
+                    blockId: tappedAnnotation.blockId,
+                    selection:
+                      tappedAnnotation.partIndex !== null &&
+                      tappedAnnotation.start !== null &&
+                      tappedAnnotation.end !== null
+                        ? {
+                            blockId: tappedAnnotation.blockId,
+                            partIndex: tappedAnnotation.partIndex,
+                            start: tappedAnnotation.start,
+                            end: tappedAnnotation.end,
+                            quote: tappedAnnotation.quote ?? "",
+                          }
+                        : null,
+                  });
+                }
+                closeBar();
+              }}
+              onDone={closeBar}
+            />
           ) : selection || selectedBlock ? (
             <AnnotationBar
-              versionId={version.id}
+              store={store}
               selection={selection}
               blockId={selectedBlock}
               onNote={() => {
@@ -1333,7 +1553,7 @@ export function ScriptReader({
       {pen.liveStroke}
       <AnnotationEditor
         key={editor?.mode === "edit" ? editor.annotation.id : (editor?.blockId ?? "neu")}
-        versionId={version.id}
+        store={store}
         state={editor}
         onClose={() => setEditor(null)}
       />
