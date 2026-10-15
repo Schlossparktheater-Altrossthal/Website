@@ -68,6 +68,7 @@ import {
   AnnotationEditor,
   AnnotationReview,
   HighlightBar,
+  InlineNoteEditor,
   PickBar,
   useTextSelection,
   type EditorState,
@@ -355,6 +356,10 @@ type BlockViewProps = {
   words: boolean;
   /** Auswahl im Notizmodus in diesem Absatz. */
   noteRange: { partIndex: number; start: number; end: number } | null;
+  /** Randnotiz wird an diesem Absatz gerade geschrieben/geändert. */
+  noteEditor: React.ReactNode;
+  /** Diese Notiz steckt im Editor und wird nicht doppelt gezeigt. */
+  editingId: string | null;
 };
 
 const BlockView = React.memo(
@@ -373,6 +378,8 @@ const BlockView = React.memo(
       ink,
       words,
       noteRange,
+      noteEditor,
+      editingId,
     },
     ref,
   ) {
@@ -402,7 +409,9 @@ const BlockView = React.memo(
     const blockMark = annotations.find(
       (annotation) => annotation.kind === "highlight" && annotation.partIndex === null,
     );
-    const notes = annotations.filter((annotation) => annotation.kind === "note");
+    const notes = annotations.filter(
+      (annotation) => annotation.kind === "note" && annotation.id !== editingId,
+    );
 
     /** Ein Teil oder – wenn ein Hinweis den Satz trennt – ein Ausschnitt davon. */
     const renderPart = ({
@@ -518,7 +527,7 @@ const BlockView = React.memo(
             // Regieblöcke haben keine Seitenzahl-Spalte: gleich weit einrücken wie Repliken.
             CUE_MARGIN_SPACE,
             "md:group-data-[cue-margin]/reader:pr-[13.5rem]",
-            !visible && !notes.length && "hidden",
+            !visible && !notes.length && !noteEditor && "hidden",
             settings.directions === "dim" && "opacity-50",
             blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
             activeMatch && "ring-2 ring-inset ring-ring",
@@ -527,6 +536,7 @@ const BlockView = React.memo(
         >
           {renderParts()}
           <NoteCards notes={notes} className="mt-1 xl:mr-[17rem]" />
+          {noteEditor}
           {ink ? <InkLayer {...ink} /> : null}
         </div>
       );
@@ -578,6 +588,7 @@ const BlockView = React.memo(
           notes={notes}
           className="mt-1 md:col-span-2 md:col-start-2 xl:col-span-1 xl:col-start-4 xl:row-span-2 xl:row-start-1 xl:mt-0"
         />
+        {noteEditor ? <div className="md:col-span-2 md:col-start-2">{noteEditor}</div> : null}
       </div>
     );
   }),
@@ -647,6 +658,18 @@ export function ScriptReader({
   const [tapped, setTapped] = React.useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = React.useState<string | null>(null);
   const [editor, setEditor] = React.useState<EditorState | null>(null);
+  // Notizen schreibt man direkt am Absatz; das Blatt bleibt für Markierungen und Stimmungen.
+  const [inlineNote, setInlineNote] = React.useState<EditorState | null>(null);
+  const openEditor = (state: EditorState) => {
+    if (state.mode === "create" || state.annotation.kind === "note") {
+      setEditor(null);
+      setInlineNote(state);
+    } else {
+      setEditor(state);
+    }
+  };
+  const inlineBlockId =
+    inlineNote?.mode === "create" ? inlineNote.blockId : (inlineNote?.annotation.blockId ?? null);
   const [reviewOpen, setReviewOpen] = React.useState(false);
   const [pick, setPick] = React.useState<{ annotationId: string; blockId: string | null } | null>(
     null,
@@ -712,7 +735,9 @@ export function ScriptReader({
       .filter((id) => annotationById.has(id));
     // Zeichen zwischen den Wörtern bzw. Etiketten (lauter …) antippen: entfernen anbieten.
     const signTag = hit && hit.tagName !== "MARK" && annotation?.kind === "sign";
-    if (noteMode && !signTag && annotation?.kind !== "note") {
+    // Im Notizmodus wählt Antippen im Text immer das Wort; Notizen öffnet man über ihre Karte.
+    const noteCard = annotation?.kind === "note" && hit?.tagName !== "MARK";
+    if (noteMode && !signTag && !noteCard) {
       setTapped([]);
       onNoteTap(target, blockId);
       return;
@@ -725,7 +750,7 @@ export function ScriptReader({
     }
     if (annotation) {
       setSelectedBlock(null);
-      setEditor({ mode: "edit", annotation });
+      openEditor({ mode: "edit", annotation });
       return;
     }
     // Ganzer Absatz markiert: Antippen öffnet die Markierung (umfärben, entfernen).
@@ -1183,7 +1208,14 @@ export function ScriptReader({
           data-chrome-hidden={(chromeHidden && !searchOpen && !penMode && !noteMode) || undefined}
           onClick={onArticleClick}
           // Notizmodus: kein Kontextmenü/„In Google suchen“ beim Gedrückthalten.
-          onContextMenu={noteMode ? (event) => event.preventDefault() : undefined}
+          onContextMenu={
+            noteMode
+              ? (event) => {
+                  // Im Notiz-Textfeld bleibt das Menü (Einfügen, Diktieren).
+                  if (!(event.target instanceof HTMLTextAreaElement)) event.preventDefault();
+                }
+              : undefined
+          }
           {...pen.handlers}
           className={cn(
             "group/reader",
@@ -1275,6 +1307,17 @@ export function ScriptReader({
                     (noteTarget?.blockId === block.id && !noteTarget.range)
                   }
                   words={noteMode}
+                  editingId={inlineNote?.mode === "edit" ? inlineNote.annotation.id : null}
+                  noteEditor={
+                    inlineNote && inlineBlockId === block.id ? (
+                      <InlineNoteEditor
+                        key={inlineNote.mode === "edit" ? inlineNote.annotation.id : "neu"}
+                        store={store}
+                        state={inlineNote}
+                        onClose={() => setInlineNote(null)}
+                      />
+                    ) : null
+                  }
                   noteRange={noteTarget?.blockId === block.id ? noteTarget.range : null}
                   ink={
                     settings.showNotes && (inkByBlock.has(block.id) || pen.pending.has(block.id))
@@ -1297,6 +1340,8 @@ export function ScriptReader({
         ref={barRef}
         className={cn(
           "fixed inset-x-0 bottom-0 z-30 bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur",
+          // Beim Schreiben einer Randnotiz verdeckt die Leiste sonst über der Tastatur das Feld.
+          inlineNote && "hidden",
           (nextCue ||
             nextLine ||
             selection ||
@@ -1324,7 +1369,7 @@ export function ScriptReader({
                   annotations={tappedAnnotations}
                   onEdit={(annotation) => {
                     setTapped([]);
-                    setEditor({ mode: "edit", annotation });
+                    openEditor({ mode: "edit", annotation });
                   }}
                   onDone={() => setTapped([])}
                 />
@@ -1347,7 +1392,7 @@ export function ScriptReader({
                 }
                 onNote={() => {
                   if (!noteTarget) return;
-                  setEditor({
+                  openEditor({
                     mode: "create",
                     blockId: noteTarget.blockId,
                     selection: noteTarget.range,
@@ -1372,7 +1417,7 @@ export function ScriptReader({
               annotations={tappedAnnotations}
               onEdit={(annotation) => {
                 setTapped([]);
-                setEditor({ mode: "edit", annotation });
+                openEditor({ mode: "edit", annotation });
               }}
               onDone={closeBar}
             />
@@ -1382,7 +1427,7 @@ export function ScriptReader({
               annotation={tappedAnnotation}
               onNote={() => {
                 if (tappedAnnotation.blockId) {
-                  setEditor({
+                  openEditor({
                     mode: "create",
                     blockId: tappedAnnotation.blockId,
                     selection:
@@ -1410,7 +1455,7 @@ export function ScriptReader({
               blockId={selectedBlock}
               onNote={() => {
                 const blockId = selection?.blockId ?? selectedBlock;
-                if (blockId) setEditor({ mode: "create", blockId, selection });
+                if (blockId) openEditor({ mode: "create", blockId, selection });
                 closeBar();
               }}
               onDone={closeBar}

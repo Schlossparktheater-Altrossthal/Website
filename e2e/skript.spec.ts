@@ -352,15 +352,15 @@ test.describe("als admin", () => {
     await page.getByText("Wie geht es dir heute?").click();
     await expect(page.getByText("Ganzer Absatz")).toBeVisible();
     await page.getByRole("button", { name: "Notiz", exact: true }).click();
-    await page.getByRole("dialog").getByRole("textbox").fill("Hier kurze Pause machen.");
-    await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
+    await page.getByRole("textbox", { name: "Notiz" }).fill("Hier kurze Pause machen.");
+    await page.locator("[data-inline-note]").getByRole("button", { name: "Speichern" }).click();
     await expect(page.getByRole("button", { name: /Hier kurze Pause machen/ })).toBeVisible();
 
     // Notiz an der Zeile, die in Fassung B fehlt
     await page.getByText("Diese Zeile verschwindet später.").click();
     await page.getByRole("button", { name: "Notiz", exact: true }).click();
-    await page.getByRole("dialog").getByRole("textbox").fill("Auftritt von links.");
-    await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
+    await page.getByRole("textbox", { name: "Notiz" }).fill("Auftritt von links.");
+    await page.locator("[data-inline-note]").getByRole("button", { name: "Speichern" }).click();
     await expect(page.getByRole("button", { name: /Auftritt von links/ })).toBeVisible();
     await shoot(page, "skript-notizen");
     if (shots) {
@@ -388,9 +388,8 @@ test.describe("als admin", () => {
 
     // Notiz bearbeiten
     await page.getByRole("button", { name: /Hier kurze Pause machen/ }).click();
-    await expect(page.getByRole("dialog").getByText(/Angelegt/)).toBeVisible();
-    await page.getByRole("dialog").getByRole("textbox").fill("Hier lange Pause machen.");
-    await page.getByRole("dialog").getByRole("button", { name: "Speichern" }).click();
+    await page.getByRole("textbox", { name: "Notiz" }).fill("Hier lange Pause machen.");
+    await page.locator("[data-inline-note]").getByRole("button", { name: "Speichern" }).click();
     await expect(page.getByRole("button", { name: /Hier lange Pause machen/ })).toBeVisible();
 
     // Fassung B: Entwürfe erben keine Absatz-Kennung → Notizen sind ohne Platz

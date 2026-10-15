@@ -1,6 +1,6 @@
 # Skript-Notizen überarbeiten
 
-Stand: 2026-10-15. Schritt 1–3 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
+Stand: 2026-10-15. Schritt 1–4 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
 
 ## Ausgangslage
 
@@ -52,8 +52,14 @@ nur Abkürzungen.
        Betonung (nochmal = stark, nochmal = weg), Bogen, lauter/leiser/schneller/langsamer
        (deutsche Wörter statt cresc./accel.), Stimmung mit Vorschlägen + eigenen Begriffen.
        Stellen-Zeichen merken sich den Text davor (`pointContext`) und wandern so in neue Fassungen.
-4. [ ] **Randnotiz** – Textfeld direkt unter dem Satz statt Bottom-Sheet (Diktieren über die
+4. [x] **Randnotiz** – Textfeld direkt unter dem Satz statt Bottom-Sheet (Diktieren über die
        Tastatur), Darstellung wie Technik-Hinweise (`CUE_MARGIN_*`).
+       Umgesetzt 2026-10-15: `InlineNoteEditor` (annotations.tsx) direkt unter dem Absatz – Enter
+       speichert, Umschalt+Enter neue Zeile, Esc bricht ab, leeres Feld beim Ändern = löschen.
+       Leiste unten ist währenddessen ausgeblendet (sonst über der Tastatur). Anzeige: Handy/Tablet
+       als Randnotiz unter dem Absatz, ab xl in der Randspalte. Bottom-Sheet nur noch für
+       Markierungen/Stimmungen. Im Notizmodus wählt Antippen im Text immer das Wort, Notizen
+       öffnet man über ihre Karte. Gemessen (Produktions-Build lokal): Notiz sichtbar nach ~155 ms.
 5. [ ] **Bessere Anker** – Wortlaut + etwas Text davor/danach speichern (W3C TextQuoteSelector),
        Übernahme über `diff.ts`: wandert still mit, solange die markierten Wörter da sind; Rückfrage
        nur, wenn sie selbst geändert oder gestrichen wurden.

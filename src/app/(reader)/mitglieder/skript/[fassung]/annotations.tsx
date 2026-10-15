@@ -447,6 +447,114 @@ export function AnnotationEditor({
 }
 
 /**
+ * Randnotiz direkt unter dem Absatz schreiben oder ändern (docs/Plan/skript-notizen-plan.md,
+ * Schritt 4) – ohne Blatt von unten. Enter speichert, Umschalt+Enter macht eine neue Zeile,
+ * Esc bricht ab. Diktieren geht über das Mikrofon der Handy-Tastatur.
+ */
+export function InlineNoteEditor({
+  store,
+  state,
+  onClose,
+}: {
+  store: AnnotationStore;
+  state: EditorState;
+  onClose: () => void;
+}) {
+  const annotation = state.mode === "edit" ? state.annotation : null;
+  const [body, setBody] = React.useState(annotation?.body ?? "");
+  const ref = React.useRef<HTMLTextAreaElement>(null);
+  const quote = state.mode === "create" ? state.selection?.quote : annotation?.quote;
+  React.useEffect(() => {
+    const field = ref.current;
+    if (!field) return;
+    field.focus({ preventScroll: true });
+    field.setSelectionRange(field.value.length, field.value.length);
+    // Erst nach dem Einblenden der Tastatur in die Mitte holen.
+    const timer = window.setTimeout(() => field.scrollIntoView({ block: "center" }), 250);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const save = () => {
+    const text = body.trim();
+    if (state.mode === "create") {
+      if (text) {
+        void store.create({
+          blockId: state.blockId,
+          kind: "note",
+          body: text,
+          range: state.selection
+            ? {
+                partIndex: state.selection.partIndex,
+                start: state.selection.start,
+                end: state.selection.end,
+                quote: state.selection.quote,
+              }
+            : null,
+        });
+      }
+    } else if (!text) {
+      void store.removeWithUndo(state.annotation);
+    } else if (text !== (state.annotation.body ?? "")) {
+      void store.update(state.annotation, { body: text });
+    }
+    onClose();
+  };
+
+  return (
+    <div
+      data-inline-note
+      className="mt-1 space-y-1.5 border-l-2 border-warning bg-warning/10 px-2 py-1.5 text-[0.85em] not-italic"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <p className="truncate text-muted-foreground">
+        {quote ? `Notiz zu „${quote}“` : "Notiz zum Absatz"}
+        {annotation?.state === "changed" ? ` · vorher: „${annotation.previousText}“` : ""}
+      </p>
+      <textarea
+        ref={ref}
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            save();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            onClose();
+          }
+        }}
+        rows={2}
+        maxLength={4000}
+        enterKeyHint="done"
+        aria-label="Notiz"
+        placeholder="z. B. hier zur Rampe, Blick zu Atréju …"
+        className="block w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-base [field-sizing:content]"
+      />
+      <div className="flex items-center gap-2">
+        {annotation ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              void store.removeWithUndo(annotation);
+              onClose();
+            }}
+          >
+            <TrashIcon aria-hidden /> Löschen
+          </Button>
+        ) : null}
+        <Button variant="ghost" size="sm" className="ml-auto" onClick={onClose}>
+          Abbrechen
+        </Button>
+        <Button size="sm" onClick={save} disabled={!annotation && !body.trim()}>
+          Speichern
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Notizen, die nach einer neuen Fassung eine Entscheidung brauchen: Absatz geändert oder
  * gestrichen. „Passt so“ bestätigt am aktuellen Platz, „Anderen Absatz“ startet das Zuordnen.
  */
