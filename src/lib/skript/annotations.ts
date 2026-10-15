@@ -240,6 +240,14 @@ async function loadBlock(versionId: string, blockId: string) {
 
 export async function createAnnotation(authorId: string, raw: AnnotationInput) {
   const input = annotationInputSchema.parse(raw);
+  // Offline nachgesendet: kam die erste Anfrage schon an, gilt die vorhandene Notiz.
+  if (input.id) {
+    const existing = await prisma.scriptAnnotation.findUnique({ where: { id: input.id } });
+    if (existing) {
+      if (existing.authorId !== authorId) throw new ScriptAnnotationError("Ungültige Kennung.");
+      return existing;
+    }
+  }
   const block = await loadBlock(input.versionId, input.blockId);
   let quote: string | null = null;
   let context: { prefix: string; suffix: string } | null = null;
@@ -363,6 +371,12 @@ export async function anchorAnnotation(
 }
 
 export async function deleteAnnotation(annotationId: string, authorId: string) {
+  // Schon gelöscht (z. B. offline nachgesendet): nichts zu tun.
+  const found = await prisma.scriptAnnotation.findUnique({
+    where: { id: annotationId },
+    select: { id: true },
+  });
+  if (!found) return null;
   const annotation = await requireOwn(annotationId, authorId);
   await prisma.scriptAnnotation.delete({ where: { id: annotationId } });
   return annotation;

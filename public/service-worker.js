@@ -101,6 +101,14 @@ if (typeof workbox !== "undefined") {
     new strategies.NetworkFirst({ cacheName: "lernen-pages", networkTimeoutSeconds: 4 }),
   );
 
+  // Skript-Leser: zuletzt geöffnete Fassungen bleiben offline lesbar (Bühne ohne Netz); Notizen
+  // sammelt die Seite in einer eigenen Warteschlange (skript-outbox:<Fassung>).
+  routing.registerRoute(
+    ({ request, url }) =>
+      request.mode === "navigate" && /^\/mitglieder\/skript\/[^/]+$/.test(url.pathname),
+    new strategies.NetworkFirst({ cacheName: "skript-pages", networkTimeoutSeconds: 4 }),
+  );
+
   // Seitenaufrufe immer übers Netz; ohne Verbindung die Offline-Seite statt Browserfehler.
   routing.registerRoute(new routing.NavigationRoute(new strategies.NetworkOnly()));
   routing.setCatchHandler(async ({ request }) => {

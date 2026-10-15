@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CircleDashed, CircleSlash, Play, WifiOff } from "lucide-react";
+import Link from "next/link";
+import { CircleDashed, CircleSlash, NotebookPen, Play, WifiOff } from "lucide-react";
 
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon } from "@/components/ui/action-icons";
 import { AttachButtons, MediaAttachments } from "@/components/media/media-attachments";
@@ -487,6 +488,7 @@ export function ProbeMode({
   access,
   userId,
   initialPreparing,
+  script,
 }: {
   eventId: string;
   title: string;
@@ -503,6 +505,8 @@ export function ProbeMode({
   userId: string;
   /** Mehr als eine Stunde vor Beginn und noch nicht begonnen (Stand beim Laden). */
   initialPreparing: boolean;
+  /** Freigegebenes Skript des Stücks, falls lesbar; Szene des Stücks → Skript-Szene. */
+  script: { versionId: string; sceneMap: Record<string, string> } | null;
 }) {
   useEventLiveRefresh(eventId);
   const { state, dispatch, status, pending } = useProtocolSync(eventId, serverState, candidates);
@@ -536,6 +540,19 @@ export function ProbeMode({
   }, [sendWhenSynced, status, sending, eventId]);
   const [adding, setAdding] = useState(false);
   const current = resolveCurrentBlock(state.blocks);
+  const scriptLink = script ? (
+    <ScriptLink
+      compact={full}
+      versionId={script.versionId}
+      scriptSceneId={
+        (current?.block.sceneId && script.sceneMap[current.block.sceneId]) ||
+        state.blocks.flatMap((block) =>
+          block.sceneId && script.sceneMap[block.sceneId] ? [script.sceneMap[block.sceneId]] : [],
+        )[0] ||
+        null
+      }
+    />
+  ) : null;
   const attendance = countAttendance(state);
   const usedSceneIds = useMemo(
     () => new Set(state.blocks.flatMap((block) => (block.sceneId ? [block.sceneId] : []))),
@@ -565,6 +582,7 @@ export function ProbeMode({
             Ändern kannst du nur deine eigenen.
           </p>
         </div>
+        {scriptLink}
         <NotesPanel
           state={state}
           assignees={assignees}
@@ -599,6 +617,7 @@ export function ProbeMode({
               {now === null ? "" : TIME.format(new Date(now))}
             </span>
             <SyncBadge status={status} pending={pending} />
+            {scriptLink}
           </div>
         </div>
         {preparing ? (
@@ -763,5 +782,40 @@ export function ProbeMode({
         </Badge>
       ) : null}
     </div>
+  );
+}
+
+/** Direkt in die Szene im Skript, Notizmodus an (Schritt 7 der Skript-Notizen). */
+function ScriptLink({
+  versionId,
+  scriptSceneId,
+  compact,
+}: {
+  versionId: string;
+  scriptSceneId: string | null;
+  /** In der Kopfkarte des Probenmodus nur kurz „Skript“. */
+  compact: boolean;
+}) {
+  const params = new URLSearchParams({ notieren: "1" });
+  if (scriptSceneId) params.set("szene", scriptSceneId);
+  return (
+    <Button
+      asChild
+      variant={compact ? "ghost" : "outline"}
+      size="sm"
+      className={compact ? "h-7 px-2" : "w-full sm:w-auto"}
+    >
+      <Link
+        href={`/mitglieder/skript/${versionId}?${params}`}
+        aria-label={scriptSceneId ? "Im Skript notieren – aktuelle Szene" : "Im Skript notieren"}
+      >
+        <NotebookPen aria-hidden />
+        {compact
+          ? "Skript"
+          : scriptSceneId
+            ? "Im Skript notieren – aktuelle Szene"
+            : "Im Skript notieren"}
+      </Link>
+    </Button>
   );
 }

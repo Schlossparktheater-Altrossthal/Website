@@ -243,5 +243,5 @@ Offen:
 - [ ] Phase 10 Bearbeiten
 - [ ] Phase 11 Übernahme-Assistent
 - [ ] Phase 12 Live-Mitlesen + Live-Zusammenarbeit, Offline
-- [ ] Phase 13 Lernmodus – eigener Plan: docs/Plan/lernmodus-plan.md
+- [x] Phase 13 Lernmodus – eigener Plan: docs/Plan/lernmodus-plan.md (umgesetzt, Staging; offen Release + Gerätetest)
 - [ ] Phase 14 E2E + Release

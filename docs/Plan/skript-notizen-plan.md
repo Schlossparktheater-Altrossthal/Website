@@ -76,8 +76,16 @@ nur Abkürzungen.
        Stift erkannt ist, Radierer über Abstand zur Linie, Titel; Symbol ✎ im Text, Vorschau unter
        dem Absatz bzw. im Rand. Stiftmodus über dem Text (`ink.tsx`) entfernt.
        Falle: Geschwister-Komponenten mit gleichem `key` („neu“) – React entfernte den Editor nicht.
-7. [ ] **Offline + Probe** – Warteschlange ohne Netz, Einstieg aus dem Probenablauf direkt in die
+7. [x] **Offline + Probe** – Warteschlange ohne Netz, Einstieg aus dem Probenablauf direkt in die
        Szene mit eingeschaltetem Notizmodus.
+       Umgesetzt 2026-10-15: `[fassung]/outbox.ts` – ohne Netz (oder bei Netzfehler) landen
+       Anlegen/Ändern/Löschen/Zettel in `skript-outbox:<Fassung>` (localStorage) und gehen beim
+       nächsten `online` in Reihenfolge raus; solange etwas wartet, stellt sich jede neue Änderung
+       hinten an. Anlegen und Löschen sind auf dem Server wiederholbar (gleiche Kennung). Beim
+       Öffnen wird Wartendes über den Stand gelegt; Wolke mit Zahl in der Kopfleiste. Leser legt
+       sich selbst in den SW-Cache `skript-pages` (wie Lernmodus). Probenmodus: Knopf „Skript“
+       bzw. „Im Skript notieren“ → `/mitglieder/skript/<Fassung>?szene=<Skript-Szene>&notieren=1`
+       (neueste freigegebene Fassung, Szene über `matchScenes` aus dem laufenden/nächsten Punkt).
 
 ## Offene Punkte
 

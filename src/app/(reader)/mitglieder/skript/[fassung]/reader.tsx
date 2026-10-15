@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 
+import { CloudOffIcon } from "lucide-react";
 import {
   ArrowLeftIcon,
   BookOpenTextIcon,
@@ -960,7 +961,16 @@ export function ScriptReader({
 
   // Leseposition je Fassung merken und beim Öffnen wiederherstellen.
   const positionKey = `skript-position:${version.id}`;
+  // Einstieg aus dem Probenmodus: `?szene=…&notieren=1` (Skript-Notizen, Schritt 7). Einmal
+  // lesen – die URL wird gleich bereinigt, Effekte können aber erneut laufen.
+  const entry = React.useRef<URLSearchParams | null>(null);
+  const entryParams = React.useCallback(
+    () => (entry.current ??= new URLSearchParams(window.location.search)),
+    [],
+  );
   React.useEffect(() => {
+    // Einstieg aus dem Probenmodus springt in die Szene statt zur letzten Stelle.
+    if (entryParams().has("szene")) return;
     const stored = readStored<{ lineageId: string }>(positionKey);
     const index = stored?.lineageId
       ? blocks.findIndex((block) => block.lineageId === stored.lineageId)
@@ -996,6 +1006,40 @@ export function ScriptReader({
     const index = sceneIndex.get(sceneId);
     if (index !== undefined) scrollToIndex(index, false);
   };
+  const entryUsed = React.useRef(false);
+  React.useEffect(() => {
+    if (entryUsed.current) return;
+    const params = entryParams();
+    const sceneId = params.get("szene");
+    if (params.get("notieren") === "1") setNoteMode(true);
+    if (window.location.search) {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
+    if (!sceneId) {
+      entryUsed.current = true;
+      return;
+    }
+    // Erst nach den Schriften springen, sonst verschiebt sich die Stelle noch.
+    let cancelled = false;
+    void document.fonts.ready.then(() => {
+      const index = sceneIndex.get(sceneId);
+      if (cancelled) return;
+      entryUsed.current = true;
+      if (index !== undefined) scrollToIndex(index, false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [entryParams, sceneIndex, scrollToIndex]);
+  // Offline: Seite beim Öffnen selbst in den Cache des Service Workers legen (wie im Lernmodus).
+  React.useEffect(() => {
+    if (!("caches" in window) || !navigator.onLine) return;
+    const path = window.location.pathname;
+    caches
+      .open("skript-pages")
+      .then((cache) => cache.add(new Request(path, { credentials: "same-origin" })))
+      .catch((error) => console.warn("[skript] Offline-Kopie nicht gespeichert", error));
+  }, []);
   const currentScene = scenes.find((scene) => scene.id === blocks[position.first]?.sceneId);
   const fontClass = FONT_SIZES[settings.fontSize] ?? FONT_SIZES[1];
   // Sprecher-Spalte so breit wie der längste übliche Name; längere Namen stehen darüber.
@@ -1090,6 +1134,16 @@ export function ScriptReader({
                 <SparklesIcon aria-hidden />
               </Link>
             </Button>
+          ) : null}
+          {store.waiting ? (
+            <span
+              className="flex items-center gap-1 px-1 text-xs text-muted-foreground"
+              title="Ohne Netz gespeichert – wird nachgesendet"
+            >
+              <CloudOffIcon aria-hidden className="size-4" />
+              <span className="sr-only">Wartende Notizen:</span>
+              {store.waiting}
+            </span>
           ) : null}
           <Button
             variant="ghost"
