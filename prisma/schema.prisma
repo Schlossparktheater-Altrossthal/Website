@@ -4019,6 +4019,9 @@ model ScriptAnnotation {
   start     Int?
   end       Int?
   quote     String?
+  /// Text vor/nach der Stelle – findet sie in neuen Fassungen wieder (W3C TextQuoteSelector).
+  prefix    String?
+  suffix    String?
   /// Freihand-Striche (kind = ink): Punkte relativ zum Absatz, siehe annotation-types.ts.
   ink       Json?
   /// Wortlaut des Absatzes beim Anlegen/Bestätigen – erkennt Änderungen in neuen Fassungen.

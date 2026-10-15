@@ -4,6 +4,8 @@ import {
   extendTo,
   gapAfter,
   locatePoint,
+  locateRange,
+  rangeContext,
   nudge,
   overlaps,
   pointContext,
@@ -70,5 +72,46 @@ describe("Stellen-Zeichen", () => {
     const changed = "Ach, " + text;
     expect(locatePoint(changed, at, context)).toBe(at + 5);
     expect(locatePoint("Ganz anders.", at, context)).toBeNull();
+  });
+});
+
+describe("locateRange", () => {
+  const before = "Ich bin nie da, sagt er. Ich bin nie da!";
+  it("nimmt bei gleichem Wortlaut das Vorkommen mit passendem Text drumherum", () => {
+    const start = before.lastIndexOf("nie");
+    const { prefix, suffix } = rangeContext(before, start, start + 3);
+    const after = "Na gut. " + before;
+    const found = locateRange([after], {
+      partIndex: 0,
+      start,
+      end: start + 3,
+      quote: "nie",
+      prefix,
+      suffix,
+    });
+    expect(found).toEqual({
+      partIndex: 0,
+      start: after.lastIndexOf("nie"),
+      end: after.lastIndexOf("nie") + 3,
+    });
+  });
+  it("findet den Bereich in einem anderen Teil", () => {
+    const found = locateRange(["Ganz anders.", "Ich bin nie da"], {
+      partIndex: 0,
+      start: 8,
+      end: 11,
+      quote: "nie",
+      prefix: "Ich bin ",
+      suffix: " da",
+    });
+    expect(found).toEqual({ partIndex: 1, start: 8, end: 11 });
+  });
+  it("gibt null, wenn der Wortlaut fehlt", () => {
+    expect(
+      locateRange(["Ich bin immer da"], { partIndex: 0, start: 8, end: 11, quote: "nie" }),
+    ).toBeNull();
+  });
+  it("Stellen-Zeichen: Text danach, wenn davor geändert", () => {
+    expect(locatePoint("Hallo Welt, hier!", 12, "Hello Welt,", " hier!")).toBe(11);
   });
 });

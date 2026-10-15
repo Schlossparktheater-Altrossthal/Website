@@ -1,6 +1,6 @@
 # Skript-Notizen überarbeiten
 
-Stand: 2026-10-15. Schritt 1–4 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
+Stand: 2026-10-15. Schritt 1–5 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
 
 ## Ausgangslage
 
@@ -60,9 +60,13 @@ nur Abkürzungen.
        als Randnotiz unter dem Absatz, ab xl in der Randspalte. Bottom-Sheet nur noch für
        Markierungen/Stimmungen. Im Notizmodus wählt Antippen im Text immer das Wort, Notizen
        öffnet man über ihre Karte. Gemessen (Produktions-Build lokal): Notiz sichtbar nach ~155 ms.
-5. [ ] **Bessere Anker** – Wortlaut + etwas Text davor/danach speichern (W3C TextQuoteSelector),
+5. [x] **Bessere Anker** – Wortlaut + etwas Text davor/danach speichern (W3C TextQuoteSelector),
        Übernahme über `diff.ts`: wandert still mit, solange die markierten Wörter da sind; Rückfrage
        nur, wenn sie selbst geändert oder gestrichen wurden.
+       Umgesetzt 2026-10-15: Spalten `prefix`/`suffix` (Migration 20261015120000), `locateRange` in
+       `note-logic.ts` (Vorkommen mit passendstem Umfeld, auch in anderem Teil), Stellen-Zeichen
+       zusätzlich über den Text danach. Absatz-Notizen fragen erst unter 85 % Wort-Ähnlichkeit
+       nach (`similarity` aus `diff.ts`); Diff-Abbildung der Positionen war nicht nötig.
 6. [ ] **Notizzettel** – Freihand nur noch auf eigener Fläche, an einer Stelle verankert;
        bisherige Freihand-Striche werden zu Zetteln am jeweiligen Absatz.
 7. [ ] **Offline + Probe** – Warteschlange ohne Netz, Einstieg aus dem Probenablauf direkt in die

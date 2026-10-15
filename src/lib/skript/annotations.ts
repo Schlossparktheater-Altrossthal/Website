@@ -3,7 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 import { readParts } from "./json";
-import { locatePoint, pointContext } from "./note-logic";
+import { similarity } from "./diff";
+import { locatePoint, locateRange, pointContext, rangeContext } from "./note-logic";
 import {
   ANNOTATION_COLORS,
   inkSchema,
@@ -82,7 +83,10 @@ export function plainBlockText(parts: ScriptPart[]) {
     .trim();
 }
 
-/** Liegt die markierte Stelle noch so im Absatz? Sonst wird sie gesucht. */
+/** Ganzer-Absatz-Notizen fragen erst bei größeren Änderungen nach (z. B. nicht bei einem Komma). */
+const BLOCK_NOTE_SIMILARITY = 0.85;
+
+/** Liegt die markierte Stelle noch so im Absatz? Sonst wird sie über Wortlaut + Umfeld gesucht. */
 export function locateQuote(
   parts: ScriptPart[],
   anchor: {
@@ -90,18 +94,14 @@ export function locateQuote(
     start: number | null;
     end: number | null;
     quote: string | null;
+    prefix?: string | null;
+    suffix?: string | null;
   },
 ): { partIndex: number; start: number; end: number } | null {
-  if (anchor.partIndex === null || !anchor.quote) return null;
-  const { partIndex, start, end, quote } = anchor;
-  if (start !== null && end !== null && parts[partIndex]?.text.slice(start, end) === quote) {
-    return { partIndex, start, end };
-  }
-  for (const [index, part] of parts.entries()) {
-    const found = part.text.indexOf(quote);
-    if (found >= 0) return { partIndex: index, start: found, end: found + quote.length };
-  }
-  return null;
+  return locateRange(
+    parts.map((part) => part.text),
+    anchor,
+  );
 }
 
 function signOf(value: string | null): ScriptSign | null {
@@ -111,14 +111,19 @@ function signOf(value: string | null): ScriptSign | null {
 /** Stellen-Zeichen: `quote` hält den Text davor, die Stelle folgt direkt darauf. */
 function locateSignPoint(
   parts: ScriptPart[],
-  anchor: { partIndex: number | null; start: number | null; quote: string | null },
+  anchor: {
+    partIndex: number | null;
+    start: number | null;
+    quote: string | null;
+    suffix?: string | null;
+  },
 ): { partIndex: number; start: number; end: number } | null {
   if (anchor.partIndex === null) return null;
   const same = parts[anchor.partIndex];
-  const at = same ? locatePoint(same.text, anchor.start, anchor.quote) : null;
+  const at = same ? locatePoint(same.text, anchor.start, anchor.quote, anchor.suffix) : null;
   if (at !== null) return { partIndex: anchor.partIndex, start: at, end: at };
   for (const [index, part] of parts.entries()) {
-    const found = locatePoint(part.text, null, anchor.quote);
+    const found = locatePoint(part.text, null, anchor.quote, anchor.suffix);
     if (found !== null && anchor.quote) return { partIndex: index, start: found, end: found };
   }
   return null;
@@ -174,11 +179,15 @@ export function resolveAnnotations(
         : locateQuote(block.parts, annotation);
       if (annotation.partIndex !== null) {
         if (located) anchor = located;
-        // Marker wandern mit, solange die Stelle noch da ist; Notizen fragen bei jeder
-        // Änderung am Absatz nach, weil sich ihr Sinn ändern kann.
-        state = located && (unchanged || annotation.kind !== "note") ? "ok" : "changed";
+        // Alles an einer Textstelle wandert still mit, solange die Wörter selbst noch da sind
+        // (docs/Plan/skript-notizen-plan.md, Schritt 5).
+        state = located ? "ok" : "changed";
       } else {
-        state = unchanged ? "ok" : "changed";
+        state =
+          unchanged ||
+          similarity(plainBlockText(block.parts), annotation.blockText) >= BLOCK_NOTE_SIMILARITY
+            ? "ok"
+            : "changed";
       }
     }
     return {
@@ -226,6 +235,7 @@ export async function createAnnotation(authorId: string, raw: AnnotationInput) {
   const input = annotationInputSchema.parse(raw);
   const block = await loadBlock(input.versionId, input.blockId);
   let quote: string | null = null;
+  let context: { prefix: string; suffix: string } | null = null;
   if (input.partIndex !== null && input.start !== null && input.end !== null) {
     const part = block.parts[input.partIndex];
     if (!part || input.end > part.text.length) {
@@ -234,6 +244,7 @@ export async function createAnnotation(authorId: string, raw: AnnotationInput) {
     quote = isPointSign(input.sign)
       ? pointContext(part.text, input.start)
       : part.text.slice(input.start, input.end);
+    context = rangeContext(part.text, input.start, input.end);
   }
   const hasRange = quote !== null && (quote !== "" || isPointSign(input.sign));
   return prisma.scriptAnnotation.create({
@@ -251,6 +262,8 @@ export async function createAnnotation(authorId: string, raw: AnnotationInput) {
       start: hasRange ? input.start : null,
       end: hasRange ? input.end : null,
       quote,
+      prefix: hasRange ? (context?.prefix ?? null) : null,
+      suffix: hasRange ? (context?.suffix ?? null) : null,
       blockText: plainBlockText(block.parts),
       authorId,
     },
@@ -334,6 +347,9 @@ export async function anchorAnnotation(
           ? pointContext(block.parts[located.partIndex].text, located.start)
           : annotation.quote
         : null,
+      ...(located
+        ? rangeContext(block.parts[located.partIndex].text, located.start, located.end)
+        : { prefix: null, suffix: null }),
     },
     select: { id: true, showId: true },
   });

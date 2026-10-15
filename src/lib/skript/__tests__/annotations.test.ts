@@ -17,6 +17,8 @@ function stored(overrides: Partial<Parameters<typeof resolveAnnotations>[0][numb
     kind: "note" as const,
     color: null,
     sign: null,
+    prefix: null,
+    suffix: null,
     body: "Hier lauter",
     partIndex: null,
     start: null,
@@ -64,9 +66,25 @@ describe("resolveAnnotations", () => {
     expect(note).toMatchObject({ state: "ok", blockId: "b2" });
   });
 
-  it("fragt bei geändertem Absatz nach und zeigt den alten Wortlaut", () => {
+  it("Absatz-Notiz wandert bei kleiner Änderung still mit", () => {
     const [note] = resolveAnnotations([stored({})], "v2", [changedBlock]);
+    expect(note).toMatchObject({ state: "ok" });
+  });
+
+  it("fragt bei größerer Änderung nach und zeigt den alten Wortlaut", () => {
+    const [note] = resolveAnnotations([stored({})], "v2", [
+      { ...changedBlock, parts: [text("Wir suchen morgen gemeinsam den Weg.")] },
+    ]);
     expect(note).toMatchObject({ state: "changed", previousText: "Ich muss den Nachtalp finden." });
+  });
+
+  it("Notiz an einer Textstelle wandert mit, solange die Wörter da sind", () => {
+    const [note] = resolveAnnotations(
+      [stored({ partIndex: 0, start: 13, end: 21, quote: "Nachtalp", prefix: "Ich muss den " })],
+      "v2",
+      [changedBlock],
+    );
+    expect(note).toMatchObject({ state: "ok", start: 13, end: 21 });
   });
 
   it("Marker wandern mit, solange die Stelle noch im Text steht", () => {

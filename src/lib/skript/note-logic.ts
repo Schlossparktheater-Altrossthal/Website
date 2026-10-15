@@ -106,12 +106,92 @@ export function pointContext(text: string, at: number, length = 24) {
   return text.slice(Math.max(0, at - length), at);
 }
 
-/** Stelle über ihren Kontext wiederfinden: erst an alter Position, sonst erster Treffer. */
-export function locatePoint(text: string, at: number | null, context: string | null) {
-  if (!context) return at !== null && at <= text.length ? at : null;
-  if (at !== null && at >= context.length && text.slice(at - context.length, at) === context) {
+/**
+ * Stelle über ihren Kontext wiederfinden: erst an alter Position, sonst hinter dem Text davor,
+ * sonst vor dem Text danach (falls nur davor etwas geändert wurde).
+ */
+export function locatePoint(
+  text: string,
+  at: number | null,
+  context: string | null,
+  after: string | null = null,
+) {
+  if (!context && !after) return at !== null && at <= text.length ? at : null;
+  if (
+    at !== null &&
+    at >= (context?.length ?? 0) &&
+    (!context || text.slice(at - context.length, at) === context)
+  ) {
     return at;
   }
-  const found = text.indexOf(context);
-  return found >= 0 ? found + context.length : null;
+  if (context) {
+    const found = text.indexOf(context);
+    if (found >= 0) return found + context.length;
+  }
+  if (after) {
+    const found = text.indexOf(after);
+    if (found >= 0) return found;
+  }
+  return null;
+}
+
+/** Text vor und nach einem Bereich – hilft, ihn in einer neuen Fassung wiederzufinden. */
+export function rangeContext(text: string, start: number, end: number, length = 32) {
+  return {
+    prefix: text.slice(Math.max(0, start - length), start),
+    suffix: text.slice(end, end + length),
+  };
+}
+
+function sharedEnd(a: string, b: string) {
+  let n = 0;
+  while (n < a.length && n < b.length && a[a.length - 1 - n] === b[b.length - 1 - n]) n += 1;
+  return n;
+}
+
+function sharedStart(a: string, b: string) {
+  let n = 0;
+  while (n < a.length && n < b.length && a[n] === b[n]) n += 1;
+  return n;
+}
+
+export type RangeAnchor = {
+  partIndex: number | null;
+  start: number | null;
+  end: number | null;
+  quote: string | null;
+  prefix?: string | null;
+  suffix?: string | null;
+};
+
+/**
+ * Bereich in den Teilen eines Absatzes wiederfinden (wie W3C TextQuoteSelector): erst an der
+ * alten Stelle, sonst unter allen Vorkommen des Wortlauts das mit dem passendsten Text davor und
+ * danach (bei Gleichstand: gleicher Teil, dann nächste Position). `null`, wenn der Wortlaut fehlt.
+ */
+export function locateRange(
+  texts: string[],
+  anchor: RangeAnchor,
+): { partIndex: number; start: number; end: number } | null {
+  const { partIndex, start, end, quote } = anchor;
+  if (partIndex === null || !quote) return null;
+  if (start !== null && end !== null && texts[partIndex]?.slice(start, end) === quote) {
+    return { partIndex, start, end };
+  }
+  const prefix = anchor.prefix ?? "";
+  const suffix = anchor.suffix ?? "";
+  let best: { partIndex: number; start: number; end: number; score: number } | null = null;
+  texts.forEach((text, index) => {
+    for (let found = text.indexOf(quote); found >= 0; found = text.indexOf(quote, found + 1)) {
+      const after = found + quote.length;
+      const score =
+        sharedEnd(text.slice(0, found), prefix) +
+        sharedStart(text.slice(after), suffix) +
+        (index === partIndex ? 0.5 : 0) -
+        Math.abs(found - (start ?? found)) / 10_000;
+      if (!best || score > best.score) best = { partIndex: index, start: found, end: after, score };
+    }
+  });
+  const found = best as { partIndex: number; start: number; end: number } | null;
+  return found ? { partIndex: found.partIndex, start: found.start, end: found.end } : null;
 }
