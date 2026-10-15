@@ -71,6 +71,8 @@ import {
 } from "./annotations";
 import { InkLayer, PenBar, usePen, type PenSettings } from "./ink";
 import { useAnnotations } from "./use-annotations";
+import { SelectionHandles } from "./selection-handles";
+import { useWordDrag, type WordRef } from "./use-word-drag";
 
 /** Bildschirm bleibt an, solange der Leser offen ist (Screen Wake Lock API). */
 function useWakeLock(enabled: boolean) {
@@ -593,6 +595,7 @@ export function ScriptReader({
   /** Antippen im Text: Notiz öffnen, Absatz wählen oder beim Neu-Zuordnen das Ziel setzen. */
   const onArticleClick = (event: React.MouseEvent) => {
     if (penMode) return;
+    if (noteMode && consumeDragClick()) return;
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
     if (!noteMode && window.getSelection()?.isCollapsed === false) return;
@@ -670,6 +673,28 @@ export function ScriptReader({
       quote: block.parts[partIndex].text.slice(span.start, span.end),
     },
   });
+  // Ziehen: Auswahl vom Start- bis zum aktuellen Wort (nur innerhalb desselben Satzteils).
+  const consumeDragClick = useWordDrag(articleRef, noteMode, (from, to) => {
+    // Anderer Absatz oder Teil (z. B. Regieanweisung dazwischen): Auswahl nicht ändern.
+    if (to.blockId !== from.blockId || to.partIndex !== from.partIndex) return;
+    const block = blockById.get(from.blockId);
+    const text = block?.parts[from.partIndex]?.text;
+    if (!block || text === undefined) return;
+    const start = wordAt(text, from.offset);
+    const end = wordAt(text, to.offset);
+    if (start && end) setNoteTarget(noteTargetOf(block, from.partIndex, extendTo(start, end)));
+  });
+  /** Anfasser gezogen: dieses Ende der Auswahl auf das Wort setzen (das andere bleibt). */
+  const moveNoteEdge = (edge: "start" | "end", word: WordRef) => {
+    const range = noteTarget?.range;
+    if (!range || word.blockId !== noteTarget.blockId || word.partIndex !== range.partIndex) return;
+    const block = blockById.get(word.blockId);
+    const text = block?.parts[range.partIndex]?.text;
+    const tapped = text === undefined ? null : wordAt(text, word.offset);
+    if (!block || text === undefined || !tapped) return;
+    const fixed = edge === "start" ? wordAt(text, range.end - 1) : wordAt(text, range.start);
+    if (fixed) setNoteTarget(noteTargetOf(block, range.partIndex, extendTo(fixed, tapped)));
+  };
   const changeNoteRange = (change: (text: string, span: Span) => Span) => {
     const range = noteTarget?.range;
     const block = noteTarget ? blockById.get(noteTarget.blockId) : undefined;
@@ -1551,6 +1576,14 @@ export function ScriptReader({
         </div>
       </BottomSheet>
       {pen.liveStroke}
+      <SelectionHandles
+        selectionKey={
+          noteMode && noteTarget?.range
+            ? `${noteTarget.blockId}:${noteTarget.range.partIndex}:${noteTarget.range.start}:${noteTarget.range.end}:${settings.fontSize}`
+            : null
+        }
+        onMove={moveNoteEdge}
+      />
       <AnnotationEditor
         key={editor?.mode === "edit" ? editor.annotation.id : (editor?.blockId ?? "neu")}
         store={store}

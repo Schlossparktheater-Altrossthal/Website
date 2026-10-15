@@ -308,6 +308,24 @@ test.describe("als admin", () => {
     await page.locator("[data-w]", { hasText: "Guten" }).click();
     await page.getByRole("button", { name: "Grün markieren" }).click();
     await expect(gruen).toHaveCount(0);
+    // Ziehen mit der Maus wählt mehrere Wörter, der Griff am Ende verlängert die Auswahl
+    const von = await page.locator("[data-w]", { hasText: "verehrtes" }).boundingBox();
+    const bis = await page.locator("[data-w]", { hasText: "Abend," }).boundingBox();
+    if (!von || !bis) throw new Error("Wörter nicht sichtbar");
+    await page.mouse.move(bis.x + 2, bis.y + bis.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(von.x + von.width - 2, von.y + von.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.getByText("„Abend, verehrtes“")).toBeVisible();
+    const griff = await page.locator('[data-selection-handle="end"]').boundingBox();
+    const ziel = await page.locator("[data-w]", { hasText: "Publikum." }).boundingBox();
+    if (!griff || !ziel) throw new Error("Griff nicht sichtbar");
+    await page.mouse.move(griff.x + griff.width / 2, griff.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(ziel.x + ziel.width - 4, griff.y + 8, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.getByText("„Abend, verehrtes Publikum“")).toBeVisible();
+    await page.getByRole("button", { name: "Auswahl aufheben" }).click();
     // Ganzer Absatz (Rollenname antippen) markieren und per Antippen wieder entfernen
     await page.locator("[data-block]", { hasText: "Wie geht es dir heute?" }).click({
       position: { x: 4, y: 4 },

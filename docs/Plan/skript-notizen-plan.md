@@ -1,6 +1,6 @@
 # Skript-Notizen überarbeiten
 
-Stand: 2026-10-15. Schritt 1–2 umgesetzt.
+Stand: 2026-10-15. Schritt 1–2 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
 
 ## Ausgangslage
 
@@ -39,6 +39,10 @@ nur Abkürzungen.
        Antippen wählt das Wort, zweites Wort erweitert, ◀ ▶ ein Wort weniger/mehr, „Satz“, Rollenname
        antippen = ganzer Absatz. Farbe antippen = markieren, gleiche Farbe nochmal = entfernen.
        Leiste bleibt offen, Rückgängig-Knopf. Logik: `src/lib/skript/note-logic.ts`.
+       Zusätzlich Ziehen (2026-10-15): Maus/Stift ziehen direkt über Wörter, am Handy Anfasser an
+       beiden Enden der Auswahl (`selection-handles.tsx`, `touch-action: none`); Halten+Ziehen per
+       Finger nur als Bonus (`use-word-drag.ts`) – Chrome bricht die Berührung nach dem Halten oft
+       mit `pointercancel` ab.
 3. [ ] **Zeichen im Text** – Pause, Atmer, Betonung, Bogen, Tempo, Stimmung als neue Arten
        (`ScriptAnnotation.kind`), Knöpfe mit Symbol + Wort, „?“-Zeichenerklärung.
 4. [ ] **Randnotiz** – Textfeld direkt unter dem Satz statt Bottom-Sheet (Diktieren über die
@@ -55,3 +59,12 @@ nur Abkürzungen.
 
 - Zeichenliste mit dem Ensemble abstimmen (Tempo/Lautstärke-Zeichen?).
 - Gerätetest Android/iPhone: kein Systemmenü im Notizmodus, Tippziele groß genug.
+
+## Lokale Entwicklung
+
+Schneller als über Staging: Datenbank `skript_dev` im Container `mb-test-pg` (nur 127.0.0.1),
+Demo-Seed plus Skript aus Staging (Tabellen `Script*` per `pg_dump --data-only`, `showId` auf
+`demo-show-sommernachtstraum`). Die Demo-Stammdaten ordnen `PRIVATE.PRODUCTION.SCRIPT.*` keiner
+Rolle zu – lokal nachtragen (READ → `member`, MANAGE → Rollen mit Produktions-Verwaltung).
+Start: `DEMO_MODE=true NEXTAUTH_URL=http://localhost:3200 next dev -p 3200 -H localhost`,
+Anmeldung über den Rollen-Knopf „Regie“ (erst nach dem Laden klicken, sonst `MissingCSRF`).
