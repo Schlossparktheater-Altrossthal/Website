@@ -1,6 +1,6 @@
 # Skript-Notizen überarbeiten
 
-Stand: 2026-10-15. Schritt 1–5 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
+Stand: 2026-10-15. Schritt 1–6 umgesetzt, Ziehen ergänzt; ab Schritt 3 lokal entwickeln (siehe unten).
 
 ## Ausgangslage
 
@@ -67,8 +67,15 @@ nur Abkürzungen.
        `note-logic.ts` (Vorkommen mit passendstem Umfeld, auch in anderem Teil), Stellen-Zeichen
        zusätzlich über den Text danach. Absatz-Notizen fragen erst unter 85 % Wort-Ähnlichkeit
        nach (`similarity` aus `diff.ts`); Diff-Abbildung der Positionen war nicht nötig.
-6. [ ] **Notizzettel** – Freihand nur noch auf eigener Fläche, an einer Stelle verankert;
+6. [x] **Notizzettel** – Freihand nur noch auf eigener Fläche, an einer Stelle verankert;
        bisherige Freihand-Striche werden zu Zetteln am jeweiligen Absatz.
+       Umgesetzt 2026-10-15: `kind = ink` mit `{ canvas: true, strokes }` (Koordinaten als Anteil
+       der Zettelbreite, 4:3), Anker wie Stellen-Zeichen. Alte Zeichnungen rechnet `readSketch`
+       beim Lesen um (mittig, maßstabsgetreu, ohne Datenmigration). `sketch.tsx`: Vollbild-Editor
+       (kein Bottom-Sheet – Wischen würde es schließen), Stift mit Druck/Neigung, Finger bis ein
+       Stift erkannt ist, Radierer über Abstand zur Linie, Titel; Symbol ✎ im Text, Vorschau unter
+       dem Absatz bzw. im Rand. Stiftmodus über dem Text (`ink.tsx`) entfernt.
+       Falle: Geschwister-Komponenten mit gleichem `key` („neu“) – React entfernte den Editor nicht.
 7. [ ] **Offline + Probe** – Warteschlange ohne Netz, Einstieg aus dem Probenablauf direkt in die
        Szene mit eingeschaltetem Notizmodus.
 

@@ -12,14 +12,14 @@ import { requireAuth } from "@/lib/rbac";
 import {
   ANNOTATION_COLORS,
   ScriptAnnotationError,
-  addInkStroke,
   anchorAnnotation,
   createReaderAnnotation,
   deleteAnnotation,
-  removeInkStrokes,
+  saveSketch,
   scriptVersionScope,
   updateAnnotation,
   type AnnotationInput,
+  type SketchInput,
   type ReaderAnnotation,
 } from "@/lib/skript/annotations";
 import { SCRIPT_MANAGE_PERMISSION, SCRIPT_READ_PERMISSION } from "@/lib/skript/service";
@@ -106,20 +106,14 @@ export async function deleteAnnotationAction(versionId: string, annotationId: st
   return run(async () => deleteAnnotation(annotationId, await requireReader(versionId)));
 }
 
-export async function addInkStrokeAction(versionId: string, blockId: string, stroke: unknown) {
-  return run(async () => addInkStroke(await requireReader(versionId), versionId, blockId, stroke));
-}
+export type SaveSketchResult =
+  { ok: true; annotation: ReaderAnnotation | null } | { ok: false; error: string };
 
-export async function removeInkStrokesAction(
-  versionId: string,
-  annotationId: string,
-  indices: number[],
-) {
-  return run(async () =>
-    removeInkStrokes(
-      annotationId,
-      await requireReader(versionId),
-      z.array(z.number().int().min(0)).parse(indices),
-    ),
-  );
+/** Notizzettel anlegen, ändern oder (leer) löschen. */
+export async function saveSketchAction(input: SketchInput): Promise<SaveSketchResult> {
+  let annotation: ReaderAnnotation | null = null;
+  const result = await run(async () => {
+    annotation = await saveSketch(await requireReader(input.versionId), input);
+  });
+  return result.ok ? { ok: true, annotation } : { ok: false, error: result.error };
 }

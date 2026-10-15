@@ -407,6 +407,7 @@ export function NoteToolbox({
   onClear,
   onDone,
   onDropPoint,
+  onSketch,
 }: {
   store: AnnotationStore;
   target: NoteTarget | null;
@@ -419,6 +420,8 @@ export function NoteToolbox({
   onClear: () => void;
   onDone: () => void;
   onDropPoint: (sign: ScriptSign, gap: DropGap) => void;
+  /** Notizzettel an der Auswahl (bzw. am Absatz) anlegen. */
+  onSketch: () => void;
 }) {
   const [moodOpen, setMoodOpen] = React.useState(false);
   const [legendOpen, setLegendOpen] = React.useState(false);
@@ -528,6 +531,17 @@ export function NoteToolbox({
         >
           <EditIcon aria-hidden />
           <span className="mt-0.5 text-[0.68rem] text-muted-foreground">Notiz</span>
+        </button>
+        <button
+          type="button"
+          onClick={onSketch}
+          disabled={!target}
+          className="flex h-11 flex-col items-center justify-center rounded-md border border-border bg-card leading-tight hover:bg-muted disabled:opacity-45"
+        >
+          <span aria-hidden className="text-base font-bold leading-none text-primary">
+            ✎
+          </span>
+          <span className="mt-0.5 text-[0.68rem] text-muted-foreground">Zettel</span>
         </button>
       </div>
       <div className="flex flex-wrap items-center gap-2">

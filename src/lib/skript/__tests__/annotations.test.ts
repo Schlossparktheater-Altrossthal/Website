@@ -119,14 +119,21 @@ describe("resolveAnnotations", () => {
     expect(note).toMatchObject({ state: "ok", blockId: "b7" });
   });
 
-  it("liest Freihand-Striche und verwirft ungültige", () => {
-    const stroke = { color: "rot", size: 0.15, points: [[0.1, 0.5, 0.6, 30]] };
-    const [ink] = resolveAnnotations(
-      [stored({ kind: "ink", body: null, ink: { strokes: [stroke] } })],
+  it("liest Notizzettel, rechnet alte Zeichnungen um und verwirft ungültige", () => {
+    const stroke = { color: "rot", size: 0.01, points: [[0.1, 0.5, 0.6, 30]] };
+    const [sketch] = resolveAnnotations(
+      [stored({ kind: "ink", body: null, ink: { canvas: true, strokes: [stroke] } })],
       "v1",
       [{ id: "b1", lineageId: "l1", parts: [text("Ich muss den Nachtalp finden.")] }],
     );
-    expect(ink.strokes).toEqual([stroke]);
+    expect(sketch.strokes).toEqual([stroke]);
+    const [legacy] = resolveAnnotations(
+      [stored({ kind: "ink", body: null, ink: { strokes: [{ ...stroke, size: 0.15 }] } })],
+      "v1",
+      [{ id: "b1", lineageId: "l1", parts: [text("Ich muss den Nachtalp finden.")] }],
+    );
+    expect(legacy.strokes).toHaveLength(1);
+    expect(legacy.strokes[0].points[0][0]).toBeCloseTo(0.5);
     const [broken] = resolveAnnotations(
       [stored({ kind: "ink", body: null, ink: { strokes: [{ color: "lila" }] } })],
       "v1",

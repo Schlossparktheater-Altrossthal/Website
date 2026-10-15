@@ -79,13 +79,15 @@ export const INK_COLORS = ["schwarz", "rot", "blau", "gruen"] as const;
 export type InkColor = (typeof INK_COLORS)[number];
 
 /**
- * Ein Strich: Punkte `[x, y, Druck, Neigung]` relativ zum Absatz – x als Anteil der Breite
- * (0–1), y in em ab Oberkante, damit die Zeichnung bei anderer Breite und Schriftgröße mitgeht.
+ * Ein Strich: Punkte `[x, y, Druck, Neigung]`. Auf dem Notizzettel (docs/Plan/skript-notizen-plan.md,
+ * Schritt 6) sind x und y Anteile der Zettelbreite (x 0–1, y 0–SKETCH_HEIGHT), die Stärke ebenso.
+ * Alte Zeichnungen (Phase 9) lagen frei über dem Text: x als Anteil der Absatzbreite, y und Stärke
+ * in em – sie werden beim Lesen mit `legacyToCanvas` auf einen Zettel umgerechnet.
  */
 export const inkStrokeSchema = z.object({
   color: z.enum(INK_COLORS),
-  /** Grundstärke in em. */
-  size: z.number().min(0.02).max(1),
+  /** Grundstärke (Zettel: Anteil der Breite, alt: em). */
+  size: z.number().min(0.001).max(1),
   points: z
     .array(z.tuple([z.number(), z.number(), z.number().min(0).max(1), z.number().min(0).max(90)]))
     .min(1)
@@ -93,4 +95,52 @@ export const inkStrokeSchema = z.object({
 });
 export type InkStroke = z.infer<typeof inkStrokeSchema>;
 
+/** Alte Zeichnung (frei über dem Text). */
 export const inkSchema = z.object({ strokes: z.array(inkStrokeSchema).max(500) });
+/** Notizzettel: feste Fläche 4:3. */
+export const sketchSchema = z.object({
+  canvas: z.literal(true),
+  strokes: z.array(inkStrokeSchema).max(500),
+});
+
+/** Höhe des Zettels im Verhältnis zur Breite (4:3). */
+export const SKETCH_HEIGHT = 0.75;
+/** Angenommene Absatzbreite in em für die Umrechnung alter Zeichnungen. */
+const LEGACY_WIDTH_EM = 30;
+
+/** Alte Zeichnung mittig und maßstabsgetreu auf einen Zettel setzen. */
+export function legacyToCanvas(strokes: InkStroke[]): InkStroke[] {
+  const all = strokes.flatMap((stroke) => stroke.points);
+  if (!all.length) return [];
+  const xs = all.map(([x]) => x * LEGACY_WIDTH_EM);
+  const ys = all.map(([, y]) => y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  const scale = Math.min(
+    0.9 / Math.max(maxX - minX, 1),
+    (0.9 * SKETCH_HEIGHT) / Math.max(maxY - minY, 1),
+  );
+  // Mittelpunkt der Zeichnung auf die Zettelmitte.
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  return strokes.map((stroke) => ({
+    ...stroke,
+    size: Math.min(1, Math.max(0.001, stroke.size * scale)),
+    points: stroke.points.map(([x, y, pressure, tilt]) => [
+      0.5 + (x * LEGACY_WIDTH_EM - centerX) * scale,
+      SKETCH_HEIGHT / 2 + (y - centerY) * scale,
+      pressure,
+      tilt,
+    ]),
+  }));
+}
+
+/** Gespeicherte Striche als Zettel lesen (neues oder altes Format). */
+export function readSketch(value: unknown): InkStroke[] {
+  const sketch = sketchSchema.safeParse(value);
+  if (sketch.success) return sketch.data.strokes;
+  const legacy = inkSchema.safeParse(value);
+  return legacy.success ? legacyToCanvas(legacy.data.strokes) : [];
+}

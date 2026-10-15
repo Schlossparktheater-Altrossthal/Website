@@ -11,7 +11,6 @@ import {
   CloseIcon,
   DownloadIcon,
   HighlighterIcon,
-  PenLineIcon,
   PrinterIcon,
   SearchIcon,
   SettingsIcon,
@@ -44,7 +43,14 @@ import {
   isRoleBlock,
   splitTail,
 } from "@/lib/skript/reader-logic";
-import { extendTo, nudge, sentenceAround, wordAt, type Span } from "@/lib/skript/note-logic";
+import {
+  extendTo,
+  gapAfter,
+  nudge,
+  sentenceAround,
+  wordAt,
+  type Span,
+} from "@/lib/skript/note-logic";
 import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +80,7 @@ import {
   type EditorState,
   type NoteTarget,
 } from "./annotations";
-import { InkLayer, PenBar, usePen, type PenSettings } from "./ink";
+import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketch";
 import { useAnnotations } from "./use-annotations";
 import { NoteToolbox, TappedBar, toggleSign, type DropGap } from "./note-toolbox";
 import { SelectionHandles } from "./selection-handles";
@@ -190,6 +196,7 @@ function segmentClasses(covering: Range[]) {
 
 /** Stellen-Zeichen (Pause, Atmer …) zwischen den Wörtern. */
 function PointSign({ annotation }: { annotation: ReaderAnnotation }) {
+  if (annotation.kind === "ink") return <SketchMark annotation={annotation} />;
   return (
     <span
       data-annotation={annotation.id}
@@ -220,7 +227,9 @@ function TextRun({
   includeEnd: boolean;
 }) {
   const end = offset + text.length;
-  const isPoint = (range: Range) => isPointSign(range.annotation?.sign);
+  // Stellen: Pause & Co. sowie Notizzettel (Symbol im Text).
+  const isPoint = (range: Range) =>
+    isPointSign(range.annotation?.sign) || range.annotation?.kind === "ink";
   const spans = ranges.filter((range) => !isPoint(range));
   const points = ranges.filter(
     (range) =>
@@ -297,8 +306,16 @@ function TextRun({
   );
 }
 
-function NoteCards({ notes, className }: { notes: ReaderAnnotation[]; className?: string }) {
-  if (!notes.length) return null;
+function NoteCards({
+  notes,
+  sketches,
+  className,
+}: {
+  notes: ReaderAnnotation[];
+  sketches: ReaderAnnotation[];
+  className?: string;
+}) {
+  if (!notes.length && !sketches.length) return null;
   return (
     <div className={cn("space-y-1 not-italic", className)}>
       {notes.map((note) => (
@@ -318,6 +335,9 @@ function NoteCards({ notes, className }: { notes: ReaderAnnotation[]; className?
           ) : null}
           <span className="block whitespace-pre-wrap break-words">{note.body}</span>
         </button>
+      ))}
+      {sketches.map((sketch) => (
+        <SketchCard key={sketch.id} annotation={sketch} />
       ))}
     </div>
   );
@@ -350,8 +370,6 @@ type BlockViewProps = {
   annotations: ReaderAnnotation[];
   /** Absatz ist angetippt (Aktionsleiste offen) oder Ziel beim Neu-Zuordnen. */
   selected: boolean;
-  /** Freihand-Zeichnung des Absatzes (gespeichert + vorläufig). */
-  ink: React.ComponentProps<typeof InkLayer> | null;
   /** Notizmodus: Wörter antippbar machen. */
   words: boolean;
   /** Auswahl im Notizmodus in diesem Absatz. */
@@ -375,7 +393,6 @@ const BlockView = React.memo(
       activeMatch,
       annotations,
       selected,
-      ink,
       words,
       noteRange,
       noteEditor,
@@ -412,6 +429,7 @@ const BlockView = React.memo(
     const notes = annotations.filter(
       (annotation) => annotation.kind === "note" && annotation.id !== editingId,
     );
+    const sketches = annotations.filter((annotation) => annotation.kind === "ink");
 
     /** Ein Teil oder – wenn ein Hinweis den Satz trennt – ein Ausschnitt davon. */
     const renderPart = ({
@@ -527,7 +545,7 @@ const BlockView = React.memo(
             // Regieblöcke haben keine Seitenzahl-Spalte: gleich weit einrücken wie Repliken.
             CUE_MARGIN_SPACE,
             "md:group-data-[cue-margin]/reader:pr-[13.5rem]",
-            !visible && !notes.length && !noteEditor && "hidden",
+            !visible && !notes.length && !sketches.length && !noteEditor && "hidden",
             settings.directions === "dim" && "opacity-50",
             blockMark && SCRIPT_MARKER_STYLES[blockMark.color ?? "gelb"],
             activeMatch && "ring-2 ring-inset ring-ring",
@@ -535,9 +553,8 @@ const BlockView = React.memo(
           )}
         >
           {renderParts()}
-          <NoteCards notes={notes} className="mt-1 xl:mr-[17rem]" />
+          <NoteCards notes={notes} sketches={sketches} className="mt-1 xl:mr-[17rem]" />
           {noteEditor}
-          {ink ? <InkLayer {...ink} /> : null}
         </div>
       );
     }
@@ -566,10 +583,7 @@ const BlockView = React.memo(
         >
           {block.speaker ?? "?"}
         </span>
-        <p
-          data-ink-anchor
-          className={cn("relative break-words", CUE_MARGIN_SPACE, stacked && "md:col-start-2")}
-        >
+        <p className={cn("relative break-words", CUE_MARGIN_SPACE, stacked && "md:col-start-2")}>
           <span
             className={cn(
               "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide md:sr-only",
@@ -578,14 +592,14 @@ const BlockView = React.memo(
           >
             {block.speaker ?? "?"}
           </span>
-          <span data-ink-text>{renderParts()}</span>
-          {ink ? <InkLayer {...ink} /> : null}
+          <span>{renderParts()}</span>
         </p>
         <span className="hidden pt-[0.25em] text-right text-[0.72em] tabular-nums text-muted-foreground md:block">
           {showPage ? (block.page ?? "") : ""}
         </span>
         <NoteCards
           notes={notes}
+          sketches={sketches}
           className="mt-1 md:col-span-2 md:col-start-2 xl:col-span-1 xl:col-start-4 xl:row-span-2 xl:row-start-1 xl:mt-0"
         />
         {noteEditor ? <div className="md:col-span-2 md:col-start-2">{noteEditor}</div> : null}
@@ -660,6 +674,18 @@ export function ScriptReader({
   const [editor, setEditor] = React.useState<EditorState | null>(null);
   // Notizen schreibt man direkt am Absatz; das Blatt bleibt für Markierungen und Stimmungen.
   const [inlineNote, setInlineNote] = React.useState<EditorState | null>(null);
+  // Notizzettel (Schritt 6): feste Zeichenfläche an einer Stelle im Text.
+  const [sketch, setSketch] = React.useState<SketchTarget | null>(null);
+  const openSketch = (annotation: ReaderAnnotation) => {
+    if (!annotation.blockId) return;
+    setSketch({
+      existing: annotation,
+      blockId: annotation.blockId,
+      partIndex: annotation.partIndex,
+      at: annotation.start,
+      label: annotation.body ?? "Zettel",
+    });
+  };
   const openEditor = (state: EditorState) => {
     if (state.mode === "create" || state.annotation.kind === "note") {
       setEditor(null);
@@ -686,37 +712,12 @@ export function ScriptReader({
     }
     return map;
   }, [annotations]);
-  // Freihandnotizen (Phase 9)
-  const [penMode, setPenMode] = React.useState(false);
-  const [penSettings, setPenSettings] = React.useState<PenSettings>({
-    tool: "pen",
-    color: "rot",
-    size: "mittel",
-    finger: false,
-  });
-  const inkByBlock = React.useMemo(() => {
-    const map = new Map<string, ReaderAnnotation>();
-    for (const annotation of annotations) {
-      if (annotation.kind === "ink" && annotation.blockId && annotation.state !== "orphaned") {
-        map.set(annotation.blockId, annotation);
-      }
-    }
-    return map;
-  }, [annotations]);
-  const pen = usePen({
-    enabled: penMode,
-    settings: penSettings,
-    versionId: version.id,
-    inkByBlock,
-  });
-  const noStrokes = React.useMemo(() => [], []);
   const toReview = annotations.filter((annotation) => annotation.state !== "ok");
   const blockById = React.useMemo(() => new Map(blocks.map((b) => [b.id, b])), [blocks]);
   const noAnnotations: ReaderAnnotation[] = React.useMemo(() => [], []);
 
   /** Antippen im Text: Notiz öffnen, Absatz wählen oder beim Neu-Zuordnen das Ziel setzen. */
   const onArticleClick = (event: React.MouseEvent) => {
-    if (penMode) return;
     if (noteMode && consumeDragClick()) return;
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
@@ -730,6 +731,10 @@ export function ScriptReader({
     const hit = target.closest("[data-annotation]");
     const annotationId = hit?.getAttribute("data-annotation");
     const annotation = annotationId ? annotationById.get(annotationId) : undefined;
+    if (annotation?.kind === "ink") {
+      openSketch(annotation);
+      return;
+    }
     const hitIds = (hit?.getAttribute("data-annotations") ?? annotationId ?? "")
       .split(" ")
       .filter((id) => annotationById.has(id));
@@ -838,7 +843,6 @@ export function ScriptReader({
     setSelectedBlock(null);
     setTapped([]);
     setNoteTarget(null);
-    if (on) setPenMode(false);
     setNoteMode(on);
   };
   const closeBar = () => {
@@ -1026,7 +1030,7 @@ export function ScriptReader({
         ref={toolbarRef}
         className={cn(
           "fixed inset-x-0 top-0 z-30 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur transition-transform duration-200",
-          chromeHidden && !searchOpen && !penMode && !noteMode && "-translate-y-full",
+          chromeHidden && !searchOpen && !noteMode && "-translate-y-full",
         )}
       >
         <div className="mx-auto flex h-12 max-w-[1240px] items-center gap-0.5 px-1 lg:px-4">
@@ -1096,24 +1100,6 @@ export function ScriptReader({
             onClick={() => setNoting(!noteMode)}
           >
             <HighlighterIcon aria-hidden />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Stift"
-            aria-pressed={penMode}
-            // Auf dem Handy im Ansicht-Menü, damit der Szenentitel Platz hat – außer im Stiftmodus.
-            className={cn(
-              "hidden sm:inline-flex",
-              penMode && "inline-flex bg-primary/15 text-primary",
-            )}
-            onClick={() => {
-              closeBar();
-              setNoting(false);
-              setPenMode((on) => !on);
-            }}
-          >
-            <PenLineIcon aria-hidden />
           </Button>
           <Button
             variant="ghost"
@@ -1205,7 +1191,7 @@ export function ScriptReader({
           ref={articleRef}
           data-cue-margin={cueMargin || undefined}
           // Ist die Kopfleiste beim Lesen weggescrollt, klebt stattdessen die Szenenüberschrift oben.
-          data-chrome-hidden={(chromeHidden && !searchOpen && !penMode && !noteMode) || undefined}
+          data-chrome-hidden={(chromeHidden && !searchOpen && !noteMode) || undefined}
           onClick={onArticleClick}
           // Notizmodus: kein Kontextmenü/„In Google suchen“ beim Gedrückthalten.
           onContextMenu={
@@ -1216,10 +1202,8 @@ export function ScriptReader({
                 }
               : undefined
           }
-          {...pen.handlers}
           className={cn(
             "group/reader",
-            penMode && "cursor-crosshair touch-none select-none",
             noteMode && "cursor-pointer select-none [-webkit-touch-callout:none]",
             "min-w-0 px-3 pb-24 pt-[calc(3.5rem+env(safe-area-inset-top))] leading-normal sm:px-4 lg:px-0",
             fontClass,
@@ -1319,16 +1303,6 @@ export function ScriptReader({
                     ) : null
                   }
                   noteRange={noteTarget?.blockId === block.id ? noteTarget.range : null}
-                  ink={
-                    settings.showNotes && (inkByBlock.has(block.id) || pen.pending.has(block.id))
-                      ? {
-                          annotation: inkByBlock.get(block.id) ?? null,
-                          pending: pen.pending.get(block.id) ?? noStrokes,
-                          erasing: penMode && penSettings.tool === "eraser",
-                          erased: pen.erased,
-                        }
-                      : null
-                  }
                 />
               </React.Fragment>
             );
@@ -1347,21 +1321,13 @@ export function ScriptReader({
             selection ||
             selectedBlock ||
             pick ||
-            penMode ||
             noteMode ||
             tappedAnnotations.length) &&
             "border-t border-border",
         )}
       >
         <div className="mx-auto flex max-w-[1240px] flex-col divide-y divide-border/60 lg:pl-[calc(13rem+3rem)] lg:pr-4">
-          {penMode ? (
-            <PenBar
-              settings={penSettings}
-              onChange={(patch) => setPenSettings((current) => ({ ...current, ...patch }))}
-              onUndo={() => void pen.undo()}
-              onDone={() => setPenMode(false)}
-            />
-          ) : noteMode ? (
+          {noteMode ? (
             <>
               {tappedAnnotations.length ? (
                 <TappedBar
@@ -1402,6 +1368,21 @@ export function ScriptReader({
                 onClear={() => setNoteTarget(null)}
                 onDone={() => setNoting(false)}
                 onDropPoint={dropPoint}
+                onSketch={() => {
+                  if (!noteTarget) return;
+                  const range = noteTarget.range;
+                  const text = range
+                    ? blockById.get(noteTarget.blockId)?.parts[range.partIndex]?.text
+                    : undefined;
+                  setSketch({
+                    existing: null,
+                    blockId: noteTarget.blockId,
+                    partIndex: range && text !== undefined ? range.partIndex : null,
+                    at: range && text !== undefined ? gapAfter(text, range.end) : null,
+                    label: range?.quote ?? "Absatz",
+                  });
+                  setNoteTarget(null);
+                }}
               />
             </>
           ) : pick ? (
@@ -1461,7 +1442,7 @@ export function ScriptReader({
               onDone={closeBar}
             />
           ) : null}
-          {!penMode && !pick && !selection && !selectedBlock && nextCue ? (
+          {!noteMode && !pick && !selection && !selectedBlock && nextCue ? (
             <NextBar
               label="Nächster Hinweis"
               title={cueParts(blocks[nextCue.index], followed)
@@ -1471,7 +1452,7 @@ export function ScriptReader({
               onClick={() => scrollToIndex(nextCue.index)}
             />
           ) : null}
-          {!penMode && !pick && !selection && !selectedBlock && nextLine ? (
+          {!noteMode && !pick && !selection && !selectedBlock && nextLine ? (
             <NextBar
               label={`Nächste Passage · ${blocks[nextLine.index].speaker ?? ""}`}
               title={blockText(blocks[nextLine.index])}
@@ -1594,7 +1575,7 @@ export function ScriptReader({
         description="Schriftgröße, Regieanweisungen und Hinweise einstellen"
       >
         <div className="space-y-5 text-sm">
-          {/* Handy: Lernen und Stift stehen hier statt in der Kopfleiste. */}
+          {/* Handy: Lernen steht hier statt in der Kopfleiste. */}
           <section className="grid grid-cols-2 gap-2 sm:hidden">
             {version.status === "released" ? (
               <Button asChild variant="outline" className="min-h-11">
@@ -1604,18 +1585,6 @@ export function ScriptReader({
                 </Link>
               </Button>
             ) : null}
-            <Button
-              variant="outline"
-              className="min-h-11"
-              onClick={() => {
-                setPanel(null);
-                closeBar();
-                setPenMode(true);
-              }}
-            >
-              <PenLineIcon aria-hidden />
-              Stift
-            </Button>
           </section>
           <label className="flex min-h-11 items-center justify-between gap-3">
             <span>
@@ -1778,7 +1747,6 @@ export function ScriptReader({
           </Link>
         </div>
       </BottomSheet>
-      {pen.liveStroke}
       <SelectionHandles
         selectionKey={
           noteMode && noteTarget?.range
@@ -1787,6 +1755,24 @@ export function ScriptReader({
         }
         onMove={moveNoteEdge}
       />
+      {sketch ? (
+        <SketchEditor
+          // Eigener Schlüssel: der Notiz-Editor daneben heißt sonst ebenfalls „neu“.
+          key={`zettel:${sketch.existing?.id ?? "neu"}`}
+          target={sketch}
+          onSave={(strokes, title) =>
+            void store.saveSketch({
+              existing: sketch.existing,
+              blockId: sketch.blockId,
+              partIndex: sketch.partIndex,
+              at: sketch.at,
+              title,
+              strokes,
+            })
+          }
+          onClose={() => setSketch(null)}
+        />
+      ) : null}
       <AnnotationEditor
         key={editor?.mode === "edit" ? editor.annotation.id : (editor?.blockId ?? "neu")}
         store={store}

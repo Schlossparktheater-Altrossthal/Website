@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readSketch, SKETCH_HEIGHT } from "../annotation-types";
 
 import {
   extendTo,
@@ -113,5 +114,32 @@ describe("locateRange", () => {
   });
   it("Stellen-Zeichen: Text danach, wenn davor geändert", () => {
     expect(locatePoint("Hallo Welt, hier!", 12, "Hello Welt,", " hier!")).toBe(11);
+  });
+});
+
+describe("Notizzettel", () => {
+  it("setzt alte Zeichnungen mittig auf den Zettel", () => {
+    const strokes = readSketch({
+      strokes: [
+        {
+          color: "rot",
+          size: 0.16,
+          points: [
+            [0, 1, 0.5, 0],
+            [0.5, 3, 0.5, 0],
+          ],
+        },
+      ],
+    });
+    const xs = strokes[0].points.map(([x]) => x);
+    const ys = strokes[0].points.map(([, y]) => y);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(1);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(SKETCH_HEIGHT);
+    expect((Math.min(...xs) + Math.max(...xs)) / 2).toBeCloseTo(0.5);
+  });
+  it("lässt neue Zettel unverändert", () => {
+    const stroke = { color: "blau", size: 0.01, points: [[0.2, 0.3, 0.5, 0]] };
+    expect(readSketch({ canvas: true, strokes: [stroke] })).toEqual([stroke]);
   });
 });

@@ -3,9 +3,19 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { AnnotationColor, ReaderAnnotation, ScriptSign } from "@/lib/skript/annotation-types";
+import type {
+  AnnotationColor,
+  InkStroke,
+  ReaderAnnotation,
+  ScriptSign,
+} from "@/lib/skript/annotation-types";
 
-import { createAnnotationAction, deleteAnnotationAction, updateAnnotationAction } from "../actions";
+import {
+  createAnnotationAction,
+  deleteAnnotationAction,
+  saveSketchAction,
+  updateAnnotationAction,
+} from "../actions";
 
 /**
  * Eigene Markierungen und Notizen im Leser (docs/Plan/skript-notizen-plan.md, Schritt 1):
@@ -214,7 +224,72 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
     [remove, undo],
   );
 
-  return { list, create, remove, removeWithUndo, update, undo, canUndo };
+  /**
+   * Notizzettel anlegen oder ändern (leer = löschen). `existing` ist der bisherige Zettel; neue
+   * bekommen hier ihre Kennung, die auch auf dem Server gilt.
+   */
+  const saveSketch = React.useCallback(
+    async (draft: {
+      existing: ReaderAnnotation | null;
+      blockId: string;
+      partIndex: number | null;
+      at: number | null;
+      title: string | null;
+      strokes: InkStroke[];
+    }) => {
+      const id = draft.existing?.id ?? crypto.randomUUID();
+      const now = new Date().toISOString();
+      const before = draft.existing;
+      const next: ReaderAnnotation = {
+        ...(before ?? {
+          id,
+          kind: "ink" as const,
+          sign: null,
+          color: null,
+          partIndex: draft.partIndex,
+          start: draft.at,
+          end: draft.at,
+          quote: null,
+          blockId: draft.blockId,
+          state: "ok" as const,
+          previousText: "",
+          createdAt: now,
+        }),
+        strokes: draft.strokes,
+        body: draft.title,
+        updatedAt: now,
+      };
+      setList((current) =>
+        draft.strokes.length
+          ? before
+            ? current.map((entry) => (entry.id === id ? next : entry))
+            : [...current, next]
+          : current.filter((entry) => entry.id !== id),
+      );
+      const result = await saveSketchAction({
+        id,
+        versionId,
+        blockId: draft.blockId,
+        partIndex: draft.partIndex,
+        at: draft.at,
+        title: draft.title,
+        strokes: draft.strokes,
+      });
+      if (!result.ok) {
+        setList((current) => [
+          ...current.filter((entry) => entry.id !== id),
+          ...(before ? [before] : []),
+        ]);
+        failed(result.error);
+        return;
+      }
+      const saved = result.annotation;
+      if (saved) setList((current) => current.map((entry) => (entry.id === id ? saved : entry)));
+    },
+    [versionId],
+  );
+
+  return { list, create, remove, removeWithUndo, update, undo, canUndo, saveSketch };
 }
 
 export type AnnotationStore = ReturnType<typeof useAnnotations>;

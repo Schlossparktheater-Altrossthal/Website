@@ -7,8 +7,8 @@ import { similarity } from "./diff";
 import { locatePoint, locateRange, pointContext, rangeContext } from "./note-logic";
 import {
   ANNOTATION_COLORS,
-  inkSchema,
   inkStrokeSchema,
+  readSketch,
   isPointSign,
   SCRIPT_SIGN_KEYS,
   ScriptAnnotationError,
@@ -104,6 +104,18 @@ export function locateQuote(
   );
 }
 
+/** Sitzt an einer Stelle zwischen Wörtern: Pause & Co. sowie verankerte Notizzettel. */
+function isPointAnchor(annotation: {
+  kind: string;
+  sign: string | null;
+  partIndex: number | null;
+}) {
+  return (
+    isPointSign(signOf(annotation.sign)) ||
+    (annotation.kind === "ink" && annotation.partIndex !== null)
+  );
+}
+
 function signOf(value: string | null): ScriptSign | null {
   return SCRIPT_SIGN_KEYS.find((key) => key === value) ?? null;
 }
@@ -138,11 +150,6 @@ async function loadOwnAnnotations(showId: string, authorId: string) {
   });
 }
 
-function readStrokes(value: unknown): InkStroke[] {
-  const parsed = inkSchema.safeParse(value);
-  return parsed.success ? parsed.data.strokes : [];
-}
-
 /** Status je Notiz für eine Fassung (reine Funktion, testbar). */
 export function resolveAnnotations(
   annotations: StoredAnnotation[],
@@ -174,7 +181,7 @@ export function resolveAnnotations(
       const unchanged =
         annotation.versionId === versionId || plainBlockText(block.parts) === annotation.blockText;
       const sign = signOf(annotation.sign);
-      const located = isPointSign(sign)
+      const located = isPointAnchor(annotation)
         ? locateSignPoint(block.parts, annotation)
         : locateQuote(block.parts, annotation);
       if (annotation.partIndex !== null) {
@@ -193,7 +200,7 @@ export function resolveAnnotations(
     return {
       id: annotation.id,
       kind: annotation.kind,
-      strokes: readStrokes(annotation.ink),
+      strokes: readSketch(annotation.ink),
       color: ANNOTATION_COLORS.find((color) => color === annotation.color) ?? null,
       sign: signOf(annotation.sign),
       body: annotation.body,
@@ -324,7 +331,7 @@ export async function anchorAnnotation(
   if (block.version.showId !== annotation.showId) {
     throw new ScriptAnnotationError("Absatz gehört zu einem anderen Stück.");
   }
-  const point = isPointSign(signOf(annotation.sign));
+  const point = isPointAnchor(annotation);
   const located = point
     ? locateSignPoint(block.parts, annotation)
     : locateQuote(block.parts, annotation);
@@ -369,62 +376,69 @@ export async function scriptVersionScope(versionId: string) {
   });
 }
 
+export const sketchInputSchema = z.object({
+  /** Vom Leser vergebene Kennung (neu) bzw. vorhandener Zettel. */
+  id: z.string().min(1),
+  versionId: z.string().min(1),
+  blockId: z.string().min(1),
+  /** Stelle im Teil, an der der Zettel hängt; ohne = ganzer Absatz. */
+  partIndex: z.number().int().min(0).nullable().default(null),
+  at: z.number().int().min(0).nullable().default(null),
+  title: z.string().trim().max(200).nullable().default(null),
+  strokes: z.array(inkStrokeSchema).max(500),
+});
+export type SketchInput = z.input<typeof sketchInputSchema>;
+
 /**
- * Freihand-Strich an einen Absatz hängen. Je Person und Absatz gibt es eine Zeichnung
- * (Annotation `ink`), neue Striche werden angehängt.
+ * Notizzettel speichern (docs/Plan/skript-notizen-plan.md, Schritt 6): feste Zeichenfläche,
+ * an einer Stelle im Text verankert. Leerer Zettel = löschen. Gibt den Zettel so zurück, wie der
+ * Leser ihn zeigt (oder null, wenn er gelöscht wurde).
  */
-export async function addInkStroke(
-  authorId: string,
-  versionId: string,
-  blockId: string,
-  raw: unknown,
-) {
-  const stroke = inkStrokeSchema.parse(raw);
-  const block = await loadBlock(versionId, blockId);
-  const existing = await prisma.scriptAnnotation.findFirst({
-    where: { authorId, kind: "ink", versionId, blockId },
-    select: { id: true, ink: true },
+export async function saveSketch(authorId: string, raw: SketchInput) {
+  const input = sketchInputSchema.parse(raw);
+  const existing = await prisma.scriptAnnotation.findUnique({
+    where: { id: input.id },
+    select: { id: true, authorId: true, kind: true },
   });
   if (existing) {
-    const strokes = [...readStrokes(existing.ink), stroke];
-    if (strokes.length > 500) throw new ScriptAnnotationError("Zu viele Striche an diesem Absatz.");
-    return prisma.scriptAnnotation.update({
-      where: { id: existing.id },
-      data: { ink: { strokes } },
-      select: { id: true },
+    if (existing.authorId !== authorId || existing.kind !== "ink") {
+      throw new ScriptAnnotationError("Zettel nicht gefunden.");
+    }
+    if (!input.strokes.length) {
+      await prisma.scriptAnnotation.delete({ where: { id: input.id } });
+      return null;
+    }
+    const updated = await prisma.scriptAnnotation.update({
+      where: { id: input.id },
+      data: { ink: { canvas: true, strokes: input.strokes }, body: input.title || null },
     });
+    const block = updated.blockId ? await loadBlock(updated.versionId, updated.blockId) : null;
+    return block ? resolveAnnotations([updated], updated.versionId, [block])[0] : null;
   }
-  return prisma.scriptAnnotation.create({
+  if (!input.strokes.length) return null;
+  const block = await loadBlock(input.versionId, input.blockId);
+  const text = input.partIndex !== null ? block.parts[input.partIndex]?.text : undefined;
+  const anchored = text !== undefined && input.at !== null && input.at <= text.length;
+  const created = await prisma.scriptAnnotation.create({
     data: {
+      id: input.id,
       showId: block.version.showId,
-      versionId,
+      versionId: input.versionId,
       blockId: block.id,
       lineageId: block.lineageId,
       kind: "ink",
-      ink: { strokes: [stroke] },
+      ink: { canvas: true, strokes: input.strokes },
+      body: input.title || null,
+      partIndex: anchored ? input.partIndex : null,
+      start: anchored ? input.at : null,
+      end: anchored ? input.at : null,
+      quote: anchored && input.at !== null ? pointContext(text, input.at) : null,
+      ...(anchored && input.at !== null
+        ? rangeContext(text, input.at, input.at)
+        : { prefix: null, suffix: null }),
       blockText: plainBlockText(block.parts),
       authorId,
     },
-    select: { id: true },
   });
-}
-
-/** Einzelne Striche entfernen (Radierer, Rückgängig); leere Zeichnungen werden gelöscht. */
-export async function removeInkStrokes(annotationId: string, authorId: string, indices: number[]) {
-  const annotation = await requireOwn(annotationId, authorId);
-  if (annotation.kind !== "ink") throw new ScriptAnnotationError("Keine Freihandnotiz.");
-  const current = await prisma.scriptAnnotation.findUniqueOrThrow({
-    where: { id: annotationId },
-    select: { ink: true },
-  });
-  const drop = new Set(indices);
-  const strokes = readStrokes(current.ink).filter((_, index) => !drop.has(index));
-  if (!strokes.length) {
-    await prisma.scriptAnnotation.delete({ where: { id: annotationId } });
-    return;
-  }
-  await prisma.scriptAnnotation.update({
-    where: { id: annotationId },
-    data: { ink: { strokes } },
-  });
+  return resolveAnnotations([created], created.versionId, [block])[0];
 }
