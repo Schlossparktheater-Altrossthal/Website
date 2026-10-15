@@ -346,6 +346,30 @@ export async function inheritLineage(versionId: string, previousId: string) {
   return result;
 }
 
+/**
+ * Wie `inheritLineage`, lässt aber Absätze in Ruhe, die schon eine `lineageId` der Vorfassung
+ * tragen (bearbeitete Kopie, Phase 10) – und vergibt keine `lineageId` doppelt.
+ */
+async function keepOwnLineage(versionId: string, previousId: string) {
+  const [inherited, current, before] = await Promise.all([
+    inheritLineage(versionId, previousId),
+    prisma.scriptBlock.findMany({ where: { versionId }, select: { id: true, lineageId: true } }),
+    prisma.scriptBlock.findMany({ where: { versionId: previousId }, select: { lineageId: true } }),
+  ]);
+  const known = new Set(before.map((block) => block.lineageId));
+  const kept = new Set(
+    current.filter((block) => known.has(block.lineageId)).map((block) => block.lineageId),
+  );
+  if (!kept.size) return inherited;
+  const own = new Map(current.map((block) => [block.id, block.lineageId]));
+  const result = new Map<string, string>();
+  for (const [id, lineageId] of inherited) {
+    if (known.has(own.get(id) ?? "") || kept.has(lineageId)) continue;
+    result.set(id, lineageId);
+  }
+  return result;
+}
+
 export async function releaseScriptVersion(versionId: string, userId: string) {
   const version = await requireDraft(versionId);
   const review = await loadScriptReview(versionId);
@@ -357,7 +381,7 @@ export async function releaseScriptVersion(versionId: string, userId: string) {
     orderBy: { releasedAt: "desc" },
     select: { id: true },
   });
-  const inherited = previous ? await inheritLineage(versionId, previous.id) : new Map();
+  const inherited = previous ? await keepOwnLineage(versionId, previous.id) : new Map();
   await prisma.$transaction([
     ...[...inherited].map(([id, lineageId]) =>
       prisma.scriptBlock.update({ where: { id }, data: { lineageId } }),

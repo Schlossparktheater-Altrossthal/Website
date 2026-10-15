@@ -246,12 +246,17 @@ export function AnnotationBar({
   blockId,
   onNote,
   onDone,
+  onEdit,
+  onInsert,
 }: {
   store: AnnotationStore;
   selection: TextSelection | null;
   blockId: string | null;
   onNote: () => void;
   onDone: () => void;
+  /** Nur mit Verwaltungsrecht: Absatz korrigieren bzw. neuen dahinter (Phase 10). */
+  onEdit?: () => void;
+  onInsert?: () => void;
 }) {
   const target = selection?.blockId ?? blockId;
   if (!target) return null;
@@ -272,6 +277,16 @@ export function AnnotationBar({
       <Button variant="outline" onClick={onNote}>
         <EditIcon aria-hidden /> Notiz
       </Button>
+      {onEdit ? (
+        <Button variant="ghost" onClick={onEdit}>
+          Text bearbeiten
+        </Button>
+      ) : null}
+      {onInsert ? (
+        <Button variant="ghost" onClick={onInsert}>
+          Absatz danach
+        </Button>
+      ) : null}
       <Button
         variant="ghost"
         size="icon"

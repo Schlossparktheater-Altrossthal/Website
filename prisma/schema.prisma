@@ -3972,6 +3972,9 @@ model ScriptBlock {
   parts       Json
   page        Int?
   wordCount   Int                @default(0)
+  /// Von Hand korrigiert (Phase 10): wer und wann zuletzt (E8). Ohne = wie eingelesen.
+  editedAt    DateTime?
+  editedById  String?
   version     ScriptVersion      @relation(fields: [versionId], references: [id], onDelete: Cascade)
   scene       ScriptScene        @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   roles       ScriptBlockRole[]

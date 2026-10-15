@@ -1,0 +1,2 @@
+ALTER TABLE "ScriptBlock" ADD COLUMN "editedAt" TIMESTAMP(3),
+ADD COLUMN "editedById" TEXT;

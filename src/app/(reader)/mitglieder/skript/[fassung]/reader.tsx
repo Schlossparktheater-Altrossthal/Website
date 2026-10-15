@@ -82,6 +82,7 @@ import {
   type NoteTarget,
 } from "./annotations";
 import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketch";
+import { BlockEditor, type BlockEditorState } from "./block-editor";
 import { useAnnotations } from "./use-annotations";
 import { NoteToolbox, TappedBar, toggleSign, type DropGap } from "./note-toolbox";
 import { SelectionHandles } from "./selection-handles";
@@ -672,6 +673,7 @@ export function ScriptReader({
   /** Angetippte Einträge (Markierung, Zeichen …) – mehrere, wenn sie übereinander liegen. */
   const [tapped, setTapped] = React.useState<string[]>([]);
   const [selectedBlock, setSelectedBlock] = React.useState<string | null>(null);
+  const [blockEdit, setBlockEdit] = React.useState<BlockEditorState | null>(null);
   const [editor, setEditor] = React.useState<EditorState | null>(null);
   // Notizen schreibt man direkt am Absatz; das Blatt bleibt für Markierungen und Stimmungen.
   const [inlineNote, setInlineNote] = React.useState<EditorState | null>(null);
@@ -850,6 +852,12 @@ export function ScriptReader({
     clearSelection();
     setSelectedBlock(null);
     setTapped([]);
+  };
+  const editBlockAt = (mode: BlockEditorState["mode"]) => {
+    const id = selection?.blockId ?? selectedBlock;
+    const block = blocks.find((entry) => entry.id === id);
+    closeBar();
+    if (block) setBlockEdit({ mode, block });
   };
   const tappedAnnotations = tapped.flatMap((id) => annotationById.get(id) ?? []);
   const tappedAnnotation =
@@ -1305,6 +1313,17 @@ export function ScriptReader({
           {version.status === "draft" ? (
             <p className="-mx-3 mb-2 border-l-[3px] border-warning bg-warning/15 px-3 py-1 text-sm sm:-mx-4 sm:px-4">
               Entwurf – das Ensemble sieht diese Fassung erst nach der Freigabe.
+              {canManage ? (
+                <>
+                  {" "}
+                  <Link
+                    href={`${SKRIPT_PATH}&fassung=${version.id}`}
+                    className="font-medium underline underline-offset-4"
+                  >
+                    Prüfen und freigeben
+                  </Link>
+                </>
+              ) : null}
             </p>
           ) : null}
           {blocks.map((block, index) => {
@@ -1494,6 +1513,9 @@ export function ScriptReader({
                 closeBar();
               }}
               onDone={closeBar}
+              {...(canManage
+                ? { onEdit: () => editBlockAt("edit"), onInsert: () => editBlockAt("insert") }
+                : {})}
             />
           ) : null}
           {!noteMode && !pick && !selection && !selectedBlock && nextCue ? (
@@ -1801,6 +1823,15 @@ export function ScriptReader({
           </Link>
         </div>
       </BottomSheet>
+      {canManage ? (
+        <BlockEditor
+          state={blockEdit}
+          onClose={() => setBlockEdit(null)}
+          versionId={version.id}
+          released={version.status === "released"}
+          roles={roles}
+        />
+      ) : null}
       <SelectionHandles
         selectionKey={
           noteMode && noteTarget?.range

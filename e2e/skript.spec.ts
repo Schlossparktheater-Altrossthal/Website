@@ -161,6 +161,34 @@ test.describe("als admin", () => {
     expect((await pdfResponse.body()).subarray(0, 4).toString()).toBe("%PDF");
     await page.keyboard.press("Escape");
 
+    // Bearbeiten (Phase 10): Entwurf direkt ändern, Absatz einfügen und wieder streichen
+    const greeting = page.locator("[data-block]").filter({ hasText: "Guten Abend." }).first();
+    await greeting.click();
+    await clickUntil(page.getByRole("button", { name: "Text bearbeiten" }), () =>
+      expect(page.getByRole("dialog")).toBeVisible(),
+    );
+    const firstPart = page.getByRole("textbox", { name: "Text von Teil 1" });
+    await firstPart.fill(`${await firstPart.inputValue()} Korrigiert.`);
+    await page.getByRole("button", { name: "Speichern", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByText("Korrigiert.")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/mitglieder/skript/${versionId}$`));
+    await page.locator("[data-block]").filter({ hasText: "Korrigiert." }).first().click();
+    await clickUntil(page.getByRole("button", { name: "Absatz danach" }), () =>
+      expect(page.getByRole("dialog")).toBeVisible(),
+    );
+    await page.getByLabel("Wer spricht?").fill("E2E Alpha");
+    await page.getByRole("textbox", { name: "Text von Teil 1" }).fill("Eingefügt im Test.");
+    await page.getByRole("button", { name: "Speichern", exact: true }).click();
+    await expect(page.getByText("Eingefügt im Test.")).toBeVisible();
+    await page.locator("[data-block]").filter({ hasText: "Eingefügt im Test." }).first().click();
+    await clickUntil(page.getByRole("button", { name: "Text bearbeiten" }), () =>
+      expect(page.getByRole("dialog")).toBeVisible(),
+    );
+    await page.getByRole("button", { name: "Absatz streichen" }).click();
+    await page.getByRole("button", { name: "Streichen", exact: true }).click();
+    await expect(page.getByText("Eingefügt im Test.")).toHaveCount(0);
+
     await page.goto(`${SKRIPT}&fassung=${versionId}`);
     await discard(page);
     await page.reload();

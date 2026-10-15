@@ -240,7 +240,15 @@ Offen:
       Kommentare fürs Team folgen mit Phase 12 (Live-Zusammenarbeit)
 - [x] Phase 9 Freihandnotizen (`ink.tsx`, `perfect-freehand`; Stift zeichnet, Finger scrollt, Druck +
       Neigung, Radierer je Strich, Rückgängig; Striche relativ zum Absatz in Breite/em)
-- [ ] Phase 10 Bearbeiten
+- [x] Phase 10 Bearbeiten (2026-10-15): im Leser für Verwalter – Absatz antippen → „Text bearbeiten“
+      (Art, Sprecher, Teile Text/Regie/Hinweis+Gewerk, Reihenfolge) oder „Absatz danach“, Streichen.
+      `src/lib/skript/edit.ts`, Aktionen `(reader)/mitglieder/skript/edit-actions.ts` (Absatz über
+      `lineageId`). Freigegebene Fassung: erstes Speichern legt Kopie „(bearbeitet)“ als Entwurf an
+      (`profileId = "bearbeitet"`, gleiche `lineageId`s, kein Verweis aufs Original-PDF), weitere
+      Änderungen landen in derselben Kopie. Freigabe übernimmt `lineageId`s nur für Absätze, die
+      noch keine der Vorfassung tragen. Sprecher → Rollen über Namen/Aliase, Unbekannte fragt der
+      Prüfschritt. `ScriptBlock.editedAt`/`editedById` (Migration 20261015180000) halten fest, wer
+      zuletzt korrigiert hat (E8); Anzeige davon noch offen.
 - [ ] Phase 11 Übernahme-Assistent
 - [ ] Phase 12 Live-Mitlesen + Live-Zusammenarbeit, Offline
 - [x] Phase 13 Lernmodus – eigener Plan: docs/Plan/lernmodus-plan.md (umgesetzt, Staging; offen Release + Gerätetest)
