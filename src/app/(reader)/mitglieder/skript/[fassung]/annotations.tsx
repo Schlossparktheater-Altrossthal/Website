@@ -556,7 +556,7 @@ export function AnnotationEditor({
             placeholder="z. B. Betonung auf „nie“, hier zur Rampe gehen …"
           />
         </label>
-        {annotation && !annotation.id.startsWith("tmp:") ? (
+        {annotation ? (
           <p className="text-xs text-muted-foreground">
             Angelegt {DATE_TIME.format(new Date(annotation.createdAt))}
             {annotation.updatedAt !== annotation.createdAt

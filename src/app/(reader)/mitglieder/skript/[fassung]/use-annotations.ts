@@ -29,8 +29,6 @@ type UndoStep =
   | { type: "deleted"; annotation: ReaderAnnotation }
   | { type: "updated"; ref: { id: string }; before: Patch };
 
-const isTemp = (id: string) => id.startsWith("tmp:");
-
 function draftOf(annotation: ReaderAnnotation): AnnotationDraft | null {
   if (!annotation.blockId || annotation.kind === "ink") return null;
   return {
@@ -53,13 +51,19 @@ function draftOf(annotation: ReaderAnnotation): AnnotationDraft | null {
 export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
   const [list, setList] = React.useState(initial);
   const deleting = React.useRef(new Set<string>());
+  /** Laufende Anlagen: Ändern/Löschen wartet, bis die Notiz auf dem Server existiert. */
+  const pending = React.useRef(new Map<string, Promise<boolean>>());
   // Server-Stand (z. B. nach Zuordnen oder Freihand) übernehmen, laufende Anlagen behalten.
   const [seen, setSeen] = React.useState(initial);
   if (seen !== initial) {
     setSeen(initial);
     setList((current) => [
       ...initial.filter((annotation) => !deleting.current.has(annotation.id)),
-      ...current.filter((annotation) => isTemp(annotation.id)),
+      ...current.filter(
+        (annotation) =>
+          pending.current.has(annotation.id) &&
+          !initial.some((entry) => entry.id === annotation.id),
+      ),
     ]);
   }
   const undoStack = React.useRef<UndoStep[]>([]);
@@ -71,10 +75,11 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
 
   const failed = (error: string) => toast.error("Das hat nicht geklappt", { description: error });
 
-  /** Anlegen; liefert eine Referenz, deren `id` nach dem Speichern die echte ist. */
+  /** Anlegen: sofort sichtbar, Speichern im Hintergrund. */
   const create = React.useCallback(
     async (draft: AnnotationDraft, record = true) => {
-      const ref = { id: `tmp:${crypto.randomUUID()}` };
+      // Kennung entsteht hier und gilt auch auf dem Server – Antippen klappt schon vor dem Speichern.
+      const ref = { id: crypto.randomUUID() };
       const now = new Date().toISOString();
       const temp: ReaderAnnotation = {
         id: ref.id,
@@ -94,7 +99,8 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
       };
       setList((current) => [...current, temp]);
       if (record) push({ type: "created", ref });
-      const result = await createAnnotationAction({
+      const saving = createAnnotationAction({
+        id: ref.id,
         versionId,
         blockId: draft.blockId,
         kind: draft.kind,
@@ -103,22 +109,23 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
         ...(draft.range
           ? { partIndex: draft.range.partIndex, start: draft.range.start, end: draft.range.end }
           : {}),
+      }).then((result) => {
+        pending.current.delete(ref.id);
+        if (!result.ok) {
+          setList((current) => current.filter((entry) => entry.id !== ref.id));
+          failed(result.error);
+          return false;
+        }
+        // Inzwischen gelöscht: nicht wieder einsetzen.
+        if (!deleting.current.has(ref.id)) {
+          setList((current) =>
+            current.map((entry) => (entry.id === ref.id ? result.annotation : entry)),
+          );
+        }
+        return true;
       });
-      if (!result.ok) {
-        setList((current) => current.filter((entry) => entry.id !== temp.id));
-        failed(result.error);
-        return null;
-      }
-      ref.id = result.annotation.id;
-      // Schon vor dem Speichern wieder entfernt (Rückgängig): auch auf dem Server löschen.
-      if (deleting.current.delete(temp.id)) {
-        void deleteAnnotationAction(versionId, result.annotation.id);
-        return null;
-      }
-      setList((current) =>
-        current.map((entry) => (entry.id === temp.id ? result.annotation : entry)),
-      );
-      return ref;
+      pending.current.set(ref.id, saving);
+      return (await saving) ? ref : null;
     },
     [versionId],
   );
@@ -128,8 +135,12 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
       deleting.current.add(annotation.id);
       setList((current) => current.filter((entry) => entry.id !== annotation.id));
       if (record) push({ type: "deleted", annotation });
-      // Noch nicht gespeichert: `create` löscht nach dem Speichern selbst.
-      if (isTemp(annotation.id)) return true;
+      // Noch nicht gespeichert: erst abwarten; ging das Anlegen schief, gibt es nichts zu löschen.
+      const saving = pending.current.get(annotation.id);
+      if (saving && !(await saving)) {
+        deleting.current.delete(annotation.id);
+        return true;
+      }
       const result = await deleteAnnotationAction(versionId, annotation.id);
       deleting.current.delete(annotation.id);
       if (!result.ok) {
@@ -154,6 +165,7 @@ export function useAnnotations(versionId: string, initial: ReaderAnnotation[]) {
         );
       apply(patch);
       if (record) push({ type: "updated", ref: { id: annotation.id }, before });
+      await pending.current.get(annotation.id);
       const result = await updateAnnotationAction(versionId, annotation.id, patch);
       if (!result.ok) {
         apply(before);

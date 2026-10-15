@@ -30,6 +30,8 @@ export {
 
 export const annotationInputSchema = z
   .object({
+    /** Vom Leser vergebene Kennung, damit die Notiz sofort und dauerhaft gleich heißt. */
+    id: z.string().uuid().optional(),
     versionId: z.string().min(1),
     blockId: z.string().min(1),
     kind: z.enum(["highlight", "note"]),
@@ -189,6 +191,7 @@ export async function createAnnotation(authorId: string, raw: AnnotationInput) {
   }
   return prisma.scriptAnnotation.create({
     data: {
+      ...(input.id ? { id: input.id } : {}),
       showId: block.version.showId,
       versionId: input.versionId,
       blockId: block.id,
