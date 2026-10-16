@@ -123,6 +123,8 @@ export type PdfTableCell =
       pill?: { fill: string; ink: string } | null;
       /** Leeres Kästchen zum Abhaken auf Papier. */
       checkbox?: boolean;
+      /** Linierte, leere Zelle zum Mitschreiben. */
+      ruled?: boolean;
     };
 
 export type PdfTableRow =
@@ -133,8 +135,12 @@ export type PdfTableRow =
       accent?: string | null;
       /** Etwas Abstand davor, z. B. zwischen Wochen. */
       gapBefore?: boolean;
+      /** Mindesthöhe der Zeile (z. B. Platz für Notizen). */
+      minHeight?: number;
     }
-  | { kind: "group"; label: string; hint?: string | null };
+  | { kind: "group"; label: string; hint?: string | null }
+  /** Hinweis über die ganze Breite, z. B. Ferien oder Feiertag. */
+  | { kind: "notice"; text: string; ink: string; fill: string };
 
 const CELL_PAD_X = 4;
 const CELL_PAD_Y = 3;
@@ -179,6 +185,7 @@ function drawCell(
   const c = normalizeCell(cell);
   const inner = width - CELL_PAD_X * 2;
   let cursor = y;
+  if (c.ruled) return;
   if (c.checkbox) {
     doc
       .save()
@@ -224,42 +231,72 @@ function drawCell(
 
 /**
  * Zeichnet eine Tabelle ab `y` über beliebig viele Seiten; der Tabellenkopf wird auf jeder
- * neuen Seite wiederholt. Gibt die y-Position unter der Tabelle zurück.
+ * neuen Seite (bzw. Spalte) wiederholt. Mit `flowColumns: 2` läuft die Tabelle wie in einer
+ * Zeitung erst links, dann rechts weiter. Gibt die y-Position unter der Tabelle zurück.
  */
 export function drawTable(
   doc: PDFKit.PDFDocument,
-  { y: startY, columns, rows }: { y: number; columns: PdfTableColumn[]; rows: PdfTableRow[] },
+  {
+    y: startY,
+    columns,
+    rows,
+    flowColumns = 1,
+  }: { y: number; columns: PdfTableColumn[]; rows: PdfTableRow[]; flowColumns?: 1 | 2 },
 ) {
-  const left = doc.page.margins.left;
-  const width = doc.page.width - left - doc.page.margins.right;
+  const pageLeft = doc.page.margins.left;
+  const pageWidth = doc.page.width - pageLeft - doc.page.margins.right;
+  const gutter = flowColumns === 2 ? 16 : 0;
+  const width = (pageWidth - gutter) / flowColumns;
   const totalWeight = columns.reduce((sum, column) => sum + column.weight, 0);
   const widths = columns.map((column) => (column.weight / totalWeight) * width);
-  const xs = widths.map((_, index) => left + widths.slice(0, index).reduce((a, b) => a + b, 0));
+  const offsets = widths.map((_, index) => widths.slice(0, index).reduce((a, b) => a + b, 0));
   const bottom = () => doc.page.height - doc.page.margins.bottom - 6;
+
+  let frame = 0;
+  let frameTop = startY;
+  let left = pageLeft;
 
   const drawHeader = (top: number) => {
     doc.save().rect(left, top, width, HEADER_HEIGHT).fill(PDF_COLOR.header).restore();
     columns.forEach((column, index) => {
-      textLine(doc, column.label, xs[index] + CELL_PAD_X, top + 4, widths[index] - CELL_PAD_X * 2, {
-        font: PDF_BOLD,
-        size: 6.5,
-        color: PDF_COLOR.muted,
-        align: column.align,
-      });
+      textLine(
+        doc,
+        column.label,
+        left + offsets[index] + CELL_PAD_X,
+        top + 4,
+        widths[index] - CELL_PAD_X * 2,
+        { font: PDF_BOLD, size: 6.5, color: PDF_COLOR.muted, align: column.align },
+      );
     });
     return top + HEADER_HEIGHT;
   };
 
-  const newPage = () => {
-    doc.addPage();
-    return drawHeader(doc.page.margins.top);
+  const nextFrame = () => {
+    if (frame + 1 < flowColumns) {
+      frame += 1;
+    } else {
+      doc.addPage();
+      frame = 0;
+      frameTop = doc.page.margins.top;
+    }
+    left = pageLeft + frame * (width + gutter);
+    return drawHeader(frameTop);
   };
+
+  const separator = (y: number) =>
+    doc
+      .save()
+      .moveTo(left, y)
+      .lineTo(left + width, y)
+      .lineWidth(0.5)
+      .stroke(PDF_COLOR.line)
+      .restore();
 
   let y = drawHeader(startY);
   rows.forEach((row, rowIndex) => {
     if (row.kind === "group") {
       // Gruppenkopf nie allein am Seitenende stehen lassen.
-      if (y + GROUP_HEIGHT + 20 > bottom()) y = newPage();
+      if (y + GROUP_HEIGHT + 20 > bottom()) y = nextFrame();
       doc
         .save()
         .rect(left, y + 2, width, GROUP_HEIGHT - 2)
@@ -283,14 +320,33 @@ export function drawTable(
       return;
     }
 
-    const gap = row.gapBefore && rowIndex > 0 && rows[rowIndex - 1]?.kind !== "group" ? 4 : 0;
+    if (row.kind === "notice") {
+      doc.font(PDF_BOLD).fontSize(7);
+      const height = doc.heightOfString(row.text, { width: width - 16 }) + 6;
+      if (y + height + 2 > bottom()) y = nextFrame();
+      doc
+        .save()
+        .rect(left, y + 1.5, width, height)
+        .fill(row.fill)
+        .restore();
+      doc
+        .font(PDF_BOLD)
+        .fontSize(7)
+        .fillColor(row.ink)
+        .text(row.text, left + 8, y + 4.5, { width: width - 16 });
+      y += height + 2;
+      return;
+    }
+
+    const previous = rows[rowIndex - 1];
+    const gap = row.gapBefore && previous && previous.kind !== "group" ? 4 : 0;
     const contentHeight = Math.max(
       ...row.cells.map((cell, index) => cellHeight(doc, cell, widths[index] ?? 0)),
       TEXT_SIZE + 1,
     );
-    const height = contentHeight + CELL_PAD_Y * 2;
+    const height = Math.max(contentHeight + CELL_PAD_Y * 2, row.minHeight ?? 0);
     if (y + gap + height > bottom()) {
-      y = newPage();
+      y = nextFrame();
     } else {
       y += gap;
     }
@@ -303,16 +359,23 @@ export function drawTable(
     }
     row.cells.forEach((cell, index) => {
       if (index >= columns.length) return;
-      drawCell(doc, cell, xs[index], y + CELL_PAD_Y, widths[index], columns[index].align ?? "left");
+      const x = left + offsets[index];
+      if (typeof cell !== "string" && cell.ruled) {
+        // Schreiblinien im Abstand von 9 pt, die letzte liegt auf der Zeilenlinie.
+        doc.save().lineWidth(0.4).strokeColor(PDF_COLOR.line).dash(1.5, { space: 1.5 });
+        for (let line = y + 10; line < y + height - 3; line += 9) {
+          doc
+            .moveTo(x + CELL_PAD_X, line)
+            .lineTo(x + widths[index] - CELL_PAD_X, line)
+            .stroke();
+        }
+        doc.undash().restore();
+        return;
+      }
+      drawCell(doc, cell, x, y + CELL_PAD_Y, widths[index], columns[index].align ?? "left");
     });
     y += height;
-    doc
-      .save()
-      .moveTo(left, y)
-      .lineTo(left + width, y)
-      .lineWidth(0.5)
-      .stroke(PDF_COLOR.line)
-      .restore();
+    separator(y);
   });
   return y;
 }

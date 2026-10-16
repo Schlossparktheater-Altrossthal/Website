@@ -43,6 +43,7 @@ import {
 import { DEFAULT_TIME_ZONE, formatIsoTimeInTimeZone } from "@/lib/date-time";
 import type { FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import { toDayKey } from "@/lib/sperrliste/day-tiers";
+import { buildScheduleMonths } from "@/lib/calendar/schedule-pdf";
 import { downloadPdf } from "@/lib/pdf/download";
 import { cn } from "@/lib/utils";
 import type { HolidayRange } from "@/types/holidays";
@@ -79,6 +80,10 @@ export type PlanningEvent = CalendarEntry & {
   /** Eingeladene; null = Termin für alle. */
   invitedIds: string[] | null;
   declinedIds: string[];
+  /** Kurzfassung der Beteiligten, z. B. „Ensemble · Kostüm“ (für Liste/PDF). */
+  who?: string | null;
+  /** Geplante Szenen, z. B. „1.2, 1.4“. */
+  scenes?: string | null;
 };
 
 export type PlanningDraft = {
@@ -485,6 +490,7 @@ export function EventPlanningClient({
           todayKey={todayKey}
           attendanceFor={attendanceFor}
           productionTitle={productionTitle}
+          holidays={holidays}
         />
       )}
 
@@ -1021,11 +1027,13 @@ function EventList({
   todayKey,
   attendanceFor,
   productionTitle,
+  holidays,
 }: {
   events: PlanningEvent[];
   todayKey: string;
   attendanceFor: (event: PlanningEvent) => Attendance[];
   productionTitle: string | null;
+  holidays: HolidayRange[];
 }) {
   const [showPast, setShowPast] = useState(false);
   const [showAbsences, setShowAbsences] = useState(true);
@@ -1046,23 +1054,28 @@ function EventList({
   }, [events, showPast, todayKey]);
   const [exporting, setExporting] = useState(false);
 
-  const exportPdf = async (mode: "plan" | "availability") => {
+  const exportPdf = async (mode: PdfMode) => {
     setExporting(true);
     try {
+      const visible = groups.flatMap(([, weeks]) => weeks.flat());
       await downloadPdf(
         "terminliste",
         {
           mode,
           generatedAt: new Date().toISOString(),
           production: productionTitle,
-          months: groups.map(([label, weeks]) => ({
-            label,
-            weeks: weeks.map((week) =>
-              week.map((event) =>
-                pdfEvent(event, mode === "plan" ? [] : attendanceFor(event), showAbsences),
+          months: buildScheduleMonths(
+            visible.map((event) => ({
+              dayKey: event.dayKey,
+              lastDayKey: lastDayOf(event),
+              event: pdfEvent(
+                event,
+                mode === "availability" ? attendanceFor(event) : [],
+                showAbsences,
               ),
-            ),
-          })),
+            })),
+            holidays,
+          ),
         },
         "termine.pdf",
       );
@@ -1108,12 +1121,14 @@ function EventList({
             </AsyncButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => exportPdf("plan")}>
-              Ablaufplan (ohne Sperrliste)
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => exportPdf("availability")}>
-              Mit Abwesenheiten
-            </DropdownMenuItem>
+            {PDF_MODES.map((entry) => (
+              <DropdownMenuItem key={entry.mode} onSelect={() => exportPdf(entry.mode)}>
+                <span className="flex flex-col">
+                  <span>{entry.label}</span>
+                  <span className="text-xs text-muted-foreground">{entry.hint}</span>
+                </span>
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -1171,16 +1186,32 @@ function absenceText(entries: Attendance[]) {
     .join(", ");
 }
 
+type PdfMode = "plan" | "notes" | "poster" | "availability";
+
+const PDF_MODES: { mode: PdfMode; label: string; hint: string }[] = [
+  { mode: "plan", label: "Ablaufplan", hint: "Szenen, Wer, Ort – ohne Sperrliste" },
+  { mode: "notes", label: "Ablaufplan mit Notizspalte", hint: "Platz zum Mitschreiben" },
+  { mode: "poster", label: "Aushang", hint: "zweispaltig, viele Monate auf einer Seite" },
+  {
+    mode: "availability",
+    label: "Mit Abwesenheiten",
+    hint: "quer, wer fehlt und wie viele können",
+  },
+];
+
 /** Eine Zeile der Terminliste für die PDF-Vorlage „terminliste“. */
 function pdfEvent(event: PlanningEvent, attendance: Attendance[], showAbsences: boolean) {
   const blocked = attendance.filter((entry) => entry.answer === "blocked");
   const limited = attendance.filter((entry) => entry.answer === "limited");
   return {
+    type: "event" as const,
     date: listDate(event),
     time: listTime(event) || (event.allDay ? "ganztägig" : null),
     title: event.title,
     note: firstLine(event.description) || null,
     location: event.location || null,
+    scenes: event.scenes ?? null,
+    who: event.who ?? null,
     rehearsal: event.kind === "REHEARSAL",
     status:
       event.status === "CANCELLED" || event.status === "TENTATIVE" ? event.status : "CONFIRMED",

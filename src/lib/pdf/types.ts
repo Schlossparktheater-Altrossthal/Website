@@ -28,7 +28,7 @@ export type PdfTemplate<Data> = {
   /**
    * Optional anpassbare Optionen für das zugrunde liegende PDF-Dokument.
    */
-  documentOptions?: PdfDocumentOptions;
+  documentOptions?: PdfDocumentOptions | ((data: Data) => PdfDocumentOptions);
   /**
    * Hinweis „Nur für den internen Gebrauch … vernichten“ auf jeder Seite (Standard: an).
    * Nur für Dokumente abschalten, die bewusst nach außen gehen.

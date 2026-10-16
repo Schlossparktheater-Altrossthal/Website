@@ -5,6 +5,7 @@ import { addMonths, format, startOfMonth } from "date-fns";
 import { PageHeader } from "@/components/members/page-header";
 import { getActiveProduction } from "@/lib/active-production";
 import { loadAudienceContext } from "@/lib/calendar/audience-server";
+import { summarizeEventAudience, summarizeEventScenes } from "@/lib/calendar/event-summary";
 import { loadScenePlanEntries } from "@/lib/calendar/scene-schedule-server";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
@@ -58,8 +59,8 @@ export default async function EventPlanningPage({
   };
 
   const settings = resolveBlocklistSettings(await readSperrlisteSettings());
-  const [events, drafts, users, holidays, show, sceneContext, scenePlanEntries] = await Promise.all(
-    [
+  const [events, drafts, users, holidays, show, sceneContext, scenePlanEntries, departments] =
+    await Promise.all([
       prisma.calendarEvent.findMany({
         where: {
           ...scope,
@@ -71,6 +72,15 @@ export default async function EventPlanningPage({
         include: {
           participants: { where: { invited: true }, select: { userId: true, response: true } },
           _count: { select: { audienceRules: true } },
+          // Für „Wer“ und „Szenen“ in der Terminliste/PDF.
+          audienceRules: { select: { type: true, targetId: true } },
+          blocks: {
+            select: {
+              departmentId: true,
+              scene: { select: { identifier: true, sequence: true } },
+              runScenes: { select: { scene: { select: { identifier: true, sequence: true } } } },
+            },
+          },
         },
       }),
       prisma.calendarEvent.findMany({
@@ -111,8 +121,9 @@ export default async function EventPlanningPage({
       // Szenen und Besetzung für „Was ist probbar?“ im Tagesfeld.
       showId ? loadAudienceContext(showId) : null,
       showId ? loadScenePlanEntries(showId) : [],
-    ],
-  );
+      prisma.department.findMany({ select: { id: true, name: true } }),
+    ]);
+  const departmentNames = new Map(departments.map((entry) => [entry.id, entry.name]));
 
   const planningEvents: PlanningEvent[] = events.map((event) => {
     const targeted = event._count.audienceRules > 0 || event.participants.length > 0;
@@ -139,6 +150,20 @@ export default async function EventPlanningPage({
       declinedIds: event.participants
         .filter((entry) => entry.response === "no" || entry.response === "emergency")
         .map((entry) => entry.userId),
+      who: summarizeEventAudience(
+        {
+          rules: event.audienceRules,
+          blockDepartmentIds: event.blocks.map((block) => block.departmentId),
+          invitedCount: event.participants.length,
+        },
+        departmentNames,
+      ),
+      scenes: summarizeEventScenes(
+        event.blocks.flatMap((block) => [
+          ...(block.scene ? [block.scene] : []),
+          ...block.runScenes.map((entry) => entry.scene),
+        ]),
+      ),
     };
   });
 

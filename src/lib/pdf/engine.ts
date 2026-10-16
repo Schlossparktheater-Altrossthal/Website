@@ -70,7 +70,9 @@ export async function renderPdfTemplate(
   const internalUse = typedTemplate.internalUse !== false;
   const options = {
     ...DEFAULT_OPTIONS,
-    ...(typedTemplate.documentOptions ?? {}),
+    ...(typeof typedTemplate.documentOptions === "function"
+      ? typedTemplate.documentOptions(data)
+      : (typedTemplate.documentOptions ?? {})),
     ...(internalUse ? { bufferPages: true } : {}),
   };
   const font = defaultPdfFontPath();
