@@ -500,6 +500,46 @@ function WishGroups({
   );
 }
 
+/** Kompakte Namensliste für lange Teams und Interessierte. */
+function PersonChips({
+  people,
+  onOpen,
+  hint,
+  tone,
+}: {
+  people: AssignmentPerson[];
+  onOpen: (id: string) => void;
+  hint?: (person: AssignmentPerson) => string | null;
+  tone?: (person: AssignmentPerson) => "success" | null;
+}) {
+  return (
+    <ul className="flex flex-wrap gap-1.5">
+      {people.map((person) => {
+        const extra = hint?.(person);
+        return (
+          <li key={person.id} className="max-w-full">
+            <button
+              type="button"
+              onClick={() => onOpen(person.id)}
+              className={cn(
+                "inline-flex min-h-9 max-w-full items-center gap-1 rounded-full border px-3 py-1 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                tone?.(person) === "success"
+                  ? "border-success/40 bg-success/10"
+                  : "border-border bg-background",
+              )}
+            >
+              <span className="truncate">{person.name}</span>
+              {extra ? (
+                <span className="shrink-0 text-xs text-muted-foreground">· {extra}</span>
+              ) : null}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function plural(count: number, one: string, many: string) {
   return `${count} ${count === 1 ? one : many}`;
 }
@@ -986,26 +1026,28 @@ function DepartmentView({
               <p className="text-xs text-muted-foreground">Keine offenen Wünsche.</p>
             )}
 
-            <Group title={`Team (${members.length})`}>
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Team ({members.length})
+              </h3>
               {members.length === 0 ? (
-                <li className="text-sm text-muted-foreground">Noch niemand zugewiesen.</li>
+                <p className="text-sm text-muted-foreground">Noch niemand zugewiesen.</p>
               ) : (
-                members
-                  .sort(
+                <PersonChips
+                  people={[...members].sort(
                     (a, b) =>
                       DEPARTMENT_ROLES.indexOf(membershipOf(a, department.id)!.role) -
-                      DEPARTMENT_ROLES.indexOf(membershipOf(b, department.id)!.role),
-                  )
-                  .map((person) => (
-                    <PersonLine
-                      key={person.id}
-                      person={person}
-                      onOpen={onOpenPerson}
-                      hint={ROLE_LABELS[membershipOf(person, department.id)!.role]}
-                    />
-                  ))
+                        DEPARTMENT_ROLES.indexOf(membershipOf(b, department.id)!.role) ||
+                      a.name.localeCompare(b.name, "de"),
+                  )}
+                  onOpen={onOpenPerson}
+                  hint={(person) => {
+                    const role = membershipOf(person, department.id)!.role;
+                    return role === "member" ? null : ROLE_LABELS[role];
+                  }}
+                />
               )}
-            </Group>
+            </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0 flex-1">
@@ -1139,20 +1181,28 @@ function RoleSizesView({
           >
             {roleList(characters)}
             {wishers.length ? (
-              <WishGroups
-                wishers={wishers}
-                onOpen={onOpenPerson}
-                action={({ person }) =>
-                  person.castings.length ? (
-                    <span className="text-xs text-success">
-                      {person.castings
-                        .map((entry) => characterName.get(entry.characterId))
-                        .filter(Boolean)
-                        .join(", ")}
-                    </span>
-                  ) : null
-                }
-              />
+              WISH_LEVELS.map(({ level, label }) => {
+                const atLevel = wishers.filter((entry) => entry.wish.level === level);
+                if (!atLevel.length) return null;
+                return (
+                  <div key={level} className="space-y-1.5">
+                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {label} ({atLevel.length})
+                    </h3>
+                    <PersonChips
+                      people={atLevel.map((entry) => entry.person)}
+                      onOpen={onOpenPerson}
+                      tone={(person) => (person.castings.length ? "success" : null)}
+                      hint={(person) =>
+                        person.castings
+                          .map((entry) => characterName.get(entry.characterId))
+                          .filter(Boolean)
+                          .join(", ") || null
+                      }
+                    />
+                  </div>
+                );
+              })
             ) : (
               <p className="text-xs text-muted-foreground">Niemand wünscht sich diese Größe.</p>
             )}
