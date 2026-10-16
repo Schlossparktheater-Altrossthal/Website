@@ -34,6 +34,8 @@ type RolePreferencesSectionProps = {
   onOnboardingChange: (next: ProfileClientProps["onboarding"]) => void;
   /** Herkunft der Wünsche, wenn sie aus einer früheren Produktion vorgeschlagen werden. */
   inheritedFromLabel?: string | null;
+  /** Von Verantwortlichen nachgetragene Wünsche (Code + Name). */
+  enteredBy?: { code: string; by: string }[];
 };
 
 export function RolePreferencesSection({
@@ -43,6 +45,7 @@ export function RolePreferencesSection({
   onRolePreferencesChange,
   onOnboardingChange,
   inheritedFromLabel = null,
+  enteredBy = [],
 }: RolePreferencesSectionProps) {
   const initialPreferences = useMemo(
     () => buildPreferenceFormState(rolePreferences, crewWishOptions),
@@ -181,6 +184,21 @@ export function RolePreferencesSection({
           <p className="rounded-md border border-info/30 bg-info/10 px-3 py-2 text-xs text-foreground">
             Vorschlag aus {inheritedFromLabel}. Prüfe die Auswahl und speichere sie für diese
             Produktion.
+          </p>
+        ) : null}
+        {enteredBy.length ? (
+          <p className="rounded-md border border-border bg-muted px-3 py-2 text-xs text-foreground">
+            Nachgetragen vom Team:{" "}
+            {enteredBy
+              .map((entry) => {
+                const title =
+                  [...preferenceForm.acting, ...preferenceForm.crew].find(
+                    (pref) => pref.code === entry.code,
+                  )?.title ?? entry.code;
+                return `${title} (${entry.by})`;
+              })
+              .join(", ")}
+            . Passt etwas nicht, ändere es einfach und speichere.
           </p>
         ) : null}
         <RolePreferenceLevelHint />

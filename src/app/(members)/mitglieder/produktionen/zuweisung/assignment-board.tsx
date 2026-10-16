@@ -18,6 +18,7 @@ import type {
   AssignmentPerson,
 } from "@/lib/departments/assignments";
 import type { RolesScenesData } from "@/lib/produktionen/roles-scenes";
+import type { WishlistData } from "@/lib/wishes/wishlist";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +29,9 @@ import {
 } from "../actions/assignments";
 import { DepartmentSettingsButton } from "../../meine-gewerke/department-settings-panel";
 import { RolePanel as RoleEditPanel } from "../stueck/panels";
+import { WishlistView } from "./wishlist-view";
 
-type View = "person" | "department" | "roles";
+type View = "person" | "department" | "roles" | "wishes";
 type Filter = "all" | "open" | "requests";
 type DepartmentRole = "lead" | "deputy" | "member" | "guest";
 
@@ -59,6 +61,8 @@ type Props = {
   rolesData: RolesScenesData | null;
   manageAll: boolean;
   leadDepartmentIds: string[];
+  /** Wunschliste der Produktion (Ansicht „Wünsche“). */
+  wishlist: WishlistData;
 };
 
 /** Höchster Wunsch-Wert einer Person für ein Gewerk (0 = kein Wunsch). */
@@ -87,7 +91,13 @@ function noWishText(person: AssignmentPerson) {
   return "Keine Wünsche angegeben";
 }
 
-export function AssignmentBoard({ data, rolesData, manageAll, leadDepartmentIds }: Props) {
+export function AssignmentBoard({
+  data,
+  rolesData,
+  manageAll,
+  leadDepartmentIds,
+  wishlist,
+}: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [pending, startTransition] = React.useTransition();
@@ -180,6 +190,7 @@ export function AssignmentBoard({ data, rolesData, manageAll, leadDepartmentIds 
     { value: "person", label: "Personen" },
     { value: "department", label: "Gewerke" },
     ...(manageAll ? [{ value: "roles" as const, label: "Rollen" }] : []),
+    { value: "wishes", label: "Wünsche" },
   ];
 
   const personPanel = selectedPerson ? (
@@ -330,6 +341,10 @@ export function AssignmentBoard({ data, rolesData, manageAll, leadDepartmentIds 
             </BottomSheet>
           )}
         </div>
+      ) : null}
+
+      {view === "wishes" ? (
+        <WishlistView data={wishlist} manageAll={manageAll} leadDepartmentIds={leadDepartmentIds} />
       ) : null}
 
       {rolesData && editingRole ? (

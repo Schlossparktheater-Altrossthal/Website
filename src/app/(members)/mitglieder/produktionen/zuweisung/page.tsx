@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { loadRolesAndScenes } from "@/lib/produktionen/roles-scenes";
 import { requireAuth } from "@/lib/rbac";
+import { loadWishlist } from "@/lib/wishes/wishlist";
 
 import { AssignmentBoard } from "./assignment-board";
 
@@ -43,6 +44,7 @@ export default async function ZuweisungPage() {
           rolesData={isManager ? await loadRolesAndScenes(activeProduction.id) : null}
           manageAll={isManager}
           leadDepartmentIds={leadDepartments.map((entry) => entry.departmentId)}
+          wishlist={await loadWishlist(activeProduction.id)}
         />
       ) : (
         <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">

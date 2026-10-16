@@ -62,6 +62,7 @@ export function ProfileClient({
   aversions: initialAversions,
   checklist: initialChecklist,
   rolePreferencesInheritedFrom,
+  rolePreferencesEnteredBy,
   crewWishOptions,
   history,
   measurements: initialMeasurements,
@@ -318,6 +319,7 @@ export function ProfileClient({
             onRolePreferencesChange={handleRolePreferencesChange}
             onWhatsAppVisit={handleWhatsAppVisit}
             preferencesInheritedFrom={preferencesInheritedFrom}
+            preferencesEnteredBy={rolePreferencesEnteredBy}
           />
         );
       case "masse":

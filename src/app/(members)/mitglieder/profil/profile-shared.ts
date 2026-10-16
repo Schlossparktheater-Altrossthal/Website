@@ -244,6 +244,8 @@ export type ProfileClientProps = {
   checklist: ProfileCompletionSummary;
   /** Label der Produktion, aus der die Rollenwünsche als Vorschlag stammen. */
   rolePreferencesInheritedFrom: string | null;
+  /** Von Verantwortlichen nachgetragene Wünsche (Code + Name), sichtbar für die Person. */
+  rolePreferencesEnteredBy: { code: string; by: string }[];
   /** Gewerks-Wünsche der Produktion (`listCrewWishOptions`). */
   crewWishOptions: CrewWishOption[];
 };

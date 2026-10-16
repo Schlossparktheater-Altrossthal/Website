@@ -9,6 +9,7 @@ import { productionCastingTemplate } from "./production-casting";
 import { requisitenAblaufTemplate } from "./requisiten-ablauf";
 import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
 import { terminlisteTemplate } from "./terminliste";
+import { wunschlisteTemplate } from "./wunschliste";
 import { scriptReaderPdfTemplate } from "@/lib/skript/pdf";
 
 const templates = [
@@ -22,6 +23,7 @@ const templates = [
   requisitenAblaufTemplate,
   sperrlisteImportantDaysTemplate,
   terminlisteTemplate,
+  wunschlisteTemplate,
   scriptReaderPdfTemplate,
 ] as const;
 

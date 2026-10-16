@@ -380,6 +380,7 @@ export default async function ProfilePage() {
         aversions={aversions}
         checklist={checklist}
         rolePreferencesInheritedFrom={rolePreferencesInheritedFrom}
+        rolePreferencesEnteredBy={productionPreferences.enteredBy}
         crewWishOptions={crewWishOptions}
       />
     </div>

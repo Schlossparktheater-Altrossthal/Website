@@ -397,6 +397,9 @@ model User {
   onboardingProfile               MemberOnboardingProfile?
   interests                       UserInterest[]
   rolePreferences                 MemberRolePreference[]
+  rolePreferencesEntered          MemberRolePreference[]     @relation("RolePreferenceEnteredBy")
+  wishNotes                       MemberWishNote[]           @relation("WishNoteMember")
+  wishNotesAuthored               MemberWishNote[]           @relation("WishNoteAuthor")
   noticeDismissals                UserNoticeDismissal[]
   productionMemberships           ProductionMembership[]
   interestsAuthored               Interest[]                 @relation("InterestCreatedBy")
@@ -506,6 +509,7 @@ model Show {
   productionOnboardings   ProductionOnboarding[]
   calendarEvents          CalendarEvent[]
   memberRolePreferences   MemberRolePreference[]
+  memberWishNotes         MemberWishNote[]
   departments             Department[]
   onboardingProfiles      MemberOnboardingProfile[]
   invites                 MemberInvite[]
@@ -2866,19 +2870,41 @@ model UserInterest {
 /// Rollen- und Gewerkewünsche gelten pro Produktion (`showId`). Einträge ohne `showId`
 /// stammen aus der Zeit vor der Umstellung und dienen nur noch als Vorschlag.
 model MemberRolePreference {
-  id        String               @id @default(cuid())
-  userId    String
-  showId    String?
-  code      String
-  domain    RolePreferenceDomain
-  weight    Int
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  id          String               @id @default(cuid())
+  userId      String
+  showId      String?
+  code        String
+  domain      RolePreferenceDomain
+  weight      Int
+  /// Von Verantwortlichen nachgetragen (Wunschliste); `null` = von der Person selbst angegeben.
+  enteredById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  show Show? @relation(fields: [showId], references: [id], onDelete: Cascade)
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show      Show? @relation(fields: [showId], references: [id], onDelete: Cascade)
+  enteredBy User? @relation("RolePreferenceEnteredBy", fields: [enteredById], references: [id], onDelete: SetNull)
 
   @@unique([userId, showId, code])
+  @@index([showId])
+}
+
+/// Interne Notiz der Verantwortlichen zu den Wünschen einer Person für eine Produktion
+/// (z. B. „im Gespräch: lieber kleinere Rolle“). Für die Person selbst nicht sichtbar.
+model MemberWishNote {
+  id          String   @id @default(cuid())
+  userId      String
+  showId      String
+  text        String
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User  @relation("WishNoteMember", fields: [userId], references: [id], onDelete: Cascade)
+  show      Show  @relation(fields: [showId], references: [id], onDelete: Cascade)
+  updatedBy User? @relation("WishNoteAuthor", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, showId])
   @@index([showId])
 }
 

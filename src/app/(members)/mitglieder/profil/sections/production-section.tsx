@@ -12,6 +12,7 @@ type ProductionSectionProps = {
   onRolePreferencesChange: (next: ProfileClientProps["rolePreferences"]) => void;
   onWhatsAppVisit: () => Promise<{ visitedAt: string | null; alreadyVisited: boolean }>;
   preferencesInheritedFrom: string | null;
+  preferencesEnteredBy: { code: string; by: string }[];
 };
 
 /** „Meine Produktion“: Produktion und Team-Chat, Rollenwünsche, Angaben zur Person. */
@@ -23,6 +24,7 @@ export function ProductionSection({
   onRolePreferencesChange,
   onWhatsAppVisit,
   preferencesInheritedFrom,
+  preferencesEnteredBy,
 }: ProductionSectionProps) {
   return (
     <div className="space-y-4">
@@ -40,6 +42,7 @@ export function ProductionSection({
           onRolePreferencesChange={onRolePreferencesChange}
           onOnboardingChange={onOnboardingChange}
           inheritedFromLabel={preferencesInheritedFrom}
+          enteredBy={preferencesEnteredBy}
         />
       </OnboardingSection>
     </div>

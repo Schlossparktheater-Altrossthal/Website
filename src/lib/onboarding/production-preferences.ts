@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient, RolePreferenceDomain } from "@prisma/client";
 
+import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -13,6 +14,8 @@ export type ProductionPreferences = {
    * (oder `"legacy"` für Einträge vor der Umstellung), aus der sie als Vorschlag stammen.
    */
   inheritedFrom: { showId: string; title: string | null; year: number } | "legacy" | null;
+  /** Von Verantwortlichen nachgetragene Wünsche dieser Produktion (Code + Name). */
+  enteredBy: { code: string; by: string }[];
 };
 
 /**
@@ -34,6 +37,7 @@ export async function readProductionPreferences(
       showId: true,
       updatedAt: true,
       show: { select: { id: true, title: true, year: true } },
+      enteredBy: { select: { firstName: true, lastName: true, name: true } },
     },
     orderBy: [{ domain: "asc" }, { code: "asc" }],
   });
@@ -44,7 +48,13 @@ export async function readProductionPreferences(
   if (showId) {
     const own = pick((row) => row.showId === showId);
     if (own.length) {
-      return { preferences: own, inheritedFrom: null };
+      const enteredBy = rows
+        .filter((row) => row.showId === showId && row.enteredBy)
+        .map((row) => ({
+          code: row.code,
+          by: row.enteredBy ? getUserDisplayName(row.enteredBy) : "",
+        }));
+      return { preferences: own, inheritedFrom: null, enteredBy };
     }
   }
 
@@ -55,10 +65,11 @@ export async function readProductionPreferences(
       null,
     );
   if (!latest) {
-    return { preferences: [], inheritedFrom: null };
+    return { preferences: [], inheritedFrom: null, enteredBy: [] };
   }
 
   return {
+    enteredBy: [],
     preferences: pick((row) => row.showId === latest.showId),
     inheritedFrom: latest.show
       ? { showId: latest.show.id, title: latest.show.title, year: latest.show.year }
@@ -73,6 +84,12 @@ export async function replaceProductionPreferences(
   showId: string | null,
   preferences: ReadonlyArray<RolePreferenceEntry>,
 ) {
+  // Nachgetragene Wünsche (Wunschliste) behalten ihre Herkunft, solange die Person sie
+  // unverändert übernimmt; geänderte gelten danach als selbst angegeben.
+  const previous = await tx.memberRolePreference.findMany({
+    where: { userId, showId, enteredById: { not: null } },
+    select: { code: true, weight: true, enteredById: true },
+  });
   await tx.memberRolePreference.deleteMany({ where: { userId, showId } });
   const byCode = new Map(
     preferences.filter((pref) => pref.weight > 0).map((pref) => [pref.code, pref]),
@@ -80,7 +97,14 @@ export async function replaceProductionPreferences(
   const entries = [...byCode.values()];
   if (entries.length) {
     await tx.memberRolePreference.createMany({
-      data: entries.map((pref) => ({ userId, showId, ...pref })),
+      data: entries.map((pref) => ({
+        userId,
+        showId,
+        ...pref,
+        enteredById:
+          previous.find((row) => row.code === pref.code && row.weight === pref.weight)
+            ?.enteredById ?? null,
+      })),
     });
   }
 }
