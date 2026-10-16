@@ -22,7 +22,6 @@ export function downloadWishlistPdf(
       domain: area.domain,
     })),
     people: people.map((person) => {
-      const max = Math.max(0, ...person.wishes.map((wish) => wish.weight));
       return {
         name: person.name,
         tag: person.onboardingDone && !person.isReturning ? "neu" : null,
@@ -38,7 +37,7 @@ export function downloadWishlistPdf(
                 level: wish.level,
                 assigned: wish.assigned,
                 entered: Boolean(wish.enteredBy),
-                top: wish.weight === max,
+                top: wish.top,
               }
             : null;
         }),

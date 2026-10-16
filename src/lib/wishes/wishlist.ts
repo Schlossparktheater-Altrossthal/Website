@@ -35,6 +35,8 @@ export type WishlistWish = {
   enteredBy: string | null;
   /** Gewerk aktiv bzw. Rolle dieser Größe besetzt. */
   assigned: boolean;
+  /** Höchster Wunsch der Person (bei Gleichstand mehrere). */
+  top: boolean;
 };
 
 export type WishlistPerson = AvatarFields & {
@@ -132,6 +134,11 @@ export async function loadWishlistAreas(showId: string): Promise<WishlistArea[]>
     }),
   ]);
   return buildAreas(crewOptions, departments);
+}
+
+export function markTopWishes(wishes: WishlistWish[]): WishlistWish[] {
+  const max = Math.max(0, ...wishes.map((wish) => wish.weight));
+  return wishes.map((wish) => ({ ...wish, top: wish.weight === max }));
 }
 
 /** Wunscherfüllung: wer etwas zugeteilt bekam, hat dabei einen Top-Wunsch erhalten? */
@@ -268,6 +275,7 @@ export async function loadWishlist(showId: string): Promise<WishlistData> {
           area.domain === "acting"
             ? Boolean(castSizes.get(user.id)?.has(area.code))
             : area.departmentIds.some((id) => userDepartments.has(id)),
+        top: false,
       });
     }
 
@@ -290,7 +298,7 @@ export async function loadWishlist(showId: string): Promise<WishlistData> {
             at: note.updatedAt.toISOString(),
           }
         : null,
-      wishes: [...byArea.values()].sort((a, b) => b.weight - a.weight),
+      wishes: markTopWishes([...byArea.values()]).sort((a, b) => b.weight - a.weight),
       departments: [...userDepartments]
         .map((id) => departmentName.get(id))
         .filter((name): name is string => Boolean(name))

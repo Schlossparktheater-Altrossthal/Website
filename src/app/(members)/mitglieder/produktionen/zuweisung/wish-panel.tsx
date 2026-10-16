@@ -19,6 +19,7 @@ import { WISH_LEVELS, type WishLevel } from "@/lib/wishes/levels";
 import type { WishlistArea, WishlistPerson } from "@/lib/wishes/wishlist";
 
 import { saveWishNoteAction, setWishAction } from "../actions/wishes";
+import { TopWishStar } from "./top-wish-star";
 
 type Result = { ok: boolean; error?: string; message?: string };
 
@@ -84,7 +85,10 @@ export function WishPanel({
             return (
               <li key={wish.areaCode} className="rounded-md border border-border px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-sm">{area.title}</span>
+                  <span className="flex min-w-0 flex-1 items-center gap-1 text-sm">
+                    <span className="truncate">{area.title}</span>
+                    {wish.top ? <TopWishStar /> : null}
+                  </span>
                   <WishMeter level={wish.level} showLabel />
                   {editable ? (
                     <Button

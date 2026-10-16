@@ -29,6 +29,7 @@ function person(id: string, wishes: Partial<WishlistWish>[], assigned = true): W
       level: 2,
       enteredBy: null,
       assigned: false,
+      top: false,
       ...wish,
     })),
     departments: assigned ? ["Kostüm"] : [],

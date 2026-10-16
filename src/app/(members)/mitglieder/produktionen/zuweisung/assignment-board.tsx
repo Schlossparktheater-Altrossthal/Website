@@ -43,6 +43,7 @@ import {
 } from "../actions/assignments";
 import { DepartmentSettingsButton } from "../../meine-gewerke/department-settings-panel";
 import { RolePanel as RoleEditPanel } from "../stueck/panels";
+import { TopWishStar } from "./top-wish-star";
 import { WishPanel } from "./wish-panel";
 import { downloadWishlistPdf } from "./wishlist-pdf";
 
@@ -494,6 +495,7 @@ function WishGroups({
                 person={entry.person}
                 onOpen={onOpen}
                 hint={entry.wish.enteredBy ? `nachgetragen von ${entry.wish.enteredBy}` : undefined}
+                top={entry.wish.top}
               >
                 {action?.(entry)}
               </PersonLine>
@@ -511,9 +513,11 @@ function PersonChips({
   onOpen,
   hint,
   tone,
+  top,
 }: {
   people: AssignmentPerson[];
   onOpen: (id: string) => void;
+  top?: (person: AssignmentPerson) => boolean;
   hint?: (person: AssignmentPerson) => string | null;
   tone?: (person: AssignmentPerson) => "success" | null;
 }) {
@@ -534,6 +538,7 @@ function PersonChips({
               )}
             >
               <span className="truncate">{person.name}</span>
+              {top?.(person) ? <TopWishStar /> : null}
               {extra ? (
                 <span className="shrink-0 text-xs text-muted-foreground">· {extra}</span>
               ) : null}
@@ -1201,6 +1206,9 @@ function RoleSizesView({
                     <PersonChips
                       people={atLevel.map((entry) => entry.person)}
                       onOpen={onOpenPerson}
+                      top={(person) =>
+                        atLevel.some((entry) => entry.person.id === person.id && entry.wish.top)
+                      }
                       tone={(person) => (person.castings.length ? "success" : null)}
                       hint={(person) =>
                         person.castings
@@ -1317,11 +1325,14 @@ function Group({
 function PersonLine({
   person,
   hint,
+  top = false,
   onOpen,
   children,
 }: {
   person: AssignmentPerson;
   hint?: string;
+  /** Höchster Wunsch der Person: Stern hinter dem Namen. */
+  top?: boolean;
   onOpen: (id: string) => void;
   children?: React.ReactNode;
 }) {
@@ -1341,7 +1352,10 @@ function PersonLine({
           size={32}
         />
         <span className="min-w-0">
-          <span className="block truncate text-sm">{person.name}</span>
+          <span className="flex items-center gap-1 text-sm">
+            <span className="truncate">{person.name}</span>
+            {top ? <TopWishStar /> : null}
+          </span>
           {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
         </span>
       </button>
