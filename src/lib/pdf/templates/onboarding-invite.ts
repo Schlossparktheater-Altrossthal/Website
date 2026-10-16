@@ -101,6 +101,8 @@ function formatLinkForDisplay(link: string) {
 export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
   id: "onboarding-invite",
   label: "Backstage-Pass Poster",
+  // Plakat zum Aushängen – geht bewusst nach außen.
+  internalUse: false,
   description:
     "Erzeugt ein farbenfrohes A4-PDF mit QR-Code für neue Gesichter beim Sommertheater Altrossthal.",
   filename: (data) => {

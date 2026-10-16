@@ -30,6 +30,11 @@ export type PdfTemplate<Data> = {
    */
   documentOptions?: PdfDocumentOptions;
   /**
+   * Hinweis „Nur für den internen Gebrauch … vernichten“ auf jeder Seite (Standard: an).
+   * Nur für Dokumente abschalten, die bewusst nach außen gehen.
+   */
+  internalUse?: boolean;
+  /**
    * Zeichnet den eigentlichen Inhalt der PDF-Datei.
    */
   render: (doc: PdfDocumentInstance, data: Data) => Promise<void> | void;

@@ -1,6 +1,7 @@
 import type { ZodError, ZodIssue } from "zod";
 
 import { registerDefaultPdfFonts } from "./fonts";
+import { stampInternalNotice } from "./internal-notice";
 import { findPdfTemplate } from "./templates";
 import type { PdfRenderResult, PdfTemplate } from "./types";
 
@@ -66,7 +67,12 @@ export async function renderPdfTemplate(
 
   const data = parsed.data;
   const typedTemplate = template as PdfTemplate<typeof data>;
-  const options = { ...DEFAULT_OPTIONS, ...(typedTemplate.documentOptions ?? {}) };
+  const internalUse = typedTemplate.internalUse !== false;
+  const options = {
+    ...DEFAULT_OPTIONS,
+    ...(typedTemplate.documentOptions ?? {}),
+    ...(internalUse ? { bufferPages: true } : {}),
+  };
   const PdfDocument = await loadPdfDocument();
   const doc = new PdfDocument(options);
 
@@ -127,6 +133,7 @@ export async function renderPdfTemplate(
     (async () => {
       try {
         await typedTemplate.render(doc, data);
+        if (internalUse) stampInternalNotice(doc);
         doc.end();
       } catch (error) {
         handleError(error);
