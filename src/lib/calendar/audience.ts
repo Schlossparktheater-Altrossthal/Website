@@ -58,7 +58,7 @@ export type AudienceContext = {
   hasProduction: boolean;
   members: { id: string; name: string }[];
   castings: { characterId: string; userId: string; type: CharacterCastingType }[];
-  characters: { id: string; name: string }[];
+  characters: { id: string; name: string; shortName?: string | null }[];
   scenes: { id: string; label: string; characterIds: string[]; durationMinutes?: number | null }[];
   departments: { id: string; name: string; memberIds: string[] }[];
 };

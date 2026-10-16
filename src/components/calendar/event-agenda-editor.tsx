@@ -44,7 +44,7 @@ import {
 } from "@/lib/calendar/agenda";
 import type { AudienceContext } from "@/lib/calendar/audience";
 import { optimizeOrder, rankScenes, type SceneCandidate } from "@/lib/calendar/rehearsal-suggest";
-import { READINESS_LABEL, type SceneReadiness } from "@/lib/calendar/scene-readiness";
+import { describeCast, type SceneReadiness } from "@/lib/calendar/scene-readiness";
 import { HEAVY_WEEK_COUNT, type PersonLoad } from "@/lib/calendar/week-load";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
@@ -243,10 +243,24 @@ export function EventAgendaEditor({
     });
   }, [context, readinessById, stats, urgency, weekLoad, sceneKey, durationKey]);
 
+  // Szenen mit unbesetzten Rollen lassen sich nicht sinnvoll proben – außer sie stehen schon drin.
+  const plannableCandidates = useMemo(
+    () =>
+      candidates.filter(
+        (entry) =>
+          readinessById.get(entry.sceneId)?.fullyCast !== false || sceneIds.includes(entry.sceneId),
+      ),
+    [candidates, readinessById, sceneIds],
+  );
+  const uncastScenes = useMemo(
+    () => readiness.filter((entry) => !entry.fullyCast && !sceneIds.includes(entry.sceneId)),
+    [readiness, sceneIds],
+  );
+
   const quickScenes = useMemo<QuickAddScene[]>(() => {
-    const ranked = rankScenes(candidates);
+    const ranked = rankScenes(plannableCandidates);
     const order = new Map(ranked.map((entry, index) => [entry.sceneId, index]));
-    return candidates
+    return plannableCandidates
       .filter((entry) => !sceneIds.includes(entry.sceneId))
       .sort(
         (a, b) =>
@@ -259,16 +273,14 @@ export function EventAgendaEditor({
         durationMinutes: entry.durationMinutes,
         status: readinessById.get(entry.sceneId)?.status ?? null,
         hint: [
-          readinessById.get(entry.sceneId)
-            ? READINESS_LABEL[readinessById.get(entry.sceneId)!.status]
-            : null,
+          readinessById.get(entry.sceneId) ? describeCast(readinessById.get(entry.sceneId)!) : null,
           describeSceneStats(stats[entry.sceneId]),
           formatDuration(entry.durationMinutes),
         ]
           .filter(Boolean)
           .join(" · "),
       }));
-  }, [candidates, sceneIds, readinessById, stats]);
+  }, [plannableCandidates, sceneIds, readinessById, stats]);
 
   const update = (id: string, patch: Partial<AgendaItem>) =>
     onItemsChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
@@ -421,8 +433,8 @@ export function EventAgendaEditor({
     const room = item.location.trim() ? ` · ${item.location.trim()}` : "";
     if (item.type === "SCENE" && item.sceneId) {
       const entry = readinessById.get(item.sceneId);
-      const status = entry && entry.status !== "ready" ? `${READINESS_LABEL[entry.status]} · ` : "";
-      return `${status}${describeSceneStats(stats[item.sceneId])}${room}`;
+      const cast = entry?.roles.length ? `${describeCast(entry)} · ` : "";
+      return `${cast}${describeSceneStats(stats[item.sceneId])}${room}`;
     }
     if (item.type === "DEPARTMENT") {
       const name = context.departments.find((entry) => entry.id === item.departmentId)?.name;
@@ -719,7 +731,9 @@ export function EventAgendaEditor({
         <RehearsalSuggestPanel
           open
           onOpenChange={setSuggestOpen}
-          candidates={candidates}
+          candidates={plannableCandidates}
+          readiness={readinessById}
+          uncast={uncastScenes}
           existingSceneIds={sceneIds}
           defaultBudget={defaultBudget}
           names={names}

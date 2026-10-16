@@ -26,6 +26,7 @@ import {
   type ResolvedParticipant,
 } from "@/lib/calendar/audience";
 import type { DayAvailability } from "@/lib/calendar/day-availability";
+import { groupMembers } from "@/lib/calendar/member-groups";
 import { describeLoad, weekdayShort, type PersonLoad } from "@/lib/calendar/week-load";
 import { cn } from "@/lib/utils";
 
@@ -319,99 +320,127 @@ export function AudienceBuilder({
           ) : null}
         </div>
         {visible.length ? (
-          <ul className="max-h-[32rem] divide-y divide-border overflow-y-auto rounded-lg border border-border">
-            {visible.map((entry) => {
-              const status: AvailabilityStatus | null = availability
-                ? (availability[entry.userId] ?? "free")
-                : null;
-              const load = entry.excluded ? null : loadOf(entry.userId);
+          <div className="max-h-[32rem] overflow-y-auto rounded-lg border border-border">
+            {groupMembers(visible, context).map((group) => {
+              const required = group.entries.filter(
+                (entry) => !entry.excluded && entry.level === "REQUIRED",
+              ).length;
               return (
-                <li
-                  key={entry.userId}
-                  className={cn(
-                    "flex items-center gap-2 py-1 pl-3 pr-2",
-                    entry.excluded && "bg-muted/50",
-                  )}
-                >
-                  <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 py-1">
-                    <Checkbox
-                      checked={!entry.excluded}
-                      onCheckedChange={() => toggle(entry)}
-                      aria-label={`${entry.name} ${entry.excluded ? "wieder einladen" : "ausnehmen"}`}
-                    />
-                    <span className="min-w-0">
-                      <span
-                        className={cn(
-                          "block text-sm font-medium",
-                          entry.excluded && "text-muted-foreground line-through",
-                        )}
-                      >
-                        {entry.name}
-                      </span>
-                      <span className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-                        {status && !entry.excluded ? (
-                          <span
-                            className={cn(
-                              "inline-flex shrink-0 items-center gap-1",
-                              AVAILABILITY_STATUS[status].text,
-                            )}
-                          >
-                            <StatusDot status={status} />
-                            {status === "free" ? "kann" : AVAILABILITY_STATUS[status].short}
-                            <span aria-hidden className="text-muted-foreground">
-                              ·
-                            </span>
+                <section key={group.key}>
+                  <h4 className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-muted/80 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur">
+                    {group.label}
+                    <span className="font-normal normal-case tracking-normal tabular-nums">
+                      {group.entries.length}
+                      {required && required !== group.entries.length
+                        ? ` · ${required} benötigt`
+                        : ""}
+                    </span>
+                  </h4>
+                  <ul className="divide-y divide-border">
+                    {group.entries.map((entry) => {
+                      const status: AvailabilityStatus | null = availability
+                        ? (availability[entry.userId] ?? "free")
+                        : null;
+                      const load = entry.excluded ? null : loadOf(entry.userId);
+                      const tags = [...entry.roles, ...entry.extra];
+                      const notes = [
+                        entry.userId in declined && !entry.excluded ? (
+                          <span key="declined" className="text-destructive">
+                            Abgesagt
+                            {declined[entry.userId] ? `: „${declined[entry.userId]}“` : ""}
                           </span>
-                        ) : null}
-                        <span className="truncate">
-                          {entry.excluded ? "ausgenommen · " : ""}
-                          {entry.reasons.join(" · ")}
-                        </span>
-                      </span>
-                      {entry.userId in declined && !entry.excluded ? (
-                        <span className="block text-xs text-destructive">
-                          Abgesagt{declined[entry.userId] ? `: „${declined[entry.userId]}“` : ""}
-                        </span>
-                      ) : null}
-                      {load ? (
-                        <span
+                        ) : null,
+                        load?.heavy ? (
+                          <span key="load" className="text-warning">
+                            {load.text}
+                          </span>
+                        ) : null,
+                        conflicts[entry.userId] && !entry.excluded ? (
+                          <span key="conflict" className="text-warning">
+                            Zur selben Zeit: {conflicts[entry.userId]}
+                          </span>
+                        ) : null,
+                      ].filter(Boolean);
+                      return (
+                        <li
+                          key={entry.userId}
                           className={cn(
-                            "block text-xs",
-                            load.heavy ? "text-warning" : "text-muted-foreground",
+                            "flex items-center gap-2 pl-3 pr-2",
+                            entry.excluded && "bg-muted/50",
                           )}
                         >
-                          {load.text}
-                        </span>
-                      ) : null}
-                      {conflicts[entry.userId] && !entry.excluded ? (
-                        <span className="block text-xs text-warning">
-                          Zur selben Zeit eingeladen: {conflicts[entry.userId]}
-                        </span>
-                      ) : null}
-                    </span>
-                  </label>
-                  {!entry.excluded ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setLevel(entry, entry.level === "REQUIRED" ? "OPTIONAL" : "REQUIRED")
-                      }
-                      aria-label={`Verbindlichkeit für ${entry.name}: ${PARTICIPATION_LEVEL_LABELS[entry.level]} – umschalten`}
-                      title="Tippen zum Umschalten"
-                      className={cn(
-                        "min-h-9 shrink-0 rounded-full border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        entry.level === "REQUIRED"
-                          ? "border-foreground/20 bg-foreground/10 text-foreground"
-                          : "border-dashed border-border text-muted-foreground",
-                      )}
-                    >
-                      {PARTICIPATION_LEVEL_LABELS[entry.level]}
-                    </button>
-                  ) : null}
-                </li>
+                          <label
+                            className="flex min-h-10 min-w-0 flex-1 cursor-pointer items-center gap-3 py-1"
+                            title={[entry.name, ...entry.reasons, load?.text]
+                              .filter(Boolean)
+                              .join("\n")}
+                          >
+                            <Checkbox
+                              checked={!entry.excluded}
+                              onCheckedChange={() => toggle(entry)}
+                              aria-label={`${entry.name} ${entry.excluded ? "wieder einladen" : "ausnehmen"}`}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="flex min-w-0 items-center gap-1.5 text-sm">
+                                <span
+                                  className={cn(
+                                    "shrink-0 font-medium",
+                                    entry.excluded && "text-muted-foreground line-through",
+                                  )}
+                                >
+                                  {entry.name}
+                                </span>
+                                {tags.length ? (
+                                  <span className="truncate text-xs text-muted-foreground">
+                                    {tags.join(", ")}
+                                  </span>
+                                ) : null}
+                                {status && status !== "free" && !entry.excluded ? (
+                                  <span
+                                    className={cn(
+                                      "ml-auto inline-flex shrink-0 items-center gap-1 text-xs",
+                                      AVAILABILITY_STATUS[status].text,
+                                    )}
+                                  >
+                                    <StatusDot status={status} />
+                                    {AVAILABILITY_STATUS[status].short}
+                                  </span>
+                                ) : null}
+                              </span>
+                              {notes.length ? (
+                                <span className="flex flex-wrap gap-x-2 text-xs">{notes}</span>
+                              ) : null}
+                            </span>
+                          </label>
+                          {!entry.excluded ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setLevel(
+                                  entry,
+                                  entry.level === "REQUIRED" ? "OPTIONAL" : "REQUIRED",
+                                )
+                              }
+                              aria-label={`Verbindlichkeit für ${entry.name}: ${PARTICIPATION_LEVEL_LABELS[entry.level]} – umschalten`}
+                              title="Tippen zum Umschalten"
+                              className={cn(
+                                "min-h-8 shrink-0 rounded-full border px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                entry.level === "REQUIRED"
+                                  ? "border-foreground/20 bg-foreground/10 text-foreground"
+                                  : "border-dashed border-border text-muted-foreground",
+                              )}
+                            >
+                              {PARTICIPATION_LEVEL_LABELS[entry.level]}
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
               );
             })}
-          </ul>
+          </div>
         ) : (
           <div className="py-12 text-center text-sm text-muted-foreground">
             {resolved.length

@@ -6,7 +6,11 @@ import { MinusIcon, PlusIcon } from "@/components/ui/action-icons";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ReadinessDot } from "@/components/calendar/scene-readiness-list";
+import {
+  ReadinessDot,
+  SceneCastLine,
+  UncastScenes,
+} from "@/components/calendar/scene-readiness-list";
 import { formatDuration } from "@/lib/calendar/agenda";
 import {
   optimizeOrder,
@@ -15,7 +19,7 @@ import {
   waitByPerson,
   type SceneCandidate,
 } from "@/lib/calendar/rehearsal-suggest";
-import { READINESS_LABEL } from "@/lib/calendar/scene-readiness";
+import { type SceneReadiness } from "@/lib/calendar/scene-readiness";
 import { cn } from "@/lib/utils";
 
 function initialSelection(
@@ -42,6 +46,8 @@ export function RehearsalSuggestPanel({
   open,
   onOpenChange,
   candidates,
+  readiness,
+  uncast,
   existingSceneIds,
   defaultBudget,
   names,
@@ -50,6 +56,10 @@ export function RehearsalSuggestPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   candidates: readonly SceneCandidate[];
+  /** Besetzung je Szene an dem Tag (Rollen, wer fehlt). */
+  readiness: ReadonlyMap<string, SceneReadiness>;
+  /** Szenen mit unbesetzten Rollen – nur eingeklappt genannt. */
+  uncast: readonly SceneReadiness[];
   existingSceneIds: readonly string[];
   /** Verfügbare Minuten für Szenen (Terminzeit minus übrige Punkte). */
   defaultBudget: number;
@@ -181,7 +191,7 @@ export function RehearsalSuggestPanel({
             <li key={entry.sceneId}>
               <label
                 className={cn(
-                  "flex min-h-12 cursor-pointer items-start gap-3 px-3 py-2",
+                  "flex min-h-11 cursor-pointer items-start gap-3 px-3 py-1.5",
                   disabled && "cursor-not-allowed opacity-60",
                 )}
               >
@@ -206,22 +216,26 @@ export function RehearsalSuggestPanel({
                       {formatDuration(entry.durationMinutes)}
                     </span>
                   </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {entry.readiness === "missing"
-                      ? READINESS_LABEL.missing
-                      : [
-                          `${entry.done}× geprobt`,
-                          ...entry.reasons.filter((reason) => reason !== "noch nie geprobt"),
-                        ]
-                          .join(" · ")
-                          .replace(/^0× geprobt/, "noch nie geprobt")}
-                  </span>
+                  {readiness.get(entry.sceneId)?.roles.length ? (
+                    <SceneCastLine entry={readiness.get(entry.sceneId)!} className="pl-3.5" />
+                  ) : null}
+                  {entry.readiness !== "missing" ? (
+                    <span className="block pl-3.5 text-xs text-muted-foreground/80">
+                      {[
+                        `${entry.done}× geprobt`,
+                        ...entry.reasons.filter((reason) => reason !== "noch nie geprobt"),
+                      ]
+                        .join(" · ")
+                        .replace(/^0× geprobt/, "noch nie geprobt")}
+                    </span>
+                  ) : null}
                 </span>
               </label>
             </li>
           );
         })}
       </ul>
+      <UncastScenes entries={uncast} />
     </BottomSheet>
   );
 }

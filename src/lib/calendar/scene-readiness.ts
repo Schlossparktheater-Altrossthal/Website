@@ -18,13 +18,31 @@ export type RoleIssue = {
   substitute: { userId: string; name: string } | null;
 };
 
+/** Eine Rolle der Szene mit der Person, die an dem Tag spielt (oder fehlt). */
+export type RoleCast = {
+  characterId: string;
+  characterName: string;
+  /** Kurzname der Rolle, sonst der Name. */
+  short: string;
+  /** Wer die Rolle an dem Tag spielt (Hauptbesetzung, sonst Zweitbesetzung). */
+  player: { userId: string; name: string } | null;
+  status: SceneReadinessStatus;
+};
+
 export type SceneReadiness = {
   sceneId: string;
   label: string;
   status: SceneReadinessStatus;
   issues: RoleIssue[];
-  /** Rollen der Szene ohne Besetzung – kein Fehler, nur zur Info. */
+  /** Rollen der Szene ohne Besetzung. */
   uncast: string[];
+  /** Alle besetzten Rollen der Szene in Stückreihenfolge. */
+  roles: RoleCast[];
+  /**
+   * Jede Rolle hat jemanden. Szenen ohne Rollen oder mit unbesetzten Rollen lassen sich
+   * nicht planen und werden beim Anlegen von Proben ausgeblendet.
+   */
+  fullyCast: boolean;
 };
 
 type ReadinessContext = Pick<AudienceContext, "scenes" | "castings" | "characters" | "members">;
@@ -67,7 +85,7 @@ export function computeSceneReadiness(
   absences: Partial<Record<string, Absence>>,
 ): SceneReadiness[] {
   const names = new Map(context.members.map((member) => [member.id, member.name]));
-  const characterNames = new Map(context.characters.map((entry) => [entry.id, entry.name]));
+  const characterById = new Map(context.characters.map((entry) => [entry.id, entry]));
   const nameOf = (userId: string) => names.get(userId) ?? "Unbekannt";
   const isFree = (userId: string) => !absences[userId];
   const isLimited = (userId: string) => absences[userId]?.kind === "limited";
@@ -75,8 +93,11 @@ export function computeSceneReadiness(
   return context.scenes.map((scene) => {
     const issues: RoleIssue[] = [];
     const uncast: string[] = [];
+    const roles: RoleCast[] = [];
     for (const characterId of scene.characterIds) {
-      const characterName = characterNames.get(characterId) ?? "Rolle";
+      const character = characterById.get(characterId);
+      const characterName = character?.name ?? "Rolle";
+      const short = character?.shortName?.trim() || characterName;
       const castings = context.castings.filter(
         (entry) => entry.characterId === characterId && entry.type !== "cameo",
       );
@@ -86,7 +107,17 @@ export function computeSceneReadiness(
       }
       const primaries = castings.filter((entry) => entry.type === "primary");
       const others = castings.filter((entry) => entry.type !== "primary");
-      if (primaries.some((entry) => isFree(entry.userId))) continue;
+      const freePrimary = primaries.find((entry) => isFree(entry.userId));
+      if (freePrimary) {
+        roles.push({
+          characterId,
+          characterName,
+          short,
+          player: { userId: freePrimary.userId, name: nameOf(freePrimary.userId) },
+          status: "ready",
+        });
+        continue;
+      }
 
       const absent = primaries.map((entry) => ({
         userId: entry.userId,
@@ -105,12 +136,28 @@ export function computeSceneReadiness(
         status = "missing";
       }
       issues.push({ characterId, characterName, status, absent, substitute });
+      const fallback = substitute ?? absent[0] ?? null;
+      roles.push({
+        characterId,
+        characterName,
+        short,
+        player: fallback ? { userId: fallback.userId, name: fallback.name } : null,
+        status,
+      });
     }
     const status = issues.reduce<SceneReadinessStatus>(
       (worst, issue) => (RANK[issue.status] > RANK[worst] ? issue.status : worst),
       "ready",
     );
-    return { sceneId: scene.id, label: scene.label, status, issues, uncast };
+    return {
+      sceneId: scene.id,
+      label: scene.label,
+      status,
+      issues,
+      uncast,
+      roles,
+      fullyCast: scene.characterIds.length > 0 && uncast.length === 0,
+    };
   });
 }
 
@@ -127,6 +174,51 @@ export function describeReadiness(entry: SceneReadiness) {
       return `${issue.characterName} ${verb}${who ? ` (${who})` : ""}`;
     })
     .join(" · ");
+}
+
+/** Vorname – kurz für enge Zeilen. */
+export function firstName(name: string) {
+  return name.split(" ")[0] ?? name;
+}
+
+/** Rollen einer Szene als Text: „Oberon · Titania fehlt (Kat) · Helena: Emma“. */
+export function describeCast(entry: Pick<SceneReadiness, "roles" | "issues">) {
+  const issues = new Map(entry.issues.map((issue) => [issue.characterId, issue]));
+  return [...entry.roles]
+    .sort((a, b) => Number(issues.has(b.characterId)) - Number(issues.has(a.characterId)))
+    .map((role) => {
+      const issue = issues.get(role.characterId);
+      if (!issue) return role.short;
+      if (issue.status === "alternate" && issue.substitute)
+        return `${role.short}: ${firstName(issue.substitute.name)}`;
+      const who = issue.absent.map((person) => firstName(person.name)).join(", ");
+      return `${role.short} ${issue.status === "limited" ? "eingeschränkt" : "fehlt"}${who ? ` (${who})` : ""}`;
+    })
+    .join(" · ");
+}
+
+/** Nur planbare Szenen (alle Rollen besetzt). */
+export function plannableScenes<T extends Pick<SceneReadiness, "fullyCast">>(
+  entries: readonly T[],
+) {
+  return entries.filter((entry) => entry.fullyCast);
+}
+
+/** Rollen je Person aus der Besetzung (Haupt- und Zweitbesetzung, ohne Cameo). */
+export function rolesByPerson(context: Pick<AudienceContext, "castings" | "characters">) {
+  const byId = new Map(context.characters.map((entry) => [entry.id, entry]));
+  const result = new Map<string, string[]>();
+  for (const casting of context.castings) {
+    if (casting.type === "cameo") continue;
+    const character = byId.get(casting.characterId);
+    if (!character) continue;
+    const base = character.shortName?.trim() || character.name;
+    const label = casting.type === "primary" ? base : `${base} (2.)`;
+    const list = result.get(casting.userId) ?? [];
+    if (!list.includes(label)) list.push(label);
+    result.set(casting.userId, list);
+  }
+  return result;
 }
 
 /** Szenenanzahl je Zustand. */

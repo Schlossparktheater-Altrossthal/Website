@@ -16,7 +16,7 @@ import {
   SearchIcon,
 } from "@/components/ui/action-icons";
 import { AvailabilityBar } from "@/components/ui/availability-bar";
-import { StatusDot, StatusLegend } from "@/components/ui/availability-status";
+import { StatusDot } from "@/components/ui/availability-status";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
@@ -57,11 +57,12 @@ import { ScenePlanView, type ScenePlanData } from "./scene-plan-view";
 import { ReadinessSummary, SceneReadinessList } from "@/components/calendar/scene-readiness-list";
 import type { AudienceContext } from "@/lib/calendar/audience";
 import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
+import { groupMembers } from "@/lib/calendar/member-groups";
 import { computeWeekLoad, HEAVY_WEEK_COUNT, type PersonLoad } from "@/lib/calendar/week-load";
 
 export type PlanningSceneContext = Pick<
   AudienceContext,
-  "scenes" | "castings" | "characters" | "members"
+  "scenes" | "castings" | "characters" | "members" | "departments"
 >;
 
 /** `roles`: Schauspielrollen in der aktiven Produktion (leer ohne Besetzung). */
@@ -731,9 +732,17 @@ function DayPanel({
         )}
       </section>
 
+      {sceneContext ? (
+        <PlayableScenes key={dayKey} dayKey={dayKey} team={team} context={sceneContext} />
+      ) : null}
+
       <section className="space-y-2 border-t border-border pt-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-xs font-medium text-muted-foreground">Wer kann?</h3>
+          <h3 className="text-xs font-medium text-muted-foreground">
+            {blocked.length || limited.length
+              ? `Fehlt heute (${blocked.length + limited.length})`
+              : "Wer kann?"}
+          </h3>
           <AvailabilityBar
             total={total}
             blocked={counts.blocked}
@@ -742,37 +751,22 @@ function DayPanel({
           />
         </div>
         {blocked.length || limited.length ? (
-          <div className="space-y-2">
-            <NameGroup
-              status="blocked"
-              title="Können nicht"
-              entries={blocked.map((entry) => ({
-                id: entry.userId,
-                name: nameOf(entry.userId),
-                note: entry.reason,
-              }))}
-            />
-            <NameGroup
-              status="limited"
-              title="Eingeschränkt"
-              entries={limited.map((entry) => ({
-                id: entry.userId,
-                name: nameOf(entry.userId),
-                note: entry.reason,
-              }))}
-            />
-          </div>
+          <AbsentList
+            entries={[...blocked, ...limited].map((entry) => ({
+              userId: entry.userId,
+              name: nameOf(entry.userId),
+              status: entry.status as "blocked" | "limited",
+              note: entry.reason,
+            }))}
+            context={sceneContext}
+            memberRoles={(id) => memberById.get(id)?.roles ?? []}
+          />
         ) : (
           <p className="text-sm text-muted-foreground">Laut Sperrliste können alle.</p>
         )}
-        <StatusLegend statuses={["preferred", "limited", "blocked"]} />
       </section>
 
       <WeekLoadSection weekLoad={weekLoad} memberById={memberById} />
-
-      {sceneContext ? (
-        <PlayableScenes key={dayKey} dayKey={dayKey} team={team} context={sceneContext} />
-      ) : null}
     </div>
   );
 }
@@ -792,12 +786,15 @@ function WeekLoadSection({
     })
     .sort((a, b) => b.count - a.count || b.minutes - a.minutes || a.name.localeCompare(b.name));
   if (!rows.length) return null;
+  const heavy = rows.filter((row) => row.count >= HEAVY_WEEK_COUNT).length;
   return (
-    <section className="space-y-2 border-t border-border pt-4">
-      <h3 className="text-xs font-medium text-muted-foreground">
-        Diese Woche eingeladen ({rows.length})
-      </h3>
-      <ul className="flex flex-wrap gap-1.5">
+    <details className="group border-t border-border pt-3">
+      <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground">
+        <span className="inline-block transition-transform group-open:rotate-90">▸</span> Diese
+        Woche eingeladen ({rows.length})
+        {heavy ? <span className="text-warning"> · {heavy} oft</span> : null}
+      </summary>
+      <ul className="mt-2 flex flex-wrap gap-1.5">
         {rows.map((row) => (
           <li
             key={row.userId}
@@ -814,7 +811,7 @@ function WeekLoadSection({
           </li>
         ))}
       </ul>
-    </section>
+    </details>
   );
 }
 
@@ -857,64 +854,94 @@ function PlayableScenes({
     });
   };
 
+  const durations = useMemo(
+    () => new Map(context.scenes.map((scene) => [scene.id, scene.durationMinutes])),
+    [context.scenes],
+  );
+
   return (
     <section className="space-y-2 border-t border-border pt-4">
-      <div className="space-y-1">
-        <h3 className="text-xs font-medium text-muted-foreground">Was ist probbar?</h3>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h3 className="text-xs font-medium text-muted-foreground">Probbar</h3>
         <p className="text-xs text-muted-foreground">
           <ReadinessSummary entries={readiness} />
         </p>
       </div>
       <SceneReadinessList
-        className="pt-2"
         entries={readiness}
+        durations={durations}
         selectedIds={selected}
         onAdd={(id) => setSelected((current) => [...current, id])}
         onRemove={(id) => setSelected((current) => current.filter((entry) => entry !== id))}
       />
       {selected.length ? (
-        <Button type="button" className="h-11 w-full" disabled={pending} onClick={createWithScenes}>
+        <Button
+          type="button"
+          className="sticky bottom-2 z-10 h-11 w-full shadow-md"
+          disabled={pending}
+          onClick={createWithScenes}
+        >
           {pending
             ? "Legt an …"
             : `Probe mit ${selected.length} ${selected.length === 1 ? "Szene" : "Szenen"} anlegen`}
         </Button>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Szenen mit + auswählen, um daraus eine Probe anzulegen.
+          Szenen antippen, um daraus eine Probe anzulegen.
         </p>
       )}
     </section>
   );
 }
 
-function NameGroup({
-  status,
-  title,
+/**
+ * Wer an dem Tag fehlt oder eingeschränkt ist – gruppiert nach Zugehörigkeit (Besetzung mit
+ * Rollen, je Gewerk, Weitere), eine Zeile pro Person.
+ */
+function AbsentList({
   entries,
+  context,
+  memberRoles,
 }: {
-  status: "blocked" | "limited";
-  title: string;
-  entries: { id: string; name: string; note: string | null }[];
+  entries: { userId: string; name: string; status: "blocked" | "limited"; note: string | null }[];
+  context: PlanningSceneContext | null;
+  /** Funktionen in der Produktion (Regie, Technik …) für Personen ohne Rolle. */
+  memberRoles: (userId: string) => string[];
 }) {
-  if (!entries.length) return null;
+  const groups = groupMembers(entries, {
+    castings: context?.castings ?? [],
+    characters: context?.characters ?? [],
+    departments: context?.departments ?? [],
+  });
   return (
-    <div className="flex flex-wrap items-start gap-1.5">
-      <span className="inline-flex w-full items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <StatusDot status={status} /> {title} · {entries.length}
-      </span>
-      {entries.map((entry) => (
-        <span
-          key={entry.id}
-          className={cn(
-            "rounded-md px-2 py-0.5 text-xs",
-            status === "blocked"
-              ? "bg-destructive/15 text-destructive"
-              : "bg-warning/20 text-warning",
-          )}
-        >
-          <span className="font-medium">{entry.name}</span>
-          {entry.note ? <span className="text-foreground/70"> – {entry.note}</span> : null}
-        </span>
+    <div className="space-y-2">
+      {groups.map((group) => (
+        <section key={group.key}>
+          <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            {group.label} · {group.entries.length}
+          </h4>
+          <ul className="mt-0.5 space-y-0.5">
+            {group.entries.map((entry) => {
+              const tags = entry.roles.length ? entry.roles : memberRoles(entry.userId);
+              return (
+                <li key={entry.userId} className="flex items-baseline gap-1.5 text-sm">
+                  <StatusDot status={entry.status} className="translate-y-[-1px]" />
+                  <span className="min-w-0">
+                    <span className="font-medium">{entry.name}</span>
+                    {tags.length ? (
+                      <span className="text-muted-foreground"> ({tags.join(", ")})</span>
+                    ) : null}
+                    {entry.note ? (
+                      <span className="text-xs text-muted-foreground"> – {entry.note}</span>
+                    ) : entry.status === "limited" ? (
+                      <span className="text-xs text-warning"> – eingeschränkt</span>
+                    ) : null}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       ))}
     </div>
   );

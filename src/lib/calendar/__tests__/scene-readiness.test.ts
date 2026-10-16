@@ -59,3 +59,21 @@ describe("computeSceneReadiness", () => {
     expect(result[0]?.status).toBe("limited");
   });
 });
+
+describe("Besetzung je Szene", () => {
+  it("markiert Szenen mit unbesetzten Rollen oder ohne Rollen als nicht planbar", () => {
+    const result = computeSceneReadiness(
+      { ...context, scenes: [...context.scenes, { id: "s5", label: "Sz. 5", characterIds: [] }] },
+      {},
+    );
+    expect(result.map((entry) => entry.fullyCast)).toEqual([true, true, true, false, false]);
+  });
+
+  it("nennt pro Rolle, wer an dem Tag spielt", () => {
+    const result = computeSceneReadiness(context, { clara: { kind: "blocked" } });
+    expect(result[1]?.roles.map((role) => [role.short, role.player?.userId, role.status])).toEqual([
+      ["Helena", "emma", "alternate"],
+      ["Puck", "max", "ready"],
+    ]);
+  });
+});

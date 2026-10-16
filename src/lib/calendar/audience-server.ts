@@ -73,6 +73,7 @@ export async function loadAudienceContext(showId: string | null): Promise<Audien
           select: {
             id: true,
             name: true,
+            shortName: true,
             castings: { where: { user: activeUser }, select: { userId: true, type: true } },
           },
         })
@@ -113,7 +114,7 @@ export async function loadAudienceContext(showId: string | null): Promise<Audien
     members: [...users]
       .sort(compareMembersByName(nameSort, roleRankOf(roles)))
       .map((user) => ({ id: user.id, name: getUserDisplayName(user) })),
-    characters: characters.map(({ id, name }) => ({ id, name })),
+    characters: characters.map(({ id, name, shortName }) => ({ id, name, shortName })),
     castings: characters.flatMap((character) =>
       character.castings.map((casting) => ({ characterId: character.id, ...casting })),
     ),

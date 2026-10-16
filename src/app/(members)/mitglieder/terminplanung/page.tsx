@@ -239,6 +239,7 @@ export default async function EventPlanningPage({
                 castings: sceneContext.castings,
                 characters: sceneContext.characters,
                 members: sceneContext.members,
+                departments: sceneContext.departments,
               }
             : null
         }
