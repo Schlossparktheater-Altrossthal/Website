@@ -4,8 +4,13 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { CheckIcon, EditIcon, PlusIcon, SearchIcon, XIcon } from "@/components/ui/action-icons";
-import { Badge } from "@/components/ui/badge";
+import {
+  ChevronDownIcon,
+  EditIcon,
+  PlusIcon,
+  SearchIcon,
+  XIcon,
+} from "@/components/ui/action-icons";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -18,7 +23,15 @@ import type {
   AssignmentPerson,
 } from "@/lib/departments/assignments";
 import type { RolesScenesData } from "@/lib/produktionen/roles-scenes";
-import type { WishlistData } from "@/lib/wishes/wishlist";
+import { WISH_LEVELS } from "@/lib/wishes/levels";
+import {
+  canEditWishArea,
+  type WishlistArea,
+  type WishlistData,
+  type WishlistPerson,
+  type WishlistWish,
+} from "@/lib/wishes/wishlist";
+import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
@@ -29,10 +42,11 @@ import {
 } from "../actions/assignments";
 import { DepartmentSettingsButton } from "../../meine-gewerke/department-settings-panel";
 import { RolePanel as RoleEditPanel } from "../stueck/panels";
-import { WishlistView } from "./wishlist-view";
+import { WishPanel } from "./wish-panel";
+import { downloadWishlistPdf } from "./wishlist-pdf";
 
-type View = "person" | "department" | "roles" | "wishes";
-type Filter = "all" | "open" | "requests";
+type View = "department" | "roles";
+type Filter = "all" | "unassigned" | "requests";
 type DepartmentRole = "lead" | "deputy" | "member" | "guest";
 
 const DEPARTMENT_ROLES: DepartmentRole[] = ["lead", "deputy", "member", "guest"];
@@ -76,21 +90,6 @@ function membershipOf(person: AssignmentPerson, departmentId: string) {
   return person.memberships.find((entry) => entry.departmentId === departmentId);
 }
 
-/** Crew-Wünsche, für die diese Produktion kein Gewerk hat (z. B. „Regieassistenz & Orga“). */
-function unmappedCrewWishes(person: AssignmentPerson, departments: AssignmentDepartment[]) {
-  return person.wishes.filter(
-    (wish) =>
-      wish.domain === "crew" &&
-      !departments.some((department) => department.preferenceCodes.includes(wish.code)),
-  );
-}
-
-/** Kurztext, wenn es keine Wünsche für diese Produktion gibt. */
-function noWishText(person: AssignmentPerson) {
-  if (!person.onboardingDone) return "Onboarding noch offen";
-  return "Keine Wünsche angegeben";
-}
-
 export function AssignmentBoard({
   data,
   rolesData,
@@ -102,9 +101,8 @@ export function AssignmentBoard({
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [pending, startTransition] = React.useTransition();
   const [busyKey, setBusyKey] = React.useState<string | null>(null);
-  const [view, setView] = React.useState<View>(manageAll ? "person" : "department");
+  const [view, setView] = React.useState<View>("department");
   const [filter, setFilter] = React.useState<Filter>("all");
-  const [query, setQuery] = React.useState("");
   const [personId, setPersonId] = React.useState<string | null>(null);
   const [characterId, setCharacterId] = React.useState<string | null>(null);
   // Rollen-Dialog aus „Stück“: `new` = neue Rolle, sonst ID der bearbeiteten Rolle.
@@ -115,7 +113,15 @@ export function AssignmentBoard({
     (departmentId: string) => manageAll || leadSet.has(departmentId),
     [manageAll, leadSet],
   );
+  const canEditArea = React.useCallback(
+    (area: WishlistArea) => canEditWishArea(area, { manageAll, leadDepartmentIds }),
+    [manageAll, leadDepartmentIds],
+  );
   const departments = data.departments;
+  const wishPeople = React.useMemo(
+    () => new Map(wishlist.people.map((person) => [person.id, person])),
+    [wishlist.people],
+  );
 
   const run = React.useCallback(
     (key: string, action: () => Promise<{ ok: boolean; error?: string; message?: string }>) => {
@@ -163,189 +169,149 @@ export function AssignmentBoard({
       (entry) => entry.status === "requested" && canManage(entry.departmentId),
     ),
   ).length;
-  const isOpen = (person: AssignmentPerson) =>
-    departments.some(
-      (department) =>
-        wishWeight(person, department) > 0 &&
-        canManage(department.id) &&
-        membershipOf(person, department.id)?.status !== "active",
-    );
-  const openCount = data.people.filter(isOpen).length;
-
-  const people = data.people.filter((person) => {
-    if (query && !person.name.toLowerCase().includes(query.trim().toLowerCase())) return false;
-    if (filter === "open") return isOpen(person);
-    if (filter === "requests") {
-      return person.memberships.some(
-        (entry) => entry.status === "requested" && canManage(entry.departmentId),
-      );
-    }
-    return true;
-  });
+  const unassignedCount = data.people.filter(isUnassigned).length;
+  const include = (person: AssignmentPerson) => filter !== "unassigned" || isUnassigned(person);
 
   const selectedPerson = data.people.find((person) => person.id === personId) ?? null;
+  const selectedWishPerson = selectedPerson ? (wishPeople.get(selectedPerson.id) ?? null) : null;
   const selectedCharacter = data.characters.find((entry) => entry.id === characterId) ?? null;
 
-  const viewOptions: { value: View; label: string }[] = [
-    { value: "person", label: "Personen" },
-    { value: "department", label: "Gewerke" },
-    ...(manageAll ? [{ value: "roles" as const, label: "Rollen" }] : []),
-    { value: "wishes", label: "Wünsche" },
-  ];
+  const exportPdf = async (layout: "list" | "matrix") => {
+    try {
+      const ids = new Set(data.people.filter(include).map((person) => person.id));
+      await downloadWishlistPdf(
+        wishlist,
+        wishlist.people.filter((person) => ids.has(person.id)),
+        layout,
+      );
+    } catch (error) {
+      toast.error("PDF konnte nicht erstellt werden", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
 
-  const personPanel = selectedPerson ? (
-    <PersonPanel
-      person={selectedPerson}
-      departments={departments}
-      canManage={canManage}
-      characters={manageAll ? data.characters : []}
-      manageAll={manageAll}
-      busyKey={busyKey}
-      pending={pending}
-      onAssign={assign}
-      onRemove={remove}
-      onCast={setCasting}
-    />
-  ) : null;
-  const rolePanel = selectedCharacter ? (
-    <RolePanel
-      character={selectedCharacter}
-      people={data.people}
-      busyKey={busyKey}
-      onSet={(person, type) => setCasting(person, selectedCharacter, type)}
-      onEdit={rolesData ? () => setEditingRole(selectedCharacter.id) : undefined}
-    />
-  ) : null;
+  const menuItems = [
+    { label: "PDF: Liste je Bereich", onSelect: () => void exportPdf("list") },
+    { label: "PDF: Matrix Person × Bereich", onSelect: () => void exportPdf("matrix") },
+    ...(rolesData ? [{ label: "Neue Rolle", onSelect: () => setEditingRole("new") }] : []),
+  ];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SegmentedControl
-          aria-label="Ansicht"
-          size="md"
-          fullWidth
-          className="sm:w-auto"
-          value={view}
-          onValueChange={setView}
-          options={viewOptions}
-        />
-        {view === "person" ? (
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        {manageAll ? (
           <SegmentedControl
-            aria-label="Filter"
+            aria-label="Ansicht"
             size="md"
             fullWidth
             className="sm:w-auto"
-            value={filter}
-            onValueChange={setFilter}
+            value={view}
+            onValueChange={setView}
             options={[
-              { value: "all", label: `Alle ${data.people.length}` },
-              { value: "open", label: `Offen ${openCount}` },
-              { value: "requests", label: `Anfragen ${requestCount}` },
+              { value: "department", label: "Gewerke" },
+              { value: "roles", label: "Rollen" },
             ]}
           />
         ) : null}
+        <SegmentedControl
+          aria-label="Filter"
+          size="md"
+          fullWidth
+          className="sm:w-auto"
+          value={filter}
+          onValueChange={setFilter}
+          options={[
+            { value: "all", label: "Alle" },
+            { value: "unassigned", label: `Ohne Zuteilung ${unassignedCount}` },
+            ...(view === "department"
+              ? [{ value: "requests" as const, label: `Anfragen ${requestCount}` }]
+              : []),
+          ]}
+        />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <PersonSearch people={data.people} onPick={setPersonId} />
+          <ActionDropdownMenu items={menuItems} label="Weitere Aktionen" className="h-10 w-10" />
+        </div>
       </div>
 
-      {view === "person" ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_30rem]">
-          <section className="space-y-3" aria-label="Personen">
-            <SearchField value={query} onChange={setQuery} label="Person suchen" />
-            {people.length === 0 ? (
-              <EmptyHint>
-                {data.people.length === 0
-                  ? "In dieser Produktion gibt es noch keine Mitglieder."
-                  : "Keine Person passt zu Suche und Filter."}
-              </EmptyHint>
-            ) : (
-              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border/70 bg-card">
-                {people.map((person) => (
-                  <li key={person.id}>
-                    <PersonRow
-                      person={person}
-                      departments={departments}
-                      selected={person.id === personId}
-                      onSelect={() => setPersonId(person.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          {isDesktop ? (
-            <aside className="hidden lg:block">
-              <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-border/70 bg-card p-4">
-                {personPanel ?? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">
-                    {manageAll
-                      ? "Wähle links eine Person, um Gewerke und Rollen zuzuweisen."
-                      : "Wähle links eine Person, um Gewerke zuzuweisen."}
-                  </p>
-                )}
-              </div>
-            </aside>
-          ) : (
-            <BottomSheet
-              open={Boolean(selectedPerson)}
-              onOpenChange={(open) => !open && setPersonId(null)}
-              title={selectedPerson?.name ?? ""}
-              description={manageAll ? "Gewerke und Rollen zuweisen" : "Gewerke zuweisen"}
-            >
-              {personPanel}
-            </BottomSheet>
-          )}
-        </div>
-      ) : null}
+      <WishSummary wishlist={wishlist} onOpen={setPersonId} />
 
       {view === "department" ? (
         <DepartmentView
           data={data}
+          wishlist={wishlist}
+          isDesktop={isDesktop}
+          filter={filter}
+          include={include}
           canManage={canManage}
           manageAll={manageAll}
           busyKey={busyKey}
           onAssign={assign}
           onRemove={remove}
-          onOpenPerson={(id) => {
-            setPersonId(id);
-            setView("person");
-          }}
+          onOpenPerson={setPersonId}
         />
-      ) : null}
+      ) : (
+        <RoleSizesView
+          data={data}
+          wishlist={wishlist}
+          isDesktop={isDesktop}
+          include={include}
+          onOpenPerson={setPersonId}
+          onOpenRole={setCharacterId}
+        />
+      )}
 
-      {view === "roles" ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_26rem] xl:grid-cols-[minmax(0,1fr)_30rem]">
-          <RolesList
-            characters={data.characters}
+      <BottomSheet
+        open={Boolean(selectedPerson)}
+        onOpenChange={(open) => !open && setPersonId(null)}
+        title={selectedPerson?.name ?? ""}
+        description={manageAll ? "Gewerke, Rollen und Wünsche" : "Gewerke und Wünsche"}
+      >
+        {selectedPerson ? (
+          <PersonPanel
+            key={selectedPerson.id}
+            person={selectedPerson}
+            wishPerson={selectedWishPerson}
+            departments={departments}
+            canManage={canManage}
+            characters={manageAll ? data.characters : []}
+            manageAll={manageAll}
+            busyKey={busyKey}
+            pending={pending}
+            onAssign={assign}
+            onRemove={remove}
+            onCast={setCasting}
+          >
+            {selectedWishPerson ? (
+              <WishPanel
+                showId={wishlist.showId}
+                person={selectedWishPerson}
+                areas={wishlist.areas}
+                canEdit={canEditArea}
+                onSaved={() => router.refresh()}
+              />
+            ) : null}
+          </PersonPanel>
+        ) : null}
+      </BottomSheet>
+
+      <BottomSheet
+        open={Boolean(selectedCharacter)}
+        onOpenChange={(open) => !open && setCharacterId(null)}
+        title={selectedCharacter?.name ?? ""}
+        description="Rolle besetzen"
+      >
+        {selectedCharacter ? (
+          <RolePanel
+            character={selectedCharacter}
             people={data.people}
-            selectedId={characterId}
-            onSelect={setCharacterId}
-            onCreate={rolesData ? () => setEditingRole("new") : undefined}
+            busyKey={busyKey}
+            onSet={(person, type) => setCasting(person, selectedCharacter, type)}
+            onEdit={rolesData ? () => setEditingRole(selectedCharacter.id) : undefined}
           />
-          {isDesktop ? (
-            <aside className="hidden lg:block">
-              <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-border/70 bg-card p-4">
-                {rolePanel ?? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">
-                    Wähle links eine Rolle, um sie zu besetzen.
-                  </p>
-                )}
-              </div>
-            </aside>
-          ) : (
-            <BottomSheet
-              open={Boolean(selectedCharacter)}
-              onOpenChange={(open) => !open && setCharacterId(null)}
-              title={selectedCharacter?.name ?? ""}
-              description="Rolle besetzen"
-            >
-              {rolePanel}
-            </BottomSheet>
-          )}
-        </div>
-      ) : null}
-
-      {view === "wishes" ? (
-        <WishlistView data={wishlist} manageAll={manageAll} leadDepartmentIds={leadDepartmentIds} />
-      ) : null}
+        ) : null}
+      </BottomSheet>
 
       {rolesData && editingRole ? (
         <RoleEditPanel
@@ -363,6 +329,179 @@ export function AssignmentBoard({
       ) : null}
     </div>
   );
+}
+
+function isUnassigned(person: AssignmentPerson) {
+  return (
+    person.castings.length === 0 && !person.memberships.some((entry) => entry.status === "active")
+  );
+}
+
+/** Namenssuche: öffnet die Person direkt, statt eine lange Personenliste zu zeigen. */
+function PersonSearch({
+  people,
+  onPick,
+}: {
+  people: AssignmentPerson[];
+  onPick: (id: string) => void;
+}) {
+  const [query, setQuery] = React.useState("");
+  const needle = query.trim().toLowerCase();
+  const matches = needle
+    ? people.filter((person) => person.name.toLowerCase().includes(needle)).slice(0, 8)
+    : [];
+  return (
+    <div className="relative min-w-0 flex-1">
+      <SearchField value={query} onChange={setQuery} label="Person öffnen" />
+      {matches.length ? (
+        <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-border bg-popover shadow-md">
+          {matches.map((person) => (
+            <li key={person.id}>
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-center gap-2 px-3 text-left text-sm hover:bg-muted"
+                onClick={() => {
+                  onPick(person.id);
+                  setQuery("");
+                }}
+              >
+                <UserAvatar
+                  userId={person.id}
+                  name={person.name}
+                  email={person.email}
+                  avatarSource={person.avatarSource}
+                  avatarUpdatedAt={person.avatarUpdatedAt}
+                  size={28}
+                />
+                {person.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function WishSummary({
+  wishlist,
+  onOpen,
+}: {
+  wishlist: WishlistData;
+  onOpen: (id: string) => void;
+}) {
+  const withWishes = wishlist.people.filter((person) => person.wishes.length > 0).length;
+  const { assigned, fulfilled, missedIds } = wishlist.fulfillment;
+  const missed = wishlist.people.filter((person) => missedIds.includes(person.id));
+  return (
+    <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">
+      <p>
+        {withWishes} von {wishlist.people.length} mit Wünschen
+        {assigned > 0 ? ` · ${fulfilled} von ${assigned} Zugeteilten mit Top-Wunsch` : ""}
+      </p>
+      {missed.length ? (
+        <details className="mt-1 text-xs text-muted-foreground">
+          <summary className="cursor-pointer">Ohne Top-Wunsch ({missed.length})</summary>
+          <p className="mt-1">
+            {missed.map((person, index) => (
+              <React.Fragment key={person.id}>
+                {index > 0 ? ", " : ""}
+                <button
+                  type="button"
+                  className="underline-offset-2 hover:underline"
+                  onClick={() => onOpen(person.id)}
+                >
+                  {person.name}
+                </button>
+              </React.Fragment>
+            ))}
+          </p>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+/** Aufklappbare Karte: Desktop offen, mobil zu – Antippen überschreibt beides. */
+function FoldCard({
+  title,
+  color,
+  summary,
+  defaultOpen,
+  children,
+}: {
+  title: string;
+  color?: string | null;
+  summary: string;
+  defaultOpen: boolean;
+  children: React.ReactNode;
+}) {
+  const [override, setOverride] = React.useState<boolean | null>(null);
+  const open = override ?? defaultOpen;
+  return (
+    <section
+      className="min-w-0 rounded-lg border border-border bg-card"
+      style={color ? { borderTopColor: color, borderTopWidth: 3 } : undefined}
+      aria-label={title}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOverride(!open)}
+        className="flex min-h-12 w-full items-center justify-between gap-2 px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        <span className="min-w-0">
+          <span className="block truncate text-base font-semibold">{title}</span>
+          <span className="block text-xs text-muted-foreground">{summary}</span>
+        </span>
+        <ChevronDownIcon
+          className={cn("h-4 w-4 shrink-0 transition-transform", open && "rotate-180")}
+          aria-hidden
+        />
+      </button>
+      {open ? <div className="space-y-3 px-4 pb-4">{children}</div> : null}
+    </section>
+  );
+}
+
+type Wisher = { person: AssignmentPerson; wish: WishlistWish };
+
+/** Wünsche gruppiert nach Stufe, je Person mit Aktion (z. B. „Zuweisen“). */
+function WishGroups({
+  wishers,
+  onOpen,
+  action,
+}: {
+  wishers: Wisher[];
+  onOpen: (id: string) => void;
+  action?: (entry: Wisher) => React.ReactNode;
+}) {
+  return (
+    <>
+      {WISH_LEVELS.map(({ level, label }) => {
+        const atLevel = wishers.filter((entry) => entry.wish.level === level);
+        if (!atLevel.length) return null;
+        return (
+          <Group key={level} title={`${label} (${atLevel.length})`}>
+            {atLevel.map((entry) => (
+              <PersonLine
+                key={entry.person.id}
+                person={entry.person}
+                onOpen={onOpen}
+                hint={entry.wish.enteredBy ? `nachgetragen von ${entry.wish.enteredBy}` : undefined}
+              >
+                {action?.(entry)}
+              </PersonLine>
+            ))}
+          </Group>
+        );
+      })}
+    </>
+  );
+}
+
+function plural(count: number, one: string, many: string) {
+  return `${count} ${count === 1 ? one : many}`;
 }
 
 function SearchField({
@@ -410,104 +549,6 @@ function DepartmentDot({ color }: { color: string | null }) {
   );
 }
 
-function PersonRow({
-  person,
-  departments,
-  selected,
-  onSelect,
-}: {
-  person: AssignmentPerson;
-  departments: AssignmentDepartment[];
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  // Gewerke mit Wunsch oder bereits vorhandener Zugehörigkeit/Anfrage.
-  const wished = departments
-    .map((department) => ({ department, weight: wishWeight(person, department) }))
-    .filter((entry) => entry.weight > 0 || membershipOf(person, entry.department.id))
-    .sort((a, b) => b.weight - a.weight);
-  const actingWishes = person.wishes.filter((wish) => wish.domain === "acting");
-  const otherWishes = unmappedCrewWishes(person, departments);
-  const assigned = person.memberships.filter((entry) => entry.status === "active").length;
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={cn(
-        "flex min-h-14 w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        selected && "bg-primary/5",
-      )}
-    >
-      <UserAvatar
-        userId={person.id}
-        name={person.name}
-        email={person.email}
-        avatarSource={person.avatarSource}
-        avatarUpdatedAt={person.avatarUpdatedAt}
-        size={36}
-      />
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium">{person.name}</span>
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {assigned > 0
-              ? `${assigned} ${assigned === 1 ? "Gewerk" : "Gewerke"}`
-              : "Nicht zugewiesen"}
-          </span>
-        </span>
-        <span className="mt-1.5 flex flex-wrap gap-1.5">
-          {wished.map(({ department }) => {
-            const membership = membershipOf(person, department.id);
-            const status = membership?.status;
-            return (
-              <span
-                key={department.id}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs",
-                  status === "active"
-                    ? "border-success/40 bg-success/10 text-success"
-                    : status === "requested"
-                      ? "border-warning/50 bg-warning/10 text-warning"
-                      : "border-dashed border-border text-muted-foreground",
-                )}
-              >
-                <DepartmentDot color={department.color} />
-                {department.name}
-                {status === "active" ? (
-                  <CheckIcon className="h-3 w-3" aria-label="zugewiesen" />
-                ) : null}
-                {status === "requested" ? " · Anfrage" : null}
-              </span>
-            );
-          })}
-          {actingWishes.length ? (
-            <span className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground">
-              Schauspiel: {actingWishes.map((wish) => wish.title).join(", ")}
-            </span>
-          ) : null}
-          {otherWishes.map((wish) => (
-            <span
-              key={wish.code}
-              className="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-xs text-muted-foreground"
-              title="Dafür gibt es in dieser Produktion kein Gewerk"
-            >
-              {wish.title}
-            </span>
-          ))}
-          {person.wishes.length === 0 && wished.length === 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {noWishText(person)}
-              {person.earlierWishes ? " · frühere Wünsche in der Detailansicht" : ""}
-            </span>
-          ) : null}
-        </span>
-      </span>
-    </button>
-  );
-}
-
 function PersonPanel({
   person,
   departments,
@@ -519,8 +560,12 @@ function PersonPanel({
   onAssign,
   onRemove,
   onCast,
+  wishPerson,
+  children,
 }: {
   person: AssignmentPerson;
+  wishPerson: WishlistPerson | null;
+  children?: React.ReactNode;
   departments: AssignmentDepartment[];
   /** Rollen zum Besetzen – leer, wenn nur Gewerke verwaltet werden dürfen. */
   characters: AssignmentCharacter[];
@@ -549,58 +594,32 @@ function PersonPanel({
     };
     return rank(a) - rank(b) || a.name.localeCompare(b.name, "de");
   });
-  const wishLabels = person.wishes;
 
   return (
     <div className="space-y-4">
-      <div className="hidden items-center gap-3 lg:flex">
-        <UserAvatar
-          userId={person.id}
-          name={person.name}
-          email={person.email}
-          avatarSource={person.avatarSource}
-          avatarUpdatedAt={person.avatarUpdatedAt}
-          size={44}
-        />
-        <div className="min-w-0">
-          <h2 className="truncate text-base font-semibold">{person.name}</h2>
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {pending ? "Speichert …" : "Änderungen gelten sofort"}
-          </p>
-        </div>
-      </div>
-
-      {person.notes ? (
-        <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm">
-          <span className="font-medium">Hinweis aus dem Onboarding: </span>
-          {person.notes}
-        </p>
+      <p className="text-xs text-muted-foreground" aria-live="polite">
+        {pending ? "Speichert …" : "Änderungen gelten sofort"}
+      </p>
+      {wishPerson ? (
+        <dl className="space-y-1 text-sm">
+          {wishPerson.memberSince ? (
+            <div className="flex gap-2">
+              <dt className="text-muted-foreground">Dabei seit</dt>
+              <dd>{wishPerson.memberSince}</dd>
+            </div>
+          ) : null}
+          {wishPerson.interests.length ? (
+            <div className="flex gap-2">
+              <dt className="shrink-0 text-muted-foreground">Interessen</dt>
+              <dd className="min-w-0 break-words">{wishPerson.interests.join(", ")}</dd>
+            </div>
+          ) : null}
+        </dl>
       ) : null}
-
-      {wishLabels.length ? (
-        <p className="text-xs text-muted-foreground">
-          Wünsche für diese Produktion:{" "}
-          {wishLabels
-            .map((wish) => `${wish.title} (${getRolePreferenceWeightLabel(wish.weight)})`)
-            .join(", ")}
-        </p>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          {noWishText(person)}.
-          {person.earlierWishes
-            ? ` Zuletzt (${person.earlierWishes.label}): ${person.earlierWishes.wishes
-                .map((wish) => wish.title)
-                .join(", ")}.`
-            : ""}
-        </p>
-      )}
-      {unmappedCrewWishes(person, departments).length ? (
-        <p className="text-xs text-muted-foreground">
-          Ohne passendes Gewerk in dieser Produktion:{" "}
-          {unmappedCrewWishes(person, departments)
-            .map((wish) => wish.title)
-            .join(", ")}
-          .
+      {person.notes ? (
+        <p className="rounded-lg bg-muted px-3 py-2 text-sm">
+          <span className="font-medium">Hinweis ans Team: </span>
+          {person.notes}
         </p>
       ) : null}
 
@@ -717,6 +736,7 @@ function PersonPanel({
       {characters.length ? (
         <PersonRoles person={person} characters={characters} busyKey={busyKey} onCast={onCast} />
       ) : null}
+      {children}
     </div>
   );
 }
@@ -822,8 +842,35 @@ function PersonRoles({
   );
 }
 
+function wishersFor(
+  data: AssignmentData,
+  wishlist: WishlistData,
+  match: (area: WishlistArea) => boolean,
+): Wisher[] {
+  const byId = new Map(data.people.map((person) => [person.id, person]));
+  const result: Wisher[] = [];
+  for (const wishPerson of wishlist.people) {
+    const person = byId.get(wishPerson.id);
+    if (!person) continue;
+    const best = wishPerson.wishes
+      .filter((wish) => {
+        const area = wishlist.areas.find((entry) => entry.code === wish.areaCode);
+        return area ? match(area) : false;
+      })
+      .sort((a, b) => b.weight - a.weight)[0];
+    if (best) result.push({ person, wish: best });
+  }
+  return result.sort(
+    (a, b) => b.wish.weight - a.wish.weight || a.person.name.localeCompare(b.person.name, "de"),
+  );
+}
+
 function DepartmentView({
   data,
+  wishlist,
+  isDesktop,
+  filter,
+  include,
   canManage,
   manageAll,
   busyKey,
@@ -832,6 +879,10 @@ function DepartmentView({
   onOpenPerson,
 }: {
   data: AssignmentData;
+  wishlist: WishlistData;
+  isDesktop: boolean;
+  filter: Filter;
+  include: (person: AssignmentPerson) => boolean;
   canManage: (departmentId: string) => boolean;
   manageAll: boolean;
   busyKey: string | null;
@@ -844,48 +895,48 @@ function DepartmentView({
   onOpenPerson: (id: string) => void;
 }) {
   const visible = data.departments.filter((department) => canManage(department.id));
+  const unmapped = wishlist.areas.filter(
+    (area) => area.domain === "crew" && area.departmentIds.length === 0,
+  );
   if (visible.length === 0 && !manageAll) return <EmptyHint>Keine Gewerke vorhanden.</EmptyHint>;
 
+  const cards = visible
+    .map((department) => {
+      const members = data.people.filter(
+        (person) => membershipOf(person, department.id)?.status === "active",
+      );
+      const requests = data.people.filter(
+        (person) => membershipOf(person, department.id)?.status === "requested",
+      );
+      const wishers = wishersFor(data, wishlist, (area) =>
+        area.departmentIds.includes(department.id),
+      ).filter((entry) => !membershipOf(entry.person, department.id) && include(entry.person));
+      return { department, members, requests, wishers };
+    })
+    .filter((card) => filter !== "requests" || card.requests.length > 0);
+
   return (
-    <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-      {visible.map((department) => {
-        const members = data.people.filter(
-          (person) => membershipOf(person, department.id)?.status === "active",
-        );
-        const requests = data.people.filter(
-          (person) => membershipOf(person, department.id)?.status === "requested",
-        );
-        const wishing = data.people
-          .filter(
-            (person) => !membershipOf(person, department.id) && wishWeight(person, department) > 0,
-          )
-          .sort((a, b) => wishWeight(b, department) - wishWeight(a, department));
-
-        return (
-          <section
+    <div className="space-y-4">
+      {cards.length === 0 ? (
+        <EmptyHint>
+          {filter === "requests" ? "Keine offenen Anfragen." : "Keine Gewerke vorhanden."}
+        </EmptyHint>
+      ) : null}
+      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        {cards.map(({ department, members, requests, wishers }) => (
+          <FoldCard
             key={department.id}
-            className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card p-4"
-            style={{ borderTopColor: department.color ?? undefined, borderTopWidth: 3 }}
-            aria-label={department.name}
+            title={department.name}
+            color={department.color}
+            defaultOpen={isDesktop || requests.length > 0}
+            summary={[
+              `Team ${members.length}`,
+              wishers.length ? plural(wishers.length, "Wunsch offen", "Wünsche offen") : null,
+              requests.length ? plural(requests.length, "Anfrage", "Anfragen") : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           >
-            {/* `flex-wrap` ist das Sicherheitsnetz: Gewerkname links, Zähler und Bearbeiten rechts
-                dürfen bei einem langen Namen in die nächste Zeile rutschen. */}
-            <header className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="min-w-0 truncate text-base font-semibold">{department.name}</h2>
-              <div className="flex shrink-0 items-center gap-2">
-                <Badge variant="muted">
-                  {members.length} {members.length === 1 ? "Person" : "Personen"}
-                </Badge>
-                {manageAll ? (
-                  <DepartmentSettingsButton
-                    showId={data.showId}
-                    department={department}
-                    stayOnPage
-                  />
-                ) : null}
-              </div>
-            </header>
-
             {requests.length ? (
               <Group title={`Anfragen (${requests.length})`}>
                 {requests.map((person) => (
@@ -914,71 +965,208 @@ function DepartmentView({
               </Group>
             ) : null}
 
-            <details className="group rounded-lg" open={members.length <= 3}>
-              <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <span className="min-w-0">Team ({members.length})</span>
-                <span className="shrink-0 normal-case tracking-normal group-open:hidden">
-                  anzeigen
-                </span>
-              </summary>
-              <ul className="mt-1.5 space-y-1">
-                {members.length === 0 ? (
-                  <li className="text-sm text-muted-foreground">Noch niemand zugewiesen.</li>
-                ) : (
-                  members
-                    .sort(
-                      (a, b) =>
-                        DEPARTMENT_ROLES.indexOf(membershipOf(a, department.id)!.role) -
-                        DEPARTMENT_ROLES.indexOf(membershipOf(b, department.id)!.role),
-                    )
-                    .map((person) => (
-                      <PersonLine
-                        key={person.id}
-                        person={person}
-                        onOpen={onOpenPerson}
-                        hint={ROLE_LABELS[membershipOf(person, department.id)!.role]}
-                      />
-                    ))
-                )}
-              </ul>
-            </details>
-
-            <AddPersonPicker
-              people={data.people.filter(
-                (person) => membershipOf(person, department.id)?.status !== "active",
-              )}
-              label={`Person zu ${department.name} hinzufügen`}
-              onPick={(person) => onAssign(person, department)}
-            />
-
-            {wishing.length ? (
-              <Group title={`Möchten mitmachen (${wishing.length})`}>
-                {wishing.map((person) => (
-                  <PersonLine
-                    key={person.id}
-                    person={person}
-                    onOpen={onOpenPerson}
-                    hint={getRolePreferenceWeightLabel(wishWeight(person, department))}
+            {wishers.length ? (
+              <WishGroups
+                wishers={wishers}
+                onOpen={onOpenPerson}
+                action={({ person }) => (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-10"
+                    disabled={busyKey === `${person.id}:${department.id}`}
+                    onClick={() => onAssign(person, department)}
                   >
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-10"
-                      disabled={busyKey === `${person.id}:${department.id}`}
-                      onClick={() => onAssign(person, department)}
-                    >
-                      Zuweisen
-                    </Button>
-                  </PersonLine>
-                ))}
-              </Group>
-            ) : null}
-          </section>
-        );
-      })}
+                    Zuweisen
+                  </Button>
+                )}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">Keine offenen Wünsche.</p>
+            )}
+
+            <Group title={`Team (${members.length})`}>
+              {members.length === 0 ? (
+                <li className="text-sm text-muted-foreground">Noch niemand zugewiesen.</li>
+              ) : (
+                members
+                  .sort(
+                    (a, b) =>
+                      DEPARTMENT_ROLES.indexOf(membershipOf(a, department.id)!.role) -
+                      DEPARTMENT_ROLES.indexOf(membershipOf(b, department.id)!.role),
+                  )
+                  .map((person) => (
+                    <PersonLine
+                      key={person.id}
+                      person={person}
+                      onOpen={onOpenPerson}
+                      hint={ROLE_LABELS[membershipOf(person, department.id)!.role]}
+                    />
+                  ))
+              )}
+            </Group>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <AddPersonPicker
+                  people={data.people.filter(
+                    (person) => membershipOf(person, department.id)?.status !== "active",
+                  )}
+                  label={`Person zu ${department.name} hinzufügen`}
+                  onPick={(person) => onAssign(person, department)}
+                />
+              </div>
+              {manageAll ? (
+                <DepartmentSettingsButton showId={data.showId} department={department} stayOnPage />
+              ) : null}
+            </div>
+          </FoldCard>
+        ))}
+      </div>
+
+      {filter !== "requests"
+        ? unmapped.map((area) => {
+            const wishers = wishersFor(data, wishlist, (entry) => entry.code === area.code).filter(
+              (entry) => include(entry.person),
+            );
+            if (!wishers.length) return null;
+            return (
+              <FoldCard
+                key={area.code}
+                title={`${area.title} (kein Gewerk)`}
+                defaultOpen={false}
+                summary={`${plural(wishers.length, "Wunsch", "Wünsche")} · in dieser Produktion gibt es dafür kein Gewerk`}
+              >
+                <WishGroups wishers={wishers} onOpen={onOpenPerson} />
+              </FoldCard>
+            );
+          })
+        : null}
+
       {manageAll ? (
         <DepartmentSettingsButton showId={data.showId} variant="tile" stayOnPage />
+      ) : null}
+    </div>
+  );
+}
+
+/** Rollen nach Größe: Interessierte nach Stufe und die Rollen dieser Größe mit Besetzung. */
+function RoleSizesView({
+  data,
+  wishlist,
+  isDesktop,
+  include,
+  onOpenPerson,
+  onOpenRole,
+}: {
+  data: AssignmentData;
+  wishlist: WishlistData;
+  isDesktop: boolean;
+  include: (person: AssignmentPerson) => boolean;
+  onOpenPerson: (id: string) => void;
+  onOpenRole: (id: string) => void;
+}) {
+  const sizes = wishlist.areas.filter((area) => area.domain === "acting");
+  const withoutSize = data.characters.filter(
+    (character) => !character.sizeCode || !sizes.some((area) => area.code === character.sizeCode),
+  );
+  const characterName = new Map(data.characters.map((character) => [character.id, character.name]));
+
+  const roleList = (characters: AssignmentCharacter[]) => (
+    <Group title={`Rollen (${characters.length})`}>
+      {characters.length === 0 ? (
+        <li className="text-sm text-muted-foreground">Keine Rollen dieser Größe.</li>
+      ) : (
+        characters.map((character) => {
+          const cast = data.people.filter((person) =>
+            person.castings.some((entry) => entry.characterId === character.id),
+          );
+          return (
+            <li key={character.id}>
+              <button
+                type="button"
+                onClick={() => onOpenRole(character.id)}
+                className="flex min-h-11 w-full items-center gap-2 rounded-md px-1 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span
+                  aria-hidden
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: character.color ?? "var(--muted-foreground)" }}
+                />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {character.name}
+                </span>
+                <span
+                  className={cn(
+                    "min-w-0 shrink truncate text-xs",
+                    cast.length ? "text-success" : "text-muted-foreground",
+                  )}
+                >
+                  {cast.length ? cast.map((person) => person.name).join(", ") : "offen"}
+                </span>
+              </button>
+            </li>
+          );
+        })
+      )}
+    </Group>
+  );
+
+  return (
+    <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 2xl:grid-cols-3">
+      {sizes.map((area) => {
+        const characters = data.characters.filter((character) => character.sizeCode === area.code);
+        const castCount = characters.filter((character) =>
+          data.people.some((person) =>
+            person.castings.some((entry) => entry.characterId === character.id),
+          ),
+        ).length;
+        const wishers = wishersFor(data, wishlist, (entry) => entry.code === area.code).filter(
+          (entry) => include(entry.person),
+        );
+        return (
+          <FoldCard
+            key={area.code}
+            title={area.title}
+            defaultOpen={isDesktop}
+            summary={[
+              plural(wishers.length, "Interessierte:r", "Interessierte"),
+              characters.length ? `${characters.length} Rollen, ${castCount} besetzt` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          >
+            {roleList(characters)}
+            {wishers.length ? (
+              <WishGroups
+                wishers={wishers}
+                onOpen={onOpenPerson}
+                action={({ person }) =>
+                  person.castings.length ? (
+                    <span className="text-xs text-success">
+                      {person.castings
+                        .map((entry) => characterName.get(entry.characterId))
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
+                  ) : null
+                }
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">Niemand wünscht sich diese Größe.</p>
+            )}
+          </FoldCard>
+        );
+      })}
+      {withoutSize.length ? (
+        <FoldCard
+          title="Rollen ohne Größe"
+          defaultOpen={false}
+          summary="Größe im Stück eintragen, damit Wünsche passen"
+        >
+          {roleList(withoutSize)}
+        </FoldCard>
       ) : null}
     </div>
   );
@@ -1101,88 +1289,6 @@ function castLabel(type: string) {
   return type === "alternate" ? "Zweitbesetzung" : "Hauptbesetzung";
 }
 
-function RolesList({
-  characters,
-  people,
-  selectedId,
-  onSelect,
-  onCreate,
-}: {
-  characters: AssignmentCharacter[];
-  people: AssignmentPerson[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onCreate?: () => void;
-}) {
-  const createButton = onCreate ? (
-    <Button type="button" variant="outline" className="h-11 w-full" onClick={onCreate}>
-      <PlusIcon className="h-4 w-4" aria-hidden />
-      Neue Rolle
-    </Button>
-  ) : null;
-  if (characters.length === 0) {
-    return (
-      <div className="space-y-2">
-        <EmptyHint>Für diese Produktion sind noch keine Rollen angelegt.</EmptyHint>
-        {createButton}
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-2">
-      {createButton}
-      <ul
-        className="divide-y divide-border overflow-hidden rounded-xl border border-border/70 bg-card"
-        aria-label="Rollen"
-      >
-        {characters.map((character) => {
-          const cast = people.flatMap((person) =>
-            person.castings
-              .filter((entry) => entry.characterId === character.id)
-              .map((entry) => ({ person, type: entry.type })),
-          );
-          return (
-            <li key={character.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(character.id)}
-                aria-pressed={character.id === selectedId}
-                className={cn(
-                  "flex min-h-14 w-full items-start gap-3 px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                  character.id === selectedId && "bg-primary/5",
-                )}
-              >
-                <span
-                  aria-hidden
-                  className="mt-1 h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: character.color ?? "var(--muted-foreground)" }}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium">{character.name}</span>
-                    {character.sizeLabel ? (
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {character.sizeLabel}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {cast.length
-                      ? cast
-                          .map(({ person, type }) => `${person.name} (${castLabel(type)})`)
-                          .join(", ")
-                      : "Noch nicht besetzt"}
-                  </span>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
 function RolePanel({
   character,
   people,
@@ -1225,12 +1331,9 @@ function RolePanel({
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
-        <div className="hidden min-w-0 lg:block">
-          <h2 className="truncate text-base font-semibold">{character.name}</h2>
-          {character.sizeLabel ? (
-            <p className="text-xs text-muted-foreground">Rollengröße: {character.sizeLabel}</p>
-          ) : null}
-        </div>
+        {character.sizeLabel ? (
+          <p className="text-xs text-muted-foreground">Rollengröße: {character.sizeLabel}</p>
+        ) : null}
         {onEdit ? (
           <button
             type="button"

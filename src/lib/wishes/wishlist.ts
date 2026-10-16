@@ -41,6 +41,8 @@ export type WishlistPerson = AvatarFields & {
   isReturning: boolean;
   onboardingDone: boolean;
   interests: string[];
+  /** Erstes Jahr im Verein (Onboarding-Profil). */
+  memberSince: number | null;
   /** Hinweis der Person aus dem Onboarding. */
   onboardingNote: string | null;
   /** Interne Notiz der Verantwortlichen. */
@@ -188,6 +190,7 @@ export async function loadWishlist(showId: string): Promise<WishlistData> {
               name: true,
               ...AVATAR_USER_SELECT,
               interests: { select: { interest: { select: { name: true } } } },
+              onboardingProfile: { select: { memberSinceYear: true } },
             },
           },
         },
@@ -285,6 +288,7 @@ export async function loadWishlist(showId: string): Promise<WishlistData> {
       interests: user.interests
         .map((entry) => entry.interest.name)
         .sort((a, b) => a.localeCompare(b, "de")),
+      memberSince: user.onboardingProfile?.memberSinceYear ?? null,
       onboardingNote: onboarding?.notes?.trim() || null,
       note: note
         ? {

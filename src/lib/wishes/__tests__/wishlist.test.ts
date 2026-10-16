@@ -20,6 +20,7 @@ function person(id: string, wishes: Partial<WishlistWish>[], assigned = true): W
     isReturning: false,
     onboardingDone: true,
     interests: [],
+    memberSince: null,
     onboardingNote: null,
     note: null,
     wishes: wishes.map((wish, index) => ({

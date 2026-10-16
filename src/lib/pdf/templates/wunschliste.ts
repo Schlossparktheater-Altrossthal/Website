@@ -6,6 +6,7 @@ import {
   PDF_MARGIN,
   drawDocumentHeader,
   drawPageFooters,
+  drawSectionTitle,
   drawTable,
   pdfDateTimeFormatter,
   textLine,
@@ -33,6 +34,12 @@ const wunschlisteSchema = z.object({
       tag: z.string().nullable().default(null),
       /** Ist-Stand in Worten (Gewerke, Rollen). */
       assignment: z.string().nullable().default(null),
+      memberSince: z.number().int().nullable().default(null),
+      interests: z.array(z.string()).default([]),
+      /** Hinweis der Person ans Team (Onboarding). */
+      teamNote: z.string().nullable().default(null),
+      /** Interne Notiz der Verantwortlichen. */
+      planningNote: z.string().nullable().default(null),
       /** Je Bereich (gleiche Reihenfolge wie `areas`): Stufe 1–4 oder null. */
       wishes: z.array(
         z
@@ -262,6 +269,46 @@ function renderMatrix(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY:
   textLine(doc, "grün = zugeteilt", x + 28, y, 90, { size: 6.5, color: PDF_COLOR.muted });
 }
 
+/** Anhang: dabei seit, Interessen und Hinweise je Person (nur Personen mit Angaben). */
+function renderPeopleNotes(doc: PDFKit.PDFDocument, data: WunschlistePdfData) {
+  const rows: PdfTableRow[] = data.people
+    .filter(
+      (person) =>
+        person.memberSince || person.interests.length || person.teamNote || person.planningNote,
+    )
+    .map((person) => ({
+      cells: [
+        { text: person.name, bold: true, sub: person.tag },
+        person.memberSince ? String(person.memberSince) : { text: "–", color: PDF_COLOR.faint },
+        person.interests.join(", ") || { text: "–", color: PDF_COLOR.faint },
+        {
+          text: person.teamNote ?? "",
+          sub: person.planningNote
+            ? [{ text: `Planung: ${person.planningNote}`, color: PDF_COLOR.rehearsal }]
+            : null,
+        },
+      ],
+    }));
+  if (!rows.length) return;
+  doc.addPage();
+  const y = drawSectionTitle(
+    doc,
+    "Personen",
+    doc.page.margins.top,
+    "dabei seit · Interessen · Hinweis ans Team (Planung = interne Notiz)",
+  );
+  drawTable(doc, {
+    y,
+    columns: [
+      { label: "Person", weight: 2.4 },
+      { label: "Dabei seit", weight: 1 },
+      { label: "Interessen", weight: 3 },
+      { label: "Hinweis ans Team", weight: 5 },
+    ],
+    rows,
+  });
+}
+
 export const wunschlisteTemplate: PdfTemplate<WunschlistePdfData> = {
   id: "wunschliste",
   label: "Wunschliste",
@@ -287,6 +334,7 @@ export const wunschlisteTemplate: PdfTemplate<WunschlistePdfData> = {
     });
     if (data.layout === "matrix") renderMatrix(doc, data, y);
     else renderList(doc, data, y);
+    renderPeopleNotes(doc, data);
     drawPageFooters(
       doc,
       `Wunschliste${data.production ? ` · ${data.production}` : ""} · Stand ${pdfDateTimeFormatter.format(new Date(data.generatedAt))}`,
