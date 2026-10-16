@@ -233,33 +233,6 @@ function drawStatusIcon(doc: PDFKit.PDFDocument, status: Status, cx: number, cy:
   return drawStar(doc, cx, cy, size + 1.5, ink);
 }
 
-/** Pill mit Text; gibt die Breite zurück. */
-function drawPill(
-  doc: PDFKit.PDFDocument,
-  x: number,
-  y: number,
-  text: string,
-  style: { ink: string; fill: string },
-  maxWidth: number,
-  fontSize = 5.6,
-) {
-  doc.font(BOLD).fontSize(fontSize);
-  const width = Math.min(maxWidth, doc.widthOfString(text) + 5);
-  const height = fontSize + 3;
-  doc
-    .save()
-    .roundedRect(x, y, width, height, height / 2)
-    .fill(style.fill)
-    .restore();
-  doc.fillColor(style.ink).text(text, x + 2.5, y + 1.6, {
-    width: width - 5,
-    height: fontSize + 1,
-    lineBreak: false,
-    ellipsis: true,
-  });
-  return width;
-}
-
 function textLine(
   doc: PDFKit.PDFDocument,
   text: string,
@@ -305,13 +278,43 @@ function eventLabel(event: Day["events"][number]) {
   return event.time ? `${title} ${event.time}` : title;
 }
 
-/** Höhe des Tageskopfs: Wochentag/Datum + eine Zeile je Hinweis/Termin (max. 3). */
+const BAR_HEIGHT = 9;
+const EVENT_LINE = 7.5;
+
+type Band = { kind: Day["badges"][number]["kind"]; label: string; start: number; end: number };
+
+/**
+ * Ferien, Feiertage, Endprobenwoche als Balken über zusammenhängende Spalten. Balken, die sich
+ * nicht überschneiden, teilen sich eine Zeile – so bleibt der Kopf flach.
+ */
+function bandLanes(days: Day[]) {
+  const bands: Band[] = [];
+  days.forEach((day, index) => {
+    for (const badge of day.badges) {
+      const open = bands.find((band) => band.label === badge.label && band.end === index - 1);
+      if (open) open.end = index;
+      else bands.push({ kind: badge.kind, label: badge.label, start: index, end: index });
+    }
+  });
+  const lanes: Band[][] = [];
+  for (const band of bands) {
+    const lane = lanes.find((entries) =>
+      entries.every((entry) => band.start > entry.end || band.end < entry.start),
+    );
+    if (lane) lane.push(band);
+    else lanes.push([band]);
+  }
+  // Mehr als drei Zeilen werden zu hoch – dann zählen nur die ersten.
+  return lanes.slice(0, 3);
+}
+
+function eventLines(days: Day[]) {
+  return Math.min(2, Math.max(0, ...days.map((day) => day.events.length)));
+}
+
+/** Höhe des Tageskopfs: Balken + Wochentag/Datum + Termine (max. 2 Zeilen). */
 function dayHeaderHeight(days: Day[]) {
-  const lines = Math.max(
-    0,
-    ...days.map((day) => Math.min(3, day.badges.length + day.events.length)),
-  );
-  return 22 + lines * 8.5;
+  return bandLanes(days).length * (BAR_HEIGHT + 1) + 22 + eventLines(days) * EVENT_LINE + 2;
 }
 
 function drawTableHeader(
@@ -321,12 +324,32 @@ function drawTableHeader(
   y: number,
   headerHeight: number,
 ) {
+  const lanes = bandLanes(days);
+  const bandsHeight = lanes.length * (BAR_HEIGHT + 1);
   doc
     .save()
-    .rect(layout.left, y, layout.right - layout.left, headerHeight)
+    .rect(layout.left, y + bandsHeight, layout.right - layout.left, headerHeight - bandsHeight)
     .fill(COLOR.header)
     .restore();
-  textLine(doc, "Mitglied", layout.left + 6, y + 6, layout.nameWidth - 12, {
+
+  lanes.forEach((lane, laneIndex) => {
+    const laneY = y + laneIndex * (BAR_HEIGHT + 1);
+    for (const band of lane) {
+      const style = BADGE_STYLE[band.kind];
+      const x = layout.dayX(band.start) + 0.8;
+      const width = (band.end - band.start + 1) * layout.dayWidth - 1.6;
+      doc.save().rect(x, laneY, width, BAR_HEIGHT).fill(style.fill).restore();
+      doc.save().rect(x, laneY, 1.6, BAR_HEIGHT).fill(style.ink).restore();
+      textLine(doc, band.label, x + 4, laneY + 1.9, width - 6, {
+        font: BOLD,
+        size: 5.8,
+        color: style.ink,
+      });
+    }
+  });
+
+  const top = y + bandsHeight;
+  textLine(doc, "Mitglied", layout.left + 6, top + 6, layout.nameWidth - 12, {
     font: BOLD,
     size: 7,
     color: COLOR.muted,
@@ -334,59 +357,80 @@ function drawTableHeader(
   days.forEach((day, index) => {
     const x = layout.dayX(index);
     const width = layout.dayWidth;
-    const highlight = day.events.some((event) => event.rehearsal);
-    if (highlight) {
-      doc.save().rect(x, y, width, headerHeight).fill(COLOR.rehearsalFill).restore();
+    const rehearsal = day.events.some((event) => event.rehearsal);
+    if (rehearsal) {
+      doc
+        .save()
+        .rect(x, top, width, headerHeight - bandsHeight)
+        .fill(COLOR.rehearsalFill)
+        .restore();
     }
-    textLine(doc, day.weekday, x, y + 3.5, width, {
+    textLine(doc, day.weekday, x, top + 3.5, width, {
       font: BOLD,
       size: 7.5,
-      color: highlight ? COLOR.rehearsal : COLOR.text,
+      color: rehearsal ? COLOR.rehearsal : COLOR.text,
       align: "center",
     });
-    textLine(doc, day.date, x, y + 12, width, {
+    textLine(doc, day.date, x, top + 12, width, {
       size: 6.5,
       color: COLOR.muted,
       align: "center",
     });
-    const items: { text: string; style: { ink: string; fill: string } }[] = [
-      ...day.events.map((event) => ({
-        text: eventLabel(event),
-        style: event.rehearsal
-          ? { ink: "#ffffff", fill: COLOR.rehearsal }
-          : { ink: COLOR.text, fill: "#e5e7eb" },
-      })),
-      ...day.badges.map((badge) => ({ text: badge.label, style: BADGE_STYLE[badge.kind] })),
-    ];
-    const shown =
-      items.length > 3
-        ? [
-            ...items.slice(0, 2),
-            { text: `+${items.length - 2}`, style: { ink: COLOR.muted, fill: "#e5e7eb" } },
-          ]
-        : items;
-    shown.forEach((item, line) => {
-      doc.font(BOLD).fontSize(5.2);
-      const pillWidth = Math.min(width - 3, doc.widthOfString(item.text) + 5);
-      drawPill(
-        doc,
-        x + (width - pillWidth) / 2,
-        y + 21 + line * 8.5,
-        item.text,
-        item.style,
-        width - 3,
-        5.2,
-      );
+    const events = day.events.length > 2 ? day.events.slice(0, 1) : day.events;
+    events.forEach((event, line) => {
+      textLine(doc, eventLabel(event), x + 2, top + 21.5 + line * EVENT_LINE, width - 4, {
+        font: event.rehearsal ? BOLD : FONT,
+        size: 5.8,
+        color: event.rehearsal ? COLOR.rehearsal : COLOR.muted,
+        align: "center",
+      });
     });
+    if (day.events.length > 2) {
+      textLine(
+        doc,
+        `+${day.events.length - 1} weitere`,
+        x + 2,
+        top + 21.5 + EVENT_LINE,
+        width - 4,
+        {
+          size: 5.8,
+          color: COLOR.muted,
+          align: "center",
+        },
+      );
+    }
   });
   // Trennlinien zwischen den Tagen
   doc.save().lineWidth(0.4).strokeColor(COLOR.line);
   days.forEach((_, index) => {
     const x = layout.dayX(index);
-    doc.moveTo(x, y).lineTo(x, y + headerHeight);
+    doc.moveTo(x, top).lineTo(x, y + headerHeight);
   });
   doc.stroke().restore();
   return y + headerHeight;
+}
+
+/** Kleines Farbfeld mit Beschriftung (Legende); gibt die belegte Breite zurück. */
+function drawSwatch(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  label: string,
+  style: { ink: string; fill: string },
+) {
+  doc
+    .save()
+    .rect(x, y + 0.5, 9, 6)
+    .fill(style.fill)
+    .restore();
+  doc
+    .save()
+    .rect(x, y + 0.5, 1.4, 6)
+    .fill(style.ink)
+    .restore();
+  doc.font(FONT).fontSize(6.5);
+  textLine(doc, label, x + 12, y, 80, { size: 6.5, color: COLOR.muted });
+  return 12 + doc.widthOfString(label) + 10;
 }
 
 function drawFooter(doc: PDFKit.PDFDocument, data: SperrlisteImportantDaysPdfData) {
@@ -432,12 +476,14 @@ function drawLegend(doc: PDFKit.PDFDocument, x: number, y: number, maxX: number)
     textLine(doc, item.label, cursor, y, 60, { size: 6.5, color: COLOR.muted });
     cursor += doc.widthOfString(item.label) + 10;
   }
-  cursor += 2;
-  cursor +=
-    drawPill(doc, cursor, y - 0.5, "Probe", { ink: "#ffffff", fill: COLOR.rehearsal }, 40) + 4;
-  cursor += drawPill(doc, cursor, y - 0.5, "Ferien", BADGE_STYLE.schoolHoliday, 40) + 4;
-  cursor += drawPill(doc, cursor, y - 0.5, "Feiertag", BADGE_STYLE.publicHoliday, 40) + 4;
-  if (cursor < maxX) drawPill(doc, cursor, y - 0.5, "Endprobenwoche", BADGE_STYLE.finalWeek, 70);
+  cursor += 4;
+  cursor += drawSwatch(doc, cursor, y, "Probe", {
+    ink: COLOR.rehearsal,
+    fill: COLOR.rehearsalFill,
+  });
+  cursor += drawSwatch(doc, cursor, y, "Ferien", BADGE_STYLE.schoolHoliday);
+  cursor += drawSwatch(doc, cursor, y, "Feiertag", BADGE_STYLE.publicHoliday);
+  if (cursor < maxX) drawSwatch(doc, cursor, y, "Endprobenwoche", BADGE_STYLE.finalWeek);
 }
 
 function sectionTitle(doc: PDFKit.PDFDocument, title: string, x: number, y: number, hint?: string) {
@@ -666,8 +712,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
         // Legende
         let legendX = layout.left;
         for (const status of sceneStatusValues) {
-          legendX +=
-            drawPill(doc, legendX, y, SCENE_STYLE[status].label, SCENE_STYLE[status], 90) + 4;
+          legendX += drawSwatch(doc, legendX, y, SCENE_STYLE[status].label, SCENE_STYLE[status]);
         }
         y += 12;
         const sceneHeader = () => {
