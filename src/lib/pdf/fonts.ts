@@ -42,6 +42,18 @@ function hasSupportedSignature(absolutePath: string): boolean {
   return supported;
 }
 
+/**
+ * Pfad der Grundschrift für `new PDFDocument({ font })`. PDFKit lädt sonst beim Anlegen das
+ * eingebaute Helvetica und legt es unter „Helvetica“ in den Cache – die spätere Registrierung
+ * von Inter unter diesem Namen griffe dann nie, normaler Text bliebe Helvetica.
+ */
+export function defaultPdfFontPath(): string | undefined {
+  const regular = FONT_DEFINITIONS.find((font) => font.id === "Helvetica");
+  if (!regular) return undefined;
+  const absolutePath = path.join(FONT_DIRECTORY, regular.file);
+  return existsSync(absolutePath) && hasSupportedSignature(absolutePath) ? absolutePath : undefined;
+}
+
 export function registerDefaultPdfFonts(doc: PDFKit.PDFDocument) {
   for (const { id, file } of FONT_DEFINITIONS) {
     const absolutePath = path.join(FONT_DIRECTORY, file);

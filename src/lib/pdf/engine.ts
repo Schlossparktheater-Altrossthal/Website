@@ -1,6 +1,6 @@
 import type { ZodError, ZodIssue } from "zod";
 
-import { registerDefaultPdfFonts } from "./fonts";
+import { defaultPdfFontPath, registerDefaultPdfFonts } from "./fonts";
 import { stampInternalNotice } from "./internal-notice";
 import { findPdfTemplate } from "./templates";
 import type { PdfRenderResult, PdfTemplate } from "./types";
@@ -73,6 +73,8 @@ export async function renderPdfTemplate(
     ...(typedTemplate.documentOptions ?? {}),
     ...(internalUse ? { bufferPages: true } : {}),
   };
+  const font = defaultPdfFontPath();
+  if (font) options.font = font;
   const PdfDocument = await loadPdfDocument();
   const doc = new PdfDocument(options);
 
