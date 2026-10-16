@@ -18,6 +18,7 @@ import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { compareMembersByName, getUserDisplayName, type NameSortOrder } from "@/lib/names";
 import { getNameSortOrder } from "@/lib/name-sort-server";
+import { loadAudienceContext } from "@/lib/calendar/audience-server";
 import { loadMemberRoles, roleRankOf, type MemberRoles } from "@/lib/produktionen/member-roles";
 import type { AvatarFields } from "@/lib/avatar-fields";
 import { hasPermission } from "@/lib/permissions";
@@ -52,6 +53,7 @@ type MemberRecord = AvatarFields & {
   lastName: string | null;
   name: string | null;
   group: MemberGroup;
+  departments?: string[];
   blockedDays: {
     id: string;
     date: string;
@@ -77,6 +79,7 @@ function buildTeam(
       avatarSource: record.avatarSource,
       avatarUpdatedAt: record.avatarUpdatedAt,
       group: record.group,
+      departments: record.departments ?? [],
     });
     for (const day of record.blockedDays) {
       entries.push({
@@ -194,6 +197,18 @@ export default async function BlocklistPage() {
         avatarSource: true,
         avatarImageUpdatedAt: true,
         onboardingProfile: { select: { focus: true } },
+        // Schwerpunkt aus dem Onboarding dieser Produktion geht dem allgemeinen Profil vor.
+        productionOnboardings: {
+          where: { showId: activeProductionId ?? "" },
+          select: { focus: true },
+          take: 1,
+        },
+        // Ein Rollenwunsch zeigt auch ohne Schwerpunkt „Schauspiel“, dass jemand spielen möchte.
+        rolePreferences: {
+          where: { showId: activeProductionId ?? "", domain: "acting", weight: { gt: 0 } },
+          select: { id: true },
+          take: 1,
+        },
         // Ohne Produktion passt `showId: ""` auf nichts – dann zählt der Onboarding-Schwerpunkt.
         characterCastings: {
           where: { character: { showId: activeProductionId ?? "" } },
@@ -205,7 +220,9 @@ export default async function BlocklistPage() {
             status: "active",
             department: { showId: activeProductionId ?? "", archivedAt: null },
           },
-          select: { department: { select: { template: { select: { slug: true } } } } },
+          select: {
+            department: { select: { name: true, template: { select: { slug: true } } } },
+          },
         },
         blockedDays: {
           where: { date: { gte: from, lt: to } },
@@ -230,25 +247,34 @@ export default async function BlocklistPage() {
             year: true,
             finalRehearsalWeekStart: true,
             finalRehearsalWeekEnd: true,
+            characters: {
+              select: { castings: { where: { type: "primary" }, select: { id: true } } },
+            },
           },
         })
       : null,
   ]);
 
-  // Solange in der Produktion noch niemand besetzt bzw. keinem Gewerk zugeordnet ist, zählt für
-  // diese Seite der Onboarding-Schwerpunkt – sonst stünde z. B. das ganze Ensemble unter „Offen“.
+  // Fallback auf den Onboarding-Schwerpunkt bzw. Rollenwunsch, solange die Zuteilung noch läuft:
+  // - Schauspiel: bis jede Rolle eine Hauptbesetzung hat, zählt wer spielen möchte (Schwerpunkt
+  //   Schauspiel/beides oder Rollenwunsch) weiter zum Ensemble – auch wenn er schon einem Gewerk
+  //   zugeteilt ist oder andere bereits besetzt sind.
+  // - Gewerke: bis irgendwer einem Gewerk zugeteilt ist, zählt der Schwerpunkt Technik/beides.
   const isActing = (membership: { department: { template: { slug: string } } }) =>
     membership.department.template.slug === ACTING_TEMPLATE_SLUG;
-  const castingAssigned = users.some(
-    (user) => user.characterCastings.length > 0 || user.departmentMemberships.some(isActing),
-  );
+  const castingComplete =
+    !!production?.characters.length &&
+    production.characters.every((character) => character.castings.length > 0);
   const crewAssigned = users.some((user) =>
     user.departmentMemberships.some((membership) => !isActing(membership)),
   );
-  const groupFromAssignments = (user: (typeof users)[number], focus: string | null) => {
-    const acting = castingAssigned
-      ? user.characterCastings.length > 0 || user.departmentMemberships.some(isActing)
-      : focus === "acting" || focus === "both";
+  const groupFromAssignments = (user: (typeof users)[number]) => {
+    const focus = user.productionOnboardings[0]?.focus ?? user.onboardingProfile?.focus ?? null;
+    const wantsToAct = focus === "acting" || focus === "both" || user.rolePreferences.length > 0;
+    const acting =
+      user.characterCastings.length > 0 ||
+      user.departmentMemberships.some(isActing) ||
+      (!castingComplete && wantsToAct);
     const crew = crewAssigned
       ? user.departmentMemberships.some((membership) => !isActing(membership))
       : focus === "tech" || focus === "both";
@@ -264,8 +290,11 @@ export default async function BlocklistPage() {
     avatarSource: user.avatarSource,
     avatarUpdatedAt: user.avatarImageUpdatedAt,
     group: activeProductionId
-      ? groupFromAssignments(user, user.onboardingProfile?.focus ?? null)
+      ? groupFromAssignments(user)
       : focusToGroup(user.onboardingProfile?.focus),
+    departments: user.departmentMemberships
+      .filter((membership) => !isActing(membership))
+      .map((membership) => membership.department.name),
     blockedDays: user.blockedDays.map((day) => ({
       id: day.id,
       date: format(day.date, "yyyy-MM-dd"),
@@ -273,7 +302,12 @@ export default async function BlocklistPage() {
       reason: day.reason,
     })),
   }));
-  const team = buildTeam(records, canPlan, nameSort, await loadMemberRoles(activeProductionId));
+  const [memberRoles, audience] = await Promise.all([
+    loadMemberRoles(activeProductionId),
+    // Szenen und Besetzung nur fürs PDF („welche Szenen sind probbar“).
+    canExport && activeProductionId ? loadAudienceContext(activeProductionId) : null,
+  ]);
+  const team = buildTeam(records, canPlan, nameSort, memberRoles);
   const myEntries = records.find((record) => record.id === userId)?.blockedDays ?? [];
 
   const finalWeek = production?.finalRehearsalWeekStart
@@ -302,6 +336,9 @@ export default async function BlocklistPage() {
     canManageSettings,
     canExport,
     readOnly: false,
+    sceneContext: audience
+      ? { scenes: audience.scenes, castings: audience.castings, characters: audience.characters }
+      : null,
     production: production
       ? { id: production.id, title: production.title ?? String(production.year) }
       : null,

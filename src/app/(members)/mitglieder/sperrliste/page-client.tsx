@@ -19,7 +19,7 @@ import { MyCalendar } from "./my-calendar";
 import { BlocklistSettingsDialog } from "./settings-dialog";
 import { TeamView } from "./team-view";
 import type { NameSortOrder } from "@/lib/names";
-import type { MyBlockedDay, TeamEntry, TeamMember } from "./types";
+import type { MyBlockedDay, SceneContext, TeamEntry, TeamMember } from "./types";
 import { useCalendarModel } from "./use-calendar-model";
 import { useMyEntries } from "./use-my-entries";
 
@@ -42,6 +42,8 @@ export type BlocklistPageData = {
   readOnly: boolean;
   /** Gewählte Produktion, neue Termine gehören standardmäßig dazu. */
   production?: { id: string; title: string } | null;
+  /** Szenen/Besetzung fürs PDF; nur mit Export-Recht und gewählter Produktion. */
+  sceneContext?: SceneContext | null;
 };
 
 export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
@@ -117,6 +119,9 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
           finalWeek={data.finalWeek}
           preferredWeekdays={settings.preferredWeekdays}
           exceptionWeekdays={settings.exceptionWeekdays}
+          calendarEntries={data.calendarEntries}
+          sceneContext={data.sceneContext ?? null}
+          productionTitle={data.production?.title ?? null}
         />
       ) : null}
       {!data.readOnly ? <CalendarFeedDialog /> : null}

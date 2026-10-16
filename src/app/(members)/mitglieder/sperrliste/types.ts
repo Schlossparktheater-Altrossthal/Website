@@ -1,4 +1,4 @@
-import type { BlockedDayKind } from "@prisma/client";
+import type { BlockedDayKind, CharacterCastingType } from "@prisma/client";
 
 import type { AvailabilityStatus, SettableStatus } from "@/components/ui/availability-status";
 import type { AvatarFields } from "@/lib/avatar-fields";
@@ -19,7 +19,16 @@ export type TeamMember = AvatarFields & {
   name: string;
   /** Schauspielrollen in der aktiven Produktion (leer ohne Besetzung). */
   roles: string[];
+  /** Gewerke in der aktiven Produktion (ohne „Schauspiel“). */
+  departments: string[];
   group: MemberGroup;
+};
+
+/** Szenen und Besetzung der Produktion – fürs PDF („welche Szenen sind probbar“). */
+export type SceneContext = {
+  scenes: { id: string; label: string; characterIds: string[] }[];
+  castings: { characterId: string; userId: string; type: CharacterCastingType }[];
+  characters: { id: string; name: string }[];
 };
 
 /** Eintrag eines Mitglieds; `reason` nur für Planer gefüllt. */

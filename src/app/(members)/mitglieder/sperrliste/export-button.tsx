@@ -7,24 +7,20 @@ import { toast } from "sonner";
 
 import { FileDownIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
-import { buildDayInfos, type FinalWeekRange } from "@/lib/sperrliste/day-tiers";
+import { expandEntryDayKeys, type CalendarEntry } from "@/lib/calendar/event-kinds";
+import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
+import { formatIsoTimeInTimeZone } from "@/lib/date-time";
+import { buildDayInfos, type DayInfo, type FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import { formatWeekdayList, sortWeekdays } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";
 
-import type { MemberGroup, TeamEntry, TeamMember } from "./types";
+import type { MemberGroup, SceneContext, TeamEntry, TeamMember } from "./types";
 
 const PDF_ZONE: Record<MemberGroup, "acting" | "crew" | "both" | "unknown"> = {
   actors: "acting",
   crew: "crew",
   both: "both",
   unassigned: "unknown",
-};
-
-const FALLBACK_LABEL = {
-  blocked: "gesperrt",
-  limited: "eingeschränkt",
-  preferred: "bevorzugt",
-  emergency: "Notfall",
 };
 
 type ExportButtonProps = {
@@ -34,7 +30,92 @@ type ExportButtonProps = {
   finalWeek: FinalWeekRange;
   preferredWeekdays: number[];
   exceptionWeekdays: number[];
+  calendarEntries: CalendarEntry[];
+  sceneContext: SceneContext | null;
+  productionTitle: string | null;
 };
+
+const firstName = (name: string) => name.split(" ")[0] ?? name;
+
+/** Kurze Uhrzeit fürs PDF: volle Stunden ohne „:00“, z. B. „10–14“ oder „18:30“. */
+function eventTime(entry: CalendarEntry) {
+  if (entry.allDay) return null;
+  const short = (iso: string) => formatIsoTimeInTimeZone(iso).replace(/:00$/, "");
+  return entry.end && entry.end.slice(0, 10) === entry.start.slice(0, 10)
+    ? `${short(entry.start)}–${short(entry.end)}`
+    : short(entry.start);
+}
+
+function dayBadges(day: DayInfo) {
+  const badges: { kind: "schoolHoliday" | "publicHoliday" | "finalWeek"; label: string }[] = [];
+  if (day.isFinalWeek) badges.push({ kind: "finalWeek", label: "Endprobenwoche" });
+  for (const holiday of day.holidays) {
+    badges.push({
+      kind: holiday.category === "publicHoliday" ? "publicHoliday" : "schoolHoliday",
+      label: holiday.title,
+    });
+  }
+  return badges;
+}
+
+/** Probbarkeit jeder besetzten Szene je Tag – Grundlage sind die Sperren der Besetzung. */
+function buildSceneRows(
+  context: SceneContext,
+  members: TeamMember[],
+  days: DayInfo[],
+  byMemberDay: Map<string, TeamEntry>,
+) {
+  const castCharacters = new Set(
+    context.castings.filter((entry) => entry.type !== "cameo").map((entry) => entry.characterId),
+  );
+  const scenes = context.scenes.filter((scene) =>
+    scene.characterIds.some((id) => castCharacters.has(id)),
+  );
+  const readinessContext = {
+    ...context,
+    scenes,
+    members: members.map(({ id, name }) => ({ id, name })),
+  };
+  const perDay = days.map((day) => {
+    const absences: Record<string, Absence> = {};
+    for (const member of members) {
+      const entry = byMemberDay.get(`${member.id}:${day.key}`);
+      if (entry?.status === "blocked" || entry?.status === "emergency") {
+        absences[member.id] = { kind: "blocked", reason: entry.reason };
+      } else if (entry?.status === "limited") {
+        absences[member.id] = { kind: "limited", reason: entry.reason };
+      }
+    }
+    return computeSceneReadiness(readinessContext, absences);
+  });
+  const castComplete =
+    context.characters.length > 0 &&
+    context.characters.every((character) =>
+      context.castings.some(
+        (entry) => entry.characterId === character.id && entry.type === "primary",
+      ),
+    );
+  const rows = scenes.map((scene, sceneIndex) => ({
+    label: scene.label,
+    cells: perDay.map((readiness) => {
+      const entry = readiness[sceneIndex];
+      const issue = entry.issues.find((item) => item.status === entry.status);
+      let note: string | null = null;
+      if (issue) {
+        const absent = issue.absent.map((person) => firstName(person.name)).join(", ");
+        note =
+          issue.status === "alternate" && issue.substitute
+            ? `${firstName(issue.substitute.name)} statt ${absent}`
+            : issue.status === "limited"
+              ? `${absent} eingeschr.`
+              : `fehlt: ${absent}`;
+        if (entry.issues.length > 1) note += ` +${entry.issues.length - 1}`;
+      }
+      return { status: entry.status, note };
+    }),
+  }));
+  return { castComplete, rows };
+}
 
 function filenameFrom(disposition: string | null, fallback: string) {
   const match = disposition?.match(/filename\*=UTF-8''([^;]+)/i);
@@ -56,6 +137,9 @@ export function ExportButton({
   finalWeek,
   preferredWeekdays,
   exceptionWeekdays,
+  calendarEntries,
+  sceneContext,
+  productionTitle,
 }: ExportButtonProps) {
   const [busy, setBusy] = useState(false);
 
@@ -74,6 +158,12 @@ export function ExportButton({
     }
 
     const byMemberDay = new Map(entries.map((entry) => [`${entry.userId}:${entry.date}`, entry]));
+    const eventsByDay = new Map<string, CalendarEntry[]>();
+    for (const entry of calendarEntries) {
+      for (const key of expandEntryDayKeys(entry)) {
+        eventsByDay.set(key, [...(eventsByDay.get(key) ?? []), entry]);
+      }
+    }
     const rangeLabel = `${format(start, "dd.MM.yyyy")} – ${format(end, "dd.MM.yyyy")}`;
     const important = sortWeekdays([...preferredWeekdays, ...exceptionWeekdays]);
 
@@ -89,26 +179,33 @@ export function ExportButton({
             memberCount: members.length,
             importantWeekdays: important.length ? formatWeekdayList(important) : null,
           },
+          production: productionTitle,
           days: days.map((day) => ({
             key: day.key,
-            label: format(day.date, "EEEEEE dd.MM.", { locale: de }),
-            title: format(day.date, "EEEE, d. MMMM yyyy", { locale: de }),
+            weekday: format(day.date, "EEEEEE", { locale: de }),
+            date: format(day.date, "dd.MM."),
+            badges: dayBadges(day),
+            events: (eventsByDay.get(day.key) ?? [])
+              .sort((a, b) => a.start.localeCompare(b.start))
+              .map((entry) => ({
+                rehearsal: entry.kind === "REHEARSAL",
+                time: eventTime(entry),
+                title: entry.title,
+              })),
           })),
           members: members.map((member) => ({
             zone: PDF_ZONE[member.group],
             name: member.name,
-            email: null,
+            // Rollen zuerst; wer keine hat, bekommt seine Gewerke.
+            detail: (member.roles.length ? member.roles : member.departments).join(", ") || null,
             entries: days.map((day) => {
               const entry = byMemberDay.get(`${member.id}:${day.key}`);
               return entry
-                ? {
-                    dayKey: day.key,
-                    status: entry.status,
-                    value: entry.reason || FALLBACK_LABEL[entry.status],
-                  }
+                ? { dayKey: day.key, status: entry.status, value: entry.reason }
                 : { dayKey: day.key, status: "none", value: null };
             }),
           })),
+          scenes: sceneContext ? buildSceneRows(sceneContext, members, days, byMemberDay) : null,
         }),
       });
       if (!response.ok) {

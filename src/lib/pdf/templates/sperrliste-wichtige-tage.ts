@@ -2,34 +2,63 @@ import { z } from "zod";
 
 import type { PdfTemplate } from "../types";
 
+const entryStatusValues = ["none", "blocked", "limited", "preferred", "emergency"] as const;
+const memberZoneValues = ["acting", "both", "crew", "unknown"] as const;
+
 const daySchema = z.object({
   key: z.string(),
-  label: z.string(),
-  title: z.string(),
+  /** Kurzer Wochentag, z. B. „Fr“. */
+  weekday: z.string(),
+  /** Kurzes Datum, z. B. „16.10.“. */
+  date: z.string(),
+  /** Ferien, Feiertage, Endprobenwoche – kurze Hinweise unter dem Datum. */
+  badges: z
+    .array(
+      z.object({
+        kind: z.enum(["schoolHoliday", "publicHoliday", "finalWeek"]),
+        label: z.string(),
+      }),
+    )
+    .default([]),
+  /** Proben und Termine an diesem Tag. */
+  events: z
+    .array(
+      z.object({
+        rehearsal: z.boolean(),
+        time: z.string().nullable(),
+        title: z.string(),
+      }),
+    )
+    .default([]),
 });
-
-const entryStatusValues = ["none", "blocked", "limited", "preferred"] as const;
-const entryStatusSchema = z.enum(entryStatusValues);
 
 const entrySchema = z.object({
   dayKey: z.string(),
-  status: entryStatusSchema,
+  status: z.enum(entryStatusValues),
+  /** Grund (nur für Planer), sonst null. */
   value: z.string().nullable(),
 });
 
-const memberZoneValues = ["acting", "crew", "both", "unknown"] as const;
-const memberZoneSchema = z.enum(memberZoneValues);
-
 const memberSchema = z.object({
-  zone: memberZoneSchema,
+  zone: z.enum(memberZoneValues),
   name: z.string(),
-  email: z.string().nullable(),
+  /** Rollen bzw. Gewerke, klein hinter dem Namen. */
+  detail: z.string().nullable().default(null),
   entries: z.array(entrySchema),
+});
+
+const sceneStatusValues = ["ready", "alternate", "limited", "missing"] as const;
+
+const sceneRowSchema = z.object({
+  label: z.string(),
+  /** Je Tag (gleiche Reihenfolge wie `days`): Zustand und kurzer Hinweis (wer fehlt). */
+  cells: z.array(z.object({ status: z.enum(sceneStatusValues), note: z.string().nullable() })),
 });
 
 const sperrlisteImportantDaysSchema = z
   .object({
     generatedAt: z.string().datetime(),
+    production: z.string().nullable().default(null),
     range: z.object({
       start: z.string().datetime(),
       end: z.string().datetime(),
@@ -41,6 +70,14 @@ const sperrlisteImportantDaysSchema = z
     }),
     days: z.array(daySchema),
     members: z.array(memberSchema),
+    /** null: keine Szenen/Besetzung – der Abschnitt entfällt bzw. zeigt einen Hinweis. */
+    scenes: z
+      .object({
+        castComplete: z.boolean(),
+        rows: z.array(sceneRowSchema),
+      })
+      .nullable()
+      .default(null),
   })
   .superRefine((data, ctx) => {
     data.members.forEach((member, memberIndex) => {
@@ -55,1149 +92,698 @@ const sperrlisteImportantDaysSchema = z
   });
 
 export type SperrlisteImportantDaysPdfData = z.infer<typeof sperrlisteImportantDaysSchema>;
-type MemberZone = (typeof memberZoneValues)[number];
-type MemberEntryStatus = (typeof entryStatusValues)[number];
-type MemberEntry = z.infer<typeof entrySchema>;
-type Member = z.infer<typeof memberSchema>;
+type Day = SperrlisteImportantDaysPdfData["days"][number];
+type Member = SperrlisteImportantDaysPdfData["members"][number];
+type Zone = Member["zone"];
+type Status = Member["entries"][number]["status"];
+type SceneStatus = (typeof sceneStatusValues)[number];
 
-const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
+const SCENE_STYLE: Record<SceneStatus, { fill: string; ink: string; label: string }> = {
+  ready: { fill: "#dcfce7", ink: "#15803d", label: "probbar" },
+  alternate: { fill: "#cffafe", ink: "#0e7490", label: "mit Zweitbesetzung" },
+  limited: { fill: "#fef3c7", ink: "#b45309", label: "eingeschränkt" },
+  missing: { fill: "#fee2e2", ink: "#b91c1c", label: "fehlt jemand" },
+};
+
+const FONT = "Helvetica";
+const BOLD = "Helvetica-Bold";
+const MARGIN = 28;
+
+const COLOR = {
+  text: "#111827",
+  muted: "#6b7280",
+  faint: "#9ca3af",
+  line: "#e5e7eb",
+  header: "#f3f4f6",
+  accent: "#4f46e5",
+  rehearsal: "#4338ca",
+  rehearsalFill: "#e0e7ff",
+  holiday: "#0e7490",
+  holidayFill: "#cffafe",
+  publicHoliday: "#b45309",
+  publicHolidayFill: "#fef3c7",
+  finalWeek: "#be185d",
+  finalWeekFill: "#fce7f3",
+};
+
+const STATUS_STYLE: Record<
+  Exclude<Status, "none">,
+  { fill: string; ink: string; label: string }
+> = {
+  blocked: { fill: "#fee2e2", ink: "#b91c1c", label: "gesperrt" },
+  emergency: { fill: "#fee2e2", ink: "#b91c1c", label: "nur im Notfall" },
+  limited: { fill: "#fef3c7", ink: "#b45309", label: "eingeschränkt" },
+  preferred: { fill: "#dcfce7", ink: "#15803d", label: "bevorzugt" },
+};
+
+const ZONE_STYLE: Record<Zone, { label: string; ink: string; fill: string }> = {
+  acting: { label: "Schauspiel", ink: "#4338ca", fill: "#eef2ff" },
+  both: { label: "Schauspiel & Gewerke", ink: "#7c3aed", fill: "#f5f3ff" },
+  crew: { label: "Gewerke", ink: "#047857", fill: "#ecfdf5" },
+  unknown: { label: "Noch nicht zugewiesen", ink: "#4b5563", fill: "#f3f4f6" },
+};
+
+const BADGE_STYLE: Record<Day["badges"][number]["kind"], { ink: string; fill: string }> = {
+  schoolHoliday: { ink: COLOR.holiday, fill: COLOR.holidayFill },
+  publicHoliday: { ink: COLOR.publicHoliday, fill: COLOR.publicHolidayFill },
+  finalWeek: { ink: COLOR.finalWeek, fill: COLOR.finalWeekFill },
+};
+
 const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: "Europe/Berlin",
+});
+const dateFormatter = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Europe/Berlin",
 });
 
-function ensurePageSpace(doc: PDFKit.PDFDocument, neededHeight: number) {
-  const bottom = doc.page.height - doc.page.margins.bottom;
-  if (doc.y + neededHeight <= bottom) {
-    return;
-  }
-  doc.addPage();
-  doc.x = doc.page.margins.left;
-  doc.y = doc.page.margins.top;
+const isAway = (status: Status) => status === "blocked" || status === "emergency";
+
+// ---------- Zeichenhelfer ----------
+
+function drawCheck(doc: PDFKit.PDFDocument, cx: number, cy: number, size: number, color: string) {
+  doc
+    .save()
+    .lineWidth(1.1)
+    .lineCap("round")
+    .lineJoin("round")
+    .moveTo(cx - size * 0.5, cy)
+    .lineTo(cx - size * 0.12, cy + size * 0.38)
+    .lineTo(cx + size * 0.55, cy - size * 0.42)
+    .stroke(color)
+    .restore();
 }
 
-function formatDateForFilename(value: string) {
-  try {
-    return value.slice(0, 10).replace(/-/g, "");
-  } catch {
-    return "unknown";
-  }
+function drawCross(doc: PDFKit.PDFDocument, cx: number, cy: number, size: number, color: string) {
+  const h = size / 2;
+  doc
+    .save()
+    .lineWidth(1.2)
+    .lineCap("round")
+    .moveTo(cx - h, cy - h)
+    .lineTo(cx + h, cy + h)
+    .moveTo(cx + h, cy - h)
+    .lineTo(cx - h, cy + h)
+    .stroke(color)
+    .restore();
 }
 
-function buildRangeLabel(range: SperrlisteImportantDaysPdfData["range"]) {
-  try {
-    const start = new Date(range.start);
-    const end = new Date(range.end);
-    return `${dateFormatter.format(start)} – ${dateFormatter.format(end)}`;
-  } catch {
-    return null;
-  }
+function drawTilde(doc: PDFKit.PDFDocument, cx: number, cy: number, size: number, color: string) {
+  const h = size / 2;
+  doc
+    .save()
+    .lineWidth(1.2)
+    .lineCap("round")
+    .moveTo(cx - h, cy + 1)
+    .bezierCurveTo(cx - h / 2, cy - 2.5, cx, cy - 1, cx, cy)
+    .bezierCurveTo(cx, cy + 1, cx + h / 2, cy + 2.5, cx + h, cy - 1)
+    .stroke(color)
+    .restore();
 }
 
-function normalizeEntryValue(value: string | null | undefined) {
-  return value?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
+function drawStar(doc: PDFKit.PDFDocument, cx: number, cy: number, size: number, color: string) {
+  const outer = size / 2;
+  const inner = outer * 0.45;
+  const points: [number, number][] = [];
+  for (let i = 0; i < 10; i += 1) {
+    const radius = i % 2 === 0 ? outer : inner;
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+    points.push([cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)]);
+  }
+  doc
+    .save()
+    .polygon(...points)
+    .fill(color)
+    .restore();
 }
 
-function removeDiacritics(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function drawDot(doc: PDFKit.PDFDocument, cx: number, cy: number, color: string) {
+  doc.save().circle(cx, cy, 0.9).fill(color).restore();
 }
 
-function isPositiveAvailabilityRemark(value: string) {
-  if (!value) {
-    return false;
-  }
-
-  const asciiValue = removeDiacritics(value).replace(/ß/g, "ss");
-  const negativeIndicators = ["nicht", "kein", "keine", "keinen", "keiner", "nie"];
-  if (negativeIndicators.some((indicator) => asciiValue.includes(indicator))) {
-    return false;
-  }
-
-  const tagPattern = "tag(?:e|en)?";
-  const positivePatterns = [
-    /\bfrei\b/,
-    /\bverf(?:u|ue)gbar\b/,
-    /\bimmer\b.*\bverf(?:u|ue)gbar\b/,
-    new RegExp(`\\bkann\\b.*\\balle\\b.*\\b${tagPattern}`),
-    new RegExp(`\\balle\\b.*\\b${tagPattern}\\b.*\\bkann\\b`),
-    new RegExp(`\\buber\\b.*\\balle\\b.*\\b${tagPattern}`),
-    new RegExp(`\\bkann\\b.*\\bjed[ea]n\\b.*\\b${tagPattern}`),
-    new RegExp(`\\bjed[ea]n\\b.*\\b${tagPattern}\\b.*\\bkann\\b`),
-  ];
-
-  return positivePatterns.some((pattern) => pattern.test(asciiValue));
+function drawStatusIcon(doc: PDFKit.PDFDocument, status: Status, cx: number, cy: number, size = 6) {
+  if (status === "none") return drawCheck(doc, cx, cy, size, "#86c5a0");
+  const ink = STATUS_STYLE[status].ink;
+  if (isAway(status)) return drawCross(doc, cx, cy, size - 1, ink);
+  if (status === "limited") return drawTilde(doc, cx, cy, size + 1, ink);
+  return drawStar(doc, cx, cy, size + 1.5, ink);
 }
 
-function isBlockedEntry(entry: MemberEntry) {
-  if (entry.status !== "blocked") {
-    return false;
-  }
-
-  const normalized = normalizeEntryValue(entry.value);
-  if (isPositiveAvailabilityRemark(normalized)) {
-    return false;
-  }
-
-  return true;
-}
-
-function hasAnyAvailability(member: Member) {
-  if (member.entries.length === 0) {
-    return true;
-  }
-
-  return member.entries.some((entry) => !isBlockedEntry(entry));
-}
-
-type TableCellIcon = {
-  type: "check" | "cross";
-  size?: number;
-  strokeColor?: string;
-  strokeWidth?: number;
-  offsetY?: number;
-  spacing?: number;
-  align?: "left" | "center" | "right";
-  verticalAlign?: "top" | "middle" | "bottom";
-};
-
-type TableCellStyle = {
-  align?: "left" | "center" | "right";
-  font?: "regular" | "bold";
-  fontSize?: number;
-  textColor?: string;
-  fillColor?: string | null;
-  prefixIcon?: TableCellIcon | null;
-  secondaryText?: string | null;
-  secondaryFont?: "regular" | "bold";
-  secondaryFontSize?: number;
-  secondaryTextColor?: string;
-  secondarySpacing?: number;
-  contentOffsetY?: number;
-  lineBreak?: boolean;
-  lineGap?: number;
-  verticalAlign?: "top" | "middle" | "bottom";
-  rotate?: number;
-  affectsRowHeight?: boolean;
-};
-
-type TableCellConfig = {
-  text: string;
-  style: TableCellStyle;
-};
-
-type TableOptions = {
-  headerStyles?: readonly TableCellStyle[];
-  cellStyles?: readonly (readonly TableCellStyle[])[];
-  rowBackgrounds?: readonly (string | null | undefined)[];
-  repeatHeaderAtBottom?: boolean;
-  mergedColumnGroups?: readonly TableMergedColumnGroup[];
-};
-
-type TableMergedColumnGroup = {
-  columnIndex: number;
-  groups: readonly {
-    startRow: number;
-    rowSpan: number;
-    text: string;
-    style?: TableCellStyle;
-  }[];
-};
-
-function drawTable(
+/** Pill mit Text; gibt die Breite zurück. */
+function drawPill(
   doc: PDFKit.PDFDocument,
-  headers: readonly string[],
-  rows: readonly (readonly string[])[],
-  columnWidths: readonly number[],
-  options: TableOptions = {},
+  x: number,
+  y: number,
+  text: string,
+  style: { ink: string; fill: string },
+  maxWidth: number,
+  fontSize = 5.6,
 ) {
-  if (!rows.length) {
-    return;
-  }
-
-  const paddingX = 5;
-  const paddingY = 3;
-  const startX = doc.page.margins.left;
-  const columnPositions = columnWidths.reduce<number[]>((positions, width, index) => {
-    const previous = index === 0 ? startX : positions[index - 1] + columnWidths[index - 1];
-    positions.push(previous);
-    return positions;
-  }, []);
-  const totalWidth = columnWidths.reduce((sum, value) => sum + value, 0);
-  const pageBottom = doc.page.height - doc.page.margins.bottom;
-
-  const columnBoundaries = columnPositions.map((position, index) => position + columnWidths[index]);
-  const gridLinesX = [startX, ...columnBoundaries];
-  const horizontalSegments = columnPositions.map((position, index) => ({
-    start: position,
-    end: columnBoundaries[index],
-    columnIndex: index,
-  }));
-  const gridColor = "#9ca3af";
-  const gridWidth = 0.75;
-
-  const mergedColumnGroups = options.mergedColumnGroups ?? [];
-  type MergedCellInfo = {
-    columnIndex: number;
-    group: (typeof mergedColumnGroups)[number]["groups"][number];
-  };
-  const mergedCellLookup = new Map<string, MergedCellInfo>();
-  const skipHorizontalBoundaries = new Set<string>();
-
-  const getCurrentPageIndex = () => {
-    const range = doc.bufferedPageRange?.();
-    if (range && typeof range.start === "number" && typeof range.count === "number") {
-      return range.start + Math.max(range.count - 1, 0);
-    }
-    return 0;
-  };
-
-  mergedColumnGroups.forEach((columnGroup) => {
-    columnGroup.groups.forEach((group) => {
-      for (let offset = 0; offset < group.rowSpan; offset += 1) {
-        const rowIndex = group.startRow + offset;
-        const key = `${rowIndex}:${columnGroup.columnIndex}`;
-        mergedCellLookup.set(key, { columnIndex: columnGroup.columnIndex, group });
-        if (offset < group.rowSpan - 1) {
-          skipHorizontalBoundaries.add(`${columnGroup.columnIndex}:${rowIndex}`);
-        }
-      }
-    });
+  doc.font(BOLD).fontSize(fontSize);
+  const width = Math.min(maxWidth, doc.widthOfString(text) + 5);
+  const height = fontSize + 3;
+  doc
+    .save()
+    .roundedRect(x, y, width, height, height / 2)
+    .fill(style.fill)
+    .restore();
+  doc.fillColor(style.ink).text(text, x + 2.5, y + 1.6, {
+    width: width - 5,
+    height: fontSize + 1,
+    lineBreak: false,
+    ellipsis: true,
   });
-
-  const rowMetrics: { top: number; height: number; pageIndex: number }[] = [];
-
-  const drawHorizontalLine = (y: number, boundaryRowIndex: number | null) => {
-    horizontalSegments.forEach(({ start, end, columnIndex }) => {
-      if (boundaryRowIndex !== null) {
-        const key = `${columnIndex}:${boundaryRowIndex}`;
-        if (skipHorizontalBoundaries.has(key)) {
-          return;
-        }
-      }
-      doc.moveTo(start, y).lineTo(end, y).stroke();
-    });
-  };
-
-  const drawGridLines = (
-    top: number,
-    bottom: number,
-    includeTop: boolean,
-    boundaryRowIndex: number | null,
-  ) => {
-    doc.save().lineWidth(gridWidth).strokeColor(gridColor);
-    if (includeTop) {
-      drawHorizontalLine(top, null);
-    }
-    drawHorizontalLine(bottom, boundaryRowIndex);
-    gridLinesX.forEach((x) => {
-      doc.moveTo(x, top).lineTo(x, bottom).stroke();
-    });
-    doc.restore();
-  };
-
-  const resolveFont = (style: TableCellStyle) => {
-    if (style.font === "bold") {
-      return "Helvetica-Bold";
-    }
-    return "Helvetica";
-  };
-
-  const resolveAlign = (style: TableCellStyle) => style.align ?? "left";
-
-  const measurePrefixIconWidth = (
-    icon: TableCellIcon | null | undefined,
-    hasText: boolean,
-  ): number => {
-    if (!icon) {
-      return 0;
-    }
-    const align = icon.align ?? "left";
-    if (align !== "left" || !hasText) {
-      return 0;
-    }
-    return (icon.size ?? 9) + (icon.spacing ?? 4);
-  };
-
-  const computeRowHeight = (cells: readonly TableCellConfig[]) => {
-    return cells.reduce((max, cell, cellIndex) => {
-      if (cell.style.affectsRowHeight === false) {
-        return max;
-      }
-      const font = resolveFont(cell.style);
-      const fontSize = cell.style.fontSize ?? 9;
-      const icon = cell.style.prefixIcon;
-      const text = cell.text?.trim() ?? "";
-      const iconWidth = measurePrefixIconWidth(icon, text.length > 0);
-      const width = Math.max(columnWidths[cellIndex] - paddingX * 2 - iconWidth, 16);
-      const align = resolveAlign(cell.style);
-      const lineBreak = cell.style.lineBreak ?? false;
-      const lineGap = cell.style.lineGap;
-      doc.font(font).fontSize(fontSize);
-      const primaryHeight = text
-        ? doc.heightOfString(text, {
-            width,
-            align,
-            lineBreak,
-            lineGap,
-          })
-        : 0;
-      const secondaryText = cell.style.secondaryText?.trim() ?? "";
-      const secondaryFont = resolveFont({ font: cell.style.secondaryFont ?? "regular" });
-      const secondaryFontSize = cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5);
-      doc.font(secondaryFont).fontSize(secondaryFontSize);
-      const secondaryHeight = secondaryText
-        ? doc.heightOfString(secondaryText, {
-            width,
-            align,
-            lineBreak: false,
-          })
-        : 0;
-      const spacing =
-        secondaryHeight > 0 && primaryHeight > 0 ? (cell.style.secondarySpacing ?? 1.6) : 0;
-      const textHeight = primaryHeight + spacing + secondaryHeight;
-      const iconHeight = icon?.size ?? 0;
-      const contentOffsetY = cell.style.contentOffsetY ?? 0;
-      const fallbackHeight =
-        (cell.style.fontSize ?? 9) +
-        1.5 +
-        (secondaryHeight > 0 ? (cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5)) : 0);
-      const effectiveHeight = Math.max(
-        textHeight + contentOffsetY,
-        iconHeight,
-        fallbackHeight + contentOffsetY,
-      );
-      const height = effectiveHeight + paddingY * 2;
-      return Math.max(max, height);
-    }, 0);
-  };
-
-  const drawPrefixIcon = (
-    icon: TableCellIcon,
-    cellX: number,
-    columnWidth: number,
-    rowTop: number,
-    rowHeight: number,
-    textColor: string,
-    hasText: boolean,
-  ) => {
-    const size = icon.size ?? 9;
-    const strokeWidth = icon.strokeWidth ?? Math.max(1, size / 5.5);
-    const align = icon.align ?? "left";
-    const iconAreaWidth = Math.max(columnWidth - paddingX * 2, size);
-    let iconX = cellX + paddingX;
-    if (align === "center") {
-      iconX = cellX + paddingX + Math.max((iconAreaWidth - size) / 2, 0);
-    }
-    if (align === "right") {
-      iconX = cellX + paddingX + Math.max(iconAreaWidth - size, 0);
-    }
-    if (align === "left" && !hasText) {
-      const offset = Math.max((iconAreaWidth - size) / 2, 0);
-      iconX = cellX + paddingX + offset;
-    }
-
-    const verticalAlign = icon.verticalAlign ?? "middle";
-    let iconY = rowTop + paddingY + (rowHeight - paddingY * 2 - size) / 2;
-    if (verticalAlign === "top") {
-      iconY = rowTop + paddingY;
-    }
-    if (verticalAlign === "bottom") {
-      iconY = rowTop + rowHeight - paddingY - size;
-    }
-    iconY += icon.offsetY ?? 0;
-    const strokeColor = icon.strokeColor ?? textColor;
-
-    if (icon.type === "check") {
-      doc
-        .save()
-        .lineWidth(strokeWidth)
-        .strokeColor(strokeColor)
-        .moveTo(iconX, iconY + size * 0.6)
-        .lineTo(iconX + size * 0.35, iconY + size * 0.9)
-        .lineTo(iconX + size, iconY + size * 0.1)
-        .stroke()
-        .restore();
-      return;
-    }
-
-    if (icon.type === "cross") {
-      const inset = Math.max(size * 0.1, strokeWidth / 2);
-      const startX = iconX + inset;
-      const startY = iconY + inset;
-      const endX = iconX + size - inset;
-      const endY = iconY + size - inset;
-
-      doc
-        .save()
-        .lineWidth(strokeWidth)
-        .strokeColor(strokeColor)
-        .moveTo(startX, startY)
-        .lineTo(endX, endY)
-        .moveTo(endX, startY)
-        .lineTo(startX, endY)
-        .stroke()
-        .restore();
-    }
-  };
-
-  const headerCells: TableCellConfig[] = headers.map((header, index) => ({
-    text: header,
-    style: {
-      align: "center",
-      font: "bold",
-      fontSize: 8,
-      textColor: "#111827",
-      verticalAlign: "middle",
-      ...(options.headerStyles?.[index] ?? {}),
-    },
-  }));
-  const headerHeight = computeRowHeight(headerCells);
-  const tableBottom = Math.max(
-    options.repeatHeaderAtBottom ? pageBottom - headerHeight : pageBottom,
-    doc.page.margins.top,
-  );
-
-  const renderHeaderRowAt = (y: number, includeTopBorder: boolean) => {
-    doc.save();
-    doc.rect(startX, y, totalWidth, headerHeight).fill("#f3f4f6");
-    doc.restore();
-
-    headerCells.forEach((cell, index) => {
-      const columnX = columnPositions[index];
-      const columnWidth = Math.max(columnWidths[index], 32);
-      const align = resolveAlign(cell.style);
-      const useFullWidth = align === "center";
-      const availableWidth = useFullWidth ? columnWidth : Math.max(columnWidth - paddingX * 2, 16);
-      const font = resolveFont(cell.style);
-      const fontSize = cell.style.fontSize ?? 8.5;
-      const lineBreak = cell.style.lineBreak ?? false;
-      const lineGap = cell.style.lineGap;
-      const verticalAlign = cell.style.verticalAlign ?? "middle";
-      const textColor = cell.style.textColor ?? "#111827";
-
-      doc.font(font).fontSize(fontSize);
-      const textHeight = doc.heightOfString(cell.text, {
-        width: availableWidth,
-        align,
-        lineBreak,
-        lineGap,
-      });
-
-      const offsetX = useFullWidth ? 0 : paddingX;
-      const basePaddingY = useFullWidth ? 0 : paddingY;
-      const extraVerticalSpace = Math.max(headerHeight - textHeight - basePaddingY * 2, 0);
-      let offsetY = basePaddingY;
-      if (verticalAlign === "middle") {
-        offsetY = basePaddingY + extraVerticalSpace / 2;
-      } else if (verticalAlign === "bottom") {
-        offsetY = basePaddingY + extraVerticalSpace;
-      }
-
-      doc
-        .font(font)
-        .fontSize(fontSize)
-        .fillColor(textColor)
-        .text(cell.text, columnX + offsetX, y + offsetY, {
-          width: availableWidth,
-          align,
-          lineBreak,
-          ellipsis: !lineBreak,
-          lineGap,
-        });
-      doc.y = y;
-      doc.x = startX;
-    });
-    drawGridLines(y, y + headerHeight, includeTopBorder, null);
-  };
-
-  const drawHeaderRow = () => {
-    ensurePageSpace(doc, headerHeight + 6);
-    const top = doc.y;
-    renderHeaderRowAt(top, true);
-    doc.y = top + headerHeight;
-  };
-
-  const drawFooterRowBeforePageBreak = () => {
-    if (!options.repeatHeaderAtBottom) {
-      return;
-    }
-    const previousY = doc.y;
-    if (previousY <= doc.page.margins.top) {
-      return;
-    }
-    renderHeaderRowAt(previousY, true);
-    doc.y = previousY;
-  };
-
-  const drawFooterRowAtCurrentPosition = () => {
-    if (!options.repeatHeaderAtBottom) {
-      return;
-    }
-    ensurePageSpace(doc, headerHeight);
-    const footerTop = doc.y;
-    renderHeaderRowAt(footerTop, true);
-    doc.y = footerTop + headerHeight;
-  };
-
-  const drawDataRow = (row: readonly string[], rowIndex: number) => {
-    const cells: TableCellConfig[] = row.map((cell, cellIndex) => {
-      const isNameColumn = cellIndex === 1;
-      const defaultStyle: TableCellStyle = {
-        align: isNameColumn ? "left" : "center",
-        font: isNameColumn ? "bold" : "regular",
-        fontSize: isNameColumn ? 8 : 7.4,
-        textColor: isNameColumn ? "#111827" : "#1f2937",
-      };
-      const style = {
-        ...defaultStyle,
-        ...(options.cellStyles?.[rowIndex]?.[cellIndex] ?? {}),
-      } satisfies TableCellStyle;
-      return { text: cell, style };
-    });
-
-    const rowHeight = computeRowHeight(cells);
-    if (doc.y + rowHeight > tableBottom) {
-      drawFooterRowBeforePageBreak();
-      doc.addPage();
-      doc.x = doc.page.margins.left;
-      doc.y = doc.page.margins.top;
-      drawHeaderRow();
-    }
-
-    const rowBackground = options.rowBackgrounds?.[rowIndex];
-    if (rowBackground) {
-      doc.save();
-      doc.rect(startX, doc.y, totalWidth, rowHeight).fill(rowBackground);
-      doc.restore();
-    } else if (rowIndex % 2 === 1) {
-      doc.save();
-      doc.rect(startX, doc.y, totalWidth, rowHeight).fill("#f9fafb");
-      doc.restore();
-    }
-
-    const rowTop = doc.y;
-    const pageIndexForRow = getCurrentPageIndex();
-    cells.forEach((cell, cellIndex) => {
-      if (mergedCellLookup.has(`${rowIndex}:${cellIndex}`)) {
-        return;
-      }
-      const x = columnPositions[cellIndex];
-      const width = Math.max(columnWidths[cellIndex], 32);
-      const icon = cell.style.prefixIcon;
-      const textColor = cell.style.textColor ?? "#1f2937";
-      const text = cell.text?.trim() ?? "";
-      const iconWidth = measurePrefixIconWidth(icon, text.length > 0);
-      const textWidth = Math.max(width - paddingX * 2 - iconWidth, 16);
-      const align = resolveAlign(cell.style);
-      const font = resolveFont(cell.style);
-      const fontSize = cell.style.fontSize ?? 9;
-      const secondaryText = cell.style.secondaryText?.trim() ?? "";
-      const secondaryFont = resolveFont({ font: cell.style.secondaryFont ?? "regular" });
-      const secondaryFontSize = cell.style.secondaryFontSize ?? Math.max(fontSize - 1.5, 6.5);
-      const spacing = secondaryText && text ? (cell.style.secondarySpacing ?? 1.6) : 0;
-      const lineBreak = cell.style.lineBreak ?? false;
-      const lineGap = cell.style.lineGap;
-
-      if (cell.style.fillColor) {
-        doc.save();
-        doc.rect(x, doc.y, width, rowHeight).fill(cell.style.fillColor);
-        doc.restore();
-      }
-
-      if (icon) {
-        drawPrefixIcon(icon, x, width, rowTop, rowHeight, textColor, text.length > 0);
-      }
-
-      doc.font(font).fontSize(fontSize);
-      const primaryHeight = text
-        ? doc.heightOfString(text, {
-            width: textWidth,
-            align,
-            lineBreak,
-            lineGap,
-          })
-        : 0;
-      const contentOffsetY = cell.style.contentOffsetY ?? 0;
-      const secondaryHeight = secondaryText
-        ? doc.font(secondaryFont).fontSize(secondaryFontSize).heightOfString(secondaryText, {
-            width: textWidth,
-            align,
-            lineBreak: false,
-          })
-        : 0;
-      const totalTextHeight =
-        (text ? primaryHeight : 0) + (secondaryText ? spacing + secondaryHeight : 0);
-      const availableHeight = Math.max(rowHeight - paddingY * 2, 0);
-      const verticalAlign = cell.style.verticalAlign ?? "top";
-      let textStartY = rowTop + paddingY + contentOffsetY;
-      if (verticalAlign === "middle") {
-        textStartY =
-          rowTop + paddingY + Math.max((availableHeight - totalTextHeight) / 2, 0) + contentOffsetY;
-      }
-      if (verticalAlign === "bottom") {
-        textStartY = rowTop + rowHeight - paddingY - totalTextHeight + contentOffsetY;
-      }
-
-      if (text) {
-        doc
-          .font(font)
-          .fontSize(fontSize)
-          .fillColor(textColor)
-          .text(text, x + paddingX + iconWidth, textStartY, {
-            width: textWidth,
-            align,
-            lineBreak,
-            ellipsis: !lineBreak,
-            lineGap,
-          });
-      }
-
-      if (secondaryText) {
-        doc
-          .font(secondaryFont)
-          .fontSize(secondaryFontSize)
-          .fillColor(cell.style.secondaryTextColor ?? textColor)
-          .text(secondaryText, x + paddingX + iconWidth, textStartY + primaryHeight + spacing, {
-            width: textWidth,
-            align,
-            lineBreak: false,
-            ellipsis: true,
-          });
-      }
-      doc.y = rowTop;
-      doc.x = startX;
-    });
-
-    doc.y += rowHeight;
-    rowMetrics[rowIndex] = { top: rowTop, height: rowHeight, pageIndex: pageIndexForRow };
-    drawGridLines(rowTop, doc.y, false, rowIndex);
-  };
-
-  drawHeaderRow();
-  rows.forEach((row, index) => {
-    drawDataRow(row, index);
-  });
-  if (mergedColumnGroups.length) {
-    const savedX = doc.x;
-    const savedY = doc.y;
-    const savedPageIndex = getCurrentPageIndex();
-    mergedColumnGroups.forEach((columnGroup) => {
-      const columnIndex = columnGroup.columnIndex;
-      const columnX = columnPositions[columnIndex];
-      const columnWidth = columnWidths[columnIndex];
-      columnGroup.groups.forEach((group) => {
-        const { startRow, rowSpan, text } = group;
-        const rowsForGroup = rowMetrics
-          .slice(startRow, startRow + rowSpan)
-          .filter((metric): metric is { top: number; height: number; pageIndex: number } =>
-            Boolean(metric),
-          );
-        if (!rowsForGroup.length) {
-          return;
-        }
-        const style: TableCellStyle = {
-          align: "center",
-          font: "bold",
-          fontSize: 7.3,
-          textColor: "#111827",
-          verticalAlign: "middle",
-          ...group.style,
-        };
-
-        const segments: { pageIndex: number; top: number; height: number }[] = [];
-        rowsForGroup.forEach((metric) => {
-          const lastSegment = segments[segments.length - 1];
-          if (!lastSegment || lastSegment.pageIndex !== metric.pageIndex) {
-            segments.push({ pageIndex: metric.pageIndex, top: metric.top, height: metric.height });
-            return;
-          }
-          lastSegment.height += metric.height;
-        });
-
-        segments.forEach((segment) => {
-          doc.switchToPage(segment.pageIndex);
-          if (style.fillColor) {
-            doc.save();
-            doc.rect(columnX, segment.top, columnWidth, segment.height).fill(style.fillColor);
-            doc.restore();
-          }
-
-          const paddingX = 5;
-          const paddingY = 3;
-          const availableWidth = Math.max(columnWidth - paddingX * 2, 8);
-          const availableHeight = Math.max(segment.height - paddingY * 2, 8);
-          const rotation = (((style.rotate ?? 0) % 360) + 360) % 360;
-          const font = resolveFont(style);
-          const fontSize = style.fontSize ?? 9;
-          const textColor = style.textColor ?? "#1f2937";
-          const align = resolveAlign(style);
-          const verticalAlign = style.verticalAlign ?? "middle";
-          doc.font(font).fontSize(fontSize);
-          const lineBreak = style.lineBreak ?? false;
-          const lineGap = style.lineGap;
-          let textWidth = 0;
-          let textHeight = 0;
-          if (lineBreak) {
-            textWidth = availableWidth;
-            textHeight = doc.heightOfString(text, {
-              width: availableWidth,
-              align,
-              lineGap,
-              lineBreak: true,
-            });
-          } else {
-            textWidth = doc.widthOfString(text);
-            textHeight = doc.currentLineHeight();
-          }
-
-          const normalizedRotation = rotation % 360;
-          if (normalizedRotation === 90 || normalizedRotation === 270) {
-            const centerX = columnX + paddingX + availableWidth / 2;
-            const centerY = segment.top + paddingY + availableHeight / 2;
-            const drawWidth = textWidth;
-            const drawHeight = textHeight;
-            doc.save();
-            doc.rotate(normalizedRotation, { origin: [centerX, centerY] });
-            const textX = centerX - drawWidth / 2;
-            const textY = centerY - drawHeight / 2;
-            doc.font(font).fontSize(fontSize).fillColor(textColor).text(text, textX, textY, {
-              width: drawWidth,
-              align: "center",
-              lineBreak: false,
-            });
-            doc.restore();
-            return;
-          }
-
-          const horizontalSpace = availableWidth - textWidth;
-          let offsetX = paddingX;
-          if (align === "center") {
-            offsetX = paddingX + Math.max(horizontalSpace / 2, 0);
-          }
-          if (align === "right") {
-            offsetX = paddingX + Math.max(horizontalSpace, 0);
-          }
-
-          let offsetY = paddingY;
-          const verticalSpace = availableHeight - textHeight;
-          if (verticalAlign === "middle") {
-            offsetY = paddingY + Math.max(verticalSpace / 2, 0);
-          }
-          if (verticalAlign === "bottom") {
-            offsetY = paddingY + Math.max(verticalSpace, 0);
-          }
-          doc
-            .font(font)
-            .fontSize(fontSize)
-            .fillColor(textColor)
-            .text(text, columnX + offsetX, segment.top + offsetY, {
-              width: availableWidth,
-              align,
-              lineBreak,
-              ellipsis: !lineBreak,
-              lineGap,
-            });
-        });
-      });
-    });
-    doc.switchToPage(savedPageIndex);
-    doc.x = savedX;
-    doc.y = savedY;
-  }
-  drawFooterRowAtCurrentPosition();
-  doc.moveDown(0.6);
+  return width;
 }
+
+function textLine(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  options: { font?: string; size: number; color: string; align?: "left" | "center" | "right" },
+) {
+  doc
+    .font(options.font ?? FONT)
+    .fontSize(options.size)
+    .fillColor(options.color)
+    .text(text, x, y, {
+      width,
+      height: options.size + 2,
+      lineBreak: false,
+      ellipsis: true,
+      align: options.align ?? "left",
+    });
+}
+
+// ---------- Layout ----------
+
+type Layout = {
+  left: number;
+  right: number;
+  nameWidth: number;
+  dayWidth: number;
+  dayX: (index: number) => number;
+};
+
+function buildLayout(doc: PDFKit.PDFDocument, dayCount: number): Layout {
+  const left = MARGIN;
+  const right = doc.page.width - MARGIN;
+  const total = right - left;
+  const nameWidth = Math.max(150, Math.min(210, total - dayCount * 30));
+  const dayWidth = (total - nameWidth) / Math.max(1, dayCount);
+  return { left, right, nameWidth, dayWidth, dayX: (index) => left + nameWidth + index * dayWidth };
+}
+
+function eventLabel(event: Day["events"][number]) {
+  const title = event.rehearsal ? "Probe" : event.title;
+  return event.time ? `${title} ${event.time}` : title;
+}
+
+/** Höhe des Tageskopfs: Wochentag/Datum + eine Zeile je Hinweis/Termin (max. 3). */
+function dayHeaderHeight(days: Day[]) {
+  const lines = Math.max(
+    0,
+    ...days.map((day) => Math.min(3, day.badges.length + day.events.length)),
+  );
+  return 22 + lines * 8.5;
+}
+
+function drawTableHeader(
+  doc: PDFKit.PDFDocument,
+  layout: Layout,
+  days: Day[],
+  y: number,
+  headerHeight: number,
+) {
+  doc
+    .save()
+    .rect(layout.left, y, layout.right - layout.left, headerHeight)
+    .fill(COLOR.header)
+    .restore();
+  textLine(doc, "Mitglied", layout.left + 6, y + 6, layout.nameWidth - 12, {
+    font: BOLD,
+    size: 7,
+    color: COLOR.muted,
+  });
+  days.forEach((day, index) => {
+    const x = layout.dayX(index);
+    const width = layout.dayWidth;
+    const highlight = day.events.some((event) => event.rehearsal);
+    if (highlight) {
+      doc.save().rect(x, y, width, headerHeight).fill(COLOR.rehearsalFill).restore();
+    }
+    textLine(doc, day.weekday, x, y + 3.5, width, {
+      font: BOLD,
+      size: 7.5,
+      color: highlight ? COLOR.rehearsal : COLOR.text,
+      align: "center",
+    });
+    textLine(doc, day.date, x, y + 12, width, {
+      size: 6.5,
+      color: COLOR.muted,
+      align: "center",
+    });
+    const items: { text: string; style: { ink: string; fill: string } }[] = [
+      ...day.events.map((event) => ({
+        text: eventLabel(event),
+        style: event.rehearsal
+          ? { ink: "#ffffff", fill: COLOR.rehearsal }
+          : { ink: COLOR.text, fill: "#e5e7eb" },
+      })),
+      ...day.badges.map((badge) => ({ text: badge.label, style: BADGE_STYLE[badge.kind] })),
+    ];
+    const shown =
+      items.length > 3
+        ? [
+            ...items.slice(0, 2),
+            { text: `+${items.length - 2}`, style: { ink: COLOR.muted, fill: "#e5e7eb" } },
+          ]
+        : items;
+    shown.forEach((item, line) => {
+      doc.font(BOLD).fontSize(5.2);
+      const pillWidth = Math.min(width - 3, doc.widthOfString(item.text) + 5);
+      drawPill(
+        doc,
+        x + (width - pillWidth) / 2,
+        y + 21 + line * 8.5,
+        item.text,
+        item.style,
+        width - 3,
+        5.2,
+      );
+    });
+  });
+  // Trennlinien zwischen den Tagen
+  doc.save().lineWidth(0.4).strokeColor(COLOR.line);
+  days.forEach((_, index) => {
+    const x = layout.dayX(index);
+    doc.moveTo(x, y).lineTo(x, y + headerHeight);
+  });
+  doc.stroke().restore();
+  return y + headerHeight;
+}
+
+function drawFooter(doc: PDFKit.PDFDocument, data: SperrlisteImportantDaysPdfData) {
+  const range = doc.bufferedPageRange();
+  for (let index = range.start; index < range.start + range.count; index += 1) {
+    doc.switchToPage(index);
+    const y = doc.page.height - MARGIN + 8;
+    const left = MARGIN;
+    const width = doc.page.width - MARGIN * 2;
+    // Unterer Seitenrand darf beschrieben werden, ohne dass PDFKit umbricht.
+    const bottom = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
+    textLine(
+      doc,
+      `Sperrliste${data.production ? ` · ${data.production}` : ""} · Stand ${dateTimeFormatter.format(new Date(data.generatedAt))}`,
+      left,
+      y,
+      width / 1.5,
+      { size: 6, color: COLOR.faint },
+    );
+    textLine(doc, `Seite ${index - range.start + 1} von ${range.count}`, left, y, width, {
+      size: 6,
+      color: COLOR.faint,
+      align: "right",
+    });
+    doc.page.margins.bottom = bottom;
+  }
+}
+
+function drawLegend(doc: PDFKit.PDFDocument, x: number, y: number, maxX: number) {
+  doc.font(FONT).fontSize(6.5);
+  const items: { status: Status; label: string }[] = [
+    { status: "none", label: "frei" },
+    { status: "preferred", label: "bevorzugt" },
+    { status: "limited", label: "eingeschränkt" },
+    { status: "blocked", label: "gesperrt" },
+  ];
+  let cursor = x;
+  for (const item of items) {
+    if (item.status === "none") drawDot(doc, cursor + 3, y + 3.5, "#94a3b8");
+    else drawStatusIcon(doc, item.status, cursor + 3, y + 3.5, 5.5);
+    cursor += 9;
+    textLine(doc, item.label, cursor, y, 60, { size: 6.5, color: COLOR.muted });
+    cursor += doc.widthOfString(item.label) + 10;
+  }
+  cursor += 2;
+  cursor +=
+    drawPill(doc, cursor, y - 0.5, "Probe", { ink: "#ffffff", fill: COLOR.rehearsal }, 40) + 4;
+  cursor += drawPill(doc, cursor, y - 0.5, "Ferien", BADGE_STYLE.schoolHoliday, 40) + 4;
+  cursor += drawPill(doc, cursor, y - 0.5, "Feiertag", BADGE_STYLE.publicHoliday, 40) + 4;
+  if (cursor < maxX) drawPill(doc, cursor, y - 0.5, "Endprobenwoche", BADGE_STYLE.finalWeek, 70);
+}
+
+function sectionTitle(doc: PDFKit.PDFDocument, title: string, x: number, y: number, hint?: string) {
+  textLine(doc, title, x, y, 300, { font: BOLD, size: 9, color: COLOR.text });
+  if (hint) {
+    doc.font(BOLD).fontSize(9);
+    const offset = doc.widthOfString(title) + 6;
+    textLine(doc, hint, x + offset, y + 1.6, 400, { size: 6.5, color: COLOR.muted });
+  }
+  return y + 14;
+}
+
+// ---------- Vorlage ----------
 
 export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDaysPdfData> = {
   id: "sperrliste-wichtige-tage",
-  label: "Verfügbarkeiten · Wichtige Probentage",
+  label: "Sperrliste – Kerntage",
   description:
-    "Zeigt Verfügbarkeiten für die wichtigsten Probentage im Zwei-Wochen-Fenster als kompakt formatiertes Tabellen-PDF.",
+    "Kompakte Übersicht der Verfügbarkeiten an den Kerntagen mit Proben, Ferien/Feiertagen und probbaren Szenen.",
+  schema: sperrlisteImportantDaysSchema,
+  documentOptions: { size: "A4", layout: "portrait", margin: MARGIN, bufferPages: true },
   filename: (data) => {
-    const start = formatDateForFilename(data.range.start);
-    const end = formatDateForFilename(data.range.end);
-    return `sperrliste-wichtige-tage-${start}-${end}.pdf`;
+    const start = new Date(data.range.start).toISOString().slice(0, 10).replace(/-/g, "");
+    return `sperrliste-${start}.pdf`;
   },
-  documentOptions: {
-    bufferPages: true,
-  },
-  async render(doc, data) {
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(17)
-      .fillColor("#111827")
-      .text("Verfügbarkeiten · Wichtige Probentage");
+  render: (doc, data) => {
+    const { days } = data;
+    const layout = buildLayout(doc, days.length);
+    const bottomLimit = () => doc.page.height - MARGIN - 10;
+    const fullWidth = layout.right - layout.left;
 
-    const accentStartX = doc.page.margins.left;
-    const accentEndX = accentStartX + 64;
-    const accentY = doc.y + 6;
-    doc
-      .moveTo(accentStartX, accentY)
-      .lineTo(accentEndX, accentY)
-      .strokeColor("#4f46e5")
-      .lineWidth(2)
-      .stroke();
-    doc.moveDown(0.9);
-
-    const generatedAt = new Date(data.generatedAt);
-    const effectiveRangeLabel = data.range.label ?? buildRangeLabel(data.range) ?? "–";
-    const metadataItems = [
-      `Zeitraum: ${effectiveRangeLabel}`,
-      `Generiert: ${dateTimeFormatter.format(generatedAt)}`,
-      data.summary.importantWeekdays
-        ? `Berücksichtigte Tage: ${data.summary.importantWeekdays}`
-        : null,
-      `Mitglieder mit Verfügbarkeiten: ${data.summary.memberCount}`,
-    ].filter((value): value is string => Boolean(value));
-
-    const summaryBoxX = doc.page.margins.left;
-    const summaryBoxY = doc.y;
-    const summaryBoxWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const summaryBoxPaddingX = 12;
-    const summaryBoxPaddingY = 10;
-    const summaryTextWidth = Math.max(summaryBoxWidth - summaryBoxPaddingX * 2, 120);
-
-    const summaryText = metadataItems.join(" • ");
-    doc.font("Helvetica").fontSize(8.5);
-    const summaryTextHeight = doc.heightOfString(summaryText, {
-      width: summaryTextWidth,
-      align: "left",
-      lineGap: 2,
-      lineBreak: false,
+    // Kopf
+    let y = MARGIN;
+    textLine(doc, "Sperrliste · Kerntage", layout.left, y, fullWidth, {
+      font: BOLD,
+      size: 15,
+      color: COLOR.text,
     });
-    const summaryBoxHeight = summaryTextHeight + summaryBoxPaddingY * 2;
+    y += 19;
+    const rangeText = `${dateFormatter.format(new Date(data.range.start))} – ${dateFormatter.format(new Date(data.range.end))}`;
+    const subtitle = [
+      data.production,
+      rangeText,
+      data.summary.importantWeekdays ? `Kerntage: ${data.summary.importantWeekdays}` : null,
+      `${data.summary.memberCount} Mitglieder`,
+    ]
+      .filter(Boolean)
+      .join("  ·  ");
+    textLine(doc, subtitle, layout.left, y, fullWidth, { size: 7.5, color: COLOR.muted });
+    y += 12;
+    doc.save().rect(layout.left, y, 36, 1.6).fill(COLOR.accent).restore();
+    y += 7;
+    drawLegend(doc, layout.left, y, layout.right - 60);
+    y += 13;
 
-    doc
-      .save()
-      .rect(summaryBoxX, summaryBoxY, summaryBoxWidth, summaryBoxHeight)
-      .fill("#f9fafb")
-      .restore();
+    // Tabelle
+    const headerHeight = dayHeaderHeight(days);
+    const rowHeight = 12.5;
+    const groupHeight = 12;
+    y = drawTableHeader(doc, layout, days, y, headerHeight);
 
-    doc
-      .fillColor("#1f2937")
-      .text(summaryText, summaryBoxX + summaryBoxPaddingX, summaryBoxY + summaryBoxPaddingY, {
-        width: summaryTextWidth,
-        lineGap: 2,
-        lineBreak: false,
-        ellipsis: true,
-      });
+    const zones = memberZoneValues.filter((zone) => data.members.some((m) => m.zone === zone));
+    const notes: { day: Day; member: Member; text: string; status: Status }[] = [];
 
-    doc.y = summaryBoxY + summaryBoxHeight + 10;
-
-    const membersToDisplay = data.members.filter((member) => hasAnyAvailability(member));
-
-    if (!data.days.length || membersToDisplay.length === 0) {
-      doc
-        .font("Helvetica")
-        .fontSize(9)
-        .fillColor("#4b5563")
-        .text("Für den angegebenen Zeitraum liegen keine Verfügbarkeiten auf wichtigen Tagen vor.");
-      return;
-    }
-
-    const availableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const dayCount = data.days.length;
-    const minNameWidth = 136;
-    const minDayWidth = 48;
-    const absoluteMinNameWidth = 100;
-    const absoluteMinDayWidth = 32;
-
-    let nameWidth = minNameWidth;
-    let dayWidth = minDayWidth;
-
-    const minimalTotal = nameWidth + dayWidth * dayCount;
-    if (minimalTotal > availableWidth) {
-      const excess = minimalTotal - availableWidth;
-      const adjustableName = Math.max(0, nameWidth - absoluteMinNameWidth);
-      const adjustableDay = Math.max(0, dayWidth - absoluteMinDayWidth) * dayCount;
-      const adjustableTotal = adjustableName + adjustableDay;
-
-      if (adjustableTotal > 0) {
-        const ratio = Math.min(1, excess / adjustableTotal);
-        nameWidth -= adjustableName * ratio;
-        dayWidth -= Math.max(0, dayWidth - absoluteMinDayWidth) * ratio;
-      }
-
-      const adjustedTotal = nameWidth + dayWidth * dayCount;
-      if (adjustedTotal > availableWidth && adjustedTotal > 0) {
-        const scale = availableWidth / adjustedTotal;
-        nameWidth *= scale;
-        dayWidth *= scale;
-      }
-    } else {
-      const extra = availableWidth - minimalTotal;
-      const weightName = 1.35;
-      const weightDay = dayCount > 0 ? 0.85 * dayCount : 0;
-      const weightSum = weightName + weightDay;
-      if (weightSum > 0) {
-        nameWidth += (weightName / weightSum) * extra;
-        if (dayCount > 0) {
-          dayWidth += ((weightDay / weightSum) * extra) / dayCount;
-        }
-      }
-    }
-
-    nameWidth = Math.max(0, nameWidth);
-    dayWidth = Math.max(0, dayWidth);
-
-    const zoneColumnWidth = 28;
-    const columnWidths = [zoneColumnWidth, nameWidth, ...Array(dayCount).fill(dayWidth)];
-
-    const headers: string[] = ["Zone", "Mitglied", ...data.days.map((day) => day.label)];
-    const dayLookup = new Map(data.days.map((day, index) => [day.key, index] as const));
-
-    const zonePalette: Record<
-      MemberZone,
-      { rowFill: string | null; columnFill: string; textColor: string; columnLabel: string }
-    > = {
-      acting: {
-        rowFill: "#eef2ff",
-        columnFill: "#e0e7ff",
-        textColor: "#312e81",
-        columnLabel: "Schauspiel",
-      },
-      crew: {
-        rowFill: "#ecfdf5",
-        columnFill: "#d1fae5",
-        textColor: "#065f46",
-        columnLabel: "Gewerke",
-      },
-      both: {
-        rowFill: "#fef3c7",
-        columnFill: "#fde68a",
-        textColor: "#92400e",
-        columnLabel: "Beides",
-      },
-      unknown: {
-        rowFill: "#f3f4f6",
-        columnFill: "#e5e7eb",
-        textColor: "#374151",
-        columnLabel: "Offen",
-      },
+    const newPage = () => {
+      doc.addPage();
+      return drawTableHeader(doc, layout, days, MARGIN, headerHeight);
     };
 
-    const rowBackgrounds: (string | null)[] = [];
+    for (const zone of zones) {
+      const members = data.members.filter((member) => member.zone === zone);
+      const style = ZONE_STYLE[zone];
+      if (y + groupHeight + rowHeight * 2 > bottomLimit()) y = newPage();
 
-    const zoneSortOrder: MemberZone[] = ["acting", "both", "crew", "unknown"];
-    const members = [...membersToDisplay].sort((a, b) => {
-      const zoneA = (a.zone ?? "unknown") as MemberZone;
-      const zoneB = (b.zone ?? "unknown") as MemberZone;
-      const zoneIndexDifference = zoneSortOrder.indexOf(zoneA) - zoneSortOrder.indexOf(zoneB);
-      if (zoneIndexDifference !== 0) {
-        return zoneIndexDifference;
-      }
-
-      return a.name.localeCompare(b.name, "de", { sensitivity: "base" });
-    });
-
-    const rowDefinitions = members.map((member) => {
-      const zone = (member.zone ?? "unknown") as MemberZone;
-      const zoneConfig = zonePalette[zone] ?? zonePalette.unknown;
-      const cells = Array<string>(dayCount).fill("–");
-      const styles: TableCellStyle[] = Array.from({ length: dayCount }, () => ({
-        align: "center",
-        fontSize: 7.2,
-        textColor: "#9ca3af",
-        prefixIcon: null,
-        verticalAlign: "middle",
-      }));
-
-      member.entries.forEach((entry, entryIndex) => {
-        const columnIndex = dayLookup.get(entry.dayKey) ?? entryIndex;
-        if (columnIndex >= dayCount) {
-          return;
-        }
-
-        const status = (entry.status ?? "none") as MemberEntryStatus;
-        const normalized = entry.value?.replace(/\s+/g, " ").trim() ?? "";
-        const lower = normalized.toLowerCase();
-        const truncate = (value: string) =>
-          value.length > 60 ? `${value.slice(0, 57).trimEnd()}…` : value;
-        const iconSize = 10;
-
-        if (status === "limited" || status === "preferred") {
-          const baseLabel = status === "limited" ? "eingeschränkt verfügbar" : "bevorzugt";
-          const displayLabel =
-            status === "limited"
-              ? "Eingeschränkt\nverfügbar"
-              : `${baseLabel.charAt(0).toUpperCase()}${baseLabel.slice(1)}`;
-          const hasCustomReason =
-            normalized &&
-            (status === "limited"
-              ? !["eingeschränkt", "eingeschränkt verfügbar"].includes(lower)
-              : lower !== "bevorzugt");
-          const truncated = hasCustomReason ? truncate(normalized) : null;
-          const palette =
-            status === "limited"
-              ? {
-                  fill: "#fef3c7",
-                  text: "#92400e",
-                  secondary: "#92400e",
-                }
-              : {
-                  fill: "#d1fae5",
-                  text: "#065f46",
-                  secondary: "#047857",
-                };
-
-          cells[columnIndex] = displayLabel;
-          styles[columnIndex] = {
+      // Gruppenzeile mit Anwesenheit je Tag
+      doc.save().rect(layout.left, y, fullWidth, groupHeight).fill(style.fill).restore();
+      doc.save().rect(layout.left, y, 2, groupHeight).fill(style.ink).restore();
+      textLine(doc, `${style.label}`, layout.left + 6, y + 3, layout.nameWidth - 30, {
+        font: BOLD,
+        size: 7,
+        color: style.ink,
+      });
+      doc.font(BOLD).fontSize(7);
+      textLine(
+        doc,
+        String(members.length),
+        layout.left + 6 + doc.widthOfString(style.label) + 4,
+        y + 3,
+        30,
+        { size: 6.5, color: style.ink },
+      );
+      days.forEach((day, index) => {
+        const present = members.filter(
+          (member) => !isAway(member.entries[index]?.status ?? "none"),
+        ).length;
+        textLine(
+          doc,
+          `${present}/${members.length}`,
+          layout.dayX(index),
+          y + 3.2,
+          layout.dayWidth,
+          {
+            font: BOLD,
+            size: 6.5,
+            color: present === members.length ? style.ink : "#b91c1c",
             align: "center",
-            font: "bold",
-            fontSize: 7.3,
-            textColor: palette.text,
-            fillColor: palette.fill,
-            verticalAlign: "middle",
-            secondaryText: truncated,
-            secondaryFont: truncated ? "regular" : undefined,
-            secondaryFontSize: truncated ? 6.2 : undefined,
-            secondaryTextColor: truncated ? palette.secondary : undefined,
-            secondarySpacing: truncated ? 1.6 : undefined,
-            lineGap: truncated ? 1.2 : undefined,
-            lineBreak: status === "limited",
-          };
-          return;
-        }
-
-        if (isBlockedEntry(entry)) {
-          const truncatedRemark = normalized ? truncate(normalized) : null;
-
-          cells[columnIndex] = "";
-          styles[columnIndex] = {
-            align: "center",
-            font: "bold",
-            fontSize: 7.4,
-            textColor: "#b91c1c",
-            fillColor: "#fee2e2",
-            prefixIcon: {
-              type: "cross",
-              size: iconSize,
-              strokeColor: "#b91c1c",
-              align: "center",
-              verticalAlign: truncatedRemark ? "top" : "middle",
-            },
-            verticalAlign: truncatedRemark ? "top" : "middle",
-            contentOffsetY: truncatedRemark ? iconSize + 3 : undefined,
-            secondaryText: truncatedRemark,
-            secondaryFont: truncatedRemark ? "regular" : undefined,
-            secondaryFontSize: truncatedRemark ? 6.1 : undefined,
-            secondaryTextColor: truncatedRemark ? "#b91c1c" : undefined,
-            secondarySpacing: truncatedRemark ? 2 : undefined,
-          };
-          return;
-        }
-
-        const isAffirmativeRemark = isPositiveAvailabilityRemark(normalized);
-        const truncatedRemark = normalized && !isAffirmativeRemark ? truncate(normalized) : null;
-
-        cells[columnIndex] = "";
-        styles[columnIndex] = {
-          align: "center",
-          font: "bold",
-          fontSize: 7.5,
-          textColor: "#047857",
-          fillColor: "#ecfdf5",
-          prefixIcon: {
-            type: "check",
-            size: iconSize,
-            strokeColor: "#047857",
-            align: "center",
-            verticalAlign: truncatedRemark ? "top" : "middle",
           },
-          verticalAlign: truncatedRemark ? "top" : "middle",
-          contentOffsetY: truncatedRemark ? iconSize + 3 : undefined,
-          secondaryText: truncatedRemark,
-          secondaryFont: truncatedRemark ? "regular" : undefined,
-          secondaryFontSize: truncatedRemark ? 6.3 : undefined,
-          secondaryTextColor: truncatedRemark ? "#047857" : undefined,
-          secondarySpacing: truncatedRemark ? 2 : undefined,
-        };
+        );
       });
+      y += groupHeight;
 
-      const trimmedEmail = member.email?.trim() ?? "";
-      const zoneCellStyle: TableCellStyle = {
-        align: "center",
-        font: "bold",
-        fontSize: 7.3,
-        textColor: zoneConfig.textColor,
-        fillColor: zoneConfig.columnFill,
-        verticalAlign: "middle",
-        rotate: -90,
-        affectsRowHeight: false,
-      };
-      const nameCellStyle: TableCellStyle = {
-        font: "bold",
-        fontSize: 8.5,
-        textColor: "#111827",
-        secondaryText: trimmedEmail || null,
-        secondaryFont: "regular",
-        secondaryFontSize: trimmedEmail ? 6.4 : undefined,
-        secondaryTextColor: trimmedEmail ? "#6b7280" : undefined,
-        secondarySpacing: trimmedEmail ? 1.2 : undefined,
-        verticalAlign: "middle",
-      };
-
-      rowBackgrounds.push(zoneConfig.rowFill);
-
-      return {
-        zone,
-        zoneLabel: zoneConfig.columnLabel,
-        zoneStyle: zoneCellStyle,
-        values: [zoneConfig.columnLabel, member.name, ...cells] as const,
-        styles: [zoneCellStyle, nameCellStyle, ...styles],
-      };
-    });
-
-    const rows = rowDefinitions.map((row) => row.values);
-    const cellStyles = rowDefinitions.map((row) => row.styles);
-
-    const mergedColumnGroups: TableMergedColumnGroup[] = [];
-    if (rowDefinitions.length > 0) {
-      type ZoneGroup = { startRow: number; rowSpan: number; zone: MemberZone };
-      const zoneGroups: ZoneGroup[] = [];
-      let current: ZoneGroup | null = null;
-      rowDefinitions.forEach((row, index) => {
-        if (!current || row.zone !== current.zone) {
-          current = { startRow: index, rowSpan: 1, zone: row.zone };
-          zoneGroups.push(current);
-          return;
+      members.forEach((member, memberIndex) => {
+        if (y + rowHeight > bottomLimit()) y = newPage();
+        if (memberIndex % 2 === 1) {
+          doc.save().rect(layout.left, y, fullWidth, rowHeight).fill("#fafafa").restore();
         }
-        current.rowSpan += 1;
-      });
-
-      mergedColumnGroups.push({
-        columnIndex: 0,
-        groups: zoneGroups.map((group) => ({
-          startRow: group.startRow,
-          rowSpan: group.rowSpan,
-          text: rowDefinitions[group.startRow]?.zoneLabel ?? "",
-          style: rowDefinitions[group.startRow]?.zoneStyle,
-        })),
+        doc.font(BOLD).fontSize(7);
+        const nameWidth = Math.min(doc.widthOfString(member.name), layout.nameWidth - 12);
+        textLine(doc, member.name, layout.left + 6, y + 3, layout.nameWidth - 12, {
+          font: BOLD,
+          size: 7,
+          color: COLOR.text,
+        });
+        if (member.detail) {
+          textLine(
+            doc,
+            member.detail,
+            layout.left + 6 + nameWidth + 4,
+            y + 3.6,
+            layout.nameWidth - nameWidth - 16,
+            { size: 6, color: COLOR.muted },
+          );
+        }
+        member.entries.forEach((entry, index) => {
+          const x = layout.dayX(index);
+          const day = days[index];
+          if (entry.status !== "none") {
+            doc
+              .save()
+              .rect(x + 0.6, y + 0.6, layout.dayWidth - 1.2, rowHeight - 1.2)
+              .fill(STATUS_STYLE[entry.status].fill)
+              .restore();
+          }
+          const text = entry.value?.trim();
+          if (text && entry.status !== "none") {
+            notes.push({ day, member, text, status: entry.status });
+          }
+          const showText = text && layout.dayWidth >= 44;
+          if (showText) {
+            drawStatusIcon(doc, entry.status, x + 6, y + rowHeight / 2, 5);
+            textLine(doc, text, x + 11, y + 3.6, layout.dayWidth - 13, {
+              size: 5.6,
+              color: STATUS_STYLE[entry.status as Exclude<Status, "none">].ink,
+            });
+          } else if (entry.status === "none") {
+            drawDot(doc, x + layout.dayWidth / 2, y + rowHeight / 2, "#cbd5e1");
+          } else {
+            drawStatusIcon(doc, entry.status, x + layout.dayWidth / 2, y + rowHeight / 2, 5.5);
+          }
+        });
+        doc
+          .save()
+          .lineWidth(0.3)
+          .strokeColor(COLOR.line)
+          .moveTo(layout.left, y + rowHeight)
+          .lineTo(layout.right, y + rowHeight)
+          .stroke()
+          .restore();
+        y += rowHeight;
       });
     }
 
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(11)
-      .fillColor("#111827")
-      .text("Verfügbarkeiten im Überblick");
-    doc.moveDown(0.4);
-
-    drawTable(doc, headers, rows, columnWidths, {
-      headerStyles: headers.map(() => ({ align: "center", verticalAlign: "middle" })),
-      cellStyles,
-      rowBackgrounds,
-      repeatHeaderAtBottom: true,
-      mergedColumnGroups,
+    // Summenzeile
+    if (y + 14 > bottomLimit()) y = newPage();
+    doc.save().rect(layout.left, y, fullWidth, 14).fill(COLOR.header).restore();
+    textLine(doc, "Verfügbar gesamt", layout.left + 6, y + 4, layout.nameWidth, {
+      font: BOLD,
+      size: 7,
+      color: COLOR.text,
     });
-
-    doc
-      .font("Helvetica")
-      .fontSize(7.4)
-      .fillColor("#6b7280")
-      .text(
-        "Hinweis: Häkchen markieren Verfügbarkeiten. Angegebene Hinweise werden neben dem Symbol angezeigt; leere Felder bedeuten keine Verfügbarkeit am jeweiligen Tag.",
+    days.forEach((day, index) => {
+      const present = data.members.filter(
+        (m) => !isAway(m.entries[index]?.status ?? "none"),
+      ).length;
+      textLine(
+        doc,
+        `${present}/${data.members.length}`,
+        layout.dayX(index),
+        y + 4,
+        layout.dayWidth,
+        {
+          font: BOLD,
+          size: 7,
+          color: COLOR.text,
+          align: "center",
+        },
       );
+    });
+    y += 14;
+    // Senkrechte Trennlinien über die ganze Tabelle der letzten Seite sind bewusst weggelassen –
+    // Zebrastreifen und Zellfarben reichen und halten das Blatt ruhig.
+
+    // Probbare Szenen – gleiche Tagesspalten wie oben
+    if (data.scenes) {
+      const scenes = data.scenes;
+      y += 16;
+      if (y + 30 > bottomLimit()) {
+        doc.addPage();
+        y = MARGIN;
+      }
+      const hint = scenes.rows.length
+        ? `Ist die Besetzung der Szene da?${scenes.castComplete ? "" : " · noch nicht alle Rollen besetzt"}`
+        : undefined;
+      y = sectionTitle(doc, "Probbare Szenen", layout.left, y, hint);
+      if (!scenes.rows.length) {
+        textLine(
+          doc,
+          "Noch keine Szenen mit Besetzung – die Übersicht erscheint, sobald Szenen angelegt und Rollen besetzt sind.",
+          layout.left,
+          y,
+          fullWidth,
+          { size: 7, color: COLOR.muted },
+        );
+        y += 12;
+      } else {
+        // Legende
+        let legendX = layout.left;
+        for (const status of sceneStatusValues) {
+          legendX +=
+            drawPill(doc, legendX, y, SCENE_STYLE[status].label, SCENE_STYLE[status], 90) + 4;
+        }
+        y += 12;
+        const sceneHeader = () => {
+          doc.save().rect(layout.left, y, fullWidth, 12).fill(COLOR.header).restore();
+          textLine(doc, "Szene", layout.left + 6, y + 3.2, layout.nameWidth - 12, {
+            font: BOLD,
+            size: 6.5,
+            color: COLOR.muted,
+          });
+          days.forEach((day, index) => {
+            const ready = scenes.rows.filter((row) => {
+              const status = row.cells[index]?.status;
+              return status === "ready" || status === "alternate";
+            }).length;
+            textLine(
+              doc,
+              `${day.weekday} ${day.date} · ${ready}/${scenes.rows.length}`,
+              layout.dayX(index),
+              y + 3.2,
+              layout.dayWidth,
+              {
+                font: BOLD,
+                size: 6,
+                color: COLOR.text,
+                align: "center",
+              },
+            );
+          });
+          y += 12;
+        };
+        sceneHeader();
+        const sceneRowHeight = 11;
+        scenes.rows.forEach((row, rowIndex) => {
+          if (y + sceneRowHeight > bottomLimit()) {
+            doc.addPage();
+            y = MARGIN;
+            sceneHeader();
+          }
+          if (rowIndex % 2 === 1) {
+            doc.save().rect(layout.left, y, fullWidth, sceneRowHeight).fill("#fafafa").restore();
+          }
+          textLine(doc, row.label, layout.left + 6, y + 2.6, layout.nameWidth - 12, {
+            size: 6.8,
+            color: COLOR.text,
+          });
+          row.cells.forEach((cell, index) => {
+            const x = layout.dayX(index);
+            const style = SCENE_STYLE[cell.status];
+            doc
+              .save()
+              .rect(x + 0.6, y + 0.6, layout.dayWidth - 1.2, sceneRowHeight - 1.2)
+              .fill(style.fill)
+              .restore();
+            const text = cell.status === "ready" ? null : cell.note;
+            if (text && layout.dayWidth >= 44) {
+              textLine(doc, text, x + 3, y + 3, layout.dayWidth - 6, {
+                size: 5.4,
+                color: style.ink,
+                align: "center",
+              });
+            } else if (cell.status === "ready") {
+              drawCheck(doc, x + layout.dayWidth / 2, y + sceneRowHeight / 2, 5, style.ink);
+            } else if (cell.status === "missing") {
+              drawCross(doc, x + layout.dayWidth / 2, y + sceneRowHeight / 2, 4.5, style.ink);
+            } else {
+              drawTilde(doc, x + layout.dayWidth / 2, y + sceneRowHeight / 2, 6, style.ink);
+            }
+          });
+          y += sceneRowHeight;
+        });
+      }
+    }
+
+    // Anmerkungen (Gründe), nur wenn welche mitgeschickt wurden
+    if (notes.length) {
+      y += 12;
+      if (y + 30 > bottomLimit()) {
+        doc.addPage();
+        y = MARGIN;
+      }
+      y = sectionTitle(doc, "Anmerkungen", layout.left, y, "Gründe – nur für die Planung");
+      const columnGap = 12;
+      const columnWidth = (fullWidth - columnGap) / 2;
+      const sorted = [...notes].sort(
+        (a, b) =>
+          a.day.key.localeCompare(b.day.key) || a.member.name.localeCompare(b.member.name, "de"),
+      );
+      const half = Math.ceil(sorted.length / 2);
+      const columns = [sorted.slice(0, half), sorted.slice(half)];
+      const startY = y;
+      let maxY = y;
+      columns.forEach((column, columnIndex) => {
+        let columnY = startY;
+        const x = layout.left + columnIndex * (columnWidth + columnGap);
+        for (const note of column) {
+          if (columnY + 9 > bottomLimit()) break;
+          drawStatusIcon(doc, note.status, x + 3, columnY + 3.6, 4.5);
+          const head = `${note.day.weekday} ${note.day.date}  ${note.member.name}:`;
+          doc.font(BOLD).fontSize(6.5);
+          const headWidth = Math.min(doc.widthOfString(head), columnWidth - 40);
+          textLine(doc, head, x + 9, columnY, headWidth + 1, {
+            font: BOLD,
+            size: 6.5,
+            color: COLOR.text,
+          });
+          textLine(doc, note.text, x + 12 + headWidth, columnY, columnWidth - headWidth - 14, {
+            size: 6.5,
+            color: COLOR.muted,
+          });
+          columnY += 9;
+        }
+        maxY = Math.max(maxY, columnY);
+      });
+      y = maxY;
+    }
+
+    drawFooter(doc, data);
   },
-  schema: sperrlisteImportantDaysSchema,
 };
