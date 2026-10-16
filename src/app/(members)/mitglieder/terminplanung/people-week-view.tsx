@@ -205,8 +205,18 @@ export function PeopleWeekView({
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <th scope="row" className="truncate p-1 text-left text-sm font-medium">
+                <th
+                  scope="row"
+                  className="truncate p-1 text-left text-sm font-medium"
+                  title={[row.name, ...row.roles].join(" · ")}
+                >
                   {row.name}
+                  {row.roles.length ? (
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      · {row.roles.join(", ")}
+                    </span>
+                  ) : null}
                 </th>
                 {days.map((day) => (
                   <td key={day} className="p-0 align-top">
@@ -253,7 +263,14 @@ export function PeopleWeekView({
         <ul className="divide-y divide-border rounded-md border border-border">
           {rows.map((row) => (
             <li key={row.id} className="flex min-h-11 items-center gap-2 px-3 py-1.5">
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.name}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {row.name}
+                {row.roles.length ? (
+                  <span className="block truncate text-xs font-normal text-muted-foreground">
+                    {row.roles.join(", ")}
+                  </span>
+                ) : null}
+              </span>
               <span className="w-28 shrink-0">
                 <DayCell state={grid.get(`${row.id}:${mobileDay}`)} compact />
               </span>

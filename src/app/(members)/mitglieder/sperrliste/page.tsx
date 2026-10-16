@@ -18,6 +18,7 @@ import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { compareMembersByName, getUserDisplayName, type NameSortOrder } from "@/lib/names";
 import { getNameSortOrder } from "@/lib/name-sort-server";
+import { loadMemberRoles, roleRankOf, type MemberRoles } from "@/lib/produktionen/member-roles";
 import type { AvatarFields } from "@/lib/avatar-fields";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -59,13 +60,19 @@ type MemberRecord = AvatarFields & {
   }[];
 };
 
-function buildTeam(records: MemberRecord[], includeReasons: boolean, nameSort: NameSortOrder) {
+function buildTeam(
+  records: MemberRecord[],
+  includeReasons: boolean,
+  nameSort: NameSortOrder,
+  roles: Map<string, MemberRoles> = new Map(),
+) {
   const members: TeamMember[] = [];
   const entries: TeamEntry[] = [];
-  for (const record of [...records].sort(compareMembersByName(nameSort))) {
+  for (const record of [...records].sort(compareMembersByName(nameSort, roleRankOf(roles)))) {
     members.push({
       id: record.id,
       name: getUserDisplayName(record),
+      roles: roles.get(record.id)?.labels ?? [],
       email: record.email,
       avatarSource: record.avatarSource,
       avatarUpdatedAt: record.avatarUpdatedAt,
@@ -266,7 +273,7 @@ export default async function BlocklistPage() {
       reason: day.reason,
     })),
   }));
-  const team = buildTeam(records, canPlan, nameSort);
+  const team = buildTeam(records, canPlan, nameSort, await loadMemberRoles(activeProductionId));
   const myEntries = records.find((record) => record.id === userId)?.blockedDays ?? [];
 
   const finalWeek = production?.finalRehearsalWeekStart

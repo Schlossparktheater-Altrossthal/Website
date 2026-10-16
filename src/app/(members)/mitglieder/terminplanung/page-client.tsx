@@ -54,7 +54,8 @@ export type PlanningSceneContext = Pick<
   "scenes" | "castings" | "characters" | "members"
 >;
 
-export type PlanningMember = { id: string; name: string };
+/** `roles`: Schauspielrollen in der aktiven Produktion (leer ohne Besetzung). */
+export type PlanningMember = { id: string; name: string; roles: string[] };
 
 export type PlanningAvailability = {
   userId: string;

@@ -17,6 +17,8 @@ export type MyBlockedDay = {
 export type TeamMember = AvatarFields & {
   id: string;
   name: string;
+  /** Schauspielrollen in der aktiven Produktion (leer ohne Besetzung). */
+  roles: string[];
   group: MemberGroup;
 };
 

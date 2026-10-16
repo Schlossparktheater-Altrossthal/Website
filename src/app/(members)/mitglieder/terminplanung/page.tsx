@@ -13,6 +13,7 @@ import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { compareMembersByName, getUserDisplayName } from "@/lib/names";
 import { getNameSortOrder } from "@/lib/name-sort-server";
+import { loadMemberRoles, roleRankOf } from "@/lib/produktionen/member-roles";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
@@ -141,11 +142,14 @@ export default async function EventPlanningPage({
     };
   });
 
-  const nameSort = await getNameSortOrder();
-  const members: PlanningMember[] = [...users].sort(compareMembersByName(nameSort)).map((user) => ({
-    id: user.id,
-    name: getUserDisplayName(user),
-  }));
+  const [nameSort, roles] = await Promise.all([getNameSortOrder(), loadMemberRoles(showId)]);
+  const members: PlanningMember[] = [...users]
+    .sort(compareMembersByName(nameSort, roleRankOf(roles)))
+    .map((user) => ({
+      id: user.id,
+      name: getUserDisplayName(user),
+      roles: roles.get(user.id)?.labels ?? [],
+    }));
   const availability: PlanningAvailability[] = users.flatMap((user) =>
     user.blockedDays.map((entry) => ({
       userId: user.id,

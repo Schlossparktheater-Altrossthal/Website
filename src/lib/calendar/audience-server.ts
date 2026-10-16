@@ -12,6 +12,7 @@ import {
 } from "@/lib/calendar/audience";
 import { compareMembersByName, getUserDisplayName } from "@/lib/names";
 import { getNameSortOrder } from "@/lib/name-sort-server";
+import { loadMemberRoles, roleRankOf } from "@/lib/produktionen/member-roles";
 import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
 
@@ -106,11 +107,11 @@ export async function loadAudienceContext(showId: string | null): Promise<Audien
       : [],
   ]);
 
-  const nameSort = await getNameSortOrder();
+  const [nameSort, roles] = await Promise.all([getNameSortOrder(), loadMemberRoles(showId)]);
   return {
     hasProduction: Boolean(showId),
     members: [...users]
-      .sort(compareMembersByName(nameSort))
+      .sort(compareMembersByName(nameSort, roleRankOf(roles)))
       .map((user) => ({ id: user.id, name: getUserDisplayName(user) })),
     characters: characters.map(({ id, name }) => ({ id, name })),
     castings: characters.flatMap((character) =>

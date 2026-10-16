@@ -18,4 +18,16 @@ describe("compareMembersByName", () => {
     const sorted = [...people].sort(compareMembersByName(parseNameSortOrder("last")));
     expect(sorted.map((p) => p.lastName ?? p.name)).toEqual(["Albrecht", "Zander", "Bernd"]);
   });
+
+  it("sortiert nach Rolle, Personen ohne Rolle nach Vorname dahinter", () => {
+    const members = [
+      { id: "a", firstName: "Anna" },
+      { id: "z", firstName: "Zoe" },
+      { id: "b", firstName: "Bernd" },
+      { id: "c", firstName: "Clara" },
+    ];
+    const rank: Record<string, number> = { z: 0, c: 1 };
+    const sorted = [...members].sort(compareMembersByName("role", (m) => rank[m.id] ?? Infinity));
+    expect(sorted.map((m) => m.firstName)).toEqual(["Zoe", "Clara", "Anna", "Bernd"]);
+  });
 });

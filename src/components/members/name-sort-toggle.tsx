@@ -6,7 +6,7 @@ import { useTransition } from "react";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { NAME_SORT_COOKIE, type NameSortOrder } from "@/lib/names";
 
-/** Umschalter Vorname/Nachname – gilt für alle Personenlisten (Cookie, ein Jahr). */
+/** Umschalter Vorname/Nachname/Rolle – gilt für alle Personenlisten (Cookie, ein Jahr). */
 export function NameSortToggle({ value, className }: { value: NameSortOrder; className?: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -22,6 +22,7 @@ export function NameSortToggle({ value, className }: { value: NameSortOrder; cla
       options={[
         { value: "first", label: "Vorname", disabled: pending },
         { value: "last", label: "Nachname", disabled: pending },
+        { value: "role", label: "Rolle", disabled: pending },
       ]}
     />
   );

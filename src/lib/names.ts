@@ -40,12 +40,13 @@ type SortableMember = {
 };
 
 /** Reihenfolge von Personenlisten; Standard ist der Vorname. */
-export type NameSortOrder = "first" | "last";
+/** `role`: nach Figurenliste der aktiven Produktion, Personen ohne Rolle danach. */
+export type NameSortOrder = "first" | "last" | "role";
 export const NAME_SORT_COOKIE = "mb-name-sort";
 export const DEFAULT_NAME_SORT: NameSortOrder = "first";
 
 export function parseNameSortOrder(value: MaybeString): NameSortOrder {
-  return value === "last" ? "last" : DEFAULT_NAME_SORT;
+  return value === "last" || value === "role" ? value : DEFAULT_NAME_SORT;
 }
 
 export function compareMembersByFirstName(
@@ -61,9 +62,23 @@ export function compareMembersByFirstName(
   return compareMembersByLastName(a, b, locale);
 }
 
-export function compareMembersByName(order: NameSortOrder) {
-  return (a: SortableMember, b: SortableMember) =>
-    order === "last" ? compareMembersByLastName(a, b) : compareMembersByFirstName(a, b);
+/**
+ * `roleRank` liefert die Position der ersten Rolle (kleiner = weiter vorn); nur für `role` nötig.
+ * Ohne Rolle oder ohne `roleRank` wird nach Vorname sortiert.
+ */
+export function compareMembersByName<T extends SortableMember & { id?: string }>(
+  order: NameSortOrder,
+  roleRank?: (member: T) => number,
+) {
+  return (a: T, b: T) => {
+    if (order === "last") return compareMembersByLastName(a, b);
+    if (order === "role" && roleRank) {
+      const aRank = roleRank(a);
+      const bRank = roleRank(b);
+      if (aRank !== bRank) return aRank < bRank ? -1 : 1;
+    }
+    return compareMembersByFirstName(a, b);
+  };
 }
 
 export function compareMembersByLastName(

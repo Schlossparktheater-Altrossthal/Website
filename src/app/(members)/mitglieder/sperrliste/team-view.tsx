@@ -106,7 +106,10 @@ export function TeamView({
     return members.filter(
       (member) =>
         matchesGroup(member, groupFilter) &&
-        (!needle || member.name.toLocaleLowerCase("de-DE").includes(needle)),
+        (!needle ||
+          [member.name, ...member.roles].some((text) =>
+            text.toLocaleLowerCase("de-DE").includes(needle),
+          )),
     );
   }, [groupFilter, members, query]);
   const visibleIds = useMemo(() => new Set(visibleMembers.map((m) => m.id)), [visibleMembers]);
@@ -383,6 +386,12 @@ function TeamDayList({
                         </span>
                         <span className="hidden lg:inline">
                           {memberById.get(entry.userId)?.name ?? "Unbekannt"}
+                          {memberById.get(entry.userId)?.roles.length ? (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {memberById.get(entry.userId)?.roles.join(", ")}
+                            </span>
+                          ) : null}
                           {canPlan && entry.reason ? (
                             <span className="text-muted-foreground"> ({entry.reason})</span>
                           ) : null}
@@ -579,9 +588,18 @@ function TeamMatrix({
                         size={24}
                         className="hidden shrink-0 sm:inline-block"
                       />
-                      <span className="truncate text-xs sm:text-sm" title={member.name}>
+                      <span
+                        className="truncate text-xs sm:text-sm"
+                        title={[member.name, ...member.roles].join(" · ")}
+                      >
                         <span className="sm:hidden">{shortName(member.name)}</span>
                         <span className="hidden sm:inline">{member.name}</span>
+                        {member.roles.length ? (
+                          <span className="hidden text-muted-foreground sm:inline">
+                            {" "}
+                            · {member.roles.join(", ")}
+                          </span>
+                        ) : null}
                       </span>
                     </span>
                   </th>
