@@ -16,6 +16,10 @@ import type { PdfTemplate } from "../types";
 
 const LEVEL_LABELS = ["", "Vielleicht", "Gern", "Sehr gern", "Unbedingt"] as const;
 
+/** Ampel wie in der App: Unbedingt/Sehr gern grün, Gern gelb, Vielleicht grau. */
+const LEVEL_INK = ["", "#9ca3af", "#d97706", "#22c55e", "#15803d"] as const;
+const LEVEL_FILL = ["", "#f3f4f6", "#fef3c7", "#dcfce7", "#bbf7d0"] as const;
+
 const wunschlisteSchema = z.object({
   generatedAt: z.string().datetime(),
   production: z.string().nullable().default(null),
@@ -95,7 +99,10 @@ function renderList(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY: n
             },
             {
               text: LEVEL_LABELS[wish.level],
-              color: wish.level >= 3 ? PDF_COLOR.text : PDF_COLOR.muted,
+              pill: {
+                fill: LEVEL_FILL[wish.level],
+                ink: wish.level === 3 ? PDF_COLOR.success : LEVEL_INK[wish.level],
+              },
             },
             wish.assigned
               ? { text: "zugeteilt", pill: { fill: PDF_COLOR.successFill, ink: PDF_COLOR.success } }
@@ -142,8 +149,8 @@ function drawDots(doc: PDFKit.PDFDocument, x: number, y: number, level: number, 
     const cx = x + index * 5.5;
     doc.save().lineWidth(0.6);
     if (index < level) {
-      if (hollow) doc.circle(cx, y, 1.9).stroke(PDF_COLOR.accent);
-      else doc.circle(cx, y, 2).fill(PDF_COLOR.accent);
+      if (hollow) doc.circle(cx, y, 1.9).stroke(LEVEL_INK[level]);
+      else doc.circle(cx, y, 2).fill(LEVEL_INK[level]);
     } else {
       doc.circle(cx, y, 1.2).fill(PDF_COLOR.line);
     }
@@ -217,8 +224,9 @@ function renderMatrix(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY:
       if (wish.assigned) {
         doc
           .save()
-          .rect(x + 1, y + 1, columnWidth - 2, ROW_HEIGHT - 2)
-          .fill(PDF_COLOR.successFill)
+          .lineWidth(0.9)
+          .roundedRect(x + 1.5, y + 1.5, columnWidth - 3, ROW_HEIGHT - 3, 2)
+          .stroke(PDF_COLOR.success)
           .restore();
       }
       drawDots(doc, x + 5, y + ROW_HEIGHT / 2, wish.level, wish.entered);
@@ -263,10 +271,11 @@ function renderMatrix(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY:
   x += 120;
   doc
     .save()
-    .rect(x, y - 1, 22, 9)
-    .fill(PDF_COLOR.successFill)
+    .lineWidth(0.9)
+    .roundedRect(x, y - 1, 22, 9, 2)
+    .stroke(PDF_COLOR.success)
     .restore();
-  textLine(doc, "grün = zugeteilt", x + 28, y, 90, { size: 6.5, color: PDF_COLOR.muted });
+  textLine(doc, "umrandet = zugeteilt", x + 28, y, 90, { size: 6.5, color: PDF_COLOR.muted });
 }
 
 /** Anhang: dabei seit, Interessen und Hinweise je Person (nur Personen mit Angaben). */

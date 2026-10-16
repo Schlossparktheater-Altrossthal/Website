@@ -23,7 +23,8 @@ import type {
   AssignmentPerson,
 } from "@/lib/departments/assignments";
 import type { RolesScenesData } from "@/lib/produktionen/roles-scenes";
-import { WISH_LEVELS } from "@/lib/wishes/levels";
+import { WishMeter } from "@/components/members/wish-meter";
+import { WISH_LEVELS, wishLevelOf } from "@/lib/wishes/levels";
 import { canEditWishArea } from "@/lib/wishes/permissions";
 import type {
   WishlistArea,
@@ -482,7 +483,11 @@ function WishGroups({
         const atLevel = wishers.filter((entry) => entry.wish.level === level);
         if (!atLevel.length) return null;
         return (
-          <Group key={level} title={`${label} (${atLevel.length})`}>
+          <Group
+            key={level}
+            title={`${label} (${atLevel.length})`}
+            icon={<WishMeter level={level} />}
+          >
             {atLevel.map((entry) => (
               <PersonLine
                 key={entry.person.id}
@@ -662,6 +667,7 @@ function PersonPanel({
           {person.notes}
         </p>
       ) : null}
+      {children}
 
       <ul className="space-y-2" aria-label={`Gewerke für ${person.name}`}>
         {sorted.map((department) => {
@@ -684,7 +690,10 @@ function PersonPanel({
               <DepartmentDot color={department.color} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{department.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  {membership?.status !== "requested" && weight > 0 ? (
+                    <WishMeter level={wishLevelOf(weight)} />
+                  ) : null}
                   {membership?.status === "requested"
                     ? "Anfrage wartet auf Entscheidung"
                     : weight > 0
@@ -692,7 +701,7 @@ function PersonPanel({
                       : membership?.status === "active"
                         ? ROLE_LABELS[membership.role]
                         : "Kein Wunsch"}
-                </p>
+                </div>
               </div>
               {editable ? (
                 <div className="flex items-center gap-2">
@@ -776,7 +785,6 @@ function PersonPanel({
       {characters.length ? (
         <PersonRoles person={person} characters={characters} busyKey={busyKey} onCast={onCast} />
       ) : null}
-      {children}
     </div>
   );
 }
@@ -1186,7 +1194,8 @@ function RoleSizesView({
                 if (!atLevel.length) return null;
                 return (
                   <div key={level} className="space-y-1.5">
-                    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <h3 className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <WishMeter level={level} />
                       {label} ({atLevel.length})
                     </h3>
                     <PersonChips
@@ -1285,10 +1294,21 @@ function AddPersonPicker({
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {icon}
+        {title}
+      </h3>
       <ul className="space-y-1">{children}</ul>
     </div>
   );

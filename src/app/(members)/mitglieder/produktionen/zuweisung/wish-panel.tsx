@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { WISH_LEVELS, wishLevelLabel, type WishLevel } from "@/lib/wishes/levels";
+import { WishMeter } from "@/components/members/wish-meter";
+import { WISH_LEVELS, type WishLevel } from "@/lib/wishes/levels";
 import type { WishlistArea, WishlistPerson } from "@/lib/wishes/wishlist";
 
 import { saveWishNoteAction, setWishAction } from "../actions/wishes";
@@ -72,7 +73,7 @@ export function WishPanel({
     );
 
   return (
-    <section className="space-y-3 border-t border-border/60 pt-4" aria-label="Wünsche">
+    <section className="space-y-3" aria-label="Wünsche">
       <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Wünsche</h3>
       {person.wishes.length ? (
         <ul className="space-y-1.5">
@@ -84,7 +85,7 @@ export function WishPanel({
               <li key={wish.areaCode} className="rounded-md border border-border px-3 py-2">
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm">{area.title}</span>
-                  <span className="shrink-0 text-xs font-medium">{wishLevelLabel(wish.level)}</span>
+                  <WishMeter level={wish.level} showLabel />
                   {editable ? (
                     <Button
                       type="button"
@@ -222,6 +223,7 @@ function LevelButtons({
           disabled={disabled}
           onClick={() => onPick(entry.level)}
         >
+          <WishMeter level={entry.level} />
           {entry.label}
         </Button>
       ))}
