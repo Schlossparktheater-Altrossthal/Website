@@ -1,6 +1,7 @@
 import type { ProfileChecklistTarget } from "@/lib/profile-completion";
 
-export type ProfileSectionId = ProfileChecklistTarget | "masse" | "benachrichtigungen";
+export type ProfileSectionId =
+  ProfileChecklistTarget | "masse" | "benachrichtigungen" | "sicherheit";
 
 export type ProfileSectionDefinition = {
   id: ProfileSectionId;
@@ -14,7 +15,7 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
   {
     id: "stammdaten",
     label: "Persönliche Daten",
-    description: "Name, Geburtsdatum, Profilbild und Zugang.",
+    description: "Name, Geburtsdatum, Profilbild und E-Mail.",
     group: "person",
   },
   {
@@ -57,6 +58,12 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
     id: "benachrichtigungen",
     label: "Benachrichtigungen",
     description: "Push aufs Handy, Ruhezeit und angemeldete Geräte.",
+    group: "settings",
+  },
+  {
+    id: "sicherheit",
+    label: "Anmeldung & Sicherheit",
+    description: "Passwort, Passkeys und Zwei-Faktor-Anmeldung.",
     group: "settings",
   },
 ];

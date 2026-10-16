@@ -7,6 +7,7 @@ import { getUserDisplayName } from "@/lib/names";
 import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 import { getAvailableOnboardings } from "@/lib/onboarding/dashboard-service";
 import { readStoredEducation, toEducationPayload } from "@/lib/education/schools";
+import { getAuthentikAccountLinks } from "@/lib/authentik/config";
 import { prisma } from "@/lib/prisma";
 import { buildProfileChecklist, isPaymentDetailsComplete } from "@/lib/profile-completion";
 import { listCrewWishOptions } from "@/lib/onboarding/crew-options";
@@ -349,6 +350,7 @@ export default async function ProfilePage() {
     <div className="space-y-6">
       <PageHeader title="Mein Profil" breadcrumbs={[membersBreadcrumb]} />
       <ProfileClient
+        authentikAccount={getAuthentikAccountLinks() !== null}
         history={history}
         measurements={measurements}
         sizes={sizes}

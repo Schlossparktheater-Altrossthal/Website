@@ -97,6 +97,33 @@ export function getAuthentikLogoutUrl(): string | null {
   return `${baseUrl}/if/flow/${encodeURIComponent(flow)}/`;
 }
 
+export type AuthentikAccountLinks = {
+  passwordChange: string;
+  passkeySetup: string;
+  totpSetup: string;
+  /** Kontoeinstellungen von Authentik (alle Geräte, Sitzungen). */
+  settings: string;
+};
+
+/**
+ * Konto-Flows in Authentik (Blueprint theater-blueprint.yaml, Abschnitt
+ * "Konto"), verlinkt im Profil unter "Anmeldung & Sicherheit". Die Flows
+ * verlangen eine Authentik-Session und springen über `?next=` (nur eigene
+ * Domains) zurück ins Profil.
+ */
+export function getAuthentikAccountLinks(): AuthentikAccountLinks | null {
+  if (!isAuthentikLoginEnabled()) return null;
+  const baseUrl = getAuthentikBaseUrl();
+  if (!baseUrl) return null;
+  const flow = (slug: string) => `${baseUrl}/if/flow/${slug}/`;
+  return {
+    passwordChange: flow("theater-password-change"),
+    passkeySetup: flow("theater-passkey-setup"),
+    totpSetup: flow("theater-totp-setup"),
+    settings: `${baseUrl}/if/user/#/settings`,
+  };
+}
+
 /** Anmeldung über Authentik ist möglich, sobald der OIDC-Client konfiguriert ist. */
 export function isAuthentikLoginEnabled(): boolean {
   return getAuthentikOidcConfig() !== null;

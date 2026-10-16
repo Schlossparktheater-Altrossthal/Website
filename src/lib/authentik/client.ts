@@ -400,3 +400,78 @@ export async function sendAuthentikPasswordEmail(user: AuthentikUser): Promise<v
     query: { email_stage: stagePk },
   });
 }
+
+// --- Anmeldegeräte (Passkeys, Authenticator-Apps) ---------------------------
+
+/** Gerätearten, die Mitglieder im Profil sehen und entfernen können. */
+export const AUTHENTIK_DEVICE_KINDS = ["webauthn", "totp"] as const;
+export type AuthentikDeviceKind = (typeof AUTHENTIK_DEVICE_KINDS)[number];
+
+const DEVICE_TYPE_TO_KIND: Record<string, AuthentikDeviceKind> = {
+  "authentik_stages_authenticator_webauthn.WebAuthnDevice": "webauthn",
+  "authentik_stages_authenticator_totp.TOTPDevice": "totp",
+};
+
+const authentikDeviceSchema = z.object({
+  pk: z.union([z.string(), z.number()]).transform(String),
+  name: z.string(),
+  type: z.string(),
+  confirmed: z.boolean(),
+  created: z.string().nullable().optional(),
+  last_used: z.string().nullable().optional(),
+  extra_description: z.string().nullable().optional(),
+});
+
+export type AuthentikDevice = {
+  id: string;
+  kind: AuthentikDeviceKind;
+  name: string;
+  description: string | null;
+  createdAt: string | null;
+  lastUsedAt: string | null;
+};
+
+/**
+ * Bestätigte Passkeys und Authenticator-Apps eines Kontos. Der Service-Account
+ * darf nur diese beiden Gerätearten sehen (Rolle "Mitgliederbereich API").
+ */
+export async function listAuthentikDevices(user: AuthentikUser): Promise<AuthentikDevice[]> {
+  const config = requireConfig();
+  const data = z
+    .array(authentikDeviceSchema)
+    .parse(
+      await request(config, "/authenticators/admin/all/", { query: { user: String(user.pk) } }),
+    );
+  return data.flatMap((device) => {
+    const kind = DEVICE_TYPE_TO_KIND[device.type];
+    if (!kind || !device.confirmed) return [];
+    return [
+      {
+        id: device.pk,
+        kind,
+        name: device.name,
+        description:
+          device.extra_description && !device.extra_description.includes("not available")
+            ? device.extra_description
+            : null,
+        createdAt: device.created ?? null,
+        lastUsedAt: device.last_used ?? null,
+      },
+    ];
+  });
+}
+
+/** Entfernt ein Gerät, aber nur, wenn es wirklich zu diesem Konto gehört. */
+export async function deleteAuthentikDevice(
+  user: AuthentikUser,
+  kind: AuthentikDeviceKind,
+  deviceId: string,
+): Promise<boolean> {
+  const devices = await listAuthentikDevices(user);
+  if (!devices.some((device) => device.kind === kind && device.id === deviceId)) return false;
+  const config = requireConfig();
+  await request(config, `/authenticators/admin/${kind}/${encodeURIComponent(deviceId)}/`, {
+    method: "DELETE",
+  });
+  return true;
+}

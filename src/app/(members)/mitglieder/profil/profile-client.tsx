@@ -13,6 +13,7 @@ import { isPhotoConsentDone } from "@/lib/photo-consent-levels";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 import { ProfileHeader } from "./profile-header";
 import { NotificationsSection } from "./sections/notifications-section";
+import { SecuritySection } from "./sections/security-section";
 import { PROFILE_SECTIONS, resolveProfileSection, type ProfileSectionId } from "./profile-sections";
 import { ProfileSectionNav, type ProfileSectionStatus } from "./profile-section-nav";
 import { BasicsSection } from "./sections/basics-section";
@@ -65,6 +66,7 @@ export function ProfileClient({
   history,
   measurements: initialMeasurements,
   sizes: initialSizes,
+  authentikAccount,
 }: ProfileClientProps) {
   const { update: refreshSession } = useSession();
   const searchParams = useSearchParams();
@@ -264,6 +266,7 @@ export function ProfileClient({
             .join(" · ") || "Noch nichts eingetragen",
       },
       benachrichtigungen: { missing: false, summary: "Push, Ruhezeit, Geräte" },
+      sicherheit: { missing: false, summary: "Passwort, Passkeys, Zwei-Faktor" },
     };
   }, [
     allergies.length,
@@ -281,7 +284,13 @@ export function ProfileClient({
   const renderSection = (section: ProfileSectionId) => {
     switch (section) {
       case "stammdaten":
-        return <BasicsSection user={user} onUserUpdated={handleUserUpdated} />;
+        return (
+          <BasicsSection
+            user={user}
+            onUserUpdated={handleUserUpdated}
+            authentikAccount={authentikAccount}
+          />
+        );
       case "zahlungen":
         return <PaymentSection user={user} onUserUpdated={handleUserUpdated} />;
       case "ernaehrung":
@@ -322,6 +331,8 @@ export function ProfileClient({
         );
       case "benachrichtigungen":
         return <NotificationsSection />;
+      case "sicherheit":
+        return <SecuritySection />;
     }
   };
 

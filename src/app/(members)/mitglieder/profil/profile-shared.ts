@@ -163,6 +163,8 @@ export type ProfileMeasurement = {
 };
 
 export type ProfileClientProps = {
+  /** Anmeldung läuft über Authentik: Passwort & Co. pflegt der Bereich „Anmeldung & Sicherheit“. */
+  authentikAccount: boolean;
   history: MemberHistory;
   /** Eigene Körpermaße; `null`, wenn die Person nicht im Ensemble ist (Bereich ausgeblendet). */
   measurements: ProfileMeasurement[] | null;
@@ -461,10 +463,10 @@ export const basicsSchema = z
     removeAvatar: z.boolean(),
   })
   .superRefine((data, ctx) => {
-    if (data.password && data.password.length > 0 && data.password.length < 6) {
+    if (data.password && data.password.length > 0 && data.password.length < 8) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Passwort muss mindestens 6 Zeichen haben",
+        message: "Passwort muss mindestens 8 Zeichen haben",
         path: ["password"],
       });
     }

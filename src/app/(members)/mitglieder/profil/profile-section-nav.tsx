@@ -6,6 +6,7 @@ import {
   CreditCardIcon,
   HeartIcon,
   RulerIcon,
+  ShieldCheckIcon,
   TheaterIcon,
   UserIcon,
   UtensilsIcon,
@@ -35,6 +36,7 @@ const SECTION_ICONS: Record<ProfileSectionId, IconComponent> = {
   interessen: HeartIcon,
   produktion: TheaterIcon,
   benachrichtigungen: BellIcon,
+  sicherheit: ShieldCheckIcon,
 };
 
 type ProfileSectionNavProps = {

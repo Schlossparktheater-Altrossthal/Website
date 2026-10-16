@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AuthentikApiError,
   deactivateAuthentikUser,
+  deleteAuthentikDevice,
   ensureAuthentikUser,
   hasAuthentikPasswordSinceCreation,
+  listAuthentikDevices,
   reconcileAuthentikUser,
   setAuthentikPassword,
   type AuthentikUser,
@@ -167,6 +169,78 @@ describe("authentik client", () => {
     fetchMock.mockResolvedValueOnce(new Response("forbidden", { status: 403 }));
     await expect(setAuthentikPassword(managedUser, "geheim-123")).rejects.toMatchObject({
       status: 403,
+    });
+  });
+
+  describe("devices", () => {
+    const devices = [
+      {
+        pk: 3,
+        name: "iPhone",
+        type: "authentik_stages_authenticator_webauthn.WebAuthnDevice",
+        confirmed: true,
+        created: "2026-10-01T10:00:00Z",
+        last_used: null,
+        extra_description: "Extra description not available",
+      },
+      {
+        pk: "9",
+        name: "Aegis",
+        type: "authentik_stages_authenticator_totp.TOTPDevice",
+        confirmed: true,
+        created: null,
+        last_used: "2026-10-02T10:00:00Z",
+        extra_description: "",
+      },
+      {
+        pk: 4,
+        name: "halb eingerichtet",
+        type: "authentik_stages_authenticator_totp.TOTPDevice",
+        confirmed: false,
+      },
+      {
+        pk: 5,
+        name: "Codes",
+        type: "authentik_stages_authenticator_static.StaticDevice",
+        confirmed: true,
+      },
+    ];
+
+    it("lists confirmed passkeys and authenticator apps of the account", async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(devices));
+      const result = await listAuthentikDevices(managedUser);
+      expect(requestUrl(0).pathname).toBe("/api/v3/authenticators/admin/all/");
+      expect(requestUrl(0).searchParams.get("user")).toBe("7");
+      expect(result).toEqual([
+        {
+          id: "3",
+          kind: "webauthn",
+          name: "iPhone",
+          description: null,
+          createdAt: "2026-10-01T10:00:00Z",
+          lastUsedAt: null,
+        },
+        {
+          id: "9",
+          kind: "totp",
+          name: "Aegis",
+          description: null,
+          createdAt: null,
+          lastUsedAt: "2026-10-02T10:00:00Z",
+        },
+      ]);
+    });
+
+    it("deletes only devices that belong to the account", async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(devices));
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+      await expect(deleteAuthentikDevice(managedUser, "totp", "9")).resolves.toBe(true);
+      expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("DELETE");
+      expect(requestUrl(1).pathname).toBe("/api/v3/authenticators/admin/totp/9/");
+
+      fetchMock.mockResolvedValueOnce(jsonResponse(devices));
+      await expect(deleteAuthentikDevice(managedUser, "webauthn", "9")).resolves.toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
     });
   });
 });

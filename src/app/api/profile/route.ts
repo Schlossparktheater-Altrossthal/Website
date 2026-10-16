@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
+import { getAuthentikAccountLinks } from "@/lib/authentik/config";
 import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { syncMemberToAuthentik } from "@/lib/authentik/sync";
 import { sortRoles, type Role } from "@/lib/roles";
@@ -541,10 +542,19 @@ export async function PUT(request: NextRequest) {
 
   let newPassword: string | null = null;
   if ("password" in body) {
-    const passwordValue = body.password;
-    if (typeof passwordValue !== "string" || passwordValue.length < 6) {
+    if (getAuthentikAccountLinks()) {
+      // Mit Authentik-Login gilt nur das Passwort im Theater-Konto (Richtlinie
+      // dort: 8 Zeichen, keine geleakten Passwörter). Ein lokal gesetztes
+      // Passwort würde davon abweichen.
       return NextResponse.json(
-        { error: "Passwort muss mindestens 6 Zeichen haben" },
+        { error: "Passwort bitte unter „Anmeldung & Sicherheit“ ändern" },
+        { status: 400 },
+      );
+    }
+    const passwordValue = body.password;
+    if (typeof passwordValue !== "string" || passwordValue.length < 8) {
+      return NextResponse.json(
+        { error: "Passwort muss mindestens 8 Zeichen haben" },
         { status: 400 },
       );
     }

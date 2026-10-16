@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Card } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { updateProfileBasicsAction } from "../actions/basics";
 import { AvatarCropDialog } from "../avatar-crop-dialog";
 import { useAvatarCrop } from "../use-avatar-crop";
+import { getProfileSectionHref } from "../profile-sections";
 import { ProfileField, ProfileFieldset } from "./profile-fieldset";
 import {
   ProfileUser,
@@ -25,9 +27,10 @@ import {
 type BasicsSectionProps = {
   user: ProfileUser;
   onUserUpdated: (nextUser: ProfileUser) => Promise<void> | void;
+  authentikAccount: boolean;
 };
 
-export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
+export function BasicsSection({ user, onUserUpdated, authentikAccount }: BasicsSectionProps) {
   const [formState, setFormState] = useState<BasicsFormState>(() => ({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -440,7 +443,14 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                 autoComplete="email"
               />
             </ProfileField>
-            {passwordOpen ? (
+            {authentikAccount ? (
+              // Passwort, Passkeys und Zwei-Faktor liegen im Theater-Konto (Authentik).
+              <Button asChild type="button" variant="outline" size="sm">
+                <Link href={getProfileSectionHref("sicherheit")}>
+                  Passwort & Anmeldung verwalten
+                </Link>
+              </Button>
+            ) : passwordOpen ? (
               <div className="space-y-1.5">
                 <p className="text-sm font-medium text-foreground">Neues Passwort</p>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -466,7 +476,7 @@ export function BasicsSection({ user, onUserUpdated }: BasicsSectionProps) {
                     {fieldErrors.password ?? fieldErrors.confirmPassword}
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen.</p>
+                  <p className="text-xs text-muted-foreground">Mindestens 8 Zeichen.</p>
                 )}
               </div>
             ) : (
