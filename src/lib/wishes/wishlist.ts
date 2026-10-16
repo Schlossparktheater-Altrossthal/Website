@@ -8,6 +8,9 @@ import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
 
 import { isTopWish, wishLevelOf, type WishLevel } from "./levels";
+import { canEditWishArea } from "./permissions";
+
+export { canEditWishArea };
 
 /** Ein wählbarer Bereich: eine Rollengröße oder ein Gewerks-Wunsch der Produktion. */
 export type WishlistArea = {
@@ -129,16 +132,6 @@ export async function loadWishlistAreas(showId: string): Promise<WishlistArea[]>
     }),
   ]);
   return buildAreas(crewOptions, departments);
-}
-
-/** Regie/Planung dürfen jeden Bereich, die Gewerk-Leitung nur Bereiche ihrer Gewerke. */
-export function canEditWishArea(
-  area: Pick<WishlistArea, "domain" | "departmentIds">,
-  access: { manageAll: boolean; leadDepartmentIds: ReadonlyArray<string> },
-) {
-  if (access.manageAll) return true;
-  if (area.domain !== "crew") return false;
-  return area.departmentIds.some((id) => access.leadDepartmentIds.includes(id));
 }
 
 /** Wunscherfüllung: wer etwas zugeteilt bekam, hat dabei einen Top-Wunsch erhalten? */

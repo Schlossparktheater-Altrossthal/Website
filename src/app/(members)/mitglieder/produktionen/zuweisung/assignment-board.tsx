@@ -24,12 +24,12 @@ import type {
 } from "@/lib/departments/assignments";
 import type { RolesScenesData } from "@/lib/produktionen/roles-scenes";
 import { WISH_LEVELS } from "@/lib/wishes/levels";
-import {
-  canEditWishArea,
-  type WishlistArea,
-  type WishlistData,
-  type WishlistPerson,
-  type WishlistWish,
+import { canEditWishArea } from "@/lib/wishes/permissions";
+import type {
+  WishlistArea,
+  WishlistData,
+  WishlistPerson,
+  WishlistWish,
 } from "@/lib/wishes/wishlist";
 import { ActionDropdownMenu } from "@/components/ui/action-dropdown-menu";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
