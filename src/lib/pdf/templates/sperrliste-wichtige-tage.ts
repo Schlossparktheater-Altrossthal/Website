@@ -51,6 +51,8 @@ const sceneStatusValues = ["ready", "alternate", "limited", "missing"] as const;
 
 const sceneRowSchema = z.object({
   label: z.string(),
+  /** Benötigte Rollen mit Besetzung, z. B. „Fogg: Tom · Passepartout: Lea/Jan“. */
+  cast: z.string().nullable().default(null),
   /** Je Tag (gleiche Reihenfolge wie `days`): Zustand und kurzer Hinweis (wer fehlt). */
   cells: z.array(z.object({ status: z.enum(sceneStatusValues), note: z.string().nullable() })),
 });
@@ -744,7 +746,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
           y += 12;
         };
         sceneHeader();
-        const sceneRowHeight = 11;
+        const sceneRowHeight = 17;
         scenes.rows.forEach((row, rowIndex) => {
           if (y + sceneRowHeight > bottomLimit()) {
             doc.addPage();
@@ -754,10 +756,17 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
           if (rowIndex % 2 === 1) {
             doc.save().rect(layout.left, y, fullWidth, sceneRowHeight).fill("#fafafa").restore();
           }
-          textLine(doc, row.label, layout.left + 6, y + 2.6, layout.nameWidth - 12, {
+          textLine(doc, row.label, layout.left + 6, y + 2.2, layout.nameWidth - 12, {
+            font: BOLD,
             size: 6.8,
             color: COLOR.text,
           });
+          if (row.cast) {
+            textLine(doc, row.cast, layout.left + 6, y + 10, layout.nameWidth - 12, {
+              size: 5.6,
+              color: COLOR.muted,
+            });
+          }
           row.cells.forEach((cell, index) => {
             const x = layout.dayX(index);
             const style = SCENE_STYLE[cell.status];
@@ -768,7 +777,7 @@ export const sperrlisteImportantDaysTemplate: PdfTemplate<SperrlisteImportantDay
               .restore();
             const text = cell.status === "ready" ? null : cell.note;
             if (text && layout.dayWidth >= 44) {
-              textLine(doc, text, x + 3, y + 3, layout.dayWidth - 6, {
+              textLine(doc, text, x + 3, y + 6, layout.dayWidth - 6, {
                 size: 5.4,
                 color: style.ink,
                 align: "center",

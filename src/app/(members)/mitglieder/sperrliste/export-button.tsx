@@ -58,6 +58,27 @@ function dayBadges(day: DayInfo) {
   return badges;
 }
 
+/** Rollen der Szene mit Besetzung: „Fogg: Tom · Passepartout: Lea (Z: Jan) · Aouda: offen“. */
+function describeCast(characterIds: string[], context: SceneContext, members: TeamMember[]) {
+  const names = new Map(members.map((member) => [member.id, firstName(member.name)]));
+  const characterNames = new Map(context.characters.map((entry) => [entry.id, entry.name]));
+  const parts = characterIds.map((characterId) => {
+    const castings = context.castings.filter(
+      (entry) => entry.characterId === characterId && entry.type !== "cameo",
+    );
+    const who = (type: "primary" | "other") =>
+      castings
+        .filter((entry) => (type === "primary") === (entry.type === "primary"))
+        .map((entry) => names.get(entry.userId) ?? "?")
+        .join("/");
+    const primary = who("primary");
+    const other = who("other");
+    const cast = primary || other ? `${primary || "–"}${other ? ` (Z: ${other})` : ""}` : "offen";
+    return `${characterNames.get(characterId) ?? "Rolle"}: ${cast}`;
+  });
+  return parts.join(" · ") || null;
+}
+
 /** Probbarkeit jeder besetzten Szene je Tag – Grundlage sind die Sperren der Besetzung. */
 function buildSceneRows(
   context: SceneContext,
@@ -97,6 +118,7 @@ function buildSceneRows(
     );
   const rows = scenes.map((scene, sceneIndex) => ({
     label: scene.label,
+    cast: describeCast(scene.characterIds, context, members),
     cells: perDay.map((readiness) => {
       const entry = readiness[sceneIndex];
       const issue = entry.issues.find((item) => item.status === entry.status);
