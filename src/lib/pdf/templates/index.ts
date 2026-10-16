@@ -1,21 +1,27 @@
 import type { PdfTemplate } from "../types";
 import { dataPortalTableTemplate } from "./data-portal-table";
 import { doorChecklistTemplate } from "./door-checklist";
+import { koerpermasseTemplate } from "./koerpermasse";
 import { onboardingInviteTemplate } from "./onboarding-invite";
 import { onboardingStatisticsTemplate } from "./onboarding-statistics";
 import { photoConsentListTemplate } from "./photo-consent-list";
 import { productionCastingTemplate } from "./production-casting";
+import { requisitenAblaufTemplate } from "./requisiten-ablauf";
 import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
+import { terminlisteTemplate } from "./terminliste";
 import { scriptReaderPdfTemplate } from "@/lib/skript/pdf";
 
 const templates = [
   dataPortalTableTemplate,
   doorChecklistTemplate,
+  koerpermasseTemplate,
   onboardingInviteTemplate,
   onboardingStatisticsTemplate,
   photoConsentListTemplate,
   productionCastingTemplate,
+  requisitenAblaufTemplate,
   sperrlisteImportantDaysTemplate,
+  terminlisteTemplate,
   scriptReaderPdfTemplate,
 ] as const;
 

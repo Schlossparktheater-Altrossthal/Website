@@ -2,17 +2,20 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { CheckIcon, PrinterIcon, RefreshCwIcon } from "@/components/ui/action-icons";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { ObjectListItem, StageData, StageScene } from "@/lib/ausstattung/objects";
+import { downloadPdf } from "@/lib/pdf/download";
 import { cn } from "@/lib/utils";
 
 import { resetChecksAction, setObjectCheckedAction } from "../ausstattung-actions";
 import { EmptyState, StatusDot, fullScene, useAction } from "./shared";
 
-/** Requisiten je Szene in Spielreihenfolge: was liegt wo, wer braucht es. Druckbar. */
+/** Requisiten je Szene in Spielreihenfolge: was liegt wo, wer braucht es. Als PDF zum Abhaken. */
 export function PropsRunsheet({
   objects,
   stage,
@@ -29,6 +32,41 @@ export function PropsRunsheet({
     }))
     .filter((entry) => entry.objects.length);
   const role = (id: string) => stage.characters.find((character) => character.id === id)?.name;
+  const sceneRoles = (object: ObjectListItem, scene: StageScene) =>
+    object.characterIds
+      .filter((id) => scene.characterIds.includes(id) || !scene.characterIds.length)
+      .map(role)
+      .filter(Boolean);
+  const [exporting, setExporting] = React.useState(false);
+
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      await downloadPdf(
+        "requisiten-ablauf",
+        {
+          generatedAt: new Date().toISOString(),
+          scenes: scenes.map(({ scene, objects: list }) => ({
+            title: fullScene(scene),
+            objects: list.map((object) => ({
+              title: object.title,
+              note: object.sceneNotes[scene.id] || null,
+              roles: sceneRoles(object, scene).join(", ") || null,
+              status: object.status,
+            })),
+          })),
+        },
+        "requisiten-ablauf.pdf",
+      );
+    } catch (error) {
+      console.error("[ausstattung:pdf]", error);
+      toast.error("PDF konnte nicht erstellt werden", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (!scenes.length) {
     return <EmptyState>Noch keine Requisite einer Szene zugeordnet.</EmptyState>;
@@ -36,9 +74,16 @@ export function PropsRunsheet({
   return (
     <div className="space-y-3">
       <div className="flex justify-end print:hidden">
-        <Button type="button" variant="outline" className="h-10" onClick={() => window.print()}>
-          <PrinterIcon className="h-4 w-4" /> Drucken
-        </Button>
+        <AsyncButton
+          type="button"
+          variant="outline"
+          className="h-10"
+          isLoading={exporting}
+          loadingText="PDF wird erstellt…"
+          onClick={exportPdf}
+        >
+          <PrinterIcon className="h-4 w-4" /> PDF
+        </AsyncButton>
       </div>
       {scenes.map(({ scene, objects: list }) => (
         <section
@@ -48,10 +93,7 @@ export function PropsRunsheet({
           <h3 className="text-sm font-semibold">{fullScene(scene)}</h3>
           <ul className="mt-1 divide-y divide-border">
             {list.map((object) => {
-              const roles = object.characterIds
-                .filter((id) => scene.characterIds.includes(id) || !scene.characterIds.length)
-                .map(role)
-                .filter(Boolean);
+              const roles = sceneRoles(object, scene);
               return (
                 <li key={object.id} className="flex min-h-10 items-start gap-2 py-1.5">
                   <span className="mt-1.5">

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import type { CalendarEventKind } from "@prisma/client";
 
 import {
@@ -17,6 +18,7 @@ import {
 import { AvailabilityBar } from "@/components/ui/availability-bar";
 import { StatusDot, StatusLegend } from "@/components/ui/availability-status";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MonthGrid } from "@/components/ui/month-grid";
@@ -35,6 +37,7 @@ import {
 import { DEFAULT_TIME_ZONE, formatIsoTimeInTimeZone } from "@/lib/date-time";
 import type { FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import { toDayKey } from "@/lib/sperrliste/day-tiers";
+import { downloadPdf } from "@/lib/pdf/download";
 import { cn } from "@/lib/utils";
 import type { HolidayRange } from "@/types/holidays";
 
@@ -1035,6 +1038,35 @@ function EventList({
     }
     return [...byMonth.entries()];
   }, [events, showPast, todayKey]);
+  const [exporting, setExporting] = useState(false);
+
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      await downloadPdf(
+        "terminliste",
+        {
+          generatedAt: new Date().toISOString(),
+          production: productionTitle,
+          months: groups.map(([label, weeks]) => ({
+            label,
+            weeks: weeks.map((week) =>
+              week.map((event) => pdfEvent(event, attendanceFor(event), showAbsences)),
+            ),
+          })),
+        },
+        "termine.pdf",
+      );
+      toast.success("PDF heruntergeladen", { duration: 3000 });
+    } catch (error) {
+      console.error("[terminplanung:pdf]", error);
+      toast.error("PDF konnte nicht erstellt werden", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -1051,15 +1083,18 @@ function EventList({
         >
           {showAbsences ? "Abwesenheiten ausblenden" : "Abwesenheiten zeigen"}
         </Button>
-        <Button
+        <AsyncButton
           type="button"
           variant="outline"
           size="sm"
           className="ml-auto h-10"
-          onClick={() => window.print()}
+          isLoading={exporting}
+          loadingText="PDF wird erstellt…"
+          disabled={!groups.length}
+          onClick={exportPdf}
         >
-          <PrinterIcon className="h-4 w-4" aria-hidden /> PDF / Drucken
-        </Button>
+          <PrinterIcon className="h-4 w-4" aria-hidden /> PDF
+        </AsyncButton>
       </div>
       {groups.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
@@ -1113,6 +1148,26 @@ function absenceText(entries: Attendance[]) {
       entry.days.length ? `${entry.name} (${entry.days.map(weekdayOf).join(", ")})` : entry.name,
     )
     .join(", ");
+}
+
+/** Eine Zeile der Terminliste für die PDF-Vorlage „terminliste“. */
+function pdfEvent(event: PlanningEvent, attendance: Attendance[], showAbsences: boolean) {
+  const blocked = attendance.filter((entry) => entry.answer === "blocked");
+  const limited = attendance.filter((entry) => entry.answer === "limited");
+  return {
+    date: listDate(event),
+    time: listTime(event) || (event.allDay ? "ganztägig" : null),
+    title: event.title,
+    detail: [firstLine(event.description), event.location].filter(Boolean).join(" · ") || null,
+    rehearsal: event.kind === "REHEARSAL",
+    status:
+      event.status === "CANCELLED" || event.status === "TENTATIVE" ? event.status : "CONFIRMED",
+    blocked: showAbsences && blocked.length ? `fehlen: ${absenceText(blocked)}` : null,
+    limited: showAbsences && limited.length ? `eingeschränkt: ${absenceText(limited)}` : null,
+    attendance: attendance.length
+      ? `${attendance.length - blocked.length}/${attendance.length}`
+      : null,
+  };
 }
 
 function EventRow({

@@ -56,7 +56,10 @@ import {
 } from "@/data/measurements";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, type Role } from "@/lib/roles";
 import { compareMembersByFirstName } from "@/lib/names";
+import { downloadPdf } from "@/lib/pdf/download";
 import { cn } from "@/lib/utils";
+import { SIZE_CATEGORY_LABELS, sizeCategoryEnum, type SizeEntry } from "@/data/sizes";
+import { toast } from "sonner";
 import { formatRelativeWithAbsolute } from "@/lib/datetime";
 
 type MeasurementEntry = {
@@ -77,6 +80,8 @@ type MeasurementMember = {
   avatarSource: AvatarSource | string | null;
   avatarUpdatedAt: string | null;
   measurements: MeasurementEntry[];
+  /** Konfektionsgrößen – nur für den PDF-Export. */
+  sizes?: SizeEntry[];
 };
 
 type MemberMeasurementsControlCenterProps = {
@@ -548,32 +553,42 @@ export function MemberMeasurementsControlCenter({
     );
   };
 
-  const handleExportPdf = () => {
-    const tableHeaders = [
-      "Mitglied",
-      ...activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type]),
-    ];
-    const rows = preparedMembers.map((member) => {
-      const values = activeMeasurementTypes.map((type) =>
-        formatMeasurementValue(member.measurementMap.get(type) ?? null),
+  const handleExportPdf = async () => {
+    try {
+      await downloadPdf(
+        "koerpermasse",
+        {
+          generatedAt: new Date().toISOString(),
+          measurements: {
+            columns: activeMeasurementTypes.map((type) => MEASUREMENT_TYPE_LABELS[type]),
+            rows: preparedMembers.map((member) => ({
+              name: member.displayName,
+              values: activeMeasurementTypes.map((type) =>
+                formatMeasurementValue(member.measurementMap.get(type) ?? null),
+              ),
+            })),
+          },
+          sizes: preparedMembers.some((member) => member.sizes?.length)
+            ? {
+                columns: sizeCategoryEnum.options.map((category) => SIZE_CATEGORY_LABELS[category]),
+                rows: preparedMembers.map((member) => ({
+                  name: member.displayName,
+                  values: sizeCategoryEnum.options.map((category) => {
+                    const entry = member.sizes?.find((size) => size.category === category);
+                    return { size: entry?.size ?? null, note: entry?.note ?? null };
+                  }),
+                })),
+              }
+            : null,
+        },
+        "koerpermasse.pdf",
       );
-      return [member.displayName, ...values];
-    });
-    const html = buildExportHtml(tableHeaders, rows);
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const exportUrl = window.URL.createObjectURL(blob);
-    const exportWindow = window.open(exportUrl, "_blank", "noopener,noreferrer");
-    if (!exportWindow) {
-      window.URL.revokeObjectURL(exportUrl);
-      return;
+    } catch (error) {
+      console.error("[koerpermasse:pdf]", error);
+      toast.error("PDF konnte nicht erstellt werden", {
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
-    const triggerPrint = () => {
-      exportWindow.focus();
-      exportWindow.print();
-      window.URL.revokeObjectURL(exportUrl);
-    };
-    exportWindow.addEventListener("load", triggerPrint, { once: true });
-    window.setTimeout(triggerPrint, 250);
   };
 
   return (
@@ -1095,44 +1110,6 @@ function downloadFile(blob: Blob, filename: string) {
   link.download = filename;
   link.click();
   window.URL.revokeObjectURL(url);
-}
-
-function buildExportHtml(headers: string[], rows: string[][]) {
-  const tableHeader = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
-  const tableRows = rows
-    .map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(value)}</td>`).join("")}</tr>`)
-    .join("");
-  return `
-    <html lang="de">
-      <head>
-        <meta charset="utf-8" />
-        <title>Körpermaße Export</title>
-        <style>
-          body { font-family: "Inter", sans-serif; margin: 24px; color: #111; }
-          h1 { font-size: 18px; margin-bottom: 16px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
-          th { background: #f4f4f5; }
-        </style>
-      </head>
-      <body>
-        <h1>Körpermaße Export</h1>
-        <table>
-          <thead><tr>${tableHeader}</tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      </body>
-    </html>
-  `;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 function buildDisplayName(member: {
