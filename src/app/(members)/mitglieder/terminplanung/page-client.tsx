@@ -23,7 +23,9 @@ import { MonthGrid } from "@/components/ui/month-grid";
 import { PLANNING_PATH, rememberPlanningHref } from "./return-href";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { SectionHeader } from "@/components/ui/section-header";
+import { NameSortToggle } from "@/components/members/name-sort-toggle";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import type { NameSortOrder } from "@/lib/names";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
   expandEntryDayKeys,
@@ -131,6 +133,7 @@ type EventPlanningProps = {
   events: PlanningEvent[];
   drafts: PlanningDraft[];
   members: PlanningMember[];
+  nameSort: NameSortOrder;
   availability: PlanningAvailability[];
   holidays: HolidayRange[];
   finalWeek: FinalWeekRange;
@@ -152,6 +155,7 @@ export function EventPlanningClient({
   events,
   drafts,
   members,
+  nameSort,
   availability,
   holidays,
   finalWeek,
@@ -387,6 +391,7 @@ export function EventPlanningClient({
             { value: "events", label: "Termine" },
           ]}
         />
+        {view === "calendar" || view === "people" ? <NameSortToggle value={nameSort} /> : null}
         <div className="ml-auto flex items-center gap-2">
           <Button asChild variant="outline" size="sm" className="h-10">
             <Link href="/mitglieder/terminplanung/terminfinder" aria-label="Terminfinder">

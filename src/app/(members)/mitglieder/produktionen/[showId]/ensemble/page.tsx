@@ -138,7 +138,7 @@ export default async function ProduktionEnsemblePage({
         select: { show: { select: { title: true, year: true } } },
       },
     },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
   });
   const candidates: AddableMember[] = users.map((user) => ({
     id: user.id,

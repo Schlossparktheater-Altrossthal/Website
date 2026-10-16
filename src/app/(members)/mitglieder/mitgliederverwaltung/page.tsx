@@ -40,7 +40,7 @@ export default async function MemberManagementPage({
 
   const [users, customRoles, seasonResetRecord] = await Promise.all([
     prisma.user.findMany({
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { name: "asc" }],
       select: {
         id: true,
         email: true,

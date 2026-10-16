@@ -10,7 +10,8 @@ import {
   type AudienceOverride,
   type AudienceRule,
 } from "@/lib/calendar/audience";
-import { compareMembersByLastName, getUserDisplayName } from "@/lib/names";
+import { compareMembersByName, getUserDisplayName } from "@/lib/names";
+import { getNameSortOrder } from "@/lib/name-sort-server";
 import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
 
@@ -105,10 +106,11 @@ export async function loadAudienceContext(showId: string | null): Promise<Audien
       : [],
   ]);
 
+  const nameSort = await getNameSortOrder();
   return {
     hasProduction: Boolean(showId),
     members: [...users]
-      .sort(compareMembersByLastName)
+      .sort(compareMembersByName(nameSort))
       .map((user) => ({ id: user.id, name: getUserDisplayName(user) })),
     characters: characters.map(({ id, name }) => ({ id, name })),
     castings: characters.flatMap((character) =>

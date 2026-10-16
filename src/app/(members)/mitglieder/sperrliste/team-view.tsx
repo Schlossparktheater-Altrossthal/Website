@@ -22,6 +22,7 @@ import { DateBadge } from "@/components/ui/date-badge";
 import { FullscreenOverlay } from "@/components/ui/fullscreen-overlay";
 import { Input } from "@/components/ui/input";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
+import { NameSortToggle } from "@/components/members/name-sort-toggle";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Select,
@@ -34,6 +35,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { DAY_TIER_LABELS, type DayInfo } from "@/lib/sperrliste/day-tiers";
 import { MEMBER_GROUP_ACCENTS } from "@/config/category-colors";
+import type { NameSortOrder } from "@/lib/names";
 import { cn } from "@/lib/utils";
 
 import { CalendarEntryList, CalendarLegend, DayChips, formatLongDate } from "./day-parts";
@@ -59,6 +61,7 @@ type TeamViewProps = {
   onMonthChange: (month: Date) => void;
   model: CalendarModel;
   members: TeamMember[];
+  nameSort: NameSortOrder;
   canPlan: boolean;
   readOnly: boolean;
   onCreateEvent: (date: string) => void;
@@ -83,6 +86,7 @@ export function TeamView({
   onMonthChange,
   model,
   members,
+  nameSort,
   canPlan,
   readOnly,
   onCreateEvent,
@@ -161,6 +165,7 @@ export function TeamView({
             ...(hasUnassigned ? [{ value: "unassigned" as const, label: "Offen" }] : []),
           ]}
         />
+        <NameSortToggle value={nameSort} />
         <Select value={dayFilter} onValueChange={(value) => setDayFilter(value as DayFilter)}>
           <SelectTrigger className="ml-auto h-9 w-auto gap-2 text-xs" aria-label="Tage filtern">
             <SelectValue />

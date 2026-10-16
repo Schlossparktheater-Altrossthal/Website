@@ -55,7 +55,7 @@ import {
   type MeasurementUnit,
 } from "@/data/measurements";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, type Role } from "@/lib/roles";
-import { compareMembersByLastName } from "@/lib/names";
+import { compareMembersByFirstName } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import { formatRelativeWithAbsolute } from "@/lib/datetime";
 
@@ -209,7 +209,7 @@ export function MemberMeasurementsControlCenter({
 
   const sortedMembers = useMemo(() => {
     return [...filteredMembers].sort((a, b) => {
-      const comparison = compareMembersByLastName(a, b);
+      const comparison = compareMembersByFirstName(a, b);
       return sortDirection === "asc" ? comparison : -comparison;
     });
   }, [filteredMembers, sortDirection]);
@@ -217,7 +217,7 @@ export function MemberMeasurementsControlCenter({
   const memberSelectOptions = useMemo(() => {
     return [...preparedMembers]
       .sort((a, b) => {
-        const comparison = compareMembersByLastName(a, b);
+        const comparison = compareMembersByFirstName(a, b);
         return sortDirection === "asc" ? comparison : -comparison;
       })
       .map((member) => ({
@@ -229,7 +229,7 @@ export function MemberMeasurementsControlCenter({
   const mobileMemberOptions = useMemo(() => {
     return [...filteredMembers]
       .sort((a, b) => {
-        const comparison = compareMembersByLastName(a, b);
+        const comparison = compareMembersByFirstName(a, b);
         return sortDirection === "asc" ? comparison : -comparison;
       })
       .map((member) => ({

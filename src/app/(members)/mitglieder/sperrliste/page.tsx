@@ -16,7 +16,8 @@ import {
 } from "@/lib/dev-sperrliste-fixture";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import { compareMembersByLastName, getUserDisplayName } from "@/lib/names";
+import { compareMembersByName, getUserDisplayName, type NameSortOrder } from "@/lib/names";
+import { getNameSortOrder } from "@/lib/name-sort-server";
 import type { AvatarFields } from "@/lib/avatar-fields";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -58,10 +59,10 @@ type MemberRecord = AvatarFields & {
   }[];
 };
 
-function buildTeam(records: MemberRecord[], includeReasons: boolean) {
+function buildTeam(records: MemberRecord[], includeReasons: boolean, nameSort: NameSortOrder) {
   const members: TeamMember[] = [];
   const entries: TeamEntry[] = [];
-  for (const record of [...records].sort(compareMembersByLastName)) {
+  for (const record of [...records].sort(compareMembersByName(nameSort))) {
     members.push({
       id: record.id,
       name: getUserDisplayName(record),
@@ -91,6 +92,7 @@ export default async function BlocklistPage() {
   }
 
   const breadcrumbs = [membersNavigationBreadcrumb("/mitglieder/sperrliste")];
+  const nameSort = await getNameSortOrder();
 
   if (!databaseEnabled()) {
     const team = buildTeam(
@@ -105,8 +107,10 @@ export default async function BlocklistPage() {
         })),
       })),
       false,
+      nameSort,
     );
     const data: BlocklistPageData = {
+      nameSort,
       currentUserId: userId,
       myEntries: DEV_SPERRLISTE_BLOCKED_DAYS_FIXTURE.map(({ id, date, kind, reason }) => ({
         id,
@@ -262,7 +266,7 @@ export default async function BlocklistPage() {
       reason: day.reason,
     })),
   }));
-  const team = buildTeam(records, canPlan);
+  const team = buildTeam(records, canPlan, nameSort);
   const myEntries = records.find((record) => record.id === userId)?.blockedDays ?? [];
 
   const finalWeek = production?.finalRehearsalWeekStart
@@ -275,6 +279,7 @@ export default async function BlocklistPage() {
     : null;
 
   const data: BlocklistPageData = {
+    nameSort,
     currentUserId: userId,
     myEntries,
     members: team.members,

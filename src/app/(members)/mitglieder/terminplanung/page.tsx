@@ -11,7 +11,8 @@ import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
 import { formatIsoDateInTimeZone } from "@/lib/date-time";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import { compareMembersByLastName, getUserDisplayName } from "@/lib/names";
+import { compareMembersByName, getUserDisplayName } from "@/lib/names";
+import { getNameSortOrder } from "@/lib/name-sort-server";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
@@ -140,7 +141,8 @@ export default async function EventPlanningPage({
     };
   });
 
-  const members: PlanningMember[] = [...users].sort(compareMembersByLastName).map((user) => ({
+  const nameSort = await getNameSortOrder();
+  const members: PlanningMember[] = [...users].sort(compareMembersByName(nameSort)).map((user) => ({
     id: user.id,
     name: getUserDisplayName(user),
   }));
@@ -184,6 +186,7 @@ export default async function EventPlanningPage({
         events={planningEvents}
         drafts={planningDrafts}
         members={members}
+        nameSort={nameSort}
         availability={availability}
         holidays={holidays}
         finalWeek={finalWeek}

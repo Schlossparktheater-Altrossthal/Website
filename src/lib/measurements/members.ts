@@ -9,7 +9,7 @@ import { sortRoles, type Role } from "@/lib/roles";
 export async function loadMeasurementMembers(where: Prisma.UserWhereInput) {
   const members = await prisma.user.findMany({
     where: { AND: [{ deactivatedAt: null }, where] },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { name: "asc" }, { email: "asc" }],
+    orderBy: [{ firstName: "asc" }, { lastName: "asc" }, { name: "asc" }],
     select: {
       id: true,
       firstName: true,

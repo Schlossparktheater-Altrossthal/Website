@@ -18,11 +18,13 @@ import { ExportButton } from "./export-button";
 import { MyCalendar } from "./my-calendar";
 import { BlocklistSettingsDialog } from "./settings-dialog";
 import { TeamView } from "./team-view";
+import type { NameSortOrder } from "@/lib/names";
 import type { MyBlockedDay, TeamEntry, TeamMember } from "./types";
 import { useCalendarModel } from "./use-calendar-model";
 import { useMyEntries } from "./use-my-entries";
 
 export type BlocklistPageData = {
+  nameSort: NameSortOrder;
   currentUserId: string;
   myEntries: MyBlockedDay[];
   members: TeamMember[];
@@ -199,6 +201,7 @@ export function BlocklistPageClient({ data }: { data: BlocklistPageData }) {
           onMonthChange={setMonth}
           model={model}
           members={data.members}
+          nameSort={data.nameSort}
           canPlan={data.canPlan}
           readOnly={data.readOnly}
           onCreateEvent={openCreate}

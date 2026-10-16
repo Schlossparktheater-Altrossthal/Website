@@ -32,6 +32,40 @@ export function getUserDisplayName(
   return getUserFullName(user) ?? trimToNull(user.email) ?? fallback;
 }
 
+type SortableMember = {
+  firstName?: MaybeString;
+  lastName?: MaybeString;
+  name?: MaybeString;
+  email?: MaybeString;
+};
+
+/** Reihenfolge von Personenlisten; Standard ist der Vorname. */
+export type NameSortOrder = "first" | "last";
+export const NAME_SORT_COOKIE = "mb-name-sort";
+export const DEFAULT_NAME_SORT: NameSortOrder = "first";
+
+export function parseNameSortOrder(value: MaybeString): NameSortOrder {
+  return value === "last" ? "last" : DEFAULT_NAME_SORT;
+}
+
+export function compareMembersByFirstName(
+  a: SortableMember,
+  b: SortableMember,
+  locale: string = "de-DE",
+): number {
+  // Ohne Vorname zählt der angezeigte Name, damit Konten nur mit `name` nicht ans Ende fallen.
+  const aKey = getUserDisplayName(a, "");
+  const bKey = getUserDisplayName(b, "");
+  const compare = aKey.localeCompare(bKey, locale, { sensitivity: "base" });
+  if (compare !== 0) return compare;
+  return compareMembersByLastName(a, b, locale);
+}
+
+export function compareMembersByName(order: NameSortOrder) {
+  return (a: SortableMember, b: SortableMember) =>
+    order === "last" ? compareMembersByLastName(a, b) : compareMembersByFirstName(a, b);
+}
+
 export function compareMembersByLastName(
   a: {
     firstName?: MaybeString;
