@@ -922,7 +922,10 @@ function AbsentList({
           </h4>
           <ul className="mt-0.5 space-y-0.5">
             {group.entries.map((entry) => {
-              const tags = entry.roles.length ? entry.roles : memberRoles(entry.userId);
+              const tags = [
+                ...(entry.roles.length ? entry.roles : memberRoles(entry.userId)),
+                ...entry.extra,
+              ];
               return (
                 <li key={entry.userId} className="flex items-baseline gap-1.5 text-sm">
                   <StatusDot status={entry.status} className="translate-y-[-1px]" />
