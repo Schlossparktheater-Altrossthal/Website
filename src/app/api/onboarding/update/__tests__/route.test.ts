@@ -39,7 +39,11 @@ vi.mock("@/lib/prisma", () => {
       upsert: mocks.profileUpsert.mockResolvedValue({ id: "profile-1", focus: "tech" }),
     },
     productionOnboarding: { upsert: mocks.onboardingUpsert },
-    memberRolePreference: { deleteMany: vi.fn(), createMany: vi.fn() },
+    memberRolePreference: {
+      findMany: vi.fn().mockResolvedValue([]),
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+    },
     dietaryRestriction: {
       upsert: mocks.restrictionUpsert,
       updateMany: mocks.restrictionUpdateMany,
