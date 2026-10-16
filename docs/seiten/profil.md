@@ -24,7 +24,7 @@ Fotoerlaubnis-Signaturen.
 - Bereiche über `?bereich=<id>`; Quelle ist `PROFILE_SECTIONS` in
   `src/app/(members)/mitglieder/profil/profile-sections.ts` mit den IDs `stammdaten`, `zahlungen`,
   `ernaehrung`, `masse`, `freigaben`, `interessen` (Gruppe „Über mich“), `produktion`
-  (Gruppe „Produktion“) und `benachrichtigungen` (Gruppe „Einstellungen“). Alte Links
+  (Gruppe „Produktion“), `benachrichtigungen` und `sicherheit` (Gruppe „Einstellungen“). Alte Links
   `onboarding`/`rollen` führen zu `produktion`.
 - Mobil (< `lg`): Profilkopf + gruppierte Bereichsliste mit „Fehlt: …“-Hinweisen; Tippen öffnet
   den Bereich, „‹ Profil“ bzw. Browser-Zurück führt zur Liste.
@@ -97,3 +97,14 @@ aktiven Produktion (Plan: `docs/Plan/fotoerlaubnis-stufen-plan.md`):
 ## Benachrichtigungen (`?bereich=benachrichtigungen`)
 
 Push auf diesem Gerät ein-/ausschalten und testen, Push je Bereich (Aufgaben und Dringendes kommen immer), Vorlaufzeit für Termin-Erinnerungen, Ruhezeit, angemeldete Geräte entfernen. Details: [benachrichtigungen.md](benachrichtigungen.md).
+
+## Anmeldung & Sicherheit (`?bereich=sicherheit`)
+
+Passwort ändern, Passkeys hinzufügen und die freiwillige Zwei-Faktor-Anmeldung (Authenticator-App,
+TOTP) – alles im Theater-Konto (Authentik). Die Knöpfe öffnen die Theater-Flows
+`theater-password-change`, `theater-passkey-setup` und `theater-totp-setup` (Blueprint in
+Config-LimitlessGreen `applications/authentik/theater-blueprint.yaml`) mit `?next=` zurück in diesen
+Bereich; ohne Authentik-Session melden die Flows vorher selbst an. Hinterlegte Passkeys/Apps kommen
+über `GET/DELETE /api/profile/security` aus Authentik (nur mit API-Token, auf Staging nur die Links).
+Mit Authentik-Login gibt es unter „Persönliche Daten“ kein lokales Passwortfeld mehr, nur einen
+Link hierher; `PATCH /api/profile` lehnt `password` dann ab.

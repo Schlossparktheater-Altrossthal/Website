@@ -25,7 +25,11 @@ Berechtigungen konfigurieren.
 - `/mitglieder/mitgliederverwaltung`: vier Bereiche über `SectionNav` mit Zustand in der URL
   (`?tab=`): Mitglieder, Einladungen, Saisonwechsel, Datenpflege. Ab vier Einträgen zeigt die
   Leiste auf Mobil ein Auswahlfeld statt der Pills.
-- `/mitglieder/mitgliederverwaltung/[userId]`: Bereiche Profil, Rechte, Aktivität.
+- `/mitglieder/mitgliederverwaltung/[userId]`: Bereiche Profil, Rechte, Aktivität. Karte
+  „Anmeldung“ (`MemberLoginCard`, `GET/DELETE/POST /api/members/[id]/login`,
+  `PRIVATE.ADMIN.MEMBERS.MANAGE`): Theater-Konto, Passwort-Stand, Passkeys und Authenticator-Apps
+  des Mitglieds aus Authentik; einzeln entfernen, Zwei-Faktor zurücksetzen, Mail „Passwort
+  festlegen“. Nur für Konten aus dem Mitgliederbereich, jede Aktion wird mit Admin geloggt.
 - Aktionen je Mitglied über das „⋯“ in der Mitgliederliste: Profil öffnen, Rollen & Daten
   bearbeiten, Aus Produktion entfernen, Deaktivieren/Reaktivieren, Löschen. „Aus Produktion
   entfernen“ erscheint nur bei Mitgliedschaft in der aktiven Produktion (fehlt sie, ist der

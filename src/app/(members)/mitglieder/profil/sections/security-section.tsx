@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 
 type DeviceKind = "webauthn" | "totp";
 
@@ -37,7 +38,10 @@ type SecurityState =
       canManage: boolean;
     };
 
-const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+const dateFormat = new Intl.DateTimeFormat("de-DE", {
+  dateStyle: "medium",
+  timeZone: DEFAULT_TIME_ZONE,
+});
 
 function formatDate(value: string | null) {
   if (!value) return null;
