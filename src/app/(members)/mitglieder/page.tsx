@@ -13,6 +13,8 @@ import { DateBadge } from "@/components/ui/date-badge";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { getActiveProduction } from "@/lib/active-production";
 import { loadUpcomingDeadlines } from "@/lib/planning/plan-service";
+import { loadDashboardScript } from "@/lib/skript/learn/dashboard";
+import { ProgressRing } from "@/components/ui/progress-ring";
 
 export default async function MembersPage() {
   const session = await requireAuth();
@@ -23,7 +25,12 @@ export default async function MembersPage() {
     readProtocolShortcuts(session.user),
   ]);
   const open = tasks.filter((task) => !task.doneAt).length;
-  const deadlines = production ? await loadUpcomingDeadlines(session.user, production.id) : [];
+  const [deadlines, script] = production
+    ? await Promise.all([
+        loadUpcomingDeadlines(session.user, production.id),
+        userId ? loadDashboardScript(production.id, userId) : Promise.resolve(null),
+      ])
+    : [[], null];
   const now = new Date();
 
   const deadlinesCard = deadlines.length ? (
@@ -87,6 +94,48 @@ export default async function MembersPage() {
     </Card>
   ) : null;
 
+  const learn = script?.learn;
+  const scriptCard = script ? (
+    <Card variant="plain" size="flush" id="skript">
+      <div className="flex items-center gap-3 p-4 pb-2">
+        {learn ? (
+          <ProgressRing
+            value={learn.solid}
+            max={learn.total}
+            label={`${learn.total ? Math.round((learn.solid / learn.total) * 100) : 0}%`}
+          />
+        ) : null}
+        <SectionHeader
+          title={learn ? "Mein Text" : "Skript"}
+          description={
+            learn
+              ? `${script.roleNames.join(", ")} · ${learn.solid} von ${learn.total} Stellen sitzen`
+              : `Aktuelle Fassung: ${script.label}`
+          }
+        />
+      </div>
+      {learn ? (
+        <p className="px-4 text-sm text-muted-foreground">
+          {learn.changed ? `${learn.changed} geänderte Stellen · ` : ""}
+          {learn.due ? `${learn.due} heute zu wiederholen` : "Heute nichts fällig"}
+          {learn.fresh ? ` · ${learn.fresh} noch neu` : ""}
+          <br />
+          Fassung: {script.label}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-2 p-4 pt-3">
+        {learn ? (
+          <Button asChild size="sm">
+            <Link href={`/mitglieder/lernen/${script.showId}`}>Text lernen</Link>
+          </Button>
+        ) : null}
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/mitglieder/skript/${script.versionId}`}>Skript lesen</Link>
+        </Button>
+      </div>
+    </Card>
+  ) : null;
+
   return (
     <MembersDashboard
       tasksSlot={
@@ -105,6 +154,7 @@ export default async function MembersPage() {
               </div>
             </Card>
           ) : null}
+          {scriptCard}
           {deadlinesCard}
         </>
       }
