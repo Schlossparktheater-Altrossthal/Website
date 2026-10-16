@@ -21,6 +21,12 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { PLANNING_PATH, rememberPlanningHref } from "./return-href";
 import { MonthSwitcher } from "@/components/ui/month-switcher";
@@ -1040,18 +1046,21 @@ function EventList({
   }, [events, showPast, todayKey]);
   const [exporting, setExporting] = useState(false);
 
-  const exportPdf = async () => {
+  const exportPdf = async (mode: "plan" | "availability") => {
     setExporting(true);
     try {
       await downloadPdf(
         "terminliste",
         {
+          mode,
           generatedAt: new Date().toISOString(),
           production: productionTitle,
           months: groups.map(([label, weeks]) => ({
             label,
             weeks: weeks.map((week) =>
-              week.map((event) => pdfEvent(event, attendanceFor(event), showAbsences)),
+              week.map((event) =>
+                pdfEvent(event, mode === "plan" ? [] : attendanceFor(event), showAbsences),
+              ),
             ),
           })),
         },
@@ -1083,18 +1092,30 @@ function EventList({
         >
           {showAbsences ? "Abwesenheiten ausblenden" : "Abwesenheiten zeigen"}
         </Button>
-        <AsyncButton
-          type="button"
-          variant="outline"
-          size="sm"
-          className="ml-auto h-10"
-          isLoading={exporting}
-          loadingText="PDF wird erstellt…"
-          disabled={!groups.length}
-          onClick={exportPdf}
-        >
-          <PrinterIcon className="h-4 w-4" aria-hidden /> PDF
-        </AsyncButton>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <AsyncButton
+              type="button"
+              variant="outline"
+              size="sm"
+              className="ml-auto h-10"
+              isLoading={exporting}
+              loadingText="PDF wird erstellt…"
+              disabled={!groups.length}
+            >
+              <PrinterIcon className="h-4 w-4" aria-hidden /> PDF
+              <ChevronDownIcon className="h-4 w-4" aria-hidden />
+            </AsyncButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => exportPdf("plan")}>
+              Ablaufplan (ohne Sperrliste)
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => exportPdf("availability")}>
+              Mit Abwesenheiten
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       {groups.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
@@ -1158,7 +1179,8 @@ function pdfEvent(event: PlanningEvent, attendance: Attendance[], showAbsences: 
     date: listDate(event),
     time: listTime(event) || (event.allDay ? "ganztägig" : null),
     title: event.title,
-    detail: [firstLine(event.description), event.location].filter(Boolean).join(" · ") || null,
+    note: firstLine(event.description) || null,
+    location: event.location || null,
     rehearsal: event.kind === "REHEARSAL",
     status:
       event.status === "CANCELLED" || event.status === "TENTATIVE" ? event.status : "CONFIRMED",

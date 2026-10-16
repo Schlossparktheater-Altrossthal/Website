@@ -16,7 +16,9 @@ const eventSchema = z.object({
   date: z.string(),
   time: z.string().nullable(),
   title: z.string(),
-  detail: z.string().nullable().default(null),
+  /** Erste Zeile der Beschreibung. */
+  note: z.string().nullable().default(null),
+  location: z.string().nullable().default(null),
   rehearsal: z.boolean(),
   status: z.enum(["CONFIRMED", "TENTATIVE", "CANCELLED"]).default("CONFIRMED"),
   /** „fehlen: …“ bzw. „eingeschränkt: …“; null, wenn ausgeblendet oder niemand. */
@@ -27,6 +29,8 @@ const eventSchema = z.object({
 });
 
 const terminlisteSchema = z.object({
+  /** plan: reiner Ablaufplan ohne Sperrlistendaten; availability: mit Abwesenheiten und Zusagen. */
+  mode: z.enum(["plan", "availability"]).default("availability"),
   generatedAt: z.string().datetime(),
   production: z.string().nullable().default(null),
   months: z.array(
@@ -50,12 +54,13 @@ export const terminlisteTemplate: PdfTemplate<TerminlistePdfData> = {
   description: "Kompakte Liste aller Proben und Termine, nach Monat und Woche gruppiert.",
   schema: terminlisteSchema,
   documentOptions: { size: "A4", layout: "portrait", margin: PDF_MARGIN, bufferPages: true },
-  filename: (data) => `termine-${data.generatedAt.slice(0, 10)}.pdf`,
+  filename: (data) =>
+    `${data.mode === "plan" ? "ablaufplan" : "termine"}-${data.generatedAt.slice(0, 10)}.pdf`,
   render: (doc, data) => {
     const all = data.months.flatMap((month) => month.weeks.flat());
     const rehearsals = all.filter((event) => event.rehearsal).length;
     const y = drawDocumentHeader(doc, {
-      title: "Termine",
+      title: data.mode === "plan" ? "Ablaufplan" : "Termine & Verfügbarkeit",
       meta: [
         data.production,
         `${rehearsals} Proben`,
@@ -64,6 +69,7 @@ export const terminlisteTemplate: PdfTemplate<TerminlistePdfData> = {
       ],
     });
 
+    const plan = data.mode === "plan";
     const rows: PdfTableRow[] = [];
     for (const month of data.months) {
       const count = month.weeks.reduce((sum, week) => sum + week.length, 0);
@@ -71,26 +77,37 @@ export const terminlisteTemplate: PdfTemplate<TerminlistePdfData> = {
       month.weeks.forEach((week) =>
         week.forEach((event, index) => {
           const cancelled = event.status === "CANCELLED";
+          const base = [
+            { text: event.date, bold: true },
+            { text: event.time ?? "", color: PDF_COLOR.muted },
+            {
+              text: event.title,
+              bold: !event.rehearsal,
+              strike: cancelled,
+              color: cancelled ? PDF_COLOR.muted : PDF_COLOR.text,
+              sub: event.note,
+            },
+          ];
+          const status = event.status === "CONFIRMED" ? "" : STATUS_PILL[event.status];
           rows.push({
             gapBefore: index === 0,
             accent: event.rehearsal ? PDF_COLOR.rehearsal : PDF_COLOR.accent,
-            cells: [
-              { text: event.date, bold: true },
-              { text: event.time ?? "", color: PDF_COLOR.muted },
-              {
-                text: event.title,
-                bold: !event.rehearsal,
-                strike: cancelled,
-                color: cancelled ? PDF_COLOR.muted : PDF_COLOR.text,
-                sub: [
-                  { text: event.detail ?? "" },
-                  { text: cancelled ? "" : (event.blocked ?? ""), color: PDF_COLOR.danger },
-                  { text: cancelled ? "" : (event.limited ?? ""), color: PDF_COLOR.warning },
+            cells: plan
+              ? [...base, { text: event.location ?? "", color: PDF_COLOR.muted }, status]
+              : [
+                  ...base,
+                  {
+                    text: "",
+                    sub: cancelled
+                      ? null
+                      : [
+                          { text: event.blocked ?? "", color: PDF_COLOR.danger },
+                          { text: event.limited ?? "", color: PDF_COLOR.warning },
+                        ],
+                  },
+                  status,
+                  { text: cancelled ? "" : (event.attendance ?? ""), color: PDF_COLOR.muted },
                 ],
-              },
-              event.status === "CONFIRMED" ? "" : STATUS_PILL[event.status],
-              { text: cancelled ? "" : (event.attendance ?? ""), color: PDF_COLOR.muted },
-            ],
           });
         }),
       );
@@ -101,13 +118,22 @@ export const terminlisteTemplate: PdfTemplate<TerminlistePdfData> = {
     } else {
       drawTable(doc, {
         y,
-        columns: [
-          { label: "Datum", weight: 15 },
-          { label: "Zeit", weight: 11 },
-          { label: "Termin", weight: 56 },
-          { label: "Status", weight: 10, align: "center" },
-          { label: "Können", weight: 8, align: "right" },
-        ],
+        columns: plan
+          ? [
+              { label: "Datum", weight: 13 },
+              { label: "Zeit", weight: 10 },
+              { label: "Termin", weight: 45 },
+              { label: "Ort", weight: 22 },
+              { label: "Status", weight: 10, align: "center" },
+            ]
+          : [
+              { label: "Datum", weight: 12 },
+              { label: "Zeit", weight: 10 },
+              { label: "Termin", weight: 33 },
+              { label: "Abwesend", weight: 29 },
+              { label: "Status", weight: 9, align: "center" },
+              { label: "Können", weight: 8, align: "right" },
+            ],
         rows,
       });
     }
