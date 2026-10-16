@@ -51,6 +51,8 @@ const wunschlisteSchema = z.object({
             level: z.number().int().min(1).max(4),
             assigned: z.boolean(),
             entered: z.boolean(),
+            /** Höchster Wunsch der Person (bei Gleichstand mehrere). */
+            top: z.boolean().default(false),
           })
           .nullable(),
       ),
@@ -95,7 +97,10 @@ function renderList(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY: n
             {
               text: person.name + (person.tag ? ` (${person.tag})` : ""),
               bold: wish.level >= 3,
-              sub: wish.entered ? "nachgetragen" : null,
+              sub:
+                [wish.top ? "höchster Wunsch" : null, wish.entered ? "nachgetragen" : null]
+                  .filter(Boolean)
+                  .join(" · ") || null,
             },
             {
               text: LEVEL_LABELS[wish.level],
@@ -143,6 +148,21 @@ const NAME_WIDTH = 150;
 const ASSIGN_WIDTH = 130;
 const ROW_HEIGHT = 14;
 const HEAD_HEIGHT = 30;
+
+/** Kleiner Stern als Kennzeichen für den höchsten Wunsch einer Person. */
+function drawStar(doc: PDFKit.PDFDocument, cx: number, cy: number, radius: number) {
+  const points: [number, number][] = [];
+  for (let index = 0; index < 10; index += 1) {
+    const r = index % 2 === 0 ? radius : radius * 0.45;
+    const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+    points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+  }
+  doc
+    .save()
+    .polygon(...points)
+    .fill(PDF_COLOR.accent)
+    .restore();
+}
 
 function drawDots(doc: PDFKit.PDFDocument, x: number, y: number, level: number, hollow: boolean) {
   for (let index = 0; index < 4; index += 1) {
@@ -230,6 +250,7 @@ function renderMatrix(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY:
           .restore();
       }
       drawDots(doc, x + 5, y + ROW_HEIGHT / 2, wish.level, wish.entered);
+      if (wish.top) drawStar(doc, x + 33, y + ROW_HEIGHT / 2, 3);
     });
     if (person.assignment) {
       textLine(
@@ -268,6 +289,13 @@ function renderMatrix(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY:
   }
   drawDots(doc, x, y + 3, 2, true);
   textLine(doc, "hohl = nachgetragen", x + 24, y, 90, { size: 6.5, color: PDF_COLOR.muted });
+  x += 110;
+  drawStar(doc, x + 4, y + 3, 3);
+  textLine(doc, "höchster Wunsch der Person", x + 12, y, 110, {
+    size: 6.5,
+    color: PDF_COLOR.muted,
+  });
+  x += 10;
   x += 120;
   doc
     .save()

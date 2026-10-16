@@ -21,21 +21,29 @@ export function downloadWishlistPdf(
       shortTitle: area.shortTitle,
       domain: area.domain,
     })),
-    people: people.map((person) => ({
-      name: person.name,
-      tag: person.onboardingDone && !person.isReturning ? "neu" : null,
-      assignment: assignmentText(person),
-      memberSince: person.memberSince,
-      interests: person.interests,
-      teamNote: person.onboardingNote,
-      planningNote: person.note?.text ?? null,
-      wishes: data.areas.map((area) => {
-        const wish = person.wishes.find((entry) => entry.areaCode === area.code);
-        return wish
-          ? { level: wish.level, assigned: wish.assigned, entered: Boolean(wish.enteredBy) }
-          : null;
-      }),
-    })),
+    people: people.map((person) => {
+      const max = Math.max(0, ...person.wishes.map((wish) => wish.weight));
+      return {
+        name: person.name,
+        tag: person.onboardingDone && !person.isReturning ? "neu" : null,
+        assignment: assignmentText(person),
+        memberSince: person.memberSince,
+        interests: person.interests,
+        teamNote: person.onboardingNote,
+        planningNote: person.note?.text ?? null,
+        wishes: data.areas.map((area) => {
+          const wish = person.wishes.find((entry) => entry.areaCode === area.code);
+          return wish
+            ? {
+                level: wish.level,
+                assigned: wish.assigned,
+                entered: Boolean(wish.enteredBy),
+                top: wish.weight === max,
+              }
+            : null;
+        }),
+      };
+    }),
   };
   return downloadPdf("wunschliste", payload, "wunschliste.pdf");
 }
