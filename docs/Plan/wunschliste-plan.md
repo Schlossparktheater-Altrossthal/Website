@@ -41,3 +41,14 @@ Verantwortliche können Wünsche nachtragen.
 
 Prozente, Verteilungsdiagramme, Rankings über Personen; algorithmische Besetzung. Den Reiter
 „Wünsche & Besetzung“ der Onboarding-Statistik später durch einen Link hierher ersetzen.
+
+## Umbau Zuweisung (2026-10-16, Nutzer: „mega unübersichtlich“)
+
+- Nur noch zwei Ansichten **Gewerke** und **Rollen** als aufklappbare Karten (Desktop offen,
+  mobil zu): offene Wünsche nach Stufe mit „Zuweisen“, Team als Namens-Chips, Rollen der Größe.
+- Personenliste und Ansicht „Wünsche“ entfallen; die Suche öffnet die Person (Gewerke, Rollen,
+  Wünsche, Nachtragen, Notiz). PDF und „Neue Rolle“ im ⋯-Menü.
+- PDF-Anhang „Personen“: dabei seit, Interessen, Hinweis ans Team, interne Notiz.
+- Datenmigration: Alt-Codes → Blaupausen (Bühnenbild+Requisite → Bühnenbau, Kostüm → Kostüme,
+  Licht & Ton → Technik, Werbung → Social Media & Werbung, Musik → Musik …); neue Blaupausen
+  „Maske & Make-up“ und „Regieassistenz & Orga“ – die Gewerke legt die Regie in der Produktion an.
