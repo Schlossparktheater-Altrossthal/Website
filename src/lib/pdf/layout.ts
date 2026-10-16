@@ -100,6 +100,27 @@ export function drawPageFooters(doc: PDFKit.PDFDocument, label: string) {
   }
 }
 
+/** Fünfzackiger Stern (Schriften haben das Zeichen nicht zuverlässig). */
+export function drawPdfStar(
+  doc: PDFKit.PDFDocument,
+  cx: number,
+  cy: number,
+  radius: number,
+  color: string,
+) {
+  const points: [number, number][] = [];
+  for (let index = 0; index < 10; index += 1) {
+    const r = index % 2 === 0 ? radius : radius * 0.45;
+    const angle = -Math.PI / 2 + (index * Math.PI) / 5;
+    points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+  }
+  doc
+    .save()
+    .polygon(...points)
+    .fill(color)
+    .restore();
+}
+
 // ---------- Tabelle ----------
 
 export type PdfTableColumn = {
@@ -125,6 +146,8 @@ export type PdfTableCell =
       checkbox?: boolean;
       /** Linierte, leere Zelle zum Mitschreiben. */
       ruled?: boolean;
+      /** Kleiner Stern hinter dem Text (einzeilige Texte), z. B. „höchster Wunsch“. */
+      star?: string | null;
     };
 
 export type PdfTableRow =
@@ -217,6 +240,10 @@ function drawCell(
       .fillColor(c.color ?? PDF_COLOR.text);
     const height = doc.heightOfString(c.text, { width: inner });
     doc.text(c.text, x + CELL_PAD_X, cursor, { width: inner, align, strike: c.strike });
+    if (c.star && align === "left") {
+      const textWidth = Math.min(doc.widthOfString(c.text), inner - 8);
+      drawPdfStar(doc, x + CELL_PAD_X + textWidth + 5, cursor + TEXT_SIZE / 2 + 0.5, 3, c.star);
+    }
     cursor += height;
   }
   doc.font(PDF_FONT).fontSize(SUB_SIZE);

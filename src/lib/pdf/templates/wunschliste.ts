@@ -6,6 +6,7 @@ import {
   PDF_MARGIN,
   drawDocumentHeader,
   drawPageFooters,
+  drawPdfStar,
   drawSectionTitle,
   drawTable,
   pdfDateTimeFormatter,
@@ -97,10 +98,8 @@ function renderList(doc: PDFKit.PDFDocument, data: WunschlistePdfData, startY: n
             {
               text: person.name + (person.tag ? ` (${person.tag})` : ""),
               bold: wish.level >= 3,
-              sub:
-                [wish.top ? "höchster Wunsch" : null, wish.entered ? "nachgetragen" : null]
-                  .filter(Boolean)
-                  .join(" · ") || null,
+              sub: wish.entered ? "nachgetragen" : null,
+              star: wish.top ? PDF_COLOR.accent : null,
             },
             {
               text: LEVEL_LABELS[wish.level],
@@ -149,19 +148,8 @@ const ASSIGN_WIDTH = 130;
 const ROW_HEIGHT = 14;
 const HEAD_HEIGHT = 30;
 
-/** Kleiner Stern als Kennzeichen für den höchsten Wunsch einer Person. */
 function drawStar(doc: PDFKit.PDFDocument, cx: number, cy: number, radius: number) {
-  const points: [number, number][] = [];
-  for (let index = 0; index < 10; index += 1) {
-    const r = index % 2 === 0 ? radius : radius * 0.45;
-    const angle = -Math.PI / 2 + (index * Math.PI) / 5;
-    points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
-  }
-  doc
-    .save()
-    .polygon(...points)
-    .fill(PDF_COLOR.accent)
-    .restore();
+  drawPdfStar(doc, cx, cy, radius, PDF_COLOR.accent);
 }
 
 function drawDots(doc: PDFKit.PDFDocument, x: number, y: number, level: number, hollow: boolean) {
@@ -366,6 +354,7 @@ export const wunschlisteTemplate: PdfTemplate<WunschlistePdfData> = {
       meta: [
         data.production,
         `${withWishes} von ${data.people.length} Personen mit Wünschen`,
+        data.layout === "list" ? "Stern = höchster Wunsch der Person" : null,
         `Stand ${pdfDateTimeFormatter.format(new Date(data.generatedAt))}`,
       ],
     });
