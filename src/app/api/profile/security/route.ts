@@ -4,24 +4,13 @@ import { z } from "zod";
 import {
   AUTHENTIK_DEVICE_KINDS,
   deleteAuthentikDevice,
-  findAuthentikUserForMember,
   isManagedAuthentikUser,
   listAuthentikDevices,
   type AuthentikDevice,
 } from "@/lib/authentik/client";
 import { getAuthentikAccountLinks, isAuthentikProvisioningEnabled } from "@/lib/authentik/config";
-import { memberIdentitySelect, toMemberIdentity } from "@/lib/authentik/sync";
-import { prisma } from "@/lib/prisma";
+import { findAuthentikUserForMemberId as loadAuthentikUser } from "@/lib/authentik/devices";
 import { requireAuth } from "@/lib/rbac";
-
-async function loadAuthentikUser(userId: string) {
-  const member = await prisma.user.findUnique({
-    where: { id: userId },
-    select: memberIdentitySelect,
-  });
-  const identity = member ? toMemberIdentity(member) : null;
-  return identity ? findAuthentikUserForMember(identity) : null;
-}
 
 /**
  * Profil "Anmeldung & Sicherheit": Links in die Konto-Flows von Authentik und

@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { formatRelativeFromNow } from "@/lib/datetime";
 import { getUserDisplayName } from "@/lib/names";
 import { buildProductionHistory } from "@/lib/produktionen/production-history";
+import { MemberLoginCard } from "@/components/members/member-login-card";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { ImpersonationButton } from "./impersonation-button";
@@ -1265,6 +1266,12 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                   </dl>
                 </CardContent>
               </Card>
+
+              <MemberLoginCard
+                userId={member.id}
+                displayName={displayName}
+                hasEmail={Boolean(email)}
+              />
 
               {canSendTestNotifications ? (
                 <MemberTestNotificationCard
