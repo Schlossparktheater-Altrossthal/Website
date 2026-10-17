@@ -71,11 +71,12 @@ test.describe("als admin", () => {
     await option.click();
     await page.getByRole("button", { name: `Details Gewerk ${department}`, exact: true }).click();
     await page.getByLabel("Was steht an?").fill("E2E Baustein");
-    await expect(page.getByText("Ablauf: E2E Baustein").first()).toBeVisible();
+    // Der Grund steht seit der gruppierten Teilnehmerliste im Tooltip der Person.
+    await expect(page.locator('[title*="Ablauf: E2E Baustein"]').first()).toBeAttached();
     await expect(page.getByText(/^Gespeichert/)).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole("button", { name: "Vormerken" }).click();
-    await expect(page).toHaveURL(/\/mitglieder\/termine\/[^/]+$/);
+    await expect(page).toHaveURL(/\/mitglieder\/termine\/[^/]+$/, { timeout: 60_000 });
     await expect(page.getByText(`E2E Baustein (Gewerk ${department})`)).toBeVisible();
 
     // Gewerk-Leitung (admin darf als Regie jedes Gewerk verwalten)

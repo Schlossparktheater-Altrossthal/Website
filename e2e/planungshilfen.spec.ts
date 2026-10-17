@@ -4,7 +4,7 @@ import { clickUntil } from "./helpers";
 import { authFile } from "./env";
 
 // Planungshilfen der Terminplanung (docs/Plan/planungshilfen-terminplanung-plan.md):
-// Tagesblatt mit „Was ist probbar?“ und Wochenbelastung, Ansichten Szenen und Personen.
+// Tagesblatt mit „Probbar“ und Wochenbelastung, Ansichten Szenen und Personen.
 // Nur lesend – legt nichts an, läuft also auch auf Staging.
 
 test.describe("als admin", () => {
@@ -32,8 +32,8 @@ test.describe("als admin", () => {
       (await page.getByRole("radio", { name: "Szenen" }).count()) === 0,
       "Aktive Produktion ohne Szenen",
     );
-    await expect(page.getByText("Was ist probbar?")).toBeVisible();
-    const add = page.getByRole("button", { name: /hinzufügen$/ }).first();
+    await expect(page.getByRole("heading", { name: "Probbar", level: 3 })).toBeVisible();
+    const add = page.getByRole("button", { name: /auswählen$/ }).first();
     await clickUntil(add, () =>
       expect(page.getByRole("button", { name: /Probe mit 1 Szene anlegen/ })).toBeVisible({
         timeout: 2_000,

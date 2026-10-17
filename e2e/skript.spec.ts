@@ -304,7 +304,15 @@ test.describe("als admin", () => {
       const part = [...document.querySelectorAll("[data-part]")].find((el) =>
         el.textContent?.includes("verehrtes Publikum"),
       );
-      const node = part?.firstChild;
+      // Wörter stecken einzeln in [data-w]-Spans: passenden Textknoten suchen.
+      const walker = part ? document.createTreeWalker(part, NodeFilter.SHOW_TEXT) : null;
+      let node: Node | null = null;
+      while (walker?.nextNode()) {
+        if (walker.currentNode.textContent?.includes("verehrtes")) {
+          node = walker.currentNode;
+          break;
+        }
+      }
       if (!node?.textContent) throw new Error("Text nicht gefunden");
       const start = node.textContent.indexOf("verehrtes");
       const range = document.createRange();
@@ -328,7 +336,11 @@ test.describe("als admin", () => {
     // Notizmodus: Wort antippen, zweites Wort erweitert, Farbe markiert, gleiche Farbe entfernt
     await page.getByRole("button", { name: "Notieren" }).click();
     await page.locator("[data-w]", { hasText: "Guten" }).click();
-    await page.locator("[data-w]", { hasText: "Abend," }).click();
+    // Satzzeichen stehen außerhalb der Wort-Spans.
+    await page
+      .locator("[data-w]")
+      .filter({ hasText: /^Abend$/ })
+      .click();
     await expect(page.getByText("„Guten Abend“")).toBeVisible();
     await page.getByRole("button", { name: "Grün markieren" }).click();
     const gruen = page.locator("mark[data-annotation]", { hasText: "Guten Abend" });
@@ -338,7 +350,10 @@ test.describe("als admin", () => {
     await expect(gruen).toHaveCount(0);
     // Ziehen mit der Maus wählt mehrere Wörter, der Griff am Ende verlängert die Auswahl
     const von = await page.locator("[data-w]", { hasText: "verehrtes" }).boundingBox();
-    const bis = await page.locator("[data-w]", { hasText: "Abend," }).boundingBox();
+    const bis = await page
+      .locator("[data-w]")
+      .filter({ hasText: /^Abend$/ })
+      .boundingBox();
     if (!von || !bis) throw new Error("Wörter nicht sichtbar");
     await page.mouse.move(bis.x + 2, bis.y + bis.height / 2);
     await page.mouse.down();
@@ -358,7 +373,11 @@ test.describe("als admin", () => {
     await page.locator("[data-w]", { hasText: "Guten" }).click();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     await expect(page.locator("[data-sign-point]")).toHaveText("/");
-    await page.locator("[data-w]", { hasText: "Abend," }).click();
+    // Satzzeichen stehen außerhalb der Wort-Spans.
+    await page
+      .locator("[data-w]")
+      .filter({ hasText: /^Abend$/ })
+      .click();
     await page.getByRole("button", { name: "Betonung", exact: true }).click();
     await expect(page.locator("mark.underline", { hasText: "Abend" })).toBeVisible();
     await page.locator("[data-sign-point]").click();
