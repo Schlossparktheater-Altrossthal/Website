@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   AUTHENTIK_DEVICE_KINDS,
   deleteAuthentikDevice,
+  hasAuthentikPasswordSinceCreation,
   isManagedAuthentikUser,
   listAuthentikDevices,
   type AuthentikDevice,
@@ -27,12 +28,15 @@ export async function GET() {
 
   let devices: AuthentikDevice[] | null = null;
   let canManage = false;
+  // `null`: unbekannt (ohne API-Token) – dann heißt der Knopf „Passwort ändern“.
+  let hasPassword: boolean | null = null;
   if (isAuthentikProvisioningEnabled()) {
     try {
       const authentikUser = await loadAuthentikUser(userId);
       if (authentikUser) {
         devices = await listAuthentikDevices(authentikUser);
         canManage = isManagedAuthentikUser(authentikUser);
+        hasPassword = hasAuthentikPasswordSinceCreation(authentikUser);
       } else {
         devices = [];
       }
@@ -41,7 +45,7 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ mode: "authentik", links, devices, canManage });
+  return NextResponse.json({ mode: "authentik", links, devices, canManage, hasPassword });
 }
 
 const deleteSchema = z.object({

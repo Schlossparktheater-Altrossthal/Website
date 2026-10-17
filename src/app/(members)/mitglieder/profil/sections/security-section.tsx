@@ -36,6 +36,8 @@ type SecurityState =
       /** `null`: Geräte hier nicht abrufbar (z. B. Staging) – dann zeigt Authentik sie. */
       devices: Device[] | null;
       canManage: boolean;
+      /** `false`: Konto ohne Passwort (z. B. Regie mit Passkey); `null`: unbekannt. */
+      hasPassword?: boolean | null;
     };
 
 const dateFormat = new Intl.DateTimeFormat("de-DE", {
@@ -161,7 +163,7 @@ export function SecuritySection() {
     );
   }
 
-  const { links, devices, canManage } = state;
+  const { links, devices, canManage, hasPassword } = state;
   const passkeys = devices?.filter((device) => device.kind === "webauthn") ?? [];
   const totps = devices?.filter((device) => device.kind === "totp") ?? [];
   const totpActive = totps.length > 0;
@@ -201,7 +203,9 @@ export function SecuritySection() {
           </div>
         </div>
         <Button asChild variant="outline" size="sm">
-          <a href={withReturn(links.passwordChange)}>Passwort ändern</a>
+          <a href={withReturn(links.passwordChange)}>
+            {hasPassword === false ? "Passwort festlegen" : "Passwort ändern"}
+          </a>
         </Button>
       </Card>
 
