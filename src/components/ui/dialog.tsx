@@ -50,10 +50,12 @@ function prefersReducedMotion() {
 /** Wie weit sich das Blatt über seine Ruhelage nach oben ziehen lässt. */
 const STRETCH_MAX = 48;
 /** Schließen ab diesem Anteil der Blatthöhe oder mit einem schnellen Wisch nach unten. */
-const CLOSE_RATIO = 0.3;
-const CLOSE_MIN = 80;
-const FLICK_VELOCITY = 0.6; // px/ms
-const SPRING = { stiffness: 380, damping: 32 };
+const CLOSE_RATIO = 0.45;
+const CLOSE_MIN = 140;
+const FLICK_VELOCITY = 1; // px/ms
+/** Nur Bewegungen so kurz vor dem Loslassen zählen für den Schwung. */
+const VELOCITY_WINDOW = 80; // ms
+const SPRING = { stiffness: 700, damping: 48 };
 
 /** Gummiband: je weiter gezogen, desto zäher, nie über `max`. */
 function rubberBand(distance: number, max: number) {
@@ -123,9 +125,14 @@ function useSheetPhysics(
         const s = state.current;
         const dt = Math.min(0.032, Math.max(0, (now - last) / 1000));
         last = now;
-        const force = -SPRING.stiffness * (s.y - target) - SPRING.damping * s.velocity;
-        s.velocity += force * dt;
-        const y = s.y + s.velocity * dt;
+        // In kleinen Teilschritten rechnen: bei ruckelnden Bildern bleibt die Feder stabil.
+        let y = s.y;
+        for (let left = dt; left > 0; left -= 0.004) {
+          const h = Math.min(0.004, left);
+          const force = -SPRING.stiffness * (y - target) - SPRING.damping * s.velocity;
+          s.velocity += force * h;
+          y += s.velocity * h;
+        }
         if (Math.abs(y - target) < 0.5 && Math.abs(s.velocity) < 20) {
           s.velocity = 0;
           s.frame = 0;
@@ -183,19 +190,21 @@ function useSheetPhysics(
       const raw = s.drag.startOffset + event.clientY - s.drag.startY;
       apply(raw >= 0 ? raw : -rubberBand(-raw, STRETCH_MAX));
       s.samples.push({ t: event.timeStamp, y: event.clientY });
-      if (s.samples.length > 6) s.samples.shift();
+      if (s.samples.length > 12) s.samples.shift();
     },
     onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => {
       const s = state.current;
       if (!s.drag || s.drag.pointerId !== event.pointerId) return;
       s.drag = null;
-      const first = s.samples[0];
-      const last = s.samples[s.samples.length - 1];
-      const dt = last && first ? last.t - first.t : 0;
+      // Schwung nur aus den letzten Millisekunden: wer stillhält und loslässt, wischt nicht.
+      const recent = s.samples.filter((sample) => event.timeStamp - sample.t <= VELOCITY_WINDOW);
+      const first = recent[0];
+      const last = recent[recent.length - 1];
+      const dt = first && last ? Math.max(event.timeStamp - first.t, 16) : 0;
       const velocity = dt > 0 ? (last.y - first.y) / dt : 0; // px/ms
       const height = contentRef.current?.offsetHeight ?? window.innerHeight;
       const farEnough = s.y > Math.max(CLOSE_MIN, height * CLOSE_RATIO);
-      const flicked = velocity > FLICK_VELOCITY && s.y > 10;
+      const flicked = velocity > FLICK_VELOCITY && s.y > 40;
       s.velocity = velocity * 1000;
       if ((farEnough && velocity > -0.2) || flicked) {
         // Mit Schwung hinaus, dann schließen (Radix' Ausblende-Animation startet unten).
