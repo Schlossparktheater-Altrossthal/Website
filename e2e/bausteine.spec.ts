@@ -8,6 +8,12 @@ import { authFile } from "./env";
 // Gewerk-Dashboard. Läuft nur über die Oberfläche (auch auf Staging) und räumt am Ende auf.
 // Lokale Demo-Daten ohne Klickerei: `pnpm demo:bausteine` (docs/e2e-tests.md).
 
+// „Neu“ legt die Probe am gewählten Tag um 19:00 (Berlin) an, die Gewerk-Liste zeigt nur kommende
+// Termine. Abends nach Probenende (CI nach 21 Uhr Ortszeit, 2026-10-17) fehlte die Kachel – wie in
+// teams.spec.ts deshalb auf morgen datieren.
+const BERLIN_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" });
+const tomorrowInBerlin = () => BERLIN_DAY.format(new Date(Date.now() + 86_400_000));
+
 const stamp = Date.now().toString(36);
 const title = `E2E Bausteine ${stamp}`;
 
@@ -29,7 +35,8 @@ async function deleteRehearsal(page: Page) {
     expect(page.getByRole("dialog")).toContainText("löschen?", { timeout: 2_000 }),
   );
   await page.getByRole("button", { name: "Löschen", exact: true }).last().click();
-  await expect(page).toHaveURL(/\/mitglieder\/terminplanung$/);
+  // Nach dem Löschen geht es zurück zum Tag der Probe (`?tag=…`).
+  await expect(page).toHaveURL(/\/mitglieder\/terminplanung(\?.*)?$/);
 }
 
 test.describe("als admin", () => {
@@ -44,7 +51,7 @@ test.describe("als admin", () => {
   }) => {
     const errors = await collectErrors(page);
 
-    await page.goto("/mitglieder/terminplanung");
+    await page.goto(`/mitglieder/terminplanung?tag=${tomorrowInBerlin()}`);
     const create = page.getByRole("button", { name: "Neu", exact: true });
     test.skip(!(await create.isVisible().catch(() => false)), "Keine Terminplanung verfügbar");
     // Menü erst öffnen, wenn die Seite reagiert – vor der Hydration verpufft der Klick.
