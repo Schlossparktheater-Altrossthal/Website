@@ -383,7 +383,9 @@ function SceneTable({
                         ""
                       )
                     ) : column === "duration" ? (
-                      scene.words ? (
+                      canManage ? (
+                        <DurationCell scene={scene} />
+                      ) : scene.words || !scene.duration.estimated ? (
                         formatDuration(scene.duration)
                       ) : (
                         ""
