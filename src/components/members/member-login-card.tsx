@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { MemberLoginLinkDialog } from "@/components/members/member-login-link-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 
@@ -40,7 +41,8 @@ type PendingConfirm =
   | { type: "device"; device: Device }
   | { type: "reset-totp" }
   | { type: "reset-passkeys" }
-  | { type: "password-email" };
+  | { type: "password-email" }
+  | { type: "login-link" };
 
 const dateFormat = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "medium",
@@ -70,6 +72,9 @@ export function MemberLoginCard({ userId, displayName, hasEmail }: MemberLoginCa
   const [failed, setFailed] = React.useState(false);
   const [confirm, setConfirm] = React.useState<PendingConfirm | null>(null);
   const [pending, setPending] = React.useState(false);
+  const [loginLink, setLoginLink] = React.useState<{ link: string; expiresAt: string } | null>(
+    null,
+  );
 
   const load = React.useCallback(async () => {
     try {
@@ -110,6 +115,27 @@ export function MemberLoginCard({ userId, displayName, hasEmail }: MemberLoginCa
       body: JSON.stringify({ kind, id }),
     });
 
+  const createLoginLink = async () => {
+    setPending(true);
+    try {
+      const response = await fetch(`/api/members/${userId}/login/link`, { method: "POST" });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        link?: string;
+        expiresAt?: string;
+      };
+      if (!response.ok || !payload.link || !payload.expiresAt) {
+        throw new Error(payload.error ?? `HTTP ${response.status}`);
+      }
+      setLoginLink({ link: payload.link, expiresAt: payload.expiresAt });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Das hat nicht geklappt.");
+    } finally {
+      setPending(false);
+      await load();
+    }
+  };
+
   const onConfirm = () => {
     const action = confirm;
     setConfirm(null);
@@ -123,6 +149,8 @@ export function MemberLoginCard({ userId, displayName, hasEmail }: MemberLoginCa
       void run(() => removeDevices("totp"), "Zwei-Faktor-Anmeldung zurückgesetzt");
     } else if (action.type === "reset-passkeys") {
       void run(() => removeDevices("webauthn"), "Alle Passkeys entfernt");
+    } else if (action.type === "login-link") {
+      void createLoginLink();
     } else {
       void run(
         () => fetch(`/api/members/${userId}/login`, { method: "POST" }),
@@ -143,6 +171,10 @@ export function MemberLoginCard({ userId, displayName, hasEmail }: MemberLoginCa
     "reset-passkeys": {
       title: "Alle Passkeys entfernen?",
       description: `${displayName} meldet sich danach mit Passwort an und kann im Profil neue Passkeys hinzufügen.`,
+    },
+    "login-link": {
+      title: "Anmeldelink erzeugen?",
+      description: `Der Link gilt 30 Minuten und einmal. ${displayName} richtet damit einen Passkey (Fingerabdruck/Gesicht) statt eines Passworts ein. Für Konten ohne Passwort, z. B. die Regie, oder wenn der Passkey verloren ist.`,
     },
     "password-email": {
       title: "Passwort-Mail schicken?",
@@ -272,6 +304,14 @@ export function MemberLoginCard({ userId, displayName, hasEmail }: MemberLoginCa
           >
             Mail „Passwort festlegen“
           </AsyncButton>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!hasEmail || pending || (account !== null && !canManage)}
+            onClick={() => setConfirm({ type: "login-link" })}
+          >
+            Anmeldelink (Passkey)
+          </Button>
           {canManage && totps.length ? (
             <Button
               size="sm"
@@ -312,12 +352,30 @@ export function MemberLoginCard({ userId, displayName, hasEmail }: MemberLoginCa
         onOpenChange={(open) => (open ? undefined : setConfirm(null))}
         title={confirm ? confirmTexts[confirm.type].title : ""}
         description={confirm ? confirmTexts[confirm.type].description : ""}
-        confirmLabel={confirm?.type === "password-email" ? "Mail schicken" : "Entfernen"}
+        confirmLabel={
+          confirm?.type === "password-email"
+            ? "Mail schicken"
+            : confirm?.type === "login-link"
+              ? "Link erzeugen"
+              : "Entfernen"
+        }
         cancelLabel="Abbrechen"
-        variant={confirm?.type === "password-email" ? "default" : "destructive"}
+        variant={
+          confirm?.type === "password-email" || confirm?.type === "login-link"
+            ? "default"
+            : "destructive"
+        }
         onCancel={() => setConfirm(null)}
         onConfirm={onConfirm}
       />
+      {loginLink ? (
+        <MemberLoginLinkDialog
+          link={loginLink.link}
+          expiresAt={loginLink.expiresAt}
+          displayName={displayName}
+          onClose={() => setLoginLink(null)}
+        />
+      ) : null}
     </Card>
   );
 }

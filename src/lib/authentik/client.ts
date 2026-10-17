@@ -401,6 +401,43 @@ export async function sendAuthentikPasswordEmail(user: AuthentikUser): Promise<v
   });
 }
 
+/**
+ * Markierung für den Authentik-Recovery-Flow: Konten mit `loginLink` richten
+ * über den Link einen Passkey statt eines Passworts ein (Blueprint
+ * theater-recovery-login-link, docs/Plan/regie-plan.md).
+ */
+async function setAuthentikLoginLinkFlag(user: AuthentikUser, enabled: boolean) {
+  const current = (user.attributes?.mitgliederbereich ?? {}) as Record<string, unknown>;
+  if (Boolean(current.loginLink) === enabled) return user;
+  const rest = Object.fromEntries(Object.entries(current).filter(([key]) => key !== "loginLink"));
+  return updateManagedUser(user, {
+    attributes: {
+      ...user.attributes,
+      mitgliederbereich: enabled ? { ...rest, loginLink: true } : rest,
+    },
+  });
+}
+
+/** Vor der Mail „Passwort festlegen“: Der Link soll wieder nach einem Passwort fragen. */
+export async function clearAuthentikLoginLink(user: AuthentikUser): Promise<void> {
+  if (!isManagedAuthentikUser(user)) return;
+  await setAuthentikLoginLinkFlag(user, false);
+}
+
+/**
+ * Einmal-Anmeldelink (Theater-Recovery-Flow, 30 Minuten gültig) für Konten ohne
+ * Passwort, z. B. die Regie: Der Link richtet einen Passkey ein und meldet an.
+ * Ein Admin schickt ihn per Messenger oder zeigt ihn vor Ort als QR-Code.
+ */
+export async function createAuthentikLoginLink(user: AuthentikUser): Promise<string> {
+  const flagged = await setAuthentikLoginLinkFlag(user, true);
+  const config = requireConfig();
+  const data = z
+    .object({ link: z.string().url() })
+    .parse(await request(config, `/core/users/${flagged.pk}/recovery/`, { method: "POST" }));
+  return data.link;
+}
+
 // --- Anmeldegeräte (Passkeys, Authenticator-Apps) ---------------------------
 
 /** Gerätearten, die Mitglieder im Profil sehen und entfernen können. */

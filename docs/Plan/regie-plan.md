@@ -1,6 +1,6 @@
 # Regie-Zugang & Regie-Dashboard – Plan (2026-10-17)
 
-Stand: Phase 1, 3–6 umgesetzt (2026-10-17), offen Phase 2, 7.
+Stand: Phase 1–6 umgesetzt (2026-10-17), offen Phase 7.
 
 Ziel: Die Regie (wenig technikaffin, möchte keine persönlichen Daten angeben) bekommt einen
 einfachen Zugang und **ein eigenes, auf sie zugeschnittenes Dashboard** statt des normalen Menüs.
@@ -68,7 +68,7 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
    über Gewerk Regie/Regieassistenz in der Produktion. Weiterleitung auf das Dashboard, Menü für
    diese Nutzer ausblenden. Altes Regie-Onboarding (`src/app/onboarding/regie`, Rolle `board`)
    prüfen: anpassen oder ablösen.
-2. **Zugang:** Authentik-Account ohne Pflicht-E-Mail, mehrere Passkeys, Admin-Anmeldelink per
+2. ✅ **Zugang:** Authentik-Account ohne Pflicht-E-Mail, mehrere Passkeys, Admin-Anmeldelink per
    Messenger, lange Sitzung (Blueprint). Anleitung für Admins in `docs/`.
 3. ✅ **Dashboard-Gerüst:** eigene Seite, Karten mit Zusammenfassung + Ansehen/PDF, mobil eine
    Spalte, Laptop Raster, „neu seit letztem Besuch“. Vorbild: Dashboard-Karten
@@ -138,6 +138,18 @@ ausstattung,wuensche}`; Lader in `src/lib/regie/data.ts` (eigene, schlanke Abfra
   Produktion, Stand, Inhalt mit Seitenzahlen und „Noch ohne Daten“. Jede Seite behält INTERN-Hinweis
   und Fußzeile ihrer Liste.
 - Geprüft: Typecheck, Lint, Unit-Tests, Mappe mit allen Teilen gegen Demo-Daten (27 Seiten).
+
+## Umsetzung Phase 2 (2026-10-17)
+
+- Anmeldelink: Knopf **„Anmeldelink (Passkey)“** in Mitgliederverwaltung → Person → Anmeldung,
+  API `POST /api/members/[id]/login/link`; Dialog mit QR-Code (vor Ort), Kopieren und Teilen
+  (Messenger). Link 30 Minuten, einmal gültig.
+- Authentik (Config-LimitlessGreen 7aaf0dc): Recovery-Flow verzweigt über Policy
+  `theater-recovery-login-link` – markierte Konten richten einen Passkey statt eines Passworts ein.
+- E-Mail bleibt im Mitgliederbereich Pflicht; für die Regie eine Theater-Adresse. Lange Sitzung
+  über „angemeldet bleiben“ (30 Tage). Anleitung: `docs/regie-zugang.md`.
+- Geprüft: Typecheck, Lint, Unit-Tests (`src/lib/authentik/__tests__/client.test.ts`). Offen:
+  Ende-zu-Ende in Prod (Staging ohne API-Token), Blueprint-Übernahme in Authentik prüfen.
 
 ## Entscheidungen Nachtrag (Nutzer 2026-10-17)
 

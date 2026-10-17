@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AuthentikApiError,
+  clearAuthentikLoginLink,
+  createAuthentikLoginLink,
   deactivateAuthentikUser,
   deleteAuthentikDevice,
   ensureAuthentikUser,
@@ -241,6 +243,38 @@ describe("authentik client", () => {
       fetchMock.mockResolvedValueOnce(jsonResponse(devices));
       await expect(deleteAuthentikDevice(managedUser, "webauthn", "9")).resolves.toBe(false);
       expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("login link", () => {
+    it("marks the account and returns the recovery link", async () => {
+      const link = "https://auth.example.org/if/flow/theater-recovery/?flow_token=x";
+      fetchMock
+        .mockResolvedValueOnce(
+          jsonResponse({
+            ...managedUser,
+            attributes: { mitgliederbereich: { userId: "u1", loginLink: true } },
+          }),
+        )
+        .mockResolvedValueOnce(jsonResponse({ link }));
+
+      await expect(createAuthentikLoginLink(managedUser)).resolves.toBe(link);
+      expect(requestBody(0)).toEqual({
+        attributes: { mitgliederbereich: { userId: "u1", loginLink: true } },
+      });
+      expect(requestUrl(1).pathname).toBe("/api/v3/core/users/7/recovery/");
+    });
+
+    it("removes the mark before a password mail and skips unmarked accounts", async () => {
+      await clearAuthentikLoginLink(managedUser);
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      fetchMock.mockResolvedValueOnce(jsonResponse(managedUser));
+      await clearAuthentikLoginLink({
+        ...managedUser,
+        attributes: { mitgliederbereich: { userId: "u1", loginLink: true } },
+      });
+      expect(requestBody(0)).toEqual({ attributes: { mitgliederbereich: { userId: "u1" } } });
     });
   });
 });

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   AUTHENTIK_DEVICE_KINDS,
+  clearAuthentikLoginLink,
   deleteAuthentikDevice,
   isManagedAuthentikUser,
   listAuthentikDevices,
@@ -133,6 +134,8 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
   }
   try {
     const { user: authentikUser } = await ensureAuthentikUserForMember(identity);
+    // Ein früherer Anmeldelink hat das Konto auf „Passkey statt Passwort“ gestellt.
+    await clearAuthentikLoginLink(authentikUser);
     await sendAuthentikPasswordEmail(authentikUser);
     // ÜBERGANGSPHASE: wie bei "Passwort vergessen" den alten lokalen Hash
     // verwerfen, sonst überschreibt das alte Formular das neue Passwort.
