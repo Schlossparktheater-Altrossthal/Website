@@ -130,7 +130,7 @@ export default async function DirectionDashboardPage({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <DirectionCard
           title="Wünsche an die Planung"
-          className="border-primary/40 sm:col-span-2 lg:col-span-1 lg:row-span-2"
+          className="border-primary/40 sm:col-span-2 lg:col-span-1"
           isNew={wishes.some((wish) => newer(new Date(wish.updatedAt), since))}
           summary={
             wishes.length
@@ -208,7 +208,7 @@ export default async function DirectionDashboardPage({
           title="Szenen × Personen"
           summary={
             scenes.length
-              ? `${scenes.length} Szenen · ${roles.length} Rollen`
+              ? `${scenes.length} ${scenes.length === 1 ? "Szene" : "Szenen"} · ${roles.length} ${roles.length === 1 ? "Rolle" : "Rollen"}`
               : "Noch keine Szenen angelegt."
           }
           viewHref={scenes.length ? href("szenen") : null}
@@ -219,7 +219,7 @@ export default async function DirectionDashboardPage({
           title="Verfügbarkeit"
           summary={
             absentPeople
-              ? `Nächste 2 Wochen: ${absentPeople} Personen fehlen an ${absentDays} Tagen`
+              ? `Nächste 2 Wochen: ${absentPeople} ${absentPeople === 1 ? "Person fehlt" : "Personen fehlen"} an einzelnen Tagen (${absentDays} Abwesenheiten)`
               : "Nächste 2 Wochen: niemand hat sich abgemeldet."
           }
           viewHref={href("verfuegbarkeit")}
