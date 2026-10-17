@@ -182,7 +182,47 @@ Phase 1–4 brauchen keine Migration und liefern schon den sichtbaren Kern.
   (Phase 6/7 aus skript-auswertungen-plan.md).
 - **Druckvorschau** im Einstellungen-Blatt (erste Seite als Bild), bevor man das ganze PDF lädt.
 
-## Offene Entscheidungen
+## Neue Fassungen (Upload) – nichts darf verloren gehen
+
+Grundsatz: Ansichten und Szenen-Infos hängen **am Stück**, nicht an einer Fassung. Alles, was an
+einer Fassung hängt, wird bei der Freigabe einer neuen Fassung übernommen und – wo unsicher – im
+Prüfschritt zur Bestätigung vorgelegt (wie Rollen heute).
+
+| Was                              | Hängt an                               | Übernahme bei neuer Fassung                                       |
+| -------------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
+| Ansichten, aktive Ansicht        | Stück + Person                         | unverändert; Rollen-IDs sind stückweit (`ScriptRole`)             |
+| Szenen-Infos (Ort, Requisiten …) | **Szenen-Linie** (neu)                 | Zuordnung alte → neue Szene, s. u.                                |
+| Feste Licht-/Tonnummern          | Hinweis über Absatz-`lineageId` + Text | Absatz gefunden → Nummer bleibt; Hinweis neu → „neu, ohne Nummer“ |
+| Gemessene Szenenzeit             | heute per Titel                        | künftig über Szenen-Linie                                         |
+| Notizen/Markierungen             | Absatz-`lineageId` (existiert)         | wie bisher                                                        |
+
+**Szenen-Linie:** `ScriptScene.lineageId` analog zu den Absätzen. Zuordnung: gleicher Titel → sonst
+größte Überschneidung der Absatz-`lineageId`s (fängt umbenannte, geteilte, zusammengelegte Szenen).
+Mehrdeutiges (Szene geteilt/zusammengelegt/neu/entfallen) zeigt der Prüfschritt als Karte
+„Szenen zuordnen“; Infos entfallener Szenen werden nicht gelöscht, sondern als „verwaist“ angezeigt
+und können einer Szene zugewiesen werden.
+
+**Feste Technik-Nummern:** Bei neuer Fassung bleiben vorhandene Nummern stehen; neue Hinweise
+bekommen Zwischennummern (L4a) statt Umnummerierung – so stimmen Pult und Papier weiter. Entfallene
+Hinweise erscheinen im Prüfschritt und im Technik-Fahrplan als „gestrichen“. Umnummerieren nur auf
+ausdrücklichen Knopfdruck der Technik. Der Fassungsvergleich zeigt geänderte Szenen-Infos/Nummern.
+
+**Lesende während eines Uploads:** Entwürfe ändern nichts; erst die Freigabe stellt um. Die aktive
+Ansicht wählt automatisch die neueste freigegebene Fassung, Szenenkopf zeigt „seit letzter Fassung
+geändert“ (Punkt), wenn Text/Technik der Szene sich geändert hat.
+
+Phase 6 umfasst deshalb: `ScriptScene.lineageId` + Migration (bestehende Fassungen per Titel
+verketten), Zuordnung in `review.ts`, Karte im Prüfschritt, Tests mit 17.4. → 15.6.
+
+## Entscheidungen 2026-10-17
+
+1. Szenen-Infos: Skript-Verwaltung alles, Gewerke (Ton/Licht, Requisite, Kostüm) ihre Felder.
+2. Licht/Ton: automatische Nummern als Startwert, Technik kann festschreiben/ändern.
+3. Szenenkopf für neue Leser: kompakt an.
+4. Aktive Ansicht serverseitig; Geräteeinstellungen lokal.
+5. Geteilte Ansichten nur Skript-Verwaltung (wie bisher), eigene alle.
+
+## Ursprünglich offene Entscheidungen (beantwortet, s. o.)
 
 1. Wer darf Szenen-Infos bearbeiten: nur Skript-Verwaltung oder auch die Gewerke (Ton/Licht,
    Requisite, Kostüm) für „ihre“ Felder?
