@@ -3,6 +3,11 @@
 import * as React from "react";
 
 import { SCRIPT_CUE_STYLES } from "@/config/category-colors";
+import {
+  DEFAULT_SCENE_COLUMNS,
+  type SceneTableColumn,
+  type ScriptPdfSection,
+} from "@/lib/skript/export-options";
 import type { ScriptReaderData } from "@/lib/skript/reader";
 import type { CueCategory, ScriptPart } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
@@ -44,6 +49,10 @@ export type Settings = {
   /** Probenmodus: Werte vor dem Einschalten, damit Ausschalten sie zurückholt (null = aus). */
   rehearsalBackup: Pick<Settings, "fontSize" | "keepAwake" | "dimOthers"> | null;
   pdfCover: boolean;
+  /** PDF-Abschnitte in Reihenfolge, Spalten der Szenenübersicht, Inhalt der Auftrittstabelle. */
+  pdfSections: ScriptPdfSection[];
+  pdfSceneColumns: SceneTableColumn[];
+  pdfMatrixCell: "mark" | "words" | "passages";
   showNotes: boolean;
 };
 
@@ -57,6 +66,9 @@ const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
   keepAwake: true,
   rehearsalBackup: null,
   pdfCover: true,
+  pdfSections: ["script"],
+  pdfSceneColumns: DEFAULT_SCENE_COLUMNS,
+  pdfMatrixCell: "mark",
   showNotes: true,
 };
 

@@ -84,6 +84,32 @@ async function render(options: Partial<Record<string, unknown>>, personName?: st
 }
 
 describe("Skript-PDF", () => {
+  it("rendert Auswertungen als eigene Abschnitte mit Inhaltsverzeichnis", async () => {
+    const { text } = await render({
+      roleIds: ["a"],
+      sections: ["roleStats", "sceneTable", "matrix", "cueList", "cueScript", "script"],
+    });
+    const all = text.join("\n");
+    for (const expected of [
+      "INHALT",
+      "Rollen in Zahlen",
+      "Szenenübersicht",
+      "Auftritte",
+      "Technik-Fahrplan",
+      "Stichwortheft",
+      "Licht 1",
+      "LICHT 1 Wald",
+      "Ton 1",
+      "…Wo bin ich hier nur gelandet?",
+      "Wo bin ich hier nur gelandet?",
+    ]) {
+      expect(all).toContain(expected);
+    }
+    const onlyStats = (await render({ sections: ["roleStats"] })).text.join("\n");
+    expect(onlyStats).toContain("Rollen in Zahlen");
+    expect(onlyStats).not.toContain("In Phantásien.");
+  }, 30_000);
+
   it("Deckblatt nennt Mitwirkende sowie Person und Rolle einer persönlichen Fassung", async () => {
     const { text } = await render({ roleIds: ["a"], personId: "u1" }, "Lisa Muster");
     const all = text.join("\n");

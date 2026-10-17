@@ -4,6 +4,14 @@ import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import type { PdfTemplate } from "@/lib/pdf/types";
 
 import { joinNames, sortCredits } from "./credits";
+import {
+  DEFAULT_SCENE_COLUMNS,
+  SCENE_TABLE_COLUMNS,
+  SCRIPT_PDF_SECTIONS,
+  SCRIPT_PDF_SECTION_LABELS,
+  type ScriptPdfSection,
+} from "./export-options";
+import { renderScriptSection } from "./pdf-sections";
 import type { ScriptReaderData } from "./reader";
 import { cueLineIndices, isRoleBlock, splitTail } from "./reader-logic";
 import type { CueCategory, ScriptPart } from "./types";
@@ -26,6 +34,14 @@ export const scriptPdfOptionsSchema = z.object({
   personId: z.string().min(1).nullable().default(null),
   /** Was das Deckblatt bei einer personalisierten Fassung nennt. */
   personShow: z.enum(["both", "role", "name"]).default("both"),
+  /** Abschnitte in Reihenfolge; „script“ ist das Skript selbst (Phase 3 Auswertungen). */
+  sections: z
+    .array(z.enum(SCRIPT_PDF_SECTIONS))
+    .max(SCRIPT_PDF_SECTIONS.length)
+    .default(["script"])
+    .transform((list) => (list.length ? [...new Set(list)] : ["script" as const])),
+  sceneColumns: z.array(z.enum(SCENE_TABLE_COLUMNS)).default(DEFAULT_SCENE_COLUMNS),
+  matrixCell: z.enum(["mark", "words", "passages"]).default("mark"),
 });
 
 export type ScriptPdfOptions = z.infer<typeof scriptPdfOptionsSchema>;
@@ -202,6 +218,26 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
     doc.moveDown(0.8);
   }
 
+  // Abschnitte vor/nach dem Skript; jeder beginnt auf einer eigenen Seite.
+  const sectionPages: { label: string; page: number }[] = [];
+  const scriptAt = options.sections.indexOf("script");
+  const before = scriptAt < 0 ? options.sections : options.sections.slice(0, scriptAt);
+  const after = scriptAt < 0 ? [] : options.sections.slice(scriptAt + 1);
+  const pageNumber = () => doc.bufferedPageRange().count - coverPages;
+  const renderSections = (list: readonly ScriptPdfSection[]) => {
+    for (const section of list) {
+      if (section === "script") continue;
+      if (doc.y > doc.page.height * 0.3) doc.addPage();
+      sectionPages.push({ label: SCRIPT_PDF_SECTION_LABELS[section], page: pageNumber() });
+      renderScriptSection(doc, section, data, options);
+    }
+  };
+  renderSections(before);
+  if (scriptAt >= 0 && before.length) doc.addPage();
+  if (scriptAt >= 0 && (before.length || after.length)) {
+    sectionPages.push({ label: SCRIPT_PDF_SECTION_LABELS.script, page: pageNumber() });
+  }
+
   let currentScene: string | null = null;
   doc.fontSize(size);
 
@@ -212,7 +248,7 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
     }
   };
 
-  data.blocks.forEach((block, index) => {
+  (scriptAt >= 0 ? data.blocks : []).forEach((block, index) => {
     if (block.sceneId !== currentScene) {
       currentScene = block.sceneId;
       ensureSpace(size * 5);
@@ -281,9 +317,12 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
     doc.y = Math.max(doc.y, y + height) + size * 0.35;
   });
 
+  if (after.length) doc.addPage();
+  renderSections(after);
+
   // Kopf- und Fußzeile auf jeder Seite
   const range = doc.bufferedPageRange();
-  if (options.cover) fillCoverContents(doc, input, scenePages, coverEnd);
+  if (options.cover) fillCoverContents(doc, input, scenePages, coverEnd, sectionPages);
   for (let page = range.start + coverPages; page < range.start + range.count; page++) {
     doc.switchToPage(page);
     // Fußzeile liegt im unteren Rand – ohne das legt pdfkit eine neue Seite an.
@@ -398,6 +437,7 @@ function fillCoverContents(
   input: ScriptPdfInput,
   scenePages: Map<string, number>,
   coverEnd: number,
+  sectionPages: readonly { label: string; page: number }[],
 ) {
   const range = doc.bufferedPageRange();
   doc.switchToPage(range.start);
@@ -405,6 +445,18 @@ function fillCoverContents(
   const width = doc.page.width - 2 * MARGIN;
   let y = Math.max(doc.page.height * COVER_CONTENTS_Y, coverEnd + 28);
   const limit = doc.page.height - MARGIN - 24;
+  if (sectionPages.length) {
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED).text("INHALT", left, y, { width });
+    y += 18;
+    for (const entry of sectionPages) {
+      doc.font("Helvetica-Bold").fontSize(10).fillColor(INK);
+      doc.text(entry.label, left, y, { width: width - 40, lineBreak: false });
+      doc.text(String(entry.page), left, y, { width, align: "right", lineBreak: false });
+      y += 14;
+    }
+    y += 14;
+  }
+  if (!scenePages.size) return;
   const scenes = input.data.scenes.filter((scene) => scenePages.has(scene.id));
   const lineHeight = Math.max(9, Math.min(15, (limit - y - 24) / Math.max(1, scenes.length)));
   doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED).text("SZENEN", left, y, { width });

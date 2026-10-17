@@ -19,6 +19,8 @@ function list(value: string | null) {
  * `?fassung=<id>&rollen=a,b&regie=show|dim|hide&ohne=ton,licht&abblenden=1&groesse=0-3&deckblatt=0`
  * `&fuer=<userId>&zeigen=both|role|name` – personalisiert für ein Mitglied der Produktion; ohne
  * `rollen` gelten dessen Rollen laut Besetzung.
+ * `&teile=roleStats,sceneTable,script,…&spalten=roles,words,ton&matrix=mark|words|passages` –
+ * Abschnitte in Reihenfolge (docs/Plan/skript-auswertungen-plan.md, Phase 3).
  */
 export async function GET(
   request: NextRequest,
@@ -54,6 +56,9 @@ export async function GET(
     roleIds: roleIds.length ? roleIds : (person?.roleIds ?? []),
     personId: person?.id ?? null,
     personShow: search.get("zeigen") ?? undefined,
+    sections: search.has("teile") ? list(search.get("teile")) : undefined,
+    sceneColumns: search.has("spalten") ? list(search.get("spalten")) : undefined,
+    matrixCell: search.get("matrix") ?? undefined,
     directions: search.get("regie") ?? undefined,
     hiddenCues: list(search.get("ohne")),
     dimOthers: search.get("abblenden") === "1",

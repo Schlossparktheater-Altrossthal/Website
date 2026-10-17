@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatTile } from "@/components/ui/stat-tile";
+import { cn } from "@/lib/utils";
 import type { ProductionActionResult } from "@/lib/produktionen/actions-helpers";
 import {
   SCRIPT_CREDIT_KINDS,
@@ -349,11 +350,11 @@ function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: 
                 Original-PDFs.
               </p>
             ) : null}
-            <ul className="space-y-3">
+            <ul className="divide-y divide-border/60 sm:divide-y-0">
               {rows.map((row, index) => (
                 <li
                   key={index}
-                  className="grid grid-cols-1 gap-2 sm:grid-cols-[11rem_minmax(0,10rem)_minmax(0,1fr)_auto] sm:items-center"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 py-3 first:pt-0 sm:grid-cols-[9rem_minmax(0,10rem)_minmax(0,1fr)_auto] sm:items-center sm:py-1.5"
                 >
                   <select
                     className={inputClass}
@@ -370,7 +371,7 @@ function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: 
                     ))}
                   </select>
                   <input
-                    className={inputClass}
+                    className={cn(inputClass, "col-span-2 sm:col-span-1")}
                     aria-label="Bezeichnung auf dem Deckblatt"
                     placeholder={SCRIPT_CREDIT_KIND_LABELS[row.kind]}
                     value={row.label}
@@ -378,7 +379,7 @@ function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: 
                     onChange={(event) => update(index, { label: event.target.value })}
                   />
                   <input
-                    className={inputClass}
+                    className={cn(inputClass, "col-span-2 sm:col-span-1")}
                     aria-label="Namen, mit Komma getrennt"
                     placeholder="Vorname Nachname, …"
                     value={row.names}
@@ -387,6 +388,7 @@ function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: 
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="col-start-2 row-start-1 sm:col-start-auto sm:row-start-auto"
                     aria-label="Zeile entfernen"
                     onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}
                   >

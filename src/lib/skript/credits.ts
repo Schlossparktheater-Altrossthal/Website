@@ -17,7 +17,7 @@ export type ScriptCreditKind = (typeof SCRIPT_CREDIT_KINDS)[number];
 export const SCRIPT_CREDIT_KIND_LABELS: Record<ScriptCreditKind, string> = {
   basedOn: "Vorlage",
   author: "Autor",
-  adaptation: "Bühnenfassung/Bearbeitung",
+  adaptation: "Fassung",
   direction: "Regie",
   other: "Weitere",
 };

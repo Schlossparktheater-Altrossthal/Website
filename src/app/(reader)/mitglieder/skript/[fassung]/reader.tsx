@@ -10,9 +10,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   CloseIcon,
-  DownloadIcon,
   HighlighterIcon,
-  PrinterIcon,
   SearchIcon,
   SettingsIcon,
   SparklesIcon,
@@ -81,6 +79,7 @@ import {
   type EditorState,
   type NoteTarget,
 } from "./annotations";
+import { PdfExport } from "./pdf-export";
 import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketch";
 import { BlockEditor, type BlockEditorState } from "./block-editor";
 import { useAnnotations } from "./use-annotations";
@@ -1056,26 +1055,6 @@ export function ScriptReader({
     return Math.min(SPEAKER_MAX_CHARS, Math.max(8, ...lengths));
   }, [blocks]);
 
-  // Personalisiertes PDF: für mich (mit den hervorgehobenen Rollen) oder für ein anderes Mitglied
-  // (dessen Rollen laut Besetzung). Nur für dieses Mal, nicht gespeichert.
-  const [pdfPerson, setPdfPerson] = React.useState("");
-  const [pdfPersonShow, setPdfPersonShow] = React.useState<"both" | "role" | "name">("both");
-  const pdfUrl = (download: boolean) => {
-    const params = new URLSearchParams({ fassung: version.id, regie: settings.directions });
-    const forOther = pdfPerson !== "" && pdfPerson !== data.viewerId;
-    if (settings.roleIds.length && !forOther) params.set("rollen", settings.roleIds.join(","));
-    if (pdfPerson) {
-      params.set("fuer", pdfPerson);
-      params.set("zeigen", pdfPersonShow);
-    }
-    if (settings.hiddenCues.length) params.set("ohne", settings.hiddenCues.join(","));
-    if (settings.dimOthers) params.set("abblenden", "1");
-    params.set("groesse", String(settings.fontSize));
-    if (!settings.pdfCover) params.set("deckblatt", "0");
-    if (download) params.set("download", "1");
-    return `/api/skript/${version.showId}/pdf?${params}`;
-  };
-
   const toggleCategory = (list: "hiddenCues" | "followedCues", category: CueCategory) => {
     const current = settings[list];
     update({
@@ -1783,75 +1762,7 @@ export function ScriptReader({
               aria-label="Bildschirm anlassen"
             />
           </label>
-          <section className="space-y-2 border-t border-border/60 pt-4">
-            <h3 className="font-medium">PDF</h3>
-            <p className="text-xs text-muted-foreground">
-              Mit den aktuellen Einstellungen: gewählte Rollen, Regieanweisungen, sichtbare Hinweise
-              und Schriftgröße.
-            </p>
-            <label className="grid gap-1">
-              <span className="text-sm">Fassung für</span>
-              <select
-                className="min-h-11 rounded-md border border-input bg-background px-3 text-sm"
-                value={pdfPerson}
-                onChange={(event) => setPdfPerson(event.target.value)}
-              >
-                <option value="">Niemand bestimmtes</option>
-                {data.viewerId && data.people.some((p) => p.id === data.viewerId) ? (
-                  <option value={data.viewerId}>Mich</option>
-                ) : null}
-                {data.people
-                  .filter((person) => person.id !== data.viewerId)
-                  .map((person) => (
-                    <option key={person.id} value={person.id}>
-                      {person.name}
-                      {person.roleIds.length
-                        ? ` (${person.roleIds
-                            .map((id) => roles.find((role) => role.id === id)?.name)
-                            .filter(Boolean)
-                            .join(", ")})`
-                        : ""}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            {pdfPerson ? (
-              <SegmentedControl<"both" | "role" | "name">
-                aria-label="Auf dem Deckblatt"
-                fullWidth
-                value={pdfPersonShow}
-                onValueChange={setPdfPersonShow}
-                options={[
-                  { value: "both", label: "Name + Rolle" },
-                  { value: "name", label: "Name" },
-                  { value: "role", label: "Rolle" },
-                ]}
-              />
-            ) : null}
-            {pdfPerson && pdfPerson !== data.viewerId ? (
-              <p className="text-xs text-muted-foreground">
-                Hervorgehoben werden die Rollen dieser Person laut Besetzung.
-              </p>
-            ) : null}
-            <label className="flex min-h-11 items-center justify-between gap-3">
-              <span>Mit Deckblatt und Szenenverzeichnis</span>
-              <Switch
-                checked={settings.pdfCover}
-                onCheckedChange={(pdfCover) => update({ pdfCover })}
-                aria-label="PDF mit Deckblatt"
-              />
-            </label>
-            <Button asChild variant="outline">
-              <a href={pdfUrl(false)} target="_blank" rel="noopener">
-                <PrinterIcon aria-hidden /> PDF öffnen
-              </a>
-            </Button>{" "}
-            <Button asChild variant="ghost">
-              <a href={pdfUrl(true)}>
-                <DownloadIcon aria-hidden /> Herunterladen
-              </a>
-            </Button>
-          </section>
+          <PdfExport data={data} settings={settings} update={update} />
           {previous ? (
             <Link
               href={compareHref}

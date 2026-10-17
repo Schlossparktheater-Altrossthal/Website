@@ -152,3 +152,12 @@ Phasen 1–5 hängen nur am Skript und sind sofort machbar; 6–7 bauen aufeinan
 - Phase 1 (Deckblatt) umgesetzt 2026-10-17: `src/lib/skript/credits.ts` (+ Tests), Migration
   `20261017160000_script_credits`, Karte „Mitwirkende“ im Prüfschritt, PDF `?fuer=<userId>&zeigen=both|role|name`,
   Auswahl „Fassung für“ im Leser, Fußzeile „für <Name>“.
+- Nachlesen aus dem Original-PDF für ältere Fassungen (Knopf in der Karte „Mitwirkende“), 0cbb1387.
+- Phase 2 Statistik `src/lib/skript/stats.ts` (+ Tests): Rollen, Szenen (Dauer geschätzt/gemessen),
+  Hinweise nummeriert mit Stichwort, Pausen, Stichwortheft.
+- Phase 3 Abschnitte `src/lib/skript/pdf-sections.ts`, client-sichere Optionen in `export-options.ts`;
+  PDF `&teile=roleStats,sceneTable,matrix,cueList,cueScript,script&spalten=…&matrix=mark|words|passages`,
+  Inhaltsverzeichnis auf dem Deckblatt.
+- Phase 4 Export im Leser `pdf-export.tsx`: Vorlagen (Mein Text, Stichwortheft, Regiebuch, Technik,
+  Übersichten), Abschnitte an/aus + sortieren, Szenenspalten, Matrix-Inhalt (gespeichert im Browser).
+  Eigene Vorlagen auf dem Server (ScriptExportPreset) noch offen.
