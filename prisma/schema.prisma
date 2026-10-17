@@ -437,6 +437,7 @@ model User {
   scriptVersionsCreated           ScriptVersion[]            @relation("ScriptVersionCreator")
   scriptVersionsReleased          ScriptVersion[]            @relation("ScriptVersionReleaser")
   scriptRolesCreated              ScriptRole[]               @relation("ScriptRoleCreator")
+  scriptExportPresets             ScriptExportPreset[]       @relation("ScriptExportPresetOwner")
   scriptAnnotations               ScriptAnnotation[]
   scriptLearnCards                ScriptLearnCard[]
   scriptLearnProfile              ScriptLearnProfile?
@@ -532,6 +533,7 @@ model Show {
   scriptRoles             ScriptRole[]
   scriptAnnotations       ScriptAnnotation[]
   scriptLearnCards        ScriptLearnCard[]
+  scriptExportPresets     ScriptExportPreset[]
   directionWishes         DirectionWish[]
   directionVisits         DirectionVisit[]
 }
@@ -4197,3 +4199,22 @@ model DirectionVisit {
 
   @@id([userId, showId])
 }
+
+/// Gespeicherte PDF-Zusammenstellung (docs/Plan/skript-auswertungen-plan.md, Phase 4):
+/// `shared` = für alle im Stück (nur Skript-Verwalter), sonst nur für die Person.
+model ScriptExportPreset {
+  id        String   @id @default(cuid())
+  showId    String
+  ownerId   String
+  shared    Boolean  @default(false)
+  name      String
+  /// { sections, sceneColumns, matrixCell } – src/lib/skript/export-options.ts
+  config    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  owner     User     @relation("ScriptExportPresetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([showId, ownerId])
+}
+

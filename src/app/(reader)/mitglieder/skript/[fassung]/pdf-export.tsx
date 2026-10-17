@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   ChevronDownIcon,
@@ -19,11 +21,13 @@ import {
   SCRIPT_PDF_SECTIONS,
   SCRIPT_PDF_SECTION_LABELS,
   type SceneTableColumn,
+  type ScriptExportPresetItem,
   type ScriptPdfSection,
 } from "@/lib/skript/export-options";
 import type { ScriptReaderData } from "@/lib/skript/reader";
 import { cn } from "@/lib/utils";
 
+import { deleteScriptPresetAction, saveScriptPresetAction } from "../preset-actions";
 import type { Settings } from "../shared";
 
 /** PDF-Export im Leser (docs/Plan/skript-auswertungen-plan.md, Phase 4). */
@@ -94,11 +98,18 @@ export function PdfExport({
   data,
   settings,
   update,
+  presets,
+  canManage,
 }: {
   data: ScriptReaderData;
   settings: Settings;
   update: (patch: Partial<Settings>) => void;
+  presets: ScriptExportPresetItem[];
+  canManage: boolean;
 }) {
+  const router = useRouter();
+  const [saving, setSaving] = React.useState<null | { name: string; shared: boolean }>(null);
+  const [busy, setBusy] = React.useState(false);
   const { version, roles } = data;
   // Personalisiert: für mich (mit den hervorgehobenen Rollen) oder für ein anderes Mitglied
   // (dessen Rollen laut Besetzung). Nur für dieses Mal, nicht gespeichert.
@@ -112,6 +123,43 @@ export function PdfExport({
       (!p.sections.includes("sceneTable") ||
         same(p.sceneColumns ?? DEFAULT_SCENE_COLUMNS, sceneColumns)),
   );
+
+  const custom = presets.find(
+    (p) =>
+      same(p.config.sections, sections) &&
+      (!sections.includes("sceneTable") || same(p.config.sceneColumns, sceneColumns)) &&
+      (!sections.includes("matrix") || p.config.matrixCell === settings.pdfMatrixCell),
+  );
+  const builtIn = custom ? undefined : preset;
+
+  const result = (outcome: { ok: boolean; error?: string; message?: string }) => {
+    if (!outcome.ok) {
+      toast.error("Das hat nicht geklappt", { description: outcome.error, duration: 6000 });
+      return false;
+    }
+    if (outcome.message) toast.success(outcome.message);
+    router.refresh();
+    return true;
+  };
+  const savePreset = async () => {
+    if (!saving?.name.trim()) return;
+    setBusy(true);
+    const ok = result(
+      await saveScriptPresetAction({
+        versionId: version.id,
+        name: saving.name,
+        shared: saving.shared,
+        config: { sections, sceneColumns, matrixCell: settings.pdfMatrixCell },
+      }),
+    );
+    setBusy(false);
+    if (ok) setSaving(null);
+  };
+  const deletePreset = async (id: string) => {
+    setBusy(true);
+    result(await deleteScriptPresetAction(id));
+    setBusy(false);
+  };
 
   const url = (download: boolean) => {
     const params = new URLSearchParams({ fassung: version.id, regie: settings.directions });
@@ -159,9 +207,9 @@ export function PdfExport({
           <Button
             key={p.id}
             size="sm"
-            variant={preset?.id === p.id ? "default" : "outline"}
+            variant={builtIn?.id === p.id ? "default" : "outline"}
             title={p.hint}
-            aria-pressed={preset?.id === p.id}
+            aria-pressed={builtIn?.id === p.id}
             onClick={() =>
               update({
                 pdfSections: p.sections,
@@ -175,7 +223,37 @@ export function PdfExport({
             {p.label}
           </Button>
         ))}
+        {presets.map((p) => (
+          <Button
+            key={p.id}
+            size="sm"
+            variant={custom?.id === p.id ? "default" : "outline"}
+            title={p.shared ? "Vorlage für alle im Stück" : "Eigene Vorlage"}
+            aria-pressed={custom?.id === p.id}
+            onClick={() =>
+              update({
+                pdfSections: p.config.sections,
+                pdfSceneColumns: p.config.sceneColumns,
+                pdfMatrixCell: p.config.matrixCell,
+              })
+            }
+          >
+            {p.name}
+            {p.shared ? <span className="text-xs opacity-70">· Stück</span> : null}
+          </Button>
+        ))}
       </div>
+      {custom?.deletable ? (
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0 text-destructive"
+          disabled={busy}
+          onClick={() => deletePreset(custom.id)}
+        >
+          Vorlage „{custom.name}“ löschen
+        </Button>
+      ) : null}
 
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground">Inhalt in dieser Reihenfolge</p>
@@ -274,6 +352,53 @@ export function PdfExport({
             ]}
           />
         </div>
+      ) : null}
+
+      {!custom && !builtIn ? (
+        saving ? (
+          <div className="space-y-2 rounded-md border border-border/60 p-3">
+            <label className="grid gap-1">
+              <span className="text-sm">Name der Vorlage</span>
+              <input
+                className="min-h-11 rounded-md border border-input bg-background px-3 text-sm"
+                value={saving.name}
+                maxLength={40}
+                autoFocus
+                placeholder="z. B. Maske & Kostüm"
+                onChange={(event) => setSaving({ ...saving, name: event.target.value })}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void savePreset();
+                }}
+              />
+            </label>
+            {canManage ? (
+              <label className="flex min-h-11 items-center justify-between gap-3 text-sm">
+                <span>Für alle im Stück</span>
+                <Switch
+                  checked={saving.shared}
+                  onCheckedChange={(shared) => setSaving({ ...saving, shared })}
+                  aria-label="Vorlage für alle im Stück"
+                />
+              </label>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setSaving(null)}>
+                Abbrechen
+              </Button>
+              <Button size="sm" disabled={busy || !saving.name.trim()} onClick={savePreset}>
+                Speichern
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSaving({ name: "", shared: false })}
+          >
+            Als Vorlage speichern
+          </Button>
+        )
       ) : null}
 
       <label className="grid gap-1">

@@ -160,4 +160,8 @@ Phasen 1–5 hängen nur am Skript und sind sofort machbar; 6–7 bauen aufeinan
   Inhaltsverzeichnis auf dem Deckblatt.
 - Phase 4 Export im Leser `pdf-export.tsx`: Vorlagen (Mein Text, Stichwortheft, Regiebuch, Technik,
   Übersichten), Abschnitte an/aus + sortieren, Szenenspalten, Matrix-Inhalt (gespeichert im Browser).
-  Eigene Vorlagen auf dem Server (ScriptExportPreset) noch offen.
+  Eigene Vorlagen: `ScriptExportPreset` (Migration 20261017200000), `src/lib/skript/presets.ts`,
+  Aktionen `preset-actions.ts`; eigene für alle Leser, „für alle im Stück“ nur mit SCRIPT.MANAGE.
+- Phase 5 Übersichten `/mitglieder/skript/[fassung]/uebersicht`: Rollen (sortierbar, Balken),
+  Szenen (Spalten wie im PDF), Auftritte, Technik (Filter je Gewerk); CSV je Reiter
+  (`stats-csv.ts`, Semikolon + BOM für Excel). Spalten/Matrix-Inhalt teilen sich die Einstellung mit dem PDF.

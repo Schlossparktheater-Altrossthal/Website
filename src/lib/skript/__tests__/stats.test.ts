@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { computeScriptStats, cueScript, formatDuration, type StatsInput } from "@/lib/skript/stats";
+import { cueListCsv, matrixCsv, roleStatsCsv, toCsv } from "@/lib/skript/stats-csv";
 
 const block = (
   id: string,
@@ -103,5 +104,20 @@ describe("Skript-Auswertungen", () => {
       },
       { blockId: "7", sceneId: "s3", cueSpeaker: "b", cue: "Allein hier", text: "Zurück" },
     ]);
+  });
+});
+
+describe("CSV der Auswertungen", () => {
+  const stats = computeScriptStats(input);
+  it("schreibt Semikolon-CSV mit BOM, Komma als Dezimaltrenner und Anführungszeichen", () => {
+    const csv = roleStatsCsv(stats);
+    expect(csv.startsWith("﻿Rolle;Wörter;Anteil %")).toBe(true);
+    expect(csv).toContain("Bastian;6;54,5;3;3;2");
+    expect(toCsv([["a;b", 'sagt "hallo"']])).toBe('﻿"a;b";"sagt ""hallo"""\r\n');
+  });
+  it("Matrix markiert Erwähnte, Technik listet Stichwörter", () => {
+    expect(matrixCsv(stats, "words")).toContain("Atreju;5;;1");
+    const names = new Map(input.scenes.map((s) => [s.id, s.title]));
+    expect(cueListCsv(stats, names)).toContain("Licht;1;LICHT 2 aus;Allein hier;Szene 2;1");
   });
 });

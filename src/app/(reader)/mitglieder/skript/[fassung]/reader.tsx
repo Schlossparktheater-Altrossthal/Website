@@ -31,6 +31,7 @@ import {
   type ReaderAnnotation,
   type ScriptSign,
 } from "@/lib/skript/annotation-types";
+import type { ScriptExportPresetItem } from "@/lib/skript/export-options";
 import type { ReaderBlock, ScriptReaderData } from "@/lib/skript/reader";
 import {
   cueLineIndices,
@@ -616,9 +617,12 @@ export function ScriptReader({
   canManage,
   previous,
   annotations: initialAnnotations,
+  presets,
 }: {
   data: ScriptReaderData;
   canManage: boolean;
+  /** Eigene und gemeinsame PDF-Vorlagen. */
+  presets: ScriptExportPresetItem[];
   /** Vorfassung für den Vergleich, falls vorhanden. */
   previous: { id: string; label: string } | null;
   /** Eigene Markierungen und Notizen mit Status für diese Fassung. */
@@ -1762,7 +1766,19 @@ export function ScriptReader({
               aria-label="Bildschirm anlassen"
             />
           </label>
-          <PdfExport data={data} settings={settings} update={update} />
+          <PdfExport
+            data={data}
+            settings={settings}
+            update={update}
+            presets={presets}
+            canManage={canManage}
+          />
+          <Link
+            href={`/mitglieder/skript/${version.id}/uebersicht`}
+            className="flex min-h-11 items-center gap-2 text-primary underline-offset-4 hover:underline"
+          >
+            <BookOpenTextIcon aria-hidden /> Übersichten: Rollen, Szenen, Auftritte, Technik
+          </Link>
           {previous ? (
             <Link
               href={compareHref}

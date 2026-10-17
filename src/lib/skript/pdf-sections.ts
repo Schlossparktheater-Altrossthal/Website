@@ -17,6 +17,7 @@ import {
   CUE_LABELS,
   DEFAULT_SCENE_COLUMNS,
   SCENE_TABLE_COLUMN_LABELS,
+  sceneShortLabel,
   type SceneTableColumn,
   type ScriptPdfSection,
 } from "./export-options";
@@ -42,15 +43,6 @@ const ACCENT = "#d9480f";
 
 const NUMBER = new Intl.NumberFormat("de-DE");
 const PERCENT = new Intl.NumberFormat("de-DE", { style: "percent", maximumFractionDigits: 1 });
-
-/** Kurzname einer Szene für enge Spalten: „SZENE 10 A – Furcht“ → „10A“. */
-export function sceneShortLabel(title: string, index: number) {
-  const match = /^(?:szene|bild|auftritt)?\s*(\d+)\s*([a-z])?\b/iu.exec(title.trim());
-  if (match) return `${match[1]}${(match[2] ?? "").toUpperCase()}`;
-  if (/^\(?vorspann\)?$/iu.test(title.trim())) return "V";
-  if (/^pause/iu.test(title.trim())) return "P";
-  return String(index + 1);
-}
 
 function heading(doc: Doc, title: string, hint?: string) {
   const left = doc.page.margins.left;

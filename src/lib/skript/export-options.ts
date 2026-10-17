@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { CUE_CATEGORIES } from "./stats";
 import type { CueCategory } from "./types";
 
@@ -68,3 +70,32 @@ export const CUE_LABELS: Record<CueCategory, string> = {
   aus: "Off-Stimme",
   technik: "Technik",
 };
+
+export const MATRIX_CELLS = ["mark", "words", "passages"] as const;
+export type MatrixCell = (typeof MATRIX_CELLS)[number];
+
+/** Gespeicherte Zusammenstellung (Vorlage) – Abschnitte, Szenenspalten, Matrix-Inhalt. */
+export const scriptExportConfigSchema = z.object({
+  sections: z.array(z.enum(SCRIPT_PDF_SECTIONS)).min(1).max(SCRIPT_PDF_SECTIONS.length),
+  sceneColumns: z.array(z.enum(SCENE_TABLE_COLUMNS)).max(SCENE_TABLE_COLUMNS.length),
+  matrixCell: z.enum(MATRIX_CELLS),
+});
+export type ScriptExportConfig = z.infer<typeof scriptExportConfigSchema>;
+
+export type ScriptExportPresetItem = {
+  id: string;
+  name: string;
+  shared: boolean;
+  /** Darf die angemeldete Person sie löschen? */
+  deletable: boolean;
+  config: ScriptExportConfig;
+};
+
+/** Kurzname einer Szene für enge Spalten: „SZENE 10 A – Furcht“ → „10A“. */
+export function sceneShortLabel(title: string, index: number) {
+  const match = /^(?:szene|bild|auftritt)?\s*(\d+)\s*([a-z])?\b/iu.exec(title.trim());
+  if (match) return `${match[1]}${(match[2] ?? "").toUpperCase()}`;
+  if (/^\(?vorspann\)?$/iu.test(title.trim())) return "V";
+  if (/^pause/iu.test(title.trim())) return "P";
+  return String(index + 1);
+}

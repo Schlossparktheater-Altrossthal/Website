@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { loadReaderAnnotations } from "@/lib/skript/annotations";
 import { previousVersion } from "@/lib/skript/compare";
+import { listScriptPresets } from "@/lib/skript/presets";
 import { loadScriptReader } from "@/lib/skript/reader";
 import { SCRIPT_MANAGE_PERMISSION, SCRIPT_READ_PERMISSION } from "@/lib/skript/service";
 
@@ -27,13 +28,20 @@ export default async function ScriptReaderPage({
   // Entwürfe sehen nur Verwalter (E7).
   if (!canManage && (!canRead || data.version.status !== "released")) notFound();
 
-  const [previous, annotations] = await Promise.all([
+  const [previous, annotations, presets] = await Promise.all([
     previousVersion(data.version.id),
     session.user?.id
       ? loadReaderAnnotations(data.version.showId, data.version.id, session.user.id, data.blocks)
       : Promise.resolve([]),
+    listScriptPresets(data.version.showId, session.user?.id ?? null, canManage),
   ]);
   return (
-    <ScriptReader data={data} canManage={canManage} previous={previous} annotations={annotations} />
+    <ScriptReader
+      data={data}
+      canManage={canManage}
+      previous={previous}
+      annotations={annotations}
+      presets={presets}
+    />
   );
 }
