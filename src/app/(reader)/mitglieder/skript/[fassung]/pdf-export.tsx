@@ -176,6 +176,15 @@ export function PdfExport({
     if (!same(sections, ["script"])) params.set("teile", sections.join(","));
     if (sections.includes("sceneTable")) params.set("spalten", sceneColumns.join(","));
     if (sections.includes("matrix")) params.set("matrix", settings.pdfMatrixCell);
+    // Szenenkopf: gleicher Inhalt wie im Leser, im PDF als Kasten gesetzt.
+    if (
+      sections.includes("script") &&
+      settings.pdfSceneHeader &&
+      settings.sceneHeader.mode !== "off"
+    ) {
+      params.set("kopf", settings.sceneHeader.items.join(",") || "-");
+      if (settings.sceneHeader.onlyMine) params.set("kopfnurmeine", "1");
+    }
     if (download) params.set("download", "1");
     return `/api/skript/${version.showId}/pdf?${params}`;
   };
@@ -200,7 +209,9 @@ export function PdfExport({
 
   return (
     <section className="space-y-3 border-t border-border/60 pt-4">
-      <h3 className="font-medium">PDF</h3>
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Drucken / PDF
+      </h3>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Vorlagen">
         {PRESETS.map((p) => (
@@ -453,9 +464,19 @@ export function PdfExport({
           aria-label="PDF mit Deckblatt"
         />
       </label>
+      {sections.includes("script") && settings.sceneHeader.mode !== "off" ? (
+        <label className="flex min-h-11 items-center justify-between gap-3">
+          <span>Szenenkopf im PDF</span>
+          <Switch
+            checked={settings.pdfSceneHeader}
+            onCheckedChange={(pdfSceneHeader) => update({ pdfSceneHeader })}
+            aria-label="Szenenkopf im PDF"
+          />
+        </label>
+      ) : null}
       <p className="text-xs text-muted-foreground">
-        Das Skript übernimmt die Einstellungen oben: Rollen, Regieanweisungen, sichtbare Hinweise
-        und Schriftgröße.
+        Das Skript zeigt denselben Inhalt wie der Leser – Rollen, Regieanweisungen, sichtbare
+        Hinweise, Szenenkopf –, aber fürs Papier gesetzt.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="outline">

@@ -9,6 +9,11 @@ import {
   type ScriptPdfSection,
 } from "@/lib/skript/export-options";
 import type { ScriptReaderData } from "@/lib/skript/reader";
+import {
+  DEFAULT_SCENE_HEADER,
+  sanitizeSceneHeader,
+  type SceneHeaderConfig,
+} from "@/lib/skript/scene-header";
 import type { CueCategory, ScriptPart } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +59,10 @@ export type Settings = {
   pdfSceneColumns: SceneTableColumn[];
   pdfMatrixCell: "mark" | "words" | "passages";
   showNotes: boolean;
+  /** Szenenkopf: was am Beginn jeder Szene steht (docs/Plan/skript-ansicht-plan.md). */
+  sceneHeader: SceneHeaderConfig;
+  /** Szenenkopf auch im PDF (dort als Kasten, eigene Darstellung). */
+  pdfSceneHeader: boolean;
 };
 
 const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
@@ -70,6 +79,8 @@ const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
   pdfSceneColumns: DEFAULT_SCENE_COLUMNS,
   pdfMatrixCell: "mark",
   showNotes: true,
+  sceneHeader: DEFAULT_SCENE_HEADER,
+  pdfSceneHeader: true,
 };
 
 /** Einstellungen je Stück im Browser (nur Komfort, E: localStorage nur für Ansicht). */
@@ -100,7 +111,13 @@ export function useSettings(showId: string, ownRoleIds: string[]) {
   const loaded = React.useRef(false);
   React.useEffect(() => {
     const stored = readStored<Settings>(key);
-    if (stored) setSettings((current) => ({ ...current, ...stored }));
+    if (stored) {
+      setSettings((current) => ({
+        ...current,
+        ...stored,
+        sceneHeader: sanitizeSceneHeader(stored.sceneHeader),
+      }));
+    }
     loaded.current = true;
   }, [key]);
   const update = React.useCallback(

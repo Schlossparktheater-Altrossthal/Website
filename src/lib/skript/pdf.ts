@@ -12,6 +12,14 @@ import {
   type ScriptPdfSection,
 } from "./export-options";
 import { renderScriptSection } from "./pdf-sections";
+import {
+  buildSceneHeaders,
+  cueTag,
+  formatPages,
+  SCENE_HEADER_ITEMS,
+  type SceneHeaderModel,
+} from "./scene-header";
+import { formatDuration } from "./stats";
 import type { ScriptReaderData } from "./reader";
 import { cueLineIndices, isRoleBlock, splitTail } from "./reader-logic";
 import type { CueCategory, ScriptPart } from "./types";
@@ -42,6 +50,13 @@ export const scriptPdfOptionsSchema = z.object({
     .transform((list) => (list.length ? [...new Set(list)] : ["script" as const])),
   sceneColumns: z.array(z.enum(SCENE_TABLE_COLUMNS)).default(DEFAULT_SCENE_COLUMNS),
   matrixCell: z.enum(["mark", "words", "passages"]).default("mark"),
+  /** Szenenkopf-Bausteine (wie im Leser); null = kein Kopf (docs/Plan/skript-ansicht-plan.md). */
+  sceneHeader: z
+    .array(z.enum(SCENE_HEADER_ITEMS))
+    .max(SCENE_HEADER_ITEMS.length)
+    .nullable()
+    .default(null),
+  sceneHeaderOnlyMine: z.boolean().default(false),
 });
 
 export type ScriptPdfOptions = z.infer<typeof scriptPdfOptionsSchema>;
@@ -240,6 +255,19 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
 
   let currentScene: string | null = null;
   doc.fontSize(size);
+  const roleNames = new Map(data.roles.map((role) => [role.id, role.name]));
+  const headers =
+    options.sceneHeader?.length && scriptAt >= 0
+      ? buildSceneHeaders(
+          { scenes: data.scenes, blocks: data.blocks, roles: data.roles },
+          {
+            // Notizen gibt es nur im Leser.
+            items: options.sceneHeader.filter((item) => item !== "notes"),
+            roleIds: options.roleIds,
+            hiddenCues: options.hiddenCues,
+          },
+        )
+      : new Map<string, SceneHeaderModel | null>();
 
   const ensureSpace = (height: number) => {
     if (doc.y + height > bottom()) {
@@ -251,7 +279,16 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
   (scriptAt >= 0 ? data.blocks : []).forEach((block, index) => {
     if (block.sceneId !== currentScene) {
       currentScene = block.sceneId;
-      ensureSpace(size * 5);
+      const header = headers.get(block.sceneId);
+      const mineHere = data.roles.some(
+        (role) => roleSet.has(role.id) && role.sceneIds.includes(block.sceneId),
+      );
+      const showHeader = header && (!options.sceneHeaderOnlyMine || mineHere) ? header : null;
+      const headerHeight = showHeader
+        ? renderSceneHeader(doc, showHeader, roleNames, { left, right, size }, true)
+        : 0;
+      // Überschrift, Kopf und die ersten Zeilen bleiben zusammen (Kopf nie allein am Seitenende).
+      ensureSpace(size * 5 + Math.min(headerHeight, bottom() - MARGIN - size * 8));
       doc.moveDown(0.6);
       scenePages.set(block.sceneId, doc.bufferedPageRange().count - coverPages);
       const y = doc.y;
@@ -266,6 +303,7 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
       const lineY = doc.y + 2;
       doc.moveTo(left, lineY).lineTo(right, lineY).lineWidth(1.2).strokeColor(INK).stroke();
       doc.y = lineY + size * 0.5;
+      if (showHeader) renderSceneHeader(doc, showHeader, roleNames, { left, right, size });
       doc.fontSize(size);
     }
 
@@ -344,6 +382,120 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
       });
     doc.page.margins.bottom = bottomMargin;
   }
+}
+
+const HEADER_FILL = "#f5f5f4";
+const HEADER_LABEL_WIDTH = 62;
+
+/**
+ * Szenenkopf fürs Papier: grauer Kasten unter der Überschrift, Beschriftung links, Inhalt rechts.
+ * Gleicher Inhalt wie im Leser, aber immer ganz ausgeschrieben (nichts zum Aufklappen).
+ */
+function renderSceneHeader(
+  doc: Doc,
+  model: SceneHeaderModel,
+  roleNames: ReadonlyMap<string, string>,
+  layout: { left: number; right: number; size: number },
+  /** Nur Höhe messen (damit Überschrift und Kopf zusammen auf eine Seite kommen). */
+  measureOnly = false,
+): number {
+  const { left, right } = layout;
+  const size = layout.size * 0.82;
+  const name = (id: string) => roleNames.get(id) ?? id;
+  const plain = (text: string, color = INK): Run => ({ text, font: "Helvetica", color });
+  const bold = (text: string, color = INK): Run => ({ text, font: "Helvetica-Bold", color });
+  const names = (ids: readonly string[], mine?: ReadonlySet<string>) =>
+    ids.flatMap((id, index) => [
+      ...(index ? [plain(", ")] : []),
+      mine?.has(id) ? bold(name(id), MINE_BAR) : plain(name(id)),
+    ]);
+  const rows: { label: string; color: string; runs: Run[] }[] = [];
+  const mine = new Set(model.roles?.speaking.filter((r) => r.mine).map((r) => r.id) ?? []);
+  if (model.roles) {
+    // Eigene Rollen zuerst (wie im Leser).
+    const ids = model.roles.speaking.map((r) => r.id);
+    const runs = names(
+      [...ids.filter((id) => mine.has(id)), ...ids.filter((id) => !mine.has(id))],
+      mine,
+    );
+    if (model.roles.mentioned.length) {
+      runs.push(plain(`${runs.length ? " · " : ""}in der Regie genannt: `, MUTED));
+      runs.push(...names(model.roles.mentioned).map((run) => ({ ...run, color: MUTED })));
+    }
+    rows.push({ label: "WER", color: MUTED, runs });
+  }
+  if (model.mine) {
+    const runs = [
+      bold(
+        `${model.mine.passages} ${model.mine.passages === 1 ? "Replik" : "Repliken"} · ${model.mine.words} Wörter`,
+        MINE_BAR,
+      ),
+    ];
+    if (model.mine.cue) {
+      runs.push(
+        plain(
+          ` · Stichwort${model.mine.cueSpeaker ? ` (${model.mine.cueSpeaker})` : ""}: „…${model.mine.cue}“`,
+          MUTED,
+        ),
+      );
+    }
+    rows.push({ label: "MEIN TEIL", color: MINE_BAR, runs });
+  }
+  for (const { category, entries } of model.cues ?? []) {
+    rows.push({
+      label: CUE_LABELS[category],
+      color: CUE_COLORS[category],
+      runs: entries.flatMap((entry, index) => [
+        ...(index ? [plain("  ·  ", MUTED)] : []),
+        ...(cueTag(category, entry)
+          ? [bold(`${cueTag(category, entry)} `, CUE_COLORS[category])]
+          : []),
+        plain(entry.text),
+        ...(entry.page != null ? [plain(` S. ${entry.page}`, MUTED)] : []),
+      ]),
+    });
+  }
+  if (model.duration || model.size) {
+    const parts = [
+      model.duration
+        ? `${formatDuration(model.duration)}${model.duration.estimated ? " Sprechzeit" : ""}`
+        : null,
+      model.size?.pages ? formatPages(model.size.pages) : null,
+      model.size ? `${model.size.words} Wörter · ${model.size.passages} Passagen` : null,
+    ].filter(Boolean);
+    rows.push({ label: "UMFANG", color: MUTED, runs: [plain(parts.join(" · "))] });
+  }
+  if (model.transition) {
+    rows.push({ label: "WEITER", color: MUTED, runs: names(model.transition.continuing, mine) });
+  }
+  if (!rows.length) return 0;
+
+  const pad = 5;
+  const textX = left + HEADER_LABEL_WIDTH;
+  const textWidth = right - textX - pad;
+  doc.fontSize(size);
+  const heights = rows.map((row) => runsHeight(doc, row.runs, textWidth));
+  const total = heights.reduce((sum, h) => sum + h + 2, 0) + pad * 2;
+  if (measureOnly) return total + layout.size * 0.6;
+  const top = doc.y;
+  doc.rect(left - 6, top, right - left + 12, total).fill(HEADER_FILL);
+  let y = top + pad;
+  rows.forEach((row, index) => {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(size * 0.85)
+      .fillColor(row.color)
+      .text(row.label, left, y + size * 0.1, {
+        width: HEADER_LABEL_WIDTH - 6,
+        characterSpacing: 0.4,
+        lineBreak: false,
+      });
+    doc.fontSize(size);
+    writeRuns(doc, row.runs, textX, y, textWidth);
+    y += heights[index] + 2;
+  });
+  doc.y = top + total + layout.size * 0.6;
+  return total + layout.size * 0.6;
 }
 
 const DATE = new Intl.DateTimeFormat("de-DE", {

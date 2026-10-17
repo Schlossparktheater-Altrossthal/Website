@@ -145,6 +145,26 @@ describe("Skript-PDF", () => {
     expect(joined).toContain("Atreju");
   });
 
+  it("setzt den Szenenkopf als Kasten: Wer, Mein Teil, Technik nummeriert", async () => {
+    const { text } = await render({
+      roleIds: ["a"],
+      hiddenCues: ["ton"],
+      sceneHeader: ["roles", "mine", "cues", "notes"],
+    });
+    const joined = text.join("\n");
+    expect(joined).toContain("WERAtreju, Bastian");
+    expect(joined).toContain("MEIN TEIL");
+    // Eigene Nummer aus dem Skript („LICHT 1“) – keine zweite automatische davor.
+    expect(joined).toContain("LICHTLICHT 1 Wald S. 1");
+    // Ausgeblendetes Gewerk fehlt auch im Kopf.
+    expect(joined).not.toContain("T1");
+  });
+
+  it("ohne Szenenkopf-Parameter kein Kasten", async () => {
+    const { text } = await render({ roleIds: ["a"] });
+    expect(text.join("\n")).not.toContain("MEIN TEIL");
+  });
+
   it("Deckblatt mit Szenenverzeichnis, Seitenzählung ohne Deckblatt", async () => {
     const { text } = await render({});
     const joined = text.join("\n");

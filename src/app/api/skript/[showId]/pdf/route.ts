@@ -21,6 +21,8 @@ function list(value: string | null) {
  * `rollen` gelten dessen Rollen laut Besetzung.
  * `&teile=roleStats,sceneTable,script,…&spalten=roles,words,ton&matrix=mark|words|passages` –
  * Abschnitte in Reihenfolge (docs/Plan/skript-auswertungen-plan.md, Phase 3).
+ * `&kopf=roles,mine,cues,…&kopfnurmeine=1` – Szenenkopf wie im Leser, fürs Papier gesetzt
+ * (docs/Plan/skript-ansicht-plan.md).
  */
 export async function GET(
   request: NextRequest,
@@ -64,6 +66,8 @@ export async function GET(
     dimOthers: search.get("abblenden") === "1",
     cover: search.get("deckblatt") !== "0",
     fontSize: search.has("groesse") ? Number(search.get("groesse")) : undefined,
+    sceneHeader: search.has("kopf") ? list(search.get("kopf")).filter((v) => v !== "-") : null,
+    sceneHeaderOnlyMine: search.get("kopfnurmeine") === "1",
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Ungültige Einstellungen." }, { status: 400 });

@@ -51,6 +51,8 @@ import {
   wordAt,
   type Span,
 } from "@/lib/skript/note-logic";
+import { buildSceneHeaders, type SceneHeaderModel } from "@/lib/skript/scene-header";
+import { computeScriptStats } from "@/lib/skript/stats";
 import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +83,8 @@ import {
   type NoteTarget,
 } from "./annotations";
 import { PdfExport } from "./pdf-export";
+import { SceneHeader } from "./scene-header";
+import { SceneHeaderSettings } from "./scene-header-settings";
 import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketch";
 import { BlockEditor, type BlockEditorState } from "./block-editor";
 import { useAnnotations } from "./use-annotations";
@@ -906,6 +910,49 @@ export function ScriptReader({
     });
     return first;
   }, [blocks]);
+  // Szenenkopf (docs/Plan/skript-ansicht-plan.md): Zahlen einmal je Fassung, Kopf je Ansicht.
+  const stats = React.useMemo(
+    () => computeScriptStats({ scenes, blocks, roles }),
+    [scenes, blocks, roles],
+  );
+  const roleNames = React.useMemo(
+    () => new Map(roles.map((role) => [role.id, role.name])),
+    [roles],
+  );
+  const noteCounts = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!settings.showNotes) return counts;
+    for (const [blockId, list] of annotationsByBlock) {
+      const sceneId = blockById.get(blockId)?.sceneId;
+      if (sceneId) counts.set(sceneId, (counts.get(sceneId) ?? 0) + list.length);
+    }
+    return counts;
+  }, [annotationsByBlock, blockById, settings.showNotes]);
+  const sceneHeaders = React.useMemo(
+    () =>
+      settings.sceneHeader.mode === "off"
+        ? new Map<string, SceneHeaderModel | null>()
+        : buildSceneHeaders(
+            { scenes, blocks, roles },
+            {
+              items: settings.sceneHeader.items,
+              roleIds: settings.roleIds,
+              hiddenCues: settings.hiddenCues,
+              noteCounts,
+            },
+            stats,
+          ),
+    [
+      blocks,
+      noteCounts,
+      roles,
+      scenes,
+      settings.hiddenCues,
+      settings.roleIds,
+      settings.sceneHeader,
+      stats,
+    ],
+  );
   const roleScenes = React.useMemo(
     () => new Set(roles.filter((role) => roleSet.has(role.id)).flatMap((role) => role.sceneIds)),
     [roles, roleSet],
@@ -1323,6 +1370,10 @@ export function ScriptReader({
               sceneIndex.get(block.sceneId) === index
                 ? scenes.find((s) => s.id === block.sceneId)
                 : null;
+            const header =
+              scene && (!settings.sceneHeader.onlyMine || roleScenes.has(scene.id))
+                ? sceneHeaders.get(scene.id)
+                : null;
             return (
               <React.Fragment key={block.id}>
                 {scene ? (
@@ -1332,6 +1383,15 @@ export function ScriptReader({
                   >
                     {scene.title}
                   </h2>
+                ) : null}
+                {header ? (
+                  <SceneHeader
+                    // Darstellung gewechselt: alle Köpfe neu auf- bzw. zuklappen.
+                    key={settings.sceneHeader.mode}
+                    model={header}
+                    names={roleNames}
+                    expandedByDefault={settings.sceneHeader.mode === "card"}
+                  />
                 ) : null}
                 <BlockView
                   ref={(element) => {
@@ -1640,7 +1700,7 @@ export function ScriptReader({
         open={panel === "settings"}
         onOpenChange={(open) => setPanel(open ? "settings" : null)}
         title="Ansicht"
-        description="Schriftgröße, Regieanweisungen und Hinweise einstellen"
+        description="Was der Leser und das PDF zeigen – Text, Hinweise, Szenenkopf"
       >
         <div className="space-y-5 text-sm">
           {/* Handy: Lernen steht hier statt in der Kopfleiste. */}
@@ -1667,6 +1727,9 @@ export function ScriptReader({
               aria-label="Probenmodus"
             />
           </label>
+          <h3 className="border-t border-border/60 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Text
+          </h3>
           <section className="space-y-2">
             <h3 className="font-medium">Schriftgröße</h3>
             <SegmentedControl
@@ -1694,9 +1757,22 @@ export function ScriptReader({
               ]}
             />
           </section>
+          <label className="flex min-h-11 items-center justify-between gap-3">
+            <span>Meine Markierungen und Notizen</span>
+            <Switch
+              checked={settings.showNotes}
+              onCheckedChange={(showNotes) => update({ showNotes })}
+              aria-label="Markierungen und Notizen zeigen"
+            />
+          </label>
+          {categories.length ? (
+            <h3 className="border-t border-border/60 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Technische Hinweise
+            </h3>
+          ) : null}
           {categories.length ? (
             <section className="space-y-2">
-              <h3 className="font-medium">Hinweise anzeigen</h3>
+              <h3 className="font-medium">Darstellung</h3>
               <SegmentedControl<Settings["cueLayout"]>
                 aria-label="Hinweise anzeigen"
                 fullWidth
@@ -1711,7 +1787,7 @@ export function ScriptReader({
           ) : null}
           {categories.length ? (
             <section className="space-y-1">
-              <h3 className="font-medium">Technische Hinweise</h3>
+              <h3 className="font-medium">Gewerke</h3>
               <p className="text-xs text-muted-foreground">
                 „Verfolgen“ zeigt unten den nächsten Hinweis des Gewerks an.
               </p>
@@ -1750,14 +1826,13 @@ export function ScriptReader({
               </ul>
             </section>
           ) : null}
-          <label className="flex min-h-11 items-center justify-between gap-3">
-            <span>Meine Markierungen und Notizen</span>
-            <Switch
-              checked={settings.showNotes}
-              onCheckedChange={(showNotes) => update({ showNotes })}
-              aria-label="Markierungen und Notizen zeigen"
-            />
-          </label>
+          <h3 className="border-t border-border/60 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Szenenkopf
+          </h3>
+          <SceneHeaderSettings settings={settings} update={update} />
+          <h3 className="border-t border-border/60 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Gerät
+          </h3>
           <label className="flex min-h-11 items-center justify-between gap-3">
             <span>Bildschirm anlassen</span>
             <Switch
