@@ -15,6 +15,7 @@ import {
   ScriptReviewError,
   deleteScriptDraft,
   releaseScriptVersion,
+  rereadCreditsFromSource,
   resolveUncertainCue,
   saveRoleAssignments,
   saveShowCredits,
@@ -116,5 +117,23 @@ export async function saveScriptCreditsAction(
     return actionSuccess("Mitwirkende gespeichert");
   } catch (error) {
     return actionFailure(error, "Mitwirkende konnten nicht gespeichert werden.");
+  }
+}
+
+/** Mitwirkende aus dem gespeicherten Original-PDF nachlesen. */
+export async function rereadScriptCreditsAction(
+  versionId: string,
+): Promise<ProductionActionResult> {
+  try {
+    await requireScriptManager(versionId);
+    const credits = await rereadCreditsFromSource(versionId);
+    revalidatePath(PATH);
+    return actionSuccess(
+      credits.length
+        ? `${credits.reduce((sum, c) => sum + c.names.length, 0)} Namen im PDF gefunden`
+        : "Im Vorspann wurden keine Namen gefunden",
+    );
+  } catch (error) {
+    return actionFailure(error, "Das Original-PDF konnte nicht gelesen werden.");
   }
 }

@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
-import { deleteObjects } from "@/lib/storage/s3";
+import { deleteObjects, getObject } from "@/lib/storage/s3";
 
 import { newCreditNames, readScriptCredits, type ScriptCredit } from "./credits";
 import { align, blockSimilarity, similarity } from "./diff";
+import { parseScriptPdf } from "./import";
 import { readImportReport, readParts } from "./json";
 import { jaroWinkler, roleKey, splitSpeakerRoles } from "./roles";
 import type { ScriptImportReport } from "./service";
@@ -420,4 +421,38 @@ export async function deleteScriptDraft(versionId: string) {
 /** Mitwirkende der Produktion speichern (Prüfschritt, Phase 1 Auswertungen). */
 export async function saveShowCredits(showId: string, credits: ScriptCredit[]) {
   await prisma.show.update({ where: { id: showId }, data: { scriptCredits: credits } });
+}
+
+/**
+ * Mitwirkende nachträglich aus dem Original-PDF lesen (Fassungen von vor Phase 1). Ergebnis landet
+ * im Import-Bericht; ist die Liste der Produktion leer, wird sie direkt gefüllt.
+ */
+export async function rereadCreditsFromSource(versionId: string) {
+  const version = await prisma.scriptVersion.findUnique({
+    where: { id: versionId },
+    select: {
+      showId: true,
+      sourceBucket: true,
+      sourceKey: true,
+      importReport: true,
+      show: { select: { scriptCredits: true } },
+    },
+  });
+  if (!version) throw new ScriptReviewError("Fassung nicht gefunden.");
+  if (!version.sourceBucket || !version.sourceKey) {
+    throw new ScriptReviewError("Zu dieser Fassung ist kein Original-PDF gespeichert.");
+  }
+  const object = await getObject(version.sourceBucket, version.sourceKey);
+  if (!object.body) throw new ScriptReviewError("Das Original-PDF ist leer.");
+  const data = new Uint8Array(await new Response(object.body).arrayBuffer());
+  const { credits } = await parseScriptPdf(data);
+  const report = { ...readImportReport(version.importReport), credits };
+  const fill = credits.length > 0 && !readScriptCredits(version.show.scriptCredits).length;
+  await prisma.$transaction([
+    prisma.scriptVersion.update({ where: { id: versionId }, data: { importReport: report } }),
+    ...(fill
+      ? [prisma.show.update({ where: { id: version.showId }, data: { scriptCredits: credits } })]
+      : []),
+  ]);
+  return credits;
 }

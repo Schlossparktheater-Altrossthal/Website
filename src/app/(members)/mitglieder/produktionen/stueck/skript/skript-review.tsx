@@ -26,6 +26,7 @@ import {
   deleteScriptDraftAction,
   releaseScriptAction,
   resolveScriptCueAction,
+  rereadScriptCreditsAction,
   saveScriptCreditsAction,
   saveScriptRolesAction,
 } from "../../actions/skript";
@@ -286,6 +287,7 @@ function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: 
   const { saved, found, newNames } = data.credits;
   const [rows, setRows] = React.useState<CreditRow[]>(() => toRows(saved));
   const [busy, setBusy] = React.useState(false);
+  const [rereading, setRereading] = React.useState(false);
 
   const save = async (credits: ScriptCredit[]) => {
     setBusy(true);
@@ -341,6 +343,12 @@ function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: 
         ) : null}
         {editable ? (
           <>
+            {!rows.length ? (
+              <p className="rounded-md border border-dashed border-border p-3 text-muted-foreground">
+                Noch keine Angaben. Füge Zeilen hinzu oder lies die Namen aus dem Vorspann des
+                Original-PDFs.
+              </p>
+            ) : null}
             <ul className="space-y-3">
               {rows.map((row, index) => (
                 <li
@@ -388,6 +396,20 @@ function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: 
               ))}
             </ul>
             <div className="flex flex-wrap justify-end gap-2">
+              {!found.length ? (
+                <AsyncButton
+                  variant="ghost"
+                  isLoading={rereading}
+                  loadingText="Liest PDF …"
+                  onClick={async () => {
+                    setRereading(true);
+                    report(await rereadScriptCreditsAction(data.version.id), router);
+                    setRereading(false);
+                  }}
+                >
+                  Aus dem Original-PDF lesen
+                </AsyncButton>
+              ) : null}
               <Button
                 variant="outline"
                 onClick={() =>
