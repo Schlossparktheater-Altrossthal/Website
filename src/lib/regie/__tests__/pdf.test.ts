@@ -47,6 +47,10 @@ describe("parseBinderParts", () => {
     expect(parseBinderParts("besetzung,foo,termine,termine")).toEqual(["termine", "besetzung"]);
   });
 
+  it("lässt das Skript nie in die Mappe", () => {
+    expect(parseBinderParts("skript,besetzung")).toEqual(["besetzung"]);
+  });
+
   it("nimmt ohne Auswahl die Vorauswahl", () => {
     expect(parseBinderParts(null)).toEqual(BINDER_DEFAULT_PARTS);
     expect(parseBinderParts("foo")).toEqual(BINDER_DEFAULT_PARTS);

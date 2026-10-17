@@ -287,6 +287,9 @@ export async function renderDirectionPdf(
   return renderPdfTemplate(built.templateId, built.payload);
 }
 
+/** Wählbare Teile der Probenmappe – das Skript gehört nicht hinein. */
+export const BINDER_PARTS = DIRECTION_PDF_KINDS.filter((kind) => kind !== "skript");
+
 /** Vorauswahl der Probenmappe (Plan: Wochenplan, Szenen, Verfügbarkeit, Besetzung, Requisiten). */
 export const BINDER_DEFAULT_PARTS: DirectionPdfKind[] = [
   "termine",
@@ -299,7 +302,7 @@ export const BINDER_DEFAULT_PARTS: DirectionPdfKind[] = [
 /** `?teile=a,b` → gültige Teile in fester Mappen-Reihenfolge; leer → Vorauswahl. */
 export function parseBinderParts(value: string | null | undefined): DirectionPdfKind[] {
   const wanted = new Set((value ?? "").split(",").map((part) => part.trim()));
-  const parts = DIRECTION_PDF_KINDS.filter((kind) => wanted.has(kind));
+  const parts = BINDER_PARTS.filter((kind) => wanted.has(kind));
   return parts.length ? parts : BINDER_DEFAULT_PARTS;
 }
 

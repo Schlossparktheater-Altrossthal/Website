@@ -130,7 +130,7 @@ ausstattung,wuensche}`; Lader in `src/lib/regie/data.ts` (eigene, schlanke Abfra
 
 ## Umsetzung Phase 6 (2026-10-17)
 
-- Karte **Probenmappe** im Dashboard, Auswahl im Bottom-Sheet per Häkchen (Teile ohne Daten
+- Karte **Probenmappe** im Dashboard (ohne Skript, Nutzer 2026-10-17), Auswahl im Bottom-Sheet per Häkchen (Teile ohne Daten
   ausgegraut), letzte Auswahl im Browser gemerkt (`localStorage`, `regie-probenmappe-teile`).
 - `GET /api/regie/<showId>/pdf/mappe?teile=termine,szenen,…`: Teile werden mit den vorhandenen
   Vorlagen gerendert und mit `pdf-lib` zusammengefügt; feste Reihenfolge wie

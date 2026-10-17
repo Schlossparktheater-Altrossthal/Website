@@ -27,7 +27,7 @@ import {
 } from "@/lib/regie/page";
 import {
   BINDER_DEFAULT_PARTS,
-  DIRECTION_PDF_KINDS,
+  BINDER_PARTS,
   DIRECTION_PDF_LABELS,
   type DirectionPdfKind,
 } from "@/lib/regie/pdf";
@@ -92,13 +92,12 @@ export default async function DirectionDashboardPage({
   const href = (section: string) => directionHref(section, show.id);
   const pdf = (kind: string) => directionPdfHref(kind, show.id);
 
-  const partAvailable: Record<DirectionPdfKind, boolean> = {
+  const partAvailable: Record<Exclude<DirectionPdfKind, "skript">, boolean> = {
     termine: events.length > 0,
     szenen: scenes.length > 0,
     verfuegbarkeit: true,
     besetzung: roles.length > 0,
     ausstattung: props.scenes.length > 0,
-    skript: Boolean(script),
   };
 
   const openWishes = wishes.filter((wish) => wish.status === "open").length;
@@ -227,7 +226,7 @@ export default async function DirectionDashboardPage({
             <BinderComposer
               pdfHref={pdf("mappe")}
               defaults={BINDER_DEFAULT_PARTS}
-              parts={DIRECTION_PDF_KINDS.map((kind) => ({
+              parts={BINDER_PARTS.map((kind) => ({
                 kind,
                 label: DIRECTION_PDF_LABELS[kind],
                 available: partAvailable[kind],
