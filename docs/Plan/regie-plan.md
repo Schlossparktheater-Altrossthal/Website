@@ -64,7 +64,7 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
 
 ## Phasen
 
-1. **Rechte & Rolle:** Produktionsbezogenes Recht „Regie-Dashboard“ (lesen + Wünsche), Zuordnung
+1. ✅ **Rechte & Rolle:** Produktionsbezogenes Recht „Regie-Dashboard“ (lesen + Wünsche), Zuordnung
    über Gewerk Regie/Regieassistenz in der Produktion. Weiterleitung auf das Dashboard, Menü für
    diese Nutzer ausblenden. Altes Regie-Onboarding (`src/app/onboarding/regie`, Rolle `board`)
    prüfen: anpassen oder ablösen.
@@ -98,6 +98,10 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
   Einladungen mit Rolle `board` ohne `cast` (Leitungsteam), nicht für den Regie-Zugang. Bleibt
   unverändert; der Regie-Account läuft nicht über das Onboarding. Umbenennen in „Leitungsteam“
   wäre später sinnvoll.
+- Geprüft: Typecheck, Lint, Unit-Tests (`src/lib/regie/__tests__/access.test.ts`), Migration auf
+  frischer DB. Noch nicht geprüft: Staging/Browser (Regie-Ansicht mobil+desktop, Umleitung,
+  Schalter) – mit Phase 3 nachholen. `api/dashboard/overview`-Test wackelt im vollen Lauf
+  (einzeln grün, unabhängig von Phase 1).
 
 ## Entscheidungen Nachtrag (Nutzer 2026-10-17)
 
