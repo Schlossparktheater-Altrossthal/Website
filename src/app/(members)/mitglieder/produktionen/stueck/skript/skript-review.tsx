@@ -13,12 +13,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatTile } from "@/components/ui/stat-tile";
 import type { ProductionActionResult } from "@/lib/produktionen/actions-helpers";
+import {
+  SCRIPT_CREDIT_KINDS,
+  SCRIPT_CREDIT_KIND_LABELS,
+  joinNames,
+  mergeCredits,
+  type ScriptCredit,
+} from "@/lib/skript/credits";
 import type { ScriptReviewData } from "@/lib/skript/review";
 
 import {
   deleteScriptDraftAction,
   releaseScriptAction,
   resolveScriptCueAction,
+  saveScriptCreditsAction,
   saveScriptRolesAction,
 } from "../../actions/skript";
 import { inputClass } from "../ui";
@@ -108,6 +116,7 @@ export function ScriptReview({ data, canManage }: { data: ScriptReviewData; canM
         </CardContent>
       </Card>
 
+      <CreditsSection key={JSON.stringify(data.credits.saved)} data={data} editable={canManage} />
       <RoleSection
         key={data.entries.map((e) => `${e.name}=${e.roleId}`).join("|")}
         data={data}
@@ -262,6 +271,152 @@ function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boo
             </AsyncButton>
           </div>
         ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+type CreditRow = { kind: ScriptCredit["kind"]; label: string; names: string };
+
+const toRows = (credits: ScriptCredit[]): CreditRow[] =>
+  credits.map((credit) => ({ ...credit, names: credit.names.join(", ") }));
+
+function CreditsSection({ data, editable }: { data: ScriptReviewData; editable: boolean }) {
+  const router = useRouter();
+  const { saved, found, newNames } = data.credits;
+  const [rows, setRows] = React.useState<CreditRow[]>(() => toRows(saved));
+  const [busy, setBusy] = React.useState(false);
+
+  const save = async (credits: ScriptCredit[]) => {
+    setBusy(true);
+    report(await saveScriptCreditsAction(data.version.id, credits), router);
+    setBusy(false);
+  };
+  const fromRows = (): ScriptCredit[] =>
+    rows
+      .map((row) => ({
+        kind: row.kind,
+        label: row.label.trim() || SCRIPT_CREDIT_KIND_LABELS[row.kind],
+        names: row.names
+          .split(/\s*(?:,|;|\bund\b)\s*/u)
+          .map((name) => name.trim())
+          .filter(Boolean),
+      }))
+      .filter((credit) => credit.names.length);
+  const update = (index: number, patch: Partial<CreditRow>) =>
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          Mitwirkende
+          {editable && newNames.length ? (
+            <Badge variant="warning" size="sm">
+              {plural(newNames.length, "neuer Name", "neue Namen")}
+            </Badge>
+          ) : null}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p className="text-muted-foreground">
+          Stehen auf dem Deckblatt der PDFs und gelten für die ganze Produktion. Fehlt die Regie,
+          nimmt das Deckblatt die Mitglieder des Gewerks Regie.
+        </p>
+        {editable && newNames.length ? (
+          <div className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 sm:flex-row sm:items-center">
+            <p className="min-w-0 flex-1 break-words">
+              Diese Fassung nennt {saved.length ? "weitere Namen" : "Namen"}:{" "}
+              <strong>{joinNames(newNames)}</strong>
+            </p>
+            <AsyncButton
+              size="sm"
+              isLoading={busy}
+              loadingText="Speichert …"
+              onClick={() => save(mergeCredits(saved, found))}
+            >
+              Ergänzen
+            </AsyncButton>
+          </div>
+        ) : null}
+        {editable ? (
+          <>
+            <ul className="space-y-3">
+              {rows.map((row, index) => (
+                <li
+                  key={index}
+                  className="grid grid-cols-1 gap-2 sm:grid-cols-[11rem_minmax(0,10rem)_minmax(0,1fr)_auto] sm:items-center"
+                >
+                  <select
+                    className={inputClass}
+                    aria-label="Art"
+                    value={row.kind}
+                    onChange={(event) =>
+                      update(index, { kind: event.target.value as CreditRow["kind"] })
+                    }
+                  >
+                    {SCRIPT_CREDIT_KINDS.map((kind) => (
+                      <option key={kind} value={kind}>
+                        {SCRIPT_CREDIT_KIND_LABELS[kind]}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className={inputClass}
+                    aria-label="Bezeichnung auf dem Deckblatt"
+                    placeholder={SCRIPT_CREDIT_KIND_LABELS[row.kind]}
+                    value={row.label}
+                    maxLength={60}
+                    onChange={(event) => update(index, { label: event.target.value })}
+                  />
+                  <input
+                    className={inputClass}
+                    aria-label="Namen, mit Komma getrennt"
+                    placeholder="Vorname Nachname, …"
+                    value={row.names}
+                    onChange={(event) => update(index, { names: event.target.value })}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Zeile entfernen"
+                    onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    <TrashIcon aria-hidden />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setRows((prev) => [...prev, { kind: "direction", label: "Regie", names: "" }])
+                }
+              >
+                Zeile hinzufügen
+              </Button>
+              <AsyncButton
+                isLoading={busy}
+                loadingText="Speichert …"
+                onClick={() => save(fromRows())}
+              >
+                Mitwirkende speichern
+              </AsyncButton>
+            </div>
+          </>
+        ) : saved.length ? (
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-[auto_1fr]">
+            {saved.map((credit, index) => (
+              <React.Fragment key={index}>
+                <dt className="text-muted-foreground">{credit.label}</dt>
+                <dd className="min-w-0 break-words">{joinNames(credit.names)}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-muted-foreground">Noch keine Angaben.</p>
+        )}
       </CardContent>
     </Card>
   );

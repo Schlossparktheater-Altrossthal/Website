@@ -499,6 +499,8 @@ model Show {
   /// T−0-Anker der Produktionsplanung (docs/Plan/projektplanung-plan.md).
   premiereAt              DateTime?
   meta                    Json?
+  /// Mitwirkende fürs Skript-Deckblatt (Autor, Fassung, Regie …), src/lib/skript/credits.ts.
+  scriptCredits           Json?
   status                  ProductionStatus          @default(planning)
   statusChangedAt         DateTime?
   archivedAt              DateTime?

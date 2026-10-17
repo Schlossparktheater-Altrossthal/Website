@@ -17,7 +17,9 @@ import {
   releaseScriptVersion,
   resolveUncertainCue,
   saveRoleAssignments,
+  saveShowCredits,
 } from "@/lib/skript/review";
+import { scriptCreditsSchema } from "@/lib/skript/credits";
 import { SCRIPT_MANAGE_PERMISSION } from "@/lib/skript/service";
 
 const PATH = "/mitglieder/produktionen/stueck";
@@ -33,7 +35,7 @@ async function requireScriptManager(versionId: string) {
   if (!(await hasPermission(session.user, SCRIPT_MANAGE_PERMISSION, { showId: version.showId }))) {
     throw new ScriptReviewError("Keine Berechtigung.");
   }
-  return { userId };
+  return { userId, showId: version.showId };
 }
 
 const assignmentSchema = z.array(
@@ -99,5 +101,20 @@ export async function deleteScriptDraftAction(versionId: string): Promise<Produc
     return actionSuccess("Entwurf verworfen");
   } catch (error) {
     return actionFailure(error, "Entwurf konnte nicht verworfen werden.");
+  }
+}
+
+/** Mitwirkende (Autor, Fassung, Regie …) der Produktion fürs Deckblatt speichern. */
+export async function saveScriptCreditsAction(
+  versionId: string,
+  credits: unknown,
+): Promise<ProductionActionResult> {
+  try {
+    const { showId } = await requireScriptManager(versionId);
+    await saveShowCredits(showId, scriptCreditsSchema.parse(credits));
+    revalidatePath(PATH);
+    return actionSuccess("Mitwirkende gespeichert");
+  } catch (error) {
+    return actionFailure(error, "Mitwirkende konnten nicht gespeichert werden.");
   }
 }

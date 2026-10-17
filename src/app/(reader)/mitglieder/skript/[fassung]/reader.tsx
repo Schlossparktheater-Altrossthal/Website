@@ -1056,9 +1056,18 @@ export function ScriptReader({
     return Math.min(SPEAKER_MAX_CHARS, Math.max(8, ...lengths));
   }, [blocks]);
 
+  // Personalisiertes PDF: für mich (mit den hervorgehobenen Rollen) oder für ein anderes Mitglied
+  // (dessen Rollen laut Besetzung). Nur für dieses Mal, nicht gespeichert.
+  const [pdfPerson, setPdfPerson] = React.useState("");
+  const [pdfPersonShow, setPdfPersonShow] = React.useState<"both" | "role" | "name">("both");
   const pdfUrl = (download: boolean) => {
     const params = new URLSearchParams({ fassung: version.id, regie: settings.directions });
-    if (settings.roleIds.length) params.set("rollen", settings.roleIds.join(","));
+    const forOther = pdfPerson !== "" && pdfPerson !== data.viewerId;
+    if (settings.roleIds.length && !forOther) params.set("rollen", settings.roleIds.join(","));
+    if (pdfPerson) {
+      params.set("fuer", pdfPerson);
+      params.set("zeigen", pdfPersonShow);
+    }
     if (settings.hiddenCues.length) params.set("ohne", settings.hiddenCues.join(","));
     if (settings.dimOthers) params.set("abblenden", "1");
     params.set("groesse", String(settings.fontSize));
@@ -1780,6 +1789,50 @@ export function ScriptReader({
               Mit den aktuellen Einstellungen: gewählte Rollen, Regieanweisungen, sichtbare Hinweise
               und Schriftgröße.
             </p>
+            <label className="grid gap-1">
+              <span className="text-sm">Fassung für</span>
+              <select
+                className="min-h-11 rounded-md border border-input bg-background px-3 text-sm"
+                value={pdfPerson}
+                onChange={(event) => setPdfPerson(event.target.value)}
+              >
+                <option value="">Niemand bestimmtes</option>
+                {data.viewerId && data.people.some((p) => p.id === data.viewerId) ? (
+                  <option value={data.viewerId}>Mich</option>
+                ) : null}
+                {data.people
+                  .filter((person) => person.id !== data.viewerId)
+                  .map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name}
+                      {person.roleIds.length
+                        ? ` (${person.roleIds
+                            .map((id) => roles.find((role) => role.id === id)?.name)
+                            .filter(Boolean)
+                            .join(", ")})`
+                        : ""}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            {pdfPerson ? (
+              <SegmentedControl<"both" | "role" | "name">
+                aria-label="Auf dem Deckblatt"
+                fullWidth
+                value={pdfPersonShow}
+                onValueChange={setPdfPersonShow}
+                options={[
+                  { value: "both", label: "Name + Rolle" },
+                  { value: "name", label: "Name" },
+                  { value: "role", label: "Rolle" },
+                ]}
+              />
+            ) : null}
+            {pdfPerson && pdfPerson !== data.viewerId ? (
+              <p className="text-xs text-muted-foreground">
+                Hervorgehoben werden die Rollen dieser Person laut Besetzung.
+              </p>
+            ) : null}
             <label className="flex min-h-11 items-center justify-between gap-3">
               <span>Mit Deckblatt und Szenenverzeichnis</span>
               <Switch

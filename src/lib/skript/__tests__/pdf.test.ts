@@ -22,6 +22,12 @@ const data: ScriptReaderData = {
     { id: "b", name: "Bastian", lines: 1, words: 6, sceneIds: ["sc1"] },
   ],
   ownRoleIds: [],
+  credits: [
+    { kind: "direction", label: "Regie", names: ["Elke Zeh"] },
+    { kind: "adaptation", label: "Bühnenfassung", names: ["John von Düffel"] },
+  ],
+  people: [{ id: "u1", name: "Lisa Muster", roleIds: ["a"] }],
+  viewerId: null,
   blocks: [
     {
       id: "1",
@@ -65,18 +71,31 @@ const data: ScriptReaderData = {
   ],
 };
 
-async function render(options: Partial<Record<string, unknown>>) {
+async function render(options: Partial<Record<string, unknown>>, personName?: string) {
   const parsed = scriptPdfOptionsSchema.parse(options);
   const result = await renderPdfTemplate("skript-fassung", {
     title: "Testgeschichte",
     data,
     options: parsed,
+    personName,
   });
   const lines = await extractLines(new Uint8Array(result.buffer), BOLD_COLON_PROFILE);
   return { result, text: lines.map((line) => line.spans.map((s) => s.text).join("")) };
 }
 
 describe("Skript-PDF", () => {
+  it("Deckblatt nennt Mitwirkende sowie Person und Rolle einer persönlichen Fassung", async () => {
+    const { text } = await render({ roleIds: ["a"], personId: "u1" }, "Lisa Muster");
+    const all = text.join("\n");
+    expect(all).toContain("Bühnenfassung John von Düffel");
+    expect(all).toContain("Regie Elke Zeh");
+    expect(all).toContain("Lisa Muster");
+    expect(all).toContain("Rolle: Atreju");
+    expect(all).toContain("für Lisa Muster");
+    const onlyRole = (await render({ roleIds: ["a"], personShow: "role" }, "Lisa Muster")).text;
+    expect(onlyRole.join("\n")).not.toContain("Lisa Muster");
+  }, 30_000);
+
   it("enthält Titel, Szene, Sprecher, Text und Hinweise", async () => {
     const { result, text } = await render({});
     expect(result.filename).toBe("skript-testgeschichte-stand-15-6.pdf");

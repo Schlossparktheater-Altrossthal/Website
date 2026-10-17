@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { deleteObjects } from "@/lib/storage/s3";
 
+import { newCreditNames, readScriptCredits, type ScriptCredit } from "./credits";
 import { align, blockSimilarity, similarity } from "./diff";
 import { readImportReport, readParts } from "./json";
 import { jaroWinkler, roleKey, splitSpeakerRoles } from "./roles";
@@ -54,6 +55,8 @@ export type ScriptReviewData = {
   roles: { id: string; name: string }[];
   entries: ReviewRoleEntry[];
   cues: ReviewCue[];
+  /** Mitwirkende der Produktion und was diese Fassung im Vorspann nennt. */
+  credits: { saved: ScriptCredit[]; found: ScriptCredit[]; newNames: string[] };
   /** Was vor der Freigabe noch fehlt. */
   blockers: string[];
 };
@@ -85,6 +88,7 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
       createdBy: { select: { name: true } },
       releasedBy: { select: { name: true } },
       basedOn: { select: { label: true } },
+      show: { select: { scriptCredits: true } },
       blocks: {
         orderBy: { sequence: "asc" },
         select: {
@@ -163,6 +167,8 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
     );
   }
 
+  const report = readImportReport(version.importReport);
+  const saved = readScriptCredits(version.show.scriptCredits);
   return {
     version: {
       id: version.id,
@@ -174,12 +180,13 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
       createdByName: version.createdBy?.name ?? null,
       releasedAt: version.releasedAt,
       releasedByName: version.releasedBy?.name ?? null,
-      report: readImportReport(version.importReport),
+      report,
       basedOnLabel: version.basedOn?.label ?? null,
     },
     roles: roles.map(({ id, name }) => ({ id, name })),
     entries: [...entries.values()].sort((a, b) => b.words - a.words),
     cues,
+    credits: { saved, found: report.credits, newNames: newCreditNames(saved, report.credits) },
     blockers,
   };
 }
@@ -408,4 +415,9 @@ export async function deleteScriptDraft(versionId: string) {
       console.error("[skript] Original-PDF nicht gelöscht", error),
     );
   }
+}
+
+/** Mitwirkende der Produktion speichern (Prüfschritt, Phase 1 Auswertungen). */
+export async function saveShowCredits(showId: string, credits: ScriptCredit[]) {
+  await prisma.show.update({ where: { id: showId }, data: { scriptCredits: credits } });
 }

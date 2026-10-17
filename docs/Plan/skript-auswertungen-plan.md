@@ -132,11 +132,23 @@ type SceneColumn =
 
 Phasen 1–5 hängen nur am Skript und sind sofort machbar; 6–7 bauen aufeinander auf.
 
-## Offene Entscheidungen
+## Entscheidungen (2026-10-17)
 
-- E1: Autor/Vorlage an `Show` (empfohlen) oder an der Fassung?
-- E2: Darf jede Person PDFs **für andere** erzeugen (Name auf dem Deckblatt) oder nur SCRIPT.MANAGE?
-- E3: Dauer-Schätzung: Wörter pro Minute fest (z. B. 130) oder aus echten Durchlaufzeiten lernen?
-- E4: Zählen gemeinsame Repliken („Atreju/Bastian“) voll für jede Rolle (Vorschlag) oder geteilt?
-- E5: Szenenübersicht als Tabelle (kompakt) oder eine Seite pro Szene – beides anbieten?
-- E6: Soll Phase 6 (Verknüpfung) vorgezogen werden, weil der Darstellername wichtig ist?
+- E1: Autor, Fassung und Regie liest der **Parser aus dem Vorspann**, gespeichert **pro Produktion**
+  (`Show.scriptCredits`). Die erste Fassung füllt die Liste, später fragt der Prüfschritt nur nach,
+  wenn neue Namen auftauchen („Ergänzen“). Ohne Regie-Angabe: Mitglieder des Gewerks Regie.
+- E2: **Jeder für jeden** – alle Leser dürfen PDFs für jedes Mitglied der Produktion erzeugen.
+- E3: Dauer geschätzt (Wörter/Minute) und **als Schätzung markiert**; gibt es eine gemessene Zeit
+  (später: Stoppuhr bei Durchläufen, Feld an `ScriptScene`), gilt diese.
+- E4: Gemeinsame Repliken zählen **voll für jede Rolle**.
+- E5: Szenenübersicht als **Tabelle**.
+- E6: **Keine Verknüpfung mit dem Stück** vorerst. Das Skript bleibt in sich geschlossen; die
+  Person für ein PDF wird gewählt, ihre Rollen kommen per Namensabgleich mit der Besetzung (wie
+  bisher `ownRoleIds`). Später ein eigener Verknüpfungsassistent (Szenen, Rollen übernehmen/verknüpfen);
+  Phase 6/7 warten darauf. Requisiten/Umzüge vorerst nur aus Skript-Hinweisen.
+
+## Stand
+
+- Phase 1 (Deckblatt) umgesetzt 2026-10-17: `src/lib/skript/credits.ts` (+ Tests), Migration
+  `20261017160000_script_credits`, Karte „Mitwirkende“ im Prüfschritt, PDF `?fuer=<userId>&zeigen=both|role|name`,
+  Auswahl „Fassung für“ im Leser, Fußzeile „für <Name>“.

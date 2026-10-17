@@ -3,6 +3,7 @@ import { z } from "zod";
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import type { PdfTemplate } from "@/lib/pdf/types";
 
+import { joinNames, sortCredits } from "./credits";
 import type { ScriptReaderData } from "./reader";
 import { cueLineIndices, isRoleBlock, splitTail } from "./reader-logic";
 import type { CueCategory, ScriptPart } from "./types";
@@ -21,6 +22,10 @@ export const scriptPdfOptionsSchema = z.object({
   dimOthers: z.boolean().default(false),
   fontSize: z.number().int().min(0).max(3).default(1),
   cover: z.boolean().default(true),
+  /** Personalisiert „für“ ein Mitglied der Produktion (Name kommt aus den Leser-Daten). */
+  personId: z.string().min(1).nullable().default(null),
+  /** Was das Deckblatt bei einer personalisierten Fassung nennt. */
+  personShow: z.enum(["both", "role", "name"]).default("both"),
 });
 
 export type ScriptPdfOptions = z.infer<typeof scriptPdfOptionsSchema>;
@@ -29,6 +34,8 @@ export type ScriptPdfInput = {
   title: string;
   data: ScriptReaderData;
   options: ScriptPdfOptions;
+  /** Name der Person bei einer personalisierten Fassung. */
+  personName?: string | null;
 };
 
 /** Druckfarben je Gewerk (dunkel genug für Schwarzweiß-Druck). */
@@ -162,10 +169,15 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
   const bottom = () => doc.page.height - MARGIN;
   const selectedNames = data.roles.filter((role) => roleSet.has(role.id)).map((r) => r.name);
 
+  const personName = options.personShow !== "role" ? (input.personName ?? null) : null;
+  const footerText = [title, data.version.label, personName ? `für ${personName}` : null]
+    .filter(Boolean)
+    .join(" · ");
   const sceneTitles = new Map(data.scenes.map((scene) => [scene.id, scene.title]));
   const scenePages = new Map<string, number>();
+  let coverEnd = 0;
   if (options.cover) {
-    renderCover(doc, input, selectedNames);
+    coverEnd = renderCover(doc, input, selectedNames);
     doc.addPage();
   }
   const coverPages = options.cover ? 1 : 0;
@@ -271,7 +283,7 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
 
   // Kopf- und Fußzeile auf jeder Seite
   const range = doc.bufferedPageRange();
-  if (options.cover) fillCoverContents(doc, input, scenePages);
+  if (options.cover) fillCoverContents(doc, input, scenePages, coverEnd);
   for (let page = range.start + coverPages; page < range.start + range.count; page++) {
     doc.switchToPage(page);
     // Fußzeile liegt im unteren Rand – ohne das legt pdfkit eine neue Seite an.
@@ -282,7 +294,7 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
       .font("Helvetica")
       .fontSize(8)
       .fillColor(MUTED)
-      .text(`${title} · ${data.version.label}`, left, footerY, {
+      .text(footerText, left, footerY, {
         width: right - left,
         lineBreak: false,
       })
@@ -306,33 +318,65 @@ const DATE = new Intl.DateTimeFormat("de-DE", {
 const COVER_CONTENTS_Y = 0.46;
 
 function renderCover(doc: Doc, input: ScriptPdfInput, selectedNames: string[]) {
-  const { data, title } = input;
+  const { data, title, options } = input;
   const left = MARGIN;
   const width = doc.page.width - 2 * MARGIN;
-  const top = doc.page.height * 0.16;
+  const top = doc.page.height * 0.14;
   doc.rect(left, top - 24, 40, 4).fill(MINE_BAR);
   doc.font("Helvetica-Bold").fontSize(34).fillColor(INK).text(title, left, top, { width });
-  doc.moveDown(0.3);
+
+  const credits = sortCredits(data.credits);
+  if (credits.length) {
+    doc.moveDown(0.4);
+    for (const credit of credits) {
+      doc
+        .font("Helvetica")
+        .fontSize(12)
+        .fillColor(MUTED)
+        .text(`${credit.label} `, { width, continued: true })
+        .font("Helvetica-Bold")
+        .fillColor(INK)
+        .text(joinNames(credit.names), { continued: false });
+    }
+  }
+
+  doc.moveDown(0.8);
   doc
     .font("Helvetica")
-    .fontSize(14)
+    .fontSize(11)
     .fillColor(MUTED)
     .text(
-      [data.version.label, data.version.status === "draft" ? "Entwurf" : null]
+      [
+        data.version.label,
+        data.version.status === "draft" ? "Entwurf" : null,
+        data.version.versionDate
+          ? `Stand vom ${DATE.format(new Date(data.version.versionDate))}`
+          : null,
+      ]
         .filter(Boolean)
         .join(" · "),
       { width },
     );
-  if (data.version.versionDate) {
-    doc.text(`Stand vom ${DATE.format(new Date(data.version.versionDate))}`, { width });
-  }
-  if (selectedNames.length) {
+
+  const name = options.personShow !== "role" ? (input.personName ?? null) : null;
+  const roles = options.personShow !== "name" || !name ? selectedNames : [];
+  if (name || roles.length) {
     doc.moveDown(1.2);
     doc.font("Helvetica-Bold").fontSize(10).fillColor(MUTED).text("FASSUNG FÜR", { width });
-    doc.font("Helvetica-Bold").fontSize(16).fillColor(MINE_BAR).text(selectedNames.join(", "), {
-      width,
-    });
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(18)
+      .fillColor(MINE_BAR)
+      .text(name ?? joinNames(roles), { width });
+    if (name && roles.length) {
+      doc
+        .font("Helvetica")
+        .fontSize(12)
+        .fillColor(INK)
+        .text(`${roles.length === 1 ? "Rolle" : "Rollen"}: ${joinNames(roles)}`, { width });
+    }
   }
+  const end = doc.y;
   const bottomMargin = doc.page.margins.bottom;
   doc.page.margins.bottom = 0;
   doc
@@ -346,14 +390,20 @@ function renderCover(doc: Doc, input: ScriptPdfInput, selectedNames: string[]) {
       { width, lineBreak: false },
     );
   doc.page.margins.bottom = bottomMargin;
+  return end;
 }
 
-function fillCoverContents(doc: Doc, input: ScriptPdfInput, scenePages: Map<string, number>) {
+function fillCoverContents(
+  doc: Doc,
+  input: ScriptPdfInput,
+  scenePages: Map<string, number>,
+  coverEnd: number,
+) {
   const range = doc.bufferedPageRange();
   doc.switchToPage(range.start);
   const left = MARGIN;
   const width = doc.page.width - 2 * MARGIN;
-  let y = doc.page.height * COVER_CONTENTS_Y;
+  let y = Math.max(doc.page.height * COVER_CONTENTS_Y, coverEnd + 28);
   const limit = doc.page.height - MARGIN - 24;
   const scenes = input.data.scenes.filter((scene) => scenePages.has(scene.id));
   const lineHeight = Math.max(9, Math.min(15, (limit - y - 24) / Math.max(1, scenes.length)));

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { scriptCreditSchema } from "./credits";
 import type { ScriptImportReport } from "./service";
 import type { ScriptPart } from "./types";
 
@@ -42,6 +43,7 @@ const reportSchema = z.object({
     .default([]),
   scenes: z.number().default(0),
   blocks: z.number().default(0),
+  credits: z.array(scriptCreditSchema).catch([]).default([]),
 });
 
 export function readImportReport(value: unknown): ScriptImportReport {

@@ -17,6 +17,8 @@ function list(value: string | null) {
 /**
  * Fassung als PDF mit den Leser-Einstellungen (docs/Plan/skript-plan.md, Phase 6).
  * `?fassung=<id>&rollen=a,b&regie=show|dim|hide&ohne=ton,licht&abblenden=1&groesse=0-3&deckblatt=0`
+ * `&fuer=<userId>&zeigen=both|role|name` – personalisiert für ein Mitglied der Produktion; ohne
+ * `rollen` gelten dessen Rollen laut Besetzung.
  */
 export async function GET(
   request: NextRequest,
@@ -43,8 +45,15 @@ export async function GET(
     return NextResponse.json({ error: "Fassung nicht gefunden." }, { status: 404 });
   }
 
+  const person = data.people.find((p) => p.id === search.get("fuer")) ?? null;
+  if (search.get("fuer") && !person) {
+    return NextResponse.json({ error: "Person nicht in dieser Produktion." }, { status: 400 });
+  }
+  const roleIds = list(search.get("rollen"));
   const parsed = scriptPdfOptionsSchema.safeParse({
-    roleIds: list(search.get("rollen")),
+    roleIds: roleIds.length ? roleIds : (person?.roleIds ?? []),
+    personId: person?.id ?? null,
+    personShow: search.get("zeigen") ?? undefined,
     directions: search.get("regie") ?? undefined,
     hiddenCues: list(search.get("ohne")),
     dimOthers: search.get("abblenden") === "1",
@@ -58,6 +67,7 @@ export async function GET(
     title: data.version.showTitle,
     data,
     options: parsed.data,
+    personName: person?.name ?? null,
   });
   return new NextResponse(new Uint8Array(result.buffer), {
     status: 200,

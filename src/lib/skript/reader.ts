@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
+import { DIRECTION_TEAM_TEMPLATE_SLUGS } from "@/lib/regie/wishes";
 
+import { readScriptCredits, type ScriptCredit } from "./credits";
 import { readParts } from "./json";
 import { roleKey, splitSpeakerRoles } from "./roles";
 import type { ScriptPart } from "./types";
@@ -46,7 +49,15 @@ export type ScriptReaderData = {
   roles: ReaderRole[];
   /** Skript-Rollen, deren Name zu einer eigenen Besetzung im Stück passt. */
   ownRoleIds: string[];
+  /** Mitwirkende fürs Deckblatt; ohne Regie-Angabe die Mitglieder des Gewerks Regie. */
+  credits: ScriptCredit[];
+  /** Mitglieder der Produktion – personalisierte PDFs „für“ jemanden (jeder für jeden). */
+  people: ReaderPerson[];
+  /** Angemeldete Person (Vorauswahl „für mich“ im PDF). */
+  viewerId: string | null;
 };
+
+export type ReaderPerson = { id: string; name: string; roleIds: string[] };
 
 export function estimateMinutes(words: number) {
   return words ? Math.max(1, Math.round(words / WORDS_PER_MINUTE)) : 0;
@@ -64,7 +75,7 @@ export async function loadScriptReader(
       label: true,
       status: true,
       versionDate: true,
-      show: { select: { title: true, year: true } },
+      show: { select: { title: true, year: true, scriptCredits: true } },
       scenes: { orderBy: { sequence: "asc" }, select: { id: true, title: true } },
       blocks: {
         orderBy: { sequence: "asc" },
@@ -84,17 +95,30 @@ export async function loadScriptReader(
   });
   if (!version) return null;
 
-  const [scriptRoles, castings] = await Promise.all([
+  const [scriptRoles, castings, members, directors] = await Promise.all([
     prisma.scriptRole.findMany({
       where: { showId: version.showId },
       select: { id: true, name: true, aliases: true },
     }),
-    userId
-      ? prisma.characterCasting.findMany({
-          where: { userId, character: { showId: version.showId } },
-          select: { character: { select: { name: true, shortName: true } } },
-        })
-      : Promise.resolve([]),
+    prisma.characterCasting.findMany({
+      where: { character: { showId: version.showId } },
+      select: { userId: true, character: { select: { name: true, shortName: true } } },
+    }),
+    prisma.productionMembership.findMany({
+      where: { showId: version.showId, status: { not: "left" } },
+      select: { user: { select: { id: true, name: true } } },
+    }),
+    prisma.departmentMembership.findMany({
+      where: {
+        ...currentDepartmentMembershipWhere(),
+        department: {
+          showId: version.showId,
+          template: { slug: DIRECTION_TEAM_TEMPLATE_SLUGS[0] },
+        },
+      },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+      select: { user: { select: { name: true } } },
+    }),
   ]);
 
   // Ohne bestätigte Rolle (Entwurf) gilt der Sprechername als vorläufige Rolle.
@@ -153,17 +177,34 @@ export async function loadScriptReader(
     })
     .sort((a, b) => b.words - a.words || a.name.localeCompare(b.name, "de"));
 
-  const castKeys = new Set(
-    castings.flatMap(({ character }) =>
-      [character.name, character.shortName].filter((name): name is string => !!name).map(roleKey),
-    ),
-  );
-  const ownRoleIds = roles
-    .filter((role) => {
-      const original = known.find((candidate) => candidate.id === role.id);
-      return [role.name, ...(original?.aliases ?? [])].some((name) => castKeys.has(roleKey(name)));
-    })
-    .map((role) => role.id);
+  const castKeysByUser = new Map<string, Set<string>>();
+  for (const { userId: castUser, character } of castings) {
+    const keys = castKeysByUser.get(castUser) ?? new Set<string>();
+    for (const name of [character.name, character.shortName]) if (name) keys.add(roleKey(name));
+    castKeysByUser.set(castUser, keys);
+  }
+  const rolesFor = (personId: string | null) => {
+    const keys = personId ? castKeysByUser.get(personId) : undefined;
+    if (!keys) return [];
+    return roles
+      .filter((role) => {
+        const original = known.find((candidate) => candidate.id === role.id);
+        return [role.name, ...(original?.aliases ?? [])].some((name) => keys.has(roleKey(name)));
+      })
+      .map((role) => role.id);
+  };
+  const ownRoleIds = rolesFor(userId);
+
+  const people = new Map<string, ReaderPerson>();
+  for (const { user } of members) {
+    if (user.name)
+      people.set(user.id, { id: user.id, name: user.name, roleIds: rolesFor(user.id) });
+  }
+  let credits = readScriptCredits(version.show.scriptCredits);
+  const directorNames = [...new Set(directors.map((d) => d.user.name).filter(Boolean))] as string[];
+  if (!credits.some((credit) => credit.kind === "direction") && directorNames.length) {
+    credits = [...credits, { kind: "direction", label: "Regie", names: directorNames }];
+  }
 
   return {
     version: {
@@ -181,5 +222,8 @@ export async function loadScriptReader(
     blocks,
     roles,
     ownRoleIds,
+    credits,
+    viewerId: userId,
+    people: [...people.values()].sort((a, b) => a.name.localeCompare(b.name, "de")),
   };
 }

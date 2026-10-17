@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/produktionen/actions-helpers";
 import { isStorageConfigured, putObject } from "@/lib/storage/s3";
 
+import { readScriptCredits, type ScriptCredit } from "./credits";
 import { isPdf, parseScriptPdf } from "./import";
 import { countWords, roleKey, roleStatistics, type RoleTypoSuspect } from "./roles";
 
@@ -36,6 +37,8 @@ export type ScriptImportReport = {
   speakers: { name: string; lines: number; words: number; known: boolean }[];
   scenes: number;
   blocks: number;
+  /** Mitwirkende aus dem Vorspann dieser Fassung. */
+  credits: ScriptCredit[];
 };
 
 /** Bestätigte Schreibweisen des Stücks: normalisierter Schlüssel → Rollenname. */
@@ -75,7 +78,7 @@ export async function importScriptDraft(input: {
   }
   const show = await prisma.show.findUnique({
     where: { id: input.showId },
-    select: { id: true, year: true, title: true },
+    select: { id: true, year: true, title: true, scriptCredits: true },
   });
   if (!show) throw new ScriptImportError("Produktion nicht gefunden.", 404);
 
@@ -113,7 +116,10 @@ export async function importScriptDraft(input: {
     })),
     scenes: parsed.scenes.length,
     blocks: blockCount,
+    credits: parsed.credits,
   };
+  // Erste Fassung mit Angaben füllt die Mitwirkenden der Produktion; danach fragt der Prüfschritt.
+  const saveCredits = parsed.credits.length > 0 && !readScriptCredits(show.scriptCredits).length;
 
   const basedOn = await prisma.scriptVersion.findFirst({
     where: { showId: show.id },
@@ -167,6 +173,9 @@ export async function importScriptDraft(input: {
     }),
     prisma.scriptScene.createMany({ data: scenes }),
     prisma.scriptBlock.createMany({ data: blocks }),
+    ...(saveCredits
+      ? [prisma.show.update({ where: { id: show.id }, data: { scriptCredits: parsed.credits } })]
+      : []),
   ]);
   return { id, report };
 }

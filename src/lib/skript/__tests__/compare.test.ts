@@ -37,6 +37,9 @@ function version(id: string, blocks: ReaderBlock[]): ScriptReaderData {
       showTitle: "Test",
     },
     scenes: [{ id: "s1", title: "Szene 1", words: 0, minutes: 0 }],
+    credits: [],
+    people: [],
+    viewerId: null,
     blocks,
     roles: [
       { id: "a", name: "Atreju", lines: 0, words: 0, sceneIds: [] },

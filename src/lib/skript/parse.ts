@@ -184,6 +184,17 @@ function sceneHeading(
   return { title: title.replace(/[\s:–-]+$/, ""), rest: line.spans.slice(i) };
 }
 
+/** Zeilen vor der ersten Szene (höchstens die ersten zwei Seiten) – für Titel und Mitwirkende. */
+export function frontMatterLines(lines: TextLine[], profile: ScriptProfile): string[] {
+  const result: string[] = [];
+  for (const line of lines) {
+    if (line.page > 2 || sceneHeading(line, profile)) break;
+    const text = normalizeWhitespace(line.spans.map((s) => s.text).join(""));
+    if (text) result.push(text);
+  }
+  return result;
+}
+
 export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptScene[] {
   const lines = splitInlineSpeakers(input);
   const scenes: ScriptScene[] = [{ title: "(Vorspann)", blocks: [] }];

@@ -1,5 +1,6 @@
 import { extractLines } from "./extract";
-import { parseLines, scoreProfile } from "./parse";
+import { extractCredits, type ScriptCredit } from "./credits";
+import { frontMatterLines, parseLines, scoreProfile } from "./parse";
 import { SCRIPT_PROFILES, type ScriptProfile } from "./profiles";
 import { findRoleTypos, normalizeRoles, resolveRoleNames, type RoleTypoSuspect } from "./roles";
 import type { ScriptScene } from "./types";
@@ -14,6 +15,8 @@ export type ParsedScript = {
   roleTypos: RoleTypoSuspect[];
   /** Hinweise ohne Markierung, im Prüfschritt zu bestätigen. */
   uncertainCues: number;
+  /** Mitwirkende aus dem Vorspann (Autor, Fassung, Regie …). */
+  credits: ScriptCredit[];
 };
 
 /** PDF einlesen: Profil automatisch wählen, parsen, Rollen zusammenführen. */
@@ -22,12 +25,24 @@ export async function parseScriptPdf(
   options: { profiles?: readonly ScriptProfile[]; aliases?: ReadonlyMap<string, string> } = {},
 ): Promise<ParsedScript> {
   const profiles = options.profiles ?? SCRIPT_PROFILES;
-  let best: { profile: ScriptProfile; score: number; scenes: ScriptScene[] } | null = null;
+  let best: {
+    profile: ScriptProfile;
+    score: number;
+    scenes: ScriptScene[];
+    credits: ScriptCredit[];
+  } | null = null;
   for (const profile of profiles) {
     // pdfjs übernimmt den Puffer – je Profil eine Kopie übergeben.
     const lines = await extractLines(data.slice(), profile);
     const score = scoreProfile(lines, profile);
-    if (!best || score > best.score) best = { profile, score, scenes: parseLines(lines, profile) };
+    if (!best || score > best.score) {
+      best = {
+        profile,
+        score,
+        scenes: parseLines(lines, profile),
+        credits: extractCredits(frontMatterLines(lines, profile)),
+      };
+    }
   }
   if (!best) throw new Error("Kein Skript-Profil registriert");
   const mergedRoles = resolveRoleNames(best.scenes, options.aliases);
