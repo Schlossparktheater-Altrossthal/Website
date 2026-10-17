@@ -470,7 +470,7 @@ function DurationCell({ scene }: { scene: ScriptStats["scenes"][number] }) {
           : "Gemessene Zeit eintragen"
       }
       className={cn(
-        "min-h-9 rounded px-1 underline decoration-dotted underline-offset-4 hover:bg-muted",
+        "min-h-9 whitespace-nowrap rounded px-1 underline decoration-dotted underline-offset-4 hover:bg-muted",
         measured ? "font-medium" : "text-muted-foreground",
       )}
     >
