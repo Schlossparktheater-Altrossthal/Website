@@ -160,6 +160,32 @@ describe("Skript-PDF", () => {
     expect(joined).not.toContain("T1");
   });
 
+  it("druckt eigene Notizen: Nummer im Text, Notiz darunter, Pause als Zeichen", async () => {
+    const parsed = scriptPdfOptionsSchema.parse({ cover: false, notes: true });
+    const base = {
+      strokes: [],
+      color: null,
+      quote: null,
+      state: "ok" as const,
+      blockId: "2",
+      partIndex: 0,
+    };
+    const result = await renderPdfTemplate("skript-fassung", {
+      title: "Testgeschichte",
+      data,
+      options: parsed,
+      notes: [
+        { ...base, id: "n1", kind: "note", sign: null, body: "Hier stocken", start: 0, end: 2 },
+        { ...base, id: "n2", kind: "sign", sign: "pause", body: null, start: 6, end: 6 },
+      ],
+    });
+    const lines = await extractLines(new Uint8Array(result.buffer), BOLD_COLON_PROFILE);
+    const joined = lines.map((line) => line.spans.map((s) => s.text).join("")).join("\n");
+    expect(joined).toContain("[1] Hier stocken");
+    expect(joined).toMatch(/Wo\s*\[1\]\s*bin/);
+    expect(joined).toMatch(/bin\s*\/\s*ich/);
+  });
+
   it("ohne Szenenkopf-Parameter kein Kasten", async () => {
     const { text } = await render({ roleIds: ["a"] });
     expect(text.join("\n")).not.toContain("MEIN TEIL");

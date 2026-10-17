@@ -185,6 +185,10 @@ export function PdfExport({
       params.set("kopf", settings.sceneHeader.items.join(",") || "-");
       if (settings.sceneHeader.onlyMine) params.set("kopfnurmeine", "1");
     }
+    // Eigene Notizen nicht in die Fassung für jemand anderen.
+    if (sections.includes("script") && settings.pdfNotes && settings.showNotes && !forOther) {
+      params.set("notizen", "1");
+    }
     if (download) params.set("download", "1");
     return `/api/skript/${version.showId}/pdf?${params}`;
   };
@@ -471,6 +475,21 @@ export function PdfExport({
             checked={settings.pdfSceneHeader}
             onCheckedChange={(pdfSceneHeader) => update({ pdfSceneHeader })}
             aria-label="Szenenkopf im PDF"
+          />
+        </label>
+      ) : null}
+      {sections.includes("script") && settings.showNotes ? (
+        <label className="flex min-h-11 items-center justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block">Meine Notizen im PDF</span>
+            <span className="block text-xs text-muted-foreground">
+              Markierungen, Zeichen, Notizen und Zettel – nur deine eigenen
+            </span>
+          </span>
+          <Switch
+            checked={settings.pdfNotes}
+            onCheckedChange={(pdfNotes) => update({ pdfNotes })}
+            aria-label="Meine Notizen im PDF"
           />
         </label>
       ) : null}

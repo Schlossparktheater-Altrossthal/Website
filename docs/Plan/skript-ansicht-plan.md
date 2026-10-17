@@ -233,7 +233,14 @@ Abweichungen vom Plan (bewusst, klein gehalten):
   der Umbau kommt mit Phase 5 (serverseitige Ansichten).
 - PDF bleibt GET mit Parametern (`kopf`, `kopfnurmeine`), damit „PDF öffnen“ als Link funktioniert.
 - Reihenfolge der Bausteine fest (Wer, Mein Teil, Dauer, Umfang, Technik, Weiter, Notizen).
-- „Meine Notizen“ nur im Leser; Notizen im PDF später.
+- „Meine Notizen“ als Szenenkopf-Baustein nur im Leser.
+
+Notizen im PDF (User-Wunsch, 2026-10-17): `src/lib/skript/pdf-notes.ts`, Schalter „Meine Notizen im
+PDF“ (`&notizen=1`). Fürs Papier: Markierung farbig unterstrichen, Absatzmarkierung als Randstrich,
+Zeichen als Glyphe (Zäsur „||“, Helvetica kennt kein ‖), lauter/leiser/Stimmung als „(Etikett)“,
+Notizen mit Nummer „[1]“ im Text und darunter, Zettel als kleine Vektorzeichnung. Nur eigene
+Notizen der erzeugenden Person, nie in der Fassung für jemand anderen; verwaiste weggelassen,
+verrutschte nur unter dem Absatz.
 
 ## Entscheidungen 2026-10-17
 

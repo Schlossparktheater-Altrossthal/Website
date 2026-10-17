@@ -63,6 +63,8 @@ export type Settings = {
   sceneHeader: SceneHeaderConfig;
   /** Szenenkopf auch im PDF (dort als Kasten, eigene Darstellung). */
   pdfSceneHeader: boolean;
+  /** Eigene Notizen, Markierungen und Zettel im PDF. */
+  pdfNotes: boolean;
 };
 
 const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
@@ -81,6 +83,7 @@ const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
   showNotes: true,
   sceneHeader: DEFAULT_SCENE_HEADER,
   pdfSceneHeader: true,
+  pdfNotes: true,
 };
 
 /** Einstellungen je Stück im Browser (nur Komfort, E: localStorage nur für Ansicht). */

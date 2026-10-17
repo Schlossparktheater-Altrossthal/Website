@@ -11,6 +11,8 @@ import {
   SCRIPT_PDF_SECTION_LABELS,
   type ScriptPdfSection,
 } from "./export-options";
+import { SKETCH_HEIGHT } from "./annotation-types";
+import { blockNotes, drawSketch, segmentText, type BlockNotes, type PdfNote } from "./pdf-notes";
 import { renderScriptSection } from "./pdf-sections";
 import {
   buildSceneHeaders,
@@ -56,6 +58,8 @@ export const scriptPdfOptionsSchema = z.object({
     .nullable()
     .default(null),
   sceneHeaderOnlyMine: z.boolean().default(false),
+  /** Eigene Markierungen, Zeichen, Notizen und Zettel mitdrucken. */
+  notes: z.boolean().default(false),
 });
 
 export type ScriptPdfOptions = z.infer<typeof scriptPdfOptionsSchema>;
@@ -66,6 +70,8 @@ export type ScriptPdfInput = {
   options: ScriptPdfOptions;
   /** Name der Person bei einer personalisierten Fassung. */
   personName?: string | null;
+  /** Eigene Notizen der Person, die das PDF erzeugt (nur wenn gewünscht). */
+  notes?: PdfNote[];
 };
 
 /** Druckfarben je Gewerk (dunkel genug für Schwarzweiß-Druck). */
@@ -112,26 +118,36 @@ function fileSlug(value: string) {
   );
 }
 
-function visibleParts(parts: ScriptPart[], options: ScriptPdfOptions, hidden: Set<string>) {
-  return parts.filter((part) => {
-    if (part.kind === "cue") return !hidden.has(part.category);
-    if (part.kind === "direction") return options.directions !== "hide";
-    return true;
-  });
+type PartEntry = { part: ScriptPart; index: number };
+
+/** Sichtbare Teile mit ihrem Index im Absatz (Notizen verweisen auf den Index). */
+function visibleParts(
+  parts: ScriptPart[],
+  options: ScriptPdfOptions,
+  hidden: Set<string>,
+): PartEntry[] {
+  return parts
+    .map((part, index) => ({ part, index }))
+    .filter(({ part }) => {
+      if (part.kind === "cue") return !hidden.has(part.category);
+      if (part.kind === "direction") return options.directions !== "hide";
+      return true;
+    });
 }
 
 type Run = { text: string; font: string; color: string; oblique?: boolean; underline?: boolean };
 
 function partRuns(
-  parts: ScriptPart[],
+  entries: PartEntry[],
   options: ScriptPdfOptions,
   baseColor: string,
   cueLine: boolean,
+  notes?: BlockNotes,
 ): Run[] {
   const runs: Run[] = [];
-  const lastText = cueLine ? parts.findLastIndex((part) => part.kind === "text") : -1;
+  const lastText = cueLine ? entries.findLastIndex(({ part }) => part.kind === "text") : -1;
   const directionColor = options.directions === "dim" ? "#a8a29e" : MUTED;
-  parts.forEach((part, index) => {
+  entries.forEach(({ part, index }, position) => {
     if (part.kind === "cue") {
       const color = CUE_COLORS[part.category];
       const label = CUE_LABELS[part.category];
@@ -141,17 +157,72 @@ function partRuns(
         font: "Helvetica-Bold",
         color,
       });
-    } else if (part.kind === "direction") {
-      runs.push({ text: `${part.text} `, font: "Helvetica", color: directionColor, oblique: true });
-    } else if (index === lastText) {
-      const [head, tail] = splitTail(part.text);
-      if (head) runs.push({ text: head, font: "Helvetica", color: baseColor });
-      runs.push({ text: `${tail} `, font: "Helvetica-Bold", color: baseColor, underline: true });
-    } else {
-      runs.push({ text: `${part.text} `, font: "Helvetica", color: baseColor });
+      return;
     }
+    const direction = part.kind === "direction";
+    const color = direction ? directionColor : baseColor;
+    // Stichwortzeile: die letzten Wörter fett und unterstrichen.
+    const tailStart = position === lastText ? splitTail(part.text)[0].length : null;
+    const segments = segmentText(
+      part.text,
+      notes?.parts.get(index) ?? [],
+      tailStart === null ? [] : [tailStart],
+    );
+    let offset = 0;
+    for (const segment of segments) {
+      for (const insert of segment.inserts) {
+        runs.push({ text: insert.text, font: "Helvetica-Bold", color: insert.color });
+      }
+      if (segment.text) {
+        const inTail = tailStart !== null && offset >= tailStart;
+        const decoration = segment.covering.findLast((d) => d.tint);
+        runs.push({
+          text: segment.text,
+          font: inTail || segment.covering.some((d) => d.bold) ? "Helvetica-Bold" : "Helvetica",
+          color: decoration?.color ?? color,
+          oblique: direction,
+          underline: inTail || segment.covering.some((d) => d.underline),
+        });
+      }
+      offset += segment.text.length;
+    }
+    runs.push({ text: " ", font: "Helvetica", color });
   });
   return runs;
+}
+
+/** Notiztexte und Zettel unter einem Absatz (eigene Notizen, nur auf Wunsch). */
+function renderBlockNotes(
+  doc: Doc,
+  notes: BlockNotes,
+  layout: { x: number; width: number; size: number; ensureSpace: (height: number) => void },
+) {
+  const size = layout.size * 0.8;
+  for (const line of notes.lines) {
+    const runs: Run[] = [
+      ...(line.number !== null
+        ? [{ text: `[${line.number}] `, font: "Helvetica-Bold", color: line.color }]
+        : []),
+      ...(line.quote ? [{ text: `„${line.quote}“ `, font: "Helvetica", color: MUTED }] : []),
+      { text: line.body, font: "Helvetica", color: INK, oblique: true },
+    ];
+    doc.fontSize(size);
+    const height = runsHeight(doc, runs, layout.width - 8);
+    layout.ensureSpace(height + 2);
+    doc.fontSize(size);
+    const y = doc.y;
+    doc.rect(layout.x, y, 1.5, height).fill(line.color);
+    writeRuns(doc, runs, layout.x + 6, y, layout.width - 8);
+    doc.y = Math.max(doc.y, y + height) + 2;
+  }
+  const sketchWidth = Math.min(120, layout.width);
+  for (const strokes of notes.sketches) {
+    layout.ensureSpace(sketchWidth * SKETCH_HEIGHT + 4);
+    const y = doc.y;
+    const height = drawSketch(doc, strokes, layout.x, y, sketchWidth);
+    doc.y = y + height + 4;
+  }
+  doc.fontSize(layout.size);
 }
 
 function writeRuns(doc: Doc, runs: Run[], x: number, y: number, width: number) {
@@ -255,6 +326,13 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
   let currentScene: string | null = null;
   doc.fontSize(size);
   const roleNames = new Map(data.roles.map((role) => [role.id, role.name]));
+  // Eigene Notizen je Absatz; Nummern laufen über das ganze Dokument.
+  const notesByBlock = new Map<string, PdfNote[]>();
+  for (const note of input.notes ?? []) {
+    if (note.blockId)
+      notesByBlock.set(note.blockId, [...(notesByBlock.get(note.blockId) ?? []), note]);
+  }
+  const noteCounter = { value: 0 };
   const headers =
     options.sceneHeader?.length && scriptAt >= 0
       ? buildSceneHeaders(
@@ -308,22 +386,30 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
 
     const parts = visibleParts(block.parts, options, hidden);
     if (!parts.length) return;
+    const blockNoteList = notesByBlock.get(block.id);
+    const notes = blockNoteList ? blockNotes(blockNoteList, noteCounter) : undefined;
+    const notesLayout = { x: textX, width: textWidth, size, ensureSpace };
+    const markBlock = (y: number, height: number) => {
+      if (notes?.blockColor) doc.rect(left - 10, y - 2, 2.5, height + 4).fill(notes.blockColor);
+    };
 
     if (block.kind === "direction") {
-      if (options.directions === "hide" && !parts.some((part) => part.kind === "cue")) return;
-      const runs = partRuns(parts, options, MUTED, false);
+      if (options.directions === "hide" && !parts.some(({ part }) => part.kind === "cue")) return;
+      const runs = partRuns(parts, options, MUTED, false, notes);
       const height = runsHeight(doc, runs, textWidth);
       ensureSpace(height);
       const y = doc.y;
+      markBlock(y, height);
       writeRuns(doc, runs, textX, y, textWidth);
       doc.y = Math.max(doc.y, y + height) + size * 0.3;
+      if (notes) renderBlockNotes(doc, notes, notesLayout);
       return;
     }
 
     const mine = isRoleBlock(block, roleSet);
     const dimmed = options.dimOthers && roleSet.size > 0 && !mine;
     const color = dimmed ? "#a8a29e" : INK;
-    const runs = partRuns(parts, options, color, cueLines.has(index));
+    const runs = partRuns(parts, options, color, cueLines.has(index), notes);
     const speaker = (block.speaker ?? "?").toUpperCase();
     // Zu lange Namen stehen in einer eigenen Zeile über dem Text statt umzubrechen.
     const stacked = speakerWidthOf(speaker) > SPEAKER_WIDTH;
@@ -349,9 +435,11 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
         width: stacked ? right - left : SPEAKER_WIDTH,
         characterSpacing: 0.3,
       });
+    markBlock(y, height);
     doc.fontSize(size);
     writeRuns(doc, runs, textX, y + speakerHeight, textWidth);
     doc.y = Math.max(doc.y, y + height) + size * 0.35;
+    if (notes) renderBlockNotes(doc, notes, notesLayout);
   });
 
   if (after.length) doc.addPage();

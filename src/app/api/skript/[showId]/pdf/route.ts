@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { renderPdfTemplate } from "@/lib/pdf/engine";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
+import { loadReaderAnnotations } from "@/lib/skript/annotations";
 import { scriptPdfOptionsSchema } from "@/lib/skript/pdf";
 import { loadScriptReader } from "@/lib/skript/reader";
 import { SCRIPT_MANAGE_PERMISSION, SCRIPT_READ_PERMISSION } from "@/lib/skript/service";
@@ -22,7 +23,7 @@ function list(value: string | null) {
  * `&teile=roleStats,sceneTable,script,…&spalten=roles,words,ton&matrix=mark|words|passages` –
  * Abschnitte in Reihenfolge (docs/Plan/skript-auswertungen-plan.md, Phase 3).
  * `&kopf=roles,mine,cues,…&kopfnurmeine=1` – Szenenkopf wie im Leser, fürs Papier gesetzt
- * (docs/Plan/skript-ansicht-plan.md).
+ * (docs/Plan/skript-ansicht-plan.md). `&notizen=1` – eigene Notizen mitdrucken.
  */
 export async function GET(
   request: NextRequest,
@@ -68,15 +69,23 @@ export async function GET(
     fontSize: search.has("groesse") ? Number(search.get("groesse")) : undefined,
     sceneHeader: search.has("kopf") ? list(search.get("kopf")).filter((v) => v !== "-") : null,
     sceneHeaderOnlyMine: search.get("kopfnurmeine") === "1",
+    notes: search.get("notizen") === "1",
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "Ungültige Einstellungen." }, { status: 400 });
   }
+  // Eigene Notizen nur von der Person, die das PDF erzeugt – nie die eines anderen Mitglieds.
+  const userId = session.user?.id ?? null;
+  const notes =
+    parsed.data.notes && userId
+      ? await loadReaderAnnotations(showId, data.version.id, userId, data.blocks)
+      : [];
   const result = await renderPdfTemplate("skript-fassung", {
     title: data.version.showTitle,
     data,
     options: parsed.data,
     personName: person?.name ?? null,
+    notes,
   });
   return new NextResponse(new Uint8Array(result.buffer), {
     status: 200,
