@@ -476,6 +476,8 @@ test.describe("als admin", () => {
     // Zettel ist mit dem unveränderten Absatz mitgewandert; wegradiert = gelöscht
     await expect(page.locator("[data-sketch]")).toHaveCount(1);
     await page.locator("[data-sketch]").click();
+    // Next-Dev-Hinweis („Issues“) liegt unten links über der Skizzen-Werkzeugleiste.
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
     await page.getByRole("radio", { name: "Radierer" }).click();
     const strich = await zettel.locator("path[data-ink]").boundingBox();
     if (!strich) throw new Error("Strich nicht sichtbar");
