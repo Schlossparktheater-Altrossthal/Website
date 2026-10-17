@@ -67,6 +67,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/theater_test?schema=public
       NEXT_TELEMETRY_DISABLED: "1"
+      AUTH_SECRET: e2e-ci-only-not-a-real-secret-0123456789
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
