@@ -107,8 +107,9 @@ model ScriptSceneInfo {
 }
 ```
 
-Bearbeiten direkt im Szenenkopf (Stift-Symbol) für SCRIPT.MANAGE. Vorschlag: Technik-Felder
-zusätzlich für Mitglieder der Gewerke Ton/Licht, Requisiten/Kostüm für deren Gewerke.
+Bearbeiten direkt im Szenenkopf (Stift-Symbol) **nur für SCRIPT.MANAGE**. Gewerke bearbeiten vorerst
+nichts; sie halten ihre Dinge über das vorhandene Notizsystem fest (Phase 8). Der Szenenkopf kann
+eigene Notizen der Szene als Baustein „Meine Notizen“ (Anzahl + Sprung) anzeigen.
 Erkannte Hinweise aus dem PDF und manuelle Einträge werden zusammengeführt (manuelle Nummer gewinnt,
 Hinweis ohne Nummer bekommt automatisch die nächste).
 
@@ -161,7 +162,7 @@ Inhaltliche Änderungen gelten für Leser und PDF; Darstellungsoptionen nur für
 5. **Ansichten speichern**: `ScriptView` (Migration aus `ScriptExportPreset`), fertige Ansichten,
    serverseitig gemerkte aktive Ansicht, `?ansicht=`-Link.
 6. **Szenen-Infos**: `ScriptSceneInfo` + Bearbeiten im Szenenkopf, Übernahme in neue Fassungen,
-   Rechte je Gewerk, nummerierte Licht-/Tonstimmungen zusammengeführt mit erkannten Hinweisen.
+   nur Skript-Verwaltung, nummerierte Licht-/Tonstimmungen zusammengeführt mit erkannten Hinweisen.
 7. **Szenenspiegel im Leser** + Zellinhalt „stumm“, Sprung zur Szene.
 8. **E2E** (Ansicht wählen → Leser + PDF passen zusammen, Szenen-Info bearbeiten), Staging-Abnahme,
    Release.
@@ -205,7 +206,7 @@ und können einer Szene zugewiesen werden.
 **Feste Technik-Nummern:** Bei neuer Fassung bleiben vorhandene Nummern stehen; neue Hinweise
 bekommen Zwischennummern (L4a) statt Umnummerierung – so stimmen Pult und Papier weiter. Entfallene
 Hinweise erscheinen im Prüfschritt und im Technik-Fahrplan als „gestrichen“. Umnummerieren nur auf
-ausdrücklichen Knopfdruck der Technik. Der Fassungsvergleich zeigt geänderte Szenen-Infos/Nummern.
+ausdrücklichen Knopfdruck der Skript-Verwaltung. Der Fassungsvergleich zeigt geänderte Szenen-Infos/Nummern.
 
 **Lesende während eines Uploads:** Entwürfe ändern nichts; erst die Freigabe stellt um. Die aktive
 Ansicht wählt automatisch die neueste freigegebene Fassung, Szenenkopf zeigt „seit letzter Fassung
@@ -216,8 +217,8 @@ verketten), Zuordnung in `review.ts`, Karte im Prüfschritt, Tests mit 17.4. →
 
 ## Entscheidungen 2026-10-17
 
-1. Szenen-Infos: Skript-Verwaltung alles, Gewerke (Ton/Licht, Requisite, Kostüm) ihre Felder.
-2. Licht/Ton: automatische Nummern als Startwert, Technik kann festschreiben/ändern.
+1. Szenen-Infos bearbeitet nur die Skript-Verwaltung; Gewerke nutzen das Notizsystem.
+2. Licht/Ton: automatische Nummern als Startwert, Skript-Verwaltung kann festschreiben/ändern.
 3. Szenenkopf für neue Leser: kompakt an.
 4. Aktive Ansicht serverseitig; Geräteeinstellungen lokal.
 5. Geteilte Ansichten nur Skript-Verwaltung (wie bisher), eigene alle.
