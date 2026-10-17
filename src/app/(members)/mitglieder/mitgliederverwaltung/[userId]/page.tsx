@@ -44,6 +44,7 @@ import { MemberLoginCard } from "@/components/members/member-login-card";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { ImpersonationButton } from "./impersonation-button";
+import { DirectionViewSwitch } from "./direction-view-switch";
 import { loadTemplateWishTitles } from "@/lib/onboarding/crew-options";
 import {
   getRolePreferenceDescription,
@@ -406,6 +407,7 @@ const memberSelect = {
   createdAt: true,
   dateOfBirth: true,
   deactivatedAt: true,
+  directionView: true,
   payoutMethod: true,
   payoutAccountHolder: true,
   payoutIban: true,
@@ -1385,6 +1387,8 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
                       )}
                     </div>
                   </div>
+
+                  <DirectionViewSwitch userId={member.id} enabled={member.directionView} />
                 </CardContent>
               </Card>
 

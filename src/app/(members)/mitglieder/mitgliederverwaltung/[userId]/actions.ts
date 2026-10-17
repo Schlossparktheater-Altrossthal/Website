@@ -1,6 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+
+import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import { clearImpersonationCookie, setImpersonationCookie } from "@/lib/auth/impersonation";
 
@@ -46,4 +49,28 @@ export async function startImpersonationAction(input: {
 
   await setImpersonationCookie(ownerId, target.id);
   return { ok: true, redirectTo } as const;
+}
+
+export type DirectionViewResult = { ok: true } | { ok: false; error: string };
+
+/** Regie-Ansicht ein-/ausschalten (docs/Plan/regie-plan.md). */
+export async function setDirectionViewAction(input: {
+  userId: string;
+  enabled: boolean;
+}): Promise<DirectionViewResult> {
+  const session = await requireAuth();
+  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
+    return { ok: false, error: "Nicht berechtigt" };
+  }
+  const userId = input?.userId?.trim();
+  if (!userId) return { ok: false, error: "Ungültige Auswahl" };
+
+  const updated = await prisma.user.updateMany({
+    where: { id: userId },
+    data: { directionView: input.enabled === true },
+  });
+  if (updated.count === 0) return { ok: false, error: "Mitglied wurde nicht gefunden" };
+
+  revalidatePath(`/mitglieder/mitgliederverwaltung/${userId}`);
+  return { ok: true };
 }

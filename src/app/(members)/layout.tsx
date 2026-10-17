@@ -21,6 +21,8 @@ import {
   isMemberPageHidden,
   PAGE_VISIBILITY_BYPASS_PERMISSION,
 } from "@/lib/members-page-visibility";
+import { DIRECTION_HOME_PATH, isDirectionViewPathAllowed } from "@/lib/regie/access";
+import { DirectionViewGuard } from "@/components/members/direction-view-guard";
 import { MEMBERS_PATHNAME_HEADER } from "@/proxy";
 
 type CommitInfo = {
@@ -95,7 +97,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
   const session = await requireAuth();
   const userId = session.user?.id;
   // Alles Unabhängige gleichzeitig laden – jede Abfrage kostet eine Runde zur Datenbank.
-  const [permissions, activeProduction, websiteSettingsRecord, assignmentCounts] =
+  const [permissions, activeProduction, websiteSettingsRecord, assignmentCounts, viewSettings] =
     await Promise.all([
       getUserPermissionKeys(session.user),
       getActiveProduction(session.user?.id),
@@ -122,6 +124,9 @@ export default async function MembersLayout({ children }: { children: React.Reac
             }),
           ])
         : Promise.resolve([0, 0, 0] as const),
+      userId
+        ? prisma.user.findUnique({ where: { id: userId }, select: { directionView: true } })
+        : Promise.resolve(null),
     ]);
   const isBoard = hasRole(session.user, "board");
 
@@ -131,6 +136,11 @@ export default async function MembersLayout({ children }: { children: React.Reac
   // In der Seitensteuerung ausgeblendete Seiten sind nur mit dem Pages-Recht erreichbar.
   const canBypassPageVisibility = permissions.includes(PAGE_VISIBILITY_BYPASS_PERMISSION);
   const pathname = (await headers()).get(MEMBERS_PATHNAME_HEADER);
+  // Regie-Ansicht (docs/Plan/regie-plan.md): ohne Menü, alles läuft über das Regie-Dashboard.
+  const directionView = viewSettings?.directionView === true;
+  if (directionView && pathname && !isDirectionViewPathAllowed(pathname)) {
+    redirect(DIRECTION_HOME_PATH);
+  }
   if (
     pathname &&
     !canBypassPageVisibility &&
@@ -158,7 +168,11 @@ export default async function MembersLayout({ children }: { children: React.Reac
 
   return (
     <div className="app-shell bg-background">
-      <SiteHeader siteTitle={siteTitle} activeProduction={activeProduction} membersMenu />
+      <SiteHeader
+        siteTitle={siteTitle}
+        activeProduction={activeProduction}
+        membersMenu={!directionView}
+      />
       <main className="relative z-10 flex min-h-0 min-w-0 flex-col pt-[var(--header-height)]">
         <SidebarProvider
           defaultOpen={defaultSidebarOpen}
@@ -166,6 +180,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
           style={layoutStyle}
         >
           <MembersPermissionsProvider permissions={permissions}>
+            {directionView ? <DirectionViewGuard /> : null}
             {canBypassPageVisibility ? null : (
               <HiddenPageGuard visibility={resolvedSettings.pageVisibility.members} />
             )}
@@ -179,6 +194,7 @@ export default async function MembersLayout({ children }: { children: React.Reac
               impersonation={session.impersonation ?? null}
               pageVisibility={resolvedSettings.pageVisibility.members}
               closedNavGroups={closedNavGroups}
+              directionView={directionView}
               globalFooter={
                 <SiteFooter buildInfo={buildInfo} isAuthenticated={true} isDevBuild={isDevBuild} />
               }

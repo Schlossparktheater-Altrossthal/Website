@@ -173,6 +173,8 @@ function getContentClasses(layout: MembersContentLayoutState) {
 
 interface MembersAppShellProps {
   children: React.ReactNode;
+  /** Regie-Ansicht (docs/Plan/regie-plan.md): ohne Seitenleiste und Bottom-Leiste. */
+  directionView?: boolean;
   permissions: readonly string[];
   activeProduction?: { id: string; title: string | null; year: number };
   assignmentFocus: AssignmentFocus;
@@ -349,6 +351,7 @@ export function MembersAppShell({
   impersonation,
   pageVisibility,
   closedNavGroups,
+  directionView = false,
 }: MembersAppShellProps) {
   const [topbarContent, setTopbarContentState] = React.useState<MembersTopbarSlots>(INITIAL_TOPBAR);
   const [contentHeader, setContentHeaderState] = React.useState<React.ReactNode>(null);
@@ -421,25 +424,34 @@ export function MembersAppShell({
 
   return (
     <>
-      <SidebarMobileAutoClose />
-      <SidebarHeaderMenuToggle />
-      <Sidebar collapsible="icon">
-        <MembersNav
-          permissions={permissions}
-          activeProduction={activeProduction}
-          assignmentFocus={assignmentFocus}
-          hasDepartmentMemberships={hasDepartmentMemberships}
-          isBoard={isBoard}
-          isDepartmentLead={isDepartmentLead}
-          pageVisibility={pageVisibility}
-          closedGroups={closedNavGroups}
-        />
-        <SidebarRail />
-      </Sidebar>
+      {directionView ? null : (
+        <>
+          <SidebarMobileAutoClose />
+          <SidebarHeaderMenuToggle />
+          <Sidebar collapsible="icon">
+            <MembersNav
+              permissions={permissions}
+              activeProduction={activeProduction}
+              assignmentFocus={assignmentFocus}
+              hasDepartmentMemberships={hasDepartmentMemberships}
+              isBoard={isBoard}
+              isDepartmentLead={isDepartmentLead}
+              pageVisibility={pageVisibility}
+              closedGroups={closedNavGroups}
+            />
+            <SidebarRail />
+          </Sidebar>
+        </>
+      )}
       <MembersAppShellContext.Provider value={contextValue}>
         <SidebarInset
           id="main"
-          className="min-h-svh pb-[var(--members-bottom-nav)] [--members-bottom-nav:calc(3.5rem+env(safe-area-inset-bottom))] lg:[--members-bottom-nav:0px]"
+          className={cn(
+            "min-h-svh pb-[var(--members-bottom-nav)]",
+            directionView
+              ? "[--members-bottom-nav:env(safe-area-inset-bottom)]"
+              : "[--members-bottom-nav:calc(3.5rem+env(safe-area-inset-bottom))] lg:[--members-bottom-nav:0px]",
+          )}
         >
           <MembersTopbarContent
             content={topbarContent}
@@ -466,15 +478,17 @@ export function MembersAppShell({
             ) : null}
           </main>
           {globalFooter}
-          <MembersBottomNav
-            permissions={permissions}
-            activeProduction={activeProduction}
-            assignmentFocus={assignmentFocus}
-            hasDepartmentMemberships={hasDepartmentMemberships}
-            isBoard={isBoard}
-            isDepartmentLead={isDepartmentLead}
-            pageVisibility={pageVisibility}
-          />
+          {directionView ? null : (
+            <MembersBottomNav
+              permissions={permissions}
+              activeProduction={activeProduction}
+              assignmentFocus={assignmentFocus}
+              hasDepartmentMemberships={hasDepartmentMemberships}
+              isBoard={isBoard}
+              isDepartmentLead={isDepartmentLead}
+              pageVisibility={pageVisibility}
+            />
+          )}
         </SidebarInset>
       </MembersAppShellContext.Provider>
     </>

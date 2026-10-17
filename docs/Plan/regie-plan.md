@@ -1,6 +1,6 @@
 # Regie-Zugang & Regie-Dashboard – Plan (2026-10-17)
 
-Stand: Konzept abgestimmt, Umsetzung offen.
+Stand: Phase 1 umgesetzt (2026-10-17), offen Phase 2–7.
 
 Ziel: Die Regie (wenig technikaffin, möchte keine persönlichen Daten angeben) bekommt einen
 einfachen Zugang und **ein eigenes, auf sie zugeschnittenes Dashboard** statt des normalen Menüs.
@@ -81,6 +81,23 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
    Deckblatt und Stand.
 7. **Tests & Abnahme:** Unit (Rechte, Filter), E2E, Staging-Screenshots mobil+desktop, Test mit
    der Regie auf ihrem Handy. Danach Release; in Prod Gewerke Regie/Regieassistenz anlegen.
+
+## Umsetzung Phase 1 (2026-10-17)
+
+- Recht `PRIVATE.PRODUCTION.DIRECTION.DASHBOARD` („Regie-Dashboard“), neue Blaupause **Regie**
+  (`regie`, nicht im Onboarding) und Rechte für Leitung/Stellvertretung/Mitglied in **Regie** und
+  **Regieassistenz & Orga** (Migration `20261017100000_regie_dashboard`). In bestehenden
+  Produktionen muss das Gewerk „Regie“ noch angelegt und die Person zugeordnet werden.
+- Produktionen kommen aus den Gewerk-Mitgliedschaften (`src/lib/regie/access.ts`); wer das Recht
+  über eine Rolle hat (Admin), sieht alle aktuellen Produktionen. Bei mehreren: Auswahl per Chip.
+- `User.directionView` („Nur Regie-Ansicht“, Schalter in Mitgliederverwaltung → Person): ohne
+  Seitenleiste/Bottom-Leiste/Menü-Knopf, alles außer Regie, Profil und Benachrichtigungen leitet
+  auf `/mitglieder/regie` um (Layout + Client-Wächter).
+- Menüpunkt **Proben → Regie** für alle mit dem Recht (z. B. Regieassistenz in normaler Ansicht).
+- Altes Regie-Onboarding (`src/app/onboarding/regie`): Es ist die Einladungs-Variante für
+  Einladungen mit Rolle `board` ohne `cast` (Leitungsteam), nicht für den Regie-Zugang. Bleibt
+  unverändert; der Regie-Account läuft nicht über das Onboarding. Umbenennen in „Leitungsteam“
+  wäre später sinnvoll.
 
 ## Entscheidungen Nachtrag (Nutzer 2026-10-17)
 

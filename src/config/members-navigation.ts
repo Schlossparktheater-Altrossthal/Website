@@ -12,6 +12,7 @@ import {
   CircleIcon,
   ClipboardListIcon,
   ClapperboardIcon,
+  DramaIcon,
   FileStackIcon,
   LayersIcon,
   LayoutGridIcon,
@@ -116,6 +117,12 @@ export const membersNavigation = [
         label: "Überblick",
         permissionKey: "PRIVATE.PRODUCTION.SHOW.MANAGE",
         icon: ClapperboardIcon,
+      },
+      {
+        href: "/mitglieder/regie",
+        label: "Regie",
+        permissionKey: "PRIVATE.PRODUCTION.DIRECTION.DASHBOARD",
+        icon: DramaIcon,
       },
       {
         href: "/mitglieder/terminplanung",

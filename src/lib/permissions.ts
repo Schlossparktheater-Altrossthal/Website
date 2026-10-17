@@ -74,6 +74,11 @@ export const INVENTORY_PERMISSION_KEYS = {
   catalog: "PRIVATE.INVENTORY.CATALOG",
 } as const;
 
+/** Regie-Dashboard (docs/Plan/regie-plan.md): lesen + Wünsche an die Planung, pro Produktion. */
+export const DIRECTION_PERMISSION_KEYS = {
+  dashboard: "PRIVATE.PRODUCTION.DIRECTION.DASHBOARD",
+} as const;
+
 /** Verpflegung (docs/Plan/ernaehrung-rezepte-ui-plan.md). Rezepte selbst darf jedes Mitglied. */
 export const FOOD_PERMISSION_KEYS = {
   taxonomyManage: "PRIVATE.FOOD.TAXONOMY.MANAGE",
@@ -234,6 +239,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     label: "Produktionsplan pflegen",
     description:
       "Meilensteine, Fristen und Abhängigkeiten der Produktion anlegen, verschieben und Vorlagen übernehmen.",
+    category: "pages",
+  },
+  {
+    key: DIRECTION_PERMISSION_KEYS.dashboard,
+    label: "Regie-Dashboard",
+    description:
+      "Regie-Dashboard der eigenen Produktion: Proben, Besetzung, Szenen, Verfügbarkeit (ohne Gründe) und Listen lesen sowie Wünsche an die Planung schicken. Wird über die Gewerke Regie und Regieassistenz vergeben.",
     category: "pages",
   },
   { key: "PRIVATE.ADMIN.MEMBERS.MANAGE", label: "Mitgliederverwaltung öffnen", category: "admin" },
