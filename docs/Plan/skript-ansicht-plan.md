@@ -215,6 +215,26 @@ geändert“ (Punkt), wenn Text/Technik der Szene sich geändert hat.
 Phase 6 umfasst deshalb: `ScriptScene.lineageId` + Migration (bestehende Fassungen per Titel
 verketten), Zuordnung in `review.ts`, Karte im Prüfschritt, Tests mit 17.4. → 15.6.
 
+## Stand 2026-10-17 abends
+
+Phase 1–4 umgesetzt (bb20a619 + Nachbesserung), auf Staging mit Screenshots mobil/Desktop und PDF
+geprüft:
+
+- `src/lib/skript/scene-header.ts`: Modell, Bausteine, `buildSceneHeaders` (rein, getestet).
+- Leser: `scene-header.tsx` (eine Zeile, Antippen klappt Karte auf), `scene-header-settings.tsx`;
+  Einstellungen-Blatt gegliedert in Text · Technische Hinweise · Szenenkopf · Gerät · Drucken/PDF.
+- PDF: grauer Kasten unter der Szenenüberschrift, bleibt mit Überschrift auf einer Seite;
+  Schalter „Szenenkopf im PDF“.
+- Hinweisnummern: Nummeriert das Skript ein Gewerk selbst („TON 1 …“), keine Auto-Nummer daneben.
+
+Abweichungen vom Plan (bewusst, klein gehalten):
+
+- `Settings` bleibt (um `sceneHeader`, `pdfSceneHeader` erweitert) statt neuem `ScriptView`-Typ –
+  der Umbau kommt mit Phase 5 (serverseitige Ansichten).
+- PDF bleibt GET mit Parametern (`kopf`, `kopfnurmeine`), damit „PDF öffnen“ als Link funktioniert.
+- Reihenfolge der Bausteine fest (Wer, Mein Teil, Dauer, Umfang, Technik, Weiter, Notizen).
+- „Meine Notizen“ nur im Leser; Notizen im PDF später.
+
 ## Entscheidungen 2026-10-17
 
 1. Szenen-Infos bearbeitet nur die Skript-Verwaltung; Gewerke nutzen das Notizsystem.

@@ -14,7 +14,6 @@ import {
 import { renderScriptSection } from "./pdf-sections";
 import {
   buildSceneHeaders,
-  cueTag,
   formatPages,
   SCENE_HEADER_ITEMS,
   type SceneHeaderModel,
@@ -447,9 +446,7 @@ function renderSceneHeader(
       color: CUE_COLORS[category],
       runs: entries.flatMap((entry, index) => [
         ...(index ? [plain("  ·  ", MUTED)] : []),
-        ...(cueTag(category, entry)
-          ? [bold(`${cueTag(category, entry)} `, CUE_COLORS[category])]
-          : []),
+        ...(entry.tag ? [bold(`${entry.tag} `, CUE_COLORS[category])] : []),
         plain(entry.text),
         ...(entry.page != null ? [plain(` S. ${entry.page}`, MUTED)] : []),
       ]),

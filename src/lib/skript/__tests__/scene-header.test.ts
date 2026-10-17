@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSceneHeaders,
-  cueTag,
+  hasOwnCueNumber,
   formatCueNumbers,
   sanitizeSceneHeader,
   DEFAULT_SCENE_HEADER,
@@ -111,9 +111,23 @@ describe("Szenenkopf", () => {
     expect(formatCueNumbers("licht", [entry(3), entry(7)])).toBe("L3, L7");
   });
 
-  it("nummeriert nur Hinweise ohne eigene Nummer", () => {
-    expect(cueTag("licht", { number: 3, text: "LICHT 12 Abendrot" })).toBeNull();
-    expect(cueTag("licht", { number: 3, text: "Abendrot" })).toBe("L3");
+  it("nummeriert nur Gewerke, die das Skript nicht selbst nummeriert", () => {
+    expect(hasOwnCueNumber("LICHT 12 Abendrot")).toBe(true);
+    expect(hasOwnCueNumber("Abendrot")).toBe(false);
+    const heads = buildSceneHeaders(input, { items: ["cues"], roleIds: [], hiddenCues: [] });
+    // „TON 1 Donner“ bzw. „LICHT 2 aus“ bringen eigene Nummern mit.
+    expect(heads.get("s1")?.cues?.[0].entries[0].tag).toBeNull();
+    const plain: StatsInput = {
+      ...input,
+      blocks: input.blocks.map((b) => ({
+        ...b,
+        parts: b.parts.map((part) =>
+          part.kind === "cue" ? { ...part, text: part.text.replace(/^\w+ \d+ /, "") } : part,
+        ),
+      })),
+    };
+    const numbered = buildSceneHeaders(plain, { items: ["cues"], roleIds: [], hiddenCues: [] });
+    expect(numbered.get("s2")?.cues?.[0].entries[0].tag).toBe("L1");
   });
 
   it("liest alte oder kaputte Einstellungen mit Standardwerten", () => {

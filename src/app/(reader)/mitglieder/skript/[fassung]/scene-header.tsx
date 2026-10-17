@@ -4,7 +4,7 @@ import * as React from "react";
 import { ClockIcon, CornerDownRightIcon, FileTextIcon, NotebookPenIcon } from "lucide-react";
 
 import { ChevronDownIcon, UsersIcon } from "@/components/ui/action-icons";
-import { cueTag, formatPages, type SceneHeaderModel } from "@/lib/skript/scene-header";
+import { formatPages, type SceneHeaderModel } from "@/lib/skript/scene-header";
 import { formatDuration } from "@/lib/skript/stats";
 import { cn } from "@/lib/utils";
 
@@ -139,7 +139,7 @@ export function SceneHeader({
       </button>
 
       {open ? (
-        <dl className="grid gap-x-4 gap-y-2 px-3 pb-2.5 sm:grid-cols-[auto_minmax(0,1fr)] sm:px-4 md:px-3">
+        <dl className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 px-3 pb-2.5 sm:grid-cols-[6rem_minmax(0,1fr)] sm:px-4 md:px-3">
           {model.roles ? (
             <Row label="Wer">
               {speakingIds.length ? (
@@ -187,10 +187,8 @@ export function SceneHeader({
               <ul className="space-y-0.5">
                 {entries.map((entry) => (
                   <li key={`${entry.blockId}-${entry.number}`} className="flex gap-2">
-                    {cueTag(category, entry) ? (
-                      <span className="w-8 shrink-0 font-semibold tabular-nums">
-                        {cueTag(category, entry)}
-                      </span>
+                    {entry.tag ? (
+                      <span className="w-8 shrink-0 font-semibold tabular-nums">{entry.tag}</span>
                     ) : null}
                     <span className="min-w-0 flex-1">{entry.text}</span>
                     {entry.page != null ? (
@@ -204,7 +202,7 @@ export function SceneHeader({
             </Row>
           ))}
           {model.duration || model.size ? (
-            <Row label="Umfang">
+            <Row label={model.size ? "Umfang" : "Dauer"}>
               {[
                 model.duration ? formatDuration(model.duration) : null,
                 model.size?.pages ? formatPages(model.size.pages) : null,
@@ -219,8 +217,9 @@ export function SceneHeader({
             </Row>
           ) : null}
           {model.transition ? (
-            <Row label="Aus der Szene davor">
+            <Row label="Weiter">
               <Names ids={model.transition.continuing} names={names} mine={mine} />
+              <span className="text-muted-foreground"> – direkt aus der Szene davor</span>
             </Row>
           ) : null}
           {model.notes ? (
@@ -244,7 +243,7 @@ function Row({ label, bar, children }: { label: string; bar?: string; children: 
     <>
       <dt
         className={cn(
-          "text-[0.85em] font-semibold uppercase tracking-wide text-muted-foreground",
+          "pt-0.5 text-[0.8em] font-semibold uppercase leading-tight tracking-wide text-muted-foreground",
           bar && cn("self-start border-l-[3px] pl-1.5", bar),
         )}
       >

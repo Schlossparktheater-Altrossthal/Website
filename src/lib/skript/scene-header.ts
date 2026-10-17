@@ -83,7 +83,8 @@ export type SceneHeaderModel = {
   mine: { words: number; passages: number; cueSpeaker: string | null; cue: string } | null;
   duration: Duration | null;
   size: { pages: { from: number; to: number } | null; words: number; passages: number } | null;
-  cues: { category: CueCategory; entries: CueEntry[] }[] | null;
+  /** `tag`: automatische Nummer („L4“), null wenn das Skript das Gewerk selbst nummeriert. */
+  cues: { category: CueCategory; entries: (CueEntry & { tag: string | null })[] }[] | null;
   transition: { continuing: string[] } | null;
   notes: number | null;
 };
@@ -111,6 +112,10 @@ export function buildSceneHeaders(
       if (!firstCue.has(line.sceneId)) firstCue.set(line.sceneId, line);
     }
   }
+  // Nummeriert das Skript ein Gewerk selbst („TON 1 …“), keine zweite Zählung daneben.
+  const ownNumbered = new Set(
+    stats.cues.filter((cue) => hasOwnCueNumber(cue.text)).map((cue) => cue.category),
+  );
   const result = new Map<string, SceneHeaderModel | null>();
   stats.scenes.forEach((scene, index) => {
     const previous = index > 0 ? stats.scenes[index - 1] : null;
@@ -146,7 +151,13 @@ export function buildSceneHeaders(
       cues: items.has("cues")
         ? CUE_CATEGORIES.filter(
             (category) => !hidden.has(category) && scene.cues[category].length,
-          ).map((category) => ({ category, entries: scene.cues[category] }))
+          ).map((category) => ({
+            category,
+            entries: scene.cues[category].map((entry) => ({
+              ...entry,
+              tag: ownNumbered.has(category) ? null : `${CUE_PREFIX[category]}${entry.number}`,
+            })),
+          }))
         : null,
       transition: null,
       notes: items.has("notes") ? (options.noteCounts?.get(scene.id) ?? 0) || null : null,
@@ -204,9 +215,4 @@ export const CUE_PREFIX: Record<CueCategory, string> = {
  */
 export function hasOwnCueNumber(text: string) {
   return /^\p{L}+\.?\s*\d+/u.test(text.trim());
-}
-
-/** Kürzel + laufende Nummer, außer der Hinweis bringt seine eigene mit. */
-export function cueTag(category: CueCategory, entry: Pick<CueEntry, "number" | "text">) {
-  return hasOwnCueNumber(entry.text) ? null : `${CUE_PREFIX[category]}${entry.number}`;
 }
