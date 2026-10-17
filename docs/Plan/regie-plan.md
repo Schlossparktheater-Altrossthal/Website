@@ -54,8 +54,8 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
 
 - Ein Wunsch ist Freitext + optional **Bezug**: Szene(n), Termin, Zeitraum/Datum, Person(en).
   Beispiel: „Szene 4+5 vor dem 12.6. durchlaufen“.
-- Status: **offen → eingeplant → erledigt**, oder **abgelehnt mit Grund**. Die Planung kann
-  antworten (kurzer Kommentar).
+- Status: **offen → eingeplant → erledigt**, oder **abgelehnt mit Grund**. Regieteam und Planung
+  antworten im Verlauf des Wunsches (siehe Nachtrag).
 - Die Planung bekommt eine Benachrichtigung (Glocke/Push); die Regie bei Statuswechsel.
 - In der Terminplanung bzw. beim Anlegen einer Probe: Hinweis **„offene Regie-Wünsche“** mit
   passendem Bezug (Szene/Zeitraum); ein Wunsch lässt sich mit einem Termin verknüpfen
@@ -77,16 +77,20 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
    Sperrgründe/Maße/Kontakte ausfiltern).
 5. **Wünsche an die Planung:** Schema, Eingabe, Status, Antworten, Benachrichtigungen, Hinweis in
    der Terminplanung, Verknüpfung mit Termin.
-6. **Probenmappe:** Sammel-PDF aus den vorhandenen Vorlagen mit Deckblatt und Stand.
+6. **Probenmappe:** Auswahl per Häkchen (gemerkt), Sammel-PDF aus den vorhandenen Vorlagen mit
+   Deckblatt und Stand.
 7. **Tests & Abnahme:** Unit (Rechte, Filter), E2E, Staging-Screenshots mobil+desktop, Test mit
    der Regie auf ihrem Handy. Danach Release; in Prod Gewerke Regie/Regieassistenz anlegen.
 
-## Offen
+## Entscheidungen Nachtrag (Nutzer 2026-10-17)
 
-- Welche PDFs gehören in die Probenmappe (Vorschlag: Wochenplan, Szenen × Personen,
-  Verfügbarkeit, Besetzung, Requisiten)?
-- Sieht die Regie Wünsche der Regieassistenz und umgekehrt? (Vorschlag: ja, gemeinsamer Eingang
-  „Regieteam“.)
+- **Probenmappe frei zusammenstellbar:** Vor dem Erzeugen per Häkchen auswählen, welche Listen
+  hinein kommen (Vorauswahl: Wochenplan, Szenen × Personen, Verfügbarkeit, Besetzung,
+  Requisiten). Die letzte Auswahl wird gemerkt. Reihenfolge fest, Deckblatt mit Stand und Inhalt.
+- **Gemeinsamer Eingang „Regieteam“:** Regie und Regieassistenz sehen alle Wünsche des Regieteams.
+  Filter **„Meine Wünsche“** zeigt die selbst geschickten; jeder Wunsch zeigt, wer ihn geschickt hat.
+- **Antworten auf Wünsche:** Jeder Wunsch hat einen Gesprächsverlauf. Regieteam und Planung können
+  antworten, beide Seiten werden benachrichtigt.
 
 ## Bewusst nicht
 
