@@ -1,6 +1,6 @@
 # Regie-Zugang & Regie-Dashboard – Plan (2026-10-17)
 
-Stand: Phase 1–6 umgesetzt (2026-10-17), offen Phase 7.
+Stand: Phase 1–6 umgesetzt, Phase 7 E2E/Prüfung auf Staging grün (2026-10-17); offen Release, Prod-Test Anmeldelink, Test mit der Regie.
 
 Ziel: Die Regie (wenig technikaffin, möchte keine persönlichen Daten angeben) bekommt einen
 einfachen Zugang und **ein eigenes, auf sie zugeschnittenes Dashboard** statt des normalen Menüs.
@@ -150,6 +150,17 @@ ausstattung,wuensche}`; Lader in `src/lib/regie/data.ts` (eigene, schlanke Abfra
   über „angemeldet bleiben“ (30 Tage). Anleitung: `docs/regie-zugang.md`.
 - Geprüft: Typecheck, Lint, Unit-Tests (`src/lib/authentik/__tests__/client.test.ts`). Offen:
   Ende-zu-Ende in Prod (Staging ohne API-Token), Blueprint-Übernahme in Authentik prüfen.
+
+## Prüfung Phase 7 (2026-10-17)
+
+- E2E `e2e/regie.spec.ts` (nur lesend): Karten, alle Lese-Ansichten, Wunsch-Eingabe, Probenmappe
+  ohne Skript, alle Einzel-PDFs, Planer-Seite – 6/6 grün auf Staging.
+- Lint (0 Errors), Format, Build ok; volle Unit-Tests 924/928, die 4 Ausreißer (datenportal,
+  skript-pdf, dashboard/overview, create-production-form) einzeln grün (Last-Timeouts).
+- Screenshots `--viewport all` (Dashboard, Proben, Wünsche, Verfügbarkeit, Planer-Seite) ohne
+  Überlauf.
+- Offen: Release; danach in Prod Anmeldelink mit Testkonto (Staging ohne API-Token), Gewerke
+  Regie/Regieassistenz je Produktion anlegen, Test mit der Regie auf ihrem Handy.
 
 ## Entscheidungen Nachtrag (Nutzer 2026-10-17)
 
