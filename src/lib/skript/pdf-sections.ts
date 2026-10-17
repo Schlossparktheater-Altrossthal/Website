@@ -6,7 +6,13 @@ import {
 } from "@/lib/pdf/layout";
 
 import type { ScriptReaderData } from "./reader";
-import { computeScriptStats, cueScript, formatDuration, type ScriptStats } from "./stats";
+import {
+  CUE_CATEGORIES,
+  computeScriptStats,
+  cueScript,
+  formatDuration,
+  type ScriptStats,
+} from "./stats";
 import {
   CUE_LABELS,
   DEFAULT_SCENE_COLUMNS,
@@ -114,13 +120,13 @@ function renderSceneTable(
   const y = heading(
     doc,
     "Szenenübersicht",
-    `${stats.scenes.length} Szenen · Gesamtdauer ${formatDuration(stats.duration)}${stats.duration.estimated ? " (geschätzt aus Wörtern)" : ""}`,
+    `${stats.scenes.length} Szenen · Sprechzeit ${formatDuration(stats.duration)}${stats.duration.estimated ? " (geschätzt aus dem gesprochenen Text, ohne Spiel, Musik und Umbauten)" : ""}`,
   );
   const tableColumns: PdfTableColumn[] = [
     { label: "SZENE", weight: 3.2 },
     ...columns.map((column): PdfTableColumn => {
       if (column === "roles") return { label: "ROLLEN", weight: 4.5 };
-      if (column === "duration") return { label: "DAUER", weight: 1.3, align: "right" };
+      if (column === "duration") return { label: "SPRECHZEIT", weight: 1.7, align: "right" };
       if (column === "pages") return { label: "SEITEN", weight: 1, align: "right" };
       if (column === "words" || column === "passages") {
         return {
@@ -132,7 +138,11 @@ function renderSceneTable(
       return { label: SCENE_TABLE_COLUMN_LABELS[column].toUpperCase(), weight: 1.2 };
     }),
   ];
-  const rows: PdfTableRow[] = stats.scenes.map((scene) => ({
+  // Teil-Überschriften und leerer Vorspann (ohne Text und Hinweise) brauchen keine Zeile.
+  const scenes = stats.scenes.filter(
+    (scene) => scene.passages > 0 || CUE_CATEGORIES.some((c) => scene.cues[c].length),
+  );
+  const rows: PdfTableRow[] = scenes.map((scene) => ({
     accent: scene.roles.some((role) => mine.has(role.id)) ? ACCENT : null,
     cells: [
       { text: scene.title, bold: true },

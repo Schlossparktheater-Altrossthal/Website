@@ -88,6 +88,7 @@ describe("Skript-Auswertungen", () => {
     expect(measured.scenes[0].duration).toEqual({ seconds: 600, estimated: false });
     expect(formatDuration(measured.scenes[0].duration)).toBe("10 min");
     expect(formatDuration({ seconds: 3900, estimated: true })).toBe("ca. 1:05 h");
+    expect(formatDuration({ seconds: 12, estimated: true })).toBe("< 1 min");
   });
 
   it("baut das Stichwortheft", () => {

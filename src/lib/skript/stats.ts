@@ -298,12 +298,14 @@ export function cueScript(input: StatsInput, roleIds: readonly string[], cueWord
   return lines;
 }
 
-/** „1:05 h“, „12 min“, mit „ca.“ bei Schätzung. */
+/** „1:05 h“, „12 min“, „< 1 min“, mit „ca.“ bei Schätzung. */
 export function formatDuration(duration: Duration) {
   const minutes = Math.round(duration.seconds / 60);
   const value =
-    minutes >= 60
-      ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")} h`
-      : `${minutes} min`;
-  return duration.estimated ? `ca. ${value}` : value;
+    duration.seconds > 0 && minutes < 1
+      ? "< 1 min"
+      : minutes >= 60
+        ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")} h`
+        : `${minutes} min`;
+  return duration.estimated && minutes >= 1 ? `ca. ${value}` : value;
 }
