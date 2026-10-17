@@ -1,6 +1,6 @@
 # Regie-Zugang & Regie-Dashboard – Plan (2026-10-17)
 
-Stand: Phase 1 umgesetzt (2026-10-17), offen Phase 2–7.
+Stand: Phase 1, 3, 4, 5 umgesetzt (2026-10-17), offen Phase 2, 6, 7.
 
 Ziel: Die Regie (wenig technikaffin, möchte keine persönlichen Daten angeben) bekommt einen
 einfachen Zugang und **ein eigenes, auf sie zugeschnittenes Dashboard** statt des normalen Menüs.
@@ -70,12 +70,12 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
    prüfen: anpassen oder ablösen.
 2. **Zugang:** Authentik-Account ohne Pflicht-E-Mail, mehrere Passkeys, Admin-Anmeldelink per
    Messenger, lange Sitzung (Blueprint). Anleitung für Admins in `docs/`.
-3. **Dashboard-Gerüst:** eigene Seite, Karten mit Zusammenfassung + Ansehen/PDF, mobil eine
+3. ✅ **Dashboard-Gerüst:** eigene Seite, Karten mit Zusammenfassung + Ansehen/PDF, mobil eine
    Spalte, Laptop Raster, „neu seit letztem Besuch“. Vorbild: Dashboard-Karten
    (`mb-ui-vorbilder`).
-4. **Lese-Ansichten:** schlanke Nur-Lese-Ansichten der Karten (bestehende Lader wiederverwenden,
+4. ✅ **Lese-Ansichten:** schlanke Nur-Lese-Ansichten der Karten (bestehende Lader wiederverwenden,
    Sperrgründe/Maße/Kontakte ausfiltern).
-5. **Wünsche an die Planung:** Schema, Eingabe, Status, Antworten, Benachrichtigungen, Hinweis in
+5. ✅ **Wünsche an die Planung:** Schema, Eingabe, Status, Antworten, Benachrichtigungen, Hinweis in
    der Terminplanung, Verknüpfung mit Termin.
 6. **Probenmappe:** Auswahl per Häkchen (gemerkt), Sammel-PDF aus den vorhandenen Vorlagen mit
    Deckblatt und Stand.
@@ -102,6 +102,31 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
   frischer DB. Noch nicht geprüft: Staging/Browser (Regie-Ansicht mobil+desktop, Umleitung,
   Schalter) – mit Phase 3 nachholen. `api/dashboard/overview`-Test wackelt im vollen Lauf
   (einzeln grün, unabhängig von Phase 1).
+
+## Umsetzung Phase 3–5 (2026-10-17)
+
+- **Dashboard** `/mitglieder/regie`: Karten Wünsche (hervorgehoben, „Neuer Wunsch“ direkt),
+  Nächste Proben, Szenen × Personen, Verfügbarkeit, Besetzung, Probenprotokolle, Ausstattung,
+  Skript (nur PDF). Mobil eine Spalte, ab `sm` zwei, ab `lg` drei Spalten. Probenmappe folgt mit
+  Phase 6.
+- **„neu“** über `DirectionVisit` (`src/lib/regie/visits.ts`): vorheriger Besuch gilt als
+  Grenze; Neuladen innerhalb von 30 Minuten behält die Markierungen.
+- **Lese-Ansichten** unter `/mitglieder/regie/{proben,szenen,verfuegbarkeit,besetzung,protokolle,
+ausstattung,wuensche}`; Lader in `src/lib/regie/data.ts` (eigene, schlanke Abfragen statt der
+  Planer-Lader, damit Sperrgründe/Maße/Kontakte den Server nie verlassen).
+- **PDFs** serverseitig: `GET /api/regie/<showId>/pdf/<art>` (inline, `?download=1`), Zugriff
+  über `getDirectionShows`. Vorlagen wiederverwendet (terminliste, sperrliste-wichtige-tage ohne
+  Gründe, production-casting, requisiten-ablauf, skript-fassung), neu `szenen-matrix` (quer,
+  max. 24 Szenen je Tabelle).
+- **Wünsche** (`DirectionWish`, `DirectionWishMessage`, Migration `20261017120000_regie_wishes`):
+  Freitext + Bezug Szenen/Zeitraum/Personen (Bottom-Sheet, Chips), Status offen/eingeplant/
+  erledigt/abgelehnt (Grund Pflicht), Verlauf mit Antworten. Planung: Seite
+  `/mitglieder/terminplanung/regie-wuensche` (einplanen mit Termin-Verknüpfung, ablehnen,
+  erledigt), Hinweis „offene Regie-Wünsche“ in der Terminplanung und „Regie-Wünsche für diesen
+  Tag“ im Termin-Editor. Benachrichtigungstyp `direction-wish` an Planung bzw. Regieteam.
+  Das Regieteam darf selbst nur „erledigt“/„wieder öffnen“.
+- Geprüft: Typecheck, Lint, Unit-Tests (`src/lib/regie/__tests__`), Migration auf frischer DB
+  ohne Drift, alle PDFs gegen die Demo-Daten gerendert. Offen: Staging-Screenshots mobil+desktop.
 
 ## Entscheidungen Nachtrag (Nutzer 2026-10-17)
 

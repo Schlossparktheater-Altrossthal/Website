@@ -39,6 +39,7 @@ export const NOTIFICATION_TYPES = {
   DEPARTMENT_TASK: "department-task",
   DEPARTMENT_HANDOVER: "department-handover",
   SCENE_REQUIREMENT: "scene-requirement",
+  DIRECTION_WISH: "direction-wish",
   PLAN_DEADLINE: "plan-deadline",
   CASTING: "casting",
   PHOTO_CONSENT: "photo-consent",
@@ -107,6 +108,7 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
     priority: "normal",
     severity: "info",
   },
+  "direction-wish": { category: "proben", kind: "info", priority: "normal", severity: "info" },
   "plan-deadline": {
     category: "produktion",
     kind: "info",

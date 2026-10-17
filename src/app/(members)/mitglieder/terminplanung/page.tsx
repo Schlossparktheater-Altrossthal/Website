@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { addMonths, format, startOfMonth } from "date-fns";
 
+import Link from "next/link";
+
 import { PageHeader } from "@/components/members/page-header";
 import { getActiveProduction } from "@/lib/active-production";
 import { loadAudienceContext } from "@/lib/calendar/audience-server";
@@ -16,6 +18,7 @@ import { compareMembersByName, getUserDisplayName } from "@/lib/names";
 import { getNameSortOrder } from "@/lib/name-sort-server";
 import { loadMemberRoles, roleRankOf } from "@/lib/produktionen/member-roles";
 import { hasPermission } from "@/lib/permissions";
+import { PLANNER_WISHES_PATH, countOpenDirectionWishes } from "@/lib/regie/wishes";
 import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
 import { requireAuth } from "@/lib/rbac";
@@ -199,6 +202,8 @@ export default async function EventPlanningPage({
       }
     : null;
 
+  const openWishes = showId ? await countOpenDirectionWishes(showId) : 0;
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -210,6 +215,20 @@ export default async function EventPlanningPage({
         }
         breadcrumbs={[membersNavigationBreadcrumb("/mitglieder/terminplanung")]}
       />
+      {openWishes ? (
+        <Link
+          href={PLANNER_WISHES_PATH}
+          className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm hover:bg-primary/10"
+        >
+          <span>
+            <span className="font-semibold">
+              {openWishes === 1 ? "1 offener Regie-Wunsch" : `${openWishes} offene Regie-Wünsche`}
+            </span>{" "}
+            – bitte bei der Planung berücksichtigen
+          </span>
+          <span aria-hidden>→</span>
+        </Link>
+      ) : null}
       <EventPlanningClient
         productionTitle={productionTitle}
         events={planningEvents}

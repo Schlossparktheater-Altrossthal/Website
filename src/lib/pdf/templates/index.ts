@@ -8,6 +8,7 @@ import { photoConsentListTemplate } from "./photo-consent-list";
 import { productionCastingTemplate } from "./production-casting";
 import { requisitenAblaufTemplate } from "./requisiten-ablauf";
 import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
+import { szenenMatrixTemplate } from "./szenen-matrix";
 import { terminlisteTemplate } from "./terminliste";
 import { wunschlisteTemplate } from "./wunschliste";
 import { scriptReaderPdfTemplate } from "@/lib/skript/pdf";
@@ -22,6 +23,7 @@ const templates = [
   productionCastingTemplate,
   requisitenAblaufTemplate,
   sperrlisteImportantDaysTemplate,
+  szenenMatrixTemplate,
   terminlisteTemplate,
   wunschlisteTemplate,
   scriptReaderPdfTemplate,

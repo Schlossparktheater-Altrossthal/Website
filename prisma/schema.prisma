@@ -326,6 +326,9 @@ model User {
   deactivatedAt            DateTime?
   /// Nur Regie-Ansicht (docs/Plan/regie-plan.md): ohne Menü, alles läuft über /mitglieder/regie.
   directionView            Boolean                  @default(false)
+  directionWishes          DirectionWish[]          @relation("DirectionWishAuthor")
+  directionWishMessages    DirectionWishMessage[]
+  directionVisits          DirectionVisit[]
   /// Gesetzt, wenn personenbezogene Daten nach Ablauf der Aufbewahrungsfrist entfernt wurden.
   anonymizedAt             DateTime?
   sessionVersion           Int                      @default(0)
@@ -527,6 +530,8 @@ model Show {
   scriptRoles             ScriptRole[]
   scriptAnnotations       ScriptAnnotation[]
   scriptLearnCards        ScriptLearnCard[]
+  directionWishes         DirectionWish[]
+  directionVisits         DirectionVisit[]
 }
 
 enum MilestoneKind {
@@ -1500,6 +1505,7 @@ model CalendarEvent {
   ticketing           PerformanceTicketing?
   reservations        Reservation[]
   waitlistEntries     WaitlistEntry[]
+  directionWishes     DirectionWish[]
 
   @@index([start])
   @@index([departmentId, start])
@@ -4125,4 +4131,67 @@ model ScriptLearnProfile {
   weeklyDays Int      @default(4)
   updatedAt  DateTime @updatedAt
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Regie-Dashboard (docs/Plan/regie-plan.md)
+
+enum DirectionWishStatus {
+  open
+  planned
+  done
+  declined
+}
+
+/// Wunsch des Regieteams an die Probenplanung, z. B. „Szene 4+5 vor dem 12.6. durchlaufen“.
+model DirectionWish {
+  id        String                 @id @default(cuid())
+  showId    String
+  authorId  String?
+  text      String
+  status    DirectionWishStatus    @default(open)
+  /// Bezug (optional): Szenen, Personen, Zeitraum.
+  sceneIds  String[]               @default([])
+  userIds   String[]               @default([])
+  dateFrom  DateTime?
+  dateTo    DateTime?
+  /// „Eingeplant in Probe am …“
+  eventId   String?
+  statusAt  DateTime?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  show      Show                   @relation(fields: [showId], references: [id], onDelete: Cascade)
+  author    User?                  @relation("DirectionWishAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  event     CalendarEvent?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  messages  DirectionWishMessage[]
+
+  @@index([showId, status])
+  @@index([eventId])
+}
+
+/// Verlauf eines Wunsches: Antworten und Statuswechsel (`status` gesetzt).
+model DirectionWishMessage {
+  id        String               @id @default(cuid())
+  wishId    String
+  authorId  String?
+  text      String?
+  status    DirectionWishStatus?
+  createdAt DateTime             @default(now())
+  wish      DirectionWish        @relation(fields: [wishId], references: [id], onDelete: Cascade)
+  author    User?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([wishId, createdAt])
+}
+
+/// Letzter Besuch im Regie-Dashboard je Produktion – für „neu seit letztem Besuch“.
+model DirectionVisit {
+  userId     String
+  showId     String
+  /// Vorheriger Besuch: Grundlage für „neu“ während des aktuellen Besuchs.
+  previousAt DateTime?
+  seenAt     DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show       Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@id([userId, showId])
 }

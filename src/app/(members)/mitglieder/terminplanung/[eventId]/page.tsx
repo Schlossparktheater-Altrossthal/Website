@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 import { PageHeader } from "@/components/members/page-header";
+import { EventWishHint } from "@/components/regie/event-wish-hint";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
@@ -153,6 +154,10 @@ export default async function EventEditorPage({
           breadcrumbs={breadcrumbs}
           actions={<EventSwitcherNav events={switcherEvents} currentId={rehearsal.id} />}
         />
+
+        {rehearsal.showId && rehearsal.status !== "CANCELLED" ? (
+          <EventWishHint showId={rehearsal.showId} eventId={rehearsal.id} dayKey={dateKey} />
+        ) : null}
 
         <EventEditor
           rehearsal={{
