@@ -189,13 +189,13 @@ function RoleTable({ stats, mine }: { stats: ScriptStats; mine: Set<string> }) {
   );
   return (
     <div className="overflow-x-auto rounded-md border border-border/60">
-      <table className="w-full min-w-[34rem] text-sm">
+      <table className="w-full text-sm">
         <thead className="bg-muted/50">
           <tr>
             {header("name", "Rolle", false)}
             {header("words", "Wörter")}
-            <th className={cn(th, "w-1/4")}>Anteil</th>
-            {header("passages", "Passagen")}
+            <th className={cn(th, "text-right sm:w-1/4 sm:text-left")}>Anteil</th>
+            {header("passages", "Pass.")}
             {header("longest", "Längste")}
             {header("scenes", "Szenen")}
           </tr>
@@ -207,13 +207,13 @@ function RoleTable({ stats, mine }: { stats: ScriptStats; mine: Set<string> }) {
               <td className={cn(td, "text-right tabular-nums")}>{NUMBER.format(role.words)}</td>
               <td className={td}>
                 <div className="flex items-center gap-2">
-                  <div className="h-2 flex-1 rounded-full bg-muted">
+                  <div className="hidden h-2 flex-1 rounded-full bg-muted sm:block">
                     <div
                       className="h-2 rounded-full bg-primary"
                       style={{ width: `${(role.words / max) * 100}%` }}
                     />
                   </div>
-                  <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
+                  <span className="ml-auto w-12 text-right text-xs tabular-nums text-muted-foreground">
                     {PERCENT.format(role.share)}
                   </span>
                 </div>
