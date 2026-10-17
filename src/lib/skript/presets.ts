@@ -5,8 +5,12 @@ import {
   type ScriptExportConfig,
   type ScriptExportPresetItem,
 } from "./export-options";
+import { sanitizeViewPatch } from "./view-options";
 
-/** Eigene PDF-Vorlagen (docs/Plan/skript-auswertungen-plan.md, Phase 4). */
+/**
+ * Eigene PDF-Vorlagen (docs/Plan/skript-auswertungen-plan.md, Phase 4) und Ansichten
+ * (`config.view`, docs/Plan/skript-ansicht-plan.md Phase 5) – dieselbe Tabelle.
+ */
 
 export class ScriptPresetError extends Error {}
 
@@ -33,7 +37,10 @@ export async function listScriptPresets(
         name: row.name,
         shared: row.shared,
         deletable: row.ownerId === userId || (row.shared && canManage),
-        config: config.data,
+        config: {
+          ...config.data,
+          view: config.data.view ? sanitizeViewPatch(config.data.view) : undefined,
+        },
       },
     ];
   });

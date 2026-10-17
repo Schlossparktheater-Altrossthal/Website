@@ -3,17 +3,14 @@
 import * as React from "react";
 
 import { SCRIPT_CUE_STYLES } from "@/config/category-colors";
-import {
-  DEFAULT_SCENE_COLUMNS,
-  type SceneTableColumn,
-  type ScriptPdfSection,
-} from "@/lib/skript/export-options";
 import type { ScriptReaderData } from "@/lib/skript/reader";
 import {
-  DEFAULT_SCENE_HEADER,
-  sanitizeSceneHeader,
-  type SceneHeaderConfig,
-} from "@/lib/skript/scene-header";
+  DEFAULT_SCRIPT_VIEW,
+  pickView,
+  sanitizeViewPatch,
+  type ReaderState,
+  type ScriptView,
+} from "@/lib/skript/view-options";
 import type { CueCategory, ScriptPart } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
@@ -41,49 +38,21 @@ export const FONT_SIZES = ["text-[15px]", "text-base", "text-lg", "text-xl"] as 
 
 export type Visibility = "show" | "dim" | "hide";
 
-export type Settings = {
-  fontSize: number;
-  directions: Visibility;
-  /** Hinweise als Zeile unter dem Satz (Standard) oder wie im PDF mitten im Text. */
-  cueLayout: "below" | "inline";
-  hiddenCues: CueCategory[];
-  followedCues: CueCategory[];
+/**
+ * Leser-Einstellungen = Ansicht (was Leser und PDF zeigen, docs/Plan/skript-ansicht-plan.md)
+ * + eigene Rollen + Geräteeinstellungen (bleiben nur auf diesem Gerät).
+ */
+export type Settings = ScriptView & {
   roleIds: string[];
-  dimOthers: boolean;
   keepAwake: boolean;
   /** Probenmodus: Werte vor dem Einschalten, damit Ausschalten sie zurückholt (null = aus). */
   rehearsalBackup: Pick<Settings, "fontSize" | "keepAwake" | "dimOthers"> | null;
-  pdfCover: boolean;
-  /** PDF-Abschnitte in Reihenfolge, Spalten der Szenenübersicht, Inhalt der Auftrittstabelle. */
-  pdfSections: ScriptPdfSection[];
-  pdfSceneColumns: SceneTableColumn[];
-  pdfMatrixCell: "mark" | "words" | "passages";
-  showNotes: boolean;
-  /** Szenenkopf: was am Beginn jeder Szene steht (docs/Plan/skript-ansicht-plan.md). */
-  sceneHeader: SceneHeaderConfig;
-  /** Szenenkopf auch im PDF (dort als Kasten, eigene Darstellung). */
-  pdfSceneHeader: boolean;
-  /** Eigene Notizen, Markierungen und Zettel im PDF. */
-  pdfNotes: boolean;
 };
 
 const DEFAULT_SETTINGS: Omit<Settings, "roleIds"> = {
-  fontSize: 0,
-  directions: "show",
-  cueLayout: "below",
-  hiddenCues: [],
-  followedCues: [],
-  dimOthers: false,
+  ...DEFAULT_SCRIPT_VIEW,
   keepAwake: true,
   rehearsalBackup: null,
-  pdfCover: true,
-  pdfSections: ["script"],
-  pdfSceneColumns: DEFAULT_SCENE_COLUMNS,
-  pdfMatrixCell: "mark",
-  showNotes: true,
-  sceneHeader: DEFAULT_SCENE_HEADER,
-  pdfSceneHeader: true,
-  pdfNotes: true,
 };
 
 /** Einstellungen je Stück im Browser (nur Komfort, E: localStorage nur für Ansicht). */
@@ -105,32 +74,101 @@ export function writeStored(key: string, value: unknown) {
   }
 }
 
-export function useSettings(showId: string, ownRoleIds: string[]) {
+type StoredSettings = Partial<Settings> & { savedAt?: number };
+
+/**
+ * Einstellungen je Stück: im Browser (sofort, offline) und – mit `server` – pro Person auf dem
+ * Server, damit Handy und Laptop gleich aussehen. Der neuere Stand gewinnt.
+ */
+export function useSettings(
+  showId: string,
+  ownRoleIds: string[],
+  server?: {
+    state: ReaderState | null;
+    save: (showId: string, state: ReaderState) => Promise<unknown>;
+  },
+) {
   const key = `skript-leser:${showId}`;
   const [settings, setSettings] = React.useState<Settings>({
     ...DEFAULT_SETTINGS,
     roleIds: ownRoleIds,
   });
   const loaded = React.useRef(false);
+  const saveTimer = React.useRef<number | null>(null);
+  const serverRef = React.useRef(server);
   React.useEffect(() => {
-    const stored = readStored<Settings>(key);
-    if (stored) {
-      setSettings((current) => ({
-        ...current,
-        ...stored,
-        sceneHeader: sanitizeSceneHeader(stored.sceneHeader),
-      }));
+    serverRef.current = server;
+  });
+  const push = React.useCallback(
+    (next: Settings, savedAt: number) => {
+      const save = serverRef.current?.save;
+      if (!save) return;
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(() => {
+        void save(showId, { view: pickView(next), roleIds: next.roleIds, savedAt }).catch(
+          (error: unknown) => console.warn("Leser-Stand nicht auf dem Server gespeichert", error),
+        );
+      }, 1200);
+    },
+    [showId],
+  );
+  React.useEffect(() => {
+    const stored = readStored<StoredSettings>(key);
+    const remote = serverRef.current?.state ?? null;
+    const localAt = stored?.savedAt ?? 0;
+    const useRemote = remote && remote.savedAt > localAt;
+    // Geräteeinstellungen kommen immer aus dem Browser.
+    const device = {
+      ...(typeof stored?.keepAwake === "boolean" ? { keepAwake: stored.keepAwake } : {}),
+      ...(stored?.rehearsalBackup !== undefined
+        ? { rehearsalBackup: stored.rehearsalBackup ?? null }
+        : {}),
+    };
+    const source = useRemote
+      ? { view: remote.view, roleIds: remote.roleIds }
+      : stored
+        ? {
+            view: sanitizeViewPatch(stored),
+            roleIds: Array.isArray(stored.roleIds) ? stored.roleIds : undefined,
+          }
+        : null;
+    if (source) {
+      setSettings((current) => {
+        const next = {
+          ...current,
+          ...source.view,
+          ...(source.roleIds ? { roleIds: source.roleIds } : {}),
+          ...device,
+        };
+        if (useRemote) writeStored(key, { ...next, savedAt: remote.savedAt });
+        // Älterer Stand auf dem Server (z. B. erst offline geändert): nachziehen.
+        else if (stored && localAt > (remote?.savedAt ?? 0)) push(next, localAt);
+        return next;
+      });
     }
     loaded.current = true;
-  }, [key]);
+  }, [key, push]);
+  React.useEffect(
+    () => () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    },
+    [],
+  );
   const update = React.useCallback(
     (patch: Partial<Settings>) =>
       setSettings((current) => {
         const next = { ...current, ...patch };
-        if (loaded.current) writeStored(key, next);
+        if (loaded.current) {
+          const savedAt = Date.now();
+          writeStored(key, { ...next, savedAt });
+          const device = Object.keys(patch).every(
+            (name) => name === "keepAwake" || name === "rehearsalBackup",
+          );
+          if (!device) push(next, savedAt);
+        }
         return next;
       }),
-    [key],
+    [key, push],
   );
   return [settings, update] as const;
 }

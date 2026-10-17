@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { CUE_CATEGORIES } from "./stats";
 import type { CueCategory } from "./types";
+import type { ScriptView } from "./view-options";
 
 /**
  * Wählbare Teile des Skript-PDFs (docs/Plan/skript-auswertungen-plan.md, Phase 3/4).
@@ -79,8 +80,15 @@ export const scriptExportConfigSchema = z.object({
   sections: z.array(z.enum(SCRIPT_PDF_SECTIONS)).min(1).max(SCRIPT_PDF_SECTIONS.length),
   sceneColumns: z.array(z.enum(SCENE_TABLE_COLUMNS)).max(SCENE_TABLE_COLUMNS.length),
   matrixCell: z.enum(MATRIX_CELLS),
+  /**
+   * Ganze Ansicht (Leser + PDF, docs/Plan/skript-ansicht-plan.md Phase 5). Fehlt sie, ist es eine
+   * reine PDF-Vorlage. Wird beim Lesen mit `sanitizeViewPatch` geprüft.
+   */
+  view: z.record(z.string(), z.unknown()).optional(),
 });
-export type ScriptExportConfig = z.infer<typeof scriptExportConfigSchema>;
+export type ScriptExportConfig = Omit<z.infer<typeof scriptExportConfigSchema>, "view"> & {
+  view?: Partial<ScriptView>;
+};
 
 export type ScriptExportPresetItem = {
   id: string;

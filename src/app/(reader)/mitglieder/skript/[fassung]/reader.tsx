@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { CloudOffIcon } from "lucide-react";
 import {
@@ -54,6 +55,7 @@ import {
 import { buildSceneHeaders, type SceneHeaderModel } from "@/lib/skript/scene-header";
 import { computeScriptStats } from "@/lib/skript/stats";
 import type { CueCategory } from "@/lib/skript/types";
+import type { ReaderState } from "@/lib/skript/view-options";
 import { cn } from "@/lib/utils";
 
 import {
@@ -82,9 +84,11 @@ import {
   type EditorState,
   type NoteTarget,
 } from "./annotations";
+import { saveReaderStateAction } from "../view-actions";
 import { PdfExport } from "./pdf-export";
 import { SceneHeader } from "./scene-header";
 import { SceneHeaderSettings } from "./scene-header-settings";
+import { ViewPicker, viewChoices } from "./view-picker";
 import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketch";
 import { BlockEditor, type BlockEditorState } from "./block-editor";
 import { useAnnotations } from "./use-annotations";
@@ -622,8 +626,11 @@ export function ScriptReader({
   previous,
   annotations: initialAnnotations,
   presets,
+  readerState,
 }: {
   data: ScriptReaderData;
+  /** Persönlicher Stand vom Server (Ansicht + eigene Rollen). */
+  readerState: ReaderState | null;
   canManage: boolean;
   /** Eigene und gemeinsame PDF-Vorlagen. */
   presets: ScriptExportPresetItem[];
@@ -633,7 +640,10 @@ export function ScriptReader({
   annotations: ReaderAnnotation[];
 }) {
   const { version, scenes, blocks, roles } = data;
-  const [settings, update] = useSettings(version.showId, data.ownRoleIds);
+  const [settings, update] = useSettings(version.showId, data.ownRoleIds, {
+    state: readerState,
+    save: saveReaderStateAction,
+  });
   // Tablet hochkant: Szenen als Seitenleiste von links statt von unten.
   const sidePanel = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
   const setRehearsal = (on: boolean) => {
@@ -651,6 +661,10 @@ export function ScriptReader({
   };
   useWakeLock(settings.keepAwake);
 
+  const pdfPresets = React.useMemo(
+    () => presets.filter((preset) => !preset.config.view),
+    [presets],
+  );
   const [panel, setPanel] = React.useState<"scenes" | "roles" | "settings" | null>(null);
   // „Was ist neu“: Hinweis, wenn zuletzt eine andere Fassung dieses Stücks gelesen wurde.
   const [newVersionHint, setNewVersionHint] = React.useState(false);
@@ -1069,6 +1083,15 @@ export function ScriptReader({
     if (entryUsed.current) return;
     const params = entryParams();
     const sceneId = params.get("szene");
+    // Geteilter Link `?ansicht=<id>` (fertige oder gespeicherte Ansicht) – einmal übernehmen.
+    const viewId = params.get("ansicht");
+    const shared = viewId ? viewChoices(presets).find((choice) => choice.id === viewId) : null;
+    if (shared) {
+      update(shared.view);
+      toast.success(`Ansicht „${shared.label}“ übernommen`, {
+        description: "Unter Einstellungen jederzeit wieder änderbar.",
+      });
+    }
     if (params.get("notieren") === "1") setNoteMode(true);
     if (window.location.search) {
       window.history.replaceState(window.history.state, "", window.location.pathname);
@@ -1088,7 +1111,7 @@ export function ScriptReader({
     return () => {
       cancelled = true;
     };
-  }, [entryParams, sceneIndex, scrollToIndex]);
+  }, [entryParams, presets, sceneIndex, scrollToIndex, update]);
   // Offline: Seite beim Öffnen selbst in den Cache des Service Workers legen (wie im Lernmodus).
   React.useEffect(() => {
     if (!("caches" in window) || !navigator.onLine) return;
@@ -1703,6 +1726,13 @@ export function ScriptReader({
         description="Was der Leser und das PDF zeigen – Text, Hinweise, Szenenkopf"
       >
         <div className="space-y-5 text-sm">
+          <ViewPicker
+            versionId={version.id}
+            settings={settings}
+            update={update}
+            presets={presets}
+            canManage={canManage}
+          />
           {/* Handy: Lernen steht hier statt in der Kopfleiste. */}
           <section className="grid grid-cols-2 gap-2 sm:hidden">
             {version.status === "released" ? (
@@ -1845,7 +1875,8 @@ export function ScriptReader({
             data={data}
             settings={settings}
             update={update}
-            presets={presets}
+            // Reine PDF-Vorlagen; ganze Ansichten stehen oben.
+            presets={pdfPresets}
             canManage={canManage}
           />
           <Link

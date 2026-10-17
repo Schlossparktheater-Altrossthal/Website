@@ -242,6 +242,13 @@ Notizen mit Nummer „[1]“ im Text und darunter, Zettel als kleine Vektorzeich
 Notizen der erzeugenden Person, nie in der Fassung für jemand anderen; verwaiste weggelassen,
 verrutschte nur unter dem Absatz.
 
+Phase 5 (2026-10-17): `src/lib/skript/view-options.ts` (Ansicht = Inhalt, `BUILT_IN_VIEWS`
+Darsteller/Regie/Ton-Licht/Souffleuse/Requisite-Bühne), gespeicherte Ansichten als
+`ScriptExportPreset.config.view` (ohne Migration; ohne `view` = reine PDF-Vorlage), persönlicher
+Stand in `ScriptReaderState` (Migration 20261017230000, neuester `savedAt` gewinnt, Geräte-
+einstellungen nur lokal), Auswahl oben im Einstellungen-Blatt (`view-picker.tsx`), Link
+`?ansicht=<id>` übernimmt eine Ansicht einmal.
+
 ## Entscheidungen 2026-10-17
 
 1. Szenen-Infos bearbeitet nur die Skript-Verwaltung; Gewerke nutzen das Notizsystem.

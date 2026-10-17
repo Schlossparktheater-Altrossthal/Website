@@ -438,6 +438,7 @@ model User {
   scriptVersionsReleased          ScriptVersion[]            @relation("ScriptVersionReleaser")
   scriptRolesCreated              ScriptRole[]               @relation("ScriptRoleCreator")
   scriptExportPresets             ScriptExportPreset[]       @relation("ScriptExportPresetOwner")
+  scriptReaderStates              ScriptReaderState[]
   scriptAnnotations               ScriptAnnotation[]
   scriptLearnCards                ScriptLearnCard[]
   scriptLearnProfile              ScriptLearnProfile?
@@ -534,6 +535,7 @@ model Show {
   scriptAnnotations       ScriptAnnotation[]
   scriptLearnCards        ScriptLearnCard[]
   scriptExportPresets     ScriptExportPreset[]
+  scriptReaderStates      ScriptReaderState[]
   directionWishes         DirectionWish[]
   directionVisits         DirectionVisit[]
 }
@@ -3968,17 +3970,17 @@ model ScriptVersion {
 
 /// Szene innerhalb einer Fassung (unabhängig von `Scene`).
 model ScriptScene {
-  id        String        @id @default(cuid())
-  versionId String
-  sequence  Int
-  title     String
+  id              String        @id @default(cuid())
+  versionId       String
+  sequence        Int
+  title           String
   /// Gemessene Spieldauer in Sekunden (z. B. aus Durchläufen); ersetzt die Schätzung aus Wörtern.
   /// Neue Fassungen übernehmen sie bei gleichem Szenentitel (docs/Plan/skript-auswertungen-plan.md).
   measuredSeconds Int?
   measuredAt      DateTime?
   measuredById    String?
-  version   ScriptVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  blocks    ScriptBlock[]
+  version         ScriptVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  blocks          ScriptBlock[]
 
   @@index([versionId, sequence])
 }
@@ -4207,6 +4209,20 @@ model DirectionVisit {
 
 /// Gespeicherte PDF-Zusammenstellung (docs/Plan/skript-auswertungen-plan.md, Phase 4):
 /// `shared` = für alle im Stück (nur Skript-Verwalter), sonst nur für die Person.
+/// Persönlicher Stand des Skript-Lesers je Person und Stück (Ansicht + eigene Rollen), damit
+/// Handy und Laptop gleich aussehen (docs/Plan/skript-ansicht-plan.md, Phase 5).
+model ScriptReaderState {
+  userId    String
+  showId    String
+  /// { view, roleIds, savedAt } – src/lib/skript/view-options.ts
+  state     Json
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@id([userId, showId])
+}
+
 model ScriptExportPreset {
   id        String   @id @default(cuid())
   showId    String
@@ -4222,4 +4238,3 @@ model ScriptExportPreset {
 
   @@index([showId, ownerId])
 }
-
