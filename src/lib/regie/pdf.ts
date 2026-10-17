@@ -286,3 +286,59 @@ export async function renderDirectionPdf(
   if (!built) return null;
   return renderPdfTemplate(built.templateId, built.payload);
 }
+
+/** Vorauswahl der Probenmappe (Plan: Wochenplan, Szenen, Verfügbarkeit, Besetzung, Requisiten). */
+export const BINDER_DEFAULT_PARTS: DirectionPdfKind[] = [
+  "termine",
+  "szenen",
+  "verfuegbarkeit",
+  "besetzung",
+  "ausstattung",
+];
+
+/** `?teile=a,b` → gültige Teile in fester Mappen-Reihenfolge; leer → Vorauswahl. */
+export function parseBinderParts(value: string | null | undefined): DirectionPdfKind[] {
+  const wanted = new Set((value ?? "").split(",").map((part) => part.trim()));
+  const parts = DIRECTION_PDF_KINDS.filter((kind) => wanted.has(kind));
+  return parts.length ? parts : BINDER_DEFAULT_PARTS;
+}
+
+/** Probenmappe: gewählte Teile + Deckblatt mit Stand und Inhalt als ein PDF. */
+export async function renderDirectionBinder(
+  parts: DirectionPdfKind[],
+  show: DirectionShow,
+  userId: string,
+): Promise<{ buffer: Buffer; filename: string } | null> {
+  const { PDFDocument } = await import("pdf-lib");
+  const rendered = await Promise.all(
+    parts.map(async (kind) => ({ kind, result: await renderDirectionPdf(kind, show, userId) })),
+  );
+  const docs = await Promise.all(
+    rendered
+      .filter((entry) => entry.result)
+      .map(async ({ kind, result }) => ({ kind, doc: await PDFDocument.load(result!.buffer) })),
+  );
+  if (!docs.length) return null;
+
+  const generatedAt = new Date().toISOString();
+  const contents: { label: string; page: number }[] = [];
+  let page = 2;
+  for (const { kind, doc } of docs) {
+    contents.push({ label: DIRECTION_PDF_LABELS[kind], page });
+    page += doc.getPageCount();
+  }
+  const cover = await renderPdfTemplate("probenmappe-deckblatt", {
+    generatedAt,
+    production: showLabel(show),
+    parts: contents,
+    missing: rendered.filter((entry) => !entry.result).map((e) => DIRECTION_PDF_LABELS[e.kind]),
+  });
+
+  const binder = await PDFDocument.create();
+  binder.setTitle(`Probenmappe ${showLabel(show)}`);
+  for (const source of [await PDFDocument.load(cover.buffer), ...docs.map((d) => d.doc)]) {
+    const pages = await binder.copyPages(source, source.getPageIndices());
+    for (const copied of pages) binder.addPage(copied);
+  }
+  return { buffer: Buffer.from(await binder.save()), filename: cover.filename };
+}

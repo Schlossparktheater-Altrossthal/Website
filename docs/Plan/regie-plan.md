@@ -1,6 +1,6 @@
 # Regie-Zugang & Regie-Dashboard – Plan (2026-10-17)
 
-Stand: Phase 1, 3, 4, 5 umgesetzt (2026-10-17), offen Phase 2, 6, 7.
+Stand: Phase 1, 3–6 umgesetzt (2026-10-17), offen Phase 2, 7.
 
 Ziel: Die Regie (wenig technikaffin, möchte keine persönlichen Daten angeben) bekommt einen
 einfachen Zugang und **ein eigenes, auf sie zugeschnittenes Dashboard** statt des normalen Menüs.
@@ -77,7 +77,7 @@ Auf jeder Karte ein kleiner Hinweis **„neu seit letztem Besuch“**.
    Sperrgründe/Maße/Kontakte ausfiltern).
 5. ✅ **Wünsche an die Planung:** Schema, Eingabe, Status, Antworten, Benachrichtigungen, Hinweis in
    der Terminplanung, Verknüpfung mit Termin.
-6. **Probenmappe:** Auswahl per Häkchen (gemerkt), Sammel-PDF aus den vorhandenen Vorlagen mit
+6. ✅ **Probenmappe:** Auswahl per Häkchen (gemerkt), Sammel-PDF aus den vorhandenen Vorlagen mit
    Deckblatt und Stand.
 7. **Tests & Abnahme:** Unit (Rechte, Filter), E2E, Staging-Screenshots mobil+desktop, Test mit
    der Regie auf ihrem Handy. Danach Release; in Prod Gewerke Regie/Regieassistenz anlegen.
@@ -127,6 +127,17 @@ ausstattung,wuensche}`; Lader in `src/lib/regie/data.ts` (eigene, schlanke Abfra
   Das Regieteam darf selbst nur „erledigt“/„wieder öffnen“.
 - Geprüft: Typecheck, Lint, Unit-Tests (`src/lib/regie/__tests__`), Migration auf frischer DB
   ohne Drift, alle PDFs gegen die Demo-Daten gerendert. Offen: Staging-Screenshots mobil+desktop.
+
+## Umsetzung Phase 6 (2026-10-17)
+
+- Karte **Probenmappe** im Dashboard, Auswahl im Bottom-Sheet per Häkchen (Teile ohne Daten
+  ausgegraut), letzte Auswahl im Browser gemerkt (`localStorage`, `regie-probenmappe-teile`).
+- `GET /api/regie/<showId>/pdf/mappe?teile=termine,szenen,…`: Teile werden mit den vorhandenen
+  Vorlagen gerendert und mit `pdf-lib` zusammengefügt; feste Reihenfolge wie
+  `DIRECTION_PDF_KINDS`, ohne Auswahl die Vorauswahl. Deckblatt `probenmappe-deckblatt` mit
+  Produktion, Stand, Inhalt mit Seitenzahlen und „Noch ohne Daten“. Jede Seite behält INTERN-Hinweis
+  und Fußzeile ihrer Liste.
+- Geprüft: Typecheck, Lint, Unit-Tests, Mappe mit allen Teilen gegen Demo-Daten (27 Seiten).
 
 ## Entscheidungen Nachtrag (Nutzer 2026-10-17)
 

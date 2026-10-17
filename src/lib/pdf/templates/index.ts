@@ -5,6 +5,7 @@ import { koerpermasseTemplate } from "./koerpermasse";
 import { onboardingInviteTemplate } from "./onboarding-invite";
 import { onboardingStatisticsTemplate } from "./onboarding-statistics";
 import { photoConsentListTemplate } from "./photo-consent-list";
+import { probenmappeDeckblattTemplate } from "./probenmappe-deckblatt";
 import { productionCastingTemplate } from "./production-casting";
 import { requisitenAblaufTemplate } from "./requisiten-ablauf";
 import { sperrlisteImportantDaysTemplate } from "./sperrliste-wichtige-tage";
@@ -20,6 +21,7 @@ const templates = [
   onboardingInviteTemplate,
   onboardingStatisticsTemplate,
   photoConsentListTemplate,
+  probenmappeDeckblattTemplate,
   productionCastingTemplate,
   requisitenAblaufTemplate,
   sperrlisteImportantDaysTemplate,

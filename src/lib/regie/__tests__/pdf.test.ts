@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
-import { sceneRows } from "@/lib/regie/pdf";
+import { BINDER_DEFAULT_PARTS, parseBinderParts, sceneRows } from "@/lib/regie/pdf";
 import type { DirectionCastRole, DirectionScene } from "@/lib/regie/data";
 
 const role = (id: string, ...users: string[]): DirectionCastRole => ({
@@ -39,5 +39,16 @@ describe("sceneRows", () => {
   it("unterscheidet eingeschränkt", () => {
     const [row] = sceneRows([scene], roles, ["d"], new Map([["ben:d", "LIMITED"]]));
     expect(row.cells[0]).toEqual({ status: "limited", note: "B" });
+  });
+});
+
+describe("parseBinderParts", () => {
+  it("hält die feste Reihenfolge und verwirft Unbekanntes", () => {
+    expect(parseBinderParts("besetzung,foo,termine,termine")).toEqual(["termine", "besetzung"]);
+  });
+
+  it("nimmt ohne Auswahl die Vorauswahl", () => {
+    expect(parseBinderParts(null)).toEqual(BINDER_DEFAULT_PARTS);
+    expect(parseBinderParts("foo")).toEqual(BINDER_DEFAULT_PARTS);
   });
 });

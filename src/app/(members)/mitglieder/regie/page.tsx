@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/members/page-header";
+import { BinderComposer } from "@/components/regie/binder-composer";
 import { DirectionCard, DirectionEmpty } from "@/components/regie/direction-ui";
 import { WishComposer } from "@/components/regie/wish-board";
 import { DateBadge } from "@/components/ui/date-badge";
@@ -24,6 +25,12 @@ import {
   resolveDirectionPage,
   type DirectionSearchParams,
 } from "@/lib/regie/page";
+import {
+  BINDER_DEFAULT_PARTS,
+  DIRECTION_PDF_KINDS,
+  DIRECTION_PDF_LABELS,
+  type DirectionPdfKind,
+} from "@/lib/regie/pdf";
 import { touchDirectionVisit } from "@/lib/regie/visits";
 import { listDirectionWishes } from "@/lib/regie/wishes";
 import { cn } from "@/lib/utils";
@@ -84,6 +91,15 @@ export default async function DirectionDashboardPage({
   const showLabel = `${show.title ?? "Produktion"} ${show.year}`;
   const href = (section: string) => directionHref(section, show.id);
   const pdf = (kind: string) => directionPdfHref(kind, show.id);
+
+  const partAvailable: Record<DirectionPdfKind, boolean> = {
+    termine: events.length > 0,
+    szenen: scenes.length > 0,
+    verfuegbarkeit: true,
+    besetzung: roles.length > 0,
+    ausstattung: props.scenes.length > 0,
+    skript: Boolean(script),
+  };
 
   const openWishes = wishes.filter((wish) => wish.status === "open").length;
   const plannedWishes = wishes.filter((wish) => wish.status === "planned").length;
@@ -203,6 +219,22 @@ export default async function DirectionDashboardPage({
             </ul>
           ) : null}
         </DirectionCard>
+
+        <DirectionCard
+          title="Probenmappe"
+          summary="Die wichtigen Listen als ein PDF – zum Ausdrucken oder für unterwegs."
+          actions={
+            <BinderComposer
+              pdfHref={pdf("mappe")}
+              defaults={BINDER_DEFAULT_PARTS}
+              parts={DIRECTION_PDF_KINDS.map((kind) => ({
+                kind,
+                label: DIRECTION_PDF_LABELS[kind],
+                available: partAvailable[kind],
+              }))}
+            />
+          }
+        />
 
         <DirectionCard
           title="Szenen × Personen"

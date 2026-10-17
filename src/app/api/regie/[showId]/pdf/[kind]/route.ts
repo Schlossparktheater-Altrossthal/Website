@@ -2,7 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAuth } from "@/lib/rbac";
 import { getDirectionShows } from "@/lib/regie/access";
-import { isDirectionPdfKind, renderDirectionPdf } from "@/lib/regie/pdf";
+import {
+  isDirectionPdfKind,
+  parseBinderParts,
+  renderDirectionBinder,
+  renderDirectionPdf,
+} from "@/lib/regie/pdf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,6 +15,7 @@ export const dynamic = "force-dynamic";
 /**
  * PDFs des Regie-Dashboards (docs/Plan/regie-plan.md). Die Daten lädt der Server selbst –
  * ohne Sperrgründe, Maße und Kontakte. Öffnet inline (Handy), `?download=1` speichert.
+ * `mappe?teile=termine,szenen` erzeugt die Probenmappe aus den gewählten Teilen.
  */
 export async function GET(
   request: NextRequest,
@@ -18,7 +24,7 @@ export async function GET(
   const session = await requireAuth();
   const userId = session.user?.id;
   const { showId, kind } = await params;
-  if (!userId || !isDirectionPdfKind(kind)) {
+  if (!userId || (kind !== "mappe" && !isDirectionPdfKind(kind))) {
     return NextResponse.json({ error: "Unbekanntes PDF." }, { status: 404 });
   }
   const show = (await getDirectionShows(userId)).find((entry) => entry.id === showId);
@@ -26,7 +32,14 @@ export async function GET(
     return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
   }
 
-  const result = await renderDirectionPdf(kind, show, userId);
+  const result =
+    kind === "mappe"
+      ? await renderDirectionBinder(
+          parseBinderParts(request.nextUrl.searchParams.get("teile")),
+          show,
+          userId,
+        )
+      : await renderDirectionPdf(kind, show, userId);
   if (!result) {
     return NextResponse.json({ error: "Dafür gibt es noch keine Daten." }, { status: 404 });
   }
