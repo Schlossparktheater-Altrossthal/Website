@@ -22,7 +22,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 duration-200 sm:bg-black/60 sm:backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/80 duration-200 max-sm:transition-none sm:bg-black/60 sm:backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -288,6 +288,8 @@ const DialogContent = React.forwardRef<
         className={cn(
           // Mobil ein Blatt von unten, ab 640 px ein zentrierter Dialog.
           "fixed inset-x-0 bottom-0 z-50 grid max-h-[90dvh] w-full gap-4 overflow-y-auto overscroll-contain rounded-t-2xl border-t bg-background px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-7 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom max-sm:data-[state=open]:animate-none",
+          // Keine CSS-Transition auf der Federposition, sonst gleitet das Blatt erst nach unten.
+          "max-sm:transition-none",
           "sm:inset-x-auto sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6 sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-90 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[49%] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[46%]",
           // Desktop: federnd mit leichtem Überschwingen auf, schnell und weich zu.
           "sm:data-[state=open]:duration-300 sm:data-[state=open]:ease-[cubic-bezier(0.34,1.4,0.64,1)] sm:data-[state=closed]:duration-150 sm:data-[state=closed]:ease-in motion-reduce:animate-none",
