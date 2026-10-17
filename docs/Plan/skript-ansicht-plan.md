@@ -1,7 +1,7 @@
 # Skript: Frei konfigurierbare Ansicht + Szenenkopf (Plan, 2026-10-17)
 
-Ziel: Jede Person stellt sich **eine Ansicht** zusammen, und **Leser und PDF sehen danach gleich aus**
-(„was ich sehe, wird gedruckt“). Kernstück ist ein **Szenenkopf**: am Beginn jeder Szene eine
+Ziel: Jede Person stellt sich **eine Ansicht** zusammen, und **Leser und PDF zeigen danach denselben Inhalt** – aber kein WYSIWYG:
+Papier und Bildschirm haben je eine eigene, dafür optimierte Darstellung (User 2026-10-17). Kernstück ist ein **Szenenkopf**: am Beginn jeder Szene eine
 kompakte, schöne Übersicht – wer gebraucht wird, welche Ton-/Lichtszenen kommen, Umbau, Requisiten,
 Dauer … – deren Inhalt man selbst wählt. Der Szenenspiegel (Auftrittsmatrix) bleibt erhalten.
 
@@ -69,7 +69,10 @@ type SceneHeaderItem =
   | "sceneNote"; // Bemerkung zur Szene (Team) + eigene Szenennotiz
 ```
 
-Leser **und** PDF rendern den Text, die Hinweise und den Szenenkopf aus genau diesem Objekt. Der
+Leser **und** PDF entscheiden aus diesem Objekt, **was** gezeigt wird (Rollen, Regie, Hinweis-Kategorien,
+Szenenkopf-Bausteine). **Wie** es aussieht, legt jedes Medium selbst fest (Papier: Kasten, Rand,
+Seitenumbruch; Bildschirm: Chips, aufklappbar). Medienspezifische Optionen stehen getrennt
+(`screen.*`, `print.*`). Der
 PDF-Export bekommt die Ansicht als Ganzes (JSON im POST statt einzelner Query-Parameter), damit neue
 Optionen nicht jedes Mal doppelt verdrahtet werden müssen.
 
@@ -136,7 +139,7 @@ Ein Blatt, Gruppen statt langer Liste, oben die Ansicht-Auswahl:
    „PDF dieser Ansicht“
 6. **Gerät**: Wachhalten, Probenmodus
 
-Änderungen wirken sofort im Leser dahinter (Vorschau), das PDF folgt derselben Ansicht.
+Inhaltliche Änderungen gelten für Leser und PDF; Darstellungsoptionen nur für ihr Medium.
 
 ## Szenenspiegel behalten und einbinden
 
@@ -153,7 +156,7 @@ Ein Blatt, Gruppen statt langer Liste, oben die Ansicht-Auswahl:
 2. **Szenenkopf im Leser** aus vorhandenen Daten (Wer sprechend/genannt, Mein Teil, Dauer, Umfang,
    Technik je Kategorie, Wechsel). Kompakt + Karte, einklappbar. Screenshots mobil/Desktop.
 3. **Einstellungen-Blatt** neu gegliedert inkl. Bausteine/Reihenfolge des Szenenkopfs.
-4. **PDF = Ansicht**: Route nimmt die Ansicht (POST/JSON), `pdf.ts` rendert Szenenkopf-Kasten,
+4. **PDF nach Ansicht**: Route nimmt die Ansicht (POST/JSON), `pdf.ts` rendert Szenenkopf-Kasten,
    Hinweis-Layout und Notizen wie der Leser; Abschnitt „Szenen-Steckbriefe“. Tests in `pdf.test.ts`.
 5. **Ansichten speichern**: `ScriptView` (Migration aus `ScriptExportPreset`), fertige Ansichten,
    serverseitig gemerkte aktive Ansicht, `?ansicht=`-Link.
