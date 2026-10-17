@@ -165,3 +165,6 @@ Phasen 1–5 hängen nur am Skript und sind sofort machbar; 6–7 bauen aufeinan
 - Phase 5 Übersichten `/mitglieder/skript/[fassung]/uebersicht`: Rollen (sortierbar, Balken),
   Szenen (Spalten wie im PDF), Auftritte, Technik (Filter je Gewerk); CSV je Reiter
   (`stats-csv.ts`, Semikolon + BOM für Excel). Spalten/Matrix-Inhalt teilen sich die Einstellung mit dem PDF.
+- Gemessene Szenenzeiten: `ScriptScene.measuredSeconds` (Migration 20261017220000), Eintragen in
+  der Übersicht (Reiter Szenen, nur SCRIPT.MANAGE, Eingabe `12:30`/`12`), neue Fassungen und
+  bearbeitete Kopien übernehmen sie bei gleichem Szenentitel. Spalte heißt „Dauer“; „ca.“ = geschätzt.

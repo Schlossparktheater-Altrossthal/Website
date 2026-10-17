@@ -10,6 +10,7 @@ import { isStorageConfigured, putObject } from "@/lib/storage/s3";
 import { readScriptCredits, type ScriptCredit } from "./credits";
 import { isPdf, parseScriptPdf } from "./import";
 import { countWords, roleKey, roleStatistics, type RoleTypoSuspect } from "./roles";
+import { sceneTitleKey } from "./stats";
 
 /** DB-Zugriff für Skript-Fassungen (docs/Plan/skript-plan.md, Phase 2). */
 
@@ -127,12 +128,30 @@ export async function importScriptDraft(input: {
     select: { id: true },
   });
 
+  // Gemessene Szenenzeiten der Vorfassung übernehmen (gleicher Titel).
+  const measured = new Map(
+    basedOn
+      ? (
+          await prisma.scriptScene.findMany({
+            where: { versionId: basedOn.id, measuredSeconds: { not: null } },
+            select: { title: true, measuredSeconds: true },
+          })
+        ).map((scene) => [sceneTitleKey(scene.title), scene.measuredSeconds])
+      : [],
+  );
+
   const scenes: Prisma.ScriptSceneCreateManyInput[] = [];
   const blocks: Prisma.ScriptBlockCreateManyInput[] = [];
   let sequence = 0;
   parsed.scenes.forEach((scene, sceneIndex) => {
     const sceneId = randomUUID();
-    scenes.push({ id: sceneId, versionId: id, sequence: sceneIndex, title: scene.title });
+    scenes.push({
+      id: sceneId,
+      versionId: id,
+      sequence: sceneIndex,
+      title: scene.title,
+      measuredSeconds: measured.get(sceneTitleKey(scene.title)) ?? null,
+    });
     for (const block of scene.blocks) {
       blocks.push({
         versionId: id,

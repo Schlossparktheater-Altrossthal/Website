@@ -31,6 +31,7 @@ export default async function ScriptOverviewPage({
       stats={computeScriptStats(data)}
       roleNames={data.roles.map((role) => [role.id, role.name])}
       ownRoleIds={data.ownRoleIds}
+      canManage={canManage}
     />
   );
 }

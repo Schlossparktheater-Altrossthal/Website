@@ -16,7 +16,7 @@ const data: ScriptReaderData = {
     versionDate: null,
     showTitle: "Testgeschichte",
   },
-  scenes: [{ id: "sc1", title: "Szene 1 – Wald", words: 9, minutes: 1 }],
+  scenes: [{ id: "sc1", title: "Szene 1 – Wald", words: 9, minutes: 1, measuredSeconds: null }],
   roles: [
     { id: "a", name: "Atreju", lines: 1, words: 3, sceneIds: ["sc1"] },
     { id: "b", name: "Bastian", lines: 1, words: 6, sceneIds: ["sc1"] },

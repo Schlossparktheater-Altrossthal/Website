@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { computeScriptStats, cueScript, formatDuration, type StatsInput } from "@/lib/skript/stats";
+import {
+  computeScriptStats,
+  cueScript,
+  formatDuration,
+  parseDurationInput,
+  sceneTitleKey,
+  type StatsInput,
+} from "@/lib/skript/stats";
 import { cueListCsv, matrixCsv, roleStatsCsv, toCsv } from "@/lib/skript/stats-csv";
 
 const block = (
@@ -119,5 +126,31 @@ describe("CSV der Auswertungen", () => {
     expect(matrixCsv(stats, "words")).toContain("Atreju;5;;1");
     const names = new Map(input.scenes.map((s) => [s.id, s.title]));
     expect(cueListCsv(stats, names)).toContain("Licht;1;LICHT 2 aus;Allein hier;Szene 2;1");
+  });
+});
+
+describe("Gemessene Szenenzeiten", () => {
+  it("nimmt die Messung aus der Szene und zeigt Sekunden", () => {
+    const stats = computeScriptStats({
+      ...input,
+      scenes: input.scenes.map((s) => (s.id === "s2" ? { ...s, measuredSeconds: 750 } : s)),
+    });
+    expect(stats.scenes[1].duration).toEqual({ seconds: 750, estimated: false });
+    expect(formatDuration(stats.scenes[1].duration)).toBe("12:30 min");
+    expect(stats.duration.estimated).toBe(true);
+  });
+  it("liest Eingaben", () => {
+    expect(parseDurationInput("12")).toBe(720);
+    expect(parseDurationInput("12:30")).toBe(750);
+    expect(parseDurationInput("1:02:05")).toBe(3725);
+    expect(parseDurationInput(" 4 min")).toBe(240);
+    expect(parseDurationInput("")).toBeNull();
+    expect(parseDurationInput("12:75")).toBeNaN();
+    expect(parseDurationInput("abc")).toBeNaN();
+  });
+  it("erkennt gleiche Szenen trotz Schreibweise", () => {
+    expect(sceneTitleKey("SZENE 2 – HERR  KOREANDER")).toBe(
+      sceneTitleKey("szene 2 - Herr Koreander"),
+    );
   });
 });

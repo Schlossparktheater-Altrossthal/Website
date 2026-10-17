@@ -112,13 +112,13 @@ function renderSceneTable(
   const y = heading(
     doc,
     "Szenenübersicht",
-    `${stats.scenes.length} Szenen · Sprechzeit ${formatDuration(stats.duration)}${stats.duration.estimated ? " (geschätzt aus dem gesprochenen Text, ohne Spiel, Musik und Umbauten)" : ""}`,
+    `${stats.scenes.length} Szenen · Dauer ${formatDuration(stats.duration)}${stats.duration.estimated ? " · „ca.“ = geschätzt aus dem gesprochenen Text (ohne Spiel, Musik, Umbauten)" : " (gemessen)"}`,
   );
   const tableColumns: PdfTableColumn[] = [
     { label: "SZENE", weight: 3.2 },
     ...columns.map((column): PdfTableColumn => {
       if (column === "roles") return { label: "ROLLEN", weight: 4.5 };
-      if (column === "duration") return { label: "SPRECHZEIT", weight: 1.7, align: "right" };
+      if (column === "duration") return { label: "DAUER", weight: 1.5, align: "right" };
       if (column === "pages") return { label: "SEITEN", weight: 1, align: "right" };
       if (column === "words" || column === "passages") {
         return {

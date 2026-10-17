@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { ArrowLeftIcon, DownloadIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
@@ -15,11 +17,17 @@ import {
   type SceneTableColumn,
 } from "@/lib/skript/export-options";
 import type { ScriptReaderData } from "@/lib/skript/reader";
-import { CUE_CATEGORIES, formatDuration, type ScriptStats } from "@/lib/skript/stats";
+import {
+  CUE_CATEGORIES,
+  formatDuration,
+  parseDurationInput,
+  type ScriptStats,
+} from "@/lib/skript/stats";
 import { cueListCsv, matrixCsv, roleStatsCsv, sceneTableCsv } from "@/lib/skript/stats-csv";
 import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
+import { saveSceneDurationAction } from "../../scene-time-actions";
 import { CUE_STYLE, useSettings } from "../../shared";
 
 /** Übersichten im Leser: Rollen, Szenen, Auftritte, Technik – sortierbar, als CSV (Phase 5). */
@@ -55,11 +63,14 @@ export function ScriptOverview({
   stats,
   roleNames,
   ownRoleIds,
+  canManage,
 }: {
   version: ScriptReaderData["version"];
   stats: ScriptStats;
   roleNames: [string, string][];
   ownRoleIds: string[];
+  /** Skript-Verwaltung: gemessene Szenendauer eintragen. */
+  canManage: boolean;
 }) {
   const [settings, update] = useSettings(version.showId, ownRoleIds);
   const [tab, setTab] = React.useState<Tab>("rollen");
@@ -108,7 +119,7 @@ export function ScriptOverview({
           <Stat label="Wörter" value={NUMBER.format(stats.totalWords)} />
           <Stat label="Passagen" value={NUMBER.format(stats.totalPassages)} />
           <Stat
-            label={stats.duration.estimated ? "Sprechzeit (geschätzt)" : "Dauer"}
+            label={stats.duration.estimated ? "Dauer (teils geschätzt)" : "Dauer (gemessen)"}
             value={formatDuration(stats.duration)}
           />
         </div>
@@ -134,6 +145,7 @@ export function ScriptOverview({
             mine={mine}
             columns={settings.pdfSceneColumns}
             onColumns={(pdfSceneColumns) => update({ pdfSceneColumns })}
+            canManage={canManage}
           />
         ) : null}
         {tab === "auftritte" ? (
@@ -271,12 +283,14 @@ function SceneTable({
   mine,
   columns,
   onColumns,
+  canManage,
 }: {
   stats: ScriptStats;
   names: Map<string, string>;
   mine: Set<string>;
   columns: SceneTableColumn[];
   onColumns: (columns: SceneTableColumn[]) => void;
+  canManage: boolean;
 }) {
   const scenes = stats.scenes.filter(
     (scene) => scene.passages > 0 || CUE_CATEGORIES.some((c) => scene.cues[c].length),
@@ -297,6 +311,10 @@ function SceneTable({
         label={(c) => SCENE_TABLE_COLUMN_LABELS[c]}
         onToggle={toggle}
       />
+      <p className="text-xs text-muted-foreground">
+        Dauer mit „ca.“ ist aus dem gesprochenen Text geschätzt (ohne Spiel, Musik, Umbauten).
+        {canManage ? " Antippen, um eine gemessene Zeit einzutragen (z. B. 12:30)." : ""}
+      </p>
       <div className="overflow-x-auto rounded-md border border-border/60">
         <table className="w-full min-w-[40rem] text-sm">
           <thead className="bg-muted/50">
@@ -386,6 +404,76 @@ function SceneTable({
         </table>
       </div>
     </div>
+  );
+}
+
+function DurationCell({ scene }: { scene: ScriptStats["scenes"][number] }) {
+  const router = useRouter();
+  const measured = !scene.duration.estimated;
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const label = scene.words || measured ? formatDuration(scene.duration) : "–";
+
+  const save = async () => {
+    const seconds = parseDurationInput(value);
+    if (Number.isNaN(seconds)) {
+      toast.error("Bitte als Minuten oder mm:ss eingeben, z. B. 12:30");
+      return;
+    }
+    setBusy(true);
+    const result = await saveSceneDurationAction({ sceneId: scene.id, seconds });
+    setBusy(false);
+    if (!result.ok) {
+      toast.error("Das hat nicht geklappt", { description: result.error });
+      return;
+    }
+    setEditing(false);
+    router.refresh();
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        inputMode="numeric"
+        disabled={busy}
+        aria-label={`Gemessene Dauer für ${scene.title}`}
+        placeholder="mm:ss"
+        className="h-9 w-20 rounded-md border border-input bg-background px-2 text-right text-sm"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => void save()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") void save();
+          if (event.key === "Escape") setEditing(false);
+        }}
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setValue(
+          measured
+            ? `${Math.floor(scene.duration.seconds / 60)}:${String(scene.duration.seconds % 60).padStart(2, "0")}`
+            : "",
+        );
+        setEditing(true);
+      }}
+      title={
+        measured
+          ? "Gemessen – antippen zum Ändern, leeren zum Entfernen"
+          : "Gemessene Zeit eintragen"
+      }
+      className={cn(
+        "min-h-9 rounded px-1 underline decoration-dotted underline-offset-4 hover:bg-muted",
+        measured ? "font-medium" : "text-muted-foreground",
+      )}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -24,7 +24,14 @@ export type ReaderBlock = {
   page: number | null;
 };
 
-export type ReaderScene = { id: string; title: string; words: number; minutes: number };
+export type ReaderScene = {
+  id: string;
+  title: string;
+  words: number;
+  minutes: number;
+  /** Gemessene Dauer in Sekunden, falls eingetragen. */
+  measuredSeconds: number | null;
+};
 
 export type ReaderRole = {
   id: string;
@@ -76,7 +83,10 @@ export async function loadScriptReader(
       status: true,
       versionDate: true,
       show: { select: { title: true, year: true, scriptCredits: true } },
-      scenes: { orderBy: { sequence: "asc" }, select: { id: true, title: true } },
+      scenes: {
+        orderBy: { sequence: "asc" },
+        select: { id: true, title: true, measuredSeconds: true },
+      },
       blocks: {
         orderBy: { sequence: "asc" },
         select: {
@@ -217,7 +227,13 @@ export async function loadScriptReader(
     },
     scenes: version.scenes.map((scene) => {
       const words = sceneWords.get(scene.id) ?? 0;
-      return { id: scene.id, title: scene.title, words, minutes: estimateMinutes(words) };
+      return {
+        id: scene.id,
+        title: scene.title,
+        words,
+        minutes: estimateMinutes(words),
+        measuredSeconds: scene.measuredSeconds,
+      };
     }),
     blocks,
     roles,

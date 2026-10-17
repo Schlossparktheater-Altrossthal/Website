@@ -3972,6 +3972,11 @@ model ScriptScene {
   versionId String
   sequence  Int
   title     String
+  /// Gemessene Spieldauer in Sekunden (z. B. aus Durchläufen); ersetzt die Schätzung aus Wörtern.
+  /// Neue Fassungen übernehmen sie bei gleichem Szenentitel (docs/Plan/skript-auswertungen-plan.md).
+  measuredSeconds Int?
+  measuredAt      DateTime?
+  measuredById    String?
   version   ScriptVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
   blocks    ScriptBlock[]
 

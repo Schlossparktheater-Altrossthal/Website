@@ -20,7 +20,7 @@ export const CUE_CATEGORIES: CueCategory[] = [
 ];
 
 export type StatsInput = {
-  scenes: Pick<ReaderScene, "id" | "title">[];
+  scenes: (Pick<ReaderScene, "id" | "title"> & { measuredSeconds?: number | null })[];
   blocks: Pick<
     ReaderBlock,
     "id" | "sceneId" | "kind" | "speaker" | "roleIds" | "parts" | "words" | "page"
@@ -210,7 +210,10 @@ export function computeScriptStats(input: StatsInput): ScriptStats {
   let totalSeconds = 0;
   let anyEstimated = false;
   for (const scene of sceneStats.values()) {
-    const measured = input.measuredSeconds?.get(scene.id);
+    const measured =
+      input.measuredSeconds?.get(scene.id) ??
+      input.scenes.find((s) => s.id === scene.id)?.measuredSeconds ??
+      null;
     scene.duration =
       measured != null
         ? { seconds: measured, estimated: false }
@@ -301,6 +304,11 @@ export function cueScript(input: StatsInput, roleIds: readonly string[], cueWord
 /** „1:05 h“, „12 min“, „< 1 min“, mit „ca.“ bei Schätzung. */
 export function formatDuration(duration: Duration) {
   const minutes = Math.round(duration.seconds / 60);
+  const rest = duration.seconds % 60;
+  // Gemessene Zeiten mit Sekunden („12:30 min“), Schätzungen gerundet.
+  if (!duration.estimated && rest && duration.seconds < 3600) {
+    return `${Math.floor(duration.seconds / 60)}:${String(rest).padStart(2, "0")} min`;
+  }
   const value =
     duration.seconds > 0 && minutes < 1
       ? "< 1 min"
@@ -308,4 +316,21 @@ export function formatDuration(duration: Duration) {
         ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")} h`
         : `${minutes} min`;
   return duration.estimated && minutes >= 1 ? `ca. ${value}` : value;
+}
+
+/** Eingabe „12:30“, „12“ (Minuten) oder „1:02:30“ → Sekunden; leer → null; ungültig → NaN. */
+export function parseDurationInput(value: string): number | null {
+  const text = value.trim().replace(/\s*(min|m)\.?$/i, "");
+  if (!text) return null;
+  const parts = text.split(":");
+  if (parts.length > 3 || parts.some((part) => !/^\d{1,3}$/.test(part))) return Number.NaN;
+  const numbers = parts.map(Number);
+  if (numbers.length === 1) return numbers[0] * 60;
+  if (numbers.slice(1).some((n) => n >= 60)) return Number.NaN;
+  return numbers.reduce((total, n) => total * 60 + n, 0);
+}
+
+/** Szenentitel vergleichbar machen (Groß/klein, Leerraum, Bindestriche) – Übernahme der Zeiten. */
+export function sceneTitleKey(title: string) {
+  return title.toLocaleLowerCase("de-DE").replace(/[–—-]/g, "-").replace(/\s+/g, " ").trim();
 }

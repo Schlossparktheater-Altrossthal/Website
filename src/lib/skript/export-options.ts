@@ -42,7 +42,7 @@ export const SCENE_TABLE_COLUMN_LABELS: Record<SceneTableColumn, string> = {
   words: "Wörter",
   passages: "Passagen",
   pages: "Seiten",
-  duration: "Sprechzeit",
+  duration: "Dauer",
   ton: "Ton",
   licht: "Licht",
   nebel: "Nebel",
