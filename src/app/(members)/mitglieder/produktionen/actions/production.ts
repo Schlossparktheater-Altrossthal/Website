@@ -313,7 +313,9 @@ export async function updateProductionAction(formData: FormData): Promise<Produc
   }
 }
 
-export async function updateProductionTimelineAction(formData: FormData): Promise<void> {
+export async function updateProductionTimelineAction(
+  formData: FormData,
+): Promise<ProductionActionResult> {
   const redirectPath = parseRedirectPath(formData);
   try {
     const session = await requireAuth();
@@ -362,11 +364,10 @@ export async function updateProductionTimelineAction(formData: FormData): Promis
     });
 
     revalidateShow(showId, redirectPath, true);
+    return actionSuccess("Termine gespeichert – Fristen im Plan wurden angepasst.");
   } catch (error) {
     console.error("updateProductionTimelineAction", error);
-    const message =
-      error instanceof Error ? error.message : "Produktion konnte nicht aktualisiert werden.";
-    throw new Error(message);
+    return actionFailure(error, "Termine konnten nicht gespeichert werden.");
   }
 }
 
@@ -444,5 +445,19 @@ export async function updateOnboardingSettingsAction(formData: FormData): Promis
         ? error.message
         : "Onboarding-Einstellungen konnten nicht gespeichert werden.";
     throw new Error(message);
+  }
+}
+
+/** Wie `updateOnboardingSettingsAction`, aber mit Ergebnis statt Fehler – für Formulare mit Hinweis. */
+export async function saveOnboardingLinkAction(
+  formData: FormData,
+): Promise<ProductionActionResult> {
+  try {
+    await updateOnboardingSettingsAction(formData);
+    return actionSuccess(
+      formData.get("clear") === "1" ? "WhatsApp-Link entfernt." : "WhatsApp-Link gespeichert.",
+    );
+  } catch (error) {
+    return actionFailure(error, "Onboarding-Einstellungen konnten nicht gespeichert werden.");
   }
 }

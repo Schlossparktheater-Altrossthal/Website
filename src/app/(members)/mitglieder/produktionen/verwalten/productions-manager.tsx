@@ -1,20 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ProductionStatus } from "@prisma/client";
-import { toast } from "sonner";
 
 import { ProductionStatusPill } from "@/components/production/production-status-pill";
-import { CheckIcon, ChevronRightIcon, PlusIcon } from "@/components/ui/action-icons";
+import { CheckIcon, PlusIcon } from "@/components/ui/action-icons";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { ListRow } from "@/components/ui/list-row";
 
-import { switchProductionAction } from "../actions/production";
-import { CreateProductionForm, UpdateProductionForm } from "../production-forms-client";
-import { ProductionStatusControl } from "./production-status-control";
+import { CreateProductionForm } from "../production-forms-client";
 
 export type ManagedProduction = {
   id: string;
@@ -81,26 +77,11 @@ export function ProductionsManager({
 }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(openCreate);
-  const [editId, setEditId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [isSwitching, startSwitch] = useTransition();
-  const editing = shows.find((show) => show.id === editId) ?? null;
 
   const closeCreate = (open: boolean) => {
     setCreateOpen(open);
     if (!open && openCreate) router.replace(PAGE_PATH, { scroll: false });
-  };
-
-  const showProduction = (show: ManagedProduction) => {
-    startSwitch(async () => {
-      const result = await switchProductionAction(show.id, PAGE_PATH);
-      if (!result.ok) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(`Angezeigt: ${productionTitle(show)}`);
-      router.refresh();
-    });
   };
 
   return (
@@ -145,7 +126,7 @@ export function ProductionsManager({
                   return (
                     <li key={show.id}>
                       <ListRow
-                        onClick={() => setEditId(show.id)}
+                        href={`/mitglieder/produktionen/${show.id}`}
                         leading={<YearTile year={show.year} />}
                         title={productionTitle(show)}
                         description={describe(show)}
@@ -172,76 +153,6 @@ export function ProductionsManager({
           </section>
         );
       })}
-
-      <BottomSheet
-        open={editing !== null}
-        onOpenChange={(open) => !open && setEditId(null)}
-        title={editing ? productionTitle(editing) : "Produktion"}
-        description="Status, Anzeige und Stammdaten der Produktion"
-      >
-        {editing ? (
-          <div className="space-y-6">
-            <section className="space-y-2">
-              <h3 className="text-sm font-medium">Status</h3>
-              <ProductionStatusControl
-                key={`${editing.id}-${editing.status}`}
-                showId={editing.id}
-                showTitle={productionTitle(editing)}
-                status={editing.status}
-              />
-            </section>
-
-            <section className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
-              {editing.id === activeShowId ? (
-                <p className="flex items-center gap-2 text-sm">
-                  <CheckIcon className="size-4 text-primary" />
-                  Wird dir gerade angezeigt
-                </p>
-              ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Du siehst gerade eine andere Produktion.
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={isSwitching}
-                    onClick={() => showProduction(editing)}
-                  >
-                    Anzeigen
-                  </Button>
-                </>
-              )}
-            </section>
-
-            <section className="space-y-2">
-              <h3 className="text-sm font-medium">Stammdaten</h3>
-              <UpdateProductionForm
-                key={editing.id}
-                show={editing}
-                redirectPath={PAGE_PATH}
-                onSuccess={() => {
-                  setEditId(null);
-                  router.refresh();
-                }}
-              />
-            </section>
-
-            <Link
-              href={`/mitglieder/produktionen/${editing.id}`}
-              className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-sm transition hover:bg-muted/50"
-            >
-              <span>
-                <span className="block font-medium">Premiere, Endprobenwoche &amp; Onboarding</span>
-                <span className="block text-xs text-muted-foreground">
-                  Weitere Einstellungen der Produktion
-                </span>
-              </span>
-              <ChevronRightIcon className="size-4 text-muted-foreground" />
-            </Link>
-          </div>
-        ) : null}
-      </BottomSheet>
 
       <BottomSheet
         open={createOpen}

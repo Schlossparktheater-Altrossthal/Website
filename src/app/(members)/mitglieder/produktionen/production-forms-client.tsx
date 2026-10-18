@@ -1,30 +1,15 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useActionState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 
 import type { ProductionActionResult } from "@/lib/produktionen/actions-helpers";
-import {
-  clearActiveProductionAction,
-  createProductionAction,
-  setActiveProductionAction,
-  updateProductionAction,
-} from "./actions/production";
+import { createProductionAction, updateProductionAction } from "./actions/production";
 
 const INITIAL_ACTION_STATE: ProductionActionResult = { ok: false, error: "" };
 
@@ -218,139 +203,6 @@ export function CreateProductionForm({
   );
 }
 
-type CreateProductionDialogProps = {
-  suggestedYear: number;
-  shouldSetActiveByDefault: boolean;
-  redirectPath: string;
-  trigger?: ReactNode;
-  /** Direkt geöffnet, z. B. über „Neue Produktion“ im Wechsler (`?neu=1`). */
-  defaultOpen?: boolean;
-};
-
-export function CreateProductionDialog({
-  suggestedYear,
-  shouldSetActiveByDefault,
-  redirectPath,
-  trigger,
-  defaultOpen = false,
-}: CreateProductionDialogProps) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger ?? <Button>Neue Produktion anlegen</Button>}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader className="space-y-2">
-          <DialogTitle>Neue Produktion anlegen</DialogTitle>
-          <DialogDescription>
-            Erfasse Jahrgang, optionale Beschreibung und starte direkt in den modernen Gewerke-,
-            Rollen- und Szenen-Workflows.
-          </DialogDescription>
-        </DialogHeader>
-        <CreateProductionForm
-          redirectPath={redirectPath}
-          suggestedYear={suggestedYear}
-          shouldSetActiveByDefault={shouldSetActiveByDefault}
-          onSuccess={() => setOpen(false)}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-type SetActiveProductionFormProps = {
-  showId: string;
-  showTitle: string;
-  redirectPath: string;
-  isActive: boolean;
-  className?: string;
-};
-
-export function SetActiveProductionForm({
-  showId,
-  showTitle,
-  redirectPath,
-  isActive,
-  className,
-}: SetActiveProductionFormProps) {
-  const action = useCallback(async (_state: ProductionActionResult, formData: FormData) => {
-    return setActiveProductionAction(formData);
-  }, []);
-  const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
-  const isInitialRender = useRef(true);
-
-  useEffect(() => {
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
-    }
-    if (!state.ok) {
-      toast.error(state.error);
-      return;
-    }
-    const message = state.message ?? `Angezeigt: ${showTitle}`;
-    toast.success(message);
-  }, [showTitle, state]);
-
-  return (
-    <form action={formAction} className={cn("flex-shrink-0", className)}>
-      <input type="hidden" name="showId" value={showId} />
-      <input type="hidden" name="redirectPath" value={redirectPath} />
-      <Button type="submit" size="sm" disabled={isPending || isActive}>
-        {isActive ? "Angezeigt" : "Anzeigen"}
-      </Button>
-      {!state.ok ? (
-        <p role="alert" aria-live="assertive" className="mt-2 text-xs text-destructive">
-          {state.error}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-type ClearActiveProductionFormProps = {
-  redirectPath: string;
-  className?: string;
-};
-
-export function ClearActiveProductionForm({
-  redirectPath,
-  className,
-}: ClearActiveProductionFormProps) {
-  const action = useCallback(async (_state: ProductionActionResult, formData: FormData) => {
-    return clearActiveProductionAction(formData);
-  }, []);
-  const [state, formAction, isPending] = useActionState(action, INITIAL_ACTION_STATE);
-  const isInitialRender = useRef(true);
-
-  useEffect(() => {
-    if (isInitialRender.current) {
-      isInitialRender.current = false;
-      return;
-    }
-    if (!state.ok) {
-      toast.error(state.error);
-      return;
-    }
-    const message = state.message ?? "Auswahl wurde zurückgesetzt.";
-    toast.success(message);
-  }, [state]);
-
-  return (
-    <form action={formAction} className={cn("flex-shrink-0", className)}>
-      <input type="hidden" name="redirectPath" value={redirectPath} />
-      <Button type="submit" variant="ghost" size="sm" disabled={isPending}>
-        Aktive Auswahl zurücksetzen
-      </Button>
-      {!state.ok ? (
-        <p role="alert" aria-live="assertive" className="mt-2 text-xs text-destructive">
-          {state.error}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
 type UpdateProductionFormProps = {
   show: {
     id: string;
@@ -478,39 +330,5 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
         </div>
       </div>
     </form>
-  );
-}
-
-type UpdateProductionDialogProps = {
-  show: UpdateProductionFormProps["show"];
-  redirectPath: string;
-  trigger?: ReactNode;
-};
-
-export function UpdateProductionDialog({
-  show,
-  redirectPath,
-  trigger,
-}: UpdateProductionDialogProps) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger ?? <Button>Produktion bearbeiten</Button>}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader className="space-y-2">
-          <DialogTitle>Produktion bearbeiten</DialogTitle>
-          <DialogDescription>
-            Aktualisiere Jahrgang, optionale Beschreibung sowie Zeitraum deiner Produktion.
-            Änderungen werden direkt im Workspace übernommen.
-          </DialogDescription>
-        </DialogHeader>
-        <UpdateProductionForm
-          show={show}
-          redirectPath={redirectPath}
-          onSuccess={() => setOpen(false)}
-        />
-      </DialogContent>
-    </Dialog>
   );
 }

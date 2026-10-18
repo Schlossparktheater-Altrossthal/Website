@@ -1,273 +1,187 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { PageHeader } from "@/components/members/page-header";
+import { ProductionStatusPill } from "@/components/production/production-status-pill";
+import { ListRow } from "@/components/ui/list-row";
+import { getActiveProductionId } from "@/lib/active-production";
+import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
+import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
+import { hasPermission } from "@/lib/permissions";
+import { daysUntil, formatCountdown } from "@/lib/planning/schedule";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
-import { hasPermission } from "@/lib/permissions";
-import { getActiveProductionId } from "@/lib/active-production";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DateInput } from "@/components/ui/date-input";
-import { Input } from "@/components/ui/input";
 
-import { getOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
-
+import { UpdateProductionForm } from "../production-forms-client";
+import { ProductionStatusControl } from "../verwalten/production-status-control";
 import {
-  updateOnboardingSettingsAction,
-  updateProductionTimelineAction,
-} from "../actions/production";
-import { SetActiveProductionForm, UpdateProductionDialog } from "../production-forms-client";
-import { XIcon } from "@/components/ui/action-icons";
+  OnboardingLinkForm,
+  ShowProductionButton,
+  TimelineForm,
+} from "./production-settings-forms";
 
-function formatShowTitle(show: { title: string | null; year: number }) {
-  if (show.title && show.title.trim()) return show.title;
-  return `Produktion ${show.year}`;
+const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function dateInput(value: Date | null) {
+  return value ? value.toISOString().slice(0, 10) : "";
 }
 
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3 rounded-lg border border-border bg-card p-4 sm:p-5">
+      <div className="space-y-0.5">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** Produktion einrichten (docs/Plan/produktionen-wechsler-plan.md, Schritt 4). */
 export default async function ProduktionDetailPage({
   params,
 }: {
   params: Promise<{ showId: string }>;
 }) {
   const session = await requireAuth();
-  const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
-  if (!allowed) {
-    return (
-      <div className="space-y-6">
-        <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-          Du hast keinen Zugriff auf diese Produktion.
-        </div>
-      </div>
-    );
+  if (!(await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE"))) {
+    redirect("/mitglieder/produktionen");
   }
 
-  const resolvedParams = await params;
-  const showId = resolvedParams?.showId;
-  if (!showId) {
-    notFound();
-  }
-
-  const [show, breakdownCount] = await Promise.all([
+  const { showId } = await params;
+  const [show, breakdownCount, memberCounts, activeProductionId] = await Promise.all([
     prisma.show.findUnique({
       where: { id: showId },
       include: { _count: { select: { characters: true, scenes: true } } },
     }),
     prisma.productionObject.count({ where: { showId, archivedAt: null } }),
+    prisma.productionMembership.groupBy({
+      by: ["status"],
+      where: { showId },
+      _count: { _all: true },
+    }),
+    getActiveProductionId(session.user?.id, { canManageProductions: true }),
   ]);
+  if (!show) notFound();
 
-  if (!show) {
-    notFound();
-  }
+  const isDisplayed = activeProductionId === show.id;
+  const title = show.title?.trim() || `Produktion ${show.year}`;
+  const countOf = (status: string) =>
+    memberCounts.find((entry) => entry.status === status)?._count._all ?? 0;
+  const activeMembers = countOf("active");
+  const openMembers = countOf("invited") + countOf("onboarding");
+  const premiere = show.premiereAt;
 
-  const activeProductionId = await getActiveProductionId(session.user?.id);
-  const isActive = activeProductionId === show.id;
-  const title = formatShowTitle(show);
-  const premiereValue = show.premiereAt ? show.premiereAt.toISOString().slice(0, 10) : "";
-  const finalRehearsalWeekStartValue = show.finalRehearsalWeekStart
-    ? show.finalRehearsalWeekStart.toISOString().slice(0, 10)
-    : "";
-  const finalRehearsalWeekEndValue = show.finalRehearsalWeekEnd
-    ? show.finalRehearsalWeekEnd.toISOString().slice(0, 10)
-    : "";
-  const finalRehearsalWeekStartLabel = show.finalRehearsalWeekStart
-    ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekStart)
-    : null;
-  const finalRehearsalWeekEndLabel = show.finalRehearsalWeekEnd
-    ? new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(show.finalRehearsalWeekEnd)
-    : null;
-  const finalRehearsalWeekRangeLabel =
-    finalRehearsalWeekStartLabel && finalRehearsalWeekEndLabel
-      ? `${finalRehearsalWeekStartLabel} – ${finalRehearsalWeekEndLabel}`
-      : (finalRehearsalWeekStartLabel ?? finalRehearsalWeekEndLabel);
-  const whatsappLink = getOnboardingWhatsAppLink(show.meta);
-  const onboardingRedirect = `/mitglieder/produktionen/${show.id}`;
-  const updateDialogShow = {
-    id: show.id,
-    year: show.year,
-    title: show.title,
-    synopsis: show.synopsis,
-    dates: show.dates,
-    revealedAt: show.revealedAt ? show.revealedAt.toISOString() : null,
-  };
+  const displayedOnly = (href: string) => (isDisplayed ? { href } : {});
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Produktion {show.year}
-            </p>
-            <h1 className="text-3xl font-semibold">{title}</h1>
-            {show.synopsis ? (
-              <p className="max-w-2xl text-sm text-muted-foreground">{show.synopsis}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <UpdateProductionDialog
-              show={updateDialogShow}
-              redirectPath={`/mitglieder/produktionen/${show.id}`}
-              trigger={
-                <Button variant="outline" size="sm">
-                  Produktion bearbeiten
-                </Button>
-              }
-            />
-            <Button asChild variant="outline" size="sm">
-              <Link href="/mitglieder/produktionen">Zur Produktionsübersicht</Link>
-            </Button>
-          </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        title={title}
+        description={
+          <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <ProductionStatusPill status={show.status} />
+            <span>
+              {premiere
+                ? [`Premiere ${DATE_FORMAT.format(premiere)}`, formatCountdown(daysUntil(premiere))]
+                    .filter(Boolean)
+                    .join(" · ")
+                : `Jahrgang ${show.year} · Premiere noch offen`}
+            </span>
+          </span>
+        }
+        breadcrumbs={[
+          membersNavigationBreadcrumb("/mitglieder/produktionen"),
+          { id: "verwalten", label: "Verwalten", href: "/mitglieder/produktionen/verwalten" },
+        ]}
+      />
+
+      {isDisplayed ? null : (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm">
+          <p className="min-w-0 flex-1 text-muted-foreground">
+            Du siehst gerade eine andere Produktion. Stück und Gewerke öffnen sich erst, wenn diese
+            angezeigt wird.
+          </p>
+          <ShowProductionButton showId={show.id}>Diese anzeigen</ShowProductionButton>
         </div>
-      </section>
+      )}
 
-      <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle className="text-lg font-semibold">Status &amp; Kennzahlen</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-background/70 p-4">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Rollen</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">
-                {show._count.characters}
-              </div>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-background/70 p-4">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Szenen</div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">
-                {show._count.scenes}
-              </div>
-            </div>
-            <div className="rounded-lg border border-border/60 bg-background/70 p-4">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Ausstattung
-              </div>
-              <div className="mt-2 text-2xl font-semibold text-foreground">{breakdownCount}</div>
-            </div>
-          </div>
+      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        <li>
+          <ListRow
+            href={`/mitglieder/produktionen/${show.id}/ensemble`}
+            title="Ensemble"
+            description={`${activeMembers} dabei${openMembers > 0 ? ` · ${openMembers} im Onboarding` : ""}`}
+          />
+        </li>
+        <li>
+          <ListRow
+            {...displayedOnly("/mitglieder/produktionen/stueck")}
+            title="Stück, Rollen & Szenen"
+            description={`${show._count.characters} Rollen · ${show._count.scenes} Szenen · ${breakdownCount} Ausstattung`}
+          />
+        </li>
+        <li>
+          <ListRow
+            {...displayedOnly("/mitglieder/produktionen/gewerke")}
+            title="Gewerke & Teams"
+            description="Teams, Aufgaben und Übergaben"
+          />
+        </li>
+      </ul>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild>
-              <Link href={`/mitglieder/produktionen/${show.id}/ensemble`}>Ensemble</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/mitglieder/produktionen/stueck?ansicht=rollen">Rollen</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/mitglieder/produktionen/stueck">Stück</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/mitglieder/meine-gewerke">Gewerke &amp; Teams</Link>
-            </Button>
-            {!isActive ? (
-              <SetActiveProductionForm
-                showId={show.id}
-                showTitle={title}
-                redirectPath={`/mitglieder/produktionen/${show.id}`}
-                isActive={isActive}
-                className="ml-auto flex-shrink-0"
-              />
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
+      <Section title="Status">
+        <ProductionStatusControl
+          key={show.status}
+          showId={show.id}
+          showTitle={title}
+          status={show.status}
+        />
+      </Section>
 
-      <Card id="endprobenwoche" className="scroll-mt-20">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-lg font-semibold">Premiere &amp; Endprobenwoche</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            action={updateProductionTimelineAction}
-            className="flex flex-col gap-4 sm:flex-row sm:items-end"
-          >
-            <input type="hidden" name="showId" value={show.id} />
-            <input
-              type="hidden"
-              name="redirectPath"
-              value={`/mitglieder/produktionen/${show.id}`}
-            />
-            <div className="space-y-1 sm:max-w-xs">
-              <label className="text-sm font-medium" htmlFor="premiereAt">
-                Premiere
-              </label>
-              <DateInput id="premiereAt" name="premiereAt" defaultValue={premiereValue} />
-            </div>
-            <div className="space-y-2 sm:max-w-xs">
-              <div className="space-y-1">
-                <label className="text-sm font-medium" htmlFor="finalRehearsalWeekStart">
-                  Beginn der Endprobenwoche
-                </label>
-                <DateInput
-                  id="finalRehearsalWeekStart"
-                  name="finalRehearsalWeekStart"
-                  defaultValue={finalRehearsalWeekStartValue}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {finalRehearsalWeekRangeLabel ?? "Kein Zeitraum hinterlegt."}
-              </p>
-            </div>
-            <div className="space-y-2 sm:max-w-xs">
-              <div className="space-y-1">
-                <label className="text-sm font-medium" htmlFor="finalRehearsalWeekEnd">
-                  Ende der Endprobenwoche
-                </label>
-                <DateInput
-                  id="finalRehearsalWeekEnd"
-                  name="finalRehearsalWeekEnd"
-                  defaultValue={finalRehearsalWeekEndValue}
-                />
-              </div>
-            </div>
-            <Button type="submit" className="sm:w-auto">
-              Speichern
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <Section
+        title="Termine"
+        description="Fristen im Produktionsplan hängen an Premiere und Endprobenwoche und werden mitverschoben."
+      >
+        <TimelineForm
+          showId={show.id}
+          premiere={dateInput(show.premiereAt)}
+          weekStart={dateInput(show.finalRehearsalWeekStart)}
+          weekEnd={dateInput(show.finalRehearsalWeekEnd)}
+        />
+      </Section>
 
-      <Card>
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-lg font-semibold">Onboarding-Einstellungen</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={updateOnboardingSettingsAction} className="space-y-4">
-            <input type="hidden" name="showId" value={show.id} />
-            <input type="hidden" name="redirectPath" value={onboardingRedirect} />
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="whatsappLink">
-                WhatsApp-Beitrittslink
-              </label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  id="whatsappLink"
-                  name="whatsappLink"
-                  defaultValue={whatsappLink ?? ""}
-                  placeholder="https://chat.whatsapp.com/..."
-                  className="sm:max-w-lg"
-                />
-                <div className="flex items-center gap-2">
-                  <Button type="submit">Speichern</Button>
-                  {whatsappLink ? (
-                    <Button
-                      type="submit"
-                      name="clear"
-                      value="1"
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      aria-label="Link entfernen"
-                    >
-                      <XIcon className="h-4 w-4" />
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <Section title="Stammdaten">
+        <UpdateProductionForm
+          show={{
+            id: show.id,
+            year: show.year,
+            title: show.title,
+            synopsis: show.synopsis,
+            dates: show.dates,
+            revealedAt: show.revealedAt ? show.revealedAt.toISOString() : null,
+          }}
+          redirectPath={`/mitglieder/produktionen/${show.id}`}
+        />
+      </Section>
+
+      <Section title="Onboarding">
+        <OnboardingLinkForm showId={show.id} link={getOnboardingWhatsAppLink(show.meta) ?? null} />
+      </Section>
     </div>
   );
 }

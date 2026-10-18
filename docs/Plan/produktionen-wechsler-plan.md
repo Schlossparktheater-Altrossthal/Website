@@ -42,3 +42,11 @@ Stand: 2026-10-18 · Abgestimmt mit dem User.
      mit Knopf zur laufenden (sonst geplanten) Produktion (`PastProductionBanner`). Weil mehrere
      Produktionen gleichzeitig laufen dürfen, gibt es keinen Hinweis zwischen laufenden.
    - E2E für Wechsel (gleiche Seite, ID-Ersatz, Rückfall), Screenshots mobil + desktop.
+4. **Alte Produktionsseiten erneuert** – erledigt 2026-10-18
+   - `/mitglieder/produktionen/[showId]` = „Produktion einrichten“: Bereiche (Ensemble, Stück,
+     Gewerke) als Listenzeilen, Status-Umschalter, Termine, Stammdaten, Onboarding-Link.
+     Stück/Gewerke laufen über die angezeigte Produktion – bei anderer Produktion Hinweis +
+     „Diese anzeigen“. Die Verwaltungsliste verlinkt direkt hierher (kein Bearbeiten-Sheet mehr).
+   - Ensemble: Kennzahlen, Filter (Alle/Offen/Foto/Ehemalig) + Suche, Listenzeilen; Bearbeiten,
+     Aufnehmen (Suche, Antippen nimmt auf) und Ehemalige einladen jeweils im Bottom-Sheet;
+     Erinnerungen und Fotoliste im Menü, Rückfragen per ConfirmDialog statt `window.confirm`.
