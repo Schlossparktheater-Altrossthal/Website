@@ -139,7 +139,10 @@ export function useLiveFollow({
   React.useEffect(() => {
     if (!enabled) return;
     state.current = FOLLOWING;
-    const onInput = () => interrupt();
+    // Scrollen in Seitenleiste oder Dialogen bewegt die Seite nicht.
+    const onInput = (event: Event) => {
+      if (!insideOwnScroller(event.target)) interrupt();
+    };
     const onKey = (event: KeyboardEvent) => {
       if (SCROLL_KEYS.has(event.key) && !isEditable(event.target)) interrupt();
     };
@@ -198,6 +201,10 @@ export function useLiveFollow({
   }, [enabled, interrupt, readingLine, screenY, userPosition]);
 
   return { status, interrupt, resume, startHere };
+}
+
+function insideOwnScroller(target: EventTarget | null) {
+  return target instanceof Element && !!target.closest("aside, [role='dialog']");
 }
 
 function isEditable(target: EventTarget | null) {
