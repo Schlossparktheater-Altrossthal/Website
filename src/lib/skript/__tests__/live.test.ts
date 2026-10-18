@@ -18,7 +18,7 @@ const text = (sceneId: string, length: number) => ({
 const blocks = [
   text("s1", 100),
   { sceneId: "s1", parts: [{ kind: "direction" as const, text: "y".repeat(100) }] },
-  { sceneId: "s2", parts: [{ kind: "cue" as const, text: "Licht", category: "light" as const }] },
+  { sceneId: "s2", parts: [{ kind: "cue" as const, text: "Licht", category: "licht" as const }] },
   text("s2", 200),
 ];
 const axis = buildAxis(blocks);
