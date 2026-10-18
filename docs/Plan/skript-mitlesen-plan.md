@@ -92,6 +92,64 @@ eine reine Funktion in `src/lib/skript/live/estimate.ts` und wird von Server und
   wählbar; „Scrollen übernehmen“ gibt sie weiter.
 - Meldungen: höchstens 1/s und nur bei Änderung; Server sendet die Schätzung 2×/s an den Raum.
 
+## Automatisches Probenprotokoll (Erweiterung 2026-10-18)
+
+Die Positionen, die ohnehin für die Live-Stelle gemeldet werden, ergeben nebenbei ein
+Protokoll der Probe. Gespeichert wird **nicht** jede Einzelposition, sondern nur eine
+verdichtete Zeitleiste je Sitzung (alle ~5 s: Gruppen mit Position, Größe, beteiligte Rollen).
+
+### Was erkannt wird
+
+- **Gruppen:** Mehrere dichte Cluster gleichzeitig = Teilgruppen proben parallel
+  verschiedene Szenen (z. B. Szene 3 mit 4 Personen, Szene 7 mit 9 Personen). Jede Gruppe
+  bekommt eine eigene Live-Stelle; man folgt automatisch der Gruppe, in der man liest bzw.
+  deren Szene die eigene Rolle enthält. Große Gruppe = Ensemble-Leseprobe, kleine = Szenenarbeit.
+- **Szenendauer brutto/netto:** wie lange eine Gruppe in einer Szene war (brutto) und wie lange
+  sie davon tatsächlich vorwärts gelesen hat (netto, ohne Stillstand).
+- **Wiederholungen:** Rücksprung der Gruppe um mehr als ein paar Absätze und erneutes
+  Durchlesen = Wiederholung; gezählt je Szene und Passage („ab ‚Halt, wer da?‘ 3× wiederholt“).
+- **Unterbrechungen:** Stillstand > 30 s = Nachfrage, Gespräch, Pause. Dauer und Stelle werden
+  festgehalten; lange Stillstände ohne Aktivität = Pause.
+- **Übersprungen/ausgelassen:** Gruppe springt vorwärts über Absätze → als „nicht gelesen“
+  markiert (wichtig für „was haben wir schon geprobt?“).
+- **Wer war dabei:** Rollen der aktiv Mitlesenden je Szene → Abgleich mit den in der Szene
+  sprechenden Rollen („Rolle X fehlte in Szene 4“, Vorschlag fürs Anwesenheits-Häkchen).
+- **Probenart:** aus Tempo, Stillständen und Wiederholungen grob klassifiziert –
+  Leseprobe / Szenenarbeit / Durchlauf. Nur Durchläufe gehen als Kandidat in die Szenenzeiten
+  ein (mit Bestätigung), alles andere bleibt Probenstatistik.
+
+### Was daraus wird
+
+- **Protokollentwurf am Probentermin:** „19:05–19:40 Szene 2–4 (Ensemble, 1 Wiederholung),
+  19:40–20:15 parallel Szene 6 (klein) und Lied 2 …“. Wird an das bestehende Probenprotokoll
+  des Termins angehängt; Leitung bestätigt/korrigiert, erst dann ist es sichtbar.
+- **Lernkurve je Szene:** Netto-Tempo und Stillstände über alle Proben → Diagramm „Szene 5
+  wird schneller, Szene 8 stockt noch“. Prognose, wann eine Szene Durchlauf-Tempo erreicht
+  (Ziel = gemessene bzw. geschätzte Szenenzeit), mit Warnung, wenn die Zeit bis zur Premiere
+  nicht reicht.
+- **Problemstellen-Heatmap** im Skript (nur Regie/Leitung): wo wird oft angehalten oder
+  wiederholt → Randmarkierung im Leser, Liste „Top-10-Stellen“.
+- **Probenabdeckung:** welche Szenen wie oft/lange geprobt wurden und wann zuletzt → fließt in
+  die Planungshilfen (probbare Szenen, „lange nicht geprobt“) der Terminplanung.
+- **Lernmodus:** Passagen mit vielen Stillständen/Wiederholungen werden beim Lernen der eigenen
+  Rolle vorgezogen (nur wenn die eigene Rolle dort spricht).
+- **Pausen-/Zeitbilanz:** Anteil Lesen vs. Gespräch vs. Pause je Probe – hilft beim Planen
+  realistischer Probenabläufe (Termineditor-Dauern).
+
+### Weitere Ideen (optional, später)
+
+- „Wo sind wir?“-Anzeige für Zuspätkommende auf dem Dashboard während der Probe.
+- Hinweis an Personen, deren Rolle gleich dran ist, die aber gerade woanders lesen
+  („Deine Szene beginnt in ~2 Min.“) – auch für Parallelproben.
+- Technik: nächster Hinweis mit geschätzter Restzeit statt nur Standby.
+- Vergleich zweier Fassungen: brauchen geänderte Stellen mehr Wiederholungen?
+
+### Datenschutz beim Protokoll
+
+Gespeichert werden Gruppen und Rollen, keine Bewegungsdaten einzelner Personen. Rohdaten der
+Zeitleiste werden nach Bestätigung des Protokolls verdichtet (Szenenstatistik) und nach
+~30 Tagen gelöscht. Anwesenheit wird nie automatisch gesetzt, nur vorgeschlagen.
+
 ## Phasen
 
 1. **Lesezeile + Folgen-Steuerung lokal** – Lesezeile messen (vorhandene Messlogik bei
@@ -115,6 +173,10 @@ eine reine Funktion in `src/lib/skript/live/estimate.ts` und wird von Server und
   evtl. nützlich), oder bleibt das anonym?
 - O3: Läuft der Realtime-Server in Prod mit einer Instanz? Sonst Schätzung mit Redis-Adapter
   bzw. sticky Raum-Zuordnung absichern.
+- O5: Protokollentwurf automatisch an den Termin hängen oder nur auf Knopfdruck?
+- O6: Wer sieht Lernkurve/Heatmap – nur Regie/Leitung oder auch das Ensemble (motivierend vs.
+  bloßstellend)? Auswertung bleibt in jedem Fall je Szene, nicht je Person.
+- O7: Rollen der Mitlesenden im Protokoll speichern (für „Rolle X fehlte“) oder ganz anonym?
 - O4: Lesetempo allein (Teleprompter) mit in Phase 4 oder erst bei Bedarf?
 
 ## Checkliste
@@ -124,3 +186,9 @@ eine reine Funktion in `src/lib/skript/live/estimate.ts` und wird von Server und
 - [ ] Phase 3 Statistische Schätzung
 - [ ] Phase 4 Feinschliff
 - [ ] Phase 5 E2E + Gerätetest
+- [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)
+- [ ] Phase 7 Sitzungs-Zeitleiste speichern (Tabelle `ScriptSessionSample`, verdichtet) +
+      Erkennung Wiederholung/Stillstand/Übersprungen/Probenart
+- [ ] Phase 8 Protokollentwurf am Probentermin + Bestätigung, Anwesenheitsvorschlag
+- [ ] Phase 9 Auswertungen: Lernkurve/Prognose je Szene, Heatmap, Probenabdeckung →
+      Planungshilfen, Lernmodus-Priorität
