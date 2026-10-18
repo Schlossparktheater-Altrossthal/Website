@@ -165,6 +165,18 @@ Zeitleiste werden nach Bestätigung des Protokolls verdichtet (Szenenstatistik) 
    Kopplung an laufenden Termin, Lesetempo allein/offline.
 5. **E2E + Gerätetest** – zwei Browser-Kontexte in einem Raum; echte Leseprobe als Abnahme.
 
+## Entscheidungen (2026-10-18)
+
+- E1: Zuerst gründlich protokollieren (Zeitleiste, Gruppen, Wiederholungen, Stillstände,
+  Übersprungenes, Rollen); genauere Auswertungen (Lernkurve, Prognose, Heatmap, Abdeckung,
+  Lernmodus-Priorität) werden später geplant.
+- E2: Protokollentwurf ist ein eigenes Objekt (eigene Ansicht je Sitzung), wird aber mit dem
+  Probentermin verknüpft und dort angezeigt; Sitzungen ohne Termin bleiben möglich.
+- E3: Lernkurven/Problemstellen nur mit eigener Berechtigung (Name/Zuschnitt später).
+- E4: Rollen der Mitlesenden werden im Protokoll gespeichert (Grundlage für „Rolle X fehlte“).
+- E5: „Wo sind wir gerade?“ wird umgesetzt (Dashboard/Termin während laufender Sitzung:
+  Szene, Absatz, Gruppen; Tipp öffnet den Leser an der Live-Stelle).
+
 ## Offene Fragen
 
 - O1: Soll „Mitlesen“ während eines Probentermins automatisch an sein oder immer bewusst
@@ -173,10 +185,6 @@ Zeitleiste werden nach Bestätigung des Protokolls verdichtet (Szenenstatistik) 
   evtl. nützlich), oder bleibt das anonym?
 - O3: Läuft der Realtime-Server in Prod mit einer Instanz? Sonst Schätzung mit Redis-Adapter
   bzw. sticky Raum-Zuordnung absichern.
-- O5: Protokollentwurf automatisch an den Termin hängen oder nur auf Knopfdruck?
-- O6: Wer sieht Lernkurve/Heatmap – nur Regie/Leitung oder auch das Ensemble (motivierend vs.
-  bloßstellend)? Auswertung bleibt in jedem Fall je Szene, nicht je Person.
-- O7: Rollen der Mitlesenden im Protokoll speichern (für „Rolle X fehlte“) oder ganz anonym?
 - O4: Lesetempo allein (Teleprompter) mit in Phase 4 oder erst bei Bedarf?
 
 ## Checkliste
@@ -189,6 +197,7 @@ Zeitleiste werden nach Bestätigung des Protokolls verdichtet (Szenenstatistik) 
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)
 - [ ] Phase 7 Sitzungs-Zeitleiste speichern (Tabelle `ScriptSessionSample`, verdichtet) +
       Erkennung Wiederholung/Stillstand/Übersprungen/Probenart
-- [ ] Phase 8 Protokollentwurf am Probentermin + Bestätigung, Anwesenheitsvorschlag
-- [ ] Phase 9 Auswertungen: Lernkurve/Prognose je Szene, Heatmap, Probenabdeckung →
-      Planungshilfen, Lernmodus-Priorität
+- [ ] Phase 8 Protokollentwurf als eigenes Objekt, verknüpft mit Probentermin, Bestätigung,
+      Anwesenheitsvorschlag (Rollen gespeichert)
+- [ ] Phase 8b „Wo sind wir gerade?“ (Dashboard/Termin, Tipp → Leser an Live-Stelle)
+- [ ] Phase 9 Auswertungen (später planen; Lernkurve/Problemstellen nur mit eigener Berechtigung)
