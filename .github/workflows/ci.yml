@@ -79,6 +79,10 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/theater_test?schema=public
       NEXT_TELEMETRY_DISABLED: "1"
       AUTH_SECRET: e2e-ci-only-not-a-real-secret-0123456789
+      # Realtime-Server für das Live-Mitlesen (e2e/skript-mitlesen.spec.ts), startet mit next dev.
+      REALTIME_HANDSHAKE_SECRET: e2e-ci-only-realtime-secret
+      REALTIME_AUTH_TOKEN: e2e-ci-only-realtime-secret
+      NEXT_PUBLIC_REALTIME_URL: http://localhost:4001
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -103,5 +107,5 @@ jobs:
           CI: "true"
           # Playwright startet damit selbst den Dev-Server (playwright.config.ts webServer),
           # weil der Test-Login /api/dev/screenshot-session nur außerhalb von Production greift.
-          SCAN_E2E_START_COMMAND: pnpm exec next dev --turbo
+          SCAN_E2E_START_COMMAND: node realtime-server/src/server.js & pnpm exec next dev --turbo
         run: pnpm exec playwright test

@@ -230,6 +230,10 @@ Phase 1–3 auf main und Staging (letzter Commit 1a324724), Prod-Release offen.
         Redis-Anfragen mehr
   - [x] Realtime-Server-Tests (`node --test` in `realtime-server/`) in der CI (2026-10-18)
 - [ ] Phase 5 E2E + Gerätetest
+  - [x] E2E `e2e/skript-mitlesen.spec.ts` (2026-10-18): admin führt (Desktop), owner folgt mobil
+        einer Person, pausiert, „Live ↓“, Automatisch, danach „1 abgehängt“ bei der Führung;
+        CI startet dafür den Realtime-Server neben next dev
+  - [ ] Gerätetest bei einer echten Leseprobe
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)
 - [ ] Phase 7 Sitzungs-Zeitleiste speichern (Tabelle `ScriptSessionSample`, verdichtet) +
       Erkennung Wiederholung/Stillstand/Übersprungen/Probenart
