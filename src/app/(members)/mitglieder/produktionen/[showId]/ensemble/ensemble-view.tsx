@@ -124,7 +124,7 @@ function Hint({ tone, children }: { tone: "warning" | "muted"; children: React.R
 function describeMember(member: EnsembleMember) {
   const roles = member.roles.map((role) => ROLE_LABELS[role]);
   if (member.func) roles.push(member.func);
-  return roles.length > 0 ? roles.join(" · ") : "Noch keine Rolle";
+  return roles.length > 0 ? roles.join(" · ") : undefined;
 }
 
 function normalize(value: string) {
@@ -207,12 +207,12 @@ export function EnsembleView({
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <StatTile label="Dabei" value={counts.active} tone="success" />
         <StatTile
-          label="Onboarding offen"
+          label="Im Onboarding"
           value={counts.open}
           tone={counts.open > 0 ? "warning" : "neutral"}
         />
         <StatTile
-          label="Ohne Fotoerlaubnis"
+          label="Ohne Foto"
           value={counts.photo}
           tone={counts.photo > 0 ? "warning" : "neutral"}
         />
@@ -597,7 +597,7 @@ function AddMemberSheet({
       description="Antippen nimmt die Person direkt in diese Produktion auf."
       showDescription
     >
-      <div className="space-y-3">
+      <div className="space-y-3 pt-1">
         <SearchField value={query} onChange={setQuery} label="Personen durchsuchen" />
         {visible.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Niemand gefunden.</p>
@@ -703,7 +703,7 @@ function InviteSheet({
           Alle Mitglieder früherer Produktionen sind bereits dabei.
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 pt-1">
           <SearchField value={query} onChange={setQuery} label="Ehemalige durchsuchen" />
           <label className="flex items-center gap-3 px-3 text-sm font-medium">
             <Checkbox
