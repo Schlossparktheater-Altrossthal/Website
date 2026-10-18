@@ -4,7 +4,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import { Redis } from "ioredis";
 import { URL } from "url";
 import { createAnalyticsManager } from "./analytics.js";
-import { createRealtimeAnalyticsRecorder } from "./analytics-events.js";
+import { createRealtimeAnalyticsRecorder, getGlobalPrisma } from "./analytics-events.js";
 import { verifyHandshake } from "./handshake.js";
 import { createEventHandlers } from "./events.js";
 import { createScriptLive } from "./script-live.js";
@@ -54,6 +54,8 @@ export function createRealtimeServer(options = {}) {
     analyticsIntervalMs: explicitAnalyticsIntervalMs,
     analyticsMaxAgeMs: explicitAnalyticsMaxAgeMs,
     analyticsRecorder: providedAnalyticsRecorder,
+    /** Datenbank für Skript-Aufnahmen (Tests); sonst Prisma, wenn DATABASE_URL gesetzt ist. */
+    scriptDb,
   } = options;
 
   const logError =
@@ -168,7 +170,13 @@ export function createRealtimeServer(options = {}) {
   } = createEventHandlers({ io, logger, toISO });
   // Befehls-Client für die Skript-Sperre (gesetzt, sobald der Redis-Adapter läuft).
   let redisCommands = null;
-  const scriptLive = createScriptLive({ io, logger, redis: () => redisCommands });
+  const scriptLive = createScriptLive({
+    io,
+    logger,
+    redis: () => redisCommands,
+    // Aufnahmen (Messpunkte) nur mit Datenbank.
+    db: scriptDb ? () => scriptDb : process.env.DATABASE_URL ? () => getGlobalPrisma() : () => null,
+  });
 
   const analyticsManager = createAnalyticsManager({
     logger,

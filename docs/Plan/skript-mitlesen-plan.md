@@ -189,6 +189,38 @@ Zeitleiste werden nach Bestätigung des Protokolls verdichtet (Szenenstatistik) 
 - E9 (O4): Lesetempo (Teleprompter allein/offline) kommt, ist für alle verfügbar und muss
   aktiv eingeschaltet werden.
 
+## Aufnahme und private Aufnahme (Entscheidungen 2026-10-18, nach Phase 5)
+
+- E10: Gemeinsame Protokolle entstehen nur, wenn eine Führung (Recht `SCRIPT.MANAGE`) im
+  Mitlesen-Sheet **„Aufnahme starten“** drückt. Alle im Raum sehen „● Aufnahme“. Ohne Start
+  wird nichts gespeichert.
+- E11: **Private Aufnahme** für alle Lesenden, in zwei Formen: allein (Text üben, Kleingruppe,
+  auch ohne Mitlesen/offline) und als eigene Spur während einer gemeinsamen Probe. Sie zeichnet
+  nur die eigene Lesestelle auf. Sehen kann sie nur die Person selbst; sie geht nicht an den
+  Termin und nicht in Auswertungen anderer.
+- E12: Reihenfolge: zuerst Protokoll mit einer Live-Stelle (Phase 7+8 + privat),
+  Parallelgruppen (Phase 6) danach.
+
+Umsetzung:
+
+- Tabellen `ScriptSession` (Art `group`/`private`, Status `recording`/`draft`/`confirmed`/
+  `discarded`, Fassung, Besitzer, optional Termin und bei privat die gemeinsame Sitzung) und
+  `ScriptSessionSample` (Zeit, Position, Tempo, Anzahl aktiv, Rollen-IDs; alle ~5 s).
+- Gemeinsam: Start/Stopp per Server-Action, die über den Event-Endpunkt den Realtime-Server
+  informiert (Redis-Schlüssel `script:live:rec:<raum>`, damit jeder Pod es weiß). Der Pod mit der
+  Schätz-Sperre schreibt jede 5 s einen Messpunkt (Live-Stelle + Rollen der aktiv Mitlesenden,
+  keine Personen). Rollen meldet der Client beim Beitritt (`ownRoleIds`).
+- Privat: Der Leser puffert die eigene Stelle alle 5 s (localStorage, offlinefest) und lädt
+  alle 30 s bzw. beim Beenden hoch.
+- Auswertung `src/lib/skript/live/protocol.ts` (rein, getestet): Szenen brutto/netto,
+  Wiederholungen, Stillstände/Pausen, Übersprungenes, Probenart, Rollen dabei/fehlten.
+- Ansicht `/mitglieder/skript/[fassung]/protokolle` (Liste) und `…/protokolle/[id]`.
+  Gemeinsame Entwürfe sehen nur Verwalter; Termin verknüpfen (Vorschlag: Termin des Stücks,
+  der zur Aufnahmezeit läuft), bestätigen oder verwerfen. Bestätigte erscheinen am Termin.
+  Private sieht nur der Besitzer (umbenennen, löschen).
+- Vergessene Aufnahmen: ohne Messpunkt seit 30 min gilt eine Aufnahme als beendet; nach 4 h
+  endet sie spätestens.
+
 ## Offene Fragen
 
 Keine (Stand 2026-10-18).
@@ -234,6 +266,7 @@ Phase 1–3 auf main und Staging (letzter Commit 1a324724), Prod-Release offen.
         einer Person, pausiert, „Live ↓“, Automatisch, danach „1 abgehängt“ bei der Führung;
         CI startet dafür den Realtime-Server neben next dev
   - [ ] Gerätetest bei einer echten Leseprobe
+- [ ] Phase 7/8 Aufnahme + private Aufnahme + Protokollansicht (E10–E12)
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)
 - [ ] Phase 7 Sitzungs-Zeitleiste speichern (Tabelle `ScriptSessionSample`, verdichtet) +
       Erkennung Wiederholung/Stillstand/Übersprungen/Probenart

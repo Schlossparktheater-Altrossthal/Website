@@ -21,6 +21,8 @@ import { prisma } from "@/lib/prisma";
 
 export type ProtocolView = {
   summary: string | null;
+  /** Bestätigte Aufnahmen aus dem Skript-Mitlesen (docs/Plan/skript-mitlesen-plan.md, E2). */
+  scriptProtocols: { href: string; label: string; start: string; end: string | null }[];
   actualStart: string | null;
   actualEnd: string | null;
   sentAt: string | null;
@@ -88,10 +90,23 @@ export async function readProtocolView(
       guests: { orderBy: { createdAt: "asc" }, select: { name: true } },
       notes: { orderBy: { createdAt: "asc" }, include: { assignees: { select: ASSIGNEE_SELECT } } },
       media: { orderBy: { createdAt: "asc" } },
+      scriptSessions: {
+        where: { kind: "group", status: "confirmed" },
+        orderBy: { startedAt: "asc" },
+        select: {
+          id: true,
+          versionId: true,
+          title: true,
+          startedAt: true,
+          endedAt: true,
+          version: { select: { label: true } },
+        },
+      },
     },
   });
   if (!event) return null;
   const hasContent =
+    event.scriptSessions.length ||
     event.actualStart ||
     event.protocolSummary ||
     event.participants.length ||
@@ -147,6 +162,12 @@ export async function readProtocolView(
 
   return {
     summary: event.protocolSummary,
+    scriptProtocols: event.scriptSessions.map((session) => ({
+      href: `/mitglieder/skript/${session.versionId}/protokolle/${session.id}`,
+      label: session.title ?? `Skript ${session.version.label}`,
+      start: session.startedAt.toISOString(),
+      end: session.endedAt?.toISOString() ?? null,
+    })),
     actualStart: event.actualStart?.toISOString() ?? null,
     actualEnd: event.actualEnd?.toISOString() ?? null,
     sentAt: event.protocolSentAt?.toISOString() ?? null,

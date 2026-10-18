@@ -97,6 +97,8 @@ import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketc
 import { BlockEditor, type BlockEditorState } from "./block-editor";
 import { useLiveFollow, useTempoSource, type LiveSource } from "./use-live-follow";
 import { useScriptLive } from "./use-script-live";
+import { usePrivateRecording } from "./use-private-recording";
+import { startGroupRecordingAction, stopRecordingAction } from "../session-actions";
 import { useAnnotations } from "./use-annotations";
 import { NoteToolbox, TappedBar, toggleSign, type DropGap } from "./note-toolbox";
 import { SelectionHandles } from "./selection-handles";
@@ -1066,6 +1068,7 @@ export function ScriptReader({
     versionId: version.id,
     enabled: liveOn,
     followable,
+    roleIds: data.ownRoleIds,
     ownPoint: () => {
       const point = follow.currentPoint();
       // Wer gerade selbst folgt, gibt nur weiter, was er bekommt – zählt nicht für die Schätzung.
@@ -1082,6 +1085,60 @@ export function ScriptReader({
     leaderPointRef.current = live.leaderPoint;
     estimateRef.current = live.estimatePosition;
   }, [live.leaderPoint, live.estimatePosition]);
+  // Private Aufnahme (E11): nur die eigene Stelle, sieht nur man selbst.
+  const privateRec = usePrivateRecording({
+    versionId: version.id,
+    position: () => toAxis(axis, follow.currentPoint()),
+  });
+  const protocolsHref = `/mitglieder/skript/${version.id}/protokolle`;
+  const [groupBusy, setGroupBusy] = React.useState(false);
+  const toggleGroupRecording = async () => {
+    setGroupBusy(true);
+    try {
+      const running = live.recording;
+      const result = running
+        ? await stopRecordingAction({ sessionId: running.sessionId })
+        : await startGroupRecordingAction({ versionId: version.id });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      if (running) {
+        live.setRecording(null);
+        toast.success("Aufnahme beendet – Protokollentwurf liegt bereit", {
+          action: {
+            label: "Ansehen",
+            onClick: () => window.location.assign(`${protocolsHref}/${running.sessionId}`),
+          },
+        });
+      } else if (result.sessionId) {
+        live.setRecording({
+          sessionId: result.sessionId,
+          startedAt: result.startedAt ?? Date.now(),
+        });
+        toast.success("Aufnahme läuft");
+      }
+    } finally {
+      setGroupBusy(false);
+    }
+  };
+  const togglePrivateRecording = async () => {
+    if (privateRec.recording) {
+      const sessionId = await privateRec.stop();
+      if (sessionId) {
+        toast.success("Private Aufnahme beendet", {
+          action: {
+            label: "Ansehen",
+            onClick: () => window.location.assign(`${protocolsHref}/${sessionId}`),
+          },
+        });
+      }
+      return;
+    }
+    const error = await privateRec.start();
+    if (error) toast.error(error);
+    else toast.success("Private Aufnahme läuft – nur du siehst sie");
+  };
   const followAuto = followUserId === AUTO_FOLLOW;
   const followedLeader =
     followUserId && !followAuto
@@ -1736,6 +1793,18 @@ export function ScriptReader({
               onStop={() => startFollowing(null)}
             />
           ) : null}
+          {(privateRec.recording || (liveOn && live.recording)) &&
+          !noteMode &&
+          !pick &&
+          !selection &&
+          !selectedBlock ? (
+            <RecordingBar
+              group={liveOn ? live.recording : null}
+              own={privateRec.recording}
+              busy={privateRec.busy}
+              onStopOwn={togglePrivateRecording}
+            />
+          ) : null}
           {tempo.enabled && !personActive && !noteMode && !pick && !selection && !selectedBlock ? (
             <TempoBar
               running={tempoRunning}
@@ -1838,6 +1907,70 @@ export function ScriptReader({
           />
         </label>
         {followable ? <LiveStatusList status={live.status} axis={axis} /> : null}
+        <h3 className="pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Aufnahme
+        </h3>
+        {canManage ? (
+          <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border/60 py-2 text-sm">
+            <span className="min-w-0">
+              {live.recording ? (
+                <>
+                  <span className="font-semibold text-red-600 dark:text-red-400">
+                    ● Aufnahme läuft
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    seit <Elapsed since={live.recording.startedAt} />
+                  </span>
+                </>
+              ) : (
+                "Gemeinsames Protokoll"
+              )}
+              <span className="block text-xs text-muted-foreground">
+                Hält fest, welche Szenen gelesen, wiederholt oder übersprungen wurden und welche
+                Rollen dabei waren – keine einzelnen Personen.
+              </span>
+            </span>
+            <Button
+              size="sm"
+              variant={live.recording ? "destructive" : "default"}
+              disabled={groupBusy}
+              onClick={toggleGroupRecording}
+              className="shrink-0"
+            >
+              {live.recording ? "Beenden" : "Starten"}
+            </Button>
+          </div>
+        ) : live.recording ? (
+          <p className="border-b border-border/60 py-2 text-sm">
+            <span className="font-semibold text-red-600 dark:text-red-400">● Aufnahme läuft</span>{" "}
+            <span className="text-muted-foreground">
+              Die Probe wird protokolliert (Szenen und Rollen, keine einzelnen Personen).
+            </span>
+          </p>
+        ) : null}
+        <div className="flex min-h-11 items-center justify-between gap-3 border-b border-border/60 py-2 text-sm">
+          <span className="min-w-0">
+            Private Aufnahme
+            <span className="block text-xs text-muted-foreground">
+              Zeichnet nur deine eigene Lesestelle auf. Sehen kannst nur du sie.
+            </span>
+          </span>
+          <Button
+            size="sm"
+            variant={privateRec.recording ? "destructive" : "outline"}
+            disabled={privateRec.busy}
+            onClick={togglePrivateRecording}
+            className="shrink-0"
+          >
+            {privateRec.recording ? "Beenden" : "Starten"}
+          </Button>
+        </div>
+        <Link
+          href={protocolsHref}
+          className="flex min-h-11 items-center gap-2 text-sm text-primary underline-offset-4 hover:underline"
+        >
+          <BookOpenTextIcon aria-hidden /> Protokolle ansehen
+        </Link>
         <h3 className="pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Folgen
         </h3>
@@ -2129,6 +2262,21 @@ export function ScriptReader({
           </label>
           <label className="flex min-h-11 items-center justify-between gap-3">
             <span>
+              Private Aufnahme
+              <span className="block text-xs text-muted-foreground">
+                Zeichnet deine Lesestelle auf (auch allein und ohne Netz) – z. B. beim Text üben.
+                Sehen kannst nur du sie.
+              </span>
+            </span>
+            <Switch
+              checked={!!privateRec.recording}
+              disabled={privateRec.busy}
+              onCheckedChange={() => void togglePrivateRecording()}
+              aria-label="Private Aufnahme"
+            />
+          </label>
+          <label className="flex min-h-11 items-center justify-between gap-3">
+            <span>
               Lesetempo
               <span className="block text-xs text-muted-foreground">
                 Scrollt im Sprechtempo von selbst weiter. Eigenes Scrollen korrigiert die Stelle.
@@ -2162,6 +2310,12 @@ export function ScriptReader({
             presets={pdfPresets}
             canManage={canManage}
           />
+          <Link
+            href={protocolsHref}
+            className="flex min-h-11 items-center gap-2 text-primary underline-offset-4 hover:underline"
+          >
+            <BookOpenTextIcon aria-hidden /> Protokolle der Aufnahmen
+          </Link>
           <Link
             href={`/mitglieder/skript/${version.id}/uebersicht`}
             className="flex min-h-11 items-center gap-2 text-primary underline-offset-4 hover:underline"
@@ -2391,6 +2545,60 @@ function LiveStatusList({
             })}
           </ul>
         </>
+      ) : null}
+    </div>
+  );
+}
+
+/** Laufende Zeit „12:34“ bzw. „1:02:03“, sekündlich neu. */
+function Elapsed({ since }: { since: number }) {
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const total = Math.max(0, Math.floor((now - since) / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = String(total % 60).padStart(2, "0");
+  return (
+    <span className="tabular-nums">
+      {h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`}
+    </span>
+  );
+}
+
+function RecordingBar({
+  group,
+  own,
+  busy,
+  onStopOwn,
+}: {
+  group: { startedAt: number } | null;
+  own: { startedAt: number } | null;
+  busy: boolean;
+  onStopOwn: () => void;
+}) {
+  return (
+    <div className="flex min-h-11 items-center gap-2 px-3 py-1 text-sm sm:px-4">
+      <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-red-500" />
+      <span className="min-w-0 flex-1 truncate">
+        {group ? (
+          <>
+            Aufnahme <Elapsed since={group.startedAt} />
+          </>
+        ) : null}
+        {group && own ? <span className="text-muted-foreground"> · </span> : null}
+        {own ? (
+          <>
+            Privat <Elapsed since={own.startedAt} />
+          </>
+        ) : null}
+      </span>
+      {own ? (
+        <Button variant="ghost" size="sm" onClick={onStopOwn} disabled={busy} className="shrink-0">
+          Privat beenden
+        </Button>
       ) : null}
     </div>
   );

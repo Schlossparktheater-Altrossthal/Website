@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Check, CircleDashed, CircleSlash, CornerDownRight } from "lucide-react";
 
 import { EventTaskList } from "@/components/calendar/event-task-list";
@@ -124,6 +125,27 @@ export function ProtocolSection({ protocol }: { protocol: ProtocolView }) {
                 </li>
               );
             })}
+          </ul>
+        </Section>
+      ) : null}
+
+      {protocol.scriptProtocols.length ? (
+        <Section title="Aus dem Skript">
+          <ul className="space-y-1">
+            {protocol.scriptProtocols.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="inline-flex min-h-11 items-center gap-2 text-sm text-primary underline-offset-4 hover:underline"
+                >
+                  {item.label}
+                  <span className="text-muted-foreground">
+                    {time(item.start)}
+                    {item.end ? `–${time(item.end)}` : ""}
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
         </Section>
       ) : null}

@@ -202,3 +202,55 @@ test("Skript-Raum: Führende sehen, wer abgehängt ist (E7)", async () => {
     await server.close();
   }
 });
+
+test("Skript-Raum: Aufnahme schreibt Messpunkte mit Rollen, meldet den Stand (E10)", async () => {
+  const samples = [];
+  const session = { id: "sess1", startedAt: new Date() };
+  let recording = true;
+  const scriptDb = {
+    scriptSession: {
+      findFirst: async ({ where }) =>
+        recording && where.versionId === "v5" && where.kind === "group" ? session : null,
+      update: async () => {},
+    },
+    scriptSessionSample: { create: async ({ data }) => samples.push(data) },
+  };
+  const server = createRealtimeServer({
+    port: 0,
+    handshakeSecret: SECRET,
+    logger: { log() {}, warn() {}, error() {} },
+    scriptDb,
+  });
+  await server.listen(0);
+  const a = await connect(server, "u-a", "A");
+  const b = await connect(server, "u-b", "B");
+  try {
+    const started = next(a, "script_live_recording", (r) => r.sessionId === "sess1");
+    a.emit("script_live_join", { versionId: "v5", followable: false, roleIds: ["r1", "bad id!"] });
+    b.emit("script_live_join", { versionId: "v5", followable: false, roleIds: ["r2"] });
+    assert.equal((await started).versionId, "v5");
+    a.emit("script_live_position", { index: 10, fraction: 0, pos: 1000 });
+    b.emit("script_live_position", { index: 11, fraction: 0, pos: 1100 });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    assert.equal(samples.length, 1, "höchstens ein Messpunkt je 5 s");
+    assert.equal(samples[0].sessionId, "sess1");
+    assert.ok(samples[0].pos >= 1000 && samples[0].pos <= 1100);
+    assert.deepEqual([...samples[0].roleIds].sort(), ["r1", "r2"]);
+    assert.equal(samples[0].active, 2);
+    recording = false;
+    const ended = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("kein Ende")), 7000);
+      a.on("script_live_recording", (r) => {
+        if (r.sessionId === null) {
+          clearTimeout(timer);
+          resolve(r);
+        }
+      });
+    });
+    assert.equal(ended.sessionId, null);
+  } finally {
+    a.disconnect();
+    b.disconnect();
+    await server.close();
+  }
+});

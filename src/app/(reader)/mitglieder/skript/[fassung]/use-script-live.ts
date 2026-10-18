@@ -8,6 +8,7 @@ import type {
   ScriptLiveLeader,
   ScriptLiveEstimateEvent,
   ScriptLivePositionEvent,
+  ScriptLiveRecordingEvent,
   ScriptLiveRosterEvent,
   ScriptLiveStatusEvent,
 } from "@/lib/realtime/types";
@@ -26,11 +27,14 @@ export function useScriptLive({
   versionId,
   enabled,
   followable,
+  roleIds,
   ownPoint,
 }: {
   versionId: string;
   enabled: boolean;
   followable: boolean;
+  /** Eigene Rollen (gehen nur ins Protokoll einer gemeinsamen Aufnahme, E4). */
+  roleIds: string[];
   /**
    * Eigene Lesestelle; wird geteilt, solange man mitliest. `pos` = Achsen-Position für die
    * Schätzung, `echo` = der Leser folgt gerade selbst (zählt dann nicht für die Schätzung).
@@ -46,16 +50,26 @@ export function useScriptLive({
   const [estimateInfo, setEstimateInfo] = React.useState({ confident: false, active: 0 });
   /** Letzte Stelle je führender Person (Ref: ändert sich bis zu 1×/s, ohne Neuzeichnen). */
   const points = React.useRef(new Map<string, LeaderPoint>());
+  /** Laufende gemeinsame Aufnahme im Raum (E10). */
+  const [recording, setRecording] = React.useState<{ sessionId: string; startedAt: number } | null>(
+    null,
+  );
   const followableRef = React.useRef(followable);
+  const roleIdsRef = React.useRef(roleIds);
   const pointRef = React.useRef(ownPoint);
   React.useEffect(() => {
     pointRef.current = ownPoint;
+    roleIdsRef.current = roleIds;
   });
 
   React.useEffect(() => {
     if (!socket || !enabled) return;
     const join = () =>
-      socket.emit("script_live_join", { versionId, followable: followableRef.current });
+      socket.emit("script_live_join", {
+        versionId,
+        followable: followableRef.current,
+        roleIds: roleIdsRef.current,
+      });
     const store = (event: ScriptLivePositionEvent) => {
       const next: LeaderPoint = {
         deviceId: event.deviceId,
@@ -87,6 +101,15 @@ export function useScriptLive({
     const onStatus = (event: ScriptLiveStatusEvent) => {
       if (event.versionId === versionId) setStatus(event);
     };
+    const onRecording = (event: ScriptLiveRecordingEvent) => {
+      if (event.versionId !== versionId) return;
+      setRecording((current) => {
+        if (!event.sessionId || event.startedAt === null) return null;
+        if (current?.sessionId === event.sessionId) return current;
+        return { sessionId: event.sessionId, startedAt: event.startedAt };
+      });
+    };
+    socket.on("script_live_recording", onRecording);
     socket.on("script_live_status", onStatus);
     socket.on("script_live_estimate", onEstimate);
     socket.on("script_live_roster", onRoster);
@@ -96,6 +119,8 @@ export function useScriptLive({
     if (socket.connected) join();
     return () => {
       socket.off("script_live_status", onStatus);
+      socket.off("script_live_recording", onRecording);
+      setRecording(null);
       socket.off("script_live_estimate", onEstimate);
       socket.off("script_live_roster", onRoster);
       socket.off("script_live_position", onPosition);
@@ -153,6 +178,9 @@ export function useScriptLive({
     /** Genug Mitlesende für eine sichere Schätzung? */
     estimateConfident: estimateInfo.confident,
     estimateActive: estimateInfo.active,
+    recording,
+    /** Nach Start/Stopp sofort anzeigen, bis der Server es bestätigt. */
+    setRecording,
     /** Wer folgt, mitliest, abgehängt ist – nur solange man selbst folgbar ist. */
     status: followable ? status : null,
   };

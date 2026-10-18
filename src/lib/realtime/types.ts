@@ -197,6 +197,13 @@ export interface ScriptLiveEstimateEvent {
 }
 
 /** Nur an Führende (E7): wer liest mit, wer folgt, wer ist abgehängt. */
+/** Laufende gemeinsame Aufnahme im Raum (E10); `sessionId: null` = keine. */
+export interface ScriptLiveRecordingEvent {
+  versionId: string;
+  sessionId: string | null;
+  startedAt: number | null;
+}
+
 export interface ScriptLiveStatusEvent {
   versionId: string;
   /** Live-Stelle, auf die sich die Einteilung bezieht (Achsen-Zeichen). */
@@ -226,7 +233,12 @@ export interface ClientToServerEvents {
   unsubscribe_online_stats: () => void;
   get_rehearsal_users: (rehearsalId: string) => void;
   get_server_analytics: () => void;
-  script_live_join: (payload: { versionId: string; followable: boolean }) => void;
+  script_live_join: (payload: {
+    versionId: string;
+    followable: boolean;
+    /** Eigene Rollen fürs Protokoll einer Aufnahme. */
+    roleIds?: string[];
+  }) => void;
   script_live_update: (payload: { followable: boolean }) => void;
   script_live_position: (payload: {
     index: number;
@@ -255,6 +267,7 @@ export interface ServerToClientEvents {
   script_live_position: (event: ScriptLivePositionEvent) => void;
   script_live_estimate: (event: ScriptLiveEstimateEvent) => void;
   script_live_status: (event: ScriptLiveStatusEvent) => void;
+  script_live_recording: (event: ScriptLiveRecordingEvent) => void;
   pong: () => void;
 }
 

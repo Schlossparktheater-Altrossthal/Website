@@ -21,6 +21,16 @@ const MIN_POSITION_INTERVAL_MS = 250;
 const AWAY_MS = 120_000;
 /** Höchstens so viele Namen in der Liste der Abgehängten. */
 const MAX_BEHIND = 12;
+/** Aufnahme (E10): alle 5 s ein Messpunkt, Stand der Aufnahme ebenso oft neu lesen. */
+export const SAMPLE_INTERVAL_MS = 5_000;
+/** Aufnahmen enden spätestens nach 4 Stunden (vergessen). */
+export const MAX_RECORDING_MS = 4 * 3600_000;
+const ROLE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+function readRoleIds(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((id) => typeof id === "string" && ROLE_ID.test(id)).slice(0, 20);
+}
 
 function readPoint(value) {
   if (!value || typeof value !== "object") return null;
@@ -42,9 +52,9 @@ function readPoint(value) {
 }
 
 /**
- * @param {{ io: import("socket.io").Server; logger?: Console; redis?: () => import("ioredis").Redis | null }} options
+ * @param {{ io: import("socket.io").Server; logger?: Console; redis?: () => import("ioredis").Redis | null; db?: () => any }} options
  */
-export function createScriptLive({ io, logger = console, redis = () => null }) {
+export function createScriptLive({ io, logger = console, redis = () => null, db = () => null }) {
   // Je Instanz eindeutig (auch mehrere Server in einem Prozess, z. B. Tests).
   const POD_ID = `${hostname()}-${process.pid}-${randomUUID().slice(0, 8)}`;
   const logWarn = typeof logger?.warn === "function" ? (...args) => logger.warn(...args) : () => {};
@@ -106,6 +116,8 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
       socket.data.scriptLive = {
         room,
         followable: payload?.followable === true,
+        // Eigene Rollen (nur für das Protokoll einer Aufnahme, E4).
+        roleIds: readRoleIds(payload?.roleIds),
         point: socket.data.scriptLive?.point ?? null,
         pos: socket.data.scriptLive?.pos ?? null,
         echo: socket.data.scriptLive?.echo ?? false,
@@ -167,6 +179,79 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
       socket.data.scriptLive = null;
       void emitRoster(live.room);
     });
+  }
+
+  // ---- Aufnahme (E10) ----
+  /** Je Raum: laufende gemeinsame Aufnahme (vom rechnenden Pod aus der DB gelesen). */
+  const recordings = new Map();
+
+  /** Aufnahme des Raums neu lesen (höchstens alle 5 s) und an alle im Raum melden. */
+  async function refreshRecording(room, now) {
+    const known = recordings.get(room);
+    if (known && now - known.checkedAt < SAMPLE_INTERVAL_MS) return known;
+    const client = db();
+    const next = { checkedAt: now, session: null, sampledAt: known?.sampledAt ?? 0 };
+    if (client) {
+      try {
+        const session = await client.scriptSession.findFirst({
+          where: {
+            versionId: room.slice(SCRIPT_ROOM_PREFIX.length),
+            kind: "group",
+            status: "recording",
+          },
+          orderBy: { startedAt: "desc" },
+          select: { id: true, startedAt: true },
+        });
+        if (session && now - session.startedAt.getTime() > MAX_RECORDING_MS) {
+          await client.scriptSession.update({
+            where: { id: session.id },
+            data: { status: "draft", endedAt: new Date(now) },
+          });
+        } else if (session) {
+          next.session = { id: session.id, startedAt: session.startedAt.getTime() };
+        }
+      } catch (error) {
+        logWarn("[Realtime] Skript-Aufnahme nicht lesbar", error);
+        if (known) next.session = known.session;
+      }
+    }
+    recordings.set(room, next);
+    io.to(room).emit("script_live_recording", {
+      versionId: room.slice(SCRIPT_ROOM_PREFIX.length),
+      sessionId: next.session?.id ?? null,
+      startedAt: next.session?.startedAt ?? null,
+    });
+    return next;
+  }
+
+  /** Messpunkt schreiben: Live-Stelle + Rollen der aktiv Mitlesenden (keine Personen). */
+  async function record(room, sockets, result, now) {
+    if (stopped) return;
+    const recording = await refreshRecording(room, now);
+    if (!recording.session || now - recording.sampledAt < SAMPLE_INTERVAL_MS - 100) return;
+    const client = db();
+    if (!client) return;
+    recording.sampledAt = now;
+    const roleIds = new Set();
+    for (const socket of sockets) {
+      const live = socket.data?.scriptLive;
+      if (!live || live.room !== room || !live.at || now - live.at > AWAY_MS) continue;
+      for (const roleId of live.roleIds ?? []) roleIds.add(roleId);
+    }
+    try {
+      await client.scriptSessionSample.create({
+        data: {
+          sessionId: recording.session.id,
+          at: new Date(now),
+          pos: result.pos,
+          rate: result.rate,
+          active: result.active,
+          roleIds: [...roleIds],
+        },
+      });
+    } catch (error) {
+      logWarn("[Realtime] Skript-Messpunkt nicht gespeichert", error);
+    }
   }
 
   // ---- Statistische Live-Stelle (Phase 3) ----
@@ -266,6 +351,7 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
   async function tickRoom(room, now) {
     if (!(await holdsLock(room))) {
       states.delete(room);
+      recordings.delete(room);
       return;
     }
     let sockets;
@@ -298,10 +384,13 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
     if (!result) {
       states.delete(room);
       statusSent.delete(room);
+      // Stand der Aufnahme trotzdem melden (z. B. gerade gestartet, noch niemand liest).
+      await refreshRecording(room, now);
       return;
     }
     states.set(room, result.state);
     emitStatus(room, sockets, result.pos, now);
+    await record(room, sockets, result, now);
     io.to(room).emit("script_live_estimate", {
       versionId: room.slice(SCRIPT_ROOM_PREFIX.length),
       pos: result.pos,
@@ -319,6 +408,7 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
       const rooms = localRooms();
       for (const room of states.keys()) if (!rooms.has(room)) states.delete(room);
       for (const room of statusSent.keys()) if (!rooms.has(room)) statusSent.delete(room);
+      for (const room of recordings.keys()) if (!rooms.has(room)) recordings.delete(room);
       const now = Date.now();
       await Promise.all([...rooms].map((room) => tickRoom(room, now)));
     } catch (error) {
@@ -338,6 +428,7 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
     await running;
     states.clear();
     statusSent.clear();
+    recordings.clear();
   }
 
   return { attach, emitRoster, stop };

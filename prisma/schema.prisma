@@ -438,6 +438,7 @@ model User {
   scriptVersionsReleased          ScriptVersion[]            @relation("ScriptVersionReleaser")
   scriptRolesCreated              ScriptRole[]               @relation("ScriptRoleCreator")
   scriptExportPresets             ScriptExportPreset[]       @relation("ScriptExportPresetOwner")
+  scriptSessions                  ScriptSession[]            @relation("ScriptSessionOwner")
   scriptReaderStates              ScriptReaderState[]
   scriptAnnotations               ScriptAnnotation[]
   scriptLearnCards                ScriptLearnCard[]
@@ -1512,6 +1513,7 @@ model CalendarEvent {
   reservations        Reservation[]
   waitlistEntries     WaitlistEntry[]
   directionWishes     DirectionWish[]
+  scriptSessions      ScriptSession[]
 
   @@index([start])
   @@index([departmentId, start])
@@ -3964,6 +3966,7 @@ model ScriptVersion {
   scenes       ScriptScene[]
   blocks       ScriptBlock[]
   annotations  ScriptAnnotation[]
+  sessions     ScriptSession[]
 
   @@index([showId, createdAt])
 }
@@ -4221,6 +4224,67 @@ model ScriptReaderState {
   show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
 
   @@id([userId, showId])
+}
+
+enum ScriptSessionKind {
+  group
+  private
+}
+
+enum ScriptSessionStatus {
+  recording
+  draft
+  confirmed
+  discarded
+}
+
+/// Aufnahme beim Mitlesen (docs/Plan/skript-mitlesen-plan.md, E10–E12). `group` startet die
+/// Führung, Messpunkte schreibt der Realtime-Server; `private` zeichnet nur die eigene Stelle auf
+/// und ist nur für den Besitzer sichtbar.
+model ScriptSession {
+  id             String                @id @default(cuid())
+  versionId      String
+  kind           ScriptSessionKind
+  status         ScriptSessionStatus   @default(recording)
+  ownerId        String
+  title          String?
+  /// Verknüpfter Probentermin (nur gemeinsame Aufnahmen).
+  eventId        String?
+  /// Private Spur während dieser gemeinsamen Aufnahme.
+  groupSessionId String?
+  startedAt      DateTime              @default(now())
+  endedAt        DateTime?
+  confirmedAt    DateTime?
+  confirmedById  String?
+  note           String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  version        ScriptVersion         @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  owner          User                  @relation("ScriptSessionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  event          CalendarEvent?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  groupSession   ScriptSession?        @relation("ScriptSessionTrack", fields: [groupSessionId], references: [id], onDelete: SetNull)
+  tracks         ScriptSession[]       @relation("ScriptSessionTrack")
+  samples        ScriptSessionSample[]
+
+  @@index([versionId, kind, startedAt])
+  @@index([ownerId, startedAt])
+  @@index([eventId])
+}
+
+/// Messpunkt einer Aufnahme (~alle 5 s): Live- bzw. eigene Stelle auf der Achse (live/axis.ts).
+model ScriptSessionSample {
+  sessionId String
+  at        DateTime
+  pos       Float
+  /// Zeichen/s laut Schätzung (privat: 0).
+  rate      Float         @default(0)
+  /// Aktiv Mitlesende (privat: 1, wenn man sich bewegt hat).
+  active    Int           @default(0)
+  /// Rollen der aktiv Mitlesenden (keine Personen).
+  roleIds   String[]      @default([])
+  session   ScriptSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, at])
 }
 
 model ScriptExportPreset {
