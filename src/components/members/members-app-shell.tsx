@@ -1,5 +1,6 @@
 "use client";
 
+import { PastProductionBanner } from "@/components/production/past-production-banner";
 import type { SwitcherProduction } from "@/components/production/production-switcher";
 import { ArrowLeftIcon } from "@/components/ui/action-icons";
 
@@ -464,6 +465,13 @@ export function MembersAppShell({
             content={topbarContent}
             containerClassName={contentClasses.container}
           />
+          {directionView ? null : (
+            <PastProductionBannerSlot
+              className={contentClasses.container}
+              activeProductionId={activeProduction?.id ?? null}
+              productions={productions ?? []}
+            />
+          )}
           {impersonation?.active ? (
             <div className={cn(contentClasses.container, "py-4 sm:py-5")}>
               <ImpersonationBanner details={impersonation} />
@@ -729,4 +737,22 @@ export function MembersContentLayout({ spacing, width, padding, gap }: MembersCo
   }, [options, registerContentLayout]);
 
   return null;
+}
+
+function PastProductionBannerSlot({
+  className,
+  activeProductionId,
+  productions,
+}: {
+  className: string;
+  activeProductionId: string | null;
+  productions: SwitcherProduction[];
+}) {
+  const active = productions.find((production) => production.id === activeProductionId);
+  if (!active || active.status === "active" || active.status === "planning") return null;
+  return (
+    <div className={cn(className, "pt-4 sm:pt-5")}>
+      <PastProductionBanner activeProductionId={activeProductionId} productions={productions} />
+    </div>
+  );
 }

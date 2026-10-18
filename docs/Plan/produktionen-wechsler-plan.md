@@ -28,7 +28,7 @@ Stand: 2026-10-18 · Abgestimmt mit dem User.
    - `ProductionSwitcher` (Desktop Popover, mobil `BottomSheet`): gruppiert nach Läuft /
      In Planung / Vergangen, Häkchen, ein Tipp wechselt (`switchProductionAction`).
    - Mitglieder sehen nur Produktionen mit aktueller Mitgliedschaft; bei nur einer kein Menü.
-   - Produktionsleitung: „Neue Produktion“ (`?verwalten=1&neu=1`) und „Alle Produktionen verwalten“.
+   - Produktionsleitung: „Neue Produktion“ (`/mitglieder/produktionen/verwalten?neu=1`) und „Alle Produktionen verwalten“.
    - „Zur Produktion“ entfernt; `ProductionStatusPill` für farbige Status.
 2. **Verwaltungsseite** `/mitglieder/produktionen/verwalten` statt Seitenfenster – erledigt 2026-10-18
    - Listenzeilen im Dashboard-Stil (Jahr-Kachel, Titel, Premiere, Status, Chevron),
@@ -37,7 +37,8 @@ Stand: 2026-10-18 · Abgestimmt mit dem User.
      sofort gespeichert; „Status setzen“ entfällt.
    - Neue Produktion als kurzer Assistent (Jahr, Titel, Premiere), danach direkt angezeigt.
    - Altes Seitenfenster und `?verwalten=1` entfernen (Weiterleitung auf die neue Seite).
-3. **Hinweisleiste + Abnahme**
-   - Zeigt jemand nicht die neueste laufende Produktion: dezente Leiste „Du siehst … · zur
-     aktuellen wechseln“.
+3. **Hinweisleiste + Abnahme** – Leiste erledigt 2026-10-18
+   - Wird eine abgeschlossene oder archivierte Produktion angezeigt: dezente Leiste „Du siehst …“
+     mit Knopf zur laufenden (sonst geplanten) Produktion (`PastProductionBanner`). Weil mehrere
+     Produktionen gleichzeitig laufen dürfen, gibt es keinen Hinweis zwischen laufenden.
    - E2E für Wechsel (gleiche Seite, ID-Ersatz, Rückfall), Screenshots mobil + desktop.
