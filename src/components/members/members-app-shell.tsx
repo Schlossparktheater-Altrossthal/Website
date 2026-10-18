@@ -1,5 +1,6 @@
 "use client";
 
+import type { SwitcherProduction } from "@/components/production/production-switcher";
 import { ArrowLeftIcon } from "@/components/ui/action-icons";
 
 import * as React from "react";
@@ -177,6 +178,8 @@ interface MembersAppShellProps {
   directionView?: boolean;
   permissions: readonly string[];
   activeProduction?: { id: string; title: string | null; year: number };
+  productions?: SwitcherProduction[];
+  canManageProductions?: boolean;
   assignmentFocus: AssignmentFocus;
   hasDepartmentMemberships: boolean;
   isBoard: boolean;
@@ -342,6 +345,8 @@ export function MembersAppShell({
   children,
   permissions,
   activeProduction,
+  productions,
+  canManageProductions,
   assignmentFocus,
   hasDepartmentMemberships,
   isBoard,
@@ -432,6 +437,8 @@ export function MembersAppShell({
             <MembersNav
               permissions={permissions}
               activeProduction={activeProduction}
+              productions={productions}
+              canManageProductions={canManageProductions}
               assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
               isBoard={isBoard}

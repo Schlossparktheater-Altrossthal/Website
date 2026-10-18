@@ -11,7 +11,7 @@ import { MembersPermissionsProvider } from "@/components/members/permissions-con
 import { MembersAppShell } from "@/components/members/members-app-shell";
 import { HiddenPageGuard } from "@/components/members/hidden-page-guard";
 import { SidebarProvider, SIDEBAR_COOKIE_NAME } from "@/components/ui/sidebar";
-import { getActiveProduction } from "@/lib/active-production";
+import { getActiveProduction, getSwitchableProductions } from "@/lib/active-production";
 import { prisma } from "@/lib/prisma";
 import { currentDepartmentMembershipWhere } from "@/lib/produktionen/status";
 import { getUserPermissionKeys } from "@/lib/permissions";
@@ -97,37 +97,44 @@ export default async function MembersLayout({ children }: { children: React.Reac
   const session = await requireAuth();
   const userId = session.user?.id;
   // Alles Unabhängige gleichzeitig laden – jede Abfrage kostet eine Runde zur Datenbank.
-  const [permissions, activeProduction, websiteSettingsRecord, assignmentCounts, viewSettings] =
-    await Promise.all([
-      getUserPermissionKeys(session.user),
-      getActiveProduction(session.user?.id),
-      process.env.DATABASE_URL
-        ? readWebsiteSettingsCached().catch((error) => {
-            console.error("Failed to load website settings", error);
-            return null;
-          })
-        : Promise.resolve(null),
-      userId
-        ? Promise.all([
-            prisma.eventParticipant.count({
-              where: {
-                userId,
-                response: { not: null },
-                event: { kind: "REHEARSAL", status: { not: "DRAFT" } },
-              },
-            }),
-            prisma.departmentMembership.count({
-              where: { userId, ...currentDepartmentMembershipWhere() },
-            }),
-            prisma.departmentMembership.count({
-              where: { userId, role: "lead", ...currentDepartmentMembershipWhere() },
-            }),
-          ])
-        : Promise.resolve([0, 0, 0] as const),
-      userId
-        ? prisma.user.findUnique({ where: { id: userId }, select: { directionView: true } })
-        : Promise.resolve(null),
-    ]);
+  const [
+    permissions,
+    activeProduction,
+    switchableProductions,
+    websiteSettingsRecord,
+    assignmentCounts,
+    viewSettings,
+  ] = await Promise.all([
+    getUserPermissionKeys(session.user),
+    getActiveProduction(session.user?.id),
+    getSwitchableProductions(session.user?.id),
+    process.env.DATABASE_URL
+      ? readWebsiteSettingsCached().catch((error) => {
+          console.error("Failed to load website settings", error);
+          return null;
+        })
+      : Promise.resolve(null),
+    userId
+      ? Promise.all([
+          prisma.eventParticipant.count({
+            where: {
+              userId,
+              response: { not: null },
+              event: { kind: "REHEARSAL", status: { not: "DRAFT" } },
+            },
+          }),
+          prisma.departmentMembership.count({
+            where: { userId, ...currentDepartmentMembershipWhere() },
+          }),
+          prisma.departmentMembership.count({
+            where: { userId, role: "lead", ...currentDepartmentMembershipWhere() },
+          }),
+        ])
+      : Promise.resolve([0, 0, 0] as const),
+    userId
+      ? prisma.user.findUnique({ where: { id: userId }, select: { directionView: true } })
+      : Promise.resolve(null),
+  ]);
   const isBoard = hasRole(session.user, "board");
 
   const resolvedSettings = resolveWebsiteSettings(websiteSettingsRecord ?? null);
@@ -187,6 +194,8 @@ export default async function MembersLayout({ children }: { children: React.Reac
             <MembersAppShell
               permissions={permissions}
               activeProduction={activeProduction ?? undefined}
+              productions={switchableProductions}
+              canManageProductions={permissions.includes("PRIVATE.PRODUCTION.SHOW.MANAGE")}
               assignmentFocus={assignmentFocus}
               hasDepartmentMemberships={hasDepartmentMemberships}
               isBoard={isBoard}

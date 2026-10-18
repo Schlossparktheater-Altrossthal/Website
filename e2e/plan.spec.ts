@@ -21,10 +21,10 @@ async function collectErrors(page: Page) {
 async function openPlanAgenda(page: Page) {
   await page.goto("/mitglieder/produktionen");
   const missing = await page
-    .getByText("Keine aktive Produktion ausgewählt.")
+    .getByText("Keine Produktion ausgewählt.")
     .isVisible()
     .catch(() => false);
-  test.skip(missing, "Testnutzer hat keine aktive Produktion");
+  test.skip(missing, "Testnutzer hat keine Produktion ausgewählt");
   const agenda = page.getByRole("radio", { name: "Agenda" });
   if (await agenda.count()) {
     await clickUntil(agenda, () => expect(agenda).toBeChecked());
@@ -47,10 +47,10 @@ test.describe("als admin", () => {
 
     await page.goto("/mitglieder/produktionen");
     const missing = await page
-      .getByText("Keine aktive Produktion ausgewählt.")
+      .getByText("Keine Produktion ausgewählt.")
       .isVisible()
       .catch(() => false);
-    test.skip(missing, "Testnutzer hat keine aktive Produktion");
+    test.skip(missing, "Testnutzer hat keine Produktion ausgewählt");
 
     // Anlegen – im leeren Plan heißt der Button anders.
     const create = page.getByRole("button", {
@@ -134,10 +134,10 @@ test.describe("als admin", () => {
     await expect(page).not.toHaveURL(/verwalten=1/);
 
     const missing = await page
-      .getByText("Keine aktive Produktion ausgewählt.")
+      .getByText("Keine Produktion ausgewählt.")
       .isVisible()
       .catch(() => false);
-    test.skip(missing, "Keine aktive Produktion");
+    test.skip(missing, "Keine Produktion ausgewählt");
     const nav = page.getByRole("navigation", { name: "Produktionsbereiche" });
     await expect(nav).toBeVisible();
     await nav.getByRole("link", { name: "Gewerke" }).click();

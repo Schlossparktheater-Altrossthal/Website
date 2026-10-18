@@ -79,7 +79,7 @@ describe("setProductionStatusAction", () => {
 
     expect(result).toEqual({
       ok: true,
-      message: "Status: Beendet. 12 Mitgliedschaften wurden beendet.",
+      message: "Status: Abgeschlossen. 12 Mitgliedschaften wurden beendet.",
     });
     expect(showUpdateMock).toHaveBeenCalledWith({
       where: { id: "show-1" },
@@ -100,7 +100,7 @@ describe("setProductionStatusAction", () => {
       formData({ showId: "show-1", status: "active" }),
     );
 
-    expect(result).toEqual({ ok: true, message: "Status: Aktiv." });
+    expect(result).toEqual({ ok: true, message: "Status: Läuft." });
     expect(membershipUpdateManyMock).not.toHaveBeenCalled();
     expect(syncMock).not.toHaveBeenCalled();
   });

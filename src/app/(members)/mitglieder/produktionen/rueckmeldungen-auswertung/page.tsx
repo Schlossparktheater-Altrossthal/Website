@@ -30,7 +30,7 @@ export default async function ProduktionsRueckmeldungenPage() {
         </p>
       ) : (
         <ProductionWorkspaceEmptyState
-          title="Keine aktive Produktion ausgewählt"
+          title="Keine Produktion ausgewählt"
           description="Wähle in der Seitenleiste eine Produktion aus."
         />
       )}

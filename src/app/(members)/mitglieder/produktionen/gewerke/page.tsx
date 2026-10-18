@@ -21,7 +21,7 @@ export default async function ProduktionGewerkePage() {
       <div className="space-y-6">
         <ProductionHeader production={null} active="gewerke" canManage={canManage} />
         <ProductionWorkspaceEmptyState
-          title="Keine aktive Produktion ausgewählt"
+          title="Keine Produktion ausgewählt"
           description="Wähle in der Seitenleiste eine Produktion aus."
         />
       </div>

@@ -8,9 +8,9 @@ export const PRODUCTION_STATUSES = [
 ] as const satisfies readonly ProductionStatus[];
 
 export const PRODUCTION_STATUS_LABELS: Record<ProductionStatus, string> = {
-  planning: "In Planung",
-  active: "Aktiv",
-  finished: "Beendet",
+  planning: "Planung",
+  active: "Läuft",
+  finished: "Abgeschlossen",
   archived: "Archiviert",
 };
 

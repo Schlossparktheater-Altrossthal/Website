@@ -187,7 +187,7 @@ describe("MembersDashboard final rehearsal tile", () => {
     await waitForOverview();
 
     expect(queryFinalRehearsalTile()).toBeNull();
-    expect(screen.getByText("Keine aktive Produktion")).toBeInTheDocument();
+    expect(screen.getByText("Keine Produktion ausgewählt")).toBeInTheDocument();
   });
 
   it("shows the member count of the active production", async () => {

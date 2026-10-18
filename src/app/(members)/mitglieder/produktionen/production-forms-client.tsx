@@ -202,7 +202,7 @@ export function CreateProductionForm({
             defaultChecked={shouldSetActiveByDefault}
             className="mt-1 h-4 w-4 rounded border border-border bg-background text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
-          <span className="leading-snug">Nach dem Anlegen als aktive Produktion setzen</span>
+          <span className="leading-snug">Nach dem Anlegen direkt anzeigen</span>
         </label>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <Button type="submit" className="sm:w-auto" disabled={isPending}>
@@ -224,6 +224,8 @@ type CreateProductionDialogProps = {
   shouldSetActiveByDefault: boolean;
   redirectPath: string;
   trigger?: ReactNode;
+  /** Direkt geöffnet, z. B. über „Neue Produktion“ im Wechsler (`?neu=1`). */
+  defaultOpen?: boolean;
 };
 
 export function CreateProductionDialog({
@@ -231,8 +233,9 @@ export function CreateProductionDialog({
   shouldSetActiveByDefault,
   redirectPath,
   trigger,
+  defaultOpen = false,
 }: CreateProductionDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -286,7 +289,7 @@ export function SetActiveProductionForm({
       toast.error(state.error);
       return;
     }
-    const message = state.message ?? `Aktive Produktion: ${showTitle}`;
+    const message = state.message ?? `Angezeigt: ${showTitle}`;
     toast.success(message);
   }, [showTitle, state]);
 
@@ -295,7 +298,7 @@ export function SetActiveProductionForm({
       <input type="hidden" name="showId" value={showId} />
       <input type="hidden" name="redirectPath" value={redirectPath} />
       <Button type="submit" size="sm" disabled={isPending || isActive}>
-        {isActive ? "Aktiv ausgewählt" : "Als aktiv setzen"}
+        {isActive ? "Angezeigt" : "Anzeigen"}
       </Button>
       {!state.ok ? (
         <p role="alert" aria-live="assertive" className="mt-2 text-xs text-destructive">
@@ -330,7 +333,7 @@ export function ClearActiveProductionForm({
       toast.error(state.error);
       return;
     }
-    const message = state.message ?? "Aktive Produktion wurde zurückgesetzt.";
+    const message = state.message ?? "Auswahl wurde zurückgesetzt.";
     toast.success(message);
   }, [state]);
 

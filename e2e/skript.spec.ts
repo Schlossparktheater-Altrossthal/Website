@@ -58,10 +58,10 @@ test.describe("als admin", () => {
     await page.goto(SKRIPT);
     test.skip(
       await page
-        .getByText("Keine aktive Produktion ausgewählt")
+        .getByText("Keine Produktion ausgewählt")
         .isVisible()
         .catch(() => false),
-      "Testnutzer hat keine aktive Produktion",
+      "Testnutzer hat keine Produktion ausgewählt",
     );
     await expect(page.getByText("Neue Fassung einlesen")).toBeVisible();
     // Reste abgebrochener Läufe aufräumen
@@ -202,10 +202,10 @@ test.describe("als admin", () => {
     await page.goto(SKRIPT);
     test.skip(
       await page
-        .getByText("Keine aktive Produktion ausgewählt")
+        .getByText("Keine Produktion ausgewählt")
         .isVisible()
         .catch(() => false),
-      "Testnutzer hat keine aktive Produktion",
+      "Testnutzer hat keine Produktion ausgewählt",
     );
     const stamp = Date.now().toString(36);
     const scene = (lines: string[][]) =>
@@ -271,10 +271,10 @@ test.describe("als admin", () => {
     await page.goto(SKRIPT);
     test.skip(
       await page
-        .getByText("Keine aktive Produktion ausgewählt")
+        .getByText("Keine Produktion ausgewählt")
         .isVisible()
         .catch(() => false),
-      "Testnutzer hat keine aktive Produktion",
+      "Testnutzer hat keine Produktion ausgewählt",
     );
     const stamp = Date.now().toString(36);
     const pdfOf = (lines: string[][]) =>

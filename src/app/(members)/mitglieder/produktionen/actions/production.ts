@@ -9,7 +9,9 @@ import { recalculateShowPlan } from "@/lib/planning/plan-service";
 import { ensureProductionDepartments } from "@/lib/departments/templates";
 import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
-import { ACTIVE_PRODUCTION_COOKIE } from "@/lib/active-production";
+import { ACTIVE_PRODUCTION_COOKIE, getActiveProductionId } from "@/lib/active-production";
+import { currentMembershipWhere } from "@/lib/produktionen/status";
+import { resolveProductionSwitchTarget } from "@/lib/produktionen/switch-target";
 import { setOnboardingWhatsAppLink } from "@/lib/onboarding-settings";
 
 import {
@@ -54,9 +56,49 @@ export async function setActiveProductionAction(
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-    return actionSuccess("Aktive Produktion wurde gesetzt.");
+    return actionSuccess("Produktion wird jetzt angezeigt.");
   } catch (error) {
-    return actionFailure(error, "Aktive Produktion konnte nicht gesetzt werden.");
+    return actionFailure(error, "Produktion konnte nicht gewechselt werden.");
+  }
+}
+
+export type SwitchProductionResult = { ok: true; target: string } | { ok: false; error: string };
+
+/**
+ * Wechsler der Seitenleiste: zeigt eine andere Produktion an (nur für diese Person, per Cookie)
+ * und liefert die gleichwertige Seite der neuen Produktion als Ziel.
+ */
+export async function switchProductionAction(
+  showId: string,
+  pathname: string | null,
+): Promise<SwitchProductionResult> {
+  try {
+    const session = await requireAuth();
+    const userId = session.user?.id;
+    if (!userId) throw new Error("Bitte melde dich an.");
+    const canManage = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
+    const show = await prisma.show.findFirst({
+      where: canManage
+        ? { id: showId }
+        : { id: showId, memberships: { some: { userId, ...currentMembershipWhere() } } },
+      select: { id: true },
+    });
+    if (!show) throw new Error("Diese Produktion kannst du nicht anzeigen.");
+
+    const previousId = await getActiveProductionId(userId, { canManageProductions: canManage });
+    const cookieStore = await cookies();
+    cookieStore.set(ACTIVE_PRODUCTION_COOKIE, show.id, {
+      maxAge: 60 * 60 * 24 * 180,
+      sameSite: "lax",
+      path: "/",
+    });
+    revalidatePath("/mitglieder", "layout");
+    return { ok: true, target: resolveProductionSwitchTarget(pathname, previousId, show.id) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Produktion konnte nicht gewechselt werden.",
+    };
   }
 }
 
@@ -79,9 +121,9 @@ export async function clearActiveProductionAction(
     if (redirectPath) {
       revalidatePath(redirectPath);
     }
-    return actionSuccess("Aktive Produktion wurde zurückgesetzt.");
+    return actionSuccess("Auswahl wurde zurückgesetzt.");
   } catch (error) {
-    return actionFailure(error, "Aktive Produktion konnte nicht entfernt werden.");
+    return actionFailure(error, "Produktion konnte nicht gewechselt werden.");
   }
 }
 

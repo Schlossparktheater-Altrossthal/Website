@@ -66,11 +66,11 @@ export function selectMembersNavigation({
         const activeItem: MembersNavItem = {
           ...(overviewItem ?? {}),
           href: activeHref,
-          label: overviewItem?.label ?? activeProduction.title ?? "Aktive Produktion",
+          label: overviewItem?.label ?? activeProduction.title ?? "Angezeigte Produktion",
           badge: String(activeProduction.year),
           ariaLabel: activeProduction.title
-            ? `Aktive Produktion: ${activeProduction.title}`
-            : "Aktive Produktion",
+            ? `Angezeigte Produktion: ${activeProduction.title}`
+            : "Angezeigte Produktion",
         };
 
         items.unshift(activeItem);

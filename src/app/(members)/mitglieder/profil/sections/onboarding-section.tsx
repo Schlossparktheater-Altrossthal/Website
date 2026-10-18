@@ -75,7 +75,7 @@ export function OnboardingSection({
       : showYear
         ? `Produktion ${showYear}`
         : "Produktion"
-    : "Keine aktive Produktion";
+    : "Keine Produktion ausgewählt";
   const showHelper = currentShow
     ? (currentShow.periodLabel ?? "Zeitraum wird noch geplant.")
     : "Sobald du einer Produktion angehörst, kannst du hier deine Wünsche dafür angeben.";

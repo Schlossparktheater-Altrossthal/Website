@@ -27,7 +27,7 @@ export async function DELETE(
 
   const production = await getActiveProduction(session.user?.id);
   if (!production) {
-    return NextResponse.json({ error: "Keine aktive Produktion ausgewählt" }, { status: 400 });
+    return NextResponse.json({ error: "Keine Produktion ausgewählt" }, { status: 400 });
   }
 
   try {

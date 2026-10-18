@@ -571,7 +571,7 @@ export function MembersDashboard({
                 ? numberFormatter.format(stats.productionMembers)
                 : "–"
             }
-            hint={activeProduction ? undefined : "Keine aktive Produktion"}
+            hint={activeProduction ? undefined : "Keine Produktion ausgewählt"}
             icon={<UsersIcon />}
             tone="info"
           />

@@ -30,7 +30,7 @@ export default async function ProduktionenPage() {
       <div className="space-y-6">
         <ProductionHeader production={null} active="plan" canManage={canManage} />
         <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <p className="text-sm text-muted-foreground">Keine aktive Produktion ausgewählt.</p>
+          <p className="text-sm text-muted-foreground">Keine Produktion ausgewählt.</p>
           {canManage ? (
             <Button asChild>
               <Link href={`/mitglieder/produktionen?${MANAGE_PARAM}=1`}>

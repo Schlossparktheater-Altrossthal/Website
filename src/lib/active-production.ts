@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 
+import type { ProductionStatus } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
@@ -180,3 +182,28 @@ export const getActiveProduction = cache(async (userId?: string | null) => {
 
   return show;
 });
+
+export type SwitchableProduction = {
+  id: string;
+  title: string | null;
+  year: number;
+  status: ProductionStatus;
+};
+
+/**
+ * Produktionen für den Wechsler der Seitenleiste: Produktionsleitung sieht alle,
+ * alle anderen nur die, in denen sie gerade dabei sind.
+ */
+export const getSwitchableProductions = cache(
+  async (userId?: string | null): Promise<SwitchableProduction[]> => {
+    if (!userId) return [];
+    const canManage = await hasPermission({ id: userId }, "PRIVATE.PRODUCTION.SHOW.MANAGE");
+    return prisma.show.findMany({
+      where: canManage
+        ? undefined
+        : { memberships: { some: { userId, ...currentMembershipWhere() } } },
+      orderBy: { year: "desc" },
+      select: { id: true, title: true, year: true, status: true },
+    });
+  },
+);

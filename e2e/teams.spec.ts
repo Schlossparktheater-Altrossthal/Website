@@ -30,7 +30,7 @@ async function requireProduction(page: Page) {
     .getByText(/Wähle (zuerst|oben) eine (aktive )?Produktion/)
     .isVisible()
     .catch(() => false);
-  test.skip(missing, "Testnutzer hat keine aktive Produktion");
+  test.skip(missing, "Testnutzer hat keine Produktion ausgewählt");
 }
 
 test.describe("als admin", () => {

@@ -48,7 +48,7 @@ export default async function ZuweisungPage() {
         />
       ) : (
         <div className="rounded-lg border border-border/70 bg-background/60 p-6 text-sm text-muted-foreground">
-          Wähle zuerst eine aktive Produktion aus.
+          Wähle zuerst oben in der Seitenleiste eine Produktion aus.
         </div>
       )}
     </div>

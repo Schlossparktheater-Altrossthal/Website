@@ -222,7 +222,7 @@ export async function requireActiveProductionManager() {
   const { userId } = await requireProductionManager();
   const activeProduction = await getActiveProduction(userId);
   if (!activeProduction) {
-    throw new Error("Bitte wähle zunächst eine aktive Produktion aus.");
+    throw new Error("Bitte wähle zuerst oben in der Seitenleiste eine Produktion aus.");
   }
   return { userId, activeProduction };
 }

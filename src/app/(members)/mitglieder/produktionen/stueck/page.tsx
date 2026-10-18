@@ -52,7 +52,7 @@ export default async function StueckPage({ searchParams }: PageProps) {
         {canManage ? <StueckNav view="skript" /> : null}
         {!production ? (
           <ProductionWorkspaceEmptyState
-            title="Keine aktive Produktion ausgewählt"
+            title="Keine Produktion ausgewählt"
             description="Wähle oben eine Produktion aus, um ihr Skript zu sehen."
           />
         ) : canRead || canManageScript ? (
@@ -102,7 +102,7 @@ export default async function StueckPage({ searchParams }: PageProps) {
       <div className="space-y-6">
         <PageHeader title="Stück" breadcrumbs={breadcrumbs} />
         <ProductionWorkspaceEmptyState
-          title="Keine aktive Produktion ausgewählt"
+          title="Keine Produktion ausgewählt"
           description="Wähle oben eine Produktion aus, um Szenen und Rollen zu planen."
         />
       </div>

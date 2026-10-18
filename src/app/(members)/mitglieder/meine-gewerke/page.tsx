@@ -24,7 +24,9 @@ export default async function MeineTeamsPage() {
       <div className="space-y-6">
         <PageHeader title="Meine Teams" />
         <div className="py-12 text-center">
-          <p className="text-muted-foreground">Wähle zuerst eine aktive Produktion aus.</p>
+          <p className="text-muted-foreground">
+            Wähle zuerst oben in der Seitenleiste eine Produktion aus.
+          </p>
         </div>
       </div>
     );

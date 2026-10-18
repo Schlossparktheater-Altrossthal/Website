@@ -55,6 +55,7 @@ export function ProductionManageSheet({
   const close = () => {
     const next = new URLSearchParams(params.toString());
     next.delete(MANAGE_PARAM);
+    next.delete("neu");
     const query = next.toString();
     // Nur die Adresse ändern: kein Server-Neuladen, man bleibt an derselben Stelle der Seite.
     window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
@@ -74,6 +75,7 @@ export function ProductionManageSheet({
             redirectPath={redirectPath}
             suggestedYear={suggestedYear}
             shouldSetActiveByDefault={!activeShowId}
+            defaultOpen={open && params.get("neu") === "1"}
             trigger={<Button className="w-full">Neue Produktion anlegen</Button>}
           />
           <ul className="divide-y divide-border rounded-lg border border-border">
@@ -89,7 +91,7 @@ export function ProductionManageSheet({
                     </div>
                     <div className="flex shrink-0 flex-wrap justify-end gap-1">
                       <Badge variant="outline">{PRODUCTION_STATUS_LABELS[show.status]}</Badge>
-                      {isActive ? <Badge>Ausgewählt</Badge> : null}
+                      {isActive ? <Badge>Angezeigt</Badge> : null}
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
