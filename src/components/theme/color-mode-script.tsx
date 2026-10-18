@@ -68,11 +68,22 @@ export function ColorModeScript({ mode }: ColorModeScriptProps) {
       context.fillRect(0, 0, 1, 1);
       const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
       const hex = "#" + [r, g, b].map((value) => value.toString(16).padStart(2, "0")).join("");
+      syncedColor = hex;
       document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
         meta.removeAttribute("media");
         meta.setAttribute("content", hex);
       });
     };
+    // Next fügt die theme-color-Tags aus viewport beim Hydrieren erneut ein: dann nachziehen.
+    let syncedColor = null;
+    new MutationObserver(() => {
+      if (!syncedColor) return;
+      document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+        if (meta.getAttribute("content") === syncedColor && !meta.hasAttribute("media")) return;
+        meta.removeAttribute("media");
+        meta.setAttribute("content", syncedColor);
+      });
+    }).observe(document.head, { childList: true });
     const scheduleThemeColor = () => {
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", syncThemeColor, { once: true });
