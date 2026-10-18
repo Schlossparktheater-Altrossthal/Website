@@ -184,6 +184,18 @@ export interface ScriptLivePositionEvent {
   at: number;
 }
 
+/** Statistische Live-Stelle (Achsen-Zeichen, src/lib/skript/live/estimate.js). */
+export interface ScriptLiveEstimateEvent {
+  versionId: string;
+  pos: number;
+  /** Zeichen pro Sekunde. */
+  rate: number;
+  confident: boolean;
+  /** Personen, die gerade in die Schätzung eingehen. */
+  active: number;
+  at: number;
+}
+
 // Room Types
 export type RoomType =
   | `user_${string}` // User-specific room
@@ -203,7 +215,12 @@ export interface ClientToServerEvents {
   get_server_analytics: () => void;
   script_live_join: (payload: { versionId: string; followable: boolean }) => void;
   script_live_update: (payload: { followable: boolean }) => void;
-  script_live_position: (payload: { index: number; fraction: number }) => void;
+  script_live_position: (payload: {
+    index: number;
+    fraction: number;
+    pos: number;
+    echo: boolean;
+  }) => void;
   script_live_leave: () => void;
 }
 
@@ -223,6 +240,7 @@ export interface ServerToClientEvents {
   rehearsal_users_list: (event: RehearsalUsersListEvent) => void;
   script_live_roster: (event: ScriptLiveRosterEvent) => void;
   script_live_position: (event: ScriptLivePositionEvent) => void;
+  script_live_estimate: (event: ScriptLiveEstimateEvent) => void;
   pong: () => void;
 }
 

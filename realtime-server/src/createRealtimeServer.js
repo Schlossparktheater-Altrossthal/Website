@@ -166,7 +166,9 @@ export function createRealtimeServer(options = {}) {
     validateRoom,
     getOnlineStatsSnapshot,
   } = createEventHandlers({ io, logger, toISO });
-  const scriptLive = createScriptLive({ io, logger });
+  // Befehls-Client für die Skript-Sperre (gesetzt, sobald der Redis-Adapter läuft).
+  let redisCommands = null;
+  const scriptLive = createScriptLive({ io, logger, redis: () => redisCommands });
 
   const analyticsManager = createAnalyticsManager({
     logger,
@@ -185,6 +187,7 @@ export function createRealtimeServer(options = {}) {
     Promise.all([pubClient.connect(), subClient.connect()])
       .then(() => {
         io.adapter(createAdapter(pubClient, subClient));
+        redisCommands = pubClient;
         logInfo("[Realtime] Using Redis adapter for cross-instance broadcasts");
       })
       .catch((error) => {
@@ -444,6 +447,7 @@ export function createRealtimeServer(options = {}) {
     if (closed) return;
     closed = true;
     analyticsManager.stop();
+    scriptLive.stop();
     if (analyticsRecorder && typeof analyticsRecorder.flush === "function") {
       await analyticsRecorder.flush();
     }

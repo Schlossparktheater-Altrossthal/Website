@@ -197,7 +197,7 @@ Keine (Stand 2026-10-18).
 
 - [x] Phase 1 Lesezeile + Folgen-Steuerung lokal (2026-10-18): `src/lib/skript/live/` (axis, follow, tempo), Hook `use-live-follow.ts`, Lesetempo in den Leser-Einstellungen (nur Gerät)
 - [x] Phase 2 Realtime-Raum + Person folgen (2026-10-18): `realtime-server/src/script-live.js` (Raum `script_<fassung>`, Teilnehmer per fetchSockets über alle Pods; Test `script-live.test.js` läuft nicht in der CI), Hook `use-script-live.ts`, Ansicht → Mitlesen, Leiste „Folge …“ mit „Live ↓ n“
-- [ ] Phase 3 Statistische Schätzung
+- [x] Phase 3 Statistische Schätzung (2026-10-18): `src/lib/skript/live/estimate.js` (plain JS für den Realtime-Server, Typen in `.d.ts`; Simulationstests `live-estimate.test.ts`), Server rechnet je Raum alle 500 ms mit Redis-Sperre `script:live:lock:<raum>` (ohne Redis lokal), alle Mitlesenden senden `pos`, wer selbst folgt meldet `echo` und zählt nicht; im Leser „Folgen → Automatisch“
 - [ ] Phase 4 Feinschliff
 - [ ] Phase 5 E2E + Gerätetest
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)

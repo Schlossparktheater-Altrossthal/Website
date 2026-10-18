@@ -1022,11 +1022,14 @@ export function ScriptReader({
   const leaderPointRef = React.useRef<
     ((userId: string) => { index: number; fraction: number } | null) | null
   >(null);
+  // Automatisch (Phase 3): statistische Live-Stelle aus allen Mitlesenden.
+  const estimateRef = React.useRef<((now: number) => number) | null>(null);
   const personSource = React.useMemo<LiveSource>(() => {
     // Noch keine Stelle der Person bekannt → NaN, der Leser bleibt dann stehen.
     let last = Number.NaN;
     return {
-      position: () => {
+      position: (now) => {
+        if (followUserId === AUTO_FOLLOW) return estimateRef.current?.(now) ?? Number.NaN;
         const point = followUserId ? leaderPointRef.current?.(followUserId) : null;
         if (point) last = toAxis(axis, point);
         return last;
@@ -1062,14 +1065,21 @@ export function ScriptReader({
     versionId: version.id,
     enabled: liveOn,
     followable,
-    ownPoint: follow.currentPoint,
+    ownPoint: () => {
+      const point = follow.currentPoint();
+      // Wer gerade selbst folgt, gibt nur weiter, was er bekommt – zählt nicht für die Schätzung.
+      return { ...point, pos: toAxis(axis, point), echo: personActive && follow.status.following };
+    },
   });
   React.useEffect(() => {
     leaderPointRef.current = live.leaderPoint;
-  }, [live.leaderPoint]);
-  const followedLeader = followUserId
-    ? (live.leaders.find((leader) => leader.userId === followUserId) ?? null)
-    : null;
+    estimateRef.current = live.estimatePosition;
+  }, [live.leaderPoint, live.estimatePosition]);
+  const followAuto = followUserId === AUTO_FOLLOW;
+  const followedLeader =
+    followUserId && !followAuto
+      ? (live.leaders.find((leader) => leader.userId === followUserId) ?? null)
+      : null;
   const startFollowing = (userId: string | null) => {
     setFollowUserId(userId);
     if (userId) {
@@ -1706,8 +1716,11 @@ export function ScriptReader({
               connected={live.connected}
               readers={live.readers}
               followable={followable}
-              followedName={personActive ? (followedLeader?.name ?? "…") : null}
-              leaderGone={personActive && !followedLeader}
+              followedName={
+                !personActive ? null : followAuto ? "automatisch" : (followedLeader?.name ?? "…")
+              }
+              leaderGone={personActive && !followAuto && !followedLeader}
+              tooFew={personActive && followAuto && !live.estimateConfident}
               following={follow.status.following}
               blocksAway={follow.status.blocksAway}
               onResume={follow.resume}
@@ -1819,6 +1832,29 @@ export function ScriptReader({
         <h3 className="pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Folgen
         </h3>
+        <button
+          type="button"
+          aria-pressed={followAuto}
+          className={cn(
+            "flex min-h-11 w-full items-center justify-between gap-3 border-b border-border/60 py-2 text-left text-sm",
+            followAuto && "font-semibold text-primary",
+          )}
+          onClick={() => {
+            setFollowable(false);
+            startFollowing(followAuto ? null : AUTO_FOLLOW);
+            setPanel(null);
+          }}
+        >
+          <span className="min-w-0">
+            Automatisch
+            <span className="block text-xs font-normal text-muted-foreground">
+              Stelle aus allen, die gerade mitlesen und selbst scrollen
+            </span>
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {followAuto ? "Folge ich" : "Folgen"}
+          </span>
+        </button>
         {live.leaders.length ? (
           <ul className="divide-y divide-border/60">
             {live.leaders.map((leader) => {
@@ -2234,6 +2270,8 @@ function NextBar({
 }
 
 const TEMPO_KEY = "skript-lesetempo";
+/** `followUserId` für „Automatisch“ (Benutzer-IDs sind cuids, keine Verwechslung). */
+const AUTO_FOLLOW = "auto";
 type TempoSettings = { enabled: boolean; factor: number };
 
 function TempoBar({
@@ -2306,6 +2344,7 @@ function LiveBar({
   followable,
   followedName,
   leaderGone,
+  tooFew,
   following,
   blocksAway,
   onResume,
@@ -2317,6 +2356,8 @@ function LiveBar({
   followable: boolean;
   followedName: string | null;
   leaderGone: boolean;
+  /** Automatisch: zu wenige Mitlesende für eine sichere Stelle. */
+  tooFew: boolean;
   following: boolean;
   blocksAway: number;
   onResume: () => void;
@@ -2342,6 +2383,7 @@ function LiveBar({
           <>
             Folge <span className="font-semibold">{followedName}</span>
             {leaderGone ? <span className="text-muted-foreground"> · nicht mehr da</span> : null}
+            {tooFew ? <span className="text-muted-foreground"> · zu wenige lesen mit</span> : null}
           </>
         ) : followable ? (
           <>

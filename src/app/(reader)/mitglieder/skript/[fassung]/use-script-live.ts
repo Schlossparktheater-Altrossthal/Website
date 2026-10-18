@@ -6,6 +6,7 @@ import { useRealtime } from "@/hooks/useRealtime";
 import type { AxisPoint } from "@/lib/skript/live/axis";
 import type {
   ScriptLiveLeader,
+  ScriptLiveEstimateEvent,
   ScriptLivePositionEvent,
   ScriptLiveRosterEvent,
 } from "@/lib/realtime/types";
@@ -29,11 +30,17 @@ export function useScriptLive({
   versionId: string;
   enabled: boolean;
   followable: boolean;
-  /** Eigene Lesestelle, wird bei `followable` regelmäßig geteilt. */
-  ownPoint: () => AxisPoint;
+  /**
+   * Eigene Lesestelle; wird geteilt, solange man mitliest. `pos` = Achsen-Position für die
+   * Schätzung, `echo` = der Leser folgt gerade selbst (zählt dann nicht für die Schätzung).
+   */
+  ownPoint: () => AxisPoint & { pos: number; echo: boolean };
 }) {
   const { socket, connectionStatus } = useRealtime();
   const [roster, setRoster] = React.useState<ScriptLiveRosterEvent | null>(null);
+  /** Statistische Live-Stelle vom Server (Phase 3); `received` = lokale Empfangszeit. */
+  const estimateRef = React.useRef<(ScriptLiveEstimateEvent & { received: number }) | null>(null);
+  const [estimateInfo, setEstimateInfo] = React.useState({ confident: false, active: 0 });
   /** Letzte Stelle je führender Person (Ref: ändert sich bis zu 1×/s, ohne Neuzeichnen). */
   const points = React.useRef(new Map<string, LeaderPoint>());
   const followableRef = React.useRef(followable);
@@ -65,18 +72,31 @@ export function useScriptLive({
       setRoster(event);
     };
     const onPosition = (event: ScriptLivePositionEvent) => store(event);
+    const onEstimate = (event: ScriptLiveEstimateEvent) => {
+      if (event.versionId !== versionId) return;
+      estimateRef.current = { ...event, received: performance.now() };
+      setEstimateInfo((current) =>
+        current.confident === event.confident && current.active === event.active
+          ? current
+          : { confident: event.confident, active: event.active },
+      );
+    };
+    socket.on("script_live_estimate", onEstimate);
     socket.on("script_live_roster", onRoster);
     socket.on("script_live_position", onPosition);
     // Nach Verbindungsabbruch neu beitreten (der Server vergisst den Raum).
     socket.on("connect", join);
     if (socket.connected) join();
     return () => {
+      socket.off("script_live_estimate", onEstimate);
       socket.off("script_live_roster", onRoster);
       socket.off("script_live_position", onPosition);
       socket.off("connect", join);
       if (socket.connected) socket.emit("script_live_leave");
       setRoster(null);
       points.current.clear();
+      estimateRef.current = null;
+      setEstimateInfo({ confident: false, active: 0 });
     };
   }, [socket, enabled, versionId]);
 
@@ -85,20 +105,29 @@ export function useScriptLive({
     if (socket?.connected && enabled) socket.emit("script_live_update", { followable });
   }, [socket, enabled, followable]);
 
-  // Eigene Stelle teilen, nur bei Änderung.
+  // Eigene Stelle teilen, nur bei Änderung. Alle Mitlesenden senden (anonym für die Schätzung);
+  // an andere weitergegeben wird sie nur bei „Andere dürfen mir folgen“ (Server).
   React.useEffect(() => {
-    if (!socket || !enabled || !followable) return;
+    if (!socket || !enabled) return;
     let last = "";
     const timer = window.setInterval(() => {
       if (!socket.connected) return;
       const point = pointRef.current();
-      const key = `${point.index}:${point.fraction.toFixed(3)}`;
+      const key = `${point.index}:${point.fraction.toFixed(3)}:${point.echo}`;
       if (key === last) return;
       last = key;
-      socket.emit("script_live_position", { index: point.index, fraction: point.fraction });
+      socket.emit("script_live_position", point);
     }, SEND_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [socket, enabled, followable]);
+  }, [socket, enabled]);
+
+  /** Live-Stelle jetzt: letzte Schätzung + Tempo seit Empfang (höchstens 2 s weiterrechnen). */
+  const estimatePosition = React.useCallback((now: number) => {
+    const current = estimateRef.current;
+    if (!current || !current.confident) return Number.NaN;
+    const seconds = Math.min(2, Math.max(0, (now - current.received) / 1000));
+    return current.pos + current.rate * seconds;
+  }, []);
 
   const leaderPoint = React.useCallback((userId: string) => points.current.get(userId) ?? null, []);
 
@@ -111,5 +140,9 @@ export function useScriptLive({
       (leader) => leader.userId !== ownId,
     ),
     leaderPoint,
+    estimatePosition,
+    /** Genug Mitlesende für eine sichere Schätzung? */
+    estimateConfident: estimateInfo.confident,
+    estimateActive: estimateInfo.active,
   };
 }

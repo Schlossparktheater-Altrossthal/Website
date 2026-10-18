@@ -132,3 +132,34 @@ test("Skript-Raum: zwei Geräte einer Person zählen einmal, Positionen tragen d
     await server.close();
   }
 });
+
+test("Skript-Raum: Live-Stelle aus allen Mitlesenden, Folgende zählen nicht", async () => {
+  const server = createRealtimeServer({
+    port: 0,
+    handshakeSecret: SECRET,
+    logger: { log() {}, warn() {}, error() {} },
+  });
+  await server.listen(0);
+  const a = await connect(server, "u-a", "A");
+  const b = await connect(server, "u-b", "B");
+  const echo = await connect(server, "u-c", "C");
+  try {
+    for (const client of [a, b, echo]) {
+      client.emit("script_live_join", { versionId: "v3", followable: false });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    a.emit("script_live_position", { index: 10, fraction: 0, pos: 1000 });
+    b.emit("script_live_position", { index: 11, fraction: 0, pos: 1100 });
+    // Folgt selbst automatisch: würde sonst die Schätzung auf sich ziehen.
+    echo.emit("script_live_position", { index: 90, fraction: 0, pos: 9000, echo: true });
+    const live = await next(echo, "script_live_estimate", (e) => e.active === 2);
+    assert.equal(live.versionId, "v3");
+    assert.ok(live.pos >= 1000 && live.pos <= 1100, `pos ${live.pos}`);
+    assert.equal(live.confident, true);
+  } finally {
+    a.disconnect();
+    b.disconnect();
+    echo.disconnect();
+    await server.close();
+  }
+});
