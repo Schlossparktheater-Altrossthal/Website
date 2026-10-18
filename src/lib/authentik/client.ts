@@ -150,6 +150,18 @@ async function listAllPages<T>(
   return items;
 }
 
+/**
+ * Konto zum OIDC-"sub" (uid). Die API kann nicht nach uid filtern, daher
+ * werden alle Konten gelesen (wenige Dutzend, eine Anfrage).
+ */
+export async function findAuthentikUserByUid(uid: string): Promise<AuthentikUser | null> {
+  const config = requireConfig();
+  const users = await listAllPages(config, "/core/users/", authentikUserSchema, {
+    include_groups: "false",
+  });
+  return users.find((user) => user.uid === uid) ?? null;
+}
+
 /** Alle vom Mitgliederbereich verwalteten Konten (Pfad AUTHENTIK_MANAGED_USER_PATH). */
 export async function listManagedAuthentikUsers(): Promise<AuthentikUser[]> {
   const config = requireConfig();
