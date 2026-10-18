@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { topWishFlags } from "@/lib/wishes/levels";
 import {
   RolePreferenceLevelHint,
   RolePreferenceLevelPicker,
@@ -161,6 +162,12 @@ export function RolePreferencesSection({
     { domain: "acting" as const, title: "Schauspiel", entries: preferenceForm.acting },
     { domain: "crew" as const, title: "Gewerke", entries: preferenceForm.crew },
   ];
+  // Wie in der Zuweisung: alles in der höchsten vergebenen Stufe bekommt einen Stern.
+  const allEntries = [...preferenceForm.acting, ...preferenceForm.crew];
+  const topFlags = topWishFlags(allEntries.map((pref) => (pref.enabled ? pref.weight : 0)));
+  const topWishCodes = new Set(
+    allEntries.filter((_, index) => topFlags[index]).map((pref) => `${pref.domain}:${pref.code}`),
+  );
 
   return (
     <Card variant="plain" size="md">
@@ -225,6 +232,7 @@ export function RolePreferencesSection({
                     }
                     enabled={pref.enabled}
                     weight={pref.weight}
+                    top={topWishCodes.has(`${group.domain}:${pref.code}`)}
                     onChange={(weight) => setPreferenceWeight(group.domain, pref.code, weight)}
                   />
                 ))}

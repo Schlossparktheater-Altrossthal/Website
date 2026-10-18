@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import { StarIcon } from "lucide-react";
+
 import { Slider } from "@/components/ui/slider";
 import { getRolePreferenceWeightLabel } from "@/lib/onboarding/role-preference-utils";
 import { cn } from "@/lib/utils";
@@ -15,6 +17,8 @@ type RolePreferenceLevelPickerProps = {
   action?: ReactNode;
   enabled: boolean;
   weight: number;
+  /** Höchste vergebene Stufe – so erscheint der Wunsch in der Zuweisung mit Stern. */
+  top?: boolean;
   /** `null` = ganz links (kein Interesse), sonst das Gewicht 1–100. */
   onChange: (weight: number | null) => void;
 };
@@ -30,6 +34,7 @@ export function RolePreferenceLevelPicker({
   action,
   enabled,
   weight,
+  top = false,
   onChange,
 }: RolePreferenceLevelPickerProps) {
   const value = enabled ? weight : 0;
@@ -50,6 +55,13 @@ export function RolePreferenceLevelPicker({
           {badge}
         </p>
         <span className="flex shrink-0 items-center gap-1">
+          {top && active ? (
+            <StarIcon
+              className="h-3.5 w-3.5 shrink-0 fill-primary text-primary"
+              aria-label="Top-Wunsch"
+              role="img"
+            />
+          ) : null}
           <span
             className={cn("text-xs", active ? "font-medium text-primary" : "text-muted-foreground")}
           >
@@ -76,7 +88,8 @@ export function RolePreferenceLevelHint({ className }: { className?: string }) {
   return (
     <p className={cn("text-xs text-muted-foreground", className)}>
       Jeder Regler gilt für sich – es gibt kein Gesamtbudget, du kannst auch mehrere ganz nach
-      rechts schieben.
+      rechts schieben. Was in deiner höchsten Stufe liegt, bekommt einen Stern ★ – so sieht die
+      Planung deine Top-Wünsche.
     </p>
   );
 }

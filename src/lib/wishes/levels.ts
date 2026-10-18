@@ -16,10 +16,6 @@ export const WISH_LEVELS: ReadonlyArray<{ level: WishLevel; label: string; weigh
   { level: 1, label: "Vielleicht", weight: 15 },
 ];
 
-/** Ab dieser Stufe gilt ein Wunsch als Top-Wunsch („Sehr gern“). */
-const TOP_THRESHOLD =
-  ROLE_PREFERENCE_WEIGHT_LABELS.find((entry) => entry.label === "Sehr gern")?.threshold ?? 55;
-
 export function wishLevelOf(weight: number): WishLevel {
   const normalized = normalizeRolePreferenceWeight(weight);
   const index = [...ROLE_PREFERENCE_WEIGHT_LABELS]
@@ -33,7 +29,18 @@ export function wishLevelLabel(level: WishLevel) {
   return WISH_LEVELS.find((entry) => entry.level === level)?.label ?? "Vielleicht";
 }
 
-/** Top-Wunsch: ab „Sehr gern“ oder – wenn die Person nichts so hoch hat – ihr höchster Wunsch. */
+/**
+ * Top-Wunsch: alles in derselben Stufe wie der höchste Wunsch der Person. Die Regler sind stufenlos,
+ * deshalb zählt die Stufe (das angezeigte Wort) und nicht das genaue Gewicht.
+ */
 export function isTopWish(weight: number, maxWeight: number) {
-  return weight >= TOP_THRESHOLD || (maxWeight < TOP_THRESHOLD && weight === maxWeight);
+  return (
+    normalizeRolePreferenceWeight(weight) > 0 && wishLevelOf(weight) === wishLevelOf(maxWeight)
+  );
+}
+
+/** Markiert für eine Liste von Gewichten (0 = kein Wunsch) die Top-Wünsche. */
+export function topWishFlags(weights: number[]): boolean[] {
+  const max = Math.max(0, ...weights);
+  return weights.map((weight) => isTopWish(weight, max));
 }

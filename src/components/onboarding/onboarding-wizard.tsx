@@ -82,6 +82,7 @@ import {
   type AllergyTracesChoice,
 } from "@/data/allergy-styles";
 import { Checkbox } from "@/components/ui/checkbox";
+import { topWishFlags } from "@/lib/wishes/levels";
 import { AllergenField } from "@/components/forms/allergen-field";
 
 const actingOptions = listRolePreferenceDefinitions("acting");
@@ -363,6 +364,13 @@ export function OnboardingWizard({
         })),
       ]) ?? null
     );
+  }, [form.actingPreferences, form.crewPreferences, isRegieVariant]);
+
+  // Wie in der Zuweisung: alles in der höchsten vergebenen Stufe bekommt einen Stern.
+  const topWishCodes = useMemo(() => {
+    const entries = [...(isRegieVariant ? [] : form.actingPreferences), ...form.crewPreferences];
+    const flags = topWishFlags(entries.map((pref) => (pref.enabled ? pref.weight : 0)));
+    return new Set(entries.filter((_, index) => flags[index]).map((pref) => pref.code));
   }, [form.actingPreferences, form.crewPreferences, isRegieVariant]);
 
   const [newInterest, setNewInterest] = useState("");
@@ -1255,6 +1263,7 @@ export function OnboardingWizard({
                       description={pref.description}
                       enabled={pref.enabled}
                       weight={pref.weight}
+                      top={topWishCodes.has(pref.code)}
                       onChange={(weight) => setPreferenceWeight("acting", pref.code, weight)}
                     />
                   ))}
@@ -1299,6 +1308,7 @@ export function OnboardingWizard({
                     }
                     enabled={pref.enabled}
                     weight={pref.weight}
+                    top={topWishCodes.has(pref.code)}
                     onChange={(weight) => setPreferenceWeight("crew", pref.code, weight)}
                   />
                 ))}

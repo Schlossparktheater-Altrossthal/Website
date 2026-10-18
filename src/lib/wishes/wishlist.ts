@@ -7,7 +7,7 @@ import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
 
-import { isTopWish, wishLevelOf, type WishLevel } from "./levels";
+import { isTopWish, topWishFlags, wishLevelOf, type WishLevel } from "./levels";
 import { canEditWishArea } from "./permissions";
 
 export { canEditWishArea };
@@ -137,8 +137,8 @@ export async function loadWishlistAreas(showId: string): Promise<WishlistArea[]>
 }
 
 export function markTopWishes(wishes: WishlistWish[]): WishlistWish[] {
-  const max = Math.max(0, ...wishes.map((wish) => wish.weight));
-  return wishes.map((wish) => ({ ...wish, top: wish.weight === max }));
+  const flags = topWishFlags(wishes.map((wish) => wish.weight));
+  return wishes.map((wish, index) => ({ ...wish, top: flags[index] }));
 }
 
 /** Wunscherfüllung: wer etwas zugeteilt bekam, hat dabei einen Top-Wunsch erhalten? */

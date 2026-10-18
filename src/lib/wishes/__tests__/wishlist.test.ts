@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { WISH_LEVELS, isTopWish, wishLevelOf } from "@/lib/wishes/levels";
+import { WISH_LEVELS, isTopWish, topWishFlags, wishLevelOf } from "@/lib/wishes/levels";
 import {
   canEditWishArea,
   computeFulfillment,
@@ -46,11 +46,19 @@ describe("wish levels", () => {
     for (const entry of WISH_LEVELS) expect(wishLevelOf(entry.weight)).toBe(entry.level);
   });
 
-  it("treats the highest wish as top when nothing reaches 'Sehr gern'", () => {
+  it("treats every wish in the highest level as top", () => {
     expect(isTopWish(60, 60)).toBe(true);
     expect(isTopWish(40, 40)).toBe(true);
+    expect(isTopWish(82, 95)).toBe(true);
+    expect(isTopWish(60, 90)).toBe(false);
     expect(isTopWish(20, 40)).toBe(false);
-    expect(isTopWish(40, 90)).toBe(false);
+    expect(isTopWish(0, 0)).toBe(false);
+  });
+
+  it("flags all wishes sharing the top level", () => {
+    expect(topWishFlags([85, 99, 70, 0])).toEqual([true, true, false, false]);
+    expect(topWishFlags([35, 50, 10])).toEqual([true, true, false]);
+    expect(topWishFlags([0, 0])).toEqual([false, false]);
   });
 });
 
