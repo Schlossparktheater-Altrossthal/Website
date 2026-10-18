@@ -196,7 +196,7 @@ Keine (Stand 2026-10-18).
 ## Checkliste
 
 - [x] Phase 1 Lesezeile + Folgen-Steuerung lokal (2026-10-18): `src/lib/skript/live/` (axis, follow, tempo), Hook `use-live-follow.ts`, Lesetempo in den Leser-Einstellungen (nur Gerät)
-- [ ] Phase 2 Realtime-Raum + Person folgen
+- [x] Phase 2 Realtime-Raum + Person folgen (2026-10-18): `realtime-server/src/script-live.js` (Raum `script_<fassung>`, Teilnehmer per fetchSockets über alle Pods; Test `script-live.test.js` läuft nicht in der CI), Hook `use-script-live.ts`, Ansicht → Mitlesen, Leiste „Folge …“ mit „Live ↓ n“
 - [ ] Phase 3 Statistische Schätzung
 - [ ] Phase 4 Feinschliff
 - [ ] Phase 5 E2E + Gerätetest

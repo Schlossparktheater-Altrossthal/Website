@@ -158,6 +158,29 @@ export type RealtimeEvent =
   | UserLeftEvent
   | RehearsalUsersListEvent;
 
+// Live-Mitlesen im Skript (docs/Plan/skript-mitlesen-plan.md, realtime-server/src/script-live.js)
+export interface ScriptLiveLeader {
+  userId: string;
+  name: string;
+  index: number | null;
+  fraction: number | null;
+  at: number | null;
+}
+
+export interface ScriptLiveRosterEvent {
+  versionId: string;
+  /** Anzahl Personen im Raum (mehrere Geräte zählen einmal). */
+  readers: number;
+  leaders: ScriptLiveLeader[];
+}
+
+export interface ScriptLivePositionEvent {
+  userId: string;
+  index: number;
+  fraction: number;
+  at: number;
+}
+
 // Room Types
 export type RoomType =
   | `user_${string}` // User-specific room
@@ -175,6 +198,10 @@ export interface ClientToServerEvents {
   unsubscribe_online_stats: () => void;
   get_rehearsal_users: (rehearsalId: string) => void;
   get_server_analytics: () => void;
+  script_live_join: (payload: { versionId: string; followable: boolean }) => void;
+  script_live_update: (payload: { followable: boolean }) => void;
+  script_live_position: (payload: { index: number; fraction: number }) => void;
+  script_live_leave: () => void;
 }
 
 // Server to Client Events
@@ -191,6 +218,8 @@ export interface ServerToClientEvents {
   user_joined: (event: UserJoinedEvent) => void;
   user_left: (event: UserLeftEvent) => void;
   rehearsal_users_list: (event: RehearsalUsersListEvent) => void;
+  script_live_roster: (event: ScriptLiveRosterEvent) => void;
+  script_live_position: (event: ScriptLivePositionEvent) => void;
   pong: () => void;
 }
 

@@ -7,6 +7,7 @@ import { createAnalyticsManager } from "./analytics.js";
 import { createRealtimeAnalyticsRecorder } from "./analytics-events.js";
 import { verifyHandshake } from "./handshake.js";
 import { createEventHandlers } from "./events.js";
+import { createScriptLive } from "./script-live.js";
 
 function toISO(date) {
   return new Date(date).toISOString();
@@ -165,6 +166,7 @@ export function createRealtimeServer(options = {}) {
     validateRoom,
     getOnlineStatsSnapshot,
   } = createEventHandlers({ io, logger, toISO });
+  const scriptLive = createScriptLive({ io, logger });
 
   const analyticsManager = createAnalyticsManager({
     logger,
@@ -356,6 +358,7 @@ export function createRealtimeServer(options = {}) {
 
     socket.join("global");
     socket.data.rooms.add("global");
+    scriptLive.attach(socket);
 
     socket.on("join_room", (room) => {
       if (!validateRoom(room, socket)) {

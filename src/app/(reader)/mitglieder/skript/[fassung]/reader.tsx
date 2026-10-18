@@ -53,8 +53,8 @@ import {
   type Span,
 } from "@/lib/skript/note-logic";
 import { buildSceneHeaders, type SceneHeaderModel } from "@/lib/skript/scene-header";
-import { buildAxis } from "@/lib/skript/live/axis";
-import { SOLO_TEMPO } from "@/lib/skript/live/follow";
+import { buildAxis, toAxis } from "@/lib/skript/live/axis";
+import { LIVE_FOLLOW, SOLO_TEMPO } from "@/lib/skript/live/follow";
 import { TEMPO_FACTORS, blockRates, nearestFactorIndex } from "@/lib/skript/live/tempo";
 import { computeScriptStats } from "@/lib/skript/stats";
 import type { CueCategory } from "@/lib/skript/types";
@@ -94,7 +94,8 @@ import { SceneHeaderSettings } from "./scene-header-settings";
 import { ViewPicker, viewChoices } from "./view-picker";
 import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketch";
 import { BlockEditor, type BlockEditorState } from "./block-editor";
-import { useLiveFollow, useTempoSource } from "./use-live-follow";
+import { useLiveFollow, useTempoSource, type LiveSource } from "./use-live-follow";
+import { useScriptLive } from "./use-script-live";
 import { useAnnotations } from "./use-annotations";
 import { NoteToolbox, TappedBar, toggleSign, type DropGap } from "./note-toolbox";
 import { SelectionHandles } from "./selection-handles";
@@ -669,7 +670,7 @@ export function ScriptReader({
     () => presets.filter((preset) => !preset.config.view),
     [presets],
   );
-  const [panel, setPanel] = React.useState<"scenes" | "roles" | "settings" | null>(null);
+  const [panel, setPanel] = React.useState<"scenes" | "roles" | "settings" | "live" | null>(null);
   // „Was ist neu“: Hinweis, wenn zuletzt eine andere Fassung dieses Stücks gelesen wurde.
   const [newVersionHint, setNewVersionHint] = React.useState(false);
   React.useEffect(() => {
@@ -1014,10 +1015,30 @@ export function ScriptReader({
     });
   const axis = React.useMemo(() => buildAxis(blocks), [blocks]);
   const rates = React.useMemo(() => blockRates(blocks, scenes), [blocks, scenes]);
-  const tempoActive = tempo.enabled && tempoRunning;
+  // Live-Mitlesen (Phase 2): nie automatisch an (E6), nur auf dieser Seite.
+  const [liveOn, setLiveOn] = React.useState(false);
+  const [followable, setFollowable] = React.useState(false);
+  const [followUserId, setFollowUserId] = React.useState<string | null>(null);
+  const leaderPointRef = React.useRef<
+    ((userId: string) => { index: number; fraction: number } | null) | null
+  >(null);
+  const personSource = React.useMemo<LiveSource>(() => {
+    // Noch keine Stelle der Person bekannt → NaN, der Leser bleibt dann stehen.
+    let last = Number.NaN;
+    return {
+      position: () => {
+        const point = followUserId ? leaderPointRef.current?.(followUserId) : null;
+        if (point) last = toAxis(axis, point);
+        return last;
+      },
+      reanchor: () => {},
+    };
+  }, [axis, followUserId]);
+  const personActive = liveOn && followUserId !== null;
+  const tempoActive = tempo.enabled && tempoRunning && !personActive;
   const tempoSource = useTempoSource(axis, rates, tempo.factor, tempoActive);
   const follow = useLiveFollow({
-    enabled: tempoActive,
+    enabled: tempoActive || personActive,
     suspended:
       noteMode ||
       !!blockEdit ||
@@ -1031,12 +1052,31 @@ export function ScriptReader({
     refs,
     topRef: toolbarRef,
     bottomRef: barRef,
-    source: tempoSource,
-    options: SOLO_TEMPO,
+    source: personActive ? personSource : tempoSource,
+    options: personActive ? LIVE_FOLLOW : SOLO_TEMPO,
   });
   React.useEffect(() => {
-    interruptFollow.current = tempoActive ? follow.interrupt : null;
-  }, [tempoActive, follow.interrupt]);
+    interruptFollow.current = tempoActive || personActive ? follow.interrupt : null;
+  }, [tempoActive, personActive, follow.interrupt]);
+  const live = useScriptLive({
+    versionId: version.id,
+    enabled: liveOn,
+    followable,
+    ownPoint: follow.currentPoint,
+  });
+  React.useEffect(() => {
+    leaderPointRef.current = live.leaderPoint;
+  }, [live.leaderPoint]);
+  const followedLeader = followUserId
+    ? (live.leaders.find((leader) => leader.userId === followUserId) ?? null)
+    : null;
+  const startFollowing = (userId: string | null) => {
+    setFollowUserId(userId);
+    if (userId) {
+      setTempoRunning(false);
+      follow.resume();
+    }
+  };
   const startTempo = () => {
     setTempoRunning(true);
     follow.startHere();
@@ -1515,7 +1555,7 @@ export function ScriptReader({
         </article>
       </div>
 
-      {tempoActive && follow.status.following ? (
+      {(tempoActive || personActive) && follow.status.following ? (
         // Lesezeile: hier steht die Stelle, die gerade „gesprochen“ wird.
         <div
           aria-hidden
@@ -1533,6 +1573,7 @@ export function ScriptReader({
           (nextCue ||
             nextLine ||
             tempo.enabled ||
+            liveOn ||
             selection ||
             selectedBlock ||
             pick ||
@@ -1660,7 +1701,21 @@ export function ScriptReader({
                 : {})}
             />
           ) : null}
-          {tempo.enabled && !noteMode && !pick && !selection && !selectedBlock ? (
+          {liveOn && !noteMode && !pick && !selection && !selectedBlock ? (
+            <LiveBar
+              connected={live.connected}
+              readers={live.readers}
+              followable={followable}
+              followedName={personActive ? (followedLeader?.name ?? "…") : null}
+              leaderGone={personActive && !followedLeader}
+              following={follow.status.following}
+              blocksAway={follow.status.blocksAway}
+              onResume={follow.resume}
+              onOpen={() => setPanel("live")}
+              onStop={() => startFollowing(null)}
+            />
+          ) : null}
+          {tempo.enabled && !personActive && !noteMode && !pick && !selection && !selectedBlock ? (
             <TempoBar
               running={tempoRunning}
               following={follow.status.following}
@@ -1734,6 +1789,71 @@ export function ScriptReader({
           </p>
         </BottomSheet>
       )}
+
+      <BottomSheet
+        open={panel === "live"}
+        onOpenChange={(open) => setPanel(open ? "live" : null)}
+        title="Mitlesen"
+        description={
+          live.connected
+            ? `${live.readers} ${live.readers === 1 ? "Person liest" : "Personen lesen"} gerade mit`
+            : "Keine Verbindung – wird wieder aufgebaut"
+        }
+      >
+        <label className="flex min-h-11 items-center justify-between gap-3 border-b border-border/60 pb-3 text-sm">
+          <span>
+            Andere dürfen mir folgen
+            <span className="block text-xs text-muted-foreground">
+              Deine Lesestelle wird geteilt, solange du mitliest.
+            </span>
+          </span>
+          <Switch
+            checked={followable}
+            onCheckedChange={(on) => {
+              setFollowable(on);
+              if (on) setFollowUserId(null);
+            }}
+            aria-label="Andere dürfen mir folgen"
+          />
+        </label>
+        <h3 className="pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Folgen
+        </h3>
+        {live.leaders.length ? (
+          <ul className="divide-y divide-border/60">
+            {live.leaders.map((leader) => {
+              const active = followUserId === leader.userId;
+              return (
+                <li key={leader.userId}>
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    className={cn(
+                      "flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left text-sm",
+                      active && "font-semibold text-primary",
+                    )}
+                    onClick={() => {
+                      setFollowable(false);
+                      startFollowing(active ? null : leader.userId);
+                      setPanel(null);
+                    }}
+                  >
+                    <span className="min-w-0 truncate">{leader.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {active ? "Folge ich" : "Folgen"}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="py-3 text-sm text-muted-foreground">
+            Gerade teilt niemand seine Lesestelle. Bitte z. B. die Souffleuse, „Andere dürfen mir
+            folgen“ einzuschalten.
+          </p>
+        )}
+      </BottomSheet>
 
       <BottomSheet
         open={panel === "roles"}
@@ -1938,8 +2058,30 @@ export function ScriptReader({
           </h3>
           <SceneHeaderSettings settings={settings} update={update} />
           <h3 className="border-t border-border/60 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Gerät
+            Mitlesen
           </h3>
+          <label className="flex min-h-11 items-center justify-between gap-3">
+            <span>
+              Gemeinsam mitlesen
+              <span className="block text-xs text-muted-foreground">
+                Mit allen verbinden, die diese Fassung gerade offen haben – einer Person folgen oder
+                andere dir folgen lassen.
+              </span>
+            </span>
+            <Switch
+              checked={liveOn}
+              onCheckedChange={(on) => {
+                setLiveOn(on);
+                if (!on) {
+                  setFollowable(false);
+                  setFollowUserId(null);
+                } else {
+                  setPanel("live");
+                }
+              }}
+              aria-label="Gemeinsam mitlesen"
+            />
+          </label>
           <label className="flex min-h-11 items-center justify-between gap-3">
             <span>
               Lesetempo
@@ -1956,6 +2098,9 @@ export function ScriptReader({
               aria-label="Lesetempo"
             />
           </label>
+          <h3 className="border-t border-border/60 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Gerät
+          </h3>
           <label className="flex min-h-11 items-center justify-between gap-3">
             <span>Bildschirm anlassen</span>
             <Switch
@@ -2151,6 +2296,78 @@ function TempoBar({
       >
         <PlusIcon className="size-4" />
       </Button>
+    </div>
+  );
+}
+
+function LiveBar({
+  connected,
+  readers,
+  followable,
+  followedName,
+  leaderGone,
+  following,
+  blocksAway,
+  onResume,
+  onOpen,
+  onStop,
+}: {
+  connected: boolean;
+  readers: number;
+  followable: boolean;
+  followedName: string | null;
+  leaderGone: boolean;
+  following: boolean;
+  blocksAway: number;
+  onResume: () => void;
+  onOpen: () => void;
+  onStop: () => void;
+}) {
+  const count = `${readers} ${readers === 1 ? "liest" : "lesen"} mit`;
+  return (
+    <div className="flex min-h-11 items-center gap-2 px-3 py-1 sm:px-4">
+      <span
+        aria-hidden
+        className={cn(
+          "size-2 shrink-0 rounded-full",
+          connected ? "bg-emerald-500" : "bg-muted-foreground/40",
+        )}
+      />
+      <button
+        type="button"
+        onClick={onOpen}
+        className="min-w-0 flex-1 truncate text-left text-sm hover:text-foreground"
+      >
+        {followedName ? (
+          <>
+            Folge <span className="font-semibold">{followedName}</span>
+            {leaderGone ? <span className="text-muted-foreground"> · nicht mehr da</span> : null}
+          </>
+        ) : followable ? (
+          <>
+            Andere können dir folgen <span className="text-muted-foreground">· {count}</span>
+          </>
+        ) : (
+          <>
+            Mitlesen <span className="text-muted-foreground">· {count} · Folgen …</span>
+          </>
+        )}
+      </button>
+      {followedName && !following && blocksAway !== 0 ? (
+        <Button size="sm" onClick={onResume} className="shrink-0">
+          Live {blocksAway > 0 ? "↓" : "↑"} {Math.abs(blocksAway)}
+        </Button>
+      ) : null}
+      {followedName && !following && blocksAway === 0 ? (
+        <Button size="sm" variant="outline" onClick={onResume} className="shrink-0">
+          Folgen
+        </Button>
+      ) : null}
+      {followedName ? (
+        <Button variant="ghost" size="sm" onClick={onStop} className="shrink-0">
+          Beenden
+        </Button>
+      ) : null}
     </div>
   );
 }

@@ -133,6 +133,12 @@ export function useLiveFollow({
     state.current = FOLLOWING;
   }, []);
 
+  /** Eigene Lesestelle als Absatz + Anteil (zum Teilen mit anderen). */
+  const currentPoint = React.useCallback(
+    () => fromAxis(latest.current.axis, userPosition(readingLine())),
+    [readingLine, userPosition],
+  );
+
   /** Ab der eigenen Stelle weiter (Lesetempo „Hier weiterlesen“, Start). */
   const startHere = React.useCallback(() => {
     latest.current.source.reanchor(userPosition(readingLine()));
@@ -167,6 +173,11 @@ export function useLiveFollow({
       const lineY = readingLine();
       const live = current.position(now);
       const user = userPosition(lineY);
+      // Quelle kennt noch keine Stelle (Person hat sich noch nicht bewegt).
+      if (!Number.isFinite(live)) {
+        frame = window.requestAnimationFrame(tick);
+        return;
+      }
       if (hold) {
         state.current = userInput(now, user, live, opts);
       } else {
@@ -205,7 +216,7 @@ export function useLiveFollow({
     };
   }, [enabled, interrupt, readingLine, screenY, userPosition]);
 
-  return { status, interrupt, resume, startHere };
+  return { status, interrupt, resume, startHere, currentPoint };
 }
 
 function insideOwnScroller(target: EventTarget | null) {
