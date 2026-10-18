@@ -177,15 +177,21 @@ Zeitleiste werden nach Bestätigung des Protokolls verdichtet (Szenenstatistik) 
 - E5: „Wo sind wir gerade?“ wird umgesetzt (Dashboard/Termin während laufender Sitzung:
   Szene, Absatz, Gruppen; Tipp öffnet den Leser an der Live-Stelle).
 
+- E6 (O1): Mitlesen wird nie automatisch eingeschaltet, auch nicht während eines Probentermins.
+- E7 (O2): Führende sehen, wie viele mitlesen und wer abgehängt ist.
+- E8 (O3, geprüft 2026-10-18): Prod läuft mit 2–4 Website-Pods (HPA, min 2), der
+  Realtime-Server steckt in jedem Pod, der Redis-Adapter ist aktiv (Log „Using Redis adapter“).
+  Broadcasts gehen also über alle Pods, die Schätzung im Speicher eines Pods aber nicht.
+  Daher: Positionen als Redis-Hash je Raum (`script:live:<fassung>`, TTL ~60 s), Schätzung
+  rechnet genau ein Pod je Raum (Redis-Lock `SET NX PX`, wird bei Ausfall übernommen), Ergebnis
+  per Adapter-Broadcast. Sticky Sessions gibt es keine → der Client nutzt für den Leser nur
+  `transports: ["websocket"]` (Polling würde zwischen Pods springen).
+- E9 (O4): Lesetempo (Teleprompter allein/offline) kommt, ist für alle verfügbar und muss
+  aktiv eingeschaltet werden.
+
 ## Offene Fragen
 
-- O1: Soll „Mitlesen“ während eines Probentermins automatisch an sein oder immer bewusst
-  eingeschaltet werden?
-- O2: Dürfen Führende sehen, _wie viele_ mitlesen bzw. wer abgehängt ist (für die Souffleuse
-  evtl. nützlich), oder bleibt das anonym?
-- O3: Läuft der Realtime-Server in Prod mit einer Instanz? Sonst Schätzung mit Redis-Adapter
-  bzw. sticky Raum-Zuordnung absichern.
-- O4: Lesetempo allein (Teleprompter) mit in Phase 4 oder erst bei Bedarf?
+Keine (Stand 2026-10-18).
 
 ## Checkliste
 
