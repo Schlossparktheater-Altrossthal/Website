@@ -163,3 +163,42 @@ test("Skript-Raum: Live-Stelle aus allen Mitlesenden, Folgende zählen nicht", a
     await server.close();
   }
 });
+
+test("Skript-Raum: Führende sehen, wer abgehängt ist (E7)", async () => {
+  const server = createRealtimeServer({
+    port: 0,
+    handshakeSecret: SECRET,
+    logger: { log() {}, warn() {}, error() {} },
+  });
+  await server.listen(0);
+  const lead = await connect(server, "u-lead", "Souffleuse");
+  const a = await connect(server, "u-a", "A");
+  const late = await connect(server, "u-late", "Nachzügler");
+  const echo = await connect(server, "u-echo", "Folgt");
+  try {
+    lead.emit("script_live_join", { versionId: "v4", followable: true });
+    for (const client of [a, late, echo]) {
+      client.emit("script_live_join", { versionId: "v4", followable: false });
+    }
+    // Nur Führende bekommen den Status mit Namen.
+    let leaked = false;
+    a.on("script_live_status", () => (leaked = true));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    lead.emit("script_live_position", { index: 50, fraction: 0, pos: 5000, cps: 9 });
+    a.emit("script_live_position", { index: 51, fraction: 0, pos: 5100 });
+    late.emit("script_live_position", { index: 10, fraction: 0, pos: 1000 });
+    echo.emit("script_live_position", { index: 50, fraction: 0, pos: 5000, echo: true });
+    const status = await next(lead, "script_live_status", (s) => s.behind.length === 1);
+    assert.equal(status.behind[0].name, "Nachzügler");
+    assert.equal(status.following, 1);
+    assert.equal(status.reading, 2);
+    assert.ok(status.livePos >= 5000 && status.livePos <= 5100, `pos ${status.livePos}`);
+    const live = await next(a, "script_live_estimate");
+    // Starttempo aus der Szenenzeit (9 Zeichen/s) statt 14.
+    assert.ok(live.rate > 6 && live.rate < 12, `rate ${live.rate}`);
+    assert.equal(leaked, false);
+  } finally {
+    for (const client of [lead, a, late, echo]) client.disconnect();
+    await server.close();
+  }
+});

@@ -16,6 +16,8 @@ export type Report = {
   at: number;
   leader?: boolean;
   searchingUntil?: number;
+  /** Gemessenes Szenentempo an der Stelle (Zeichen/s), für den Start. */
+  cps?: number;
 };
 
 export type EstimateState = {
@@ -23,6 +25,8 @@ export type EstimateState = {
   rate: number;
   t: number;
   jump: { pos: number; since: number } | null;
+  /** Schon einmal sicher gewesen (danach mit Vorhersage statt Neuansatz). */
+  warm?: boolean;
 };
 
 export type Estimate = {
@@ -34,6 +38,8 @@ export type Estimate = {
 };
 
 export function weightedMedian(items: { pos: number; weight: number }[]): number | null;
+export function densestCenter(items: { pos: number; weight: number }[]): number | null;
+export function startRate(reports: Report[]): number;
 export function estimate(
   state: EstimateState | null,
   reports: Report[],

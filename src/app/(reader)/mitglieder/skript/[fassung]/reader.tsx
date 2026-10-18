@@ -53,7 +53,8 @@ import {
   type Span,
 } from "@/lib/skript/note-logic";
 import { buildSceneHeaders, type SceneHeaderModel } from "@/lib/skript/scene-header";
-import { buildAxis, toAxis } from "@/lib/skript/live/axis";
+import { buildAxis, fromAxis, toAxis, type LiveAxis } from "@/lib/skript/live/axis";
+import type { ScriptLiveStatusEvent } from "@/lib/realtime/types";
 import { LIVE_FOLLOW, SOLO_TEMPO } from "@/lib/skript/live/follow";
 import { TEMPO_FACTORS, blockRates, nearestFactorIndex } from "@/lib/skript/live/tempo";
 import { computeScriptStats } from "@/lib/skript/stats";
@@ -1068,7 +1069,13 @@ export function ScriptReader({
     ownPoint: () => {
       const point = follow.currentPoint();
       // Wer gerade selbst folgt, gibt nur weiter, was er bekommt – zählt nicht für die Schätzung.
-      return { ...point, pos: toAxis(axis, point), echo: personActive && follow.status.following };
+      return {
+        ...point,
+        pos: toAxis(axis, point),
+        echo: personActive && follow.status.following,
+        // Gemessenes Szenentempo: Starttempo der Schätzung im Raum.
+        cps: rates[point.index],
+      };
     },
   });
   React.useEffect(() => {
@@ -1716,6 +1723,7 @@ export function ScriptReader({
               connected={live.connected}
               readers={live.readers}
               followable={followable}
+              behind={live.status?.behind.length ?? 0}
               followedName={
                 !personActive ? null : followAuto ? "automatisch" : (followedLeader?.name ?? "…")
               }
@@ -1829,6 +1837,7 @@ export function ScriptReader({
             aria-label="Andere dürfen mir folgen"
           />
         </label>
+        {followable ? <LiveStatusList status={live.status} axis={axis} /> : null}
         <h3 className="pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Folgen
         </h3>
@@ -2338,10 +2347,60 @@ function TempoBar({
   );
 }
 
+/** Für Führende (E7): wer liest mit, wer folgt, wer ist abgehängt. */
+function LiveStatusList({
+  status,
+  axis,
+}: {
+  status: ScriptLiveStatusEvent | null;
+  axis: LiveAxis;
+}) {
+  if (!status) {
+    return (
+      <p className="border-b border-border/60 py-3 text-sm text-muted-foreground">
+        Sobald mitgelesen wird, siehst du hier, wer folgt und wer abgehängt ist.
+      </p>
+    );
+  }
+  const liveIndex = fromAxis(axis, status.livePos).index;
+  const parts = [
+    status.reading ? `${status.reading} an der Stelle` : null,
+    status.following ? `${status.following} ${status.following === 1 ? "folgt" : "folgen"}` : null,
+    status.ahead ? `${status.ahead} voraus` : null,
+    status.away ? `${status.away} inaktiv` : null,
+  ].filter(Boolean);
+  return (
+    <div className="border-b border-border/60 py-3 text-sm">
+      <p className="text-muted-foreground">{parts.join(" · ") || "Noch keine Lesestellen"}</p>
+      {status.behind.length ? (
+        <>
+          <h3 className="pt-3 text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+            Abgehängt
+          </h3>
+          <ul className="divide-y divide-border/60">
+            {status.behind.map((person) => {
+              const blocks = liveIndex - fromAxis(axis, person.pos).index;
+              return (
+                <li key={person.userId} className="flex min-h-9 items-center justify-between gap-3">
+                  <span className="min-w-0 truncate">{person.name}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {blocks} {blocks === 1 ? "Absatz" : "Absätze"} zurück
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 function LiveBar({
   connected,
   readers,
   followable,
+  behind,
   followedName,
   leaderGone,
   tooFew,
@@ -2354,6 +2413,8 @@ function LiveBar({
   connected: boolean;
   readers: number;
   followable: boolean;
+  /** Führende: so viele sind abgehängt (E7). */
+  behind: number;
   followedName: string | null;
   leaderGone: boolean;
   /** Automatisch: zu wenige Mitlesende für eine sichere Stelle. */
@@ -2388,6 +2449,9 @@ function LiveBar({
         ) : followable ? (
           <>
             Andere können dir folgen <span className="text-muted-foreground">· {count}</span>
+            {behind ? (
+              <span className="text-amber-700 dark:text-amber-400"> · {behind} abgehängt</span>
+            ) : null}
           </>
         ) : (
           <>

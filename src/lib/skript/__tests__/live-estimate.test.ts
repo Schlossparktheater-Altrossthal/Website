@@ -4,6 +4,7 @@ import {
   LEAD_MAX,
   estimate,
   searchingUntil,
+  startRate,
   weightedMedian,
   type EstimateState,
   type Report,
@@ -158,6 +159,54 @@ describe("statistische Live-Stelle", () => {
     expect(result?.confident).toBe(false);
     const lead = estimate(null, [{ key: "a", pos: 500, at: 0, leader: true }], 0);
     expect(lead?.confident).toBe(true);
+  });
+
+  it("setzt ohne sichere Stelle sofort bei der dichtesten Gruppe an", () => {
+    // Erst meldet nur eine Person (unsicher), dann zwei andere gemeinsam an anderer Stelle.
+    const first = estimate(null, [{ key: "a", pos: 9000, at: 0 }], 0);
+    expect(first?.confident).toBe(false);
+    const second = estimate(
+      first!.state,
+      [
+        { key: "a", pos: 9000, at: 0 },
+        { key: "b", pos: 2000, at: 500 },
+        { key: "c", pos: 2100, at: 500 },
+      ],
+      500,
+    );
+    expect(second?.confident).toBe(true);
+    expect(Math.abs(second!.pos - 2050)).toBeLessThan(100);
+    // Danach ist die Schätzung „warm“: ein einzelner Ausreißer zieht sie nicht weg.
+    const third = estimate(
+      second!.state,
+      [
+        { key: "a", pos: 9000, at: 1000 },
+        { key: "b", pos: 2000, at: 500 },
+        { key: "c", pos: 2100, at: 500 },
+      ],
+      1000,
+    );
+    expect(Math.abs(third!.pos - 2050)).toBeLessThan(100);
+  });
+
+  it("startet mit dem gemessenen Szenentempo", () => {
+    expect(startRate([])).toBe(14);
+    expect(
+      startRate([
+        { key: "a", pos: 0, at: 0, cps: 9 },
+        { key: "b", pos: 0, at: 0, cps: 10 },
+        { key: "c", pos: 0, at: 0 },
+      ]),
+    ).toBe(10);
+    const result = estimate(
+      null,
+      [
+        { key: "a", pos: 100, at: 0, cps: 8 },
+        { key: "b", pos: 120, at: 0, cps: 8 },
+      ],
+      0,
+    );
+    expect(result?.rate).toBe(8);
   });
 
   it("erkennt schnelles Blättern", () => {

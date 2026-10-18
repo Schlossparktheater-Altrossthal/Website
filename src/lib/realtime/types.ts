@@ -196,6 +196,19 @@ export interface ScriptLiveEstimateEvent {
   at: number;
 }
 
+/** Nur an Führende (E7): wer liest mit, wer folgt, wer ist abgehängt. */
+export interface ScriptLiveStatusEvent {
+  versionId: string;
+  /** Live-Stelle, auf die sich die Einteilung bezieht (Achsen-Zeichen). */
+  livePos: number;
+  following: number;
+  reading: number;
+  ahead: number;
+  /** Länger als 2 min nicht bewegt. */
+  away: number;
+  behind: { userId: string; name: string; pos: number }[];
+}
+
 // Room Types
 export type RoomType =
   | `user_${string}` // User-specific room
@@ -241,6 +254,7 @@ export interface ServerToClientEvents {
   script_live_roster: (event: ScriptLiveRosterEvent) => void;
   script_live_position: (event: ScriptLivePositionEvent) => void;
   script_live_estimate: (event: ScriptLiveEstimateEvent) => void;
+  script_live_status: (event: ScriptLiveStatusEvent) => void;
   pong: () => void;
 }
 

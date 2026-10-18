@@ -29,8 +29,8 @@ const BETA = 0.05;
 const LEADER_WEIGHT = 3;
 
 /**
- * @typedef {{ key: string; pos: number; at: number; leader?: boolean; searchingUntil?: number }} Report
- * @typedef {{ pos: number; rate: number; t: number; jump: { pos: number; since: number } | null }} EstimateState
+ * @typedef {{ key: string; pos: number; at: number; leader?: boolean; searchingUntil?: number; cps?: number }} Report
+ * @typedef {{ pos: number; rate: number; t: number; jump: { pos: number; since: number } | null; warm?: boolean }} EstimateState
  * @typedef {{ pos: number; rate: number; confident: boolean; active: number; state: EstimateState }} Estimate
  */
 
@@ -50,6 +50,37 @@ export function weightedMedian(items) {
 const weightOf = (report) => (report.leader ? LEADER_WEIGHT : 1);
 
 /**
+ * Mitte der dichtesten Gruppe (meistes Gewicht im Fenster): Start ohne Vorhersage, damit zwei
+ * Mitlesende an derselben Stelle sofort zählen, auch wenn jemand anderes woanders steht.
+ */
+export function densestCenter(items) {
+  let best = null;
+  let bestWeight = 0;
+  for (const item of items) {
+    const group = items.filter((other) => Math.abs(other.pos - item.pos) <= WINDOW);
+    const weight = group.reduce((sum, other) => sum + other.weight, 0);
+    if (weight > bestWeight) {
+      bestWeight = weight;
+      best = group;
+    }
+  }
+  return best ? weightedMedian(best) : null;
+}
+
+/**
+ * Starttempo: Median der gemessenen Szenentempi an den Stellen der Mitlesenden (der Client
+ * kennt die Szenenzeiten), sonst 14 Zeichen/s.
+ */
+export function startRate(reports) {
+  const rates = reports
+    .map((report) => report.cps)
+    .filter((cps) => Number.isFinite(cps) && cps > 0)
+    .sort((a, b) => a - b);
+  if (!rates.length) return START_CPS;
+  return Math.min(MAX_CPS, rates[Math.floor(rates.length / 2)]);
+}
+
+/**
  * @param {EstimateState | null} state  vorheriger Stand (null = neu)
  * @param {Report[]} reports            letzte Meldung je Person (ohne Folgende/Echos)
  * @param {number} now                  ms
@@ -63,10 +94,12 @@ export function estimate(state, reports, now) {
   );
   const weighted = active.map((report) => ({ pos: report.pos, weight: weightOf(report) }));
 
-  if (!state) {
-    const start = weightedMedian(weighted);
+  // Neu oder noch nie sicher: jedes Mal frisch an der dichtesten Gruppe ansetzen, statt einer
+  // zufälligen ersten Meldung hinterherzulaufen (verkürzt den Anlauf).
+  if (!state || (!state.warm && weighted.length)) {
+    const start = densestCenter(weighted);
     if (start === null) return null;
-    const next = { pos: start, rate: START_CPS, t: now, jump: null };
+    const next = { pos: start, rate: startRate(active), t: now, jump: null };
     return finish(next, active, start, now);
   }
 
@@ -83,7 +116,7 @@ export function estimate(state, reports, now) {
       rate,
       confident: false,
       active: 0,
-      state: { pos: predicted, rate, t: now, jump: null },
+      state: { pos: predicted, rate, t: now, jump: null, warm: state.warm },
     };
   }
 
@@ -102,7 +135,13 @@ export function estimate(state, reports, now) {
           ? { pos: target, since: state.jump.since }
           : { pos: target, since: now };
       if (now - jump.since >= JUMP_CONFIRM_MS) {
-        const next = { pos: target, rate: Math.max(rate, START_CPS / 2), t: now, jump: null };
+        const next = {
+          pos: target,
+          rate: Math.max(rate, startRate(active) / 2),
+          t: now,
+          jump: null,
+          warm: true,
+        };
         return finish(next, active, target, now);
       }
       return {
@@ -110,7 +149,7 @@ export function estimate(state, reports, now) {
         rate,
         confident: false,
         active: active.length,
-        state: { pos: predicted, rate, t: now, jump },
+        state: { pos: predicted, rate, t: now, jump, warm: state.warm },
       };
     }
   }
@@ -122,7 +161,7 @@ export function estimate(state, reports, now) {
       rate,
       confident: false,
       active: active.length,
-      state: { pos: predicted, rate, t: now, jump: null },
+      state: { pos: predicted, rate, t: now, jump: null, warm: state.warm },
     };
   }
 
@@ -134,19 +173,26 @@ export function estimate(state, reports, now) {
   const front = Math.max(...inside.map((item) => item.pos));
   pos = Math.min(pos, front + LEAD_MAX);
   // Wieder Bewegung nach einer Pause: mit Starttempo anlaufen.
-  const resumed = rate === 0 && anyMoved ? Math.max(state.rate, START_CPS / 2) : nextRate;
-  return finish({ pos, rate: resumed, t: now, jump: null }, active, measured, now);
+  const resumed = rate === 0 && anyMoved ? Math.max(state.rate, startRate(active) / 2) : nextRate;
+  return finish(
+    { pos, rate: resumed, t: now, jump: null, warm: state.warm },
+    active,
+    measured,
+    now,
+  );
 }
 
 function finish(state, active, measured, now) {
   const near = active.filter((report) => Math.abs(report.pos - measured) <= WINDOW);
   const leaderNear = near.some((report) => report.leader);
+  const confident = near.length >= 2 || leaderNear;
   return {
     pos: state.pos,
     rate: state.rate,
-    confident: near.length >= 2 || leaderNear,
+    confident,
     active: near.length,
-    state: { ...state, t: now },
+    // Einmal sicher → ab dann mit Vorhersage weiter (Sprünge brauchen Bestätigung).
+    state: { ...state, t: now, warm: state.warm === true || confident },
   };
 }
 

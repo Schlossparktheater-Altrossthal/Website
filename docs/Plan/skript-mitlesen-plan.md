@@ -215,12 +215,15 @@ Phase 1–3 auf main und Staging (letzter Commit 1a324724), Prod-Release offen.
       Wechsel erst nach 5 s Ruhe (`src/lib/skript/live/devices.ts`). Dem eigenen anderen Gerät folgen
       geht noch nicht (man sieht sich nicht in der Liste).
 - [ ] Phase 4 Feinschliff:
-  - [ ] E7: Führende sehen, wie viele mitlesen und wer abgehängt ist (Server kennt alle Positionen,
-        nur an Personen mit „Andere dürfen mir folgen“ senden)
-  - [ ] Anlauf „Automatisch“ verkürzen (heute ~10 s nach dem ersten Verbinden)
-  - [ ] Starttempo der Schätzung aus gemessenen Szenenzeiten (Client kennt `blockRates`)
+  - [x] E7 (2026-10-18): Führende sehen, wie viele mitlesen und wer abgehängt ist (Server kennt alle Positionen,
+        nur an Personen mit „Andere dürfen mir folgen“ senden) – Event `script_live_status`, Leiste
+        „n abgehängt“, Liste im Mitlesen-Sheet
+  - [x] Anlauf „Automatisch“ verkürzt (2026-10-18): bis zur ersten sicheren Stelle setzt die
+        Schätzung jedes Mal an der dichtesten Gruppe neu an (`densestCenter`, Flag `warm`)
+  - [x] Starttempo aus gemessenen Szenenzeiten (2026-10-18): Clients senden `cps` ihrer Stelle,
+        Server nimmt den Median (`startRate`)
   - [ ] Zusammenspiel mehrerer Pods mit Redis prüfen (Staging hat 1 Pod ohne Redis)
-  - [ ] Realtime-Server-Tests (`node --test` in `realtime-server/`) in die CI aufnehmen
+  - [x] Realtime-Server-Tests (`node --test` in `realtime-server/`) in der CI (2026-10-18)
 - [ ] Phase 5 E2E + Gerätetest
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)
 - [ ] Phase 7 Sitzungs-Zeitleiste speichern (Tabelle `ScriptSessionSample`, verdichtet) +

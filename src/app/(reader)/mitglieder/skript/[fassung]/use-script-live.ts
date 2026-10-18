@@ -9,6 +9,7 @@ import type {
   ScriptLiveEstimateEvent,
   ScriptLivePositionEvent,
   ScriptLiveRosterEvent,
+  ScriptLiveStatusEvent,
 } from "@/lib/realtime/types";
 import { acceptLeaderPoint, type LeaderPoint } from "@/lib/skript/live/devices";
 
@@ -34,12 +35,14 @@ export function useScriptLive({
    * Eigene Lesestelle; wird geteilt, solange man mitliest. `pos` = Achsen-Position für die
    * Schätzung, `echo` = der Leser folgt gerade selbst (zählt dann nicht für die Schätzung).
    */
-  ownPoint: () => AxisPoint & { pos: number; echo: boolean };
+  ownPoint: () => AxisPoint & { pos: number; echo: boolean; cps?: number };
 }) {
   const { socket, connectionStatus } = useRealtime();
   const [roster, setRoster] = React.useState<ScriptLiveRosterEvent | null>(null);
   /** Statistische Live-Stelle vom Server (Phase 3); `received` = lokale Empfangszeit. */
   const estimateRef = React.useRef<(ScriptLiveEstimateEvent & { received: number }) | null>(null);
+  /** Nur für Führende: wer ist abgehängt (E7). */
+  const [status, setStatus] = React.useState<ScriptLiveStatusEvent | null>(null);
   const [estimateInfo, setEstimateInfo] = React.useState({ confident: false, active: 0 });
   /** Letzte Stelle je führender Person (Ref: ändert sich bis zu 1×/s, ohne Neuzeichnen). */
   const points = React.useRef(new Map<string, LeaderPoint>());
@@ -81,6 +84,10 @@ export function useScriptLive({
           : { confident: event.confident, active: event.active },
       );
     };
+    const onStatus = (event: ScriptLiveStatusEvent) => {
+      if (event.versionId === versionId) setStatus(event);
+    };
+    socket.on("script_live_status", onStatus);
     socket.on("script_live_estimate", onEstimate);
     socket.on("script_live_roster", onRoster);
     socket.on("script_live_position", onPosition);
@@ -88,12 +95,14 @@ export function useScriptLive({
     socket.on("connect", join);
     if (socket.connected) join();
     return () => {
+      socket.off("script_live_status", onStatus);
       socket.off("script_live_estimate", onEstimate);
       socket.off("script_live_roster", onRoster);
       socket.off("script_live_position", onPosition);
       socket.off("connect", join);
       if (socket.connected) socket.emit("script_live_leave");
       setRoster(null);
+      setStatus(null);
       points.current.clear();
       estimateRef.current = null;
       setEstimateInfo({ confident: false, active: 0 });
@@ -144,5 +153,7 @@ export function useScriptLive({
     /** Genug Mitlesende für eine sichere Schätzung? */
     estimateConfident: estimateInfo.confident,
     estimateActive: estimateInfo.active,
+    /** Wer folgt, mitliest, abgehängt ist – nur solange man selbst folgbar ist. */
+    status: followable ? status : null,
   };
 }
