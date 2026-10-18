@@ -44,6 +44,7 @@ export function createScriptLive({ io, logger = console }) {
       leaders.set(userId, {
         userId,
         name: socket.data.userName ?? "Unbekannt",
+        deviceId: socket.id,
         index: live.point?.index ?? null,
         fraction: live.point?.fraction ?? null,
         at: live.at ?? null,
@@ -105,6 +106,8 @@ export function createScriptLive({ io, logger = console }) {
       if (!live.followable) return;
       socket.to(live.room).emit("script_live_position", {
         userId: socket.data.userId,
+        // Mehrere Geräte einer Person: Folgende bleiben beim gerade aktiven (use-script-live).
+        deviceId: socket.id,
         index: point.index,
         fraction: point.fraction,
         at: now,

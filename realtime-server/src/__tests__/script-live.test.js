@@ -103,3 +103,32 @@ test("Skript-Raum: Teilnehmer, Führende und Positionen", async () => {
     await server.close();
   }
 });
+
+test("Skript-Raum: zwei Geräte einer Person zählen einmal, Positionen tragen das Gerät", async () => {
+  const server = createRealtimeServer({
+    port: 0,
+    handshakeSecret: SECRET,
+    logger: { log() {}, warn() {}, error() {} },
+  });
+  await server.listen(0);
+  const phone = await connect(server, "u-lead", "Souffleuse");
+  const tablet = await connect(server, "u-lead", "Souffleuse");
+  const reader = await connect(server, "u-read", "Darsteller");
+  try {
+    phone.emit("script_live_join", { versionId: "v2", followable: true });
+    tablet.emit("script_live_join", { versionId: "v2", followable: true });
+    const roster = next(reader, "script_live_roster", (r) => r.readers === 2);
+    reader.emit("script_live_join", { versionId: "v2", followable: false });
+    const got = await roster;
+    assert.equal(got.leaders.length, 1);
+
+    const fromTablet = next(reader, "script_live_position");
+    tablet.emit("script_live_position", { index: 5, fraction: 0 });
+    assert.equal((await fromTablet).deviceId, tablet.id);
+  } finally {
+    phone.disconnect();
+    tablet.disconnect();
+    reader.disconnect();
+    await server.close();
+  }
+});

@@ -9,6 +9,7 @@ import {
   scrollStep,
   userInput,
 } from "../live/follow";
+import { DEVICE_SWITCH_AFTER_MS, acceptLeaderPoint } from "../live/devices";
 import { DEFAULT_CPS, advance, blockRates } from "../live/tempo";
 
 const text = (sceneId: string, length: number) => ({
@@ -93,5 +94,22 @@ describe("Folgen", () => {
     expect(scrollStep(10, 0.016, 800)).toBe(1);
     expect(scrollStep(-100, 0.016, 800)).toBeCloseTo(-6.4);
     expect(scrollStep(2000, 0.016, 800)).toBe(2000);
+  });
+});
+
+describe("mehrere Geräte einer Person", () => {
+  const point = (deviceId: string, at: number, index = 1) => ({ deviceId, at, index, fraction: 0 });
+
+  it("bleibt beim aktiven Gerät und wechselt erst nach Ruhe", () => {
+    expect(acceptLeaderPoint(null, point("a", 0))).toBe(true);
+    expect(acceptLeaderPoint(point("a", 1000), point("a", 2000))).toBe(true);
+    expect(acceptLeaderPoint(point("a", 1000), point("b", 2000))).toBe(false);
+    expect(acceptLeaderPoint(point("a", 1000), point("b", 1000 + DEVICE_SWITCH_AFTER_MS))).toBe(
+      true,
+    );
+  });
+
+  it("ignoriert ältere Stände", () => {
+    expect(acceptLeaderPoint(point("a", 2000), point("a", 1000))).toBe(false);
   });
 });

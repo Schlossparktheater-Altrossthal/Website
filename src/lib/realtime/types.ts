@@ -162,6 +162,8 @@ export type RealtimeEvent =
 export interface ScriptLiveLeader {
   userId: string;
   name: string;
+  /** Gerät (Socket) mit der zuletzt bewegten Stelle. */
+  deviceId: string;
   index: number | null;
   fraction: number | null;
   at: number | null;
@@ -176,6 +178,7 @@ export interface ScriptLiveRosterEvent {
 
 export interface ScriptLivePositionEvent {
   userId: string;
+  deviceId: string;
   index: number;
   fraction: number;
   at: number;

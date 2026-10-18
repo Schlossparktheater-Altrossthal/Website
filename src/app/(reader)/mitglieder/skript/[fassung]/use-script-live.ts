@@ -4,7 +4,12 @@ import * as React from "react";
 
 import { useRealtime } from "@/hooks/useRealtime";
 import type { AxisPoint } from "@/lib/skript/live/axis";
-import type { ScriptLiveLeader, ScriptLiveRosterEvent } from "@/lib/realtime/types";
+import type {
+  ScriptLiveLeader,
+  ScriptLivePositionEvent,
+  ScriptLiveRosterEvent,
+} from "@/lib/realtime/types";
+import { acceptLeaderPoint, type LeaderPoint } from "@/lib/skript/live/devices";
 
 /**
  * Raum fürs Live-Mitlesen je Fassung (docs/Plan/skript-mitlesen-plan.md, Phase 2). Nur aktiv,
@@ -14,8 +19,6 @@ import type { ScriptLiveLeader, ScriptLiveRosterEvent } from "@/lib/realtime/typ
 
 /** Höchstens eine Position pro Sekunde senden. */
 const SEND_INTERVAL_MS = 1000;
-
-export type LeaderPoint = AxisPoint & { at: number };
 
 export function useScriptLive({
   versionId,
@@ -43,27 +46,25 @@ export function useScriptLive({
     if (!socket || !enabled) return;
     const join = () =>
       socket.emit("script_live_join", { versionId, followable: followableRef.current });
-    const onRoster = (event: ScriptLiveRosterEvent) => {
-      if (event.versionId !== versionId) return;
-      for (const leader of event.leaders) {
-        const known = points.current.get(leader.userId);
-        if (leader.index === null || leader.fraction === null || leader.at === null) continue;
-        if (known && known.at >= leader.at) continue;
-        points.current.set(leader.userId, {
-          index: leader.index,
-          fraction: leader.fraction,
-          at: leader.at,
-        });
-      }
-      setRoster(event);
-    };
-    const onPosition = (event: { userId: string; index: number; fraction: number; at: number }) => {
-      points.current.set(event.userId, {
+    const store = (event: ScriptLivePositionEvent) => {
+      const next: LeaderPoint = {
+        deviceId: event.deviceId,
         index: event.index,
         fraction: event.fraction,
         at: event.at,
-      });
+      };
+      const known = points.current.get(event.userId) ?? null;
+      if (acceptLeaderPoint(known, next)) points.current.set(event.userId, next);
     };
+    const onRoster = (event: ScriptLiveRosterEvent) => {
+      if (event.versionId !== versionId) return;
+      for (const leader of event.leaders) {
+        if (leader.index === null || leader.fraction === null || leader.at === null) continue;
+        store({ ...leader, index: leader.index, fraction: leader.fraction, at: leader.at });
+      }
+      setRoster(event);
+    };
+    const onPosition = (event: ScriptLivePositionEvent) => store(event);
     socket.on("script_live_roster", onRoster);
     socket.on("script_live_position", onPosition);
     // Nach Verbindungsabbruch neu beitreten (der Server vergisst den Raum).
