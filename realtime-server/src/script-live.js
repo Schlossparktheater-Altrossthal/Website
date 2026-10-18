@@ -5,6 +5,7 @@
  * Teilnehmerliste kommt über `fetchSockets()` und gilt damit über alle Pods (Redis-Adapter).
  */
 
+import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 
 import { WINDOW, estimate, searchingUntil } from "../../src/lib/skript/live/estimate.js";
@@ -13,7 +14,6 @@ export const SCRIPT_ROOM_PREFIX = "script_";
 /** Wie oft die Live-Stelle je Raum geschätzt und verteilt wird. */
 export const ESTIMATE_INTERVAL_MS = 500;
 const LOCK_TTL_MS = 2_000;
-const POD_ID = `${hostname()}-${process.pid}`;
 const VERSION_ID = /^[A-Za-z0-9_-]{1,64}$/;
 /** Mindestabstand zwischen zwei Positionen eines Geräts (Client sendet höchstens 1/s). */
 const MIN_POSITION_INTERVAL_MS = 250;
@@ -45,9 +45,15 @@ function readPoint(value) {
  * @param {{ io: import("socket.io").Server; logger?: Console; redis?: () => import("ioredis").Redis | null }} options
  */
 export function createScriptLive({ io, logger = console, redis = () => null }) {
+  // Je Instanz eindeutig (auch mehrere Server in einem Prozess, z. B. Tests).
+  const POD_ID = `${hostname()}-${process.pid}-${randomUUID().slice(0, 8)}`;
   const logWarn = typeof logger?.warn === "function" ? (...args) => logger.warn(...args) : () => {};
 
+  /** Nach stop(): keine Redis-Anfragen mehr (Server fährt herunter, Clients trennen sich). */
+  let stopped = false;
+
   async function emitRoster(room) {
+    if (stopped) return;
     let sockets;
     try {
       sockets = await io.in(room).fetchSockets();
@@ -306,10 +312,9 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
     });
   }
 
-  let running = false;
-  const timer = setInterval(async () => {
-    if (running) return;
-    running = true;
+  /** Laufende Runde (stop() wartet darauf, bevor Redis geschlossen wird). */
+  let running = null;
+  const tick = async () => {
     try {
       const rooms = localRooms();
       for (const room of states.keys()) if (!rooms.has(room)) states.delete(room);
@@ -319,13 +324,18 @@ export function createScriptLive({ io, logger = console, redis = () => null }) {
     } catch (error) {
       logWarn("[Realtime] Skript-Schätzung fehlgeschlagen", error);
     } finally {
-      running = false;
+      running = null;
     }
+  };
+  const timer = setInterval(() => {
+    if (!running) running = tick();
   }, ESTIMATE_INTERVAL_MS);
   timer.unref?.();
 
-  function stop() {
+  async function stop() {
+    stopped = true;
     clearInterval(timer);
+    await running;
     states.clear();
     statusSent.clear();
   }

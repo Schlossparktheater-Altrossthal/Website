@@ -31,6 +31,12 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    services:
+      # Mitlesen über mehrere Pods (realtime-server/src/__tests__/script-live-redis.test.js)
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -48,6 +54,8 @@ jobs:
         run: pnpm test
       - name: Run realtime server tests
         working-directory: realtime-server
+        env:
+          TEST_REDIS_URL: redis://localhost:6379
         run: node --test
 
   playwright:

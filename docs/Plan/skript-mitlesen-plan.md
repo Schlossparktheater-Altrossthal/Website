@@ -222,7 +222,12 @@ Phase 1–3 auf main und Staging (letzter Commit 1a324724), Prod-Release offen.
         Schätzung jedes Mal an der dichtesten Gruppe neu an (`densestCenter`, Flag `warm`)
   - [x] Starttempo aus gemessenen Szenenzeiten (2026-10-18): Clients senden `cps` ihrer Stelle,
         Server nimmt den Median (`startRate`)
-  - [ ] Zusammenspiel mehrerer Pods mit Redis prüfen (Staging hat 1 Pod ohne Redis)
+  - [x] Zusammenspiel mehrerer Pods mit Redis geprüft (2026-10-18): Test
+        `realtime-server/src/__tests__/script-live-redis.test.js` (zwei Server an einem Redis,
+        läuft mit `TEST_REDIS_URL`, in der CI mit Redis-Dienst): Liste/Positionen über Pods, genau
+        ein Pod schätzt, Status an Führung auf anderem Pod, Übernahme bei Ausfall. Dabei behoben:
+        Sperren-ID je Instanz, Redis-Verbindungen beim Schließen beenden, nach `stop()` keine
+        Redis-Anfragen mehr
   - [x] Realtime-Server-Tests (`node --test` in `realtime-server/`) in der CI (2026-10-18)
 - [ ] Phase 5 E2E + Gerätetest
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)

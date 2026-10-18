@@ -179,9 +179,12 @@ export function createRealtimeServer(options = {}) {
   });
 
   const redisUrl = process.env.REDIS_URL;
+  /** Redis-Verbindungen, beim Schließen beenden. */
+  const redisClients = [];
   if (redisUrl) {
     const pubClient = new Redis(redisUrl, { lazyConnect: true });
     const subClient = pubClient.duplicate();
+    redisClients.push(pubClient, subClient);
     pubClient.on("error", (error) => logError("[Realtime] Redis pub client error", error));
     subClient.on("error", (error) => logError("[Realtime] Redis sub client error", error));
     Promise.all([pubClient.connect(), subClient.connect()])
@@ -447,7 +450,8 @@ export function createRealtimeServer(options = {}) {
     if (closed) return;
     closed = true;
     analyticsManager.stop();
-    scriptLive.stop();
+    await scriptLive.stop();
+    redisCommands = null;
     if (analyticsRecorder && typeof analyticsRecorder.flush === "function") {
       await analyticsRecorder.flush();
     }
@@ -470,6 +474,7 @@ export function createRealtimeServer(options = {}) {
         });
       });
     });
+    await Promise.allSettled(redisClients.map((client) => client.quit()));
   }
 
   return {
