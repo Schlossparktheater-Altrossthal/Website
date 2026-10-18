@@ -40,7 +40,7 @@ const GROUPS: { label: string; statuses: ProductionStatus[] }[] = [
   { label: "Vergangen", statuses: ["finished", "archived"] },
 ];
 
-const MANAGE_HREF = "/mitglieder/produktionen?verwalten=1";
+const MANAGE_HREF = "/mitglieder/produktionen/verwalten";
 
 function productionTitle(production: { title: string | null; year: number }) {
   return production.title?.trim() || `Produktion ${production.year}`;
@@ -214,7 +214,7 @@ export function ProductionSwitcher({
   const footer = canManage ? (
     <div className="flex flex-col gap-0.5">
       <Link
-        href={`${MANAGE_HREF}&neu=1`}
+        href={`${MANAGE_HREF}?neu=1`}
         onClick={() => setOpen(false)}
         className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition hover:bg-accent"
       >

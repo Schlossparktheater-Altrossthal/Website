@@ -111,7 +111,7 @@ DATABASE_URL=postgresql://…@localhost:15432/<db> pnpm demo:lager --remove     
 - `e2e/plan.spec.ts` prüft den Produktionsplan (docs/Plan/projektplanung-plan.md): legt einen
   Meilenstein mit festem Datum im ersten Gewerk an, hängt über „+ Karte“ eine Karte im Board daran,
   hakt den Meilenstein trotz offener Karte ab (Rückfrage) und löscht Karte und Meilenstein wieder.
-  Ein zweiter Test prüft die Tabs und „Produktionen verwalten“ (`?verwalten=1`).
+  Ein zweiter Test prüft die Tabs und die Verwaltungsseite (`/mitglieder/produktionen/verwalten`, alte Adresse `?verwalten=1` leitet um); ein dritter den Wechsler in der Seitenleiste.
   Braucht eine aktive Produktion mit mindestens einem Gewerk, sonst wird er übersprungen
   (`pnpm e2e:desktop plan`).
 - Der Playwright-Test `e2e/bausteine.spec.ts` braucht keine Demo-Daten: Er legt über die

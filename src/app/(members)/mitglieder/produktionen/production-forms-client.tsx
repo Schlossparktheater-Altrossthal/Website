@@ -133,12 +133,9 @@ export function CreateProductionForm({
   }, [state]);
 
   return (
-    <form ref={formRef} action={formAction} className="grid gap-6">
+    <form ref={formRef} action={formAction} className="grid gap-4">
       <input type="hidden" name="redirectPath" value={redirectPath} />
-      <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
-        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Basisdaten
-        </legend>
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <label className="text-sm font-medium">Jahr</label>
           <Input
@@ -163,12 +160,14 @@ export function CreateProductionForm({
             placeholder="Optionaler Teaser, Autor oder kurzes Motto."
           />
         </div>
-      </fieldset>
+      </div>
 
-      <details className="rounded-lg border border-border/60 bg-background/60 p-4 transition [&_summary::-webkit-details-marker]:hidden">
+      <details className="group rounded-lg border border-border/60 px-3 py-2.5 [&_summary::-webkit-details-marker]:hidden">
         <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-          <span>Timeline &amp; Kommunikation (optional)</span>
-          <span className="text-xs text-muted-foreground">Bereich öffnen</span>
+          <span>Zeitraum &amp; Ankündigung</span>
+          <span className="text-xs font-normal text-muted-foreground group-open:hidden">
+            optional
+          </span>
         </summary>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
@@ -205,8 +204,8 @@ export function CreateProductionForm({
           <span className="leading-snug">Nach dem Anlegen direkt anzeigen</span>
         </label>
         <div className="flex flex-col items-start gap-2 sm:items-end">
-          <Button type="submit" className="sm:w-auto" disabled={isPending}>
-            Produktion erstellen
+          <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
+            Produktion anlegen
           </Button>
           {!state.ok ? (
             <p role="alert" aria-live="assertive" className="text-sm text-destructive">
@@ -393,13 +392,10 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
   }, [state]);
 
   return (
-    <form ref={formRef} action={formAction} className="grid gap-6">
+    <form ref={formRef} action={formAction} className="grid gap-4">
       <input type="hidden" name="showId" value={show.id} />
       <input type="hidden" name="redirectPath" value={redirectPath} />
-      <fieldset className="grid gap-3 rounded-lg border border-border/60 bg-background/70 p-4 sm:grid-cols-2">
-        <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Basisdaten
-        </legend>
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <label className="text-sm font-medium" htmlFor={`year-${show.id}`}>
             Jahr
@@ -438,12 +434,14 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
             placeholder="Optionaler Teaser, Autor oder kurzes Motto."
           />
         </div>
-      </fieldset>
+      </div>
 
-      <details className="rounded-lg border border-border/60 bg-background/60 p-4 transition [&_summary::-webkit-details-marker]:hidden">
+      <details className="group rounded-lg border border-border/60 px-3 py-2.5 [&_summary::-webkit-details-marker]:hidden">
         <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-          <span>Timeline &amp; Kommunikation (optional)</span>
-          <span className="text-xs text-muted-foreground">Bereich öffnen</span>
+          <span>Zeitraum &amp; Ankündigung</span>
+          <span className="text-xs font-normal text-muted-foreground group-open:hidden">
+            optional
+          </span>
         </summary>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
@@ -467,10 +465,10 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
         </div>
       </details>
 
-      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <Button type="submit" className="sm:w-auto" disabled={isPending}>
-            Produktion aktualisieren
+      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
+            Speichern
           </Button>
           {!state.ok ? (
             <p role="alert" aria-live="assertive" className="text-sm text-destructive">

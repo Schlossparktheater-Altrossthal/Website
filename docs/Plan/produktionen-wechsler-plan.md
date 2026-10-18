@@ -30,7 +30,7 @@ Stand: 2026-10-18 · Abgestimmt mit dem User.
    - Mitglieder sehen nur Produktionen mit aktueller Mitgliedschaft; bei nur einer kein Menü.
    - Produktionsleitung: „Neue Produktion“ (`?verwalten=1&neu=1`) und „Alle Produktionen verwalten“.
    - „Zur Produktion“ entfernt; `ProductionStatusPill` für farbige Status.
-2. **Verwaltungsseite** `/mitglieder/produktionen/verwalten` statt Seitenfenster
+2. **Verwaltungsseite** `/mitglieder/produktionen/verwalten` statt Seitenfenster – erledigt 2026-10-18
    - Listenzeilen im Dashboard-Stil (Jahr-Kachel, Titel, Premiere, Status, Chevron),
      Archivierte eingeklappt.
    - Bearbeiten im einheitlichen Dialog (mobil Bottom-Sheet), Status als `SegmentedControl`,

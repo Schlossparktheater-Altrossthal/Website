@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { ProductionHeader } from "@/components/production/production-header";
 import { Button } from "@/components/ui/button";
@@ -12,18 +12,24 @@ import { requireAuth } from "@/lib/rbac";
 import { PlanView } from "./_plan/plan-view";
 import type { PlanTemplateSummary } from "./_plan/templates-panel";
 import { SUGGESTED_TEMPLATE } from "@/lib/planning/templates";
-import { MANAGE_PARAM, ProductionManageSheet } from "./production-manage-sheet";
 
 /** Produktionsseite, Tab „Plan“ (docs/Plan/projektplanung-plan.md). */
-export default async function ProduktionenPage() {
+export default async function ProduktionenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ verwalten?: string; neu?: string }>;
+}) {
+  // Frühere Adresse des Verwalten-Fensters (Lesezeichen, Benachrichtigungen).
+  const { verwalten, neu } = await searchParams;
+  if (verwalten === "1") {
+    redirect(`/mitglieder/produktionen/verwalten${neu === "1" ? "?neu=1" : ""}`);
+  }
   const session = await requireAuth();
   const userId = session.user?.id;
   const [canManage, production] = await Promise.all([
     hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE"),
     getActiveProduction(userId),
   ]);
-
-  const manageSheet = canManage ? await renderManageSheet(production?.id ?? null) : null;
 
   if (!production) {
     return (
@@ -33,13 +39,10 @@ export default async function ProduktionenPage() {
           <p className="text-sm text-muted-foreground">Keine Produktion ausgewählt.</p>
           {canManage ? (
             <Button asChild>
-              <Link href={`/mitglieder/produktionen?${MANAGE_PARAM}=1`}>
-                Produktionen verwalten
-              </Link>
+              <Link href="/mitglieder/produktionen/verwalten">Produktionen verwalten</Link>
             </Button>
           ) : null}
         </div>
-        {manageSheet}
       </div>
     );
   }
@@ -80,36 +83,6 @@ export default async function ProduktionenPage() {
       {plan ? (
         <PlanView plan={plan} templates={templates} templateName={`Ablauf ${production.year}`} />
       ) : null}
-      {manageSheet}
     </div>
-  );
-}
-
-async function renderManageSheet(activeShowId: string | null) {
-  const shows = await prisma.show.findMany({
-    orderBy: { year: "desc" },
-    select: {
-      id: true,
-      year: true,
-      title: true,
-      synopsis: true,
-      dates: true,
-      revealedAt: true,
-      status: true,
-    },
-  });
-  const currentYear = new Date().getFullYear();
-  const highest = shows[0]?.year ?? currentYear - 1;
-  return (
-    <Suspense>
-      <ProductionManageSheet
-        shows={shows.map((show) => ({
-          ...show,
-          revealedAt: show.revealedAt ? show.revealedAt.toISOString() : null,
-        }))}
-        activeShowId={activeShowId}
-        suggestedYear={highest >= currentYear ? highest + 1 : currentYear}
-      />
-    </Suspense>
   );
 }

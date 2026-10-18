@@ -48,7 +48,7 @@ describe("CreateProductionForm", () => {
       />,
     );
 
-    const submitButton = screen.getByRole("button", { name: "Produktion erstellen" });
+    const submitButton = screen.getByRole("button", { name: "Produktion anlegen" });
     await user.click(submitButton);
 
     await waitFor(() => {

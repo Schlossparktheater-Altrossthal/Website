@@ -126,12 +126,13 @@ test.describe("als admin", () => {
     expect(errors).toEqual([]);
   });
 
-  test("Tabs der Produktionsseite und Verwaltung im Sheet", async ({ page }) => {
+  test("Tabs der Produktionsseite und Verwaltungsseite", async ({ page }) => {
     const errors = await collectErrors(page);
+    // Die frühere Adresse des Verwalten-Fensters leitet auf die eigene Seite um.
     await page.goto("/mitglieder/produktionen?verwalten=1");
+    await expect(page).toHaveURL(/\/mitglieder\/produktionen\/verwalten$/);
     await expect(page.getByRole("heading", { name: "Produktionen verwalten" })).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page).not.toHaveURL(/verwalten=1/);
+    await page.goto("/mitglieder/produktionen");
 
     const missing = await page
       .getByText("Keine Produktion ausgewählt.")
@@ -148,6 +149,36 @@ test.describe("als admin", () => {
       .click();
     await expect(page).toHaveURL(/\/mitglieder\/produktionen\/stueck/);
 
+    expect(errors).toEqual([]);
+  });
+});
+
+test.describe("Produktionen-Wechsler", () => {
+  test.use({ storageState: authFile("admin") });
+  test("wechselt die Produktion und bleibt auf derselben Seite", async ({ page }) => {
+    const errors = await collectErrors(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/mitglieder/sperrliste");
+    const trigger = page.getByRole("button", { name: /^Angezeigte Produktion: / });
+    test.skip(!(await trigger.isVisible().catch(() => false)), "Keine Produktion ausgewählt");
+    const before = await trigger.getAttribute("aria-label");
+    await trigger.click();
+    await expect(page.getByRole("link", { name: "Alle Produktionen verwalten" })).toBeVisible();
+    const others = page.locator("[data-radix-popper-content-wrapper] button:not([aria-current])");
+    test.skip((await others.count()) === 0, "Nur eine Produktion vorhanden");
+    await others.first().click();
+    await expect(trigger).not.toHaveAttribute("aria-label", before ?? "");
+    await expect(page).toHaveURL(/\/mitglieder\/sperrliste$/);
+
+    // Zurück auf die ursprüngliche Produktion, damit andere Tests sie weiter sehen.
+    await trigger.click();
+    const title = (before ?? "").replace(/^Angezeigte Produktion: /, "");
+    await page
+      .locator("[data-radix-popper-content-wrapper] button")
+      .filter({ hasText: title })
+      .first()
+      .click();
+    await expect(trigger).toHaveAttribute("aria-label", before ?? "");
     expect(errors).toEqual([]);
   });
 });
