@@ -37,7 +37,7 @@ Stand: 2026-10-18 · Abgestimmt mit dem User.
      sofort gespeichert; „Status setzen“ entfällt.
    - Neue Produktion als kurzer Assistent (Jahr, Titel, Premiere), danach direkt angezeigt.
    - Altes Seitenfenster und `?verwalten=1` entfernen (Weiterleitung auf die neue Seite).
-3. **Hinweisleiste + Abnahme** – Leiste erledigt 2026-10-18
+3. **Hinweisleiste + Abnahme** – erledigt 2026-10-18 (E2E plan.spec.ts grün auf Staging, Screenshots geprüft)
    - Wird eine abgeschlossene oder archivierte Produktion angezeigt: dezente Leiste „Du siehst …“
      mit Knopf zur laufenden (sonst geplanten) Produktion (`PastProductionBanner`). Weil mehrere
      Produktionen gleichzeitig laufen dürfen, gibt es keinen Hinweis zwischen laufenden.

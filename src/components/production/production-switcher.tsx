@@ -172,8 +172,8 @@ export function ProductionSwitcher({
                       disabled={isPending}
                       aria-current={isActive ? "true" : undefined}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait",
-                        isActive && "bg-accent/60",
+                        "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait",
+                        isActive && "bg-muted",
                       )}
                     >
                       <YearTile year={production.year} />
@@ -216,7 +216,7 @@ export function ProductionSwitcher({
       <Link
         href={`${MANAGE_HREF}?neu=1`}
         onClick={() => setOpen(false)}
-        className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition hover:bg-accent"
+        className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium transition hover:bg-muted/70"
       >
         <span className="flex size-9 items-center justify-center rounded-md border border-dashed border-border">
           <PlusIcon className="size-4" />
@@ -226,7 +226,7 @@ export function ProductionSwitcher({
       <Link
         href={MANAGE_HREF}
         onClick={() => setOpen(false)}
-        className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-muted-foreground transition hover:bg-accent hover:text-foreground"
+        className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
       >
         <span className="flex size-9 items-center justify-center">
           <SettingsIcon className="size-4" />
