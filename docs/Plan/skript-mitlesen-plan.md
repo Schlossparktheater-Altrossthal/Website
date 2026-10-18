@@ -193,12 +193,34 @@ Zeitleiste werden nach Bestätigung des Protokolls verdichtet (Szenenstatistik) 
 
 Keine (Stand 2026-10-18).
 
+## Stand und Testhinweise (2026-10-18)
+
+Phase 1–3 auf main und Staging (letzter Commit 1a324724), Prod-Release offen.
+
+- Staging hat nach dem Prod→Staging-Sync kein Skript. Zum Testen ein PDF einlesen
+  (Stück → Skript, z. B. „Die unendliche Geschichte“) und den Entwurf danach verwerfen.
+  Entwürfe sehen nur Verwalter → Test-Logins `admin`, `owner`, `board` (E2E_LOGIN_SECRET).
+- Leser auf Staging mit `waitUntil: "domcontentloaded"` öffnen, „load“ läuft in Timeouts.
+- Test mit mehreren Personen: je Person ein eigener Browser-Kontext; Stelle über
+  `[data-block]` an der Lesezeile vergleichen (Absatz-Index).
+- Beim automatischen Scrollen ist die Kopfleiste ausgeblendet (kurz hochwischen).
+- Lokale Demo (:3200) kann keine PDFs einlesen.
+
 ## Checkliste
 
 - [x] Phase 1 Lesezeile + Folgen-Steuerung lokal (2026-10-18): `src/lib/skript/live/` (axis, follow, tempo), Hook `use-live-follow.ts`, Lesetempo in den Leser-Einstellungen (nur Gerät)
 - [x] Phase 2 Realtime-Raum + Person folgen (2026-10-18): `realtime-server/src/script-live.js` (Raum `script_<fassung>`, Teilnehmer per fetchSockets über alle Pods; Test `script-live.test.js` läuft nicht in der CI), Hook `use-script-live.ts`, Ansicht → Mitlesen, Leiste „Folge …“ mit „Live ↓ n“
 - [x] Phase 3 Statistische Schätzung (2026-10-18): `src/lib/skript/live/estimate.js` (plain JS für den Realtime-Server, Typen in `.d.ts`; Simulationstests `live-estimate.test.ts`), Server rechnet je Raum alle 500 ms mit Redis-Sperre `script:live:lock:<raum>` (ohne Redis lokal), alle Mitlesenden senden `pos`, wer selbst folgt meldet `echo` und zählt nicht; im Leser „Folgen → Automatisch“
-- [ ] Phase 4 Feinschliff
+- [x] Mehrere Geräte einer Person (2026-10-18): zählen einmal; Folgende bleiben beim aktiven Gerät,
+      Wechsel erst nach 5 s Ruhe (`src/lib/skript/live/devices.ts`). Dem eigenen anderen Gerät folgen
+      geht noch nicht (man sieht sich nicht in der Liste).
+- [ ] Phase 4 Feinschliff:
+  - [ ] E7: Führende sehen, wie viele mitlesen und wer abgehängt ist (Server kennt alle Positionen,
+        nur an Personen mit „Andere dürfen mir folgen“ senden)
+  - [ ] Anlauf „Automatisch“ verkürzen (heute ~10 s nach dem ersten Verbinden)
+  - [ ] Starttempo der Schätzung aus gemessenen Szenenzeiten (Client kennt `blockRates`)
+  - [ ] Zusammenspiel mehrerer Pods mit Redis prüfen (Staging hat 1 Pod ohne Redis)
+  - [ ] Realtime-Server-Tests (`node --test` in `realtime-server/`) in die CI aufnehmen
 - [ ] Phase 5 E2E + Gerätetest
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)
 - [ ] Phase 7 Sitzungs-Zeitleiste speichern (Tabelle `ScriptSessionSample`, verdichtet) +
