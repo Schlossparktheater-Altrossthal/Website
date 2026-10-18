@@ -27,6 +27,8 @@ export async function GET() {
   if (!links) return NextResponse.json({ mode: "local" });
 
   let devices: AuthentikDevice[] | null = null;
+  // Authentik war gefragt, hat aber nicht (rechtzeitig) geantwortet.
+  let devicesError = false;
   let canManage = false;
   // `null`: unbekannt (ohne API-Token) – dann heißt der Knopf „Passwort ändern“.
   let hasPassword: boolean | null = null;
@@ -42,10 +44,18 @@ export async function GET() {
       }
     } catch (error) {
       console.error("[authentik] Geräte konnten nicht geladen werden", error);
+      devicesError = true;
     }
   }
 
-  return NextResponse.json({ mode: "authentik", links, devices, canManage, hasPassword });
+  return NextResponse.json({
+    mode: "authentik",
+    links,
+    devices,
+    devicesError,
+    canManage,
+    hasPassword,
+  });
 }
 
 const deleteSchema = z.object({

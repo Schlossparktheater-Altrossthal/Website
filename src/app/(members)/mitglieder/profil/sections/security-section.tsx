@@ -35,6 +35,8 @@ type SecurityState =
       links: { passwordChange: string; passkeySetup: string; totpSetup: string; settings: string };
       /** `null`: Geräte hier nicht abrufbar (z. B. Staging) – dann zeigt Authentik sie. */
       devices: Device[] | null;
+      /** Authentik hat nicht geantwortet – Status unbekannt. */
+      devicesError?: boolean;
       canManage: boolean;
       /** `false`: Konto ohne Passwort (z. B. Regie mit Passkey); `null`: unbekannt. */
       hasPassword?: boolean | null;
@@ -163,7 +165,12 @@ export function SecuritySection() {
     );
   }
 
-  const { links, devices, canManage, hasPassword } = state;
+  const { links, devices, devicesError, canManage, hasPassword } = state;
+  const statusUnavailable = devicesError ? (
+    <p className="text-sm text-muted-foreground">
+      Status konnte gerade nicht geladen werden. Bitte die Seite später neu laden.
+    </p>
+  ) : null;
   const passkeys = devices?.filter((device) => device.kind === "webauthn") ?? [];
   const totps = devices?.filter((device) => device.kind === "totp") ?? [];
   const totpActive = totps.length > 0;
@@ -227,7 +234,9 @@ export function SecuritySection() {
             empty="Noch kein Passkey hinterlegt."
             onRemove={setRemoveDevice}
           />
-        ) : null}
+        ) : (
+          statusUnavailable
+        )}
         <Button asChild size="sm">
           <a href={withReturn(links.passkeySetup)}>
             <PlusIcon className="h-4 w-4" />
@@ -268,7 +277,9 @@ export function SecuritySection() {
             empty="Keine Authenticator-App eingerichtet."
             onRemove={setRemoveDevice}
           />
-        ) : null}
+        ) : (
+          statusUnavailable
+        )}
         <Button asChild size="sm" variant={totpActive ? "outline" : "default"}>
           <a href={withReturn(links.totpSetup)}>
             <PlusIcon className="h-4 w-4" />

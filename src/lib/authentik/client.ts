@@ -118,7 +118,10 @@ export async function findAuthentikUserByMemberId(userId: string): Promise<Authe
   const config = requireConfig();
   const data = userListSchema.parse(
     await request(config, "/core/users/", {
-      query: { attributes: JSON.stringify({ mitgliederbereich__userId: userId }) },
+      query: {
+        attributes: JSON.stringify({ mitgliederbereich__userId: userId }),
+        include_groups: "false",
+      },
     }),
   );
   return (
@@ -206,7 +209,9 @@ export async function findAuthentikUserByEmail(email: string): Promise<Authentik
   const config = requireConfig();
   const normalized = email.trim().toLowerCase();
   const data = userListSchema.parse(
-    await request(config, "/core/users/", { query: { email: normalized } }),
+    await request(config, "/core/users/", {
+      query: { email: normalized, include_groups: "false" },
+    }),
   );
   return data.results.find((user) => user.email.toLowerCase() === normalized) ?? null;
 }
