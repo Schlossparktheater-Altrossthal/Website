@@ -266,7 +266,7 @@ Phase 1–3 auf main und Staging (letzter Commit 1a324724), Prod-Release offen.
         einer Person, pausiert, „Live ↓“, Automatisch, danach „1 abgehängt“ bei der Führung;
         CI startet dafür den Realtime-Server neben next dev
   - [ ] Gerätetest bei einer echten Leseprobe
-- [ ] Phase 7/8 Aufnahme + private Aufnahme + Protokollansicht (E10–E12)
+- [x] Phase 7/8 Aufnahme + private Aufnahme + Protokollansicht (E10–E12) (2026-10-18, 4f4942dc, auf Staging geprüft; offen: Probe auf echtem Gerät, Gruppen Phase 6, Rohdaten nach 30 Tagen verdichten)
 - [ ] Phase 6 Gruppen/Parallelproben (mehrere Live-Stellen, Gruppe automatisch wählen)
 - [ ] Phase 7 Sitzungs-Zeitleiste speichern (Tabelle `ScriptSessionSample`, verdichtet) +
       Erkennung Wiederholung/Stillstand/Übersprungen/Probenart

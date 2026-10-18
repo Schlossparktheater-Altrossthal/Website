@@ -397,11 +397,17 @@ export function SessionView({
                   Übersprungen
                 </h2>
                 <ul className="list-disc space-y-1 pl-5 text-sm">
-                  {protocol.skipped.map((range) => (
-                    <li key={range.from}>
-                      {range.sceneIds.map((id) => sceneTitle.get(id) ?? "Szene").join(", ") ||
-                        "Teil des Skripts"}
-                    </li>
+                  {[
+                    // Mehrere Lücken in derselben Szene nur einmal nennen.
+                    ...new Set(
+                      protocol.skipped.map(
+                        (range) =>
+                          range.sceneIds.map((id) => sceneTitle.get(id) ?? "Szene").join(", ") ||
+                          "Teil des Skripts",
+                      ),
+                    ),
+                  ].map((label) => (
+                    <li key={label}>{label}</li>
                   ))}
                 </ul>
               </section>
