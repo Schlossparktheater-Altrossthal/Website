@@ -195,7 +195,7 @@ Keine (Stand 2026-10-18).
 
 ## Checkliste
 
-- [ ] Phase 1 Lesezeile + Folgen-Steuerung lokal
+- [x] Phase 1 Lesezeile + Folgen-Steuerung lokal (2026-10-18): `src/lib/skript/live/` (axis, follow, tempo), Hook `use-live-follow.ts`, Lesetempo in den Leser-Einstellungen (nur Gerät)
 - [ ] Phase 2 Realtime-Raum + Person folgen
 - [ ] Phase 3 Statistische Schätzung
 - [ ] Phase 4 Feinschliff

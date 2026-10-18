@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import { CloudOffIcon } from "lucide-react";
+import { CloudOffIcon, MinusIcon, PauseIcon, PlayIcon, PlusIcon } from "lucide-react";
 import {
   ArrowLeftIcon,
   BookOpenTextIcon,
@@ -53,6 +53,9 @@ import {
   type Span,
 } from "@/lib/skript/note-logic";
 import { buildSceneHeaders, type SceneHeaderModel } from "@/lib/skript/scene-header";
+import { buildAxis } from "@/lib/skript/live/axis";
+import { SOLO_TEMPO } from "@/lib/skript/live/follow";
+import { TEMPO_FACTORS, blockRates, nearestFactorIndex } from "@/lib/skript/live/tempo";
 import { computeScriptStats } from "@/lib/skript/stats";
 import type { CueCategory } from "@/lib/skript/types";
 import type { ReaderState } from "@/lib/skript/view-options";
@@ -91,6 +94,7 @@ import { SceneHeaderSettings } from "./scene-header-settings";
 import { ViewPicker, viewChoices } from "./view-picker";
 import { SketchCard, SketchEditor, SketchMark, type SketchTarget } from "./sketch";
 import { BlockEditor, type BlockEditorState } from "./block-editor";
+import { useLiveFollow, useTempoSource } from "./use-live-follow";
 import { useAnnotations } from "./use-annotations";
 import { NoteToolbox, TappedBar, toggleSign, type DropGap } from "./note-toolbox";
 import { SelectionHandles } from "./selection-handles";
@@ -985,9 +989,62 @@ export function ScriptReader({
   }, [blocks, trimmed]);
   const activeMatch = matches.length ? matches[Math.min(matchIndex, matches.length - 1)] : -1;
 
+  // Sprung (Szene, Suche, Vorschau) zählt fürs Lesetempo wie eigenes Scrollen.
+  const interruptFollow = React.useRef<(() => void) | null>(null);
   const scrollToIndex = React.useCallback((index: number, smooth = true) => {
+    interruptFollow.current?.();
     refs.current[index]?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
   }, []);
+
+  // Lesetempo (docs/Plan/skript-mitlesen-plan.md, Phase 1 / E9): nur auf diesem Gerät.
+  const [tempo, setTempo] = React.useState<TempoSettings>({ enabled: false, factor: 1 });
+  const [tempoRunning, setTempoRunning] = React.useState(false);
+  React.useEffect(() => {
+    const stored = readStored<TempoSettings>(TEMPO_KEY);
+    setTempo({
+      enabled: stored?.enabled === true,
+      factor: TEMPO_FACTORS[nearestFactorIndex(Number(stored?.factor) || 1)],
+    });
+  }, []);
+  const updateTempo = (patch: Partial<TempoSettings>) =>
+    setTempo((current) => {
+      const next = { ...current, ...patch };
+      writeStored(TEMPO_KEY, next);
+      return next;
+    });
+  const axis = React.useMemo(() => buildAxis(blocks), [blocks]);
+  const rates = React.useMemo(() => blockRates(blocks, scenes), [blocks, scenes]);
+  const tempoActive = tempo.enabled && tempoRunning;
+  const tempoSource = useTempoSource(axis, rates, tempo.factor, tempoActive);
+  const follow = useLiveFollow({
+    enabled: tempoActive,
+    suspended:
+      noteMode ||
+      !!blockEdit ||
+      !!editor ||
+      !!inlineNote ||
+      !!sketch ||
+      searchOpen ||
+      panel !== null ||
+      reviewOpen,
+    axis,
+    refs,
+    topRef: toolbarRef,
+    bottomRef: barRef,
+    source: tempoSource,
+    options: SOLO_TEMPO,
+  });
+  React.useEffect(() => {
+    interruptFollow.current = tempoActive ? follow.interrupt : null;
+  }, [tempoActive, follow.interrupt]);
+  const startTempo = () => {
+    setTempoRunning(true);
+    follow.startHere();
+  };
+  const changeFactor = (step: number) => {
+    const index = nearestFactorIndex(tempo.factor) + step;
+    updateTempo({ factor: TEMPO_FACTORS[Math.min(Math.max(index, 0), TEMPO_FACTORS.length - 1)] });
+  };
 
   // Sichtbaren Bereich bestimmen (Kopfzeilen oben, Navigation und Vorschau-Leiste unten).
   React.useEffect(() => {
@@ -1458,6 +1515,15 @@ export function ScriptReader({
         </article>
       </div>
 
+      {tempoActive && follow.status.following ? (
+        // Lesezeile: hier steht die Stelle, die gerade „gesprochen“ wird.
+        <div
+          aria-hidden
+          className="pointer-events-none fixed left-0 z-20 h-6 w-1 -translate-y-1/2 rounded-r bg-primary/70"
+          style={{ top: follow.status.lineY }}
+        />
+      ) : null}
+
       <div
         ref={barRef}
         className={cn(
@@ -1466,6 +1532,7 @@ export function ScriptReader({
           inlineNote && "hidden",
           (nextCue ||
             nextLine ||
+            tempo.enabled ||
             selection ||
             selectedBlock ||
             pick ||
@@ -1591,6 +1658,16 @@ export function ScriptReader({
               {...(canManage
                 ? { onEdit: () => editBlockAt("edit"), onInsert: () => editBlockAt("insert") }
                 : {})}
+            />
+          ) : null}
+          {tempo.enabled && !noteMode && !pick && !selection && !selectedBlock ? (
+            <TempoBar
+              running={tempoRunning}
+              following={follow.status.following}
+              factor={tempo.factor}
+              onToggle={() => (tempoRunning ? setTempoRunning(false) : startTempo())}
+              onResume={follow.startHere}
+              onFactor={changeFactor}
             />
           ) : null}
           {!noteMode && !pick && !selection && !selectedBlock && nextCue ? (
@@ -1864,6 +1941,22 @@ export function ScriptReader({
             Gerät
           </h3>
           <label className="flex min-h-11 items-center justify-between gap-3">
+            <span>
+              Lesetempo
+              <span className="block text-xs text-muted-foreground">
+                Scrollt im Sprechtempo von selbst weiter. Eigenes Scrollen korrigiert die Stelle.
+              </span>
+            </span>
+            <Switch
+              checked={tempo.enabled}
+              onCheckedChange={(enabled) => {
+                updateTempo({ enabled });
+                if (!enabled) setTempoRunning(false);
+              }}
+              aria-label="Lesetempo"
+            />
+          </label>
+          <label className="flex min-h-11 items-center justify-between gap-3">
             <span>Bildschirm anlassen</span>
             <Switch
               checked={settings.keepAwake}
@@ -1992,5 +2085,72 @@ function NextBar({
         {linesAway === 0 ? "gleich" : `in ${linesAway} ${linesAway === 1 ? "Replik" : "Repliken"}`}
       </span>
     </button>
+  );
+}
+
+const TEMPO_KEY = "skript-lesetempo";
+type TempoSettings = { enabled: boolean; factor: number };
+
+function TempoBar({
+  running,
+  following,
+  factor,
+  onToggle,
+  onResume,
+  onFactor,
+}: {
+  running: boolean;
+  following: boolean;
+  factor: number;
+  onToggle: () => void;
+  onResume: () => void;
+  onFactor: (step: number) => void;
+}) {
+  const factorIndex = nearestFactorIndex(factor);
+  return (
+    <div className="flex min-h-11 items-center gap-2 px-3 py-1 sm:px-4">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onToggle}
+        aria-label={running ? "Lesetempo anhalten" : "Lesetempo starten"}
+      >
+        {running ? <PauseIcon className="size-5" /> : <PlayIcon className="size-5" />}
+      </Button>
+      {running && !following ? (
+        <button
+          type="button"
+          onClick={onResume}
+          className="min-w-0 flex-1 truncate text-left text-sm text-muted-foreground hover:text-foreground"
+        >
+          Pausiert – <span className="text-primary">hier weiterlesen</span>
+        </button>
+      ) : (
+        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+          {running ? "Lesetempo läuft" : "Lesetempo"}
+        </span>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onFactor(-1)}
+        disabled={factorIndex === 0}
+        aria-label="Langsamer"
+      >
+        <MinusIcon className="size-4" />
+      </Button>
+      <span className="w-10 text-center text-sm tabular-nums">
+        {factor.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })}×
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onFactor(1)}
+        disabled={factorIndex === TEMPO_FACTORS.length - 1}
+        aria-label="Schneller"
+      >
+        <PlusIcon className="size-4" />
+      </Button>
+    </div>
   );
 }
