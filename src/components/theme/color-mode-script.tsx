@@ -54,15 +54,44 @@ export function ColorModeScript({ mode }: ColorModeScriptProps) {
       window.removeEventListener("beforeunload", cleanup);
     };
 
+    // Titel-/Statusleiste der installierten App in der tatsächlichen Hintergrundfarbe des Themes.
+    // Canvas wandelt oklch()/var()-Ergebnisse in Hex, das jeder Browser in theme-color versteht.
+    const syncThemeColor = () => {
+      const target = document.body || root;
+      const color = getComputedStyle(target).backgroundColor;
+      if (!color || color === "transparent" || color === "rgba(0, 0, 0, 0)") return;
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+      const hex = "#" + [r, g, b].map((value) => value.toString(16).padStart(2, "0")).join("");
+      document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+        meta.removeAttribute("media");
+        meta.setAttribute("content", hex);
+      });
+    };
+    const scheduleThemeColor = () => {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", syncThemeColor, { once: true });
+      } else {
+        requestAnimationFrame(syncThemeColor);
+      }
+    };
+
     const apply = (modeToApply) => {
       if (modeToApply === "system") {
         const isDark = preferenceQuery ? preferenceQuery.matches : false;
         root.classList.toggle("dark", isDark);
         root.style.colorScheme = preferenceQuery ? "light dark" : (isDark ? "dark" : "light");
+        scheduleThemeColor();
         return;
       }
       root.classList.toggle("dark", modeToApply === "dark");
       root.style.colorScheme = modeToApply;
+      scheduleThemeColor();
     };
 
     const handlePreferenceChange = () => {

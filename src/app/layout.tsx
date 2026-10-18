@@ -71,10 +71,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   // Android-Chrome: Tastatur verkleinert die Seite, statt Dialoge zu überdecken (iOS: visualViewport).
   interactiveWidget: "resizes-content",
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "oklch(0.75 0.14 63.3)" },
-    { color: "oklch(0.78 0.146 63.3)" },
-  ],
+  // Titel-/Statusleiste in Hintergrundfarbe statt Akzent; ColorModeScript gleicht sie danach an
+  // das aktive Theme an (Hex, weil nicht jeder Browser oklch() in theme-color versteht).
+  themeColor: [{ media: "(prefers-color-scheme: dark)", color: "#0f1115" }, { color: "#ffffff" }],
   colorScheme: "light dark",
 };
 

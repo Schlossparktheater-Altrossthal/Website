@@ -12,7 +12,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/mitglieder",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
+    // Kein `orientation`: Tablets und Querformat (Skript, Tabellen) bleiben möglich.
+    // Klick auf Benachrichtigung/Kurzbefehl nutzt das offene App-Fenster statt eines zweiten.
+    launch_handler: { client_mode: ["navigate-existing", "auto"] },
     lang: "de-DE",
     dir: "ltr",
     background_color: PWA_BACKGROUND_COLOR,
@@ -38,6 +40,11 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "Meine Termine",
         url: "/mitglieder/meine-proben",
+        icons: [{ src: "/pwa-icons/192", sizes: "192x192", type: "image/png" }],
+      },
+      {
+        name: "Lager-Scanner",
+        url: "/mitglieder/lager/scannen",
         icons: [{ src: "/pwa-icons/192", sizes: "192x192", type: "image/png" }],
       },
       {
