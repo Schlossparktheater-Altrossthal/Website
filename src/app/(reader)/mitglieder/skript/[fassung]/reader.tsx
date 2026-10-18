@@ -1519,8 +1519,8 @@ export function ScriptReader({
         // Lesezeile: hier steht die Stelle, die gerade „gesprochen“ wird.
         <div
           aria-hidden
-          className="pointer-events-none fixed left-0 z-20 h-6 w-1 -translate-y-1/2 rounded-r bg-primary/70"
-          style={{ top: follow.status.lineY }}
+          className="pointer-events-none fixed z-20 h-6 w-1 -translate-y-1/2 rounded-full bg-primary/70"
+          style={{ top: follow.status.lineY, left: Math.max(0, follow.status.lineX - 8) }}
         />
       ) : null}
 

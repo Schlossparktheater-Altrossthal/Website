@@ -35,6 +35,8 @@ export type LiveFollowStatus = {
   blocksAway: number;
   /** Lesezeile in px vom oberen Fensterrand (für die Markierung). */
   lineY: number;
+  /** Linker Rand der Textspalte. */
+  lineX: number;
 };
 
 export function useLiveFollow({
@@ -61,6 +63,7 @@ export function useLiveFollow({
     following: true,
     blocksAway: 0,
     lineY: 0,
+    lineX: 0,
   });
   const state = React.useRef<FollowState>(FOLLOWING);
   const hint = React.useRef(0);
@@ -181,12 +184,14 @@ export function useLiveFollow({
       }
       const axisNow = latest.current.axis;
       const blocksAway = fromAxis(axisNow, live).index - fromAxis(axisNow, user).index;
+      const lineX = (refs.current ?? []).find(Boolean)?.getBoundingClientRect().left ?? 0;
       setStatus((prev) =>
         prev.following === following &&
         prev.blocksAway === blocksAway &&
-        Math.abs(prev.lineY - lineY) < 1
+        Math.abs(prev.lineY - lineY) < 1 &&
+        Math.abs(prev.lineX - lineX) < 1
           ? prev
-          : { following, blocksAway, lineY },
+          : { following, blocksAway, lineY, lineX },
       );
       frame = window.requestAnimationFrame(tick);
     };
