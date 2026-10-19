@@ -260,7 +260,8 @@ async function main() {
     },
   });
 
-  const measurementRoleNames = ["member", "cast", "tech", "board", "finance"];
+  // Körpermaße aller nur für den Vorstand; sonst über Gewerk-Baustein (lib/measurements/access.ts).
+  const measurementRoleNames = ["board"];
   const measurementRoles = await prisma.appRole.findMany({
     where: { name: { in: measurementRoleNames } },
   });
