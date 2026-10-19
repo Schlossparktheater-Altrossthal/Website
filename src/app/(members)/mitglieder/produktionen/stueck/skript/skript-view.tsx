@@ -3,10 +3,10 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "@/components/ui/action-icons";
 import { loadScriptReview } from "@/lib/skript/review";
 import { readImportReport } from "@/lib/skript/json";
-import { listScriptVersions } from "@/lib/skript/service";
+import { listPendingImports, listScriptVersions } from "@/lib/skript/service";
 
 import { ScriptReview } from "./skript-review";
-import { ScriptVersions, type ScriptVersionItem } from "./skript-versions";
+import { ScriptVersions, type ScriptPendingItem, type ScriptVersionItem } from "./skript-versions";
 
 export const SKRIPT_PATH = "/mitglieder/produktionen/stueck?ansicht=skript";
 
@@ -44,7 +44,20 @@ export async function SkriptView({
     );
   }
 
-  const versions = await listScriptVersions(showId, { includeDrafts: canManage });
+  const [versions, pendingRows] = await Promise.all([
+    listScriptVersions(showId, { includeDrafts: canManage }),
+    canManage ? listPendingImports(showId) : [],
+  ]);
+  const pending: ScriptPendingItem[] = pendingRows.map((item) => ({
+    id: item.id,
+    label: item.label,
+    sourceName: item.sourceName,
+    error: item.error,
+    attempts: item.attempts,
+    lastTriedAt: item.lastTriedAt.toISOString(),
+    createdAt: item.createdAt.toISOString(),
+    createdByName: item.createdBy?.name ?? null,
+  }));
   const items: ScriptVersionItem[] = versions.map((version) => {
     const report = readImportReport(version.importReport);
     return {
@@ -59,7 +72,10 @@ export async function SkriptView({
       scenes: report.scenes,
       blocks: report.blocks,
       roles: report.speakers.length,
+      hasSource: version.hasSource,
     };
   });
-  return <ScriptVersions showId={showId} versions={items} canManage={canManage} />;
+  return (
+    <ScriptVersions showId={showId} versions={items} pending={pending} canManage={canManage} />
+  );
 }

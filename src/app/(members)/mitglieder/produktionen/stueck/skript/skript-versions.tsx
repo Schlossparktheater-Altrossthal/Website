@@ -5,15 +5,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { ChevronRightIcon, FileIcon, SparklesIcon, UploadIcon } from "@/components/ui/action-icons";
+import {
+  ChevronRightIcon,
+  DownloadIcon,
+  FileIcon,
+  RefreshIcon,
+  SparklesIcon,
+  TrashIcon,
+  UploadIcon,
+} from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 
+import { deletePendingScriptAction, retryPendingScriptAction } from "../../actions/skript";
+
 import { inputClass } from "../ui";
-import { byline } from "./format";
+import { byline, formatDateTime } from "./format";
 
 export type ScriptVersionItem = {
   id: string;
@@ -27,6 +38,19 @@ export type ScriptVersionItem = {
   scenes: number;
   blocks: number;
   roles: number;
+  hasSource: boolean;
+};
+
+/** Hochgeladenes PDF, an dem sich der Parser noch die Zähne ausbeißt. */
+export type ScriptPendingItem = {
+  id: string;
+  label: string;
+  sourceName: string;
+  error: string;
+  attempts: number;
+  lastTriedAt: string;
+  createdAt: string;
+  createdByName: string | null;
 };
 
 const BASE = "/mitglieder/produktionen/stueck?ansicht=skript";
@@ -34,10 +58,12 @@ const BASE = "/mitglieder/produktionen/stueck?ansicht=skript";
 export function ScriptVersions({
   showId,
   versions,
+  pending,
   canManage,
 }: {
   showId: string;
   versions: ScriptVersionItem[];
+  pending: ScriptPendingItem[];
   canManage: boolean;
 }) {
   return (
@@ -58,41 +84,58 @@ export function ScriptVersions({
         </Link>
       ) : null}
       {canManage ? <ScriptUpload showId={showId} /> : null}
+      {pending.map((item) => (
+        <PendingCard key={item.id} showId={showId} item={item} />
+      ))}
       {versions.length ? (
         <ListRowGroup>
           {versions.map((version) => (
-            <ListRow
-              key={version.id}
-              href={
-                version.status === "released"
-                  ? `/mitglieder/skript/${version.id}`
-                  : `${BASE}&fassung=${version.id}`
-              }
-              leading={<FileIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
-              title={
-                <span className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="break-words">{version.label}</span>
-                  {version.status === "draft" ? (
-                    <Badge variant="warning" size="sm">
-                      Entwurf
-                    </Badge>
-                  ) : (
-                    <Badge variant="success" size="sm">
-                      Freigegeben
-                    </Badge>
-                  )}
-                </span>
-              }
-              description={
-                <>
-                  {version.scenes} Szenen · {version.blocks} Absätze · {version.roles} Rollen
-                  <br />
-                  {version.releasedAt
-                    ? `Freigegeben von ${byline(version.releasedByName, version.releasedAt)}`
-                    : `Eingelesen von ${byline(version.createdByName, version.createdAt)}`}
-                </>
-              }
-            />
+            <div key={version.id} className="flex items-center gap-1">
+              <ListRow
+                className="flex-1"
+                href={
+                  version.status === "released"
+                    ? `/mitglieder/skript/${version.id}`
+                    : `${BASE}&fassung=${version.id}`
+                }
+                leading={<FileIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
+                title={
+                  <span className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="break-words">{version.label}</span>
+                    {version.status === "draft" ? (
+                      <Badge variant="warning" size="sm">
+                        Entwurf
+                      </Badge>
+                    ) : (
+                      <Badge variant="success" size="sm">
+                        Freigegeben
+                      </Badge>
+                    )}
+                  </span>
+                }
+                description={
+                  <>
+                    {version.scenes} Szenen · {version.blocks} Absätze · {version.roles} Rollen
+                    <br />
+                    {version.releasedAt
+                      ? `Freigegeben von ${byline(version.releasedByName, version.releasedAt)}`
+                      : `Eingelesen von ${byline(version.createdByName, version.createdAt)}`}
+                  </>
+                }
+              />
+              {version.hasSource ? (
+                <Button asChild size="icon" variant="ghost" className="shrink-0">
+                  <a
+                    href={originalUrl(showId, "fassung", version.id)}
+                    download
+                    aria-label={`Original-PDF „${version.sourceName}“ herunterladen`}
+                    title="Original-PDF herunterladen"
+                  >
+                    <DownloadIcon aria-hidden />
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           ))}
         </ListRowGroup>
       ) : (
@@ -103,6 +146,89 @@ export function ScriptVersions({
         </p>
       )}
     </div>
+  );
+}
+
+export function originalUrl(showId: string, kind: "fassung" | "upload", id: string) {
+  return `/api/skript/${showId}/original?${kind}=${encodeURIComponent(id)}`;
+}
+
+/** Freundlicher Platzhalter für ein PDF, das der Parser (noch) nicht versteht. */
+function PendingCard({ showId, item }: { showId: string; item: ScriptPendingItem }) {
+  const router = useRouter();
+  const [busy, setBusy] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+
+  const retry = async () => {
+    setBusy(true);
+    const result = await retryPendingScriptAction(item.id);
+    setBusy(false);
+    if (!result.ok) {
+      toast.error("Noch nicht lesbar", { description: result.error, duration: 6000 });
+      router.refresh();
+      return;
+    }
+    toast.success(result.message ?? "Entwurf angelegt");
+    router.push(`${BASE}&fassung=${result.id}`);
+  };
+
+  return (
+    <Card className="border-warning/50 bg-warning/5">
+      <CardHeader>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          <span className="min-w-0 break-words">{item.label}</span>
+          <Badge variant="warning" size="sm">
+            Wartet auf den Parser
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <p>
+          🎭 Unser Skript-Parser hat bei diesem PDF ins Leere gegriffen – Texthänger sozusagen.
+          Keine Sorge: Das Original ist sicher verwahrt, und die Admins bringen dem Parser gerade
+          bei, diese Fassung zu lesen. Danach einfach „Erneut einlesen“ tippen.
+        </p>
+        <p className="text-muted-foreground">
+          Hochgeladen von {byline(item.createdByName, item.createdAt)} · {item.sourceName}
+          {item.attempts > 1
+            ? ` · ${item.attempts} Versuche, zuletzt ${formatDateTime(item.lastTriedAt)}`
+            : ""}
+        </p>
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">Für die Admins</summary>
+          <code className="mt-1 block break-all">{item.error}</code>
+        </details>
+        <div className="flex flex-wrap gap-2">
+          <AsyncButton size="sm" isLoading={busy} loadingText="Liest …" onClick={retry}>
+            <RefreshIcon aria-hidden /> Erneut einlesen
+          </AsyncButton>
+          <Button asChild size="sm" variant="outline">
+            <a href={originalUrl(showId, "upload", item.id)} download>
+              <DownloadIcon aria-hidden /> Original-PDF
+            </a>
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
+            <TrashIcon aria-hidden /> Verwerfen
+          </Button>
+        </div>
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Upload verwerfen?"
+          description="Das aufgehobene PDF wird gelöscht."
+          confirmLabel="Verwerfen"
+          cancelLabel="Abbrechen"
+          variant="destructive"
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={async () => {
+            setConfirmDelete(false);
+            const result = await deletePendingScriptAction(item.id);
+            if (!result.ok) toast.error(result.error);
+            else router.refresh();
+          }}
+        />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -125,6 +251,18 @@ function ScriptUpload({ showId }: { showId: string }) {
     try {
       const response = await fetch(`/api/skript/${showId}`, { method: "POST", body: form });
       const body = (await response.json().catch(() => ({}))) as { id?: string; error?: string };
+      if (response.status === 202) {
+        toast.warning("Skript aufgehoben", {
+          description:
+            "Unser Parser kommt mit diesem PDF noch nicht klar – die Admins kümmern sich.",
+          duration: 8000,
+        });
+        setFile(null);
+        setLabel("");
+        setDate("");
+        router.refresh();
+        return;
+      }
       if (!response.ok || !body.id) {
         toast.error("Einlesen fehlgeschlagen", { description: body.error, duration: 6000 });
         return;

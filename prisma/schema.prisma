@@ -436,6 +436,7 @@ model User {
   decidedSceneRequirements        SceneRequirement[]         @relation("SceneRequirementDecider")
   scriptVersionsCreated           ScriptVersion[]            @relation("ScriptVersionCreator")
   scriptVersionsReleased          ScriptVersion[]            @relation("ScriptVersionReleaser")
+  scriptPendingImports            ScriptPendingImport[]
   scriptRolesCreated              ScriptRole[]               @relation("ScriptRoleCreator")
   scriptExportPresets             ScriptExportPreset[]       @relation("ScriptExportPresetOwner")
   scriptSessions                  ScriptSession[]            @relation("ScriptSessionOwner")
@@ -532,6 +533,7 @@ model Show {
   freeTicketAllowances    FreeTicketAllowance[]
   boxOfficeAccesses       BoxOfficeAccess[]
   scriptVersions          ScriptVersion[]
+  scriptPendingImports    ScriptPendingImport[]
   scriptRoles             ScriptRole[]
   scriptAnnotations       ScriptAnnotation[]
   scriptLearnCards        ScriptLearnCard[]
@@ -3967,6 +3969,29 @@ model ScriptVersion {
   blocks       ScriptBlock[]
   annotations  ScriptAnnotation[]
   sessions     ScriptSession[]
+
+  @@index([showId, createdAt])
+}
+
+/// Hochgeladenes PDF, das der Parser (noch) nicht lesen konnte. Bleibt erhalten, bis es nach
+/// einer Parser-Anpassung erneut eingelesen oder verworfen wird.
+model ScriptPendingImport {
+  id           String    @id @default(cuid())
+  showId       String
+  label        String
+  versionDate  DateTime?
+  sourceBucket String
+  sourceKey    String
+  sourceName   String
+  sourceSize   Int
+  /// Technische Fehlermeldung für die Admins (nicht fürs Ensemble).
+  error        String
+  attempts     Int       @default(1)
+  lastTriedAt  DateTime  @default(now())
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  show         Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  createdBy    User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([showId, createdAt])
 }

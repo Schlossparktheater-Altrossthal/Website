@@ -39,7 +39,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
   });
 }
 
-/** PDF hochladen (Formularfelder: `file`, optional `label`, `versionDate` YYYY-MM-DD) → Entwurf. */
+/**
+ * PDF hochladen (Formularfelder: `file`, optional `label`, `versionDate` YYYY-MM-DD) → Entwurf
+ * (201). Kann der Parser es nicht lesen, wird es aufgehoben (202, `pending: true`).
+ */
 export async function POST(request: Request, { params }: RouteParams) {
   const { showId } = await params;
   const user = await loadUser();
@@ -68,7 +71,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       versionDate,
     });
     revalidatePath("/mitglieder/produktionen/stueck");
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(result, { status: result.pending ? 202 : 201 });
   } catch (error) {
     if (error instanceof ScriptImportError) return fail(error.message, error.status);
     console.error("[skript] Import fehlgeschlagen", error);

@@ -46,6 +46,8 @@ export type ScriptReviewData = {
     label: string;
     status: "draft" | "released";
     sourceName: string;
+    /** Original-PDF liegt im Speicher (fehlt z. B. bei bearbeiteten Kopien). */
+    hasSource: boolean;
     createdAt: Date;
     createdByName: string | null;
     releasedAt: Date | null;
@@ -83,6 +85,7 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
       label: true,
       status: true,
       sourceName: true,
+      sourceKey: true,
       createdAt: true,
       releasedAt: true,
       importReport: true,
@@ -177,6 +180,7 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
       label: version.label,
       status: version.status,
       sourceName: version.sourceName,
+      hasSource: Boolean(version.sourceKey),
       createdAt: version.createdAt,
       createdByName: version.createdBy?.name ?? null,
       releasedAt: version.releasedAt,

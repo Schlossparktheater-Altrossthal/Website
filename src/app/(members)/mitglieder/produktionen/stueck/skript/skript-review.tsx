@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { BookOpenTextIcon, CheckIcon, TrashIcon } from "@/components/ui/action-icons";
+import { BookOpenTextIcon, CheckIcon, DownloadIcon, TrashIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
 } from "../../actions/skript";
 import { inputClass } from "../ui";
 import { byline } from "./format";
+import { originalUrl } from "./skript-versions";
 
 const CUE_LABEL: Record<string, string> = {
   ton: "Ton",
@@ -80,6 +81,13 @@ export function ScriptReview({ data, canManage }: { data: ScriptReviewData; canM
                   <Link href={`/mitglieder/skript/${version.id}/vergleich`}>
                     Vergleich mit {version.basedOnLabel}
                   </Link>
+                </Button>
+              ) : null}
+              {version.hasSource ? (
+                <Button asChild size="sm" variant="outline">
+                  <a href={originalUrl(version.showId, "fassung", version.id)} download>
+                    <DownloadIcon aria-hidden /> Original-PDF
+                  </a>
                 </Button>
               ) : null}
               <Button asChild size="sm" variant="outline">

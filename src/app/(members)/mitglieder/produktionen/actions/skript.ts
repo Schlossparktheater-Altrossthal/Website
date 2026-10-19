@@ -21,7 +21,11 @@ import {
   saveShowCredits,
 } from "@/lib/skript/review";
 import { scriptCreditsSchema } from "@/lib/skript/credits";
-import { SCRIPT_MANAGE_PERMISSION } from "@/lib/skript/service";
+import {
+  SCRIPT_MANAGE_PERMISSION,
+  deletePendingImport,
+  retryPendingImport,
+} from "@/lib/skript/service";
 
 const PATH = "/mitglieder/produktionen/stueck";
 
@@ -135,5 +139,47 @@ export async function rereadScriptCreditsAction(
     );
   } catch (error) {
     return actionFailure(error, "Das Original-PDF konnte nicht gelesen werden.");
+  }
+}
+
+async function requirePendingManager(pendingId: string) {
+  const session = await requireAuth();
+  const userId = session.user?.id;
+  const pending = await prisma.scriptPendingImport.findUnique({
+    where: { id: pendingId },
+    select: { showId: true },
+  });
+  if (!userId || !pending) throw new ScriptReviewError("Upload nicht gefunden.");
+  if (!(await hasPermission(session.user, SCRIPT_MANAGE_PERMISSION, { showId: pending.showId }))) {
+    throw new ScriptReviewError("Keine Berechtigung.");
+  }
+  return { userId };
+}
+
+/** Aufgehobenes PDF nach einer Parser-Anpassung erneut einlesen. */
+export async function retryPendingScriptAction(
+  pendingId: string,
+): Promise<ProductionActionResult & { id?: string }> {
+  try {
+    const { userId } = await requirePendingManager(pendingId);
+    const { id } = await retryPendingImport(pendingId, userId);
+    revalidatePath(PATH);
+    return { ...actionSuccess("Endlich lesbar – Entwurf angelegt"), id };
+  } catch (error) {
+    return actionFailure(error, "Das PDF konnte nicht erneut eingelesen werden.");
+  }
+}
+
+/** Aufgehobenes PDF verwerfen. */
+export async function deletePendingScriptAction(
+  pendingId: string,
+): Promise<ProductionActionResult> {
+  try {
+    await requirePendingManager(pendingId);
+    await deletePendingImport(pendingId);
+    revalidatePath(PATH);
+    return actionSuccess("Upload verworfen");
+  } catch (error) {
+    return actionFailure(error, "Upload konnte nicht verworfen werden.");
   }
 }

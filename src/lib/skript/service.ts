@@ -5,7 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { safeFileName } from "@/lib/media/event-media";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/produktionen/actions-helpers";
-import { isStorageConfigured, putObject } from "@/lib/storage/s3";
+import { deleteObjects, getObject, isStorageConfigured, putObject } from "@/lib/storage/s3";
 
 import { readScriptCredits, type ScriptCredit } from "./credits";
 import { isPdf, parseScriptPdf } from "./import";
@@ -83,27 +83,94 @@ export async function importScriptDraft(input: {
   });
   if (!show) throw new ScriptImportError("Produktion nicht gefunden.", 404);
 
-  const { aliases, known } = await loadRoleAliases(show.id);
+  let source: ScriptSource | null = null;
+  if (isStorageConfigured()) {
+    const name = safeFileName(input.fileName || "skript.pdf");
+    source = await putObject(
+      `${storageFolder(show)}${randomUUID()}-${name}`,
+      input.data,
+      "application/pdf",
+    );
+  }
+  const meta = {
+    label: input.label?.trim() || input.fileName.replace(/\.pdf$/i, ""),
+    versionDate: input.versionDate ?? null,
+    sourceName: input.fileName,
+    sourceSize: input.data.byteLength,
+    userId: input.userId,
+  };
+
+  const attempt = await tryParse(show.id, input.data);
+  if (!attempt.ok) {
+    // Ohne Speicher lässt sich nichts aufheben – dann wie früher sofort abweisen.
+    if (!source) throw new ScriptImportError(attempt.message);
+    const pending = await prisma.scriptPendingImport.create({
+      data: {
+        showId: show.id,
+        label: meta.label,
+        versionDate: meta.versionDate,
+        sourceBucket: source.bucket,
+        sourceKey: source.key,
+        sourceName: meta.sourceName,
+        sourceSize: meta.sourceSize,
+        error: attempt.error,
+        createdById: input.userId,
+      },
+      select: { id: true },
+    });
+    console.error(`[skript] PDF aufgehoben, Parser muss angepasst werden (${pending.id})`);
+    return { pending: true as const, id: pending.id };
+  }
+  return { pending: false as const, ...(await saveVersion(show, attempt, source, meta)) };
+}
+
+type ScriptSource = { bucket: string; key: string };
+type ParseAttempt =
+  | ({ ok: true; known: Set<string>; blockCount: number } & Awaited<
+      ReturnType<typeof parseScriptPdf>
+    >)
+  | { ok: false; message: string; error: string };
+
+async function tryParse(showId: string, data: Uint8Array): Promise<ParseAttempt> {
+  const { aliases, known } = await loadRoleAliases(showId);
   let parsed: Awaited<ReturnType<typeof parseScriptPdf>>;
   try {
-    parsed = await parseScriptPdf(input.data, { aliases });
+    parsed = await parseScriptPdf(data, { aliases });
   } catch (error) {
     console.error("[skript] PDF nicht lesbar", error);
-    throw new ScriptImportError("Das PDF konnte nicht gelesen werden.");
+    return {
+      ok: false,
+      message: "Das PDF konnte nicht gelesen werden.",
+      error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    };
   }
   const blockCount = parsed.scenes.reduce((sum, scene) => sum + scene.blocks.length, 0);
   if (!blockCount) {
-    throw new ScriptImportError(
-      "Im PDF wurde kein Text gefunden (eingescannt?). Bitte die Word-Datei als PDF exportieren.",
-    );
+    return {
+      ok: false,
+      message:
+        "Im PDF wurde kein Text gefunden (eingescannt?). Bitte die Word-Datei als PDF exportieren.",
+      error: `Kein Absatz erkannt (Profil ${parsed.profile.id}, Quote ${parsed.score.toFixed(2)})`,
+    };
   }
+  return { ok: true, known, blockCount, ...parsed };
+}
 
+async function saveVersion(
+  show: { id: string; scriptCredits: Prisma.JsonValue },
+  parsed: Extract<ParseAttempt, { ok: true }>,
+  source: ScriptSource | null,
+  meta: {
+    label: string;
+    versionDate: Date | null;
+    sourceName: string;
+    sourceSize: number;
+    userId: string;
+  },
+  extra: Prisma.PrismaPromise<unknown>[] = [],
+) {
+  const { known, blockCount } = parsed;
   const id = randomUUID();
-  let source: { bucket: string; key: string } | null = null;
-  if (isStorageConfigured()) {
-    const name = safeFileName(input.fileName || "skript.pdf");
-    source = await putObject(`${storageFolder(show)}${id}-${name}`, input.data, "application/pdf");
-  }
 
   const report: ScriptImportReport = {
     mergedRoles: [...parsed.mergedRoles.entries()],
@@ -177,17 +244,17 @@ export async function importScriptDraft(input: {
       data: {
         id,
         showId: show.id,
-        label: input.label?.trim() || input.fileName.replace(/\.pdf$/i, ""),
-        versionDate: input.versionDate ?? null,
+        label: meta.label,
+        versionDate: meta.versionDate,
         sourceBucket: source?.bucket ?? null,
         sourceKey: source?.key ?? null,
-        sourceName: input.fileName,
-        sourceSize: input.data.byteLength,
+        sourceName: meta.sourceName,
+        sourceSize: meta.sourceSize,
         profileId: parsed.profile.id,
         profileScore: parsed.score,
         importReport: report,
         basedOnId: basedOn?.id ?? null,
-        createdById: input.userId,
+        createdById: meta.userId,
       },
     }),
     prisma.scriptScene.createMany({ data: scenes }),
@@ -195,13 +262,79 @@ export async function importScriptDraft(input: {
     ...(saveCredits
       ? [prisma.show.update({ where: { id: show.id }, data: { scriptCredits: parsed.credits } })]
       : []),
+    ...extra,
   ]);
   return { id, report };
 }
 
+/** Aufgehobene PDFs eines Stücks, die der Parser noch nicht lesen konnte. */
+export function listPendingImports(showId: string) {
+  return prisma.scriptPendingImport.findMany({
+    where: { showId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      label: true,
+      sourceName: true,
+      error: true,
+      attempts: true,
+      lastTriedAt: true,
+      createdAt: true,
+      createdBy: { select: { name: true } },
+    },
+  });
+}
+
+/**
+ * Aufgehobenes PDF erneut einlesen (nach einer Parser-Anpassung). Klappt es, entsteht ein Entwurf
+ * mit demselben Original; sonst wird der Versuch gezählt.
+ */
+export async function retryPendingImport(pendingId: string, userId: string) {
+  const pending = await prisma.scriptPendingImport.findUnique({ where: { id: pendingId } });
+  if (!pending) throw new ScriptImportError("Upload nicht gefunden.", 404);
+  const show = await prisma.show.findUniqueOrThrow({
+    where: { id: pending.showId },
+    select: { id: true, scriptCredits: true },
+  });
+  const object = await getObject(pending.sourceBucket, pending.sourceKey);
+  if (!object.body) throw new ScriptImportError("Das Original-PDF ist leer.");
+  const data = new Uint8Array(await new Response(object.body).arrayBuffer());
+
+  const attempt = await tryParse(show.id, data);
+  if (!attempt.ok) {
+    await prisma.scriptPendingImport.update({
+      where: { id: pendingId },
+      data: { error: attempt.error, attempts: { increment: 1 }, lastTriedAt: new Date() },
+    });
+    throw new ScriptImportError("Der Parser kommt mit diesem PDF immer noch nicht klar.");
+  }
+  return saveVersion(
+    show,
+    attempt,
+    { bucket: pending.sourceBucket, key: pending.sourceKey },
+    {
+      label: pending.label,
+      versionDate: pending.versionDate,
+      sourceName: pending.sourceName,
+      sourceSize: pending.sourceSize,
+      // Urheber bleibt, wer das PDF hochgeladen hat.
+      userId: pending.createdById ?? userId,
+    },
+    [prisma.scriptPendingImport.delete({ where: { id: pendingId } })],
+  );
+}
+
+/** Aufgehobenes PDF verwerfen, Original aus dem Speicher löschen. */
+export async function deletePendingImport(pendingId: string) {
+  const pending = await prisma.scriptPendingImport.delete({ where: { id: pendingId } });
+  await deleteObjects([{ bucket: pending.sourceBucket, key: pending.sourceKey }]).catch((error) =>
+    console.error("[skript] Original-PDF nicht gelöscht", error),
+  );
+}
+
 /** Fassungen eines Stücks; Entwürfe nur für Verwalter. */
-export function listScriptVersions(showId: string, options: { includeDrafts: boolean }) {
-  return prisma.scriptVersion.findMany({
+export async function listScriptVersions(showId: string, options: { includeDrafts: boolean }) {
+  const versions = await prisma.scriptVersion.findMany({
     where: { showId, ...(options.includeDrafts ? {} : { status: "released" }) },
     orderBy: { createdAt: "desc" },
     select: {
@@ -210,6 +343,7 @@ export function listScriptVersions(showId: string, options: { includeDrafts: boo
       versionDate: true,
       status: true,
       sourceName: true,
+      sourceKey: true,
       profileId: true,
       importReport: true,
       createdAt: true,
@@ -218,4 +352,8 @@ export function listScriptVersions(showId: string, options: { includeDrafts: boo
       releasedBy: { select: { id: true, name: true } },
     },
   });
+  return versions.map(({ sourceKey, ...version }) => ({
+    ...version,
+    hasSource: Boolean(sourceKey),
+  }));
 }
