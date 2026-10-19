@@ -5,13 +5,16 @@ import { BinderComposer } from "@/components/regie/binder-composer";
 import { DirectionCard, DirectionEmpty } from "@/components/regie/direction-ui";
 import { WishComposer } from "@/components/regie/wish-board";
 import { DateBadge } from "@/components/ui/date-badge";
+import { StatTile } from "@/components/ui/stat-tile";
 import { prisma } from "@/lib/prisma";
 import { DIRECTION_HOME_PATH } from "@/lib/regie/access";
+import { buildDirectionCountdown } from "@/lib/regie/countdown";
 import {
   dayKeyOf,
   eventTimeLabel,
   loadDirectionAvailability,
   loadDirectionCasting,
+  loadDirectionCountdownData,
   loadDirectionEvents,
   loadDirectionPeople,
   loadDirectionProps,
@@ -72,6 +75,7 @@ export default async function DirectionDashboardPage({
     script,
     people,
     castChange,
+    countdownData,
   ] = await Promise.all([
     listDirectionWishes(show.id),
     loadDirectionEvents(show.id),
@@ -86,6 +90,7 @@ export default async function DirectionDashboardPage({
       where: { character: { showId: show.id } },
       _max: { updatedAt: true },
     }),
+    loadDirectionCountdownData(show.id),
   ]);
 
   const showLabel = `${show.title ?? "Produktion"} ${show.year}`;
@@ -118,6 +123,23 @@ export default async function DirectionDashboardPage({
     0,
   );
 
+  const now = new Date();
+  const stats = buildDirectionCountdown({
+    now,
+    finalRehearsalWeekStart: countdownData.finalRehearsalWeekStart,
+    finalRehearsalWeekEnd: countdownData.finalRehearsalWeekEnd,
+    premiereAt: countdownData.premiereAt,
+    performances: countdownData.performances,
+    upcomingRehearsals: rehearsals.filter((event) => event.start >= now).map((e) => e.start),
+    sceneCount: scenes.length,
+    rehearsedSceneCount: scenes.filter((scene) => countdownData.rehearsedSceneIds.has(scene.id))
+      .length,
+  });
+  const statHref: Partial<Record<(typeof stats)[number]["key"], string>> = {
+    proben: href("proben"),
+    szenen: href("szenen"),
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader title="Regie" description={showLabel} />
@@ -140,6 +162,21 @@ export default async function DirectionDashboardPage({
             </Link>
           ))}
         </nav>
+      ) : null}
+
+      {stats.length ? (
+        <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {stats.map((stat) => (
+            <StatTile
+              key={stat.key}
+              label={stat.label}
+              value={stat.value}
+              hint={stat.hint}
+              tone={stat.tone}
+              href={statHref[stat.key]}
+            />
+          ))}
+        </section>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

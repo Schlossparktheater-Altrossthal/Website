@@ -1,4 +1,9 @@
-import type { BlockedDayKind, CharacterCastingType, ProductionObjectStatus } from "@prisma/client";
+import type {
+  BlockedDayKind,
+  Prisma,
+  CharacterCastingType,
+  ProductionObjectStatus,
+} from "@prisma/client";
 
 import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
 import { getUserDisplayName } from "@/lib/names";
@@ -426,4 +431,44 @@ export async function loadDirectionPeople(showId: string) {
     .map(({ user }) => ({ id: user.id, label: displayName(user), cast: cast.has(user.id) }))
     .sort((a, b) => Number(b.cast) - Number(a.cast) || a.label.localeCompare(b.label, "de"))
     .map(({ id, label }) => ({ id, label }));
+}
+
+// ---------------------------------------------------------------------------
+// Kennzahlen (Countdown)
+
+/** Termine und Probenabdeckung für die Kennzahlen oben im Dashboard. */
+export async function loadDirectionCountdownData(showId: string) {
+  const eventWhere = {
+    showId,
+    departmentId: null,
+    status: { notIn: ["DRAFT", "CANCELLED"] },
+  } satisfies Prisma.CalendarEventWhereInput;
+  const [show, performances, rehearsedBlocks] = await Promise.all([
+    prisma.show.findUnique({
+      where: { id: showId },
+      select: { finalRehearsalWeekStart: true, finalRehearsalWeekEnd: true, premiereAt: true },
+    }),
+    prisma.calendarEvent.findMany({
+      where: { ...eventWhere, kind: "PERFORMANCE" },
+      orderBy: { start: "asc" },
+      select: { start: true },
+    }),
+    prisma.eventBlock.findMany({
+      where: { event: { ...eventWhere, kind: "REHEARSAL" } },
+      select: { sceneId: true, runScenes: { select: { sceneId: true } } },
+    }),
+  ]);
+  const rehearsedSceneIds = new Set(
+    rehearsedBlocks.flatMap((block) => [
+      ...(block.sceneId ? [block.sceneId] : []),
+      ...block.runScenes.map((entry) => entry.sceneId),
+    ]),
+  );
+  return {
+    finalRehearsalWeekStart: show?.finalRehearsalWeekStart ?? null,
+    finalRehearsalWeekEnd: show?.finalRehearsalWeekEnd ?? null,
+    premiereAt: show?.premiereAt ?? null,
+    performances: performances.map((event) => event.start),
+    rehearsedSceneIds,
+  };
 }
