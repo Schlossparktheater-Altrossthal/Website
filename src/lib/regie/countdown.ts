@@ -129,15 +129,23 @@ export function buildDirectionCountdown(input: DirectionCountdownInput): Directi
       label: premiere ? "Proben bis Premiere" : "Kommende Proben",
       value: String(rehearsals.length),
       hint:
-        beforeFrw !== null && daysBetween(now, frwStart!) > 0
-          ? `${beforeFrw} vor der Endprobenwoche`
+        beforeFrw !== null && beforeFrw !== rehearsals.length && daysBetween(now, frwStart!) > 0
+          ? `${beforeFrw} vor den Endproben`
           : undefined,
       tone: rehearsals.length ? "primary" : "neutral",
     });
   }
 
   // Szenen, die noch in keiner Probe stehen (vergangen oder geplant).
-  if (input.sceneCount) {
+  if (!input.sceneCount) {
+    stats.push({
+      key: "szenen",
+      label: "Szenen ohne Probe",
+      value: "–",
+      hint: "Noch keine Szenen",
+      tone: "neutral",
+    });
+  } else {
     const open = Math.max(0, input.sceneCount - input.rehearsedSceneCount);
     const soon = premiere ? daysBetween(now, premiere) <= 28 : false;
     stats.push({

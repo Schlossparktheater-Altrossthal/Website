@@ -22,7 +22,7 @@ describe("buildDirectionCountdown", () => {
     expect(stats.endproben.value).toBe("28");
     expect(stats.premiere.value).toBe("34");
     expect(stats.proben.value).toBe("2");
-    expect(stats.proben.hint).toBe("1 vor der Endprobenwoche");
+    expect(stats.proben.hint).toBe("1 vor den Endproben");
     expect(stats.szenen.value).toBe("3");
   });
 
