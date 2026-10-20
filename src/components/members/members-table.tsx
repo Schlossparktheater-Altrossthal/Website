@@ -53,6 +53,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ROLES, sortRoles, type Role } from "@/lib/roles";
 import { RoleChips } from "@/components/members/role-chips";
 import { RoleManager } from "@/components/members/role-manager";
+import { DirectionViewSwitch } from "@/components/members/direction-view-switch";
 import { UserAvatar } from "@/components/user-avatar";
 import type { AvatarSource } from "@/components/user-avatar";
 import { combineNameParts } from "@/lib/names";
@@ -73,6 +74,8 @@ export type MembersTableUser = {
   deactivatedAt?: string | null;
   /** Konto ist mit Authentik verknüpft (Login bzw. Passwort-Übernahme hat geklappt). */
   hasAuthentikAccount: boolean;
+  /** Schalter „Nur Regie-Ansicht“ (docs/Plan/regie-plan.md). */
+  directionView?: boolean;
   /** Mitgliedschaft in der gerade gewählten Produktion (null = nicht dabei). */
   production?: { roles: Role[]; function: string | null; pending: boolean } | null;
 };
@@ -755,7 +758,7 @@ export function MembersTable({
           if (!nextOpen) setOpenFor(null);
         }}
         title={editUser ? `${getDisplayName(editUser) || "Mitglied"} bearbeiten` : "Mitglied"}
-        description="Rollen und Kontaktdaten"
+        description="Rollen, Kontaktdaten und Regie-Ansicht"
         contentClassName="sm:max-w-3xl"
       >
         {editUser ? (
@@ -807,6 +810,22 @@ export function MembersTable({
               );
             }}
           />
+        ) : null}
+        {editUser ? (
+          <div className="mt-4">
+            <DirectionViewSwitch
+              key={`direction-${editUser.id}`}
+              userId={editUser.id}
+              enabled={editUser.directionView ?? false}
+              onChanged={(enabled) =>
+                setRows((prev) =>
+                  prev.map((row) =>
+                    row.id === editUser.id ? { ...row, directionView: enabled } : row,
+                  ),
+                )
+              }
+            />
+          </div>
         ) : null}
       </ModalFormDialog>
       <MemberStatusModal

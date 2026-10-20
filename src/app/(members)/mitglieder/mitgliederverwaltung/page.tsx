@@ -53,6 +53,7 @@ export default async function MemberManagementPage({
         avatarSource: true,
         avatarImageUpdatedAt: true,
         deactivatedAt: true,
+        directionView: true,
         productionMemberships: production
           ? {
               where: { showId: production.id },
@@ -90,6 +91,7 @@ export default async function MemberManagementPage({
       isDeactivated: Boolean(user.deactivatedAt),
       deactivatedAt: user.deactivatedAt?.toISOString() ?? null,
       hasAuthentikAccount: user.accounts.length > 0,
+      directionView: user.directionView,
       production: (() => {
         const membership = user.productionMemberships?.[0];
         if (!membership || membership.leftAt || membership.status === "left") return null;

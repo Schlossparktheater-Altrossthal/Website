@@ -9,9 +9,11 @@ Die Regie bekommt ein eigenes Theater-Konto ohne Passwort. Sie meldet sich mit e
 
 1. Mitgliederverwaltung → neues Mitglied. Name darf ein Anzeigename sein. Als E-Mail eine
    Theater-Adresse verwenden (Mailu-Weiterleitung, z. B. `regie-2027@…`), keine private.
-2. In der Person den Schalter **„Nur Regie-Ansicht“** einschalten.
-3. In der Produktion das Gewerk **Regie** (oder **Regieassistenz & Orga**) anlegen und die Person
-   zuordnen. Ohne Zuordnung bleibt das Dashboard leer.
+2. In der Person (Karte „Rollen & Berechtigungen“) oder in der Liste über „Rollen & Daten
+   bearbeiten“ den Schalter **„Nur Regie-Ansicht“** einschalten.
+3. In der Person, Karte **Produktionen → Bearbeiten**: Produktion einschalten und das Gewerk
+   **Regie** (oder **Regieassistenz & Orga**) antippen. Fehlt das Gewerk, erst in der Produktion
+   anlegen. Ohne Zuordnung bleibt das Dashboard leer.
 
 ## 2. Ersten Passkey einrichten
 

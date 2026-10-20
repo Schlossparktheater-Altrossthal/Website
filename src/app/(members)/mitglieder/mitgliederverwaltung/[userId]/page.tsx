@@ -44,7 +44,12 @@ import { MemberLoginCard } from "@/components/members/member-login-card";
 import { MemberTestNotificationCard } from "@/components/members/member-test-notification-card";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { ImpersonationButton } from "./impersonation-button";
-import { DirectionViewSwitch } from "./direction-view-switch";
+import { DirectionViewSwitch } from "@/components/members/direction-view-switch";
+import {
+  MemberProductionsEditor,
+  type MemberProductionsEditorShow,
+} from "@/components/members/member-productions-editor";
+import { CURRENT_PRODUCTION_STATUSES } from "@/lib/produktionen/status";
 import { loadTemplateWishTitles } from "@/lib/onboarding/crew-options";
 import {
   getRolePreferenceDescription,
@@ -487,6 +492,42 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
   if (!member) {
     notFound();
   }
+
+  // Bearbeiten-Dialog der Karte „Produktionen“: laufende/geplante Produktionen mit Gewerken.
+  const [editableShows, activeDepartmentIds] = await Promise.all([
+    prisma.show.findMany({
+      where: { status: { in: [...CURRENT_PRODUCTION_STATUSES] } },
+      orderBy: [{ year: "desc" }, { title: "asc" }],
+      select: {
+        id: true,
+        title: true,
+        year: true,
+        departments: {
+          where: { archivedAt: null },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          select: { id: true, name: true },
+        },
+      },
+    }),
+    prisma.departmentMembership
+      .findMany({
+        where: { userId: member.id, status: "active" },
+        select: { departmentId: true },
+      })
+      .then((rows) => new Set(rows.map((row) => row.departmentId))),
+  ]);
+  const productionEditorShows: MemberProductionsEditorShow[] = editableShows.map((show) => ({
+    id: show.id,
+    label: `${show.title ?? "Produktion"} (${show.year})`,
+    member: member.productionMemberships.some(
+      (entry) => entry.showId === show.id && entry.status !== "left" && !entry.leftAt,
+    ),
+    departments: show.departments.map((dep) => ({
+      id: dep.id,
+      name: dep.name,
+      member: activeDepartmentIds.has(dep.id),
+    })),
+  }));
 
   // Rollenwünsche und Notizen gelten pro Produktion: die gerade ausgewählte Produktion zeigen.
   const viewedShowId = await getActiveProductionId(session.user?.id);
@@ -1285,7 +1326,14 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
 
               <Card className="border border-border/70">
                 <CardHeader className="space-y-2">
-                  <CardTitle>Produktionen</CardTitle>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle>Produktionen</CardTitle>
+                    <MemberProductionsEditor
+                      userId={member.id}
+                      displayName={displayName}
+                      shows={productionEditorShows}
+                    />
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     In welchen Produktionen war {displayName} dabei – mit Rollen, Onboarding und
                     Fotoerlaubnis der jeweiligen Produktion.
