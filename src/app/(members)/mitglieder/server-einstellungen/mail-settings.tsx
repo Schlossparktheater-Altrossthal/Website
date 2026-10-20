@@ -220,13 +220,15 @@ function StatusCard({ data, pending, run }: { data: MailSettingsData } & RunProp
           icon={<ClockIcon className="h-4 w-4" />}
         />
         <StatTile
-          label="Gesendet (7 Tage)"
+          label="Gesendet"
+          hint="letzte 7 Tage"
           value={overview.sent7}
           tone="success"
           icon={<MailIcon className="h-4 w-4" />}
         />
         <StatTile
-          label="Fehlgeschlagen"
+          label="Fehler"
+          hint="letzte 7 Tage"
           value={overview.failed7}
           tone={overview.failed7 ? "destructive" : "neutral"}
           icon={<AlertTriangleIcon className="h-4 w-4" />}
