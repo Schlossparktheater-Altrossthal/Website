@@ -26,7 +26,6 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { Switch } from "@/components/ui/switch";
 import type { MailConfigSource, MailSenderField } from "@/lib/email/config";
 import type { FieldErrors } from "@/lib/email/settings-validation";
-import { formatRelativeFromNow } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
 import {
@@ -81,6 +80,8 @@ export type MailSettingsData = {
   };
   overview: {
     lastSentAt: string | null;
+    /** Auf dem Server berechnet – relative Zeit würde sonst beim Hydrieren abweichen. */
+    lastSentLabel: string | null;
     sent7: number;
     failed7: number;
     pending: number;
@@ -216,7 +217,7 @@ function StatusCard({ data, pending, run }: { data: MailSettingsData } & RunProp
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           label="Letzte Mail"
-          value={overview.lastSentAt ? formatRelativeFromNow(new Date(overview.lastSentAt)) : "–"}
+          value={overview.lastSentLabel ?? "–"}
           icon={<ClockIcon className="h-4 w-4" />}
         />
         <StatTile

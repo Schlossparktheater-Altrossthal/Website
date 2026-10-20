@@ -1,3 +1,4 @@
+import { formatRelativeFromNow } from "@/lib/datetime";
 import { loadEffectiveMailSettings } from "@/lib/email/config";
 import { readMailOverview } from "@/lib/email/outbox";
 import { isMailDisabled } from "@/lib/email/transporter";
@@ -61,6 +62,7 @@ export default async function ServerSettingsPage() {
       },
       overview: {
         lastSentAt: overview.lastSentAt?.toISOString() ?? null,
+        lastSentLabel: overview.lastSentAt ? formatRelativeFromNow(overview.lastSentAt) : null,
         sent7: overview.sent7,
         failed7: overview.failed7,
         pending: overview.pending,
