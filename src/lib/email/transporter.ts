@@ -9,8 +9,11 @@ export function isMailDisabled(): boolean {
   return ["1", "true", "yes"].includes((process.env.MAIL_DISABLED ?? "").trim().toLowerCase());
 }
 
-export function createTransporterFromSettings(settings: ResolvedServerSettings): Transporter {
-  if (isMailDisabled()) {
+export function createTransporterFromSettings(
+  settings: ResolvedServerSettings,
+  options: { allowWhenDisabled?: boolean } = {},
+): Transporter {
+  if (isMailDisabled() && !options.allowWhenDisabled) {
     throw new Error("Mailversand ist in dieser Umgebung deaktiviert (MAIL_DISABLED).");
   }
   if (!settings.mailHost) {
@@ -31,6 +34,7 @@ export function createTransporterFromSettings(settings: ResolvedServerSettings):
 }
 
 export async function verifyMailTransport(settings: ResolvedServerSettings): Promise<void> {
-  const transporter = createTransporterFromSettings(settings);
+  // Verbindungstest schickt keine Mail – geht daher auch mit MAIL_DISABLED.
+  const transporter = createTransporterFromSettings(settings, { allowWhenDisabled: true });
   await transporter.verify();
 }

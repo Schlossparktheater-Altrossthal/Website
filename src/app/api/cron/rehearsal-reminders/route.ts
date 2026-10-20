@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { processMailOutbox } from "@/lib/email/outbox";
 import { runTicketMaintenance } from "@/lib/karten/maintenance";
 import { createLogger } from "@/lib/logger";
 import { dispatchEventReminders } from "@/lib/notifications/event-reminders";
@@ -50,6 +51,13 @@ async function handle(request: Request) {
       }
     } catch (error) {
       console.error("[cron:termine-reminders] Kartenbuchung fehlgeschlagen", error);
+    }
+    // Mail-Outbox: fällige Wiederholungen, alte Inhalte leeren (docs/Plan/email-plan.md).
+    try {
+      const mails = await processMailOutbox();
+      if (mails.sent > 0 || mails.failed > 0) logger.info("Mail-Outbox abgearbeitet", mails);
+    } catch (error) {
+      console.error("[cron:termine-reminders] Mail-Outbox fehlgeschlagen", error);
     }
     // Nur melden, wenn wirklich etwas passiert ist – der Lauf wiederholt sich alle paar Minuten.
     if (summary.sent > 0 || summary.failed > 0) {

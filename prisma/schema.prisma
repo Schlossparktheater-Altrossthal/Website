@@ -2571,11 +2571,14 @@ model PushSubscription {
 /// Kanalwahl je Kategorie (proben | termine | gewerke | produktion | system). Ohne Eintrag gelten
 /// die Standardwerte aus `src/lib/notifications/preferences.ts`.
 model NotificationPreference {
-  userId   String
-  category String
-  push     Boolean
-  email    Boolean @default(false)
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  category  String
+  push      Boolean
+  email     Boolean @default(false)
+  /// E-Mail für normale Hinweise: `instant` | `digest` | `off`; null = `digest`.
+  /// Dringendes und Aufgaben kommen unabhängig davon sofort (docs/Plan/email-plan.md).
+  emailMode String?
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, category])
 }
@@ -2583,13 +2586,40 @@ model NotificationPreference {
 /// Allgemeine Benachrichtigungs-Einstellungen, z. B. Ruhezeit für Push (Minuten ab Mitternacht,
 /// Europe/Berlin; Ende kleiner als Beginn = über Mitternacht). Dringendes kommt trotzdem.
 model NotificationSettings {
-  userId       String  @id
+  userId       String    @id
   quietStart   Int?
   quietEnd     Int?
   /// Vorlaufzeit für Termin-Erinnerungen: `never` | `1h` | `2h` | `12h` | `1d` | `2d` | `3d` | `7d`.
   /// Ohne Eintrag gilt `DEFAULT_REMINDER_LEAD` aus `src/lib/notifications/preferences.ts`.
   reminderLead String?
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Rhythmus der E-Mail-Zusammenfassung: `daily` | `weekly` | `off`; null = `daily`.
+  digest       String?
+  digestSentAt DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Warteschlange und Protokoll aller ausgehenden Mails (docs/Plan/email-plan.md). Inhalte werden
+/// nach 30 Tagen geleert, die Zeile bleibt für Status und Statistik.
+model MailOutbox {
+  id            String    @id @default(cuid())
+  /// test | notification | digest | karten | einladung | fotoerlaubnis | system
+  kind          String
+  toAddress     String
+  userId        String?
+  subject       String
+  text          String?
+  html          String?
+  headers       Json?
+  /// pending | sent | failed | blocked
+  status        String    @default("pending")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  lastError     String?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([status, nextAttemptAt])
+  @@index([createdAt])
 }
 
 /// Protokoll der versendeten Termin-Erinnerungen (Idempotenz): höchstens eine Zeile je Termin und Person.

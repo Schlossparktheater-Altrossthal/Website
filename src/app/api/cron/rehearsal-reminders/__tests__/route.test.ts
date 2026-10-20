@@ -20,6 +20,9 @@ vi.mock("@/lib/karten/maintenance", () => ({
     anonymized: 0,
   }),
 }));
+vi.mock("@/lib/email/outbox", () => ({
+  processMailOutbox: vi.fn().mockResolvedValue({ sent: 0, retried: 0, failed: 0, cleaned: 0 }),
+}));
 vi.mock("@/lib/logger", () => ({ createLogger: () => mocks.logger }));
 
 import { GET, POST } from "../route";
