@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { getAppBaseUrl } from "@/lib/app-url";
+
 import {
   unsubscribeFromNotificationMails,
   verifyUnsubscribeSignature,
@@ -22,5 +24,6 @@ export async function POST(request: Request) {
 
 export function GET(request: Request) {
   const url = new URL(request.url);
-  return NextResponse.redirect(new URL(`/email/abmelden${url.search}`, url.origin), 303);
+  // Öffentliche Adresse statt request.url – hinter dem Proxy ist das sonst die Pod-Adresse.
+  return NextResponse.redirect(`${getAppBaseUrl()}/email/abmelden${url.search}`, 303);
 }
