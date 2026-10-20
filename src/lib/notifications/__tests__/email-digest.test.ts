@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { verifyUnsubscribeSignature, unsubscribePageUrl } from "@/lib/email/unsubscribe";
 
-import { buildDigestMail, isDigestDue, lastDigestSlot } from "../digest";
+import { buildDigestMail, digestWindowStart, isDigestDue, lastDigestSlot } from "../digest";
 import { buildNotificationMail } from "../email";
 import { resolveEmailMode, shouldEmailInstantly } from "../preferences";
 
@@ -95,5 +95,19 @@ describe("Mails", () => {
     const url = new URL(unsubscribePageUrl("u1"));
     expect(verifyUnsubscribeSignature("u1", url.searchParams.get("s") ?? "")).toBe(true);
     expect(verifyUnsubscribeSignature("u2", url.searchParams.get("s") ?? "")).toBe(false);
+  });
+});
+
+describe("digestWindowStart", () => {
+  const now = new Date("2026-10-27T17:00:00Z");
+  it("nimmt nichts von vor dem Release", () => {
+    const released = new Date("2026-10-25T10:00:00Z");
+    expect(digestWindowStart(now, released)).toEqual(released);
+  });
+  it("bleibt bei höchstens 7 Tagen, wenn der Release länger her ist", () => {
+    expect(digestWindowStart(now, new Date("2026-01-01T00:00:00Z")).toISOString()).toBe(
+      "2026-10-20T17:00:00.000Z",
+    );
+    expect(digestWindowStart(now, null).toISOString()).toBe("2026-10-20T17:00:00.000Z");
   });
 });

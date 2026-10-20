@@ -105,3 +105,4 @@ model NotificationRecipient { … emailedAt DateTime? } // nie doppelt mailen (s
   HTML erkennt Anrede, Link-Absatz → Knopf, „Feld: Wert“ → Tabelle, „- “ → Liste.
 - Testtypen (`test`, `test-emergency`) gehen nie per Mail.
 - Abmelden per GET meldet nicht ab (Link-Scanner), erst der Knopf bzw. One-Click-POST.
+- Zusammenfassung nimmt nie Hinweise von vor dem Release (Zeitpunkt der Migration `20261020100000_mail_outbox` aus `_prisma_migrations`) – kein Schwall Altlasten beim ersten Lauf.

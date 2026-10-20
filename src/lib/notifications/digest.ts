@@ -22,6 +22,32 @@ const logger = createLogger("mail-digest");
 const MAX_AGE_DAYS = 7;
 const MAX_ITEMS_PER_CATEGORY = 8;
 
+/** Migration, mit der E-Mail als Kanal kam – ältere Hinweise gehören nie in eine Zusammenfassung. */
+const MAIL_CHANNEL_MIGRATION = "20261020100000_mail_outbox";
+let mailChannelStart: Date | null | undefined;
+
+/** Zeitpunkt des Releases (Migration angewendet); `null`, falls nicht ermittelbar. */
+async function readMailChannelStart(): Promise<Date | null> {
+  if (mailChannelStart !== undefined) return mailChannelStart;
+  try {
+    const rows = await prisma.$queryRaw<{ finished_at: Date | null }[]>`
+      SELECT finished_at FROM "_prisma_migrations"
+      WHERE migration_name = ${MAIL_CHANNEL_MIGRATION} AND finished_at IS NOT NULL
+      LIMIT 1`;
+    mailChannelStart = rows[0]?.finished_at ?? null;
+  } catch (error) {
+    logger.warn("Release-Zeitpunkt nicht lesbar", { error: String(error) });
+    return null;
+  }
+  return mailChannelStart;
+}
+
+/** Untergrenze: höchstens 7 Tage zurück, nie vor dem Release. */
+export function digestWindowStart(now: Date, releasedAt: Date | null) {
+  const maxAge = new Date(now.getTime() - MAX_AGE_DAYS * 24 * 60 * 60_000);
+  return releasedAt && releasedAt > maxAge ? releasedAt : maxAge;
+}
+
 const dayFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: DEFAULT_TIME_ZONE,
   year: "numeric",
@@ -137,7 +163,7 @@ export async function dispatchEmailDigests(now = new Date()) {
   const summary = { sent: 0, users: 0 };
   if (!(await isMailConfigured())) return summary;
 
-  const since = new Date(now.getTime() - MAX_AGE_DAYS * 24 * 60 * 60_000);
+  const since = digestWindowStart(now, await readMailChannelStart());
   const rows = await prisma.notificationRecipient.findMany({
     where: {
       readAt: null,
