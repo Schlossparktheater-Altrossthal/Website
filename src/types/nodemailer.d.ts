@@ -18,6 +18,7 @@ declare module "nodemailer" {
     text?: string | null | undefined;
     html?: string | null | undefined;
     attachments?: Attachment[] | null | undefined;
+    headers?: Record<string, string> | undefined;
   }
 
   export interface Transporter<T = unknown> {

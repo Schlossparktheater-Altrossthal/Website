@@ -255,7 +255,7 @@ export const membersNavigation = [
       },
       {
         href: "/mitglieder/server-einstellungen",
-        label: "E-Mail Server Einstellungen",
+        label: "E-Mail-Versand",
         permissionKey: "PRIVATE.ADMIN.SERVER.SETTINGS",
         icon: MailIcon,
       },
