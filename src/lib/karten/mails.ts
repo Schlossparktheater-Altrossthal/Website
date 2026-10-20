@@ -1,5 +1,6 @@
 import { getAppBaseUrl } from "@/lib/app-url";
 import { createConfiguredMailSender } from "@/lib/email/send";
+import { renderPlainTextMail } from "@/lib/email/layout";
 import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_TITLE } from "@/lib/website-settings";
 
@@ -69,12 +70,23 @@ function footer(ctx: MailContext) {
   ].join("\n");
 }
 
-async function send(to: string | null, subject: string, text: string): Promise<boolean> {
+async function send(
+  to: string | null,
+  subject: string,
+  text: string,
+  buttonLabel?: string,
+): Promise<boolean> {
   if (!to) return false;
   try {
     const sender = await createConfiguredMailSender();
     if (!sender) return false;
-    await sender({ to, subject, text });
+    await sender({
+      to,
+      subject,
+      text,
+      kind: "karten",
+      rendered: renderPlainTextMail(subject, text, { buttonLabel }),
+    });
     return true;
   } catch (error) {
     console.error("[karten] Mailversand fehlgeschlagen", error);
@@ -125,7 +137,12 @@ export async function sendConfirmationRequest(reservationId: string, token: stri
     ...(others.length ? ["", "Außerdem gebucht:", ...others] : []),
     footer(ctx),
   ].join("\n");
-  return send(ctx.email, `Bitte bestätigen: Reservierung ${showDisplayTitle(ctx.show)}`, text);
+  return send(
+    ctx.email,
+    `Bitte bestätigen: Reservierung ${showDisplayTitle(ctx.show)}`,
+    text,
+    "Reservierung bestätigen",
+  );
 }
 
 /** Bestätigt oder telefonisch gebucht: Ticket. */
@@ -144,7 +161,7 @@ export async function sendTicket(reservationId: string, token: string) {
     summary(ctx),
     footer(ctx),
   ].join("\n");
-  return send(ctx.email, `Deine Karten: ${showDisplayTitle(ctx.show)}`, text);
+  return send(ctx.email, `Deine Karten: ${showDisplayTitle(ctx.show)}`, text, "Ticket öffnen");
 }
 
 /**
@@ -237,7 +254,7 @@ export async function sendPerformanceCancelled(
     summary(ctx),
     footer(ctx),
   ].join("\n");
-  return send(ctx.email, `Vorstellung abgesagt: ${showDisplayTitle(ctx.show)}`, text);
+  return send(ctx.email, `Vorstellung abgesagt: ${showDisplayTitle(ctx.show)}`, text, "Umbuchen");
 }
 
 export async function sendWaitlistNotice(input: {
@@ -257,7 +274,7 @@ export async function sendWaitlistNotice(input: {
     "Viele Grüße",
     DEFAULT_SITE_TITLE,
   ].join("\n");
-  return send(input.email, `Wieder Plätze frei: ${input.showTitle}`, text);
+  return send(input.email, `Wieder Plätze frei: ${input.showTitle}`, text, "Karten buchen");
 }
 
 export async function sendBoxOfficeAccess(input: {
@@ -282,5 +299,5 @@ export async function sendBoxOfficeAccess(input: {
     "Viele Grüße",
     DEFAULT_SITE_TITLE,
   ].join("\n");
-  return send(input.email, `Dein Zugang zum Kartenbüro`, text);
+  return send(input.email, `Dein Zugang zum Kartenbüro`, text, "Kartenbüro öffnen");
 }

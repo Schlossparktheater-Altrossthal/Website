@@ -42,6 +42,27 @@ export function buildReturneeInviteMail(input: {
       "",
       "Bis bald im Theater!",
     ].join("\n"),
+    kind: "einladung",
+    content: {
+      preheader: "Dein persönlicher Link für die neue Produktion",
+      greeting: `Hallo ${input.name},`,
+      blocks: [
+        {
+          type: "paragraph",
+          text: `wir planen „${input.showTitle}“ und würden uns freuen, wenn du wieder dabei bist.`,
+        },
+        {
+          type: "paragraph",
+          text: "Über deinen persönlichen Link meldest du dich mit deinem bisherigen Konto an. Deine Angaben (z. B. Allergien und Ernährung) sind schon ausgefüllt – du musst sie nur prüfen. Die Fotoerlaubnis gibst du für jede Produktion neu.",
+        },
+        { type: "button", label: "Ich bin dabei", url: input.link },
+        {
+          type: "note",
+          text: `Der Link ist bis zum ${expires} gültig und nur für dich bestimmt.`,
+        },
+      ],
+      signature: "Bis bald im Theater!",
+    },
   };
 }
 

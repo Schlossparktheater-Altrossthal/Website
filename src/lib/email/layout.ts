@@ -170,15 +170,46 @@ ${footerHtml ? `<tr><td style="padding:16px 8px;font-size:12px;line-height:1.5;c
   return { subject: content.subject, text, html };
 }
 
-/** Altbestand: fertiger Text ohne Bausteine – Absätze werden übernommen. */
-export function renderPlainTextMail(subject: string, text: string): RenderedMail {
-  return renderMail({
-    subject,
-    signature: null,
-    blocks: text
-      .split(/\n{2,}/)
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => ({ type: "paragraph" as const, text: part })),
+const DETAIL_LINE = /^([^:\n]{1,24}): (.+)$/;
+const URL_ONLY = /^https?:\/\/\S+$/;
+
+/**
+ * Altbestand: fertiger Text ohne Bausteine. Absätze werden übernommen; ein Absatz nur aus einer
+ * URL wird zum Knopf (mit `buttonLabel`), Zeilen „Feld: Wert“ zur Tabelle, „- …“ zur Liste.
+ * Die Textfassung bleibt unverändert.
+ */
+export function renderPlainTextMail(
+  subject: string,
+  text: string,
+  options: { buttonLabel?: string } = {},
+): RenderedMail {
+  const parts = text
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  let greeting: string | undefined;
+  if (parts[0] && /^(Hallo|Hi|Liebe|Lieber)\b.*,$/.test(parts[0])) greeting = parts.shift();
+
+  const blocks: MailBlock[] = parts.map((part) => {
+    const lines = part.split("\n");
+    if (URL_ONLY.test(part) && options.buttonLabel) {
+      return { type: "button", label: options.buttonLabel, url: part };
+    }
+    if (lines.length > 1 && lines.every((line) => line.startsWith("- "))) {
+      return { type: "list", items: lines.map((line) => line.slice(2)) };
+    }
+    if (lines.length > 1 && lines.every((line) => DETAIL_LINE.test(line))) {
+      return {
+        type: "details",
+        rows: lines.map((line) => {
+          const match = DETAIL_LINE.exec(line);
+          return [match?.[1] ?? "", match?.[2] ?? ""] as [string, string];
+        }),
+      };
+    }
+    return { type: "paragraph", text: part };
   });
+
+  const rendered = renderMail({ subject, greeting, signature: null, blocks });
+  return { ...rendered, text };
 }

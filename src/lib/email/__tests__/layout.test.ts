@@ -29,3 +29,25 @@ describe("renderMail", () => {
     expect(mail.text).not.toContain("Viele Grüße");
   });
 });
+
+describe("renderPlainTextMail", () => {
+  it("macht aus Altbestand Anrede, Knopf, Tabelle und Liste – Text bleibt gleich", async () => {
+    const { renderPlainTextMail } = await import("../layout");
+    const text = [
+      "Hallo Anna,",
+      "",
+      "bitte bestätigen:",
+      "",
+      "https://x.example/r/abc",
+      "",
+      "Stück: Faust\nCode: K-1",
+      "",
+      "- eins\n- zwei",
+    ].join("\n");
+    const mail = renderPlainTextMail("Betreff", text, { buttonLabel: "Bestätigen" });
+    expect(mail.text).toBe(text);
+    expect(mail.html).toContain(">Bestätigen</a>");
+    expect(mail.html).toContain(">Stück</td>");
+    expect(mail.html).toContain("<li");
+  });
+});

@@ -1,7 +1,7 @@
 import { formatSenderAddress } from "@/lib/server-settings";
 
 import { loadEffectiveMailSettings } from "./config";
-import { renderMail, renderPlainTextMail, type MailContent } from "./layout";
+import { renderMail, renderPlainTextMail, type MailContent, type RenderedMail } from "./layout";
 import { queueMail, type MailKind } from "./outbox";
 import { isMailDisabled } from "./transporter";
 
@@ -12,6 +12,8 @@ export type OutgoingMail = {
   text: string;
   /** Bausteine fürs Layout – ersetzt `text`, wenn gesetzt. */
   content?: Omit<MailContent, "subject">;
+  /** Fertig gerenderte Mail – hat Vorrang vor `content` und `text`. */
+  rendered?: RenderedMail;
   kind?: MailKind;
   userId?: string | null;
   headers?: Record<string, string>;
@@ -34,9 +36,11 @@ export async function isMailConfigured(): Promise<boolean> {
 export async function createConfiguredMailSender(): Promise<MailSender | null> {
   if (!(await isMailConfigured())) return null;
   return async (mail) => {
-    const rendered = mail.content
-      ? renderMail({ ...mail.content, subject: mail.subject })
-      : renderPlainTextMail(mail.subject, mail.text);
+    const rendered = mail.rendered
+      ? mail.rendered
+      : mail.content
+        ? renderMail({ ...mail.content, subject: mail.subject })
+        : renderPlainTextMail(mail.subject, mail.text);
     const result = await queueMail({
       kind: mail.kind ?? "system",
       to: mail.to,

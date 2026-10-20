@@ -28,6 +28,24 @@ export function buildPhotoConsentReminderMail(input: {
       "",
       "Danke!",
     ].join("\n"),
+    kind: "fotoerlaubnis",
+    content: {
+      greeting: `Hallo ${input.name},`,
+      blocks: [
+        {
+          type: "paragraph",
+          text: input.rejected
+            ? `deine Fotoerlaubnis für „${input.showTitle}“ wurde leider abgelehnt. Bitte reiche sie in deinem Profil erneut ein – den Grund findest du dort.`
+            : `für „${input.showTitle}“ fehlt noch deine Fotoerlaubnis. Sie gilt pro Produktion, deshalb brauchen wir sie auch von dir, wenn du schon mal dabei warst.`,
+        },
+        { type: "button", label: "Fotoerlaubnis abgeben", url: link },
+        {
+          type: "note",
+          text: "Solange sie fehlt, wirst du bei Fotos und Videos ausgespart.",
+        },
+      ],
+      signature: `Danke!`,
+    },
   };
 }
 
