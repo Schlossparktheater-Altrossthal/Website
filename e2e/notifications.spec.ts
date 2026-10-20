@@ -25,15 +25,22 @@ test.describe("als admin", () => {
     test.skip(sent.status() === 403, "Testnutzer darf keine Testbenachrichtigung senden");
     expect(sent.ok()).toBeTruthy();
 
+    // Nur Zeilen der Glocke: Der Text kann in der vollen Suite auch anderswo auf der Seite
+    // stehen, und eine Wiederholung findet sonst die Zeile des vorherigen Versuchs.
     const bell = page.getByTestId("notification-bell");
-    const entry = page.getByText("Testbenachrichtigung", { exact: true }).first();
-    await clickUntil(bell, () => expect(entry).toBeVisible({ timeout: 2_000 }));
+    const row = page
+      .locator("[data-notification-group]")
+      .filter({ has: page.getByText("Testbenachrichtigung", { exact: true }) })
+      .first();
+    await clickUntil(bell, () => expect(row).toBeVisible({ timeout: 2_000 }));
+    const groupKey = await row.getAttribute("data-notification-group");
+    expect(groupKey).toBeTruthy();
+    const archivedRow = page.locator(`[data-notification-group="${groupKey}"]`);
 
     // Archivieren (Desktop: Knopf beim Überfahren, mobil per Wischen – hier der Knopf)
-    const row = page.locator("[data-notification-group]").filter({ has: entry }).first();
-    await row.hover();
-    await row.getByRole("button", { name: "Archivieren" }).click({ force: true });
-    await expect(row).toHaveCount(0);
+    await archivedRow.hover();
+    await archivedRow.getByRole("button", { name: "Archivieren" }).click({ force: true });
+    await expect(archivedRow).toHaveCount(0);
 
     await page.goto("/mitglieder/benachrichtigungen");
     await clickUntil(page.getByRole("radio", { name: "Archiv" }), () =>
