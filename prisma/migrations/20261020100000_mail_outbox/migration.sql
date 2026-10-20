@@ -24,3 +24,4 @@ CREATE INDEX "MailOutbox_createdAt_idx" ON "MailOutbox"("createdAt");
 ALTER TABLE "NotificationPreference" ADD COLUMN "emailMode" TEXT;
 ALTER TABLE "NotificationSettings" ADD COLUMN "digest" TEXT;
 ALTER TABLE "NotificationSettings" ADD COLUMN "digestSentAt" TIMESTAMP(3);
+ALTER TABLE "NotificationRecipient" ADD COLUMN "emailedAt" TIMESTAMP(3);

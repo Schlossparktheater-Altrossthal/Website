@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TimeInput } from "@/components/ui/time-input";
@@ -26,6 +27,8 @@ import {
   minutesToTime,
   resolveReminderLead,
   timeToMinutes,
+  type DigestMode,
+  type EmailMode,
   type EventReminderLead,
   type QuietHours,
 } from "@/lib/notifications/preferences";
@@ -34,7 +37,10 @@ import { usePwaInstall } from "@/lib/pwa/register-sw";
 
 type Preferences = {
   pushConfigured: boolean;
-  categories: { category: NotificationCategory; push: boolean }[];
+  mailConfigured: boolean;
+  email: string | null;
+  digest: DigestMode;
+  categories: { category: NotificationCategory; push: boolean; emailMode: EmailMode }[];
   quietHours: QuietHours | null;
   reminderLead: EventReminderLead;
 };
@@ -47,6 +53,18 @@ type Device = {
   lastUsedAt: string | null;
 };
 
+const EMAIL_MODE_OPTIONS: { value: EmailMode; label: string }[] = [
+  { value: "instant", label: "Sofort" },
+  { value: "digest", label: "Sammeln" },
+  { value: "off", label: "Aus" },
+];
+
+const DIGEST_OPTIONS: { value: DigestMode; label: string }[] = [
+  { value: "daily", label: "Täglich um 18 Uhr" },
+  { value: "weekly", label: "Montags um 18 Uhr" },
+  { value: "off", label: "Nie" },
+];
+
 const DEFAULT_QUIET: QuietHours = { start: 22 * 60, end: 7 * 60 };
 
 async function savePreference(body: unknown) {
@@ -58,7 +76,7 @@ async function savePreference(body: unknown) {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
 
-/** Profil-Bereich „Benachrichtigungen“: dieses Gerät, Push je Bereich, Ruhezeit, Geräte. */
+/** Profil-Bereich „Benachrichtigungen“: dieses Gerät, Push und E-Mail je Bereich, Ruhezeit, Geräte. */
 export function NotificationsSection() {
   const push = usePushSubscription();
   const install = usePwaInstall();
@@ -121,6 +139,35 @@ export function NotificationsSection() {
     void savePreference({ category, push: value }).catch((error) => {
       console.error("[NotificationsSection] save category failed", error);
       toast.error("Konnte nicht gespeichert werden.", { duration: 5000 });
+      void load();
+    });
+  };
+
+  const setEmailMode = (category: NotificationCategory, emailMode: EmailMode) => {
+    setPreferences((prev) =>
+      prev
+        ? {
+            ...prev,
+            categories: prev.categories.map((entry) =>
+              entry.category === category ? { ...entry, emailMode } : entry,
+            ),
+          }
+        : prev,
+    );
+    void savePreference({ category, emailMode }).catch((error) => {
+      console.error("[NotificationsSection] save email mode failed", error);
+      toast.error("Konnte nicht gespeichert werden.", { duration: 5000 });
+      void load();
+    });
+  };
+
+  const setDigest = (value: string) => {
+    const digest = (DIGEST_OPTIONS.find((option) => option.value === value)?.value ??
+      "daily") as DigestMode;
+    setPreferences((prev) => (prev ? { ...prev, digest } : prev));
+    void savePreference({ digest }).catch((error) => {
+      console.error("[NotificationsSection] save digest failed", error);
+      toast.error("Zusammenfassung konnte nicht gespeichert werden.", { duration: 5000 });
       void load();
     });
   };
@@ -276,6 +323,57 @@ export function NotificationsSection() {
             );
           })}
         </ul>
+      </Card>
+
+      <Card className="p-4">
+        <h3 className="text-sm font-semibold text-foreground">E-Mail</h3>
+        <p className="mb-2 text-sm text-muted-foreground">
+          {!preferences.email
+            ? "In deinem Profil ist keine E-Mail-Adresse hinterlegt."
+            : !preferences.mailConfigured
+              ? "Der Mailversand ist gerade nicht eingerichtet – deine Auswahl gilt, sobald er läuft."
+              : `An ${preferences.email}. Aufgaben und Dringendes kommen immer sofort. Den Rest bekommst du sofort, gesammelt in der Zusammenfassung oder gar nicht.`}
+        </p>
+        <ul className="divide-y divide-border/60">
+          {preferences.categories.map(({ category, emailMode }) => (
+            <li
+              key={category}
+              className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2"
+            >
+              <span className="text-sm font-medium text-foreground">
+                {CATEGORY_LABELS[category]}
+              </span>
+              <SegmentedControl
+                aria-label={`E-Mail für ${CATEGORY_LABELS[category]}`}
+                value={emailMode}
+                onValueChange={(value) => setEmailMode(category, value)}
+                options={EMAIL_MODE_OPTIONS}
+              />
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 flex flex-col gap-2 border-t border-border/60 pt-3 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <label htmlFor="digest" className="text-sm font-medium text-foreground">
+              Zusammenfassung
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Enthält nur, was du bis dahin nicht gelesen hast.
+            </p>
+          </div>
+          <Select value={preferences.digest} onValueChange={setDigest}>
+            <SelectTrigger id="digest" className="h-11 w-full sm:w-56" aria-label="Zusammenfassung">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DIGEST_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </Card>
 
       <Card className="space-y-3 p-4">

@@ -125,3 +125,44 @@ export function reminderLeadMinutes(lead: EventReminderLead): number | null {
 export function resolveReminderLead(stored: string | null | undefined): EventReminderLead {
   return isEventReminderLead(stored) ? stored : DEFAULT_REMINDER_LEAD;
 }
+
+/**
+ * E-Mail je Bereich für normale Hinweise (docs/Plan/email-plan.md). Dringendes und Aufgaben
+ * kommen unabhängig davon sofort; ohne Eintrag gilt die Zusammenfassung.
+ */
+export const EMAIL_MODES = ["instant", "digest", "off"] as const;
+export type EmailMode = (typeof EMAIL_MODES)[number];
+export const DEFAULT_EMAIL_MODE: EmailMode = "digest";
+
+export function resolveEmailMode(stored: string | null | undefined): EmailMode {
+  return (EMAIL_MODES as readonly string[]).includes(stored ?? "")
+    ? (stored as EmailMode)
+    : DEFAULT_EMAIL_MODE;
+}
+
+export const DIGEST_MODES = ["daily", "weekly", "off"] as const;
+export type DigestMode = (typeof DIGEST_MODES)[number];
+export const DEFAULT_DIGEST_MODE: DigestMode = "daily";
+
+export function resolveDigestMode(stored: string | null | undefined): DigestMode {
+  return (DIGEST_MODES as readonly string[]).includes(stored ?? "")
+    ? (stored as DigestMode)
+    : DEFAULT_DIGEST_MODE;
+}
+
+/** Uhrzeit der Zusammenfassung (Ortszeit Berlin); wöchentlich am Montag. */
+export const DIGEST_HOUR = 18;
+
+/**
+ * Soll ein Eintrag sofort per Mail kommen? Dringendes und Aufgaben immer; `forceInstant` (z. B.
+ * Absagen an die Planung) außer bei „Aus“; sonst nur bei „Sofort“.
+ */
+export function shouldEmailInstantly(
+  notification: { kind: NotificationKind; priority: NotificationPriority },
+  mode: EmailMode,
+  forceInstant = false,
+) {
+  if (notification.priority === "urgent" || notification.kind === "action") return true;
+  if (mode === "off") return false;
+  return mode === "instant" || forceInstant;
+}

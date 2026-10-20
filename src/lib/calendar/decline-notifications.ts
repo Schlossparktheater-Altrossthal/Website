@@ -1,6 +1,5 @@
 import type { Role } from "@prisma/client";
 
-import { getAppBaseUrl } from "@/lib/app-url";
 import { loadAudienceContext } from "@/lib/calendar/audience-server";
 import { readDayAvailability } from "@/lib/calendar/day-availability";
 import {
@@ -13,7 +12,6 @@ import {
   formatIsoDateInTimeZone,
   parseDateTimeInTimeZone,
 } from "@/lib/date-time";
-import { createConfiguredMailSender } from "@/lib/email/send";
 import { getUserDisplayName } from "@/lib/names";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, categoryForEventKind } from "@/lib/notifications/types";
@@ -151,27 +149,10 @@ export async function notifyPlannersOfDecline({
     category: categoryForEventKind(event.kind),
     groupKey: `decline:${event.id}`,
     data: { declinedUserId: userId, shortNotice },
+    // Die Planung bekam Absagen schon immer sofort per Mail – bleibt so, solange „Aus“ nicht gewählt ist.
+    emailInstant: true,
   });
 
-  try {
-    const sender = await createConfiguredMailSender();
-    if (sender) {
-      const people = await prisma.user.findMany({
-        where: { id: { in: recipients }, email: { not: null } },
-        select: { email: true },
-      });
-      const link = `${getAppBaseUrl()}/mitglieder/terminplanung/${event.id}`;
-      await Promise.all(
-        people.flatMap((person) =>
-          person.email
-            ? [sender({ to: person.email, subject: title, text: `${body}\n\n${link}` })]
-            : [],
-        ),
-      );
-    }
-  } catch (error) {
-    console.error("[decline-notifications] Mail an die Planung fehlgeschlagen", error);
-  }
   return true;
 }
 

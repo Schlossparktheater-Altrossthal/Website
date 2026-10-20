@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { processMailOutbox } from "@/lib/email/outbox";
+import { dispatchEmailDigests } from "@/lib/notifications/digest";
 import { runTicketMaintenance } from "@/lib/karten/maintenance";
 import { createLogger } from "@/lib/logger";
 import { dispatchEventReminders } from "@/lib/notifications/event-reminders";
@@ -58,6 +59,12 @@ async function handle(request: Request) {
       if (mails.sent > 0 || mails.failed > 0) logger.info("Mail-Outbox abgearbeitet", mails);
     } catch (error) {
       console.error("[cron:termine-reminders] Mail-Outbox fehlgeschlagen", error);
+    }
+    try {
+      const digests = await dispatchEmailDigests();
+      if (digests.users > 0) logger.info("Zusammenfassungen verschickt", digests);
+    } catch (error) {
+      console.error("[cron:termine-reminders] Zusammenfassung fehlgeschlagen", error);
     }
     // Nur melden, wenn wirklich etwas passiert ist – der Lauf wiederholt sich alle paar Minuten.
     if (summary.sent > 0 || summary.failed > 0) {

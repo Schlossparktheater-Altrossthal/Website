@@ -1,0 +1,26 @@
+import { NextResponse } from "next/server";
+
+import {
+  unsubscribeFromNotificationMails,
+  verifyUnsubscribeSignature,
+} from "@/lib/email/unsubscribe";
+
+/**
+ * Ein-Klick-Abmeldung aus dem Mailprogramm (RFC 8058, `List-Unsubscribe-Post`). Nur POST – ein
+ * GET (z. B. Link-Scanner) meldet niemanden ab, sondern leitet auf die Bestätigungsseite.
+ */
+export async function POST(request: Request) {
+  const url = new URL(request.url);
+  const userId = url.searchParams.get("u") ?? "";
+  const signature = url.searchParams.get("s") ?? "";
+  if (!userId || !verifyUnsubscribeSignature(userId, signature)) {
+    return NextResponse.json({ error: "Ungültiger Link" }, { status: 400 });
+  }
+  await unsubscribeFromNotificationMails(userId);
+  return NextResponse.json({ ok: true });
+}
+
+export function GET(request: Request) {
+  const url = new URL(request.url);
+  return NextResponse.redirect(new URL(`/email/abmelden${url.search}`, url.origin), 303);
+}

@@ -3,11 +3,19 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { isPushConfigured } from "@/lib/notifications/push";
-import { EVENT_REMINDER_LEAD_CODES, resolveReminderLead } from "@/lib/notifications/preferences";
+import { isMailConfigured } from "@/lib/email/send";
+import {
+  DIGEST_MODES,
+  EMAIL_MODES,
+  EVENT_REMINDER_LEAD_CODES,
+  resolveDigestMode,
+  resolveEmailMode,
+  resolveReminderLead,
+} from "@/lib/notifications/preferences";
 import { NOTIFICATION_CATEGORIES } from "@/lib/notifications/types";
 import { requireAuth } from "@/lib/rbac";
 
-/** Eigene Benachrichtigungs-Einstellungen: Push je Bereich, Ruhezeit und Erinnerungs-Vorlauf. */
+/** Eigene Benachrichtigungs-Einstellungen: Push/E-Mail je Bereich, Zusammenfassung, Ruhezeit, Vorlauf. */
 export async function GET() {
   const session = await requireAuth();
   const userId = session.user?.id;
@@ -16,16 +24,21 @@ export async function GET() {
   const [preferences, settings] = await Promise.all([
     prisma.notificationPreference.findMany({
       where: { userId },
-      select: { category: true, push: true },
+      select: { category: true, push: true, emailMode: true },
     }),
     prisma.notificationSettings.findUnique({ where: { userId } }),
   ]);
-  const byCategory = new Map(preferences.map((entry) => [entry.category, entry.push]));
+  const byCategory = new Map(preferences.map((entry) => [entry.category, entry]));
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
   return NextResponse.json({
     pushConfigured: isPushConfigured(),
+    mailConfigured: await isMailConfigured(),
+    email: user?.email ?? null,
+    digest: resolveDigestMode(settings?.digest),
     categories: NOTIFICATION_CATEGORIES.map((category) => ({
       category,
-      push: byCategory.get(category) ?? false,
+      push: byCategory.get(category)?.push ?? false,
+      emailMode: resolveEmailMode(byCategory.get(category)?.emailMode),
     })),
     quietHours:
       settings?.quietStart != null && settings.quietEnd != null
@@ -44,6 +57,8 @@ const updateSchema = z.union([
   z.object({ category: z.enum(NOTIFICATION_CATEGORIES), push: z.boolean() }),
   z.object({ quietHours: z.object({ start: minutes, end: minutes }).nullable() }),
   z.object({ reminderLead: z.enum(EVENT_REMINDER_LEAD_CODES) }),
+  z.object({ category: z.enum(NOTIFICATION_CATEGORIES), emailMode: z.enum(EMAIL_MODES) }),
+  z.object({ digest: z.enum(DIGEST_MODES) }),
 ]);
 
 export async function PUT(request: Request) {
@@ -54,7 +69,21 @@ export async function PUT(request: Request) {
   const parsed = updateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
 
-  if ("category" in parsed.data) {
+  if ("emailMode" in parsed.data) {
+    const { category, emailMode } = parsed.data;
+    await prisma.notificationPreference.upsert({
+      where: { userId_category: { userId, category } },
+      create: { userId, category, push: false, emailMode },
+      update: { emailMode },
+    });
+  } else if ("digest" in parsed.data) {
+    const { digest } = parsed.data;
+    await prisma.notificationSettings.upsert({
+      where: { userId },
+      create: { userId, digest },
+      update: { digest },
+    });
+  } else if ("push" in parsed.data) {
     const { category, push } = parsed.data;
     await prisma.notificationPreference.upsert({
       where: { userId_category: { userId, category } },

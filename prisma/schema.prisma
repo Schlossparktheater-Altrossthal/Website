@@ -2544,6 +2544,8 @@ model NotificationRecipient {
   doneAt         DateTime?
   archivedAt     DateTime?
   pushedAt       DateTime?
+  /// Per Mail zugestellt (sofort oder in der Zusammenfassung) – nie doppelt.
+  emailedAt      DateTime?
   notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 

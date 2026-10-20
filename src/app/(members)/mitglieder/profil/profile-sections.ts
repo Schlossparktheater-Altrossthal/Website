@@ -57,7 +57,7 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
   {
     id: "benachrichtigungen",
     label: "Benachrichtigungen",
-    description: "Push aufs Handy, Ruhezeit und angemeldete Geräte.",
+    description: "Push, E-Mail, Ruhezeit und angemeldete Geräte.",
     group: "settings",
   },
   {

@@ -1,6 +1,6 @@
 # Plan: E-Mail modernisieren (Versand, Vorlagen, Kanal in den Benachrichtigungen)
 
-Stand: 2026-10-20. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-20. Phase 1–5 umgesetzt, offen Phase 6 (Secret) und 7. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -68,6 +68,7 @@ model MailOutbox {
 
 model NotificationPreference { … emailMode String? } // instant | digest | off; null = digest
 model NotificationSettings  { … digest String?; digestSentAt DateTime? } // daily | weekly | off
+model NotificationRecipient { … emailedAt DateTime? } // nie doppelt mailen (sofort oder Zusammenfassung)
 ```
 
 ## Phasen
@@ -88,10 +89,19 @@ model NotificationSettings  { … digest String?; digestSentAt DateTime? } // da
 
 ## Checkliste
 
-- [ ] Phase 1 Mail-Kern
-- [ ] Phase 2 Admin-Seite
-- [ ] Phase 3 Bestehende Mails
-- [ ] Phase 4 E-Mail-Kanal + Zusammenfassung
-- [ ] Phase 5 Abmelden
+- [x] Phase 1 Mail-Kern
+- [x] Phase 2 Admin-Seite
+- [x] Phase 3 Bestehende Mails
+- [x] Phase 4 E-Mail-Kanal + Zusammenfassung
+- [x] Phase 5 Abmelden
 - [ ] Phase 6 Secret
 - [ ] Phase 7 Abschluss/Release
+
+## Umsetzungsnotizen
+
+- Absagen an die Planung (`decline-notifications.ts`) liefen früher als eigene Mail; jetzt über
+  `notify({ emailInstant: true })` – weiter sofort, aber mit „Aus“ abschaltbar.
+- Altbestand-Mails (Karten) laufen über `renderPlainTextMail()`: Textfassung bleibt Wort für Wort,
+  HTML erkennt Anrede, Link-Absatz → Knopf, „Feld: Wert“ → Tabelle, „- “ → Liste.
+- Testtypen (`test`, `test-emergency`) gehen nie per Mail.
+- Abmelden per GET meldet nicht ab (Link-Scanner), erst der Knopf bzw. One-Click-POST.

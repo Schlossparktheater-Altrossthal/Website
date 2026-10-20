@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/realtime/triggers";
 
+import { emailNotification } from "./email";
 import { pushNotification } from "./push";
 
 import {
@@ -37,6 +38,8 @@ export type NotifyInput = {
   severity?: NotificationSeverity;
   /** Zusatzdaten nur für das Realtime-Event. */
   realtimeMetadata?: Record<string, unknown>;
+  /** Mail sofort statt in der Zusammenfassung (außer der Bereich steht auf „Aus“). */
+  emailInstant?: boolean;
 };
 
 export type PreparedNotification = {
@@ -53,6 +56,7 @@ export type PreparedNotification = {
   severity: NotificationSeverity;
   groupKey: string | null;
   realtimeMetadata?: Record<string, unknown>;
+  emailInstant?: boolean;
 };
 
 export function resolveRecipients(recipients: readonly string[], actorId?: string | null) {
@@ -110,10 +114,11 @@ export async function createNotification(
     severity: input.severity ?? meta.severity,
     groupKey: input.groupKey ?? null,
     realtimeMetadata: input.realtimeMetadata,
+    emailInstant: input.emailInstant,
   };
 }
 
-/** Stellt eine angelegte Benachrichtigung zu: Realtime im offenen Tab, Web Push auf Geräte. */
+/** Stellt eine angelegte Benachrichtigung zu: Realtime im offenen Tab, Web Push, E-Mail. */
 export async function dispatchNotification(prepared: PreparedNotification | null) {
   if (!prepared) return;
   const metadata = {
@@ -153,6 +158,12 @@ export async function dispatchNotification(prepared: PreparedNotification | null
     await pushNotification(prepared);
   } catch (error) {
     console.warn("[notify] push delivery failed", error);
+  }
+
+  try {
+    await emailNotification(prepared, { forceInstant: prepared.emailInstant });
+  } catch (error) {
+    console.warn("[notify] email delivery failed", error);
   }
 }
 
