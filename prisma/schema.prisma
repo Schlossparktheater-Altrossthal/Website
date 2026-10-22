@@ -328,6 +328,9 @@ model User {
   directionView            Boolean                  @default(false)
   directionWishes          DirectionWish[]          @relation("DirectionWishAuthor")
   directionWishMessages    DirectionWishMessage[]
+  directionWishTargets     DirectionWishTarget[]    @relation("DirectionWishTargetUser")
+  directionWishTargetsSet  DirectionWishTarget[]    @relation("DirectionWishTargetStatusBy")
+  directionWishMentions    DirectionWishPerson[]    @relation("DirectionWishPerson")
   directionVisits          DirectionVisit[]
   /// Gesetzt, wenn personenbezogene Daten nach Ablauf der Aufbewahrungsfrist entfernt wurden.
   anonymizedAt             DateTime?
@@ -349,7 +352,6 @@ model User {
   sessions                        Session[]
   eventParticipations             EventParticipant[]
   availability                    Availability[]
-  tasks                           Task[]                     @relation("TaskAssignee")
   eventNotesWritten               EventNote[]                @relation("EventNoteAuthor")
   eventTasksAssigned              EventNoteAssignee[]        @relation("EventNoteAssignee")
   eventNotesEdited                EventNote[]                @relation("EventNoteEditor")
@@ -726,6 +728,7 @@ model Department {
   milestones           ShowMilestone[]
   productionObjects    ProductionObject[]
   sceneRequirements    SceneRequirement[]
+  directionWishTargets DirectionWishTarget[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([templateId])
@@ -775,44 +778,45 @@ enum TaskPriority {
 }
 
 model DepartmentTask {
-  id           String                     @id @default(cuid())
-  departmentId String
-  columnId     String?
-  position     Int                        @default(0)
-  priority     TaskPriority               @default(normal)
-  title        String
-  description  String?
-  status       TaskStatus                 @default(todo)
-  dueAt        DateTime?
+  id                  String                     @id @default(cuid())
+  departmentId        String
+  columnId            String?
+  position            Int                        @default(0)
+  priority            TaskPriority               @default(normal)
+  title               String
+  description         String?
+  status              TaskStatus                 @default(todo)
+  dueAt               DateTime?
   /// Zugehöriger Meilenstein im Produktionsplan; ohne eigene Frist gilt dessen Fälligkeit.
-  milestoneId  String?
+  milestoneId         String?
   /// Stand für die Übergabe: was als Nächstes zu tun ist und worauf zu achten ist.
-  nextStep     String?
-  nextStepById String?
-  nextStepAt   DateTime?
-  caution      String?
-  cautionById  String?
-  cautionAt    DateTime?
+  nextStep            String?
+  nextStepById        String?
+  nextStepAt          DateTime?
+  caution             String?
+  cautionById         String?
+  cautionAt           DateTime?
   /// „Ich bin dran“; gilt 12 Stunden.
-  claimedById  String?
-  claimedAt    DateTime?
-  createdById  String
-  createdAt    DateTime                   @default(now())
-  updatedAt    DateTime                   @updatedAt
-  nextStepBy   User?                      @relation("DepartmentTaskNextStepBy", fields: [nextStepById], references: [id], onDelete: SetNull)
-  cautionBy    User?                      @relation("DepartmentTaskCautionBy", fields: [cautionById], references: [id], onDelete: SetNull)
-  claimedBy    User?                      @relation("DepartmentTaskClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)
-  activities   TaskActivity[]
-  department   Department                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  milestone    ShowMilestone?             @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
-  column       DepartmentBoardColumn?     @relation(fields: [columnId], references: [id], onDelete: SetNull)
-  creator      User                       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  assignments  DepartmentTaskAssignment[]
-  comments     DepartmentTaskComment[]
-  eventNote    EventNoteAssignee?
-  object       ProductionObject?          @relation(fields: [objectId], references: [id], onDelete: SetNull)
-  objectId     String?                    @unique
-  checklist    TaskChecklistItem[]
+  claimedById         String?
+  claimedAt           DateTime?
+  createdById         String
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  nextStepBy          User?                      @relation("DepartmentTaskNextStepBy", fields: [nextStepById], references: [id], onDelete: SetNull)
+  cautionBy           User?                      @relation("DepartmentTaskCautionBy", fields: [cautionById], references: [id], onDelete: SetNull)
+  claimedBy           User?                      @relation("DepartmentTaskClaimedBy", fields: [claimedById], references: [id], onDelete: SetNull)
+  activities          TaskActivity[]
+  department          Department                 @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  milestone           ShowMilestone?             @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  column              DepartmentBoardColumn?     @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  creator             User                       @relation("DepartmentTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignments         DepartmentTaskAssignment[]
+  comments            DepartmentTaskComment[]
+  eventNote           EventNoteAssignee?
+  object              ProductionObject?          @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  objectId            String?                    @unique
+  checklist           TaskChecklistItem[]
+  directionWishTarget DirectionWishTarget?
 
   @@index([departmentId, status])
   @@index([milestoneId])
@@ -872,23 +876,24 @@ model DepartmentDocument {
 }
 
 model Character {
-  id                 String              @id @default(cuid())
-  showId             String
-  name               String
-  shortName          String?
-  rolePreferenceCode String?
-  description        String?
-  notes              String?
-  color              String?
-  order              Int                 @default(0)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  show               Show                @relation(fields: [showId], references: [id], onDelete: Cascade)
-  castings           CharacterCasting[]
-  sceneAppearances   SceneCharacter[]
-  eventTasks         EventNoteAssignee[]
-  objectCharacters   ObjectCharacter[]
-  requirements       SceneRequirement[]
+  id                   String                @id @default(cuid())
+  showId               String
+  name                 String
+  shortName            String?
+  rolePreferenceCode   String?
+  description          String?
+  notes                String?
+  color                String?
+  order                Int                   @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  show                 Show                  @relation(fields: [showId], references: [id], onDelete: Cascade)
+  castings             CharacterCasting[]
+  sceneAppearances     SceneCharacter[]
+  eventTasks           EventNoteAssignee[]
+  objectCharacters     ObjectCharacter[]
+  requirements         SceneRequirement[]
+  directionWishTargets DirectionWishTarget[]
 
   @@index([showId, order])
 }
@@ -930,6 +935,7 @@ model Scene {
   runBlocks       EventBlockScene[]
   objectScenes    ObjectScene[]
   requirements    SceneRequirement[]
+  directionWishes DirectionWishScene[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([showId, sequence])
@@ -1830,17 +1836,6 @@ model BlockedDay {
 
   @@unique([userId, date])
   @@index([eventId])
-}
-
-model Task {
-  id          String     @id @default(cuid())
-  title       String
-  description String?
-  assigneeId  String?
-  status      TaskStatus @default(todo)
-  labels      Json
-  dueAt       DateTime?
-  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
 }
 
 // ---------------------------------------------------------------------------
@@ -4221,9 +4216,7 @@ model DirectionWish {
   authorId  String?
   text      String
   status    DirectionWishStatus    @default(open)
-  /// Bezug (optional): Szenen, Personen, Zeitraum.
-  sceneIds  String[]               @default([])
-  userIds   String[]               @default([])
+  /// Bezug (optional): Zeitraum; Szenen und Personen über `scenes`/`people`.
   dateFrom  DateTime?
   dateTo    DateTime?
   /// „Eingeplant in Probe am …“
@@ -4235,21 +4228,95 @@ model DirectionWish {
   author    User?                  @relation("DirectionWishAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   event     CalendarEvent?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
   messages  DirectionWishMessage[]
+  targets   DirectionWishTarget[]
+  scenes    DirectionWishScene[]
+  people    DirectionWishPerson[]
 
   @@index([showId, status])
   @@index([eventId])
 }
 
+enum DirectionWishTargetKind {
+  planning
+  department
+  character
+  user
+}
+
+enum DirectionWishTargetStatus {
+  open
+  accepted
+  planned
+  done
+  declined
+}
+
+/// Empfänger eines Wunsches (docs/Plan/wuensche-plan.md): Planung, Gewerk, Figur oder Person,
+/// jeweils mit eigenem Status. `DirectionWish.status` fasst die Empfänger zusammen.
+model DirectionWishTarget {
+  id               String                    @id @default(cuid())
+  wishId           String
+  kind             DirectionWishTargetKind
+  departmentId     String?
+  characterId      String?
+  userId           String?
+  status           DirectionWishTargetStatus @default(open)
+  /// Grund beim Ablehnen.
+  reason           String?
+  statusAt         DateTime?
+  statusById       String?
+  /// Gewerk-Empfänger: Karte im Gewerk-Board, Status wird abgeglichen.
+  departmentTaskId String?                   @unique
+  createdAt        DateTime                  @default(now())
+  wish             DirectionWish             @relation(fields: [wishId], references: [id], onDelete: Cascade)
+  department       Department?               @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  character        Character?                @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  user             User?                     @relation("DirectionWishTargetUser", fields: [userId], references: [id], onDelete: Cascade)
+  statusBy         User?                     @relation("DirectionWishTargetStatusBy", fields: [statusById], references: [id], onDelete: SetNull)
+  departmentTask   DepartmentTask?           @relation(fields: [departmentTaskId], references: [id], onDelete: SetNull)
+
+  @@index([wishId])
+  @@index([departmentId])
+  @@index([characterId])
+  @@index([userId])
+}
+
+/// Bezug eines Wunsches auf Szenen.
+model DirectionWishScene {
+  wishId  String
+  sceneId String
+  wish    DirectionWish @relation(fields: [wishId], references: [id], onDelete: Cascade)
+  scene   Scene         @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@id([wishId, sceneId])
+  @@index([sceneId])
+}
+
+/// Im Wunsch erwähnte Personen (Bezug, keine Empfänger).
+model DirectionWishPerson {
+  wishId String
+  userId String
+  wish   DirectionWish @relation(fields: [wishId], references: [id], onDelete: Cascade)
+  user   User          @relation("DirectionWishPerson", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([wishId, userId])
+  @@index([userId])
+}
+
 /// Verlauf eines Wunsches: Antworten und Statuswechsel (`status` gesetzt).
 model DirectionWishMessage {
-  id        String               @id @default(cuid())
-  wishId    String
-  authorId  String?
-  text      String?
-  status    DirectionWishStatus?
-  createdAt DateTime             @default(now())
-  wish      DirectionWish        @relation(fields: [wishId], references: [id], onDelete: Cascade)
-  author    User?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  id           String                     @id @default(cuid())
+  wishId       String
+  authorId     String?
+  text         String?
+  status       DirectionWishStatus?
+  /// Statuswechsel eines einzelnen Empfängers (Gewerk, Figur, Person).
+  targetStatus DirectionWishTargetStatus?
+  /// Lesbarer Empfänger zum Zeitpunkt des Wechsels, z. B. „Kostüm“.
+  targetLabel  String?
+  createdAt    DateTime                   @default(now())
+  wish         DirectionWish              @relation(fields: [wishId], references: [id], onDelete: Cascade)
+  author       User?                      @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([wishId, createdAt])
 }

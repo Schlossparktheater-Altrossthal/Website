@@ -1,6 +1,6 @@
 # Wünsche mit Empfängern – Plan (2026-10-22)
 
-Stand: Schritt 1 (Abgleich Karte ⇔ Protokoll-Aufgabe) umgesetzt; Schritt 2–6 offen.
+Stand: Schritt 1–6 umgesetzt (2026-10-22); offen Staging-Abnahme, Gerätetest, Release.
 
 ## Ausgangslage (Review 2026-10-22)
 
@@ -39,8 +39,8 @@ Schwächen:
 1. **Abgleich Karte ⇔ Protokoll-Aufgabe** (`src/lib/departments/task-sync.ts`): Karte nach
    „erledigt“ (Verschieben, Status-Knopf, Spalten-Status, Spalte löschen) hakt die
    Gewerk-Zuständigkeit ab; Abhaken im Protokoll schiebt die Karte in die erste
-   Erledigt- bzw. Zu-tun-Spalte. Offen: gelöschte Karte lässt die Zuständigkeit offen
-   (`departmentTaskId` → NULL) – beim Löschen besser mit abhaken oder Zuständigkeit entfernen.
+   Erledigt- bzw. Zu-tun-Spalte. Gelöschte Karte: Zuständigkeit des Gewerks wird entfernt bzw.
+   (wenn allein zuständig) abgehakt (`detachProtocolFromTask`).
 2. **Schema**: `DirectionWishTarget` (`wishId`, genau eins von `planning`/`departmentId`/
    `characterId`/`userId`, `status` open/accepted/planned/done/declined, `statusAt`,
    `statusById`, `reason`, `departmentTaskId @unique`). Szenen/Personen-Bezug als
@@ -55,3 +55,18 @@ Schwächen:
    Planer-Seite filtert auf Ziel `planning`. Staging-Screenshots mobil + Desktop.
 6. **E2E** (`e2e/regie.spec.ts` erweitern): Wunsch an Gewerk → Karte → erledigt → Regie sieht
    Status; Wunsch an Figur → Darsteller lehnt ab → Grund beim Regieteam.
+
+## Umsetzung (2026-10-22)
+
+- Migration `20261022120000_direction_wish_targets`: bestehende Wünsche → Empfänger `planning`
+  (Status übernommen), `sceneIds`/`userIds` → `DirectionWishScene`/`DirectionWishPerson`,
+  Tabelle `Task` entfernt (in Staging/Prod leer).
+- Logik `src/lib/regie/wishes.ts`: `loadWishViewer` + `allowedTargetStatuses` (Rechte je
+  Empfänger, Unit-Tests), `setWishTargetStatus`, `syncWishesFromTasks`, `notifyWish` (E5).
+- „Gewerksleitung“ = Rolle `lead` oder `deputy` (bzw. Recht SHOW.MANAGE), wie im Board.
+- Gewerk-Karte eines Wunsches: „In Arbeit“ ⇒ angenommen, „Erledigt“ ⇒ erledigt, zurück ⇒ offen;
+  Löschen nur Leitung (gilt als Ablehnung). Ablehnen über den Wunsch löscht die Karte,
+  Wieder-Öffnen legt sie neu an.
+- Seiten: Regie `/mitglieder/regie/wuensche` (alle), Planung `/terminplanung/regie-wuensche`
+  (nur mit Empfänger Planung), Empfänger `/mitglieder/wuensche` + Dashboard-Karte
+  „Wünsche der Regie“.

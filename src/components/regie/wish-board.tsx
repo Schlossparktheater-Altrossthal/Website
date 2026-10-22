@@ -1,6 +1,6 @@
 "use client";
 
-import type { DirectionWishStatus } from "@prisma/client";
+import type { DirectionWishStatus, DirectionWishTargetStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
@@ -11,23 +11,32 @@ import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Textarea } from "@/components/ui/textarea";
-import type { DirectionWishView } from "@/lib/regie/wishes";
+import type { WishRecipientOptions } from "@/lib/regie/data";
+import type { DirectionWishView, WishTargetInput, WishTargetView } from "@/lib/regie/wishes";
 import { cn } from "@/lib/utils";
 
 import {
   createWishAction,
+  editWishAction,
   replyWishAction,
-  setWishStatusAction,
+  setWishTargetStatusAction,
   type WishActionResult,
 } from "@/app/(members)/mitglieder/regie/actions";
 
 export type WishOption = { id: string; label: string };
 
-const STATUS: Record<
-  DirectionWishStatus,
-  { label: string; variant: "warning" | "info" | "success" | "muted" }
-> = {
+type Variant = "warning" | "info" | "success" | "muted";
+
+const STATUS: Record<DirectionWishStatus, { label: string; variant: Variant }> = {
   open: { label: "offen", variant: "warning" },
+  planned: { label: "in Arbeit", variant: "info" },
+  done: { label: "erledigt", variant: "success" },
+  declined: { label: "abgelehnt", variant: "muted" },
+};
+
+const TARGET_STATUS: Record<DirectionWishTargetStatus, { label: string; variant: Variant }> = {
+  open: { label: "offen", variant: "warning" },
+  accepted: { label: "angenommen", variant: "info" },
   planned: { label: "eingeplant", variant: "info" },
   done: { label: "erledigt", variant: "success" },
   declined: { label: "abgelehnt", variant: "muted" },
@@ -114,24 +123,34 @@ function Chips({
   );
 }
 
-/** Neuer Wunsch: Textfeld zuerst, Bezug optional über Chips. */
+const PLANNING_KEY = "planning";
+
+function parseTargetKey(key: string): WishTargetInput {
+  if (key === PLANNING_KEY) return { kind: "planning" };
+  const [kind, id] = key.split(":") as [Exclude<WishTargetInput["kind"], "planning">, string];
+  return { kind, id };
+}
+
+/** Neuer Wunsch: Textfeld zuerst, dann „An:“ (Planung vorausgewählt), Bezug optional. */
 export function WishComposer({
   showId,
   scenes,
-  people,
+  recipients,
   trigger,
 }: {
   showId: string;
   scenes: WishOption[];
-  people: WishOption[];
+  recipients: WishRecipientOptions;
   trigger?: (open: () => void) => React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(false);
   const [text, setText] = React.useState("");
+  const [targets, setTargets] = React.useState<string[]>([PLANNING_KEY]);
   const [sceneIds, setSceneIds] = React.useState<string[]>([]);
   const [userIds, setUserIds] = React.useState<string[]>([]);
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
+  const [moreTargets, setMoreTargets] = React.useState(false);
   const [more, setMore] = React.useState(false);
   const { pending, run } = useAction();
 
@@ -140,20 +159,38 @@ export function WishComposer({
 
   const reset = () => {
     setText("");
+    setTargets([PLANNING_KEY]);
     setSceneIds([]);
     setUserIds([]);
     setDateFrom("");
     setDateTo("");
+    setMoreTargets(false);
     setMore(false);
     setOpen(false);
   };
 
+  const prefixed = (kind: string, options: WishOption[]) =>
+    options.map((option) => ({ id: `${kind}:${option.id}`, label: option.label }));
+
   const submit = () =>
     run(
-      () => createWishAction({ showId, text, sceneIds, userIds, dateFrom, dateTo }),
-      "Wunsch an die Planung geschickt",
+      () =>
+        createWishAction({
+          showId,
+          text,
+          targets: targets.map(parseTargetKey),
+          sceneIds,
+          userIds,
+          dateFrom,
+          dateTo,
+        }),
+      targets.length === 1 && targets[0] === PLANNING_KEY
+        ? "Wunsch an die Planung geschickt"
+        : "Wunsch geschickt",
       reset,
     );
+
+  const chosenOthers = targets.filter((key) => key !== PLANNING_KEY).length;
 
   return (
     <>
@@ -167,15 +204,19 @@ export function WishComposer({
       <BottomSheet
         open={open}
         onOpenChange={setOpen}
-        title="Wunsch an die Planung"
-        description="Was soll die Probenplanung berücksichtigen?"
+        title="Neuer Wunsch"
+        description="Was soll berücksichtigt werden – und von wem?"
         showDescription
         footer={
           <div className="flex gap-2 p-4 sm:px-6">
             <Button variant="outline" className="flex-1" onClick={() => setOpen(false)}>
               Abbrechen
             </Button>
-            <Button className="flex-1" onClick={submit} disabled={pending || !text.trim()}>
+            <Button
+              className="flex-1"
+              onClick={submit}
+              disabled={pending || !text.trim() || !targets.length}
+            >
               {pending ? "Senden …" : "Senden"}
             </Button>
           </div>
@@ -190,6 +231,48 @@ export function WishComposer({
             placeholder="z. B. Szene 4 und 5 vor dem 12.6. einmal durchlaufen"
             aria-label="Wunsch"
           />
+          <Chips
+            label="An"
+            options={[
+              { id: PLANNING_KEY, label: "Planung" },
+              // Eingeklappt: die schon gewählten weiteren Empfänger hier zeigen.
+              ...(moreTargets
+                ? []
+                : [
+                    ...prefixed("department", recipients.departments),
+                    ...prefixed("character", recipients.characters),
+                    ...prefixed("user", recipients.people),
+                  ].filter((option) => targets.includes(option.id))),
+            ]}
+            selected={targets}
+            onToggle={toggle(setTargets)}
+          />
+          {moreTargets ? (
+            <>
+              <Chips
+                label="Gewerke"
+                options={prefixed("department", recipients.departments)}
+                selected={targets}
+                onToggle={toggle(setTargets)}
+              />
+              <Chips
+                label="Rollen"
+                options={prefixed("character", recipients.characters)}
+                selected={targets}
+                onToggle={toggle(setTargets)}
+              />
+              <Chips
+                label="Personen"
+                options={prefixed("user", recipients.people)}
+                selected={targets}
+                onToggle={toggle(setTargets)}
+              />
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setMoreTargets(true)}>
+              + Gewerk, Rolle oder Person{chosenOthers ? ` (${chosenOthers} gewählt)` : ""}
+            </Button>
+          )}
           <Chips
             label="Szenen"
             options={scenes}
@@ -212,15 +295,15 @@ export function WishComposer({
                 </label>
               </div>
               <Chips
-                label="Personen"
-                options={people}
+                label="Es geht um (Personen)"
+                options={recipients.people}
                 selected={userIds}
                 onToggle={toggle(setUserIds)}
               />
             </>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setMore(true)}>
-              + Zeitraum oder Personen angeben
+              + Zeitraum oder betroffene Personen
             </Button>
           )}
         </div>
@@ -229,39 +312,154 @@ export function WishComposer({
   );
 }
 
-function WishCard({
-  wish,
-  currentUserId,
-  mode,
-  events,
-}: {
-  wish: DirectionWishView;
-  currentUserId: string;
-  mode: "direction" | "planner";
-  events: WishOption[];
-}) {
-  const [reply, setReply] = React.useState("");
-  const [expanded, setExpanded] = React.useState(false);
+const ACTION_LABELS: Partial<Record<DirectionWishTargetStatus, string>> = {
+  accepted: "Annehmen",
+  done: "Erledigt",
+  open: "Wieder öffnen",
+};
+
+/** Ein Empfänger mit Status und den Knöpfen, die die angemeldete Person nutzen darf. */
+function TargetRow({ target, events }: { target: WishTargetView; events: WishOption[] }) {
   const [decision, setDecision] = React.useState<"planned" | "declined" | null>(null);
   const [reason, setReason] = React.useState("");
-  const [eventId, setEventId] = React.useState(wish.event?.id ?? "");
+  const [eventId, setEventId] = React.useState("");
   const { pending, run } = useAction();
-  const range = rangeLabel(wish.dateFrom, wish.dateTo);
-  const status = STATUS[wish.status];
-  const replies = wish.messages.length;
+  const status = TARGET_STATUS[target.status];
 
   const setStatus = (
-    next: DirectionWishStatus,
+    next: DirectionWishTargetStatus,
     extra: { reason?: string; eventId?: string } = {},
   ) =>
     run(
-      () => setWishStatusAction({ wishId: wish.id, status: next, ...extra }),
-      `Wunsch ${STATUS[next].label}`,
+      () => setWishTargetStatusAction({ targetId: target.id, status: next, ...extra }),
+      `${target.label}: ${TARGET_STATUS[next].label}`,
       () => {
         setDecision(null);
         setReason("");
       },
     );
+
+  // Wer nicht zum Empfänger gehört (Regieteam), sieht nur „Wieder öffnen“ bei fertigen Zielen.
+  const actions = target.mine
+    ? target.allowed
+    : target.allowed.filter(
+        (next) => next === "open" && (target.status === "declined" || target.status === "done"),
+      );
+
+  return (
+    <li className="space-y-2 py-2 first:pt-0 last:pb-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className="text-sm font-medium">{target.label}</span>
+          {target.reason ? (
+            <span className="block text-sm text-muted-foreground">Grund: {target.reason}</span>
+          ) : null}
+          {target.statusBy && target.status !== "open" ? (
+            <span className="block text-xs text-muted-foreground">
+              {target.statusBy}
+              {target.statusAt ? ` · ${STAMP.format(new Date(target.statusAt))}` : ""}
+            </span>
+          ) : null}
+        </div>
+        <Badge variant={status.variant} className="shrink-0">
+          {status.label}
+        </Badge>
+      </div>
+      {actions.length ? (
+        <div className="flex flex-wrap gap-2">
+          {actions.includes("planned") ? (
+            <Button size="sm" variant="outline" onClick={() => setDecision("planned")}>
+              Eingeplant …
+            </Button>
+          ) : null}
+          {(["accepted", "done", "open"] as const)
+            .filter((next) => actions.includes(next))
+            .map((next) => (
+              <Button
+                key={next}
+                size="sm"
+                variant={next === "open" ? "ghost" : "outline"}
+                disabled={pending}
+                onClick={() => setStatus(next)}
+              >
+                {ACTION_LABELS[next]}
+              </Button>
+            ))}
+          {actions.includes("declined") ? (
+            <Button size="sm" variant="ghost" onClick={() => setDecision("declined")}>
+              Ablehnen …
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {decision === "planned" ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="min-w-0 flex-1 space-y-1 text-sm">
+            <span className="font-medium">In welcher Probe? (optional)</span>
+            <select
+              value={eventId}
+              onChange={(event) => setEventId(event.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="">Ohne Termin</option>
+              {events.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() => setStatus("planned", { eventId: eventId || undefined })}
+          >
+            Speichern
+          </Button>
+        </div>
+      ) : null}
+      {decision === "declined" ? (
+        <div className="flex gap-2">
+          <Textarea
+            rows={2}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Grund (sieht die Regie)"
+            aria-label="Grund"
+          />
+          <Button
+            size="sm"
+            className="self-end"
+            disabled={pending || !reason.trim()}
+            onClick={() => setStatus("declined", { reason })}
+          >
+            Ablehnen
+          </Button>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+function WishCard({
+  wish,
+  currentUserId,
+  events,
+}: {
+  wish: DirectionWishView;
+  currentUserId: string;
+  events: WishOption[];
+}) {
+  const [reply, setReply] = React.useState("");
+  const [expanded, setExpanded] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(wish.text);
+  const { pending, run } = useAction();
+  const range = rangeLabel(wish.dateFrom, wish.dateTo);
+  const status = STATUS[wish.status];
+  const replies = wish.messages.length;
+  // Eigene Empfänger zuerst, damit die Knöpfe oben stehen.
+  const targets = [...wish.targets].sort((a, b) => Number(b.mine) - Number(a.mine));
 
   return (
     <li
@@ -269,10 +467,41 @@ function WishCard({
       className="scroll-mt-24 rounded-xl border border-border/70 bg-card p-4 target:ring-2 target:ring-primary"
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="whitespace-pre-line text-[15px] leading-snug">{wish.text}</p>
-        <Badge variant={status.variant} className="shrink-0">
-          {status.label}
-        </Badge>
+        {editing ? (
+          <div className="flex-1 space-y-2">
+            <Textarea
+              rows={3}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              aria-label="Wunsch bearbeiten"
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={pending || !draft.trim()}
+                onClick={() =>
+                  run(
+                    () => editWishAction({ wishId: wish.id, text: draft }),
+                    "Wunsch geändert",
+                    () => setEditing(false),
+                  )
+                }
+              >
+                Speichern
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="whitespace-pre-line text-[15px] leading-snug">{wish.text}</p>
+        )}
+        {wish.targets.length > 1 ? (
+          <Badge variant={status.variant} className="shrink-0">
+            {status.label}
+          </Badge>
+        ) : null}
       </div>
       {wish.scenes.length || range || wish.people.length ? (
         <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
@@ -298,7 +527,31 @@ function WishCard({
         {wish.author?.id === currentUserId ? "Von dir" : `Von ${wish.author?.name ?? "Unbekannt"}`}
         {" · "}
         {STAMP.format(new Date(wish.createdAt))}
+        {wish.canEdit && !editing ? (
+          <>
+            {" · "}
+            <button
+              type="button"
+              className="font-medium text-primary"
+              onClick={() => {
+                setDraft(wish.text);
+                setEditing(true);
+              }}
+            >
+              Bearbeiten
+            </button>
+          </>
+        ) : null}
       </p>
+
+      <div className="mt-3 rounded-lg border border-border/60 px-3 py-2">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">An</p>
+        <ul className="divide-y divide-border/60">
+          {targets.map((target) => (
+            <TargetRow key={target.id} target={target} events={events} />
+          ))}
+        </ul>
+      </div>
 
       <button
         type="button"
@@ -326,7 +579,12 @@ function WishCard({
                     {" "}
                     · {STAMP.format(new Date(message.createdAt))}
                   </span>
-                  {message.status ? (
+                  {message.targetStatus ? (
+                    <span className="block text-muted-foreground">
+                      {message.targetLabel ? `${message.targetLabel}: ` : ""}„
+                      {TARGET_STATUS[message.targetStatus].label}“
+                    </span>
+                  ) : message.status ? (
                     <span className="block text-muted-foreground">
                       hat den Wunsch auf „{STATUS[message.status].label}“ gesetzt
                     </span>
@@ -363,105 +621,24 @@ function WishCard({
           </div>
         </div>
       ) : null}
-
-      {mode === "planner" ? (
-        <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
-          <div className="flex flex-wrap gap-2">
-            {wish.status !== "planned" ? (
-              <Button size="sm" variant="outline" onClick={() => setDecision("planned")}>
-                Eingeplant …
-              </Button>
-            ) : null}
-            {wish.status !== "done" ? (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() => setStatus("done")}
-              >
-                Erledigt
-              </Button>
-            ) : null}
-            {wish.status !== "declined" ? (
-              <Button size="sm" variant="ghost" onClick={() => setDecision("declined")}>
-                Ablehnen …
-              </Button>
-            ) : null}
-            {wish.status !== "open" ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={pending}
-                onClick={() => setStatus("open")}
-              >
-                Wieder öffnen
-              </Button>
-            ) : null}
-          </div>
-          {decision === "planned" ? (
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="min-w-0 flex-1 space-y-1 text-sm">
-                <span className="font-medium">In welcher Probe? (optional)</span>
-                <select
-                  value={eventId}
-                  onChange={(event) => setEventId(event.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
-                >
-                  <option value="">Ohne Termin</option>
-                  {events.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Button
-                size="sm"
-                disabled={pending}
-                onClick={() => setStatus("planned", { eventId: eventId || undefined })}
-              >
-                Speichern
-              </Button>
-            </div>
-          ) : null}
-          {decision === "declined" ? (
-            <div className="flex gap-2">
-              <Textarea
-                rows={2}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                placeholder="Grund (sieht das Regieteam)"
-                aria-label="Grund"
-              />
-              <Button
-                size="sm"
-                className="self-end"
-                disabled={pending || !reason.trim()}
-                onClick={() => setStatus("declined", { reason })}
-              >
-                Ablehnen
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      ) : wish.status === "planned" ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-2"
-          disabled={pending}
-          onClick={() => setStatus("done")}
-        >
-          Als erledigt markieren
-        </Button>
-      ) : null}
     </li>
   );
 }
 
 type Filter = "all" | "mine" | "open";
 
-/** Gemeinsamer Eingang „Regieteam“ bzw. Sicht der Planung. */
+/** Offen aus Sicht der Ansicht: Planung bzw. eigene Empfänger noch nicht fertig. */
+function isOpenFor(wish: DirectionWishView, mode: "direction" | "planner" | "recipient") {
+  const relevant =
+    mode === "planner"
+      ? wish.targets.filter((target) => target.kind === "planning")
+      : mode === "recipient"
+        ? wish.targets.filter((target) => target.mine)
+        : wish.targets;
+  return relevant.some((target) => target.status !== "done" && target.status !== "declined");
+}
+
+/** Eingang des Regieteams, Sicht der Planung oder Wünsche an mich, meine Rollen und Gewerke. */
 export function WishBoard({
   wishes,
   currentUserId,
@@ -470,15 +647,15 @@ export function WishBoard({
 }: {
   wishes: DirectionWishView[];
   currentUserId: string;
-  mode: "direction" | "planner";
+  mode: "direction" | "planner" | "recipient";
   events?: WishOption[];
 }) {
-  const [filter, setFilter] = React.useState<Filter>(mode === "planner" ? "open" : "all");
+  const [filter, setFilter] = React.useState<Filter>(mode === "direction" ? "all" : "open");
   const visible = wishes.filter((wish) =>
     filter === "mine"
       ? wish.author?.id === currentUserId
       : filter === "open"
-        ? wish.status === "open" || wish.status === "planned"
+        ? isOpenFor(wish, mode)
         : true,
   );
 
@@ -489,21 +666,15 @@ export function WishBoard({
         value={filter}
         onValueChange={setFilter}
         options={[
-          { value: "all", label: `Alle (${wishes.length})` },
           { value: "open", label: "Offen" },
+          { value: "all", label: `Alle (${wishes.length})` },
           ...(mode === "direction" ? [{ value: "mine" as const, label: "Meine Wünsche" }] : []),
         ]}
       />
       {visible.length ? (
         <ul className="space-y-3">
           {visible.map((wish) => (
-            <WishCard
-              key={wish.id}
-              wish={wish}
-              currentUserId={currentUserId}
-              mode={mode}
-              events={events}
-            />
+            <WishCard key={wish.id} wish={wish} currentUserId={currentUserId} events={events} />
           ))}
         </ul>
       ) : (

@@ -23,7 +23,7 @@ test.describe("als admin", () => {
     await page.goto("/mitglieder/regie");
     await expect(page.getByRole("heading", { name: "Regie", level: 1 })).toBeVisible();
     for (const title of [
-      "Wünsche an die Planung",
+      "Wünsche",
       "Nächste Proben",
       "Probenmappe",
       "Szenen × Personen",
@@ -52,9 +52,18 @@ test.describe("als admin", () => {
     );
     const send = page.getByRole("dialog").getByRole("button", { name: "Senden" });
     await expect(send).toBeDisabled();
-    await page.getByRole("dialog").getByLabel("Wunsch").fill("Test – nicht senden");
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Wunsch").fill("Test – nicht senden");
     await expect(send).toBeEnabled();
-    await page.getByRole("dialog").getByRole("button", { name: "Abbrechen" }).click();
+    // Empfänger: Planung vorausgewählt; ohne Empfänger kein Senden.
+    const planning = dialog.getByRole("button", { name: "Planung", exact: true });
+    await expect(planning).toHaveAttribute("aria-pressed", "true");
+    await planning.click();
+    await expect(send).toBeDisabled();
+    await planning.click();
+    await dialog.getByRole("button", { name: /Gewerk, Rolle oder Person/ }).click();
+    await expect(dialog.getByText("Personen", { exact: true })).toBeVisible();
+    await dialog.getByRole("button", { name: "Abbrechen" }).click();
   });
 
   test("Probenmappe: Auswahl ohne Skript, PDF mit Deckblatt", async ({ page }) => {
@@ -90,5 +99,11 @@ test.describe("als admin", () => {
     const response = await page.goto("/mitglieder/terminplanung/regie-wuensche");
     expect(response?.status()).toBeLessThan(400);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  });
+
+  test("Wünsche an mich laden", async ({ page }) => {
+    const response = await page.goto("/mitglieder/wuensche");
+    expect(response?.status()).toBeLessThan(400);
+    await expect(page.getByRole("heading", { name: "Wünsche der Regie", level: 1 })).toBeVisible();
   });
 });

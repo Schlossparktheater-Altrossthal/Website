@@ -89,7 +89,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     prisma.departmentMembership.count({ where: { userId: id } }),
     prisma.characterCasting.count({ where: { userId: id } }),
     prisma.sceneBreakdownItem.count({ where: { assignedToId: id } }),
-    prisma.task.count({ where: { assigneeId: id } }),
+    prisma.directionWishTarget.count({ where: { userId: id } }),
     prisma.departmentTaskAssignment.count({ where: { userId: id } }),
     prisma.departmentTask.count({ where: { createdById: id } }),
     prisma.eventParticipant.count({ where: { userId: id, invited: true } }),
@@ -184,7 +184,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
 
   const taskItems: UsageItem[] = [
-    { key: "generalTasks", label: "Allgemeine Aufgaben", count: generalTasks },
+    { key: "generalTasks", label: "Wünsche der Regie (an die Person)", count: generalTasks },
     {
       key: "departmentTasksAssigned",
       label: "Gewerkaufgaben (zugewiesen)",

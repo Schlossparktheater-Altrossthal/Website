@@ -472,3 +472,38 @@ export async function loadDirectionCountdownData(showId: string) {
     rehearsedSceneIds,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Empfänger für Wünsche (docs/Plan/wuensche-plan.md)
+
+export type WishRecipientOptions = {
+  departments: { id: string; label: string }[];
+  characters: { id: string; label: string }[];
+  people: { id: string; label: string }[];
+};
+
+/** Gewerke (ohne das Regieteam selbst), Figuren und Personen der Produktion. */
+export async function loadWishRecipientOptions(showId: string): Promise<WishRecipientOptions> {
+  const [departments, characters, people] = await Promise.all([
+    prisma.department.findMany({
+      where: {
+        showId,
+        archivedAt: null,
+        template: { slug: { notIn: ["regie", "regieassistenz-orga"] } },
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    prisma.character.findMany({
+      where: { showId },
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    loadDirectionPeople(showId),
+  ]);
+  return {
+    departments: departments.map((department) => ({ id: department.id, label: department.name })),
+    characters: characters.map((character) => ({ id: character.id, label: character.name })),
+    people,
+  };
+}

@@ -1,14 +1,39 @@
 import type { Prisma } from "@prisma/client";
 
 import { allDoneAt } from "@/lib/calendar/protocol";
+import { notifyWishTargetChanges, syncWishesFromTasks } from "@/lib/regie/wishes";
 
 /**
- * Abgleich zwischen Gewerk-Karten und Protokoll-Aufgaben, die ein Gewerk als Zuständigkeit haben
- * (`EventNoteAssignee.departmentTaskId`). Karte erledigt ⇔ Zuständigkeit des Gewerks abgehakt.
+ * Abgleich zwischen Gewerk-Karten und dem, wofür sie stehen: Protokoll-Aufgaben mit dem Gewerk
+ * als Zuständigkeit (`EventNoteAssignee.departmentTaskId`) und Wünsche der Regie an das Gewerk
+ * (`DirectionWishTarget.departmentTaskId`, docs/Plan/wuensche-plan.md).
  */
 
-/** Nach Statuswechsel von Karten: die verknüpften Zuständigkeiten nachziehen. */
-export async function syncProtocolFromTasks(
+export type TaskSyncResult = Awaited<ReturnType<typeof syncWishesFromTasks>>;
+
+/**
+ * Nach Statuswechsel von Karten: verknüpfte Zuständigkeiten und Wunsch-Empfänger nachziehen.
+ * Das Ergebnis nach der Transaktion an `notifyTaskSync` geben.
+ */
+export async function syncFromTasks(
+  tx: Prisma.TransactionClient,
+  taskIds: readonly string[],
+  actorId: string | null,
+): Promise<TaskSyncResult> {
+  await syncProtocolFromTasks(tx, taskIds, actorId);
+  return syncWishesFromTasks(tx, taskIds, actorId);
+}
+
+/** Beteiligte über geänderte Wünsche informieren; Fehler nur protokollieren. */
+export async function notifyTaskSync(changes: TaskSyncResult, actorId: string) {
+  if (!changes.length) return;
+  await notifyWishTargetChanges(changes, actorId).catch((error) =>
+    console.error("[task-sync] Benachrichtigung fehlgeschlagen", error),
+  );
+}
+
+/** Karte erledigt ⇔ Zuständigkeit des Gewerks in der Protokoll-Aufgabe abgehakt. */
+async function syncProtocolFromTasks(
   tx: Prisma.TransactionClient,
   taskIds: readonly string[],
   actorId: string | null,
@@ -30,6 +55,37 @@ export async function syncProtocolFromTasks(
     changedNotes.add(row.noteId);
   }
   for (const noteId of changedNotes) await refreshNoteDoneAt(tx, noteId);
+}
+
+/**
+ * Vor dem Löschen einer Karte: Die Protokoll-Aufgabe verliert die Zuständigkeit des Gewerks
+ * (sonst bliebe sie für immer offen). War das Gewerk allein zuständig, gilt sie als erledigt.
+ */
+export async function detachProtocolFromTask(
+  tx: Prisma.TransactionClient,
+  taskId: string,
+  actorId: string,
+) {
+  const rows = await tx.eventNoteAssignee.findMany({
+    where: { departmentTaskId: taskId },
+    select: {
+      id: true,
+      noteId: true,
+      doneAt: true,
+      note: { select: { _count: { select: { assignees: true } } } },
+    },
+  });
+  for (const row of rows) {
+    if (row.note._count.assignees > 1) {
+      await tx.eventNoteAssignee.delete({ where: { id: row.id } });
+    } else if (!row.doneAt) {
+      await tx.eventNoteAssignee.update({
+        where: { id: row.id },
+        data: { doneAt: new Date(), doneById: actorId },
+      });
+    }
+    await refreshNoteDoneAt(tx, row.noteId);
+  }
 }
 
 /** Gesamtstatus einer Protokoll-Aufgabe aus ihren Zuständigkeiten neu berechnen. */

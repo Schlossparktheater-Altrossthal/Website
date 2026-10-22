@@ -4,7 +4,7 @@ import { getActiveProduction } from "@/lib/active-production";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
 import { formatDay, formatTime, loadDirectionEvents } from "@/lib/regie/data";
-import { canPlanForShow, listDirectionWishes } from "@/lib/regie/wishes";
+import { canPlanForShow, listPlannerWishes } from "@/lib/regie/wishes";
 
 export const metadata = { title: "Regie-Wünsche" };
 
@@ -17,7 +17,7 @@ export default async function PlannerDirectionWishesPage() {
     return <div className="text-sm text-destructive">Kein Zugriff auf die Regie-Wünsche.</div>;
   }
   const [wishes, events] = await Promise.all([
-    listDirectionWishes(production.id),
+    listPlannerWishes(production.id, userId),
     loadDirectionEvents(production.id),
   ]);
 

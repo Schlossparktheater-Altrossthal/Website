@@ -16,7 +16,7 @@ import {
   loadDirectionCasting,
   loadDirectionCountdownData,
   loadDirectionEvents,
-  loadDirectionPeople,
+  loadWishRecipientOptions,
   loadDirectionProps,
   loadDirectionProtocols,
   loadDirectionScenes,
@@ -73,11 +73,11 @@ export default async function DirectionDashboardPage({
     protocols,
     props,
     script,
-    people,
     castChange,
     countdownData,
+    wishRecipients,
   ] = await Promise.all([
-    listDirectionWishes(show.id),
+    listDirectionWishes(show.id, userId),
     loadDirectionEvents(show.id),
     loadDirectionScenes(show.id),
     loadDirectionCasting(show.id),
@@ -85,12 +85,12 @@ export default async function DirectionDashboardPage({
     loadDirectionProtocols(show.id, 5),
     loadDirectionProps(show.id),
     loadDirectionScript(show.id),
-    loadDirectionPeople(show.id),
     prisma.characterCasting.aggregate({
       where: { character: { showId: show.id } },
       _max: { updatedAt: true },
     }),
     loadDirectionCountdownData(show.id),
+    loadWishRecipientOptions(show.id),
   ]);
 
   const showLabel = `${show.title ?? "Produktion"} ${show.year}`;
@@ -181,20 +181,20 @@ export default async function DirectionDashboardPage({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <DirectionCard
-          title="Wünsche an die Planung"
+          title="Wünsche"
           className="border-primary/40 sm:col-span-2 lg:col-span-1"
           isNew={wishes.some((wish) => newer(new Date(wish.updatedAt), since))}
           summary={
             wishes.length
-              ? `${openWishes} offen · ${plannedWishes} eingeplant · ${wishes.length} insgesamt`
-              : "Was soll die Probenplanung berücksichtigen? Hier schickst du es ab."
+              ? `${openWishes} offen · ${plannedWishes} in Arbeit · ${wishes.length} insgesamt`
+              : "Was sollen Planung, Gewerke oder Darsteller berücksichtigen? Hier schickst du es ab."
           }
           viewHref={wishes.length ? href("wuensche") : null}
           actions={
             <WishComposer
               showId={show.id}
               scenes={scenes.map((scene) => ({ id: scene.id, label: scene.label }))}
-              people={people}
+              recipients={wishRecipients}
             />
           }
         >
@@ -212,7 +212,7 @@ export default async function DirectionDashboardPage({
                     {
                       {
                         open: "offen",
-                        planned: "eingeplant",
+                        planned: "in Arbeit",
                         done: "erledigt",
                         declined: "abgelehnt",
                       }[wish.status]

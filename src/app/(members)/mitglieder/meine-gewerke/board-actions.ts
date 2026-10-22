@@ -5,7 +5,13 @@ import { z } from "zod";
 
 import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
 import { syncObjectFromTask } from "@/lib/ausstattung/service";
-import { syncProtocolFromTasks } from "@/lib/departments/task-sync";
+import {
+  detachProtocolFromTask,
+  notifyTaskSync,
+  syncFromTasks,
+  type TaskSyncResult,
+} from "@/lib/departments/task-sync";
+import { declineWishForDeletedCard } from "@/lib/regie/wishes";
 import { requireBoardAccess } from "@/lib/departments/board";
 import { STEP_LIMIT } from "@/lib/departments/activity-format";
 import { logTaskActivity } from "@/lib/departments/handover";
@@ -217,6 +223,7 @@ export async function moveBoardTaskAction(
       where: { id: task.id },
       select: { columnId: true },
     });
+    let synced: TaskSyncResult = [];
     await prisma.$transaction(async (tx) => {
       const siblings = await tx.departmentTask.findMany({
         where: { columnId: column.id, id: { not: task.id } },
@@ -233,11 +240,12 @@ export async function moveBoardTaskAction(
         await tx.departmentTask.update({ where: { id }, data: { position } });
       }
       await syncObjectFromTask(tx, task.id);
-      await syncProtocolFromTasks(tx, [task.id], access.userId);
+      synced = await syncFromTasks(tx, [task.id], access.userId);
       if (before?.columnId !== column.id) {
         await logTaskActivity(tx, task.id, access.userId, "column", { to: column.name });
       }
     });
+    await notifyTaskSync(synced, access.userId);
     if (task.objectId && column.status === "done" && task.status !== "done") {
       await notifyRequestersIfReady(task.objectId, "ready", access.userId);
     }
@@ -260,7 +268,20 @@ export async function deleteBoardTaskAction(input: {
     if (task.objectId) {
       throw new Error("Die Karte gehört zu einem Ausstattungsstück – bitte dort archivieren.");
     }
-    await prisma.departmentTask.delete({ where: { id: task.id } });
+    const fromWish = await prisma.directionWishTarget.findUnique({
+      where: { departmentTaskId: task.id },
+      select: { status: true },
+    });
+    if (fromWish && !access.canManage) {
+      throw new Error("Die Karte ist ein Wunsch der Regie – ablehnen kann nur die Gewerksleitung.");
+    }
+    const declined = await prisma.$transaction(async (tx) => {
+      await detachProtocolFromTask(tx, task.id, access.userId);
+      const change = await declineWishForDeletedCard(tx, task.id, access.userId);
+      await tx.departmentTask.delete({ where: { id: task.id } });
+      return change;
+    });
+    if (declined) await notifyTaskSync([declined], access.userId);
     revalidateBoard();
     return actionSuccess();
   } catch (error) {
@@ -335,6 +356,7 @@ export async function updateBoardColumnAction(
     if (!column) throw new Error("Spalte wurde nicht gefunden.");
     const access = await requireBoardAccess(column.departmentId);
     if (!access.canManage) throw new Error("Spalten verwaltet die Leitung.");
+    let synced: TaskSyncResult = [];
     await prisma.$transaction(async (tx) => {
       await tx.departmentBoardColumn.update({
         where: { id: data.columnId },
@@ -348,12 +370,13 @@ export async function updateBoardColumnAction(
         where: { columnId: data.columnId },
         select: { id: true },
       });
-      await syncProtocolFromTasks(
+      synced = await syncFromTasks(
         tx,
         tasks.map((task) => task.id),
         access.userId,
       );
     });
+    await notifyTaskSync(synced, access.userId);
     revalidateBoard();
     return actionSuccess();
   } catch (error) {
@@ -414,6 +437,7 @@ export async function deleteBoardColumnAction(input: {
       select: { id: true, status: true },
     });
     if (!target) throw new Error("Die letzte Spalte kann nicht gelöscht werden.");
+    let synced: TaskSyncResult = [];
     await prisma.$transaction(async (tx) => {
       const tasks = await tx.departmentTask.findMany({
         where: { columnId: column.id },
@@ -424,12 +448,13 @@ export async function deleteBoardColumnAction(input: {
         data: { columnId: target.id, status: target.status },
       });
       await tx.departmentBoardColumn.delete({ where: { id: column.id } });
-      await syncProtocolFromTasks(
+      synced = await syncFromTasks(
         tx,
         tasks.map((task) => task.id),
         access.userId,
       );
     });
+    await notifyTaskSync(synced, access.userId);
     revalidateBoard();
     return actionSuccess();
   } catch (error) {

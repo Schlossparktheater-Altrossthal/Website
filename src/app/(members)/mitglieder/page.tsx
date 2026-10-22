@@ -12,6 +12,8 @@ import { DeadlineBadge } from "@/components/production/deadline-badge";
 import { DateBadge } from "@/components/ui/date-badge";
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { getActiveProduction } from "@/lib/active-production";
+import { RECIPIENT_WISHES_PATH, listRecipientWishes } from "@/lib/regie/wishes";
+import { Badge } from "@/components/ui/badge";
 import { loadUpcomingDeadlines } from "@/lib/planning/plan-service";
 import { loadDashboardScript } from "@/lib/skript/learn/dashboard";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -25,12 +27,19 @@ export default async function MembersPage() {
     readProtocolShortcuts(session.user),
   ]);
   const open = tasks.filter((task) => !task.doneAt).length;
-  const [deadlines, script] = production
+  const [deadlines, script, wishes] = production
     ? await Promise.all([
         loadUpcomingDeadlines(session.user, production.id),
         userId ? loadDashboardScript(production.id, userId) : Promise.resolve(null),
+        userId ? listRecipientWishes(production.id, userId) : Promise.resolve([]),
       ])
-    : [[], null];
+    : [[], null, []];
+  // Wünsche der Regie, bei denen ich (bzw. meine Rolle/mein Gewerk) noch etwas tun kann.
+  const openWishes = wishes.filter((wish) =>
+    wish.targets.some(
+      (target) => target.mine && (target.status === "open" || target.status === "accepted"),
+    ),
+  );
   const now = new Date();
 
   const deadlinesCard = deadlines.length ? (
@@ -94,6 +103,40 @@ export default async function MembersPage() {
     </Card>
   ) : null;
 
+  const wishesCard = openWishes.length ? (
+    <Card variant="plain" size="flush" id="wuensche" className="order-first lg:order-none">
+      <div className="p-4 pb-2">
+        <SectionHeader
+          title="Wünsche der Regie"
+          description={`${openWishes.length} offen – an dich, deine Rollen oder Gewerke`}
+        />
+      </div>
+      <ListRowGroup className="pb-2">
+        {openWishes.slice(0, 4).map((wish) => {
+          const mine = wish.targets.filter((target) => target.mine);
+          return (
+            <ListRow
+              key={wish.id}
+              href={`${RECIPIENT_WISHES_PATH}#wunsch-${wish.id}`}
+              title={wish.text.split("\n")[0]}
+              description={mine.map((target) => target.label).join(", ")}
+              trailing={
+                <Badge variant={mine.some((t) => t.status === "open") ? "warning" : "info"}>
+                  {mine.some((t) => t.status === "open") ? "offen" : "angenommen"}
+                </Badge>
+              }
+            />
+          );
+        })}
+      </ListRowGroup>
+      <div className="px-4 pb-4">
+        <Button asChild size="sm" variant="outline">
+          <Link href={RECIPIENT_WISHES_PATH}>Alle Wünsche</Link>
+        </Button>
+      </div>
+    </Card>
+  ) : null;
+
   const learn = script?.learn;
   const scriptCard = script ? (
     <Card variant="plain" size="flush" id="skript">
@@ -141,6 +184,7 @@ export default async function MembersPage() {
       tasksSlot={
         <>
           {rehearsalCard}
+          {wishesCard}
           {tasks.length ? (
             <Card variant="plain" size="flush" id="aufgaben" className="order-first lg:order-none">
               <div className="p-4 pb-2">

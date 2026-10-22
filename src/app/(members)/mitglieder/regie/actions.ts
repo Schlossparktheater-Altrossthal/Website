@@ -1,24 +1,35 @@
 "use server";
 
-import type { DirectionWishStatus } from "@prisma/client";
+import type { DirectionWishTargetStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
-import { getDirectionShows } from "@/lib/regie/access";
 import { DIRECTION_HOME_PATH } from "@/lib/regie/paths";
 import {
   PLANNER_WISHES_PATH,
+  RECIPIENT_WISHES_PATH,
+  WISH_TARGETS_MAX,
   WISH_TEXT_MAX,
-  canPlanForShow,
   createDirectionWish,
+  loadTargetForViewer,
+  loadWishAccess,
+  loadWishViewer,
   replyToDirectionWish,
-  setDirectionWishStatus,
+  setWishTargetStatus,
+  updateDirectionWishText,
+  type WishTargetInput,
 } from "@/lib/regie/wishes";
 
 export type WishActionResult = { ok: true } | { ok: false; error: string };
 
-const STATUSES: readonly DirectionWishStatus[] = ["open", "planned", "done", "declined"];
+const STATUSES: readonly DirectionWishTargetStatus[] = [
+  "open",
+  "accepted",
+  "planned",
+  "done",
+  "declined",
+];
+const TARGET_KINDS = ["planning", "department", "character", "user"] as const;
 
 function parseDay(value: string | null | undefined) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -28,6 +39,9 @@ function parseDay(value: string | null | undefined) {
 function revalidate() {
   revalidatePath(DIRECTION_HOME_PATH, "layout");
   revalidatePath(PLANNER_WISHES_PATH);
+  revalidatePath(RECIPIENT_WISHES_PATH);
+  revalidatePath("/mitglieder");
+  revalidatePath("/mitglieder/meine-gewerke", "layout");
 }
 
 async function sessionUserId() {
@@ -35,27 +49,23 @@ async function sessionUserId() {
   return session.user?.id ?? null;
 }
 
-async function isDirectionMember(userId: string, showId: string) {
-  return (await getDirectionShows(userId)).some((show) => show.id === showId);
-}
-
-/** Wer einen Wunsch sehen und beantworten darf: Regieteam oder Planung der Produktion. */
-async function wishAccess(userId: string, wishId: string) {
-  const wish = await prisma.directionWish.findUnique({
-    where: { id: wishId },
-    select: { showId: true },
+function parseTargets(input: unknown): WishTargetInput[] {
+  if (!Array.isArray(input)) return [];
+  return input.slice(0, WISH_TARGETS_MAX).flatMap((entry): WishTargetInput[] => {
+    if (!entry || typeof entry !== "object") return [];
+    const { kind, id } = entry as { kind?: unknown; id?: unknown };
+    if (typeof kind !== "string" || !(TARGET_KINDS as readonly string[]).includes(kind)) return [];
+    if (kind === "planning") return [{ kind: "planning" }];
+    return typeof id === "string" && id
+      ? [{ kind: kind as Exclude<WishTargetInput["kind"], "planning">, id }]
+      : [];
   });
-  if (!wish) return null;
-  const [direction, planner] = await Promise.all([
-    isDirectionMember(userId, wish.showId),
-    canPlanForShow({ id: userId }, wish.showId),
-  ]);
-  return { showId: wish.showId, direction, planner };
 }
 
 export async function createWishAction(input: {
   showId: string;
   text: string;
+  targets?: WishTargetInput[];
   sceneIds?: string[];
   userIds?: string[];
   dateFrom?: string | null;
@@ -66,22 +76,47 @@ export async function createWishAction(input: {
   const text = input.text?.trim() ?? "";
   if (!text) return { ok: false, error: "Bitte beschreibe deinen Wunsch." };
   if (text.length > WISH_TEXT_MAX) return { ok: false, error: "Der Text ist zu lang." };
-  if (!(await isDirectionMember(userId, input.showId))) {
+  if (!(await loadWishViewer(userId, input.showId)).direction) {
     return { ok: false, error: "Nicht berechtigt" };
   }
+  // Ohne Angabe wie bisher an die Planung.
+  const targets = input.targets ? parseTargets(input.targets) : [{ kind: "planning" as const }];
+  if (!targets.length) return { ok: false, error: "Bitte wähle mindestens einen Empfänger." };
   let dateFrom = parseDay(input.dateFrom);
   let dateTo = parseDay(input.dateTo);
   if (dateFrom && dateTo && dateTo < dateFrom) [dateFrom, dateTo] = [dateTo, dateFrom];
 
-  await createDirectionWish({
-    showId: input.showId,
-    authorId: userId,
-    text,
-    sceneIds: (input.sceneIds ?? []).slice(0, 50),
-    userIds: (input.userIds ?? []).slice(0, 50),
-    dateFrom,
-    dateTo,
-  });
+  try {
+    await createDirectionWish({
+      showId: input.showId,
+      authorId: userId,
+      text,
+      targets,
+      sceneIds: (input.sceneIds ?? []).slice(0, 50),
+      userIds: (input.userIds ?? []).slice(0, 50),
+      dateFrom,
+      dateTo,
+    });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Fehler beim Senden" };
+  }
+  revalidate();
+  return { ok: true };
+}
+
+/** Wunschtext nachträglich ändern (Regieteam). */
+export async function editWishAction(input: {
+  wishId: string;
+  text: string;
+}): Promise<WishActionResult> {
+  const userId = await sessionUserId();
+  if (!userId) return { ok: false, error: "Nicht angemeldet" };
+  const text = input.text?.trim() ?? "";
+  if (!text) return { ok: false, error: "Der Wunsch darf nicht leer sein." };
+  if (text.length > WISH_TEXT_MAX) return { ok: false, error: "Der Text ist zu lang." };
+  const viewer = await loadWishAccess(input.wishId, userId);
+  if (!viewer?.direction) return { ok: false, error: "Nicht berechtigt" };
+  await updateDirectionWishText(input.wishId, userId, text);
   revalidate();
   return { ok: true };
 }
@@ -95,8 +130,7 @@ export async function replyWishAction(input: {
   const text = input.text?.trim() ?? "";
   if (!text) return { ok: false, error: "Bitte schreibe eine Antwort." };
   if (text.length > WISH_TEXT_MAX) return { ok: false, error: "Der Text ist zu lang." };
-  const access = await wishAccess(userId, input.wishId);
-  if (!access || (!access.direction && !access.planner)) {
+  if (!(await loadWishAccess(input.wishId, userId))) {
     return { ok: false, error: "Nicht berechtigt" };
   }
   await replyToDirectionWish(input.wishId, userId, text);
@@ -105,32 +139,39 @@ export async function replyWishAction(input: {
 }
 
 /**
- * Status setzen: Die Planung entscheidet (eingeplant, erledigt, abgelehnt mit Grund); das
- * Regieteam kann einen eigenen Wunsch als erledigt markieren oder wieder öffnen.
+ * Status eines Empfängers setzen. Planung: eingeplant/erledigt/abgelehnt; Gewerk: annehmen und
+ * erledigen alle Mitglieder, ablehnen nur die Leitung; Figur/Person: alles inkl. ablehnen;
+ * Regieteam: erledigt (Planung) und wieder öffnen.
  */
-export async function setWishStatusAction(input: {
-  wishId: string;
-  status: DirectionWishStatus;
+export async function setWishTargetStatusAction(input: {
+  targetId: string;
+  status: DirectionWishTargetStatus;
   reason?: string | null;
   eventId?: string | null;
 }): Promise<WishActionResult> {
   const userId = await sessionUserId();
   if (!userId) return { ok: false, error: "Nicht angemeldet" };
   if (!STATUSES.includes(input.status)) return { ok: false, error: "Ungültiger Status" };
-  const access = await wishAccess(userId, input.wishId);
-  if (!access) return { ok: false, error: "Wunsch nicht gefunden" };
-  const allowed =
-    access.planner || (access.direction && (input.status === "done" || input.status === "open"));
-  if (!allowed) return { ok: false, error: "Nicht berechtigt" };
+  const loaded = await loadTargetForViewer(input.targetId, userId);
+  if (!loaded) return { ok: false, error: "Wunsch nicht gefunden" };
+  if (!loaded.allowed.includes(input.status)) {
+    return {
+      ok: false,
+      error:
+        input.status === "declined" && loaded.target.kind === "department"
+          ? "Ablehnen kann nur die Gewerksleitung."
+          : "Nicht berechtigt",
+    };
+  }
   const reason = input.reason?.trim() || null;
   if (input.status === "declined" && !reason) {
     return { ok: false, error: "Bitte gib einen Grund an." };
   }
   if (reason && reason.length > WISH_TEXT_MAX) return { ok: false, error: "Der Text ist zu lang." };
 
-  await setDirectionWishStatus(input.wishId, userId, input.status, {
+  await setWishTargetStatus(input.targetId, userId, input.status, {
     reason,
-    eventId: input.status === "planned" ? (input.eventId ?? null) : undefined,
+    eventId: input.eventId ?? null,
   });
   revalidate();
   return { ok: true };
