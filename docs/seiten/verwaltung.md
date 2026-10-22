@@ -74,7 +74,7 @@ Manuelle Vorschau und Löschung nach Fristen ab dem Ende der letzten Produktion 
   Strengegrad im Onboarding-Profil auf `null` und leert die Kopien in
   `ProductionOnboarding.profileSnapshot` und `MemberInviteRedemption.payload`.
 - **Fotoerlaubnisse** – 5 Jahre nach Ende der jeweiligen Produktion, samt hochgeladenen Dokumenten.
-- **Konten** – 6 Jahre; deaktivierte Konten ohne Vorstands-, Finanz-, Admin- oder Owner-Rolle
+- **Konten** – 3 Jahre; deaktivierte Konten ohne Vorstands-, Finanz-, Admin- oder Owner-Rolle
   werden anonymisiert (`User.anonymizedAt`).
 
 Nichts wird automatisch gelöscht: Die Seite listet die Kandidaten, die Löschung löst eine

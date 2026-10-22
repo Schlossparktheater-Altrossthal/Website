@@ -5,11 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 import { isCurrentProductionStatus } from "./produktionen/status";
 
-/** Aufbewahrungsfristen nach Ende der letzten Produktion (Entscheidung E4, 2026-09-24). */
+/** Aufbewahrungsfristen nach Ende der letzten Produktion (Entscheidung E4, 2026-09-24; Konten 3 statt 6 Jahre seit 2026-10-22). */
 export const RETENTION_YEARS = {
   dietary: 2,
   photoConsent: 5,
-  account: 6,
+  account: 3,
 } as const;
 
 /** Konten mit diesen Rollen werden nie automatisch zum Anonymisieren vorgeschlagen. */

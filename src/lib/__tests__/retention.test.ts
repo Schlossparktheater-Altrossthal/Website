@@ -111,7 +111,7 @@ describe("collectRetentionCandidates", () => {
     mocks.consentFindMany.mockResolvedValue([]);
   });
 
-  it("schlägt Allergien nach 2 und Konten nach 6 Jahren vor", async () => {
+  it("schlägt Allergien nach 2 und Konten nach 3 Jahren vor", async () => {
     mocks.userFindMany.mockResolvedValue([
       user({ id: "vor-3-jahren", productionMemberships: [membershipEndingIn("2029-05-01")] }),
       user({ id: "vor-1-jahr", productionMemberships: [membershipEndingIn("2031-05-01")] }),
@@ -121,7 +121,7 @@ describe("collectRetentionCandidates", () => {
     const result = await collectRetentionCandidates(now);
 
     expect(result.dietary.map((entry) => entry.id)).toEqual(["vor-7-jahren", "vor-3-jahren"]);
-    expect(result.accounts.map((entry) => entry.id)).toEqual(["vor-7-jahren"]);
+    expect(result.accounts.map((entry) => entry.id)).toEqual(["vor-7-jahren", "vor-3-jahren"]);
   });
 
   it("schlägt geschützte, aktive und bereits bereinigte Konten nicht vor", async () => {
@@ -139,7 +139,7 @@ describe("collectRetentionCandidates", () => {
       user({
         id: "ohne-allergien",
         _count: { dietaryRestrictions: 0, dietaryAversions: 0 },
-        productionMemberships: [membershipEndingIn("2029-05-01")],
+        productionMemberships: [membershipEndingIn("2030-05-01")],
       }),
     ]);
 

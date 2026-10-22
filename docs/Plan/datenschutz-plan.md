@@ -83,7 +83,7 @@ Gemessen ab Ende der letzten Produktion, wie bisher in `src/lib/retention.ts` (E
 | Allergien         | bis Widerruf, max. 2 Jahre (vorhanden)                              |
 | Körpermaße/Größen | bis Widerruf, max. 2 Jahre (**neu**, in `RETENTION_YEARS` ergänzen) |
 | Fotoerlaubnis     | 5 Jahre (vorhanden)                                                 |
-| Konto             | Anonymisierung nach 6 Jahren (vorhanden)                            |
+| Konto             | Anonymisierung nach 3 Jahren (vorher 6, geändert 2026-10-22)        |
 | E-Mail-Inhalte    | 30 Tage (vorhanden)                                                 |
 | Statistik         | Seiten 60 Tage, Sitzungen 180 Tage (vorhanden)                      |
 | Datenportal-Audit | 12 Monate (vorhanden)                                               |
