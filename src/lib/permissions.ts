@@ -352,6 +352,13 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
       "Anmeldung an der Theater-Nextcloud mit dem Mitglieder-Konto (eigener Speicher 100 MB plus Sommertheater-Freigabe).",
     category: "services",
   },
+  {
+    key: "SSO.IMMICH.ACCESS",
+    label: "Fotos (Immich) nutzen",
+    description:
+      "Anmeldung an der Theater-Fotoverwaltung mit dem Mitglieder-Konto: Fotos in Produktionsalben hochladen und ansehen (eigener Speicher 10 GB).",
+    category: "services",
+  },
 ];
 
 const DEFAULT_PERMISSION_KEYS = DEFAULT_PERMISSION_DEFINITIONS.map((def) => def.key);
