@@ -356,7 +356,7 @@ export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     key: "SSO.IMMICH.ACCESS",
     label: "Fotos (Immich) nutzen",
     description:
-      "Anmeldung an der Theater-Fotoverwaltung mit dem Mitglieder-Konto: Fotos in Produktionsalben hochladen und ansehen (eigener Speicher 10 GB).",
+      "Anmeldung an der Theater-Fotoverwaltung mit dem Mitglieder-Konto: Fotos in Produktionsalben hochladen und ansehen (eigener Speicher 250 MB).",
     category: "services",
   },
 ];
