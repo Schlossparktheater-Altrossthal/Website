@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
 import { syncObjectFromTask } from "@/lib/ausstattung/service";
+import { syncProtocolFromTasks } from "@/lib/departments/task-sync";
 import { requireBoardAccess } from "@/lib/departments/board";
 import { STEP_LIMIT } from "@/lib/departments/activity-format";
 import { logTaskActivity } from "@/lib/departments/handover";
@@ -232,6 +233,7 @@ export async function moveBoardTaskAction(
         await tx.departmentTask.update({ where: { id }, data: { position } });
       }
       await syncObjectFromTask(tx, task.id);
+      await syncProtocolFromTasks(tx, [task.id], access.userId);
       if (before?.columnId !== column.id) {
         await logTaskActivity(tx, task.id, access.userId, "column", { to: column.name });
       }
@@ -333,16 +335,25 @@ export async function updateBoardColumnAction(
     if (!column) throw new Error("Spalte wurde nicht gefunden.");
     const access = await requireBoardAccess(column.departmentId);
     if (!access.canManage) throw new Error("Spalten verwaltet die Leitung.");
-    await prisma.$transaction([
-      prisma.departmentBoardColumn.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.departmentBoardColumn.update({
         where: { id: data.columnId },
         data: { name: data.name, status: data.status },
-      }),
-      prisma.departmentTask.updateMany({
+      });
+      await tx.departmentTask.updateMany({
         where: { columnId: data.columnId },
         data: { status: data.status },
-      }),
-    ]);
+      });
+      const tasks = await tx.departmentTask.findMany({
+        where: { columnId: data.columnId },
+        select: { id: true },
+      });
+      await syncProtocolFromTasks(
+        tx,
+        tasks.map((task) => task.id),
+        access.userId,
+      );
+    });
     revalidateBoard();
     return actionSuccess();
   } catch (error) {
@@ -403,13 +414,22 @@ export async function deleteBoardColumnAction(input: {
       select: { id: true, status: true },
     });
     if (!target) throw new Error("Die letzte Spalte kann nicht gelöscht werden.");
-    await prisma.$transaction([
-      prisma.departmentTask.updateMany({
+    await prisma.$transaction(async (tx) => {
+      const tasks = await tx.departmentTask.findMany({
+        where: { columnId: column.id },
+        select: { id: true },
+      });
+      await tx.departmentTask.updateMany({
         where: { columnId: column.id },
         data: { columnId: target.id, status: target.status },
-      }),
-      prisma.departmentBoardColumn.delete({ where: { id: column.id } }),
-    ]);
+      });
+      await tx.departmentBoardColumn.delete({ where: { id: column.id } });
+      await syncProtocolFromTasks(
+        tx,
+        tasks.map((task) => task.id),
+        access.userId,
+      );
+    });
     revalidateBoard();
     return actionSuccess();
   } catch (error) {

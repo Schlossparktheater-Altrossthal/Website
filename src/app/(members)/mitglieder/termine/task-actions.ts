@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { allDoneAt } from "@/lib/calendar/protocol";
 import { ASSIGNEE_SELECT, canEditProtocol, rowsForUser } from "@/lib/calendar/protocol-server";
+import { syncTasksFromProtocol } from "@/lib/departments/task-sync";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/rbac";
 import { broadcastRehearsalUpdated } from "@/lib/realtime/triggers";
@@ -61,6 +62,11 @@ export async function setEventTaskDoneAction(input: z.input<typeof schema>) {
       where: { id: { in: [...ids] } },
       data: parsed.data.done ? { doneAt: now, doneById: userId } : { doneAt: null, doneById: null },
     });
+    await syncTasksFromProtocol(
+      tx,
+      rows.flatMap((row) => row.departmentTaskId ?? []),
+      parsed.data.done,
+    );
     const states = note.assignees.map((row) =>
       ids.has(row.id)
         ? { doneAt: parsed.data.done ? now.toISOString() : null }

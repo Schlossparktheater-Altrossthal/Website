@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { notifyRequestersIfReady } from "@/lib/ausstattung/notify";
 import { syncObjectFromTask } from "@/lib/ausstattung/service";
+import { syncProtocolFromTasks } from "@/lib/departments/task-sync";
 import {
   claimActive,
   NOTE_LIMIT,
@@ -180,6 +181,7 @@ export async function setTaskStatusAction(input: {
         },
       });
       await syncObjectFromTask(tx, task.id);
+      await syncProtocolFromTasks(tx, [task.id], access.userId);
       await logTaskActivity(tx, task.id, access.userId, "status", {
         to: WORK_STATUS_LABELS[status],
       });
