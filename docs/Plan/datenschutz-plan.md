@@ -98,7 +98,13 @@ Bestandsdaten Allergien/Maße: Nach dem Aktivieren werden alle zur Einwilligung 
 - 2026-10-22: Text (Fassung `2026-11`, Entwurf) in `src/lib/datenschutz/`, Seite `/datenschutz` hinter
   `PRIVACY_POLICY_ENABLED` (Standard aus → 404). Phase 1 ohne Links, Phase 2–6 offen.
 
+- 2026-10-22: Automatische Bereinigung `applyRetention` im Cron `rehearsal-reminders` (täglich 3:00–3:14)
+  hinter `RETENTION_AUTO_ENABLED` (Standard aus). Neu: Körpermaße/Größen 2 Jahre; `anonymizeAccount` löscht
+  jetzt auch Abneigungen, Push-Abos und Kalender-Abo. Konten weiterhin nur, wenn deaktiviert und ohne
+  geschützte Rolle.
+
 ## Offen
 
 - Den Text segnet der Vorstand des Fördervereins ab, gegebenenfalls in Abstimmung mit der Schulleitung. Danach das Flag setzen.
+- Vor `RETENTION_AUTO_ENABLED`: Seite „Aufbewahrung“ auf Prod ansehen, ob die Kandidaten stimmen.
 - `[PRÜFEN]` im Text: Hosting-Anbieter und Auftragsverarbeitungsvertrag.

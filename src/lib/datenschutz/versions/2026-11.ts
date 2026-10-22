@@ -60,7 +60,7 @@ export const PRIVACY_POLICY_2026_11: PrivacyPolicyVersion = {
         "Allergien und Unverträglichkeiten: bis zum Widerruf, längstens 2 Jahre nach Ende deiner letzten Produktion.",
         "Körpermaße und Konfektionsgrößen: bis zum Widerruf, längstens 2 Jahre nach Ende deiner letzten Produktion.",
         "Fotoerlaubnisse: 5 Jahre nach Ende der Produktion, als Nachweis für veröffentlichte Fotos.",
-        "Konto und übrige Profildaten: Das Konto wird 3 Jahre nach Ende deiner letzten Produktion anonymisiert. Auf Wunsch löschen oder anonymisieren wir früher, soweit keine Nachweispflichten entgegenstehen.",
+        "Konto und übrige Profildaten: Wer nicht mehr mitwirkt, wird deaktiviert; deaktivierte Konten werden 3 Jahre nach Ende der letzten Produktion automatisch anonymisiert. Auf Wunsch löschen oder anonymisieren wir früher, soweit keine Nachweispflichten entgegenstehen.",
         "E-Mail-Inhalte im Versandprotokoll: 30 Tage.",
         "Seitenaufrufe der Nutzungsstatistik: 60 Tage, Sitzungsdaten: 180 Tage, danach nur noch zusammengefasste Zahlen.",
         "Protokoll der Auswertungen mit Gesundheitsdaten: 12 Monate.",

@@ -7,6 +7,7 @@ import { createLogger } from "@/lib/logger";
 import { dispatchEventReminders } from "@/lib/notifications/event-reminders";
 import { dispatchInspectionReminders } from "@/lib/notifications/inspection-reminders";
 import { dispatchMilestoneReminders } from "@/lib/notifications/milestone-reminders";
+import { applyRetention, isAutomaticRetentionEnabled, isRetentionWindow } from "@/lib/retention";
 
 const logger = createLogger("cron:termine-reminders");
 
@@ -65,6 +66,17 @@ async function handle(request: Request) {
       if (digests.users > 0) logger.info("Zusammenfassungen verschickt", digests);
     } catch (error) {
       console.error("[cron:termine-reminders] Zusammenfassung fehlgeschlagen", error);
+    }
+    // Aufbewahrungsfristen: nachts automatisch anwenden (docs/Plan/datenschutz-plan.md).
+    if (isAutomaticRetentionEnabled() && isRetentionWindow(new Date())) {
+      try {
+        const retention = await applyRetention();
+        if (Object.values(retention).some((count) => count > 0)) {
+          logger.info("Aufbewahrungsfristen angewendet", retention);
+        }
+      } catch (error) {
+        console.error("[cron:termine-reminders] Aufbewahrung fehlgeschlagen", error);
+      }
     }
     // Nur melden, wenn wirklich etwas passiert ist – der Lauf wiederholt sich alle paar Minuten.
     if (summary.sent > 0 || summary.failed > 0) {

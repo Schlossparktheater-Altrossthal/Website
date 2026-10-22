@@ -16,6 +16,7 @@ vi.mock("@/lib/authentik/sync", () => ({ deactivateMemberInAuthentik: mocks.deac
 
 import {
   collectRetentionCandidates,
+  isRetentionWindow,
   lastProductionEnd,
   productionEndDate,
   yearsBefore,
@@ -92,7 +93,7 @@ function user(overrides: Record<string, unknown>) {
     role: "member",
     roles: [],
     productionMemberships: [],
-    _count: { dietaryRestrictions: 1, dietaryAversions: 0 },
+    _count: { dietaryRestrictions: 1, dietaryAversions: 0, measurements: 0, sizes: 0 },
     onboardingProfile: null,
     ...overrides,
   };
@@ -192,5 +193,40 @@ describe("collectRetentionCandidates", () => {
     const result = await collectRetentionCandidates(now);
 
     expect(result.photoConsents.map((entry) => entry.id)).toEqual(["alt"]);
+  });
+});
+
+describe("Körpermaße", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.consentFindMany.mockResolvedValue([]);
+  });
+
+  it("schlägt Maße und Größen nach 2 Jahren vor", async () => {
+    mocks.userFindMany.mockResolvedValue([
+      user({
+        id: "alt",
+        _count: { dietaryRestrictions: 0, dietaryAversions: 0, measurements: 3, sizes: 0 },
+        productionMemberships: [membershipEndingIn("2029-05-01")],
+      }),
+      user({
+        id: "neu",
+        _count: { dietaryRestrictions: 0, dietaryAversions: 0, measurements: 0, sizes: 2 },
+        productionMemberships: [membershipEndingIn("2031-05-01")],
+      }),
+    ]);
+
+    const result = await collectRetentionCandidates(now);
+
+    expect(result.measurements.map((entry) => entry.id)).toEqual(["alt"]);
+  });
+});
+
+describe("isRetentionWindow", () => {
+  it("trifft nur 3:00–3:14 Uhr deutscher Zeit", () => {
+    expect(isRetentionWindow(new Date("2026-07-01T01:05:00Z"))).toBe(true); // Sommerzeit 3:05
+    expect(isRetentionWindow(new Date("2026-12-01T02:14:00Z"))).toBe(true); // Winterzeit 3:14
+    expect(isRetentionWindow(new Date("2026-12-01T02:15:00Z"))).toBe(false);
+    expect(isRetentionWindow(new Date("2026-12-01T01:05:00Z"))).toBe(false);
   });
 });

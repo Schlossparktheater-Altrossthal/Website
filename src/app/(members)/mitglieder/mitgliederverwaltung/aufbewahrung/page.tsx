@@ -8,7 +8,11 @@ import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { requireAuth } from "@/lib/rbac";
 import { findPossibleDuplicates } from "@/lib/member-duplicates";
 import { prisma } from "@/lib/prisma";
-import { RETENTION_YEARS, collectRetentionCandidates } from "@/lib/retention";
+import {
+  RETENTION_YEARS,
+  collectRetentionCandidates,
+  isAutomaticRetentionEnabled,
+} from "@/lib/retention";
 
 import { AnonymizeButton, PurgeButton } from "./retention-forms-client";
 
@@ -48,7 +52,7 @@ export default async function AufbewahrungPage() {
     <div className="space-y-6">
       <PageHeader
         title="Aufbewahrung & Löschfristen"
-        description={`Fristen ab dem Ende der letzten Produktion einer Person: Ernährung, Allergien und Abneigungen ${RETENTION_YEARS.dietary} Jahre, Fotoerlaubnisse ${RETENTION_YEARS.photoConsent} Jahre nach Ende der jeweiligen Produktion, Konten ${RETENTION_YEARS.account} Jahre. Wer in einer geplanten oder aktiven Produktion ist, wird nie aufgeführt. Nichts wird automatisch gelöscht.`}
+        description={`Fristen ab dem Ende der letzten Produktion einer Person: Ernährung, Allergien und Abneigungen ${RETENTION_YEARS.dietary} Jahre, Körpermaße und Größen ${RETENTION_YEARS.measurements} Jahre, Fotoerlaubnisse ${RETENTION_YEARS.photoConsent} Jahre nach Ende der jeweiligen Produktion, Konten ${RETENTION_YEARS.account} Jahre. Wer in einer geplanten oder aktiven Produktion ist, wird nie aufgeführt. ${isAutomaticRetentionEnabled() ? "Abgelaufene Fristen werden jede Nacht um 3 Uhr automatisch angewendet." : "Nichts wird automatisch gelöscht."}`}
         breadcrumbs={[
           membersNavigationBreadcrumb("/mitglieder/mitgliederverwaltung"),
           { id: "aufbewahrung", label: "Aufbewahrung", isCurrent: true },
