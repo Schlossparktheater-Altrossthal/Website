@@ -172,7 +172,14 @@ export async function loadPublicShows(now: Date = new Date()) {
       },
     },
     orderBy: [{ year: "desc" }],
-    select: { id: true, title: true, year: true, posterUrl: true, synopsis: true },
+    select: {
+      id: true,
+      title: true,
+      year: true,
+      revealedAt: true,
+      posterUrl: true,
+      synopsis: true,
+    },
   });
 }
 
@@ -184,6 +191,7 @@ export async function loadPublicShow(showId: string, now: Date = new Date()) {
       id: true,
       title: true,
       year: true,
+      revealedAt: true,
       posterUrl: true,
       synopsis: true,
       ticketingSettings: { select: { infoText: true, maxSeatsPerBooking: true } },

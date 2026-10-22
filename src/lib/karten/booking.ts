@@ -617,7 +617,9 @@ export async function findReservationByToken(token: string) {
     include: {
       items: { orderBy: { label: "asc" } },
       event: { select: { id: true, title: true, start: true, location: true, status: true } },
-      show: { select: { id: true, title: true, year: true, ticketingSettings: true } },
+      show: {
+        select: { id: true, title: true, year: true, revealedAt: true, ticketingSettings: true },
+      },
     },
   });
 }

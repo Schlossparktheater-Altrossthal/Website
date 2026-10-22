@@ -87,7 +87,7 @@ async function notifyWaitlist(now: Date) {
           start: true,
           showId: true,
           ticketing: true,
-          show: { select: { title: true, year: true } },
+          show: { select: { title: true, year: true, revealedAt: true } },
         },
       },
     },

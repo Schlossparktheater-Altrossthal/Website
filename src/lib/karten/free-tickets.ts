@@ -45,7 +45,7 @@ export async function loadMyFreeTicketShows(userId: string) {
     },
     select: {
       show: {
-        select: { id: true, title: true, year: true, ticketingSettings: true },
+        select: { id: true, title: true, year: true, revealedAt: true, ticketingSettings: true },
       },
     },
     orderBy: { show: { year: "desc" } },

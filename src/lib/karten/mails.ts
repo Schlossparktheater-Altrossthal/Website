@@ -12,8 +12,18 @@ import {
   PUBLIC_TICKETS_PATH,
 } from "./constants";
 
-export function showDisplayTitle(show: { title: string | null; year: number }) {
-  return show.title?.trim() || `${DEFAULT_SITE_TITLE} ${show.year}`;
+/** Ist der Stücktitel schon öffentlich? Ohne Enthüllungsdatum bleibt er geheim. */
+export function isShowRevealed(show: { revealedAt: Date | null }, now: Date = new Date()) {
+  return show.revealedAt !== null && show.revealedAt <= now;
+}
+
+/** Öffentlicher Titel (Website, Karten, Mails): vor der Enthüllung nur „Sommertheater <Jahr>“. */
+export function showDisplayTitle(
+  show: { title: string | null; year: number; revealedAt: Date | null },
+  now: Date = new Date(),
+) {
+  const title = isShowRevealed(show, now) ? show.title?.trim() : null;
+  return title || `${DEFAULT_SITE_TITLE} ${show.year}`;
 }
 
 export function reservationLink(token: string) {
@@ -31,7 +41,12 @@ async function loadMailContext(reservationId: string) {
       items: true,
       event: { select: { start: true, location: true } },
       show: {
-        select: { title: true, year: true, ticketingSettings: { select: { infoText: true } } },
+        select: {
+          title: true,
+          year: true,
+          revealedAt: true,
+          ticketingSettings: { select: { infoText: true } },
+        },
       },
     },
   });

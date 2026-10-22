@@ -54,7 +54,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
   }
 
-  let show: { id: string; title: string | null; year: number } | null = null;
+  let show: { id: string; title: string | null; year: number; revealedAt: Date | null } | null =
+    null;
   let events: { id: string; start: Date }[] = [];
   if (eventId) {
     const event = await prisma.calendarEvent.findUnique({
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
         id: true,
         start: true,
         kind: true,
-        show: { select: { id: true, title: true, year: true } },
+        show: { select: { id: true, title: true, year: true, revealedAt: true } },
       },
     });
     if (event?.show && event.kind === "PERFORMANCE") {
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
   } else if (showId) {
     show = await prisma.show.findUnique({
       where: { id: showId },
-      select: { id: true, title: true, year: true },
+      select: { id: true, title: true, year: true, revealedAt: true },
     });
     if (show) {
       const performances = await loadPerformances(show.id, { now: new Date() });

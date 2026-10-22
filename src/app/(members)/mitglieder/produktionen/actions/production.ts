@@ -148,7 +148,7 @@ export async function createProductionAction(formData: FormData): Promise<Produc
     });
     const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
     const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
-    const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
+    const revealDate = parseOptionalDate(formData, "revealDate", "Enthüllungsdatum");
     const finalRehearsalWeekStart = parseOptionalDate(
       formData,
       "finalRehearsalWeekStart",
@@ -265,7 +265,7 @@ export async function updateProductionAction(formData: FormData): Promise<Produc
     });
     const startDate = parseOptionalDate(formData, "startDate", "Startdatum");
     const endDate = parseOptionalDate(formData, "endDate", "Enddatum");
-    const revealDate = parseOptionalDate(formData, "revealDate", "Premierenankündigung");
+    const revealDate = parseOptionalDate(formData, "revealDate", "Enthüllungsdatum");
     const finalRehearsalWeekStart = parseOptionalDate(
       formData,
       "finalRehearsalWeekStart",

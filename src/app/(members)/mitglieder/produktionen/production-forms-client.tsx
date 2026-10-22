@@ -172,8 +172,13 @@ export function CreateProductionForm({
             <DateInput name="finalRehearsalWeekEnd" />
           </div>
           <div className="space-y-1 sm:col-span-2">
-            <label className="text-sm font-medium">Premierenankündigung</label>
+            <label className="text-sm font-medium">Stück öffentlich enthüllen am</label>
             <DateInput name="revealDate" />
+            <p className="text-xs text-muted-foreground">
+              Ab diesem Tag zeigen Website, Kartenbuchung und Mails den Stücktitel. Ohne Datum
+              bleibt er geheim (öffentlich nur „Sommertheater {"<Jahr>"}“), Termine sind trotzdem
+              sichtbar.
+            </p>
           </div>
         </div>
       </details>
@@ -310,9 +315,14 @@ export function UpdateProductionForm({ show, redirectPath, onSuccess }: UpdatePr
           </div>
           <div className="space-y-1 sm:col-span-2">
             <label className="text-sm font-medium" htmlFor={`revealDate-${show.id}`}>
-              Premierenankündigung
+              Stück öffentlich enthüllen am
             </label>
             <DateInput id={`revealDate-${show.id}`} name="revealDate" defaultValue={revealDate} />
+            <p className="text-xs text-muted-foreground">
+              Ab diesem Tag zeigen Website, Kartenbuchung und Mails den Stücktitel. Ohne Datum
+              bleibt er geheim (öffentlich nur „Sommertheater {"<Jahr>"}“), Termine sind trotzdem
+              sichtbar.
+            </p>
           </div>
         </div>
       </details>
