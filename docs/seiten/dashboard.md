@@ -47,3 +47,9 @@ einspaltig.
 - Die Kennzahl „Mitglieder“ zählt die Mitgliedschaften der aktiven Produktion
   (`ProductionMembership` mit `currentMembershipWhere()`), nicht alle Konten des Vereins.
   Ohne aktive Produktion zeigt sie `–` mit dem Hinweis „Keine aktive Produktion“.
+
+## Wünsche der Regie (seit 2026-10-22)
+
+Karte „Wünsche der Regie“ auf dem Dashboard, wenn an die Person, ihre Rollen oder Gewerke offene
+Wünsche gehen. Vollansicht `/mitglieder/wuensche` (annehmen, erledigt, ablehnen mit Grund;
+Ablehnen im Gewerk nur Leitung). Plan: `docs/Plan/wuensche-plan.md`.
