@@ -141,13 +141,16 @@ test.describe("als admin", () => {
     test.skip(missing, "Keine Produktion ausgewählt");
     const nav = page.getByRole("navigation", { name: "Produktionsbereiche" });
     await expect(nav).toBeVisible();
-    await nav.getByRole("link", { name: "Gewerke" }).click();
-    await expect(page).toHaveURL(/\/mitglieder\/produktionen\/gewerke$/);
-    await page
-      .getByRole("navigation", { name: "Produktionsbereiche" })
-      .getByRole("link", { name: "Stück" })
-      .click();
-    await expect(page).toHaveURL(/\/mitglieder\/produktionen\/stueck/);
+    // clickUntil: In CI kann der erste Klick vor dem Hydrieren verpuffen.
+    await clickUntil(nav.getByRole("link", { name: "Gewerke" }), () =>
+      expect(page).toHaveURL(/\/mitglieder\/produktionen\/gewerke$/, { timeout: 3_000 }),
+    );
+    await clickUntil(
+      page.getByRole("navigation", { name: "Produktionsbereiche" }).getByRole("link", {
+        name: "Stück",
+      }),
+      () => expect(page).toHaveURL(/\/mitglieder\/produktionen\/stueck/, { timeout: 3_000 }),
+    );
 
     expect(errors).toEqual([]);
   });
