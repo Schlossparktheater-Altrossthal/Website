@@ -33,6 +33,12 @@ export const SCRIPT_FIXES: readonly ScriptFixSet[] = [
         to: "20.B SZENE: AN DECK DER HENRIETTE VON NEW YORK NACH ENGLAND",
       },
       { kind: "text", from: "What a wonderful worldkom", to: "What a wonderful world" },
+      // Strophengrenze fällt auf den Seitenumbruch (S. 44/45)
+      {
+        kind: "text",
+        from: "What a wonderful world\nI see skies of blue",
+        to: "What a wonderful world\n\nI see skies of blue",
+      },
     ],
   },
 ];
