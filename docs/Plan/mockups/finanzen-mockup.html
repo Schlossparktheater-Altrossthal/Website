@@ -1,136 +1,634 @@
 <!doctype html>
 <html lang="de">
-<head>
-<meta charset="utf-8">
-<title>Mockup Finanzen neu</title>
-<style>
-:root{--bg:#f6f5f2;--card:#fff;--fg:#1d1b18;--mut:#6b665e;--line:#e6e2da;--pri:#7a3e2b;--ok:#2f7a4b;--warn:#b7791f;--bad:#b23b3b;--chip:#efe9df}
-*{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,system-ui,sans-serif;background:#d9d5cc;color:var(--fg);padding:24px}
-h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:0 0 10px}h3{font-size:13px;margin:0;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-.row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
-.label{font-weight:700;margin:28px 0 10px;font-size:13px;color:#4a463f}
-.phone{width:375px;height:760px;background:var(--bg);border-radius:32px;border:10px solid #222;overflow:hidden;position:relative;display:flex;flex-direction:column}
-.top{padding:14px 16px 8px;background:var(--bg)}.body{padding:0 16px 16px;overflow:auto;flex:1}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;padding:10px 14px;font-weight:600;border:1px solid var(--line);background:#fff;cursor:pointer}
-.btn.pri{background:var(--pri);color:#fff;border-color:var(--pri)}.btn.block{width:100%}
-.chip{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;background:var(--chip);color:#4a463f}
-.chip.ok{background:#e1f0e6;color:var(--ok)}.chip.warn{background:#f7ecd6;color:var(--warn)}.chip.bad{background:#f5dede;color:var(--bad)}
-.mut{color:var(--mut)}.big{font-size:30px;font-weight:700;letter-spacing:-.02em}
-.field{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;margin:6px 0 12px}
-.seg{display:flex;background:var(--chip);border-radius:10px;padding:3px}.seg span{flex:1;text-align:center;padding:7px;border-radius:8px}.seg .on{background:#fff;font-weight:600;box-shadow:0 1px 2px #0002}
-.photo{height:150px;border-radius:12px;background:repeating-linear-gradient(45deg,#ece6db,#ece6db 10px,#f3eee6 10px,#f3eee6 20px);display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--mut);border:1px dashed #c9c1b2}
-.bar{height:10px;border-radius:99px;background:var(--chip);overflow:hidden;display:flex}.bar i{display:block;height:100%}
-.li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.li:first-child{border-top:0}
-.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 30px #0003;padding:10px 16px 20px}
-.grab{width:40px;height:5px;border-radius:9px;background:#d6d0c5;margin:0 auto 12px}
-.nav{display:flex;justify-content:space-around;border-top:1px solid var(--line);background:#fff;padding:8px 0 14px;font-size:11px;color:var(--mut)}
-.desk{width:1180px;background:var(--bg);border-radius:12px;border:1px solid #bbb;overflow:hidden;display:flex;min-height:640px}
-.side{width:210px;background:#fff;border-right:1px solid var(--line);padding:16px;font-size:13px}.side div{padding:7px 10px;border-radius:8px}.side .on{background:var(--chip);font-weight:600}
-.main{flex:1;padding:22px 26px}
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:14px 0 16px}.tabs span{padding:8px 14px;color:var(--mut)}.tabs .on{color:var(--fg);border-bottom:2px solid var(--pri);font-weight:600}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-th,td{white-space:nowrap;text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--mut);font-weight:600;background:#faf8f4}
-td.n{text-align:right;font-variant-numeric:tabular-nums}.in{color:var(--ok)}.out{color:var(--bad)}
-.claim{display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:center}
-.thumb{width:90px;height:70px;border-radius:8px;background:repeating-linear-gradient(45deg,#ece6db,#ece6db 6px,#f3eee6 6px,#f3eee6 12px)}
-.note{background:#fff8e6;border:1px solid #efd9a6;border-radius:10px;padding:10px 12px;font-size:13px;margin-top:10px}
-</style>
-</head>
-<body>
-<h1>Finanzen neu – Mockup (Entwurf 2026-10-23)</h1>
-<div class="mut">Siehe docs/Plan/finanzen-plan.md · Beispieldaten erfunden · Produktion „Sommer 2027“</div>
+  <head>
+    <meta charset="utf-8" />
+    <title>Mockup Finanzen neu</title>
+    <style>
+      :root {
+        --bg: #f6f5f2;
+        --card: #fff;
+        --fg: #1d1b18;
+        --mut: #6b665e;
+        --line: #e6e2da;
+        --pri: #7a3e2b;
+        --ok: #2f7a4b;
+        --warn: #b7791f;
+        --bad: #b23b3b;
+        --chip: #efe9df;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          14px/1.45 Inter,
+          system-ui,
+          sans-serif;
+        background: #d9d5cc;
+        color: var(--fg);
+        padding: 24px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 15px;
+        margin: 0 0 10px;
+      }
+      h3 {
+        font-size: 13px;
+        margin: 0;
+        color: var(--mut);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .row {
+        display: flex;
+        gap: 28px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .label {
+        font-weight: 700;
+        margin: 28px 0 10px;
+        font-size: 13px;
+        color: #4a463f;
+      }
+      .phone {
+        width: 375px;
+        height: 760px;
+        background: var(--bg);
+        border-radius: 32px;
+        border: 10px solid #222;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+      .top {
+        padding: 14px 16px 8px;
+        background: var(--bg);
+      }
+      .body {
+        padding: 0 16px 16px;
+        overflow: auto;
+        flex: 1;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 600;
+        border: 1px solid var(--line);
+        background: #fff;
+        cursor: pointer;
+      }
+      .btn.pri {
+        background: var(--pri);
+        color: #fff;
+        border-color: var(--pri);
+      }
+      .btn.block {
+        width: 100%;
+      }
+      .chip {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 9px;
+        font-size: 12px;
+        background: var(--chip);
+        color: #4a463f;
+      }
+      .chip.ok {
+        background: #e1f0e6;
+        color: var(--ok);
+      }
+      .chip.warn {
+        background: #f7ecd6;
+        color: var(--warn);
+      }
+      .chip.bad {
+        background: #f5dede;
+        color: var(--bad);
+      }
+      .mut {
+        color: var(--mut);
+      }
+      .big {
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .field {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #fff;
+        margin: 6px 0 12px;
+      }
+      .seg {
+        display: flex;
+        background: var(--chip);
+        border-radius: 10px;
+        padding: 3px;
+      }
+      .seg span {
+        flex: 1;
+        text-align: center;
+        padding: 7px;
+        border-radius: 8px;
+      }
+      .seg .on {
+        background: #fff;
+        font-weight: 600;
+        box-shadow: 0 1px 2px #0002;
+      }
+      .photo {
+        height: 150px;
+        border-radius: 12px;
+        background: repeating-linear-gradient(
+          45deg,
+          #ece6db,
+          #ece6db 10px,
+          #f3eee6 10px,
+          #f3eee6 20px
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        color: var(--mut);
+        border: 1px dashed #c9c1b2;
+      }
+      .bar {
+        height: 10px;
+        border-radius: 99px;
+        background: var(--chip);
+        overflow: hidden;
+        display: flex;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+      }
+      .li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+      }
+      .li:first-child {
+        border-top: 0;
+      }
+      .sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -8px 30px #0003;
+        padding: 10px 16px 20px;
+      }
+      .grab {
+        width: 40px;
+        height: 5px;
+        border-radius: 9px;
+        background: #d6d0c5;
+        margin: 0 auto 12px;
+      }
+      .nav {
+        display: flex;
+        justify-content: space-around;
+        border-top: 1px solid var(--line);
+        background: #fff;
+        padding: 8px 0 14px;
+        font-size: 11px;
+        color: var(--mut);
+      }
+      .desk {
+        width: 1180px;
+        background: var(--bg);
+        border-radius: 12px;
+        border: 1px solid #bbb;
+        overflow: hidden;
+        display: flex;
+        min-height: 640px;
+      }
+      .side {
+        width: 210px;
+        background: #fff;
+        border-right: 1px solid var(--line);
+        padding: 16px;
+        font-size: 13px;
+      }
+      .side div {
+        padding: 7px 10px;
+        border-radius: 8px;
+      }
+      .side .on {
+        background: var(--chip);
+        font-weight: 600;
+      }
+      .main {
+        flex: 1;
+        padding: 22px 26px;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 1px solid var(--line);
+        margin: 14px 0 16px;
+      }
+      .tabs span {
+        padding: 8px 14px;
+        color: var(--mut);
+      }
+      .tabs .on {
+        color: var(--fg);
+        border-bottom: 2px solid var(--pri);
+        font-weight: 600;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        white-space: nowrap;
+        text-align: left;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      th {
+        color: var(--mut);
+        font-weight: 600;
+        background: #faf8f4;
+      }
+      td.n {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .in {
+        color: var(--ok);
+      }
+      .out {
+        color: var(--bad);
+      }
+      .claim {
+        display: grid;
+        grid-template-columns: 90px 1fr auto;
+        gap: 14px;
+        align-items: center;
+      }
+      .thumb {
+        width: 90px;
+        height: 70px;
+        border-radius: 8px;
+        background: repeating-linear-gradient(
+          45deg,
+          #ece6db,
+          #ece6db 6px,
+          #f3eee6 6px,
+          #f3eee6 12px
+        );
+      }
+      .note {
+        background: #fff8e6;
+        border: 1px solid #efd9a6;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 13px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Finanzen neu – Mockup (Entwurf 2026-10-23)</h1>
+    <div class="mut">
+      Siehe docs/Plan/finanzen-plan.md · Beispieldaten erfunden · Produktion „Sommer 2027“
+    </div>
 
-<div class="label">Mobil · Mitglieder &amp; Gewerksleitung</div>
-<div class="row">
+    <div class="label">Mobil · Mitglieder &amp; Gewerksleitung</div>
+    <div class="row">
+      <!-- 1 Auslage einreichen -->
+      <div class="phone">
+        <div class="top">
+          <div class="mut">← Zurück</div>
+          <h2 style="margin-top: 6px">Auslage einreichen</h2>
+        </div>
+        <div class="body">
+          <div class="photo">
+            Beleg fotografieren<br /><span style="font-size: 12px">oder Datei wählen</span>
+          </div>
+          <div style="margin-top: 14px" class="mut">Betrag</div>
+          <div class="field big">23,80 €</div>
+          <div class="mut">Wofür?</div>
+          <div class="field">Farbe + Pinsel Bühnenbild</div>
+          <div style="display: flex; gap: 10px">
+            <div style="flex: 1">
+              <div class="mut">Gewerk</div>
+              <div class="field">Bühnenbild ▾</div>
+            </div>
+            <div style="flex: 1">
+              <div class="mut">Datum</div>
+              <div class="field">21.10.</div>
+            </div>
+          </div>
+          <div class="mut">Erstattung</div>
+          <div class="seg" style="margin: 6px 0 16px">
+            <span class="on">Bar</span><span>Überweisung</span><span>Spenden</span>
+          </div>
+          <button class="btn pri block">Einreichen</button>
+          <div class="mut" style="font-size: 12px; margin-top: 8px; text-align: center">
+            Gewerksleitung prüft, dann erstattet der Kassenwart.
+          </div>
+        </div>
+      </div>
 
-<!-- 1 Auslage einreichen -->
-<div class="phone"><div class="top"><div class="mut">← Zurück</div><h2 style="margin-top:6px">Auslage einreichen</h2></div>
-<div class="body">
-  <div class="photo">Beleg fotografieren<br><span style="font-size:12px">oder Datei wählen</span></div>
-  <div style="margin-top:14px" class="mut">Betrag</div><div class="field big">23,80 €</div>
-  <div class="mut">Wofür?</div><div class="field">Farbe + Pinsel Bühnenbild</div>
-  <div style="display:flex;gap:10px"><div style="flex:1"><div class="mut">Gewerk</div><div class="field">Bühnenbild ▾</div></div><div style="flex:1"><div class="mut">Datum</div><div class="field">21.10.</div></div></div>
-  <div class="mut">Erstattung</div>
-  <div class="seg" style="margin:6px 0 16px"><span class="on">Bar</span><span>Überweisung</span><span>Spenden</span></div>
-  <button class="btn pri block">Einreichen</button>
-  <div class="mut" style="font-size:12px;margin-top:8px;text-align:center">Gewerksleitung prüft, dann erstattet der Kassenwart.</div>
-</div></div>
+      <!-- 2 Meine Auslagen -->
+      <div class="phone">
+        <div class="top">
+          <h2>Meine Auslagen</h2>
+          <div class="mut">Offen: 41,30 € · Erstattet 2027: 118,00 €</div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="li">
+              <div><b>Farbe + Pinsel</b><br /><span class="mut">Bühnenbild · 21.10.</span></div>
+              <div style="text-align: right">
+                <b>23,80 €</b><br /><span class="chip warn">Beim Gewerk</span>
+              </div>
+            </div>
+            <div class="li">
+              <div><b>Stoff Kostüm Hexe</b><br /><span class="mut">Kostüm · 18.10.</span></div>
+              <div style="text-align: right">
+                <b>17,50 €</b><br /><span class="chip">Beim Kassenwart</span>
+              </div>
+            </div>
+            <div class="li">
+              <div><b>Kabelbinder</b><br /><span class="mut">Technik · 02.10.</span></div>
+              <div style="text-align: right">
+                <b>8,00 €</b><br /><span class="chip ok">Erstattet bar</span>
+              </div>
+            </div>
+            <div class="li">
+              <div><b>Brötchen Probe</b><br /><span class="mut">Verpflegung · 28.09.</span></div>
+              <div style="text-align: right">
+                <b>110,00 €</b><br /><span class="chip ok">Überwiesen</span>
+              </div>
+            </div>
+            <div class="li">
+              <div><b>Doppelter Beleg</b><br /><span class="mut">Technik · 20.09.</span></div>
+              <div style="text-align: right">
+                <b>12,00 €</b><br /><span class="chip bad">Abgelehnt</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn pri block">+ Auslage einreichen</button>
+        </div>
+        <div class="nav">
+          <span>Start</span><span>Termine</span><span>Gewerk</span
+          ><span><b style="color: var(--fg)">Profil</b></span>
+        </div>
+      </div>
 
-<!-- 2 Meine Auslagen -->
-<div class="phone"><div class="top"><h2>Meine Auslagen</h2><div class="mut">Offen: 41,30 € · Erstattet 2027: 118,00 €</div></div>
-<div class="body">
-  <div class="card">
-    <div class="li"><div><b>Farbe + Pinsel</b><br><span class="mut">Bühnenbild · 21.10.</span></div><div style="text-align:right"><b>23,80 €</b><br><span class="chip warn">Beim Gewerk</span></div></div>
-    <div class="li"><div><b>Stoff Kostüm Hexe</b><br><span class="mut">Kostüm · 18.10.</span></div><div style="text-align:right"><b>17,50 €</b><br><span class="chip">Beim Kassenwart</span></div></div>
-    <div class="li"><div><b>Kabelbinder</b><br><span class="mut">Technik · 02.10.</span></div><div style="text-align:right"><b>8,00 €</b><br><span class="chip ok">Erstattet bar</span></div></div>
-    <div class="li"><div><b>Brötchen Probe</b><br><span class="mut">Verpflegung · 28.09.</span></div><div style="text-align:right"><b>110,00 €</b><br><span class="chip ok">Überwiesen</span></div></div>
-    <div class="li"><div><b>Doppelter Beleg</b><br><span class="mut">Technik · 20.09.</span></div><div style="text-align:right"><b>12,00 €</b><br><span class="chip bad">Abgelehnt</span></div></div>
-  </div>
-  <button class="btn pri block">+ Auslage einreichen</button>
-</div>
-<div class="nav"><span>Start</span><span>Termine</span><span>Gewerk</span><span><b style="color:var(--fg)">Profil</b></span></div></div>
+      <!-- 3 Budget-Tab im Gewerk -->
+      <div class="phone">
+        <div class="top">
+          <div class="mut">Gewerk Bühnenbild</div>
+          <div class="seg" style="margin-top: 8px; font-size: 12px">
+            <span>Nächstes</span><span>Board</span><span class="on">Budget</span><span>Mehr</span>
+          </div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <h3>Budget Sommer 2027 · Förderverein</h3>
+            <div style="display: flex; align-items: baseline; gap: 6px; margin: 8px 0">
+              <span class="big">612 €</span><span class="mut">von 900 €</span>
+            </div>
+            <div class="bar">
+              <i style="width: 58%; background: var(--pri)"></i
+              ><i style="width: 10%; background: #d9a77f"></i>
+            </div>
+            <div class="mut" style="font-size: 12px; margin-top: 6px">
+              ■ ausgegeben 522 € · <span style="color: #c08a5d">■</span> offen 90 € · frei 288 €
+            </div>
+          </div>
+          <div class="card">
+            <div style="display: flex; justify-content: space-between"><h3>Zu prüfen (2)</h3></div>
+            <div class="li">
+              <div><b>Farbe + Pinsel</b><br /><span class="mut">Lena · 23,80 €</span></div>
+              <div><button class="btn" style="padding: 6px 10px">Passt ✓</button></div>
+            </div>
+            <div class="li">
+              <div><b>Holzleisten</b><br /><span class="mut">Tom · 66,20 €</span></div>
+              <div><button class="btn" style="padding: 6px 10px">Passt ✓</button></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Ausgaben</h3>
+            <div class="li"><span>Baumarkt Platten</span><b>312,00 €</b></div>
+            <div class="li"><span>Schrauben, Leim</span><b>48,40 €</b></div>
+            <div class="li"><span>Farbe (Rechnung)</span><b>161,60 €</b></div>
+          </div>
+        </div>
+      </div>
 
-<!-- 3 Budget-Tab im Gewerk -->
-<div class="phone"><div class="top"><div class="mut">Gewerk Bühnenbild</div>
-<div class="seg" style="margin-top:8px;font-size:12px"><span>Nächstes</span><span>Board</span><span class="on">Budget</span><span>Mehr</span></div></div>
-<div class="body">
-  <div class="card"><h3>Budget Sommer 2027 · Förderverein</h3>
-    <div style="display:flex;align-items:baseline;gap:6px;margin:8px 0"><span class="big">612 €</span><span class="mut">von 900 €</span></div>
-    <div class="bar"><i style="width:58%;background:var(--pri)"></i><i style="width:10%;background:#d9a77f"></i></div>
-    <div class="mut" style="font-size:12px;margin-top:6px">■ ausgegeben 522 € · <span style="color:#c08a5d">■</span> offen 90 € · frei 288 €</div></div>
-  <div class="card"><div style="display:flex;justify-content:space-between"><h3>Zu prüfen (2)</h3></div>
-    <div class="li"><div><b>Farbe + Pinsel</b><br><span class="mut">Lena · 23,80 €</span></div><div><button class="btn" style="padding:6px 10px">Passt ✓</button></div></div>
-    <div class="li"><div><b>Holzleisten</b><br><span class="mut">Tom · 66,20 €</span></div><div><button class="btn" style="padding:6px 10px">Passt ✓</button></div></div></div>
-  <div class="card"><h3>Ausgaben</h3>
-    <div class="li"><span>Baumarkt Platten</span><b>312,00 €</b></div>
-    <div class="li"><span>Schrauben, Leim</span><b>48,40 €</b></div>
-    <div class="li"><span>Farbe (Rechnung)</span><b>161,60 €</b></div></div>
-</div></div>
+      <!-- 4 Kassenwart Eingang mobil mit Sheet -->
+      <div class="phone">
+        <div class="top">
+          <h2>Finanzen</h2>
+          <div class="seg" style="font-size: 12px">
+            <span class="on">Eingang 3</span><span>Kassenbuch</span><span>Budgets</span>
+          </div>
+        </div>
+        <div class="body" style="opacity: 0.45">
+          <div class="card claim" style="grid-template-columns: 60px 1fr auto">
+            <div class="thumb" style="width: 60px; height: 50px"></div>
+            <div><b>Stoff Kostüm</b><br /><span class="mut">Mia · Kostüm</span></div>
+            <b>17,50 €</b>
+          </div>
+          <div class="card claim" style="grid-template-columns: 60px 1fr auto">
+            <div class="thumb" style="width: 60px; height: 50px"></div>
+            <div><b>Holzleisten</b><br /><span class="mut">Tom · Bühnenbild</span></div>
+            <b>66,20 €</b>
+          </div>
+        </div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <div class="photo" style="height: 120px">Beleg (antippen = groß)</div>
+          <div style="display: flex; justify-content: space-between; margin: 12px 0 4px">
+            <b>Stoff Kostüm Hexe</b><b>17,50 €</b>
+          </div>
+          <div class="mut">
+            Mia Schulz · 18.10. · Kostüm · <span class="chip ok">Gewerk ✓</span>
+          </div>
+          <div class="mut" style="margin-top: 10px">Topf</div>
+          <div class="field" style="margin-top: 4px">Förderverein ▾</div>
+          <div class="mut">
+            Auszahlung: <b style="color: var(--fg)">Überweisung</b> · IBAN …4711
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 14px">
+            <button class="btn" style="flex: 1">Ablehnen</button
+            ><button class="btn pri" style="flex: 2">Freigeben + buchen</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<!-- 4 Kassenwart Eingang mobil mit Sheet -->
-<div class="phone"><div class="top"><h2>Finanzen</h2><div class="seg" style="font-size:12px"><span class="on">Eingang 3</span><span>Kassenbuch</span><span>Budgets</span></div></div>
-<div class="body" style="opacity:.45">
-  <div class="card claim" style="grid-template-columns:60px 1fr auto"><div class="thumb" style="width:60px;height:50px"></div><div><b>Stoff Kostüm</b><br><span class="mut">Mia · Kostüm</span></div><b>17,50 €</b></div>
-  <div class="card claim" style="grid-template-columns:60px 1fr auto"><div class="thumb" style="width:60px;height:50px"></div><div><b>Holzleisten</b><br><span class="mut">Tom · Bühnenbild</span></div><b>66,20 €</b></div>
-</div>
-<div class="sheet"><div class="grab"></div>
-  <div class="photo" style="height:120px">Beleg (antippen = groß)</div>
-  <div style="display:flex;justify-content:space-between;margin:12px 0 4px"><b>Stoff Kostüm Hexe</b><b>17,50 €</b></div>
-  <div class="mut">Mia Schulz · 18.10. · Kostüm · <span class="chip ok">Gewerk ✓</span></div>
-  <div class="mut" style="margin-top:10px">Topf</div><div class="field" style="margin-top:4px">Förderverein ▾</div>
-  <div class="mut">Auszahlung: <b style="color:var(--fg)">Überweisung</b> · IBAN …4711</div>
-  <div style="display:flex;gap:8px;margin-top:14px"><button class="btn" style="flex:1">Ablehnen</button><button class="btn pri" style="flex:2">Freigeben + buchen</button></div>
-</div></div>
-</div>
-
-<div class="label">Desktop · Kassenwart</div>
-<div class="desk">
-<div class="side"><b>Mitgliederbereich</b><br><br><div>Dashboard</div><div>Termine</div><div>Gewerke</div><div>Kartenbüro</div><div class="on">Finanzen</div><div>Mitglieder</div></div>
-<div class="main">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div><h1>Finanzen · Sommer 2027</h1><span class="mut">Topf:</span> <span class="chip">Alle Töpfe ▾</span> <span class="chip">Förderverein</span> <span class="chip">Schule</span> <span class="chip">Barkasse</span></div>
-    <div style="display:flex;gap:8px"><button class="btn">Umbuchen</button><button class="btn">Export CSV/PDF</button><button class="btn pri">+ Buchung</button></div>
-  </div>
-  <div class="tabs"><span>Eingang (3)</span><span class="on">Kassenbuch</span><span>Budgets</span><span>Berichte</span><span>Töpfe</span></div>
-  <div class="grid">
-    <div class="card"><h3>Einnahmen</h3><div class="big in">4.860 €</div><span class="mut">Karten 3.420 · Spenden 640 · Förderung 800</span></div>
-    <div class="card"><h3>Ausgaben</h3><div class="big out">2.315 €</div><span class="mut">davon Auslagen 486 €</span></div>
-    <div class="card"><h3>Saldo</h3><div class="big">+2.545 €</div><span class="mut">Budget verplant 3.400 €</span></div>
-    <div class="card"><h3>Offen</h3><div class="big">3</div><span class="mut">Auslagen · 107,50 €</span></div>
-  </div>
-  <table>
-    <tr><th>Nr.</th><th>Datum</th><th>Text</th><th>Kategorie</th><th>Gewerk</th><th>Topf</th><th>Beleg</th><th style="text-align:right">Betrag</th></tr>
-    <tr><td>S27-041</td><td>21.10.</td><td>Abendkasse 19.10. (Kassensturz)</td><td>Karten</td><td>–</td><td>Barkasse</td><td>Zählprotokoll</td><td class="n in">+ 612,00</td></tr>
-    <tr><td>S27-040</td><td>20.10.</td><td>Auslage Mia – Stoff</td><td>Material</td><td>Kostüm</td><td>Förderverein</td><td>Foto</td><td class="n out">− 17,50</td></tr>
-    <tr><td>S27-039</td><td>18.10.</td><td>Umbuchung Barkasse → Förderverein</td><td>Umbuchung</td><td>–</td><td>Barkasse → FV</td><td>–</td><td class="n">500,00</td></tr>
-    <tr><td>S27-038</td><td>15.10.</td><td>Spende Familie K. <span class="chip">Quittung vorbereitet</span></td><td>Spenden</td><td>–</td><td>Förderverein</td><td>–</td><td class="n in">+ 150,00</td></tr>
-    <tr><td>S27-037</td><td>12.10.</td><td>Storno zu S27-035</td><td>Material</td><td>Technik</td><td>Schule</td><td>–</td><td class="n in">+ 12,00</td></tr>
-    <tr><td>S27-036</td><td>10.10.</td><td>Rechnung Farbenhaus</td><td>Material</td><td>Bühnenbild</td><td>Förderverein</td><td>Foto</td><td class="n out">− 161,60</td></tr>
-  </table>
-  <div class="note">Buchungen bis S27-030 sind festgeschrieben – Korrektur nur per Storno. Nummern laufen je Produktion („S27-…“) und Topf-übergreifend; Filter Topf zeigt Teilsaldo.</div>
-</div></div>
-
-</body>
+    <div class="label">Desktop · Kassenwart</div>
+    <div class="desk">
+      <div class="side">
+        <b>Mitgliederbereich</b><br /><br />
+        <div>Dashboard</div>
+        <div>Termine</div>
+        <div>Gewerke</div>
+        <div>Kartenbüro</div>
+        <div class="on">Finanzen</div>
+        <div>Mitglieder</div>
+      </div>
+      <div class="main">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <div>
+            <h1>Finanzen · Sommer 2027</h1>
+            <span class="mut">Topf:</span> <span class="chip">Alle Töpfe ▾</span>
+            <span class="chip">Förderverein</span> <span class="chip">Schule</span>
+            <span class="chip">Barkasse</span>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <button class="btn">Umbuchen</button><button class="btn">Export CSV/PDF</button
+            ><button class="btn pri">+ Buchung</button>
+          </div>
+        </div>
+        <div class="tabs">
+          <span>Eingang (3)</span><span class="on">Kassenbuch</span><span>Budgets</span
+          ><span>Berichte</span><span>Töpfe</span>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h3>Einnahmen</h3>
+            <div class="big in">4.860 €</div>
+            <span class="mut">Karten 3.420 · Spenden 640 · Förderung 800</span>
+          </div>
+          <div class="card">
+            <h3>Ausgaben</h3>
+            <div class="big out">2.315 €</div>
+            <span class="mut">davon Auslagen 486 €</span>
+          </div>
+          <div class="card">
+            <h3>Saldo</h3>
+            <div class="big">+2.545 €</div>
+            <span class="mut">Budget verplant 3.400 €</span>
+          </div>
+          <div class="card">
+            <h3>Offen</h3>
+            <div class="big">3</div>
+            <span class="mut">Auslagen · 107,50 €</span>
+          </div>
+        </div>
+        <table>
+          <tr>
+            <th>Nr.</th>
+            <th>Datum</th>
+            <th>Text</th>
+            <th>Kategorie</th>
+            <th>Gewerk</th>
+            <th>Topf</th>
+            <th>Beleg</th>
+            <th style="text-align: right">Betrag</th>
+          </tr>
+          <tr>
+            <td>S27-041</td>
+            <td>21.10.</td>
+            <td>Abendkasse 19.10. (Kassensturz)</td>
+            <td>Karten</td>
+            <td>–</td>
+            <td>Barkasse</td>
+            <td>Zählprotokoll</td>
+            <td class="n in">+ 612,00</td>
+          </tr>
+          <tr>
+            <td>S27-040</td>
+            <td>20.10.</td>
+            <td>Auslage Mia – Stoff</td>
+            <td>Material</td>
+            <td>Kostüm</td>
+            <td>Förderverein</td>
+            <td>Foto</td>
+            <td class="n out">− 17,50</td>
+          </tr>
+          <tr>
+            <td>S27-039</td>
+            <td>18.10.</td>
+            <td>Umbuchung Barkasse → Förderverein</td>
+            <td>Umbuchung</td>
+            <td>–</td>
+            <td>Barkasse → FV</td>
+            <td>–</td>
+            <td class="n">500,00</td>
+          </tr>
+          <tr>
+            <td>S27-038</td>
+            <td>15.10.</td>
+            <td>Spende Familie K. <span class="chip">Quittung vorbereitet</span></td>
+            <td>Spenden</td>
+            <td>–</td>
+            <td>Förderverein</td>
+            <td>–</td>
+            <td class="n in">+ 150,00</td>
+          </tr>
+          <tr>
+            <td>S27-037</td>
+            <td>12.10.</td>
+            <td>Storno zu S27-035</td>
+            <td>Material</td>
+            <td>Technik</td>
+            <td>Schule</td>
+            <td>–</td>
+            <td class="n in">+ 12,00</td>
+          </tr>
+          <tr>
+            <td>S27-036</td>
+            <td>10.10.</td>
+            <td>Rechnung Farbenhaus</td>
+            <td>Material</td>
+            <td>Bühnenbild</td>
+            <td>Förderverein</td>
+            <td>Foto</td>
+            <td class="n out">− 161,60</td>
+          </tr>
+        </table>
+        <div class="note">
+          Buchungen bis S27-030 sind festgeschrieben – Korrektur nur per Storno. Nummern laufen je
+          Produktion („S27-…“) und Topf-übergreifend; Filter Topf zeigt Teilsaldo.
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

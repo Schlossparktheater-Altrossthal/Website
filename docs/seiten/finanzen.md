@@ -10,7 +10,8 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
 
 - `/mitglieder/finanzen/auslagen` – Meine Auslagen (alle Mitglieder); Gewerksleitung und
   Vertretung sehen oben „Zu prüfen“ mit den Auslagen ihres Gewerks.
-- `/mitglieder/finanzen` – Kassenwart/Prüfer: Tabs `Eingang` und `Töpfe` (`?tab=toepfe`).
+- `/mitglieder/finanzen` – Kassenwart/Prüfer: Tabs `Eingang`, `Kassenbuch` (`?tab=kassenbuch`,
+  Filter `zeitraum`, `topf`, `art`, `kategorie`, `gewerk`, `q`) und `Töpfe` (`?tab=toepfe`).
   Ohne Finanzrecht Weiterleitung auf Meine Auslagen.
 - `/api/finanzen/belege/<id>` – Beleg (Foto/PDF) für Einreicher, Gewerksleitung, Kassenwart, Prüfer.
 
@@ -24,6 +25,17 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
 3. Kassenwart: „Erstatten + buchen“ (Topf, Buchungsdatum) erzeugt eine Ausgabe im Kassenbuch;
    bei „Spenden“ zusätzlich die Spende als Einnahme. „Nur freigeben“ für spätere Sammel-Erstattung.
 4. Benachrichtigungstyp `expense-claim` an Gewerk → Kassenwart → einreichende Person.
+
+## Kassenbuch
+
+- Zeitraum-Auswahl: aktive Produktion (Standard) und „Allgemein“ des Jahres werden bei Bedarf
+  angelegt (`loadPeriodOptions`). Nummern laufen je Zeitraum über alle Töpfe (`S27-041`).
+- Kennzahlen: Einnahmen/Ausgaben ohne Umbuchungen, Stornos mindern die ursprüngliche Richtung;
+  mit Topf-Filter enthält der Saldo die Umbuchungen (`summarize` in `lib/finance/book.ts`).
+- Buchen/Bearbeiten im Bottom-Sheet (Ausgabe, Einnahme, Umbuchung), Belege anhängen,
+  Spender + Anschrift bei Kategorie „Spenden“ (für spätere Zuwendungsbestätigung).
+- Detail-Sheet: Bearbeiten (nur nicht festgeschrieben, keine Stornos), Stornieren (Gegenbuchung
+  mit neuer Nummer), „Bis hier festschreiben“ (nur vorwärts, nicht rückgängig).
 
 ## Permissions
 
@@ -42,5 +54,5 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
 
 ## Offene Baustellen
 
-Kassenbuch, Umbuchung, Budgets, Einnahmen aus Kartenverkauf/Abendkasse, Berichte/Export
-(Phasen 3–6 im Plan). IBAN im Profil ist noch unverschlüsselt (Altbestand).
+Budgets, Einnahmen aus Kartenverkauf/Abendkasse, Berichte/Export
+(Phasen 4–6 im Plan). IBAN im Profil ist noch unverschlüsselt (Altbestand).

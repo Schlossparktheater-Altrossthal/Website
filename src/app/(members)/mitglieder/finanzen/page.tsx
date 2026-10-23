@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { ClaimInbox, type PayoutDetails } from "@/components/finance/claim-inbox";
+import { CashBook } from "@/components/finance/cash-book";
 import { FundManager } from "@/components/finance/fund-manager";
+import { loadBook, loadPeriodOptions } from "@/lib/finance/book";
+import type { ClaimView } from "@/lib/finance/claims";
 import { PageHeader } from "@/components/members/page-header";
 import { SectionNav } from "@/components/ui/section-nav";
 import { getFinanceAccess } from "@/lib/finance/access";
@@ -15,8 +18,20 @@ export const metadata = { title: "Finanzen" };
 
 const AREAS = [
   { id: "eingang", label: "Eingang" },
+  { id: "kassenbuch", label: "Kassenbuch" },
   { id: "toepfe", label: "Töpfe" },
 ] as const;
+
+const ENTRY_TYPES = ["income", "expense", "transfer"] as const;
+type SearchParams = {
+  tab?: string;
+  zeitraum?: string;
+  topf?: string;
+  art?: string;
+  kategorie?: string;
+  gewerk?: string;
+  q?: string;
+};
 type Area = (typeof AREAS)[number]["id"];
 
 /** Kassenwart: Auslagen-Eingang und Geldtöpfe; Kassenbuch, Budgets, Berichte folgen (docs/Plan/finanzen-plan.md). */
@@ -28,7 +43,8 @@ export default async function FinancePage({
   const session = await requireAuth();
   const access = await getFinanceAccess(session.user);
   if (!access.viewAll) redirect(MY_CLAIMS_PATH);
-  const { tab } = await searchParams;
+  const params = await searchParams;
+  const tab = params.tab;
   const area: Area = AREAS.some((entry) => entry.id === tab) ? (tab as Area) : "eingang";
 
   const [claims, funds, entries] = await Promise.all([
@@ -61,6 +77,7 @@ export default async function FinancePage({
     );
   }
   const balances = fundBalances(entries);
+  const book = area === "kassenbuch" ? await loadCashBook(session.user!.id!, params, claims) : null;
   const activeFunds = funds
     .filter((fund) => !fund.archivedAt)
     .map((fund) => ({ id: fund.id, name: fund.name }));
@@ -69,7 +86,7 @@ export default async function FinancePage({
     <div className="space-y-4">
       <PageHeader
         title="Finanzen"
-        description="Auslagen prüfen und erstatten, Geldtöpfe verwalten. Kassenbuch, Budgets und Berichte kommen als Nächstes."
+        description="Auslagen prüfen und erstatten, Kassenbuch je Produktion führen, Geldtöpfe verwalten."
       />
       <SectionNav
         variant="underline"
@@ -91,6 +108,8 @@ export default async function FinancePage({
           payoutDetails={payoutDetails}
           canManage={access.manage}
         />
+      ) : book ? (
+        <CashBook {...book} funds={activeFunds} canManage={access.manage} />
       ) : (
         <FundManager
           canManage={access.manage}
@@ -106,4 +125,56 @@ export default async function FinancePage({
       )}
     </div>
   );
+}
+
+async function loadCashBook(userId: string, params: SearchParams, claims: ClaimView[]) {
+  const { options, defaultId } = await loadPeriodOptions(userId);
+  const periodId = options.some((option) => option.id === params.zeitraum)
+    ? params.zeitraum!
+    : defaultId;
+  const type = (ENTRY_TYPES as readonly string[]).includes(params.art ?? "")
+    ? (params.art as (typeof ENTRY_TYPES)[number])
+    : null;
+  const filter = {
+    fundId: params.topf || null,
+    type,
+    categoryId: params.kategorie || null,
+    departmentId: params.gewerk || null,
+    query: params.q?.slice(0, 100) ?? "",
+  };
+  const { period, entries, totals } = await loadBook({ periodId, ...filter });
+  const [categories, departments] = await Promise.all([
+    prisma.financeCategory.findMany({
+      where: { archivedAt: null },
+      select: { id: true, name: true, type: true },
+      orderBy: [{ type: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    }),
+    period.showId
+      ? prisma.department.findMany({
+          where: { showId: period.showId, archivedAt: null },
+          select: { id: true, name: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        })
+      : [],
+  ]);
+  return {
+    periods: options,
+    period: {
+      id: period.id,
+      name: period.name,
+      code: period.code,
+      lockedThrough: period.lockedThrough,
+      nextNumber: period.nextNumber,
+      closed: Boolean(period.closedAt),
+    },
+    entries,
+    totals,
+    openClaims: {
+      count: claims.length,
+      cents: claims.reduce((sum, claim) => sum + claim.amountCents, 0),
+    },
+    categories,
+    departments,
+    filter,
+  };
 }

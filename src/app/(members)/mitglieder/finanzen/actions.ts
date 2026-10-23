@@ -13,8 +13,14 @@ import {
   submitClaim,
   withdrawClaim,
 } from "@/lib/finance/claims";
-import { FinanceError } from "@/lib/finance/ledger";
-import { FINANCE_HOME_PATH, MY_CLAIMS_PATH } from "@/lib/finance/paths";
+import {
+  FinanceError,
+  createEntryInTx,
+  lockPeriodThrough,
+  reverseEntry,
+  updateEntry,
+} from "@/lib/finance/ledger";
+import { FINANCE_HOME_PATH } from "@/lib/finance/paths";
 import { readReceiptFiles } from "@/lib/finance/receipts";
 import { parseEuroToCents } from "@/lib/format/money";
 import { prisma } from "@/lib/prisma";
@@ -74,9 +80,7 @@ const claimSchema = z.object({
 export async function submitClaimAction(formData: FormData): Promise<ActionResult> {
   return run(async () => {
     const { userId } = await session();
-    const input = claimSchema.parse(
-      Object.fromEntries(Array.from(formData.entries()).filter(([, v]) => typeof v === "string")),
-    );
+    const input = claimSchema.parse(stringFields(formData));
     const amountCents = parseEuroToCents(input.amount);
     if (!amountCents) throw new FinanceError("Bitte einen gültigen Betrag angeben, z. B. 23,80.");
     if (input.categoryId) {
@@ -190,5 +194,145 @@ export async function saveFundAction(input: z.input<typeof fundSchema>): Promise
       const count = await prisma.financeFund.count();
       await prisma.financeFund.create({ data: { ...values, sortOrder: count } });
     }
+  });
+}
+
+// ── Kassenbuch (Kassenwart) ────────────────────────────────────────────────
+
+const entrySchema = z.object({
+  periodId: id,
+  type: z.enum(["income", "expense", "transfer"]),
+  fundId: id,
+  transferFundId: optionalId,
+  amount: z.string().max(20),
+  bookingDate: day,
+  description: z.string().max(400),
+  counterparty: z.string().max(400).optional(),
+  categoryId: optionalId,
+  departmentId: optionalId,
+  donorName: z.string().max(200).optional(),
+  donorAddress: z.string().max(400).optional(),
+});
+
+async function resolveEntryInput(raw: Record<string, unknown>) {
+  const input = entrySchema.parse(raw);
+  const amountCents = parseEuroToCents(input.amount);
+  if (!amountCents) throw new FinanceError("Bitte einen gültigen Betrag angeben, z. B. 23,80.");
+  const period = await prisma.financePeriod.findUnique({ where: { id: input.periodId } });
+  if (!period) throw new FinanceError("Zeitraum nicht gefunden.");
+  const fundIds = [input.fundId, input.transferFundId].filter((value): value is string => !!value);
+  const funds = await prisma.financeFund.findMany({
+    where: { id: { in: fundIds }, archivedAt: null },
+  });
+  if (funds.length !== new Set(fundIds).size)
+    throw new FinanceError("Bitte aktive Geldtöpfe wählen.");
+  if (input.categoryId && input.type !== "transfer") {
+    const category = await prisma.financeCategory.findUnique({ where: { id: input.categoryId } });
+    if (category?.type !== input.type)
+      throw new FinanceError("Kategorie passt nicht zur Buchungsart.");
+  }
+  if (input.departmentId) {
+    const department = await prisma.department.findUnique({ where: { id: input.departmentId } });
+    if (!department || department.showId !== period.showId) {
+      throw new FinanceError("Gewerk gehört nicht zu diesem Zeitraum.");
+    }
+  }
+  const isDonation = input.type === "income" && Boolean(input.donorName?.trim());
+  return {
+    periodId: input.periodId,
+    type: input.type,
+    fundId: input.fundId,
+    transferFundId: input.type === "transfer" ? input.transferFundId : null,
+    amountCents,
+    bookingDate: new Date(`${input.bookingDate}T00:00:00.000Z`),
+    description: input.description,
+    counterparty: input.counterparty ?? null,
+    categoryId: input.type === "transfer" ? null : input.categoryId,
+    departmentId: input.departmentId,
+    donorName: isDonation ? input.donorName!.trim() : null,
+    donorAddress: isDonation ? input.donorAddress?.trim() || null : null,
+    source: isDonation ? ("donation" as const) : ("manual" as const),
+  };
+}
+
+function stringFields(formData: FormData) {
+  return Object.fromEntries(
+    Array.from(formData.entries()).filter(([, value]) => typeof value === "string"),
+  );
+}
+
+export async function createEntryAction(formData: FormData): Promise<ActionResult> {
+  return run(async () => {
+    const { userId } = await requireManage();
+    const input = await resolveEntryInput(stringFields(formData));
+    const receipts = await readReceiptFiles(formData);
+    await prisma.$transaction(async (tx) => {
+      const entry = await createEntryInTx(tx, input, userId);
+      if (receipts.length) {
+        await tx.financeReceipt.createMany({
+          data: receipts.map((receipt) => ({
+            ...receipt,
+            entryId: entry.id,
+            uploadedById: userId,
+          })),
+        });
+      }
+    });
+  });
+}
+
+export async function updateEntryAction(
+  entryId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  return run(async () => {
+    const { userId } = await requireManage();
+    const { periodId, source, ...input } = await resolveEntryInput(stringFields(formData));
+    const existing = await prisma.financeEntry.findUnique({ where: { id: id.parse(entryId) } });
+    if (!existing || existing.periodId !== periodId)
+      throw new FinanceError("Buchung nicht gefunden.");
+    void source;
+    await updateEntry(existing.id, input, userId);
+    const receipts = await readReceiptFiles(formData);
+    if (receipts.length) {
+      await prisma.financeReceipt.createMany({
+        data: receipts.map((receipt) => ({
+          ...receipt,
+          entryId: existing.id,
+          uploadedById: userId,
+        })),
+      });
+    }
+  });
+}
+
+export async function reverseEntryAction(input: {
+  id: string;
+  reason: string;
+}): Promise<ActionResult> {
+  return run(async () => {
+    const { userId } = await requireManage();
+    await reverseEntry(
+      id.parse(input.id),
+      userId,
+      z
+        .string()
+        .max(200)
+        .parse(input.reason ?? ""),
+    );
+  });
+}
+
+export async function lockPeriodAction(input: {
+  periodId: string;
+  throughNumber: number;
+}): Promise<ActionResult> {
+  return run(async () => {
+    const { userId } = await requireManage();
+    await lockPeriodThrough(
+      id.parse(input.periodId),
+      z.number().int().positive().parse(input.throughNumber),
+      userId,
+    );
   });
 }
