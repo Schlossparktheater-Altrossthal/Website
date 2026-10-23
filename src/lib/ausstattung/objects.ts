@@ -242,7 +242,7 @@ export type ObjectDetail = ObjectListItem & {
     requestedBy: string | null;
     createdAt: string;
   }[];
-  finance: { id: string; title: string; amount: number; status: string }[];
+  finance: { id: string; title: string; amountCents: number; reversed: boolean }[];
   createdBy: string | null;
   createdAt: string;
 };
@@ -288,8 +288,14 @@ export async function loadObjectDetail(objectId: string): Promise<ObjectDetail |
         },
       },
       financeEntries: {
+        where: { type: "expense", reversalOfId: null },
         orderBy: { bookingDate: "asc" },
-        select: { id: true, title: true, amount: true, status: true },
+        select: {
+          id: true,
+          description: true,
+          amountCents: true,
+          reversedBy: { select: { id: true } },
+        },
       },
     },
   });
@@ -322,9 +328,9 @@ export async function loadObjectDetail(objectId: string): Promise<ObjectDetail |
     })),
     finance: row.financeEntries.map((entry) => ({
       id: entry.id,
-      title: entry.title,
-      amount: entry.amount,
-      status: entry.status,
+      title: entry.description,
+      amountCents: entry.amountCents,
+      reversed: Boolean(entry.reversedBy),
     })),
     createdBy: row.createdBy ? getUserDisplayName(row.createdBy) : null,
     createdAt: row.createdAt.toISOString(),

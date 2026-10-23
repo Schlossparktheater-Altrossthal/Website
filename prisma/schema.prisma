@@ -246,28 +246,50 @@ enum TaskStatus {
   done
 }
 
-enum FinanceType {
+/// Finanzen (docs/Plan/finanzen-plan.md): Einnahme, Ausgabe oder Umbuchung zwischen Töpfen.
+enum FinanceEntryType {
+  income
+  expense
+  transfer
+}
+
+/// Woher eine Buchung stammt.
+enum FinanceEntrySource {
+  manual
+  expense_claim
+  box_office
+  tickets
+  donation
+}
+
+enum FinanceFundKind {
+  bank
+  cash
+  other
+}
+
+enum FinanceCategoryType {
   income
   expense
 }
 
-enum FinanceEntryKind {
+/// Abrechnungszeitraum: eine Produktion oder „Allgemein“ je Jahr.
+enum FinancePeriodKind {
+  production
   general
-  invoice
-  donation
 }
 
-enum FinanceEntryStatus {
-  draft
-  pending
+enum ExpenseClaimStatus {
+  submitted
   approved
+  rejected
   paid
-  cancelled
 }
 
-enum VisibilityScope {
-  board
-  finance
+enum ExpenseClaimPayout {
+  cash
+  bank
+  donated
 }
 
 enum Audience {
@@ -419,9 +441,11 @@ model User {
   issuesUpdated                   Issue[]                    @relation("IssueUpdatedBy")
   issueComments                   IssueComment[]             @relation("IssueCommentAuthor")
   financeEntriesCreated           FinanceEntry[]             @relation("FinanceEntryCreatedBy")
-  financeEntriesApproved          FinanceEntry[]             @relation("FinanceEntryApprovedBy")
-  financeEntriesPaidFor           FinanceEntry[]             @relation("FinanceEntryMemberPaidBy")
-  financeLogsAuthored             FinanceLog[]               @relation("FinanceLogChangedBy")
+  financeLogsAuthored             FinanceLog[]               @relation("FinanceLogActor")
+  financeReceiptsUploaded         FinanceReceipt[]           @relation("FinanceReceiptUploadedBy")
+  expenseClaimsSubmitted          ExpenseClaim[]             @relation("ExpenseClaimSubmittedBy")
+  expenseClaimsChecked            ExpenseClaim[]             @relation("ExpenseClaimDepartmentCheckedBy")
+  expenseClaimsReviewed           ExpenseClaim[]             @relation("ExpenseClaimReviewedBy")
   finalRehearsalDutiesAssigned    FinalRehearsalDuty[]       @relation("FinalRehearsalDutyAssignee")
   finalRehearsalDutiesCreated     FinalRehearsalDuty[]       @relation("FinalRehearsalDutyCreatedBy")
   fileLibraryFoldersCreated       FileLibraryFolder[]        @relation("FileLibraryFoldersCreated")
@@ -515,8 +539,7 @@ model Show {
   status                  ProductionStatus          @default(planning)
   statusChangedAt         DateTime?
   archivedAt              DateTime?
-  finance                 FinanceEntry[]
-  budgets                 FinanceBudget[]
+  financePeriod           FinancePeriod?
   characters              Character[]
   scenes                  Scene[]
   acts                    ShowAct[]
@@ -718,6 +741,9 @@ model Department {
   show                 Show                    @relation(fields: [showId], references: [id], onDelete: Cascade)
   template             DepartmentTemplate      @relation(fields: [templateId], references: [id], onDelete: Restrict)
   activities           TaskActivity[]
+  financeBudgets       FinanceBudget[]
+  financeEntries       FinanceEntry[]
+  expenseClaims        ExpenseClaim[]
   notices              DepartmentNotice[]
   handovers            DepartmentHandover[]
   visits               DepartmentVisit[]
@@ -1527,6 +1553,7 @@ model CalendarEvent {
   milestone           ShowMilestone?
   ticketing           PerformanceTicketing?
   reservations        Reservation[]
+  financeEntries      FinanceEntry[]
   waitlistEntries     WaitlistEntry[]
   directionWishes     DirectionWish[]
   scriptSessions      ScriptSession[]
@@ -2427,91 +2454,202 @@ model SyncMutation {
   @@index([scope, clientId])
 }
 
-model FinanceEntry {
-  id              String             @id @default(cuid())
-  type            FinanceType
-  kind            FinanceEntryKind   @default(general)
-  status          FinanceEntryStatus @default(draft)
-  title           String
-  description     String?
-  amount          Float
-  currency        String             @default("EUR")
-  category        String?
-  bookingDate     DateTime           @default(now())
-  dueDate         DateTime?
-  paidAt          DateTime?
-  invoiceNumber   String?
-  vendor          String?
-  memberPaidById  String?
-  donationSource  String?
-  donorContact    String?
-  tags            Json?
-  showId          String
-  budgetId        String?
-  visibilityScope VisibilityScope    @default(finance)
-  createdById     String
-  approvedById    String?
-  approvedAt      DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-
-  show         Show                @relation(fields: [showId], references: [id], onDelete: Restrict)
-  budget       FinanceBudget?      @relation(fields: [budgetId], references: [id], onDelete: SetNull)
-  createdBy    User                @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  approvedBy   User?               @relation("FinanceEntryApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  memberPaidBy User?               @relation("FinanceEntryMemberPaidBy", fields: [memberPaidById], references: [id], onDelete: SetNull)
-  attachments  FinanceAttachment[]
-  logs         FinanceLog[]
-  objectId     String?
-  object       ProductionObject?   @relation(fields: [objectId], references: [id], onDelete: SetNull)
-
-  @@index([showId, status])
-  @@index([budgetId])
-  @@index([memberPaidById, bookingDate])
+/// Geldtopf (z. B. Förderverein, Schule, Barkasse), wird getrennt geführt.
+model FinanceFund {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  description String?
+  kind        FinanceFundKind @default(bank)
+  sortOrder   Int             @default(0)
+  archivedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  entries     FinanceEntry[]  @relation("FinanceEntryFund")
+  transfersIn FinanceEntry[]  @relation("FinanceEntryTransferFund")
+  budgets     FinanceBudget[]
+  claims      ExpenseClaim[]
 }
 
-model FinanceAttachment {
-  id        String       @id @default(cuid())
-  entryId   String
-  filename  String
-  url       String?
-  mimeType  String?
-  size      Int?
-  meta      Json?
-  createdAt DateTime     @default(now())
-  entry     FinanceEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
-
-  @@index([entryId])
-}
-
-model FinanceBudget {
-  id            String         @id @default(cuid())
-  showId        String
-  category      String
-  plannedAmount Float          @default(0)
-  currency      String         @default("EUR")
-  notes         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  show          Show           @relation(fields: [showId], references: [id], onDelete: Restrict)
+/// Abrechnungszeitraum mit eigenem Nummernkreis: eine Produktion oder „Allgemein“ je Jahr.
+model FinancePeriod {
+  id            String            @id @default(cuid())
+  kind          FinancePeriodKind
+  showId        String?           @unique
+  year          Int
+  name          String
+  /// Präfix der Buchungsnummern, z. B. „S27“ oder „A26“.
+  code          String            @unique
+  /// Nächste freie Buchungsnummer.
+  nextNumber    Int               @default(1)
+  /// Buchungen bis einschließlich dieser Nummer sind festgeschrieben.
+  lockedThrough Int               @default(0)
+  closedAt      DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  show          Show?             @relation(fields: [showId], references: [id], onDelete: Restrict)
   entries       FinanceEntry[]
+  budgets       FinanceBudget[]
+  claims        ExpenseClaim[]
 
-  @@index([showId, category])
+  @@index([kind, year])
 }
 
-model FinanceLog {
-  id          String              @id @default(cuid())
-  entryId     String
-  changedById String?
-  fromStatus  FinanceEntryStatus?
-  toStatus    FinanceEntryStatus
-  note        String?
-  createdAt   DateTime            @default(now())
-  entry       FinanceEntry        @relation(fields: [entryId], references: [id], onDelete: Cascade)
-  changedBy   User?               @relation("FinanceLogChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+model FinanceCategory {
+  id         String              @id @default(cuid())
+  name       String
+  type       FinanceCategoryType
+  sortOrder  Int                 @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  entries    FinanceEntry[]
+  budgets    FinanceBudget[]
+  claims     ExpenseClaim[]
+
+  @@unique([type, name])
+}
+
+/// Soll je Zeitraum, optional eingeschränkt auf Topf, Gewerk und Kategorie.
+model FinanceBudget {
+  id           String           @id @default(cuid())
+  periodId     String
+  fundId       String?
+  departmentId String?
+  categoryId   String?
+  plannedCents Int              @default(0)
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  period       FinancePeriod    @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  fund         FinanceFund?     @relation(fields: [fundId], references: [id], onDelete: Restrict)
+  department   Department?      @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  category     FinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([periodId])
+  @@index([departmentId])
+}
+
+/// Kassenbuch-Zeile. Beträge immer positiv in Cent, Richtung über `type`. Festgeschriebene
+/// Buchungen (`number <= period.lockedThrough`) werden nur per Storno (`reversalOfId`) korrigiert.
+model FinanceEntry {
+  id                 String             @id @default(cuid())
+  periodId           String
+  number             Int
+  fundId             String
+  /// Ziel-Topf bei `type = transfer` (Quelle ist `fundId`).
+  transferFundId     String?
+  type               FinanceEntryType
+  amountCents        Int
+  bookingDate        DateTime           @db.Date
+  description        String
+  counterparty       String?
+  categoryId         String?
+  departmentId       String?
+  objectId           String?
+  /// Vorstellung (CalendarEvent) bei Abendkasse oder Spende.
+  performanceEventId String?
+  source             FinanceEntrySource @default(manual)
+  /// Spendenquittung (vorbereitet).
+  donorName          String?
+  donorAddress       String?
+  reversalOfId       String?            @unique
+  createdById        String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  period             FinancePeriod      @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  fund               FinanceFund        @relation("FinanceEntryFund", fields: [fundId], references: [id], onDelete: Restrict)
+  transferFund       FinanceFund?       @relation("FinanceEntryTransferFund", fields: [transferFundId], references: [id], onDelete: Restrict)
+  category           FinanceCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  department         Department?        @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  object             ProductionObject?  @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  performanceEvent   CalendarEvent?     @relation(fields: [performanceEventId], references: [id], onDelete: SetNull)
+  reversalOf         FinanceEntry?      @relation("FinanceEntryReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy         FinanceEntry?      @relation("FinanceEntryReversal")
+  createdBy          User               @relation("FinanceEntryCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  claim              ExpenseClaim?
+  receipts           FinanceReceipt[]
+  logs               FinanceLog[]
+
+  @@unique([periodId, number])
+  @@index([fundId, bookingDate])
+  @@index([departmentId])
+  @@index([objectId])
+}
+
+/// Auslage eines Mitglieds: Gewerk prüft sachlich, Kassenwart erstattet und bucht.
+model ExpenseClaim {
+  id                    String             @id @default(cuid())
+  periodId              String
+  submittedById         String
+  amountCents           Int
+  spentOn               DateTime           @db.Date
+  purpose               String
+  vendor                String?
+  departmentId          String?
+  categoryId            String?
+  payout                ExpenseClaimPayout @default(cash)
+  status                ExpenseClaimStatus @default(submitted)
+  departmentCheckedById String?
+  departmentCheckedAt   DateTime?
+  reviewedById          String?
+  reviewedAt            DateTime?
+  rejectReason          String?
+  paidAt                DateTime?
+  fundId                String?
+  entryId               String?            @unique
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  period                FinancePeriod      @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  submittedBy           User               @relation("ExpenseClaimSubmittedBy", fields: [submittedById], references: [id], onDelete: Restrict)
+  departmentCheckedBy   User?              @relation("ExpenseClaimDepartmentCheckedBy", fields: [departmentCheckedById], references: [id], onDelete: SetNull)
+  reviewedBy            User?              @relation("ExpenseClaimReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  department            Department?        @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  category              FinanceCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  fund                  FinanceFund?       @relation(fields: [fundId], references: [id], onDelete: Restrict)
+  entry                 FinanceEntry?      @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  receipts              FinanceReceipt[]
+  logs                  FinanceLog[]
+
+  @@index([periodId, status])
+  @@index([submittedById])
+  @@index([departmentId, status])
+}
+
+/// Beleg (Foto/PDF) zu einer Buchung oder Auslage. `ocr` bleibt leer (Belegerkennung später).
+model FinanceReceipt {
+  id           String        @id @default(cuid())
+  entryId      String?
+  claimId      String?
+  storageKey   String
+  filename     String
+  mimeType     String
+  size         Int
+  ocr          Json?
+  uploadedById String?
+  createdAt    DateTime      @default(now())
+  entry        FinanceEntry? @relation(fields: [entryId], references: [id], onDelete: Restrict)
+  claim        ExpenseClaim? @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  uploadedBy   User?         @relation("FinanceReceiptUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([entryId])
-  @@index([changedById])
+  @@index([claimId])
+}
+
+/// Protokoll aller Änderungen an Buchungen und Auslagen.
+model FinanceLog {
+  id        String        @id @default(cuid())
+  entryId   String?
+  claimId   String?
+  actorId   String?
+  action    String
+  data      Json?
+  createdAt DateTime      @default(now())
+  entry     FinanceEntry? @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  claim     ExpenseClaim? @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  actor     User?         @relation("FinanceLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entryId])
+  @@index([claimId])
 }
 
 model Notification {

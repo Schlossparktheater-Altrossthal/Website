@@ -26,6 +26,8 @@ import { DEMO_EMAIL_DOMAIN, DEMO_PERSONAS } from "@/lib/demo-mode";
 import { ensureBoardColumns } from "@/lib/departments/board";
 import { ensureProductionDepartments } from "@/lib/departments/templates";
 import { commentRecipe, createRecipe, rateRecipe } from "@/lib/food/recipes/service";
+import { createEntryInTx } from "@/lib/finance/ledger";
+import { ensureShowPeriod } from "@/lib/finance/periods";
 import { ensurePermissionDefinitions } from "@/lib/permissions";
 import { recalculateShowPlan } from "@/lib/planning/plan-service";
 import { prisma } from "@/lib/prisma";
@@ -1557,126 +1559,160 @@ async function seedProfiles() {
 }
 
 async function seedFinance() {
-  const budgets: [string, number][] = [
-    ["Bühnenbau", 2500],
-    ["Kostüme & Maske", 1800],
-    ["Technik", 1500],
-    ["Werbung & Druck", 900],
-    ["Verpflegung", 1200],
-    ["Rechte & GEMA", 600],
+  const [fv, kasse] = await Promise.all([
+    prisma.financeFund.create({ data: { name: "Förderverein", kind: "bank", sortOrder: 0 } }),
+    prisma.financeFund.create({ data: { name: "Barkasse", kind: "cash", sortOrder: 1 } }),
+  ]);
+  await prisma.financeFund.create({ data: { name: "Schule", kind: "bank", sortOrder: 2 } });
+  const period = await ensureShowPeriod(SHOW_ID);
+  const categories = await prisma.financeCategory.findMany();
+  const cat = (name: string) => categories.find((category) => category.name === name)?.id ?? null;
+  const departments = await prisma.department.findMany({ where: { showId: SHOW_ID } });
+  const dept = (slug: string) =>
+    departments.find((department) => department.slug === slug)?.id ?? null;
+
+  const budgets: [string | null, string, number][] = [
+    ["buehnenbau", "Material", 250000],
+    ["kostueme", "Material", 180000],
+    ["technik", "Technik & Verleih", 150000],
+    ["essensplanung", "Verpflegung", 120000],
+    [null, "Druck & Werbung", 90000],
+    [null, "Rechte & Gebühren", 60000],
   ];
-  const budgetIds = new Map<string, string>();
-  for (const [category, plannedAmount] of budgets) {
-    const created = await prisma.financeBudget.create({
-      data: { showId: SHOW_ID, category, plannedAmount },
-    });
-    budgetIds.set(category, created.id);
-  }
-  const entries: [
-    string,
-    "income" | "expense",
-    "general" | "invoice" | "donation",
-    number,
-    string,
-    number,
-    "draft" | "pending" | "approved" | "paid",
-    string | null,
-    string | null,
-  ][] = [
-    [
-      "Holz und Schrauben (Baumarkt)",
-      "expense",
-      "invoice",
-      412.37,
-      "Bühnenbau",
-      -20,
-      "paid",
-      "Baumarkt Meißen",
-      null,
-    ],
-    [
-      "Stoffe für Elfenkostüme",
-      "expense",
-      "general",
-      186.5,
-      "Kostüme & Maske",
-      -12,
-      "approved",
-      "Stoffhaus Dresden",
-      "julia",
-    ],
-    [
-      "Plakatdruck A1/A3",
-      "expense",
-      "invoice",
-      329.0,
-      "Werbung & Druck",
-      -4,
-      "pending",
-      "Druckerei Wirth",
-      null,
-    ],
-    [
-      "Aufführungsrechte",
-      "expense",
-      "invoice",
-      480.0,
-      "Rechte & GEMA",
-      -60,
-      "paid",
-      "Theaterverlag",
-      null,
-    ],
-    [
-      "LED-Scheinwerfer Miete",
-      "expense",
-      "invoice",
-      640.0,
-      "Technik",
-      40,
-      "draft",
-      "Licht & Ton Vermietung",
-      null,
-    ],
-    [
-      "Schminke und Abschminktücher",
-      "expense",
-      "general",
-      74.9,
-      "Kostüme & Maske",
-      -2,
-      "pending",
-      "Drogerie",
-      "anna",
-    ],
-    ["Zuschuss Gemeinde", "income", "general", 1500, "", -45, "paid", "Gemeinde Altroßthal", null],
-    ["Spende Bäckerei Sonnenschein", "income", "donation", 250, "", -18, "paid", null, null],
-    ["Sponsoring Autohaus", "income", "general", 800, "", -25, "approved", null, null],
-    ["Ticketvorverkauf (Stand heute)", "income", "general", 2340, "", 0, "pending", null, null],
-  ];
-  for (const [title, type, kind, amount, category, offset, status, vendor, paidBy] of entries) {
-    await prisma.financeEntry.create({
+  for (const [slug, category, plannedCents] of budgets) {
+    await prisma.financeBudget.create({
       data: {
-        showId: SHOW_ID,
-        title,
-        type,
-        kind,
-        amount,
-        category: category || null,
-        budgetId: category ? budgetIds.get(category) : null,
-        bookingDate: new Date(NOW + offset * DAY),
-        paidAt: status === "paid" ? new Date(NOW + offset * DAY) : null,
-        status,
-        vendor,
-        memberPaidById: paidBy ? uid(paidBy) : null,
-        donationSource: kind === "donation" ? "Bäckerei Sonnenschein" : null,
-        createdById: uid("thomas"),
-        approvedById: status === "approved" || status === "paid" ? uid("thomas") : null,
-        approvedAt:
-          status === "approved" || status === "paid" ? new Date(NOW + offset * DAY) : null,
+        periodId: period.id,
+        fundId: fv.id,
+        departmentId: slug ? dept(slug) : null,
+        categoryId: cat(category),
+        plannedCents,
       },
     });
   }
+
+  type Row = [string, "income" | "expense", number, string, string | null, number, string | null];
+  const entries: Row[] = [
+    ["Aufführungsrechte", "expense", 48000, "Rechte & Gebühren", null, -60, "Theaterverlag"],
+    ["Zuschuss Gemeinde", "income", 150000, "Förderung", null, -45, "Gemeinde Altroßthal"],
+    ["Sponsoring Autohaus", "income", 80000, "Förderung", null, -25, "Autohaus"],
+    ["Holz und Schrauben", "expense", 41237, "Material", "buehnenbau", -20, "Baumarkt Meißen"],
+    [
+      "Spende Bäckerei Sonnenschein",
+      "income",
+      25000,
+      "Spenden",
+      null,
+      -18,
+      "Bäckerei Sonnenschein",
+    ],
+    ["Plakatdruck A1/A3", "expense", 32900, "Druck & Werbung", null, -4, "Druckerei Wirth"],
+  ];
+  await prisma.$transaction(async (tx) => {
+    for (const [description, type, amountCents, category, slug, offset, counterparty] of entries) {
+      await createEntryInTx(
+        tx,
+        {
+          periodId: period.id,
+          fundId: fv.id,
+          type,
+          amountCents,
+          bookingDate: dateOnly(offset),
+          description,
+          counterparty,
+          categoryId: cat(category),
+          departmentId: slug ? dept(slug) : null,
+          source: category === "Spenden" ? "donation" : "manual",
+          donorName: category === "Spenden" ? counterparty : null,
+        },
+        uid("thomas"),
+      );
+    }
+  });
+
+  const claims: [
+    string,
+    string,
+    number,
+    string,
+    string,
+    number,
+    "submitted" | "approved" | "paid",
+    "cash" | "bank" | "donated",
+  ][] = [
+    [
+      "julia",
+      "Stoffe für Elfenkostüme",
+      18650,
+      "kostueme",
+      "Stoffhaus Dresden",
+      -12,
+      "paid",
+      "bank",
+    ],
+    ["anna", "Schminke und Abschminktücher", 7490, "kostueme", "Drogerie", -2, "approved", "cash"],
+    ["anna", "Farbe + Pinsel", 2380, "buehnenbau", "Baumarkt", -1, "submitted", "cash"],
+  ];
+  for (const [person, purpose, amountCents, slug, vendor, offset, status, payout] of claims) {
+    const departmentId = dept(slug);
+    const claim = await prisma.expenseClaim.create({
+      data: {
+        periodId: period.id,
+        submittedById: uid(person),
+        amountCents,
+        spentOn: dateOnly(offset),
+        purpose,
+        vendor,
+        departmentId,
+        categoryId: cat("Material"),
+        payout,
+        status,
+        departmentCheckedAt: status === "submitted" ? null : new Date(NOW + offset * DAY),
+        reviewedById: status === "submitted" ? null : uid("thomas"),
+        reviewedAt: status === "submitted" ? null : new Date(NOW + offset * DAY),
+        fundId: status === "submitted" ? null : fv.id,
+      },
+    });
+    if (status === "paid") {
+      const entry = await prisma.$transaction((tx) =>
+        createEntryInTx(
+          tx,
+          {
+            periodId: period.id,
+            fundId: fv.id,
+            type: "expense",
+            amountCents,
+            bookingDate: dateOnly(offset + 2),
+            description: `Auslage – ${purpose}`,
+            categoryId: cat("Material"),
+            departmentId,
+            source: "expense_claim",
+          },
+          uid("thomas"),
+        ),
+      );
+      await prisma.expenseClaim.update({
+        where: { id: claim.id },
+        data: { entryId: entry.id, paidAt: new Date(NOW + (offset + 2) * DAY) },
+      });
+    }
+  }
+
+  await prisma.$transaction((tx) =>
+    createEntryInTx(
+      tx,
+      {
+        periodId: period.id,
+        fundId: kasse.id,
+        type: "income",
+        amountCents: 23400,
+        bookingDate: dateOnly(-1),
+        description: "Kuchenverkauf Probenwochenende",
+        categoryId: cat("Sonstige Einnahmen"),
+      },
+      uid("thomas"),
+    ),
+  );
   log("Finanzen angelegt.");
 }
 

@@ -116,17 +116,4 @@ export const OBJECT_TEXT_LIMITS = {
   sceneNote: 200,
 } as const;
 
-/** Cent-Betrag als „12,50 €“. */
-export function formatCents(cents: number | null | undefined) {
-  if (cents === null || cents === undefined) return "";
-  return (cents / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
-}
-
-/** „12,5“ / „12,50 €“ → Cent; leer → null. */
-export function parseEuroToCents(value: string): number | null {
-  const cleaned = value.replace(/[€\s]/g, "").replace(/\./g, "").replace(",", ".");
-  if (!cleaned) return null;
-  const number = Number(cleaned);
-  if (!Number.isFinite(number) || number < 0) return null;
-  return Math.round(number * 100);
-}
+export { formatCents, parseEuroToCents } from "@/lib/format/money";

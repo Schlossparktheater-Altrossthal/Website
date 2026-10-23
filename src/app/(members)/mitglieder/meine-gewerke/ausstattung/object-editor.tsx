@@ -251,8 +251,8 @@ export function ObjectEditor({
                 {object.finance.map((entry) => (
                   <div key={entry.id} className="flex justify-between gap-2">
                     <dt className="truncate text-muted-foreground">{entry.title}</dt>
-                    <dd className="tabular-nums">
-                      {entry.amount.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
+                    <dd className={entry.reversed ? "tabular-nums line-through" : "tabular-nums"}>
+                      {formatCents(entry.amountCents)}
                     </dd>
                   </div>
                 ))}

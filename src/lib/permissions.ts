@@ -4,6 +4,7 @@ import { currentCastingWhere, currentDepartmentMembershipWhere } from "@/lib/pro
 import { ROLES, ROLE_LABELS, isAdminRole, sortRoles, type Role } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
 import { TICKET_PERMISSION_KEYS } from "@/lib/karten/constants";
+import { FINANCE_PERMISSION_KEYS } from "@/lib/finance/constants";
 import { isProductionRole } from "@/lib/produktionen/production-role-keys";
 import {
   departmentMembershipWhereForPermission,
@@ -24,7 +25,8 @@ type PermissionCategoryKey =
   | "communication"
   | "services"
   | "inventory"
-  | "tickets";
+  | "tickets"
+  | "finance";
 
 export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> = {
   base: "Allgemeines",
@@ -37,6 +39,7 @@ export const PERMISSION_CATEGORY_LABELS: Record<PermissionCategoryKey, string> =
   services: "Dienste",
   inventory: "Lager",
   tickets: "Kartenverkauf",
+  finance: "Finanzen",
 };
 
 // Permission definition shape
@@ -85,6 +88,20 @@ export const FOOD_PERMISSION_KEYS = {
 } as const;
 
 export const DEFAULT_PERMISSION_DEFINITIONS: PermissionDefinition[] = [
+  {
+    key: FINANCE_PERMISSION_KEYS.manage,
+    label: "Finanzen verwalten (Kassenwart)",
+    description:
+      "Kassenbuch führen, Auslagen freigeben und erstatten, Budgets, Geldtöpfe und Kategorien pflegen, Buchungen festschreiben und stornieren, Berichte exportieren. Sieht IBANs für Erstattungen.",
+    category: "finance",
+  },
+  {
+    key: FINANCE_PERMISSION_KEYS.view,
+    label: "Finanzen einsehen",
+    description:
+      "Kassenbuch, Budgets und Berichte aller Töpfe und Zeiträume lesen und exportieren, z. B. für Vorstand und Kassenprüfung. Keine Änderungen.",
+    category: "finance",
+  },
   {
     key: TICKET_PERMISSION_KEYS.manage,
     label: "Kartenverkauf einrichten",
