@@ -108,6 +108,19 @@ export function ScriptOverview({
     if (tab === "technik") download(cueListCsv(stats, sceneTitles), `${fileBase}-technik.csv`);
   };
 
+  /** Gleicher Abschnitt wie im Skript-PDF, ohne Deckblatt (Rollen, Szenen, Spiegel). */
+  const pdfSection = ({ rollen: "roleStats", szenen: "sceneTable", auftritte: "matrix" } as const)[
+    tab as "rollen" | "szenen" | "auftritte"
+  ];
+  const pdfUrl = () => {
+    const params = new URLSearchParams({ fassung: version.id, teile: pdfSection, deckblatt: "0" });
+    if (settings.roleIds.length) params.set("rollen", settings.roleIds.join(","));
+    if (pdfSection === "sceneTable") params.set("spalten", settings.pdfSceneColumns.join(","));
+    if (pdfSection === "matrix") params.set("matrix", settings.pdfMatrixCell);
+    params.set("download", "1");
+    return `/api/skript/${version.showId}/pdf?${params}`;
+  };
+
   return (
     <div className="min-h-dvh bg-background">
       <div className="sticky top-0 z-30 border-b border-border/60 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -123,6 +136,13 @@ export function ScriptOverview({
               {version.showTitle} · {version.label}
             </p>
           </div>
+          {pdfSection ? (
+            <Button asChild variant="ghost" size="sm">
+              <a href={pdfUrl()} download>
+                <DownloadIcon aria-hidden /> PDF
+              </a>
+            </Button>
+          ) : null}
           <Button variant="ghost" size="sm" onClick={exportCsv}>
             <DownloadIcon aria-hidden /> CSV
           </Button>
