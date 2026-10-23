@@ -36,7 +36,11 @@ export function splitSpeaker(
   }
   let colon = true;
   // führende Striche/Aufzählungszeichen („- ATRÉJU:“) gehören nicht zum Namen
-  let name = lead.trim().replace(/^[-–•*]+\s*/, "");
+  let name = lead
+    .trim()
+    .replace(/^[-–•*]+\s*/, "")
+    // Umbruch am Bindestrich („Anführer- Demonstrant“), aber nicht „Hin- und Rückweg“
+    .replace(/(\p{L})-\s+(?!(?:und|oder|bzw)\b)(\p{L})/gu, "$1-$2");
   const none = { speaker: null, rest: spans, colon: false };
   if (!name) return none;
   if (name.includes(":")) {
