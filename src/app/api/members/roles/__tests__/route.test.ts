@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/rbac", async () => ({
   requireAuth: mocks.requireAuth,
+  getSession: mocks.requireAuth,
   ROLES: (await import("@/lib/roles")).ROLES,
 }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: mocks.hasPermission }));

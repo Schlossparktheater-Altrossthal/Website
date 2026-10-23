@@ -55,7 +55,7 @@ const {
   } as const;
 });
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock }));
+vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock, getSession: requireAuthMock }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: hasPermissionMock }));
 vi.mock("@/lib/sperrliste-settings", () => ({
   HOLIDAY_SOURCE_MODES: ["default", "custom", "disabled"] as const,

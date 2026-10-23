@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   appRoleUpdate: vi.fn(),
 }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: mocks.requireAuth }));
+vi.mock("@/lib/rbac", () => ({ requireAuth: mocks.requireAuth, getSession: mocks.requireAuth }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: mocks.hasPermission }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {

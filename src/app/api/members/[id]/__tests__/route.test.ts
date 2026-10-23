@@ -31,7 +31,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock }));
+vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock, getSession: requireAuthMock }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: hasPermissionMock }));
 vi.mock("@/lib/retention", () => ({ anonymizeAccount: anonymizeAccountMock }));
 vi.mock("@/lib/password", () => ({ hashPassword: vi.fn() }));

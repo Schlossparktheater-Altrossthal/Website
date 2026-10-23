@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession, withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
@@ -12,7 +13,6 @@ import {
 } from "@/lib/sperrliste-settings";
 import { fetchHolidayRangesForSettings } from "@/lib/holidays";
 import { hasPermission } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
 import { sortWeekdays } from "@/lib/weekdays";
 import { databaseEnabled } from "@/lib/dev-database";
 import {
@@ -63,7 +63,7 @@ type PermissionResult =
   | { status: "denied"; response: NextResponse };
 
 async function ensurePermission(): Promise<PermissionResult> {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   if (!databaseEnabled()) {
     return { status: "offline", response: null };
   }
@@ -76,7 +76,7 @@ async function ensurePermission(): Promise<PermissionResult> {
   return { status: "ok", response: null };
 }
 
-export async function GET() {
+export const GET = withRoute({ name: "sperrliste/settings.get" }, async () => {
   const permission = await ensurePermission();
   if (permission.status === "denied" && permission.response) {
     return permission.response;
@@ -110,9 +110,9 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
+export const PUT = withRoute({ name: "sperrliste/settings.put" }, async ({ request }) => {
   const permission = await ensurePermission();
   if (permission.status === "denied" && permission.response) {
     return permission.response;
@@ -218,4 +218,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

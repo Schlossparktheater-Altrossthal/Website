@@ -1,19 +1,13 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { notifyPlannersOfNewBlocks } from "@/lib/calendar/decline-notifications";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import { normaliseReason, reasonSchema, toResponse, EMERGENCY_KIND_MESSAGE } from "../utils";
 import { BlockedDayKind } from "@prisma/client";
 
 type SessionUser = { id?: string } | null | undefined;
-
-type RouteParams = {
-  params: Promise<{
-    id: string;
-  }>;
-};
 
 const updateSchema = z.object({
   reason: reasonSchema,
@@ -22,91 +16,95 @@ const updateSchema = z.object({
 
 type UpdatePayload = z.infer<typeof updateSchema>;
 
-export async function PATCH(request: Request, { params }: RouteParams) {
-  const { id } = await params;
-  const session = await requireAuth();
-  const userId = (session.user as SessionUser)?.id;
+export const PATCH = withRoute<{ id: string }>(
+  { name: "block-days/[id].patch" },
+  async ({ request, session, params }) => {
+    const { id } = params;
+    const userId = (session.user as SessionUser)?.id;
 
-  if (!userId) {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-  }
+    if (!userId) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    }
 
-  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
+    if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
+      return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+    }
 
-  let payload: UpdatePayload;
-  try {
-    const json = await request.json();
-    const parsed = updateSchema.safeParse(json);
-    if (!parsed.success) {
+    let payload: UpdatePayload;
+    try {
+      const json = await request.json();
+      const parsed = updateSchema.safeParse(json);
+      if (!parsed.success) {
+        return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
+      }
+      payload = parsed.data;
+    } catch {
       return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
     }
-    payload = parsed.data;
-  } catch {
-    return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
-  }
 
-  const existing = await prisma.blockedDay.findUnique({ where: { id } });
+    const existing = await prisma.blockedDay.findUnique({ where: { id } });
 
-  if (!existing || existing.userId !== userId) {
-    return NextResponse.json({ error: "Sperrtermin wurde nicht gefunden." }, { status: 404 });
-  }
+    if (!existing || existing.userId !== userId) {
+      return NextResponse.json({ error: "Sperrtermin wurde nicht gefunden." }, { status: 404 });
+    }
 
-  if (payload.kind === BlockedDayKind.EMERGENCY) {
-    return NextResponse.json({ error: EMERGENCY_KIND_MESSAGE }, { status: 403 });
-  }
+    if (payload.kind === BlockedDayKind.EMERGENCY) {
+      return NextResponse.json({ error: EMERGENCY_KIND_MESSAGE }, { status: 403 });
+    }
 
-  const updateData: {
-    reason?: string | null;
-    kind?: BlockedDayKind;
-  } = {};
+    const updateData: {
+      reason?: string | null;
+      kind?: BlockedDayKind;
+    } = {};
 
-  if ("reason" in payload) {
-    updateData.reason = normaliseReason(payload.reason);
-  }
+    if ("reason" in payload) {
+      updateData.reason = normaliseReason(payload.reason);
+    }
 
-  if (payload.kind) {
-    updateData.kind = payload.kind;
-  }
+    if (payload.kind) {
+      updateData.kind = payload.kind;
+    }
 
-  const updated = await prisma.blockedDay.update({
-    where: { id: existing.id },
-    data: updateData,
-  });
+    const updated = await prisma.blockedDay.update({
+      where: { id: existing.id },
+      data: updateData,
+    });
 
-  if (updated.kind === BlockedDayKind.BLOCKED && existing.kind !== BlockedDayKind.BLOCKED) {
-    await notifyPlannersOfNewBlocks(updated.userId, [updated]).catch((error) =>
-      console.error("[block-days:PATCH] Planung nicht benachrichtigt", error),
-    );
-  }
+    if (updated.kind === BlockedDayKind.BLOCKED && existing.kind !== BlockedDayKind.BLOCKED) {
+      await notifyPlannersOfNewBlocks(updated.userId, [updated]).catch((error) =>
+        console.error("[block-days:PATCH] Planung nicht benachrichtigt", error),
+      );
+    }
 
-  return NextResponse.json(toResponse(updated));
-}
+    return NextResponse.json(toResponse(updated));
+  },
+);
 
-export async function DELETE(_: Request, { params }: RouteParams) {
-  const { id } = await params;
-  const session = await requireAuth();
-  const userId = (session.user as SessionUser)?.id;
+export const DELETE = withRoute<{ id: string }>(
+  { name: "block-days/[id].delete" },
+  async ({ session, params }) => {
+    const { id } = params;
+    const userId = (session.user as SessionUser)?.id;
 
-  if (!userId) {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-  }
+    if (!userId) {
+      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
+    }
 
-  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
+    if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
+      return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+    }
 
-  const result = await prisma.blockedDay.deleteMany({
-    where: {
-      id,
-      userId,
-    },
-  });
+    const result = await prisma.blockedDay.deleteMany({
+      where: {
+        id,
+        userId,
+      },
+    });
 
-  if (result.count === 0) {
-    return NextResponse.json({ error: "Sperrtermin wurde nicht gefunden." }, { status: 404 });
-  }
+    if (result.count === 0) {
+      return NextResponse.json({ error: "Sperrtermin wurde nicht gefunden." }, { status: 404 });
+    }
 
-  return NextResponse.json({ success: true });
-}
+    return NextResponse.json({ success: true });
+  },
+);

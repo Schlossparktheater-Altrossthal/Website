@@ -1,7 +1,7 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAuth } from "@/lib/rbac";
 import { INBOX_STATE_ACTIONS, updateInboxState } from "@/lib/notifications/inbox";
 import { NOTIFICATION_CATEGORIES } from "@/lib/notifications/types";
 
@@ -18,11 +18,7 @@ const bodySchema = z
   });
 
 /** Status eigener Benachrichtigungen setzen: gelesen, erledigt, archiviert (und zurück). */
-export async function POST(request: Request) {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-
+export const POST = withRoute({ name: "notifications/state.post" }, async ({ request, userId }) => {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
@@ -36,4 +32,4 @@ export async function POST(request: Request) {
     console.error("[notifications/state] failed", error);
     return NextResponse.json({ error: "Status konnte nicht gespeichert werden." }, { status: 500 });
   }
-}
+});

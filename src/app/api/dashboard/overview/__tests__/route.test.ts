@@ -4,6 +4,8 @@ import { DEV_DASHBOARD_OVERVIEW_FIXTURE } from "@/lib/dev-dashboard-fixture";
 
 const ORIGINAL_ENV = process.env;
 
+vi.mock("@/lib/rbac", () => ({ getSession: async () => ({ user: { id: "dev-user" } }) }));
+
 describe("GET /api/dashboard/overview", () => {
   beforeEach(() => {
     vi.resetModules();

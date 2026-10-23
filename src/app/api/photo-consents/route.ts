@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 import {
   firstConsent,
   loadPreviousPhotoConsent,
@@ -58,8 +58,7 @@ function sanitizeFilename(name: string): string {
   return trimmed.replace(/[^\w. -]+/g, "_");
 }
 
-export async function GET() {
-  const session = await requireAuth();
+export const GET = withRoute({ name: "photo-consents.get" }, async ({ session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -146,10 +145,9 @@ export async function GET() {
   );
 
   return NextResponse.json({ consent: summary });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const session = await requireAuth();
+export const POST = withRoute({ name: "photo-consents.post" }, async ({ request, session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -388,4 +386,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});

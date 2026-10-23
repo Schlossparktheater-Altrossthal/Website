@@ -1,7 +1,7 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { notify } from "@/lib/notifications/notify";
@@ -13,10 +13,8 @@ const requestSchema = z.object({
   mode: z.enum(["normal", "emergency"]),
 });
 
-export async function POST(request: Request) {
+export const POST = withRoute({ name: "notifications/test.post" }, async ({ request, session }) => {
   try {
-    const session = await requireAuth();
-
     const allowed = await hasPermission(session.user, "PRIVATE.SUPPORT.NOTIFICATION.TEST");
     if (!allowed) {
       return NextResponse.json({ error: "Kein Zugriff" }, { status: 403 });
@@ -79,4 +77,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+});

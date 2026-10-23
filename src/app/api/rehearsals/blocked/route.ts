@@ -1,16 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 
 import {
   readDayAvailability,
   readParallelRehearsals,
   readWeekLoad,
 } from "@/lib/calendar/day-availability";
-import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 
-export async function GET(request: NextRequest) {
-  const session = await requireAuth();
+export const GET = withRoute({ name: "rehearsals/blocked.get" }, async ({ request, session }) => {
   const showId = await getActiveProductionId(session.user?.id ?? null);
   const allowed = await hasPermission(session.user, "PRIVATE.REHEARSAL.PLANNING.MANAGE", {
     showId,
@@ -46,4 +45,4 @@ export async function GET(request: NextRequest) {
     weekLoad,
     userIds: Object.keys(availability).filter((userId) => availability[userId] === "blocked"),
   });
-}
+});

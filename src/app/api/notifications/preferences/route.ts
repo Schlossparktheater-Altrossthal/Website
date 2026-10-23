@@ -1,3 +1,4 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -13,14 +14,9 @@ import {
   resolveReminderLead,
 } from "@/lib/notifications/preferences";
 import { NOTIFICATION_CATEGORIES } from "@/lib/notifications/types";
-import { requireAuth } from "@/lib/rbac";
 
 /** Eigene Benachrichtigungs-Einstellungen: Push/E-Mail je Bereich, Zusammenfassung, Ruhezeit, Vorlauf. */
-export async function GET() {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-
+export const GET = withRoute({ name: "notifications/preferences.get" }, async ({ userId }) => {
   const [preferences, settings] = await Promise.all([
     prisma.notificationPreference.findMany({
       where: { userId },
@@ -46,7 +42,7 @@ export async function GET() {
         : null,
     reminderLead: resolveReminderLead(settings?.reminderLead),
   });
-}
+});
 
 const minutes = z
   .number()
@@ -61,50 +57,49 @@ const updateSchema = z.union([
   z.object({ digest: z.enum(DIGEST_MODES) }),
 ]);
 
-export async function PUT(request: Request) {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+export const PUT = withRoute(
+  { name: "notifications/preferences.put" },
+  async ({ request, userId }) => {
+    const parsed = updateSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
 
-  const parsed = updateSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
-
-  if ("emailMode" in parsed.data) {
-    const { category, emailMode } = parsed.data;
-    await prisma.notificationPreference.upsert({
-      where: { userId_category: { userId, category } },
-      create: { userId, category, push: false, emailMode },
-      update: { emailMode },
-    });
-  } else if ("digest" in parsed.data) {
-    const { digest } = parsed.data;
-    await prisma.notificationSettings.upsert({
-      where: { userId },
-      create: { userId, digest },
-      update: { digest },
-    });
-  } else if ("push" in parsed.data) {
-    const { category, push } = parsed.data;
-    await prisma.notificationPreference.upsert({
-      where: { userId_category: { userId, category } },
-      create: { userId, category, push },
-      update: { push },
-    });
-  } else if ("reminderLead" in parsed.data) {
-    const { reminderLead } = parsed.data;
-    await prisma.notificationSettings.upsert({
-      where: { userId },
-      create: { userId, reminderLead },
-      update: { reminderLead },
-    });
-  } else {
-    const quiet = parsed.data.quietHours;
-    const data = { quietStart: quiet?.start ?? null, quietEnd: quiet?.end ?? null };
-    await prisma.notificationSettings.upsert({
-      where: { userId },
-      create: { userId, ...data },
-      update: data,
-    });
-  }
-  return NextResponse.json({ ok: true });
-}
+    if ("emailMode" in parsed.data) {
+      const { category, emailMode } = parsed.data;
+      await prisma.notificationPreference.upsert({
+        where: { userId_category: { userId, category } },
+        create: { userId, category, push: false, emailMode },
+        update: { emailMode },
+      });
+    } else if ("digest" in parsed.data) {
+      const { digest } = parsed.data;
+      await prisma.notificationSettings.upsert({
+        where: { userId },
+        create: { userId, digest },
+        update: { digest },
+      });
+    } else if ("push" in parsed.data) {
+      const { category, push } = parsed.data;
+      await prisma.notificationPreference.upsert({
+        where: { userId_category: { userId, category } },
+        create: { userId, category, push },
+        update: { push },
+      });
+    } else if ("reminderLead" in parsed.data) {
+      const { reminderLead } = parsed.data;
+      await prisma.notificationSettings.upsert({
+        where: { userId },
+        create: { userId, reminderLead },
+        update: { reminderLead },
+      });
+    } else {
+      const quiet = parsed.data.quietHours;
+      const data = { quietStart: quiet?.start ?? null, quietEnd: quiet?.end ?? null };
+      await prisma.notificationSettings.upsert({
+        where: { userId },
+        create: { userId, ...data },
+        update: data,
+      });
+    }
+    return NextResponse.json({ ok: true });
+  },
+);

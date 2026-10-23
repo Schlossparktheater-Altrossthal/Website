@@ -12,7 +12,7 @@ const { requireAuthMock, hasPermissionMock, activeProductionMock, leaveMock, rev
     revalidatePathMock: vi.fn(),
   }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock }));
+vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock, getSession: requireAuthMock }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: hasPermissionMock }));
 vi.mock("@/lib/active-production", () => ({ getActiveProduction: activeProductionMock }));
 vi.mock("@/lib/produktionen/memberships", () => ({ leaveProductionMembership: leaveMock }));

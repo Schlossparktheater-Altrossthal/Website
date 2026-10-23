@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 import { MAX_INTERESTS_PER_USER } from "@/data/profile";
 import { broadcastOnboardingDashboardForUser } from "@/lib/onboarding/dashboard-events";
 import {
@@ -10,8 +10,7 @@ import {
   type NormalizedInterest,
 } from "@/lib/profil/interests";
 
-export async function GET() {
-  const session = await requireAuth();
+export const GET = withRoute({ name: "profile/interests.get" }, async ({ session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -29,10 +28,9 @@ export async function GET() {
       .map((entry) => entry.interest?.name ?? "")
       .filter((name) => Boolean(name?.trim())),
   });
-}
+});
 
-export async function PUT(request: NextRequest) {
-  const session = await requireAuth();
+export const PUT = withRoute({ name: "profile/interests.put" }, async ({ request, session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -92,4 +90,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

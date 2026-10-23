@@ -1,178 +1,181 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, ROLES } from "@/lib/rbac";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
+import { ROLES } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { requestServiceGroupSync } from "@/lib/authentik/service-groups";
 import { sortRoles, type Role, withAutoCast } from "@/lib/roles";
 import { Prisma } from "@prisma/client";
-import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { sanitizeProductionRoles, syncProductionRoles } from "@/lib/produktionen/production-roles";
 
-export async function PUT(request: NextRequest) {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
-  const rawBody: unknown = await request.json().catch(() => null);
+export const PUT = withRoute(
+  { name: "members/roles.put", permission: "PRIVATE.ADMIN.MEMBERS.MANAGE" },
+  async ({ request, session }) => {
+    const rawBody: unknown = await request.json().catch(() => null);
 
-  if (!rawBody || typeof rawBody !== "object") {
-    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
-  }
+    if (!rawBody || typeof rawBody !== "object") {
+      return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+    }
 
-  const { userId, roles, customRoleIds } = rawBody as {
-    userId?: unknown;
-    roles?: unknown;
-    customRoleIds?: unknown;
-  };
+    const { userId, roles, customRoleIds } = rawBody as {
+      userId?: unknown;
+      roles?: unknown;
+      customRoleIds?: unknown;
+    };
 
-  if (typeof userId !== "string" || !Array.isArray(roles)) {
-    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
-  }
+    if (typeof userId !== "string" || !Array.isArray(roles)) {
+      return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
+    }
 
-  const customIds = Array.isArray(customRoleIds)
-    ? Array.from(new Set(customRoleIds)).filter(
-        (v): v is string => typeof v === "string" && v.trim().length > 0,
-      )
-    : [];
+    const customIds = Array.isArray(customRoleIds)
+      ? Array.from(new Set(customRoleIds)).filter(
+          (v): v is string => typeof v === "string" && v.trim().length > 0,
+        )
+      : [];
 
-  const provided = Array.from(new Set(roles)).filter(
-    (role): role is Role => typeof role === "string" && (ROLES as readonly string[]).includes(role),
-  );
+    const provided = Array.from(new Set(roles)).filter(
+      (role): role is Role =>
+        typeof role === "string" && (ROLES as readonly string[]).includes(role),
+    );
 
-  if (provided.length === 0) {
-    return NextResponse.json({ error: "Mindestens eine Rolle erforderlich" }, { status: 400 });
-  }
+    if (provided.length === 0) {
+      return NextResponse.json({ error: "Mindestens eine Rolle erforderlich" }, { status: 400 });
+    }
 
-  const orderedRoles = withAutoCast(sortRoles(provided));
+    const orderedRoles = withAutoCast(sortRoles(provided));
 
-  // Guard: Admins cannot assign or remove the owner role
-  const actorRoles = new Set(
-    session.user?.roles ?? (session.user?.role ? [session.user.role] : []),
-  );
-  const actorIsOwner = actorRoles.has("owner");
-  const assignsOwner = orderedRoles.includes("owner");
-  if (assignsOwner && !actorIsOwner) {
-    return NextResponse.json({ error: "Nur Owner dürfen Owner zuweisen" }, { status: 403 });
-  }
+    // Guard: Admins cannot assign or remove the owner role
+    const actorRoles = new Set(
+      session.user?.roles ?? (session.user?.role ? [session.user.role] : []),
+    );
+    const actorIsOwner = actorRoles.has("owner");
+    const assignsOwner = orderedRoles.includes("owner");
+    if (assignsOwner && !actorIsOwner) {
+      return NextResponse.json({ error: "Nur Owner dürfen Owner zuweisen" }, { status: 403 });
+    }
 
-  // We need target user's current roles to detect owner removal
-  const target = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      role: true,
-      roles: { select: { role: true } },
-    },
-  });
-  if (!target) {
-    return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
-  }
-  const beforeRoles = sortRoles([target.role as Role, ...target.roles.map((r) => r.role as Role)]);
-  const hadOwnerBefore = beforeRoles.includes("owner");
-  const willHaveOwnerAfter = orderedRoles.includes("owner");
-  if (hadOwnerBefore && !willHaveOwnerAfter) {
-    // Prevent removing last owner
-    const ownersCount = await prisma.userRole.count({ where: { role: "owner" } });
-    const isLastOwner = ownersCount <= 1; // only this user has owner
-    if (isLastOwner) {
+    // We need target user's current roles to detect owner removal
+    const target = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        roles: { select: { role: true } },
+      },
+    });
+    if (!target) {
+      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+    }
+    const beforeRoles = sortRoles([
+      target.role as Role,
+      ...target.roles.map((r) => r.role as Role),
+    ]);
+    const hadOwnerBefore = beforeRoles.includes("owner");
+    const willHaveOwnerAfter = orderedRoles.includes("owner");
+    if (hadOwnerBefore && !willHaveOwnerAfter) {
+      // Prevent removing last owner
+      const ownersCount = await prisma.userRole.count({ where: { role: "owner" } });
+      const isLastOwner = ownersCount <= 1; // only this user has owner
+      if (isLastOwner) {
+        return NextResponse.json(
+          { error: "Es muss immer mindestens einen Owner geben" },
+          { status: 400 },
+        );
+      }
+      if (!actorIsOwner) {
+        return NextResponse.json({ error: "Nur Owner dürfen Owner entfernen" }, { status: 403 });
+      }
+    }
+
+    // Ensemble/Technik gelten pro Produktion (E1): Sie landen in der Mitgliedschaft der
+    // aktuell ausgewählten Produktion, die globalen Rollen werden daraus abgeleitet.
+    const requestedProductionRoles = sanitizeProductionRoles(provided);
+    const beforeProductionRoles = sanitizeProductionRoles(beforeRoles);
+    const productionRolesChanged =
+      requestedProductionRoles.join(",") !== beforeProductionRoles.join(",");
+    const activeShowId = productionRolesChanged
+      ? await getActiveProductionId(session.user?.id ?? null)
+      : null;
+    if (productionRolesChanged && !activeShowId) {
       return NextResponse.json(
-        { error: "Es muss immer mindestens einen Owner geben" },
+        {
+          error:
+            "Ensemble- und Technik-Rollen gelten pro Produktion. Bitte wähle zuerst eine Produktion aus.",
+        },
         { status: 400 },
       );
     }
-    if (!actorIsOwner) {
-      return NextResponse.json({ error: "Nur Owner dürfen Owner entfernen" }, { status: 403 });
-    }
-  }
 
-  // Ensemble/Technik gelten pro Produktion (E1): Sie landen in der Mitgliedschaft der
-  // aktuell ausgewählten Produktion, die globalen Rollen werden daraus abgeleitet.
-  const requestedProductionRoles = sanitizeProductionRoles(provided);
-  const beforeProductionRoles = sanitizeProductionRoles(beforeRoles);
-  const productionRolesChanged =
-    requestedProductionRoles.join(",") !== beforeProductionRoles.join(",");
-  const activeShowId = productionRolesChanged
-    ? await getActiveProductionId(session.user?.id ?? null)
-    : null;
-  if (productionRolesChanged && !activeShowId) {
-    return NextResponse.json(
-      {
-        error:
-          "Ensemble- und Technik-Rollen gelten pro Produktion. Bitte wähle zuerst eine Produktion aus.",
-      },
-      { status: 400 },
-    );
-  }
+    // Keep legacy primary role field for compatibility (highest role)
+    const primaryRole = orderedRoles[orderedRoles.length - 1];
 
-  // Keep legacy primary role field for compatibility (highest role)
-  const primaryRole = orderedRoles[orderedRoles.length - 1];
-
-  try {
-    const updated = await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          role: primaryRole,
-          roles: {
-            deleteMany: {},
-            create: orderedRoles.map((role) => ({ role })),
-          },
-          appRoles: {
-            deleteMany: {},
-            create: customIds.map((rid) => ({ roleId: rid })),
-          },
-        },
-      });
-      if (activeShowId) {
-        await tx.productionMembership.upsert({
-          where: { showId_userId: { showId: activeShowId, userId } },
-          update: { roles: requestedProductionRoles },
-          create: {
-            showId: activeShowId,
-            userId,
-            status: "active",
-            roles: requestedProductionRoles,
+    try {
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            role: primaryRole,
+            roles: {
+              deleteMany: {},
+              create: orderedRoles.map((role) => ({ role })),
+            },
+            appRoles: {
+              deleteMany: {},
+              create: customIds.map((rid) => ({ roleId: rid })),
+            },
           },
         });
-      }
-      await syncProductionRoles([userId], tx);
-      return tx.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          name: true,
-          role: true,
-          roles: { select: { role: true } },
-          appRoles: { select: { role: { select: { id: true, name: true } } } },
-        },
+        if (activeShowId) {
+          await tx.productionMembership.upsert({
+            where: { showId_userId: { showId: activeShowId, userId } },
+            update: { roles: requestedProductionRoles },
+            create: {
+              showId: activeShowId,
+              userId,
+              status: "active",
+              roles: requestedProductionRoles,
+            },
+          });
+        }
+        await syncProductionRoles([userId], tx);
+        return tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            name: true,
+            role: true,
+            roles: { select: { role: true } },
+            appRoles: { select: { role: { select: { id: true, name: true } } } },
+          },
+        });
       });
-    });
 
-    const allRoles = sortRoles([updated.role, ...updated.roles.map((r) => r.role as Role)]);
-    requestServiceGroupSync();
+      const allRoles = sortRoles([updated.role, ...updated.roles.map((r) => r.role as Role)]);
+      requestServiceGroupSync();
 
-    return NextResponse.json({
-      ok: true,
-      user: {
-        id: updated.id,
-        email: updated.email,
-        firstName: updated.firstName,
-        lastName: updated.lastName,
-        name: updated.name,
+      return NextResponse.json({
+        ok: true,
+        user: {
+          id: updated.id,
+          email: updated.email,
+          firstName: updated.firstName,
+          lastName: updated.lastName,
+          name: updated.name,
+          roles: allRoles,
+          customRoles: updated.appRoles.map((ar) => ar.role),
+        },
         roles: allRoles,
         customRoles: updated.appRoles.map((ar) => ar.role),
-      },
-      roles: allRoles,
-      customRoles: updated.appRoles.map((ar) => ar.role),
-    });
-  } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return NextResponse.json({ error: "Benutzer wurde nicht gefunden" }, { status: 404 });
+      });
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        return NextResponse.json({ error: "Benutzer wurde nicht gefunden" }, { status: 404 });
+      }
+      console.error("[members] Aktualisierung fehlgeschlagen", error);
+      return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
     }
-    console.error("[members] Aktualisierung fehlgeschlagen", error);
-    return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
-  }
-}
+  },
+);

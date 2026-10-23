@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession, withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
@@ -9,7 +10,6 @@ import {
 } from "../theme-schemas";
 
 import { hasPermission } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
 import {
   LockedWebsiteThemeError,
   ensureWebsiteSettingsRecord,
@@ -55,7 +55,7 @@ const updateSchema = z.object({
  * PRIVATE.ADMIN.PAGES.MANAGE, Theme/Branding zu PRIVATE.SETTINGS.THEME.MANAGE.
  */
 async function ensureAnyPermission() {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   const canManageWebsite = await hasPermission(session.user, "PRIVATE.SETTINGS.THEME.MANAGE");
   const canManagePages = await hasPermission(session.user, "PRIVATE.ADMIN.PAGES.MANAGE");
   if (!canManageWebsite && !canManagePages) {
@@ -65,7 +65,7 @@ async function ensureAnyPermission() {
 }
 
 async function ensureThemePermission() {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   if (!(await hasPermission(session.user, "PRIVATE.SETTINGS.THEME.MANAGE"))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
@@ -73,14 +73,14 @@ async function ensureThemePermission() {
 }
 
 async function ensurePagesPermission() {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PAGES.MANAGE"))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
   return null;
 }
 
-export async function GET() {
+export const GET = withRoute({ name: "website/settings.get" }, async () => {
   const permissionResponse = await ensureAnyPermission();
   if (permissionResponse) {
     return permissionResponse;
@@ -101,9 +101,9 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
+export const PUT = withRoute({ name: "website/settings.put" }, async ({ request }) => {
   const permissionResponse = await ensureAnyPermission();
   if (permissionResponse) {
     return permissionResponse;
@@ -202,4 +202,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

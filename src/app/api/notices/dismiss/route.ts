@@ -1,18 +1,12 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { noticeKeySchema, saveNoticeDismissal } from "@/lib/notice-dismissals";
-import { requireAuth } from "@/lib/rbac";
 
 const bodySchema = z.object({ key: noticeKeySchema });
 
-export async function POST(request: Request) {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-  }
-
+export const POST = withRoute({ name: "notices/dismiss.post" }, async ({ request, userId }) => {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Ungültiger Hinweis" }, { status: 400 });
@@ -28,4 +22,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+});

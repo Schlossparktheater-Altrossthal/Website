@@ -1,9 +1,9 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { readVapidConfig } from "@/lib/notifications/push";
-import { requireAuth } from "@/lib/rbac";
 
 const subscriptionSchema = z.object({
   endpoint: z.string().url().max(2000),
@@ -12,24 +12,17 @@ const subscriptionSchema = z.object({
 });
 
 /** Öffentlicher VAPID-Schlüssel und die Geräte der angemeldeten Person. */
-export async function GET() {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-
+export const GET = withRoute({ name: "push/subscription.get" }, async ({ userId }) => {
   const devices = await prisma.pushSubscription.findMany({
     where: { userId },
     select: { id: true, endpoint: true, label: true, createdAt: true, lastUsedAt: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ publicKey: readVapidConfig()?.publicKey ?? null, devices });
-}
+});
 
 /** Push-Abo dieses Geräts speichern (ein Endpoint gehört immer der zuletzt angemeldeten Person). */
-export async function POST(request: Request) {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+export const POST = withRoute({ name: "push/subscription.post" }, async ({ request, userId }) => {
   if (!readVapidConfig()) {
     return NextResponse.json(
       { error: "Push ist auf diesem Server nicht eingerichtet." },
@@ -49,7 +42,7 @@ export async function POST(request: Request) {
     update: data,
   });
   return NextResponse.json({ ok: true });
-}
+});
 
 const deleteSchema = z.union([
   z.object({ endpoint: z.string().min(1) }),
@@ -57,19 +50,20 @@ const deleteSchema = z.union([
 ]);
 
 /** Abo entfernen – per Endpoint (dieses Gerät) oder ID (Geräteliste). */
-export async function DELETE(request: Request) {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+export const DELETE = withRoute(
+  { name: "push/subscription.delete" },
+  async ({ request, userId }) => {
+    const parsed = deleteSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
 
-  const parsed = deleteSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
-
-  const { count } = await prisma.pushSubscription.deleteMany({
-    where: {
-      userId,
-      ...("endpoint" in parsed.data ? { endpoint: parsed.data.endpoint } : { id: parsed.data.id }),
-    },
-  });
-  return NextResponse.json({ ok: true, removed: count });
-}
+    const { count } = await prisma.pushSubscription.deleteMany({
+      where: {
+        userId,
+        ...("endpoint" in parsed.data
+          ? { endpoint: parsed.data.endpoint }
+          : { id: parsed.data.id }),
+      },
+    });
+    return NextResponse.json({ ok: true, removed: count });
+  },
+);

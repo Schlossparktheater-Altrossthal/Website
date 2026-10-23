@@ -1,8 +1,8 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { Prisma, BlockedDayKind } from "@prisma/client";
 import { notifyPlannersOfNewBlocks } from "@/lib/calendar/decline-notifications";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { z } from "zod";
 import { databaseEnabled } from "@/lib/dev-database";
@@ -30,8 +30,7 @@ const blockDaySchema = z.object({
 
 type BlockDayPayload = z.infer<typeof blockDaySchema>;
 
-export async function GET() {
-  const session = await requireAuth();
+export const GET = withRoute({ name: "block-days.get" }, async ({ session }) => {
   const userId = (session.user as SessionUser)?.id;
 
   if (!userId) {
@@ -61,7 +60,7 @@ export async function GET() {
     offline: false,
     blockedDays: entries.map(toResponse),
   });
-}
+});
 
 function formatFreezeDate(date: Date) {
   try {
@@ -76,8 +75,7 @@ function formatFreezeDate(date: Date) {
   }
 }
 
-export async function POST(request: Request) {
-  const session = await requireAuth();
+export const POST = withRoute({ name: "block-days.post" }, async ({ request, session }) => {
   const userId = (session.user as SessionUser)?.id;
 
   if (!userId) {
@@ -177,4 +175,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
+});

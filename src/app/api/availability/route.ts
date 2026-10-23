@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/rbac";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 function sanitizeAvailabilityMinute(value: unknown): number | null | undefined {
@@ -14,13 +14,8 @@ function sanitizeAvailabilityMinute(value: unknown): number | null | undefined {
   return value;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ name: "availability.post" }, async ({ request, userId }) => {
   try {
-    const session = await requireAuth();
-    const userId = session.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-    }
     const { date, kind, availableFromMin, availableToMin, note } = await request.json();
 
     if (!date || !kind || !["FULL_AVAILABLE", "FULL_UNAVAILABLE", "PARTIAL"].includes(kind)) {
@@ -88,4 +83,4 @@ export async function POST(request: NextRequest) {
     console.error("Error updating availability:", error);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
-}
+});

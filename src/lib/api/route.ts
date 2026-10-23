@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { Session } from "next-auth";
 import type { z } from "zod";
 
@@ -26,7 +26,7 @@ export class HttpError extends Error {
 export type AuthedSession = Session & { user: NonNullable<Session["user"]> & { id: string } };
 
 export type RouteContext<P> = {
-  request: Request;
+  request: NextRequest;
   session: AuthedSession;
   userId: string;
   params: P;
@@ -48,8 +48,14 @@ export function withRoute<P = Record<string, never>>(
   options: RouteOptions,
   handler: (context: RouteContext<P>) => Promise<Response | unknown>,
 ) {
-  return async (request: Request, segment?: { params?: Promise<P> }): Promise<Response> => {
+  return async (request?: Request, segment?: { params?: Promise<P> }): Promise<Response> => {
     try {
+      const nextRequest =
+        request instanceof NextRequest
+          ? request
+          : request instanceof Request
+            ? new NextRequest(request)
+            : ((request ?? new NextRequest("http://localhost/")) as NextRequest);
       const session = await getSession({ allowImpersonation: options.allowImpersonation });
       const userId = session?.user?.id;
       if (!session?.user || !userId) throw new HttpError(401, "Nicht autorisiert");
@@ -60,7 +66,7 @@ export function withRoute<P = Record<string, never>>(
 
       const params = ((await segment?.params) ?? {}) as P;
       const result = await handler({
-        request,
+        request: nextRequest,
         session: session as AuthedSession,
         userId,
         params,
@@ -70,6 +76,7 @@ export function withRoute<P = Record<string, never>>(
       if (error instanceof HttpError) {
         return NextResponse.json({ error: error.message }, { status: error.status });
       }
+      console.error(`[${options.name}] Unerwarteter Fehler`, error);
       void logger.error(`[${options.name}] Unerwarteter Fehler`, {
         error: error instanceof Error ? error.message : String(error),
       });
@@ -92,4 +99,15 @@ export async function parseJson<S extends z.ZodType>(
     throw new HttpError(400, parsed.error.issues[0]?.message ?? "Ungültige Eingaben.");
   }
   return parsed.data;
+}
+
+/**
+ * Sitzung für Hilfsfunktionen innerhalb von `withRoute` (z. B. eigene Rechteprüfungen).
+ * Wirft `HttpError` statt umzuleiten; `withRoute` macht daraus 401/403.
+ */
+export async function requireApiSession(): Promise<AuthedSession> {
+  const session = await getSession();
+  if (!session?.user?.id) throw new HttpError(401, "Nicht autorisiert");
+  if (session.user.isDeactivated) throw new HttpError(403, "Konto deaktiviert");
+  return session as AuthedSession;
 }

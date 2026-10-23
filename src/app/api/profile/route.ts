@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/rbac";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { getAuthentikAccountLinks } from "@/lib/authentik/config";
@@ -169,8 +169,7 @@ function parseBooleanFlag(value: unknown): boolean {
   return value === true;
 }
 
-export async function GET() {
-  const session = await requireAuth();
+export const GET = withRoute({ name: "profile.get" }, async ({ session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -223,10 +222,9 @@ export async function GET() {
     payoutPaypalHandle: user.payoutPaypalHandle ?? null,
     payoutNote: user.payoutNote ?? null,
   });
-}
+});
 
-export async function PUT(request: NextRequest) {
-  const session = await requireAuth();
+export const PUT = withRoute({ name: "profile.put" }, async ({ request, session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -762,7 +760,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
   }
-}
+});
 
 function extractErrorCode(error: unknown): string | undefined {
   if (typeof error === "object" && error !== null && "code" in error) {

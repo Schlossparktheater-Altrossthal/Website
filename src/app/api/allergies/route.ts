@@ -1,10 +1,10 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 
 import { normalizeDietaryLabel } from "@/data/allergens";
 import { resolveRestrictionTaxonCode } from "@/lib/food/restriction-store";
 import { allergyInputSchema, firstIssueMessage } from "@/lib/profil/dietary-validation";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 
 /**
  * Findet den Eintrag, der sich nur in der Schreibweise unterscheidet: „Erdnüsse", „erdnüsse" und
@@ -21,9 +21,8 @@ async function findExistingAllergy(userId: string, allergen: string) {
 }
 
 // GET: Hole alle Allergien eines Benutzers
-export async function GET() {
+export const GET = withRoute({ name: "allergies.get" }, async ({ session }) => {
   try {
-    const session = await requireAuth();
     const userId = session.user?.id;
 
     if (!userId) {
@@ -43,17 +42,11 @@ export async function GET() {
     console.error("[Allergies] Failed to load allergies", error);
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-}
+});
 
 // POST: Füge eine neue Allergie hinzu oder aktualisiere eine bestehende
-export async function POST(request: Request) {
+export const POST = withRoute({ name: "allergies.post" }, async ({ request, userId }) => {
   try {
-    const session = await requireAuth();
-    const userId = session.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-    }
-
     const payload = await request.json().catch(() => null);
     const parsed = allergyInputSchema.safeParse(payload);
     if (!parsed.success) {
@@ -86,16 +79,11 @@ export async function POST(request: Request) {
     console.error("[Allergies] Failed to upsert allergy", error);
     return NextResponse.json({ error: "Fehler beim Speichern der Allergie" }, { status: 500 });
   }
-}
+});
 
 // DELETE: Deaktiviere eine Allergie (soft delete)
-export async function DELETE(request: Request) {
+export const DELETE = withRoute({ name: "allergies.delete" }, async ({ request, userId }) => {
   try {
-    const session = await requireAuth();
-    const userId = session.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-    }
     const { searchParams } = new URL(request.url);
     const allergen = searchParams.get("allergen");
 
@@ -118,4 +106,4 @@ export async function DELETE(request: Request) {
     console.error("[Allergies] Failed to deactivate allergy", error);
     return NextResponse.json({ error: "Fehler beim Deaktivieren der Allergie" }, { status: 500 });
   }
-}
+});

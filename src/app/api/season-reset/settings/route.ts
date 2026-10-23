@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession, withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import {
   readSeasonResetSettings,
@@ -16,22 +16,22 @@ const updateSchema = z.object({
 });
 
 async function ensurePermission(): Promise<NextResponse | null> {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
   return null;
 }
 
-export async function GET() {
+export const GET = withRoute({ name: "season-reset/settings.get" }, async () => {
   const denied = await ensurePermission();
   if (denied) return denied;
 
   const record = await readSeasonResetSettings();
   return NextResponse.json({ protectedRoles: resolveProtectedRoles(record) });
-}
+});
 
-export async function PUT(request: NextRequest) {
+export const PUT = withRoute({ name: "season-reset/settings.put" }, async ({ request }) => {
   const denied = await ensurePermission();
   if (denied) return denied;
 
@@ -45,4 +45,4 @@ export async function PUT(request: NextRequest) {
 
   const record = await readSeasonResetSettings();
   return NextResponse.json({ protectedRoles: resolveProtectedRoles(record) });
-}
+});

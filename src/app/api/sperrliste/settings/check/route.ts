@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession, withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
@@ -12,7 +13,6 @@ import {
 } from "@/lib/sperrliste-settings";
 import { fetchHolidayRangesForSettings, isHolidaySourceUrlAllowed } from "@/lib/holidays";
 import { hasPermission } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
 import { databaseEnabled } from "@/lib/dev-database";
 
 const checkSchema = z.object({
@@ -27,7 +27,7 @@ const checkSchema = z.object({
 });
 
 async function ensurePermission() {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   if (!databaseEnabled()) {
     return NextResponse.json(
       { error: "Ferienquellen können im Offline-Demo-Modus nicht geprüft werden." },
@@ -97,7 +97,7 @@ function buildCandidateSettings(
   };
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ name: "sperrliste/settings/check.post" }, async ({ request }) => {
   const permissionResponse = await ensurePermission();
   if (permissionResponse) {
     return permissionResponse;
@@ -161,4 +161,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

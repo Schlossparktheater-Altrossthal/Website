@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
-import { hasPermission } from "@/lib/permissions";
 
 const MAX_SIZE = 8 * 1024 * 1024; // 8 MB
 const TEMPLATE_FILENAME = "einverstaendnis-eltern.pdf";
@@ -11,9 +10,7 @@ function sanitizeForHeader(value: string): string {
   return value.replace(/"/g, "").replace(/\r|\n/g, "");
 }
 
-export async function GET() {
-  await requireAuth();
-
+export const GET = withRoute({ name: "photo-consents/parental-template.get" }, async () => {
   const settings = await prisma.serverSettings.findUnique({
     where: { id: "default" },
     select: {
@@ -39,83 +36,80 @@ export async function GET() {
       "Cache-Control": "no-store",
     },
   });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
+export const POST = withRoute(
+  {
+    name: "photo-consents/parental-template.post",
+    permission: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
+  },
+  async ({ request, userId }) => {
+    const formData = await request.formData().catch(() => null);
+    if (!formData) {
+      return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
+    }
 
-  const formData = await request.formData().catch(() => null);
-  if (!formData) {
-    return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
-  }
+    const file = formData.get("template");
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Datei fehlt" }, { status: 400 });
+    }
 
-  const file = formData.get("template");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Datei fehlt" }, { status: 400 });
-  }
+    if (file.type !== "application/pdf") {
+      return NextResponse.json({ error: "Nur PDF-Dateien sind erlaubt" }, { status: 400 });
+    }
 
-  if (file.type !== "application/pdf") {
-    return NextResponse.json({ error: "Nur PDF-Dateien sind erlaubt" }, { status: 400 });
-  }
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: "Datei zu groß (max 8 MB)" }, { status: 400 });
+    }
 
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: "Datei zu groß (max 8 MB)" }, { status: 400 });
-  }
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileName = file.name || TEMPLATE_FILENAME;
+    const now = new Date();
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const fileName = file.name || TEMPLATE_FILENAME;
-  const now = new Date();
+    await prisma.serverSettings.upsert({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        parentalConsentData: buffer,
+        parentalConsentName: fileName,
+        parentalConsentMime: file.type,
+        parentalConsentSize: file.size,
+        parentalConsentUploadedAt: now,
+        parentalConsentUploadedBy: { connect: { id: userId } },
+      },
+      update: {
+        parentalConsentData: buffer,
+        parentalConsentName: fileName,
+        parentalConsentMime: file.type,
+        parentalConsentSize: file.size,
+        parentalConsentUploadedAt: now,
+        parentalConsentUploadedBy: { connect: { id: userId } },
+      },
+    });
 
-  const userId = session.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "Ungültige Sitzung" }, { status: 401 });
-  }
+    return NextResponse.json({ success: true });
+  },
+);
 
-  await prisma.serverSettings.upsert({
-    where: { id: "default" },
-    create: {
-      id: "default",
-      parentalConsentData: buffer,
-      parentalConsentName: fileName,
-      parentalConsentMime: file.type,
-      parentalConsentSize: file.size,
-      parentalConsentUploadedAt: now,
-      parentalConsentUploadedBy: { connect: { id: userId } },
-    },
-    update: {
-      parentalConsentData: buffer,
-      parentalConsentName: fileName,
-      parentalConsentMime: file.type,
-      parentalConsentSize: file.size,
-      parentalConsentUploadedAt: now,
-      parentalConsentUploadedBy: { connect: { id: userId } },
-    },
-  });
+export const DELETE = withRoute(
+  {
+    name: "photo-consents/parental-template.delete",
+    permission: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE",
+  },
+  async () => {
+    await prisma.serverSettings.upsert({
+      where: { id: "default" },
+      create: { id: "default" },
+      update: {
+        parentalConsentData: null,
+        parentalConsentName: null,
+        parentalConsentMime: null,
+        parentalConsentSize: null,
+        parentalConsentUploadedAt: null,
+        parentalConsentUploadedById: null,
+      },
+    });
 
-  return NextResponse.json({ success: true });
-}
-
-export async function DELETE() {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
-
-  await prisma.serverSettings.upsert({
-    where: { id: "default" },
-    create: { id: "default" },
-    update: {
-      parentalConsentData: null,
-      parentalConsentName: null,
-      parentalConsentMime: null,
-      parentalConsentSize: null,
-      parentalConsentUploadedAt: null,
-      parentalConsentUploadedById: null,
-    },
-  });
-
-  return NextResponse.json({ success: true });
-}
+    return NextResponse.json({ success: true });
+  },
+);

@@ -1,3 +1,4 @@
+import { requireApiSession, withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { FeedScope } from "@prisma/client";
@@ -9,7 +10,6 @@ import {
   FEED_PREFIXES,
 } from "@/lib/calendar/feed";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 
 type FeedRecord = {
   token: string;
@@ -36,21 +36,21 @@ function toResponse(feed: FeedRecord | null) {
 }
 
 async function currentUserId() {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   return session.user?.id ?? null;
 }
 
 const unauthorized = () => NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
 
 /** Eigener Kalender-Link (oder `null`, solange keiner erzeugt wurde). */
-export async function GET() {
+export const GET = withRoute({ name: "calendar/feed.get" }, async () => {
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   return toResponse(await prisma.calendarFeed.findUnique({ where: { userId } }));
-}
+});
 
 /** Link erzeugen oder ersetzen – ein alter Link ist danach ungültig, Einstellungen bleiben. */
-export async function POST() {
+export const POST = withRoute({ name: "calendar/feed.post" }, async () => {
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const token = generateFeedToken();
@@ -60,7 +60,7 @@ export async function POST() {
     update: { token, lastAccessedAt: null },
   });
   return toResponse(feed);
-}
+});
 
 const patchSchema = z
   .object({
@@ -78,7 +78,7 @@ const patchSchema = z
   })
   .partial();
 
-export async function PATCH(request: Request) {
+export const PATCH = withRoute({ name: "calendar/feed.patch" }, async ({ request }) => {
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
@@ -94,12 +94,12 @@ export async function PATCH(request: Request) {
     data: parsed.data,
   });
   return toResponse(feed);
-}
+});
 
 /** Link abschalten. */
-export async function DELETE() {
+export const DELETE = withRoute({ name: "calendar/feed.delete" }, async () => {
   const userId = await currentUserId();
   if (!userId) return unauthorized();
   await prisma.calendarFeed.deleteMany({ where: { userId } });
   return toResponse(null);
-}
+});

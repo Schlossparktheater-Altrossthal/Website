@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { canEditMeasurementsOf, isEnsembleMember } from "@/lib/measurements/access";
-import { requireAuth } from "@/lib/rbac";
 import { measurementSchema } from "@/data/measurements";
 import type {
   MeasurementType as PrismaMeasurementType,
@@ -14,9 +14,8 @@ const measurementRequestSchema = measurementSchema.extend({
 });
 
 // GET: Hole alle Maße eines Benutzers
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ name: "measurements.get" }, async ({ request, session }) => {
   try {
-    const session = await requireAuth();
     const userId = session.user?.id;
 
     if (!userId) {
@@ -40,12 +39,11 @@ export async function GET(request: NextRequest) {
     console.error("[Measurements] Failed to load measurements", error);
     return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
   }
-}
+});
 
 // POST: Füge ein neues Maß hinzu oder aktualisiere ein bestehendes
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ name: "measurements.post" }, async ({ request, session }) => {
   try {
-    const session = await requireAuth();
     const userId = session.user?.id;
 
     if (!userId) {
@@ -111,12 +109,11 @@ export async function POST(request: NextRequest) {
     console.error("[Measurements] Failed to save measurement", error);
     return NextResponse.json({ error: "Fehler beim Speichern der Maße" }, { status: 500 });
   }
-}
+});
 
 // DELETE: Entferne ein einzelnes Maß (?id=...)
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRoute({ name: "measurements.delete" }, async ({ request, session }) => {
   try {
-    const session = await requireAuth();
     const id = request.nextUrl.searchParams.get("id");
     if (!session.user?.id || !id) {
       return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
@@ -140,4 +137,4 @@ export async function DELETE(request: NextRequest) {
     console.error("[Measurements] Failed to delete measurement", error);
     return NextResponse.json({ error: "Fehler beim Löschen des Maßes" }, { status: 500 });
   }
-}
+});

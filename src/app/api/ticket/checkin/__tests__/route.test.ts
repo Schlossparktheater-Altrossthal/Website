@@ -18,6 +18,7 @@ const {
 
 vi.mock("@/lib/rbac", () => ({
   requireAuth: requireAuthMock,
+  getSession: requireAuthMock,
 }));
 
 vi.mock("@/lib/permissions", () => ({

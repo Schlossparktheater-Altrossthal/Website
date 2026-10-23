@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession, withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
@@ -9,7 +10,6 @@ import {
 } from "../theme-schemas";
 
 import { hasPermission } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
 import { resolveThemeImport } from "@/lib/theme/import";
 import { ThemeImportError } from "@/lib/theme/tweakcn";
 import {
@@ -28,14 +28,14 @@ const createThemeSchema = z
   .optional();
 
 async function ensurePermission() {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   if (!(await hasPermission(session.user, "PRIVATE.SETTINGS.THEME.MANAGE"))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
   return null;
 }
 
-export async function GET() {
+export const GET = withRoute({ name: "website/themes.get" }, async () => {
   const permissionResponse = await ensurePermission();
   if (permissionResponse) {
     return permissionResponse;
@@ -52,9 +52,9 @@ export async function GET() {
     console.error("Failed to list website themes", error);
     return NextResponse.json({ error: "Themes konnten nicht geladen werden." }, { status: 500 });
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ name: "website/themes.post" }, async ({ request }) => {
   const permissionResponse = await ensurePermission();
   if (permissionResponse) {
     return permissionResponse;
@@ -111,4 +111,4 @@ export async function POST(request: NextRequest) {
     console.error("Failed to create website theme", error);
     return NextResponse.json({ error: "Theme konnte nicht erstellt werden." }, { status: 500 });
   }
-}
+});

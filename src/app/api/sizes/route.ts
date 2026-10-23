@@ -1,19 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { sizeSchema } from "@/data/sizes";
 import { canEditMeasurementsOf, isEnsembleMember } from "@/lib/measurements/access";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 
 const sizeRequestSchema = sizeSchema.extend({ userId: z.string().min(1).optional() });
 
 const FORBIDDEN = { error: "Du darfst die Größen dieser Person nicht bearbeiten." };
 
 // POST: Konfektionsgröße einer Kategorie setzen oder ändern
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ name: "sizes.post" }, async ({ request, session }) => {
   try {
-    const session = await requireAuth();
     const viewerId = session.user?.id;
     if (!viewerId) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
 
@@ -51,12 +50,11 @@ export async function POST(request: NextRequest) {
     console.error("[Sizes] Failed to save size", error);
     return NextResponse.json({ error: "Fehler beim Speichern der Größe" }, { status: 500 });
   }
-}
+});
 
 // DELETE: Konfektionsgröße entfernen (?id=...)
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRoute({ name: "sizes.delete" }, async ({ request, session }) => {
   try {
-    const session = await requireAuth();
     const id = request.nextUrl.searchParams.get("id");
     if (!session.user?.id || !id) {
       return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
@@ -72,4 +70,4 @@ export async function DELETE(request: NextRequest) {
     console.error("[Sizes] Failed to delete size", error);
     return NextResponse.json({ error: "Fehler beim Löschen der Größe" }, { status: 500 });
   }
-}
+});

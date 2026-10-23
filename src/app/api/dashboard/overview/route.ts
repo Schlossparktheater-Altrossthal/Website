@@ -1,8 +1,8 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 
 import { endOfWeek, startOfWeek } from "date-fns";
 
-import { requireAuth } from "@/lib/rbac";
 import { CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";
@@ -28,13 +28,12 @@ type MembershipSummary = {
   isActive: boolean;
 };
 
-export async function GET() {
+export const GET = withRoute({ name: "dashboard/overview.get" }, async ({ session }) => {
   if (!databaseEnabled()) {
     return NextResponse.json(DEV_DASHBOARD_OVERVIEW_FIXTURE);
   }
 
   try {
-    const session = await requireAuth();
     const userId = session.user?.id;
 
     if (!userId) {
@@ -362,4 +361,4 @@ export async function GET() {
     console.error("[Dashboard API] Error loading overview:", error);
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 });
   }
-}
+});

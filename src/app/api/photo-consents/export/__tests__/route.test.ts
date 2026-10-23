@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   renderPdfTemplate: vi.fn(),
 }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: async () => ({ user: { id: "u" } }) }));
+vi.mock("@/lib/rbac", () => ({
+  requireAuth: async () => ({ user: { id: "u" } }),
+  getSession: async () => ({ user: { id: "u" } }),
+}));
 vi.mock("@/lib/permissions", () => ({ hasPermission: mocks.hasPermission }));
 vi.mock("@/lib/prisma", () => ({ prisma: { show: { findUnique: mocks.showFindUnique } } }));
 vi.mock("@/lib/pdf/engine", () => ({ renderPdfTemplate: mocks.renderPdfTemplate }));

@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/rbac";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { migratePasswordToAuthentik } from "@/lib/authentik/migration";
 import { deactivateMemberInAuthentik, syncMemberToAuthentik } from "@/lib/authentik/sync";
-import { hasPermission } from "@/lib/permissions";
 import { combineNameParts, splitFullName, trimToNull } from "@/lib/names";
 import { anonymizeAccount } from "@/lib/retention";
 
@@ -18,219 +17,213 @@ type UpdateMemberPayload = {
   password?: unknown;
 };
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
-  const { id } = await params;
-  const rawBody: unknown = await request.json().catch(() => null);
+export const PATCH = withRoute<{ id: string }>(
+  { name: "members/[id].patch", permission: "PRIVATE.ADMIN.MEMBERS.MANAGE" },
+  async ({ request, params }) => {
+    const { id } = params;
+    const rawBody: unknown = await request.json().catch(() => null);
 
-  if (!rawBody || typeof rawBody !== "object") {
-    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
-  }
-
-  const body = rawBody as UpdateMemberPayload;
-  const updates: Record<string, unknown> = {};
-
-  let firstNameProvided = false;
-  let lastNameProvided = false;
-  let parsedFirstName: string | null = null;
-  let parsedLastName: string | null = null;
-  let fallbackNameProvided = false;
-  let fallbackFullName: string | null = null;
-
-  if (typeof body.firstName === "string") {
-    firstNameProvided = true;
-    parsedFirstName = trimToNull(body.firstName);
-  } else if (body.firstName === null) {
-    firstNameProvided = true;
-    parsedFirstName = null;
-  } else if (body.firstName !== undefined) {
-    return NextResponse.json({ error: "Vorname hat ein ungültiges Format" }, { status: 400 });
-  }
-
-  if (typeof body.lastName === "string") {
-    lastNameProvided = true;
-    parsedLastName = trimToNull(body.lastName);
-  } else if (body.lastName === null) {
-    lastNameProvided = true;
-    parsedLastName = null;
-  } else if (body.lastName !== undefined) {
-    return NextResponse.json({ error: "Nachname hat ein ungültiges Format" }, { status: 400 });
-  }
-
-  if (typeof body.name === "string") {
-    fallbackNameProvided = true;
-    fallbackFullName = trimToNull(body.name);
-  } else if (body.name === null) {
-    fallbackNameProvided = true;
-    fallbackFullName = null;
-  } else if (body.name !== undefined) {
-    return NextResponse.json({ error: "Name hat ein ungültiges Format" }, { status: 400 });
-  }
-
-  if (fallbackNameProvided && !firstNameProvided && !lastNameProvided) {
-    const split = splitFullName(fallbackFullName);
-    firstNameProvided = true;
-    lastNameProvided = true;
-    parsedFirstName = split.firstName;
-    parsedLastName = split.lastName;
-  }
-
-  if (firstNameProvided) {
-    updates.firstName = parsedFirstName;
-  }
-
-  if (lastNameProvided) {
-    updates.lastName = parsedLastName;
-  }
-
-  if (firstNameProvided || lastNameProvided) {
-    const existingNames = await prisma.user.findUnique({
-      where: { id },
-      select: { firstName: true, lastName: true },
-    });
-    if (!existingNames) {
-      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+    if (!rawBody || typeof rawBody !== "object") {
+      return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
     }
-    const effectiveFirstName = firstNameProvided ? parsedFirstName : existingNames.firstName;
-    const effectiveLastName = lastNameProvided ? parsedLastName : existingNames.lastName;
-    updates.name = combineNameParts(effectiveFirstName, effectiveLastName);
-  } else if (fallbackNameProvided) {
-    updates.name = fallbackFullName;
-  }
 
-  if (typeof body.email === "string") {
-    const email = body.email.trim().toLowerCase();
-    if (!email) {
-      return NextResponse.json({ error: "E-Mail darf nicht leer sein" }, { status: 400 });
+    const body = rawBody as UpdateMemberPayload;
+    const updates: Record<string, unknown> = {};
+
+    let firstNameProvided = false;
+    let lastNameProvided = false;
+    let parsedFirstName: string | null = null;
+    let parsedLastName: string | null = null;
+    let fallbackNameProvided = false;
+    let fallbackFullName: string | null = null;
+
+    if (typeof body.firstName === "string") {
+      firstNameProvided = true;
+      parsedFirstName = trimToNull(body.firstName);
+    } else if (body.firstName === null) {
+      firstNameProvided = true;
+      parsedFirstName = null;
+    } else if (body.firstName !== undefined) {
+      return NextResponse.json({ error: "Vorname hat ein ungültiges Format" }, { status: 400 });
     }
-    if (!EMAIL_REGEX.test(email)) {
-      return NextResponse.json({ error: "E-Mail hat ein ungültiges Format" }, { status: 400 });
+
+    if (typeof body.lastName === "string") {
+      lastNameProvided = true;
+      parsedLastName = trimToNull(body.lastName);
+    } else if (body.lastName === null) {
+      lastNameProvided = true;
+      parsedLastName = null;
+    } else if (body.lastName !== undefined) {
+      return NextResponse.json({ error: "Nachname hat ein ungültiges Format" }, { status: 400 });
     }
-    updates.email = email;
-  } else if (body.email !== undefined) {
-    return NextResponse.json({ error: "E-Mail muss eine Zeichenkette sein" }, { status: 400 });
-  }
 
-  if (typeof body.password === "string" && body.password.length > 0) {
-    if (body.password.length < 6) {
-      return NextResponse.json(
-        { error: "Passwort muss mindestens 6 Zeichen haben" },
-        { status: 400 },
-      );
+    if (typeof body.name === "string") {
+      fallbackNameProvided = true;
+      fallbackFullName = trimToNull(body.name);
+    } else if (body.name === null) {
+      fallbackNameProvided = true;
+      fallbackFullName = null;
+    } else if (body.name !== undefined) {
+      return NextResponse.json({ error: "Name hat ein ungültiges Format" }, { status: 400 });
     }
-    updates.passwordHash = await hashPassword(body.password);
-  } else if (body.password !== undefined && typeof body.password !== "string") {
-    return NextResponse.json({ error: "Passwort hat ein ungültiges Format" }, { status: 400 });
-  }
 
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "Keine Änderungen übermittelt" }, { status: 400 });
-  }
+    if (fallbackNameProvided && !firstNameProvided && !lastNameProvided) {
+      const split = splitFullName(fallbackFullName);
+      firstNameProvided = true;
+      lastNameProvided = true;
+      parsedFirstName = split.firstName;
+      parsedLastName = split.lastName;
+    }
 
-  try {
-    const user = await prisma.user.update({
-      where: { id },
-      data: updates,
-      select: { id: true, email: true, firstName: true, lastName: true, name: true },
-    });
+    if (firstNameProvided) {
+      updates.firstName = parsedFirstName;
+    }
 
-    if (["email", "firstName", "lastName", "name"].some((field) => field in updates)) {
-      // E-Mail und Name pflegt der Mitgliederbereich, Authentik zieht nach.
-      await syncMemberToAuthentik(user.id);
+    if (lastNameProvided) {
+      updates.lastName = parsedLastName;
+    }
+
+    if (firstNameProvided || lastNameProvided) {
+      const existingNames = await prisma.user.findUnique({
+        where: { id },
+        select: { firstName: true, lastName: true },
+      });
+      if (!existingNames) {
+        return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+      }
+      const effectiveFirstName = firstNameProvided ? parsedFirstName : existingNames.firstName;
+      const effectiveLastName = lastNameProvided ? parsedLastName : existingNames.lastName;
+      updates.name = combineNameParts(effectiveFirstName, effectiveLastName);
+    } else if (fallbackNameProvided) {
+      updates.name = fallbackFullName;
+    }
+
+    if (typeof body.email === "string") {
+      const email = body.email.trim().toLowerCase();
+      if (!email) {
+        return NextResponse.json({ error: "E-Mail darf nicht leer sein" }, { status: 400 });
+      }
+      if (!EMAIL_REGEX.test(email)) {
+        return NextResponse.json({ error: "E-Mail hat ein ungültiges Format" }, { status: 400 });
+      }
+      updates.email = email;
+    } else if (body.email !== undefined) {
+      return NextResponse.json({ error: "E-Mail muss eine Zeichenkette sein" }, { status: 400 });
     }
 
     if (typeof body.password === "string" && body.password.length > 0) {
-      // ÜBERGANGSPHASE: neues Passwort direkt nach Authentik übertragen.
-      await migratePasswordToAuthentik(user.id, body.password, "password-set");
-    }
-
-    const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;
-
-    return NextResponse.json({
-      ok: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName ?? null,
-        lastName: user.lastName ?? null,
-        name: responseName,
-      },
-    });
-  } catch (error: unknown) {
-    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
-      return NextResponse.json({ error: "E-Mail wird bereits verwendet" }, { status: 409 });
-    }
-    console.error("[members] Aktualisierung fehlgeschlagen", error);
-    return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
-
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
-  }
-
-  const target = await prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      role: true,
-      roles: { select: { role: true } },
-    },
-  });
-
-  if (!target) {
-    return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
-  }
-
-  const isOwner = target.role === "owner" || target.roles.some((entry) => entry.role === "owner");
-
-  if (isOwner) {
-    const remainingOwners = await prisma.user.count({
-      where: {
-        id: { not: target.id },
-        deactivatedAt: null,
-        OR: [{ role: "owner" }, { roles: { some: { role: "owner" } } }],
-      },
-    });
-
-    if (remainingOwners === 0) {
-      return NextResponse.json(
-        { error: "Es muss immer mindestens einen Owner geben" },
-        { status: 400 },
-      );
-    }
-  }
-
-  try {
-    // Authentik-Konto vorher deaktivieren (braucht noch die Profil-ID).
-    await deactivateMemberInAuthentik(target.id);
-    try {
-      await prisma.user.delete({ where: { id: target.id } });
-      return NextResponse.json({ ok: true, anonymized: false });
-    } catch (error: unknown) {
-      // P2003: Fachdaten (Buchungen, Einladungen, Protokolle …) verweisen per Restrict-FK
-      // auf das Konto. Dann bleibt es als "Ehemaliges Mitglied" erhalten statt gelöscht.
-      if (!(error && typeof error === "object" && "code" in error && error.code === "P2003")) {
-        throw error;
+      if (body.password.length < 6) {
+        return NextResponse.json(
+          { error: "Passwort muss mindestens 6 Zeichen haben" },
+          { status: 400 },
+        );
       }
-      await anonymizeAccount(target.id);
-      return NextResponse.json({ ok: true, anonymized: true });
+      updates.passwordHash = await hashPassword(body.password);
+    } else if (body.password !== undefined && typeof body.password !== "string") {
+      return NextResponse.json({ error: "Passwort hat ein ungültiges Format" }, { status: 400 });
     }
-  } catch (error: unknown) {
-    console.error("[members] Löschen fehlgeschlagen", error);
-    return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
-  }
-}
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "Keine Änderungen übermittelt" }, { status: 400 });
+    }
+
+    try {
+      const user = await prisma.user.update({
+        where: { id },
+        data: updates,
+        select: { id: true, email: true, firstName: true, lastName: true, name: true },
+      });
+
+      if (["email", "firstName", "lastName", "name"].some((field) => field in updates)) {
+        // E-Mail und Name pflegt der Mitgliederbereich, Authentik zieht nach.
+        await syncMemberToAuthentik(user.id);
+      }
+
+      if (typeof body.password === "string" && body.password.length > 0) {
+        // ÜBERGANGSPHASE: neues Passwort direkt nach Authentik übertragen.
+        await migratePasswordToAuthentik(user.id, body.password, "password-set");
+      }
+
+      const responseName = combineNameParts(user.firstName, user.lastName) ?? user.name ?? null;
+
+      return NextResponse.json({
+        ok: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          name: responseName,
+        },
+      });
+    } catch (error: unknown) {
+      if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+        return NextResponse.json({ error: "E-Mail wird bereits verwendet" }, { status: 409 });
+      }
+      console.error("[members] Aktualisierung fehlgeschlagen", error);
+      return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
+    }
+  },
+);
+
+export const DELETE = withRoute<{ id: string }>(
+  { name: "members/[id].delete", permission: "PRIVATE.ADMIN.MEMBERS.MANAGE" },
+  async ({ params }) => {
+    const { id } = params;
+    if (!id) {
+      return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        role: true,
+        roles: { select: { role: true } },
+      },
+    });
+
+    if (!target) {
+      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+    }
+
+    const isOwner = target.role === "owner" || target.roles.some((entry) => entry.role === "owner");
+
+    if (isOwner) {
+      const remainingOwners = await prisma.user.count({
+        where: {
+          id: { not: target.id },
+          deactivatedAt: null,
+          OR: [{ role: "owner" }, { roles: { some: { role: "owner" } } }],
+        },
+      });
+
+      if (remainingOwners === 0) {
+        return NextResponse.json(
+          { error: "Es muss immer mindestens einen Owner geben" },
+          { status: 400 },
+        );
+      }
+    }
+
+    try {
+      // Authentik-Konto vorher deaktivieren (braucht noch die Profil-ID).
+      await deactivateMemberInAuthentik(target.id);
+      try {
+        await prisma.user.delete({ where: { id: target.id } });
+        return NextResponse.json({ ok: true, anonymized: false });
+      } catch (error: unknown) {
+        // P2003: Fachdaten (Buchungen, Einladungen, Protokolle …) verweisen per Restrict-FK
+        // auf das Konto. Dann bleibt es als "Ehemaliges Mitglied" erhalten statt gelöscht.
+        if (!(error && typeof error === "object" && "code" in error && error.code === "P2003")) {
+          throw error;
+        }
+        await anonymizeAccount(target.id);
+        return NextResponse.json({ ok: true, anonymized: true });
+      }
+    } catch (error: unknown) {
+      console.error("[members] Löschen fehlgeschlagen", error);
+      return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
+    }
+  },
+);

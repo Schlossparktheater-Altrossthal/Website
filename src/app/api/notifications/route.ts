@@ -1,7 +1,7 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAuth } from "@/lib/rbac";
 import { INBOX_SECTIONS, loadInbox, purgeArchived } from "@/lib/notifications/inbox";
 import { NOTIFICATION_CATEGORIES } from "@/lib/notifications/types";
 import { readDismissedNoticeKeys } from "@/lib/notice-dismissals";
@@ -21,8 +21,7 @@ const querySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
-export async function GET(request: Request) {
-  const session = await requireAuth();
+export const GET = withRoute({ name: "notifications.get" }, async ({ request, session }) => {
   const userId = session.user?.id;
   if (!userId) {
     return NextResponse.json({ items: [], groups: [], nextCursor: null });
@@ -57,4 +56,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
+});

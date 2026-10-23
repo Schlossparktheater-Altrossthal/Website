@@ -1,7 +1,7 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { notifyPlannersOfNewBlocks } from "@/lib/calendar/decline-notifications";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 import { z } from "zod";
 import { hasPermission } from "@/lib/permissions";
 import {
@@ -14,8 +14,6 @@ import {
 } from "../utils";
 import { BlockedDayKind } from "@prisma/client";
 
-type SessionUser = { id?: string } | null | undefined;
-
 const bulkCreateSchema = z.object({
   dates: z.array(z.string().regex(isoDate)).min(1),
   reason: z.string().max(200).optional().nullable(),
@@ -26,80 +24,82 @@ const bulkDeleteSchema = z.object({
   dates: z.array(z.string().regex(isoDate)).min(1),
 });
 
-export async function POST(request: Request) {
-  const session = await requireAuth();
-  const userId = (session.user as SessionUser)?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
-
-  const parsed = bulkCreateSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
-
-  const uniqueDates = Array.from(new Set(parsed.data.dates));
-  const reason = normaliseReason(parsed.data.reason);
-  const kind = parsed.data.kind ?? BlockedDayKind.BLOCKED;
-
-  if (kind === BlockedDayKind.EMERGENCY) {
-    return NextResponse.json({ error: EMERGENCY_KIND_MESSAGE }, { status: 403 });
-  }
-
-  try {
-    const parsedDates = uniqueDates.map((d) => ({ key: d, date: toDateOnly(d) }));
-    let allowed = parsedDates;
-    let skipped: string[] = [];
-
-    if (kind === BlockedDayKind.BLOCKED) {
-      const todayKey = new Date().toISOString().slice(0, 10);
-      const today = toDateOnly(todayKey);
-      const cutoff = new Date(today.getTime() + (await resolveFreezeDays()) * 24 * 60 * 60 * 1000);
-      allowed = parsedDates.filter((p) => p.date.getTime() >= cutoff.getTime());
-      skipped = parsedDates.filter((p) => p.date.getTime() < cutoff.getTime()).map((p) => p.key);
+export const POST = withRoute(
+  { name: "block-days/bulk.post" },
+  async ({ request, session, userId }) => {
+    if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
+      return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
     }
 
-    const payload = allowed.map((p) => ({ userId, date: p.date, reason, kind }));
-    if (payload.length === 0) return NextResponse.json({ created: [], skipped });
+    const parsed = bulkCreateSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
 
-    await prisma.blockedDay.createMany({ data: payload, skipDuplicates: true });
+    const uniqueDates = Array.from(new Set(parsed.data.dates));
+    const reason = normaliseReason(parsed.data.reason);
+    const kind = parsed.data.kind ?? BlockedDayKind.BLOCKED;
 
-    const created = await prisma.blockedDay.findMany({
-      where: { userId, date: { in: payload.map((p) => p.date) } },
-      orderBy: { date: "asc" },
-    });
-
-    if (kind === BlockedDayKind.BLOCKED) {
-      await notifyPlannersOfNewBlocks(userId, created).catch((error) =>
-        console.error("[block-days:bulk POST] Planung nicht benachrichtigt", error),
-      );
+    if (kind === BlockedDayKind.EMERGENCY) {
+      return NextResponse.json({ error: EMERGENCY_KIND_MESSAGE }, { status: 403 });
     }
 
-    return NextResponse.json({ created: created.map(toResponse), skipped });
-  } catch (error) {
-    console.error("[block-days:bulk POST]", error);
-    return NextResponse.json({ error: "Speichern fehlgeschlagen" }, { status: 500 });
-  }
-}
+    try {
+      const parsedDates = uniqueDates.map((d) => ({ key: d, date: toDateOnly(d) }));
+      let allowed = parsedDates;
+      let skipped: string[] = [];
 
-export async function DELETE(request: Request) {
-  const session = await requireAuth();
-  const userId = (session.user as SessionUser)?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
-  if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
+      if (kind === BlockedDayKind.BLOCKED) {
+        const todayKey = new Date().toISOString().slice(0, 10);
+        const today = toDateOnly(todayKey);
+        const cutoff = new Date(
+          today.getTime() + (await resolveFreezeDays()) * 24 * 60 * 60 * 1000,
+        );
+        allowed = parsedDates.filter((p) => p.date.getTime() >= cutoff.getTime());
+        skipped = parsedDates.filter((p) => p.date.getTime() < cutoff.getTime()).map((p) => p.key);
+      }
 
-  const parsed = bulkDeleteSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
+      const payload = allowed.map((p) => ({ userId, date: p.date, reason, kind }));
+      if (payload.length === 0) return NextResponse.json({ created: [], skipped });
 
-  const uniqueDates = Array.from(new Set(parsed.data.dates));
-  const dates = uniqueDates.map((d) => toDateOnly(d));
+      await prisma.blockedDay.createMany({ data: payload, skipDuplicates: true });
 
-  try {
-    const result = await prisma.blockedDay.deleteMany({ where: { userId, date: { in: dates } } });
-    return NextResponse.json({ deleted: result.count });
-  } catch (error) {
-    console.error("[block-days:bulk DELETE]", error);
-    return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
-  }
-}
+      const created = await prisma.blockedDay.findMany({
+        where: { userId, date: { in: payload.map((p) => p.date) } },
+        orderBy: { date: "asc" },
+      });
+
+      if (kind === BlockedDayKind.BLOCKED) {
+        await notifyPlannersOfNewBlocks(userId, created).catch((error) =>
+          console.error("[block-days:bulk POST] Planung nicht benachrichtigt", error),
+        );
+      }
+
+      return NextResponse.json({ created: created.map(toResponse), skipped });
+    } catch (error) {
+      console.error("[block-days:bulk POST]", error);
+      return NextResponse.json({ error: "Speichern fehlgeschlagen" }, { status: 500 });
+    }
+  },
+);
+
+export const DELETE = withRoute(
+  { name: "block-days/bulk.delete" },
+  async ({ request, session, userId }) => {
+    if (!(await hasPermission(session.user, "PRIVATE.REHEARSAL.BLOCKLIST.VIEW"))) {
+      return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
+    }
+
+    const parsed = bulkDeleteSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
+
+    const uniqueDates = Array.from(new Set(parsed.data.dates));
+    const dates = uniqueDates.map((d) => toDateOnly(d));
+
+    try {
+      const result = await prisma.blockedDay.deleteMany({ where: { userId, date: { in: dates } } });
+      return NextResponse.json({ deleted: result.count });
+    } catch (error) {
+      console.error("[block-days:bulk DELETE]", error);
+      return NextResponse.json({ error: "Löschen fehlgeschlagen" }, { status: 500 });
+    }
+  },
+);

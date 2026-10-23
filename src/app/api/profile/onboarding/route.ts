@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { OnboardingFocus } from "@prisma/client";
 import { z } from "zod";
 
@@ -8,7 +9,6 @@ import {
   broadcastOnboardingDashboardForUser,
   broadcastOnboardingDashboardSnapshot,
 } from "@/lib/onboarding/dashboard-events";
-import { requireAuth } from "@/lib/rbac";
 import {
   legacyBackgroundFromPayload,
   readStoredEducation,
@@ -59,8 +59,7 @@ const onboardingUpdateSchema = z.object({
     .transform((value) => (value === undefined ? null : value)),
 });
 
-export async function PUT(request: NextRequest) {
-  const session = await requireAuth();
+export const PUT = withRoute({ name: "profile/onboarding.put" }, async ({ request, session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -157,4 +156,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

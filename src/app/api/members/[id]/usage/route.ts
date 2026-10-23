@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
 import { combineNameParts } from "@/lib/names";
 
 type UsageItem = {
@@ -19,282 +18,284 @@ type UsageSection = {
   items: UsageItem[];
 };
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
+export const GET = withRoute<{ id: string }>(
+  { name: "members/[id]/usage.get", permission: "PRIVATE.ADMIN.MEMBERS.MANAGE" },
+  async ({ params }) => {
+    const { id } = params;
+    if (!id) {
+      return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
+    }
 
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
-  }
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        name: true,
+        deactivatedAt: true,
+      },
+    });
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      name: true,
-      deactivatedAt: true,
-    },
-  });
+    if (!user) {
+      return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
+    }
 
-  if (!user) {
-    return NextResponse.json({ error: "Benutzer nicht gefunden" }, { status: 404 });
-  }
+    const [
+      departmentMemberships,
+      characterCastings,
+      breakdownAssignments,
+      generalTasks,
+      departmentTasksAssigned,
+      departmentTasksCreated,
+      rehearsalInvites,
+      rehearsalAttendance,
+      attendanceLogsAuthored,
+      attendanceLogsTarget,
+      blockedDays,
+      availabilityEntries,
+      availabilityDayEntries,
+      availabilityTemplateEntries,
+      financeEntriesCreated,
+      financeEntriesApproved,
+      financeEntriesPaid,
+      financeLogsAuthored,
+      issuesCreated,
+      issuesUpdated,
+      issueComments,
+      notifications,
+      measurements,
+      sizes,
+      dietaryRestrictions,
+      dietaryAversions,
+      rolePreferences,
+      interests,
+      photoConsentCount,
+      approvedPhotoConsents,
+      onboardingProfileCount,
+      memberInvitesCreated,
+      inviteRedemptions,
+      sessions,
+      accounts,
+      userAppRoles,
+      interestsAuthored,
+      rehearsalsCreated,
+    ] = await prisma.$transaction([
+      prisma.departmentMembership.count({ where: { userId: id } }),
+      prisma.characterCasting.count({ where: { userId: id } }),
+      prisma.sceneBreakdownItem.count({ where: { assignedToId: id } }),
+      prisma.directionWishTarget.count({ where: { userId: id } }),
+      prisma.departmentTaskAssignment.count({ where: { userId: id } }),
+      prisma.departmentTask.count({ where: { createdById: id } }),
+      prisma.eventParticipant.count({ where: { userId: id, invited: true } }),
+      prisma.eventParticipant.count({ where: { userId: id, response: { not: null } } }),
+      prisma.eventResponseLog.count({ where: { changedById: id } }),
+      prisma.eventResponseLog.count({ where: { userId: id } }),
+      prisma.blockedDay.count({ where: { userId: id } }),
+      prisma.availability.count({ where: { userId: id } }),
+      prisma.availabilityDay.count({ where: { userId: id } }),
+      prisma.availabilityTemplate.count({ where: { userId: id } }),
+      prisma.financeEntry.count({ where: { createdById: id } }),
+      prisma.financeEntry.count({ where: { approvedById: id } }),
+      prisma.financeEntry.count({ where: { memberPaidById: id } }),
+      prisma.financeLog.count({ where: { changedById: id } }),
+      prisma.issue.count({ where: { createdById: id } }),
+      prisma.issue.count({ where: { updatedById: id } }),
+      prisma.issueComment.count({ where: { authorId: id } }),
+      prisma.notificationRecipient.count({ where: { userId: id } }),
+      prisma.memberMeasurement.count({ where: { userId: id } }),
+      prisma.memberSize.count({ where: { userId: id } }),
+      prisma.dietaryRestriction.count({ where: { userId: id } }),
+      prisma.dietaryAversion.count({ where: { userId: id } }),
+      prisma.memberRolePreference.count({ where: { userId: id } }),
+      prisma.userInterest.count({ where: { userId: id } }),
+      prisma.photoConsent.count({ where: { userId: id } }),
+      prisma.photoConsent.count({ where: { approvedById: id } }),
+      prisma.memberOnboardingProfile.count({ where: { userId: id } }),
+      prisma.memberInvite.count({ where: { createdById: id } }),
+      prisma.memberInviteRedemption.count({ where: { userId: id } }),
+      prisma.session.count({ where: { userId: id } }),
+      prisma.account.count({ where: { userId: id } }),
+      prisma.userAppRole.count({ where: { userId: id } }),
+      prisma.interest.count({ where: { createdById: id } }),
+      prisma.calendarEvent.count({ where: { createdById: id, kind: "REHEARSAL" } }),
+    ]);
 
-  const [
-    departmentMemberships,
-    characterCastings,
-    breakdownAssignments,
-    generalTasks,
-    departmentTasksAssigned,
-    departmentTasksCreated,
-    rehearsalInvites,
-    rehearsalAttendance,
-    attendanceLogsAuthored,
-    attendanceLogsTarget,
-    blockedDays,
-    availabilityEntries,
-    availabilityDayEntries,
-    availabilityTemplateEntries,
-    financeEntriesCreated,
-    financeEntriesApproved,
-    financeEntriesPaid,
-    financeLogsAuthored,
-    issuesCreated,
-    issuesUpdated,
-    issueComments,
-    notifications,
-    measurements,
-    sizes,
-    dietaryRestrictions,
-    dietaryAversions,
-    rolePreferences,
-    interests,
-    photoConsentCount,
-    approvedPhotoConsents,
-    onboardingProfileCount,
-    memberInvitesCreated,
-    inviteRedemptions,
-    sessions,
-    accounts,
-    userAppRoles,
-    interestsAuthored,
-    rehearsalsCreated,
-  ] = await prisma.$transaction([
-    prisma.departmentMembership.count({ where: { userId: id } }),
-    prisma.characterCasting.count({ where: { userId: id } }),
-    prisma.sceneBreakdownItem.count({ where: { assignedToId: id } }),
-    prisma.directionWishTarget.count({ where: { userId: id } }),
-    prisma.departmentTaskAssignment.count({ where: { userId: id } }),
-    prisma.departmentTask.count({ where: { createdById: id } }),
-    prisma.eventParticipant.count({ where: { userId: id, invited: true } }),
-    prisma.eventParticipant.count({ where: { userId: id, response: { not: null } } }),
-    prisma.eventResponseLog.count({ where: { changedById: id } }),
-    prisma.eventResponseLog.count({ where: { userId: id } }),
-    prisma.blockedDay.count({ where: { userId: id } }),
-    prisma.availability.count({ where: { userId: id } }),
-    prisma.availabilityDay.count({ where: { userId: id } }),
-    prisma.availabilityTemplate.count({ where: { userId: id } }),
-    prisma.financeEntry.count({ where: { createdById: id } }),
-    prisma.financeEntry.count({ where: { approvedById: id } }),
-    prisma.financeEntry.count({ where: { memberPaidById: id } }),
-    prisma.financeLog.count({ where: { changedById: id } }),
-    prisma.issue.count({ where: { createdById: id } }),
-    prisma.issue.count({ where: { updatedById: id } }),
-    prisma.issueComment.count({ where: { authorId: id } }),
-    prisma.notificationRecipient.count({ where: { userId: id } }),
-    prisma.memberMeasurement.count({ where: { userId: id } }),
-    prisma.memberSize.count({ where: { userId: id } }),
-    prisma.dietaryRestriction.count({ where: { userId: id } }),
-    prisma.dietaryAversion.count({ where: { userId: id } }),
-    prisma.memberRolePreference.count({ where: { userId: id } }),
-    prisma.userInterest.count({ where: { userId: id } }),
-    prisma.photoConsent.count({ where: { userId: id } }),
-    prisma.photoConsent.count({ where: { approvedById: id } }),
-    prisma.memberOnboardingProfile.count({ where: { userId: id } }),
-    prisma.memberInvite.count({ where: { createdById: id } }),
-    prisma.memberInviteRedemption.count({ where: { userId: id } }),
-    prisma.session.count({ where: { userId: id } }),
-    prisma.account.count({ where: { userId: id } }),
-    prisma.userAppRole.count({ where: { userId: id } }),
-    prisma.interest.count({ where: { createdById: id } }),
-    prisma.calendarEvent.count({ where: { createdById: id, kind: "REHEARSAL" } }),
-  ]);
+    const sections: UsageSection[] = [];
+    let total = 0;
 
-  const sections: UsageSection[] = [];
-  let total = 0;
+    const addSection = (section: UsageSection) => {
+      if (!section.items.length) return;
+      sections.push(section);
+      total += section.total;
+    };
 
-  const addSection = (section: UsageSection) => {
-    if (!section.items.length) return;
-    sections.push(section);
-    total += section.total;
-  };
+    const productionItems: UsageItem[] = [
+      {
+        key: "departmentMemberships",
+        label: "Gewerkemitgliedschaften",
+        count: departmentMemberships,
+      },
+      { key: "characterCastings", label: "Besetzungen in Produktionen", count: characterCastings },
+      { key: "breakdownAssignments", label: "Szenische Aufgaben", count: breakdownAssignments },
+      { key: "rehearsalsCreated", label: "Erstellte Proben", count: rehearsalsCreated },
+    ].filter((item) => item.count > 0);
 
-  const productionItems: UsageItem[] = [
-    {
-      key: "departmentMemberships",
-      label: "Gewerkemitgliedschaften",
-      count: departmentMemberships,
-    },
-    { key: "characterCastings", label: "Besetzungen in Produktionen", count: characterCastings },
-    { key: "breakdownAssignments", label: "Szenische Aufgaben", count: breakdownAssignments },
-    { key: "rehearsalsCreated", label: "Erstellte Proben", count: rehearsalsCreated },
-  ].filter((item) => item.count > 0);
+    addSection({
+      key: "productions",
+      title: "Produktionen & Rollen",
+      total: productionItems.reduce((sum, item) => sum + item.count, 0),
+      items: productionItems,
+    });
 
-  addSection({
-    key: "productions",
-    title: "Produktionen & Rollen",
-    total: productionItems.reduce((sum, item) => sum + item.count, 0),
-    items: productionItems,
-  });
+    const rehearsalItems: UsageItem[] = [
+      { key: "rehearsalInvites", label: "Probeeinladungen", count: rehearsalInvites },
+      { key: "rehearsalAttendance", label: "Anwesenheitseinträge", count: rehearsalAttendance },
+      {
+        key: "attendanceLogsAuthored",
+        label: "Anwesenheitsprotokolle (Autor)",
+        count: attendanceLogsAuthored,
+      },
+      {
+        key: "attendanceLogsTarget",
+        label: "Anwesenheitsprotokolle (Ziel)",
+        count: attendanceLogsTarget,
+      },
+      { key: "blockedDays", label: "Gesperrte Tage", count: blockedDays },
+      { key: "availabilityEntries", label: "Verfügbarkeitszeiträume", count: availabilityEntries },
+      { key: "availabilityDays", label: "Tagesverfügbarkeiten", count: availabilityDayEntries },
+      {
+        key: "availabilityTemplates",
+        label: "Verfügbarkeitsvorlagen",
+        count: availabilityTemplateEntries,
+      },
+    ].filter((item) => item.count > 0);
 
-  const rehearsalItems: UsageItem[] = [
-    { key: "rehearsalInvites", label: "Probeeinladungen", count: rehearsalInvites },
-    { key: "rehearsalAttendance", label: "Anwesenheitseinträge", count: rehearsalAttendance },
-    {
-      key: "attendanceLogsAuthored",
-      label: "Anwesenheitsprotokolle (Autor)",
-      count: attendanceLogsAuthored,
-    },
-    {
-      key: "attendanceLogsTarget",
-      label: "Anwesenheitsprotokolle (Ziel)",
-      count: attendanceLogsTarget,
-    },
-    { key: "blockedDays", label: "Gesperrte Tage", count: blockedDays },
-    { key: "availabilityEntries", label: "Verfügbarkeitszeiträume", count: availabilityEntries },
-    { key: "availabilityDays", label: "Tagesverfügbarkeiten", count: availabilityDayEntries },
-    {
-      key: "availabilityTemplates",
-      label: "Verfügbarkeitsvorlagen",
-      count: availabilityTemplateEntries,
-    },
-  ].filter((item) => item.count > 0);
+    addSection({
+      key: "rehearsals",
+      title: "Proben & Verfügbarkeit",
+      total: rehearsalItems.reduce((sum, item) => sum + item.count, 0),
+      items: rehearsalItems,
+    });
 
-  addSection({
-    key: "rehearsals",
-    title: "Proben & Verfügbarkeit",
-    total: rehearsalItems.reduce((sum, item) => sum + item.count, 0),
-    items: rehearsalItems,
-  });
+    const taskItems: UsageItem[] = [
+      { key: "generalTasks", label: "Wünsche der Regie (an die Person)", count: generalTasks },
+      {
+        key: "departmentTasksAssigned",
+        label: "Gewerkaufgaben (zugewiesen)",
+        count: departmentTasksAssigned,
+      },
+      {
+        key: "departmentTasksCreated",
+        label: "Gewerkaufgaben (erstellt)",
+        count: departmentTasksCreated,
+      },
+    ].filter((item) => item.count > 0);
 
-  const taskItems: UsageItem[] = [
-    { key: "generalTasks", label: "Wünsche der Regie (an die Person)", count: generalTasks },
-    {
-      key: "departmentTasksAssigned",
-      label: "Gewerkaufgaben (zugewiesen)",
-      count: departmentTasksAssigned,
-    },
-    {
-      key: "departmentTasksCreated",
-      label: "Gewerkaufgaben (erstellt)",
-      count: departmentTasksCreated,
-    },
-  ].filter((item) => item.count > 0);
+    addSection({
+      key: "tasks",
+      title: "Aufgaben & Zusammenarbeit",
+      total: taskItems.reduce((sum, item) => sum + item.count, 0),
+      items: taskItems,
+    });
 
-  addSection({
-    key: "tasks",
-    title: "Aufgaben & Zusammenarbeit",
-    total: taskItems.reduce((sum, item) => sum + item.count, 0),
-    items: taskItems,
-  });
+    const financeItems: UsageItem[] = [
+      {
+        key: "financeEntriesCreated",
+        label: "Finanzvorgänge angelegt",
+        count: financeEntriesCreated,
+      },
+      {
+        key: "financeEntriesApproved",
+        label: "Finanzvorgänge freigegeben",
+        count: financeEntriesApproved,
+      },
+      {
+        key: "financeEntriesPaid",
+        label: "Als zahlendes Mitglied hinterlegt",
+        count: financeEntriesPaid,
+      },
+      { key: "financeLogsAuthored", label: "Finanzprotokolle", count: financeLogsAuthored },
+    ].filter((item) => item.count > 0);
 
-  const financeItems: UsageItem[] = [
-    {
-      key: "financeEntriesCreated",
-      label: "Finanzvorgänge angelegt",
-      count: financeEntriesCreated,
-    },
-    {
-      key: "financeEntriesApproved",
-      label: "Finanzvorgänge freigegeben",
-      count: financeEntriesApproved,
-    },
-    {
-      key: "financeEntriesPaid",
-      label: "Als zahlendes Mitglied hinterlegt",
-      count: financeEntriesPaid,
-    },
-    { key: "financeLogsAuthored", label: "Finanzprotokolle", count: financeLogsAuthored },
-  ].filter((item) => item.count > 0);
+    addSection({
+      key: "finance",
+      title: "Finanzen",
+      total: financeItems.reduce((sum, item) => sum + item.count, 0),
+      items: financeItems,
+    });
 
-  addSection({
-    key: "finance",
-    title: "Finanzen",
-    total: financeItems.reduce((sum, item) => sum + item.count, 0),
-    items: financeItems,
-  });
+    const supportItems: UsageItem[] = [
+      { key: "issuesCreated", label: "Supportanfragen erstellt", count: issuesCreated },
+      { key: "issuesUpdated", label: "Supportanfragen aktualisiert", count: issuesUpdated },
+      { key: "issueComments", label: "Kommentare in Supportanfragen", count: issueComments },
+      { key: "notifications", label: "Benachrichtigungen erhalten", count: notifications },
+      { key: "interestsAuthored", label: "Interessen erstellt", count: interestsAuthored },
+    ].filter((item) => item.count > 0);
 
-  const supportItems: UsageItem[] = [
-    { key: "issuesCreated", label: "Supportanfragen erstellt", count: issuesCreated },
-    { key: "issuesUpdated", label: "Supportanfragen aktualisiert", count: issuesUpdated },
-    { key: "issueComments", label: "Kommentare in Supportanfragen", count: issueComments },
-    { key: "notifications", label: "Benachrichtigungen erhalten", count: notifications },
-    { key: "interestsAuthored", label: "Interessen erstellt", count: interestsAuthored },
-  ].filter((item) => item.count > 0);
+    addSection({
+      key: "support",
+      title: "Support & Kommunikation",
+      total: supportItems.reduce((sum, item) => sum + item.count, 0),
+      items: supportItems,
+    });
 
-  addSection({
-    key: "support",
-    title: "Support & Kommunikation",
-    total: supportItems.reduce((sum, item) => sum + item.count, 0),
-    items: supportItems,
-  });
+    const onboardingItems: UsageItem[] = [
+      {
+        key: "memberInvitesCreated",
+        label: "Einladungslinks erstellt",
+        count: memberInvitesCreated,
+      },
+      { key: "inviteRedemptions", label: "Einladungen eingelöst", count: inviteRedemptions },
+      { key: "onboardingProfile", label: "Onboardingprofil", count: onboardingProfileCount },
+      { key: "photoConsent", label: "Fotoeinverständnisse", count: photoConsentCount },
+      {
+        key: "approvedPhotoConsents",
+        label: "Fotoeinverständnisse geprüft",
+        count: approvedPhotoConsents,
+      },
+    ].filter((item) => item.count > 0);
 
-  const onboardingItems: UsageItem[] = [
-    { key: "memberInvitesCreated", label: "Einladungslinks erstellt", count: memberInvitesCreated },
-    { key: "inviteRedemptions", label: "Einladungen eingelöst", count: inviteRedemptions },
-    { key: "onboardingProfile", label: "Onboardingprofil", count: onboardingProfileCount },
-    { key: "photoConsent", label: "Fotoeinverständnisse", count: photoConsentCount },
-    {
-      key: "approvedPhotoConsents",
-      label: "Fotoeinverständnisse geprüft",
-      count: approvedPhotoConsents,
-    },
-  ].filter((item) => item.count > 0);
+    addSection({
+      key: "onboarding",
+      title: "Onboarding & Freigaben",
+      total: onboardingItems.reduce((sum, item) => sum + item.count, 0),
+      items: onboardingItems,
+    });
 
-  addSection({
-    key: "onboarding",
-    title: "Onboarding & Freigaben",
-    total: onboardingItems.reduce((sum, item) => sum + item.count, 0),
-    items: onboardingItems,
-  });
+    const profileItems: UsageItem[] = [
+      { key: "sessions", label: "Aktive Sitzungen", count: sessions },
+      { key: "accounts", label: "Verknüpfte Konten", count: accounts },
+      { key: "measurements", label: "Hinterlegte Maße", count: measurements },
+      { key: "sizes", label: "Konfektionsgrößen", count: sizes },
+      { key: "dietaryRestrictions", label: "Ernährungshinweise", count: dietaryRestrictions },
+      { key: "dietaryAversions", label: "Abneigungen & Besonderheiten", count: dietaryAversions },
+      { key: "rolePreferences", label: "Rollenpräferenzen", count: rolePreferences },
+      { key: "interests", label: "Interessensgebiete", count: interests },
+      { key: "userAppRoles", label: "Zusätzliche Rollen (Custom)", count: userAppRoles },
+    ].filter((item) => item.count > 0);
 
-  const profileItems: UsageItem[] = [
-    { key: "sessions", label: "Aktive Sitzungen", count: sessions },
-    { key: "accounts", label: "Verknüpfte Konten", count: accounts },
-    { key: "measurements", label: "Hinterlegte Maße", count: measurements },
-    { key: "sizes", label: "Konfektionsgrößen", count: sizes },
-    { key: "dietaryRestrictions", label: "Ernährungshinweise", count: dietaryRestrictions },
-    { key: "dietaryAversions", label: "Abneigungen & Besonderheiten", count: dietaryAversions },
-    { key: "rolePreferences", label: "Rollenpräferenzen", count: rolePreferences },
-    { key: "interests", label: "Interessensgebiete", count: interests },
-    { key: "userAppRoles", label: "Zusätzliche Rollen (Custom)", count: userAppRoles },
-  ].filter((item) => item.count > 0);
+    addSection({
+      key: "profile",
+      title: "Profil & persönliche Daten",
+      total: profileItems.reduce((sum, item) => sum + item.count, 0),
+      items: profileItems,
+    });
 
-  addSection({
-    key: "profile",
-    title: "Profil & persönliche Daten",
-    total: profileItems.reduce((sum, item) => sum + item.count, 0),
-    items: profileItems,
-  });
+    const displayName =
+      combineNameParts(user.firstName, user.lastName) ?? user.name ?? user.email ?? user.id;
 
-  const displayName =
-    combineNameParts(user.firstName, user.lastName) ?? user.name ?? user.email ?? user.id;
-
-  return NextResponse.json({
-    ok: true,
-    user: {
-      id: user.id,
-      email: user.email,
-      name: displayName,
-      deactivatedAt: user.deactivatedAt?.toISOString() ?? null,
-    },
-    total,
-    sections,
-  });
-}
+    return NextResponse.json({
+      ok: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: displayName,
+        deactivatedAt: user.deactivatedAt?.toISOString() ?? null,
+      },
+      total,
+      sections,
+    });
+  },
+);

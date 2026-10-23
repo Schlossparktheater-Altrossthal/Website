@@ -12,7 +12,10 @@ const mocks = vi.hoisted(() => ({
   membershipFindMany: vi.fn(),
 }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: async () => ({ user: { id: "admin-1" } }) }));
+vi.mock("@/lib/rbac", () => ({
+  requireAuth: async () => ({ user: { id: "admin-1" } }),
+  getSession: async () => ({ user: { id: "admin-1" } }),
+}));
 vi.mock("@/lib/permissions", () => ({ hasPermission: async () => true }));
 vi.mock("@/lib/active-production", () => ({ getActiveProductionId: async () => null }));
 vi.mock("@/lib/prisma", () => ({

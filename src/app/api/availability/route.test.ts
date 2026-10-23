@@ -18,6 +18,7 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/rbac", () => ({
   requireAuth: requireAuthMock,
+  getSession: requireAuthMock,
 }));
 
 describe("availability POST route", () => {

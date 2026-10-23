@@ -1,10 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import sharp from "sharp";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
-import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import type { PhotoConsentAdminEntry, PhotoConsentMissingEntry } from "@/types/photo-consent";
 import { combineNameParts, getUserDisplayName } from "@/lib/names";
@@ -192,45 +191,43 @@ const CONSENT_INCLUDE = {
   },
 } satisfies Prisma.PhotoConsentInclude;
 
-export async function GET(request: NextRequest) {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
+export const GET = withRoute(
+  { name: "photo-consents/admin.get", permission: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE" },
+  async ({ request, session }) => {
+    // Standard: Fotoerlaubnisse der aktuell ausgewählten Produktion.
+    const requestedShowId = request.nextUrl.searchParams.get("showId")?.trim() || null;
+    const showId =
+      requestedShowId ?? (session.user?.id ? await getActiveProductionId(session.user.id) : null);
 
-  // Standard: Fotoerlaubnisse der aktuell ausgewählten Produktion.
-  const requestedShowId = request.nextUrl.searchParams.get("showId")?.trim() || null;
-  const showId =
-    requestedShowId ?? (session.user?.id ? await getActiveProductionId(session.user.id) : null);
+    const [consents, shows] = await Promise.all([
+      prisma.photoConsent.findMany({
+        where: showId && showId !== ALL_PRODUCTIONS ? { showId } : {},
+        orderBy: { createdAt: "desc" },
+        include: CONSENT_INCLUDE,
+      }),
+      prisma.show.findMany({
+        orderBy: [{ year: "desc" }],
+        select: { id: true, title: true, year: true, status: true },
+      }),
+    ]);
 
-  const [consents, shows] = await Promise.all([
-    prisma.photoConsent.findMany({
-      where: showId && showId !== ALL_PRODUCTIONS ? { showId } : {},
-      orderBy: { createdAt: "desc" },
-      include: CONSENT_INCLUDE,
-    }),
-    prisma.show.findMany({
-      orderBy: [{ year: "desc" }],
-      select: { id: true, title: true, year: true, status: true },
-    }),
-  ]);
+    const entries = consents.map(mapConsent);
+    const missing =
+      showId && showId !== ALL_PRODUCTIONS ? await loadMissingMembers(showId, consents) : [];
 
-  const entries = consents.map(mapConsent);
-  const missing =
-    showId && showId !== ALL_PRODUCTIONS ? await loadMissingMembers(showId, consents) : [];
-
-  return NextResponse.json({
-    entries,
-    missing,
-    showId: showId ?? ALL_PRODUCTIONS,
-    shows: shows.map((show) => ({
-      id: show.id,
-      title: show.title ?? `Produktion ${show.year}`,
-      year: show.year,
-      status: show.status,
-    })),
-  });
-}
+    return NextResponse.json({
+      entries,
+      missing,
+      showId: showId ?? ALL_PRODUCTIONS,
+      shows: shows.map((show) => ({
+        id: show.id,
+        title: show.title ?? `Produktion ${show.year}`,
+        year: show.year,
+        status: show.status,
+      })),
+    });
+  },
+);
 
 type AdminAction = "approve" | "reject" | "reset" | "setLevel";
 
@@ -284,208 +281,206 @@ async function rotateDocument(ids: string[], degrees: unknown) {
  * Aktionen der Verwaltung: freigeben (auch mehrere über `ids`), ablehnen, zurücksetzen und die
  * Stufe nachtragen (Altbestand, abgelesen vom Papierformular).
  */
-export async function PATCH(request: NextRequest) {
-  const session = await requireAuth();
-  if (!(await hasPermission(session.user, "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE"))) {
-    return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
-  }
-
-  const raw = await request.json().catch(() => null);
-  if (!raw || typeof raw !== "object") {
-    return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
-  }
-  const body = raw as Record<string, unknown>;
-
-  const ids = parseIds(body);
-  const action = typeof body.action === "string" ? body.action.trim() : "";
-
-  if (ids.length === 0) {
-    return NextResponse.json({ error: "Fehlende ID" }, { status: 400 });
-  }
-  if (action === "rotate") {
-    return rotateDocument(ids, body.degrees);
-  }
-  if (!isAdminAction(action)) {
-    return NextResponse.json({ error: "Unbekannte Aktion" }, { status: 400 });
-  }
-  if (ids.length > 1 && action !== "approve") {
-    return NextResponse.json(
-      { error: "Nur Freigaben sind für mehrere Einträge möglich" },
-      { status: 400 },
-    );
-  }
-
-  let rejectionReason: string | null = null;
-  if (action === "reject") {
-    if (typeof body.reason !== "string" || !body.reason.trim()) {
-      return NextResponse.json({ error: "Bitte gib einen Ablehnungsgrund an" }, { status: 400 });
+export const PATCH = withRoute(
+  { name: "photo-consents/admin.patch", permission: "PRIVATE.ADMIN.PHOTOCONSENT.MANAGE" },
+  async ({ request, session }) => {
+    const raw = await request.json().catch(() => null);
+    if (!raw || typeof raw !== "object") {
+      return NextResponse.json({ error: "Ungültige Daten" }, { status: 400 });
     }
-    rejectionReason = body.reason.trim();
-  }
+    const body = raw as Record<string, unknown>;
 
-  let level: PhotoConsentLevelValue | null = null;
-  if (action === "setLevel" || body.level !== undefined) {
-    if (!isPhotoConsentLevel(body.level)) {
-      return NextResponse.json({ error: "Bitte wähle eine Stufe aus" }, { status: 400 });
+    const ids = parseIds(body);
+    const action = typeof body.action === "string" ? body.action.trim() : "";
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "Fehlende ID" }, { status: 400 });
     }
-    level = body.level;
-  }
-
-  const actorDisplayName = getUserDisplayName(
-    {
-      firstName: session.user?.firstName ?? null,
-      lastName: session.user?.lastName ?? null,
-      name: session.user?.name ?? null,
-      email: session.user?.email ?? null,
-    },
-    "Unbekanntes Mitglied",
-  );
-
-  const current = await prisma.photoConsent.findMany({
-    where: { id: { in: ids } },
-    select: {
-      id: true,
-      status: true,
-      level: true,
-      documentUploadedAt: true,
-      signatureCapturedAt: true,
-    },
-  });
-  if (current.length !== ids.length) {
-    return NextResponse.json({ error: "Eintrag nicht gefunden" }, { status: 404 });
-  }
-
-  if (action === "approve") {
-    const blocked = current.find((consent) => {
-      const effectiveLevel = level ?? consent.level;
-      const hasProof = Boolean(consent.documentUploadedAt || consent.signatureCapturedAt);
-      return !effectiveLevel || (effectiveLevel !== "none" && !hasProof);
-    });
-    if (blocked) {
+    if (action === "rotate") {
+      return rotateDocument(ids, body.degrees);
+    }
+    if (!isAdminAction(action)) {
+      return NextResponse.json({ error: "Unbekannte Aktion" }, { status: 400 });
+    }
+    if (ids.length > 1 && action !== "approve") {
       return NextResponse.json(
-        {
-          error:
-            ids.length > 1
-              ? "Einige Einträge haben keine Stufe oder keinen Nachweis"
-              : "Freigabe braucht eine Stufe und einen Nachweis",
-        },
+        { error: "Nur Freigaben sind für mehrere Einträge möglich" },
         { status: 400 },
       );
     }
-  }
 
-  const now = new Date();
+    let rejectionReason: string | null = null;
+    if (action === "reject") {
+      if (typeof body.reason !== "string" || !body.reason.trim()) {
+        return NextResponse.json({ error: "Bitte gib einen Ablehnungsgrund an" }, { status: 400 });
+      }
+      rejectionReason = body.reason.trim();
+    }
 
-  try {
-    const results = await prisma.$transaction(async (tx) => {
-      const updatedEntries: ConsentWithUser[] = [];
-      const notifications = [];
+    let level: PhotoConsentLevelValue | null = null;
+    if (action === "setLevel" || body.level !== undefined) {
+      if (!isPhotoConsentLevel(body.level)) {
+        return NextResponse.json({ error: "Bitte wähle eine Stufe aus" }, { status: 400 });
+      }
+      level = body.level;
+    }
 
-      for (const consent of current) {
-        const updateData: Prisma.PhotoConsentUpdateInput = {};
-        if (level) {
-          updateData.level = level;
-        }
+    const actorDisplayName = getUserDisplayName(
+      {
+        firstName: session.user?.firstName ?? null,
+        lastName: session.user?.lastName ?? null,
+        name: session.user?.name ?? null,
+        email: session.user?.email ?? null,
+      },
+      "Unbekanntes Mitglied",
+    );
 
-        if (action === "approve") {
-          // „Gar nicht“ bleibt als eigener Zustand bestehen, er braucht keine Freigabe.
-          updateData.status = (level ?? consent.level) === "none" ? "noPhotos" : "approved";
-          updateData.approvedAt = now;
-          updateData.approvedBy = session.user?.id
-            ? { connect: { id: session.user.id } }
-            : { disconnect: true };
-          updateData.rejectionReason = null;
-        } else if (action === "reject") {
-          updateData.status = "rejected";
-          updateData.approvedAt = null;
-          updateData.approvedBy = { disconnect: true };
-          updateData.rejectionReason = rejectionReason;
-        } else if (action === "setLevel") {
-          if (level === "none") {
-            updateData.status = "noPhotos";
-          } else if (consent.status === "noPhotos") {
-            updateData.status = "pending";
+    const current = await prisma.photoConsent.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        status: true,
+        level: true,
+        documentUploadedAt: true,
+        signatureCapturedAt: true,
+      },
+    });
+    if (current.length !== ids.length) {
+      return NextResponse.json({ error: "Eintrag nicht gefunden" }, { status: 404 });
+    }
+
+    if (action === "approve") {
+      const blocked = current.find((consent) => {
+        const effectiveLevel = level ?? consent.level;
+        const hasProof = Boolean(consent.documentUploadedAt || consent.signatureCapturedAt);
+        return !effectiveLevel || (effectiveLevel !== "none" && !hasProof);
+      });
+      if (blocked) {
+        return NextResponse.json(
+          {
+            error:
+              ids.length > 1
+                ? "Einige Einträge haben keine Stufe oder keinen Nachweis"
+                : "Freigabe braucht eine Stufe und einen Nachweis",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const now = new Date();
+
+    try {
+      const results = await prisma.$transaction(async (tx) => {
+        const updatedEntries: ConsentWithUser[] = [];
+        const notifications = [];
+
+        for (const consent of current) {
+          const updateData: Prisma.PhotoConsentUpdateInput = {};
+          if (level) {
+            updateData.level = level;
           }
-          // Wer die Stufe einer bestehenden Freigabe ändert, bestätigt sie damit neu.
-          if (consent.status === "approved" && level !== "none" && level !== consent.level) {
+
+          if (action === "approve") {
+            // „Gar nicht“ bleibt als eigener Zustand bestehen, er braucht keine Freigabe.
+            updateData.status = (level ?? consent.level) === "none" ? "noPhotos" : "approved";
             updateData.approvedAt = now;
             updateData.approvedBy = session.user?.id
               ? { connect: { id: session.user.id } }
               : { disconnect: true };
+            updateData.rejectionReason = null;
+          } else if (action === "reject") {
+            updateData.status = "rejected";
+            updateData.approvedAt = null;
+            updateData.approvedBy = { disconnect: true };
+            updateData.rejectionReason = rejectionReason;
+          } else if (action === "setLevel") {
+            if (level === "none") {
+              updateData.status = "noPhotos";
+            } else if (consent.status === "noPhotos") {
+              updateData.status = "pending";
+            }
+            // Wer die Stufe einer bestehenden Freigabe ändert, bestätigt sie damit neu.
+            if (consent.status === "approved" && level !== "none" && level !== consent.level) {
+              updateData.approvedAt = now;
+              updateData.approvedBy = session.user?.id
+                ? { connect: { id: session.user.id } }
+                : { disconnect: true };
+            }
+          } else {
+            // Zurücksetzen leert den eingereichten Nachweis, damit neu eingereicht werden kann.
+            updateData.status = "pending";
+            updateData.approvedAt = null;
+            updateData.approvedBy = { disconnect: true };
+            updateData.rejectionReason = null;
+            updateData.documentName = null;
+            updateData.documentMime = null;
+            updateData.documentSize = null;
+            updateData.documentUploadedAt = null;
+            updateData.documentData = null;
+            updateData.signatureVersion = null;
+            updateData.signaturePayload = Prisma.JsonNull;
+            updateData.signatureCapturedAt = null;
           }
-        } else {
-          // Zurücksetzen leert den eingereichten Nachweis, damit neu eingereicht werden kann.
-          updateData.status = "pending";
-          updateData.approvedAt = null;
-          updateData.approvedBy = { disconnect: true };
-          updateData.rejectionReason = null;
-          updateData.documentName = null;
-          updateData.documentMime = null;
-          updateData.documentSize = null;
-          updateData.documentUploadedAt = null;
-          updateData.documentData = null;
-          updateData.signatureVersion = null;
-          updateData.signaturePayload = Prisma.JsonNull;
-          updateData.signatureCapturedAt = null;
+
+          const updated = await tx.photoConsent.update({
+            where: { id: consent.id },
+            data: updateData,
+            include: CONSENT_INCLUDE,
+          });
+          updatedEntries.push(updated);
+
+          if (action === "setLevel") {
+            continue;
+          }
+
+          const subjectDisplayName = getUserDisplayName(
+            {
+              firstName: updated.user.firstName,
+              lastName: updated.user.lastName,
+              name: updated.user.name,
+              email: updated.user.email,
+            },
+            "Unbekanntes Mitglied",
+          );
+
+          notifications.push(
+            await createPhotoConsentBoardNotification(tx, {
+              consentId: updated.id,
+              status: updated.status,
+              hasDocument: Boolean(updated.documentUploadedAt || updated.signatureCapturedAt),
+              subjectUserId: updated.userId,
+              subjectName: subjectDisplayName,
+              changeType: "status-changed",
+              actorUserId: session.user?.id ?? null,
+              actorName: actorDisplayName,
+              rejectionReason: updated.rejectionReason ?? null,
+            }),
+          );
         }
 
-        const updated = await tx.photoConsent.update({
-          where: { id: consent.id },
-          data: updateData,
-          include: CONSENT_INCLUDE,
-        });
-        updatedEntries.push(updated);
+        return { updatedEntries, notifications };
+      });
 
-        if (action === "setLevel") {
-          continue;
+      for (const notification of results.notifications) {
+        if (notification) {
+          await dispatchPhotoConsentBoardNotification(notification);
         }
-
-        const subjectDisplayName = getUserDisplayName(
-          {
-            firstName: updated.user.firstName,
-            lastName: updated.user.lastName,
-            name: updated.user.name,
-            email: updated.user.email,
-          },
-          "Unbekanntes Mitglied",
-        );
-
-        notifications.push(
-          await createPhotoConsentBoardNotification(tx, {
-            consentId: updated.id,
-            status: updated.status,
-            hasDocument: Boolean(updated.documentUploadedAt || updated.signatureCapturedAt),
-            subjectUserId: updated.userId,
-            subjectName: subjectDisplayName,
-            changeType: "status-changed",
-            actorUserId: session.user?.id ?? null,
-            actorName: actorDisplayName,
-            rejectionReason: updated.rejectionReason ?? null,
-          }),
-        );
       }
 
-      return { updatedEntries, notifications };
-    });
-
-    for (const notification of results.notifications) {
-      if (notification) {
-        await dispatchPhotoConsentBoardNotification(notification);
+      const entries = results.updatedEntries.map(mapConsent);
+      return NextResponse.json({ ok: true, entry: entries[0] ?? null, entries });
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: unknown }).code === "P2025"
+      ) {
+        return NextResponse.json({ error: "Eintrag nicht gefunden" }, { status: 404 });
       }
+      console.error("[PhotoConsent] Update failed", error);
+      return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
     }
-
-    const entries = results.updatedEntries.map(mapConsent);
-    return NextResponse.json({ ok: true, entry: entries[0] ?? null, entries });
-  } catch (error: unknown) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code?: unknown }).code === "P2025"
-    ) {
-      return NextResponse.json({ error: "Eintrag nicht gefunden" }, { status: 404 });
-    }
-    console.error("[PhotoConsent] Update failed", error);
-    return NextResponse.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 });
-  }
-}
+  },
+);

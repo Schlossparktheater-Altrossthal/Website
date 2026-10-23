@@ -10,7 +10,7 @@ const { requireAuthMock, hasPermissionMock, previewMock, performMock } = vi.hois
   performMock: vi.fn(),
 }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock }));
+vi.mock("@/lib/rbac", () => ({ requireAuth: requireAuthMock, getSession: requireAuthMock }));
 vi.mock("@/lib/permissions", () => ({ hasPermission: hasPermissionMock }));
 vi.mock("@/lib/season-reset/deactivation", () => ({
   previewSeasonChangeDeactivation: previewMock,

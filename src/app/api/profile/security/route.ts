@@ -1,3 +1,4 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -11,18 +12,13 @@ import {
 } from "@/lib/authentik/client";
 import { getAuthentikAccountLinks, isAuthentikProvisioningEnabled } from "@/lib/authentik/config";
 import { findAuthentikUserForMemberId as loadAuthentikUser } from "@/lib/authentik/devices";
-import { requireAuth } from "@/lib/rbac";
 
 /**
  * Profil "Anmeldung & Sicherheit": Links in die Konto-Flows von Authentik und
  * die hinterlegten Passkeys/Authenticator-Apps. Ohne API-Token (Staging) gibt
  * es nur die Links, die Geräte zeigt dann Authentik selbst.
  */
-export async function GET() {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-
+export const GET = withRoute({ name: "profile/security.get" }, async ({ userId }) => {
   const links = getAuthentikAccountLinks();
   if (!links) return NextResponse.json({ mode: "local" });
 
@@ -56,7 +52,7 @@ export async function GET() {
     canManage,
     hasPassword,
   });
-}
+});
 
 const deleteSchema = z.object({
   kind: z.enum(AUTHENTIK_DEVICE_KINDS),
@@ -64,27 +60,27 @@ const deleteSchema = z.object({
 });
 
 /** Passkey oder Authenticator-App des eigenen Kontos entfernen. */
-export async function DELETE(request: Request) {
-  const session = await requireAuth();
-  const userId = session.user?.id;
-  if (!userId) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-  if (!isAuthentikProvisioningEnabled()) {
-    return NextResponse.json({ error: "Hier nicht verfügbar" }, { status: 503 });
-  }
-
-  const parsed = deleteSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
-
-  try {
-    const authentikUser = await loadAuthentikUser(userId);
-    if (!authentikUser || !isManagedAuthentikUser(authentikUser)) {
-      return NextResponse.json({ error: "Konto wird in Authentik verwaltet" }, { status: 403 });
+export const DELETE = withRoute(
+  { name: "profile/security.delete" },
+  async ({ request, userId }) => {
+    if (!isAuthentikProvisioningEnabled()) {
+      return NextResponse.json({ error: "Hier nicht verfügbar" }, { status: 503 });
     }
-    const removed = await deleteAuthentikDevice(authentikUser, parsed.data.kind, parsed.data.id);
-    if (!removed) return NextResponse.json({ error: "Gerät nicht gefunden" }, { status: 404 });
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[authentik] Gerät konnte nicht entfernt werden", error);
-    return NextResponse.json({ error: "Authentik nicht erreichbar" }, { status: 502 });
-  }
-}
+
+    const parsed = deleteSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });
+
+    try {
+      const authentikUser = await loadAuthentikUser(userId);
+      if (!authentikUser || !isManagedAuthentikUser(authentikUser)) {
+        return NextResponse.json({ error: "Konto wird in Authentik verwaltet" }, { status: 403 });
+      }
+      const removed = await deleteAuthentikDevice(authentikUser, parsed.data.kind, parsed.data.id);
+      if (!removed) return NextResponse.json({ error: "Gerät nicht gefunden" }, { status: 404 });
+      return NextResponse.json({ ok: true });
+    } catch (error) {
+      console.error("[authentik] Gerät konnte nicht entfernt werden", error);
+      return NextResponse.json({ error: "Authentik nicht erreichbar" }, { status: 502 });
+    }
+  },
+);

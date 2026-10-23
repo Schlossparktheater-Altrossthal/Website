@@ -1,9 +1,9 @@
+import { withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
-import { requireAuth } from "@/lib/rbac";
 import { checkInTicket, TicketCheckInError, type TicketCheckInResult } from "@/lib/tickets/service";
 
 const payloadSchema = z
@@ -51,8 +51,7 @@ function formatScanEvent(event: TicketCheckInResult["scanEvent"]) {
   };
 }
 
-export async function POST(request: Request) {
-  const session = await requireAuth();
+export const POST = withRoute({ name: "ticket/checkin.post" }, async ({ request, session }) => {
   const allowed = await hasPermission(session.user, "PRIVATE.PRODUCTION.SHOW.MANAGE");
 
   if (!allowed) {
@@ -106,4 +105,4 @@ export async function POST(request: Request) {
     console.error("Ticket check-in failed", error);
     return NextResponse.json({ error: "Ticket-Check-in fehlgeschlagen" }, { status: 500 });
   }
-}
+});

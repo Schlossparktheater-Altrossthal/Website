@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 
 import {
   DEFAULT_STRICTNESS,
@@ -14,7 +15,6 @@ import {
   broadcastOnboardingDashboardForUser,
   broadcastOnboardingDashboardSnapshot,
 } from "@/lib/onboarding/dashboard-events";
-import { requireAuth } from "@/lib/rbac";
 
 function parseRequestBody(body: unknown) {
   const result = dietaryPreferenceSchema.safeParse(body);
@@ -25,8 +25,7 @@ function parseRequestBody(body: unknown) {
   return result.data;
 }
 
-export async function PUT(request: NextRequest) {
-  const session = await requireAuth();
+export const PUT = withRoute({ name: "profile/dietary.put" }, async ({ request, session }) => {
   const userId = session.user?.id;
 
   if (!userId) {
@@ -108,4 +107,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

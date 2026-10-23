@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { requireApiSession, withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import {
   performSeasonChangeDeactivation,
@@ -14,22 +14,22 @@ const executeSchema = z.object({
 });
 
 async function ensurePermission(): Promise<NextResponse | null> {
-  const session = await requireAuth();
+  const session = await requireApiSession();
   if (!(await hasPermission(session.user, "PRIVATE.ADMIN.MEMBERS.MANAGE"))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
   return null;
 }
 
-export async function GET() {
+export const GET = withRoute({ name: "season-reset/deactivation.get" }, async () => {
   const denied = await ensurePermission();
   if (denied) return denied;
 
   const candidates = await previewSeasonChangeDeactivation();
   return NextResponse.json({ candidates });
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ name: "season-reset/deactivation.post" }, async ({ request }) => {
   const denied = await ensurePermission();
   if (denied) return denied;
 
@@ -46,4 +46,4 @@ export async function POST(request: NextRequest) {
     console.error("season-reset deactivation failed", error);
     return NextResponse.json({ error: "Saisonabschluss fehlgeschlagen" }, { status: 500 });
   }
-}
+});

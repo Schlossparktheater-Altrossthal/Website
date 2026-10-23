@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   resolveTaxon: vi.fn(),
 }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: mocks.requireAuth }));
+vi.mock("@/lib/rbac", () => ({ requireAuth: mocks.requireAuth, getSession: mocks.requireAuth }));
 vi.mock("@/lib/food/restriction-store", () => ({
   resolveRestrictionTaxonCode: mocks.resolveTaxon,
 }));

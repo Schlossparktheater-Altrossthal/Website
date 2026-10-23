@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type AuthedSession, withRoute } from "@/lib/api/route";
+import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { getActiveProductionId } from "@/lib/active-production";
 import { isCurrentProductionStatus } from "@/lib/produktionen/status";
@@ -17,8 +17,7 @@ import { sortRoles, ROLES, type Role, withAutoCast } from "@/lib/roles";
 
 const DATE_LIMIT_YEARS = 5;
 
-type SessionPromise = ReturnType<typeof requireAuth>;
-type SessionUser = Awaited<SessionPromise>["user"];
+type SessionUser = AuthedSession["user"];
 
 async function canManageInvites(user: SessionUser) {
   if (!user) return false;
@@ -67,8 +66,7 @@ function filterRoles(value: unknown): Role[] {
   return result.length ? result : ["member"];
 }
 
-export async function GET() {
-  const session = await requireAuth();
+export const GET = withRoute({ name: "member-invites.get" }, async ({ session }) => {
   if (!(await canManageInvites(session.user))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
@@ -179,10 +177,9 @@ export async function GET() {
     defaultShowId: defaultShowId || null,
     personalInviteCount,
   });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const session = await requireAuth();
+export const POST = withRoute({ name: "member-invites.post" }, async ({ request, session }) => {
   if (!(await canManageInvites(session.user))) {
     return NextResponse.json({ error: "Nicht berechtigt" }, { status: 403 });
   }
@@ -261,4 +258,4 @@ export async function POST(request: NextRequest) {
       show: invite.show,
     },
   });
-}
+});
