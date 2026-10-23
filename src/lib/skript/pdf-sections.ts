@@ -317,19 +317,23 @@ function renderMirror(doc: Doc, stats: ScriptStats, options: SectionOptions) {
       doc.addPage({ ...doc.options, layout: "landscape" });
       y = drawHeader(doc.page.margins.top);
     }
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(6.5)
-      .fillColor(MUTED)
-      .text(`${ROLE_TIER_LABELS[tier].toUpperCase()} · ${roles.length}`, left + 4, y + 5, {
-        characterSpacing: 0.4,
-        lineBreak: false,
-      });
-    y += 15;
+    const tierLabel = (suffix: string) => {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(6.5)
+        .fillColor(MUTED)
+        .text(`${ROLE_TIER_LABELS[tier].toUpperCase()}${suffix}`, left + 4, y + 5, {
+          characterSpacing: 0.4,
+          lineBreak: false,
+        });
+      y += 15;
+    };
+    tierLabel(` · ${roles.length}`);
     roles.forEach((role, index) => {
       if (y + ROW > bottom()) {
         doc.addPage({ ...doc.options, layout: "landscape" });
         y = drawHeader(doc.page.margins.top);
+        tierLabel(" (FORTSETZUNG)");
       }
       if (index % 2 === 1) doc.save().rect(left, y, width, ROW).fill("#fafaf9").restore();
       drawGrid(y, ROW);
