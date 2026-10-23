@@ -932,6 +932,18 @@ export function ScriptReader({
   const cueMargin =
     settings.cueLayout === "below" &&
     categories.some((category) => !settings.hiddenCues.includes(category));
+  /** Blockbereiche [from, to) je Szene – Grundlage für die Szenen-Abschnitte. */
+  const sceneGroups = React.useMemo(() => {
+    const groups: { from: number; to: number }[] = [];
+    blocks.forEach((block, index) => {
+      if (index === 0 || block.sceneId !== blocks[index - 1].sceneId) {
+        groups.push({ from: index, to: index + 1 });
+      } else {
+        groups[groups.length - 1].to = index + 1;
+      }
+    });
+    return groups;
+  }, [blocks]);
   const sceneIndex = React.useMemo(() => {
     const first = new Map<string, number>();
     blocks.forEach((block, index) => {
@@ -1566,73 +1578,80 @@ export function ScriptReader({
               ) : null}
             </p>
           ) : null}
-          {blocks.map((block, index) => {
-            const scene =
-              sceneIndex.get(block.sceneId) === index
-                ? scenes.find((s) => s.id === block.sceneId)
-                : null;
-            const header =
-              scene && (!settings.sceneHeader.onlyMine || roleScenes.has(scene.id))
-                ? sceneHeaders.get(scene.id)
-                : null;
-            return (
-              <React.Fragment key={block.id}>
-                {scene ? (
-                  <h2
-                    id={`szene-${scene.id}`}
-                    className="top-[env(safe-area-inset-top)] z-10 mb-1 mt-8 scroll-mt-14 border-b-2 border-foreground bg-background/95 pb-1 pt-1 text-[0.85em] font-bold uppercase tracking-wider backdrop-blur first:mt-2 group-data-[chrome-hidden]/reader:sticky"
-                  >
-                    {scene.title}
-                  </h2>
-                ) : null}
-                {header ? (
-                  <SceneHeader
-                    // Darstellung gewechselt: alle Köpfe neu auf- bzw. zuklappen.
-                    key={settings.sceneHeader.mode}
-                    model={header}
-                    names={roleNames}
-                    expandedByDefault={settings.sceneHeader.mode === "card"}
-                  />
-                ) : null}
-                <BlockView
-                  ref={(element) => {
-                    refs.current[index] = element;
-                  }}
-                  block={block}
-                  settings={settings}
-                  mine={isRoleBlock(block, roleSet)}
-                  cueLine={cueLines.has(index)}
-                  stacked={(block.speaker?.length ?? 0) > SPEAKER_MAX_CHARS}
-                  showPage={index === 0 || blocks[index - 1].page !== block.page}
-                  query={trimmed.length >= 2 ? trimmed : ""}
-                  activeMatch={index === activeMatch}
-                  annotations={
-                    settings.showNotes
-                      ? (annotationsByBlock.get(block.id) ?? noAnnotations)
-                      : noAnnotations
-                  }
-                  selected={
-                    (!selection && selectedBlock === block.id) ||
-                    pick?.blockId === block.id ||
-                    (noteTarget?.blockId === block.id && !noteTarget.range)
-                  }
-                  words={noteMode}
-                  editingId={inlineNote?.mode === "edit" ? inlineNote.annotation.id : null}
-                  noteEditor={
-                    inlineNote && inlineBlockId === block.id ? (
-                      <InlineNoteEditor
-                        key={inlineNote.mode === "edit" ? inlineNote.annotation.id : "neu"}
-                        store={store}
-                        state={inlineNote}
-                        onClose={() => setInlineNote(null)}
+          {sceneGroups.map((group) => (
+            // Je Szene ein eigener Abschnitt: die klebende Überschrift endet mit
+            // ihrer Szene, statt sich unter die nächste (kürzere) zu schieben.
+            <section key={group.from} className="first:[&>h2]:mt-2">
+              {blocks.slice(group.from, group.to).map((block, offset) => {
+                const index = group.from + offset;
+                const scene =
+                  sceneIndex.get(block.sceneId) === index
+                    ? scenes.find((s) => s.id === block.sceneId)
+                    : null;
+                const header =
+                  scene && (!settings.sceneHeader.onlyMine || roleScenes.has(scene.id))
+                    ? sceneHeaders.get(scene.id)
+                    : null;
+                return (
+                  <React.Fragment key={block.id}>
+                    {scene ? (
+                      <h2
+                        id={`szene-${scene.id}`}
+                        className="top-[env(safe-area-inset-top)] z-10 mb-1 mt-8 scroll-mt-14 border-b-2 border-foreground bg-background/95 pb-1 pt-1 text-[0.85em] font-bold uppercase tracking-wider backdrop-blur group-data-[chrome-hidden]/reader:sticky"
+                      >
+                        {scene.title}
+                      </h2>
+                    ) : null}
+                    {header ? (
+                      <SceneHeader
+                        // Darstellung gewechselt: alle Köpfe neu auf- bzw. zuklappen.
+                        key={settings.sceneHeader.mode}
+                        model={header}
+                        names={roleNames}
+                        expandedByDefault={settings.sceneHeader.mode === "card"}
                       />
-                    ) : null
-                  }
-                  noteRange={noteTarget?.blockId === block.id ? noteTarget.range : null}
-                />
-              </React.Fragment>
-            );
-          })}
+                    ) : null}
+                    <BlockView
+                      ref={(element) => {
+                        refs.current[index] = element;
+                      }}
+                      block={block}
+                      settings={settings}
+                      mine={isRoleBlock(block, roleSet)}
+                      cueLine={cueLines.has(index)}
+                      stacked={(block.speaker?.length ?? 0) > SPEAKER_MAX_CHARS}
+                      showPage={index === 0 || blocks[index - 1].page !== block.page}
+                      query={trimmed.length >= 2 ? trimmed : ""}
+                      activeMatch={index === activeMatch}
+                      annotations={
+                        settings.showNotes
+                          ? (annotationsByBlock.get(block.id) ?? noAnnotations)
+                          : noAnnotations
+                      }
+                      selected={
+                        (!selection && selectedBlock === block.id) ||
+                        pick?.blockId === block.id ||
+                        (noteTarget?.blockId === block.id && !noteTarget.range)
+                      }
+                      words={noteMode}
+                      editingId={inlineNote?.mode === "edit" ? inlineNote.annotation.id : null}
+                      noteEditor={
+                        inlineNote && inlineBlockId === block.id ? (
+                          <InlineNoteEditor
+                            key={inlineNote.mode === "edit" ? inlineNote.annotation.id : "neu"}
+                            store={store}
+                            state={inlineNote}
+                            onClose={() => setInlineNote(null)}
+                          />
+                        ) : null
+                      }
+                      noteRange={noteTarget?.blockId === block.id ? noteTarget.range : null}
+                    />
+                  </React.Fragment>
+                );
+              })}
+            </section>
+          ))}
         </article>
       </div>
 
