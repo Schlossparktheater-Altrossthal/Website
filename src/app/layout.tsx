@@ -9,6 +9,8 @@ import { ThemeStyleRegistry } from "@/components/theme/theme-style-registry";
 import { geistSans, geistMono } from "./fonts";
 import {
   DEFAULT_SITE_TITLE,
+  applyMemberAppearance,
+  readMemberAppearance,
   readWebsiteSettingsCached,
   resolveWebsiteSettings,
 } from "@/lib/website-settings";
@@ -94,6 +96,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     console.error("Failed to load session", error);
   }
 
+  // Persönliche Darstellung (Profil) parallel laden; Fehler fallen auf die Seitenvorgabe zurück.
+  const appearancePromise =
+    process.env.DATABASE_URL && session?.user?.id && !session.user.isDeactivated
+      ? readMemberAppearance(session.user.id).catch((error) => {
+          console.error("Failed to load member appearance", error);
+          return null;
+        })
+      : Promise.resolve(null);
+
   let resolvedSettings = resolveWebsiteSettings(null);
 
   let syncToken: string | null = null;
@@ -115,6 +126,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     if (record) {
       resolvedSettings = resolveWebsiteSettings(record);
     }
+    resolvedSettings = applyMemberAppearance(resolvedSettings, await appearancePromise);
   }
 
   const htmlClassName = cn(

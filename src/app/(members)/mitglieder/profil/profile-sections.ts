@@ -1,7 +1,7 @@
 import type { ProfileChecklistTarget } from "@/lib/profile-completion";
 
 export type ProfileSectionId =
-  ProfileChecklistTarget | "masse" | "benachrichtigungen" | "sicherheit";
+  ProfileChecklistTarget | "masse" | "benachrichtigungen" | "darstellung" | "sicherheit";
 
 export type ProfileSectionDefinition = {
   id: ProfileSectionId;
@@ -58,6 +58,12 @@ export const PROFILE_SECTIONS: readonly ProfileSectionDefinition[] = [
     id: "benachrichtigungen",
     label: "Benachrichtigungen",
     description: "Push, E-Mail, Ruhezeit und angemeldete Geräte.",
+    group: "settings",
+  },
+  {
+    id: "darstellung",
+    label: "Darstellung",
+    description: "Hell, dunkel oder wie das Gerät – und auf Wunsch ein eigenes Farbschema.",
     group: "settings",
   },
   {

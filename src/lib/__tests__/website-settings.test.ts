@@ -2,7 +2,12 @@ import { describe, expect, test } from "vitest";
 
 import { DEFAULT_WEBSITE_THEME } from "@/lib/theme/presets/builtin";
 import { sanitiseTweakcnTheme } from "@/lib/theme/tweakcn";
-import { toTweakcnTheme } from "@/lib/website-settings";
+import {
+  applyMemberAppearance,
+  parseMemberColorMode,
+  resolveWebsiteSettings,
+  toTweakcnTheme,
+} from "@/lib/website-settings";
 
 // Frühere Speicherform: Farbfamilien + fertig berechnete `modes`.
 const LEGACY_STORED_THEME = {
@@ -42,5 +47,39 @@ describe("toTweakcnTheme", () => {
   test("fällt bei unbrauchbaren Daten auf das Standard-Theme zurück", () => {
     expect(toTweakcnTheme(null)).toEqual(sanitiseTweakcnTheme(DEFAULT_WEBSITE_THEME));
     expect(toTweakcnTheme({ foo: 1 })).toEqual(sanitiseTweakcnTheme(DEFAULT_WEBSITE_THEME));
+  });
+});
+
+describe("persönliche Darstellung", () => {
+  const site = resolveWebsiteSettings(null);
+  const memberTheme = {
+    id: "mein-theme",
+    name: "Mein Theme",
+    description: null,
+    tokens: DEFAULT_WEBSITE_THEME,
+    isDefault: false,
+    memberSelectable: true,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  };
+
+  test("ohne eigene Wahl gilt die Seitenvorgabe", () => {
+    expect(applyMemberAppearance(site, null)).toBe(site);
+    const result = applyMemberAppearance(site, { colorMode: null, theme: null });
+    expect(result.colorMode).toBe(site.colorMode);
+    expect(result.theme.id).toBe(site.theme.id);
+  });
+
+  test("eigener Modus und eigenes Theme überschreiben die Seite", () => {
+    const result = applyMemberAppearance(site, { colorMode: "light", theme: memberTheme });
+    expect(result.colorMode).toBe("light");
+    expect(result.theme.id).toBe("mein-theme");
+    expect(result.siteTitle).toBe(site.siteTitle);
+  });
+
+  test("unbekannte Modi werden verworfen", () => {
+    expect(parseMemberColorMode("dark")).toBe("dark");
+    expect(parseMemberColorMode("sepia")).toBeNull();
+    expect(parseMemberColorMode(null)).toBeNull();
   });
 });

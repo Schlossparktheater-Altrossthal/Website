@@ -305,6 +305,11 @@ enum IssueVisibility {
 
 model User {
   id                       String                   @id @default(cuid())
+  /// Persönliche Darstellung: light/dark/system; null = Vorgabe der Seite.
+  colorModePreference      String?
+  /// Persönliches Theme (nur `memberSelectable`); null = Theme der Seite.
+  themePreferenceId        String?
+  themePreference          WebsiteTheme?            @relation("UserThemePreference", fields: [themePreferenceId], references: [id], onDelete: SetNull)
   freeTicketReservations   Reservation[]            @relation("ReservationMember")
   freeTicketAllowances     FreeTicketAllowance[]
   boxOfficeAccessesCreated BoxOfficeAccess[]        @relation("BoxOfficeAccessCreatedBy")
@@ -988,14 +993,17 @@ model SceneBreakdownItem {
 }
 
 model WebsiteTheme {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  tokens      Json
-  isDefault   Boolean           @default(false)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  settings    WebsiteSettings[]
+  id               String            @id @default(cuid())
+  name             String
+  description      String?
+  tokens           Json
+  isDefault        Boolean           @default(false)
+  /// Mitglieder dürfen das Theme in ihrem Profil für sich wählen.
+  memberSelectable Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  settings         WebsiteSettings[]
+  preferredBy      User[]            @relation("UserThemePreference")
 }
 
 model WebsiteSettings {

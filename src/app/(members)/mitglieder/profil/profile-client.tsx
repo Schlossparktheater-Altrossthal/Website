@@ -13,6 +13,7 @@ import { isPhotoConsentDone } from "@/lib/photo-consent-levels";
 import type { PhotoConsentSummary } from "@/types/photo-consent";
 import { ProfileHeader } from "./profile-header";
 import { NotificationsSection } from "./sections/notifications-section";
+import { AppearanceSection } from "./sections/appearance-section";
 import { SecuritySection } from "./sections/security-section";
 import { PROFILE_SECTIONS, resolveProfileSection, type ProfileSectionId } from "./profile-sections";
 import { ProfileSectionNav, type ProfileSectionStatus } from "./profile-section-nav";
@@ -267,6 +268,7 @@ export function ProfileClient({
             .join(" · ") || "Noch nichts eingetragen",
       },
       benachrichtigungen: { missing: false, summary: "Push, Ruhezeit, Geräte" },
+      darstellung: { missing: false, summary: "Hell, dunkel, Farbschema" },
       sicherheit: { missing: false, summary: "Passwort, Passkeys, Zwei-Faktor" },
     };
   }, [
@@ -333,6 +335,8 @@ export function ProfileClient({
         );
       case "benachrichtigungen":
         return <NotificationsSection />;
+      case "darstellung":
+        return <AppearanceSection />;
       case "sicherheit":
         return <SecuritySection />;
     }

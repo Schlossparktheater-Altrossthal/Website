@@ -2,6 +2,7 @@
 
 import {
   BellIcon,
+  PaletteIcon,
   CameraIcon,
   CreditCardIcon,
   HeartIcon,
@@ -36,6 +37,7 @@ const SECTION_ICONS: Record<ProfileSectionId, IconComponent> = {
   interessen: HeartIcon,
   produktion: TheaterIcon,
   benachrichtigungen: BellIcon,
+  darstellung: PaletteIcon,
   sicherheit: ShieldCheckIcon,
 };
 

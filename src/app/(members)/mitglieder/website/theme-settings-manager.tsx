@@ -43,6 +43,7 @@ import {
   type ThemeVariables,
   type TweakcnTheme,
 } from "@/lib/theme/tweakcn";
+import { summarizeClientWebsiteTheme } from "@/lib/theme/swatches";
 import { cn } from "@/lib/utils";
 import type {
   ClientWebsiteSettings,
@@ -121,16 +122,7 @@ function sortThemeSummaries(themes: ClientWebsiteThemeSummary[]): ClientWebsiteT
   });
 }
 
-function themeToSummary(theme: ClientWebsiteTheme): ClientWebsiteThemeSummary {
-  return {
-    id: theme.id,
-    name: theme.name,
-    description: theme.description,
-    isDefault: theme.isDefault,
-    isPreset: theme.isPreset,
-    updatedAt: theme.updatedAt,
-  };
-}
+const themeToSummary = summarizeClientWebsiteTheme;
 
 function toFileSlug(name: string) {
   const slug = name

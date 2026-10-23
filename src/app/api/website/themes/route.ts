@@ -1,3 +1,4 @@
+import { summarizeClientWebsiteTheme } from "@/lib/theme/swatches";
 import { requireApiSession, withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -12,11 +13,7 @@ import {
 import { hasPermission } from "@/lib/permissions";
 import { resolveThemeImport } from "@/lib/theme/import";
 import { ThemeImportError } from "@/lib/theme/tweakcn";
-import {
-  createWebsiteTheme,
-  listWebsiteThemes,
-  type ClientWebsiteThemeSummary,
-} from "@/lib/website-settings";
+import { createWebsiteTheme, listWebsiteThemes } from "@/lib/website-settings";
 
 const createThemeSchema = z
   .object({
@@ -98,14 +95,7 @@ export const POST = withRoute({ name: "website/themes.post" }, async ({ request 
         options.name ?? imported?.suggestedName ?? (imported ? "Importiertes Theme" : undefined),
       tokens: imported?.theme,
     });
-    const summary: ClientWebsiteThemeSummary = {
-      id: theme.id,
-      name: theme.name,
-      description: theme.description,
-      isDefault: theme.isDefault,
-      isPreset: theme.isPreset,
-      updatedAt: theme.updatedAt,
-    };
+    const summary = summarizeClientWebsiteTheme(theme);
     return NextResponse.json({ theme, summary });
   } catch (error) {
     console.error("Failed to create website theme", error);

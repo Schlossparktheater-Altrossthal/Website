@@ -11,6 +11,7 @@ import {
   SUNSET_GLOW_THEME,
   VELVET_SPOTLIGHT_THEME,
 } from "@/lib/theme/presets/builtin";
+import { toThemeSwatches, type ThemeSwatches } from "@/lib/theme/swatches";
 import { SOMMERTHEATER_DRUPAL_THEME_CSS } from "@/lib/theme/presets/sommertheater-drupal";
 import {
   isTweakcnTheme,
@@ -211,6 +212,7 @@ export type ResolvedWebsiteTheme = {
   tokens: TweakcnTheme;
   isDefault: boolean;
   isPreset: boolean;
+  memberSelectable: boolean;
   updatedAt: Date | null;
 };
 
@@ -230,6 +232,7 @@ const FALLBACK_THEME: ResolvedWebsiteTheme = {
   tokens: toTweakcnTheme(DEFAULT_WEBSITE_THEME),
   isDefault: true,
   isPreset: true,
+  memberSelectable: false,
   updatedAt: null,
 };
 
@@ -245,6 +248,7 @@ export function resolveWebsiteTheme(record: WebsiteTheme | null | undefined): Re
     tokens: toTweakcnTheme(record.tokens ?? DEFAULT_WEBSITE_THEME),
     isDefault: record.isDefault ?? false,
     isPreset: PRESET_THEME_IDS.has(record.id) || Boolean(record.isDefault),
+    memberSelectable: record.memberSelectable ?? false,
     updatedAt: record.updatedAt ?? null,
   };
 }
@@ -270,6 +274,7 @@ export type ClientWebsiteTheme = {
   tokens: TweakcnTheme;
   isDefault: boolean;
   isPreset: boolean;
+  memberSelectable: boolean;
   updatedAt: string | null;
 };
 
@@ -279,6 +284,9 @@ export type ClientWebsiteThemeSummary = {
   description: string | null;
   isDefault: boolean;
   isPreset: boolean;
+  memberSelectable: boolean;
+  swatches: ThemeSwatches;
+  radius: string;
   updatedAt: string | null;
 };
 
@@ -299,6 +307,7 @@ export function toClientWebsiteTheme(resolved: ResolvedWebsiteTheme): ClientWebs
     tokens: deepClone(resolved.tokens),
     isDefault: resolved.isDefault,
     isPreset: resolved.isPreset,
+    memberSelectable: resolved.memberSelectable,
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
   };
 }
@@ -312,6 +321,9 @@ export function toClientWebsiteThemeSummary(
     description: resolved.description,
     isDefault: resolved.isDefault,
     isPreset: resolved.isPreset,
+    memberSelectable: resolved.memberSelectable,
+    swatches: toThemeSwatches(resolved.tokens),
+    radius: resolved.tokens.theme.radius ?? "0.5rem",
     updatedAt: resolved.updatedAt ? resolved.updatedAt.toISOString() : null,
   };
 }
@@ -616,4 +628,94 @@ export async function createWebsiteTheme(
   });
 
   return toClientWebsiteTheme(resolveWebsiteTheme(created));
+}
+
+/** Freigabe für Mitglieder; auch bei schreibgeschützten Vorlagen erlaubt. */
+export async function setWebsiteThemeMemberSelectable(id: string, memberSelectable: boolean) {
+  await prisma.websiteTheme.update({ where: { id }, data: { memberSelectable } });
+  if (!memberSelectable) {
+    // Wer das Theme gewählt hatte, fällt auf das Theme der Seite zurück.
+    await prisma.user.updateMany({
+      where: { themePreferenceId: id },
+      data: { themePreferenceId: null },
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Persönliche Darstellung der Mitglieder
+// ---------------------------------------------------------------------------
+
+export type MemberAppearancePreference = {
+  /** null = Vorgabe der Seite. */
+  colorMode: ThemeColorMode | null;
+  /** null = Theme der Seite. */
+  themeId: string | null;
+};
+
+export function parseMemberColorMode(value: unknown): ThemeColorMode | null {
+  return typeof value === "string" && (THEME_COLOR_MODES as readonly string[]).includes(value)
+    ? (value as ThemeColorMode)
+    : null;
+}
+
+export type MemberAppearance = { colorMode: ThemeColorMode | null; theme: WebsiteTheme | null };
+
+/** Liest Modus und (nur freigegebenes) Theme eines Mitglieds. */
+export async function readMemberAppearance(userId: string): Promise<MemberAppearance | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { colorModePreference: true, themePreference: true },
+  });
+  if (!user) {
+    return null;
+  }
+  const theme = user.themePreference?.memberSelectable ? user.themePreference : null;
+  return { colorMode: parseMemberColorMode(user.colorModePreference), theme };
+}
+
+/** Wendet die persönliche Wahl auf die Seiteneinstellungen an. */
+export function applyMemberAppearance(
+  settings: ResolvedWebsiteSettings,
+  appearance: MemberAppearance | null,
+): ResolvedWebsiteSettings {
+  if (!appearance) {
+    return settings;
+  }
+  return {
+    ...settings,
+    colorMode: appearance.colorMode ?? settings.colorMode,
+    theme: appearance.theme ? resolveWebsiteTheme(appearance.theme) : settings.theme,
+  };
+}
+
+export class MemberThemeNotSelectableError extends Error {
+  constructor() {
+    super("Dieses Theme ist nicht zur Auswahl freigegeben.");
+    this.name = "MemberThemeNotSelectableError";
+  }
+}
+
+export async function saveMemberAppearance(userId: string, input: MemberAppearancePreference) {
+  if (input.themeId) {
+    const theme = await prisma.websiteTheme.findUnique({
+      where: { id: input.themeId },
+      select: { memberSelectable: true },
+    });
+    if (!theme?.memberSelectable) {
+      throw new MemberThemeNotSelectableError();
+    }
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { colorModePreference: input.colorMode, themePreferenceId: input.themeId },
+  });
+}
+
+/** Themes, die Mitglieder wählen dürfen (für das Profil). */
+export async function listMemberSelectableThemes(): Promise<ClientWebsiteThemeSummary[]> {
+  const themes = await prisma.websiteTheme.findMany({ where: { memberSelectable: true } });
+  return sortResolvedThemes(themes.map((theme) => resolveWebsiteTheme(theme))).map((theme) =>
+    toClientWebsiteThemeSummary(theme),
+  );
 }
