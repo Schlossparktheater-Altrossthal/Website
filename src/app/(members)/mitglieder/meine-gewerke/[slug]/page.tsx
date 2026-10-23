@@ -31,6 +31,7 @@ import {
 } from "@/lib/departments/handover";
 import { loadTeamEvents } from "@/lib/departments/events";
 import { loadDepartmentPortal, type PortalMember } from "@/lib/departments/portal";
+import { canSeeDepartmentFinance, getFinanceAccess } from "@/lib/finance/access";
 import { castOfShow, loadMeasurementMembers } from "@/lib/measurements/members";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ import { PropsCheck, PropsRunsheet } from "../ausstattung/props-views";
 import { SetByScene, SetChangeovers } from "../ausstattung/set-views";
 import { SubViews } from "../ausstattung/shared";
 import { DepartmentBoard } from "../board/board";
+import { DepartmentBudget } from "../budget/department-budget";
 import { DepartmentSettingsButton } from "../department-settings-panel";
 import { VorOrt, type WorkItem } from "../handover/overview";
 import type { WorkPermissions } from "../handover/task-work";
@@ -56,6 +58,7 @@ type View =
   | "buehnenbild"
   | "termine"
   | "masse"
+  | "budget"
   | "team";
 
 /** Verwaltungsseiten der Ausstattung je Baustein (docs/Plan/ausstattung-plan.md). */
@@ -91,13 +94,21 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
   const hasMeasurements = portal.modules.includes("measurements");
   const objectViews = OBJECT_VIEWS.filter((entry) => portal.modules.includes(entry.module));
   const hasInbox = portal.modules.includes("requirements");
+  // Budget: Leitung/Vertretung und Finanzrechte (docs/Plan/finanzen-plan.md, Phase 4).
+  const financeAccess = await getFinanceAccess({ id: userId });
+  const hasBudget =
+    portal.modules.includes("budget") &&
+    (portal.viewerRole === "lead" ||
+      portal.viewerRole === "deputy" ||
+      canSeeDepartmentFinance(financeAccess, portal.id));
   const objectView = objectViews.find((entry) => entry.view === ansicht)?.view;
   const view: View = objectView
     ? objectView
     : ansicht === "aufgaben" ||
         ansicht === "termine" ||
         ansicht === "team" ||
-        (ansicht === "masse" && hasMeasurements)
+        (ansicht === "masse" && hasMeasurements) ||
+        (ansicht === "budget" && hasBudget)
       ? ansicht
       : "uebersicht";
   const basePath = `/mitglieder/meine-gewerke/${encodeURIComponent(portal.slug)}`;
@@ -233,6 +244,7 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           ...objectViews.map((entry) => ({ value: entry.view as View, label: entry.label })),
           { value: "termine", label: `Termine ${portal.events.length}` },
           ...(hasMeasurements ? [{ value: "masse" as const, label: "Maße" }] : []),
+          ...(hasBudget ? [{ value: "budget" as const, label: "Budget" }] : []),
           { value: "team", label: `Team ${portal.members.length}` },
         ]}
       />
@@ -386,6 +398,10 @@ export default async function GewerkPortalPage({ params, searchParams }: PagePro
           showId={production.id}
           canConfigure={isManager || (portal.viewerRole !== null && portal.viewerRole !== "guest")}
         />
+      ) : null}
+
+      {view === "budget" ? (
+        <DepartmentBudget showId={production.id} departmentId={portal.id} userId={userId} />
       ) : null}
 
       {view === "team" ? (

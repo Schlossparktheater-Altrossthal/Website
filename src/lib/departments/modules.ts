@@ -41,8 +41,8 @@ export const DEPARTMENT_MODULES = [
   {
     key: "budget",
     label: "Budget",
-    description: "Ausgaben gegen das Gewerksbudget.",
-    ready: false,
+    description: "Ausgaben und offene Auslagen gegen das Gewerksbudget (Leitung/Vertretung).",
+    ready: true,
   },
 ] as const;
 

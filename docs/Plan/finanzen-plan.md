@@ -1,6 +1,6 @@
 # Plan: Finanzen neu – Auslagen, Budget, Einnahmen, Kassenbuch
 
-Stand: 2026-10-23. Entscheidungen E1–E7 getroffen, Mockup abgenommen, Phase 1–3 umgesetzt, offen Phase 4–8. Ersetzt die im Mai 2026 entfernte Finanzverwaltung
+Stand: 2026-10-23. Entscheidungen E1–E7 getroffen, Mockup abgenommen, Phase 1–4 umgesetzt, offen Phase 5–8. Ersetzt die im Mai 2026 entfernte Finanzverwaltung
 (`8bf1c77c`) – Konzept und UI damals unbrauchbar, deshalb Neuentwurf statt Wiederherstellung.
 Bündelt [`docs/Plan/einkauf-belege-plan.md`](einkauf-belege-plan.md) (Phase 1 + 3 + 4),
 [`docs/Plan/gewerke-plan.md`](gewerke-plan.md) Phase 12 (Budget) und die Spenden aus
@@ -95,7 +95,7 @@ Mockup: `docs/Plan/mockups/finanzen-mockup.html` (2026-10-23). Vor UI-Umsetzung 
 - [x] Phase 1 Datenmodell (2026-10-23): Migration `20261023180000_finance_rebuild`, `src/lib/finance/` (Zeiträume, Nummernkreis, Storno, Festschreiben, Salden), Rechte `PRIVATE.FINANCE.MANAGE`/`.VIEW`, Startkategorien, Demo-Seed
 - [x] Phase 2 Auslagen (2026-10-23): Einreichen mobil, Meine Auslagen, Gewerk-Prüfung, Kassenwart-Eingang, Erstatten/Spende → Buchung, Töpfe-Tab; Zahlungsdaten aus dem Profil (vorhandene Felder, PayPal als Weg ergänzt), Belege als Bytes in der DB
 - [x] Phase 3 Kassenbuch (2026-10-23): Tab Kassenbuch mit Zeitraum-/Topf-/Art-/Kategorie-/Gewerk-Filter und Suche, Kennzahlen (Stornos verrechnet), Buchen/Bearbeiten/Umbuchen mit Belegen und Spender-Feldern, Storno und Festschreiben im Detail-Sheet
-- [ ] Phase 4 Budgets
+- [x] Phase 4 Budgets (2026-10-23): Tab Budgets (Soll je Zeitraum, optional Gewerk/Kategorie/Topf, Ist = passende Ausgaben minus Stornos, offene Auslagen), Baustein „Budget“ im Gewerk-Portal für Leitung/Vertretung und Finanzrechte (Balken, Zu prüfen, Ausgaben, geschätzte Objektkosten)
 - [ ] Phase 5 Einnahmen
 - [ ] Phase 6 Berichte/Export
 - [ ] Phase 7 Einkauf

@@ -11,7 +11,7 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
 - `/mitglieder/finanzen/auslagen` – Meine Auslagen (alle Mitglieder); Gewerksleitung und
   Vertretung sehen oben „Zu prüfen“ mit den Auslagen ihres Gewerks.
 - `/mitglieder/finanzen` – Kassenwart/Prüfer: Tabs `Eingang`, `Kassenbuch` (`?tab=kassenbuch`,
-  Filter `zeitraum`, `topf`, `art`, `kategorie`, `gewerk`, `q`) und `Töpfe` (`?tab=toepfe`).
+  Filter `zeitraum`, `topf`, `art`, `kategorie`, `gewerk`, `q`) `Budgets` (`?tab=budgets&zeitraum=`) und `Töpfe` (`?tab=toepfe`).
   Ohne Finanzrecht Weiterleitung auf Meine Auslagen.
 - `/api/finanzen/belege/<id>` – Beleg (Foto/PDF) für Einreicher, Gewerksleitung, Kassenwart, Prüfer.
 
@@ -37,6 +37,15 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
 - Detail-Sheet: Bearbeiten (nur nicht festgeschrieben, keine Stornos), Stornieren (Gegenbuchung
   mit neuer Nummer), „Bis hier festschreiben“ (nur vorwärts, nicht rückgängig).
 
+## Budgets
+
+- Budget = Soll je Zeitraum, optional eingeschränkt auf Gewerk, Kategorie und Topf (leer = alle).
+  Ist = passende Ausgaben minus Stornos; offene Auslagen (eingereicht/freigegeben) separat, ohne
+  zugeordneten Topf zählen sie für jedes Topf-Budget (`lib/finance/budgets.ts`).
+- Gewerk-Portal: Baustein `budget` (Blaupause) zeigt den Tab „Budget“ für Leitung, Vertretung und
+  Finanzrechte – Balken, Auslagen zum Prüfen, Ausgaben des Gewerks, geschätzte Objektkosten
+  (`ProductionObject.costCents`, nur zur Planung).
+
 ## Permissions
 
 - keine – Auslagen einreichen und eigene sehen (jedes Mitglied)
@@ -54,5 +63,5 @@ getrennten Geldtöpfen. Plan und Entscheidungen: `docs/Plan/finanzen-plan.md`.
 
 ## Offene Baustellen
 
-Budgets, Einnahmen aus Kartenverkauf/Abendkasse, Berichte/Export
-(Phasen 4–6 im Plan). IBAN im Profil ist noch unverschlüsselt (Altbestand).
+Einnahmen aus Kartenverkauf/Abendkasse, Berichte/Export
+(Phasen 5–6 im Plan). IBAN im Profil ist noch unverschlüsselt (Altbestand).

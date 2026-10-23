@@ -336,3 +336,68 @@ export async function lockPeriodAction(input: {
     );
   });
 }
+
+// ── Budgets (Kassenwart) ───────────────────────────────────────────────────
+
+const budgetSchema = z.object({
+  id: z.string().max(40).optional(),
+  periodId: id,
+  fundId: optionalId,
+  departmentId: optionalId,
+  categoryId: optionalId,
+  planned: z.string().max(20),
+  notes: z.string().max(400).optional(),
+});
+
+export async function saveBudgetAction(input: z.input<typeof budgetSchema>): Promise<ActionResult> {
+  return run(async () => {
+    await requireManage();
+    const data = budgetSchema.parse(input);
+    const plannedCents = parseEuroToCents(data.planned);
+    if (plannedCents === null) throw new FinanceError("Bitte einen gültigen Betrag angeben.");
+    const period = await prisma.financePeriod.findUnique({ where: { id: data.periodId } });
+    if (!period) throw new FinanceError("Zeitraum nicht gefunden.");
+    if (data.departmentId) {
+      const department = await prisma.department.findUnique({ where: { id: data.departmentId } });
+      if (!department || department.showId !== period.showId)
+        throw new FinanceError("Gewerk gehört nicht zu diesem Zeitraum.");
+    }
+    if (data.categoryId) {
+      const category = await prisma.financeCategory.findUnique({ where: { id: data.categoryId } });
+      if (category?.type !== "expense")
+        throw new FinanceError("Budgets gibt es nur für Ausgaben-Kategorien.");
+    }
+    const duplicate = await prisma.financeBudget.findFirst({
+      where: {
+        periodId: data.periodId,
+        fundId: data.fundId,
+        departmentId: data.departmentId,
+        categoryId: data.categoryId,
+        ...(data.id ? { NOT: { id: data.id } } : {}),
+      },
+    });
+    if (duplicate) throw new FinanceError("Für diese Kombination gibt es schon ein Budget.");
+    const values = {
+      fundId: data.fundId,
+      departmentId: data.departmentId,
+      categoryId: data.categoryId,
+      plannedCents,
+      notes: data.notes?.trim() || null,
+    };
+    if (data.id) {
+      const existing = await prisma.financeBudget.findUnique({ where: { id: data.id } });
+      if (!existing || existing.periodId !== data.periodId)
+        throw new FinanceError("Budget nicht gefunden.");
+      await prisma.financeBudget.update({ where: { id: data.id }, data: values });
+    } else {
+      await prisma.financeBudget.create({ data: { ...values, periodId: data.periodId } });
+    }
+  });
+}
+
+export async function deleteBudgetAction(input: { id: string }): Promise<ActionResult> {
+  return run(async () => {
+    await requireManage();
+    await prisma.financeBudget.delete({ where: { id: id.parse(input.id) } });
+  });
+}

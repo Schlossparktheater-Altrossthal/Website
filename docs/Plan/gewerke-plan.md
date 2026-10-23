@@ -255,5 +255,5 @@ Gemeinsame UI-Regeln: `docs/Plan/projektplanung-plan.md`, Abschnitt „UI-Konzep
 - [x] Phase 9b Onboarding über Blaupausen (2026-10-02: Migration `department_template_onboarding`, Optionen aus Gewerken der Produktion; Schalter/Text im Blaupausen-Editor seit Phase 9)
 - [ ] Phase 10 Portal aus Bausteinen (Teil 2026-10-02: Reiter „Maße“ bei Baustein `measurements`, Gewerk-Mitglieder pflegen die Maße der Besetzung, eigene Maße im Profil unter „Körpermaße“ für das Ensemble; globales Recht nur noch Standard für Vorstand)
 - [ ] Phase 11 Szenenbedarf – abgelöst durch `docs/Plan/ausstattung-plan.md` (2026-10-09; dort A2/A3 ändern Zweitkarten und E8)
-- [ ] Phase 12 Budget
+- [x] Phase 12 Budget (2026-10-23, umgesetzt über docs/Plan/finanzen-plan.md Phase 4)
 - [ ] Phase 13 E2E/Release

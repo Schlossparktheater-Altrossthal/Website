@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 
 import { ClaimInbox, type PayoutDetails } from "@/components/finance/claim-inbox";
+import { BudgetManager } from "@/components/finance/budget-manager";
 import { CashBook } from "@/components/finance/cash-book";
 import { FundManager } from "@/components/finance/fund-manager";
-import { loadBook, loadPeriodOptions } from "@/lib/finance/book";
+import { loadBook, loadPeriodOptions, summarize } from "@/lib/finance/book";
+import { loadBudgets } from "@/lib/finance/budgets";
 import type { ClaimView } from "@/lib/finance/claims";
 import { PageHeader } from "@/components/members/page-header";
 import { SectionNav } from "@/components/ui/section-nav";
@@ -19,6 +21,7 @@ export const metadata = { title: "Finanzen" };
 const AREAS = [
   { id: "eingang", label: "Eingang" },
   { id: "kassenbuch", label: "Kassenbuch" },
+  { id: "budgets", label: "Budgets" },
   { id: "toepfe", label: "Töpfe" },
 ] as const;
 
@@ -78,6 +81,7 @@ export default async function FinancePage({
   }
   const balances = fundBalances(entries);
   const book = area === "kassenbuch" ? await loadCashBook(session.user!.id!, params, claims) : null;
+  const budgetData = area === "budgets" ? await loadBudgetTab(session.user!.id!, params) : null;
   const activeFunds = funds
     .filter((fund) => !fund.archivedAt)
     .map((fund) => ({ id: fund.id, name: fund.name }));
@@ -110,6 +114,8 @@ export default async function FinancePage({
         />
       ) : book ? (
         <CashBook {...book} funds={activeFunds} canManage={access.manage} />
+      ) : budgetData ? (
+        <BudgetManager {...budgetData} funds={activeFunds} canManage={access.manage} />
       ) : (
         <FundManager
           canManage={access.manage}
@@ -176,5 +182,46 @@ async function loadCashBook(userId: string, params: SearchParams, claims: ClaimV
     categories,
     departments,
     filter,
+  };
+}
+
+async function loadBudgetTab(userId: string, params: SearchParams) {
+  const { options, defaultId } = await loadPeriodOptions(userId);
+  const periodId = options.some((option) => option.id === params.zeitraum)
+    ? params.zeitraum!
+    : defaultId;
+  const period = await prisma.financePeriod.findUniqueOrThrow({ where: { id: periodId } });
+  const [budgets, entries, departments, categories] = await Promise.all([
+    loadBudgets(periodId),
+    prisma.financeEntry.findMany({
+      where: { periodId },
+      select: {
+        type: true,
+        amountCents: true,
+        fundId: true,
+        transferFundId: true,
+        reversalOfId: true,
+      },
+    }),
+    period.showId
+      ? prisma.department.findMany({
+          where: { showId: period.showId, archivedAt: null },
+          select: { id: true, name: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        })
+      : [],
+    prisma.financeCategory.findMany({
+      where: { type: "expense", archivedAt: null },
+      select: { id: true, name: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    }),
+  ]);
+  return {
+    periods: options,
+    period: { id: period.id, name: period.name },
+    budgets,
+    expenseCents: summarize(entries, null).expenseCents,
+    departments,
+    categories,
   };
 }
