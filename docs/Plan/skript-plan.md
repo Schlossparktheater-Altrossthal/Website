@@ -249,7 +249,7 @@ Offen:
       noch keine der Vorfassung tragen. Sprecher → Rollen über Namen/Aliase, Unbekannte fragt der
       Prüfschritt. `ScriptBlock.editedAt`/`editedById` (Migration 20261015180000) halten fest, wer
       zuletzt korrigiert hat (E8); Anzeige davon noch offen.
-- [ ] Phase 11 Übernahme-Assistent
+- [ ] Phase 11 Übernahme-Assistent – eigener Plan: docs/Plan/skript-uebernahme-plan.md
 - [ ] Phase 12 Live-Mitlesen + Live-Zusammenarbeit, Offline – Mitlesen/Autoscroll: docs/Plan/skript-mitlesen-plan.md
 - [x] Phase 13 Lernmodus – eigener Plan: docs/Plan/lernmodus-plan.md (umgesetzt, Staging; offen Release + Gerätetest)
 - [ ] Phase 14 E2E + Release
