@@ -63,7 +63,8 @@ model ScriptRoleLink {                             // Skript-Rolle → Stück-Ro
 }
 
 enum ScriptGroupMode {
-  present     // alle, die in der Szene auftreten (Standard für „Alle“)
+  cast        // alle Besetzten der Produktion (Standard für „Alle“, E-U1)
+  present     // alle, die in der Szene auftreten
   fixed       // feste Liste von Rollen (Standard für „Chor“, „Demonstranten“)
   character   // die Gruppe ist selbst eine Stück-Rolle mit mehreren Besetzten („Ensemble“)
 }
@@ -99,6 +100,8 @@ Auflösung für einen Absatz einer Gruppenrolle – erste Regel, die greift:
 1. Ausnahme am **Absatz** (`lineageId`): „hier sprechen nur Aouda und Passepartout“.
 2. Ausnahme in der **Szene** (`sceneKey`): „Alle“ in Szene 5 = Passagiere ohne Fix.
 3. **Grundregel der Gruppe**:
+   - `cast` (Standard für „Alle“) – alle Personen-Rollen mit Besetzung in der Produktion.
+     „Nicht wirklich alle“ wird über die Ausnahmen 1 und 2 gelöst (z. B. „ohne Fogg“).
    - `present` – alle Personen-Rollen, die in dieser Szene sprechen oder in Regie genannt sind
      (wie der Spiegel es heute schon ermittelt), plus explizit hinzugefügte.
    - `fixed` – die gespeicherte Liste.
@@ -108,7 +111,7 @@ Wirkung:
 
 - **Leser / „Meine Rolle“ / Lernmodus**: Ich gehöre zu „Alle“ in einem Absatz, wenn eine meiner
   Rollen nach der Auflösung Mitglied ist → Absatz wird hervorgehoben, im Lernmodus abgefragt
-  (Kennzeichnung „gemeinsam“, eigene Ein/Aus-Einstellung „Gruppenpassagen lernen“).
+  (Kennzeichnung „gemeinsam“). Einstellung „Gruppenpassagen lernen“, Standard an (E-U2).
 - **Spiegel / Besetzung**: Gruppen zählen weiter nicht als Person; bei `fixed` und `character`
   zählen ihre Mitglieder als anwesend.
 - **Übernahme ins Stück**: Gruppe wird wahlweise (a) nicht übernommen, (b) als eigene Stück-Rolle
@@ -167,9 +170,33 @@ Rolle, 6 Auftritte“ an – nie automatisch.
 | Name ist eine getrennte Rolle               | Prüfschritt fragt je Szene, Vorschlag aus voriger Fassung                              |
 | Name neu                                    | neue Skript-Rolle, Art per Regex vorbelegt, Hinweis „noch nicht im Stück“              |
 | Rolle kommt nicht mehr vor                  | bleibt bestehen (ältere Fassungen, Lernkarten), Anzeige „in dieser Fassung nicht mehr“ |
+| Autor führt Rollen zusammen (A + B → C)     | siehe „Autor ändert Rollen“: Vorschlag „C ersetzt A und B“                             |
+| Autor teilt eine Rolle (A → A1 + A2)        | Vorschlag „A1 und A2 kommen aus A“                                                     |
 | Szene umnummeriert/umbenannt                | `sceneKey` über Absatz-Mehrheit vererbt → Link bleibt                                  |
 | Szene geteilt/zusammengelegt                | Mehrheit gewinnt, die andere Hälfte gilt als neu → Assistent fragt                     |
 | Gruppen-Ausnahme an gestrichenem Absatz     | Liste „Ausnahmen ohne Platz“ (wie bei Notizen)                                         |
+
+### Autor ändert Rollen in einer neuen Fassung
+
+Typisch: aus „Polizist 1“ und „Polizist 2“ wird „Polizist“, aus „Diener“ wird „Passepartout“,
+oder eine Rolle wird aufgeteilt. Erkennung über die `lineageId`s: Die Absätze der neuen Rolle C
+stammen (überwiegend) von den Absätzen der alten Rollen A und B, und A/B kommen in der neuen
+Fassung nicht mehr vor. Der Prüfschritt zeigt das als eigene Karte:
+
+- **„C ersetzt A und B“** (Zusammenlegung) – Optionen:
+  - _Zusammenführen_: A und B gehen in C auf (`mergedIntoId`), Links, Lernkarten und Gruppen
+    wandern mit. Im Stück wird angeboten, die Stück-Rollen ebenfalls zusammenzuführen
+    (Funktion „Rollen im Stück zusammenführen“); die Besetzung beider bleibt dabei erhalten
+    – C hat dann zwei Besetzte, die man im Stück aufräumen kann.
+  - _Nur neu verknüpfen_: A und B bleiben für ältere Fassungen, C bekommt deren Stück-Links.
+  - _Neue Rolle_: C ist wirklich neu.
+- **„A wurde zu A1 und A2“** (Aufteilung) – Vorschlag: A1/A2 erben Links und Besetzung von A;
+  im Stück optional neue Rollen anlegen. Wer A spielt, wird gefragt bzw. die Planung entscheidet.
+- **Umbenennung** (1 → 1) wird still als Alias übernommen, wenn mindestens ~80 % der Absätze
+  übereinstimmen; sonst Rückfrage.
+
+Doppelbesetzung (eine Person spielt mehrere Rollen) bleibt wie heute über die Besetzung gelöst –
+kein eigener Mechanismus im Skript (E-U5).
 
 ## Phasen
 
@@ -181,18 +208,22 @@ Rolle, 6 Auftritte“ an – nie automatisch.
    (`groups.ts`, Vitest), Anbindung Leser/Lernmodus/Spiegel.
 4. **Stabile Szenen** – `ScriptSceneKey`, Vererbung beim Freigeben, Rückfüllung für bestehende
    Fassungen; `measuredSeconds` darüber statt über den Titel.
-5. **Trennen** von Rollen + Rückfrage in späteren Fassungen.
+5. **Trennen** von Rollen + Rückfrage in späteren Fassungen; Erkennung „Autor ändert Rollen“ im
+   Prüfschritt (Zusammenlegung, Aufteilung, Umbenennung über `lineageId`).
 6. **Stück: Rollen zusammenführen.**
 7. **Übernahme-Assistent** Szenen → Rollen → Auftritte, `SceneCharacter.source`.
 8. **„Änderungen fürs Stück“** bei neuer Fassung; E2E (80 Tage: neue Fassung mit Umnummerierung).
 
-## Offene Entscheidungen
+## Entscheidungen (2026-10-24)
 
-- O1: Gruppen-Standard: „Alle“ = `present` (wer in der Szene ist) – oder lieber „alle Besetzten“?
-- O2: Lernmodus: Gruppenpassagen standardmäßig mitlernen oder aus?
-- O3: Darf der Assistent Szenen-Titel/Reihenfolge im Stück überschreiben, wenn sie dort nicht von
-  Hand geändert wurden – oder immer nur anbieten?
-- O4: Wer darf Zuordnungen ändern – nur `SCRIPT.MANAGE`, oder auch Darstellende für ihre eigene
-  Gruppenmitgliedschaft („bei ‚Alle‘ in Szene 5 bin ich nicht dabei“)?
-- O5: Soll der Spiegel-Vorschlag (Doppelbesetzung) im Assistenten als Besetzung übernehmbar sein
-  oder bleibt Besetzung reine Handarbeit?
+- E-U1: „Alle“ = alle Besetzten der Produktion; Ausnahmen je Szene/Absatz.
+- E-U2: Gruppenpassagen im Lernmodus einstellbar, Standard an.
+- E-U3: Der Assistent schlägt vor, angehakt sind nur Felder, die im Stück seit der letzten
+  Übernahme nicht von Hand geändert wurden (Stand der letzten Übernahme wird gespeichert).
+  Von Hand geänderte Felder: nicht angehakt, mit „im Stück geändert: …“. Nichts wird ohne Klick
+  überschrieben.
+- E-U4: Offizielle Zuordnungen pflegt nur `SCRIPT.MANAGE`. Darstellende können für sich
+  „hier nicht dabei / dabei“ setzen – wirkt nur auf ihre eigene Ansicht und ihr Lernen und
+  erscheint bei der Regie als Hinweis zum Übernehmen.
+- E-U5: Doppelbesetzung bleibt in der Besetzung (Person ↔ mehrere Rollen); der Plan kümmert sich
+  um Zusammenlegungen/Aufteilungen durch den Autor.
