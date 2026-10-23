@@ -1,5 +1,6 @@
 import { extractLines } from "./extract";
 import { extractCredits, type ScriptCredit } from "./credits";
+import { applyScriptFixes } from "./fixes";
 import { frontMatterLines, parseLines, scoreProfile } from "./parse";
 import { SCRIPT_PROFILES, type ScriptProfile } from "./profiles";
 import { findRoleTypos, normalizeRoles, resolveRoleNames, type RoleTypoSuspect } from "./roles";
@@ -17,6 +18,8 @@ export type ParsedScript = {
   uncertainCues: number;
   /** Mitwirkende aus dem Vorspann (Autor, Fassung, Regie …). */
   credits: ScriptCredit[];
+  /** Skriptspezifische Korrekturen aus `fixes.ts`: angewendet bzw. nicht mehr gefunden. */
+  fixes: { applied: string[]; missed: string[] };
 };
 
 /** PDF einlesen: Profil automatisch wählen, parsen, Rollen zusammenführen. */
@@ -30,25 +33,31 @@ export async function parseScriptPdf(
     score: number;
     scenes: ScriptScene[];
     credits: ScriptCredit[];
+    front: string[];
   } | null = null;
   for (const profile of profiles) {
     // pdfjs übernimmt den Puffer – je Profil eine Kopie übergeben.
     const lines = await extractLines(data.slice(), profile);
     const score = scoreProfile(lines, profile);
     if (!best || score > best.score) {
+      const front = frontMatterLines(lines, profile);
       best = {
         profile,
         score,
         scenes: parseLines(lines, profile),
-        credits: extractCredits(frontMatterLines(lines, profile)),
+        credits: extractCredits(front),
+        front,
       };
     }
   }
   if (!best) throw new Error("Kein Skript-Profil registriert");
+  const fixes = applyScriptFixes(best.scenes, best.front);
   const mergedRoles = resolveRoleNames(best.scenes, options.aliases);
   const scenes = normalizeRoles(best.scenes, mergedRoles);
+  const { front: _front, ...rest } = best;
   return {
-    ...best,
+    ...rest,
+    fixes,
     scenes,
     mergedRoles,
     roleTypos: findRoleTypos(scenes),
