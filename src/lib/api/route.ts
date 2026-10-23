@@ -51,8 +51,10 @@ export function withRoute<P = Record<string, never>>(
   return async (request?: Request, segment?: { params?: Promise<P> }): Promise<Response> => {
     try {
       const nextRequest =
-        request instanceof NextRequest
-          ? request
+        // Next 16.4 übergibt einen NextRequest aus einer eigenen Modulinstanz: `instanceof`
+        // greift nicht und erneutes Einpacken scheitert an `#state`.
+        request instanceof NextRequest || (request && "nextUrl" in request)
+          ? (request as NextRequest)
           : request instanceof Request
             ? new NextRequest(request)
             : ((request ?? new NextRequest("http://localhost/")) as NextRequest);
