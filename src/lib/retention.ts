@@ -1,7 +1,7 @@
 import { Prisma, type ProductionStatus, type Role } from "@prisma/client";
 
 import { deactivateMemberInAuthentik } from "@/lib/authentik/sync";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { prisma } from "@/lib/prisma";
 
 import { isCurrentProductionStatus } from "./produktionen/status";

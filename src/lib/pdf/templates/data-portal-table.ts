@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { PdfTemplate } from "../types";
+import { formatDateTime } from "@/lib/format/date";
 
 const dataPortalTableSchema = z.object({
   title: z.string().trim().min(1),
@@ -11,14 +12,6 @@ const dataPortalTableSchema = z.object({
 });
 
 type DataPortalTableData = z.infer<typeof dataPortalTableSchema>;
-
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("de-DE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Europe/Berlin",
-  }).format(date);
-}
 
 const CELL_PADDING = 5;
 
@@ -35,7 +28,7 @@ export const dataPortalTableTemplate: PdfTemplate<DataPortalTableData> = {
     doc.font("Helvetica").fontSize(9).fillColor("#6b7280");
     if (data.subtitle) doc.text(data.subtitle);
     doc.text(
-      `Exportiert: ${formatDateTime(data.generatedAt)} · ${data.rows.length} Zeilen · vertraulich, nach Gebrauch löschen`,
+      `Exportiert: ${formatDateTime(data.generatedAt) ?? ""} · ${data.rows.length} Zeilen · vertraulich, nach Gebrauch löschen`,
     );
     doc.moveDown(0.8);
 

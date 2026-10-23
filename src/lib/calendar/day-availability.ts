@@ -2,7 +2,7 @@ import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
   parseDateTimeInTimeZone,
-} from "@/lib/date-time";
+} from "@/lib/format/date";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import {
   computeWeekLoad,

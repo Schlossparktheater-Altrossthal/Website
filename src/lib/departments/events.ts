@@ -3,7 +3,7 @@ import type { BlockedDayKind, Prisma } from "@prisma/client";
 
 import { toEventResponseStatus, type EventResponseStatus } from "@/lib/calendar/responses";
 
-import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/format/date";
 import { getNameInitials, getUserDisplayName } from "@/lib/names";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";

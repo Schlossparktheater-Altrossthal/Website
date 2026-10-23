@@ -9,7 +9,7 @@ import {
 } from "@/lib/karten/constants";
 import { showDisplayTitle } from "@/lib/karten/mails";
 import { loadPerformances, loadTicketCategories } from "@/lib/karten/queries";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { renderPdfTemplate } from "@/lib/pdf/engine";
 import { prisma } from "@/lib/prisma";
 import type { ReservationSource } from "@prisma/client";

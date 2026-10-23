@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { cssColorToHex, hexToOklchValue } from "@/lib/theme/color-value";
 import {
   CHART_VARIABLES,

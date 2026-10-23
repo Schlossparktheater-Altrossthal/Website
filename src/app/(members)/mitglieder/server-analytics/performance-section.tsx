@@ -40,6 +40,7 @@ import {
   percentFormat,
   shortRoute,
   TONE_TEXT,
+  formatDay,
 } from "./statistics-format";
 
 const GROUP_LABEL: Record<PerformanceGrouping, string> = {
@@ -67,11 +68,6 @@ const tooltipStyle = {
   borderRadius: 8,
   fontSize: 12,
 };
-
-function formatDay(date: string) {
-  const [, month, day] = date.split("-");
-  return `${day}.${month}.`;
-}
 
 function inpTone(ms: number | null) {
   if (ms === null) return "neutral" as const;

@@ -1,6 +1,6 @@
 import { CalendarIcon } from "@/components/ui/action-icons";
 import type { MyEventItem, MyEventTone } from "@/lib/calendar/my-events";
-import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 import { MyEventRow, TONE_DOT, TONE_LABELS } from "./my-event-row";

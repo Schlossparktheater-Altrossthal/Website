@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { formatDate } from "@/lib/format/date";
 
 type DeviceKind = "webauthn" | "totp";
 
@@ -42,17 +42,6 @@ type SecurityState =
       hasPassword?: boolean | null;
     };
 
-const dateFormat = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-
-function formatDate(value: string | null) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : dateFormat.format(date);
-}
-
 /** Authentik-Flow mit Rücksprung in diesen Profilbereich. */
 function withReturn(url: string) {
   if (typeof window === "undefined") return url;
@@ -77,8 +66,8 @@ function DeviceList({
   return (
     <ul className="divide-y divide-border/60">
       {devices.map((device) => {
-        const used = formatDate(device.lastUsedAt);
-        const created = formatDate(device.createdAt);
+        const used = formatDate(device.lastUsedAt, "medium");
+        const created = formatDate(device.createdAt, "medium");
         const meta = [
           device.description,
           used ? `zuletzt genutzt ${used}` : created ? `hinzugefügt ${created}` : null,

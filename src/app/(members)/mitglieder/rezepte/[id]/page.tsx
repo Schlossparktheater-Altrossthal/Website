@@ -10,7 +10,7 @@ import { EditIcon, ExternalLinkIcon, HistoryIcon } from "@/components/ui/action-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import {
   DIET_LABELS,
   NUTRIENT_ROWS,

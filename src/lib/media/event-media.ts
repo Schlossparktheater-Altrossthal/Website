@@ -2,7 +2,7 @@ import type { EventMediaKind } from "@prisma/client";
 import sharp from "sharp";
 
 import { getProtocolAccess } from "@/lib/calendar/protocol-server";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { prisma } from "@/lib/prisma";
 import { toEventMediaItem } from "@/lib/media/event-media-item";
 import { slugify } from "@/lib/produktionen/actions-helpers";

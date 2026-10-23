@@ -37,7 +37,8 @@ import { EffectivePermissions } from "@/components/members/effective-permissions
 import { requireAuth } from "@/lib/rbac";
 import { ROLE_BADGE_VARIANTS, ROLE_LABELS, sortRoles, type Role } from "@/lib/roles";
 import { cn } from "@/lib/utils";
-import { formatRelativeFromNow } from "@/lib/datetime";
+import { formatRelativeFromNow } from "@/lib/format/relative-time";
+import { formatDate as formatSharedDate, formatDateTime } from "@/lib/format/date";
 import { getUserDisplayName } from "@/lib/names";
 import { buildProductionHistory } from "@/lib/produktionen/production-history";
 import { MemberLoginCard } from "@/components/members/member-login-card";
@@ -56,11 +57,6 @@ import {
   getRolePreferenceTitle,
 } from "@/lib/onboarding/role-preferences";
 
-const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "long" });
-const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 const numberFormatter = new Intl.NumberFormat("de-DE");
 const percentFormatter = new Intl.NumberFormat("de-DE", {
   style: "percent",
@@ -191,13 +187,7 @@ const ROLE_PREFERENCE_WEIGHT_FORMAT = new Intl.NumberFormat("de-DE", {
 });
 
 function formatDate(value: Date | null | undefined) {
-  if (!value) return "—";
-  return dateFormatter.format(value);
-}
-
-function formatDateTime(value: Date | null | undefined) {
-  if (!value) return null;
-  return dateTimeFormatter.format(value);
+  return formatSharedDate(value, "long") ?? "—";
 }
 
 function calculateAge(dateOfBirth: Date | null | undefined) {
@@ -725,7 +715,7 @@ export default async function MemberProfileAdminPage({ params }: PageProps) {
       badgeClass: nextStatus ? ATTENDANCE_STATUS_BADGE_CLASSES[nextStatus] : DEFAULT_BADGE_CLASS,
       dotClass: nextStatus ? ATTENDANCE_STATUS_DOT_CLASSES[nextStatus] : DEFAULT_DOT_CLASS,
       changedAt: log.changedAt,
-      changedAtLabel: formatDateTime(log.changedAt) ?? dateTimeFormatter.format(log.changedAt),
+      changedAtLabel: formatDateTime(log.changedAt) ?? "",
       changedAtRelative: formatRelativeTime(log.changedAt),
       changedBy: changedByName,
       rehearsalTitle,

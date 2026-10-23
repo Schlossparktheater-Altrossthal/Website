@@ -1,6 +1,6 @@
 import { BlockedDayKind } from "@prisma/client";
 
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_FREEZE_DAYS,

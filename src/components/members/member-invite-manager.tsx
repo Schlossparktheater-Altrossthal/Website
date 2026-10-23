@@ -47,7 +47,7 @@ import {
   resolveOnboardingVariant,
 } from "@/lib/member-invite-links";
 import { cn } from "@/lib/utils";
-import { formatRelativeFromNow } from "@/lib/datetime";
+import { formatRelativeFromNow } from "@/lib/format/relative-time";
 import { updateOnboardingSettingsAction } from "@/app/(members)/mitglieder/produktionen/actions/production";
 
 const ASSIGNABLE_ROLES = ROLES.filter((role) => role !== "admin" && role !== "owner");

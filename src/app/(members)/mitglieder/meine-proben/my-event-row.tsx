@@ -3,7 +3,7 @@ import { FileText } from "lucide-react";
 
 import { AlertIcon } from "@/components/ui/action-icons";
 import type { MyEventItem, MyEventTone } from "@/lib/calendar/my-events";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 const DAY = new Intl.DateTimeFormat("de-DE", {

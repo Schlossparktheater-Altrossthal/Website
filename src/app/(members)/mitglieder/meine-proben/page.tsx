@@ -22,7 +22,7 @@ import {
   readNextEvent,
   type MyEventGroup,
 } from "@/lib/calendar/my-events";
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";

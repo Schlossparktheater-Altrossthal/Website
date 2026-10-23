@@ -15,11 +15,9 @@ import {
 } from "@/lib/retention";
 
 import { AnonymizeButton, PurgeButton } from "./retention-forms-client";
+import { formatDate } from "@/lib/format/date";
 
 export const dynamic = "force-dynamic";
-
-const formatDate = (date: Date) =>
-  new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(date);
 
 export default async function AufbewahrungPage() {
   const session = await requireAuth();
@@ -124,7 +122,7 @@ export default async function AufbewahrungPage() {
                 <li key={entry.id}>
                   {entry.name}{" "}
                   <span className="text-muted-foreground">
-                    · zuletzt dabei bis {formatDate(entry.lastEnd)}
+                    · zuletzt dabei bis {formatDate(entry.lastEnd, "medium")}
                   </span>
                 </li>
               ))}
@@ -150,7 +148,7 @@ export default async function AufbewahrungPage() {
                 <li key={entry.id}>
                   {entry.userName}{" "}
                   <span className="text-muted-foreground">
-                    · {entry.showTitle}, beendet {formatDate(entry.showEnd)}
+                    · {entry.showTitle}, beendet {formatDate(entry.showEnd, "medium")}
                   </span>
                 </li>
               ))}
@@ -190,7 +188,7 @@ export default async function AufbewahrungPage() {
                       {entry.name}
                     </Link>{" "}
                     <span className="text-muted-foreground">
-                      · zuletzt dabei bis {formatDate(entry.lastEnd)}
+                      · zuletzt dabei bis {formatDate(entry.lastEnd, "medium")}
                     </span>
                   </span>
                   <AnonymizeButton userId={entry.id} name={entry.name} />

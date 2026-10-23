@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { RestoreRevisionButton } from "@/components/food/recipes/restore-revision-button";
 import { PageHeader } from "@/components/members/page-header";
 import { Card } from "@/components/ui/card";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { listRecipeRevisions } from "@/lib/food/recipes/queries";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { prisma } from "@/lib/prisma";

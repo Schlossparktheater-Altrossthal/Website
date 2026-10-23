@@ -103,3 +103,73 @@ export function formatIsoTimeInTimeZone(iso: string, timeZone: string = DEFAULT_
   const minute = parts.get("minute") ?? "00";
   return `${hour}:${minute}`;
 }
+
+// ---------------------------------------------------------------------------
+// Anzeigeformate (deutsch, immer in Europe/Berlin – unabhängig von der Server-Zeitzone)
+// ---------------------------------------------------------------------------
+
+export type DateInput = Date | string | number | null | undefined;
+
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+/** Zwischengespeicherter `Intl.DateTimeFormat` für `de-DE` in Europe/Berlin. */
+export function dateFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const resolved = { timeZone: DEFAULT_TIME_ZONE, ...options };
+  const key = JSON.stringify(resolved);
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("de-DE", resolved);
+    formatterCache.set(key, formatter);
+  }
+  return formatter;
+}
+
+/** Wandelt Eingaben in ein gültiges Datum; leere oder ungültige Werte ergeben `null`. */
+export function toValidDate(value: DateInput): Date | null {
+  if (value === null || value === undefined || value === "") return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatWith(value: DateInput, options: Intl.DateTimeFormatOptions): string | null {
+  const date = toValidDate(value);
+  return date ? dateFormatter(options).format(date) : null;
+}
+
+const DATE_STYLES = {
+  /** 23.10.2026 */
+  numeric: { day: "2-digit", month: "2-digit", year: "numeric" },
+  /** 23.10.2026 (Intl „medium“) */
+  medium: { dateStyle: "medium" },
+  /** 23. Oktober 2026 */
+  long: { dateStyle: "long" },
+} as const satisfies Record<string, Intl.DateTimeFormatOptions>;
+
+export type DateStyle = keyof typeof DATE_STYLES;
+
+/** Datum, z. B. „23.10.2026“. Leere/ungültige Werte ergeben `null`. */
+export function formatDate(value: DateInput, style: DateStyle = "numeric"): string | null {
+  return formatWith(value, DATE_STYLES[style]);
+}
+
+/** Datum mit Uhrzeit, z. B. „23.10.2026, 18:30“. */
+export function formatDateTime(value: DateInput): string | null {
+  return formatWith(value, { dateStyle: "medium", timeStyle: "short" });
+}
+
+/** Uhrzeit, z. B. „18:30“. */
+export function formatTime(value: DateInput): string | null {
+  return formatWith(value, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+}
+
+/**
+ * Reiner Kalendertag als `YYYY-MM-DD` (ohne Uhrzeit). Wird mittags UTC interpretiert,
+ * damit der Tag in keiner Zeitzone verrutscht.
+ */
+export function formatDateKey(
+  dateKey: string | null | undefined,
+  options: Intl.DateTimeFormatOptions = DATE_STYLES.numeric,
+): string | null {
+  if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+  return formatWith(`${dateKey}T12:00:00Z`, options);
+}

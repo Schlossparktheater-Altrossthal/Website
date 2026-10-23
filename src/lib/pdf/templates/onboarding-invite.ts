@@ -3,6 +3,7 @@ import { z } from "zod";
 import { describeRoles, ROLES } from "@/lib/roles";
 
 import type { PdfTemplate } from "../types";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 
 type QrCodeModule = typeof import("qrcode");
 
@@ -74,14 +75,6 @@ function slugify(value: string | null | undefined) {
     .toLowerCase();
   const slug = normalized.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug.slice(0, 60);
-}
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(date);
-}
-
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 function formatLinkForDisplay(link: string) {
@@ -416,7 +409,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       detailEntries.push({ label: "Titel", value: data.inviteLabel });
     }
     if (data.expiresAt) {
-      detailEntries.push({ label: "Gültig bis", value: formatDate(data.expiresAt) });
+      detailEntries.push({ label: "Gültig bis", value: formatDate(data.expiresAt, "long") ?? "" });
     }
     if (typeof data.maxUses === "number") {
       detailEntries.push({ label: "Maximale Nutzungen", value: String(data.maxUses) });
@@ -465,7 +458,7 @@ export const onboardingInviteTemplate: PdfTemplate<OnboardingInvitePdfData> = {
       });
 
     doc.moveDown(0.6);
-    const generatedAt = formatDateTime(new Date());
+    const generatedAt = formatDateTime(new Date()) ?? "";
     doc
       .font("Helvetica")
       .fontSize(9)

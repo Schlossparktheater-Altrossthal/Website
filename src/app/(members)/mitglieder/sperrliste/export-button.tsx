@@ -9,7 +9,7 @@ import { FileDownIcon } from "@/components/ui/action-icons";
 import { AsyncButton } from "@/components/ui/async-button";
 import { expandEntryDayKeys, type CalendarEntry } from "@/lib/calendar/event-kinds";
 import { computeSceneReadiness, type Absence } from "@/lib/calendar/scene-readiness";
-import { formatIsoTimeInTimeZone } from "@/lib/date-time";
+import { formatIsoTimeInTimeZone } from "@/lib/format/date";
 import { buildDayInfos, type DayInfo, type FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import { formatWeekdayList, sortWeekdays } from "@/lib/weekdays";
 import type { HolidayRange } from "@/types/holidays";

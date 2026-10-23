@@ -5,7 +5,7 @@ import type { BlockedDayKind, FeedScope } from "@prisma/client";
 
 import { getAppBaseUrl } from "@/lib/app-url";
 import { buildIcsCalendar, type IcsEvent } from "@/lib/calendar/ics";
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 import {
   GENERAL_EVENT_WHERE,
   OPEN_EVENT_WHERE,

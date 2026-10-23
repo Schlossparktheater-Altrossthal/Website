@@ -23,6 +23,7 @@ import type { ObjectListItem, StageData, StageScene } from "@/lib/ausstattung/ob
 import { cn } from "@/lib/utils";
 
 import { createObjectAction } from "../ausstattung-actions";
+import { formatSceneLabel, formatSceneShort } from "@/lib/produktionen/scenes";
 
 export const inputClass =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm";
@@ -43,13 +44,8 @@ export function useAction() {
   };
 }
 
-export function shortScene(scene: Pick<StageScene, "identifier" | "title">) {
-  return scene.identifier ?? scene.title ?? "–";
-}
-
-export function fullScene(scene: Pick<StageScene, "identifier" | "title">) {
-  return [scene.identifier, scene.title].filter(Boolean).join(" ") || "Szene";
-}
+export const shortScene = formatSceneShort;
+export const fullScene = formatSceneLabel;
 
 export function StatusPill({ status }: { status: ObjectListItem["status"] }) {
   return (

@@ -9,6 +9,7 @@ import { earliestFor, nextRehearsalByScene } from "@/lib/ausstattung/rehearsals"
 import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 import { compareSceneIdentifiers } from "@/lib/produktionen/roles-scenes";
+import { formatSceneLabel } from "@/lib/produktionen/scenes";
 
 /** Szene in Kurzform für Chips und Listen. */
 export type StageScene = {
@@ -70,10 +71,6 @@ export type InboxItem = {
   requestedBy: string | null;
   createdAt: string;
 };
-
-export function sceneLabel(scene: { identifier: string | null; title: string | null }) {
-  return [scene.identifier, scene.title].filter(Boolean).join(" ") || "Szene";
-}
 
 export async function loadStage(showId: string): Promise<StageData> {
   const [scenes, characters] = await Promise.all([
@@ -319,7 +316,7 @@ export async function loadObjectDetail(objectId: string): Promise<ObjectDetail |
       id: entry.id,
       text: entry.text,
       status: entry.status,
-      sceneLabel: sceneLabel(entry.scene),
+      sceneLabel: formatSceneLabel(entry.scene),
       requestedBy: entry.requestedBy ? getUserDisplayName(entry.requestedBy) : null,
       createdAt: entry.createdAt.toISOString(),
     })),
@@ -359,7 +356,7 @@ export async function loadInbox(departmentId: string): Promise<InboxItem[]> {
     text: row.text,
     hasPhoto: Boolean(row.photoMimeType),
     sceneId: row.sceneId,
-    sceneLabel: sceneLabel(row.scene),
+    sceneLabel: formatSceneLabel(row.scene),
     characterId: row.character?.id ?? null,
     characterName: row.character?.name ?? null,
     requestedBy: row.requestedBy ? getUserDisplayName(row.requestedBy) : null,

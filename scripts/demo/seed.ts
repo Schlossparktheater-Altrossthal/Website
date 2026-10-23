@@ -21,7 +21,7 @@ import pg from "pg";
 
 import { loadAudienceContext, saveEventAudience } from "@/lib/calendar/audience-server";
 import { saveEventBlocks, saveEventSchedule } from "@/lib/calendar/scene-schedule-server";
-import { formatIsoDateInTimeZone, parseDateTimeInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone, parseDateTimeInTimeZone } from "@/lib/format/date";
 import { DEMO_EMAIL_DOMAIN, DEMO_PERSONAS } from "@/lib/demo-mode";
 import { ensureBoardColumns } from "@/lib/departments/board";
 import { ensureProductionDepartments } from "@/lib/departments/templates";

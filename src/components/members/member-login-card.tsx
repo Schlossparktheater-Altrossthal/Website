@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { MemberLoginLinkDialog } from "@/components/members/member-login-link-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { formatDate } from "@/lib/format/date";
 
 type DeviceKind = "webauthn" | "totp";
 
@@ -43,17 +43,6 @@ type PendingConfirm =
   | { type: "reset-passkeys" }
   | { type: "password-email" }
   | { type: "login-link" };
-
-const dateFormat = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-
-function formatDate(value: string | null) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : dateFormat.format(date);
-}
 
 export interface MemberLoginCardProps {
   userId: string;
@@ -206,14 +195,14 @@ export function MemberLoginCard({ userId, displayName, hasEmail }: MemberLoginCa
     const passkeys = devices.filter((device) => device.kind === "webauthn");
     const totps = devices.filter((device) => device.kind === "totp");
     const canManage = Boolean(account?.managed);
-    const passwordChanged = formatDate(account?.passwordChangedAt ?? null);
+    const passwordChanged = formatDate(account?.passwordChangedAt ?? null, "medium");
 
     const deviceList = (items: Device[], empty: string) =>
       items.length ? (
         <ul className="divide-y divide-border/60">
           {items.map((device) => {
-            const used = formatDate(device.lastUsedAt);
-            const created = formatDate(device.createdAt);
+            const used = formatDate(device.lastUsedAt, "medium");
+            const created = formatDate(device.createdAt, "medium");
             return (
               <li key={device.id} className="flex min-h-11 items-center gap-3 py-1.5">
                 <div className="min-w-0 flex-1">

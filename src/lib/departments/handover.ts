@@ -14,7 +14,7 @@ import {
   type WorkState,
 } from "@/lib/departments/activity-format";
 import type { BoardAccess } from "@/lib/departments/board";
-import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/format/date";
 import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 

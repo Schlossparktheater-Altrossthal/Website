@@ -18,20 +18,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { formatDate } from "@/lib/format/date";
 import { photoConsentLevelLabel } from "@/lib/photo-consent-levels";
 import type { PhotoConsentSummary, PhotoConsentVersionView } from "@/types/photo-consent";
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? null : dateFormatter.format(date);
-}
 
 type StatusInfo = {
   label: string;
@@ -46,7 +35,7 @@ function describeStatus(summary: PhotoConsentSummary): StatusInfo {
     return {
       label: "Widerrufen",
       variant: "destructive",
-      detail: `Am ${formatDate(summary.revokedAt) ?? "unbekannt"} widerrufen. Du wirst nicht fotografiert.`,
+      detail: `Am ${formatDate(summary.revokedAt, "medium") ?? "unbekannt"} widerrufen. Du wirst nicht fotografiert.`,
       actionLabel: "Neu abgeben",
     };
   }
@@ -55,7 +44,7 @@ function describeStatus(summary: PhotoConsentSummary): StatusInfo {
       return {
         label: "Freigegeben",
         variant: "success",
-        detail: `Am ${formatDate(summary.approvedAt) ?? "unbekannt"}${
+        detail: `Am ${formatDate(summary.approvedAt, "medium") ?? "unbekannt"}${
           summary.approvedByName ? ` durch ${summary.approvedByName}` : ""
         }.`,
         actionLabel: summary.level ? null : "Stufe angeben",
@@ -117,7 +106,7 @@ function VersionList({ versions }: { versions: PhotoConsentVersionView[] }) {
             ) : null}
           </span>
           <span className="text-muted-foreground">
-            V{version.version} · {formatDate(version.submittedAt) ?? "unbekannt"}
+            V{version.version} · {formatDate(version.submittedAt, "medium") ?? "unbekannt"}
           </span>
         </li>
       ))}

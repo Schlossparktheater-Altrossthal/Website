@@ -1,4 +1,4 @@
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import type { HolidayRange } from "@/types/holidays";
 
 /**

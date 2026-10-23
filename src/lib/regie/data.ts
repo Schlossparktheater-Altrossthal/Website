@@ -5,10 +5,11 @@ import type {
   ProductionObjectStatus,
 } from "@prisma/client";
 
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { getUserDisplayName } from "@/lib/names";
 import { prisma } from "@/lib/prisma";
 import { currentCastingWhere, currentMembershipWhere } from "@/lib/produktionen/status";
+import { formatSceneLabel } from "@/lib/produktionen/scenes";
 
 /**
  * Lese-Daten des Regie-Dashboards (docs/Plan/regie-plan.md, Phase 3+4). Bewusst ohne
@@ -35,12 +36,6 @@ export const formatTime = (date: Date) => TIME.format(date);
 type NameFields = { firstName: string | null; lastName: string | null; name: string | null };
 const nameSelect = { firstName: true, lastName: true, name: true } as const;
 const displayName = (user: NameFields) => getUserDisplayName(user) || "Unbekannt";
-
-/** Szenen-Kürzel wie im Stück: „1.3“ bzw. Titel. */
-export function sceneLabel(scene: { identifier: string | null; title: string | null }) {
-  if (scene.identifier && scene.title) return `${scene.identifier} ${scene.title}`;
-  return scene.identifier ?? scene.title ?? "Szene";
-}
 
 // ---------------------------------------------------------------------------
 // Besetzung
@@ -103,7 +98,7 @@ export async function loadDirectionScenes(showId: string): Promise<DirectionScen
   });
   return scenes.map((scene) => ({
     id: scene.id,
-    label: sceneLabel(scene),
+    label: formatSceneLabel(scene),
     act: scene.act,
     characterIds: scene.characters.map((entry) => entry.characterId),
   }));
@@ -379,7 +374,7 @@ export async function loadDirectionProps(showId: string) {
   const list: DirectionPropScene[] = scenes
     .map((scene) => ({
       id: scene.id,
-      label: sceneLabel(scene),
+      label: formatSceneLabel(scene),
       objects: objects
         .filter((object) => object.scenes.some((entry) => entry.sceneId === scene.id))
         .map((object) => ({

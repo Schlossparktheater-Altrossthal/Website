@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { CopyIcon, ShareIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { ModalFormDialog } from "@/components/ui/modal-form-dialog";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 const timeFormat = new Intl.DateTimeFormat("de-DE", {
   timeStyle: "short",

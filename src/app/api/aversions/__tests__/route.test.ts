@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  requireAuth: vi.fn(),
+  getSession: vi.fn(),
   findMany: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
 }));
 
-vi.mock("@/lib/rbac", () => ({ requireAuth: mocks.requireAuth }));
+vi.mock("@/lib/rbac", () => ({ getSession: mocks.getSession }));
+vi.mock("@/lib/permissions", () => ({ hasPermission: vi.fn() }));
+vi.mock("@/lib/logger", () => ({
+  createLogger: () => ({ error: vi.fn(), warn: vi.fn(), info: vi.fn() }),
+}));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     dietaryAversion: {
@@ -32,7 +36,7 @@ const deleteRequest = (label?: string) =>
 describe("POST /api/aversions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.requireAuth.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.getSession.mockResolvedValue({ user: { id: "user-1" } });
     mocks.findMany.mockResolvedValue([]);
     mocks.create.mockResolvedValue({ id: "aversion-1" });
     mocks.update.mockResolvedValue({ id: "aversion-1" });
@@ -95,7 +99,7 @@ describe("POST /api/aversions", () => {
 describe("DELETE /api/aversions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.requireAuth.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.getSession.mockResolvedValue({ user: { id: "user-1" } });
     mocks.findMany.mockResolvedValue([]);
     mocks.update.mockResolvedValue({ id: "aversion-1" });
   });

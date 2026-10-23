@@ -14,7 +14,7 @@ import { EventEditor } from "../event-editor";
 import { EventSwitcherList, EventSwitcherNav, type SwitcherEvent } from "../event-switcher";
 import { MembersContentLayout } from "@/components/members/members-app-shell";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
-import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/format/date";
 import { loadAudienceContext, readEventAudience } from "@/lib/calendar/audience-server";
 import { readDayAvailability, readWeekLoad } from "@/lib/calendar/day-availability";
 import { buildScenePlan } from "@/lib/calendar/scene-plan";

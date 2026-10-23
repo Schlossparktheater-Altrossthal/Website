@@ -9,7 +9,7 @@ import {
   OBJECT_STATUS_LABELS,
   OBJECT_TEXT_LIMITS,
 } from "@/lib/ausstattung/constants";
-import { sceneLabel } from "@/lib/ausstattung/objects";
+import { formatSceneLabel } from "@/lib/produktionen/scenes";
 import {
   createObjectWithCard,
   ensureObjectCard,
@@ -566,7 +566,7 @@ export async function createRequirementAction(formData: FormData): Promise<Resul
       type: NOTIFICATION_TYPES.SCENE_REQUIREMENT,
       recipients: leads.map((entry) => entry.userId),
       actorId: userId,
-      title: `Neue Anforderung: ${OBJECT_KIND_LABELS[data.kind]} für ${sceneLabel(scene)}`,
+      title: `Neue Anforderung: ${OBJECT_KIND_LABELS[data.kind]} für ${formatSceneLabel(scene)}`,
       body: data.text.slice(0, 200),
       actionUrl: `${departmentActionUrl(department.slug)}?ansicht=aufgaben`,
       showId: scene.showId,
@@ -715,7 +715,7 @@ export async function decideRequirementAction(
     });
 
     if (requirement.requestedById) {
-      const label = sceneLabel(requirement.scene);
+      const label = formatSceneLabel(requirement.scene);
       await notify({
         type: NOTIFICATION_TYPES.SCENE_REQUIREMENT,
         recipients: [requirement.requestedById],

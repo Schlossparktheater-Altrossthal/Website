@@ -9,7 +9,7 @@ import { CloseIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ImageViewer } from "@/components/ui/image-viewer";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import type { EventGallery as Gallery } from "@/lib/media/event-gallery";
 
 import { deleteEventMedia, uploadEventMedia } from "./upload";

@@ -25,7 +25,7 @@ import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
   parseDateTimeInTimeZone,
-} from "@/lib/date-time";
+} from "@/lib/format/date";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_EMAIL = "admin@example.com";

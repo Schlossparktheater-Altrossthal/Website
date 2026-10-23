@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TimeInput } from "@/components/ui/time-input";
 import { CALENDAR_EVENT_KIND_LABELS } from "@/lib/calendar/event-kinds";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 const DATE_LABEL = new Intl.DateTimeFormat("de-DE", {

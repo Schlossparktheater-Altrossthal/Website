@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 export type SwitcherEvent = {

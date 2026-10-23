@@ -7,7 +7,7 @@ import { createDoorAccessAction } from "@/app/(members)/mitglieder/karten/einste
 import { DoorQrDialog } from "@/components/karten/settings/door-qr-dialog";
 import { AsyncButton } from "@/components/ui/async-button";
 import { QrCodeIcon } from "@/components/ui/action-icons";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 /** Vor Ort: QR-Code erzeugen, mit dem sich Helfer ohne Konto in den Einlass einklinken (gilt 1 Tag). */
 export function DoorHelperQrButton({ showId }: { showId: string }) {

@@ -52,7 +52,7 @@ import {
   formatIsoDateInTimeZone,
   formatIsoTimeInTimeZone,
   parseDateTimeInTimeZone,
-} from "@/lib/date-time";
+} from "@/lib/format/date";
 
 import { EventEditorHeader, type EventHeaderValue } from "./event-editor-header";
 import {

@@ -1,6 +1,6 @@
 import type { CalendarEventKind } from "@prisma/client";
 
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 
 export const CALENDAR_EVENT_KINDS = [
   "PERFORMANCE",

@@ -10,7 +10,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SCRIPT_MARKER_STYLES } from "@/config/category-colors";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import type { ProductionActionResult } from "@/lib/produktionen/actions-helpers";
 import {
   ANNOTATION_COLORS,

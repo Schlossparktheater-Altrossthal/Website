@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { setEventTaskDoneAction } from "@/app/(members)/mitglieder/termine/task-actions";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import type { MyTask } from "@/lib/calendar/my-tasks";
 import { cn } from "@/lib/utils";
 

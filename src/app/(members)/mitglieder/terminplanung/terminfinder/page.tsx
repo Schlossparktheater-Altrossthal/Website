@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { PageHeader } from "@/components/members/page-header";
 import { getActiveProduction } from "@/lib/active-production";
 import { loadAudienceContext } from "@/lib/calendar/audience-server";
-import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/format/date";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";

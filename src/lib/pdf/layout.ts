@@ -1,4 +1,4 @@
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 /**
  * Gemeinsame Bausteine für Listen-PDFs im Stil der Sperrliste: Kopf, Abschnittstitel,

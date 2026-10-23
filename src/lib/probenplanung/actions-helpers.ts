@@ -19,7 +19,7 @@ import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
   parseDateTimeInTimeZone,
-} from "@/lib/date-time";
+} from "@/lib/format/date";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_TIME = /^\d{2}:\d{2}$/;

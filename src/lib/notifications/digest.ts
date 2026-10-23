@@ -1,5 +1,5 @@
 import { getAppBaseUrl } from "@/lib/app-url";
-import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, parseDateTimeInTimeZone } from "@/lib/format/date";
 import { renderMail, type MailBlock } from "@/lib/email/layout";
 import { queueMail } from "@/lib/email/outbox";
 import { isMailConfigured } from "@/lib/email/send";

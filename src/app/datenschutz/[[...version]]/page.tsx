@@ -8,7 +8,7 @@ import {
   findPrivacyPolicyVersion,
   isPrivacyPolicyEnabled,
 } from "@/lib/datenschutz/policy";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { DEFAULT_SITE_TITLE } from "@/lib/website-settings";
 
 export const metadata: Metadata = {

@@ -1,6 +1,6 @@
 import { blockDayKey } from "@/lib/calendar/block-list-link";
 import { readDayAvailability, type DayAvailability } from "@/lib/calendar/day-availability";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { prisma } from "@/lib/prisma";
 import {
   currentDepartmentMembershipWhere,

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { formatRelativeFromNow } from "@/lib/datetime";
+import { formatRelativeFromNow } from "@/lib/format/relative-time";
 
 type BuildInfoTimestampProps = {
   formattedTimestamp: string;

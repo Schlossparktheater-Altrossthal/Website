@@ -2,7 +2,7 @@ import type { AttendanceMark } from "@prisma/client";
 import { GENERAL_EVENT_WHERE, visibleGeneralEventWhere } from "@/lib/calendar/entries";
 import { getCalendarEntryKindLabel } from "@/lib/calendar/event-kinds";
 import { listedEventStatus } from "@/lib/calendar/status";
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 import { blockDayKey, isWithinFreeze, readFreezeDays } from "@/lib/calendar/block-list-link";
 import { readDayAvailability } from "@/lib/calendar/day-availability";
 import { prisma } from "@/lib/prisma";

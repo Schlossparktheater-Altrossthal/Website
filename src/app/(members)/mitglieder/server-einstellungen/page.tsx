@@ -1,4 +1,4 @@
-import { formatRelativeFromNow } from "@/lib/datetime";
+import { formatRelativeFromNow } from "@/lib/format/relative-time";
 import { loadEffectiveMailSettings } from "@/lib/email/config";
 import { readMailOverview } from "@/lib/email/outbox";
 import { isMailDisabled } from "@/lib/email/transporter";

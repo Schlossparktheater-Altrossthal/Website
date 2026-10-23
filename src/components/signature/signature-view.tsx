@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { SignatureVisualizer } from "@/components/signature/signature-visualizer";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { signatureToSvgGeometry } from "@/lib/signature-svg";
 import { cn } from "@/lib/utils";
 import type { SignaturePayload } from "@/types/signature";

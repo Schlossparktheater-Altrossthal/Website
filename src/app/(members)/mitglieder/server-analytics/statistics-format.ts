@@ -1,5 +1,5 @@
 import type { StatTileTone } from "@/components/ui/stat-tile";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 export const numberFormat = new Intl.NumberFormat("de-DE");
 const decimalFormat = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
@@ -87,4 +87,10 @@ export function formatWeekday(date: string) {
     day: "2-digit",
     month: "2-digit",
   });
+}
+
+/** Kurzer Tag aus `YYYY-MM-DD`, z. B. „23.10.“. */
+export function formatDay(date: string) {
+  const [, month, day] = date.split("-");
+  return `${day}.${month}.`;
 }

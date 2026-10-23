@@ -1,4 +1,4 @@
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 export const TIME = new Intl.DateTimeFormat("de-DE", {
   hour: "2-digit",

@@ -3,7 +3,7 @@
 import { ListRow, ListRowGroup } from "@/components/ui/list-row";
 import { MapPinIcon } from "@/components/ui/action-icons";
 import { getCalendarEntryKindLabel, type CalendarEntry } from "@/lib/calendar/event-kinds";
-import { formatIsoTimeInTimeZone } from "@/lib/date-time";
+import { formatIsoTimeInTimeZone } from "@/lib/format/date";
 import { DAY_TIER_LABELS, type DayInfo } from "@/lib/sperrliste/day-tiers";
 import { cn } from "@/lib/utils";
 

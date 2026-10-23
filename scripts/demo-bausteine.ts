@@ -14,7 +14,7 @@
 
 import { loadAudienceContext, saveEventAudience } from "@/lib/calendar/audience-server";
 import { saveEventBlocks, saveEventSchedule } from "@/lib/calendar/scene-schedule-server";
-import { formatIsoDateInTimeZone, parseDateTimeInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone, parseDateTimeInTimeZone } from "@/lib/format/date";
 import { prisma } from "@/lib/prisma";
 
 const TITLE = "Demo: Stellprobe + Bautag";

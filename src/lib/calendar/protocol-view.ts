@@ -14,7 +14,7 @@ import {
   toTaskAssignee,
 } from "@/lib/calendar/protocol-server";
 import { blockLabel } from "@/lib/calendar/scene-schedule";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { getUserDisplayName } from "@/lib/names";
 import { toEventMediaItem } from "@/lib/media/event-media-item";
 import { prisma } from "@/lib/prisma";

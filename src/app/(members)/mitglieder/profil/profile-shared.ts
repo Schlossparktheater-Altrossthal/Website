@@ -26,10 +26,9 @@ import {
   type Role,
 } from "@prisma/client";
 import { type UpdateProfileBasicsResult } from "./actions/basics";
+import { formatDate as formatSharedDate } from "@/lib/format/date";
 
 export const CURRENT_YEAR = new Date().getFullYear();
-export const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
-
 export const ROLE_PREFERENCE_DEFINITIONS = {
   acting: listRolePreferenceDefinitions("acting"),
 } as const;
@@ -142,15 +141,6 @@ export const PAYOUT_METHOD_OPTIONS: Array<{ value: PayoutMethod; label: string }
 export const IBAN_REGEX = /^[A-Z]{2}[0-9]{2}[0-9A-Z]{11,30}$/;
 export const PAYPAL_HANDLE_REGEX =
   /^(?:https?:\/\/)?(?:www\.)?paypal\.me\/.+|^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
-
-export function formatDateLabel(value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return null;
-  }
-  return dateFormatter.format(date);
-}
 
 /** Eigenes Körpermaß im Profil. */
 export type ProfileMeasurement = {
@@ -499,8 +489,5 @@ export const onboardingSchema = z.object({
 });
 
 export function formatDate(value: string | null | undefined) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.valueOf())) return null;
-  return dateFormatter.format(parsed);
+  return formatSharedDate(value, "medium");
 }

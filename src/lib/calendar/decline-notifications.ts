@@ -11,7 +11,7 @@ import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
   parseDateTimeInTimeZone,
-} from "@/lib/date-time";
+} from "@/lib/format/date";
 import { getUserDisplayName } from "@/lib/names";
 import { notify } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, categoryForEventKind } from "@/lib/notifications/types";

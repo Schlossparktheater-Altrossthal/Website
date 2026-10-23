@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import type { OnboardingMembersOverview } from "@/lib/onboarding/dashboard-schemas";
 import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/format/date";
 
 type MembersOverviewTabProps = {
   onboardingId: string;
@@ -75,11 +76,6 @@ function parseDate(value: unknown): Date | null {
   return null;
 }
 
-function formatDate(value: Date | null): string {
-  if (!value) return "–";
-  return value.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
 function calculateAge(dateOfBirth: Date | null): number | null {
   if (!dateOfBirth) return null;
 
@@ -97,7 +93,7 @@ function calculateAge(dateOfBirth: Date | null): number | null {
 }
 
 function renderBirthday(dateOfBirth: Date | null): ReactNode {
-  const formattedDate = formatDate(dateOfBirth);
+  const formattedDate = formatDate(dateOfBirth) ?? "–";
   const age = calculateAge(dateOfBirth);
 
   return (

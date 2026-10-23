@@ -18,6 +18,7 @@ import {
 } from "@/lib/produktionen/status";
 import { getDirectionShows } from "@/lib/regie/access";
 import { DIRECTION_HOME_PATH } from "@/lib/regie/paths";
+import { formatSceneShort } from "@/lib/produktionen/scenes";
 
 /**
  * Wünsche des Regieteams (docs/Plan/regie-plan.md, Phase 5; docs/Plan/wuensche-plan.md).
@@ -244,16 +245,16 @@ function targetLabel(target: {
   return target.user ? getUserDisplayName(target.user) : "Person";
 }
 
-const sceneLabel = (scene: { identifier: string | null; title: string | null }) =>
-  scene.identifier ?? scene.title ?? "Szene";
-
 function toView(wish: WishRow, viewer: WishViewer): DirectionWishView {
   return {
     id: wish.id,
     text: wish.text,
     status: wish.status,
     author: wish.author ? { id: wish.author.id, name: getUserDisplayName(wish.author) } : null,
-    scenes: wish.scenes.map(({ scene }) => ({ id: scene.id, label: sceneLabel(scene) })),
+    scenes: wish.scenes.map(({ scene }) => ({
+      id: scene.id,
+      label: formatSceneShort(scene, "Szene"),
+    })),
     people: wish.people.map(({ user }) => ({ id: user.id, name: getUserDisplayName(user) })),
     dateFrom: wish.dateFrom?.toISOString() ?? null,
     dateTo: wish.dateTo?.toISOString() ?? null,
@@ -937,6 +938,6 @@ export async function listWishesForEvent(showId: string, eventId: string, dayKey
     id: wish.id,
     text: wish.text,
     plannedHere: wish.eventId === eventId,
-    scenes: wish.scenes.map(({ scene }) => sceneLabel(scene)),
+    scenes: wish.scenes.map(({ scene }) => formatSceneShort(scene, "Szene")),
   }));
 }

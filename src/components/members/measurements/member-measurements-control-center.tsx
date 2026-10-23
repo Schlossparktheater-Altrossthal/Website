@@ -60,7 +60,7 @@ import { downloadPdf } from "@/lib/pdf/download";
 import { cn } from "@/lib/utils";
 import { SIZE_CATEGORY_LABELS, sizeCategoryEnum, type SizeEntry } from "@/data/sizes";
 import { toast } from "sonner";
-import { formatRelativeWithAbsolute } from "@/lib/datetime";
+import { formatRelativeWithAbsolute } from "@/lib/format/relative-time";
 
 type MeasurementEntry = {
   id: string;

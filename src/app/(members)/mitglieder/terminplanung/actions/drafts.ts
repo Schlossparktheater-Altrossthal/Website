@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { broadcastRehearsalCreated } from "@/lib/realtime/triggers";
 import { createNotification, dispatchNotification } from "@/lib/notifications/notify";
 import { NOTIFICATION_TYPES, categoryForEventKind } from "@/lib/notifications/types";
-import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone, formatIsoTimeInTimeZone } from "@/lib/format/date";
 
 import type { CalendarEventKind } from "@prisma/client";
 

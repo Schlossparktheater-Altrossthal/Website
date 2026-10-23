@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CheckIcon, MailCheckIcon } from "@/components/ui/action-icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { formatPerformanceDateLong, formatPrice } from "@/lib/karten/constants";
 import { cn } from "@/lib/utils";
 

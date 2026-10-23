@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { blockDayKey, isWithinFreeze } from "@/lib/calendar/block-list-link";
-import { parseDateTimeInTimeZone } from "@/lib/date-time";
+import { parseDateTimeInTimeZone } from "@/lib/format/date";
 
 /** Mittwoch, 30.09.2026, 10:00 Uhr Berliner Zeit. */
 const NOW = parseDateTimeInTimeZone("2026-09-30", "10:00");

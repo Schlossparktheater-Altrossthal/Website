@@ -46,7 +46,7 @@ import type { AudienceContext } from "@/lib/calendar/audience";
 import { optimizeOrder, rankScenes, type SceneCandidate } from "@/lib/calendar/rehearsal-suggest";
 import { describeCast, type SceneReadiness } from "@/lib/calendar/scene-readiness";
 import { HEAVY_WEEK_COUNT, type PersonLoad } from "@/lib/calendar/week-load";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 export type SceneStatsView = Record<

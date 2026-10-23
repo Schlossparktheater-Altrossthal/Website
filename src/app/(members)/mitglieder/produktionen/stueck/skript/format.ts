@@ -1,4 +1,4 @@
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 const DATE_TIME = new Intl.DateTimeFormat("de-DE", {
   day: "2-digit",

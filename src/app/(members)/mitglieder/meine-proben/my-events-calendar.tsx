@@ -12,7 +12,7 @@ import {
 import { MonthSwitcher } from "@/components/ui/month-switcher";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import type { MyEventItem } from "@/lib/calendar/my-events";
-import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, formatIsoDateInTimeZone } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 import { MyEventRow } from "./my-event-row";

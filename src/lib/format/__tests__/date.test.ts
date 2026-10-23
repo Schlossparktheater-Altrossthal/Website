@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDateTimeInTimeZone } from "@/lib/date-time";
+import { parseDateTimeInTimeZone } from "@/lib/format/date";
 
 describe("parseDateTimeInTimeZone", () => {
   it("converts Berlin summer time to UTC", () => {

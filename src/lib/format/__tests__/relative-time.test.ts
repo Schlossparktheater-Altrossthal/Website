@@ -4,7 +4,7 @@ import {
   formatRelativeBetween,
   formatRelativeFromNow,
   formatRelativeWithAbsolute,
-} from "@/lib/datetime";
+} from "@/lib/format/relative-time";
 
 describe("datetime utilities", () => {
   describe("formatRelativeFromNow", () => {

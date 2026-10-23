@@ -40,7 +40,7 @@ import {
   getCalendarEntryKindLabel,
   type CalendarEntry,
 } from "@/lib/calendar/event-kinds";
-import { DEFAULT_TIME_ZONE, formatIsoTimeInTimeZone } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE, formatIsoTimeInTimeZone } from "@/lib/format/date";
 import type { FinalWeekRange } from "@/lib/sperrliste/day-tiers";
 import { toDayKey } from "@/lib/sperrliste/day-tiers";
 import { buildScheduleMonths } from "@/lib/calendar/schedule-pdf";

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import type { PdfTemplate } from "@/lib/pdf/types";
 
 import { joinNames, sortCredits } from "./credits";

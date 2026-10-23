@@ -6,7 +6,7 @@ import { Check, CircleDashed, CircleSlash, CornerDownRight } from "lucide-react"
 import { EventTaskList } from "@/components/calendar/event-task-list";
 import { MediaAttachments } from "@/components/media/media-attachments";
 import type { ProtocolView } from "@/lib/calendar/protocol-view";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 
 const TIME = new Intl.DateTimeFormat("de-DE", {

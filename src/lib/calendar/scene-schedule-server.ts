@@ -13,7 +13,7 @@ import {
   formatIsoDateInTimeZone,
   formatIsoTimeInTimeZone,
   parseDateTimeInTimeZone,
-} from "@/lib/date-time";
+} from "@/lib/format/date";
 import type { ScenePlanEntry } from "@/lib/calendar/scene-plan";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { prisma } from "@/lib/prisma";

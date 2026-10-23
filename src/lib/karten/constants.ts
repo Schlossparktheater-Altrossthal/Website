@@ -8,7 +8,7 @@ import {
   DEFAULT_TIME_ZONE,
   formatIsoDateInTimeZone,
   formatIsoTimeInTimeZone,
-} from "@/lib/date-time";
+} from "@/lib/format/date";
 
 /** Kartenbuchung (docs/Plan/kartenbuchung-plan.md). */
 export const TICKET_PERMISSION_KEYS = {

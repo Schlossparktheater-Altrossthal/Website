@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { PdfTemplate } from "../types";
+import { formatDateTime } from "@/lib/format/date";
 
 const optionalString = z
   .union([z.string(), z.null(), z.undefined()])
@@ -50,10 +51,6 @@ function slugify(value: string | null | undefined) {
     .slice(0, 60);
 }
 
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
-
 function ensureSpace(doc: PdfDocumentInstance, height: number) {
   const pageBottom = doc.page.height - doc.page.margins.bottom;
   if (doc.y + height > pageBottom) {
@@ -83,7 +80,7 @@ export const photoConsentListTemplate: PdfTemplate<PhotoConsentListData> = {
       .font("Helvetica")
       .fontSize(9)
       .fillColor("#6b7280")
-      .text(`Exportiert: ${formatDateTime(createdAt)}`);
+      .text(`Exportiert: ${formatDateTime(createdAt) ?? ""}`);
     doc.moveDown(0.8);
 
     const cellPadding = 5;

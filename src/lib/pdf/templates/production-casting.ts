@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { PdfTemplate } from "../types";
+import { formatDateTime } from "@/lib/format/date";
 
 const optionalString = z.union([z.string(), z.null(), z.undefined()]).transform((value) => {
   if (typeof value !== "string") return null;
@@ -61,10 +62,6 @@ function slugify(value: string | null | undefined) {
   return slug.slice(0, 60);
 }
 
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
-
 function formatType(type: string | null | undefined, label?: string | null) {
   if (label) return label;
   if (!type) return "Weitere";
@@ -103,7 +100,7 @@ export const productionCastingTemplate: PdfTemplate<CastingExportData> = {
       .font("Helvetica")
       .fontSize(10)
       .fillColor("#6b7280")
-      .text(`Exportiert: ${formatDateTime(createdAt)}`);
+      .text(`Exportiert: ${formatDateTime(createdAt) ?? ""}`);
     doc.moveDown(1);
 
     const tableX = doc.page.margins.left;

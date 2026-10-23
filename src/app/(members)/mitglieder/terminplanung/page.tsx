@@ -11,7 +11,7 @@ import { summarizeEventAudience, summarizeEventScenes } from "@/lib/calendar/eve
 import { loadScenePlanEntries } from "@/lib/calendar/scene-schedule-server";
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
 import { CALENDAR_PLANNER_PERMISSION } from "@/lib/calendar/permissions";
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 import { getSaxonySchoolHolidayRanges } from "@/lib/holidays";
 import { membersNavigationBreadcrumb } from "@/lib/members-breadcrumbs";
 import { compareMembersByName, getUserDisplayName } from "@/lib/names";

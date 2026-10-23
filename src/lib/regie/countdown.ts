@@ -1,5 +1,5 @@
 import type { StatTileTone } from "@/components/ui/stat-tile";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { DEFAULT_TIME_ZONE } from "@/lib/format/date";
 
 /**
  * Kennzahlen oben im Regie-Dashboard: Tage bis Endprobenwoche und Premiere, Proben bis zur

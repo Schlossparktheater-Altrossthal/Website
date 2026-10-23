@@ -20,6 +20,7 @@ import {
   percentFormat,
   shortRoute,
   TONE_TEXT,
+  formatDay,
 } from "./statistics-format";
 
 type SortKey = "views" | "persons" | "time" | "load" | "errors";
@@ -44,11 +45,6 @@ function changeHint(current: number, previous: number, label: string) {
   const change = formatChange(current, previous);
   if (change) return `${change} ggü. ${label}`;
   return previous > 0 ? `vorher ${numberFormat.format(previous)}` : "noch kein Vergleichswert";
-}
-
-function formatDay(date: string) {
-  const [, month, day] = date.split("-");
-  return `${day}.${month}.`;
 }
 
 export function StatisticsOverview({ statistics }: { statistics: MemberStatistics }) {

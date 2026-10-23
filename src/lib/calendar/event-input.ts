@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { CALENDAR_EVENT_KINDS } from "@/lib/calendar/event-kinds";
-import { parseDateTimeInTimeZone } from "@/lib/date-time";
+import { parseDateTimeInTimeZone } from "@/lib/format/date";
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const time = /^([01]\d|2[0-3]):[0-5]\d$/;

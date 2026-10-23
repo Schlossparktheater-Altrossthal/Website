@@ -23,7 +23,7 @@ import { NOTIFICATION_TYPES, departmentActionUrl } from "@/lib/notifications/typ
 import { removeStoredObjects, storedObjectsOfEvents } from "@/lib/media/event-media";
 import { prisma } from "@/lib/prisma";
 import { updateAttendanceWithLog } from "@/lib/rehearsals/attendance";
-import { parseDateTimeInTimeZone, formatIsoDateInTimeZone } from "@/lib/date-time";
+import { parseDateTimeInTimeZone, formatIsoDateInTimeZone } from "@/lib/format/date";
 import { syncRehearsalSchedule } from "@/lib/probenplanung/actions-helpers";
 import {
   actionFailure,

@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { DEFAULT_TIME_ZONE } from "@/lib/date-time";
+import { formatDateTime } from "@/lib/format/date";
 import {
   photoConsentLevelLabel,
   photoConsentLevelsFor,
@@ -94,18 +94,6 @@ const SOURCE_LABELS: Record<string, string> = {
   returnee: "Rückkehrer",
   revocation: "Widerruf",
 };
-
-const dateTimeFormatter = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: DEFAULT_TIME_ZONE,
-});
-
-function formatDateTime(value: string | null | undefined) {
-  if (!value) return "unbekannt";
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? "unbekannt" : dateTimeFormatter.format(date);
-}
 
 function bucketOf(entry: PhotoConsentAdminEntry): Exclude<Bucket, "missing"> {
   if (entry.status === "pending") return entry.hasProof ? "review" : "noProof";
@@ -297,7 +285,7 @@ function EntryDetail({
         )}
         {entry.approvedAt ? (
           <p className="text-xs text-muted-foreground">
-            Freigegeben {formatDateTime(entry.approvedAt)}
+            Freigegeben {formatDateTime(entry.approvedAt) ?? "unbekannt"}
             {entry.approvedByName ? ` durch ${entry.approvedByName}` : ""}
           </p>
         ) : null}
@@ -324,7 +312,7 @@ function EntryDetail({
                   </span>
                 </span>
                 <span className="text-muted-foreground">
-                  V{version.version} · {formatDateTime(version.submittedAt)}
+                  V{version.version} · {formatDateTime(version.submittedAt) ?? "unbekannt"}
                 </span>
               </li>
             ))}

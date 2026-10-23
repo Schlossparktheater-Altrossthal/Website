@@ -1,7 +1,7 @@
 import type { CalendarEvent, Prisma } from "@prisma/client";
 
 import type { CalendarEntry } from "@/lib/calendar/event-kinds";
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 import { visibleEventStatus } from "@/lib/calendar/status";
 import { currentMembershipWhere } from "@/lib/produktionen/status";
 import { prisma } from "@/lib/prisma";

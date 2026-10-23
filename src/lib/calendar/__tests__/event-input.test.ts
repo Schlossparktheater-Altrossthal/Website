@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { expandEntryDayKeys } from "@/lib/calendar/event-kinds";
 import { calendarEventInputSchema, resolveCalendarEventTimes } from "@/lib/calendar/event-input";
-import { formatIsoDateInTimeZone } from "@/lib/date-time";
+import { formatIsoDateInTimeZone } from "@/lib/format/date";
 
 function resolve(input: Record<string, unknown>) {
   return resolveCalendarEventTimes(
