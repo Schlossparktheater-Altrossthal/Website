@@ -1,6 +1,6 @@
 # Plan: Theme-Einstellungen neu und persönliche Darstellung
 
-Stand: 2026-10-23. Entscheidungen abgestimmt, Umsetzung läuft. Checkliste am Ende wird gepflegt.
+Stand: 2026-10-23. Phase 1–5 umgesetzt und auf Staging, offen Abnahme und Release. Checkliste am Ende wird gepflegt.
 
 ## Ziel
 
@@ -69,4 +69,4 @@ Stand: 2026-10-23. Entscheidungen abgestimmt, Umsetzung läuft. Checkliste am En
 - [x] Phase 2 Persönliche Darstellung
 - [x] Phase 3 Galerie, Import-Dialog, Freigabe
 - [x] Phase 4 Editor kompakt
-- [ ] Phase 5 Prüfung (Screenshots, E2E)
+- [x] Phase 5 Prüfung (Screenshots, E2E `e2e/darstellung.spec.ts` grün auf Staging); offen: Abnahme, Release

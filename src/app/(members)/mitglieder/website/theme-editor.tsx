@@ -136,9 +136,9 @@ export function ThemeEditor({
 
       <div className="min-w-0 space-y-3 lg:order-1">
         {locked ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted p-3">
-            <LockIcon className="size-4 shrink-0 text-muted-foreground" />
-            <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted p-3 sm:flex-row sm:items-center">
+            <p className="flex min-w-0 flex-1 items-start gap-2 text-sm text-muted-foreground">
+              <LockIcon className="mt-0.5 size-4 shrink-0" />
               Vorlagen sind schreibgeschützt. Lege eine Kopie an, um sie anzupassen.
             </p>
             <Button type="button" variant="outline" size="sm" onClick={onDuplicate}>

@@ -126,7 +126,7 @@ export function ThemePreviewCard({
       </button>
       <div className="flex min-w-0 items-start gap-1">
         <div className="min-w-0 flex-1 px-1">
-          <p className="truncate text-sm font-medium text-foreground">{name}</p>
+          <p className="line-clamp-2 text-sm font-medium break-words text-foreground">{name}</p>
           {description ? (
             <p className="line-clamp-1 text-xs text-muted-foreground">{description}</p>
           ) : null}
