@@ -69,11 +69,13 @@ export function MyClaims(props: MyClaimsProps) {
       ) : null}
 
       <Card className="p-4">
-        <div className="mb-3 flex items-baseline justify-between gap-2">
-          <h2 className="font-semibold">Meine Auslagen</h2>
-          <span className="text-sm text-muted-foreground">
-            Offen {formatCents(openSum)} · Erstattet {year}: {formatCents(paidSum)}
-          </span>
+        <div className="mb-3">
+          <h2 className="font-semibold">Eingereicht</h2>
+          {props.claims.length ? (
+            <p className="text-sm text-muted-foreground">
+              Offen {formatCents(openSum)} · Erstattet {year}: {formatCents(paidSum)}
+            </p>
+          ) : null}
         </div>
         {props.claims.length ? (
           <div className="divide-y">
@@ -83,7 +85,7 @@ export function MyClaims(props: MyClaimsProps) {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Du hast etwas fürs Theater bezahlt? Beleg fotografieren, Betrag eintragen – fertig.
+            Noch nichts eingereicht. Beleg fotografieren, Betrag eintragen – fertig.
           </p>
         )}
       </Card>

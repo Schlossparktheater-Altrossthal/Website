@@ -175,7 +175,6 @@ async function main() {
   }
 
   const latestShow = await prisma.show.findFirst({ orderBy: { year: "desc" } });
-  const referenceYear = latestShow?.year ?? new Date().getUTCFullYear();
 
   if (latestShow) {
     const seededUsers = await prisma.user.findMany({
@@ -194,36 +193,15 @@ async function main() {
     }
   }
 
-  const financeBudgetSeeds = [
-    {
-      id: "seed-budget-costumes",
-      category: "Kostüme & Requisiten",
-      plannedAmount: 1500,
-      currency: "EUR",
-      notes: "Materialien, Leihen und Reinigung",
-      showId: latestShow?.id ?? null,
-    },
-    {
-      id: "seed-budget-marketing",
-      category: "Marketing & Druck",
-      plannedAmount: 800,
-      currency: "EUR",
-      notes: "Flyer, Plakate und Social Ads",
-      showId: latestShow?.id ?? null,
-    },
-  ];
-
-  for (const budget of financeBudgetSeeds) {
-    await prisma.financeBudget.upsert({
-      where: { id: budget.id },
-      update: {
-        category: budget.category,
-        plannedAmount: budget.plannedAmount,
-        currency: budget.currency,
-        notes: budget.notes,
-        showId: budget.showId,
-      },
-      create: budget,
+  // Finanzen (docs/Plan/finanzen-plan.md): nur Geldtöpfe, Buchungen entstehen über die App.
+  for (const [index, fund] of [
+    { name: "Förderverein", kind: "bank" },
+    { name: "Barkasse", kind: "cash" },
+  ].entries()) {
+    await prisma.financeFund.upsert({
+      where: { name: fund.name },
+      update: {},
+      create: { ...fund, sortOrder: index },
     });
   }
 
@@ -317,187 +295,6 @@ async function main() {
         create: { roleId: boardRoleForProfile.id, permissionId },
       });
     }
-  }
-
-  const [financeUser, boardUser, memberUser, castUser, financeBudgets] = await Promise.all([
-    prisma.user.findUnique({ where: { email: "finance@example.com" } }),
-    prisma.user.findUnique({ where: { email: "board@example.com" } }),
-    prisma.user.findUnique({ where: { email: "member@example.com" } }),
-    prisma.user.findUnique({ where: { email: "cast@example.com" } }),
-    prisma.financeBudget.findMany({
-      where: { id: { in: financeBudgetSeeds.map((budget) => budget.id) } },
-    }),
-  ]);
-
-  const budgetMap = new Map(financeBudgets.map((budget) => [budget.id, budget.id]));
-
-  const financeEntrySeeds = [
-    {
-      id: "seed-finance-invoice-costumes",
-      data: {
-        title: "Erstattung Stoffe für Kostüme",
-        description: "Auslage für Stoffe und Kurzwaren der diesjährigen Produktion.",
-        type: "expense",
-        kind: "invoice",
-        status: "approved",
-        amount: 320.45,
-        currency: "EUR",
-        category: "Kostüme",
-        bookingDate: new Date(Date.UTC(referenceYear, 2, 18, 9, 15)),
-        dueDate: new Date(Date.UTC(referenceYear, 2, 31, 8, 0)),
-        paidAt: null,
-        invoiceNumber: "KOST-" + referenceYear + "-05",
-        vendor: "Stoff & Faden Dresden",
-        memberPaidById: castUser?.id ?? memberUser?.id ?? null,
-        donationSource: null,
-        donorContact: null,
-        tags: null,
-        showId: latestShow?.id ?? null,
-        budgetId: budgetMap.get("seed-budget-costumes") ?? null,
-        visibilityScope: "finance",
-        createdById: financeUser?.id ?? boardUser?.id ?? memberUser?.id ?? null,
-        approvedById: boardUser?.id ?? financeUser?.id ?? null,
-        approvedAt: new Date(Date.UTC(referenceYear, 2, 20, 10, 0)),
-        attachments: [
-          {
-            filename: "Beleg-Stoffe.pdf",
-            url: "https://example.com/seed/stoffe.pdf",
-            mimeType: "application/pdf",
-            size: 245678,
-          },
-        ],
-        logs: [
-          {
-            fromStatus: null,
-            toStatus: "pending",
-            changedById: financeUser?.id ?? null,
-            note: null,
-          },
-          {
-            fromStatus: "pending",
-            toStatus: "approved",
-            changedById: boardUser?.id ?? financeUser?.id ?? null,
-            note: "Vorstand hat die Auslage freigegeben",
-          },
-        ],
-      },
-    },
-    {
-      id: "seed-finance-donation-sparkasse",
-      data: {
-        title: "Spende Sparkasse Kulturstiftung",
-        description: "Projektförderung für Öffentlichkeitsarbeit und Nachwuchsarbeit.",
-        type: "income",
-        kind: "donation",
-        status: "approved",
-        amount: 1200,
-        currency: "EUR",
-        category: "Förderungen",
-        bookingDate: new Date(Date.UTC(referenceYear, 3, 5, 10, 30)),
-        dueDate: null,
-        paidAt: new Date(Date.UTC(referenceYear, 3, 8, 8, 30)),
-        invoiceNumber: null,
-        vendor: "Sparkasse Kulturstiftung",
-        memberPaidById: null,
-        donationSource: "Sparkasse Kulturstiftung",
-        donorContact: "kultur@sparkasse.example",
-        tags: null,
-        showId: latestShow?.id ?? null,
-        budgetId: budgetMap.get("seed-budget-marketing") ?? null,
-        visibilityScope: "board",
-        createdById: financeUser?.id ?? boardUser?.id ?? null,
-        approvedById: boardUser?.id ?? financeUser?.id ?? null,
-        approvedAt: new Date(Date.UTC(referenceYear, 3, 6, 9, 0)),
-        attachments: [],
-        logs: [
-          {
-            fromStatus: null,
-            toStatus: "pending",
-            changedById: financeUser?.id ?? null,
-            note: null,
-          },
-          {
-            fromStatus: "pending",
-            toStatus: "approved",
-            changedById: boardUser?.id ?? financeUser?.id ?? null,
-            note: "Freigabe des Spendeneingangs",
-          },
-        ],
-      },
-    },
-    {
-      id: "seed-finance-expense-marketing",
-      data: {
-        title: "Druckkosten Plakate",
-        description: "Großformatige Plakate für den Schlosspark und Schulen im Umfeld.",
-        type: "expense",
-        kind: "general",
-        status: "paid",
-        amount: 540,
-        currency: "EUR",
-        category: "Marketing",
-        bookingDate: new Date(Date.UTC(referenceYear, 4, 2, 12, 0)),
-        dueDate: new Date(Date.UTC(referenceYear, 4, 12, 12, 0)),
-        paidAt: new Date(Date.UTC(referenceYear, 4, 9, 14, 30)),
-        invoiceNumber: "MKT-" + referenceYear + "-11",
-        vendor: "Druckerei Altstadt",
-        memberPaidById: null,
-        donationSource: null,
-        donorContact: null,
-        tags: null,
-        showId: latestShow?.id ?? null,
-        budgetId: budgetMap.get("seed-budget-marketing") ?? null,
-        visibilityScope: "finance",
-        createdById: financeUser?.id ?? boardUser?.id ?? null,
-        approvedById: financeUser?.id ?? boardUser?.id ?? null,
-        approvedAt: new Date(Date.UTC(referenceYear, 4, 5, 8, 45)),
-        attachments: [
-          {
-            filename: "Rechnung-Plakate.pdf",
-            url: "https://example.com/seed/plakate.pdf",
-            mimeType: "application/pdf",
-            size: 198765,
-          },
-        ],
-        logs: [
-          { fromStatus: null, toStatus: "draft", changedById: financeUser?.id ?? null, note: null },
-          {
-            fromStatus: "draft",
-            toStatus: "approved",
-            changedById: financeUser?.id ?? null,
-            note: "Selbstfreigabe im kleinen Budgetrahmen",
-          },
-          {
-            fromStatus: "approved",
-            toStatus: "paid",
-            changedById: financeUser?.id ?? null,
-            note: "Rechnung wurde überwiesen",
-          },
-        ],
-      },
-    },
-  ];
-
-  for (const entry of financeEntrySeeds) {
-    const { attachments, logs, ...entryData } = entry.data;
-    const attachmentUpdate = attachments.length
-      ? { deleteMany: {}, create: attachments }
-      : { deleteMany: {} };
-    const attachmentCreate = attachments.length ? { create: attachments } : null;
-    await prisma.financeEntry.upsert({
-      where: { id: entry.id },
-      update: {
-        ...entryData,
-        attachments: attachmentUpdate,
-        logs: { deleteMany: {}, create: logs },
-      },
-      create: {
-        id: entry.id,
-        ...entryData,
-        ...(attachmentCreate ? { attachments: attachmentCreate } : {}),
-        logs: { create: logs },
-      },
-    });
   }
 
   const departmentSeeds = [
