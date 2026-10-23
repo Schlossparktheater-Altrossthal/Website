@@ -25,35 +25,57 @@ Träger ist der Förderverein (siehe Datenschutz-Plan) – Kassenbuch und Kassen
 - Kategorie als Freitext → feste **Kategorien** (Kontenrahmen light) + Gewerk + Produktion.
 - Finanzseite als eigene Insel → Einstieg dort, wo man arbeitet: Gewerk-Portal (Budget-Tab), Dashboard („Auslage einreichen“), Kartenbüro.
 
-## Zielbild
+## Zielbild (umgesetzt, Stand Phase 4)
+
+Schema in `prisma/schema.prisma` (Migrationen `20261023180000_finance_rebuild`,
+`20261023200000_finance_receipts_payout`):
 
 ```
-FinanceFund       id, name, description?, kind bank|cash|other, archived            // Geldtopf
-FinanceCategory   id, name, type income|expense, sortOrder, archived      // z. B. Material, Kostüm, Verpflegung, Karten, Spenden, Förderung
-FinanceBudget     id, showId, departmentId?, categoryId?, plannedCents Int, notes
-FinanceEntry      id, fundId, number Int (fortlaufend je Produktion, über alle Töpfe), showId, type income|expense|transfer, amountCents Int, transferFundId?,
-                  bookingDate, categoryId, departmentId?, budgetId?, performanceId?,
-                  counterparty?, description, source manual|expense_claim|tickets|box_office|donation,
-                  sourceRef?, lockedAt?, reversalOfId?, createdById
-FinanceReceipt    id, entryId? | claimId?, file (Belege-Speicher), mime, size, ocr Json?
-ExpenseClaim      id, submittedById, amountCents, date, vendor?, departmentId, showId, purpose,
-                  status submitted|approved|rejected|paid, payout bank|cash|donated, fundId?, reviewedById?, paidAt?, entryId?
-CashCount         id, performanceId, countedCents, expectedCents, countedById, notes   // Abendkasse
+FinanceFund       Geldtopf: name, kind bank|cash|other, archivedAt
+FinancePeriod     Zeitraum: kind production (showId, Code „S27“) | general („Allgemein 2026“, Code „A26“),
+                  nextNumber (Nummernkreis), lockedThrough (festgeschrieben bis Nr.), closedAt
+FinanceCategory   name, type income|expense (12 Startkategorien per Migration)
+FinanceBudget     periodId, fundId?, departmentId?, categoryId?, plannedCents, notes
+FinanceEntry      periodId, number, fundId, transferFundId? (nur transfer), type income|expense|transfer,
+                  amountCents (>0), bookingDate, description, counterparty?, categoryId?, departmentId?,
+                  objectId?, performanceEventId? (CalendarEvent), source manual|expense_claim|box_office|tickets|donation,
+                  donorName?/donorAddress? (Spendenquittung), reversalOfId? (Storno), createdById
+ExpenseClaim      periodId, submittedById, amountCents, spentOn, purpose, vendor?, departmentId?, categoryId?,
+                  payout cash|bank|paypal|donated, status submitted|approved|rejected|paid,
+                  departmentChecked*, reviewed*, rejectReason, fundId?, entryId?
+FinanceReceipt    Bytes in der DB (wie Ausstattungsfotos), entryId? | claimId?, ocr Json? (leer)
+FinanceLog        Protokoll je Buchung/Auslage (action, data)
 ```
 
-- Bestehende Tabellen (`FinanceEntry` usw.) werden migriert oder – falls in Prod leer – ersetzt (vorher Prod-DB prüfen).
-- Erstattung bar oder per Überweisung; IBAN freiwillig im Profil, verschlüsselt, nur Kassenwart sieht sie.
-- Spendenquittung vorbereitet: Auslage „spenden“ (`payout donated`) und Spenden erzeugen später eine Zuwendungsbestätigung (PDF); Felder Spendername/-anschrift vorsehen.
-- Belegerkennung nur vorbereitet: `FinanceReceipt.ocr` bleibt leer, Formular so bauen, dass Vorschläge später eingesetzt werden können.
-- Keine Steuer-Sphären, kein DATEV, kein Kontoauszug-Import.
-- **Festschreiben**: Buchungen eines Monats/Jahres werden gesperrt (`lockedAt`); Korrektur nur per Storno-Buchung (`reversalOfId`). Löschen gibt es nicht.
+- Beträge immer positive Cent-Integer, Richtung über `type`. Löschen von Buchungen gibt es nicht.
+- **Festschreiben** je Zeitraum bis zu einer Buchungsnummer (`lockedThrough`), danach nur Storno.
+- Zahlungsdaten für Erstattungen kommen aus den **bestehenden Profilfeldern** `User.payout*`
+  (IBAN, Kontoinhaber, PayPal) – Abweichung vom Entwurf: dort noch **unverschlüsselt** (offen).
+- `CashCount` (Kassensturz) ist noch nicht angelegt → Phase 5.
 
-## Rollen & Rechte
+## Code-Überblick
 
-- `FINANCE.CLAIM.SUBMIT` – alle Mitglieder einer Produktion (Auslagen einreichen, eigene sehen).
-- `FINANCE.DEPARTMENT.VIEW` – Gewerksleitung/Vertretung: Budget + Ausgaben des eigenen Gewerks, Auslagen vorprüfen („sachlich richtig“).
-- `FINANCE.MANAGE` – Kassenwart: alles buchen, erstatten, Budgets, Festschreiben, Export.
-- `FINANCE.VIEW` – Vorstand/Kassenprüfung: alles lesen, Export.
+- `src/lib/finance/`: `ledger.ts` (Buchen mit Nummernkreis, Ändern, Storno, Festschreiben, Salden),
+  `periods.ts`, `claims.ts` (Auslagen + Benachrichtigungen), `book.ts` (Kassenbuch-Abfragen,
+  Kennzahlen `summarize`), `budgets.ts` (Soll/Ist), `access.ts`, `receipts.ts`, `constants.ts`, `paths.ts`.
+- `src/lib/format/money.ts` (Cent formatieren/parsen, gemeinsam mit Ausstattung).
+- Seiten: `src/app/(members)/mitglieder/finanzen/` (`page.tsx` Tabs Eingang/Kassenbuch/Budgets/Töpfe,
+  `auslagen/page.tsx`, `actions.ts`), Beleg-Route `src/app/api/finanzen/belege/[id]`,
+  Gewerk-Tab `src/app/(members)/mitglieder/meine-gewerke/budget/department-budget.tsx`.
+- Komponenten: `src/components/finance/` (my-claims, claim-inbox, claim-ui, cash-book, budget-manager,
+  budget-bar, fund-manager).
+- Tests: `src/lib/finance/__tests__/` (ledger, book, budgets). Seiten-Doku: `docs/seiten/finanzen.md`.
+- Seeds: `prisma/seed.mjs` (CI-E2E, nur Töpfe), `scripts/demo/seed.ts` (Demo inkl. Buchungen/Auslagen).
+
+## Rollen & Rechte (umgesetzt)
+
+- Auslagen einreichen und eigene sehen: **jedes Mitglied, ohne eigenes Recht**.
+- Gewerksleitung/Vertretung: über die Gewerk-Zugehörigkeit (`lib/finance/access.ts`), kein Recht –
+  Auslagen des Gewerks prüfen, Budget-Tab sehen.
+- `PRIVATE.FINANCE.MANAGE` – Kassenwart: buchen, erstatten, Budgets, Töpfe, Festschreiben, IBANs sehen.
+- `PRIVATE.FINANCE.VIEW` – Vorstand/Kassenprüfung: alles lesen.
+- Beide Rechte sind **keiner Rolle zugewiesen** (nur Owner/Admin haben sie) – in Prod vor Nutzung
+  vergeben.
 
 ## UI-Skizze
 
@@ -75,8 +97,8 @@ Mockup: `docs/Plan/mockups/finanzen-mockup.html` (2026-10-23). Vor UI-Umsetzung 
 5. **Einnahmen automatisch**: Kartenbuchung/Freikarten (Online-Zahlung gibt es nicht → Abendkasse/Kartenbüro), Kassensturz je Vorstellung, Spenden mit Vorstellungsbezug.
 6. **Berichte & Export**: Produktionsabschluss/Kassenbericht je Topf als PDF (MB-PDF-Engine), CSV, Belege als ZIP, Zuwendungsbestätigung vorbereiten.
 7. **Einkauf**: Einkaufslisten aus `einkauf-belege-plan.md` Phase 2 an die Finanzen anbinden.
-8. Später: Belegerkennung (OCR/KI).
-9. Doku, E2E, Release.
+8. **Doku, E2E, Release** (inkl. offene Punkte unten).
+9. Später: Belegerkennung (OCR/KI).
 
 ## Entscheidungen (2026-10-23)
 
@@ -87,6 +109,31 @@ Mockup: `docs/Plan/mockups/finanzen-mockup.html` (2026-10-23). Vor UI-Umsetzung 
 - E5: Kein Kontoauszug-Abgleich (vorerst).
 - E6: Mehrere **Geldtöpfe** getrennt führen (`FinanceFund`), Budgets und Berichte je Topf filterbar.
 - E7: Belegerkennung später, nur vorbereiten.
+
+## Hinweise für Phase 5 (Einnahmen)
+
+- Kartenverkauf liegt in `src/lib/karten/` (Plan `docs/Plan/kartenbuchung-plan.md`). Abendkasse und
+  Kassieren laufen über `applyDoorMutations` in `src/lib/karten/checkin.ts` (Aktionen `sale` und
+  `pay`, offline gepuffert); Reservierungen haben `paymentStatus` (`ReservationPaymentStatus`),
+  Preise in `TicketCategory.priceCents`. Vorstellungen sind `CalendarEvent` (+ `PerformanceTicketing`).
+- Idee: „erwartet“ je Vorstellung aus Verkäufen/kassierten Reservierungen berechnen, im Einlass
+  einen Kassensturz erfassen (neues Modell `CashCount`: eventId, countedCents, expectedCents,
+  countedById, notes) und daraus eine Einnahme `source box_office` mit `performanceEventId` in den
+  Bar-Topf buchen. Vorverkauf im Kartenbüro analog als `source tickets`.
+- Vor UI erst Mockup/Screenshots (Einlass-Ansicht ist offline-fähig – Kassensturz muss das auch
+  berücksichtigen oder bewusst online-only sein; mit User klären).
+
+## Offene Punkte (außerhalb der Phasen)
+
+- Rechte `PRIVATE.FINANCE.*` in Prod an Rollen vergeben; Geldtöpfe anlegen.
+- Baustein „Budget“ je Gewerk in der Blaupause einschalten (sonst kein Budget-Tab).
+- IBAN im Profil verschlüsseln (Altbestand `User.payoutIban`, Klartext).
+- Dashboard-Kachel „Auslage einreichen“ (UI-Skizze) fehlt noch.
+- Sammel-Erstattung (Liste freigegebener Auslagen per Überweisung) fehlt – „Nur freigeben“ existiert.
+- Kategorien/Töpfe umbenennen/archivieren: Töpfe ja, Kategorien noch ohne Oberfläche.
+- Noch nicht in Prod: alles seit Phase 1 ist auf `main`/Staging, kein Release.
+- Staging-Testdaten (`stg-*`-IDs) werden nachts durch den DB-Sync überschrieben; SQL-Vorlage war
+  nur lokal (/tmp) – bei Bedarf neu schreiben.
 
 ## Checkliste
 
