@@ -12,8 +12,6 @@ import {
   CUE_LABELS,
   SCENE_TABLE_COLUMNS,
   SCENE_TABLE_COLUMN_LABELS,
-  sceneShortLabel,
-  type MatrixCell,
   type SceneTableColumn,
 } from "@/lib/skript/export-options";
 import type { ScriptReaderData } from "@/lib/skript/reader";
@@ -27,12 +25,16 @@ import { cueListCsv, matrixCsv, roleStatsCsv, sceneTableCsv } from "@/lib/skript
 import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
+import { buildCastingModel } from "@/lib/skript/casting";
+import { toCsv } from "@/lib/skript/stats-csv";
+
+import { DoubleCasting, SceneMirror, useMinGap } from "./casting-views";
 import { saveSceneDurationAction } from "../../scene-time-actions";
 import { CUE_STYLE, useSettings } from "../../shared";
 
 /** Übersichten im Leser: Rollen, Szenen, Auftritte, Technik – sortierbar, als CSV (Phase 5). */
 
-type Tab = "rollen" | "szenen" | "auftritte" | "technik";
+type Tab = "rollen" | "szenen" | "auftritte" | "besetzung" | "technik";
 type RoleSort = "name" | "words" | "passages" | "longest" | "scenes";
 
 const NUMBER = new Intl.NumberFormat("de-DE");
@@ -80,6 +82,12 @@ export function ScriptOverview({
     [stats.scenes],
   );
   const mine = new Set(settings.roleIds);
+  const casting = React.useMemo(() => buildCastingModel(stats), [stats]);
+  const [minGap, setMinGap] = useMinGap(version.id);
+  const bundlesRef = React.useRef<string[][]>([]);
+  const onBundles = React.useCallback((bundles: string[][]) => {
+    bundlesRef.current = bundles;
+  }, []);
   const fileBase = `${slug(version.showTitle)}-${slug(version.label)}`;
 
   const exportCsv = () => {
@@ -89,6 +97,13 @@ export function ScriptOverview({
     }
     if (tab === "auftritte") {
       download(matrixCsv(stats, settings.pdfMatrixCell), `${fileBase}-auftritte.csv`);
+    }
+    if (tab === "besetzung") {
+      const rows = bundlesRef.current.map((ids, i) => [
+        `Person ${i + 1}`,
+        ids.map((id) => names.get(id) ?? id).join(", "),
+      ]);
+      download(toCsv([["Person", "Rollen"], ...rows]), `${fileBase}-besetzung.csv`);
     }
     if (tab === "technik") download(cueListCsv(stats, sceneTitles), `${fileBase}-technik.csv`);
   };
@@ -132,7 +147,8 @@ export function ScriptOverview({
           options={[
             { value: "rollen", label: "Rollen" },
             { value: "szenen", label: "Szenen" },
-            { value: "auftritte", label: "Auftritte" },
+            { value: "auftritte", label: "Spiegel" },
+            { value: "besetzung", label: "Besetzung" },
             { value: "technik", label: "Technik" },
           ]}
         />
@@ -148,12 +164,14 @@ export function ScriptOverview({
             canManage={canManage}
           />
         ) : null}
-        {tab === "auftritte" ? (
-          <Matrix
-            stats={stats}
-            mine={mine}
-            cell={settings.pdfMatrixCell}
-            onCell={(pdfMatrixCell) => update({ pdfMatrixCell })}
+        {tab === "auftritte" ? <SceneMirror model={casting} mine={mine} minGap={minGap} /> : null}
+        {tab === "besetzung" ? (
+          <DoubleCasting
+            versionId={version.id}
+            model={casting}
+            minGap={minGap}
+            onMinGap={setMinGap}
+            onBundles={onBundles}
           />
         ) : null}
         {tab === "technik" ? <CueList stats={stats} sceneTitles={sceneTitles} /> : null}
@@ -476,91 +494,6 @@ function DurationCell({ scene }: { scene: ScriptStats["scenes"][number] }) {
     >
       {label}
     </button>
-  );
-}
-
-function Matrix({
-  stats,
-  mine,
-  cell,
-  onCell,
-}: {
-  stats: ScriptStats;
-  mine: Set<string>;
-  cell: MatrixCell;
-  onCell: (cell: MatrixCell) => void;
-}) {
-  const scenes = stats.scenes.filter((scene) => scene.passages > 0);
-  const lookup = new Map(
-    scenes.map((scene) => [scene.id, new Map(scene.roles.map((role) => [role.id, role]))]),
-  );
-  return (
-    <div className="space-y-3">
-      <SegmentedControl<MatrixCell>
-        aria-label="Inhalt der Zellen"
-        value={cell}
-        onValueChange={onCell}
-        options={[
-          { value: "mark", label: "Punkt" },
-          { value: "words", label: "Wörter" },
-          { value: "passages", label: "Passagen" },
-        ]}
-      />
-      <p className="text-xs text-muted-foreground">
-        ● spricht · ○ nur in Regieanweisungen genannt · Szenenname beim Antippen der Spalte
-      </p>
-      <div className="overflow-x-auto rounded-md border border-border/60">
-        <table className="text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className={cn(th, "sticky left-0 z-10 bg-muted")}>Rolle</th>
-              {scenes.map((scene) => (
-                <th key={scene.id} className={cn(th, "min-w-9 text-center")} title={scene.title}>
-                  {sceneShortLabel(scene.title, stats.scenes.indexOf(scene))}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/60">
-            {stats.roles.map((role) => (
-              <tr key={role.id} className={cn(mine.has(role.id) && "bg-primary/10")}>
-                <td
-                  className={cn(
-                    td,
-                    "sticky left-0 z-10 max-w-[9rem] truncate font-medium",
-                    mine.has(role.id) ? "bg-primary/10 backdrop-blur" : "bg-background",
-                  )}
-                >
-                  {role.name}
-                </td>
-                {scenes.map((scene) => {
-                  const entry = lookup.get(scene.id)?.get(role.id);
-                  return (
-                    <td
-                      key={scene.id}
-                      className="px-1 py-2 text-center tabular-nums"
-                      title={`${role.name} · ${scene.title}`}
-                    >
-                      {entry ? (
-                        cell === "mark" ? (
-                          "●"
-                        ) : cell === "words" ? (
-                          entry.words
-                        ) : (
-                          entry.passages
-                        )
-                      ) : scene.mentionedRoleIds.includes(role.id) ? (
-                        <span className="text-muted-foreground">○</span>
-                      ) : null}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
 

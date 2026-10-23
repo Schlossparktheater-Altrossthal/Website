@@ -101,9 +101,12 @@ export type ScriptExportPresetItem = {
 
 /** Kurzname einer Szene für enge Spalten: „SZENE 10 A – Furcht“ → „10A“. */
 export function sceneShortLabel(title: string, index: number) {
-  const match = /^(?:szene|bild|auftritt)?\s*(\d+)\s*([a-z])?\b/iu.exec(title.trim());
+  const match = /^(?:szene|bild|auftritt)?\s*(\d+)\.?\s*([a-z])?\b/iu.exec(title.trim());
   if (match) return `${match[1]}${(match[2] ?? "").toUpperCase()}`;
   if (/^\(?vorspann\)?$/iu.test(title.trim())) return "V";
   if (/^pause/iu.test(title.trim())) return "P";
+  if (/^prolog/iu.test(title.trim())) return "Pr";
+  if (/^epilog/iu.test(title.trim())) return "Ep";
+  if (/^ende\b/iu.test(title.trim())) return "E";
   return String(index + 1);
 }
