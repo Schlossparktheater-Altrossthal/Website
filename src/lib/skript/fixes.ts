@@ -41,6 +41,7 @@ export const SCRIPT_FIXES: readonly ScriptFixSet[] = [
       { kind: "role", from: "Bankdirektor Humphrey Honeysuckle", to: "Honeysuckle" },
       { kind: "role", from: "Passpartout", to: "Passepartout" },
       { kind: "role", from: "Sothebys", to: "Sotheby" },
+      { kind: "role", from: "Prinzessin", to: "Aouda" },
       // S. 11/12 an Deck der Mongolia
       { kind: "role", from: "Kapitän", to: "Kapitän der Mongolia" },
       { kind: "direction", speaker: "Fogg und der Kapitän" },

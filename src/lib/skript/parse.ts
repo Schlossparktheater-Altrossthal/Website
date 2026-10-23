@@ -167,6 +167,13 @@ export function spansToParts(spans: TextSpan[], profile: ScriptProfile): ScriptP
   }
   const out: ScriptPart[] = [];
   for (const part of raw) {
+    // Satzzeichen am Anfang der Regie gehören zum Satz davor („Merde“ + „! zügig ab“)
+    const prev = out.at(-1);
+    const lead = part.kind !== "text" && prev?.kind === "text" && part.text.match(/^[.,;!?…]+/);
+    if (lead) {
+      prev.text = prev.text.trimEnd() + lead[0] + " ";
+      part.text = part.text.slice(lead[0].length);
+    }
     if (part.kind === "text") out.push(...splitInlineCues(part.text, profile));
     else out.push(part);
   }
@@ -353,6 +360,18 @@ export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptSce
         block.parts.unshift({ kind: "text", text: name });
       }
     }
+  }
+  for (const block of scenes.flatMap((s) => s.blocks)) {
+    // Replik ganz kursiv und als Frage („Fogg Geht es Ihnen besser, Prinzessin?“) ist
+    // gesprochener Text – Regieanweisungen fragen nicht.
+    const [only] = block.parts;
+    if (
+      block.kind === "speech" &&
+      block.parts.length === 1 &&
+      only.kind === "direction" &&
+      /\?[!?]*$/.test(only.text)
+    )
+      block.parts = [{ kind: "text", text: only.text }];
   }
   return scenes.filter((s) => s.blocks.length || s.title !== "(Vorspann)");
 }
