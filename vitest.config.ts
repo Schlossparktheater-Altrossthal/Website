@@ -6,6 +6,13 @@ export default defineConfig({
     environment: "node",
     globals: true,
     exclude: [...configDefaults.exclude, "realtime-server/**", "e2e/**", "tests/integration/**"],
+    // lcov für SonarQube Cloud (sonar-project.properties), nur mit `--coverage` aktiv.
+    coverage: {
+      provider: "v8",
+      reporter: ["lcov", "text-summary"],
+      include: ["src/**"],
+      reportOnFailure: true,
+    },
     server: {
       deps: {
         inline: ["next-auth"],
