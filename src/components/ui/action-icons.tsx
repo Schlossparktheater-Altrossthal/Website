@@ -100,6 +100,7 @@ import {
   PenLine,
   Pencil,
   PiggyBank,
+  ReceiptText,
   PlugZap,
   Plus,
   Power,
@@ -474,6 +475,13 @@ export function HammerIcon({
   ...props
 }: { className?: string } & IconProps) {
   return <Hammer className={className} aria-hidden {...props} />;
+}
+
+export function ReceiptIcon({
+  className = "w-4 h-4",
+  ...props
+}: { className?: string } & IconProps) {
+  return <ReceiptText className={className} aria-hidden {...props} />;
 }
 
 export function PiggyBankIcon({

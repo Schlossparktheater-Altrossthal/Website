@@ -45,6 +45,7 @@ export const NOTIFICATION_TYPES = {
   PHOTO_CONSENT: "photo-consent",
   INVENTORY_DEFECT: "inventory-defect",
   INVENTORY_INSPECTION: "inventory-inspection",
+  EXPENSE_CLAIM: "expense-claim",
   TEST: "test",
   TEST_EMERGENCY: "test-emergency",
 } as const;
@@ -129,6 +130,7 @@ export const NOTIFICATION_TYPE_META: Record<NotificationType, NotificationTypeMe
     priority: "normal",
     severity: "warning",
   },
+  "expense-claim": { category: "produktion", kind: "info", priority: "normal", severity: "info" },
   test: { category: "system", kind: "info", priority: "normal", severity: "info" },
   "test-emergency": { category: "system", kind: "info", priority: "urgent", severity: "error" },
 };

@@ -289,6 +289,7 @@ enum ExpenseClaimStatus {
 enum ExpenseClaimPayout {
   cash
   bank
+  paypal
   donated
 }
 
@@ -2615,12 +2616,13 @@ model ExpenseClaim {
   @@index([departmentId, status])
 }
 
-/// Beleg (Foto/PDF) zu einer Buchung oder Auslage. `ocr` bleibt leer (Belegerkennung später).
+/// Beleg (Foto/PDF) zu einer Buchung oder Auslage, Bytes in der DB wie bei Ausstattungsfotos.
+/// `ocr` bleibt leer (Belegerkennung später).
 model FinanceReceipt {
   id           String        @id @default(cuid())
   entryId      String?
   claimId      String?
-  storageKey   String
+  data         Bytes
   filename     String
   mimeType     String
   size         Int

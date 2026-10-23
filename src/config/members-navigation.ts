@@ -19,6 +19,8 @@ import {
   ListChecksIcon,
   MailIcon,
   PaletteIcon,
+  PiggyBankIcon,
+  ReceiptIcon,
   RulerIcon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -105,6 +107,12 @@ export const membersNavigation = [
         label: "Freikarten",
         permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
         icon: TicketIcon,
+      },
+      {
+        href: "/mitglieder/finanzen/auslagen",
+        label: "Meine Auslagen",
+        permissionKey: "PRIVATE.PROFILE.OWN.VIEW",
+        icon: ReceiptIcon,
       },
     ],
   },
@@ -229,6 +237,13 @@ export const membersNavigation = [
     id: "admin",
     label: "Verwaltung",
     items: [
+      {
+        href: "/mitglieder/finanzen",
+        label: "Finanzen",
+        permissionKey: "PRIVATE.FINANCE.VIEW",
+        alsoPermissionKeys: ["PRIVATE.FINANCE.MANAGE"],
+        icon: PiggyBankIcon,
+      },
       {
         href: "/mitglieder/mitgliederverwaltung",
         label: "Mitglieder",

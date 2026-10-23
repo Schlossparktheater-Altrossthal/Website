@@ -1,6 +1,6 @@
 # Plan: Finanzen neu – Auslagen, Budget, Einnahmen, Kassenbuch
 
-Stand: 2026-10-23. Entscheidungen E1–E7 getroffen, Mockup abgenommen, Phase 1 umgesetzt, offen Phase 2–8. Ersetzt die im Mai 2026 entfernte Finanzverwaltung
+Stand: 2026-10-23. Entscheidungen E1–E7 getroffen, Mockup abgenommen, Phase 1–2 umgesetzt, offen Phase 3–8. Ersetzt die im Mai 2026 entfernte Finanzverwaltung
 (`8bf1c77c`) – Konzept und UI damals unbrauchbar, deshalb Neuentwurf statt Wiederherstellung.
 Bündelt [`docs/Plan/einkauf-belege-plan.md`](einkauf-belege-plan.md) (Phase 1 + 3 + 4),
 [`docs/Plan/gewerke-plan.md`](gewerke-plan.md) Phase 12 (Budget) und die Spenden aus
@@ -93,7 +93,7 @@ Mockup: `docs/Plan/mockups/finanzen-mockup.html` (2026-10-23). Vor UI-Umsetzung 
 - [x] Entscheidungen E1–E7
 - [x] Mockups
 - [x] Phase 1 Datenmodell (2026-10-23): Migration `20261023180000_finance_rebuild`, `src/lib/finance/` (Zeiträume, Nummernkreis, Storno, Festschreiben, Salden), Rechte `PRIVATE.FINANCE.MANAGE`/`.VIEW`, Startkategorien, Demo-Seed
-- [ ] Phase 2 Auslagen
+- [x] Phase 2 Auslagen (2026-10-23): Einreichen mobil, Meine Auslagen, Gewerk-Prüfung, Kassenwart-Eingang, Erstatten/Spende → Buchung, Töpfe-Tab; Zahlungsdaten aus dem Profil (vorhandene Felder, PayPal als Weg ergänzt), Belege als Bytes in der DB
 - [ ] Phase 3 Kassenbuch
 - [ ] Phase 4 Budgets
 - [ ] Phase 5 Einnahmen

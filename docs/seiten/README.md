@@ -24,6 +24,7 @@ welche Komponenten und Datenpfade sind beteiligt und welche bekannten Baustellen
 | Website            | [website.md](website.md)                       | Theme-/Branding-Einstellungen, Sichtbarkeit Mitglieder-Seiten |
 | Server             | [server.md](server.md)                         | Server-Einstellungen und Server-Analytics                     |
 | Verpflegung        | [verpflegung.md](verpflegung.md)               | Rezepte (Wiki mit Verlauf), Allergie-Zuordnung                |
+| Finanzen           | [finanzen.md](finanzen.md)                     | Auslagen, Gewerk-Prüfung, Erstattung, Geldtöpfe               |
 
 ## Konventionen
 

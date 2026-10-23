@@ -27,6 +27,7 @@ export const EXPENSE_CLAIM_STATUS_LABELS = {
 export const EXPENSE_CLAIM_PAYOUT_LABELS = {
   cash: "Bar",
   bank: "Überweisung",
+  paypal: "PayPal",
   donated: "Spenden",
 } as const;
 
