@@ -44,4 +44,47 @@ describe("skriptspezifische Korrekturen", () => {
     expect(applyScriptFixes(other, ["Die unendliche Geschichte"], [set]).applied).toEqual([]);
     expect(other[0].title).toBe("20. SZENE: HAFEN");
   });
+
+  it("benennt Rollen um und macht fette Namen zu Regie", () => {
+    const fixed: ScriptScene[] = [
+      {
+        title: "1",
+        blocks: [
+          {
+            kind: "speech",
+            speaker: "Earl Grey",
+            page: 1,
+            parts: [{ kind: "text", text: "Aber" }],
+          },
+          {
+            kind: "speech",
+            speaker: "Fogg und der Kapitän",
+            page: 1,
+            parts: [{ kind: "direction", text: "treten auf" }],
+          },
+        ],
+      },
+    ];
+    const result = applyScriptFixes(
+      fixed,
+      ["x"],
+      [
+        {
+          name: "Test",
+          match: /x/,
+          fixes: [
+            { kind: "role", from: "Earl Grey", to: "Earl of Earl Grey" },
+            { kind: "direction", speaker: "Fogg und der Kapitän" },
+          ],
+        },
+      ],
+    );
+    expect(result.missed).toEqual([]);
+    expect(fixed[0].blocks[0].speaker).toBe("Earl of Earl Grey");
+    expect(fixed[0].blocks[1]).toMatchObject({
+      kind: "direction",
+      speaker: null,
+      parts: [{ kind: "direction", text: "Fogg und der Kapitän treten auf" }],
+    });
+  });
 });
