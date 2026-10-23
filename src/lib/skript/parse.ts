@@ -17,7 +17,7 @@ export function normalizeWhitespace(text: string): string {
 export function splitSpeaker(
   spans: TextSpan[],
   profile: ScriptProfile,
-): { speaker: string | null; rest: TextSpan[] } {
+): { speaker: string | null; rest: TextSpan[]; colon: boolean } {
   let lead = "";
   let i = 0;
   while (i < spans.length && (spans[i].bold || !spans[i].text.trim())) {
@@ -26,9 +26,19 @@ export function splitSpeaker(
     if (lead.includes(":")) break;
   }
   let rest = spans.slice(i);
+  // fetter Name ohne Leerzeichen am Schriftwechsel („Hato“ + „r Sahib“)
+  if (!profile.speakerColon && !lead.includes(":") && /\p{L}$/u.test(lead)) {
+    const glued = rest[0]?.text.match(/^\p{L}+/u);
+    if (glued) {
+      lead += glued[0];
+      rest = [{ ...rest[0], text: rest[0].text.slice(glued[0].length) }, ...rest.slice(1)];
+    }
+  }
+  let colon = true;
   // führende Striche/Aufzählungszeichen („- ATRÉJU:“) gehören nicht zum Namen
   let name = lead.trim().replace(/^[-–•*]+\s*/, "");
-  if (!name) return { speaker: null, rest: spans };
+  const none = { speaker: null, rest: spans, colon: false };
+  if (!name) return none;
   if (name.includes(":")) {
     const [before, ...after] = name.split(":");
     const tail = after.join(":").trim();
@@ -36,15 +46,22 @@ export function splitSpeaker(
     if (tail) rest = [{ ...spans[0], text: tail + " " }, ...rest];
   } else if (rest[0]?.text.trimStart().startsWith(":")) {
     rest = [{ ...rest[0], text: rest[0].text.trimStart().slice(1) }, ...rest.slice(1)];
+  } else if (!profile.speakerColon && rest.some((s) => s.text.trim())) {
+    // Satzzeichen am fetten Namen („Passepartout!“, „Fogg,“) gehören nicht dazu
+    name = name.replace(/[\s!,.;]+$/, "");
+    colon = false;
+    const first = rest.find((s) => s.text.trim())!;
+    if (!first.italic)
+      rest = rest.map((s) =>
+        s === first ? { ...s, text: s.text.replace(/^\s*[,.;]\s*/, "") } : s,
+      );
   } else if (rest[0]?.italic && /^[\p{L} ./-]{2,25}$/u.test(name)) {
     name = NO_COLON + name;
   } else {
-    return { speaker: null, rest: spans };
+    return none;
   }
-  if (!name.replace(NO_COLON, "").trim() || name.length > profile.speakerMaxLength) {
-    return { speaker: null, rest: spans };
-  }
-  return { speaker: name, rest };
+  if (!name.replace(NO_COLON, "").trim() || name.length > profile.speakerMaxLength) return none;
+  return { speaker: name, rest, colon };
 }
 
 /** „Bastian: Tot. Koreander: Hättest …“ → zwei Zeilen. */
@@ -136,7 +153,8 @@ export function spansToParts(spans: TextSpan[], profile: ScriptProfile): ScriptP
     const hl = span.highlight ? profile.highlights[span.highlight] : undefined;
     const colored = span.color ? profile.textColors[span.color] : undefined;
     if (hl) part = { kind: "cue", text: span.text, category: hl };
-    else if (colored === "umbau") part = { kind: "cue", text: span.text, category: "umbau" };
+    else if (colored && colored !== "aus")
+      part = { kind: "cue", text: span.text, category: colored };
     else if (span.italic) part = { kind: "direction", text: span.text };
     else part = { kind: "text", text: span.text };
     const last = raw.at(-1);
@@ -195,6 +213,10 @@ export function frontMatterLines(lines: TextLine[], profile: ScriptProfile): str
   return result;
 }
 
+function hasPlainText(spans: TextSpan[]): boolean {
+  return spans.some((s) => s.text.trim() && !s.italic && !s.highlight && !s.color);
+}
+
 export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptScene[] {
   const lines = splitInlineSpeakers(input);
   const scenes: ScriptScene[] = [{ title: "(Vorspann)", blocks: [] }];
@@ -216,7 +238,11 @@ export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptSce
       prev = line;
       continue;
     }
-    const { speaker, rest } = splitSpeaker(line.spans, profile);
+    const split = splitSpeaker(line.spans, profile);
+    // ohne Doppelpunkt ist im Vorspann (Titel, Personenliste) jede fette Zeile verdächtig
+    const vorspann = !profile.speakerColon && scenes.length === 1;
+    const speaker = vorspann ? null : split.speaker;
+    const rest = vorspann ? line.spans : split.rest;
     const gap = prev !== null && line.page === prev.page && line.y - prev.y > 30;
     const prevEnded = prev === null || prev.x1 < wrapX - 60 || gap;
     const first = rest.find((s) => s.text.trim());
@@ -226,7 +252,10 @@ export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptSce
       scene.blocks.push(current);
     } else if (
       current === null ||
-      (prevEnded && (first?.italic || first?.highlight || first?.color))
+      (prevEnded &&
+        (first?.italic || first?.highlight || first?.color) &&
+        // ohne Doppelpunkt geht die Replik nach Regie am Zeilenanfang weiter („salutiert The …“)
+        (profile.speakerColon || current.kind !== "speech" || !hasPlainText(rest)))
     ) {
       current = { kind: "direction", speaker: null, parts: [], page: line.page };
       scene.blocks.push(current);
@@ -263,8 +292,11 @@ export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptSce
 export function scoreProfile(lines: TextLine[], profile: ScriptProfile): number {
   const sample = lines.slice(0, 400);
   if (!sample.length) return 0;
-  const hits = sample.filter(
-    (l) => splitSpeaker(l.spans, profile).speaker || sceneHeading(l, profile),
-  ).length;
+  // Profile ohne Doppelpunkt zählen nur Sprecher ohne Doppelpunkt – sonst gewännen sie auch
+  // bei Skripten im Format „Rolle:“.
+  const hits = sample.filter((l) => {
+    const split = splitSpeaker(l.spans, profile);
+    return (split.speaker && (profile.speakerColon || !split.colon)) || sceneHeading(l, profile);
+  }).length;
   return hits / sample.length;
 }

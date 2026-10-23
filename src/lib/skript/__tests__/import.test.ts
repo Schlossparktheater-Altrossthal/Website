@@ -107,4 +107,47 @@ describe("PDF-Erkennung", () => {
     expect(isPdf(new TextEncoder().encode("\n\n%PDF-1.7 …"))).toBe(true);
     expect(isPdf(new TextEncoder().encode("PK\u0003\u0004 docx"))).toBe(false);
   });
+
+  it("liest Skripte mit fetter Rolle ohne Doppelpunkt (Profil bold-name)", async () => {
+    const result = await parseScriptPdf(
+      await buildScriptPdf([
+        [
+          [B("In 80 Tagen um die Welt")],
+          [B("Die Personen"), R(": Fogg, Passepartout")],
+          [B("1. SZENE: BEI FOGG ZUHAUSE")],
+          [{ text: "Musik läuft aus", color: "#ee0000", style: "italic" }],
+          [
+            B("Fogg"),
+            I(" mit Notizblock"),
+            R(" Nun, mein Bester, Sie wissen, worum es sich handelt, ich musste"),
+          ],
+          [R("heute meinen Diener entlassen.")],
+          [B("Passepartout!"), R(" Voila ier bin isch.")],
+          [
+            I("salutiert"),
+            R(" The British Empire!"),
+            { text: " Nebelstoß", color: "#7030a0", style: "italic" },
+          ],
+          [B("Hato"), R("r Sahib, bitte, sein still!")],
+        ],
+      ]),
+    );
+    expect(result.profile.id).toBe("bold-name");
+    expect(result.scenes.map((s) => s.title)).toEqual(["(Vorspann)", "1. SZENE: BEI FOGG ZUHAUSE"]);
+    expect(result.scenes[0].blocks.every((b) => b.speaker === null)).toBe(true);
+    const [cue, fogg, passepartout, hator] = result.scenes[1].blocks;
+    expect(cue.parts).toEqual([{ kind: "cue", category: "ton", text: "Musik läuft aus" }]);
+    expect(fogg).toMatchObject({
+      speaker: "Fogg",
+      parts: [{ kind: "direction", text: "mit Notizblock" }, { kind: "text" }],
+    });
+    expect(passepartout.speaker).toBe("Passepartout");
+    // Regie am Zeilenanfang gehört weiter zur Replik
+    expect(passepartout.parts.map((p) => p.kind)).toEqual(["text", "direction", "text", "cue"]);
+    expect(passepartout.parts.at(-1)).toMatchObject({ category: "nebel" });
+    expect(hator).toMatchObject({
+      speaker: "Hator",
+      parts: [{ text: "Sahib, bitte, sein still!" }],
+    });
+  });
 });

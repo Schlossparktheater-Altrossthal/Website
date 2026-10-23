@@ -19,6 +19,8 @@ export type ScriptProfile = {
   cueEndWords: ReadonlySet<string>;
   cueMaxTailWords: number;
   speakerMaxLength: number;
+  /** `false`: Rolle steht fett am Zeilenanfang, ein Doppelpunkt ist nicht nötig. */
+  speakerColon: boolean;
   /** Seitenzahl-Zone: unterer Anteil der Seitenhöhe. */
   pageNumberZone: number;
 };
@@ -41,10 +43,21 @@ export const BOLD_COLON_PROFILE: ScriptProfile = {
   cueEndWords: new Set(["aus", "an", "ein", "ab", "zu", "auf", "weg"]),
   cueMaxTailWords: 5,
   speakerMaxLength: 40,
+  speakerColon: true,
   pageNumberZone: 0.09,
 };
 
-export const SCRIPT_PROFILES: readonly ScriptProfile[] = [BOLD_COLON_PROFILE];
+/** „In 80 Tagen um die Welt“: „Fogg mit Notizblock Nun, …“, Szenen „1. SZENE: …“, Ton rot, Nebel lila. */
+export const BOLD_NAME_PROFILE: ScriptProfile = {
+  ...BOLD_COLON_PROFILE,
+  id: "bold-name",
+  name: "Rolle fett ohne Doppelpunkt, Regie kursiv, Ton rot",
+  sceneRe: /^(\d+\.?\s*[A-Z]?\s*SZENE|SZENE|BILD|AKT|\d+\.\s*TEIL|PROLOG|EPILOG|PAUSE|ENDE)\b/i,
+  textColors: { red: "ton", other: "nebel", grey: "aus" },
+  speakerColon: false,
+};
+
+export const SCRIPT_PROFILES: readonly ScriptProfile[] = [BOLD_COLON_PROFILE, BOLD_NAME_PROFILE];
 
 export function findScriptProfile(id: string): ScriptProfile | undefined {
   return SCRIPT_PROFILES.find((profile) => profile.id === id);
