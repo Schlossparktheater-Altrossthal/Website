@@ -108,10 +108,15 @@ export function ScriptOverview({
     if (tab === "technik") download(cueListCsv(stats, sceneTitles), `${fileBase}-technik.csv`);
   };
 
-  /** Gleicher Abschnitt wie im Skript-PDF, ohne Deckblatt (Rollen, Szenen, Spiegel). */
-  const pdfSection = ({ rollen: "roleStats", szenen: "sceneTable", auftritte: "matrix" } as const)[
-    tab as "rollen" | "szenen" | "auftritte"
-  ];
+  /** Gleicher Abschnitt wie im Skript-PDF, ohne Deckblatt (Rollen, Szenen, Spiegel, Technik). */
+  const pdfSection = (
+    {
+      rollen: "roleStats",
+      szenen: "sceneTable",
+      auftritte: "matrix",
+      technik: "cueList",
+    } as const
+  )[tab as "rollen" | "szenen" | "auftritte" | "technik"];
   const pdfUrl = () => {
     const params = new URLSearchParams({ fassung: version.id, teile: pdfSection, deckblatt: "0" });
     if (settings.roleIds.length) params.set("rollen", settings.roleIds.join(","));
