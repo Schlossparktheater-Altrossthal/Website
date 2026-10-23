@@ -186,11 +186,19 @@ describe("Export", () => {
 describe("toTweakcnRegistryUrl", () => {
   it("akzeptiert nur tweakcn.com", () => {
     expect(toTweakcnRegistryUrl("https://tweakcn.com/r/themes/amethyst-haze.json")).toBe(
-      "https://tweakcn.com/r/themes/amethyst-haze.json",
+      "https://tweakcn.com/r/themes/amethyst-haze",
     );
     expect(toTweakcnRegistryUrl("https://tweakcn.com/themes/cmabc123")).toBe(
-      "https://tweakcn.com/r/themes/cmabc123.json",
+      "https://tweakcn.com/r/themes/cmabc123",
     );
+    expect(toTweakcnRegistryUrl("https://www.tweakcn.com/r/themes/cmabc123")).toBe(
+      "https://tweakcn.com/r/themes/cmabc123",
+    );
+    expect(toTweakcnRegistryUrl("https://tweakcn.com/editor/theme?theme=catppuccin")).toBe(
+      "https://tweakcn.com/r/themes/catppuccin",
+    );
+    expect(toTweakcnRegistryUrl("https://tweakcn.com/editor/theme")).toBeNull();
+    expect(toTweakcnRegistryUrl("https://tweakcn.com/community")).toBeNull();
     expect(toTweakcnRegistryUrl("https://evil.example/r/themes/x.json")).toBeNull();
     expect(toTweakcnRegistryUrl("https://tweakcn.com.evil.example/r/themes/x.json")).toBeNull();
     expect(toTweakcnRegistryUrl("http://tweakcn.com/r/themes/x.json")).toBeNull();

@@ -24,7 +24,7 @@ describe("resolveThemeImport", () => {
     const result = await resolveThemeImport("https://tweakcn.com/themes/amethyst-haze");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://tweakcn.com/r/themes/amethyst-haze.json",
+      "https://tweakcn.com/r/themes/amethyst-haze",
       expect.objectContaining({ redirect: "error" }),
     );
     expect(result.suggestedName).toBe("amethyst-haze");

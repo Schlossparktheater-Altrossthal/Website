@@ -405,16 +405,47 @@ export function parseThemeInput(input: string): TweakcnTheme {
   return parseThemeCss(trimmed);
 }
 
-const TWEAKCN_URL_PATTERN =
-  /^https:\/\/tweakcn\.com\/(?:r\/themes|themes)\/([a-zA-Z0-9_-]+)(?:\.json)?\/?$/;
+const TWEAKCN_HOSTS = new Set(["tweakcn.com", "www.tweakcn.com"]);
+const THEME_ID_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
+
+/** Theme-Name bzw. -ID aus einem tweakcn-Link (Vorlage, Community, eigenes Theme, Editor). */
+function readTweakcnThemeId(url: URL): string | null {
+  const segments = url.pathname.split("/").filter(Boolean);
+  // /r/themes/<id>[.json] und /themes/<id>
+  const themesIndex = segments.indexOf("themes");
+  if (
+    themesIndex !== -1 &&
+    segments.length === themesIndex + 2 &&
+    (themesIndex === 0 || (themesIndex === 1 && segments[0] === "r"))
+  ) {
+    return segments[themesIndex + 1].replace(/\.json$/, "");
+  }
+  // /editor/theme?theme=<id> bzw. /editor/theme/<id>
+  if (segments[0] === "editor" && segments[1] === "theme") {
+    return segments[2] ?? url.searchParams.get("theme");
+  }
+  return null;
+}
 
 /**
  * Liefert die Registry-URL zu einem tweakcn-Link oder `null`, wenn der Link nicht von
  * tweakcn.com stammt. Nur diese Adressen werden serverseitig abgerufen.
+ *
+ * Ohne `.json`: Die dynamische Registry-Route liefert Vorlagen und Community-/eigene Themes
+ * (IDs aus der Datenbank), die statische `.json`-Datei gibt es nur für Vorlagen.
  */
 export function toTweakcnRegistryUrl(input: string): string | null {
-  const match = TWEAKCN_URL_PATTERN.exec(input.trim());
-  return match ? `https://tweakcn.com/r/themes/${match[1]}.json` : null;
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || !TWEAKCN_HOSTS.has(url.hostname) || url.port) {
+    return null;
+  }
+  const id = readTweakcnThemeId(url);
+  return id && THEME_ID_PATTERN.test(id) ? `https://tweakcn.com/r/themes/${id}` : null;
 }
 
 // ---------------------------------------------------------------------------

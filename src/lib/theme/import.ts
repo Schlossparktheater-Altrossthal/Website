@@ -38,8 +38,9 @@ async function fetchRegistryItem(url: string): Promise<ResolvedThemeImport> {
   }
   if (!response.ok) {
     throw new ThemeImportError(
-      response.status === 404
-        ? "Theme auf tweakcn.com nicht gefunden. Ist es veröffentlicht?"
+      // Unbekannte oder private Theme-IDs beantwortet tweakcn mit 404 oder 500.
+      response.status === 404 || response.status === 500
+        ? "Theme auf tweakcn.com nicht gefunden. Ist es öffentlich geteilt?"
         : `tweakcn.com antwortet mit Status ${response.status}.`,
     );
   }
@@ -66,7 +67,7 @@ export async function resolveThemeImport(source: string): Promise<ResolvedThemeI
     const registryUrl = toTweakcnRegistryUrl(trimmed);
     if (!registryUrl) {
       throw new ThemeImportError(
-        "Nur Links von tweakcn.com werden unterstützt (z. B. https://tweakcn.com/r/themes/<name>.json).",
+        "Nur Links von tweakcn.com werden unterstützt – Vorlagen, Community-Themes, eigene Themes oder Editor-Links.",
       );
     }
     return fetchRegistryItem(registryUrl);
