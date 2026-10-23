@@ -113,6 +113,8 @@ function SceneAxis({
           className={cn(
             "min-h-9 overflow-hidden px-0 text-center text-[10px] tabular-nums text-muted-foreground sm:text-xs",
             scene.part && i > 0 && "border-l-2 border-border",
+            // Schmal (Handy): nur jede dritte Nummer, sonst überlappen sie.
+            i % 3 !== 0 && activeScene !== i && "max-sm:text-transparent",
             activeScene === i && "rounded-t bg-primary/10 font-semibold text-foreground",
           )}
         >
@@ -485,7 +487,7 @@ export function DoubleCasting({
                   return (
                     <li
                       key={id}
-                      className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[11rem_minmax(0,1fr)_auto]"
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 sm:grid-cols-[11rem_minmax(0,1fr)_auto]"
                     >
                       <span
                         className={cn(
@@ -501,6 +503,7 @@ export function DoubleCasting({
                         width="equal"
                         activeScene={null}
                         tone={bad.has(id) ? "conflict" : "primary"}
+                        className="max-sm:order-last max-sm:col-span-2"
                       />
                       <select
                         aria-label={`${role.name} einer anderen Person geben`}
