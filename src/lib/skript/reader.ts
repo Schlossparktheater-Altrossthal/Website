@@ -5,7 +5,7 @@ import { DIRECTION_TEAM_TEMPLATE_SLUGS } from "@/lib/regie/wishes";
 import { readScriptCredits, type ScriptCredit } from "./credits";
 import { readParts } from "./json";
 import { roleKey, splitSpeakerRoles } from "./roles";
-import type { ScriptPart } from "./types";
+import { isSpoken, type ScriptBlockKind, type ScriptPart } from "./types";
 
 /** Daten für den Leser (docs/Plan/skript-plan.md, Abschnitt „Leser“). */
 
@@ -16,7 +16,7 @@ export type ReaderBlock = {
   id: string;
   lineageId: string;
   sceneId: string;
-  kind: "speech" | "direction";
+  kind: ScriptBlockKind;
   speaker: string | null;
   roleIds: string[];
   parts: ScriptPart[];
@@ -135,7 +135,7 @@ export async function loadScriptReader(
   const provisional = new Map<string, string>();
   const blocks: ReaderBlock[] = version.blocks.map((block) => {
     let roleIds = block.roles.map((role) => role.roleId);
-    if (!roleIds.length && block.kind === "speech" && block.speaker) {
+    if (!roleIds.length && isSpoken(block.kind) && block.speaker) {
       roleIds = splitSpeakerRoles(block.speaker).map((name) => {
         const id = `name:${roleKey(name)}`;
         if (!provisional.has(id)) provisional.set(id, name);
@@ -158,7 +158,7 @@ export async function loadScriptReader(
   const stats = new Map<string, { lines: number; words: number; scenes: Set<string> }>();
   const sceneWords = new Map<string, number>();
   for (const block of blocks) {
-    if (block.kind !== "speech") continue;
+    if (!isSpoken(block.kind)) continue;
     sceneWords.set(block.sceneId, (sceneWords.get(block.sceneId) ?? 0) + block.words);
     for (const roleId of block.roleIds) {
       const entry = stats.get(roleId) ?? { lines: 0, words: 0, scenes: new Set<string>() };

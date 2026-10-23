@@ -1,6 +1,7 @@
 import type { ReaderBlock, ReaderRole, ReaderScene } from "./reader";
 import { splitTail } from "./reader-logic";
 import type { CueCategory, ScriptPart } from "./types";
+import { isSpoken } from "./types";
 
 /**
  * Auswertungen einer Fassung (docs/Plan/skript-auswertungen-plan.md, Phase 2): rein, testbar,
@@ -176,7 +177,7 @@ export function computeScriptStats(input: StatsInput): ScriptStats {
         scene.cues[part.category].push(entry);
       }
     }
-    if (block.kind !== "speech") continue;
+    if (!isSpoken(block.kind)) continue;
     const spoken = textOf(block.parts, ["text"]);
     if (spoken) lastSpoken = spoken;
     totalWords += block.words;
@@ -284,7 +285,7 @@ export function cueScript(input: StatsInput, roleIds: readonly string[], cueWord
   const lines: CueScriptLine[] = [];
   let previous: { speaker: string | null; text: string; own: boolean } | null = null;
   for (const block of input.blocks) {
-    if (block.kind !== "speech") continue;
+    if (!isSpoken(block.kind)) continue;
     const text = textOf(block.parts, ["text"]);
     const mine = block.roleIds.some((id) => own.has(id));
     if (mine) {

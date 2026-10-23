@@ -410,7 +410,12 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
     const dimmed = options.dimOthers && roleSet.size > 0 && !mine;
     const color = dimmed ? "#a8a29e" : INK;
     const runs = partRuns(parts, options, color, cueLines.has(index), notes);
-    const speaker = (block.speaker ?? "?").toUpperCase();
+    // Standardschrift ohne Notenzeichen: Lied als Wort kennzeichnen.
+    const speaker = (
+      block.kind === "song"
+        ? `Lied${block.speaker ? ` · ${block.speaker}` : ""}`
+        : (block.speaker ?? "?")
+    ).toUpperCase();
     // Zu lange Namen stehen in einer eigenen Zeile über dem Text statt umzubrechen.
     const stacked = speakerWidthOf(speaker) > SPEAKER_WIDTH;
     const speakerHeight = stacked

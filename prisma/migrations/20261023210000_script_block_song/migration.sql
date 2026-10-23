@@ -1,0 +1,1 @@
+ALTER TYPE "ScriptBlockKind" ADD VALUE IF NOT EXISTS 'song';

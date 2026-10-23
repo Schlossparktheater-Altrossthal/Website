@@ -4,6 +4,7 @@ import { loadScriptReader } from "../reader";
 import { tokenizeBlock } from "./chunks";
 import { itemKey, sceneProgress, summarize, type LearnItem, type StoredCard } from "./plan";
 import { latestReleasedVersion } from "./service";
+import { isSpoken } from "../types";
 
 /** Skript-Karte auf dem Dashboard: aktuelle Fassung und – mit Rolle – der eigene Lernstand. */
 
@@ -51,7 +52,7 @@ export async function loadDashboardScript(
   const items: LearnItem[] = [];
   reader.blocks.forEach((block, blockIndex) => {
     const roles = block.roleIds.filter((id) => own.has(id));
-    if (block.kind !== "speech" || !roles.length) return;
+    if (!isSpoken(block.kind) || !roles.length) return;
     for (const chunk of tokenizeBlock(block.parts).chunks) {
       for (const roleId of roles) {
         items.push({

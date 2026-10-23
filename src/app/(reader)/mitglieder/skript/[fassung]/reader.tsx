@@ -58,7 +58,7 @@ import type { ScriptLiveStatusEvent } from "@/lib/realtime/types";
 import { LIVE_FOLLOW, SOLO_TEMPO } from "@/lib/skript/live/follow";
 import { TEMPO_FACTORS, blockRates, nearestFactorIndex } from "@/lib/skript/live/tempo";
 import { computeScriptStats } from "@/lib/skript/stats";
-import type { CueCategory } from "@/lib/skript/types";
+import { speakerLabel, type CueCategory } from "@/lib/skript/types";
 import type { ReaderState } from "@/lib/skript/view-options";
 import { cn } from "@/lib/utils";
 
@@ -599,16 +599,23 @@ const BlockView = React.memo(
             mine && "text-primary",
           )}
         >
-          {block.speaker ?? "?"}
+          {speakerLabel(block)}
         </span>
-        <p className={cn("relative break-words", CUE_MARGIN_SPACE, stacked && "md:col-start-2")}>
+        <p
+          className={cn(
+            "relative break-words",
+            CUE_MARGIN_SPACE,
+            stacked && "md:col-start-2",
+            block.kind === "song" && "whitespace-pre-line",
+          )}
+        >
           <span
             className={cn(
               "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide md:sr-only",
               mine ? "text-primary" : "text-muted-foreground",
             )}
           >
-            {block.speaker ?? "?"}
+            {speakerLabel(block)}
           </span>
           <span>{renderParts()}</span>
         </p>

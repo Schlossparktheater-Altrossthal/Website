@@ -40,8 +40,22 @@ export type ScriptPart =
       auto?: boolean;
     };
 
+export type ScriptBlockKind = "speech" | "song" | "direction";
+
+/** Repliken und Liedtext – alles, was eine Rolle spricht oder singt (Statistik, Lernen, Folgen). */
+export function isSpoken(kind: ScriptBlockKind): boolean {
+  return kind !== "direction";
+}
+
+/** Name über dem Absatz; Liedtext mit Notenzeichen, ohne Sänger nur „Lied“. */
+export function speakerLabel(block: { kind: ScriptBlockKind; speaker: string | null }): string {
+  if (block.kind === "song") return `♪ ${block.speaker ?? "Lied"}`;
+  return block.speaker ?? "?";
+}
+
 export type ScriptBlock = {
-  kind: "speech" | "direction";
+  /** `song`: Liedtext, Zeilen durch „\n“ getrennt, Strophen durch „\n\n“. */
+  kind: ScriptBlockKind;
   /** Sprecher wie im PDF geschrieben (Normalisierung erst in `roles.ts`). */
   speaker: string | null;
   parts: ScriptPart[];

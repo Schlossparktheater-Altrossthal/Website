@@ -42,6 +42,7 @@ import {
   useSwipeLeft,
   useWakeLock,
 } from "./practice";
+import { isSpoken } from "@/lib/skript/types";
 
 /** Nach „Nochmal“ (oder solange noch im Lernschritt) kommt der Abschnitt so viele Karten später wieder. */
 const AGAIN_GAP = 4;
@@ -224,7 +225,7 @@ export function Drill({
     for (let i = unit.blockIndex - 1; i >= 0; i--) {
       const block = reader.blocks[i];
       if (block.sceneId !== unit.block.sceneId) break;
-      if (block.kind !== "speech") continue;
+      if (!isSpoken(block.kind)) continue;
       return { speaker: block.speaker, text: plainText(block.parts), own: false };
     }
     return { speaker: null, text: "", own: false };

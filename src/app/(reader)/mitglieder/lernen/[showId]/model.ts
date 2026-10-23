@@ -11,6 +11,7 @@ import type { LearnPageData } from "@/lib/skript/learn/service";
 
 import { readStored, writeStored } from "../../skript/shared";
 import { submitReviewsAction } from "./actions";
+import { isSpoken } from "@/lib/skript/types";
 
 /** Zustand des Lernmodus im Browser (docs/Plan/lernmodus-plan.md). */
 
@@ -83,7 +84,7 @@ export function useTokenized(reader: ScriptReaderData) {
   return React.useMemo(() => {
     const map = new Map<string, TokenizedBlock>();
     for (const block of reader.blocks) {
-      if (block.kind === "speech") map.set(block.id, tokenizeBlock(block.parts));
+      if (isSpoken(block.kind)) map.set(block.id, tokenizeBlock(block.parts));
     }
     return map;
   }, [reader.blocks]);
@@ -99,7 +100,7 @@ export function buildUnits(
   const units: Unit[] = [];
   reader.blocks.forEach((block, blockIndex) => {
     const roles = block.roleIds.filter((id) => selected.has(id));
-    if (block.kind !== "speech" || !roles.length) return;
+    if (!isSpoken(block.kind) || !roles.length) return;
     const tokens = tokenized.get(block.id);
     for (const chunk of tokens?.chunks ?? []) {
       const unitItems = roles.map((roleId) => ({

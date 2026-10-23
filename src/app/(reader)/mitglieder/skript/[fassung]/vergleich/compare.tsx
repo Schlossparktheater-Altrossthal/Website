@@ -15,7 +15,7 @@ import type {
   ScriptComparison,
   ScriptVersionOption,
 } from "@/lib/skript/compare";
-import type { ScriptPart } from "@/lib/skript/types";
+import { isSpoken, speakerLabel, type ScriptPart } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
 import { CueMark, FONT_SIZES, SPEAKER_MAX_CHARS, useSettings } from "../../shared";
@@ -104,10 +104,10 @@ function BlockRow({
   const { block } = entry;
   const speaker = entry.speakerChanged ? (
     <>
-      <del className="text-muted-foreground">{entry.before?.speaker}</del> {block.speaker}
+      <del className="text-muted-foreground">{entry.before?.speaker}</del> {speakerLabel(block)}
     </>
   ) : (
-    block.speaker
+    speakerLabel(block)
   );
   const body =
     entry.type === "changed" ? (
@@ -125,7 +125,7 @@ function BlockRow({
         entry.type === "same" && "opacity-55",
       )}
     >
-      {block.kind === "speech" ? (
+      {isSpoken(block.kind) ? (
         <span
           aria-hidden
           className={cn(
@@ -144,9 +144,10 @@ function BlockRow({
           "break-words",
           stacked && "md:col-start-2",
           block.kind === "direction" && "italic text-muted-foreground",
+          block.kind === "song" && "whitespace-pre-line",
         )}
       >
-        {block.kind === "speech" ? (
+        {isSpoken(block.kind) ? (
           <span
             className={cn(
               "mr-1.5 text-[0.72em] font-bold uppercase tracking-wide md:sr-only",

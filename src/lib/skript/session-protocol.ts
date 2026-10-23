@@ -4,6 +4,7 @@ import { buildAxis } from "./live/axis";
 import { buildProtocol, type Protocol } from "./live/protocol";
 import type { ScriptReaderData } from "./reader";
 import { closeStaleSessions, eventsAround } from "./sessions";
+import { isSpoken } from "./types";
 
 /** Protokolle der Aufnahmen einer Fassung (docs/Plan/skript-mitlesen-plan.md, E10–E12). */
 
@@ -59,7 +60,7 @@ export async function listSessions(versionId: string, userId: string, canManage:
 export function sceneRoles(data: Pick<ScriptReaderData, "blocks">) {
   const map: Record<string, Set<string>> = {};
   for (const block of data.blocks) {
-    if (block.kind !== "speech") continue;
+    if (!isSpoken(block.kind)) continue;
     const set = (map[block.sceneId] ??= new Set());
     for (const roleId of block.roleIds) set.add(roleId);
   }

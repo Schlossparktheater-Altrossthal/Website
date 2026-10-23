@@ -217,6 +217,43 @@ function hasPlainText(spans: TextSpan[]): boolean {
   return spans.some((s) => s.text.trim() && !s.italic && !s.highlight && !s.color);
 }
 
+/** Regie/Hinweis, nach dem ein Liedtext folgen kann („… singend auf die Bühne“, „Lied …“). */
+const SONG_TRIGGER = /\bsing(?:end|t|en)\b|\bLied\b|\bsong\b/i;
+const SONG_MIN_LINES = 3;
+
+/** Liedzeile: kurz, ganz kursiv, ohne Farbe; am Ende darf ein fetter Sängername stehen. */
+function songLine(line: TextLine, wrapX: number): { text: string; singer: string | null } | null {
+  const spans = line.spans.filter((s) => s.text.trim());
+  if (!spans.length || line.x1 > wrapX - 100) return null;
+  let singer: string | null = null;
+  const last = spans.at(-1)!;
+  if (last.bold && !last.italic && spans.length > 1) {
+    singer = normalizeWhitespace(last.text).replace(/[:\s]+$/, "");
+    spans.pop();
+  }
+  if (!spans.every((s) => s.italic && !s.bold && !s.highlight && !s.color)) return null;
+  const text = normalizeWhitespace(spans.map((s) => s.text).join(" ")).replace(/\s*[-–]$/, "");
+  return text ? { text, singer } : null;
+}
+
+/** Indizes der Zeilen, die zu einem Liedtext gehören (mindestens drei Zeilen nach einem Auslöser). */
+function findSongLines(lines: TextLine[], profile: ScriptProfile, wrapX: number): Set<number> {
+  const result = new Set<number>();
+  for (let i = 0; i < lines.length; i++) {
+    const text = lines[i].spans.map((s) => s.text).join("");
+    if (!SONG_TRIGGER.test(text)) continue;
+    let j = i + 1;
+    const isSong = (line: TextLine) =>
+      !sceneHeading(line, profile) &&
+      !SONG_TRIGGER.test(line.spans.map((s) => s.text).join("")) &&
+      songLine(line, wrapX) !== null;
+    while (j < lines.length && isSong(lines[j])) j++;
+    if (j - i - 1 >= SONG_MIN_LINES) for (let k = i + 1; k < j; k++) result.add(k);
+    i = Math.max(i, j - 1);
+  }
+  return result;
+}
+
 export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptScene[] {
   const lines = splitInlineSpeakers(input);
   const scenes: ScriptScene[] = [{ title: "(Vorspann)", blocks: [] }];
@@ -226,8 +263,35 @@ export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptSce
   const wrapX = rights[Math.floor(rights.length * 0.9)];
   let current: ScriptBlock | null = null;
   let prev: TextLine | null = null;
+  const songLines = findSongLines(lines, profile, wrapX);
+  let songGap: number | null = null;
 
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
+    const song = songLines.has(index) ? songLine(line, wrapX) : null;
+    if (song) {
+      // Liedtext: Zeilen mit „\n“, Strophen (größerer Abstand) mit „\n\n“; ein fetter Name am
+      // Zeilenende („I love you – Alle“) gibt den Sänger dieser Zeile an.
+      const scene = scenes[scenes.length - 1];
+      // Strophe: deutlich größerer Abstand als zwischen den Liedzeilen davor
+      const gap = prev !== null && line.page === prev.page ? line.y - prev.y : null;
+      const stanza = gap !== null && songGap !== null && gap > songGap * 1.5;
+      if (gap !== null && !stanza) songGap = gap;
+      const last = current?.kind === "song" ? current.parts.at(-1) : undefined;
+      if (current?.kind === "song" && !song.singer && !current.speaker && last) {
+        last.text += (stanza ? "\n\n" : "\n") + song.text;
+      } else {
+        current = {
+          kind: "song",
+          speaker: song.singer,
+          parts: [{ kind: "text", text: song.text }],
+          page: line.page,
+        };
+        scene.blocks.push(current);
+      }
+      prev = line;
+      continue;
+    }
+    songGap = null;
     const heading = sceneHeading(line, profile);
     if (heading) {
       const rest = spansToParts(heading.rest, profile);
@@ -252,6 +316,7 @@ export function parseLines(input: TextLine[], profile: ScriptProfile): ScriptSce
       scene.blocks.push(current);
     } else if (
       current === null ||
+      current.kind === "song" ||
       (prevEnded &&
         (first?.italic || first?.highlight || first?.color) &&
         // ohne Doppelpunkt geht die Replik nach Regie am Zeilenanfang weiter („salutiert The …“)

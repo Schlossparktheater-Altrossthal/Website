@@ -27,18 +27,24 @@ const partSchema = z.discriminatedUnion("kind", [
 ]);
 
 export const blockEditSchema = z.object({
-  kind: z.enum(["speech", "direction"]),
+  kind: z.enum(["speech", "song", "direction"]),
   speaker: z.string().max(200).nullable(),
   parts: z.array(partSchema).max(200),
 });
 
 export type BlockEdit = z.input<typeof blockEditSchema>;
 
-/** Teile aufräumen: leere weg, Leerraum glätten. */
-function cleanParts(parts: z.output<typeof blockEditSchema>["parts"]): ScriptPart[] {
-  return parts
-    .map((part) => ({ ...part, text: part.text.replace(/\s+/g, " ").trim() }))
-    .filter((part) => part.text);
+/** Teile aufräumen: leere weg, Leerraum glätten; im Liedtext Zeilen und Strophen behalten. */
+function cleanParts(parts: z.output<typeof blockEditSchema>["parts"], song: boolean): ScriptPart[] {
+  const clean = (text: string) =>
+    song
+      ? text
+          .replace(/[^\S\n]+/g, " ")
+          .replace(/ *\n */g, "\n")
+          .replace(/\n{3,}/g, "\n\n")
+          .trim()
+      : text.replace(/\s+/g, " ").trim();
+  return parts.map((part) => ({ ...part, text: clean(part.text) })).filter((part) => part.text);
 }
 
 async function requireDraft(versionId: string) {
@@ -183,9 +189,10 @@ async function resolveRoles(showId: string, speaker: string | null) {
 }
 
 function blockData(input: z.output<typeof blockEditSchema>, userId: string) {
-  const parts = cleanParts(input.parts);
+  const parts = cleanParts(input.parts, input.kind === "song");
   if (!parts.length) throw new ScriptEditError("Der Absatz ist leer.");
-  const speaker = input.kind === "speech" ? input.speaker?.trim() || null : null;
+  // Lied ohne Sänger ist erlaubt (wer singt, klärt die Regie später).
+  const speaker = input.kind !== "direction" ? input.speaker?.trim() || null : null;
   if (input.kind === "speech" && !speaker) throw new ScriptEditError("Wer spricht?");
   return {
     parts,

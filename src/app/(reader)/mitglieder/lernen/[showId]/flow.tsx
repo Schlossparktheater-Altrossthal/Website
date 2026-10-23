@@ -44,6 +44,7 @@ import {
   useSwipeLeft,
   useWakeLock,
 } from "./practice";
+import { isSpoken, speakerLabel } from "@/lib/skript/types";
 
 /** Kürzer angezeigt und nichts aufgedeckt = weitergeklickt, nicht abgefragt. */
 const MIN_ANSWER_MS = 1500;
@@ -158,7 +159,7 @@ export function SceneFlow({
         ({ block, index }) =>
           index > from &&
           index < unit.blockIndex &&
-          block.kind === "speech" &&
+          isSpoken(block.kind) &&
           !units.some((candidate) => candidate.block.id === block.id),
       )
       .map(({ block }) => ({ text: spokenText(block.parts), speaker: block.speaker }));
@@ -453,7 +454,7 @@ function FlowBlock({
       )}
     >
       <p className="text-[0.75em] font-semibold uppercase tracking-wider text-muted-foreground">
-        {block.speaker}
+        {speakerLabel(block)}
         {changed ? (
           <span className="ml-2 rounded-sm bg-warning/20 px-1 py-px normal-case tracking-normal text-warning">
             Text geändert
@@ -461,7 +462,7 @@ function FlowBlock({
         ) : null}
       </p>
       {own && tokens ? (
-        <p>
+        <p className={cn(block.kind === "song" && "whitespace-pre-line")}>
           <MaskedBlockText
             tokenized={tokens}
             active={activeChunk}
@@ -474,7 +475,7 @@ function FlowBlock({
           />
         </p>
       ) : (
-        <p>
+        <p className={cn(block.kind === "song" && "whitespace-pre-line")}>
           {block.parts.map((part, index) =>
             part.kind === "cue" ? null : part.kind === "direction" ? (
               <span key={index} className="italic text-muted-foreground">

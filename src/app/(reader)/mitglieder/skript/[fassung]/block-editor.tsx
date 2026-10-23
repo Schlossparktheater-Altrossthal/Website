@@ -153,7 +153,7 @@ function EditorForm({
   const save = async () => {
     const edit = {
       kind,
-      speaker: kind === "speech" ? speaker : null,
+      speaker: kind !== "direction" ? speaker : null,
       parts: parts.map((part) =>
         part.kind === "cue"
           ? { kind: "cue" as const, text: part.text, category: part.category }
@@ -190,18 +190,21 @@ function EditorForm({
         fullWidth
         options={[
           { value: "speech", label: "Replik" },
+          { value: "song", label: "Lied" },
           { value: "direction", label: "Anweisung" },
         ]}
       />
 
-      {kind === "speech" ? (
+      {kind !== "direction" ? (
         <div className="space-y-2">
-          <Label htmlFor="block-speaker">Wer spricht?</Label>
+          <Label htmlFor="block-speaker">{kind === "song" ? "Wer singt?" : "Wer spricht?"}</Label>
           <Input
             id="block-speaker"
             value={speaker}
             onChange={(event) => setSpeaker(event.target.value)}
-            placeholder="z. B. Atreju oder Atreju/Bastian"
+            placeholder={
+              kind === "song" ? "leer lassen, wenn noch offen" : "z. B. Atreju oder Atreju/Bastian"
+            }
           />
           {roles.length ? (
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Rollen">
@@ -311,7 +314,11 @@ function EditorForm({
             <Textarea
               aria-label={`Text von Teil ${index + 1}`}
               value={part.text}
-              rows={Math.min(8, Math.max(2, Math.ceil(part.text.length / 60)))}
+              rows={
+                kind === "song"
+                  ? Math.min(16, part.text.split("\n").length + 1)
+                  : Math.min(8, Math.max(2, Math.ceil(part.text.length / 60)))
+              }
               onChange={(event) => setPart(part.key, { text: event.target.value })}
               className={cn(part.kind === "direction" && "italic")}
             />

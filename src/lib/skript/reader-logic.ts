@@ -1,14 +1,15 @@
 import type { CueCategory, ScriptPart } from "./types";
+import { isSpoken, type ScriptBlockKind } from "./types";
 
 /** Reine Logik des Lesers (ohne DOM), damit sie testbar bleibt. */
 
-export type LogicBlock = { kind: "speech" | "direction"; roleIds: string[]; parts: ScriptPart[] };
+export type LogicBlock = { kind: ScriptBlockKind; roleIds: string[]; parts: ScriptPart[] };
 
 /** Anzahl Wörter am Ende der Vorgänger-Replik, die als Stichwort betont werden. */
 export const CUE_LINE_WORDS = 6;
 
 export function isRoleBlock(block: LogicBlock, roleIds: ReadonlySet<string>) {
-  return block.kind === "speech" && block.roleIds.some((id) => roleIds.has(id));
+  return isSpoken(block.kind) && block.roleIds.some((id) => roleIds.has(id));
 }
 
 export function cueParts(block: LogicBlock, categories: ReadonlySet<CueCategory>) {
@@ -40,7 +41,7 @@ export function findNextTarget<B extends LogicBlock>(
   let linesAway = 0;
   for (let i = last + 1; i < blocks.length; i++) {
     if (isTarget(blocks[i])) return { index: i, linesAway };
-    if (blocks[i].kind === "speech") linesAway += 1;
+    if (isSpoken(blocks[i].kind)) linesAway += 1;
   }
   return null;
 }
@@ -55,7 +56,7 @@ export function cueLineIndices(blocks: readonly LogicBlock[], roleIds: ReadonlyS
   for (let i = 1; i < blocks.length; i++) {
     if (!isRoleBlock(blocks[i], roleIds)) continue;
     for (let j = i - 1; j >= 0; j--) {
-      if (blocks[j].kind !== "speech") continue;
+      if (!isSpoken(blocks[j].kind)) continue;
       if (!isRoleBlock(blocks[j], roleIds)) result.add(j);
       break;
     }

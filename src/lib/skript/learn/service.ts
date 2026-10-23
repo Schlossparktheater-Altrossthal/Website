@@ -166,7 +166,7 @@ export async function recordReviews(userId: string, showId: string, entries: Rev
   if (!version) throw new ScriptLearnError("Keine freigegebene Fassung.");
   const lineages = [...new Set(entries.map((entry) => entry.lineageId))];
   const blocks = await prisma.scriptBlock.findMany({
-    where: { versionId: version.id, lineageId: { in: lineages }, kind: "speech" },
+    where: { versionId: version.id, lineageId: { in: lineages }, kind: { in: ["speech", "song"] } },
     select: { lineageId: true, parts: true, roles: { select: { roleId: true } } },
   });
   const byLineage = new Map(blocks.map((block) => [block.lineageId, block]));

@@ -4109,6 +4109,8 @@ enum ScriptVersionStatus {
 
 enum ScriptBlockKind {
   speech
+  /// Liedtext (Zeilen mit \n, Strophen mit \n\n)
+  song
   direction
 }
 

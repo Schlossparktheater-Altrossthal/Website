@@ -27,6 +27,9 @@ const SOFT_END = /[,;:–—-]["»“”']?$/;
 export function tokenizeBlock(parts: readonly ScriptPart[]): TokenizedBlock {
   const tokens: LearnToken[] = [];
   const words: Extract<LearnToken, { kind: "word" }>[] = [];
+  // Liedtext: Strophenende wie Satzende, Zeilenende wie Komma (Repliken haben keine Umbrüche).
+  const stanzaEnd = new Set<number>();
+  const lineEnd = new Set<number>();
   for (const part of parts) {
     if (part.kind === "cue") {
       tokens.push({ kind: "cue", part });
@@ -40,6 +43,9 @@ export function tokenizeBlock(parts: readonly ScriptPart[]): TokenizedBlock {
       if (!piece) continue;
       if (/^\s+$/.test(piece)) {
         tokens.push({ kind: "space", text: piece });
+        if (words.length && piece.includes("\n")) {
+          (/\n\s*\n/.test(piece) ? stanzaEnd : lineEnd).add(words.length - 1);
+        }
       } else {
         const token = { kind: "word" as const, text: piece, index: words.length, chunk: 0 };
         words.push(token);
@@ -57,10 +63,14 @@ export function tokenizeBlock(parts: readonly ScriptPart[]): TokenizedBlock {
     words[i].chunk = chunk;
     size += 1;
     const text = words[i].text;
-    if (SOFT_END.test(text)) lastSoft = i;
+    if (SOFT_END.test(text) || lineEnd.has(i)) lastSoft = i;
     const remaining = words.length - i - 1;
     if (remaining === 0) break;
-    if (SENTENCE_END.test(text) && size >= CHUNK_MIN_WORDS && remaining >= 3) {
+    if (
+      (SENTENCE_END.test(text) || stanzaEnd.has(i)) &&
+      size >= CHUNK_MIN_WORDS &&
+      remaining >= 3
+    ) {
       chunk += 1;
       size = 0;
       lastSoft = -1;

@@ -150,4 +150,33 @@ describe("PDF-Erkennung", () => {
       parts: [{ text: "Sahib, bitte, sein still!" }],
     });
   });
+
+  it("erkennt Liedtext nach „singend“ mit Zeilen, Strophen und Sänger am Zeilenende", async () => {
+    const result = await parseScriptPdf(
+      await buildScriptPdf([
+        [
+          [B("1. SZENE: IM CLUB")],
+          [
+            B("Fogg"),
+            R(" Good night, Gentlemen! Und nun singen wir alle zusammen ein schönes Lied."),
+          ],
+          [I("Alle kommen nach und nach singend auf die Bühne")],
+          [I("I see trees of green")],
+          [I("Red roses too")],
+          [I("I see them bloom")],
+          [I("I love you - "), B("Alle")],
+          [I("I hear babies cry")],
+          [R("Freeze")],
+        ],
+      ]),
+    );
+    const blocks = result.scenes.at(-1)!.blocks;
+    const songs = blocks.filter((b) => b.kind === "song");
+    expect(songs.map((b) => [b.speaker, b.parts[0].text])).toEqual([
+      [null, "I see trees of green\nRed roses too\nI see them bloom"],
+      ["Alle", "I love you"],
+      [null, "I hear babies cry"],
+    ]);
+    expect(blocks.at(-1)).toMatchObject({ kind: "direction", parts: [{ text: "Freeze" }] });
+  });
 });
