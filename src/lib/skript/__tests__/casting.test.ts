@@ -124,6 +124,9 @@ describe("casting", () => {
         ["b", "d"],
       ]),
     );
+    // Höchstens eine Rolle pro Person: jede kleine Rolle einzeln.
+    expect(suggestBundles(model, 0, 1)).toHaveLength(5);
+    expect(suggestBundles(model, 0, 2)).toHaveLength(3);
     expect(bundleConflicts(model, ["a", "b"], 1)).toEqual([{ a: "a", b: "b", distance: 1 }]);
     expect(bundleConflicts(model, ["a", "c"], 1)).toEqual([]);
   });

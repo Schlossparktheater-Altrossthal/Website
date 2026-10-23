@@ -26,7 +26,8 @@ Logik in `src/lib/skript/casting.ts`, Oberfläche in `uebersicht/casting-views.t
 **Reiter „Besetzung“** (Doppelbesetzung)
 
 - Zwei Rollen sind kombinierbar, wenn sie nie in derselben Szene stehen und mindestens der
-  Umziehpuffer (Standard 1 Szene, einstellbar 0–2) dazwischen liegt.
+  Umziehpuffer (Standard 1 Szene, einstellbar 0–2) dazwischen liegt. Höchstzahl Rollen pro
+  Person für den Vorschlag einstellbar (2–5 oder beliebig).
 - „Nur in Regieanweisungen genannt“ zählt als anwesend. Gruppen zählen nicht als Person.
 - Vorschlag per Graphfärbung (DSatur): Hauptrollen einzeln, Neben-/kleine Rollen gebündelt.
   Untergrenze = Personen in der vollsten Szene.

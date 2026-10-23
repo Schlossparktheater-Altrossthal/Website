@@ -344,30 +344,37 @@ function FocusInfo({
 
 const GAP_LABELS = ["kein Puffer", "1 Szene", "2 Szenen"] as const;
 
-export function useMinGap(versionId: string) {
-  const key = `skript-casting-gap:${versionId}`;
-  const [gap, setGap] = React.useState(1);
+/** Zahl im Browser je Fassung merken (erst nach der Hydration gelesen). */
+function useStoredNumber(key: string, fallback: number, valid: (value: number) => boolean) {
+  const [value, setValue] = React.useState(fallback);
   React.useEffect(() => {
-    const stored = Number(localStorage.getItem(key));
-    // Gespeicherter Wert erst nach der Hydration (localStorage gibt es nur im Browser).
+    const raw = localStorage.getItem(key);
+    const stored = Number(raw);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored >= 0 && stored <= 2 && localStorage.getItem(key) != null) setGap(stored);
+    if (raw != null && valid(stored)) setValue(stored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return [
-    gap,
-    (value: number) => {
-      setGap(value);
-      localStorage.setItem(key, String(value));
+    value,
+    (next: number) => {
+      setValue(next);
+      localStorage.setItem(key, String(next));
     },
   ] as const;
 }
 
+export function useMinGap(versionId: string) {
+  return useStoredNumber(`skript-casting-gap:${versionId}`, 1, (v) => v >= 0 && v <= 2);
+}
+
+const MAX_ROLE_OPTIONS = [2, 3, 4, 5, 0] as const;
+
 /** Eigene Bündel je Fassung im Browser; ohne Eintrag gilt der Vorschlag. */
-function useBundles(versionId: string, model: CastingModel, minGap: number) {
+function useBundles(versionId: string, model: CastingModel, minGap: number, maxRoles: number) {
   const key = `skript-casting-bundles:${versionId}`;
   const suggestion = React.useMemo(
-    () => suggestBundles(model, minGap).map((b) => b.roleIds),
-    [model, minGap],
+    () => suggestBundles(model, minGap, maxRoles).map((b) => b.roleIds),
+    [model, minGap, maxRoles],
   );
   const [custom, setCustom] = React.useState<string[][] | null>(null);
   React.useEffect(() => {
@@ -409,7 +416,10 @@ export function DoubleCasting({
   /** Für den CSV-Export der Übersicht. */
   onBundles: (bundles: string[][]) => void;
 }) {
-  const { bundles, isCustom, save } = useBundles(versionId, model, minGap);
+  const [maxRoles, setMaxRoles] = useStoredNumber(`skript-casting-max:${versionId}`, 0, (v) =>
+    (MAX_ROLE_OPTIONS as readonly number[]).includes(v),
+  );
+  const { bundles, isCustom, save } = useBundles(versionId, model, minGap, maxRoles);
   const byId = React.useMemo(() => new Map(model.roles.map((r) => [r.id, r])), [model.roles]);
   const people = model.roles.filter((r) => r.tier !== "ensemble");
   const minimum = minimumCast(model);
@@ -446,6 +456,19 @@ export function DoubleCasting({
           onValueChange={(v) => onMinGap(Number(v))}
           options={GAP_LABELS.map((label, i) => ({ value: String(i), label }))}
         />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Max. Rollen pro Person</span>
+        <SegmentedControl<string>
+          aria-label="Höchstens so viele Rollen pro Person"
+          size="sm"
+          value={String(maxRoles)}
+          onValueChange={(v) => setMaxRoles(Number(v))}
+          options={MAX_ROLE_OPTIONS.map((n) => ({
+            value: String(n),
+            label: n ? String(n) : "beliebig",
+          }))}
+        />
         {isCustom ? (
           <Button variant="outline" size="sm" onClick={() => save(null)}>
             Vorschlag wiederherstellen
@@ -454,9 +477,9 @@ export function DoubleCasting({
       </div>
       <p className="text-xs text-muted-foreground">
         Rollen, die nie zusammen auf der Bühne stehen (auch nicht „genannt“), kann eine Person
-        spielen. Hauptrollen bleiben einzeln, Gruppen wie „Alle“ oder „Chor“ zählen nicht. Über
-        „Person“ an einer Rolle selbst umsortieren – die Aufteilung bleibt in diesem Browser
-        gespeichert.
+        spielen. Hauptrollen bleiben einzeln, Puffer und Höchstzahl gelten für den Vorschlag,
+        Gruppen wie „Alle“ oder „Chor“ zählen nicht. Über „Person“ an einer Rolle selbst umsortieren
+        – die Aufteilung bleibt in diesem Browser gespeichert.
       </p>
 
       <ol className="space-y-2">
@@ -525,6 +548,11 @@ export function DoubleCasting({
                   );
                 })}
               </ul>
+              {maxRoles && roleIds.length > maxRoles ? (
+                <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                  {roleIds.length} Rollen – mehr als die eingestellten {maxRoles}.
+                </p>
+              ) : null}
               {conflicts.length ? (
                 <p className="mt-2 text-xs text-destructive">
                   {conflicts

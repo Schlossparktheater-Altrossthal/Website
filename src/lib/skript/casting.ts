@@ -125,15 +125,17 @@ export type Bundle = { roleIds: string[]; scenes: number };
 
 /**
  * Bündelvorschlag (Graphfärbung nach DSatur): Hauptrollen behalten je eine eigene Person,
- * Neben- und kleine Rollen werden so zusammengelegt, dass möglichst wenige Personen nötig sind. Heuristisch, aber für ~50 Rollen nahe am Optimum.
+ * Neben- und kleine Rollen werden so zusammengelegt, dass möglichst wenige Personen nötig sind.
+ * `maxRoles` begrenzt die Rollen je Person (0 = beliebig viele). Heuristisch, aber für ~50 Rollen nahe am Optimum.
  */
-export function suggestBundles(model: CastingModel, minGap: number): Bundle[] {
+export function suggestBundles(model: CastingModel, minGap: number, maxRoles = 0): Bundle[] {
   const people = model.roles.filter((r) => r.tier !== "ensemble");
   const byId = new Map(people.map((r) => [r.id, r]));
   const bundles: { roleIds: string[]; locked: boolean }[] = people
     .filter((r) => r.tier === "main")
     .map((r) => ({ roleIds: [r.id], locked: true }));
   const fits = (bundle: { roleIds: string[] }, role: CastingRole) =>
+    (!maxRoles || bundle.roleIds.length < maxRoles) &&
     bundle.roleIds.every((id) => compatible(byId.get(id)!, role, minGap));
 
   const open = people.filter((r) => r.tier !== "main");
