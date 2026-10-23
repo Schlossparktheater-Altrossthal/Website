@@ -7,10 +7,18 @@ import { toast } from "sonner";
 
 import { ArrowLeftIcon, DownloadIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   CUE_LABELS,
   SCENE_TABLE_COLUMNS,
+  sceneDisplayTitle,
+  type MirrorWidth,
   SCENE_TABLE_COLUMN_LABELS,
   type SceneTableColumn,
 } from "@/lib/skript/export-options";
@@ -25,7 +33,7 @@ import { cueListCsv, matrixCsv, roleStatsCsv, sceneTableCsv } from "@/lib/skript
 import type { CueCategory } from "@/lib/skript/types";
 import { cn } from "@/lib/utils";
 
-import { buildCastingModel } from "@/lib/skript/casting";
+import { buildCastingModel, isEnsembleRole, ROLE_TIER_LABELS } from "@/lib/skript/casting";
 import { toCsv } from "@/lib/skript/stats-csv";
 
 import { DoubleCasting, SceneMirror, useMinGap } from "./casting-views";
@@ -38,7 +46,18 @@ type Tab = "rollen" | "szenen" | "auftritte" | "besetzung" | "technik";
 type RoleSort = "name" | "words" | "passages" | "longest" | "scenes";
 
 const NUMBER = new Intl.NumberFormat("de-DE");
-const PERCENT = new Intl.NumberFormat("de-DE", { style: "percent", maximumFractionDigits: 1 });
+const PERCENT = new Intl.NumberFormat("de-DE", {
+  style: "percent",
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+const share = (value: number) => (value > 0 && value < 0.0005 ? "< 0,1 %" : PERCENT.format(value));
+
+/** „Nr · Name“ einer Szene (Großbuchstaben-Titel lesbar gesetzt). */
+function sceneLabel(title: string, index: number) {
+  const { short, name } = sceneDisplayTitle(title, index);
+  return short && short !== name ? `${short} · ${name}` : name;
+}
 
 function download(csv: string, name: string) {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -78,12 +97,13 @@ export function ScriptOverview({
   const [tab, setTab] = React.useState<Tab>("rollen");
   const names = React.useMemo(() => new Map(roleNames), [roleNames]);
   const sceneTitles = React.useMemo(
-    () => new Map(stats.scenes.map((scene) => [scene.id, scene.title])),
+    () => new Map(stats.scenes.map((scene, index) => [scene.id, sceneLabel(scene.title, index)])),
     [stats.scenes],
   );
   const mine = new Set(settings.roleIds);
   const casting = React.useMemo(() => buildCastingModel(stats), [stats]);
   const [minGap, setMinGap] = useMinGap(version.id);
+  const [mirrorWidth, setMirrorWidth] = React.useState<MirrorWidth>("equal");
   const bundlesRef = React.useRef<string[][]>([]);
   const onBundles = React.useCallback((bundles: string[][]) => {
     bundlesRef.current = bundles;
@@ -113,7 +133,7 @@ export function ScriptOverview({
     {
       rollen: "roleStats",
       szenen: "sceneTable",
-      auftritte: "matrix",
+      auftritte: "mirror",
       technik: "cueList",
     } as const
   )[tab as "rollen" | "szenen" | "auftritte" | "technik"];
@@ -121,7 +141,7 @@ export function ScriptOverview({
     const params = new URLSearchParams({ fassung: version.id, teile: pdfSection, deckblatt: "0" });
     if (settings.roleIds.length) params.set("rollen", settings.roleIds.join(","));
     if (pdfSection === "sceneTable") params.set("spalten", settings.pdfSceneColumns.join(","));
-    if (pdfSection === "matrix") params.set("matrix", settings.pdfMatrixCell);
+    if (pdfSection === "mirror" && mirrorWidth === "duration") params.set("breite", "dauer");
     params.set("download", "1");
     return `/api/skript/${version.showId}/pdf?${params}`;
   };
@@ -141,16 +161,23 @@ export function ScriptOverview({
               {version.showTitle} · {version.label}
             </p>
           </div>
-          {pdfSection ? (
-            <Button asChild variant="ghost" size="sm">
-              <a href={pdfUrl()} download>
-                <DownloadIcon aria-hidden /> PDF
-              </a>
-            </Button>
-          ) : null}
-          <Button variant="ghost" size="sm" onClick={exportCsv}>
-            <DownloadIcon aria-hidden /> CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <DownloadIcon aria-hidden /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {pdfSection ? (
+                <DropdownMenuItem asChild>
+                  <a href={pdfUrl()} download>
+                    Als PDF
+                  </a>
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onSelect={exportCsv}>Als CSV (Tabelle)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -189,7 +216,15 @@ export function ScriptOverview({
             canManage={canManage}
           />
         ) : null}
-        {tab === "auftritte" ? <SceneMirror model={casting} mine={mine} minGap={minGap} /> : null}
+        {tab === "auftritte" ? (
+          <SceneMirror
+            model={casting}
+            mine={mine}
+            minGap={minGap}
+            width={mirrorWidth}
+            onWidth={setMirrorWidth}
+          />
+        ) : null}
         {tab === "besetzung" ? (
           <DoubleCasting
             versionId={version.id}
@@ -225,10 +260,14 @@ function RoleTable({ stats, mine }: { stats: ScriptStats; mine: Set<string> }) {
         longest: role.longestPassage,
         scenes: role.sceneIds.length,
       })[sort];
-    return [...stats.roles].sort((a, b) =>
-      sort === "name" ? a.name.localeCompare(b.name, "de") : value(b) - value(a),
+    // Sammelrollen („Alle“, „Chor“ …) getrennt unter den echten Rollen.
+    return [...stats.roles].sort(
+      (a, b) =>
+        Number(isEnsembleRole(a.name)) - Number(isEnsembleRole(b.name)) ||
+        (sort === "name" ? a.name.localeCompare(b.name, "de") : value(b) - value(a)),
     );
   }, [stats.roles, sort]);
+  const firstEnsemble = rows.findIndex((role) => isEnsembleRole(role.name));
   const max = Math.max(1, ...stats.roles.map((role) => role.words));
   const header = (key: RoleSort, label: string, right = true) => (
     <th className={cn(th, right && "text-right")} aria-sort={sort === key ? "descending" : "none"}>
@@ -256,27 +295,39 @@ function RoleTable({ stats, mine }: { stats: ScriptStats; mine: Set<string> }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
-          {rows.map((role) => (
-            <tr key={role.id} className={cn(mine.has(role.id) && "bg-primary/10")}>
-              <td className={cn(td, "font-medium")}>{role.name}</td>
-              <td className={cn(td, "text-right tabular-nums")}>{NUMBER.format(role.words)}</td>
-              <td className={td}>
-                <div className="flex items-center gap-2">
-                  <div className="hidden h-2 flex-1 rounded-full bg-muted sm:block">
-                    <div
-                      className="h-2 rounded-full bg-primary"
-                      style={{ width: `${(role.words / max) * 100}%` }}
-                    />
+          {rows.map((role, index) => (
+            <React.Fragment key={role.id}>
+              {index === firstEnsemble ? (
+                <tr className="bg-muted/50">
+                  <td
+                    colSpan={6}
+                    className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  >
+                    {ROLE_TIER_LABELS.ensemble}
+                  </td>
+                </tr>
+              ) : null}
+              <tr className={cn(mine.has(role.id) && "bg-primary/10")}>
+                <td className={cn(td, "font-medium")}>{role.name}</td>
+                <td className={cn(td, "text-right tabular-nums")}>{NUMBER.format(role.words)}</td>
+                <td className={td}>
+                  <div className="flex items-center gap-2">
+                    <div className="hidden h-2 flex-1 rounded-full bg-muted sm:block">
+                      <div
+                        className="h-2 rounded-full bg-primary"
+                        style={{ width: `${(role.words / max) * 100}%` }}
+                      />
+                    </div>
+                    <span className="ml-auto w-12 text-right text-xs tabular-nums text-muted-foreground">
+                      {share(role.share)}
+                    </span>
                   </div>
-                  <span className="ml-auto w-12 text-right text-xs tabular-nums text-muted-foreground">
-                    {PERCENT.format(role.share)}
-                  </span>
-                </div>
-              </td>
-              <td className={cn(td, "text-right tabular-nums")}>{role.passages}</td>
-              <td className={cn(td, "text-right tabular-nums")}>{role.longestPassage}</td>
-              <td className={cn(td, "text-right tabular-nums")}>{role.sceneIds.length}</td>
-            </tr>
+                </td>
+                <td className={cn(td, "text-right tabular-nums")}>{role.passages}</td>
+                <td className={cn(td, "text-right tabular-nums")}>{role.longestPassage}</td>
+                <td className={cn(td, "text-right tabular-nums")}>{role.sceneIds.length}</td>
+              </tr>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
@@ -346,6 +397,51 @@ function SceneTable({
     );
   const isCue = (column: SceneTableColumn): column is CueCategory =>
     (CUE_CATEGORIES as readonly string[]).includes(column);
+  const renderCell = (scene: ScriptStats["scenes"][number], column: SceneTableColumn) =>
+    column === "roles" ? (
+      <>
+        {scene.roles.map((role, index) => (
+          <span key={role.id} className={cn(mine.has(role.id) && "font-semibold text-primary")}>
+            {index ? ", " : ""}
+            {names.get(role.id) ?? role.id}
+          </span>
+        ))}
+        {scene.mentionedRoleIds.length ? (
+          <span className="block text-xs text-muted-foreground">
+            ohne Text: {scene.mentionedRoleIds.map((id) => names.get(id) ?? id).join(", ")}
+          </span>
+        ) : null}
+      </>
+    ) : column === "words" ? (
+      NUMBER.format(scene.words)
+    ) : column === "passages" ? (
+      scene.passages
+    ) : column === "pages" ? (
+      scene.pages ? (
+        scene.pages.from === scene.pages.to ? (
+          scene.pages.from
+        ) : (
+          `${scene.pages.from}–${scene.pages.to}`
+        )
+      ) : (
+        ""
+      )
+    ) : column === "duration" ? (
+      canManage ? (
+        <DurationCell scene={scene} />
+      ) : scene.words || !scene.duration.estimated ? (
+        formatDuration(scene.duration)
+      ) : (
+        ""
+      )
+    ) : scene.cues[column].length ? (
+      <span title={scene.cues[column].map((cue) => cue.text).join("\n")}>
+        <span className="font-medium">{scene.cues[column].length}</span>
+        <span className="block text-xs text-muted-foreground">
+          Nr. {scene.cues[column].map((cue) => cue.number).join(", ")}
+        </span>
+      </span>
+    ) : null;
   return (
     <div className="space-y-3">
       <Chips
@@ -358,7 +454,46 @@ function SceneTable({
         Dauer mit „ca.“ ist aus dem gesprochenen Text geschätzt (ohne Spiel, Musik, Umbauten).
         {canManage ? " Antippen, um eine gemessene Zeit einzutragen (z. B. 12:30)." : ""}
       </p>
-      <div className="overflow-x-auto rounded-md border border-border/60">
+      {/* Handy: eine Karte je Szene statt seitlich scrollender Tabelle. */}
+      <ol className="space-y-2 sm:hidden">
+        {scenes.map((scene) => {
+          const own = scene.roles.some((role) => mine.has(role.id));
+          const facts = columns.filter((column) => column !== "roles");
+          return (
+            <li
+              key={scene.id}
+              className={cn(
+                "rounded-md border border-border/60 px-3 py-2.5",
+                own && "border-l-2 border-l-primary",
+              )}
+            >
+              <p className="font-medium">
+                <SceneName scene={scene} index={stats.scenes.indexOf(scene)} />
+              </p>
+              {columns.includes("roles") ? (
+                <p className="mt-1 text-sm">{renderCell(scene, "roles")}</p>
+              ) : null}
+              {facts.length ? (
+                <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+                  {facts.map((column) => {
+                    const value = renderCell(scene, column);
+                    if (value === null || value === "") return null;
+                    return (
+                      <div key={column} className="tabular-nums">
+                        <dt className="text-xs text-muted-foreground">
+                          {SCENE_TABLE_COLUMN_LABELS[column]}
+                        </dt>
+                        <dd>{value}</dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+      <div className="hidden overflow-x-auto rounded-md border border-border/60 sm:block">
         <table className="w-full min-w-[40rem] text-sm">
           <thead className="bg-muted/50">
             <tr>
@@ -383,7 +518,7 @@ function SceneTable({
                     scene.roles.some((role) => mine.has(role.id)) && "border-l-2 border-l-primary",
                   )}
                 >
-                  {scene.title}
+                  <SceneName scene={scene} index={stats.scenes.indexOf(scene)} />
                 </td>
                 {columns.map((column) => (
                   <td
@@ -393,54 +528,7 @@ function SceneTable({
                       !isCue(column) && column !== "roles" && "text-right tabular-nums",
                     )}
                   >
-                    {column === "roles" ? (
-                      <>
-                        {scene.roles.map((role, index) => (
-                          <span
-                            key={role.id}
-                            className={cn(mine.has(role.id) && "font-semibold text-primary")}
-                          >
-                            {index ? ", " : ""}
-                            {names.get(role.id) ?? role.id}
-                          </span>
-                        ))}
-                        {scene.mentionedRoleIds.length ? (
-                          <span className="block text-xs text-muted-foreground">
-                            ohne Text:{" "}
-                            {scene.mentionedRoleIds.map((id) => names.get(id) ?? id).join(", ")}
-                          </span>
-                        ) : null}
-                      </>
-                    ) : column === "words" ? (
-                      NUMBER.format(scene.words)
-                    ) : column === "passages" ? (
-                      scene.passages
-                    ) : column === "pages" ? (
-                      scene.pages ? (
-                        scene.pages.from === scene.pages.to ? (
-                          scene.pages.from
-                        ) : (
-                          `${scene.pages.from}–${scene.pages.to}`
-                        )
-                      ) : (
-                        ""
-                      )
-                    ) : column === "duration" ? (
-                      canManage ? (
-                        <DurationCell scene={scene} />
-                      ) : scene.words || !scene.duration.estimated ? (
-                        formatDuration(scene.duration)
-                      ) : (
-                        ""
-                      )
-                    ) : scene.cues[column].length ? (
-                      <span title={scene.cues[column].map((cue) => cue.text).join("\n")}>
-                        <span className="font-medium">{scene.cues[column].length}</span>
-                        <span className="block text-xs text-muted-foreground">
-                          Nr. {scene.cues[column].map((cue) => cue.number).join(", ")}
-                        </span>
-                      </span>
-                    ) : null}
+                    {renderCell(scene, column)}
                   </td>
                 ))}
               </tr>
@@ -449,6 +537,18 @@ function SceneTable({
         </table>
       </div>
     </div>
+  );
+}
+
+function SceneName({ scene, index }: { scene: { title: string }; index: number }) {
+  const { short, name } = sceneDisplayTitle(scene.title, index);
+  return (
+    <>
+      {short && short !== name ? (
+        <span className="mr-1.5 text-muted-foreground tabular-nums">{short}</span>
+      ) : null}
+      {name}
+    </>
   );
 }
 

@@ -8,7 +8,7 @@ import {
   minimumCast,
   suggestBundles,
 } from "@/lib/skript/casting";
-import { sceneShortLabel } from "@/lib/skript/export-options";
+import { sceneDisplayTitle, sceneShortLabel } from "@/lib/skript/export-options";
 import type { ScriptStats } from "@/lib/skript/stats";
 
 const scene = (
@@ -129,5 +129,20 @@ describe("casting", () => {
     expect(suggestBundles(model, 0, 2)).toHaveLength(3);
     expect(bundleConflicts(model, ["a", "b"], 1)).toEqual([{ a: "a", b: "b", distance: 1 }]);
     expect(bundleConflicts(model, ["a", "c"], 1)).toEqual([]);
+  });
+});
+
+describe("sceneDisplayTitle", () => {
+  it("trennt Nummer und Name und setzt Großbuchstaben lesbar", () => {
+    expect(sceneDisplayTitle("1. SZENE: BEI FOGG ZUHAUSE", 1)).toEqual({
+      short: "1",
+      name: "Bei Fogg Zuhause",
+    });
+    expect(
+      sceneDisplayTitle("5. SZENE: IM BRITISCHEN KONSULAT IN SUEZ, Ägypten am Roten Meer", 5),
+    ).toEqual({ short: "5", name: "Im Britischen Konsulat in Suez, Ägypten am Roten Meer" });
+    expect(sceneDisplayTitle("SZENE 10 A – Furcht", 10)).toEqual({ short: "10A", name: "Furcht" });
+    expect(sceneDisplayTitle("20.A SZENE: IM HAFEN", 0).name).toBe("Im Hafen");
+    expect(sceneDisplayTitle("PROLOG", 0)).toEqual({ short: "Pr", name: "Prolog" });
   });
 });

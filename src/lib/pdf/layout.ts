@@ -148,6 +148,8 @@ export type PdfTableCell =
       ruled?: boolean;
       /** Kleiner Stern hinter dem Text (einzeilige Texte), z. B. „höchster Wunsch“. */
       star?: string | null;
+      /** Waagrechter Balken links vom (rechtsbündigen) Text, `value` 0–1, z. B. Anteil. */
+      bar?: { value: number; color: string } | null;
     };
 
 export type PdfTableRow =
@@ -232,6 +234,17 @@ function drawCell(
       .fillColor(c.pill.ink)
       .text(c.text, pillX, cursor + 1.6, { width: pillWidth, align: "center", lineBreak: false });
     return;
+  }
+  if (c.bar) {
+    const barWidth = Math.max(0, inner - 34);
+    const barY = cursor + TEXT_SIZE / 2 - 1.5;
+    doc
+      .save()
+      .roundedRect(x + CELL_PAD_X, barY, barWidth, 3.5, 1.75)
+      .fill(PDF_COLOR.header)
+      .roundedRect(x + CELL_PAD_X, barY, Math.max(1.5, barWidth * c.bar.value), 3.5, 1.75)
+      .fill(c.bar.color)
+      .restore();
   }
   if (c.text) {
     doc

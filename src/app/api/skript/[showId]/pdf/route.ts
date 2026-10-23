@@ -60,6 +60,7 @@ export const GET = withRoute<{ showId: string }>(
       sections: search.has("teile") ? list(search.get("teile")) : undefined,
       sceneColumns: search.has("spalten") ? list(search.get("spalten")) : undefined,
       matrixCell: search.get("matrix") ?? undefined,
+      mirrorWidth: search.get("breite") === "dauer" ? "duration" : undefined,
       directions: search.get("regie") ?? undefined,
       hiddenCues: list(search.get("ohne")),
       dimOthers: search.get("abblenden") === "1",

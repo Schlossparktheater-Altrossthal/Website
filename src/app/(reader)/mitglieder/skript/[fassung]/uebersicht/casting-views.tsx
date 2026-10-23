@@ -129,12 +129,16 @@ export function SceneMirror({
   model,
   mine,
   minGap,
+  width,
+  onWidth: setWidth,
 }: {
   model: CastingModel;
   mine: Set<string>;
   minGap: number;
+  /** Spaltenbreite – liegt in der Übersicht, damit das PDF sie übernimmt. */
+  width: Width;
+  onWidth: (width: Width) => void;
 }) {
-  const [width, setWidth] = React.useState<Width>("equal");
   const [open, setOpen] = React.useState<Set<RoleTier>>(new Set(["main", "supporting"]));
   const [focus, setFocus] = React.useState<string | null>(null);
   const [activeScene, setActiveScene] = React.useState<number | null>(null);

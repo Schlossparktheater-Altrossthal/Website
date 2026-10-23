@@ -74,6 +74,7 @@ const SECTION_HINTS: Record<ScriptPdfSection, string> = {
   roleStats: "Wörter, Passagen und Anteil je Rolle",
   sceneTable: "Eine Zeile pro Szene, Spalten wählbar",
   matrix: "Wer spricht in welcher Szene",
+  mirror: "Auftritte als Balken nach Rollengruppen, Querformat",
   cueList: "Alle Hinweise nummeriert mit Stichwort",
   cueScript: "Eigene Repliken mit den letzten Worten davor",
 };

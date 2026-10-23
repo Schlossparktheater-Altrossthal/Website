@@ -14,6 +14,7 @@ export const SCRIPT_PDF_SECTIONS = [
   "roleStats",
   "sceneTable",
   "matrix",
+  "mirror",
   "cueList",
   "cueScript",
 ] as const;
@@ -24,6 +25,7 @@ export const SCRIPT_PDF_SECTION_LABELS: Record<ScriptPdfSection, string> = {
   roleStats: "Rollen in Zahlen",
   sceneTable: "Szenenübersicht",
   matrix: "Auftritte (Rolle × Szene)",
+  mirror: "Szenenspiegel",
   cueList: "Technik-Fahrplan",
   cueScript: "Stichwortheft",
 };
@@ -72,6 +74,10 @@ export const CUE_LABELS: Record<CueCategory, string> = {
   technik: "Technik",
 };
 
+/** Spaltenbreite im Szenenspiegel: gleich breit oder nach Szenendauer. */
+export const MIRROR_WIDTHS = ["equal", "duration"] as const;
+export type MirrorWidth = (typeof MIRROR_WIDTHS)[number];
+
 export const MATRIX_CELLS = ["mark", "words", "passages"] as const;
 export type MatrixCell = (typeof MATRIX_CELLS)[number];
 
@@ -109,4 +115,39 @@ export function sceneShortLabel(title: string, index: number) {
   if (/^epilog/iu.test(title.trim())) return "Ep";
   if (/^ende\b/iu.test(title.trim())) return "E";
   return String(index + 1);
+}
+
+const SMALL_WORDS = new Set(
+  "der die das des dem den ein eine einer eines und oder in im am an auf aus bei beim mit nach von vom zu zum zur über unter vor hinter für durch um".split(
+    " ",
+  ),
+);
+
+/** Wörter in Großbuchstaben lesbar setzen: „IM CLUB IN LONDON“ → „Im Club in London“. */
+function readableCase(text: string) {
+  let first = true;
+  return text.replace(/\p{L}[\p{L}'’]*/gu, (word) => {
+    const isFirst = first;
+    first = false;
+    if (word.length < 2 || word !== word.toLocaleUpperCase("de-DE")) return word;
+    const lower = word.toLocaleLowerCase("de-DE");
+    if (!isFirst && SMALL_WORDS.has(lower)) return lower;
+    return lower.charAt(0).toLocaleUpperCase("de-DE") + lower.slice(1);
+  });
+}
+
+/**
+ * Szenentitel für Tabellen: Kurznummer + Name ohne „1. SZENE:“-Präfix, Großbuchstaben lesbar.
+ * „1. SZENE: BEI FOGG ZUHAUSE“ → { short: "1", name: "Bei Fogg Zuhause" }.
+ */
+export function sceneDisplayTitle(title: string, index: number) {
+  const short = sceneShortLabel(title, index);
+  const rest = title
+    .trim()
+    .replace(
+      /^(?:\d+\s*\.?\s*(?:[a-z]\b)?\s*)?(?:szene|bild|auftritt)\s*(?:\d+\s*[a-z]?\b)?\.?\s*[:–—-]?\s*/iu,
+      "",
+    )
+    .trim();
+  return { short, name: readableCase(rest || title.trim()) };
 }

@@ -87,7 +87,7 @@ describe("Skript-PDF", () => {
   it("rendert Auswertungen als eigene Abschnitte mit Inhaltsverzeichnis", async () => {
     const { text } = await render({
       roleIds: ["a"],
-      sections: ["roleStats", "sceneTable", "matrix", "cueList", "cueScript", "script"],
+      sections: ["roleStats", "sceneTable", "matrix", "mirror", "cueList", "cueScript", "script"],
     });
     const all = text.join("\n");
     for (const expected of [

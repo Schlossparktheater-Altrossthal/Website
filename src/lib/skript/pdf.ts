@@ -6,6 +6,7 @@ import type { PdfTemplate } from "@/lib/pdf/types";
 import { joinNames, sortCredits } from "./credits";
 import {
   DEFAULT_SCENE_COLUMNS,
+  MIRROR_WIDTHS,
   SCENE_TABLE_COLUMNS,
   SCRIPT_PDF_SECTIONS,
   SCRIPT_PDF_SECTION_LABELS,
@@ -51,6 +52,7 @@ export const scriptPdfOptionsSchema = z.object({
     .transform((list) => (list.length ? [...new Set(list)] : ["script" as const])),
   sceneColumns: z.array(z.enum(SCENE_TABLE_COLUMNS)).default(DEFAULT_SCENE_COLUMNS),
   matrixCell: z.enum(["mark", "words", "passages"]).default("mark"),
+  mirrorWidth: z.enum(MIRROR_WIDTHS).default("equal"),
   /** Szenenkopf-Bausteine (wie im Leser); null = kein Kopf (docs/Plan/skript-ansicht-plan.md). */
   sceneHeader: z
     .array(z.enum(SCENE_HEADER_ITEMS))
@@ -255,8 +257,10 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
   const hidden = new Set(options.hiddenCues);
   const roleSet = new Set(options.roleIds);
   const cueLines = cueLineIndices(data.blocks, roleSet);
+  // Eine Querformat-Startseite (Szenenspiegel vorn) gilt nur für sie; weitere Seiten hoch.
+  doc.options.layout = "portrait";
   const left = MARGIN;
-  const right = doc.page.width - MARGIN;
+  const right = Math.min(doc.page.width, doc.page.height) - MARGIN; // Skript immer hoch
   const speakerStyle = () => doc.font("Helvetica-Bold").fontSize(size * 0.85);
   const speakerWidthOf = (name: string) =>
     speakerStyle().widthOfString(name, { characterSpacing: 0.3 }) + 2;
@@ -279,7 +283,9 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
   let coverEnd = 0;
   if (options.cover) {
     coverEnd = renderCover(doc, input, selectedNames);
-    doc.addPage();
+    // Beginnt das PDF mit dem Szenenspiegel, folgt gleich eine Querformat-Seite.
+    if (options.sections[0] === "mirror") doc.addPage({ ...doc.options, layout: "landscape" });
+    else doc.addPage();
   }
   const coverPages = options.cover ? 1 : 0;
 
@@ -312,7 +318,12 @@ export function renderScriptPdf(doc: Doc, input: ScriptPdfInput) {
   const renderSections = (list: readonly ScriptPdfSection[]) => {
     for (const section of list) {
       if (section === "script") continue;
-      if (doc.y > doc.page.height * 0.3) doc.addPage();
+      // Der Szenenspiegel braucht die Breite: eigene Seite im Querformat, danach wieder hoch.
+      const landscape = section === "mirror";
+      const isLandscape = doc.page.width > doc.page.height;
+      if (landscape !== isLandscape) {
+        doc.addPage({ ...doc.options, layout: landscape ? "landscape" : "portrait" });
+      } else if (doc.y > doc.page.height * 0.3) doc.addPage();
       sectionPages.push({ label: SCRIPT_PDF_SECTION_LABELS[section], page: pageNumber() });
       renderScriptSection(doc, section, data, options);
     }
@@ -728,6 +739,14 @@ export const scriptReaderPdfTemplate: PdfTemplate<ScriptPdfInput> = {
     (value) => typeof value === "object" && value !== null && "data" in value && "options" in value,
   ),
   filename: (input) => `skript-${fileSlug(input.title)}-${fileSlug(input.data.version.label)}.pdf`,
-  documentOptions: { size: "A4", margin: MARGIN, bufferPages: true },
+  documentOptions: (input) => ({
+    size: "A4",
+    margin: MARGIN,
+    bufferPages: true,
+    // Ohne Deckblatt und mit dem Szenenspiegel vorn: gleich im Querformat beginnen.
+    ...(!input.options.cover && input.options.sections[0] === "mirror"
+      ? { layout: "landscape" as const }
+      : {}),
+  }),
   render: renderScriptPdf,
 };
