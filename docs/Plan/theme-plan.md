@@ -66,7 +66,7 @@ Stand: 2026-10-23. Entscheidungen abgestimmt, Umsetzung läuft. Checkliste am En
 ## Checkliste
 
 - [x] Phase 1 Import-Fix
-- [ ] Phase 2 Persönliche Darstellung
-- [ ] Phase 3 Galerie, Import-Dialog, Freigabe
-- [ ] Phase 4 Editor kompakt
+- [x] Phase 2 Persönliche Darstellung
+- [x] Phase 3 Galerie, Import-Dialog, Freigabe
+- [x] Phase 4 Editor kompakt
 - [ ] Phase 5 Prüfung (Screenshots, E2E)

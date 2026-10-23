@@ -24,7 +24,7 @@ Fotoerlaubnis-Signaturen.
 - Bereiche über `?bereich=<id>`; Quelle ist `PROFILE_SECTIONS` in
   `src/app/(members)/mitglieder/profil/profile-sections.ts` mit den IDs `stammdaten`, `zahlungen`,
   `ernaehrung`, `masse`, `freigaben`, `interessen` (Gruppe „Über mich“), `produktion`
-  (Gruppe „Produktion“), `benachrichtigungen` und `sicherheit` (Gruppe „Einstellungen“). Alte Links
+  (Gruppe „Produktion“), `benachrichtigungen`, `darstellung` und `sicherheit` (Gruppe „Einstellungen“). Alte Links
   `onboarding`/`rollen` führen zu `produktion`.
 - Mobil (< `lg`): Profilkopf + gruppierte Bereichsliste mit „Fehlt: …“-Hinweisen; Tippen öffnet
   den Bereich, „‹ Profil“ bzw. Browser-Zurück führt zur Liste.
@@ -93,6 +93,13 @@ aktiven Produktion (Plan: `docs/Plan/fotoerlaubnis-stufen-plan.md`):
 - Rollenwünsche, Fokus und Team-Notizen sind produktionsbezogen (aktive Produktion aus der
   Seitenleiste, `readProductionPreferences`, Migration `production_scoped_preferences`).
 - Profilbild-Bearbeitung nutzt `react-easy-crop`.
+
+## Darstellung (`?bereich=darstellung`)
+
+Farbmodus „Wie Gerät“/Hell/Dunkel und ein Farbschema aus den Themes, die unter
+`/mitglieder/website` als „für Mitglieder wählbar“ freigegeben sind. Ohne eigene Wahl gilt die
+Vorgabe der Seite. Gespeichert am Benutzer (`/api/profile/appearance`), angewendet im
+Root-Layout, gilt nur im Mitgliederbereich.
 
 ## Benachrichtigungen (`?bereich=benachrichtigungen`)
 

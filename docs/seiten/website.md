@@ -20,7 +20,13 @@ Der öffentliche Auftritt läuft auf Drupal. Die frühere Steuerung öffentliche
 
 ## Wichtige Komponenten
 
-- `src/app/(members)/mitglieder/website/theme-settings-manager.tsx` – Theme-Editor
+- `src/app/(members)/mitglieder/website/theme-settings-manager.tsx` – Seite: Titel und
+  Standard-Farbmodus, Theme-Galerie, Editor, Dialoge
+- `theme-gallery.tsx` (Karten mit Vorschau, „⋯“-Menü: aktivieren, für Mitglieder wählbar,
+  duplizieren, exportieren, löschen), `theme-editor.tsx` (wichtigste Farben zuerst, Rest
+  aufklappbar, Live-Vorschau `theme-live-preview.tsx` daneben bzw. mobil oben),
+  `theme-import-dialog.tsx` (Vorschau vor dem Anlegen)
+- `src/components/theme/theme-preview-card.tsx` – Vorschaukarte, auch im Profil „Darstellung“
 - `src/app/(members)/mitglieder/pages/seitensteuerung/seitensteuerung-manager.tsx`
 
 ## Datenfluss
@@ -46,8 +52,14 @@ Der öffentliche Auftritt läuft auf Drupal. Die frühere Steuerung öffentliche
   entfernt, ebenso der öffentliche Next-Auftritt (`/old/**`), der Wartungsmodus und die
   Sichtbarkeit öffentlicher Seiten. `sitemap.ts` liefert bewusst eine leere Sitemap,
   `robots.ts` setzt `Disallow: /`.
-- Branded Types erfordern gelegentlich gezielte Konvertierungen (siehe `theme-settings-manager.tsx`).
-- Der Theme-Editor arbeitet mit OKLCH-Parametern. Es gibt keinen eigenen Token-Build-Schritt:
+- Import: tweakcn-Links aller Art (Vorlagen, Community, eigene Themes, Editor) werden auf
+  `https://tweakcn.com/r/themes/<id>` (ohne `.json`) abgebildet; nur diese Adressen ruft der
+  Server ab (`src/lib/theme/import.ts`).
+- Persönliche Darstellung: `WebsiteTheme.memberSelectable` gibt ein Theme fürs Profil frei,
+  `User.colorModePreference`/`themePreferenceId` speichern die Wahl
+  (`/api/profile/appearance`); das Root-Layout wendet sie an. Plan:
+  `docs/Plan/theme-plan.md`.
+- Der Theme-Editor arbeitet mit OKLCH-Werten. Es gibt keinen eigenen Token-Build-Schritt:
   Farben, Radius und Schatten kommen aus `src/lib/theme/` (tweakcn-Format) und werden vom
   `ThemeStyleRegistry` im Root-Layout als CSS-Variablen ausgegeben. Die Doku-Swatches erzeugt
   `pnpm swatches:gen`.

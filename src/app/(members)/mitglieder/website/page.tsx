@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/members/page-header";
 import { hasPermission } from "@/lib/permissions";
 import { requireAuth } from "@/lib/rbac";
 import {
@@ -57,13 +58,10 @@ export default async function WebsiteSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Website & Theme</h1>
-        <p className="text-sm text-muted-foreground">
-          Passe Farben, Branding und Darstellung der öffentlichen Website an. Änderungen werden
-          sofort im aktuellen Fenster sichtbar.
-        </p>
-      </div>
+      <PageHeader
+        title="Website & Theme"
+        description="Farben und Darstellung des Mitgliederbereichs für alle festlegen."
+      />
       <WebsiteThemeSettingsManager initialSettings={clientSettings} initialThemes={themes} />
     </div>
   );

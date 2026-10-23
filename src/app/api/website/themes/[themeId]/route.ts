@@ -10,6 +10,7 @@ import {
   deleteWebsiteTheme,
   getWebsiteTheme,
   saveWebsiteTheme,
+  setWebsiteThemeMemberSelectable,
 } from "@/lib/website-settings";
 
 const updateThemeSchema = z
@@ -17,6 +18,7 @@ const updateThemeSchema = z
     name: themeNameSchema.optional(),
     description: themeDescriptionSchema,
     tokens: themeTokensSchema.optional(),
+    memberSelectable: z.boolean().optional(),
   })
   .optional();
 
@@ -77,6 +79,18 @@ export const PUT = withRoute<{ themeId: string }>(
     }
 
     const input = parsed.data ?? {};
+    // Freigabe für Mitglieder geht auch bei schreibgeschützten Vorlagen.
+    if (input.memberSelectable !== undefined) {
+      try {
+        await setWebsiteThemeMemberSelectable(themeId, input.memberSelectable);
+      } catch (error) {
+        console.error("Failed to update member selectable flag", error);
+        return NextResponse.json({ error: "Theme nicht gefunden." }, { status: 404 });
+      }
+      if (!input.name && !input.description && !input.tokens) {
+        return NextResponse.json({ theme: await getWebsiteTheme(themeId) });
+      }
+    }
     if (!input.name && !input.description && !input.tokens) {
       return NextResponse.json({ error: "Keine Änderungen übermittelt." }, { status: 400 });
     }

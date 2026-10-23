@@ -1,4 +1,4 @@
-import { summarizeClientWebsiteTheme } from "@/lib/theme/swatches";
+import { summarizeClientWebsiteTheme, toThemeSwatches } from "@/lib/theme/swatches";
 import { requireApiSession, withRoute } from "@/lib/api/route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -21,6 +21,8 @@ const createThemeSchema = z
     description: themeDescriptionSchema,
     sourceThemeId: themeIdSchema.optional(),
     importSource: themeImportSourceSchema.optional(),
+    /** Nur prüfen und Vorschau liefern, nichts speichern. */
+    previewOnly: z.boolean().optional(),
   })
   .optional();
 
@@ -74,7 +76,7 @@ export const POST = withRoute({ name: "website/themes.post" }, async ({ request 
     return NextResponse.json({ error: issue?.message ?? "Ungültige Eingabe." }, { status: 400 });
   }
 
-  const { importSource, ...options } = parsed.data ?? {};
+  const { importSource, previewOnly, ...options } = parsed.data ?? {};
   let imported: Awaited<ReturnType<typeof resolveThemeImport>> | null = null;
   if (importSource) {
     try {
@@ -86,6 +88,19 @@ export const POST = withRoute({ name: "website/themes.post" }, async ({ request 
       console.error("Failed to import website theme", error);
       return NextResponse.json({ error: "Theme konnte nicht importiert werden." }, { status: 500 });
     }
+  }
+
+  if (previewOnly) {
+    if (!imported) {
+      return NextResponse.json({ error: "Bitte etwas zum Importieren angeben." }, { status: 400 });
+    }
+    return NextResponse.json({
+      preview: {
+        suggestedName: imported.suggestedName,
+        swatches: toThemeSwatches(imported.theme),
+        radius: imported.theme.theme.radius ?? "0.5rem",
+      },
+    });
   }
 
   try {
