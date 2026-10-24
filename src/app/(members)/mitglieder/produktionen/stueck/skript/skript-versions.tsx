@@ -61,11 +61,14 @@ export function ScriptVersions({
   versions,
   pending,
   canManage,
+  takeoverSummary = null,
 }: {
   showId: string;
   versions: ScriptVersionItem[];
   pending: ScriptPendingItem[];
   canManage: boolean;
+  /** Was die aktuelle Fassung fürs Stück noch ändern würde; leer = nichts, null = keine Fassung. */
+  takeoverSummary?: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -96,8 +99,21 @@ export function ScriptVersions({
             <ListRow
               href={`${BASE}&bereich=uebernahme`}
               leading={<FileIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
-              title="Ins Stück übernehmen"
-              description="Szenen, Rollen und Auftritte aus der aktuellen Fassung"
+              title={
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate">Ins Stück übernehmen</span>
+                  {takeoverSummary ? (
+                    <Badge variant="warning" size="sm">
+                      Änderungen
+                    </Badge>
+                  ) : null}
+                </span>
+              }
+              description={
+                takeoverSummary
+                  ? `Fürs Stück offen: ${takeoverSummary}`
+                  : "Stück ist auf dem Stand der aktuellen Fassung"
+              }
             />
           ) : null}
         </ListRowGroup>

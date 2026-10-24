@@ -362,3 +362,26 @@ export async function applyAppearanceTakeover(
   ]);
   return { added: add.length, removed: remove.length };
 }
+
+/** Kurzfassung für die Fassungsliste: „2 neue Szenen · 1 Rolle offen · 6 Auftritte“ (Phase 8). */
+export async function takeoverSummary(showId: string): Promise<string | null> {
+  const data = await loadTakeover(showId);
+  if (!data) return null;
+  const count = (n: number, one: string, many: string) =>
+    n ? `${n} ${n === 1 ? one : many}` : null;
+  const parts = [
+    count(data.scenes.filter((s) => s.status === "new").length, "neue Szene", "neue Szenen"),
+    count(
+      data.scenes.filter((s) => s.status === "linked" && s.fields.length).length,
+      "geänderte Szene",
+      "geänderte Szenen",
+    ),
+    count(
+      data.roles.filter((r) => !r.linked && !r.characterIds.length).length,
+      "Rolle offen",
+      "Rollen offen",
+    ),
+    count(data.appearances.add.length + data.appearances.remove.length, "Auftritt", "Auftritte"),
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "";
+}

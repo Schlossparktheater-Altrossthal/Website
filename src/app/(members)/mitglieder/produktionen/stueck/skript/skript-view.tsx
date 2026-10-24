@@ -6,7 +6,7 @@ import { readImportReport } from "@/lib/skript/json";
 import { listPendingImports, listScriptVersions } from "@/lib/skript/service";
 
 import { loadScriptRoleAdmin } from "@/lib/skript/role-admin";
-import { loadTakeover } from "@/lib/skript/takeover";
+import { loadTakeover, takeoverSummary } from "@/lib/skript/takeover";
 
 import { ScriptReview } from "./skript-review";
 import { ScriptRoles } from "./skript-roles";
@@ -64,9 +64,10 @@ export async function SkriptView({
     );
   }
 
-  const [versions, pendingRows] = await Promise.all([
+  const [versions, pendingRows, summary] = await Promise.all([
     listScriptVersions(showId, { includeDrafts: canManage }),
     canManage ? listPendingImports(showId) : [],
+    canManage ? takeoverSummary(showId) : null,
   ]);
   const pending: ScriptPendingItem[] = pendingRows.map((item) => ({
     id: item.id,
@@ -96,6 +97,12 @@ export async function SkriptView({
     };
   });
   return (
-    <ScriptVersions showId={showId} versions={items} pending={pending} canManage={canManage} />
+    <ScriptVersions
+      showId={showId}
+      versions={items}
+      pending={pending}
+      canManage={canManage}
+      takeoverSummary={summary}
+    />
   );
 }
