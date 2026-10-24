@@ -42,7 +42,7 @@ export type MembersNavGroupId =
   "general" | "personal" | "production" | "workshop" | "admin" | "pages";
 
 /** Bis zu so vielen Einträgen zeigt das Menü eine flache Liste ohne Gruppenüberschriften. */
-export const MEMBERS_NAV_FLAT_MAX_ITEMS = 8;
+export const MEMBERS_NAV_FLAT_MAX_ITEMS = 10;
 export const MEMBERS_NAV_PRODUCTION_GROUP_ID: MembersNavGroupId = "production";
 
 export interface MembersNavItem {
