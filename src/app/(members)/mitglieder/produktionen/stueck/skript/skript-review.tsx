@@ -10,6 +10,7 @@ import { AsyncButton } from "@/components/ui/async-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatTile } from "@/components/ui/stat-tile";
 import { cn } from "@/lib/utils";
@@ -143,12 +144,19 @@ function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boo
   const roleName = new Map(data.roles.map((r) => [r.id, r.name]));
   const typoFor = new Map(data.version.report.roleTypos.map((t) => [t.name, t.similarTo]));
   const names = new Set(data.entries.map((e) => e.name));
+  const changes = new Map(data.roleChanges.map((c) => [c.name, c]));
   const initial = Object.fromEntries(
     data.entries.map((entry) => {
       const typo = typoFor.get(entry.name);
+      const change = entry.roleId ? undefined : changes.get(entry.name);
+      // Umbenannt/zusammengelegt → alte Rolle weiterführen; aufgeteilt → neu, aber erben.
+      const fromChange = change && change.kind !== "split" ? change.sources[0].roleId : undefined;
       const choice =
-        entry.roleId ?? entry.suggestedRoleId ?? (typo && names.has(typo) ? `${SAME}${typo}` : NEW);
-      return [entry.name, { choice, newName: entry.name }];
+        entry.roleId ??
+        fromChange ??
+        entry.suggestedRoleId ??
+        (typo && names.has(typo) ? `${SAME}${typo}` : NEW);
+      return [entry.name, { choice, newName: entry.name, follow: !!change }];
     }),
   );
   // Nach dem Speichern liefert der Server neue Einträge; `key` am Aufrufer setzt den Zustand zurück.
@@ -168,9 +176,28 @@ function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boo
     };
     const assignments = data.entries.map((entry) => {
       const { value, name } = resolve(entry.name);
-      return value.choice === NEW || value.choice.startsWith(SAME)
-        ? { name: entry.name, createName: value.newName.trim() || name }
-        : { name: entry.name, roleId: value.choice };
+      const change = changes.get(entry.name);
+      const follow = !!change && state[entry.name].follow && !entry.roleId;
+      if (value.choice === NEW || value.choice.startsWith(SAME)) {
+        return {
+          name: entry.name,
+          createName: value.newName.trim() || name,
+          ...(follow && change.kind === "split"
+            ? { inheritFromRoleId: change.sources[0].roleId }
+            : {}),
+        };
+      }
+      const fromSource = follow && change.sources.some((s) => s.roleId === value.choice);
+      return {
+        name: entry.name,
+        roleId: value.choice,
+        ...(fromSource && change.kind !== "split"
+          ? {
+              renameTo: entry.name,
+              mergeRoleIds: change.sources.map((s) => s.roleId).filter((id) => id !== value.choice),
+            }
+          : {}),
+      };
     });
     report(await saveScriptRolesAction(data.version.id, assignments), router);
     setBusy(false);
@@ -219,6 +246,20 @@ function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boo
                       </Badge>
                     ) : null}
                   </div>
+                  {!entry.roleId && changes.get(entry.name) ? (
+                    <RoleChangeHint
+                      change={changes.get(entry.name)!}
+                      roleName={roleName}
+                      editable={editable}
+                      checked={value.follow}
+                      onChange={(follow) =>
+                        setState((prev) => ({
+                          ...prev,
+                          [entry.name]: { ...prev[entry.name], follow },
+                        }))
+                      }
+                    />
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     {plural(entry.lines, "Replik", "Repliken")} ·{" "}
                     {plural(entry.words, "Wort", "Wörter")}
@@ -283,6 +324,47 @@ function RoleSection({ data, editable }: { data: ScriptReviewData; editable: boo
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+const CHANGE_TEXT = {
+  rename: (from: string) => `Vermutlich umbenannt – war „${from}“`,
+  merge: (from: string) => `Vermutlich zusammengelegt aus ${from}`,
+  split: (from: string) => `Vermutlich aufgeteilt aus „${from}“`,
+};
+
+/** Hinweis „Autor hat Rollen geändert“ mit Haken zum Weiterführen (Phase 5). */
+function RoleChangeHint({
+  change,
+  roleName,
+  editable,
+  checked,
+  onChange,
+}: {
+  change: ScriptReviewData["roleChanges"][number];
+  roleName: Map<string, string>;
+  editable: boolean;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const sources = change.sources.map((s) => roleName.get(s.roleId) ?? "?");
+  const from = change.kind === "merge" ? sources.map((n) => `„${n}“`).join(" und ") : sources[0];
+  const action =
+    change.kind === "split"
+      ? `Stück-Rolle und Besetzung von „${sources[0]}“ übernehmen`
+      : change.kind === "merge"
+        ? `Zu einer Rolle zusammenführen (Lernstand, Besetzung und Zuordnungen bleiben)`
+        : `„${sources[0]}“ umbenennen (Lernstand, Besetzung und Zuordnungen bleiben)`;
+  return (
+    <div className="mt-1 space-y-1 rounded-md border border-info/40 bg-info/10 px-2 py-1.5 text-xs">
+      <p className="font-medium">{CHANGE_TEXT[change.kind](from)}</p>
+      {editable ? (
+        <label className="flex items-center gap-2">
+          <Checkbox checked={checked} onCheckedChange={(next) => onChange(next === true)} />
+          <span>{action}</span>
+        </label>
+      ) : null}
+    </div>
   );
 }
 

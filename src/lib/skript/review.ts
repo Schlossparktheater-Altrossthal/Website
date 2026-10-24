@@ -11,6 +11,14 @@ import { parseScriptPdf } from "./import";
 import { readImportReport, readParts } from "./json";
 import { jaroWinkler, roleKey, splitSpeakerRoles } from "./roles";
 import { isEnsembleRole } from "./casting";
+import {
+  ScriptRoleAdminError,
+  applyRoleSplits,
+  mergeScriptRoles,
+  renameScriptRole,
+  setScriptRoleLinks,
+} from "./role-admin";
+import { detectRoleChanges, type RoleChange } from "./role-changes";
 import { inheritSceneKeys } from "./scene-keys";
 import type { ScriptImportReport } from "./service";
 import { sceneTitleKey } from "./stats";
@@ -67,7 +75,60 @@ export type ScriptReviewData = {
   credits: { saved: ScriptCredit[]; found: ScriptCredit[]; newNames: string[] };
   /** Was vor der Freigabe noch fehlt. */
   blockers: string[];
+  /** Vermutete Rollenänderungen des Autors gegenüber der letzten freigegebenen Fassung. */
+  roleChanges: RoleChange[];
 };
+
+/** Rollenänderungen des Autors über die Absätze der letzten freigegebenen Fassung erkennen. */
+async function reviewRoleChanges(
+  versionId: string,
+  showId: string,
+  entries: ReviewRoleEntry[],
+  roles: { id: string; name: string; aliases: string[] }[],
+) {
+  const previous = await prisma.scriptVersion.findFirst({
+    where: { showId, status: "released" },
+    orderBy: { releasedAt: "desc" },
+    select: { id: true },
+  });
+  if (!previous) return [];
+  // Nur exakte Treffer (Name/Schreibweise) gelten als bekannt – „Polizist“ ähnelt „Polizist 1“,
+  // kann aber genau die Zusammenlegung sein.
+  const exact = (name: string) => {
+    const key = roleKey(name);
+    return roles.find((r) => roleKey(r.name) === key || r.aliases.includes(key))?.id ?? null;
+  };
+  const unknownNames = entries.filter((e) => !e.roleId && !exact(e.name)).map((e) => e.name);
+  if (!unknownNames.length) return [];
+  const [inherited, current, before] = await Promise.all([
+    inheritLineage(versionId, previous.id),
+    prisma.scriptBlock.findMany({
+      where: { versionId, speaker: { not: null } },
+      select: { id: true, speaker: true },
+    }),
+    prisma.scriptBlock.findMany({
+      where: { versionId: previous.id },
+      select: { lineageId: true, roles: { select: { roleId: true } } },
+    }),
+  ]);
+  const rolesByLineage = new Map(before.map((b) => [b.lineageId, b.roles.map((r) => r.roleId)]));
+  const present = new Set(
+    entries.map((e) => e.roleId ?? exact(e.name)).filter((id): id is string => !!id),
+  );
+  const previousRoles = new Set([...rolesByLineage.values()].flat());
+  const vanished = new Set([...previousRoles].filter((id) => !present.has(id)));
+  const unknown = new Map<string, string[][]>(unknownNames.map((n) => [n, []]));
+  for (const block of current) {
+    const names = splitSpeakerRoles(block.speaker!);
+    if (names.length !== 1 || !unknown.has(names[0])) continue;
+    const lineageId = inherited.get(block.id);
+    unknown.get(names[0])!.push(lineageId ? (rolesByLineage.get(lineageId) ?? []) : []);
+  }
+  const known = new Set(roles.map((r) => r.id));
+  return detectRoleChanges({ unknown, vanished }).filter((c) =>
+    c.sources.every((s) => known.has(s.roleId)),
+  );
+}
 
 function suggestRole(name: string, roles: { id: string; name: string; aliases: string[] }[]) {
   const key = roleKey(name);
@@ -176,6 +237,10 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
     );
   }
 
+  const roleChanges =
+    version.status === "draft"
+      ? await reviewRoleChanges(version.id, version.showId, [...entries.values()], roles)
+      : [];
   const report = readImportReport(version.importReport);
   const saved = readScriptCredits(version.show.scriptCredits);
   return {
@@ -198,6 +263,7 @@ export async function loadScriptReview(versionId: string): Promise<ScriptReviewD
     cues,
     credits: { saved, found: report.credits, newNames: newCreditNames(saved, report.credits) },
     blockers,
+    roleChanges,
   };
 }
 
@@ -221,7 +287,20 @@ export function defaultRoleKind(
   return { kind: "group", groupMode: /^alle\b/iu.test(name) ? "cast" : "present" };
 }
 
-export type RoleAssignment = { name: string } & ({ roleId: string } | { createName: string });
+export type RoleAssignment = { name: string } & (
+  | {
+      roleId: string;
+      /** Autor hat Rollen zusammengelegt: diese alten Rollen gehen in `roleId` auf. */
+      mergeRoleIds?: string[];
+      /** Autor hat umbenannt: Skript-Rolle bekommt den neuen Namen (alter bleibt Schreibweise). */
+      renameTo?: string;
+    }
+  | {
+      createName: string;
+      /** Autor hat eine Rolle aufgeteilt: Stück-Verknüpfung der alten Rolle übernehmen. */
+      inheritFromRoleId?: string;
+    }
+);
 
 /**
  * Rollen bestätigen: neue Skript-Rollen anlegen, Schreibweisen als Alias merken (gelten für alle
@@ -238,13 +317,13 @@ export async function saveRoleAssignments(
     select: { id: true, speaker: true, speakerRaw: true },
   });
 
-  await prisma.$transaction(async (tx) => {
+  const target = await prisma.$transaction(async (tx) => {
     const roles = await tx.scriptRole.findMany({
       where: { showId: version.showId },
       select: { id: true, name: true, aliases: true },
     });
     const byId = new Map(roles.map((r) => [r.id, r]));
-    const target = new Map<string, string>();
+    const resolved = new Map<string, string>();
     for (const assignment of assignments) {
       let roleId: string;
       if ("roleId" in assignment) {
@@ -271,7 +350,7 @@ export async function saveRoleAssignments(
           roleId = created.id;
         }
       }
-      target.set(roleKey(assignment.name), roleId);
+      resolved.set(roleKey(assignment.name), roleId);
     }
 
     const links: Prisma.ScriptBlockRoleCreateManyInput[] = [];
@@ -279,7 +358,7 @@ export async function saveRoleAssignments(
     for (const block of blocks) {
       const names = splitSpeakerRoles(block.speaker!);
       for (const name of names) {
-        const roleId = target.get(roleKey(name));
+        const roleId = resolved.get(roleKey(name));
         if (!roleId) continue;
         links.push({ blockId: block.id, roleId });
         const aliases = newAliases.get(roleId) ?? new Set<string>();
@@ -299,7 +378,50 @@ export async function saveRoleAssignments(
         await tx.scriptRole.update({ where: { id: roleId }, data: { aliases: merged } });
       }
     }
+    return resolved;
   });
+
+  // Rollenänderungen des Autors (Phase 5): zusammengelegte Rollen aufgehen lassen, aufgeteilte
+  // Rollen erben die Stück-Verknüpfung.
+  for (const assignment of assignments) {
+    const roleId = target.get(roleKey(assignment.name));
+    if (!roleId) continue;
+    if ("mergeRoleIds" in assignment) {
+      for (const sourceId of assignment.mergeRoleIds ?? []) {
+        if (sourceId === roleId) continue;
+        const exists = await prisma.scriptRole.findFirst({
+          where: { id: sourceId, showId: version.showId },
+          select: { id: true },
+        });
+        if (exists) await mergeScriptRoles(version.showId, sourceId, roleId, userId);
+      }
+    }
+    if ("renameTo" in assignment && assignment.renameTo) {
+      await renameScriptRole(version.showId, roleId, assignment.renameTo).catch((error) => {
+        if (!(error instanceof ScriptRoleAdminError)) throw error;
+      });
+    }
+    if ("inheritFromRoleId" in assignment && assignment.inheritFromRoleId) {
+      const source = await prisma.scriptRole.findFirst({
+        where: { id: assignment.inheritFromRoleId, showId: version.showId },
+        select: { kind: true, groupMode: true, links: { select: { characterId: true } } },
+      });
+      if (source) {
+        await prisma.scriptRole.update({
+          where: { id: roleId },
+          data: { kind: source.kind, groupMode: source.groupMode },
+        });
+        if (source.links.length) {
+          await setScriptRoleLinks(
+            version.showId,
+            roleId,
+            source.links.map((l) => l.characterId),
+            userId,
+          );
+        }
+      }
+    }
+  }
 }
 
 /** Unsicheren Hinweis bestätigen oder als Text/Regie umdeuten. */
@@ -464,6 +586,7 @@ export async function releaseScriptVersion(versionId: string, userId: string) {
       },
     }),
   ]);
+  await applyRoleSplits(version.showId, versionId);
   return { inherited: inherited.size };
 }
 

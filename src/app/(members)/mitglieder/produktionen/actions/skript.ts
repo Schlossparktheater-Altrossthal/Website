@@ -45,8 +45,17 @@ async function requireScriptManager(versionId: string) {
 
 const assignmentSchema = z.array(
   z.union([
-    z.object({ name: z.string().min(1).max(80), roleId: z.string().min(1) }),
-    z.object({ name: z.string().min(1).max(80), createName: z.string().trim().min(1).max(80) }),
+    z.object({
+      name: z.string().min(1).max(80),
+      roleId: z.string().min(1),
+      mergeRoleIds: z.array(z.string().min(1).max(64)).max(20).optional(),
+      renameTo: z.string().trim().min(1).max(80).optional(),
+    }),
+    z.object({
+      name: z.string().min(1).max(80),
+      createName: z.string().trim().min(1).max(80),
+      inheritFromRoleId: z.string().min(1).max(64).optional(),
+    }),
   ]),
 );
 

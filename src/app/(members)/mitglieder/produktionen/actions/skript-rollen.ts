@@ -18,6 +18,7 @@ import {
   setScriptGroupRules,
   setScriptRoleKind,
   setScriptRoleLinks,
+  splitScriptRole,
   undoScriptRoleMerge,
 } from "@/lib/skript/role-admin";
 import { SCRIPT_MANAGE_PERMISSION } from "@/lib/skript/service";
@@ -125,5 +126,24 @@ export async function saveScriptGroupRulesAction(
     "Gruppe konnte nicht gespeichert werden.",
     (userId) => setScriptGroupRules({ showId, userId, ...rulesSchema.parse(input) }),
     "Gruppe gespeichert",
+  );
+}
+
+const splitSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  sceneKeys: z.array(z.string().min(1).max(64)).min(1).max(300),
+});
+
+export async function splitScriptRoleAction(
+  showId: string,
+  roleId: string,
+  input: unknown,
+): Promise<ProductionActionResult> {
+  return run(
+    showId,
+    "Rolle konnte nicht getrennt werden.",
+    (userId) =>
+      splitScriptRole({ showId, roleId: id.parse(roleId), userId, ...splitSchema.parse(input) }),
+    "Rolle getrennt",
   );
 }

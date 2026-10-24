@@ -29,6 +29,10 @@ export type AdminRole = {
   scenes: number;
   /** Kommt in der aktuellen Fassung vor. */
   current: boolean;
+  /** Szenen der aktuellen Fassung, in denen die Rolle spricht. */
+  sceneKeys: string[];
+  /** Abgetrennt von (Name) und in welchen Szenen. */
+  splitFrom: { name: string; sceneKeys: string[] } | null;
 };
 
 export type AdminGroupRule = {
@@ -95,6 +99,8 @@ export async function loadScriptRoleAdmin(showId: string): Promise<ScriptRoleAdm
         kind: true,
         groupMode: true,
         linkedAt: true,
+        splitFromId: true,
+        splitSceneKeys: true,
         links: { select: { characterId: true } },
       },
     }),
@@ -188,6 +194,13 @@ export async function loadScriptRoleAdmin(showId: string): Promise<ScriptRoleAdm
         words: entry?.words ?? 0,
         scenes: entry?.sceneIds.length ?? 0,
         current: !!entry,
+        sceneKeys: (entry?.sceneIds ?? []).map((id) => sceneKeys.get(id) ?? "").filter(Boolean),
+        splitFrom: role.splitFromId
+          ? {
+              name: roles.find((r) => r.id === role.splitFromId)?.name ?? "(gelöscht)",
+              sceneKeys: role.splitSceneKeys,
+            }
+          : null,
       };
     }),
     characters: characters.map((c) => ({
@@ -579,4 +592,107 @@ export async function setScriptGroupRules(input: {
         .map((rule) => ({ ...level, ...rule, createdById: input.userId })),
     }),
   ]);
+}
+
+/**
+ * Rolle trennen (Phase 5): Absätze der Rolle in den gewählten Szenen gehören ab jetzt einer neuen
+ * Rolle – in allen Fassungen, mit Lernkarten. Neue Fassungen machen das bei der Freigabe von
+ * selbst (`splitSceneKeys`).
+ */
+export async function splitScriptRole(input: {
+  showId: string;
+  roleId: string;
+  sceneKeys: string[];
+  name: string;
+  userId: string;
+}) {
+  const role = await prisma.scriptRole.findFirst({
+    where: { id: input.roleId, showId: input.showId },
+    select: { id: true, kind: true, groupMode: true },
+  });
+  if (!role) throw new ScriptRoleAdminError("Rolle nicht gefunden.");
+  const name = input.name.trim();
+  if (!name) throw new ScriptRoleAdminError("Name fehlt.");
+  if (!input.sceneKeys.length) throw new ScriptRoleAdminError("Keine Szene gewählt.");
+  const clash = await prisma.scriptRole.findFirst({
+    where: { showId: input.showId, name },
+    select: { id: true },
+  });
+  if (clash) throw new ScriptRoleAdminError(`„${name}“ gibt es schon – zusammenführen?`);
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.scriptRole.create({
+      data: {
+        showId: input.showId,
+        name,
+        kind: role.kind,
+        groupMode: role.groupMode,
+        splitFromId: role.id,
+        splitSceneKeys: input.sceneKeys,
+        createdById: input.userId,
+      },
+      select: { id: true },
+    });
+    const moved = await moveSplitBlocks(tx, role.id, created.id, input.sceneKeys);
+    return { id: created.id, moved };
+  });
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Absätze (optional nur einer Fassung) von `fromId` an `toId` in den Szenen geben. */
+export async function moveSplitBlocks(
+  tx: Tx,
+  fromId: string,
+  toId: string,
+  sceneKeys: string[],
+  versionId?: string,
+) {
+  const links = await tx.scriptBlockRole.findMany({
+    where: {
+      roleId: fromId,
+      block: { scene: { sceneKey: { in: sceneKeys } }, ...(versionId ? { versionId } : {}) },
+    },
+    select: { blockId: true, block: { select: { lineageId: true } } },
+  });
+  if (!links.length) return 0;
+  const blockIds = links.map((l) => l.blockId);
+  await tx.scriptBlockRole.createMany({
+    data: blockIds.map((blockId) => ({ blockId, roleId: toId })),
+    skipDuplicates: true,
+  });
+  await tx.scriptBlockRole.deleteMany({ where: { roleId: fromId, blockId: { in: blockIds } } });
+  if (!versionId) {
+    const lineageIds = [...new Set(links.map((l) => l.block.lineageId))];
+    const cards = await tx.scriptLearnCard.findMany({
+      where: { roleId: fromId, lineageId: { in: lineageIds } },
+      select: { id: true },
+    });
+    await tx.scriptLearnCard.updateMany({
+      where: { id: { in: cards.map((c) => c.id) } },
+      data: { roleId: toId },
+    });
+  }
+  return blockIds.length;
+}
+
+/** Bei der Freigabe: abgetrennte Rollen bekommen ihre Szenen auch in der neuen Fassung. */
+export async function applyRoleSplits(showId: string, versionId: string) {
+  const splits = await prisma.scriptRole.findMany({
+    where: { showId, splitFromId: { not: null } },
+    select: { id: true, splitFromId: true, splitSceneKeys: true },
+  });
+  if (!splits.length) return 0;
+  return prisma.$transaction(async (tx) => {
+    let moved = 0;
+    for (const split of splits) {
+      moved += await moveSplitBlocks(
+        tx,
+        split.splitFromId!,
+        split.id,
+        split.splitSceneKeys,
+        versionId,
+      );
+    }
+    return moved;
+  });
 }

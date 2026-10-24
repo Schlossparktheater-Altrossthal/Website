@@ -1,6 +1,6 @@
 # Plan: Skript ↔ Stück – Rollen und Szenen übernehmen, zuordnen, zusammenführen
 
-Stand: 2026-10-24 – Phase 1–4 umgesetzt (siehe Checkliste). Konkretisiert Phase 11 aus `skript-plan.md` („Übernahme-Assistent“) und den
+Stand: 2026-10-24 – Phase 1–7 umgesetzt (siehe Checkliste). Konkretisiert Phase 11 aus `skript-plan.md` („Übernahme-Assistent“) und den
 offenen Punkt „Sammelrollen einer Gruppe zuordnen“ aus `szenenspiegel-plan.md`.
 
 ## Ziel
@@ -243,7 +243,12 @@ kein eigener Mechanismus im Skript (E-U5).
 - [x] Phase 4 Stabile Szenen (`ScriptScene.sceneKey`, Rückfüllung über Titel, Freigabe vererbt
       über Absatz-Mehrheit, `src/lib/skript/scene-keys.ts`). `measuredSeconds` läuft noch über
       den Titel.
-- [ ] Phase 5 Trennen + Erkennung „Autor ändert Rollen“
+- [x] Phase 5 Trennen + Erkennung „Autor ändert Rollen“: Trennen im Reiter „Rollen“ nach Szenen
+      (`splitFromId`/`splitSceneKeys`, Freigabe wendet es auf neue Fassungen an). Prüfschritt
+      zeigt „umbenannt / zusammengelegt / aufgeteilt aus …“ (`role-changes.ts`, über die
+      Absätze der letzten freigegebenen Fassung; nur exakte Namen gelten als bekannt, weil
+      „Polizist“ sonst per Ähnlichkeit an „Polizist 1“ hängt). Haken übernimmt: umbenennen,
+      zusammenführen (mit Rückgängig) bzw. Stück-Verknüpfung erben.
 - [x] Phase 6 Stück: Rollen zusammenführen (Rollen-Panel „Zusammenführen“, `src/lib/produktionen/character-merge.ts`;
       Vorschau der umgehängten Daten, danach wird die leere Rolle gelöscht – nicht umkehrbar)
 - [x] Phase 7 Übernahme-Assistent (`?ansicht=skript&bereich=uebernahme`, `src/lib/skript/takeover*.ts`):
@@ -252,5 +257,6 @@ kein eigener Mechanismus im Skript (E-U5).
       Braucht `SCRIPT.MANAGE` und `SHOW.MANAGE`. Neue Szenen landen im letzten Akt.
 - [ ] Phase 8 „Änderungen fürs Stück“ + E2E
 
-DB-Tests: `src/lib/skript/__tests__/role-admin.db.manual.ts`, `takeover.db.manual.ts`
+DB-Tests: `src/lib/skript/__tests__/role-admin.db.manual.ts`, `takeover.db.manual.ts`,
+`role-changes.db.manual.ts`
 (nicht in CI; Wegwerf-DB, `npx tsx`).

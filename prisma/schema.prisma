@@ -4201,26 +4201,30 @@ model ScriptScene {
 
 /// Rolle im Skript eines Stücks; `aliases` sind bestätigte Schreibweisen (normalisiert).
 model ScriptRole {
-  id          String            @id @default(cuid())
-  showId      String
-  name        String
-  aliases     String[]          @default([])
+  id             String            @id @default(cuid())
+  showId         String
+  name           String
+  aliases        String[]          @default([])
   /// Person, Gruppe („Alle“, „Chor“) oder ignorieren (docs/Plan/skript-uebernahme-plan.md).
-  kind        ScriptRoleKind    @default(person)
+  kind           ScriptRoleKind    @default(person)
   /// Nur bei Gruppen: wer standardmäßig dazugehört.
-  groupMode   ScriptGroupMode?
+  groupMode      ScriptGroupMode?
   /// Gesetzt, sobald die Stück-Rollen von Hand zugeordnet wurden; vorher gilt Namensgleichheit.
-  linkedAt    DateTime?
-  createdById String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  show        Show              @relation(fields: [showId], references: [id], onDelete: Cascade)
-  createdBy   User?             @relation("ScriptRoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  blocks      ScriptBlockRole[]
-  learnCards  ScriptLearnCard[]
-  links       ScriptRoleLink[]
-  groupRules  ScriptGroupRule[] @relation("ScriptGroupRuleGroup")
-  memberRules ScriptGroupRule[] @relation("ScriptGroupRuleMember")
+  linkedAt       DateTime?
+  /// Abgetrennt von dieser Rolle (Phase 5): neue Fassungen geben ihr die Absätze der alten Rolle
+  /// in diesen Szenen (`ScriptScene.sceneKey`).
+  splitFromId    String?
+  splitSceneKeys String[]          @default([])
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  show           Show              @relation(fields: [showId], references: [id], onDelete: Cascade)
+  createdBy      User?             @relation("ScriptRoleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  blocks         ScriptBlockRole[]
+  learnCards     ScriptLearnCard[]
+  links          ScriptRoleLink[]
+  groupRules     ScriptGroupRule[] @relation("ScriptGroupRuleGroup")
+  memberRules    ScriptGroupRule[] @relation("ScriptGroupRuleMember")
 
   @@unique([showId, name])
 }

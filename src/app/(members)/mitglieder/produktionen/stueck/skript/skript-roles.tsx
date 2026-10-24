@@ -23,6 +23,7 @@ import {
   mergeScriptRolesAction,
   saveScriptGroupRulesAction,
   saveScriptRoleAction,
+  splitScriptRoleAction,
   undoScriptRoleMergeAction,
 } from "../../actions/skript-rollen";
 import { inputClass } from "../ui";
@@ -87,6 +88,7 @@ export function ScriptRoles({ data }: { data: ScriptRoleAdminData }) {
     if (role.current) parts.push(`${role.lines} Repliken · ${role.scenes} Szenen`);
     else parts.push("in der aktuellen Fassung nicht");
     if (role.kind === "group") parts.push(GROUP_MODE_LABELS[role.groupMode ?? "present"]);
+    if (role.splitFrom) parts.push(`abgetrennt von ${role.splitFrom.name}`);
     if (role.kind !== "ignore") {
       const names = role.characterIds.map((id) => characters.get(id)?.name).filter(Boolean);
       parts.push(
@@ -357,6 +359,10 @@ function RoleDialog({
           </div>
         ) : null}
 
+        {role.sceneKeys.length > 1 ? (
+          <SplitSection data={data} role={role} onDone={onClose} />
+        ) : null}
+
         <div className="space-y-2 border-t border-border pt-4">
           <span className="text-sm font-medium">Zusammenführen</span>
           <p className="text-xs text-muted-foreground">
@@ -397,6 +403,75 @@ function RoleDialog({
         }
       />
     </ModalFormDialog>
+  );
+}
+
+/** Rolle trennen: gleiche Figur im Skript, im Stück zwei verschiedene (Phase 5). */
+function SplitSection({
+  data,
+  role,
+  onDone,
+}: {
+  data: ScriptRoleAdminData;
+  role: AdminRole;
+  onDone: () => void;
+}) {
+  const [pending, run] = useAction();
+  const [sceneKeys, setSceneKeys] = React.useState<string[]>([]);
+  const [name, setName] = React.useState(`${role.name} 2`);
+  const scenes = data.scenes.filter((scene) => role.sceneKeys.includes(scene.sceneKey));
+  return (
+    <div className="space-y-2 border-t border-border pt-4">
+      <span className="text-sm font-medium">Trennen</span>
+      <p className="text-xs text-muted-foreground">
+        Steht „{role.name}“ in manchen Szenen für eine andere Figur? Diese Szenen bekommen eine
+        eigene Rolle – auch in künftigen Fassungen.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {scenes.map((scene) => {
+          const active = sceneKeys.includes(scene.sceneKey);
+          return (
+            <button
+              key={scene.sceneKey}
+              type="button"
+              aria-pressed={active}
+              onClick={() =>
+                setSceneKeys((keys) =>
+                  active ? keys.filter((k) => k !== scene.sceneKey) : [...keys, scene.sceneKey],
+                )
+              }
+              className={
+                active
+                  ? "min-h-9 rounded-full border border-primary bg-primary/15 px-3 text-left text-sm text-primary"
+                  : "min-h-9 rounded-full border border-border bg-background px-3 text-left text-sm text-muted-foreground hover:text-foreground"
+              }
+            >
+              {scene.title}
+            </button>
+          );
+        })}
+      </div>
+      {sceneKeys.length ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className={`${inputClass} min-w-0 flex-1`}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-label="Name der neuen Rolle"
+          />
+          <AsyncButton
+            variant="outline"
+            isLoading={pending}
+            disabled={!name.trim() || sceneKeys.length === scenes.length}
+            onClick={() =>
+              run(() => splitScriptRoleAction(data.showId, role.id, { name, sceneKeys }), onDone)
+            }
+          >
+            Trennen
+          </AsyncButton>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
