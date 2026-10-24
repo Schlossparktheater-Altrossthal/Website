@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 import { setCharacterCastingAction } from "../actions/assignments";
 import { SceneAusstattung } from "./ausstattung";
+import { RoleMergeSection } from "./role-merge";
 import {
   deleteRoleAction,
   deleteSceneAction,
@@ -311,6 +312,8 @@ export function RolePanel({
                   </p>
                 )}
               </PanelSection>
+
+              <RoleMergeSection role={role} roles={data.roles} onMerged={onClose} />
 
               <Link
                 href={`/mitglieder/meine-gewerke/rolle/${encodeURIComponent(role.id)}`}

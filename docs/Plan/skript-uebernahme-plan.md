@@ -244,9 +244,13 @@ kein eigener Mechanismus im Skript (E-U5).
       über Absatz-Mehrheit, `src/lib/skript/scene-keys.ts`). `measuredSeconds` läuft noch über
       den Titel.
 - [ ] Phase 5 Trennen + Erkennung „Autor ändert Rollen“
-- [ ] Phase 6 Stück: Rollen zusammenführen
-- [ ] Phase 7 Übernahme-Assistent
+- [x] Phase 6 Stück: Rollen zusammenführen (Rollen-Panel „Zusammenführen“, `src/lib/produktionen/character-merge.ts`;
+      Vorschau der umgehängten Daten, danach wird die leere Rolle gelöscht – nicht umkehrbar)
+- [x] Phase 7 Übernahme-Assistent (`?ansicht=skript&bereich=uebernahme`, `src/lib/skript/takeover*.ts`):
+      Szenen über `ScriptSceneLink` (mit Stand der letzten Übernahme für E-U3), Rollen über
+      `ScriptRoleLink`, Auftritte mit `SceneCharacter.source`; Schalter „Gruppen als Auftritt zählen“.
+      Braucht `SCRIPT.MANAGE` und `SHOW.MANAGE`. Neue Szenen landen im letzten Akt.
 - [ ] Phase 8 „Änderungen fürs Stück“ + E2E
 
-DB-Test für Zusammenführen/Rückgängig/Gruppen: `src/lib/skript/__tests__/role-admin.db.manual.ts`
+DB-Tests: `src/lib/skript/__tests__/role-admin.db.manual.ts`, `takeover.db.manual.ts`
 (nicht in CI; Wegwerf-DB, `npx tsx`).

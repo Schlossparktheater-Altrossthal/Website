@@ -6,9 +6,11 @@ import { readImportReport } from "@/lib/skript/json";
 import { listPendingImports, listScriptVersions } from "@/lib/skript/service";
 
 import { loadScriptRoleAdmin } from "@/lib/skript/role-admin";
+import { loadTakeover } from "@/lib/skript/takeover";
 
 import { ScriptReview } from "./skript-review";
 import { ScriptRoles } from "./skript-roles";
+import { ScriptTakeover } from "./skript-takeover";
 import { ScriptVersions, type ScriptPendingItem, type ScriptVersionItem } from "./skript-versions";
 
 export const SKRIPT_PATH = "/mitglieder/produktionen/stueck?ansicht=skript";
@@ -18,14 +20,26 @@ export async function SkriptView({
   showId,
   versionId,
   section = null,
+  includeMembers = false,
   canManage,
 }: {
   showId: string;
   versionId: string | null;
-  section?: "roles" | null;
+  section?: "roles" | "takeover" | null;
+  includeMembers?: boolean;
   canManage: boolean;
 }) {
   if (section === "roles") return <ScriptRoles data={await loadScriptRoleAdmin(showId)} />;
+  if (section === "takeover") {
+    const takeover = await loadTakeover(showId, includeMembers);
+    return takeover ? (
+      <ScriptTakeover data={takeover} />
+    ) : (
+      <p className="py-12 text-center text-sm text-muted-foreground">
+        Zum Übernehmen braucht es eine freigegebene Fassung.
+      </p>
+    );
+  }
   if (versionId) {
     const review = await loadScriptReview(versionId);
     if (

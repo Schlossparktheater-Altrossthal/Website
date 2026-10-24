@@ -567,6 +567,7 @@ model Show {
   scriptPendingImports    ScriptPendingImport[]
   scriptRoles             ScriptRole[]
   scriptRoleMerges        ScriptRoleMerge[]
+  scriptSceneLinks        ScriptSceneLink[]
   scriptAnnotations       ScriptAnnotation[]
   scriptLearnCards        ScriptLearnCard[]
   scriptExportPresets     ScriptExportPreset[]
@@ -970,6 +971,7 @@ model Scene {
   objectScenes    ObjectScene[]
   requirements    SceneRequirement[]
   directionWishes DirectionWishScene[]
+  scriptLinks     ScriptSceneLink[]
 
   @@unique([showId, slug], name: "showId_slug")
   @@index([showId, sequence])
@@ -989,14 +991,17 @@ model ShowAct {
 }
 
 model SceneCharacter {
-  id          String    @id @default(cuid())
+  id          String               @id @default(cuid())
   sceneId     String
   characterId String
-  isFeatured  Boolean   @default(false)
+  isFeatured  Boolean              @default(false)
+  /// Von Hand oder vom Übernahme-Assistenten (docs/Plan/skript-uebernahme-plan.md). Nur `script`
+  /// darf eine neue Fassung zum Entfernen vorschlagen.
+  source      SceneCharacterSource @default(manual)
   note        String?
-  order       Int       @default(0)
-  scene       Scene     @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  order       Int                  @default(0)
+  scene       Scene                @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character   Character            @relation(fields: [characterId], references: [id], onDelete: Cascade)
 
   @@unique([sceneId, characterId], name: "sceneId_characterId")
   @@index([characterId])
@@ -4272,6 +4277,31 @@ model ScriptGroupRule {
 }
 
 /// Zusammenführung zweier Skript-Rollen – Protokoll für „Rückgängig“ (E8: wer und wann).
+enum SceneCharacterSource {
+  manual
+  script
+}
+
+/// Skript-Szene (über `ScriptScene.sceneKey`) → Szene im Stück; `sceneId` leer = bewusst ignoriert.
+model ScriptSceneLink {
+  id          String    @id @default(cuid())
+  showId      String
+  sceneKey    String
+  sceneId     String?
+  /// Werte, die zuletzt ins Stück übernommen wurden ({ title, durationMinutes }) – E-U3:
+  /// weicht das Stück davon ab, wurde dort von Hand geändert.
+  synced      Json?
+  syncedAt    DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  show        Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  scene       Scene?    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, sceneKey])
+  @@index([sceneId])
+}
+
 model ScriptRoleMerge {
   id           String    @id @default(cuid())
   showId       String

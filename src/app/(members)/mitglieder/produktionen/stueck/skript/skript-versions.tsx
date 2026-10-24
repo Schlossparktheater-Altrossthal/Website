@@ -92,6 +92,14 @@ export function ScriptVersions({
             title="Rollen zuordnen"
             description="Stück-Rollen, Zusammenführen, Gruppen wie „Alle“"
           />
+          {versions.some((version) => version.status === "released") ? (
+            <ListRow
+              href={`${BASE}&bereich=uebernahme`}
+              leading={<FileIcon className="h-5 w-5 text-muted-foreground" aria-hidden />}
+              title="Ins Stück übernehmen"
+              description="Szenen, Rollen und Auftritte aus der aktuellen Fassung"
+            />
+          ) : null}
         </ListRowGroup>
       ) : null}
       {canManage ? <ScriptUpload showId={showId} /> : null}
