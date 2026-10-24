@@ -78,11 +78,11 @@ describe("Verdecken", () => {
 });
 
 describe("Bewertung und Stufen", () => {
-  it("leitet die Bewertung aus dem Aufdecken ab", () => {
-    expect(autoRating(0, 10, false)).toBe(3);
-    expect(autoRating(2, 10, false)).toBe(2);
-    expect(autoRating(6, 10, false)).toBe(1);
-    expect(autoRating(0, 10, true)).toBe(1);
+  it("schlägt die Bewertung nach den Tipps vor", () => {
+    expect(autoRating(0, 10)).toBe(3);
+    expect(autoRating(2, 10)).toBe(2);
+    expect(autoRating(6, 10)).toBe(1);
+    expect(autoRating(0, 0)).toBe(3);
   });
 
   it("Stufe wächst mit der Stabilität, geänderter Text fällt zurück", () => {
@@ -107,8 +107,9 @@ describe("Bewertung und Stufen", () => {
     expect(progressOf(state, false, new Date(last.getTime() + 90 * 86_400_000))).toBe("learning");
   });
 
-  it("Hilfen deckeln die Bewertung", () => {
-    expect(capRating(3, "cloze")).toBe(2);
+  it("Hilfsstufen deckeln nur „Leicht“", () => {
+    expect(capRating(3, "cloze")).toBe(3);
+    expect(capRating(4, "cloze")).toBe(3);
     expect(capRating(4, "initials")).toBe(3);
     expect(capRating(4, "hidden")).toBe(4);
     expect(capRating(1, "cloze")).toBe(1);

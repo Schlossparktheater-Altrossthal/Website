@@ -11,6 +11,7 @@ import {
   autoRating,
   autoStage,
   capRating,
+  formatInterval,
   type LearnRating,
   type Stage,
 } from "@/lib/skript/learn/schedule";
@@ -47,9 +48,16 @@ export function usePractice(
   tokenized: TokenizedBlock | undefined,
   stage: Stage,
   seed: number,
+  /** Neue Abfrage (auch dieselbe Stelle noch einmal) → Fortschritt zurücksetzen. */
+  resetKey: string | number,
 ) {
   const [progress, setProgress] = React.useState<ChunkProgress>(emptyProgress);
-  React.useEffect(() => setProgress(emptyProgress()), [unit?.id]);
+  const [shownKey, setShownKey] = React.useState(resetKey);
+  // Gleich beim Rendern zurücksetzen, damit nie der Stand der vorigen Abfrage gilt.
+  if (shownKey !== resetKey) {
+    setShownKey(resetKey);
+    setProgress(emptyProgress());
+  }
 
   const masked = React.useMemo(
     () =>
@@ -91,15 +99,22 @@ export function usePractice(
   );
 
   const solved = masked.size > 0 && target === null;
-  const result = React.useCallback((): { rating: LearnRating; revealed: number } => {
-    const revealed = progress.whole
-      ? total
-      : [...progress.revealed].filter((index) => masked.has(index)).length;
+  /**
+   * Vorschlag aus den Tipps: einzeln aufgedeckte (oder falsch getippte) Wörter. Ganz aufdecken
+   * ist Kontrolle und zählt nicht. `revealed` = Anteil der Tipps an den verdeckten Wörtern.
+   */
+  const result = React.useCallback((): {
+    rating: LearnRating;
+    revealed: number;
+    tips: number;
+  } => {
+    const tips = [...progress.revealed].filter((index) => masked.has(index)).length;
     // Bezug ist die Zahl der verdeckten Wörter (bei Lücken nur ein Teil des Abschnitts).
     const base = masked.size || total;
     return {
-      rating: capRating(autoRating(revealed, base, progress.whole), stage),
-      revealed: base ? Math.min(1, revealed / base) : 0,
+      rating: capRating(autoRating(tips, base), stage),
+      revealed: base ? Math.min(1, tips / base) : 0,
+      tips,
     };
   }, [progress, masked, total, stage]);
 
@@ -155,19 +170,14 @@ export function CorrectionBar({
                 : "border-transparent text-muted-foreground hover:bg-muted",
             )}
           >
-            {ratingLabel(rating, last.meta.stage)}
+            {ratingLabel(rating)}
           </button>
         ))}
     </div>
   );
 }
 
-/**
- * Auf der Lücken-Stufe ist „Schwer“ die beste Bewertung (Hilfe deckelt, R3) – dort heißt sie
- * „Mit Hilfe gewusst“, damit Gewusstes nicht wie ein Fehler aussieht.
- */
-export function ratingLabel(rating: LearnRating, stage: Stage | null | undefined) {
-  if (stage === "cloze" && rating === 2) return "Mit Hilfe gewusst";
+export function ratingLabel(rating: LearnRating) {
   return RATING_LABEL[rating];
 }
 
@@ -346,14 +356,17 @@ export function useSwipeLeft(onSwipe: () => void) {
   };
 }
 
-/** Aufdeck-Knöpfe: nächstes Wort (Hinweis) und ganze Stelle. */
+/**
+ * „Tipp“ deckt das nächste Wort auf (zählt als Hilfe), „Prüfen“ die ganze Stelle (Kontrolle,
+ * zählt nicht). Ohne `onAll` nur der Tipp.
+ */
 export function RevealButtons({
   onNext,
   onAll,
   disabled,
 }: {
   onNext: () => void;
-  onAll: () => void;
+  onAll?: () => void;
   disabled?: boolean;
 }) {
   return (
@@ -364,20 +377,77 @@ export function RevealButtons({
         className="h-12 shrink-0 px-3"
         onClick={onNext}
         disabled={disabled}
-        title="Nächstes Wort aufdecken (Pfeil nach unten)"
+        title="Tipp: nächstes Wort aufdecken (Pfeil nach unten) – zählt als Hilfe"
       >
-        <EyeIcon aria-hidden /> Wort
+        <EyeIcon aria-hidden /> Tipp
       </Button>
-      <Button
-        variant="outline"
-        size="lg"
-        className="h-12 shrink-0 px-3"
-        onClick={onAll}
-        disabled={disabled}
-        title="Ganze Stelle aufdecken (Pfeil nach oben oder Text halten)"
-      >
-        Alles
-      </Button>
+      {onAll ? (
+        <Button
+          variant="outline"
+          size="lg"
+          className="h-12 shrink-0 px-3"
+          onClick={onAll}
+          disabled={disabled}
+          title="Ganze Stelle aufdecken und prüfen (Pfeil nach oben oder Text halten)"
+        >
+          Prüfen
+        </Button>
+      ) : null}
     </>
+  );
+}
+
+/**
+ * Nach dem Prüfen urteilt man selbst (wie bei Anki); vorausgewählt ist der Vorschlag aus den
+ * Tipps, darunter steht, warum.
+ */
+export function RatingButtons({
+  stage,
+  suggestion,
+  tips,
+  intervals,
+  onRate,
+}: {
+  stage: Stage;
+  suggestion: LearnRating;
+  tips: number;
+  intervals: Record<LearnRating, number> | null;
+  onRate: (rating: LearnRating) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Wie gut saß es?">
+        {([1, 2, 3, 4] as const).map((rating) => {
+          const allowed = capRating(rating, stage) === rating;
+          return (
+            <button
+              key={rating}
+              type="button"
+              onClick={() => onRate(rating)}
+              disabled={!allowed}
+              title={allowed ? undefined : "„Leicht“ gibt es nur, wenn alles verdeckt war"}
+              className={cn(
+                "flex min-h-14 flex-col items-center justify-center rounded-md border text-sm font-medium",
+                RATING_STYLE[rating],
+                !allowed && "opacity-40",
+                rating === suggestion
+                  ? "border-current bg-muted ring-2 ring-current/30"
+                  : "border-border hover:bg-muted",
+              )}
+            >
+              {ratingLabel(rating)}
+              <span className="text-[11px] font-normal text-muted-foreground">
+                {intervals ? formatInterval(intervals[rating]) : ""}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-center text-xs text-muted-foreground" data-testid="lernen-vorschlag">
+        {tips
+          ? `${tips} ${tips === 1 ? "Tipp" : "Tipps"} genutzt – Vorschlag „${ratingLabel(suggestion)}“`
+          : "Ohne Tipps – Vorschlag „Gut“. Stimmt nicht? Selbst wählen."}
+      </p>
+    </div>
   );
 }

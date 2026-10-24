@@ -14,6 +14,8 @@ import type { StoredCard } from "@/lib/skript/learn/plan";
 import {
   SOLID_RETRIEVABILITY,
   STAGE_LABEL,
+  capRating,
+  previewIntervals,
   retrievability,
   type LearnRating,
 } from "@/lib/skript/learn/schedule";
@@ -35,6 +37,7 @@ import {
   BigButton,
   CorrectionBar,
   RATING_STYLE,
+  RatingButtons,
   RevealButtons,
   spokenText,
   unitStage,
@@ -139,7 +142,27 @@ export function SceneFlow({
     setShowDiff(false);
   }, [step, only]);
   const unitTokens = unit ? tokenized.get(unit.block.id) : undefined;
-  const practice = usePractice(unit, unitTokens, stageInfo.stage, stageInfo.seed);
+  const practice = usePractice(
+    unit,
+    unitTokens,
+    stageInfo.stage,
+    stageInfo.seed,
+    `${step}:${unit?.id ?? ""}`,
+  );
+  // Ganz aufgedeckt = geprüft: bewertete Stellen beurteilt man dann selbst.
+  const checking =
+    stageInfo.graded && stageInfo.stage !== "full" && practice.progress.whole && !!unit;
+  const suggestion = practice.result();
+  const intervals = React.useMemo(
+    () =>
+      checking && unit
+        ? previewIntervals(unitCard(unit, cards).card, new Date(), {
+            changed: stageInfo.changed,
+            stage: stageInfo.stage,
+          })
+        : null,
+    [checking, unit, cards, stageInfo.changed, stageInfo.stage],
+  );
 
   const visibleUntil = finished
     ? Number.POSITIVE_INFINITY
@@ -167,12 +190,35 @@ export function SceneFlow({
     void speech.speak(lines);
   }, [settings.speak, finished, unit, sceneBlocks, units, speech]);
 
+  const rate = React.useCallback(
+    (wanted: LearnRating) => {
+      if (!unit || stageInfo.stage === "full") return;
+      const rating = capRating(wanted, stageInfo.stage);
+      const outcome = practice.result();
+      deferred.settle();
+      onCommit(unit, rating, {
+        auto: rating === outcome.rating,
+        revealed: outcome.revealed,
+        mode: "flow",
+        stage: stageInfo.stage,
+      });
+      flash.show(rating);
+      setResults((current) => new Map(current).set(unit.id, rating));
+      setStep((current) => current + 1);
+    },
+    [unit, stageInfo.stage, practice, deferred, onCommit, flash],
+  );
+
   const next = React.useCallback(() => {
     if (speech.speaking) {
       speech.stop();
       return;
     }
     if (!unit) return;
+    if (checking) {
+      rate(practice.result().rating);
+      return;
+    }
     if (stageInfo.stage !== "full") {
       const outcome = practice.result();
       // Blind weitergeklickt (kurz, nichts aufgedeckt oder getippt) ist keine Abfrage.
@@ -192,7 +238,7 @@ export function SceneFlow({
       setResults((current) => new Map(current).set(unit.id, outcome.rating));
     }
     setStep((current) => current + 1);
-  }, [speech, unit, stageInfo, practice, deferred, flash]);
+  }, [speech, unit, checking, rate, stageInfo, practice, deferred, flash]);
 
   // Tippmodus: nach dem letzten Wort automatisch weiter.
   React.useEffect(() => {
@@ -214,7 +260,9 @@ export function SceneFlow({
     onNext: next,
     onRevealAll: practice.revealAll,
     onRevealNext: practice.revealNext,
-    onLetter: settings.typing && stageInfo.stage !== "full" ? practice.typeKey : undefined,
+    onLetter:
+      settings.typing && stageInfo.stage !== "full" && !checking ? practice.typeKey : undefined,
+    onRate: checking ? rate : undefined,
   });
   const hold = useHold(practice.revealAll, !finished && stageInfo.stage !== "full");
   const swipe = useSwipeLeft(next);
@@ -360,21 +408,32 @@ export function SceneFlow({
                 }}
               />
             ) : null}
-            <div className="flex gap-2">
-              {stageInfo.stage !== "full" ? (
-                <RevealButtons
-                  onNext={practice.revealNext}
-                  onAll={practice.revealAll}
-                  disabled={practice.progress.whole || practice.target === null}
-                />
-              ) : null}
-              <BigButton onClick={next} title="Leertaste, Enter oder Pfeil nach rechts">
-                {speech.speaking ? "Überspringen" : "Weiter"} <ArrowRightIcon aria-hidden />
-              </BigButton>
-            </div>
+            {checking ? (
+              <RatingButtons
+                stage={stageInfo.stage}
+                suggestion={suggestion.rating}
+                tips={suggestion.tips}
+                intervals={intervals}
+                onRate={rate}
+              />
+            ) : (
+              <div className="flex gap-2">
+                {stageInfo.stage !== "full" ? (
+                  <RevealButtons
+                    onNext={practice.revealNext}
+                    onAll={practice.revealAll}
+                    disabled={practice.progress.whole || practice.target === null}
+                  />
+                ) : null}
+                <BigButton onClick={next} title="Leertaste, Enter oder Pfeil nach rechts">
+                  {speech.speaking ? "Überspringen" : "Weiter"} <ArrowRightIcon aria-hidden />
+                </BigButton>
+              </div>
+            )}
             <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
-              Wort antippen oder ↓ deckt ein Wort auf · Text halten oder ↑ deckt alles auf ·
-              Leertaste weiter
+              {checking
+                ? "Tasten 1–4 · Leertaste übernimmt den Vorschlag"
+                : "Wort antippen oder ↓ = Tipp · Text halten oder ↑ = prüfen · Leertaste weiter"}
               {settings.typing ? " · Anfangsbuchstaben tippen" : ""}
             </p>
           </div>

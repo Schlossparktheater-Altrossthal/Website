@@ -116,12 +116,11 @@ export const CHANGED_MAX_STABILITY = 2;
 const CHANGED_MAX_DUE_MS = 86_400_000;
 
 /**
- * Mit Hilfe erinnert ist nicht frei erinnert: Lücken höchstens „Schwer“, Anfangsbuchstaben
- * höchstens „Gut“. Ohne bekannte Stufe (alte Warteschlange) bleibt die Bewertung.
+ * Auf einer Hilfsstufe (Lücken, Anfangsbuchstaben) höchstens „Gut“ – „Leicht“ gibt es nur ganz
+ * verdeckt. Ohne bekannte Stufe (alte Warteschlange) bleibt die Bewertung.
  */
 export function capRating(rating: LearnRating, stage: Stage | null | undefined): LearnRating {
-  if (stage === "cloze") return Math.min(rating, 2) as LearnRating;
-  if (stage === "initials") return Math.min(rating, 3) as LearnRating;
+  if (stage === "cloze" || stage === "initials") return Math.min(rating, 3) as LearnRating;
   return rating;
 }
 
@@ -183,13 +182,14 @@ export function formatInterval(ms: number) {
 }
 
 /**
- * Bewertung aus dem Verhalten (L6): Halten/alles aufgedeckt → Nochmal, ein Teil → Schwer,
- * nichts → Gut. „Leicht“ gibt es nur von Hand.
+ * Vorschlag aus den Tipps (einzeln aufgedeckte oder falsch getippte Wörter) *vor* dem Prüfen.
+ * Ganz aufdecken ist Kontrolle und zählt nicht. Keine Tipps → Gut, viele (≥ 50 %) → Nochmal,
+ * sonst Schwer. „Leicht“ gibt es nur von Hand.
  */
-export function autoRating(revealed: number, total: number, wholeRevealed: boolean): LearnRating {
-  if (wholeRevealed || (total > 0 && revealed / total >= 0.5)) return 1;
-  if (revealed > 0) return 2;
-  return 3;
+export function autoRating(tips: number, total: number): LearnRating {
+  if (tips <= 0) return 3;
+  if (total > 0 && tips / total >= 0.5) return 1;
+  return 2;
 }
 
 export type Stage = "full" | "cloze" | "initials" | "hidden";

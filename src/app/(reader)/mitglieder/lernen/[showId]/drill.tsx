@@ -2,14 +2,13 @@
 
 import * as React from "react";
 
-import { ArrowLeftIcon, CheckIcon, SparklesIcon } from "@/components/ui/action-icons";
+import { ArrowLeftIcon, EyeIcon, SparklesIcon } from "@/components/ui/action-icons";
 import { Button } from "@/components/ui/button";
 import type { TokenizedBlock } from "@/lib/skript/learn/chunks";
 import type { StoredCard } from "@/lib/skript/learn/plan";
 import {
   applyReview,
   capRating,
-  formatInterval,
   previewIntervals,
   type LearnRating,
 } from "@/lib/skript/learn/schedule";
@@ -22,20 +21,12 @@ import { FONT_SIZES } from "../../skript/shared";
 import { CountUp, RatingFlash, useRatingFlash } from "./celebrate";
 import { ChangeDiff } from "./change-diff";
 import { MaskedBlockText, useHold } from "./masked";
-import {
-  unitCard,
-  useDeferredReview,
-  type LearnSettings,
-  type ReviewMeta,
-  type Unit,
-} from "./model";
+import { unitCard, type LearnSettings, type ReviewMeta, type Unit } from "./model";
 import {
   BigButton,
-  CorrectionBar,
-  RATING_STYLE,
   RevealButtons,
   plainText,
-  ratingLabel,
+  RatingButtons,
   unitStage,
   usePractice,
   useLearnKeys,
@@ -50,8 +41,8 @@ const AGAIN_GAP = 4;
 const MAX_SHOWINGS = 3;
 
 /**
- * Abfrage im Stil von Lernkarten: Stichwort groß, eigener Abschnitt verdeckt. „Gewusst“ bewertet
- * automatisch; nach dem Aufdecken wählt man selbst (Vorschlag hervorgehoben).
+ * Abfrage im Stil von Lernkarten: Stichwort groß, eigener Abschnitt verdeckt. Aufsagen, dann
+ * „Aufdecken & prüfen“ und selbst bewerten (Vorschlag aus den Tipps hervorgehoben).
  */
 export function Drill({
   reader,
@@ -84,9 +75,7 @@ export function Drill({
   useWakeLock(true);
   const [queue, setQueue] = React.useState<Unit[]>(() => [...initial]);
   const [index, setIndex] = React.useState(0);
-  const [phase, setPhase] = React.useState<"ask" | "rate">("ask");
   const [done, setDone] = React.useState(0);
-  const deferred = useDeferredReview(onCommit);
   const flash = useRatingFlash();
   // Für die Zusammenfassung am Ende.
   const [sureAtStart] = React.useState(sureNow);
@@ -97,11 +86,6 @@ export function Drill({
   });
   const unit = queue[index] ?? null;
   const finished = !unit;
-  // Am Ende die letzte (noch korrigierbare) Bewertung gleich speichern, damit der Zuwachs stimmt.
-  const settle = deferred.settle;
-  React.useEffect(() => {
-    if (finished) settle();
-  }, [finished, settle]);
 
   const stageRef = React.useRef(new Map<string, ReturnType<typeof unitStage>>());
   const stageInfo = React.useMemo(() => {
@@ -114,19 +98,19 @@ export function Drill({
     return info;
   }, [unit, index, cards, settings.stage]);
   const tokens = unit ? tokenized.get(unit.block.id) : undefined;
-  const practice = usePractice(unit, tokens, stageInfo.stage, stageInfo.seed);
+  const practice = usePractice(unit, tokens, stageInfo.stage, stageInfo.seed, index);
   // Die Abfrage verdeckt immer etwas (Volltext gilt hier als automatisch).
   const stage = stageInfo.stage === "full" ? "hidden" : stageInfo.stage;
   const suggestion = practice.result();
 
+  // Geprüft (ganz aufgedeckt oder im Tippmodus fertig) → selbst bewerten.
+  const phase: "ask" | "rate" = practice.progress.whole || practice.solved ? "rate" : "ask";
   const [showDiff, setShowDiff] = React.useState(false);
-  React.useEffect(() => {
-    setPhase("ask");
+  const [diffIndex, setDiffIndex] = React.useState(index);
+  if (diffIndex !== index) {
+    setDiffIndex(index);
     setShowDiff(false);
-  }, [index, unit?.id]);
-  React.useEffect(() => {
-    if (practice.progress.whole || practice.solved) setPhase("rate");
-  }, [practice.progress.whole, practice.solved]);
+  }
 
   const intervals = React.useMemo(() => {
     if (!unit) return null;
@@ -167,28 +151,9 @@ export function Drill({
     setDone((count) => count + 1);
   };
 
-  // Korrektur auf „Nochmal“ nach dem Weitergehen: Stelle trotzdem noch einmal bringen.
-  const correct = (rating: LearnRating) => {
-    const last = deferred.last;
-    deferred.change(rating);
-    if (last && rating === 1 && last.rating !== 1) requeue(last.unit, index - 1);
-  };
-
-  const knew = () => {
-    if (!unit) return;
-    deferred.propose(unit, suggestion.rating, {
-      auto: true,
-      revealed: suggestion.revealed,
-      mode: "drill",
-      stage,
-    });
-    advance(suggestion.rating);
-  };
-
   const rate = (wanted: LearnRating) => {
     if (!unit) return;
     const rating = capRating(wanted, stage);
-    deferred.settle();
     onCommit(unit, rating, {
       auto: rating === suggestion.rating,
       revealed: suggestion.revealed,
@@ -199,7 +164,6 @@ export function Drill({
   };
 
   const more = () => {
-    deferred.settle();
     const seen = new Set(queue.map((entry) => entry.id));
     const extra = onMore(seen);
     if (!extra.length) return;
@@ -209,14 +173,16 @@ export function Drill({
 
   useLearnKeys({
     enabled: !finished,
-    onNext: phase === "ask" ? knew : () => rate(suggestion.rating),
+    onNext: phase === "ask" ? practice.revealAll : () => rate(suggestion.rating),
     onRevealAll: practice.revealAll,
     onRevealNext: practice.revealNext,
     onLetter: settings.typing && phase === "ask" ? practice.typeKey : undefined,
     onRate: phase === "rate" ? rate : undefined,
   });
   const hold = useHold(practice.revealAll, !finished && phase === "ask");
-  const swipe = useSwipeLeft(() => (phase === "ask" ? knew() : rate(suggestion.rating)));
+  const swipe = useSwipeLeft(() =>
+    phase === "ask" ? practice.revealAll() : rate(suggestion.rating),
+  );
 
   // Kontext: vorige Replik (Stichwort betont) oder der eigene Abschnitt davor.
   const context = ((): { speaker: string | null; text: string; own: boolean } | null => {
@@ -392,47 +358,25 @@ export function Drill({
       {!finished ? (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <div className="mx-auto max-w-2xl space-y-1 px-3 py-2">
-            <CorrectionBar last={deferred.last} onChange={correct} />
             {phase === "ask" ? (
               <div className="flex gap-2">
-                <RevealButtons onNext={practice.revealNext} onAll={practice.revealAll} />
-                <BigButton onClick={knew} title="Leertaste">
-                  <CheckIcon aria-hidden /> Gewusst
+                <RevealButtons onNext={practice.revealNext} disabled={practice.target === null} />
+                <BigButton onClick={practice.revealAll} title="Leertaste oder Text halten">
+                  <EyeIcon aria-hidden /> Aufdecken & prüfen
                 </BigButton>
               </div>
             ) : (
-              <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Wie gut saß es?">
-                {([1, 2, 3, 4] as const).map((rating) => (
-                  <button
-                    key={rating}
-                    type="button"
-                    onClick={() => rate(rating)}
-                    disabled={capRating(rating, stage) !== rating}
-                    title={
-                      capRating(rating, stage) !== rating
-                        ? "Mit Hilfe gewusst zählt noch nicht als ganz frei"
-                        : undefined
-                    }
-                    className={cn(
-                      "flex min-h-14 flex-col items-center justify-center rounded-md border text-sm font-medium",
-                      RATING_STYLE[rating],
-                      capRating(rating, stage) !== rating && "opacity-40",
-                      rating === suggestion.rating
-                        ? "border-current bg-muted ring-2 ring-current/30"
-                        : "border-border hover:bg-muted",
-                    )}
-                  >
-                    {ratingLabel(rating, stage)}
-                    <span className="text-[11px] font-normal text-muted-foreground">
-                      {intervals ? formatInterval(intervals[rating]) : ""}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <RatingButtons
+                stage={stage}
+                suggestion={suggestion.rating}
+                tips={suggestion.tips}
+                intervals={intervals}
+                onRate={rate}
+              />
             )}
             <p className="hidden text-center text-[11px] text-muted-foreground sm:block">
               {phase === "ask"
-                ? `Laut sprechen, dann Leertaste · ↓ ein Wort, ↑ alles aufdecken${settings.typing ? " · Anfangsbuchstaben tippen" : ""}`
+                ? `Laut aufsagen, dann Leertaste zum Prüfen · ↓ Tipp (ein Wort)${settings.typing ? " · Anfangsbuchstaben tippen" : ""}`
                 : "Tasten 1–4 · Enter übernimmt den Vorschlag"}
             </p>
           </div>

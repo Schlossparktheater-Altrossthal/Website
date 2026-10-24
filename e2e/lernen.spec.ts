@@ -66,18 +66,21 @@ test.describe("als admin", () => {
     await expect(page.getByTestId("lernen-szene").first()).toBeVisible();
     await shoot(page, "lernen-dashboard");
 
-    // Abfrage: einmal „Gewusst“, einmal aufdecken und bewerten
+    // Abfrage: einmal ohne Tipp prüfen (Vorschlag „Gut“), einmal mit Tipp und selbst bewerten
     await page.getByRole("button", { name: /Abfrage starten|Mehr lernen/ }).click();
     await expect(page.getByTestId("lernen-karte")).toBeVisible();
     await shoot(page, "lernen-abfrage");
-    await page.getByRole("button", { name: "Gewusst" }).click();
-    await expect(page.getByTestId("lernen-korrektur")).toBeVisible();
-    await page.getByRole("button", { name: "Wort", exact: true }).click();
-    await page.getByRole("button", { name: "Alles", exact: true }).click();
     const group = page.getByRole("group", { name: "Wie gut saß es?" });
+    await page.getByRole("button", { name: /Aufdecken & prüfen/ }).click();
+    await expect(group).toBeVisible();
+    await expect(page.getByTestId("lernen-vorschlag")).toContainText("Ohne Tipps");
+    await group.getByRole("button", { name: /^Gut/ }).click();
+    const tip = page.getByRole("button", { name: "Tipp", exact: true });
+    if (await tip.isEnabled()) await tip.click();
+    await page.getByRole("button", { name: /Aufdecken & prüfen/ }).click();
     await expect(group).toBeVisible();
     await shoot(page, "lernen-abfrage-bewerten");
-    await group.getByRole("button", { name: /Schwer|Mit Hilfe gewusst/ }).click();
+    await group.getByRole("button", { name: /^Schwer/ }).click();
     await page.getByRole("button", { name: "Zurück zur Übersicht" }).click();
     await expect(page.getByTestId("lernen-heute")).toBeVisible();
 
